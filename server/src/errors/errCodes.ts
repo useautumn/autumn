@@ -2,6 +2,10 @@ export const ErrCode = {
   // General
   InvalidRequest: "invalid_request",
 
+  // Org
+  CreateClerkOrgFailed: "create_clerk_org_failed",
+  AssignUserToOrgFailed: "assign_user_to_org_failed",
+
   // Feature
   FeatureNotFound: "feature_not_found",
   InvalidFeature: "invalid_feature",

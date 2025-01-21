@@ -1,11 +1,11 @@
 import { ErrCode } from "@/errors/errCodes.js";
-import { createClerkCli } from "@/external/clerkUtils.js";
+import { createClerkCli, createClerkOrg } from "@/external/clerkUtils.js";
 import {
   checkKeyValid,
   createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
 import { encryptData } from "@/utils/encryptUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import express from "express";
 import Stripe from "stripe";
 import { CusService } from "../customers/CusService.js";
@@ -29,33 +29,25 @@ orgRouter.get("", async (req: any, res) => {
   });
 });
 
-orgRouter.post("/", async (req: any, res) => {
-  const userId = req.userId;
-  const { name, slug } = req.body;
-
+orgRouter.post("", async (req: any, res) => {
   // try {
   //   // 1. Create org in Clerk
   //   const org = await createOrgAndAssignUser(name, slug, userId);
-
   //   if (!org) {
   //     throw new Error("Error creating org in Clerk");
   //   }
-
   //   // 2. Create workspace in DB
   //   const supabaseCli = createSupabaseClient();
-
   //   const { data, error } = await supabaseCli.from("workspaces").insert({
   //     id: generateId("ws"),
   //     name,
   //     slug,
   //     org_id: org?.id,
   //   });
-
   //   if (error) {
   //     console.error("Error creating workspace in DB", error);
   //     throw new Error("Error creating workspace in DB");
   //   }
-
   //   res.status(200).json({
   //     message: "Workspace created",
   //   });

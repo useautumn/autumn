@@ -447,6 +447,6 @@ productApiRouter.post("/:productId", async (req: any, res) => {
 
     res.status(200).send({ message: "Product updated" });
   } catch (error) {
-    handleRequestError(error, res, "Update product");
+    handleRequestError({ error, res, action: "Update product" });
   }
 });

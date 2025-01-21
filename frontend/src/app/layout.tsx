@@ -37,6 +37,7 @@ import { AppEnv } from "@autumn/shared";
 import { redirect } from "next/navigation";
 import { SidebarProvider } from "../components/ui/sidebar";
 import HomeSidebar from "../views/sidebar/Sidebar";
+import RefreshHandler from "@/components/general/RefreshHandler";
 
 export default async function RootLayout({
   children,
@@ -46,40 +47,10 @@ export default async function RootLayout({
   const headersList = await headers();
   const env = (headersList.get("env") as AppEnv) || AppEnv.Sandbox;
   const path = headersList.get("path") || "";
+  const refresh = headersList.get("refresh") === "true";
 
   const { sessionClaims }: { sessionClaims: any } = await auth();
   const { org_id, org } = sessionClaims || {};
-
-  if (path.includes("/onboarding")) {
-    if (org_id) {
-      redirect("/sandbox/customers");
-    }
-
-    return (
-      <html lang="en" suppressHydrationWarning>
-        <body
-          className={`${inter.className} font-regular`}
-          suppressHydrationWarning
-        >
-          {/* @ts-expect-error ClerkProvider is not a valid JSX component */}
-          <ClerkProvider>
-            <NextUIProvider>
-              <main className="w-full h-screen overflow-hidden">
-                {children}
-              </main>
-            </NextUIProvider>
-          </ClerkProvider>
-        </body>
-      </html>
-    );
-  }
-
-  // Main layout
-  // const user = await currentUser();
-
-  if (!org_id) {
-    redirect("/onboarding");
-  }
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -91,12 +62,14 @@ export default async function RootLayout({
         <ClerkProvider>
           <NextUIProvider>
             <SidebarProvider>
-              <HomeSidebar
-                user={sessionClaims?.user as any}
-                org={org}
-                path={path}
-                env={env as AppEnv}
-              />
+              {org_id && (
+                <HomeSidebar
+                  user={sessionClaims?.user as any}
+                  org={org}
+                  path={path}
+                  env={env as AppEnv}
+                />
+              )}
               <main className="flex flex-col w-full h-screen overflow-hidden">
                 {env === AppEnv.Sandbox && (
                   <div className="w-full h-5 bg-primary/80 text-white text-xs flex items-center justify-center">
@@ -104,11 +77,15 @@ export default async function RootLayout({
                   </div>
                 )}
 
-                <div className="w-full h-screen overflow-hidden bg-stone-50 p-6 flex justify-center">
-                  <div className="w-full max-w-[1048px] flex flex-col gap-4">
-                    {children}
+                {path.includes("/onboarding") ? (
+                  children
+                ) : (
+                  <div className="w-full h-screen overflow-hidden bg-stone-50 p-6 flex justify-center">
+                    <div className="w-full max-w-[1048px] flex flex-col gap-4">
+                      {children}
+                    </div>
                   </div>
-                </div>
+                )}
               </main>
             </SidebarProvider>
           </NextUIProvider>

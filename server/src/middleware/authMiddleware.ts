@@ -50,7 +50,8 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     next();
   } catch (error: any) {
     console.log(
-      `withOrgAuth error (${req.headers["authorization"]}):`,
+      // `withOrgAuth error (${req.headers["authorization"]}):`,
+      `withOrgAuth error:`,
       error?.message || error
     );
     res.status(401).json({ message: "Unauthorized" });
@@ -60,10 +61,13 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
 
 export const withAuth = async (req: any, res: any, next: NextFunction) => {
   const tokenData = await getTokenData(req, res);
+
   if (!tokenData) {
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
+
+  req.userId = tokenData?.user_id;
 
   next();
 };

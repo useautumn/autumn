@@ -10,6 +10,54 @@ export const createClerkCli = () => {
   });
 };
 
+export const createClerkOrg = async (name: string, slug: string) => {
+  const clerkCli = createClerkCli();
+  try {
+    let org = await clerkCli.organizations.createOrganization({
+      name,
+      slug,
+    });
+    return org;
+  } catch (error: any) {
+    if (error.errors && error.errors.length > 0) {
+      const errMessage = error.errors[0].message;
+      throw new RecaseError({
+        code: ErrCode.CreateClerkOrgFailed,
+        message: errMessage,
+      });
+    } else {
+      throw new RecaseError({
+        code: ErrCode.InternalError,
+        message: "Error creating organization",
+      });
+    }
+  }
+};
+
+export const assignUserToOrg = async (userId: string, orgId: string) => {
+  const clerkCli = createClerkCli();
+  try {
+    await clerkCli.organizations.createOrganizationMembership({
+      userId,
+      role: "org:admin",
+      organizationId: orgId,
+    });
+  } catch (error: any) {
+    if (error.errors && error.errors.length > 0) {
+      const errMessage = error.errors[0].message;
+      throw new RecaseError({
+        code: ErrCode.AssignUserToOrgFailed,
+        message: errMessage,
+      });
+    } else {
+      throw new RecaseError({
+        code: ErrCode.InternalError,
+        message: "Error assigning user to organization",
+      });
+    }
+  }
+};
+
 export const getOrgById = async (orgId: string) => {
   const orgRes = await clerkClient.organizations.getOrganization({
     organizationId: orgId,

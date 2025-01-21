@@ -35,7 +35,15 @@ export function formatZodError(error: ZodError): string {
     .join(", ");
 }
 
-export const handleRequestError = (error: any, res: any, action: string) => {
+export const handleRequestError = ({
+  error,
+  res,
+  action,
+}: {
+  error: any;
+  res: any;
+  action: string;
+}) => {
   if (error instanceof RecaseError) {
     error.print();
     res.status(error.statusCode).json({

@@ -66,6 +66,6 @@ export const gateMiddleware = async (req: any, res: any, next: any) => {
 
     next();
   } catch (error) {
-    handleRequestError(error, res, "gateMiddleware");
+    handleRequestError({ error, res, action: "Gate middleware" });
   }
 };

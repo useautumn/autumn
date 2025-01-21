@@ -5,6 +5,10 @@ export class OrgService {
     return await axiosInstance.get(`/organization`);
   }
 
+  static async create(axiosInstance: AxiosInstance, data: any) {
+    return await axiosInstance.post(`/organization`, data);
+  }
+
   static async connectStripe(axiosInstance: AxiosInstance, data: any) {
     return await axiosInstance.post(`/organization/stripe`, data);
   }
