@@ -1,8 +1,9 @@
 import stripe from "stripe";
+import dotenv from "dotenv";
+dotenv.config();
+
 const init = async () => {
-  const stripeCli = new stripe(
-    "sk_test_51Po43dGHoZUApXXdgIzbsyTTSygoDHMLwoP3m9XXgelkoNA6ChcnqYPAzpnoSUWPK8gMglOURsH2FhxSzDcunCS200uKhf6eu9"
-  );
+  const stripeCli = new stripe(process.env.STRIPE_TEST_KEY!);
 
   // 1. First create a payment method using a test token
   const pm = await stripeCli.paymentMethods.create({
