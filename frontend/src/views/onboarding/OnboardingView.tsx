@@ -17,10 +17,11 @@ import {
   useOrganizationList,
 } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import LoadingScreen from "../general/LoadingScreen";
 
 function OnboardingView({ sessionClaims }: { sessionClaims: any }) {
   const { org_id, user } = sessionClaims || {};
-  const axiosInstance = useAxiosInstance({ env: AppEnv.Live });
+
   const { createOrganization, setActive } = useOrganizationList();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -94,15 +95,9 @@ function OnboardingView({ sessionClaims }: { sessionClaims: any }) {
             </Button>
           </div>
         </div>
-        {/* <CreateOrganization
-          skipInvitationScreen={true}
-          // afterCreateOrganizationUrl={"/sandbox/customers"}
-        /> */}
       </div>
     );
-  } else if (Object.keys(user.organizations).length > 0) {
-    return <OrganizationList hidePersonal={true} />;
-  }
+  } else return <LoadingScreen />;
 }
 
 export default OnboardingView;

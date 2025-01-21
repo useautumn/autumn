@@ -29,38 +29,6 @@ orgRouter.get("", async (req: any, res) => {
   });
 });
 
-orgRouter.post("", async (req: any, res) => {
-  // try {
-  //   // 1. Create org in Clerk
-  //   const org = await createOrgAndAssignUser(name, slug, userId);
-  //   if (!org) {
-  //     throw new Error("Error creating org in Clerk");
-  //   }
-  //   // 2. Create workspace in DB
-  //   const supabaseCli = createSupabaseClient();
-  //   const { data, error } = await supabaseCli.from("workspaces").insert({
-  //     id: generateId("ws"),
-  //     name,
-  //     slug,
-  //     org_id: org?.id,
-  //   });
-  //   if (error) {
-  //     console.error("Error creating workspace in DB", error);
-  //     throw new Error("Error creating workspace in DB");
-  //   }
-  //   res.status(200).json({
-  //     message: "Workspace created",
-  //   });
-  // } catch (error: any) {
-  //   console.error("Error creating workspace", error.message);
-  //   res.status(500).json({
-  //     error: "Error creating workspace",
-  //     message: error.message,
-  //   });
-  //   return;
-  // }
-});
-
 orgRouter.post("/stripe", async (req: any, res) => {
   try {
     const { testApiKey, liveApiKey, successUrl, defaultCurrency } = req.body;
