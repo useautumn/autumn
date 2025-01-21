@@ -1,0 +1,48 @@
+import { z } from "zod";
+import { EntitlementSchema } from "../../productModels/entitlementModels.js";
+import { BillingInterval } from "../../productModels/fixedPriceModels.js";
+import { FeatureSchema } from "../../featureModels/featureModels.js";
+
+export const CustomerEntitlementSchema = z.object({
+  // Foreign keys
+  id: z.string(),
+  internal_customer_id: z.string(),
+  internal_feature_id: z.string(),
+  customer_id: z.string(), // for debugging purposes
+  feature_id: z.string(), // for debugging purposes
+
+  customer_product_id: z.string(),
+  entitlement_id: z.string().nullable(),
+  custom_entitlement_id: z.string().nullable(),
+  created_at: z.number(),
+
+  // Balance fields
+  unlimited: z.boolean(),
+  balance: z.number().nullable(),
+
+  usage_allowed: z.boolean().nullable(),
+  next_reset_at: z.number().nullable(),
+});
+
+export type CustomerEntitlement = z.infer<typeof CustomerEntitlementSchema>;
+
+export const CusEntWithEntitlementSchema = CustomerEntitlementSchema.extend({
+  entitlement: EntitlementSchema,
+});
+
+export type CusEntWithEntitlement = z.infer<typeof CusEntWithEntitlementSchema>;
+
+export const CusEntWithFeatureSchema = CustomerEntitlementSchema.extend({
+  feature: FeatureSchema,
+});
+
+export type CusEntWithFeature = z.infer<typeof CusEntWithFeatureSchema>;
+
+export const CusEntWithFeatureAndEntitlementSchema =
+  CusEntWithFeatureSchema.extend({
+    entitlement: EntitlementSchema,
+  });
+
+export type CusEntWithFeatureAndEntitlement = z.infer<
+  typeof CusEntWithFeatureAndEntitlementSchema
+>;

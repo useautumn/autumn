@@ -1,0 +1,45 @@
+import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { AppEnv, Organization } from "@autumn/shared";
+import { SupabaseClient } from "@supabase/supabase-js";
+import Stripe from "stripe";
+
+export const handleInvoicePaid = async ({
+  sb,
+  org,
+  invoice,
+}: {
+  sb: SupabaseClient;
+  org: Organization;
+  invoice: Stripe.Invoice;
+}) => {
+  if (invoice.subscription) {
+    // Get customer product
+    const cusProduct = await CusProductService.getActiveByStripeSubId({
+      sb,
+      stripeSubId: invoice.subscription as string,
+    });
+
+    if (!cusProduct) {
+      return;
+    }
+    let existingInvoice = await InvoiceService.getInvoiceByStripeId({
+      sb,
+      stripeInvoiceId: invoice.id,
+    });
+
+    if (existingInvoice) {
+      console.log(`Invoice ${invoice.id} already exists`);
+      return;
+    }
+
+    // Create invoice
+    await InvoiceService.createInvoiceFromStripe({
+      sb,
+      stripeInvoice: invoice,
+      internalCustomerId: cusProduct.internal_customer_id,
+      productIds: [cusProduct.product_id],
+    });
+    console.log(`Successfully created invoice`);
+  }
+};

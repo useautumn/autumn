@@ -1,0 +1,3 @@
+https://docs.fontawesome.com/web/use-with/react
+
+https://docs.fontawesome.com/web/setup/packages#1-configure-access

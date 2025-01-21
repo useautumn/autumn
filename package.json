@@ -1,0 +1,16 @@
+{
+  "name": "autumn",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "server",
+    "shared"
+  ],
+  "type": "module",
+  "scripts": {
+    "frontend:build": "npm run build -w shared && npm run build -w frontend",
+    "frontend:start": "npm run start -w frontend",
+    "server:build": "npm run build -w shared && npm run prod:build -w server",
+    "server:start": "npm run prod:start -w server"
+  }
+}
