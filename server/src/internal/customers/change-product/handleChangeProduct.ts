@@ -13,6 +13,7 @@ import {
   CusProductWithProduct,
   EntitlementWithFeature,
   Feature,
+  FeatureOptions,
   FullProduct,
   Organization,
   Price,
@@ -29,7 +30,8 @@ const scheduleStripeSubscription = async ({
   customer,
   product,
   prices,
-  pricesInput,
+  optionsList,
+  entitlements,
   endOfBillingPeriod,
   org,
   env,
@@ -37,7 +39,8 @@ const scheduleStripeSubscription = async ({
   customer: Customer;
   product: FullProduct;
   prices: Price[];
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
+  entitlements: EntitlementWithFeature[];
   endOfBillingPeriod: number;
   org: Organization;
   env: AppEnv;
@@ -48,7 +51,8 @@ const scheduleStripeSubscription = async ({
     prices,
     product,
     org,
-    pricesInput,
+    optionsList,
+    entitlements,
   });
 
   const paymentMethod = await getCusPaymentMethod({
@@ -77,7 +81,7 @@ const handleDowngrade = async ({
   customer,
   product,
   curCusProduct,
-  pricesInput,
+  optionsList,
   prices,
   entitlements,
   org,
@@ -91,7 +95,7 @@ const handleDowngrade = async ({
   env: AppEnv;
   prices: Price[];
   entitlements: EntitlementWithFeature[];
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
   curCusProduct: CusProductWithProduct;
 }) => {
   console.log(
@@ -128,7 +132,8 @@ const handleDowngrade = async ({
       customer,
       product,
       prices,
-      pricesInput,
+      optionsList,
+      entitlements,
       endOfBillingPeriod: subscription.current_period_end,
       org,
       env,
@@ -143,7 +148,7 @@ const handleDowngrade = async ({
     product,
     prices,
     entitlements,
-    pricesInput,
+    optionsList,
     subscriptionId: undefined,
     startsAt: subscription.current_period_end * 1000,
     subscriptionScheduleId: scheduleId,
@@ -159,14 +164,16 @@ const updateStripeSubscription = async ({
   subscriptionId,
   product,
   prices,
-  pricesInput,
+  optionsList,
+  entitlements,
   org,
 }: {
   stripeCli: Stripe;
   subscriptionId: string;
   product: FullProduct;
   prices: Price[];
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
+  entitlements: EntitlementWithFeature[];
   org: Organization;
 }) => {
   // HANLDE UPGRADE
@@ -178,7 +185,8 @@ const updateStripeSubscription = async ({
     prices,
     product,
     org,
-    pricesInput,
+    optionsList,
+    entitlements,
   });
 
   // Delete existing subscription items
@@ -205,7 +213,7 @@ const handleUpgrade = async ({
   product,
   prices,
   entitlements,
-  pricesInput,
+  optionsList,
   curCusProduct,
   curFullProduct,
   org,
@@ -219,7 +227,7 @@ const handleUpgrade = async ({
   env: AppEnv;
   prices: Price[];
   entitlements: EntitlementWithFeature[];
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
   curCusProduct: CusProductWithProduct;
   curFullProduct: FullProduct;
 }) => {
@@ -241,7 +249,7 @@ const handleUpgrade = async ({
       product,
       prices,
       entitlements,
-      pricesInput,
+      optionsList,
       org,
       env,
     });
@@ -256,7 +264,8 @@ const handleUpgrade = async ({
     stripeCli,
     product,
     prices,
-    pricesInput,
+    optionsList,
+    entitlements,
     org,
   });
 
@@ -268,7 +277,7 @@ const handleUpgrade = async ({
     product,
     prices,
     entitlements,
-    pricesInput,
+    optionsList,
     subscriptionId: subUpdate.id,
     nextResetAt: sameBillingInterval
       ? subUpdate.current_period_end * 1000
@@ -299,7 +308,7 @@ export const handleChangeProduct = async ({
   product,
   prices,
   entitlements,
-  pricesInput,
+  optionsList,
   curCusProduct,
   env,
 }: {
@@ -311,7 +320,7 @@ export const handleChangeProduct = async ({
   features: Feature[];
   prices: Price[];
   entitlements: EntitlementWithFeature[];
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
   env: AppEnv;
   curCusProduct: CusProductWithProduct;
 }) => {
@@ -336,7 +345,7 @@ export const handleChangeProduct = async ({
       curCusProduct,
       prices,
       entitlements,
-      pricesInput,
+      optionsList,
       org,
       env,
     });
@@ -350,7 +359,7 @@ export const handleChangeProduct = async ({
       curCusProduct,
       prices,
       entitlements,
-      pricesInput,
+      optionsList,
       org,
       env,
       curFullProduct,

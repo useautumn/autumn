@@ -7,6 +7,7 @@ import {
   Customer,
   Organization,
   AppEnv,
+  FeatureOptions,
 } from "@autumn/shared";
 
 import { generateId } from "@/utils/genUtils.js";
@@ -22,7 +23,7 @@ export const createCheckoutMetadata = async ({
   product,
   prices,
   entitlements,
-  pricesInput,
+  optionsList,
   env,
 }: {
   sb: SupabaseClient;
@@ -31,7 +32,7 @@ export const createCheckoutMetadata = async ({
   product: FullProduct;
   prices: Price[];
   entitlements: EntitlementWithFeature[];
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
   env: AppEnv;
 }) => {
   const metaId = generateId("meta");
@@ -45,7 +46,7 @@ export const createCheckoutMetadata = async ({
       product,
       prices,
       entitlements,
-      pricesInput,
+      optionsList,
       env,
     },
   };

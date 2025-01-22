@@ -95,6 +95,7 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
             <TableHead className="">Price ID</TableHead>
             <TableHead className="">Type</TableHead>
             <TableHead>Amount</TableHead>
+
             <TableHead>Created At</TableHead>
           </TableRow>
         </TableHeader>

@@ -2,7 +2,12 @@
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import { AppEnv, FeatureType, Organization } from "@autumn/shared";
+import {
+  AppEnv,
+  FeatureType,
+  FullCustomerEntitlement,
+  Organization,
+} from "@autumn/shared";
 import { BreadcrumbItem } from "@nextui-org/react";
 import { Breadcrumbs } from "@nextui-org/react";
 import { CustomerContext } from "./CustomerContext";
@@ -41,6 +46,10 @@ export default function CustomerView({
     url: `/customers/${customer_id}/data`,
     env,
   });
+
+  if (error) {
+    router.push("/customers");
+  }
 
   if (isLoading) return <LoadingScreen />;
   const { customer, products, invoices } = data;
@@ -95,8 +104,8 @@ export default function CustomerView({
                   customer={{
                     ...customer,
                     entitlements: customer.entitlements.filter(
-                      (cusEnt: any) => {
-                        const featureType = cusEnt.feature.type;
+                      (cusEnt: FullCustomerEntitlement) => {
+                        const featureType = cusEnt.entitlement.feature.type;
                         return (
                           featureType === FeatureType.Metered ||
                           featureType === FeatureType.CreditSystem
@@ -111,8 +120,8 @@ export default function CustomerView({
                   customer={{
                     ...customer,
                     entitlements: customer.entitlements.filter(
-                      (cusEnt: any) => {
-                        const featureType = cusEnt.feature.type;
+                      (cusEnt: FullCustomerEntitlement) => {
+                        const featureType = cusEnt.entitlement.feature.type;
                         return featureType === FeatureType.Boolean;
                       }
                     ),

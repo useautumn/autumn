@@ -41,7 +41,7 @@ export const handleCheckoutSessionCompleted = async ({
     product,
     prices,
     entitlements,
-    pricesInput,
+    optionsList,
     env: metadataEnv,
   } = metadata.data;
 
@@ -67,7 +67,7 @@ export const handleCheckoutSessionCompleted = async ({
     product,
     prices,
     entitlements,
-    pricesInput,
+    optionsList,
     subscriptionId: checkoutSession.subscription as string | undefined,
   });
 

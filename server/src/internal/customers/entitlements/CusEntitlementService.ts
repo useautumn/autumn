@@ -1,5 +1,7 @@
-import { AppEnv, CustomerEntitlement } from "@autumn/shared";
+import RecaseError from "@/utils/errorUtils.js";
+import { AppEnv, CustomerEntitlement, ErrCode } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { StatusCodes } from "http-status-codes";
 
 export class CustomerEntitlementService {
   static async createMany({
@@ -69,5 +71,95 @@ export class CustomerEntitlementService {
     }
 
     return data;
+  }
+
+  static async getActive({
+    sb,
+    internalCustomerId,
+  }: {
+    sb: SupabaseClient;
+    internalCustomerId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_entitlements")
+      .select("*, entitlement:entitlements(*)")
+      .eq("internal_customer_id", internalCustomerId)
+      .eq("status", "active");
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getActiveByFeatureId({
+    sb,
+    internalCustomerId,
+    internalFeatureId,
+  }: {
+    sb: SupabaseClient;
+    internalCustomerId: string;
+    internalFeatureId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_entitlements")
+      .select("*, customer_product:customer_products!inner(*)")
+      .eq("internal_customer_id", internalCustomerId)
+      .eq("internal_feature_id", internalFeatureId)
+      .eq("customer_product.status", "active");
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getActiveInFeatureIds({
+    sb,
+    internalCustomerId,
+    internalFeatureIds,
+  }: {
+    sb: SupabaseClient;
+    internalCustomerId: string;
+    internalFeatureIds: string[];
+  }) {
+    const { data, error } = await sb
+      .from("customer_entitlements")
+      .select("*, customer_product:customer_products!inner(*)")
+      .eq("internal_customer_id", internalCustomerId)
+      .in("internal_feature_id", internalFeatureIds)
+      .eq("customer_product.status", "active");
+
+    if (error) {
+      throw new RecaseError({
+        message: "Error getting customer entitlements",
+        code: ErrCode.InternalError,
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+        data: error,
+      });
+    }
+
+    return data;
+  }
+
+  static async update({
+    sb,
+    id,
+    updates,
+  }: {
+    sb: SupabaseClient;
+    id: string;
+    updates: Partial<CustomerEntitlement>;
+  }) {
+    const { error } = await sb
+      .from("customer_entitlements")
+      .update(updates)
+      .eq("id", id);
+
+    if (error) {
+      throw error;
+    }
   }
 }

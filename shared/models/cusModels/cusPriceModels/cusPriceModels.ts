@@ -1,7 +1,5 @@
 import { z } from "zod";
-import { BillingType, PriceType } from "../../productModels/priceModels.js";
-import { FixedPriceConfigSchema } from "../../productModels/fixedPriceModels.js";
-import { UsagePriceConfigSchema } from "../../productModels/usagePriceModels.js";
+import { PriceSchema } from "../../productModels/priceModels.js";
 
 export const CustomerPriceSchema = z.object({
   id: z.string(),
@@ -10,19 +8,11 @@ export const CustomerPriceSchema = z.object({
   created_at: z.number(),
 
   price_id: z.string().nullable(),
-
-  options: z.any(),
 });
 
-export const CustomPriceSchema = z.object({
-  id: z.string(),
-  org_id: z.string(),
-  created_at: z.number(),
-
-  type: z.nativeEnum(PriceType),
-  billing_type: z.nativeEnum(BillingType),
-  config: FixedPriceConfigSchema.or(UsagePriceConfigSchema),
+export const FullCustomerPriceSchema = CustomerPriceSchema.extend({
+  price: PriceSchema,
 });
 
-export type CustomPrice = z.infer<typeof CustomPriceSchema>;
 export type CustomerPrice = z.infer<typeof CustomerPriceSchema>;
+export type FullCustomerPrice = z.infer<typeof FullCustomerPriceSchema>;

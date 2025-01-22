@@ -70,7 +70,7 @@ export class CusService {
       .select(
         `*, 
         products:customer_products(*, product:products(*)), 
-        entitlements:customer_entitlements(*, entitlement:entitlements(*), feature:features(*)), 
+        entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
         prices:customer_prices(*, price:prices(*))`
       )
       .eq("env", env)
@@ -170,4 +170,6 @@ export class CusService {
       throw error;
     }
   }
+
+  // ENTITLEMENTS
 }

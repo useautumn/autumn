@@ -9,21 +9,22 @@ import {
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useProductContext } from "../ProductContext";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { EntitlementConfig } from "./EntitlementConfig";
 import { Entitlement } from "@autumn/shared";
+import { generateId } from "@/utils/genUtils";
 
 export const CreateEntitlement = () => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
-  const { env, product, setProduct } = useProductContext();
+  const { product, setProduct } = useProductContext();
 
   const handleCreateEntitlement = async () => {
-    setLoading(true);
+    // setLoading(true);
 
     const newEntitlement = {
       ...entitlement,
+      id: generateId("ent"),
     };
 
     setProduct({
@@ -33,7 +34,7 @@ export const CreateEntitlement = () => {
 
     setOpen(false);
     setEntitlement(null);
-    setLoading(false);
+    // setLoading(false);
   };
 
   return (
@@ -57,7 +58,11 @@ export const CreateEntitlement = () => {
         />
 
         <DialogFooter>
-          <Button onClick={handleCreateEntitlement} isLoading={loading} variant="gradientPrimary">
+          <Button
+            onClick={handleCreateEntitlement}
+            isLoading={loading}
+            variant="gradientPrimary"
+          >
             Create
           </Button>
         </DialogFooter>

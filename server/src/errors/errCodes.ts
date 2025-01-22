@@ -41,6 +41,7 @@ export const ErrCode = {
   CustomerHasNoPaymentMethod: "customer_has_no_payment_method",
   CustomerHasNoBaseProduct: "customer_has_no_base_product",
   AttachProductToCustomerFailed: "attach_product_to_customer_failed",
+  MultipleProductsFound: "multiple_products_found",
 
   // Product
   InvalidProduct: "invalid_product",
@@ -54,6 +55,7 @@ export const ErrCode = {
   CreateStripeSubscriptionFailed: "create_stripe_subscription_failed",
   UpdateCusProductFailed: "update_customer_product_failed",
   DefaultProductNotAllowedPrice: "default_product_not_allowed_price",
+  InvalidOptions: "invalid_options",
 
   // Entitlements
   InvalidEntitlement: "invalid_entitlement",

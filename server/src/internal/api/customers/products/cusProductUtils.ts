@@ -3,6 +3,7 @@ import {
   AppEnv,
   Entitlement,
   Feature,
+  FeatureOptions,
   FeatureType,
   FixedPriceConfigSchema,
   FullProduct,
@@ -347,6 +348,7 @@ export const getFullCusProductData = async ({
   pricesInput,
   entsInput,
   env,
+  optionsListInput,
 }: {
   sb: SupabaseClient;
   customerId: string;
@@ -355,6 +357,7 @@ export const getFullCusProductData = async ({
   pricesInput: PricesInput;
   entsInput: Entitlement[];
   env: AppEnv;
+  optionsListInput: FeatureOptions[];
 }) => {
   // 1. Get customer, product, org & features
   const { customer, fullProduct, org } = await getCustomerProductAndOrg({
@@ -365,11 +368,47 @@ export const getFullCusProductData = async ({
     env,
   });
 
+  if (!customer) {
+    throw new RecaseError({
+      message: "Customer not found",
+      code: ErrCode.CustomerNotFound,
+      statusCode: 400,
+    });
+  }
+
+  if (!fullProduct) {
+    throw new RecaseError({
+      message: "Product not found",
+      code: ErrCode.ProductNotFound,
+      statusCode: 400,
+    });
+  }
+
   const features = await FeatureService.getFeatures({
     sb,
     orgId,
     env,
   });
+
+  let newOptionsList: FeatureOptions[] = [];
+  for (const options of optionsListInput) {
+    const feature = features.find(
+      (feature) => feature.id === options.feature_id
+    );
+
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${options.feature_id} not found`,
+        code: ErrCode.FeatureNotFound,
+        statusCode: 400,
+      });
+    }
+
+    newOptionsList.push({
+      ...options,
+      internal_feature_id: feature.internal_id,
+    });
+  }
 
   const { prices, entitlements } = await processPricesAndEntsInput({
     sb,
@@ -386,5 +425,6 @@ export const getFullCusProductData = async ({
     prices,
     entitlements,
     features,
+    optionsList: newOptionsList,
   };
 };

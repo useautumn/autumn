@@ -1,39 +1,32 @@
+import React, { useEffect, useState } from "react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { SelectContent } from "@/components/ui/select";
 import { SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SelectItem } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTrigger,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Select } from "@/components/ui/select";
-import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import toast from "react-hot-toast";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { cn } from "@/lib/utils";
 import { useHotkeys } from "react-hotkeys-hook";
-import { PlusIcon, XIcon } from "lucide-react";
-
+import { XIcon } from "lucide-react";
 import { Expression, MeteredConfig } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
-import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFeaturesContext } from "../FeaturesContext";
 
 export function FeatureConfig({
   feature,
   setFeature,
+  eventNameInput,
+  setEventNameInput,
+  isUpdate = false,
 }: {
   feature: any;
   setFeature: any;
+  eventNameInput: string;
+  setEventNameInput: any;
+  isUpdate?: boolean;
 }) {
   const { env, mutate } = useFeaturesContext();
   const axiosInstance = useAxiosInstance({ env });
@@ -129,6 +122,7 @@ export function FeatureConfig({
         <div className="w-full">
           <FieldLabel>ID</FieldLabel>
           <Input
+            disabled={isUpdate}
             placeholder="ID"
             value={fields.id}
             onChange={(e) => {
@@ -149,7 +143,12 @@ export function FeatureConfig({
               <p className="text-t2 font-mono">event_name</p>
               <p className="text-sm text-t3">is one of</p>
             </div>
-            <FilterInput config={meteredConfig} setConfig={setMeteredConfig} />
+            <FilterInput
+              config={meteredConfig}
+              setConfig={setMeteredConfig}
+              eventNameInput={eventNameInput}
+              setEventNameInput={setEventNameInput}
+            />
           </div>
 
           <div>
@@ -176,19 +175,23 @@ export function FeatureConfig({
 export const FilterInput = ({
   config,
   setConfig,
+  eventNameInput,
+  setEventNameInput,
 }: {
   config: MeteredConfig;
   setConfig: any;
+  eventNameInput: string;
+  setEventNameInput: any;
 }) => {
   const [inputFocused, setInputFocused] = useState(false);
-  const [inputValue, setInputValue] = useState("");
+
   const filter: Expression = config.filters[0];
 
   const enterClicked = () => {
     const newFilter: Expression = { ...config.filters[0] };
-    newFilter.value.push(inputValue);
+    newFilter.value.push(eventNameInput);
     setConfig({ ...config, filters: [newFilter] });
-    setInputValue("");
+    setEventNameInput("");
   };
 
   const onRemoveClicked = (index: number) => {
@@ -235,8 +238,8 @@ export const FilterInput = ({
         placeholder="eg. api_request"
         onFocus={() => setInputFocused(true)}
         onBlur={() => setInputFocused(false)}
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
+        value={eventNameInput}
+        onChange={(e) => setEventNameInput(e.target.value)}
       ></input>
     </div>
   );

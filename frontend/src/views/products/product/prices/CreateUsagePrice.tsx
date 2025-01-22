@@ -34,7 +34,6 @@ function CreateUsagePrice({
   setUsageTiers: (usageTiers: any[]) => void;
 }) {
   const { entitlements, env } = useProductContext();
-  const axiosInstance = useAxiosInstance({ env });
 
   const setUsageTier = (index: number, key: string, value: string) => {
     const newUsageTiers = [...config.usage_tiers];
@@ -68,12 +67,15 @@ function CreateUsagePrice({
           <FieldLabel>Entitlement</FieldLabel>
           <Select
             value={config.entitlement_id}
-            onValueChange={(value) =>
-              setConfig({ ...config, entitlement_id: value as string })
-            }
+            onValueChange={(value) => {
+              setConfig({
+                ...config,
+                entitlement_id: value as string,
+              });
+            }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select an entitlement" />
+              <SelectValue placeholder="Select entitlement" />
             </SelectTrigger>
             <SelectContent>
               {entitlements.map((entitlement: EntitlementWithFeature) => (
@@ -243,7 +245,10 @@ export const UsageTierInput = ({
       />
       {isAmount && (
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px]">
-          / {entitlements?.find((e) => e.id == config?.entitlement_id)?.allowance || "n"} units
+          /{" "}
+          {entitlements?.find((e) => e.id == config?.entitlement_id)
+            ?.allowance || "n"}{" "}
+          units
         </span>
       )}
     </div>

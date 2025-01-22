@@ -15,6 +15,9 @@ export class CusService {
     customer_id: string,
     data: any
   ) {
-    return await axios.post(`/v1/customers/${customer_id}/products`, data);
+    return await axios.post(`/v1/attach`, {
+      customer_id,
+      ...data,
+    });
   }
 }

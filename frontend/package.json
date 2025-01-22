@@ -43,6 +43,7 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^11.13.1",
     "hast-util-to-html": "^8.0.0",
+    "ksuid": "^3.0.0",
     "lucide-react": "^0.468.0",
     "next": "15.0.3",
     "ora": "^8.1.1",

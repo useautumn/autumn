@@ -40,11 +40,17 @@ export const PricingConfig = ({
     ],
   };
 
-  const [priceType, setPriceType] = useState(price?.config?.type || PriceType.Fixed);
+  const [priceType, setPriceType] = useState(
+    price?.config?.type || PriceType.Fixed
+  );
   const [name, setName] = useState(price?.name || "");
   const [usageTiers, setUsageTiers] = useState<any[]>([]);
-  const [fixedConfig, setFixedConfig] = useState(price?.config.amount ? price.config : defaultFixedConfig);
-  const [usageConfig, setUsageConfig]: any = useState(price?.config.entitlement_id ? price.config : defaultUsageConfig);
+  const [fixedConfig, setFixedConfig] = useState(
+    price?.config.amount ? price.config : defaultFixedConfig
+  );
+  const [usageConfig, setUsageConfig]: any = useState(
+    price?.config.entitlement_id ? price.config : defaultUsageConfig
+  );
 
   useEffect(() => {
     if (priceType === PriceType.Fixed) {

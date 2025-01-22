@@ -1,6 +1,25 @@
 import { z } from "zod";
 import { ProcessorType } from "../genModels.js";
 import { ProductSchema } from "../productModels/productModels.js";
+import { CustomerPriceSchema } from "./cusPriceModels/cusPriceModels.js";
+import { PriceSchema } from "../productModels/priceModels.js";
+import { CustomerEntitlementSchema } from "./cusEntModels/cusEntitlementModels.js";
+import { EntitlementSchema } from "../productModels/entitlementModels.js";
+import { FeatureSchema } from "../featureModels/featureModels.js";
+import { CustomerSchema } from "./cusModels.js";
+
+export const FeatureOptionsSchema = z.object({
+  internal_feature_id: z.string().optional(),
+  feature_id: z.string(),
+  threshold: z.number().optional().nullable(),
+  quantity: z.number().optional().nullable(),
+});
+
+// export const FeatureOptionsInputSchema = z.object({
+//   feature_id: z.string(),
+//   threshold: z.number().optional().nullable(),
+//   quantity: z.number().optional().nullable(),
+// });
 
 export const BillingCycleAnchorConfig = z.object({
   month: z.number(),
@@ -32,12 +51,15 @@ export const CusProductSchema = z.object({
   canceled_at: z.number().optional().nullable(),
   ended_at: z.number().optional().nullable(),
 
+  options: z.array(FeatureOptionsSchema),
+
   // Fixed-cycle configuration
   processor: z
     .object({
       type: z.nativeEnum(ProcessorType),
       subscription_id: z.string().optional().nullable(),
       subscription_schedule_id: z.string().optional().nullable(),
+      last_invoice_id: z.string().optional().nullable(),
     })
     .optional(),
 });
@@ -49,3 +71,23 @@ export const CusProductWithProduct = CusProductSchema.extend({
 });
 
 export type CusProductWithProduct = z.infer<typeof CusProductWithProduct>;
+export type FeatureOptions = z.infer<typeof FeatureOptionsSchema>;
+
+export const FullCusProductSchema = CusProductSchema.extend({
+  customer_prices: z.array(
+    CustomerPriceSchema.extend({
+      prices: z.array(PriceSchema),
+    })
+  ),
+  customer_entitlements: z.array(
+    CustomerEntitlementSchema.extend({
+      entitlement: EntitlementSchema.extend({
+        feature: FeatureSchema,
+      }),
+    })
+  ),
+  customer: CustomerSchema,
+  product: ProductSchema,
+});
+
+export type FullCusProduct = z.infer<typeof FullCusProductSchema>;

@@ -22,7 +22,6 @@ export default function UpdateEntitlement({
   const { entitlements, setProduct, product } = useProductContext();
 
   const handleDeleteFeature = () => {
-    console.log("Delete entitlement", selectedEntitlement);
     const updatedEntitlements = entitlements.filter((entitlement: any) => {
       return entitlement.id !== selectedEntitlement.id;
     });
@@ -52,13 +51,21 @@ export default function UpdateEntitlement({
         <EntitlementConfig
           entitlement={selectedEntitlement}
           setEntitlement={setSelectedEntitlement}
+          isUpdate={true}
         />
 
         <DialogFooter>
-          <Button variant="destructive" className="text-xs" onClick={() => handleDeleteFeature()}>
+          <Button
+            variant="destructive"
+            className="text-xs"
+            onClick={() => handleDeleteFeature()}
+          >
             Delete
           </Button>
-          <Button onClick={() => handleUpdateFeature()} variant="gradientPrimary">
+          <Button
+            onClick={() => handleUpdateFeature()}
+            variant="gradientPrimary"
+          >
             Update Entitlement
           </Button>
         </DialogFooter>

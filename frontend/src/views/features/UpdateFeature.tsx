@@ -6,11 +6,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FeatureService } from "@/services/FeatureService";
 import { useFeaturesContext } from "./FeaturesContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import toast from "react-hot-toast";
+import { FeatureType } from "@autumn/shared";
 
 export default function UpdateFeature({
   open,
@@ -26,19 +27,34 @@ export default function UpdateFeature({
   const { env, mutate } = useFeaturesContext();
   const axiosInstance = useAxiosInstance({ env });
   const [updateLoading, setUpdateLoading] = useState(false);
+  const [eventNameInput, setEventNameInput] = useState("");
 
-  const handleDeleteFeature = () => {
-    console.log("Delete Feature");
+  useEffect(() => {
+    if (open) {
+      setEventNameInput("");
+    }
+  }, [open]);
+
+  const updateConfig = () => {
+    const config: any = structuredClone(selectedFeature.config);
+    if (
+      selectedFeature.type === FeatureType.Metered &&
+      eventNameInput &&
+      config.filters[0].value.length === 0
+    ) {
+      config.filters[0].value.push(eventNameInput);
+    }
+    return config;
   };
 
   const handleUpdateFeature = async () => {
     setUpdateLoading(true);
+
     try {
-      await FeatureService.updateFeature(
-        axiosInstance,
-        selectedFeature.id,
-        selectedFeature
-      );
+      await FeatureService.updateFeature(axiosInstance, selectedFeature.id, {
+        ...selectedFeature,
+        config: updateConfig(),
+      });
 
       await mutate();
       setOpen(false);
@@ -56,12 +72,12 @@ export default function UpdateFeature({
         <FeatureConfig
           feature={selectedFeature}
           setFeature={setSelectedFeature}
+          eventNameInput={eventNameInput}
+          setEventNameInput={setEventNameInput}
+          isUpdate={true}
         />
 
         <DialogFooter>
-          <Button variant="destructive" className="text-xs" onClick={() => handleDeleteFeature()}>
-            Delete
-          </Button>
           <Button
             isLoading={updateLoading}
             onClick={() => handleUpdateFeature()}

@@ -13,7 +13,6 @@ import {
 } from "@/external/stripe/stripeCusUtils.js";
 import Stripe from "stripe";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { cusProductApiRouter } from "./products/cusProductRouter.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 
@@ -192,4 +191,4 @@ cusRouter.delete("/:customerId", async (req: any, res: any) => {
   }
 });
 
-cusRouter.use("/:customer_id/products", cusProductApiRouter);
+// cusRouter.use("/:customer_id/products", cusProductApiRouter);

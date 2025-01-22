@@ -23,15 +23,32 @@ const defaultFeature = {
   id: "",
 };
 export const CreateFeature = () => {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [feature, setFeature] = useState(defaultFeature);
   const { env, mutate } = useFeaturesContext();
   const axiosInstance = useAxiosInstance({ env });
 
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [feature, setFeature] = useState(defaultFeature);
+  const [eventNameInput, setEventNameInput] = useState("");
+
   useEffect(() => {
-    setFeature(defaultFeature);
+    if (open) {
+      setFeature(defaultFeature);
+      setEventNameInput("");
+    }
   }, [open]);
+
+  const updateConfig = () => {
+    const config: any = structuredClone(feature.config);
+    if (
+      feature.type === FeatureType.Metered &&
+      eventNameInput &&
+      config.filters[0].value.length === 0
+    ) {
+      config.filters[0].value.push(eventNameInput);
+    }
+    return config;
+  };
 
   const handleCreateFeature = async () => {
     if (!feature.name || !feature.id || !feature.type || !feature.config) {
@@ -45,7 +62,7 @@ export const CreateFeature = () => {
         name: feature.name,
         id: feature.id,
         type: feature.type,
-        config: feature.config,
+        config: updateConfig(),
       });
       mutate();
       setOpen(false);
@@ -70,10 +87,19 @@ export const CreateFeature = () => {
         <DialogHeader>
           <DialogTitle>Create Feature</DialogTitle>
         </DialogHeader>
-        <FeatureConfig feature={feature} setFeature={setFeature} />
+        <FeatureConfig
+          feature={feature}
+          setFeature={setFeature}
+          eventNameInput={eventNameInput}
+          setEventNameInput={setEventNameInput}
+        />
 
         <DialogFooter>
-          <Button onClick={handleCreateFeature} isLoading={loading} variant="gradientPrimary">
+          <Button
+            onClick={handleCreateFeature}
+            isLoading={loading}
+            variant="gradientPrimary"
+          >
             Create
           </Button>
         </DialogFooter>

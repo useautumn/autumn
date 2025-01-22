@@ -1,4 +1,3 @@
-import { AppEnv } from "@autumn/shared";
 import KSUID from "ksuid";
 
 export const generateId = (prefix: string) => {

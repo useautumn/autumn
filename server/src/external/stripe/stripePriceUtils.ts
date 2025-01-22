@@ -7,6 +7,7 @@ import {
   FullProduct,
   Price,
   UsagePriceConfig,
+  FeatureOptions,
 } from "@autumn/shared";
 
 import { billingIntervalToStripe } from "./utils.js";
@@ -22,7 +23,7 @@ export const priceToStripeItem = ({
   price: Price;
   product: FullProduct;
   org: Organization;
-  options: PriceOptions | undefined;
+  options: FeatureOptions | undefined | null;
 }) => {
   // TODO: Implement this
   const billingType = price.billing_type;
@@ -62,9 +63,9 @@ export const priceToStripeItem = ({
   } else if (billingType == BillingType.UsageInAdvance) {
     const config = price.config as UsagePriceConfig;
 
-    if (!options || !options.quantity) {
+    if (!options?.quantity) {
       throw new RecaseError({
-        code: ErrCode.InvalidPriceOptions,
+        code: ErrCode.InvalidOptions,
         message:
           "Price options are required for in advance usage prices. Missing: `quantity`",
         statusCode: 400,

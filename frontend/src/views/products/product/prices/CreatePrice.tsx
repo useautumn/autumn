@@ -15,6 +15,7 @@ import {
 } from "./PricingConfig";
 import { PriceType } from "@autumn/shared";
 import { useProductContext } from "../ProductContext";
+import { generateId } from "@/utils/genUtils";
 
 export const CreatePrice = () => {
   const [open, setOpen] = useState(false);
@@ -44,6 +45,7 @@ export const CreatePrice = () => {
     setLoading(true);
     const newPrice = {
       ...price,
+      id: generateId("pr"),
       config,
       // created_at: Date.now(),
       // id: product.prices.length,
@@ -57,28 +59,6 @@ export const CreatePrice = () => {
     setPrice(null);
     setLoading(false);
   };
-
-  //   //   if (!product) {
-  //   //   try {
-  //   //     await PriceService.createPrice(axiosInstance, {
-  //   //       product_id: product.id,
-  //   //       config: { ...config, type: price.priceType },
-  //   //       name: price.name,
-  //   //     });
-  //   //     await mutate();
-  //   //   } catch (error) {
-  //   //     console.log(error);
-  //   //     toast.error("Failed to create price");
-  //   //   }
-  //   // }
-  //   setOpen(false);
-  //   setPrice({
-  //     priceType: PriceType.Fixed,
-  //     config: {},
-  //     name: "",
-  //   });
-  //   setLoading(false);
-  // };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -95,7 +75,11 @@ export const CreatePrice = () => {
         <DialogTitle>Create Price</DialogTitle>
         <PricingConfig price={price} setPrice={setPrice} />
         <DialogFooter>
-          <Button onClick={handleCreatePrice} isLoading={loading} variant="gradientPrimary">
+          <Button
+            onClick={handleCreatePrice}
+            isLoading={loading}
+            variant="gradientPrimary"
+          >
             Create Price
           </Button>
         </DialogFooter>

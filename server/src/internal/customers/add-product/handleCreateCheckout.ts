@@ -1,5 +1,10 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { AppEnv, EntitlementWithFeature, Price } from "@autumn/shared";
+import {
+  AppEnv,
+  EntitlementWithFeature,
+  FeatureOptions,
+  Price,
+} from "@autumn/shared";
 import { Organization } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
 import { Customer } from "@autumn/shared";
@@ -18,7 +23,7 @@ export const handleCreateCheckout = async ({
   org,
   prices,
   entitlements,
-  pricesInput,
+  optionsList,
   env,
 }: {
   req: any;
@@ -28,7 +33,7 @@ export const handleCreateCheckout = async ({
   org: Organization;
   prices: Price[];
   entitlements: EntitlementWithFeature[];
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
   env: AppEnv;
 }) => {
   console.log(
@@ -42,7 +47,8 @@ export const handleCreateCheckout = async ({
     product,
     prices,
     org,
-    pricesInput,
+    optionsList,
+    entitlements,
   });
 
   const isRecurring = pricesContainRecurring(prices);
@@ -54,8 +60,8 @@ export const handleCreateCheckout = async ({
     customer,
     product,
     prices,
+    optionsList,
     entitlements,
-    pricesInput,
     env,
   });
 

@@ -11,6 +11,9 @@ import {
   PriceType,
   UsagePriceConfig,
   PricesInput,
+  Entitlement,
+  EntitlementWithFeature,
+  FeatureOptions,
 } from "@autumn/shared";
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
@@ -103,20 +106,30 @@ export const getBillLaterPrices = (prices: Price[]) => {
 };
 
 // Get price options
-export const getEntPriceOption = (
-  entId: string,
-  prices: Price[],
-  pricesInput: PricesInput
+export const getEntOptions = (
+  optionsList: FeatureOptions[],
+  entitlement: Entitlement | EntitlementWithFeature
 ) => {
-  const price = prices.find(
-    (p) => "entitlement_id" in p.config! && p.config.entitlement_id === entId
-  );
-
-  if (!price) {
+  if (!entitlement) {
     return null;
   }
+  const options = optionsList.find(
+    (options) => options.internal_feature_id === entitlement.internal_feature_id
+  );
+  return options;
+};
 
-  return pricesInput.find((po) => po.id == price?.id)?.options;
+export const getPriceEntitlement = (
+  price: Price,
+  entitlements: EntitlementWithFeature[]
+) => {
+  let config = price.config as UsagePriceConfig;
+
+  const entitlement = entitlements.find(
+    (ent) => ent.id === config.entitlement_id
+  );
+
+  return entitlement as EntitlementWithFeature;
 };
 
 export const comparePrices = (price1: Price, price2: Price) => {
@@ -138,10 +151,6 @@ export const comparePrices = (price1: Price, price2: Price) => {
   }
 
   return true;
-};
-
-export const getPriceOptions = (priceId: string, pricesInput: PricesInput) => {
-  return pricesInput.find((po) => "id" in po && po.id === priceId)?.options;
 };
 
 export function compareBillingIntervals(
@@ -167,24 +176,29 @@ export function compareBillingIntervals(
 
 // Stripe items
 export const getStripeSubItems = ({
+  entitlements,
   prices,
   product,
   org,
-  pricesInput,
+  optionsList,
 }: {
+  entitlements: EntitlementWithFeature[];
   prices: Price[];
   product: FullProduct;
   org: Organization;
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
 }) => {
   let subItems: any[] = [];
   for (const price of prices) {
+    const priceEnt = getPriceEntitlement(price, entitlements);
+    const options = getEntOptions(optionsList, priceEnt);
+
     subItems.push(
       priceToStripeItem({
         price,
         product,
         org,
-        options: getPriceOptions(price.id!, pricesInput),
+        options,
       })
     );
   }

@@ -296,6 +296,9 @@ const validatePricesAndEnts = ({
     idToEnt[ent.id!] = EntitlementSchema.parse(ent);
   }
 
+  // console.log("Prices: ", prices);
+  // console.log("Ents: ", entitlements);
+
   for (const price of prices) {
     let newPrice: Price;
 
@@ -320,7 +323,7 @@ const validatePricesAndEnts = ({
     } else {
       // Create
       newPrices.push({
-        id: generateId("pr"),
+        // id: generateId("pr"),
         org_id: orgId,
         created_at: Date.now(),
         billing_type: getBillingType(newPrice.config!),
@@ -368,7 +371,7 @@ const validatePricesAndEnts = ({
     } else {
       // Create
       newEntitlements.push({
-        id: generateId("ent"),
+        // id: generateId("ent"),
         org_id: orgId,
         created_at: Date.now(),
         product_id: productId,

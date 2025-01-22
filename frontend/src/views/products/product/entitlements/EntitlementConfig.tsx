@@ -21,13 +21,15 @@ import {
 } from "@autumn/shared";
 
 export const EntitlementConfig = ({
+  isUpdate = false,
   entitlement,
   setEntitlement,
 }: {
+  isUpdate?: boolean;
   entitlement: EntitlementWithFeature | Entitlement | null;
   setEntitlement: (entitlement: EntitlementWithFeature | null) => void;
 }) => {
-  const { features } = useProductContext();
+  const { features, product } = useProductContext();
 
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(
     features?.find(
@@ -81,12 +83,13 @@ export const EntitlementConfig = ({
             ) || null
           )
         }
+        disabled={isUpdate}
       >
         <SelectTrigger>
           <SelectValue placeholder="Select a feature" />
         </SelectTrigger>
         <SelectContent>
-          {features?.map((feature: Feature) => (
+          {features.map((feature: Feature) => (
             <SelectItem key={feature.internal_id} value={feature.internal_id!}>
               <div className="flex gap-2 items-center">
                 {feature.name}

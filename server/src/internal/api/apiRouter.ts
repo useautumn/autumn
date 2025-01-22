@@ -9,12 +9,13 @@ import { entitlementApiRouter } from "./entitlements/entitlementsRouter.js";
 import { featureApiRouter } from "./features/featureApiRouter.js";
 import { entitledRouter } from "./entitled/entitledRouter.js";
 import { gateMiddleware } from "@/test/gateMiddleware.js";
+import { attachRouter } from "./customers/products/cusProductRouter.js";
 
 const apiRouter = Router();
 
 apiRouter.use(apiAuthMiddleware);
 // apiRouter.use(gateMiddleware);
-
+apiRouter.use("/attach", attachRouter);
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/products", productApiRouter);
 apiRouter.use("/features", featureApiRouter);

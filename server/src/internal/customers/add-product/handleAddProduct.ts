@@ -1,7 +1,9 @@
 import {
   getBillLaterPrices,
   getBillNowPrices,
-  getPriceOptions,
+  getEntOptions,
+  getPriceEntitlement,
+  getStripeSubItems,
   pricesOnlyOneOff,
 } from "@/internal/prices/priceUtils.js";
 
@@ -9,6 +11,7 @@ import {
   AppEnv,
   Customer,
   EntitlementWithFeature,
+  FeatureOptions,
   FullProduct,
   Organization,
   Price,
@@ -16,12 +19,12 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { priceToStripeItem } from "@/external/stripe/stripePriceUtils.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
-import { PricesInput } from "@autumn/shared";
+import chalk from "chalk";
+import { priceToStripeItem } from "@/external/stripe/stripePriceUtils.js";
 
 const handleBillNowPrices = async ({
   sb,
@@ -29,7 +32,7 @@ const handleBillNowPrices = async ({
   product,
   prices,
   entitlements,
-  pricesInput,
+  optionsList,
   org,
   env,
 }: {
@@ -38,7 +41,7 @@ const handleBillNowPrices = async ({
   product: FullProduct;
   prices: Price[];
   entitlements: EntitlementWithFeature[];
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
   org: Organization;
   env: AppEnv;
 }) => {
@@ -47,20 +50,13 @@ const handleBillNowPrices = async ({
   const billNowPrices = getBillNowPrices(prices);
   const stripeCli = createStripeCli({ org, env });
 
-  const subItems = [];
-
-  for (const price of billNowPrices) {
-    const priceOption = getPriceOptions(price.id!, pricesInput);
-
-    subItems.push(
-      priceToStripeItem({
-        price,
-        product,
-        org,
-        options: priceOption,
-      })
-    );
-  }
+  const subItems = getStripeSubItems({
+    entitlements,
+    product,
+    prices,
+    org,
+    optionsList,
+  });
 
   const paymentMethod = await getCusPaymentMethod({
     org,
@@ -93,7 +89,7 @@ const handleBillNowPrices = async ({
     product,
     prices,
     entitlements,
-    pricesInput,
+    optionsList,
     subscriptionId: subscription.id,
   });
 
@@ -119,9 +115,9 @@ export const handleAddProduct = async ({
   product,
   prices,
   entitlements,
-  pricesInput,
   org,
   env,
+  optionsList,
 }: {
   req: any;
   res: any;
@@ -129,13 +125,23 @@ export const handleAddProduct = async ({
   product: FullProduct;
   prices: Price[];
   entitlements: EntitlementWithFeature[];
-  pricesInput: PricesInput;
   org: Organization;
   env: AppEnv;
+  optionsList: FeatureOptions[];
 }) => {
-  console.log(
-    `No existing product, payment method found. Adding product ${product.name} to customer ${customer.id} manually...`
-  );
+  if (product.is_add_on) {
+    console.log(
+      `Adding add-on ${chalk.yellowBright(
+        product.name
+      )} to customer ${chalk.yellowBright(customer.id)}`
+    );
+  } else {
+    console.log(
+      `Adding product ${chalk.yellowBright(
+        product.name
+      )} to customer ${chalk.yellowBright(customer.id)}`
+    );
+  }
 
   // 1. Handle one-off payment products
   if (pricesOnlyOneOff(prices)) {
@@ -153,7 +159,7 @@ export const handleAddProduct = async ({
       product,
       prices,
       entitlements,
-      pricesInput,
+      optionsList,
       org,
       env,
     });
@@ -161,6 +167,8 @@ export const handleAddProduct = async ({
     res.status(200).send({ success: true });
     return;
   }
+
+  console.log("Creating bill later prices");
 
   const billLaterPrices = getBillLaterPrices(prices);
 
@@ -170,10 +178,11 @@ export const handleAddProduct = async ({
     product,
     prices,
     entitlements,
-    pricesInput,
+    optionsList,
     subscriptionId: undefined,
   });
-  console.log("Creating bill later prices");
+
+  console.log("Successfully created full cus product");
 
   res.status(200).send({ success: true });
 };

@@ -24,8 +24,12 @@ export default class RecaseError extends Error {
   }
 
   print() {
-    console.log(`RECASE ERROR\n${this.code}: ${this.message}\n`);
-    console.log(this.data);
+    console.log(`RECASE ERROR\n${this.code}: ${this.message}`);
+    if (this.data) {
+      console.log(this.data);
+    } else {
+      console.log("No error data");
+    }
   }
 }
 

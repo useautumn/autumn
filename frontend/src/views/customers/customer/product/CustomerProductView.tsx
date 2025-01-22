@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ErrCode } from "@autumn/shared";
 import { AddProductButton } from "../add-product/AddProductButton";
+import ErrorScreen from "@/views/general/ErrorScreen";
 
 export default function CustomerProductView({
   product_id,
@@ -55,7 +56,7 @@ export default function CustomerProductView({
   const router = useRouter();
   const axiosInstance = useAxiosInstance({ env });
   const [product, setProduct] = useState<FrontendProduct | null>(null);
-  const { data, isLoading, mutate } = useAxiosSWR({
+  const { data, isLoading, mutate, error } = useAxiosSWR({
     url: `/customers/${customer_id}/data`,
     env,
   });
@@ -99,6 +100,17 @@ export default function CustomerProductView({
       });
     setHasChanges(hasChanged);
   }, [product]);
+
+  if (error) {
+    console.log("Use Axios SWR Error: ", error);
+    return (
+      <ErrorScreen>
+        <p>
+          Customer {customer_id} or product {product_id} not found
+        </p>
+      </ErrorScreen>
+    );
+  }
 
   if (isLoading) return <LoadingScreen />;
 

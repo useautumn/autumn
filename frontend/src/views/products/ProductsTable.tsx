@@ -1,4 +1,7 @@
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import {
+  formatUnixToDateTime,
+  formatUnixToDateTimeString,
+} from "@/utils/formatUtils/formatDateUtils";
 import { Product } from "@autumn/shared";
 import React from "react";
 import { useRouter } from "next/navigation";
@@ -14,6 +17,7 @@ import {
 } from "@/components/ui/table";
 import { navigateTo } from "@/utils/genUtils";
 import { useProductsContext } from "./ProductsContext";
+import { Badge } from "@/components/ui/badge";
 
 export const ProductsTable = ({ products }: { products: Product[] }) => {
   const { env } = useProductsContext();
@@ -24,6 +28,7 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
         <TableRow>
           <TableHead className="">Name</TableHead>
           <TableHead>Product ID</TableHead>
+          <TableHead>Type</TableHead>
           <TableHead>Created At</TableHead>
           <TableHead className="w-20"></TableHead>
         </TableRow>
@@ -38,16 +43,20 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
             <TableCell className="min-w-32 font-medium">
               {product.name}
             </TableCell>
-            <TableCell className="min-w-32 font-mono text-t2 w-full">
-              {" "}
-              {product.id}{" "}
+            <TableCell className="min-w-72 font-mono text-t2">
+              {product.id}
+            </TableCell>
+            <TableCell className="min-w-32 text-t2 w-full">
+              {product.is_default ? (
+                <Badge variant="outline">Default</Badge>
+              ) : product.is_add_on ? (
+                <Badge variant="outline">Add-On</Badge>
+              ) : (
+                <></>
+              )}
             </TableCell>
             <TableCell className="min-w-48">
-              {formatUnixToDateTime(product.created_at).date}
-              <span className="text-t3">
-                {" "}
-                {formatUnixToDateTime(product.created_at).time}{" "}
-              </span>
+              {formatUnixToDateTimeString(product.created_at)}
             </TableCell>
             <TableCell className="w-20 ">
               <ProductRowToolbar product={product} />

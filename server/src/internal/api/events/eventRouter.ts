@@ -12,12 +12,16 @@ import RecaseError, {
   handleRequestError,
 } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
-import { ErrorMessages } from "@/errors/errMessages.js";
+
 import { EventService } from "./EventService.js";
 import { StatusCodes } from "http-status-codes";
 import { CustomerEntitlementService } from "../../customers/entitlements/CusEntitlementService.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { z } from "zod";
+
+import {
+  getBelowThresholdPrice,
+  handleBelowThresholdInvoicing,
+} from "./invoiceThresholdUtils.js";
 
 export const eventsRouter = Router();
 
@@ -112,19 +116,18 @@ const getFeaturesAndCustomerEnts = async ({
   }
 
   let internalFeatureIds = rows.map((feature) => feature.internal_id);
-  const { data: cusEnts, error: cusEntsError } = await req.sb
-    .from("customer_entitlements")
-    .select("*")
-    .eq("internal_customer_id", customer.internal_id)
-    .in("internal_feature_id", internalFeatureIds);
+  const cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
+    sb: req.sb,
+    internalCustomerId: customer.internal_id,
+    internalFeatureIds: internalFeatureIds as string[],
+  });
 
-  if (cusEntsError) {
-    throw new RecaseError({
-      message: "Error getting customer entitlements",
-      code: ErrCode.InternalError,
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-    });
-  }
+  cusEnts.sort((a, b) => {
+    if (a.balance <= 0) return 1;
+    if (b.balance <= 0) return -1;
+
+    return a.created_at - b.created_at;
+  });
 
   return { customerEntitlements: cusEnts, features: rows };
 };
@@ -149,9 +152,6 @@ eventsRouter.post("", async (req: any, res: any) => {
     const featureIdToDeduction: any = {};
     const meteredFeatures = features.filter(
       (feature) => feature.type === FeatureType.Metered
-    );
-    const creditSystems = features.filter(
-      (feature) => feature.type === FeatureType.CreditSystem
     );
 
     for (const cusEnt of customerEntitlements) {
@@ -194,7 +194,25 @@ eventsRouter.post("", async (req: any, res: any) => {
     .map((deduction: any) => `'${deduction.cusEntId}'`)
     .join(",")});`;
 
-    await req.pg.query(updateQuery);
+    console.log("Successfully updated customer entitlements");
+
+    // UPDATE CUSTOMER ENTITLEMENTS
+    const belowThresholdPrice = await getBelowThresholdPrice({
+      sb: req.sb,
+      internalCustomerId: customer.internal_id,
+      cusEnts: customerEntitlements,
+    });
+
+    if (belowThresholdPrice) {
+      console.log("Below threshold price found, queuing check...");
+      await handleBelowThresholdInvoicing({
+        sb: req.sb,
+        internalCustomerId: customer.internal_id,
+        belowThresholdPrice,
+      });
+    }
+
+    // await req.pg.query(updateQuery);
 
     res.status(200).json({ success: true, event_id: event.id });
   } catch (error) {

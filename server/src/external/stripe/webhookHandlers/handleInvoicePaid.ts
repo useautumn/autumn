@@ -1,6 +1,6 @@
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { AppEnv, Organization } from "@autumn/shared";
+import { Organization } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
@@ -41,5 +41,16 @@ export const handleInvoicePaid = async ({
       productIds: [cusProduct.product_id],
     });
     console.log(`Successfully created invoice`);
+    return;
   }
+
+  console.log("Threshold invoice:", invoice.id);
+  const cusProduct = await CusProductService.getPastDueByInvoiceId({
+    sb,
+    invoiceId: invoice.id,
+  });
+
+  // If invoice.paid
+  // 1
+  console.log("Customer product:", cusProduct);
 };

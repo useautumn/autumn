@@ -6,6 +6,7 @@ import {
   EntInterval,
   CustomerEntitlement,
   CusProduct,
+  FeatureOptions,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
@@ -15,8 +16,8 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
-import { getEntPriceOption } from "@/internal/prices/priceUtils.js";
-import { PriceOptions, PricesInput, CustomerPrice } from "@autumn/shared";
+import { getEntOptions } from "@/internal/prices/priceUtils.js";
+import { PriceOptions, CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
 
 export const initCusEntitlement = ({
@@ -29,7 +30,7 @@ export const initCusEntitlement = ({
   entitlement: EntitlementWithFeature;
   customer: Customer;
   cusProductId: string;
-  options: PriceOptions;
+  options?: FeatureOptions;
   nextResetAt?: number;
 }) => {
   const feature: Feature = entitlement.feature;
@@ -37,6 +38,7 @@ export const initCusEntitlement = ({
   // 1. Initialize balance...
   let allowance = entitlement.allowance || 0;
   let quantity = options?.quantity || 1;
+
   let balance = allowance * quantity;
 
   // 2. Define reset interval (interval at which balance is reset to quantity * allowance)
@@ -80,12 +82,10 @@ export const initCusEntitlement = ({
 
 export const initCusPrice = ({
   price,
-  options,
   customer,
   cusProductId,
 }: {
   price: Price;
-  options: PriceOptions;
   customer: Customer;
   cusProductId: string;
 }) => {
@@ -96,7 +96,6 @@ export const initCusPrice = ({
     created_at: Date.now(),
 
     price_id: price.id || null,
-    options: options,
   };
 
   return cusPrice;
@@ -109,6 +108,7 @@ export const initCusProduct = ({
   cusProdId,
   startsAt,
   subscriptionScheduleId,
+  optionsList,
 }: {
   customer: Customer;
   product: FullProduct;
@@ -116,6 +116,7 @@ export const initCusProduct = ({
   cusProdId: string;
   startsAt?: number;
   subscriptionScheduleId?: string | null;
+  optionsList: FeatureOptions[];
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
 
@@ -132,9 +133,12 @@ export const initCusProduct = ({
       type: ProcessorType.Stripe,
       subscription_id: subscriptionId,
       subscription_schedule_id: subscriptionScheduleId,
+      last_invoice_id: null,
     },
 
     starts_at: startsAt || Date.now(),
+
+    options: optionsList || [],
   };
 };
 
@@ -186,13 +190,36 @@ export const insertFullCusProduct = async ({
   }
 };
 
+export const expireOrDeleteCusProduct = async ({
+  sb,
+  customer,
+  startsAt,
+}: {
+  sb: SupabaseClient;
+  customer: Customer;
+  startsAt?: number;
+}) => {
+  // 1. If startsAt
+  if (startsAt && startsAt > Date.now()) {
+    await CusProductService.deleteFutureProduct({
+      sb,
+      internalCustomerId: customer.internal_id,
+    });
+  } else {
+    await CusProductService.expireCurrentProduct({
+      sb,
+      internalCustomerId: customer.internal_id,
+    });
+  }
+};
+
 export const createFullCusProduct = async ({
   sb,
   customer,
   product,
   prices,
   entitlements,
-  pricesInput,
+  optionsList,
   startsAt,
   subscriptionId,
   subscriptionScheduleId,
@@ -203,23 +230,17 @@ export const createFullCusProduct = async ({
   product: FullProduct;
   prices: Price[];
   entitlements: EntitlementWithFeature[];
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
   startsAt?: number;
   subscriptionId?: string;
   subscriptionScheduleId?: string;
   nextResetAt?: number;
 }) => {
-  // 1. If startsAt
-  if (startsAt && startsAt > Date.now()) {
-    await CusProductService.deleteFutureProduct({
+  if (!product.is_add_on) {
+    await expireOrDeleteCusProduct({
       sb,
-      internalCustomerId: customer.internal_id,
-    });
-  } else {
-    // Expire current product if startsAt is not in the future
-    await CusProductService.expireCurrentProduct({
-      sb,
-      internalCustomerId: customer.internal_id,
+      customer,
+      startsAt,
     });
   }
 
@@ -229,30 +250,24 @@ export const createFullCusProduct = async ({
   const cusEnts: CustomerEntitlement[] = [];
 
   for (const entitlement of entitlements) {
-    const priceOptions = getEntPriceOption(
-      entitlement.id!,
-      prices,
-      pricesInput
-    );
+    const options = getEntOptions(optionsList, entitlement);
 
     const cusEnt: any = initCusEntitlement({
       entitlement,
       customer,
       cusProductId: cusProdId,
-      options: priceOptions || {},
+      options: options || undefined,
       nextResetAt,
     });
 
     cusEnts.push(cusEnt);
   }
+
   // 2. create customer prices
   const cusPrices: CustomerPrice[] = [];
   for (const price of prices) {
-    const options = pricesInput.find((po) => po.id === price.id)?.options || {};
-
     const cusPrice: CustomerPrice = initCusPrice({
       price,
-      options,
       customer,
       cusProductId: cusProdId,
     });
@@ -268,6 +283,7 @@ export const createFullCusProduct = async ({
     subscriptionId,
     startsAt,
     subscriptionScheduleId,
+    optionsList,
   });
 
   await insertFullCusProduct({

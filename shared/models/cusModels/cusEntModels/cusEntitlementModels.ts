@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { EntitlementSchema } from "../../productModels/entitlementModels.js";
+import {
+  EntitlementSchema,
+  EntitlementWithFeatureSchema,
+} from "../../productModels/entitlementModels.js";
 import { BillingInterval } from "../../productModels/fixedPriceModels.js";
 import { FeatureSchema } from "../../featureModels/featureModels.js";
 
@@ -24,19 +27,17 @@ export const CustomerEntitlementSchema = z.object({
   next_reset_at: z.number().nullable(),
 });
 
-export type CustomerEntitlement = z.infer<typeof CustomerEntitlementSchema>;
+export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({
+  entitlement: EntitlementWithFeatureSchema,
+});
 
 export const CusEntWithEntitlementSchema = CustomerEntitlementSchema.extend({
   entitlement: EntitlementSchema,
 });
 
-export type CusEntWithEntitlement = z.infer<typeof CusEntWithEntitlementSchema>;
-
 export const CusEntWithFeatureSchema = CustomerEntitlementSchema.extend({
   feature: FeatureSchema,
 });
-
-export type CusEntWithFeature = z.infer<typeof CusEntWithFeatureSchema>;
 
 export const CusEntWithFeatureAndEntitlementSchema =
   CusEntWithFeatureSchema.extend({
@@ -45,4 +46,11 @@ export const CusEntWithFeatureAndEntitlementSchema =
 
 export type CusEntWithFeatureAndEntitlement = z.infer<
   typeof CusEntWithFeatureAndEntitlementSchema
+>;
+export type CustomerEntitlement = z.infer<typeof CustomerEntitlementSchema>;
+export type CusEntWithEntitlement = z.infer<typeof CusEntWithEntitlementSchema>;
+export type CusEntWithFeature = z.infer<typeof CusEntWithFeatureSchema>;
+
+export type FullCustomerEntitlement = z.infer<
+  typeof FullCustomerEntitlementSchema
 >;

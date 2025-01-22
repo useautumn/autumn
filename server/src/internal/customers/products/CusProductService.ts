@@ -22,6 +22,30 @@ export class CusProductService {
     return customerProduct;
   }
 
+  static async getFullCusProduct({
+    sb,
+    cusProductId,
+  }: {
+    sb: SupabaseClient;
+    cusProductId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_products")
+      .select(
+        `
+        *, customer_entitlements:customer_entitlements!inner(*, entitlement:entitlements!inner(*, feature:features!inner(*))), customer_prices:customer_prices!inner(*, price:prices!inner(*)), customer:customers!inner(*), product:products!inner(*)
+      `
+      )
+      .eq("id", cusProductId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async getByInternalCusId({
     sb,
     cusId,
@@ -50,21 +74,29 @@ export class CusProductService {
   }) {
     const { data, error } = await sb
       .from("customer_products")
-      .select("*, product:products(*)")
+      .select("*, product:products!inner(*)")
       .eq("internal_customer_id", internalCustomerId)
       .eq("product.is_add_on", false)
       .neq("status", CusProductStatus.Expired)
-      .neq("status", CusProductStatus.Scheduled)
-      .single();
+      .neq("status", CusProductStatus.Scheduled);
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
       throw error;
     }
 
-    return data;
+    if (data.length > 1) {
+      throw new RecaseError({
+        message: "Multiple products found for customer",
+        code: ErrCode.MultipleProductsFound,
+        statusCode: 500,
+      });
+    }
+
+    if (data.length === 0) {
+      return null;
+    }
+
+    return data[0];
   }
 
   static async getByCusAndProductId({
@@ -117,6 +149,30 @@ export class CusProductService {
       .select("*, product:products(*)")
       .eq("processor->>subscription_id", stripeSubId)
       .neq("status", CusProductStatus.Expired)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getPastDueByInvoiceId({
+    sb,
+    invoiceId,
+  }: {
+    sb: SupabaseClient;
+    invoiceId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_products")
+      .select("*")
+      .eq("processor->>invoice_id", invoiceId)
+      .eq("status", CusProductStatus.PastDue)
       .single();
 
     if (error) {

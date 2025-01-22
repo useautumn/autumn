@@ -1,10 +1,12 @@
 import { Router } from "express";
 import RecaseError from "@/utils/errorUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import {
   AppEnv,
+  BillingType,
   Customer,
   Entitlement,
+  EntitlementWithFeature,
+  FeatureOptions,
   FullProduct,
   Organization,
   Price,
@@ -18,9 +20,12 @@ import {
 import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
 import { ErrorMessages } from "@/errors/errMessages.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { haveDifferentRecurringIntervals } from "@/internal/prices/priceUtils.js";
+import {
+  getEntOptions,
+  getPriceEntitlement,
+  haveDifferentRecurringIntervals,
+} from "@/internal/prices/priceUtils.js";
 import { PricesInput } from "@autumn/shared";
-import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 import { getFullCusProductData } from "./cusProductUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
@@ -28,19 +33,21 @@ import { handleCreateCheckout } from "@/internal/customers/add-product/handleCre
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
+import chalk from "chalk";
 
-export const cusProductApiRouter = Router({ mergeParams: true });
+export const attachRouter = Router();
 
 const checkAddProductErrors = async ({
-  sb,
-  customer,
   product,
   prices,
+  entitlements,
+  optionsList,
 }: {
-  sb: SupabaseClient;
-  customer: Customer;
   product: FullProduct;
   prices: Price[];
+  entitlements: EntitlementWithFeature[];
+  optionsList: FeatureOptions[];
 }) => {
   // 1. Check if product has different recurring intervals
   if (haveDifferentRecurringIntervals(prices)) {
@@ -49,6 +56,33 @@ const checkAddProductErrors = async ({
       code: ErrCode.ProductHasDifferentRecurringIntervals,
       statusCode: 400,
     });
+  }
+
+  // 2. Check if options are valid
+  for (const price of prices) {
+    if (price.billing_type === BillingType.UsageInAdvance) {
+      // Get options for price
+      let priceEnt = getPriceEntitlement(price, entitlements);
+      let options = getEntOptions(optionsList, priceEnt);
+      if (!options?.quantity) {
+        throw new RecaseError({
+          message: `Pass in 'quantity' for feature ${priceEnt.feature_id} in options`,
+          code: ErrCode.InvalidOptions,
+          statusCode: 400,
+        });
+      }
+    } else if (price.billing_type === BillingType.UsageBelowThreshold) {
+      let priceEnt = getPriceEntitlement(price, entitlements);
+      let options = getEntOptions(optionsList, priceEnt);
+
+      if (!options?.threshold) {
+        throw new RecaseError({
+          message: `Pass in 'threshold' for feature '${priceEnt.feature_id}' in options`,
+          code: ErrCode.InvalidOptions,
+          statusCode: 400,
+        });
+      }
+    }
   }
 };
 
@@ -195,38 +229,46 @@ const checkStripeConnections = async ({
   }
 };
 
-cusProductApiRouter.post("", async (req: any, res) => {
-  const { customer_id } = req.params;
-  const { product_id, prices, entitlements } = req.body;
+attachRouter.post("", async (req: any, res) => {
+  const { customer_id, product_id, prices, entitlements, options } = req.body;
   const { orgId, env } = req;
 
   const sb = req.sb;
   const pricesInput: PricesInput = prices || [];
   const entsInput: Entitlement[] = entitlements || [];
-
+  const optionsListInput: FeatureOptions[] = options || [];
   console.log("--------------------------------");
   console.log("Add product request received");
+
   try {
     // 1. Get full customer product data
-    const { customer, product, org, prices, entitlements, features } =
-      await getFullCusProductData({
-        sb,
-        customerId: customer_id,
-        productId: product_id,
-        orgId,
-        env,
-        pricesInput,
-        entsInput,
-      });
+    const {
+      customer,
+      product,
+      org,
+      prices,
+      entitlements,
+      features,
+      optionsList,
+    } = await getFullCusProductData({
+      sb,
+      customerId: customer_id,
+      productId: product_id,
+      orgId,
+      env,
+      pricesInput,
+      entsInput,
+      optionsListInput,
+    });
 
     await checkStripeConnections({ req, res, customer, product, org, env });
 
-    // 2. Check for add product errors -- different recurring intervals, already has product
+    // 2. Check for add product errors -- different recurring intervals and invalid options
     await checkAddProductErrors({
-      sb: req.sb,
-      customer,
       product,
       prices,
+      entitlements,
+      optionsList,
     });
 
     const curCusProduct = await handleExistingProduct({
@@ -243,7 +285,9 @@ cusProductApiRouter.post("", async (req: any, res) => {
     }
 
     console.log(
-      `Current cus product: ${curCusProduct?.product.name || "None"}`
+      `Current cus product: ${chalk.yellow(
+        curCusProduct?.product.name || "None"
+      )}`
     );
 
     // 3. Handle free product, no existing product
@@ -279,7 +323,7 @@ cusProductApiRouter.post("", async (req: any, res) => {
         org,
         env,
         entitlements,
-        pricesInput,
+        optionsList,
       });
       return;
     }
@@ -297,7 +341,7 @@ cusProductApiRouter.post("", async (req: any, res) => {
         org,
         env,
         features,
-        pricesInput,
+        optionsList,
       });
 
       return;
@@ -311,9 +355,9 @@ cusProductApiRouter.post("", async (req: any, res) => {
       product,
       prices,
       entitlements,
-      pricesInput,
       org,
       env,
+      optionsList,
     });
   } catch (error: any) {
     if (error instanceof RecaseError) {
