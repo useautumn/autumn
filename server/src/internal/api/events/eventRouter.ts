@@ -197,22 +197,22 @@ eventsRouter.post("", async (req: any, res: any) => {
     console.log("Successfully updated customer entitlements");
 
     // UPDATE CUSTOMER ENTITLEMENTS
-    const belowThresholdPrice = await getBelowThresholdPrice({
-      sb: req.sb,
-      internalCustomerId: customer.internal_id,
-      cusEnts: customerEntitlements,
-    });
+    // const belowThresholdPrice = await getBelowThresholdPrice({
+    //   sb: req.sb,
+    //   internalCustomerId: customer.internal_id,
+    //   cusEnts: customerEntitlements,
+    // });
 
-    if (belowThresholdPrice) {
-      console.log("Below threshold price found, queuing check...");
-      await handleBelowThresholdInvoicing({
-        sb: req.sb,
-        internalCustomerId: customer.internal_id,
-        belowThresholdPrice,
-      });
-    }
+    // if (belowThresholdPrice) {
+    //   console.log("Below threshold price found, queuing check...");
+    //   await handleBelowThresholdInvoicing({
+    //     sb: req.sb,
+    //     internalCustomerId: customer.internal_id,
+    //     belowThresholdPrice,
+    //   });
+    // }
 
-    // await req.pg.query(updateQuery);
+    await req.pg.query(updateQuery);
 
     res.status(200).json({ success: true, event_id: event.id });
   } catch (error) {

@@ -217,8 +217,6 @@ entitledRouter.get("", async (req: any, res: any) => {
       });
     }
 
-    console.log("Reached here");
-
     // 2. Get features & credit systems
     const orgId = req.orgId;
     const { feature, creditSystems } = await getFeaturesAndCreditSystems(
@@ -245,6 +243,20 @@ entitledRouter.get("", async (req: any, res: any) => {
         ...creditSystems.map((cs) => cs.internal_id),
       ],
     });
+    console.log("Features:", feature.id);
+    console.log(
+      "Credit Systems:",
+      creditSystems.map((cs) => cs.id)
+    );
+    console.log(
+      "Customer Entitlements:",
+      cusEnts?.map((ent) => {
+        return {
+          feature_id: ent.feature_id,
+          balance: ent.balance,
+        };
+      })
+    );
 
     const { allowed, balances } = await checkFeatureAccessAllowed({
       originalFeature: feature,
