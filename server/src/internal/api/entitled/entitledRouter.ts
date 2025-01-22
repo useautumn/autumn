@@ -1,5 +1,6 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import RecaseError, {
   formatZodError,
   handleRequestError,
@@ -14,24 +15,32 @@ import { z } from "zod";
 export const entitledRouter = Router();
 
 // 1. Get all features / credit systems for a particular feature_id
-const getFeaturesAndCreditSystems = async (
-  pg: Client,
-  orgId: string,
-  feature_id: string
-) => {
+const getFeaturesAndCreditSystems = async ({
+  pg,
+  orgId,
+  feature_id,
+  env,
+}: {
+  pg: Client;
+  orgId: string;
+  feature_id: string;
+  env: string;
+}) => {
   const query = `
   select * from features WHERE EXISTS (
       SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
       type = 'credit_system'
       AND org_id = '${orgId}' 
       AND schema_element->>'metered_feature_id' = '${feature_id}'
+      AND env = '${env}'
   ) 
 
   UNION all
 
   SELECT * FROM features 
   WHERE org_id = '${orgId}' 
-  AND id = '${feature_id}'`;
+  AND id = '${feature_id}'
+  AND env = '${env}'`;
 
   const { rows } = await pg.query(query);
 
@@ -41,27 +50,6 @@ const getFeaturesAndCreditSystems = async (
   );
 
   return { feature, creditSystems };
-};
-
-const getCustomerEntitlements = async ({
-  sb,
-  orgId,
-  internalCustomerId,
-  internalFeatureIds,
-}: {
-  sb: SupabaseClient;
-  orgId: string;
-  internalCustomerId: string;
-  internalFeatureIds: string[];
-}) => {
-  const { data: cusEnts, error } = await sb
-    .from("customer_entitlements")
-    .select("*, customer_product:customer_products(*)")
-    .eq("internal_customer_id", internalCustomerId)
-    .in("internal_feature_id", internalFeatureIds)
-    .eq("customer_product.status", "active");
-
-  return cusEnts;
 };
 
 const calculateFeatureBalance = ({
@@ -219,11 +207,12 @@ entitledRouter.get("", async (req: any, res: any) => {
 
     // 2. Get features & credit systems
     const orgId = req.orgId;
-    const { feature, creditSystems } = await getFeaturesAndCreditSystems(
-      req.pg,
+    const { feature, creditSystems } = await getFeaturesAndCreditSystems({
+      pg: req.pg,
       orgId,
-      feature_id
-    );
+      feature_id,
+      env: req.env,
+    });
 
     if (!feature) {
       throw new RecaseError({
@@ -234,27 +223,37 @@ entitledRouter.get("", async (req: any, res: any) => {
     }
 
     // 3. Get customer entitlements, where cp is active
-    const cusEnts = await getCustomerEntitlements({
+    // const cusEnts = await getCustomerEntitlements({
+    //   sb: req.sb,
+    //   orgId,
+    //   internalCustomerId: customer.internal_id,
+    //   internalFeatureIds: [
+    //     feature.internal_id,
+    //     ...creditSystems.map((cs) => cs.internal_id),
+    //   ],
+    // });
+
+    const internalFeatureIds = [
+      feature.internal_id,
+      ...creditSystems.map((cs) => cs.internal_id),
+    ];
+
+    const cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
       sb: req.sb,
-      orgId,
       internalCustomerId: customer.internal_id,
-      internalFeatureIds: [
-        feature.internal_id,
-        ...creditSystems.map((cs) => cs.internal_id),
-      ],
+      internalFeatureIds,
     });
-    console.log("Features:", feature.id);
+
     console.log(
-      "Credit Systems:",
+      "Feature:",
+      feature.id,
+      "| Credit Systems:",
       creditSystems.map((cs) => cs.id)
     );
     console.log(
       "Customer Entitlements:",
       cusEnts?.map((ent) => {
-        return {
-          feature_id: ent.feature_id,
-          balance: ent.balance,
-        };
+        return `${ent.feature_id} - ${ent.balance}`;
       })
     );
 
