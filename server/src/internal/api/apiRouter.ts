@@ -13,7 +13,7 @@ import { gateMiddleware } from "@/test/gateMiddleware.js";
 const apiRouter = Router();
 
 apiRouter.use(apiAuthMiddleware);
-apiRouter.use(gateMiddleware);
+// apiRouter.use(gateMiddleware);
 
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/products", productApiRouter);
