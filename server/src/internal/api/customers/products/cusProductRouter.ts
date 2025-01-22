@@ -301,7 +301,7 @@ attachRouter.post("", async (req: any, res) => {
         env,
         prices,
         entitlements,
-        pricesInput,
+        optionsList,
       });
       return;
     }

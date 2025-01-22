@@ -3,6 +3,7 @@ import {
   Entitlement,
   EntitlementWithFeature,
   Feature,
+  FeatureOptions,
   FullProduct,
   Organization,
   Price,
@@ -21,7 +22,7 @@ export const handleAddFreeProduct = async ({
   env,
   prices,
   entitlements,
-  pricesInput,
+  optionsList,
 }: {
   req: any;
   res: any;
@@ -31,7 +32,7 @@ export const handleAddFreeProduct = async ({
   env: AppEnv;
   prices: Price[];
   entitlements: EntitlementWithFeature[];
-  pricesInput: PricesInput;
+  optionsList: FeatureOptions[];
 }) => {
   console.log(`Adding free product ${product.name} to customer ${customer.id}`);
 
@@ -42,7 +43,7 @@ export const handleAddFreeProduct = async ({
     product,
     prices,
     entitlements,
-    pricesInput,
+    optionsList,
   });
 
   console.log(

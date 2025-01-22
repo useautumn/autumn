@@ -102,7 +102,7 @@ cusRouter.post("", async (req: any, res: any) => {
           product: defaultProduct,
           prices: defaultProduct.prices,
           entitlements: defaultProduct.entitlements,
-          pricesInput: [],
+          optionsList: [],
         });
       }
     } catch (error) {
