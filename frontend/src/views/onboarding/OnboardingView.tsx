@@ -6,11 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { OrgService } from "@/services/OrgService";
 import { toast } from "react-hot-toast";
-import { getBackendErr } from "@/utils/genUtils";
-import { AppEnv } from "@autumn/shared";
 import {
   OrganizationList,
   OrganizationSwitcher,
@@ -97,7 +93,12 @@ function OnboardingView({ sessionClaims }: { sessionClaims: any }) {
         </div>
       </div>
     );
-  } else return <LoadingScreen />;
+  } else
+    return (
+      <div className="flex flex-col items-center justify-center h-screen w-screen bg-stone-50">
+        <OrganizationList hidePersonal={true} />
+      </div>
+    );
 }
 
 export default OnboardingView;
