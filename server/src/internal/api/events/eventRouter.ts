@@ -57,6 +57,7 @@ const getEventAndCustomer = async (req: any) => {
       org_id: orgId,
       env: env,
       timestamp: Date.now(),
+      properties: {},
       ...body,
     };
   } catch (error: any) {
@@ -216,6 +217,8 @@ eventsRouter.post("", async (req: any, res: any) => {
       );
 
       // console.log("Queued update balance task...");
+    } else {
+      console.log("No affected features found");
     }
 
     res.status(200).json({ success: true, event_id: event.id });

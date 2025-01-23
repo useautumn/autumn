@@ -180,6 +180,7 @@ export const handleAddProduct = async ({
     entitlements,
     optionsList,
     subscriptionId: undefined,
+    billLaterOnly: true,
   });
 
   console.log("Successfully created full cus product");

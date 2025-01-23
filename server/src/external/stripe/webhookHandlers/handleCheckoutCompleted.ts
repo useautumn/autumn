@@ -24,14 +24,9 @@ export const handleCheckoutSessionCompleted = async ({
   checkoutSession: Stripe.Checkout.Session;
   env: AppEnv;
 }) => {
-  console.log(
-    "Stripe webhook, handlingcheckout.completed, autumn metadata:",
-    checkoutSession.metadata?.autumn_metadata_id
-  );
-
   const metadata = await getMetadataFromCheckoutSession(checkoutSession, sb);
   if (!metadata) {
-    console.log("Metadata not found");
+    console.log("checkout.completed: metadata not found, skipping");
     return;
   }
 
@@ -46,14 +41,19 @@ export const handleCheckoutSessionCompleted = async ({
   } = metadata.data;
 
   if (metadataOrg.id != org.id) {
-    console.log("Org doesn't match, skipping");
+    console.log("checkout.completed: org doesn't match, skipping");
     return;
   }
 
   if (metadataEnv != env) {
-    console.log("Environments don't match, skipping");
+    console.log("checkout.completed: environments don't match, skipping");
     return;
   }
+
+  console.log(
+    "Handling checkout.completed, autumn metadata:",
+    checkoutSession.metadata?.autumn_metadata_id
+  );
 
   await CusProductService.expireCurrentProduct({
     sb,

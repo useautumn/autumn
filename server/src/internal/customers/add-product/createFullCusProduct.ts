@@ -17,7 +17,7 @@ import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
-import { PriceOptions, CustomerPrice } from "@autumn/shared";
+import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
 
 export const initCusEntitlement = ({
@@ -26,12 +26,14 @@ export const initCusEntitlement = ({
   cusProductId,
   options,
   nextResetAt,
+  billLaterOnly = false,
 }: {
   entitlement: EntitlementWithFeature;
   customer: Customer;
   cusProductId: string;
   options?: FeatureOptions;
   nextResetAt?: number;
+  billLaterOnly?: boolean;
 }) => {
   const feature: Feature = entitlement.feature;
 
@@ -39,7 +41,7 @@ export const initCusEntitlement = ({
   let allowance = entitlement.allowance || 0;
   let quantity = options?.quantity || 1;
 
-  let balance = allowance * quantity;
+  let balance = billLaterOnly ? 0 : allowance * quantity;
 
   // 2. Define reset interval (interval at which balance is reset to quantity * allowance)
   let reset_interval = entitlement.interval as EntInterval;
@@ -224,6 +226,7 @@ export const createFullCusProduct = async ({
   subscriptionId,
   subscriptionScheduleId,
   nextResetAt,
+  billLaterOnly = false,
 }: {
   sb: SupabaseClient;
   customer: Customer;
@@ -235,6 +238,7 @@ export const createFullCusProduct = async ({
   subscriptionId?: string;
   subscriptionScheduleId?: string;
   nextResetAt?: number;
+  billLaterOnly?: boolean;
 }) => {
   if (!product.is_add_on) {
     await expireOrDeleteCusProduct({
@@ -258,6 +262,7 @@ export const createFullCusProduct = async ({
       cusProductId: cusProdId,
       options: options || undefined,
       nextResetAt,
+      billLaterOnly,
     });
 
     cusEnts.push(cusEnt);

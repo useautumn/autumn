@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Invoice, ProcessorType } from "@autumn/shared";
+import { Invoice, InvoiceStatus, ProcessorType } from "@autumn/shared";
 import Stripe from "stripe";
 import { generateId } from "@/utils/genUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -48,7 +48,7 @@ export class InvoiceService {
     const { data, error } = await sb
       .from("invoices")
       .select("*")
-      .eq("processor->>id", stripeInvoiceId)
+      .eq("stripe_id", stripeInvoiceId)
       .single();
 
     if (error) {
@@ -65,22 +65,22 @@ export class InvoiceService {
     stripeInvoice,
     internalCustomerId,
     productIds,
+    status,
   }: {
     sb: SupabaseClient;
     stripeInvoice: Stripe.Invoice;
     internalCustomerId: string;
     productIds: string[];
+    status?: InvoiceStatus | null;
   }) {
     const invoice: Invoice = {
       id: generateId("inv"),
       internal_customer_id: internalCustomerId,
       product_ids: productIds,
       created_at: stripeInvoice.created * 1000,
-      processor: {
-        id: stripeInvoice.id,
-        type: ProcessorType.Stripe,
-        hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
-      },
+      stripe_id: stripeInvoice.id,
+      hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
+      status: status || (stripeInvoice.status as InvoiceStatus | null),
     };
 
     // Check if invoice already exists
@@ -91,10 +91,13 @@ export class InvoiceService {
     });
 
     if (existingInvoice) {
+      console.log("Invoice already exists");
       return;
     }
 
-    const { error } = await sb.from("invoices").insert(invoice);
+    const { error } = await sb.from("invoices").upsert(invoice, {
+      onConflict: "stripe_id",
+    });
 
     if (error) {
       console.log("Failed to create invoice from stripe", error);
