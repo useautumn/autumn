@@ -22,6 +22,7 @@ import { getBelowThresholdPrice } from "../../../trigger/invoiceThresholdUtils.j
 import { updateBalanceTask } from "@/trigger/updateBalanceTask.js";
 import { Client } from "pg";
 import { inngest } from "@/trigger/inngest.js";
+import { Queue } from "bullmq";
 
 export const eventsRouter = Router();
 
@@ -185,21 +186,37 @@ eventsRouter.post("", async (req: any, res: any) => {
       //     features: affectedFeatures,
       //   },
       // });
-      await updateBalanceTask.trigger(
+      // await updateBalanceTask.trigger(
+      //   {
+      //     customer,
+      //     features: affectedFeatures,
+      //   },
+      //   {
+      //     queue: {
+      //       name: "customer",
+      //       concurrencyLimit: 1,
+      //     },
+      //     concurrencyKey: customer.internal_id,
+      //   }
+      // );
+      let queue: Queue = req.queue;
+      queue.add(
+        "update-balance",
         {
+          customerId: customer.internal_id,
           customer,
           features: affectedFeatures,
-        },
-        {
-          queue: {
-            name: "customer",
-            concurrencyLimit: 1,
-          },
-          concurrencyKey: customer.internal_id,
         }
+        // {
+        //   attempts: 10,
+        //   backoff: {
+        //     type: "exponential",
+        //     delay: 1000,
+        //   },
+        // }
       );
 
-      console.log("Queued update balance task...");
+      // console.log("Queued update balance task...");
     }
 
     res.status(200).json({ success: true, event_id: event.id });

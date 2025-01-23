@@ -70,8 +70,8 @@ export const updateCustomerBalance = async ({
     (feature) => feature.type === FeatureType.Metered
   );
 
-  console.log(`Customer: ${customer.name} (${customer.internal_id})`);
-  console.log(`Features: ${features.map((f) => f.id).join(", ")}`);
+  console.log(`   - Customer: ${customer.name} (${customer.internal_id})`);
+  console.log(`   - Features: ${features.map((f) => f.id).join(", ")}`);
 
   for (const cusEnt of cusEnts) {
     const internalFeatureId = cusEnt.internal_feature_id;
@@ -116,7 +116,7 @@ export const updateCustomerBalance = async ({
 
     if (error) {
       console.error(
-        `Failed to update (${feature?.id}: ${deduction}). Error: ${error}`
+        `   ❌ Failed to update (${feature?.id}: ${deduction}). Error: ${error}`
       );
     }
   }
@@ -125,6 +125,6 @@ export const updateCustomerBalance = async ({
     (obj: any) => `(${obj.feature.id}: ${obj.deduction})`
   );
 
-  console.log(`Deducted ${featuresUpdated}`);
+  console.log(`   - Deducted ${featuresUpdated}`);
   return cusEnts;
 };

@@ -314,7 +314,7 @@ export const handleBelowThresholdInvoicing = async ({
   });
 
   console.log(
-    `Feature balance: ${balance}, threshold: ${threshold}, below: ${below}`
+    `   - Feature balance: ${balance}, threshold: ${threshold}, below: ${below}`
   );
 
   if (!below) {

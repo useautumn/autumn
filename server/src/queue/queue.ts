@@ -1,5 +1,22 @@
 import { Job, Queue, Worker } from "bullmq";
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
+import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
+import { Redis } from "ioredis";
+
+const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+
+async function acquireLock(
+  customerId: string,
+  timeout = 30000
+): Promise<boolean> {
+  const lockKey = `lock:customer:${customerId}`;
+  const acquired = await redis.set(lockKey, "1", "PX", timeout, "NX");
+  return acquired === "OK";
+}
+
+async function releaseLock(customerId: string): Promise<void> {
+  const lockKey = `lock:customer:${customerId}`;
+  await redis.del(lockKey);
+}
 
 const getRedisConnection = () => {
   let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
@@ -13,57 +30,48 @@ const getRedisConnection = () => {
 
 export const initQueue = () => {
   try {
-    return new Queue("recase", getRedisConnection());
+    return new Queue("autumn", getRedisConnection());
   } catch (error) {
     console.error("Error initialising queue:\n", error);
     process.exit(1);
   }
 };
 
-const numWorkers = 3;
+const numWorkers = 10;
 
-const initializeWorkspace = async (userId: string, packageJson: any) => {
-  try {
-    3;
-    console.log("Successfully initialized workspace for:", userId);
-  } catch (error: any) {
-    console.log("Error initializing workspace for:", userId);
-    console.log(error?.message || error);
-  }
+const initWorker = (id: number, queue: Queue) => {
+  // Create supabase client
 
-  const supabase = createSupabaseClient();
-  await supabase
-    .from("users")
-    .update({
-      initialized: true,
-    })
-    .eq("id", userId);
-
-  await supabase.channel(`user_${userId}`).send({
-    type: "broadcast",
-    event: "user_initialized",
-    payload: {
-      userId: userId,
-      initialized: true,
-    },
-  });
-};
-
-const initWorker = (id: number) => {
   let worker = new Worker(
-    "recase",
+    "autumn",
     async (job: Job) => {
-      if (job.name === "user_created") {
-        await initializeWorkspace(job.data.userId, job.data.packageJson);
+      // if (job.name === "update-balance") {
+      //   await runUpdateBalanceTask(job.data);
+      // }
+
+      const { customerId, customer } = job.data;
+      // await runUpdateBalanceTask(job.data);
+      // return;
+
+      while (!(await acquireLock(customerId, 10000))) {
+        // console.log(`Customer ${customer.id} locked by another worker`);
+        await queue.add(job.name, job.data, {
+          delay: 50,
+        });
         return;
       }
 
       try {
-      } catch (error) {
-        console.error("BullMQ worker error:\n", error);
+        await runUpdateBalanceTask(job.data);
+      } finally {
+        await releaseLock(customerId);
       }
     },
-    getRedisConnection()
+
+    {
+      ...getRedisConnection(),
+      concurrency: 10,
+    }
   );
 
   worker.on("ready", () => {
@@ -77,10 +85,10 @@ const initWorker = (id: number) => {
   });
 };
 
-export const initWorkers = () => {
+export const initWorkers = (queue: Queue) => {
   const workers = [];
   for (let i = 0; i < numWorkers; i++) {
-    workers.push(initWorker(i));
+    workers.push(initWorker(i, queue));
   }
 
   return workers;

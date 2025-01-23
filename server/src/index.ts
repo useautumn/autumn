@@ -13,14 +13,20 @@ import pg from "pg";
 import { serve } from "inngest/express";
 import { functions } from "./trigger/inngest.js";
 import { inngest } from "./trigger/inngest.js";
+import { initQueue, initWorkers } from "./queue/queue.js";
 
 const app = express();
 
 const init = async () => {
   const pgClient = new pg.Client(process.env.SUPABASE_CONNECTION_STRING || "");
   await pgClient.connect();
+
+  const queue = initQueue();
+  const workers = initWorkers(queue);
+
   app.use((req: any, res, next) => {
     req.pg = pgClient;
+    req.queue = queue;
     next();
   });
 

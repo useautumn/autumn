@@ -83,6 +83,17 @@ export class InvoiceService {
       },
     };
 
+    // Check if invoice already exists
+    // TODO: Fix This
+    const existingInvoice = await this.getInvoiceByStripeId({
+      sb,
+      stripeInvoiceId: stripeInvoice.id,
+    });
+
+    if (existingInvoice) {
+      return;
+    }
+
     const { error } = await sb.from("invoices").insert(invoice);
 
     if (error) {
