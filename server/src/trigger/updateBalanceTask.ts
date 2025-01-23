@@ -54,7 +54,7 @@ export const runUpdateBalanceTask = async (payload: any) => {
     const { customer, features } = payload;
 
     console.log("--------------------------------");
-    console.log("Inside runUpdateBalanceTask...");
+    console.log("Inside updateBalanceTask...");
 
     console.log("1. Updating customer balance...");
     const cusEnts: any = await updateCustomerBalance({
@@ -63,8 +63,13 @@ export const runUpdateBalanceTask = async (payload: any) => {
       features,
     });
 
-    // 2. Check if there's below threshold price
+    if (!cusEnts || cusEnts.length === 0) {
+      console.log("✅ No customer entitlements found, skipping");
+      return;
+    }
+    console.log("   ✅ Customer balance updated");
 
+    // 2. Check if there's below threshold price
     const belowThresholdPrice = await getBelowThresholdPrice({
       sb,
       internalCustomerId: customer.internal_id,
@@ -81,6 +86,8 @@ export const runUpdateBalanceTask = async (payload: any) => {
         internalCustomerId: payload.internalCustomerId,
         belowThresholdPrice,
       });
+    } else {
+      console.log("   ✅ No below threshold price found");
     }
   } catch (error) {
     console.log(`Error updating customer balance: ${error}`);

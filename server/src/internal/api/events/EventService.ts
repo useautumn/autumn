@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { ErrCode, Event } from "@autumn/shared";
+import { ErrCode, Event, Organization } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 
@@ -24,6 +24,40 @@ export class EventService {
           statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
         });
       }
+    }
+
+    return data;
+  }
+
+  static async getByCustomerId({
+    sb,
+    customerId,
+    org,
+    env,
+    limit = 10,
+  }: {
+    sb: SupabaseClient;
+    customerId: string;
+    org: Organization;
+    env: string;
+    limit?: number;
+  }) {
+    const { data, error } = await sb
+      .from("events")
+      .select("*")
+      .eq("customer_id", customerId)
+      .eq("org_id", org.id)
+      .eq("env", env)
+      .order("timestamp", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw new RecaseError({
+        message: "Failed to get events",
+        code: ErrCode.InternalError,
+        data: error,
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+      });
     }
 
     return data;

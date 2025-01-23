@@ -16,6 +16,7 @@ const { data, error } = await sb
   .eq("id", customerId)
   .eq("env", "sandbox")
   .single();
+
 const stripeCusId = data.processor.id;
 const stripeCli = new stripe(process.env.STRIPE_TEST_KEY!);
 

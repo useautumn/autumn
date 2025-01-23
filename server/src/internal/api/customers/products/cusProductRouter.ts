@@ -107,8 +107,8 @@ const handleExistingProduct = async ({
     internalCustomerId: customer.internal_id,
   });
 
-  // 2. Check if customer already has product
-  if (existingCusProduct?.product_id === product.id && !product.is_add_on) {
+  // 2. Don't allow customer to get multiple of the same product
+  if (existingCusProduct?.product_id === product.id) {
     // If there's a future product, delete, else
     const deletedCusProduct = await CusProductService.deleteFutureProduct({
       sb,

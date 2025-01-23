@@ -1,7 +1,10 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import { ErrorMessages } from "@/errors/errMessages.js";
 
-import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
+import RecaseError, {
+  formatZodError,
+  handleRequestError,
+} from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { CreateCustomerSchema, Customer, ProcessorType } from "@autumn/shared";
 import { Router } from "express";
@@ -15,6 +18,7 @@ import Stripe from "stripe";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
+import { EventService } from "../events/EventService.js";
 
 export const cusRouter = Router();
 
@@ -191,4 +195,18 @@ cusRouter.delete("/:customerId", async (req: any, res: any) => {
   }
 });
 
-// cusRouter.use("/:customer_id/products", cusProductApiRouter);
+cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
+  const customerId = req.params.customer_id;
+  try {
+    const events = await EventService.getByCustomerId({
+      sb: req.sb,
+      customerId,
+      org: req.org,
+      env: req.env,
+    });
+
+    res.status(200).json({ events });
+  } catch (error) {
+    handleRequestError({ error, res, action: "get customer events" });
+  }
+});
