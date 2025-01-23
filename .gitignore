@@ -11,6 +11,7 @@ supabase.sh
 **/.vercel/
 **/.DS_Store
 **/.env*
+tests/
 # **/.npmrc
 
 **/test.nnb
