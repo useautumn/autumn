@@ -6,7 +6,7 @@
 
     "declaration": true,
     // "rootDir": "../",
-    "rootDir": "./src",
+    "rootDir": ".",
     "baseUrl": ".",
     "outDir": "./dist",
     "strict": true,
