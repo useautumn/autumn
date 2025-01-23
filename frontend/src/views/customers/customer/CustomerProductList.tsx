@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
 import { CusProduct } from "@autumn/shared";
 import { useRouter } from "next/navigation";
 
@@ -25,6 +26,10 @@ export const CustomerProductList = ({
           <TableRow className="">
             <TableHead className="w-[150px]">Name</TableHead>
             <TableHead className="">Product ID</TableHead>
+            <TableHead className="">Status</TableHead>
+
+            <TableHead className="">Created At</TableHead>
+            <TableHead className="">Ended At</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -42,7 +47,18 @@ export const CustomerProductList = ({
                 <TableCell>
                   {products.find((p) => p.id === cusProduct.product_id)?.name}
                 </TableCell>
-                <TableCell>{cusProduct.product_id}</TableCell>
+                <TableCell className="max-w-[100px] overflow-hidden text-ellipsis">
+                  {cusProduct.product_id}
+                </TableCell>
+                <TableCell>{cusProduct.status}</TableCell>
+                <TableCell>
+                  {formatUnixToDateTimeString(cusProduct.created_at)}
+                </TableCell>
+                <TableCell>
+                  {cusProduct.ended_at
+                    ? formatUnixToDateTimeString(cusProduct.ended_at)
+                    : ""}
+                </TableCell>
               </TableRow>
             );
           })}

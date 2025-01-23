@@ -11,6 +11,7 @@ import {
   FullCusProduct,
   CusProductStatus,
   CustomerEntitlement,
+  InvoiceStatus,
 } from "@autumn/shared";
 
 import dotenv from "dotenv";
@@ -79,6 +80,7 @@ const payForInvoice = async ({
   });
 
   if (!paymentMethod) {
+    console.log("   ❌ No payment method found");
     return false;
   }
 
@@ -87,7 +89,9 @@ const payForInvoice = async ({
       payment_method: paymentMethod as string,
     });
   } catch (error: any) {
-    console.log("Failed to pay invoice: " + error?.message || error);
+    console.log(
+      "   ❌ Stripe error: Failed to pay invoice: " + error?.message || error
+    );
     return false;
   }
 
@@ -96,24 +100,39 @@ const payForInvoice = async ({
 
 const handleInvoicePaymentFailure = async ({
   sb,
+  stripeCli,
   fullCusProduct,
   fullCusPrice,
   finalizedInvoice,
 }: {
   sb: SupabaseClient;
+  stripeCli: Stripe;
   fullCusProduct: FullCusProduct;
   fullCusPrice: FullCustomerPrice;
   finalizedInvoice: Stripe.Invoice;
 }) => {
   // 1. Update customer product
-  console.log(
-    "Payment failed, updating customer product status to past due..."
-  );
+  console.log("   Handling invoice payment failure...");
+
+  // Void invoice
+  await stripeCli.invoices.voidInvoice(finalizedInvoice.id);
+  console.log("   a. Stripe invoice voided");
+
+  await InvoiceService.createInvoiceFromStripe({
+    sb,
+    stripeInvoice: finalizedInvoice,
+    internalCustomerId: fullCusProduct.internal_customer_id,
+    productIds: [fullCusProduct.product.id],
+    status: InvoiceStatus.Void,
+  });
+  console.log("   b. Invoice inserted into db");
+
   await CusProductService.update({
     sb,
     cusProductId: fullCusProduct.id,
     updates: {
-      status: CusProductStatus.PastDue,
+      status: CusProductStatus.Expired,
+      ended_at: Date.now(),
       processor: {
         ...fullCusProduct.processor!,
         last_invoice_id: finalizedInvoice.id,
@@ -121,7 +140,7 @@ const handleInvoicePaymentFailure = async ({
     },
   });
 
-  console.log("Customer product updated successfully");
+  console.log("   c. Expired customer product");
 };
 
 const invoiceCustomer = async ({
@@ -159,7 +178,7 @@ const invoiceCustomer = async ({
   });
 
   // 1. Create invoice
-  console.log("1. Creating invoice...");
+  console.log("   a. Creating invoice...");
   const finalizedInvoice = await createBelowThresholdInvoice({
     stripeCli,
     customer,
@@ -168,7 +187,7 @@ const invoiceCustomer = async ({
   });
 
   // 2. Pay for invoice
-  console.log("2. Paying for invoice...");
+  console.log("   b. Paying for invoice...");
   const paid = await payForInvoice({
     fullOrg,
     env: customer.env as AppEnv,
@@ -178,9 +197,10 @@ const invoiceCustomer = async ({
   });
 
   if (!paid) {
-    console.log("Failed to pay for invoice");
+    console.log("   ❌ Failed to pay for invoice");
     await handleInvoicePaymentFailure({
       sb,
+      stripeCli,
       fullCusProduct,
       fullCusPrice,
       finalizedInvoice,
@@ -188,16 +208,18 @@ const invoiceCustomer = async ({
     return;
   }
 
-  console.log("3. Inserting invoice into db...");
+  // 3. Insert invoice into db
+  console.log("   c. Inserting invoice into db...");
   await InvoiceService.createInvoiceFromStripe({
     sb,
     stripeInvoice: finalizedInvoice,
     internalCustomerId: customer.internal_id,
     productIds: [fullCusProduct.product.id],
+    status: InvoiceStatus.Paid,
   });
 
   // 4. Update customer product
-  console.log("4. Updating customer product...");
+  console.log("   d. Updating customer product...");
   await CusProductService.update({
     sb,
     cusProductId: fullCusProduct.id,
@@ -210,11 +232,11 @@ const invoiceCustomer = async ({
   });
 
   // 5. Update feature balance
-  console.log("5. Updating feature balance...");
+  console.log("   e. Updating feature balance...");
   const newBalance = cusEnt.balance! + cusEnt.entitlement.allowance!;
 
   console.log(
-    "Current balance:",
+    "   - Current balance:",
     cusEnt.balance,
     "| Update amount:",
     cusEnt.entitlement.allowance,
@@ -314,7 +336,7 @@ export const handleBelowThresholdInvoicing = async ({
   });
 
   console.log(
-    `   - Feature balance: ${balance}, threshold: ${threshold}, below: ${below}`
+    `   - Current balance: ${balance}, threshold: ${threshold}, below: ${below}`
   );
 
   if (!below) {

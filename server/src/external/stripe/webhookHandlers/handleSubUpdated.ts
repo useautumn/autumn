@@ -105,13 +105,13 @@ export const handleSubscriptionUpdated = async ({
   org: Organization;
   subscription: any;
 }) => {
-  console.log("Subscription updated:", {
-    id: subscription.id,
-    status: subscription.status,
-    customer: subscription.customer,
-    canceled_at: subscription.canceled_at,
-    schedule_id: subscription.subscription_schedule,
-  });
+  // console.log("Subscription updated:", {
+  //   id: subscription.id,
+  //   status: subscription.status,
+  //   customer: subscription.customer,
+  //   canceled_at: subscription.canceled_at,
+  //   schedule_id: subscription.subscription_schedule,
+  // });
 
   // 1. Undo stripe sub cancellation if it was cancelled
   if (subscription.canceled_at !== null) {

@@ -29,7 +29,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSquareUpRight } from "@fortawesome/pro-duotone-svg-icons";
 import { CustomerProductList } from "./CustomerProductList";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import {
+  formatUnixToDateTime,
+  formatUnixToDateTimeString,
+} from "@/utils/formatUtils/formatDateUtils";
 import { ManageEntitlements } from "./entitlements/ManageEntitlements";
 import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsList";
 import { navigateTo } from "@/utils/genUtils";
@@ -47,12 +50,23 @@ export default function CustomerView({
     env,
   });
 
+  const {
+    data: eventsData,
+    isLoading: eventsLoading,
+    error: eventsError,
+  } = useAxiosSWR({
+    url: `/v1/customers/${customer_id}/events`,
+    env,
+  });
+
   if (error) {
     router.push("/customers");
   }
 
   if (isLoading) return <LoadingScreen />;
+
   const { customer, products, invoices } = data;
+  const { events } = eventsData;
 
   return (
     <CustomerContext.Provider value={{ customer, products, env }}>
@@ -139,6 +153,7 @@ export default function CustomerView({
                 <TableHead className="w-[150px]">Products</TableHead>
                 <TableHead className="">URL</TableHead>
                 <TableHead className="">Created At</TableHead>
+                <TableHead className="">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -154,7 +169,7 @@ export default function CustomerView({
                   </TableCell>
                   <TableCell className="max-w-[400px] truncate">
                     <a
-                      href={invoice.processor.hosted_invoice_url}
+                      href={invoice.hosted_invoice_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 text-lime-500"
@@ -170,10 +185,21 @@ export default function CustomerView({
                       {formatUnixToDateTime(invoice.created_at).time}{" "}
                     </span>
                   </TableCell>
+                  <TableCell>{invoice.status}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+
+          <p className="text-t2 font-medium text-md">Events</p>
+          <div className="flex flex-col gap-1">
+            {events.map((event) => (
+              <div key={event.id} className="flex gap-1">
+                <p>- {formatUnixToDateTimeString(event.timestamp)}</p>
+                <p>- {event.event_name}</p>
+              </div>
+            ))}
+          </div>
         </div>
         {/* customer details */}
         <div className="flex flex-col gap-4 text-t2 text-sm  w-full max-w-[400px] h-fit">

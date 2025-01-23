@@ -23,6 +23,7 @@ export const handleInvoicePaid = async ({
     if (!cusProduct) {
       return;
     }
+
     let existingInvoice = await InvoiceService.getInvoiceByStripeId({
       sb,
       stripeInvoiceId: invoice.id,
