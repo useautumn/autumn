@@ -178,27 +178,28 @@ eventsRouter.post("", async (req: any, res: any) => {
     });
 
     if (affectedFeatures.length > 0) {
-      await inngest.send({
-        name: "autumn/update-balance",
-        data: {
-          customer,
-          features: affectedFeatures,
-        },
-      });
-      console.log("Queued update balance task...");
-      // await updateBalanceTask.trigger(
-      //   {
+      // await inngest.send({
+      //   name: "autumn/update-balance",
+      //   data: {
       //     customer,
       //     features: affectedFeatures,
       //   },
-      //   {
-      //     queue: {
-      //       name: "customer",
-      //       concurrencyLimit: 1,
-      //     },
-      //     concurrencyKey: customer.internal_id,
-      //   }
-      // );
+      // });
+      await updateBalanceTask.trigger(
+        {
+          customer,
+          features: affectedFeatures,
+        },
+        {
+          queue: {
+            name: "customer",
+            concurrencyLimit: 1,
+          },
+          concurrencyKey: customer.internal_id,
+        }
+      );
+
+      console.log("Queued update balance task...");
     }
 
     res.status(200).json({ success: true, event_id: event.id });
