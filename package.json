@@ -4,7 +4,8 @@
   "workspaces": [
     "frontend",
     "server",
-    "shared"
+    "shared",
+    "tests"
   ],
   "type": "module",
   "scripts": {
