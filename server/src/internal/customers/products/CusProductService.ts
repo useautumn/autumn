@@ -171,7 +171,7 @@ export class CusProductService {
     const { data, error } = await sb
       .from("customer_products")
       .select("*")
-      .eq("processor->>invoice_id", invoiceId)
+      .eq("processor->>last_invoice_id", invoiceId)
       .eq("status", CusProductStatus.PastDue)
       .single();
 

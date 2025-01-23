@@ -1,43 +1,31 @@
 import Stripe from "stripe";
-import { getCusPaymentMethod } from "../../../external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "../../../external/stripe/utils.js";
-import { createSupabaseClient } from "../../../external/supabaseUtils.js";
-import { CusService } from "../../customers/CusService.js";
-import { getFeatureBalance } from "../../customers/entitlements/cusEntUtils.js";
-import { OrgService } from "../../orgs/OrgService.js";
-import { ProductService } from "../../products/ProductService.js";
-import { createPgClient } from "../../../middleware/envMiddleware.js";
+import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
   AppEnv,
-  BillingType,
-  CusProduct,
   Customer,
-  Entitlement,
-  EntitlementWithFeatureSchema,
   Organization,
-  Price,
   UsagePriceConfig,
   FullCustomerPrice,
   FullCusProduct,
   CusProductStatus,
-  EntitlementWithFeature,
   CustomerEntitlement,
-  FullCustomerEntitlement,
 } from "@autumn/shared";
 
 import dotenv from "dotenv";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Client } from "pg";
-import { InvoiceService } from "../../customers/invoices/InvoiceService.js";
-import { Invoice } from "@autumn/shared";
-import { generateId } from "../../../utils/genUtils.js";
-import { CusProductService } from "../../customers/products/CusProductService.js";
-import { getEntOptions, getPriceEntitlement } from "../../prices/priceUtils.js";
-import { CustomerEntitlementService } from "../../customers/entitlements/CusEntitlementService.js";
-import chalk from "chalk";
+import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import {
+  getEntOptions,
+  getPriceEntitlement,
+} from "@/internal/prices/priceUtils.js";
+import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 
 dotenv.config();
 
+// FUNCTION 3: INVOICE CUSTOMER FOR BELOW THRESHOLD PRICE
 const createBelowThresholdInvoice = async ({
   stripeCli,
   customer,
@@ -229,7 +217,9 @@ const invoiceCustomer = async ({
     "Current balance:",
     cusEnt.balance,
     "| Update amount:",
-    cusEnt.entitlement.allowance
+    cusEnt.entitlement.allowance,
+    "| New balance:",
+    newBalance
   );
 
   await CustomerEntitlementService.update({
@@ -287,7 +277,11 @@ const checkBalanceBelowThreshold = async ({
     internalFeatureId: priceEnt.feature.internal_id!,
   });
 
-  return options?.threshold && featureBalance < options?.threshold;
+  return {
+    threshold: options?.threshold,
+    balance: featureBalance,
+    below: options?.threshold && featureBalance < options?.threshold,
+  };
 };
 
 // FUNCTION 2: QUEUE CHECK BELOW THRESHOLD PRICE
@@ -313,18 +307,19 @@ export const handleBelowThresholdInvoicing = async ({
   }
 
   // 4. Check if feature balance is below threshold
-  const belowThreshold = await checkBalanceBelowThreshold({
+  const { threshold, balance, below } = await checkBalanceBelowThreshold({
     sb,
     fullCusProduct,
     belowThresholdPrice,
   });
 
-  console.log("Below threshold:", belowThreshold);
-  if (!belowThreshold) {
+  console.log(
+    `Feature balance: ${balance}, threshold: ${threshold}, below: ${below}`
+  );
+
+  if (!below) {
     return;
   }
-
-  console.log("Feature balance < threshold, creating invoice...");
 
   // 1. Invoice customer
   await invoiceCustomer({
@@ -334,6 +329,7 @@ export const handleBelowThresholdInvoicing = async ({
   });
 };
 
+// NON QUEUE BASED
 // FUNCTION 1: CHECK IF THERE'S A BELOW THRESHOLD PRICE
 export const getBelowThresholdPrice = async ({
   sb,

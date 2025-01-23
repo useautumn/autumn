@@ -21,7 +21,7 @@
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "trigger.config.ts"],
   "references": [
     {
       "path": "../shared"

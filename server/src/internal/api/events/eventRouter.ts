@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  AppEnv,
   Customer,
   ErrCode,
   Event,
@@ -17,11 +18,9 @@ import { EventService } from "./EventService.js";
 import { StatusCodes } from "http-status-codes";
 import { CustomerEntitlementService } from "../../customers/entitlements/CusEntitlementService.js";
 import { CusService } from "@/internal/customers/CusService.js";
-
-import {
-  getBelowThresholdPrice,
-  handleBelowThresholdInvoicing,
-} from "./invoiceThresholdUtils.js";
+import { getBelowThresholdPrice } from "../../../trigger/invoiceThresholdUtils.js";
+import { updateBalanceTask } from "@/trigger/updateBalanceTask.js";
+import { Client } from "pg";
 
 export const eventsRouter = Router();
 
@@ -132,6 +131,36 @@ const getFeaturesAndCustomerEnts = async ({
   return { customerEntitlements: cusEnts, features: rows };
 };
 
+const getAffectedFeatures = async ({
+  pg,
+  event,
+  orgId,
+  env,
+}: {
+  pg: Client;
+  event: Event;
+  orgId: string;
+  env: AppEnv;
+}) => {
+  const { rows }: { rows: Feature[] } = await pg.query(`
+    with features_with_event as (
+      select * from features
+      where org_id = '${orgId}'
+      and env = '${env}'
+      and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
+    )
+
+    select * from features WHERE EXISTS (
+      SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
+      schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
+    )
+    UNION all
+    select * from features_with_event
+  `);
+
+  return rows;
+};
+
 eventsRouter.post("", async (req: any, res: any) => {
   const body = req.body;
   const orgId = req.orgId;
@@ -140,81 +169,32 @@ eventsRouter.post("", async (req: any, res: any) => {
   try {
     const { customer, event } = await getEventAndCustomer(req);
 
-    const { customerEntitlements, features } = await getFeaturesAndCustomerEnts(
-      { req, customer, event }
-    );
+    const affectedFeatures = await getAffectedFeatures({
+      pg: req.pg,
+      event,
+      orgId,
+      env,
+    });
 
-    if (features.length === 0 || customerEntitlements.length === 0) {
-      res.status(200).json({ success: true, event_id: event.id });
-      return;
-    }
-
-    const featureIdToDeduction: any = {};
-    const meteredFeatures = features.filter(
-      (feature) => feature.type === FeatureType.Metered
-    );
-
-    for (const cusEnt of customerEntitlements) {
-      const internalFeatureId = cusEnt.internal_feature_id;
-      if (featureIdToDeduction[internalFeatureId]) {
-        continue;
-      }
-
-      const feature = features.find(
-        (feature) => feature.internal_id === internalFeatureId
-      );
-
-      if (feature?.type === FeatureType.Metered) {
-        featureIdToDeduction[internalFeatureId] = {
-          cusEntId: cusEnt.id,
-          deduction: 1,
-        };
-      }
-
-      if (feature?.type === FeatureType.CreditSystem) {
-        const deduction = getCreditSystemDeduction(meteredFeatures, feature);
-        if (deduction) {
-          featureIdToDeduction[internalFeatureId] = {
-            cusEntId: cusEnt.id,
-            deduction: deduction,
-          };
+    if (affectedFeatures.length > 0) {
+      console.log("Queued update balance task...");
+      await updateBalanceTask.trigger(
+        {
+          customer,
+          features: affectedFeatures,
+        },
+        {
+          queue: {
+            name: "customer",
+            concurrencyLimit: 1,
+          },
+          concurrencyKey: customer.internal_id,
         }
-      }
+      );
     }
-
-    const updateQuery = `UPDATE customer_entitlements SET balance = balance - CASE
-  ${Object.entries(featureIdToDeduction)
-    .map(
-      ([featureId, deduction]: [string, any]) =>
-        `WHEN id = '${deduction.cusEntId}' THEN ${deduction.deduction}`
-    )
-    .join("\n")}
-  END
-  WHERE id IN (${Object.values(featureIdToDeduction)
-    .map((deduction: any) => `'${deduction.cusEntId}'`)
-    .join(",")});`;
-
-    console.log("Successfully updated customer entitlements");
-
-    // UPDATE CUSTOMER ENTITLEMENTS
-    // const belowThresholdPrice = await getBelowThresholdPrice({
-    //   sb: req.sb,
-    //   internalCustomerId: customer.internal_id,
-    //   cusEnts: customerEntitlements,
-    // });
-
-    // if (belowThresholdPrice) {
-    //   console.log("Below threshold price found, queuing check...");
-    //   await handleBelowThresholdInvoicing({
-    //     sb: req.sb,
-    //     internalCustomerId: customer.internal_id,
-    //     belowThresholdPrice,
-    //   });
-    // }
-
-    await req.pg.query(updateQuery);
 
     res.status(200).json({ success: true, event_id: event.id });
+    return;
   } catch (error) {
     handleRequestError({ res, error, action: "POST event failed" });
     return;
