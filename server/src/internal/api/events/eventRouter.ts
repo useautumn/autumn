@@ -59,25 +59,6 @@ const getEventAndCustomer = async (req: any) => {
       timestamp: Date.now(),
       ...body,
     };
-
-    // 2. Check if customer ID is valid
-    customer = await CusService.getCustomer({
-      sb: req.sb,
-      orgId: orgId,
-      customerId: body.customer_id,
-      env: env,
-    });
-
-    if (!customer) {
-      throw new RecaseError({
-        message: "Customer not found",
-        code: ErrCode.CustomerNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    // 3. Insert event
-    await EventService.insertEvent(req.sb, newEvent);
   } catch (error: any) {
     throw new RecaseError({
       message: "Invalid request body -> " + formatZodError(error),
@@ -85,6 +66,24 @@ const getEventAndCustomer = async (req: any) => {
       statusCode: StatusCodes.BAD_REQUEST,
     });
   }
+  // 2. Check if customer ID is valid
+  customer = await CusService.getCustomer({
+    sb: req.sb,
+    orgId: orgId,
+    customerId: body.customer_id,
+    env: env,
+  });
+
+  if (!customer) {
+    throw new RecaseError({
+      message: "Customer not found",
+      code: ErrCode.CustomerNotFound,
+      statusCode: StatusCodes.NOT_FOUND,
+    });
+  }
+
+  // 3. Insert event
+  await EventService.insertEvent(req.sb, newEvent);
 
   return { customer, event: newEvent };
 };
