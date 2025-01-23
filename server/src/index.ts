@@ -10,6 +10,10 @@ import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 import { envMiddleware } from "./middleware/envMiddleware.js";
 import pg from "pg";
 
+import { serve } from "inngest/express";
+import { functions } from "./trigger/inngest.js";
+import { inngest } from "./trigger/inngest.js";
+
 const app = express();
 
 const init = async () => {
@@ -47,6 +51,8 @@ const init = async () => {
 
   app.use("/webhooks", webhooksRouter);
   app.use(express.json());
+  app.use("/api/inngest", serve({ client: inngest, functions }));
+
   app.use(mainRouter);
   app.use("/v1", apiRouter);
 

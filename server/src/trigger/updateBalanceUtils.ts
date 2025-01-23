@@ -1,7 +1,6 @@
+import { Feature } from "@autumn/shared";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-import { Customer, FeatureType, Event, AppEnv } from "@autumn/shared";
-
-import { CustomerEntitlement, Feature } from "@autumn/shared";
+import { Customer, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 const getCustomerEntitlements = async ({
@@ -71,6 +70,9 @@ export const updateCustomerBalance = async ({
     (feature) => feature.type === FeatureType.Metered
   );
 
+  console.log(`Customer: ${customer.name} (${customer.internal_id})`);
+  console.log(`Features: ${features.map((f) => f.id).join(", ")}`);
+
   for (const cusEnt of cusEnts) {
     const internalFeatureId = cusEnt.internal_feature_id;
     if (featureIdToDeduction[internalFeatureId]) {
@@ -103,14 +105,20 @@ export const updateCustomerBalance = async ({
     let deduction = featureIdToDeduction[internalFeatureId]?.deduction;
     let curBalance = cusEnt.balance!;
 
-    if (!curBalance) {
+    if (curBalance === undefined || curBalance === null) {
       continue;
     }
 
-    await sb
+    const { error } = await sb
       .from("customer_entitlements")
       .update({ balance: curBalance - deduction })
       .eq("id", cusEnt.id);
+
+    if (error) {
+      console.error(
+        `Failed to update (${feature?.id}: ${deduction}). Error: ${error}`
+      );
+    }
   }
 
   let featuresUpdated = Object.values(featureIdToDeduction).map(

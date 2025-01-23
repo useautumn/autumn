@@ -1,4 +1,4 @@
-import { task } from "@trigger.dev/sdk/v3";
+import { logger, task } from "@trigger.dev/sdk/v3";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { updateCustomerBalance } from "./updateBalanceUtils.js";
 import { handleBelowThresholdInvoicing } from "./invoiceThresholdUtils.js";
@@ -16,6 +16,7 @@ export const updateBalanceTask = task({
       // 1. Update customer balance
       const { customer, features } = payload;
 
+      logger.log("Updating customer balance...");
       const cusEnts: any = await updateCustomerBalance({
         sb,
         customer,

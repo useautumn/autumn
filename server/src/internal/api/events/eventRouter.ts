@@ -21,6 +21,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { getBelowThresholdPrice } from "../../../trigger/invoiceThresholdUtils.js";
 import { updateBalanceTask } from "@/trigger/updateBalanceTask.js";
 import { Client } from "pg";
+import { inngest } from "@/trigger/inngest.js";
 
 export const eventsRouter = Router();
 
@@ -177,20 +178,27 @@ eventsRouter.post("", async (req: any, res: any) => {
     });
 
     if (affectedFeatures.length > 0) {
-      console.log("Queued update balance task...");
-      await updateBalanceTask.trigger(
-        {
+      await inngest.send({
+        name: "autumn/update-balance",
+        data: {
           customer,
           features: affectedFeatures,
         },
-        {
-          queue: {
-            name: "customer",
-            concurrencyLimit: 1,
-          },
-          concurrencyKey: customer.internal_id,
-        }
-      );
+      });
+      console.log("Queued update balance task...");
+      // await updateBalanceTask.trigger(
+      //   {
+      //     customer,
+      //     features: affectedFeatures,
+      //   },
+      //   {
+      //     queue: {
+      //       name: "customer",
+      //       concurrencyLimit: 1,
+      //     },
+      //     concurrencyKey: customer.internal_id,
+      //   }
+      // );
     }
 
     res.status(200).json({ success: true, event_id: event.id });

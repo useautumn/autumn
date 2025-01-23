@@ -16,7 +16,10 @@
     "cron": "tsx src/cron.ts",
     "clean": "tsx src/clean.ts",
     "invoiceCron": "tsx src/invoiceCron.ts",
-    "trigger": "npx trigger.dev@latest dev"
+    "trigger": "npx trigger.dev@latest dev",
+    "trigger:deploy": "npx trigger.dev@latest deploy",
+
+    "inngest:dev": "npx inngest-cli@latest dev -u http://localhost:8080/api/inngest --poll-interval 5"
   },
   "author": "",
   "license": "ISC",
@@ -42,6 +45,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.1",
     "http-status-codes": "^2.3.0",
+    "inngest": "^3.30.0",
     "ksuid": "^3.0.0",
     "nodemon": "^3.1.7",
     "pg": "^8.13.1",
