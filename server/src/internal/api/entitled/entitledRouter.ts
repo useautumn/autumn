@@ -103,7 +103,7 @@ const checkEntitlementAllowed = ({
   const balance = calculateFeatureBalance({ cusEnts, featureId: feature.id });
 
   return {
-    id: feature.id,
+    feature_id: feature.id,
     balance: balance,
     required: required,
   };

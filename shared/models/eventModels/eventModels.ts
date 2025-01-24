@@ -11,7 +11,7 @@ export const EventSchema = z.object({
   event_name: z.string().nonempty(),
 
   // Optional
-  properties: z.record(z.string(), z.any()).optional(),
+  properties: z.record(z.string(), z.any()),
   idempotency_key: z.string().optional(),
   timestamp: z.number().optional(),
 });

@@ -153,31 +153,39 @@ cusRouter.get("", async (req: any, res: any) => {
 });
 
 cusRouter.delete("/:customerId", async (req: any, res: any) => {
-  const customerId = req.params.customerId;
-  let orgId = req.orgId;
-  const fullOrg = await OrgService.getFullOrg({
-    sb: req.sb,
-    orgId,
-  });
-
-  const customer = await CusService.getCustomer({
-    sb: req.sb,
-    orgId,
-    env: req.env,
-    customerId,
-  });
-
   try {
-    await deleteStripeCustomer({
-      org: fullOrg,
-      env: req.env,
-      stripeId: customer.processor.id,
+    const customerId = req.params.customerId;
+    let orgId = req.orgId;
+    const fullOrg = await OrgService.getFullOrg({
+      sb: req.sb,
+      orgId,
     });
-  } catch (error: any) {
-    console.log("Error deleting stripe customer", error?.message || error);
-  }
 
-  try {
+    const customer = await CusService.getCustomer({
+      sb: req.sb,
+      orgId,
+      env: req.env,
+      customerId,
+    });
+
+    if (!customer) {
+      throw new RecaseError({
+        message: `Customer ${customerId} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    try {
+      await deleteStripeCustomer({
+        org: fullOrg,
+        env: req.env,
+        stripeId: customer.processor.id,
+      });
+    } catch (error: any) {
+      console.log("Error deleting stripe customer", error?.message || error);
+    }
+
     await CusService.deleteCustomerStrict({
       sb: req.sb,
       customerId,
@@ -187,11 +195,7 @@ cusRouter.delete("/:customerId", async (req: any, res: any) => {
 
     res.status(200).json({ success: true, customer_id: customerId });
   } catch (error) {
-    console.log("Error deleting customer", error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      error: ErrorMessages.InternalError,
-      code: ErrCode.InternalError,
-    });
+    handleRequestError({ error, res, action: "delete customer" });
   }
 });
 

@@ -10,7 +10,7 @@ import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { cn } from "@/lib/utils";
 import { useHotkeys } from "react-hotkeys-hook";
 import { XIcon } from "lucide-react";
-import { Expression, MeteredConfig } from "@autumn/shared";
+import { AggregateType, Expression, MeteredConfig } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFeaturesContext } from "../FeaturesContext";
@@ -162,10 +162,24 @@ export function FeatureConfig({
                 <SelectValue placeholder="Select" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="count">COUNT</SelectItem>
+                {Object.values(AggregateType).map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.toUpperCase()}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+          {meteredConfig.aggregate.type == AggregateType.Sum && (
+            <div>
+              <FieldLabel>Property</FieldLabel>
+              <Input
+                placeholder="Property"
+                value={meteredConfig.aggregate.property || ""}
+                onChange={(e) => setAggregate("property", e.target.value)}
+              />
+            </div>
+          )}
         </>
       )}
     </div>
