@@ -20,4 +20,10 @@ export class CusService {
       ...data,
     });
   }
+
+  static async getProductOptions(axios: AxiosInstance, data: any) {
+    return await axios.post(`/customers/product_options`, {
+      ...data,
+    });
+  }
 }

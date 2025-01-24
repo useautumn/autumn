@@ -41,6 +41,16 @@ import {
 import { ErrCode } from "@autumn/shared";
 import { AddProductButton } from "../add-product/AddProductButton";
 import ErrorScreen from "@/views/general/ErrorScreen";
+import { ProductOptionsButton } from "./ProductOptionsButton";
+import { ProductService } from "@/services/products/ProductService";
+import RequiredOptionsModal from "./RequiredOptionsModal";
+import { ProductOptions } from "./ProductOptions";
+
+interface OptionValue {
+  feature_id: string;
+  threshold?: number;
+  quantity?: number;
+}
 
 export default function CustomerProductView({
   product_id,
@@ -56,6 +66,7 @@ export default function CustomerProductView({
   const router = useRouter();
   const axiosInstance = useAxiosInstance({ env });
   const [product, setProduct] = useState<FrontendProduct | null>(null);
+  const [options, setOptions] = useState<OptionValue[]>([]);
   const { data, isLoading, mutate, error } = useAxiosSWR({
     url: `/customers/${customer_id}/data`,
     env,
@@ -63,6 +74,7 @@ export default function CustomerProductView({
 
   const [url, setUrl] = useState<string | null>(null);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const [requiredOptions, setRequiredOptions] = useState<OptionValue[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const initialProductRef = useRef<FrontendProduct | null>(null);
 
@@ -73,10 +85,16 @@ export default function CustomerProductView({
     const foundProduct = data.products.find((p) => p.id === product_id);
     if (!foundProduct) return;
 
-    const isActive = data.customer.products.some(
-      (p) => p.product_id === product_id
-    );
-    const enrichedProduct = { ...foundProduct, isActive };
+    const customerOptions = data.customer.products.find(p => p.product_id === product_id)?.options ?? [];
+    setOptions(customerOptions);
+
+    const enrichedProduct = {
+      ...foundProduct,
+      isActive: data.customer.products.some(
+        (p) => p.product_id === product_id && p.status === "active"
+      ),
+      options: customerOptions
+    };
 
     setProduct(enrichedProduct);
     initialProductRef.current = enrichedProduct;
@@ -101,6 +119,8 @@ export default function CustomerProductView({
     setHasChanges(hasChanged);
   }, [product]);
 
+
+
   if (error) {
     console.log("Use Axios SWR Error: ", error);
     return (
@@ -122,8 +142,19 @@ export default function CustomerProductView({
   }
 
   const handleCreateProduct = async () => {
-    console.log("Customer Product Updated", product);
+    try {
+      const {data} = await ProductService.getRequiredOptions(axiosInstance, {
+        prices: product.prices,
+        entitlements: product.entitlements,
+      });
+      
+      if (data.options && data.options.length > 0) {
+        console.log("options", data.options);
+        setRequiredOptions(data.options);
+        return;
+      }
 
+<<<<<<< HEAD
     // TODO: Update product
     const entitlements = product.entitlements.map((e) => {
       return {
@@ -136,12 +167,31 @@ export default function CustomerProductView({
       };
     });
 
+=======
+      // Continue with product creation if no required options
+      await createProduct();
+    } catch (error) {
+      toast.error(getBackendErr(error, "Error checking required options"));
+    }
+  };
+
+const createProduct = async () => {
+    console.log("options", requiredOptions);
+>>>>>>> 3bd8b5d49a63101cf7dc2b6efcd31f8233b91b7d
     try {
       const { data } = await CusService.addProduct(axiosInstance, customer_id, {
         product_id,
         prices: product.prices,
+<<<<<<< HEAD
         entitlements,
+=======
+        entitlements: product.entitlements,
+        options: requiredOptions
+>>>>>>> 3bd8b5d49a63101cf7dc2b6efcd31f8233b91b7d
       });
+
+      await mutate();
+      toast.success("Product created successfully");
 
       if (data.checkout_url) {
         setUrl(data.checkout_url);
@@ -170,9 +220,9 @@ export default function CustomerProductView({
     }
     if (product.isActive) {
       return {
-        buttonText: "Save Custom Version",
+        buttonText: "Update\ Product",
         tooltipText: `You're editing the live product ${product.name} and updating it to a custom version for ${customer.name}`,
-        disabled: false,
+        disabled: true,
       };
     }
     if (hasChanges) {
@@ -205,6 +255,13 @@ export default function CustomerProductView({
       }}
     >
       <CustomToaster />
+      
+      <RequiredOptionsModal
+        requiredOptions={requiredOptions}
+        createProduct={createProduct}
+        setRequiredOptions={setRequiredOptions} 
+      />
+
       <Dialog
         open={checkoutDialogOpen}
         onOpenChange={() => {
@@ -240,14 +297,9 @@ export default function CustomerProductView({
         {product && <ManageProduct product={product} customerData={data} />}
       </div>
 
+      {options.length > 0 && <ProductOptions options={options}/>}
       <div className="flex justify-end gap-2">
-        <Button
-          variant="gradientSecondary"
-          className="w-fit gap-2"
-          startIcon={<FontAwesomeIcon icon={faCircleDollar} />}
-        >
-          Configure Product Options
-        </Button>
+        {/* <ProductOptionsButton /> */}
         <AddProductButton
           handleCreateProduct={handleCreateProduct}
           actionState={actionState}

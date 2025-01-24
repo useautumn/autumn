@@ -3,6 +3,10 @@ import { FeatureService } from "../features/FeatureService.js";
 import { entitlementRouter } from "./entitlementRouter.js";
 import { PriceService } from "../prices/PriceService.js";
 import { ProductService } from "./ProductService.js";
+import { EntitlementWithFeature } from "@autumn/shared";
+import { BillingType } from "@autumn/shared";
+import { FeatureOptions } from "@autumn/shared";
+import { getBillingType } from "../prices/priceUtils.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -84,3 +88,36 @@ productRouter.get("/:productId", async (req: any, res) => {
 });
 
 productRouter.use(entitlementRouter);
+
+
+productRouter.post("/product_options", async (req: any, res: any) => {
+  const { prices, entitlements } = req.body;
+
+
+
+  const options: FeatureOptions[] = [];
+  console.log("prices", prices);
+  console.log("entitlements", entitlements);
+  for (const price of prices) {
+    // get billing tyoe
+    const billingType = getBillingType(price.config);
+
+    if (billingType === BillingType.UsageBelowThreshold) {
+      let featureId = entitlements.find((e: EntitlementWithFeature) => e.id === price.config.entitlement_id).feature_id;
+
+      options.push({
+        feature_id: featureId,
+        threshold: 0
+      });
+    } else if (billingType === BillingType.UsageInAdvance) {
+      let featureId = entitlements.find((e: EntitlementWithFeature) => e.id === price.config.entitlement_id).feature_id;
+
+      options.push({
+        feature_id: featureId,
+        quantity: 0
+      });
+    }
+  }
+
+  res.status(200).send({ options });
+});

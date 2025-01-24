@@ -60,6 +60,7 @@ const checkAddProductErrors = async ({
 
   // 2. Check if options are valid
   for (const price of prices) {
+
     if (price.billing_type === BillingType.UsageInAdvance) {
       // Get options for price
       let priceEnt = getPriceEntitlement(price, entitlements);
