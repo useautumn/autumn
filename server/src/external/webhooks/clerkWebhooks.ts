@@ -1,11 +1,45 @@
 import { Request, Response } from "express";
 import { verifySvixSignature } from "./webhookUtils.js";
 import { createSupabaseClient } from "../supabaseUtils.js";
-
+import { Webhook } from "svix";
 export const handleClerkWebhook = async (req: Request, res: Response) => {
   let verified = false;
+  const wh = new Webhook(process.env.CLERK_SIGNING_SECRET!);
+
+  // Get headers and body
+  const headers = req.headers;
+  const payload = req.body;
+
+  // Get Svix headers for verification
+  const svix_id = headers["svix-id"];
+  const svix_timestamp = headers["svix-timestamp"];
+  const svix_signature = headers["svix-signature"];
+
+  if (!svix_id || !svix_timestamp || !svix_signature) {
+    return void res.status(400).json({
+      success: false,
+      message: "Error: Missing svix headers",
+    });
+  }
+  let evt: any;
   try {
-    verified = await verifySvixSignature(req, res);
+    evt = wh.verify(payload, {
+      "svix-id": svix_id as string,
+      "svix-timestamp": svix_timestamp as string,
+      "svix-signature": svix_signature as string,
+    });
+  } catch (err) {
+    console.log("Error: Could not verify webhook");
+    return void res.status(400).json({
+      success: false,
+      message: "Error: Could not verify webhook",
+    });
+  }
+
+  console.log("CLERK webhook verified, event:", evt);
+
+  try {
+    // verified = await verifySvixSignature(req, res);
   } catch (error: any) {
     console.error("Error verifying webhook:", error?.message);
     res.status(500).json({

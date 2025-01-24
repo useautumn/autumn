@@ -35,12 +35,21 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
         )}
       >
         {state == "expanded" && (
-          <React.Fragment>
-            {isLoaded ? (
+          <div className="flex relative w-full h-7">
+            <div className="flex items-center gap-2 text-sm font-medium h-7 absolute left-0 top-0 w-fit px-1">
+              <Avatar
+                size="sm"
+                className="w-5 h-5 mr-1"
+                fallback={orgName[0]}
+                radius="md"
+              />
+              <p className="text-zinc-500">{orgName}</p>
+            </div>
+            {isLoaded && (
               <OrganizationSwitcher
                 appearance={{
                   elements: {
-                    organizationSwitcherTrigger: "px-0",
+                    organizationSwitcherTrigger: "px-1 bg-zinc-50",
                   },
                 }}
                 hidePersonal={true}
@@ -53,18 +62,8 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
                 //   router.refresh();
                 // }}
               />
-            ) : (
-              <div className="flex items-center gap-2 text-sm font-medium h-7">
-                <Avatar
-                  size="sm"
-                  className="w-5 h-5 mr-1"
-                  fallback={orgName[0]}
-                  radius="md"
-                />
-                <p className="text-zinc-600">{orgName}</p>
-              </div>
             )}
-          </React.Fragment>
+          </div>
         )}
 
         <Button

@@ -54,8 +54,8 @@ const init = async () => {
   });
 
   app.use(envMiddleware);
-
   app.use("/webhooks", webhooksRouter);
+
   app.use(express.json());
   app.use("/api/inngest", serve({ client: inngest, functions }));
 
