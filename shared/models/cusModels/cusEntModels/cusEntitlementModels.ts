@@ -3,7 +3,6 @@ import {
   EntitlementSchema,
   EntitlementWithFeatureSchema,
 } from "../../productModels/entitlementModels.js";
-import { BillingInterval } from "../../productModels/fixedPriceModels.js";
 import { FeatureSchema } from "../../featureModels/featureModels.js";
 
 export const CustomerEntitlementSchema = z.object({

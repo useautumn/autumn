@@ -29,3 +29,16 @@ export const getNextEntitlementReset = (
       throw new Error("Invalid duration");
   }
 };
+
+export const getNextResetAt = (
+  curReset: Date | null,
+  interval: EntInterval
+) => {
+  while (true) {
+    const nextReset = getNextEntitlementReset(curReset, interval);
+    if (nextReset.getTime() > Date.now()) {
+      return nextReset.getTime();
+    }
+    curReset = nextReset;
+  }
+};

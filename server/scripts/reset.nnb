@@ -1,0 +1,11 @@
+{
+    "cells": [
+        {
+            "language": "typescript",
+            "source": [
+                "import dotenv from \"dotenv\";\nimport axios from \"axios\";\ndotenv.config();\n\nconst apiKey = \"am_test_3ZQ1KsigC9j4bc5u5uxzBabV\"\nconst url = \"http://localhost:8080/v1\"\n\n// Send event\nconst data = {\n\tcustomer_id: \"123\",\n\tevent_name: \"minutes\",\n\tproperties: {\n\t\tlength: 19.5\n\t},\n}\nconst res = await axios.post(`${url}/events`, data,\n\t{\n\t\theaders: {\n\t\t\t\"Content-Type\": \"application/json\",\n\t\t\t\"Authorization\": `Bearer ${apiKey}`\n\t\t}\n\t}\n)"
+            ],
+            "outputs": []
+        }
+    ]
+}

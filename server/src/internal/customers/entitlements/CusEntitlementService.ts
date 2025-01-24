@@ -144,6 +144,22 @@ export class CustomerEntitlementService {
     return data;
   }
 
+  static async getActiveResetPassed({ sb }: { sb: SupabaseClient }) {
+    const { data, error } = await sb
+      .from("customer_entitlements")
+      .select(
+        "*, customer_product:customer_products!inner(*), entitlement:entitlements(*)"
+      )
+      .eq("customer_product.status", "active")
+      .lt("next_reset_at", Date.now());
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async update({
     sb,
     id,
