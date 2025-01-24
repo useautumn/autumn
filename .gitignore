@@ -16,8 +16,7 @@ tests/
 
 **/test.nnb
 **/scripts.nnb
-../scripts/*
-
+**/scripts
 server/test.nnb
 server/src/test.nnb
 
