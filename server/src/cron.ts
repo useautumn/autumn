@@ -12,6 +12,7 @@ import { getEntOptions } from "./internal/prices/priceUtils.js";
 import { getNextResetAt } from "./utils/timeUtils.js";
 import chalk from "chalk";
 import { z } from "zod";
+import { format } from "date-fns";
 dotenv.config();
 
 const FullCustomerEntitlementWithProduct = FullCustomerEntitlementSchema.extend(
@@ -73,14 +74,14 @@ const resetCustomerEntitlement = async ({
       },
     });
 
-    console.log(`Successfull`);
+    console.log(`Successful`);
   } catch (error: any) {
     console.log("Error:", error.message || error);
   }
 };
 
 export const cronTask = async () => {
-  console.log("RUNNING RESET CRON");
+  console.log("RUNNING RESET CRON:", format(new Date(), "yyyy-MM-dd HH:mm:ss"));
   // 1. Query customer_entitlements for all customers with reset_interval < now
   const sb = createSupabaseClient();
   let cusEntitlements: FullCustomerEntitlement[] = [];
@@ -100,6 +101,12 @@ export const cronTask = async () => {
     }
 
     await Promise.all(resets);
+
+    console.log(
+      "FINISHED RESET CRON:",
+      format(new Date(), "yyyy-MM-dd HH:mm:ss")
+    );
+    process.exit(0);
   } catch (error) {
     console.error("Error getting entitlements for reset:", error);
     return;
