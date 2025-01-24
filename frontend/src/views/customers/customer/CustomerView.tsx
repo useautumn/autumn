@@ -68,6 +68,7 @@ export default function CustomerView({
   const { customer, products, invoices } = data;
   const { events } = eventsData;
 
+  console.log("Customer", customer);
   return (
     <CustomerContext.Provider value={{ customer, products, env }}>
       <CustomToaster />

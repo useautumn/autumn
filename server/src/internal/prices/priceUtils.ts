@@ -132,7 +132,7 @@ export const getPriceEntitlement = (
   return entitlement as EntitlementWithFeature;
 };
 
-export const comparePrices = (price1: Price, price2: Price) => {
+export const pricesAreSame = (price1: Price, price2: Price) => {
   for (const key in price1.config) {
     const originalValue = (price1.config as any)[key];
     const newValue = (price2.config as any)[key];

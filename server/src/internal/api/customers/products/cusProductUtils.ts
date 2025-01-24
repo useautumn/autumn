@@ -11,7 +11,7 @@ import {
   PriceType,
   UsagePriceConfigSchema,
 } from "@autumn/shared";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType, pricesAreSame } from "@/internal/prices/priceUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 import { ErrCode } from "@/errors/errCodes.js";
@@ -20,11 +20,10 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { PricesInput } from "@autumn/shared";
-import { comparePrices } from "@/internal/prices/priceUtils.js";
 import { generateId } from "@/utils/genUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 import { EntitlementService } from "@/internal/products/EntitlementService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const getCustomerProductAndOrg = async ({
   sb,
@@ -89,6 +88,7 @@ export const getCustomerProductAndOrg = async ({
   return { customer, fullProduct, org: fullOrg };
 };
 
+// GET PRICES
 const validatePriceConfig = (price: Price) => {
   if (!price.config?.type) {
     return {
@@ -130,64 +130,59 @@ export const getDefaultAndCustomPrices = ({
   pricesInput,
 }: {
   product: FullProduct;
-  pricesInput: PricesInput;
+  pricesInput: Price[];
 }) => {
-  const customPrices: any = [];
-  const replacedIds: string[] = [];
+  const idToPrice: { [key: string]: Price } = {};
+  for (const price of product.prices) {
+    idToPrice[price.id!] = price;
+  }
+
+  const customPrices: Price[] = [];
+  let defaultPrices: Price[] = [...product.prices];
+
   for (let i = 0; i < pricesInput.length; i++) {
     const price = pricesInput[i];
 
-    let customPriceConfig;
-    if (price.id && price.config) {
-      const { valid, error } = validatePriceConfig(price as any);
-      if (!valid) {
-        throw new RecaseError({
-          code: ErrCode.InvalidPriceConfig,
-          message: error || "Invalid price config",
-          statusCode: 400,
-        });
-      }
-
-      const existingPrice = product.prices.find((p) => p.id == price.id);
-      if (existingPrice && comparePrices(existingPrice, price as any)) {
-        continue;
-      }
-
-      replacedIds.push(price.id);
-      customPriceConfig = price.config;
-    } else if (price.config) {
-      if (!validatePriceConfig(price as any).valid) {
-        throw new RecaseError({
-          code: ErrCode.InvalidPriceConfig,
-          message: "Invalid price config",
-          statusCode: 400,
-        });
-      }
-
-      customPriceConfig = price.config;
+    const { valid, error } = validatePriceConfig(price as any);
+    if (!valid) {
+      throw new RecaseError({
+        code: ErrCode.InvalidPriceConfig,
+        message: error || "Invalid price config",
+        statusCode: 400,
+      });
     }
 
-    if (customPriceConfig) {
-      let id = generateId("pr");
-      pricesInput[i].id = id;
+    // Check if it's existing price
+    const existingPrice = idToPrice[price.id!];
+    const replacePrice =
+      existingPrice && !pricesAreSame(existingPrice, price as any);
+
+    const createNewPrice = !existingPrice;
+
+    if (createNewPrice || replacePrice) {
+      // Create new custom price for it...
       customPrices.push({
-        id,
-        created_at: Date.now(),
-        billing_type: getBillingType(customPriceConfig),
-        config: customPriceConfig,
-        is_custom: true,
+        id: generateId("pr"),
+        name: price.name || "",
+        // org_id: product.org_id,
         // product_id: product.id,
+        created_at: Date.now(),
+        billing_type: getBillingType(price.config!),
+
+        config: price.config,
+        is_custom: true,
       });
+    }
+
+    if (replacePrice) {
+      defaultPrices = defaultPrices.filter((p) => p.id != existingPrice.id);
     }
   }
 
-  const defaultPrices = product.prices.filter(
-    (p) => !replacedIds.some((id: any) => id == p.id)
-  );
-
-  return { defaultPrices, customPrices, newPricesInput: pricesInput };
+  return { defaultPrices, customPrices };
 };
 
+// GET ENTITLEMENTS
 const validateEntitlement = (ent: Entitlement, features: Feature[]) => {
   const feature = features.find((f) => ent.feature_id == f.id);
   if (!feature) {
@@ -231,7 +226,7 @@ const validateEntitlement = (ent: Entitlement, features: Feature[]) => {
   return feature;
 };
 
-const compareEnts = (ent1: Entitlement, ent2: Entitlement) => {
+const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
   if (ent1.allowance_type != ent2.allowance_type) return false;
   if (ent1.allowance_type == AllowanceType.Fixed) {
     if (ent1.allowance != ent2.allowance) return false;
@@ -245,54 +240,78 @@ export const getDefaultAndCustomEnts = ({
   product,
   entsInput,
   features,
+  prices,
 }: {
   product: FullProduct;
   features: Feature[];
   entsInput: Entitlement[];
+  prices: Price[];
 }) => {
-  const productEnts = product.entitlements;
-
-  let featureToEnt: { [key: string]: Entitlement } = {};
-  for (const ent of productEnts) {
-    featureToEnt[ent.internal_feature_id!] = ent;
+  let defaultEnts = [...product.entitlements];
+  const featureToEnt: { [key: string]: Entitlement } = {};
+  for (const ent of defaultEnts) {
+    featureToEnt[ent.feature_id!] = ent;
   }
 
   const customEnts: any = [];
-  for (let i = 0; i < entsInput.length; i++) {
-    const ent = entsInput[i];
 
-    if (!ent.feature_id) {
+  for (const ent of entsInput) {
+    // 1. Validate entitlement
+    if (!validateEntitlement(ent, features)) {
       throw new RecaseError({
         code: ErrCode.InvalidEntitlement,
-        message: `Feature ID is required for entitlement`,
+        message: `Invalid entitlement`,
         statusCode: 400,
       });
     }
 
-    const feature = validateEntitlement(ent, features);
-    if (compareEnts(featureToEnt[feature.internal_id!], ent)) {
-      continue;
+    const feature = features.find((f) => f.id == ent.feature_id);
+    const existingEnt = featureToEnt[ent.feature_id!];
+    const replaceEnt = existingEnt && !entsAreSame(existingEnt, ent);
+    const createNewEnt = !existingEnt;
+
+    let newId = generateId("ent");
+
+    // 3. If replaceEnt, remove from defaultEnts and update related price
+    if (replaceEnt) {
+      let relatedPriceIndex = prices.findIndex(
+        (p) =>
+          p.config &&
+          "entitlement_id" in p.config &&
+          p.config?.entitlement_id == existingEnt.id
+      );
+
+      if (relatedPriceIndex != -1) {
+        // @ts-ignore
+        prices[relatedPriceIndex].config!.entitlement_id = newId;
+      }
     }
 
-    customEnts.push({
-      feature_id: feature.id,
-      id: generateId("ent"),
-      created_at: Date.now(),
-      internal_feature_id: feature.internal_id,
-      is_custom: true,
+    // 4. If new ent, push to customEnts
+    if (createNewEnt || replaceEnt) {
+      customEnts.push({
+        id: newId,
 
-      // custom entitlements stuff..
-      allowance: ent.allowance,
-      allowance_type: ent.allowance_type,
-      interval: ent.interval,
-    });
-    delete featureToEnt[feature.internal_id!];
+        created_at: Date.now(),
+        feature_id: ent.feature_id,
+        internal_feature_id: feature!.internal_id,
+        is_custom: true,
+
+        allowance_type: ent.allowance_type,
+        allowance: ent.allowance,
+        interval: ent.interval,
+      });
+    }
+
+    defaultEnts = defaultEnts.filter(
+      (e) => e.feature_id != existingEnt.feature_id
+    );
   }
 
-  const defaultEnts = Object.values(featureToEnt);
   return { defaultEnts, customEnts };
 };
 
+// PROCESS PRICES AND ENTITLEMENTS
 export const processPricesAndEntsInput = async ({
   sb,
   product,
@@ -307,19 +326,20 @@ export const processPricesAndEntsInput = async ({
   features: Feature[];
 }) => {
   // 1. Get prices and entitlements
-  const { defaultPrices, customPrices, newPricesInput } =
-    getDefaultAndCustomPrices({
-      product,
-      pricesInput,
-    });
+  const { defaultPrices, customPrices } = getDefaultAndCustomPrices({
+    product,
+    pricesInput,
+  });
+
+  const prices = [...defaultPrices, ...customPrices];
 
   const { defaultEnts, customEnts } = getDefaultAndCustomEnts({
     product,
     entsInput,
     features,
+    prices,
   });
 
-  const prices = [...defaultPrices, ...customPrices];
   const entitlements = [...defaultEnts, ...customEnts];
 
   if (customEnts.length > 0) {
