@@ -32,22 +32,22 @@ priceRouter.post("", async (req: any, res) => {
     price = cleanUpPrice(price);
 
     // 1. Check if product is default
-    const product = await ProductService.get(req.sb, price.product_id!);
-    if (!product) {
-      throw new RecaseError({
-        message: "Product not found",
-        code: ErrCode.ProductNotFound,
-        statusCode: 404,
-      });
-    }
+    // const product = await ProductService.get(req.sb, price.product_id!);
+    // if (!product) {
+    //   throw new RecaseError({
+    //     message: "Product not found",
+    //     code: ErrCode.ProductNotFound,
+    //     statusCode: 404,
+    //   });
+    // }
 
-    if (product.is_default) {
-      throw new RecaseError({
-        message: "Default product should be free",
-        code: ErrCode.DefaultProductNotAllowedPrice,
-        statusCode: 400,
-      });
-    }
+    // if (product.is_default) {
+    //   throw new RecaseError({
+    //     message: "Default product should be free",
+    //     code: ErrCode.DefaultProductNotAllowedPrice,
+    //     statusCode: 400,
+    //   });
+    // }
 
     // 2. Validate the price
     try {
