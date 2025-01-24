@@ -129,6 +129,8 @@ const validateCreateProduct = ({
     }
   }
 
+
+
   return { newProduct, newPrices, newEntitlements };
 };
 
@@ -319,6 +321,7 @@ const validatePricesAndEnts = ({
         ...idToPrice[newPrice.id!],
         name: newPrice.name,
         config: newPrice.config,
+        billing_type: getBillingType(newPrice.config!),
       });
     } else {
       // Create
@@ -381,6 +384,8 @@ const validatePricesAndEnts = ({
       });
     }
   }
+
+
 
   return { newPrices, newEntitlements };
 };

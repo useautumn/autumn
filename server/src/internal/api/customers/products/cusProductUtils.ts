@@ -270,7 +270,9 @@ export const getDefaultAndCustomEnts = ({
     }
 
     const feature = validateEntitlement(ent, features);
-    if (compareEnts(featureToEnt[feature.internal_id!], ent)) {
+
+    const existingEnt = featureToEnt[feature.internal_id!];
+    if (existingEnt && compareEnts(existingEnt, ent)) {
       continue;
     }
 

@@ -36,6 +36,7 @@ import {
 import { ManageEntitlements } from "./entitlements/ManageEntitlements";
 import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsList";
 import { navigateTo } from "@/utils/genUtils";
+import { CustomerEventsList } from "./product/CustomerEventsList";
 
 export default function CustomerView({
   customer_id,
@@ -63,7 +64,7 @@ export default function CustomerView({
     router.push("/customers");
   }
 
-  if (isLoading) return <LoadingScreen />;
+  if (isLoading || eventsLoading) return <LoadingScreen />;
 
   const { customer, products, invoices } = data;
   const { events } = eventsData;
@@ -147,59 +148,60 @@ export default function CustomerView({
           </div>
 
           <p className="text-t2 font-medium text-md">Invoices</p>
-          <Table className="p-2">
-            <TableHeader>
-              <TableRow className="bg-white">
-                <TableHead className="w-[150px]">Products</TableHead>
-                <TableHead className="">URL</TableHead>
-                <TableHead className="">Created At</TableHead>
-                <TableHead className="">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.map((invoice) => (
-                <TableRow key={invoice.id}>
-                  <TableCell>
-                    {invoice.product_ids
-                      .map((p: string) => {
-                        return products.find((product) => product.id === p)
-                          ?.name;
-                      })
-                      .join(", ")}
-                  </TableCell>
-                  <TableCell className="max-w-[400px] truncate">
-                    <a
-                      href={invoice.hosted_invoice_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-lime-500"
-                    >
-                      View Invoice
-                      <FontAwesomeIcon icon={faSquareUpRight} />
-                    </a>
-                  </TableCell>
-                  <TableCell>
-                    {formatUnixToDateTime(invoice.created_at).date}
-                    <span className="text-t3">
-                      {" "}
-                      {formatUnixToDateTime(invoice.created_at).time}{" "}
-                    </span>
-                  </TableCell>
-                  <TableCell>{invoice.status}</TableCell>
+          {invoices.length === 0 ? (
+            <p className="text-t3 text-sm italic">No invoices found</p>
+          ) : (
+            <Table className="p-2">
+              <TableHeader>
+                <TableRow className="bg-white">
+                  <TableHead className="w-[150px]">Products</TableHead>
+                  <TableHead className="">URL</TableHead>
+                  <TableHead className="">Created At</TableHead>
+                  <TableHead className="">Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {invoices.map((invoice) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell>
+                      {invoice.product_ids
+                        .map((p: string) => {
+                          return products.find((product) => product.id === p)
+                            ?.name;
+                        })
+                        .join(", ")}
+                    </TableCell>
+                    <TableCell className="max-w-[400px] truncate">
+                      <a
+                        href={invoice.hosted_invoice_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-lime-500"
+                      >
+                        View Invoice
+                        <FontAwesomeIcon icon={faSquareUpRight} />
+                      </a>
+                    </TableCell>
+                    <TableCell>
+                      {formatUnixToDateTime(invoice.created_at).date}
+                      <span className="text-t3">
+                        {" "}
+                        {formatUnixToDateTime(invoice.created_at).time}{" "}
+                      </span>
+                    </TableCell>
+                    <TableCell>{invoice.status}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
 
           <p className="text-t2 font-medium text-md">Events</p>
-          <div className="flex flex-col gap-1">
-            {events.map((event) => (
-              <div key={event.id} className="flex gap-1">
-                <p>- {formatUnixToDateTimeString(event.timestamp)}</p>
-                <p>- {event.event_name}</p>
-              </div>
-            ))}
-          </div>
+          {events.length === 0 ? (
+            <p className="text-t3 text-sm italic">No events found</p>
+          ) : (
+            <CustomerEventsList events={events} />
+          )}
         </div>
         {/* customer details */}
         <div className="flex flex-col gap-4 text-t2 text-sm  w-full max-w-[400px] h-fit">
