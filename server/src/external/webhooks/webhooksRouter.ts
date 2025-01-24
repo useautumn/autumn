@@ -4,6 +4,7 @@ import { handleClerkWebhook } from "./clerkWebhooks.js";
 import { stripeWebhookRouter } from "../stripe/stripeWebhooks.js";
 
 const webhooksRouter = express.Router();
+
 webhooksRouter.use("/stripe", stripeWebhookRouter);
 
 webhooksRouter.post(
