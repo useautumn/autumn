@@ -1,16 +1,17 @@
 "use client";
 
-import { CustomToaster } from "@/components/general/CustomToaster";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import React, { useState } from "react";
+import toast from "react-hot-toast";
+
+import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import React, { useState } from "react";
-import toast from "react-hot-toast";
 import { AppEnv, Organization } from "@autumn/shared";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getBackendErr, getRedirectUrl, navigateTo } from "@/utils/genUtils";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { stripeCurrencyCodes } from "@/data/stripeCurrencyCodes";
 import { ChevronsUpDown } from "lucide-react";
 import {
@@ -21,14 +22,16 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAuth, useSession } from "@clerk/nextjs";
+import { useSession } from "@clerk/nextjs";
 
 function ConnectStripe({ org }: { org: Organization }) {
   const router = useRouter();

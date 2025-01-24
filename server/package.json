@@ -18,7 +18,6 @@
     "invoiceCron": "tsx src/invoiceCron.ts",
     "trigger": "npx trigger.dev@latest dev",
     "trigger:deploy": "npx trigger.dev@latest deploy",
-
     "inngest:dev": "npx inngest-cli@latest dev -u http://localhost:8080/api/inngest --poll-interval 5"
   },
   "author": "",
@@ -54,6 +53,7 @@
     "postgres": "^3.4.5",
     "recaseai": "^0.0.37",
     "stripe": "^17.5.0",
+    "svix": "^1.45.1",
     "ts-node": "^10.9.2",
     "tsc-alias": "^1.8.10",
     "tsx": "^4.19.2"
