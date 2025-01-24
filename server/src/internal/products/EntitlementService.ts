@@ -47,18 +47,18 @@ export class EntitlementService {
 
   static async deleteIfNotIn({
     sb,
-    productId,
+    internalProductId,
     entitlementIds,
   }: {
     sb: SupabaseClient;
-    productId: string;
+    internalProductId: string;
     entitlementIds: string[];
   }) {
     if (entitlementIds.length === 0) {
       const { error } = await sb
         .from("entitlements")
         .delete()
-        .eq("product_id", productId);
+        .eq("internal_product_id", internalProductId);
       if (error) {
         throw error;
       }
@@ -69,7 +69,7 @@ export class EntitlementService {
       .from("entitlements")
       .delete()
       .not("id", "in", `(${entitlementIds.join(",")})`)
-      .eq("product_id", productId);
+      .eq("internal_product_id", internalProductId);
 
     if (error) {
       throw error;
@@ -104,9 +104,12 @@ export class EntitlementService {
 
   static async deleteEntitlementByProductId(
     sb: SupabaseClient,
-    productId: string
+    internalProductId: string
   ) {
-    await sb.from("entitlements").delete().eq("product_id", productId);
+    await sb
+      .from("entitlements")
+      .delete()
+      .eq("internal_product_id", internalProductId);
   }
 
   static async getById(sb: SupabaseClient, entitlementId: string) {

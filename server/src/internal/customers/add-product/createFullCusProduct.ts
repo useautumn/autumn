@@ -126,6 +126,7 @@ export const initCusProduct = ({
     id: cusProdId,
     internal_customer_id: customer.internal_id,
     customer_id: customer.id,
+    internal_product_id: product.internal_id,
     product_id: product.id,
     created_at: Date.now(),
 
@@ -158,6 +159,7 @@ export const insertFullCusProduct = async ({
   const { error: prodError } = await sb
     .from("customer_products")
     .insert(cusProd);
+
   if (prodError) {
     console.log("Error inserting customer product: ", prodError);
     throw new RecaseError({

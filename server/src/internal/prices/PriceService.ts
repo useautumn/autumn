@@ -50,29 +50,18 @@ export class PriceService {
 
   static async deleteIfNotIn({
     sb,
-    productId,
+    internalProductId,
     priceIds,
   }: {
     sb: SupabaseClient;
-    productId: string;
+    internalProductId: string;
     priceIds: string[];
   }) {
-    // if (priceIds.length === 0) {
-    //   const { error } = await sb
-    //     .from("prices")
-    //     .delete()
-    //     .eq("product_id", productId);
-    //   if (error) {
-    //     throw error;
-    //   }
-    //   return;
-    // }
-
     const { error } = await sb
       .from("prices")
       .delete()
       .not("id", "in", `(${priceIds.join(",")})`)
-      .eq("product_id", productId);
+      .eq("internal_product_id", internalProductId);
 
     if (error) {
       throw error;
@@ -97,11 +86,14 @@ export class PriceService {
     return data || [];
   }
 
-  static async getPricesByProductId(sb: SupabaseClient, productId: string) {
+  static async getPricesByProductId(
+    sb: SupabaseClient,
+    internalProductId: string
+  ) {
     const { data, error } = await sb
       .from("prices")
       .select("*")
-      .eq("product_id", productId)
+      .eq("internal_product_id", internalProductId)
       .eq("is_custom", false);
 
     if (error) {
@@ -114,11 +106,14 @@ export class PriceService {
     return data || [];
   }
 
-  static async deletePriceByProductId(sb: SupabaseClient, productId: string) {
+  static async deletePriceByProductId(
+    sb: SupabaseClient,
+    internalProductId: string
+  ) {
     const { error } = await sb
       .from("prices")
       .delete()
-      .eq("product_id", productId);
+      .eq("internal_product_id", internalProductId);
 
     if (error) {
       throw error;

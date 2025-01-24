@@ -17,7 +17,8 @@ import toast from "react-hot-toast";
 import { useProductsContext } from "./ProductsContext";
 import { PlusIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { navigateTo } from "@/utils/genUtils";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
+
 function CreateProduct() {
   const { env, mutate } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env });
@@ -26,9 +27,11 @@ function CreateProduct() {
   const [loading, setLoading] = useState(false);
   const [fields, setFields] = useState({
     name: "",
+    id: "",
     is_add_on: false,
     is_default: false,
   });
+
   const [open, setOpen] = useState(false);
 
   const handleCreateClicked = async () => {
@@ -42,7 +45,7 @@ function CreateProduct() {
 
       navigateTo(`/products/${productId}`, router, env);
     } catch (error) {
-      toast.error("Failed to create product");
+      toast.error(getBackendErr(error, "Failed to create product"));
     }
     setLoading(false);
   };
@@ -60,13 +63,23 @@ function CreateProduct() {
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogTitle>Create Product</DialogTitle>
-        <div>
-          <FieldLabel>Name</FieldLabel>
-          <Input
-            placeholder="eg. Starter Product"
-            value={fields.name}
-            onChange={(e) => setFields({ ...fields, name: e.target.value })}
-          />
+        <div className="flex w-full gap-2">
+          <div className="w-full">
+            <FieldLabel>Name</FieldLabel>
+            <Input
+              placeholder="eg. Starter Product"
+              value={fields.name}
+              onChange={(e) => setFields({ ...fields, name: e.target.value })}
+            />
+          </div>
+          <div className="w-full">
+            <FieldLabel>ID</FieldLabel>
+            <Input
+              placeholder="eg. Product ID"
+              value={fields.id}
+              onChange={(e) => setFields({ ...fields, id: e.target.value })}
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2 ml-1 text-sm text-t2">
           <Checkbox

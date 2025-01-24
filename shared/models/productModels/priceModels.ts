@@ -19,7 +19,7 @@ export enum BillingType {
 export const PriceSchema = z.object({
   id: z.string().optional(),
   org_id: z.string().optional(),
-  product_id: z.string().optional(),
+  internal_product_id: z.string().optional(),
   created_at: z.number().optional(),
   billing_type: z.nativeEnum(BillingType).optional(),
 
@@ -35,7 +35,7 @@ export const CreatePriceSchema = PriceSchema.omit({
   id: true,
   org_id: true,
   created_at: true,
-  product_id: true,
+  internal_product_id: true,
   billing_type: true,
   is_custom: true,
 });

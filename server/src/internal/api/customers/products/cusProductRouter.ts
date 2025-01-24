@@ -60,7 +60,6 @@ const checkAddProductErrors = async ({
 
   // 2. Check if options are valid
   for (const price of prices) {
-
     if (price.billing_type === BillingType.UsageInAdvance) {
       // Get options for price
       let priceEnt = getPriceEntitlement(price, entitlements);
@@ -109,7 +108,7 @@ const handleExistingProduct = async ({
   });
 
   // 2. Don't allow customer to get multiple of the same product
-  if (existingCusProduct?.product_id === product.id) {
+  if (existingCusProduct?.internal_product_id === product.internal_id) {
     // If there's a future product, delete, else
     const deletedCusProduct = await CusProductService.deleteFutureProduct({
       sb,
@@ -238,6 +237,7 @@ attachRouter.post("", async (req: any, res) => {
   const pricesInput: PricesInput = prices || [];
   const entsInput: Entitlement[] = entitlements || [];
   const optionsListInput: FeatureOptions[] = options || [];
+
   console.log("--------------------------------");
   console.log("Add product request received");
 

@@ -35,108 +35,9 @@ import { CusProductService } from "@/internal/customers/products/CusProductServi
 
 export const productApiRouter = Router();
 
-const handleInsertFullProduct = async ({
-  sb,
-  product,
-  prices,
-  entitlements,
-}: {
-  sb: SupabaseClient;
-  product: Product;
-  prices: Price[];
-  entitlements: Entitlement[];
-}) => {
-  await ProductService.create({ sb, product });
-  await PriceService.insert({ sb, data: prices });
-  await EntitlementService.insert({ sb, data: entitlements });
-};
-
-const validateCreateProduct = ({
-  product,
-  prices,
-  entitlements,
-  org,
-  env,
-}: {
-  product: CreateProduct;
-  prices: CreatePrice[];
-  entitlements: CreateEntitlement[];
-  org: Organization;
-  env: string;
-}) => {
-  let newProduct: Product;
-  try {
-    const productSchema = CreateProductSchema.parse(product);
-    newProduct = {
-      ...productSchema,
-
-      id: generateId("prod"),
-      org_id: org.id,
-      created_at: Date.now(),
-      env,
-    };
-  } catch (error: any) {
-    throw new RecaseError({
-      message: "Invalid product. " + formatZodError(error),
-      code: ErrCode.InvalidProduct,
-      statusCode: 400,
-      data: error,
-    });
-  }
-
-  let newPrices: Price[] = [];
-  for (const price of prices) {
-    try {
-      const priceSchema = CreatePriceSchema.parse(price);
-      newPrices.push({
-        ...priceSchema,
-        id: generateId("pr"),
-        org_id: org.id,
-        created_at: Date.now(),
-        billing_type: getBillingType(priceSchema.config!),
-        product_id: newProduct.id,
-        is_custom: false,
-      });
-    } catch (error: any) {
-      throw new RecaseError({
-        message: "Invalid price. " + formatZodError(error),
-        code: ErrCode.InvalidPrice,
-        statusCode: 400,
-        data: error,
-      });
-    }
-  }
-
-  let newEntitlements: Entitlement[] = [];
-  for (const entitlement of entitlements) {
-    try {
-      const entitlementSchema = CreateEntitlementSchema.parse(entitlement);
-      newEntitlements.push({
-        ...entitlementSchema,
-        id: generateId("ent"),
-        org_id: org.id,
-        created_at: Date.now(),
-        product_id: newProduct.id,
-        is_custom: false,
-      });
-    } catch (error: any) {
-      throw new RecaseError({
-        message: "Invalid entitlement. " + formatZodError(error),
-        code: ErrCode.InvalidEntitlement,
-        statusCode: 400,
-        data: error,
-      });
-    }
-  }
-
-
-
-  return { newProduct, newPrices, newEntitlements };
-};
-
 productApiRouter.post("", async (req: any, res) => {
   try {
-    const { product, prices, entitlements } = req.body;
+    const { product } = req.body;
     let sb = req.sb;
 
     const org = await OrgService.getFullOrg({
@@ -144,21 +45,30 @@ productApiRouter.post("", async (req: any, res) => {
       orgId: req.org.id,
     });
 
-    // const { newProduct, newPrices, newEntitlements } = validateCreateProduct({
-    //   product,
-    //   prices,
-    //   entitlements,
-    //   org,
-    //   env: req.env,
-    // });
-
     let newProduct: Product;
+    // 1. Check ir product already exists
+    const existingProduct = await ProductService.getProductStrict({
+      sb,
+      productId: product.id,
+      orgId: org.id,
+      env: req.env,
+    });
+
+    if (existingProduct) {
+      throw new RecaseError({
+        message: `Product ${product.id} already exists`,
+        code: ErrCode.ProductAlreadyExists,
+        statusCode: 400,
+      });
+    }
+
     try {
       const productSchema = CreateProductSchema.parse(product);
       newProduct = {
         ...productSchema,
+        internal_id: generateId("prod"),
+        id: product.id,
 
-        id: generateId("prod"),
         org_id: org.id,
         created_at: Date.now(),
         env: req.env,
@@ -181,13 +91,6 @@ productApiRouter.post("", async (req: any, res) => {
         type: ProcessorType.Stripe,
       };
     }
-
-    // await handleInsertFullProduct({
-    //   sb,
-    //   product: newProduct,
-    //   prices: newPrices,
-    //   entitlements: newEntitlements,
-    // });
 
     await ProductService.create({ sb, product: newProduct });
 
@@ -275,14 +178,14 @@ const validatePricesAndEnts = ({
   prices,
   entitlements,
   orgId,
-  productId,
+  internalProductId,
   curPrices,
   curEnts,
 }: {
   prices: CreatePrice[];
   entitlements: CreateEntitlement[];
   orgId: string;
-  productId: string;
+  internalProductId: string;
   curPrices: Price[];
   curEnts: Entitlement[];
 }) => {
@@ -322,6 +225,7 @@ const validatePricesAndEnts = ({
         name: newPrice.name,
         config: newPrice.config,
         billing_type: getBillingType(newPrice.config!),
+        internal_product_id: internalProductId,
       });
     } else {
       // Create
@@ -330,7 +234,7 @@ const validatePricesAndEnts = ({
         org_id: orgId,
         created_at: Date.now(),
         billing_type: getBillingType(newPrice.config!),
-        product_id: productId,
+        internal_product_id: internalProductId,
         is_custom: false,
         ...newPrice,
       });
@@ -370,6 +274,7 @@ const validatePricesAndEnts = ({
         allowance_type: newEnt.allowance_type,
         allowance: newEnt.allowance,
         interval: newEnt.interval,
+        internal_product_id: internalProductId,
       });
     } else {
       // Create
@@ -377,15 +282,13 @@ const validatePricesAndEnts = ({
         // id: generateId("ent"),
         org_id: orgId,
         created_at: Date.now(),
-        product_id: productId,
+        internal_product_id: internalProductId,
         is_custom: false,
 
         ...newEnt,
       });
     }
   }
-
-
 
   return { newPrices, newEntitlements };
 };
@@ -431,7 +334,7 @@ productApiRouter.post("/:productId", async (req: any, res) => {
       prices,
       entitlements,
       orgId,
-      productId,
+      internalProductId: fullProduct.internal_id,
       curPrices: fullProduct.prices,
       curEnts: fullProduct.entitlements,
     });
@@ -443,13 +346,13 @@ productApiRouter.post("/:productId", async (req: any, res) => {
     // 5. Delete old prices and entitlements
     await PriceService.deleteIfNotIn({
       sb,
-      productId,
+      internalProductId: fullProduct.internal_id,
       priceIds: newPrices.map((p) => p.id!),
     });
 
     await EntitlementService.deleteIfNotIn({
       sb,
-      productId,
+      internalProductId: fullProduct.internal_id,
       entitlementIds: newEntitlements.map((e) => e.id!),
     });
 
