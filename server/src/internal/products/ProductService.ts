@@ -173,10 +173,12 @@ export class ProductService {
   static async getFullProduct({
     sb,
     productId,
+    orgId,
     env,
   }: {
     sb: SupabaseClient;
     productId: string;
+    orgId: string;
     env: AppEnv;
   }) {
     const { data, error } = await sb
@@ -191,6 +193,7 @@ export class ProductService {
       `
       )
       .eq("id", productId)
+      .eq("org_id", orgId)
       .eq("env", env)
       .single();
 
