@@ -4,21 +4,41 @@ import { ProductService } from "../products/ProductService.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { getBillingType } from "../prices/priceUtils.js";
-import { BillingType, Entitlement, EntitlementWithFeature, FeatureOptions } from "@autumn/shared";
+import {
+  BillingType,
+  Entitlement,
+  EntitlementWithFeature,
+  FeatureOptions,
+} from "@autumn/shared";
 
 export const cusRouter = Router();
 
 cusRouter.get("", async (req: any, res: any) => {
   const page = parseInt(req.query.page as string) || 1;
-  const { data: customers, count } = await CusService.getCustomers(req.sb, req.org.id, req.env, page);
+  const { data: customers, count } = await CusService.getCustomers(
+    req.sb,
+    req.org.id,
+    req.env,
+    page
+  );
   res.status(200).send({ customers, totalCount: count });
 });
 
-cusRouter.get("/search", async (req: any, res: any) => {
+cusRouter.post("/search", async (req: any, res: any) => {
   const { sb, org, env } = req;
-  const { search } = req.query;
-  const page = parseInt(req.query.page as string) || 1;
-  const { data: customers, count } = await CusService.searchCustomers(sb, org.id, env, search, page);
+  const { search, page } = req.body;
+
+  const pageInt = parseInt(page as string) || 1;
+  const cleanedQuery = search ? search.trim().toLowerCase() : "";
+
+  const { data: customers, count } = await CusService.searchCustomers({
+    sb,
+    orgId: org.id,
+    env,
+    search: cleanedQuery,
+    page: pageInt,
+  });
+
   res.status(200).send({ customers, totalCount: count });
 });
 

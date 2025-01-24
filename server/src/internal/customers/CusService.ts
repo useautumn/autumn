@@ -98,13 +98,27 @@ export class CusService {
   }
 
   //search customers
-  static async searchCustomers(sb: SupabaseClient, orgId: string, env: AppEnv, search: string, page: number = 1, pageSize: number = 50) {
+  static async searchCustomers({
+    sb,
+    orgId,
+    env,
+    search,
+    page,
+    pageSize = 50,
+  }: {
+    sb: SupabaseClient;
+    orgId: string;
+    env: AppEnv;
+    search: string;
+    page: number;
+    pageSize?: number;
+  }) {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
     const { data, count, error } = await sb
       .from("customers")
-      .select('*', { count: 'exact' })
+      .select("*", { count: "exact" })
       .eq("org_id", orgId)
       .eq("env", env)
       .or(`name.ilike.%${search}%,email.ilike.%${search}%`)
@@ -118,13 +132,19 @@ export class CusService {
     return { data, count };
   }
 
-  static async getCustomers(sb: SupabaseClient, orgId: string, env: AppEnv, page: number = 1, pageSize: number = 50) {
+  static async getCustomers(
+    sb: SupabaseClient,
+    orgId: string,
+    env: AppEnv,
+    page: number = 1,
+    pageSize: number = 50
+  ) {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
     const { data, count, error } = await sb
       .from("customers")
-      .select('*', { count: 'exact' })
+      .select("*", { count: "exact" })
       .eq("org_id", orgId)
       .eq("env", env)
       .order("created_at", { ascending: false })
