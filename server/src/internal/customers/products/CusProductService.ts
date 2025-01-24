@@ -102,13 +102,13 @@ export class CusProductService {
   static async getByCusAndProductId({
     sb,
     customerId,
-    orgId,
     productId,
+    orgId,
   }: {
     sb: SupabaseClient;
     customerId: string;
-    orgId: string;
     productId: string;
+    orgId: string;
   }) {
     const { data, error } = await sb
       .from("customer_products")
@@ -124,11 +124,11 @@ export class CusProductService {
     return data;
   }
 
-  static async getByProductId(sb: SupabaseClient, productId: string) {
+  static async getByProductId(sb: SupabaseClient, internalProductId: string) {
     const { data, error } = await sb
       .from("customer_products")
       .select("*")
-      .eq("product_id", productId);
+      .eq("internal_product_id", internalProductId);
 
     if (error) {
       throw error;

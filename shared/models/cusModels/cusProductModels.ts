@@ -40,6 +40,7 @@ export enum CusProductStatus {
 export const CusProductSchema = z.object({
   id: z.string(),
   internal_customer_id: z.string(),
+  internal_product_id: z.string(),
   customer_id: z.string(),
   product_id: z.string(),
   created_at: z.number(),

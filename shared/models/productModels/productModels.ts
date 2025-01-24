@@ -4,6 +4,7 @@ import { EntitlementSchema } from "./entitlementModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
 
 export const ProductSchema = z.object({
+  internal_id: z.string(),
   id: z.string(),
   org_id: z.string(),
   created_at: z.number(),

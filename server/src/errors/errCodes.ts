@@ -45,6 +45,7 @@ export const ErrCode = {
 
   // Product
   InvalidProduct: "invalid_product",
+  ProductAlreadyExists: "product_already_exists",
   ProductNotFound: "product_not_found",
   ProductHasCustomers: "product_has_customers",
   ProductHasNoPrices: "product_has_no_prices",
