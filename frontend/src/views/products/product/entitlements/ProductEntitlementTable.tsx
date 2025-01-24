@@ -74,10 +74,10 @@ export const ProductEntitlementTable = ({
               className="cursor-pointer"
               onClick={() => handleRowClick(entitlement)}
             >
-              <TableCell className="min-w-32 font-medium">
+              <TableCell className="min-w-40 font-medium">
                 {entitlement.feature?.name}
               </TableCell>
-              <TableCell className="min-w-32 font-mono text-t2">
+              <TableCell className="min-w-40 font-mono text-t2">
                 {entitlement.feature?.id}
               </TableCell>
               <TableCell className="min-w-32">

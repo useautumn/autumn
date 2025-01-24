@@ -107,7 +107,7 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
               className="cursor-pointer"
               onClick={() => handleRowClick(price)}
             >
-              <TableCell className="min-w-32 font-medium">
+              <TableCell className="min-w-40 font-medium">
                 {price.name}
               </TableCell>
               <TableCell className="min-w-72 font-mono text-t2">
