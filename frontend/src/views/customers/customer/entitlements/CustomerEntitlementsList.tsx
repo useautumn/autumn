@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 
 import {
+  AllowanceType,
   CusEntWithFeatureAndEntitlement,
   FullCustomerEntitlement,
 } from "@autumn/shared";
@@ -39,22 +40,32 @@ export const CustomerEntitlementsList = ({ customer }: { customer: any }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {customer.entitlements.map((cusEnt: FullCustomerEntitlement) => (
-            <TableRow key={cusEnt.id}>
-              <TableCell className="max-w-[150px] truncate">
-                {getProductName(cusEnt)}
-              </TableCell>
-              <TableCell className="max-w-[150px] truncate">
-                {cusEnt.entitlement.feature.name}
-              </TableCell>
-              <TableCell>{cusEnt.balance}</TableCell>
-              {/* <TableCell className="flex justify-end">
-                  <CustomerEntitlementToolbar
-                    entitlement={cusEnt.entitlement}
-                  />
-                </TableCell> */}
-            </TableRow>
-          ))}
+          {customer.entitlements.map((cusEnt: FullCustomerEntitlement) => {
+            const entitlement = cusEnt.entitlement;
+            const allowanceType = entitlement.allowance_type;
+            return (
+              <TableRow key={cusEnt.id}>
+                <TableCell className="max-w-[150px] truncate">
+                  {getProductName(cusEnt)}
+                </TableCell>
+                <TableCell className="max-w-[150px] truncate">
+                  {entitlement.feature.name}
+                </TableCell>
+                <TableCell>
+                  {allowanceType == AllowanceType.Unlimited
+                    ? "Unlimited"
+                    : allowanceType == AllowanceType.None
+                    ? "None"
+                    : cusEnt.balance}
+                </TableCell>
+                {/* <TableCell className="flex justify-end">
+                    <CustomerEntitlementToolbar
+                      entitlement={cusEnt.entitlement}
+                    />
+                  </TableCell> */}
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
