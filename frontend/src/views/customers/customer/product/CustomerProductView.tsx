@@ -136,17 +136,10 @@ export default function CustomerProductView({
       };
     });
 
-    const prices = product.prices.map((p) => {
-      return {
-        id: p.id,
-        config: p.config,
-      };
-    });
-
     try {
       const { data } = await CusService.addProduct(axiosInstance, customer_id, {
         product_id,
-        prices,
+        prices: product.prices,
         entitlements,
       });
 

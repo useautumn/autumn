@@ -12,11 +12,7 @@ export class PriceService {
     sb: SupabaseClient;
     data: Price | Price[];
   }) {
-    const { data: price, error } = await sb
-      .from("prices")
-      .insert(data)
-      .select()
-      .single();
+    const { error } = await sb.from("prices").insert(data);
 
     if (error) {
       throw new RecaseError({
@@ -26,8 +22,6 @@ export class PriceService {
         data: error,
       });
     }
-
-    return price;
   }
 
   static async upsert({

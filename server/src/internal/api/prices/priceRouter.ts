@@ -62,12 +62,12 @@ priceRouter.post("", async (req: any, res) => {
     }
 
     // 3. Insert price
-    const insertedPrice = await PriceService.insert({
+    await PriceService.insert({
       sb: req.sb,
       data: price,
     });
 
-    res.status(200).json({ success: true, price: insertedPrice });
+    res.status(200).json({ success: true });
   } catch (error) {
     if (error instanceof RecaseError) {
       error.print();

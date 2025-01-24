@@ -69,7 +69,16 @@ export class CusService {
       .from("customers")
       .select(
         `*, 
-        products:customer_products(*, product:products(*)), 
+        products:customer_products(
+          *, product:products(*), 
+          customer_prices:customer_prices(
+            *, price:prices(*)
+          ),
+          customer_entitlements:customer_entitlements(
+            *, entitlement:entitlements(*, feature:features(*))
+          )
+        ), 
+        
         entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
         prices:customer_prices(*, price:prices(*))`
       )
