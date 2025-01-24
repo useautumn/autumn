@@ -64,7 +64,7 @@ function AddProduct() {
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
             <Button className="w-full" variant="dashed" size="sm">
-              New Product
+              Attach Product
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] p-0">

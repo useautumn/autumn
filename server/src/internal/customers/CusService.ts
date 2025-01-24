@@ -97,18 +97,44 @@ export class CusService {
     return data;
   }
 
-  static async getCustomers(sb: SupabaseClient, orgId: string, env: AppEnv) {
-    const { data, error } = await sb
+  //search customers
+  static async searchCustomers(sb: SupabaseClient, orgId: string, env: AppEnv, search: string, page: number = 1, pageSize: number = 50) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, count, error } = await sb
       .from("customers")
-      .select()
+      .select('*', { count: 'exact' })
       .eq("org_id", orgId)
-      .eq("env", env);
+      .eq("env", env)
+      .or(`name.ilike.%${search}%,email.ilike.%${search}%`)
+      .order("created_at", { ascending: false })
+      .range(from, to);
 
     if (error) {
       throw error;
     }
 
-    return data;
+    return { data, count };
+  }
+
+  static async getCustomers(sb: SupabaseClient, orgId: string, env: AppEnv, page: number = 1, pageSize: number = 50) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    const { data, count, error } = await sb
+      .from("customers")
+      .select('*', { count: 'exact' })
+      .eq("org_id", orgId)
+      .eq("env", env)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      throw error;
+    }
+
+    return { data, count };
   }
 
   static async createCustomer(sb: SupabaseClient, customer: Customer) {
