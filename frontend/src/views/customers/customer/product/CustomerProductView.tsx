@@ -85,7 +85,9 @@ export default function CustomerProductView({
     const foundProduct = data.products.find((p) => p.id === product_id);
     if (!foundProduct) return;
 
-    const customerOptions = data.customer.products.find(p => p.product_id === product_id)?.options ?? [];
+    const customerOptions =
+      data.customer.products.find((p) => p.product_id === product_id)
+        ?.options ?? [];
     setOptions(customerOptions);
 
     const enrichedProduct = {
@@ -93,7 +95,7 @@ export default function CustomerProductView({
       isActive: data.customer.products.some(
         (p) => p.product_id === product_id && p.status === "active"
       ),
-      options: customerOptions
+      options: customerOptions,
     };
 
     setProduct(enrichedProduct);
@@ -119,8 +121,6 @@ export default function CustomerProductView({
     setHasChanges(hasChanged);
   }, [product]);
 
-
-
   if (error) {
     console.log("Use Axios SWR Error: ", error);
     return (
@@ -143,31 +143,17 @@ export default function CustomerProductView({
 
   const handleCreateProduct = async () => {
     try {
-      const {data} = await ProductService.getRequiredOptions(axiosInstance, {
+      const { data } = await ProductService.getRequiredOptions(axiosInstance, {
         prices: product.prices,
         entitlements: product.entitlements,
       });
-      
+
       if (data.options && data.options.length > 0) {
         console.log("options", data.options);
         setRequiredOptions(data.options);
         return;
       }
 
-<<<<<<< HEAD
-    // TODO: Update product
-    const entitlements = product.entitlements.map((e) => {
-      return {
-        id: e.id,
-        feature_id: e.feature.id,
-
-        allowance: e.allowance,
-        allowance_type: e.allowance_type,
-        interval: e.interval,
-      };
-    });
-
-=======
       // Continue with product creation if no required options
       await createProduct();
     } catch (error) {
@@ -175,19 +161,26 @@ export default function CustomerProductView({
     }
   };
 
-const createProduct = async () => {
+  const createProduct = async () => {
     console.log("options", requiredOptions);
->>>>>>> 3bd8b5d49a63101cf7dc2b6efcd31f8233b91b7d
     try {
+      // TODO: Update product
+      const entitlements = product.entitlements.map((e) => {
+        return {
+          id: e.id,
+          feature_id: e.feature.id,
+
+          allowance: e.allowance,
+          allowance_type: e.allowance_type,
+          interval: e.interval,
+        };
+      });
+
       const { data } = await CusService.addProduct(axiosInstance, customer_id, {
         product_id,
         prices: product.prices,
-<<<<<<< HEAD
         entitlements,
-=======
-        entitlements: product.entitlements,
-        options: requiredOptions
->>>>>>> 3bd8b5d49a63101cf7dc2b6efcd31f8233b91b7d
+        options: requiredOptions,
       });
 
       await mutate();
@@ -220,7 +213,7 @@ const createProduct = async () => {
     }
     if (product.isActive) {
       return {
-        buttonText: "Update\ Product",
+        buttonText: "Update Product",
         tooltipText: `You're editing the live product ${product.name} and updating it to a custom version for ${customer.name}`,
         disabled: true,
       };
@@ -255,11 +248,11 @@ const createProduct = async () => {
       }}
     >
       <CustomToaster />
-      
+
       <RequiredOptionsModal
         requiredOptions={requiredOptions}
         createProduct={createProduct}
-        setRequiredOptions={setRequiredOptions} 
+        setRequiredOptions={setRequiredOptions}
       />
 
       <Dialog
@@ -297,7 +290,7 @@ const createProduct = async () => {
         {product && <ManageProduct product={product} customerData={data} />}
       </div>
 
-      {options.length > 0 && <ProductOptions options={options}/>}
+      {options.length > 0 && <ProductOptions options={options} />}
       <div className="flex justify-end gap-2">
         {/* <ProductOptionsButton /> */}
         <AddProductButton
