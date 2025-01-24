@@ -5,7 +5,12 @@ import RecaseError, {
   formatZodError,
   handleRequestError,
 } from "@/utils/errorUtils.js";
-import { CusEntWithEntitlement, Feature, FeatureType } from "@autumn/shared";
+import {
+  AllowanceType,
+  CusEntWithEntitlement,
+  Feature,
+  FeatureType,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
@@ -101,10 +106,11 @@ const checkEntitlementAllowed = ({
   }
 
   const balance = calculateFeatureBalance({ cusEnts, featureId: feature.id });
-
+  const allowanceType = cusEnt.entitlement.allowance_type;
   return {
     feature_id: feature.id,
-    balance: balance,
+    balance: allowanceType === AllowanceType.Unlimited ? null : balance,
+    unlimited: allowanceType === AllowanceType.Unlimited,
     required: required,
   };
 };
@@ -150,7 +156,7 @@ const checkFeatureAccessAllowed = async ({
       continue;
     }
 
-    if (allowance.balance < allowance.required) {
+    if (!allowance.unlimited && allowance.balance! < allowance.required) {
       allowed = false;
     }
 
@@ -221,17 +227,6 @@ entitledRouter.get("", async (req: any, res: any) => {
         statusCode: StatusCodes.NOT_FOUND,
       });
     }
-
-    // 3. Get customer entitlements, where cp is active
-    // const cusEnts = await getCustomerEntitlements({
-    //   sb: req.sb,
-    //   orgId,
-    //   internalCustomerId: customer.internal_id,
-    //   internalFeatureIds: [
-    //     feature.internal_id,
-    //     ...creditSystems.map((cs) => cs.internal_id),
-    //   ],
-    // });
 
     const internalFeatureIds = [
       feature.internal_id,
