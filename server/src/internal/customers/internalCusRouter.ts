@@ -9,6 +9,8 @@ import {
   Entitlement,
   EntitlementWithFeature,
   FeatureOptions,
+  FullCustomerEntitlement,
+  FullCustomerPrice,
 } from "@autumn/shared";
 
 export const cusRouter = Router();
@@ -21,6 +23,8 @@ cusRouter.get("", async (req: any, res: any) => {
     req.env,
     page
   );
+
+
   res.status(200).send({ customers, totalCount: count });
 });
 
@@ -55,6 +59,17 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       env,
       customerId: customer_id,
     });
+
+    for (const product of customer.products) {
+      product.entitlements = product.customer_entitlements.map((cusEnt: FullCustomerEntitlement) => {
+        return cusEnt.entitlement;
+      });
+      product.prices = product.customer_prices.map((cusPrice: FullCustomerPrice) => {
+        return cusPrice.price;
+      });
+    }
+  
+    console.log("customer", customer);
 
     // Get customer invoices
     const invoices = await InvoiceService.getInvoices({

@@ -85,22 +85,52 @@ export default function CustomerProductView({
     const foundProduct = data.products.find((p) => p.id === product_id);
     if (!foundProduct) return;
 
-    const customerOptions =
-      data.customer.products.find((p) => p.product_id === product_id)
-        ?.options ?? [];
-    setOptions(customerOptions);
+    const customerProduct = data.customer.products.find(
+      (p) => p.product_id === product_id
+    );
 
-    const enrichedProduct = {
-      ...foundProduct,
-      isActive: data.customer.products.some(
-        (p) => p.product_id === product_id && p.status === "active"
-      ),
-      options: customerOptions,
-    };
-
+    // console.log("foundProduct", foundProduct);
+    console.log("customerProduc1t", customerProduct);
+    const enrichedProduct = enrichProduct(foundProduct, customerProduct);
+    
+    setOptions(enrichedProduct.options);
     setProduct(enrichedProduct);
     initialProductRef.current = enrichedProduct;
   }, [data, product_id]);
+
+  // Pure function to handle product enrichment
+  const enrichProduct = (
+    baseProduct: FrontendProduct, 
+    customerProduct?: { 
+      status?: string; 
+      options?: OptionValue[];
+      entitlements?: typeof baseProduct.entitlements;
+      prices?: typeof baseProduct.prices;
+    }
+  ) => {
+    if (!customerProduct) {
+      console.log("baseProduct", baseProduct);
+      return {
+        ...baseProduct,
+        isActive: false,
+        options: [],
+      };
+    }
+    console.log("baseProduct", baseProduct);
+    console.log("customerProduct", customerProduct);
+
+    return {
+      ...baseProduct,
+      isActive: customerProduct.status === "active",
+      options: customerProduct.options ?? [],
+      ...(customerProduct.entitlements && {
+        entitlements: customerProduct.entitlements,
+      }),
+      ...(customerProduct.prices && {
+        prices: customerProduct.prices,
+      }),
+    };
+  };
 
   //check if the user has made changes to the product state
   useEffect(() => {
