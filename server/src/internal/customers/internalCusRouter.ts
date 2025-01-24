@@ -24,7 +24,6 @@ cusRouter.get("", async (req: any, res: any) => {
     page
   );
 
-
   res.status(200).send({ customers, totalCount: count });
 });
 
@@ -61,15 +60,17 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     });
 
     for (const product of customer.products) {
-      product.entitlements = product.customer_entitlements.map((cusEnt: FullCustomerEntitlement) => {
-        return cusEnt.entitlement;
-      });
-      product.prices = product.customer_prices.map((cusPrice: FullCustomerPrice) => {
-        return cusPrice.price;
-      });
+      product.entitlements = product.customer_entitlements.map(
+        (cusEnt: FullCustomerEntitlement) => {
+          return cusEnt.entitlement;
+        }
+      );
+      product.prices = product.customer_prices.map(
+        (cusPrice: FullCustomerPrice) => {
+          return cusPrice.price;
+        }
+      );
     }
-  
-    console.log("customer", customer);
 
     // Get customer invoices
     const invoices = await InvoiceService.getInvoices({
