@@ -1,0 +1,48 @@
+{
+    "cells": [
+        {
+            "language": "typescript",
+            "source": [
+                "// SET UP\nimport axios from \"axios\";\nimport stripe from \"stripe\";\nimport { createClient } from \"@supabase/supabase-js\";\nimport dotenv from \"dotenv\";\ndotenv.config({ path: \"../.env.prod\" })\n\nlet API_KEY = \"am_test_3ZjayPZBAT9n7vgruTcstYvk\"\nconst BASE_URL = \"https://api.useautumn.com/v1\"\nconst orgId = \"org_2rzkkRh7r5dBSaBC101QHG9KDgt\"\nconst env = \"sandbox\"\n\nconst proProduct = \"prod_2s2wfNCD1qctYUbq9rjdRSKLklf\"\nconst rechargeProduct = \"prod_2s2wlOpHEkbD7uGo62IR1LvJImc\"\nconst stripeCli = new stripe(process.env.STRIPE_TEST_KEY!)\n\nconst sb = createClient(\n\tprocess.env.SUPABASE_URL!,\n\tprocess.env.SUPABASE_SERVICE_KEY!\n);\n\nlet headers = {\n\t\"Content-Type\": \"application/json\",\n\t\"Authorization\": `Bearer ${API_KEY}`\n}\n\nconst attachPmToCus = async (cusId: string) => {\n\tconst pm = await stripeCli.paymentMethods.create({\n\t\ttype: \"card\",\n\t\tcard: {\n\t\t\ttoken: \"tok_visa\", // This is a special test token that represents a valid card\n\t\t},\n\t});\n\tconst attachRes = await stripeCli.paymentMethods.attach(pm.id, {\n\t\tcustomer: cusId,\n\t});\n}\n\nconst attachProductToCus = async (cusId: string, productId: string, options: any) => {\n\tconst { data } = await axios.post(`${BASE_URL}/attach`, {\n\t\tcustomer_id: cusId,\n\t\tproduct_id: productId,\n\t\toptions: options\n\t}, { headers })\n}\n\nconst createCustomer = async (index: number) => {\n\ttry {\n\n\t\t// Create customer\n\t\tconst { data } = await axios.post(`${BASE_URL}/customers`, {\n\t\t\tid: `user_${index}`,\n\t\t\tname: `User ${index}`,\n\t\t\temail: `user${index}@example.com`\n\t\t}, { headers })\n\n\t\tconst { customer } = data\n\t\t\n\t\t// Attach payment method\n\t\tawait attachPmToCus(customer.processor.id)\n\n\t\tawait attachProductToCus(customer.id, proProduct, [])\n\t\tif (index > NUM_USERS / 2) {\n\t\t\tawait attachProductToCus(customer.id, rechargeProduct, [{\n\t\t\t\tfeature_id: FEATURE_ID,\n\t\t\t\tthreshold: 100\n\t\t\t}])\n\t\t}\n\n\t\tconsole.log(`Customer ${customer.id} created`)\n\n\t} catch (error: any) {\n\t\tconsole.log(\"Error creating customer\", error.response.data)\n\t\t// Customer already exists\n\t}\n\n}\n\nconst deleteCustomer = async (index: number) => {\n\t// 1. Delete all customer events\n\tconst { data: eventsDeleted, error: eventsError } = await sb.from(\"events\").delete().eq(\"customer_id\", `user_${index}`).eq(\"org_id\", orgId).eq(\"env\", env)\n\tif (eventsError) {\n\t\tconsole.log(\"Error deleting events\", eventsError)\n\t}\n\ttry {\n\t\tconst { data } = await axios.delete(`${BASE_URL}/customers/user_${index}`, { headers })\n\t} catch (error: any) {\n\t\tif (error.response.data && error.response.data.code !== \"customer_not_found\") {\n\t\t\tconsole.log(\"Error deleting customer\", error.response.data)\n\t\t}\n\t}\n}\n\n// SET UP\nconst setup = async () => {\n\n\tfor (let i = 0; i < Math.ceil(NUM_USERS / BATCH_SIZE); i++) {\n\t\tconst createCusCalls = []\n\t\tfor (let j = 0; j < BATCH_SIZE; j++) {\n\t\t\tcreateCusCalls.push(createCustomer(i * BATCH_SIZE + j))\n\t\t\tif (i * BATCH_SIZE + j >= NUM_USERS) {\n\t\t\t\tbreak\n\t\t\t}\n\t\t}\n\t\tawait Promise.all(createCusCalls)\n\t\tawait new Promise(resolve => setTimeout(resolve, 1000))\n\t}\n}\n\n// TEARDOWN\nconst teardown = async (numUsers: number) => {\n\tfor (let i = 0; i < Math.ceil(numUsers / DELETE_BATCH_SIZE); i++) {\n\t\tconst deleteCusCalls = []\n\t\tfor (let j = 0; j < DELETE_BATCH_SIZE; j++) {\n\t\t\tdeleteCusCalls.push(deleteCustomer(i * DELETE_BATCH_SIZE + j))\n\t\t\tif (i * DELETE_BATCH_SIZE + j >= numUsers) {\n\t\t\t\tbreak\n\t\t\t}\n\t\t}\n\t\tawait Promise.all(deleteCusCalls)\n\t\tawait new Promise(resolve => setTimeout(resolve, 1000))\n\t}\n}\n\nconst FEATURE_ID = \"credits\"\nconst BATCH_SIZE = 5\nconst DELETE_BATCH_SIZE = 20\nconst res1 = await teardown(200)\nconst NUM_USERS = 200;\n// const res2 = await setup()"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "typescript",
+            "source": [
+                "// Create 1000 customers\nimport dotenv from \"dotenv\";\nimport { createClient } from \"@supabase/supabase-js\";\ndotenv.config({ path: \"../.env\" })\n\nconst orgId = \"org_2s2tZflaVSKGVyFyclgXOVsTZc4\"\nconst env = \"sandbox\"\nconst sb = createClient(\n\tprocess.env.SUPABASE_URL!,\n\tprocess.env.SUPABASE_SERVICE_KEY!\n);\n\nlet customers = []\nfor (let i = 0; i < 1000; i++) {\n\tcustomers.push({\n\t\tid: `user_${i}`,\n\t\tname: `User ${i}`,\n\t\temail: `user${i}@example.com`,\n\t\torg_id: orgId,\n\t\tenv: env,\n\t\tinternal_id: `user_${i}`,\n\t\tcreated_at: Date.now(),\n\t})\n}\n\nconst res4 = await sb.from(\"customers\").insert(customers)\nconsole.log(res4)"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stderr",
+                            "value": [
+                                "(node:70632) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.",
+                                "(Use `node --trace-deprecation ...` to show where the warning was created)",
+                                ""
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "{",
+                                "  error: null,",
+                                "  data: null,",
+                                "  count: null,",
+                                "  status: 201,",
+                                "  statusText: 'Created'",
+                                "}",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

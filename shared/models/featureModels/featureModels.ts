@@ -7,6 +7,11 @@ export enum FeatureType {
   CreditSystem = "credit_system",
 }
 
+export enum AggregateType {
+  Count = "count",
+  Sum = "sum",
+}
+
 export const FeatureSchema = z.object({
   internal_id: z.string().optional(),
   org_id: z.string().optional(),
