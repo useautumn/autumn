@@ -127,7 +127,9 @@ export class CustomerEntitlementService {
   }) {
     const { data, error } = await sb
       .from("customer_entitlements")
-      .select("*, customer_product:customer_products!inner(*)")
+      .select(
+        "*, customer_product:customer_products!inner(*), entitlement:entitlements(*)"
+      )
       .eq("internal_customer_id", internalCustomerId)
       .in("internal_feature_id", internalFeatureIds)
       .eq("customer_product.status", "active");
