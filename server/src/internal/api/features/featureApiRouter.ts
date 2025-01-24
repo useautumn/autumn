@@ -3,7 +3,7 @@ import RecaseError, {
   formatZodError,
   handleRequestError,
 } from "@/utils/errorUtils.js";
-import { Feature } from "@autumn/shared";
+import { AggregateType, Feature, FeatureType } from "@autumn/shared";
 import { CreateFeatureSchema } from "@autumn/shared";
 import express from "express";
 import { generateId } from "@/utils/genUtils.js";
@@ -11,20 +11,41 @@ import { ErrCode } from "@/errors/errCodes.js";
 
 export const featureApiRouter = express.Router();
 
+export const validateFeature = (data: any) => {
+  let featureType = data.type;
+  if (featureType == FeatureType.Metered) {
+    // 1. Check if property is provided
+
+    let config = data.config;
+    if (
+      config.aggregate.type == AggregateType.Sum &&
+      !config.aggregate.property
+    ) {
+      throw new RecaseError({
+        message: `Property is required for sum aggregate`,
+        code: ErrCode.InvalidFeature,
+        statusCode: 400,
+      });
+    }
+  }
+
+  try {
+    CreateFeatureSchema.parse(data);
+  } catch (error: any) {
+    throw new RecaseError({
+      message: `Invalid feature: ${formatZodError(error)}`,
+      code: ErrCode.InvalidFeature,
+      statusCode: 400,
+    });
+  }
+};
+
 featureApiRouter.post("", async (req: any, res) => {
   let org = req.org;
   let data = req.body;
 
   try {
-    try {
-      CreateFeatureSchema.parse(data);
-    } catch (error: any) {
-      throw new RecaseError({
-        message: `Invalid feature: ${formatZodError(error)}`,
-        code: ErrCode.InvalidFeature,
-        statusCode: 400,
-      });
-    }
+    validateFeature(data);
 
     let feature: Feature = {
       internal_id: generateId("fe"),

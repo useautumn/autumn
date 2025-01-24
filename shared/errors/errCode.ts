@@ -1,4 +1,7 @@
 export const ErrCode = {
+  // Org
+  OrgNotFound: "org_not_found",
+
   // Feature
   FeatureNotFound: "feature_not_found",
   InvalidFeature: "invalid_feature",

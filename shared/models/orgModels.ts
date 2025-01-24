@@ -10,9 +10,10 @@ export const StripeConfigSchema = z.object({
 
 export const OrganizationSchema = z.object({
   id: z.string(),
+  slug: z.string(),
   default_currency: z.string(),
-  stripe_config: StripeConfigSchema.optional(),
   stripe_connected: z.boolean().default(false),
+  stripe_config: StripeConfigSchema.optional().nullable(),
 });
 
 export type Organization = z.infer<typeof OrganizationSchema>;

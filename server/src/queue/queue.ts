@@ -45,13 +45,7 @@ const initWorker = (id: number, queue: Queue) => {
   let worker = new Worker(
     "autumn",
     async (job: Job) => {
-      // if (job.name === "update-balance") {
-      //   await runUpdateBalanceTask(job.data);
-      // }
-
-      const { customerId, customer } = job.data;
-      // await runUpdateBalanceTask(job.data);
-      // return;
+      const { customerId } = job.data;
 
       while (!(await acquireLock(customerId, 10000))) {
         // console.log(`Customer ${customer.id} locked by another worker`);

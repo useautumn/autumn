@@ -16,31 +16,11 @@ import { generateId } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
 import { StatusCodes } from "http-status-codes";
-import { CustomerEntitlementService } from "../../customers/entitlements/CusEntitlementService.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { getBelowThresholdPrice } from "../../../trigger/invoiceThresholdUtils.js";
-import { updateBalanceTask } from "@/trigger/updateBalanceTask.js";
 import { Client } from "pg";
-import { inngest } from "@/trigger/inngest.js";
 import { Queue } from "bullmq";
 
 export const eventsRouter = Router();
-
-const getCreditSystemDeduction = (
-  meteredFeatures: Feature[],
-  creditSystem: Feature
-) => {
-  let creditsUpdate = 0;
-  let meteredFeatureIds = meteredFeatures.map((feature) => feature.id);
-
-  for (const schema of creditSystem.config.schema) {
-    if (meteredFeatureIds.includes(schema.metered_feature_id)) {
-      creditsUpdate += (1 / schema.feature_amount) * schema.credit_amount;
-    }
-  }
-
-  return creditsUpdate;
-};
 
 const getEventAndCustomer = async (req: any) => {
   const body = req.body;
@@ -89,50 +69,6 @@ const getEventAndCustomer = async (req: any) => {
   return { customer, event: newEvent };
 };
 
-const getFeaturesAndCustomerEnts = async ({
-  req,
-  customer,
-  event,
-}: {
-  req: any;
-  customer: Customer;
-  event: Event;
-}) => {
-  const { rows }: { rows: Feature[] } = await req.pg.query(`
-    with features_with_event as (
-      select * from features
-      where config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
-    )
-    
-    select * from features WHERE EXISTS (
-      SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
-      schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
-    )
-    UNION all
-    select * from features_with_event
-    `);
-
-  if (rows.length === 0) {
-    return { customerEntitlements: [], features: [] };
-  }
-
-  let internalFeatureIds = rows.map((feature) => feature.internal_id);
-  const cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
-    sb: req.sb,
-    internalCustomerId: customer.internal_id,
-    internalFeatureIds: internalFeatureIds as string[],
-  });
-
-  cusEnts.sort((a, b) => {
-    if (a.balance <= 0) return 1;
-    if (b.balance <= 0) return -1;
-
-    return a.created_at - b.created_at;
-  });
-
-  return { customerEntitlements: cusEnts, features: rows };
-};
-
 const getAffectedFeatures = async ({
   pg,
   event,
@@ -179,6 +115,13 @@ eventsRouter.post("", async (req: any, res: any) => {
     });
 
     if (affectedFeatures.length > 0) {
+      let queue: Queue = req.queue;
+      queue.add("update-balance", {
+        customerId: customer.internal_id,
+        customer,
+        features: affectedFeatures,
+        event,
+      });
       // await inngest.send({
       //   name: "autumn/update-balance",
       //   data: {
@@ -199,24 +142,6 @@ eventsRouter.post("", async (req: any, res: any) => {
       //     concurrencyKey: customer.internal_id,
       //   }
       // );
-      let queue: Queue = req.queue;
-      queue.add(
-        "update-balance",
-        {
-          customerId: customer.internal_id,
-          customer,
-          features: affectedFeatures,
-        }
-        // {
-        //   attempts: 10,
-        //   backoff: {
-        //     type: "exponential",
-        //     delay: 1000,
-        //   },
-        // }
-      );
-
-      // console.log("Queued update balance task...");
     } else {
       console.log("No affected features found");
     }
