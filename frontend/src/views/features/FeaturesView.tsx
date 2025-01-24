@@ -100,10 +100,10 @@ function FeaturesView({ env }: { env: AppEnv }) {
               className="cursor-pointer"
               onClick={() => handleRowClick(feature.id)}
             >
-              <TableCell className="min-w-32 font-medium">
+              <TableCell className="min-w-40 font-medium">
                 {feature.name}
               </TableCell>
-              <TableCell className="min-w-32 font-mono text-t2">
+              <TableCell className="min-w-40 font-mono text-t2">
                 {feature.id}
               </TableCell>
               <TableCell className="min-w-32">
