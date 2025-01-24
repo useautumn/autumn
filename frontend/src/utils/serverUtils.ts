@@ -25,6 +25,7 @@ export const getOrgFromSession = async () => {
 
   const org: Organization = {
     id: sessionClaims?.org?.id,
+    slug: sessionClaims?.org?.slug,
     default_currency: sessionClaims?.org?.default_currency,
     stripe_connected: sessionClaims?.org?.stripe_connected,
   };
