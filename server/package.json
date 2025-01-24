@@ -15,7 +15,7 @@
     "prod:start": "node dist/src/index.js",
 
     "cron": "tsx src/cron.ts",
-    "cron:start": "tsc -b && tsx src/cron.ts",
+    "cron:start": "node --no-deprecation dist/src/cron.js",
     "clean": "tsx src/clean.ts"
   },
   "author": "",
