@@ -13,6 +13,8 @@ import { getNextResetAt } from "./utils/timeUtils.js";
 import chalk from "chalk";
 import { z } from "zod";
 import { format } from "date-fns";
+import { CronJob } from "cron";
+
 dotenv.config();
 
 const FullCustomerEntitlementWithProduct = FullCustomerEntitlementSchema.extend(
@@ -33,13 +35,12 @@ const resetCustomerEntitlement = async ({
   cusEnt: FullCustomerEntitlementWithProduct;
 }) => {
   try {
-    console.log("----------------------------------");
-    console.log(`Resetting cusEnt ${cusEnt.id}`);
-    console.log(
-      `Customer: ${chalk.yellowBright(
-        cusEnt.customer_id
-      )}, Feature: ${chalk.yellowBright(cusEnt.entitlement.feature_id)}`
-    );
+    // console.log(`Resetting cusEnt ${cusEnt.id}`);
+    // console.log(
+    //   `Customer: ${chalk.yellowBright(
+    //     cusEnt.customer_id
+    //   )}, Feature: ${chalk.yellowBright(cusEnt.entitlement.feature_id)}`
+    // );
 
     // 1. Get allowance and quantity
     const allowance = cusEnt.entitlement.allowance || 0;
@@ -53,11 +54,11 @@ const resetCustomerEntitlement = async ({
     let quantity = (entOptions && entOptions.quantity) || 1;
     const newBalance = allowance * quantity;
 
-    console.log(
-      `Allowance: ${chalk.yellow(allowance)} | Quantity: ${chalk.yellow(
-        quantity
-      )} | New Balance: ${chalk.yellow(newBalance)}`
-    );
+    // console.log(
+    //   `Allowance: ${chalk.yellow(allowance)} | Quantity: ${chalk.yellow(
+    //     quantity
+    //   )} | New Balance: ${chalk.yellow(newBalance)}`
+    // );
 
     // 3. Update the next_reset_at for each entitlement
     const nextResetAt = getNextResetAt(
@@ -74,14 +75,23 @@ const resetCustomerEntitlement = async ({
       },
     });
 
-    console.log(`Successful`);
+    console.log(
+      `Reset ${cusEnt.id} | customer: ${chalk.yellow(
+        cusEnt.customer_id
+      )} | feature: ${chalk.yellow(
+        cusEnt.feature_id
+      )} | new balance: ${chalk.green(newBalance)}`
+    );
   } catch (error: any) {
-    console.log("Error:", error.message || error);
+    console.log(`Failed to reset ${cusEnt.id}, error: ${error}`);
   }
 };
 
 export const cronTask = async () => {
-  console.log("RUNNING RESET CRON:", format(new Date(), "yyyy-MM-dd HH:mm:ss"));
+  console.log(
+    "\n----------------------------------\nRUNNING RESET CRON:",
+    format(new Date(), "yyyy-MM-dd HH:mm:ss")
+  );
   // 1. Query customer_entitlements for all customers with reset_interval < now
   const sb = createSupabaseClient();
   let cusEntitlements: FullCustomerEntitlement[] = [];
@@ -106,11 +116,23 @@ export const cronTask = async () => {
       "FINISHED RESET CRON:",
       format(new Date(), "yyyy-MM-dd HH:mm:ss")
     );
-    process.exit(0);
+    console.log("----------------------------------\n");
   } catch (error) {
     console.error("Error getting entitlements for reset:", error);
     return;
   }
 };
+
+// const job = new CronJob(
+//   "* * * * *", // Run every minute
+//   function () {
+//     cronTask();
+//   },
+//   null, // onComplete
+//   true, // start immediately
+//   "UTC" // timezone (adjust as needed)
+// );
+
+// job.start();
 
 cronTask();
