@@ -7,8 +7,8 @@ export const formatTimestamp = (timestamp: number | null | undefined) => {
 
 export const formatUnixToDateTime = (unix: number | null | undefined) => {
   if (!unix) return { date: "", time: "" };
-  const date = format(new Date(unix), "d MMM yy");
-  const time = format(new Date(unix), "hh:mm a");
+  const date = format(new Date(unix), "d MMM");
+  const time = format(new Date(unix), "HH:mm");
   return { date, time };
 };
 

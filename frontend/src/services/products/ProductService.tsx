@@ -29,4 +29,10 @@ export class ProductService {
   ) {
     await axiosInstance.post(`/products/${productId}/prices`, data);
   }
+
+  static async getRequiredOptions(axiosInstance: AxiosInstance, data: any) {
+    return await axiosInstance.post(`/products/product_options`, {
+      ...data,
+    });
+  }
 }

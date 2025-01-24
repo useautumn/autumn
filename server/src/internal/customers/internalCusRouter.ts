@@ -3,12 +3,23 @@ import { CusService } from "./CusService.js";
 import { ProductService } from "../products/ProductService.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
 import { FeatureService } from "../features/FeatureService.js";
+import { getBillingType } from "../prices/priceUtils.js";
+import { BillingType, Entitlement, EntitlementWithFeature, FeatureOptions } from "@autumn/shared";
 
 export const cusRouter = Router();
 
 cusRouter.get("", async (req: any, res: any) => {
-  const customers = await CusService.getCustomers(req.sb, req.org.id, req.env);
-  res.status(200).send({ customers });
+  const page = parseInt(req.query.page as string) || 1;
+  const { data: customers, count } = await CusService.getCustomers(req.sb, req.org.id, req.env, page);
+  res.status(200).send({ customers, totalCount: count });
+});
+
+cusRouter.get("/search", async (req: any, res: any) => {
+  const { sb, org, env } = req;
+  const { search } = req.query;
+  const page = parseInt(req.query.page as string) || 1;
+  const { data: customers, count } = await CusService.searchCustomers(sb, org.id, env, search, page);
+  res.status(200).send({ customers, totalCount: count });
 });
 
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
