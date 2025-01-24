@@ -14,6 +14,7 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
   const { organization, isLoaded } = useOrganization();
   const router = useRouter();
   const [curOrgId, setCurOrgId] = useState<string | null>(null);
+  const [hidePlaceholder, setHidePlaceholder] = useState(false);
 
   useEffect(() => {
     if (organization) {
@@ -25,6 +26,13 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
       router.refresh();
     }
   }, [organization]);
+  useEffect(() => {
+    if (organization && isLoaded) {
+      setTimeout(() => {
+        setHidePlaceholder(true);
+      }, 1000);
+    }
+  }, [organization, isLoaded]);
 
   return (
     <SidebarHeader className="px-3 pt-4 mb-2 w-full">
@@ -36,15 +44,17 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
       >
         {state == "expanded" && (
           <div className="flex relative w-full h-7">
-            <div className="flex items-center gap-2 text-sm font-medium h-7 absolute left-0 top-0 w-fit px-1">
-              <Avatar
-                size="sm"
-                className="w-5 h-5 mr-1"
-                fallback={orgName[0]}
-                radius="md"
-              />
-              <p className="text-zinc-500">{orgName}</p>
-            </div>
+            {!hidePlaceholder && (
+              <div className="flex items-center gap-2 text-sm font-medium h-7 absolute left-0 top-0 w-fit px-1">
+                <Avatar
+                  size="sm"
+                  className="w-5 h-5 mr-1"
+                  fallback={orgName[0]}
+                  radius="md"
+                />
+                <p className="text-zinc-500">{orgName}</p>
+              </div>
+            )}
             {isLoaded && (
               <OrganizationSwitcher
                 appearance={{
