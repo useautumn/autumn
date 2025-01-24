@@ -89,32 +89,33 @@ productRouter.get("/:productId", async (req: any, res) => {
 
 productRouter.use(entitlementRouter);
 
-
 productRouter.post("/product_options", async (req: any, res: any) => {
   const { prices, entitlements } = req.body;
 
-
-
   const options: FeatureOptions[] = [];
-  console.log("prices", prices);
-  console.log("entitlements", entitlements);
+  // console.log("prices", prices);
+  // console.log("entitlements", entitlements);
   for (const price of prices) {
     // get billing tyoe
     const billingType = getBillingType(price.config);
 
     if (billingType === BillingType.UsageBelowThreshold) {
-      let featureId = entitlements.find((e: EntitlementWithFeature) => e.id === price.config.entitlement_id).feature_id;
+      let featureId = entitlements.find(
+        (e: EntitlementWithFeature) => e.id === price.config.entitlement_id
+      ).feature_id;
 
       options.push({
         feature_id: featureId,
-        threshold: 0
+        threshold: 0,
       });
     } else if (billingType === BillingType.UsageInAdvance) {
-      let featureId = entitlements.find((e: EntitlementWithFeature) => e.id === price.config.entitlement_id).feature_id;
+      let featureId = entitlements.find(
+        (e: EntitlementWithFeature) => e.id === price.config.entitlement_id
+      ).feature_id;
 
       options.push({
         feature_id: featureId,
-        quantity: 0
+        quantity: 0,
       });
     }
   }
