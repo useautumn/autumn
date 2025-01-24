@@ -21,6 +21,7 @@ import { handleAddProduct } from "@/internal/customers/add-product/handleAddProd
 import { ErrorMessages } from "@/errors/errMessages.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
+  getBillingType,
   getEntOptions,
   getPriceEntitlement,
   haveDifferentRecurringIntervals,
@@ -59,8 +60,10 @@ const checkAddProductErrors = async ({
   }
 
   // 2. Check if options are valid
+
   for (const price of prices) {
-    if (price.billing_type === BillingType.UsageInAdvance) {
+    const billingType = getBillingType(price.config!);
+    if (billingType === BillingType.UsageInAdvance) {
       // Get options for price
       let priceEnt = getPriceEntitlement(price, entitlements);
       let options = getEntOptions(optionsList, priceEnt);
@@ -71,7 +74,7 @@ const checkAddProductErrors = async ({
           statusCode: 400,
         });
       }
-    } else if (price.billing_type === BillingType.UsageBelowThreshold) {
+    } else if (billingType === BillingType.UsageBelowThreshold) {
       let priceEnt = getPriceEntitlement(price, entitlements);
       let options = getEntOptions(optionsList, priceEnt);
 

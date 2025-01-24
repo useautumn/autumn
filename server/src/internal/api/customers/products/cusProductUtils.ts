@@ -255,6 +255,7 @@ export const getDefaultAndCustomEnts = ({
 
   const customEnts: any = [];
 
+
   for (const ent of entsInput) {
     // 1. Validate entitlement
     if (!validateEntitlement(ent, features)) {
@@ -301,12 +302,15 @@ export const getDefaultAndCustomEnts = ({
         allowance: ent.allowance,
         interval: ent.interval,
       });
+
+      defaultEnts = defaultEnts.filter(
+        (e) => e.feature_id != existingEnt.feature_id
+      );
     }
 
-    defaultEnts = defaultEnts.filter(
-      (e) => e.feature_id != existingEnt.feature_id
-    );
+
   }
+
 
   return { defaultEnts, customEnts };
 };
