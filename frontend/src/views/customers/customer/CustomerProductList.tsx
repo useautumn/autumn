@@ -7,8 +7,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
+import { navigateTo } from "@/utils/genUtils";
 import { CusProduct } from "@autumn/shared";
 import { useRouter } from "next/navigation";
+import { useCustomerContext } from "./CustomerContext";
 
 export const CustomerProductList = ({
   customer,
@@ -18,6 +20,7 @@ export const CustomerProductList = ({
   products: any;
 }) => {
   const router = useRouter();
+  const {env} = useCustomerContext();
 
   return (
     <div>
@@ -39,8 +42,10 @@ export const CustomerProductList = ({
                 key={cusProduct.id}
                 className="cursor-pointer"
                 onClick={() => {
-                  router.push(
-                    `/customers/${customer.id}/${cusProduct.product_id}`
+                  navigateTo(
+                    `/customers/${customer.id}/${cusProduct.product_id}`,
+                    router,
+                    env
                   );
                 }}
               >
