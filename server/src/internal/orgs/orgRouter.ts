@@ -79,24 +79,26 @@ orgRouter.post("/stripe", async (req: any, res) => {
       });
     }
 
-    // 3. Update org in Clerk
-    const testWebhookSecret = testWebhook.secret as string;
-    const liveWebhookSecret = liveWebhook.secret as string;
-
-    const clerkPrivateMetadata = {
-      stripe: {
-        test_api_key: encryptData(testApiKey),
-        live_api_key: encryptData(liveApiKey),
-        test_webhook_secret: encryptData(testWebhookSecret),
-        live_webhook_secret: encryptData(liveWebhookSecret),
-        success_url: successUrl,
+    // 1. Update org in Supabase
+    await OrgService.update({
+      sb: req.sb,
+      orgId: req.org.id,
+      updates: {
+        stripe_connected: true,
+        default_currency: defaultCurrency,
+        stripe_config: {
+          test_api_key: encryptData(testApiKey),
+          live_api_key: encryptData(liveApiKey),
+          test_webhook_secret: encryptData(testWebhook.secret as string),
+          live_webhook_secret: encryptData(liveWebhook.secret as string),
+          success_url: successUrl,
+        },
       },
-    };
+    });
 
+    // 2. Update org in Clerk
     const clerkCli = createClerkCli();
-
     await clerkCli.organizations.updateOrganization(req.org.id, {
-      privateMetadata: clerkPrivateMetadata,
       publicMetadata: {
         stripe_connected: true,
         default_currency: defaultCurrency,
@@ -122,129 +124,4 @@ orgRouter.post("/stripe", async (req: any, res) => {
       });
     }
   }
-});
-
-const syncStripeCustomers = async ({
-  pg,
-  stripeCli,
-  customers,
-}: {
-  pg: Client;
-  stripeCli: Stripe;
-  customers: Customer[];
-}) => {
-  let updateStatements = "";
-  for (const customer of customers) {
-    try {
-      const stripeCustomer = await stripeCli.customers.create({
-        name: customer.name,
-        email: customer.email || undefined,
-      });
-
-      updateStatements += `
-        UPDATE customers 
-        SET processor = jsonb_build_object('id', '${stripeCustomer.id}', 'type', 'stripe')
-        WHERE internal_id = '${customer.internal_id}'\n\n`;
-    } catch (error) {
-      console.error("Error syncing Stripe customer", error);
-    }
-  }
-
-  await pg.query(updateStatements);
-};
-
-const syncStripeProducts = async ({
-  pg,
-  stripeCli,
-  products,
-}: {
-  pg: Client;
-  stripeCli: Stripe;
-  products: Product[];
-}) => {
-  let updateStatements = "";
-  for (const product of products) {
-    try {
-      const stripeProduct = await stripeCli.products.create({
-        name: product.name,
-      });
-
-      updateStatements += `
-        UPDATE products 
-        SET processor = jsonb_build_object('id', '${stripeProduct.id}', 'type', 'stripe')
-        WHERE id = '${product.id}'\n\n`;
-    } catch (error) {
-      console.error("Error syncing Stripe product", error);
-    }
-  }
-
-  await pg.query(updateStatements);
-};
-
-orgRouter.post("/sync", async (req: any, res) => {
-  let orgId = req.orgId;
-
-  const org = await OrgService.getFullOrg({
-    sb: req.sb,
-    orgId: req.orgId,
-  });
-
-  const testStripeCli = createStripeCli({
-    org,
-    env: AppEnv.Sandbox,
-  });
-
-  const liveStripeCli = createStripeCli({
-    org,
-    env: AppEnv.Live,
-  });
-
-  console.log("Getting customers & products");
-  let liveCustomers = await CusService.getCustomers(req.sb, orgId, AppEnv.Live);
-  let sandboxCustomers = await CusService.getCustomers(
-    req.sb,
-    orgId,
-    AppEnv.Sandbox
-  );
-
-  let liveProducts = await ProductService.getProducts(
-    req.sb,
-    orgId,
-    AppEnv.Live
-  );
-  let sandboxProducts = await ProductService.getProducts(
-    req.sb,
-    orgId,
-    AppEnv.Sandbox
-  );
-
-  console.log("Syncing Stripe customers");
-  await syncStripeCustomers({
-    pg: req.pg,
-    stripeCli: testStripeCli,
-    customers: sandboxCustomers,
-  });
-
-  await syncStripeCustomers({
-    pg: req.pg,
-    stripeCli: liveStripeCli,
-    customers: liveCustomers,
-  });
-
-  console.log("Syncing Stripe products");
-  await syncStripeProducts({
-    pg: req.pg,
-    stripeCli: liveStripeCli,
-    products: liveProducts,
-  });
-
-  await syncStripeProducts({
-    pg: req.pg,
-    stripeCli: testStripeCli,
-    products: sandboxProducts,
-  });
-
-  res.status(200).json({
-    message: "Stripe customers synced",
-  });
 });
