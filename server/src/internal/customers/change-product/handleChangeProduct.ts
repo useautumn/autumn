@@ -331,6 +331,7 @@ export const handleChangeProduct = async ({
   const curFullProduct = await ProductService.getFullProduct({
     sb: req.sb,
     productId: curProduct.id,
+    orgId: org.id,
     env,
   });
 

@@ -141,6 +141,7 @@ const handleExistingProduct = async ({
 
       res.status(200).send({
         success: true,
+        message: "Reactivated current product, removed future product",
       });
       return true;
     } else {

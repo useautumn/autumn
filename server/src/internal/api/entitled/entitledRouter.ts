@@ -67,11 +67,20 @@ const calculateFeatureBalance = ({
   let balance = 0;
   for (const cusEnt of cusEnts) {
     if (cusEnt.feature_id === featureId) {
+      if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
+        return {
+          balance: null,
+          unlimited: true,
+        };
+      }
       balance += cusEnt.balance!;
     }
   }
 
-  return balance;
+  return {
+    balance,
+    unlimited: false,
+  };
 };
 
 const checkEntitlementAllowed = ({
@@ -106,11 +115,10 @@ const checkEntitlementAllowed = ({
   }
 
   const balance = calculateFeatureBalance({ cusEnts, featureId: feature.id });
-  const allowanceType = cusEnt.entitlement.allowance_type;
   return {
     feature_id: feature.id,
-    balance: allowanceType === AllowanceType.Unlimited ? null : balance,
-    unlimited: allowanceType === AllowanceType.Unlimited,
+    balance: balance.balance,
+    unlimited: balance.unlimited,
     required: required,
   };
 };
