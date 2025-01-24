@@ -123,16 +123,16 @@ export const cronTask = async () => {
   }
 };
 
-// const job = new CronJob(
-//   "* * * * *", // Run every minute
-//   function () {
-//     cronTask();
-//   },
-//   null, // onComplete
-//   true, // start immediately
-//   "UTC" // timezone (adjust as needed)
-// );
+const job = new CronJob(
+  "* * * * *", // Run every minute
+  function () {
+    cronTask();
+  },
+  null, // onComplete
+  true, // start immediately
+  "UTC" // timezone (adjust as needed)
+);
 
-// job.start();
+job.start();
 
-cronTask();
+// cronTask();
