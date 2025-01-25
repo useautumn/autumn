@@ -6,17 +6,20 @@ import React from "react";
 function LoadingScreen() {
   const texts = [
     "Counting pennies",
-    "Forging products", 
+    "Forging products",
     "Increasing ARR",
     "Optimizing pricing",
     "Blasting competitors",
     "Shipping faster",
-    "Stopping churn"
+    "Stopping churn",
   ];
-  const [loadingText, setLoadingText] = React.useState(texts[Math.floor(Math.random() * texts.length)]);
+
+  const [loadingText, setLoadingText] = React.useState(texts[0]);
 
   React.useEffect(() => {
     let currentIndex = 0;
+
+    setLoadingText(texts[Math.floor(Math.random() * texts.length)]);
 
     const interval = setInterval(() => {
       currentIndex = (currentIndex + 1) % texts.length;

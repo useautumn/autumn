@@ -14,6 +14,8 @@ export enum EntInterval {
   Day = "day",
   Week = "week",
   Month = "month",
+  Quarter = "quarter",
+  SemiAnnual = "semi_annual",
   Year = "year",
   Lifetime = "lifetime",
 }

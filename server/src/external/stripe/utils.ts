@@ -36,6 +36,16 @@ export const billingIntervalToStripe = (interval: BillingInterval) => {
         interval: "month",
         interval_count: 1,
       };
+    case BillingInterval.Quarter:
+      return {
+        interval: "month",
+        interval_count: 3,
+      };
+    case BillingInterval.SemiAnnual:
+      return {
+        interval: "month",
+        interval_count: 6,
+      };
     case BillingInterval.Year:
       return {
         interval: "year",
