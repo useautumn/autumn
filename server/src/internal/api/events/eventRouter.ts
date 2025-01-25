@@ -31,7 +31,12 @@ const getEventAndCustomer = async (req: any) => {
   let customer: Customer;
   try {
     // 1. Validate request body
-    EventSchema.omit({ id: true, org_id: true, env: true }).parse(req.body);
+    EventSchema.omit({
+      id: true,
+      org_id: true,
+      env: true,
+      properties: true,
+    }).parse(req.body);
     newEvent = {
       id: generateId("evt"),
       org_id: orgId,

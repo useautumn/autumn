@@ -95,16 +95,11 @@ export default function DemoView() {
   };
 
   const sendUsage = async (eventName: string) => {
-    const { data } = await axios.post(
-      sendUsageUrl,
-      {
-        event_name: eventName,
-        customer_id: customerId,
-      },
-      {
-        headers,
-      }
-    );
+    const { data } = await axiosInstance.post("/events", {
+      event_name: eventName,
+      customer_id: customerId,
+      properties: {},
+    });
 
     toast.success("Scrape successful");
     return data;
