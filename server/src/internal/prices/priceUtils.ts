@@ -169,6 +169,8 @@ export function compareBillingIntervals(
     [BillingInterval.OneOff]: 0,
     [BillingInterval.Month]: 1,
     [BillingInterval.Year]: 2,
+    [BillingInterval.Quarter]: 3,
+    [BillingInterval.SemiAnnual]: 4,
   };
 
   return priority[a] - priority[b];
