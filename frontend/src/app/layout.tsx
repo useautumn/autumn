@@ -62,7 +62,7 @@ export default async function RootLayout({
         <ClerkProvider>
           <NextUIProvider>
             <SidebarProvider>
-              {org_id && (
+              {org_id && !path.includes("/demo") && (
                 <HomeSidebar
                   user={sessionClaims?.user as any}
                   org={org}
