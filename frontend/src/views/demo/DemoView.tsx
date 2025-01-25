@@ -5,74 +5,116 @@ import axios from "axios";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import toast from "react-hot-toast";
+import {
+  Card,
+  CardHeader,
+  CardFooter,
+  CardContent,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+const apiKey = "am_test_3ZcMpfUyb3Ybbcias3NLukrL";
+const baseUrl = "https://api.useautumn.com/v1";
+const headers = {
+  Authorization: `Bearer ${apiKey}`,
+};
+
+const axiosInstance = axios.create({
+  baseURL: baseUrl,
+  headers,
+});
 
 export default function DemoView() {
+  const customerId = "test";
+  const featureId = "enrichment-credits";
+  const eventName = "enrichment";
+
   const hasAccessRequest = {
-    feature_id: "scrape",
-    customer_id: "123",
+    feature_id: "enrichment-credits OR ai-credits",
+    customer_id: customerId,
+  };
+
+  const sendEventRequest = {
+    event_name: "enrich or ai",
+    customer_id: customerId,
+    properties: {},
   };
 
   const [hasAccessLoading, setHasAccessLoading] = useState(false);
   const [hasAccessResponse, setHasAccessResponse] = useState(null);
+  const [sendEventLoading, setSendEventLoading] = useState(false);
+  const [sendEventResponse, setSendEventResponse] = useState(null);
+  const [buyLoading, setBuyLoading] = useState(false);
 
-  const scrapeRequest = {
-    event_name: "scrape",
-    customer_id: "123",
-    properties: {},
-  };
+  const [quantities, setQuantities] = useState<any>({
+    enrichment: "",
+    ai: "",
+  });
 
-  const [scrapeLoading, setScrapeLoading] = useState(false);
-  const [scrapeResponse, setScrapeResponse] = useState(null);
-
-  const apiKey = "am_live_3ZjuppssW1Q5C4Dn5CWmH6Uy";
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-  };
-
-  const customerId = "123";
-  const featureId = "scrape";
-  const eventName = "scrape";
-  const checkAccessUrl = `http://localhost:8080/v1/entitlements/is_allowed?customer_id=${customerId}&feature_id=${featureId}`;
   const sendUsageUrl = "http://localhost:8080/v1/events";
 
-
-
-
-
-  const checkAccess = async () => {
-    const { data } = await axios.get(checkAccessUrl, {
-      headers,
+  const buyStarter = async () => {
+    const { data } = await axiosInstance.post("/attach", {
+      customer_id: customerId,
+      product_id: "starter",
+      options: [
+        {
+          feature_id: "enrichment-credits",
+          quantity: quantities.enrichment,
+        },
+        {
+          feature_id: "ai-credits",
+          quantity: quantities.ai,
+        },
+      ],
     });
+
+    console.log(data);
+
+    if (data.checkout_url) {
+      window.open(data.checkout_url, "_blank");
+    } else {
+      toast.success("Successfully bought starter");
+    }
+  };
+
+  const checkAccess = async (featureId: string) => {
+    const { data } = await axiosInstance.get(
+      `/entitled?customer_id=${customerId}&feature_id=${featureId}`,
+      {
+        headers,
+      }
+    );
 
     if (!data.allowed) {
       toast.error("You're out of credits.");
     }
+
     return data;
   };
 
-
-
-  const sendUsage = async () => {
-    const { data } = await axios.post(sendUsageUrl, {
-      event_name: eventName,
-      customer_id: customerId,
-    }, {
-      headers,
-    });
+  const sendUsage = async (eventName: string) => {
+    const { data } = await axios.post(
+      sendUsageUrl,
+      {
+        event_name: eventName,
+        customer_id: customerId,
+      },
+      {
+        headers,
+      }
+    );
 
     toast.success("Scrape successful");
     return data;
   };
 
-
-
-
-
-
-
-  const handleClicked = async () => {
+  const handleClicked = async (type: "enrich" | "ai") => {
     setHasAccessLoading(true);
-    const data = await checkAccess();
+    const data = await checkAccess(
+      type === "enrich" ? "enrichment-credits" : "ai-credits"
+    );
     setHasAccessLoading(false);
     setHasAccessResponse(data);
 
@@ -80,40 +122,82 @@ export default function DemoView() {
       return;
     }
 
-    setScrapeLoading(true);
-    const scrapeData = await sendUsage();
-    setScrapeResponse(scrapeData);
-    setScrapeLoading(false);
-
+    setSendEventLoading(true);
+    const eventData = await sendUsage(eventName);
+    setSendEventResponse(eventData);
+    setSendEventLoading(false);
   };
 
   return (
-    <div className="flex gap-4 p-4">
-      <CustomToaster />
-      <div className="w-1/4">
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          onClick={handleClicked}
-        >
-          Scrape
-        </button>
+    <div className="flex gap-12 p-4">
+      <div className="flex flex-col gap-4">
+        <CustomToaster />
+        <Card className="rounded-md shadow-md border w-[300px]">
+          <CardHeader>
+            <h3 className="font-bold">Starter Plan</h3>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex gap-2 items-center">
+              <Input
+                placeholder="Enrichment Credits"
+                value={quantities.enrichment}
+                onChange={(e) =>
+                  setQuantities({ ...quantities, enrichment: e.target.value })
+                }
+              />
+              <p className="text-t3 text-sm w-[50px]">x 100</p>
+            </div>
+            <div className="flex gap-2 items-center">
+              <Input
+                placeholder="AI Credits"
+                value={quantities.ai}
+                onChange={(e) =>
+                  setQuantities({ ...quantities, ai: e.target.value })
+                }
+              />
+              <p className="text-t3 text-sm w-[50px]">x 100</p>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button
+              isLoading={buyLoading}
+              onClick={async () => {
+                setBuyLoading(true);
+                setQuantities({
+                  enrichment: parseInt(quantities.enrichment),
+                  ai: parseInt(quantities.ai),
+                });
+                await buyStarter();
+                setBuyLoading(false);
+              }}
+            >
+              Buy
+            </Button>
+          </CardFooter>
+        </Card>
+        <Card>
+          <CardHeader className="flex justify-between">
+            <Button onClick={() => handleClicked("enrich")}>Enrich</Button>
+            <Button onClick={() => handleClicked("ai")}>Use AI</Button>
+          </CardHeader>
+        </Card>
       </div>
 
       <div className="w-3/4 space-y-4">
         <APIPlayground
           title="Has Access"
-          endpoint="GET /entitlements/is_allowed"
+          endpoint="GET /entitled"
           request={hasAccessRequest}
           response={hasAccessResponse}
           loading={hasAccessLoading}
         />
 
         <APIPlayground
-          title="Scrape"
+          title="Send Event"
           endpoint="POST /events"
-          request={scrapeRequest}
-          response={scrapeResponse}
-          loading={scrapeLoading}
+          request={sendEventRequest}
+          response={sendEventResponse}
+          loading={sendEventLoading}
         />
       </div>
     </div>

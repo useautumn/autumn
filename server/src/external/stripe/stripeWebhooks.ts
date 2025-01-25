@@ -31,6 +31,12 @@ stripeWebhookRouter.post(
       return;
     }
 
+    if (!org.stripe_config) {
+      console.log(`Org ${orgId} does not have a stripe config`);
+      response.status(200).send(`Org ${orgId} does not have a stripe config`);
+      return;
+    }
+
     const webhookSecret = getStripeWebhookSecret(org, env);
 
     try {
