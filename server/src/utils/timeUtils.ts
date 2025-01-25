@@ -23,6 +23,10 @@ export const getNextEntitlementReset = (
       return add(prevReset, { weeks: 1 });
     case EntInterval.Month:
       return add(prevReset, { months: 1 });
+    case EntInterval.Quarter:
+      return add(prevReset, { months: 3 });
+    case EntInterval.SemiAnnual:
+      return add(prevReset, { months: 6 });
     case EntInterval.Year:
       return add(prevReset, { years: 1 });
     default:
