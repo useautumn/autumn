@@ -24,7 +24,7 @@ export const ProductSchema = z.object({
 });
 
 export const CreateProductSchema = ProductSchema.omit({
-  id: true,
+  internal_id: true,
   org_id: true,
   created_at: true,
   env: true,
