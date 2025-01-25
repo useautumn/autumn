@@ -27,8 +27,6 @@ const axiosInstance = axios.create({
 
 export default function DemoView() {
   const customerId = "test";
-  const featureId = "enrichment-credits";
-  const eventName = "enrichment";
 
   const hasAccessRequest = {
     feature_id: "enrichment-credits OR ai-credits",
@@ -70,8 +68,6 @@ export default function DemoView() {
       ],
     });
 
-    console.log(data);
-
     if (data.checkout_url) {
       window.open(data.checkout_url, "_blank");
     } else {
@@ -96,8 +92,8 @@ export default function DemoView() {
 
   const sendUsage = async (eventName: string) => {
     const { data } = await axiosInstance.post("/events", {
-      event_name: eventName,
       customer_id: customerId,
+      event_name: eventName,
       properties: {},
     });
 
@@ -118,7 +114,7 @@ export default function DemoView() {
     }
 
     setSendEventLoading(true);
-    const eventData = await sendUsage(eventName);
+    const eventData = await sendUsage(type);
     setSendEventResponse(eventData);
     setSendEventLoading(false);
   };

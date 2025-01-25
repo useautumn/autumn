@@ -92,7 +92,7 @@ export default function CustomerProductView({
     // console.log("foundProduct", foundProduct);
     console.log("customerProduc1t", customerProduct);
     const enrichedProduct = enrichProduct(foundProduct, customerProduct);
-    
+
     setOptions(enrichedProduct.options);
     setProduct(enrichedProduct);
     initialProductRef.current = enrichedProduct;
@@ -100,9 +100,9 @@ export default function CustomerProductView({
 
   // Pure function to handle product enrichment
   const enrichProduct = (
-    baseProduct: FrontendProduct, 
-    customerProduct?: { 
-      status?: string; 
+    baseProduct: FrontendProduct,
+    customerProduct?: {
+      status?: string;
       options?: OptionValue[];
       entitlements?: typeof baseProduct.entitlements;
       prices?: typeof baseProduct.prices;
@@ -250,7 +250,7 @@ export default function CustomerProductView({
     }
     if (hasChanges) {
       return {
-        buttonText: "Create Product Version",
+        buttonText: "Create Custom Version",
         tooltipText: `You have edited product ${product.name} and are creating a custom version for ${customer.name}`,
         disabled: false,
       };
