@@ -3,14 +3,10 @@ import { generateId } from "@/utils/genUtils.js";
 import { Router } from "express";
 import {
   CreateEntitlement,
-  CreateEntitlementSchema,
   CreatePrice,
-  CreatePriceSchema,
-  CreateProduct,
   CreateProductSchema,
   Entitlement,
   EntitlementSchema,
-  Organization,
   Price,
   PriceSchema,
   ProcessorType,
@@ -28,7 +24,6 @@ import {
   deleteStripeProduct,
 } from "@/external/stripe/stripeProductUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { EntitlementService } from "@/internal/products/EntitlementService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
@@ -68,7 +63,6 @@ productApiRouter.post("", async (req: any, res) => {
         ...productSchema,
         internal_id: generateId("prod"),
         id: product.id,
-
         org_id: org.id,
         created_at: Date.now(),
         env: req.env,
