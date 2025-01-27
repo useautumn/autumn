@@ -25,6 +25,7 @@ import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import { handleAddProduct } from "../add-product/handleAddProduct.js";
+import { CusProductService } from "../products/CusProductService.js";
 
 const scheduleStripeSubscription = async ({
   customer,
@@ -123,7 +124,17 @@ const handleDowngrade = async ({
     });
 
     for (const schedule of schedules.data) {
-      if (schedule.status !== "canceled") {
+      const existingCusProduct = await CusProductService.getByScheduleId({
+        sb: req.sb,
+        scheduleId: schedule.id,
+      });
+
+      // Delete only if not in the same group
+      if (
+        (!existingCusProduct ||
+          existingCusProduct.product.group === product.group) &&
+        schedule.status !== "canceled"
+      ) {
         await stripeCli.subscriptionSchedules.cancel(schedule.id);
       }
     }
