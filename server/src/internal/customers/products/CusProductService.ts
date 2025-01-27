@@ -65,38 +65,33 @@ export class CusProductService {
     return data;
   }
 
-  static async getCurrentProduct({
+  static async getCurrentProductByGroup({
     sb,
     internalCustomerId,
+    productGroup,
   }: {
     sb: SupabaseClient;
     internalCustomerId: string;
+    productGroup: string;
   }) {
     const { data, error } = await sb
       .from("customer_products")
       .select("*, product:products!inner(*)")
       .eq("internal_customer_id", internalCustomerId)
+      .eq("product.group", productGroup)
       .eq("product.is_add_on", false)
       .neq("status", CusProductStatus.Expired)
-      .neq("status", CusProductStatus.Scheduled);
+      .neq("status", CusProductStatus.Scheduled)
+      .single();
 
     if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
       throw error;
     }
 
-    if (data.length > 1) {
-      throw new RecaseError({
-        message: "Multiple products found for customer",
-        code: ErrCode.MultipleProductsFound,
-        statusCode: 500,
-      });
-    }
-
-    if (data.length === 0) {
-      return null;
-    }
-
-    return data[0];
+    return data;
   }
 
   static async getByCusAndProductId({
@@ -185,6 +180,29 @@ export class CusProductService {
     return data;
   }
 
+  static async getByScheduleId({
+    sb,
+    scheduleId,
+  }: {
+    sb: SupabaseClient;
+    scheduleId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_products")
+      .select("*, product:products!inner(*)")
+      .eq("processor->>subscription_schedule_id", scheduleId)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  }
+
   static async updateStatusByStripeSubId({
     sb,
     stripeSubId,
@@ -242,13 +260,17 @@ export class CusProductService {
   static async expireCurrentProduct({
     sb,
     internalCustomerId,
+    productGroup,
   }: {
     sb: SupabaseClient;
     internalCustomerId: string;
+    productGroup: string;
   }) {
-    const currentProduct = await this.getCurrentProduct({
+    // TO WORK ON EXPIRING
+    const currentProduct = await this.getCurrentProductByGroup({
       sb,
       internalCustomerId,
+      productGroup,
     });
 
     if (!currentProduct) {
@@ -271,9 +293,11 @@ export class CusProductService {
   static async activateFutureProduct({
     sb,
     internalCustomerId,
+    productGroup,
   }: {
     sb: SupabaseClient;
     internalCustomerId: string;
+    productGroup: string;
   }) {
     const { data, error } = await sb
       .from("customer_products")
@@ -281,6 +305,7 @@ export class CusProductService {
         status: CusProductStatus.Active,
       })
       .eq("internal_customer_id", internalCustomerId)
+      .eq("product.group", productGroup)
       .eq("status", CusProductStatus.Scheduled)
       .select()
       .single();
@@ -300,25 +325,39 @@ export class CusProductService {
   static async deleteFutureProduct({
     sb,
     internalCustomerId,
+    productGroup,
   }: {
     sb: SupabaseClient;
     internalCustomerId: string;
+    productGroup: string;
   }) {
+    // 1. Get all products in same group
     const { data, error } = await sb
       .from("customer_products")
-      .delete()
+      .select("*, product:products!inner(*)")
       .eq("internal_customer_id", internalCustomerId)
-      .eq("status", CusProductStatus.Scheduled)
+      .eq("product.group", productGroup)
+      .eq("status", CusProductStatus.Scheduled);
+
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    // Delete product
+    const { error: deleteError } = await sb
+      .from("customer_products")
+      .delete()
+      .eq("id", data[0].id)
       .select()
       .single();
 
-    if (error) {
-      if (error.code === "PGRST116") {
+    if (deleteError) {
+      if (deleteError.code === "PGRST116") {
         return null;
       }
-      throw error;
+      throw deleteError;
     }
 
-    return data;
+    return data[0];
   }
 }
