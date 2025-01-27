@@ -9,6 +9,7 @@ export const ProductSchema = z.object({
   org_id: z.string(),
   created_at: z.number(),
   env: z.string(),
+  group: z.string(),
 
   processor: z
     .object({

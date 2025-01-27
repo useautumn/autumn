@@ -26,7 +26,7 @@ const axiosInstance = axios.create({
 });
 
 export default function DemoView() {
-  const customerId = "test";
+  const customerId = "regular";
 
   const hasAccessRequest = {
     feature_id: "enrichment-credits OR ai-credits",
@@ -49,8 +49,6 @@ export default function DemoView() {
     enrichment: "",
     ai: "",
   });
-
-  const sendUsageUrl = "http://localhost:8080/v1/events";
 
   const buyStarter = async () => {
     const { data } = await axiosInstance.post("/attach", {
