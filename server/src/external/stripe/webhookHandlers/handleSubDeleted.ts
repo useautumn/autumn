@@ -43,6 +43,7 @@ export const handleSubscriptionDeleted = async ({
   const futureProduct = await CusProductService.activateFutureProduct({
     sb,
     internalCustomerId: cusProduct.internal_customer_id,
+    productGroup: cusProduct.product.group,
   });
 
   if (futureProduct) {

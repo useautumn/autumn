@@ -58,6 +58,7 @@ export const handleCheckoutSessionCompleted = async ({
   await CusProductService.expireCurrentProduct({
     sb,
     internalCustomerId: customer.internal_id,
+    productGroup: product.group,
   });
 
   console.log("Creating full customer product");
