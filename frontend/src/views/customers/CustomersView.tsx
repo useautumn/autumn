@@ -95,7 +95,6 @@ function CustomersView({ env }: { env: AppEnv }) {
           {data?.customers?.length > 0 ? (
             <div className="h-fit max-h-full">
               <CustomersTable customers={data.customers} />
-              <div className="mt-4 flex justify-center"></div>
             </div>
           ) : (
             <div className="flex bg-white shadow-md border rounded-md items-center justify-center text-t3 text-md h-[150px]">
