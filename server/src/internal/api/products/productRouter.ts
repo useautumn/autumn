@@ -41,6 +41,7 @@ productApiRouter.post("", async (req: any, res) => {
     });
 
     let newProduct: Product;
+
     // 1. Check ir product already exists
     const existingProduct = await ProductService.getProductStrict({
       sb,
@@ -59,6 +60,7 @@ productApiRouter.post("", async (req: any, res) => {
 
     try {
       const productSchema = CreateProductSchema.parse(product);
+
       newProduct = {
         ...productSchema,
         internal_id: generateId("prod"),
