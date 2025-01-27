@@ -32,7 +32,7 @@ function LoadingScreen() {
   return (
     <div className="flex h-screen w-full items-center justify-center flex-col gap-4">
       <LoaderCircle className="animate-spin text-primary" size={30} />
-      <p className="text-primary font-medium">{loadingText}</p>
+      <p className="text-t2 font-mono text-xs font-medium">{loadingText}</p>
     </div>
   );
 }

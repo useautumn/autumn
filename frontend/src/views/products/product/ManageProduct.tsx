@@ -22,13 +22,25 @@ export const ManageProduct = ({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-1">
           <h2 className="text-lg font-medium">{product.name}</h2>
-          {product.add_on && (
-            <div className="flex items-center rounded-full h-5 px-3 text-xs bg-zinc-200 border border-zinc-400 text-t3">
+          <div className="flex items-center gap-2">
+          {product.is_add_on && (
+            <Badge variant="outline" className="bg-white">
               Add On
-            </div>
+            </Badge>
           )}
+             {product.is_default && (
+            <Badge variant="outline" className="bg-white">
+              Default Product
+            </Badge>
+          )}
+          {product.group && (
+            <Badge variant="outline" className="bg-white">
+              Product Group:  <span className="font-semibold ml-1">{" " + product.group}</span>
+            </Badge>
+          )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

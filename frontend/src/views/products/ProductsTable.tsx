@@ -29,6 +29,7 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
           <TableHead className="">Name</TableHead>
           <TableHead>Product ID</TableHead>
           <TableHead>Type</TableHead>
+          <TableHead>Group</TableHead>
           <TableHead>Created At</TableHead>
           <TableHead className="w-20"></TableHead>
         </TableRow>
@@ -55,8 +56,17 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
                 <></>
               )}
             </TableCell>
-            <TableCell className="min-w-48">
-              {formatUnixToDateTimeString(product.created_at)}
+            <TableCell className="min-w-32">
+              {product.group}
+            </TableCell>
+            <TableCell className="min-w-32">
+              <span>
+                {formatUnixToDateTime(product.created_at).date}
+              </span>
+              {" "}
+              <span className="text-t3">
+                {formatUnixToDateTime(product.created_at).time}
+              </span>
             </TableCell>
             <TableCell className="w-20 ">
               <ProductRowToolbar product={product} />

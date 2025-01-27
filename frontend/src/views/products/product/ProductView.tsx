@@ -40,13 +40,19 @@ function ProductView({
 
   useEffect(() => {
     if (data?.product) {
-      setProduct(data.product);
+      //setProduct(data.product)
+      setProduct({
+        ...data.product,
+        group: 'group test'
+      });
 
       initialProductRef.current = data.product;
     }
   }, [data]);
 
   useEffect(() => {
+    console.log("product", product);
+
     if (!initialProductRef.current || !product) {
       setHasChanges(false);
       return;
