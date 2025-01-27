@@ -28,6 +28,7 @@ function CreateProduct() {
   const [fields, setFields] = useState({
     name: "",
     id: "",
+    group: "",
     is_add_on: false,
     is_default: false,
   });
@@ -80,6 +81,14 @@ function CreateProduct() {
               onChange={(e) => setFields({ ...fields, id: e.target.value })}
             />
           </div>
+        </div>
+        <div className="w-full">
+          <FieldLabel>Group</FieldLabel>
+          <Input
+            placeholder="eg. Product Group"
+            value={fields.group}
+            onChange={(e) => setFields({ ...fields, group: e.target.value })}
+          />
         </div>
         <div className="flex items-center gap-2 ml-1 text-sm text-t2">
           <Checkbox
