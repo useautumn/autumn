@@ -39,7 +39,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
           {expanded ? (
             <DropdownMenuTrigger
               asChild
-              className="ring-0 focus:ring-0 border bg-white text-t2 rounded-lg"
+              className="ring-0 focus:ring-0 border bg-white text-t2 rounded-sm"
             >
               <SidebarMenuButton>
                 {envText}
