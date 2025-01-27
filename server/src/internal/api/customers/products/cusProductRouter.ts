@@ -105,17 +105,18 @@ const handleExistingProduct = async ({
   product: FullProduct;
 }) => {
   const { sb } = req;
-  const existingCusProduct = await CusProductService.getCurrentProduct({
+  const currentProduct = await CusProductService.getCurrentProductByGroup({
     sb,
     internalCustomerId: customer.internal_id,
+    productGroup: product.group,
   });
 
-  // 2. Don't allow customer to get multiple of the same product
-  if (existingCusProduct?.internal_product_id === product.internal_id) {
+  if (currentProduct?.product.internal_id === product.internal_id) {
     // If there's a future product, delete, else
     const deletedCusProduct = await CusProductService.deleteFutureProduct({
       sb,
       internalCustomerId: customer.internal_id,
+      productGroup: product.group,
     });
 
     if (deletedCusProduct) {
@@ -126,9 +127,9 @@ const handleExistingProduct = async ({
         );
       }
       // Continue current product subscription
-      if (existingCusProduct.processor.subscription_id) {
+      if (currentProduct.processor.subscription_id) {
         await stripeCli.subscriptions.update(
-          existingCusProduct.processor.subscription_id,
+          currentProduct.processor.subscription_id,
           {
             cancel_at_period_end: false,
           }
@@ -146,7 +147,7 @@ const handleExistingProduct = async ({
       return true;
     } else {
       throw new RecaseError({
-        message: `Customer ${customer.id} already has product ${existingCusProduct.product_id}`,
+        message: `Customer ${customer.id} already has product ${currentProduct.product_id}`,
         code: ErrCode.CustomerAlreadyHasProduct,
         statusCode: 400,
       });
@@ -154,7 +155,7 @@ const handleExistingProduct = async ({
   }
 
   // 3. If no existing product, check if new product is add-on
-  if (!existingCusProduct && product.is_add_on) {
+  if (!currentProduct && product.is_add_on) {
     throw new RecaseError({
       message: `Customer has no base product`,
       code: ErrCode.CustomerHasNoBaseProduct,
@@ -162,7 +163,7 @@ const handleExistingProduct = async ({
     });
   }
 
-  return existingCusProduct;
+  return currentProduct;
 };
 
 const checkStripeConnections = async ({

@@ -198,21 +198,25 @@ export const expireOrDeleteCusProduct = async ({
   sb,
   customer,
   startsAt,
+  productGroup,
 }: {
   sb: SupabaseClient;
   customer: Customer;
   startsAt?: number;
+  productGroup: string;
 }) => {
   // 1. If startsAt
   if (startsAt && startsAt > Date.now()) {
     await CusProductService.deleteFutureProduct({
       sb,
       internalCustomerId: customer.internal_id,
+      productGroup,
     });
   } else {
     await CusProductService.expireCurrentProduct({
       sb,
       internalCustomerId: customer.internal_id,
+      productGroup,
     });
   }
 };
@@ -247,6 +251,7 @@ export const createFullCusProduct = async ({
       sb,
       customer,
       startsAt,
+      productGroup: product.group,
     });
   }
 
