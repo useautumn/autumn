@@ -82,6 +82,7 @@ function CreateProduct() {
             />
           </div>
         </div>
+        <div className="flex w-full gap-2">
         <div className="w-full">
           <FieldLabel>Group</FieldLabel>
           <Input
@@ -90,7 +91,10 @@ function CreateProduct() {
             onChange={(e) => setFields({ ...fields, group: e.target.value })}
           />
         </div>
-        <div className="flex items-center gap-2 ml-1 text-sm text-t2">
+        <div className="w-full"></div>
+        </div>
+        <div className="flex flex-col gap-2 text-xs"> 
+        <div className="flex items-center gap-2 ml-1 text-t2">
           <Checkbox
             size="sm"
             checked={fields.is_add_on}
@@ -98,13 +102,14 @@ function CreateProduct() {
           />
           <p className="mt-[1px]">This product is an add on</p>
         </div>
-        <div className="flex items-center gap-2 ml-1 text-sm text-t2">
+        <div className="flex items-center gap-2 ml-1 text-t2">
           <Checkbox
             size="sm"
             checked={fields.is_default}
             onCheckedChange={(e) => setFields({ ...fields, is_default: e })}
           />
           <p className="mt-[1px]">This product is the default product</p>
+        </div>
         </div>
 
         <DialogFooter>
