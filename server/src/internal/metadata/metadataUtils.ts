@@ -15,40 +15,22 @@ import { addDays } from "date-fns";
 import { MetadataService } from "./MetadataService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
+import { AttachParams } from "../customers/products/AttachParams.js";
 
 export const createCheckoutMetadata = async ({
   sb,
-  org,
-  customer,
-  product,
-  prices,
-  entitlements,
-  optionsList,
-  env,
+  attachParams,
 }: {
   sb: SupabaseClient;
-  org: Organization;
-  customer: Customer;
-  product: FullProduct;
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
-  optionsList: FeatureOptions[];
-  env: AppEnv;
+  attachParams: AttachParams;
 }) => {
   const metaId = generateId("meta");
+
   const metadata: AutumnMetadata = {
     id: metaId,
     created_at: Date.now(),
     expires_at: addDays(Date.now(), 10).getTime(), // 10 days
-    data: {
-      org,
-      customer,
-      product,
-      prices,
-      entitlements,
-      optionsList,
-      env,
-    },
+    data: attachParams,
   };
 
   await MetadataService.insert(sb, metadata);

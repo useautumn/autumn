@@ -7,6 +7,7 @@ import {
   CustomerEntitlement,
   CusProduct,
   FeatureOptions,
+  FreeTrial,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
@@ -19,11 +20,18 @@ import RecaseError from "@/utils/errorUtils.js";
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
+import { AttachParams } from "../products/AttachParams.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import {
+  addTrialToNextResetAt,
+  applyTrialToEntitlement,
+} from "@/internal/products/entitlements/entitlementUtils.js";
 
 export const initCusEntitlement = ({
   entitlement,
   customer,
   cusProductId,
+  freeTrial,
   options,
   nextResetAt,
   billLaterOnly = false,
@@ -31,6 +39,7 @@ export const initCusEntitlement = ({
   entitlement: EntitlementWithFeature;
   customer: Customer;
   cusProductId: string;
+  freeTrial: FreeTrial | null;
   options?: FeatureOptions;
   nextResetAt?: number;
   billLaterOnly?: boolean;
@@ -46,9 +55,20 @@ export const initCusEntitlement = ({
   // 2. Define reset interval (interval at which balance is reset to quantity * allowance)
   let reset_interval = entitlement.interval as EntInterval;
   let nextResetAtCalculated = null;
+  let trialEndTimestamp = freeTrialToStripeTimestamp(freeTrial);
+
+  // 2. If free trial applies, set next reset at to trial end timestamp
+  if (
+    freeTrial &&
+    applyTrialToEntitlement(entitlement, freeTrial) &&
+    trialEndTimestamp
+  ) {
+    nextResetAtCalculated = new Date(trialEndTimestamp! * 1000);
+  }
+
   if (reset_interval && reset_interval != EntInterval.Lifetime) {
     nextResetAtCalculated = getNextEntitlementReset(
-      null,
+      nextResetAtCalculated,
       reset_interval
     ).getTime();
   }
@@ -223,29 +243,26 @@ export const expireOrDeleteCusProduct = async ({
 
 export const createFullCusProduct = async ({
   sb,
-  customer,
-  product,
-  prices,
-  entitlements,
-  optionsList,
+  attachParams,
   startsAt,
   subscriptionId,
   subscriptionScheduleId,
   nextResetAt,
   billLaterOnly = false,
+  disableFreeTrial = false,
 }: {
   sb: SupabaseClient;
-  customer: Customer;
-  product: FullProduct;
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
-  optionsList: FeatureOptions[];
+  attachParams: AttachParams;
   startsAt?: number;
   subscriptionId?: string;
   subscriptionScheduleId?: string;
   nextResetAt?: number;
   billLaterOnly?: boolean;
+  disableFreeTrial?: boolean;
 }) => {
+  const { customer, product, prices, entitlements, optionsList, freeTrial } =
+    attachParams;
+
   if (!product.is_add_on) {
     await expireOrDeleteCusProduct({
       sb,
@@ -270,6 +287,7 @@ export const createFullCusProduct = async ({
       options: options || undefined,
       nextResetAt,
       billLaterOnly,
+      freeTrial: disableFreeTrial ? null : freeTrial,
     });
 
     cusEnts.push(cusEnt);

@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { EntitlementService } from "./EntitlementService.js";
+import { EntitlementService } from "./entitlements/EntitlementService.js";
 import { Entitlement, EntitlementSchema } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { ProductService } from "./ProductService.js";

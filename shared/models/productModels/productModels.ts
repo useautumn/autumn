@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PriceSchema } from "./priceModels.js";
 import { EntitlementSchema } from "./entitlementModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
+import { FreeTrialSchema } from "./freeTrialModels.js";
 
 export const ProductSchema = z.object({
   internal_id: z.string(),
@@ -47,6 +48,7 @@ export const FrontendProductSchema = ProductSchema.omit({
       feature: FeatureSchema,
     })
   ),
+  free_trial: FreeTrialSchema,
 });
 
 export const FullProductSchema = ProductSchema.extend({
@@ -56,6 +58,7 @@ export const FullProductSchema = ProductSchema.extend({
       feature: FeatureSchema,
     })
   ),
+  free_trial: FreeTrialSchema.optional(),
 });
 
 export type Product = z.infer<typeof ProductSchema>;

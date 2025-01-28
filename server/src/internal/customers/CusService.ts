@@ -48,6 +48,7 @@ export class CusService {
       if (error.code === "PGRST116") {
         return null;
       }
+
       throw error;
     }
 

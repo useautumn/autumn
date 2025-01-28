@@ -1,4 +1,3 @@
-import { SupabaseClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 
 export const getFeatureBalance = async ({

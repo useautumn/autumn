@@ -12,38 +12,27 @@ import {
 
 import { Customer } from "@autumn/shared";
 import { createFullCusProduct } from "./createFullCusProduct.js";
+import { AttachParams } from "../products/AttachParams.js";
 
 export const handleAddFreeProduct = async ({
   req,
   res,
-  customer,
-  product,
-  org,
-  env,
-  prices,
-  entitlements,
-  optionsList,
+  attachParams,
 }: {
   req: any;
   res: any;
-  customer: Customer;
-  product: FullProduct;
-  org: Organization;
-  env: AppEnv;
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
-  optionsList: FeatureOptions[];
+  attachParams: AttachParams;
 }) => {
+  const { customer, product, prices, entitlements, optionsList } = attachParams;
+
   console.log(`Adding free product ${product.name} to customer ${customer.id}`);
 
   // 1. Just add product and entitlements
   await createFullCusProduct({
     sb: req.sb,
-    customer,
-    product,
-    prices,
-    entitlements,
-    optionsList,
+    attachParams,
+    subscriptionId: undefined,
+    billLaterOnly: false,
   });
 
   console.log(

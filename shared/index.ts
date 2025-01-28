@@ -11,6 +11,7 @@ export * from "./models/productModels/entitlementModels.js";
 export * from "./models/productModels/priceModels.js";
 export * from "./models/productModels/usagePriceModels.js";
 export * from "./models/productModels/fixedPriceModels.js";
+export * from "./models/productModels/freeTrialModels.js";
 
 // Gen Models
 export * from "./models/genModels.js";

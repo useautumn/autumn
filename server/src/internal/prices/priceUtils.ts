@@ -15,6 +15,7 @@ import {
   EntitlementWithFeature,
   FeatureOptions,
 } from "@autumn/shared";
+import { AttachParams } from "../customers/products/AttachParams.js";
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
   if (
@@ -178,20 +179,17 @@ export function compareBillingIntervals(
 
 // Stripe items
 export const getStripeSubItems = ({
-  entitlements,
-  prices,
-  product,
-  org,
-  optionsList,
+  attachParams,
 }: {
-  entitlements: EntitlementWithFeature[];
-  prices: Price[];
-  product: FullProduct;
-  org: Organization;
-  optionsList: FeatureOptions[];
+  attachParams: AttachParams;
 }) => {
+  const { product, prices, entitlements, optionsList, org } = attachParams;
+  const billNowPrices = getBillNowPrices(prices);
+
   let subItems: any[] = [];
-  for (const price of prices) {
+
+  // TODO: Check if non bill now prices can be added to stripe subscription...?
+  for (const price of billNowPrices) {
     const priceEnt = getPriceEntitlement(price, entitlements);
     const options = getEntOptions(optionsList, priceEnt);
 
