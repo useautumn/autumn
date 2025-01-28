@@ -80,8 +80,8 @@ export default async function RootLayout({
                 {path.includes("/onboarding") ? (
                   children
                 ) : (
-                  <div className="w-full h-screen overflow-hidden bg-stone-50 p-6 flex justify-center">
-                    <div className="w-full max-w-[1048px] flex flex-col gap-4">
+                  <div className="w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center">
+                    <div className="w-full h-fit max-w-[1048px] flex flex-col gap-4">
                       {children}
                     </div>
                   </div>
