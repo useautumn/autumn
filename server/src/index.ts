@@ -29,6 +29,9 @@ const init = async () => {
   });
 
   app.use(cors());
+  app.use(envMiddleware);
+  app.use("/webhooks", webhooksRouter);
+
   app.use((req: any, res, next) => {
     const method = req.method;
     const path = req.url;
@@ -50,9 +53,6 @@ const init = async () => {
 
     next();
   });
-
-  app.use(envMiddleware);
-  app.use("/webhooks", webhooksRouter);
 
   app.use(express.json());
 

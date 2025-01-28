@@ -3,10 +3,14 @@ import { generateId } from "@/utils/genUtils.js";
 import { Router } from "express";
 import {
   CreateEntitlement,
+  CreateFreeTrial,
+  CreateFreeTrialSchema,
   CreatePrice,
   CreateProductSchema,
   Entitlement,
   EntitlementSchema,
+  FreeTrial,
+  FreeTrialDuration,
   Price,
   PriceSchema,
   ProcessorType,
@@ -24,9 +28,11 @@ import {
   deleteStripeProduct,
 } from "@/external/stripe/stripeProductUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
-import { EntitlementService } from "@/internal/products/EntitlementService.js";
+import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService.js";
+import { validateFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 export const productApiRouter = Router();
 
@@ -295,9 +301,8 @@ productApiRouter.post("/:productId", async (req: any, res) => {
   const orgId = req.org.id;
   const env = req.env;
 
-  const { prices, entitlements } = req.body;
+  const { prices, entitlements, free_trial } = req.body;
 
-  // Validate prices and entitlements
   try {
     // 1. Get full product
     const fullProduct = await ProductService.getFullProductStrict({
@@ -323,6 +328,16 @@ productApiRouter.post("/:productId", async (req: any, res) => {
         code: ErrCode.ProductHasCustomers,
         statusCode: 400,
       });
+    }
+
+    // Add free trial
+    if (free_trial) {
+      const freeTrial = validateFreeTrial({
+        freeTrial: free_trial,
+        internalProductId: fullProduct.internal_id,
+      });
+
+      await FreeTrialService.upsertByInternalProductId(sb, freeTrial);
     }
 
     // 3. Validate prices and entitlements

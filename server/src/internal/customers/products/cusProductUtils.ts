@@ -1,11 +1,13 @@
 import {
   AllowanceType,
   AppEnv,
+  Customer,
   Entitlement,
   Feature,
   FeatureOptions,
   FeatureType,
   FixedPriceConfigSchema,
+  FreeTrial,
   FullProduct,
   Price,
   PriceType,
@@ -22,8 +24,15 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { PricesInput } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { EntitlementService } from "@/internal/products/EntitlementService.js";
+import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
+import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService.js";
+import {
+  trialFingerprintExists,
+  validateFreeTrial,
+} from "@/internal/products/free-trials/freeTrialUtils.js";
+
+import { StatusCodes } from "http-status-codes";
 
 export const getCustomerProductAndOrg = async ({
   sb,
@@ -47,10 +56,13 @@ export const getCustomerProductAndOrg = async ({
       orgId,
       env,
     });
+    if (!customer) {
+      throw new Error("Customer not found");
+    }
   } catch (error) {
     throw new RecaseError({
-      message: `Customer ${customerId} not found`,
-      statusCode: 404,
+      message: `Failed to get customer ${customerId}`,
+      statusCode: StatusCodes.NOT_FOUND,
       code: ErrCode.CustomerNotFound,
     });
   }
@@ -65,8 +77,8 @@ export const getCustomerProductAndOrg = async ({
     });
   } catch (error) {
     throw new RecaseError({
-      message: `Product ${productId} not found`,
-      statusCode: 404,
+      message: `Failed to get product ${productId}`,
+      statusCode: StatusCodes.NOT_FOUND,
       code: ErrCode.ProductNotFound,
     });
   }
@@ -79,8 +91,8 @@ export const getCustomerProductAndOrg = async ({
     });
   } catch (error) {
     throw new RecaseError({
-      message: `Organization ${orgId} not found`,
-      statusCode: 500,
+      message: `Failed to get organization ${orgId}`,
+      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       code: ErrCode.InternalError,
     });
   }
@@ -255,7 +267,6 @@ export const getDefaultAndCustomEnts = ({
 
   const customEnts: any = [];
 
-
   for (const ent of entsInput) {
     // 1. Validate entitlement
     if (!validateEntitlement(ent, features)) {
@@ -307,10 +318,7 @@ export const getDefaultAndCustomEnts = ({
         (e) => e.feature_id != existingEnt.feature_id
       );
     }
-
-
   }
-
 
   return { defaultEnts, customEnts };
 };
@@ -364,6 +372,51 @@ export const processPricesAndEntsInput = async ({
   return { prices, entitlements: entsWithFeature };
 };
 
+export const processFreeTrialInput = async ({
+  sb,
+  product,
+  freeTrialInput,
+  customer,
+}: {
+  sb: SupabaseClient;
+  product: FullProduct;
+  freeTrialInput?: FreeTrial;
+
+  customer: Customer;
+}) => {
+  // 1. Validate free trial input
+
+  let freeTrial;
+  if (!freeTrialInput) {
+    return null;
+  } else if (product.free_trial?.id === freeTrialInput.id) {
+    freeTrial = product.free_trial;
+  } else {
+    freeTrial = validateFreeTrial({
+      freeTrial: freeTrialInput,
+      internalProductId: product.internal_id,
+      isCustom: true,
+    });
+
+    await FreeTrialService.insert({ sb, data: freeTrial });
+  }
+
+  if (freeTrial?.unique_fingerprint && customer.fingerprint) {
+    let exists = await trialFingerprintExists({
+      sb,
+      fingerprint: customer.fingerprint,
+      freeTrialId: freeTrial.id,
+    });
+
+    if (exists) {
+      console.log("Trial fingerprint already exists");
+      return null;
+    }
+  }
+
+  return freeTrial;
+};
+
 export const getFullCusProductData = async ({
   sb,
   customerId,
@@ -373,6 +426,8 @@ export const getFullCusProductData = async ({
   entsInput,
   env,
   optionsListInput,
+  freeTrialInput,
+  isCustom = false,
 }: {
   sb: SupabaseClient;
   customerId: string;
@@ -382,6 +437,9 @@ export const getFullCusProductData = async ({
   entsInput: Entitlement[];
   env: AppEnv;
   optionsListInput: FeatureOptions[];
+
+  freeTrialInput?: FreeTrial;
+  isCustom?: boolean;
 }) => {
   // 1. Get customer, product, org & features
   const { customer, fullProduct, org } = await getCustomerProductAndOrg({
@@ -391,22 +449,6 @@ export const getFullCusProductData = async ({
     orgId,
     env,
   });
-
-  if (!customer) {
-    throw new RecaseError({
-      message: "Customer not found",
-      code: ErrCode.CustomerNotFound,
-      statusCode: 400,
-    });
-  }
-
-  if (!fullProduct) {
-    throw new RecaseError({
-      message: "Product not found",
-      code: ErrCode.ProductNotFound,
-      statusCode: 400,
-    });
-  }
 
   const features = await FeatureService.getFeatures({
     sb,
@@ -434,6 +476,19 @@ export const getFullCusProductData = async ({
     });
   }
 
+  if (!isCustom) {
+    return {
+      customer,
+      product: fullProduct,
+      org,
+      features,
+      optionsList: newOptionsList,
+      prices: fullProduct.prices,
+      entitlements: fullProduct.entitlements,
+      freeTrial: fullProduct.free_trial,
+    };
+  }
+
   const { prices, entitlements } = await processPricesAndEntsInput({
     sb,
     product: fullProduct,
@@ -442,13 +497,21 @@ export const getFullCusProductData = async ({
     features,
   });
 
+  const freeTrial = await processFreeTrialInput({
+    sb,
+    product: fullProduct,
+    freeTrialInput,
+    customer,
+  });
+
   return {
     customer,
     product: fullProduct,
     org,
-    prices,
-    entitlements,
     features,
     optionsList: newOptionsList,
+    prices,
+    entitlements,
+    freeTrial,
   };
 };

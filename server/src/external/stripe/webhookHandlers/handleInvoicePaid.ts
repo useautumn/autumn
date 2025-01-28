@@ -8,10 +8,12 @@ export const handleInvoicePaid = async ({
   sb,
   org,
   invoice,
+  event,
 }: {
   sb: SupabaseClient;
   org: Organization;
   invoice: Stripe.Invoice;
+  event: Stripe.Event;
 }) => {
   if (invoice.subscription) {
     // Get customer product
@@ -30,7 +32,7 @@ export const handleInvoicePaid = async ({
     });
 
     if (existingInvoice) {
-      console.log(`Invoice ${invoice.id} already exists`);
+      console.log(`Invoice already exists`);
       return;
     }
 

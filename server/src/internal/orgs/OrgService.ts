@@ -2,6 +2,7 @@ import { getOrgById } from "@/external/clerkUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode, Organization } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { initDefaultConfig } from "./orgUtils.js";
 
 export class OrgService {
   static async insert({ sb, org }: { sb: SupabaseClient; org: Organization }) {
@@ -64,26 +65,8 @@ export class OrgService {
       });
     }
 
-    return data;
+    const config = initDefaultConfig();
 
-    // const clerkOrg = await getOrgById(orgId);
-    // let privateMeta: any = clerkOrg.privateMetadata;
-    // let publicMeta: any = clerkOrg.publicMetadata;
-
-    // let org: Organization = {
-    //   id: clerkOrg.id,
-    //   slug: clerkOrg.slug || "",
-    //   default_currency: publicMeta.default_currency || "usd",
-    //   stripe_connected: publicMeta.stripe_connected,
-    //   stripe_config: {
-    //     test_api_key: privateMeta.stripe?.test_api_key,
-    //     live_api_key: privateMeta.stripe?.live_api_key,
-    //     test_webhook_secret: privateMeta.stripe?.test_webhook_secret,
-    //     live_webhook_secret: privateMeta.stripe?.live_webhook_secret,
-    //     success_url: privateMeta.stripe?.success_url,
-    //   },
-    // };
-
-    // return org;
+    return { ...data, config };
   }
 }

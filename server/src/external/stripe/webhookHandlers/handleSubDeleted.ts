@@ -10,7 +10,7 @@ export const handleSubscriptionDeleted = async ({
   sb: SupabaseClient;
   subscription: Stripe.Subscription;
 }) => {
-  console.log("Handling Stripe subscription.deleted:", subscription.id);
+  // console.log("Handling Stripe subscription.deleted:", subscription.id);
 
   const cusProduct = await CusProductService.getActiveByStripeSubId({
     sb,
