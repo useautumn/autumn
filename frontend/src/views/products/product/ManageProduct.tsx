@@ -6,6 +6,7 @@ import { CreatePrice } from "./prices/CreatePrice";
 
 import { Badge } from "@/components/ui/badge";
 import { CreateFreeTrial } from "./free-trial/CreateFreeTrial";
+import { EditFreeTrialToolbar } from "./EditFreeTrialToolbar";
 
 export const ManageProduct = ({
   product,
@@ -72,18 +73,26 @@ export const ManageProduct = ({
         )}
         <CreatePrice />
       </div>
-      <div>
+      <div className="flex flex-col gap-4">
         <p className="text-md text-t2 font-medium">Free Trial</p>
         {product.free_trial && (
-          <div>
-            <p>Length: {product.free_trial.length}</p>
-            <p>
-              Unique Fingerprint:{" "}
-              {product.free_trial.unique_fingerprint ? "Yes" : "No"}
-            </p>
+          <>
+            <div className="flex gap-4 w-fit bg-white p-3 rounded-sm border">
+              <div className="flex flex-col rounded-sm w-[150px] items-center gap-2">
+              <p className="text-xs text-t2 bg-stone-50 font-medium p-1 w-full text-center">Length </p>
+              <p className="text-sm font-medium">{product.free_trial.length} days</p>
+            </div>
+            <div className="flex flex-col rounded-sm w-[150px] items-center gap-2">
+              <p className="text-xs text-t2 bg-stone-50 font-medium p-1 w-full text-center">Unique Fingerprint</p>
+              <p className="text-sm font-medium">{product.free_trial.unique_fingerprint ? "Yes" : "No"}</p>
+            </div>
+            <EditFreeTrialToolbar product={product} />
           </div>
+          </>
         )}
-        <CreateFreeTrial />
+        {!product.free_trial && (
+          <CreateFreeTrial />
+        )}
       </div>
     </div>
   );
