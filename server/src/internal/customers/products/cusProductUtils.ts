@@ -2,6 +2,7 @@ import {
   AllowanceType,
   AppEnv,
   Customer,
+  CustomerData,
   Entitlement,
   Feature,
   FeatureOptions,
@@ -36,39 +37,19 @@ import { StatusCodes } from "http-status-codes";
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
 
-export const getCustomerProductAndOrg = async ({
+export const getProductAndOrg = async ({
   sb,
-  customerId,
+
   productId,
   orgId,
   env,
 }: {
   sb: SupabaseClient;
-  customerId: string;
+
   productId: string;
   orgId: string;
   env: AppEnv;
 }) => {
-  let customer;
-
-  try {
-    customer = await CusService.getCustomer({
-      sb,
-      customerId,
-      orgId,
-      env,
-    });
-    if (!customer) {
-      throw new Error("Customer not found");
-    }
-  } catch (error) {
-    throw new RecaseError({
-      message: `Failed to get customer ${customerId}`,
-      statusCode: StatusCodes.NOT_FOUND,
-      code: ErrCode.CustomerNotFound,
-    });
-  }
-
   let fullProduct;
   try {
     fullProduct = await ProductService.getFullProductStrict({
@@ -99,7 +80,7 @@ export const getCustomerProductAndOrg = async ({
     });
   }
 
-  return { customer, fullProduct, org: fullOrg };
+  return { fullProduct, org: fullOrg };
 };
 
 // GET PRICES
@@ -438,9 +419,55 @@ export const processEntsInput = async ({
 //   return freeTrial;
 // };
 
+const getAndCreateCustomerProduct = async ({
+  sb,
+  customerId,
+  customerData,
+  productId,
+  orgId,
+  env,
+}: {
+  sb: SupabaseClient;
+  customerId: string;
+  customerData: CustomerData;
+  productId: string;
+  orgId: string;
+  env: AppEnv;
+}) => {
+  let customer = await CusService.getCustomer({
+    sb,
+    customerId,
+    orgId,
+    env,
+  });
+
+  if (!customer) {
+    const newCustomer: Customer = {
+      internal_id: generateId("cus"),
+      org_id: orgId,
+      created_at: Date.now(),
+      env,
+      processor: null,
+      id: customerId,
+
+      // customer data fields
+      name: customerData?.name || null,
+      email: customerData?.email || null,
+      fingerprint: customerData?.fingerprint || null,
+    };
+
+    await CusService.createCustomer({ sb, customer: newCustomer });
+
+    customer = newCustomer;
+  }
+
+  return customer;
+};
+
 export const getFullCusProductData = async ({
   sb,
   customerId,
+  customerData,
   productId,
   orgId,
   pricesInput,
@@ -452,6 +479,7 @@ export const getFullCusProductData = async ({
 }: {
   sb: SupabaseClient;
   customerId: string;
+  customerData: Customer;
   productId: string;
   orgId: string;
   pricesInput: PricesInput;
@@ -462,10 +490,18 @@ export const getFullCusProductData = async ({
   freeTrialInput: FreeTrial | null;
   isCustom?: boolean;
 }) => {
-  // 1. Get customer, product, org & features
-  const { customer, fullProduct, org } = await getCustomerProductAndOrg({
+  const customer = await getAndCreateCustomerProduct({
     sb,
     customerId,
+    customerData,
+    productId,
+    orgId,
+    env,
+  });
+
+  // 1. Get customer, product, org & features
+  const { fullProduct, org } = await getProductAndOrg({
+    sb,
     productId,
     orgId,
     env,
