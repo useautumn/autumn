@@ -81,7 +81,10 @@ cusRouter.post("", async (req: any, res: any) => {
 
     let createdCustomer: Customer;
     try {
-      createdCustomer = await CusService.createCustomer(req.sb, newCustomer);
+      createdCustomer = await CusService.createCustomer({
+        sb: req.sb,
+        customer: newCustomer,
+      });
     } catch (error: any) {
       throw new RecaseError({
         message: "Error creating customer",

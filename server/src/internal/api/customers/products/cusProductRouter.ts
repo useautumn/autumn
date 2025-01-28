@@ -231,6 +231,8 @@ attachRouter.post("", async (req: any, res) => {
   const {
     customer_id,
     product_id,
+    customer_data,
+
     is_custom,
     prices,
     entitlements,
@@ -254,6 +256,7 @@ attachRouter.post("", async (req: any, res) => {
       sb,
       customerId: customer_id,
       productId: product_id,
+      customerData: customer_data,
       orgId,
       env,
       pricesInput,
@@ -287,7 +290,7 @@ attachRouter.post("", async (req: any, res) => {
     // -------------------- ATTACH PRODUCT --------------------
 
     // SCENARIO 1: Free product, no existing product
-    if (!curCusProduct && isFreeProduct(prices)) {
+    if (!curCusProduct && isFreeProduct(attachParams.prices)) {
       await handleAddFreeProduct({
         req,
         res,

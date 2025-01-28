@@ -159,7 +159,13 @@ export class CusService {
     return { data, count };
   }
 
-  static async createCustomer(sb: SupabaseClient, customer: Customer) {
+  static async createCustomer({
+    sb,
+    customer,
+  }: {
+    sb: SupabaseClient;
+    customer: Customer;
+  }) {
     const { data, error } = await sb
       .from("customers")
       .insert(customer)
@@ -171,6 +177,8 @@ export class CusService {
         throw new RecaseError({
           code: ErrCode.DuplicateCustomerId,
           message: "Customer ID already exists",
+          statusCode: StatusCodes.BAD_REQUEST,
+          data: error,
         });
       }
       throw error;
