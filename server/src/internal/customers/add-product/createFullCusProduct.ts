@@ -22,10 +22,7 @@ import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import {
-  addTrialToNextResetAt,
-  applyTrialToEntitlement,
-} from "@/internal/products/entitlements/entitlementUtils.js";
+import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 
 export const initCusEntitlement = ({
   entitlement,
@@ -131,6 +128,7 @@ export const initCusProduct = ({
   startsAt,
   subscriptionScheduleId,
   optionsList,
+  freeTrial,
 }: {
   customer: Customer;
   product: FullProduct;
@@ -139,6 +137,7 @@ export const initCusProduct = ({
   startsAt?: number;
   subscriptionScheduleId?: string | null;
   optionsList: FeatureOptions[];
+  freeTrial: FreeTrial | null;
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
 
@@ -162,6 +161,7 @@ export const initCusProduct = ({
     starts_at: startsAt || Date.now(),
 
     options: optionsList || [],
+    free_trial_id: freeTrial?.id || null,
   };
 };
 
@@ -314,6 +314,7 @@ export const createFullCusProduct = async ({
     startsAt,
     subscriptionScheduleId,
     optionsList,
+    freeTrial,
   });
 
   await insertFullCusProduct({

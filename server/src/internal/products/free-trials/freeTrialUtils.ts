@@ -39,6 +39,15 @@ export const freeTrialsAreSame = (ft1?: FreeTrial, ft2?: FreeTrial) => {
   );
 };
 
+export const freeTrialToStripeTimestamp = (freeTrial: FreeTrial | null) => {
+  if (!freeTrial) return undefined;
+  // 1. Add days
+  let trialEnd = addDays(new Date(), freeTrial.length);
+  trialEnd = addSeconds(trialEnd, 10);
+
+  return Math.ceil(trialEnd.getTime() / 1000);
+};
+
 export const trialFingerprintExists = async ({
   sb,
   freeTrialId,
@@ -50,9 +59,13 @@ export const trialFingerprintExists = async ({
 }) => {
   const { data, error } = await sb
     .from("customer_products")
-    .select("*, customer:inner!(*)")
+    .select("*, customer:customers!inner(*)")
     .eq("free_trial_id", freeTrialId)
     .eq("customer.fingerprint", fingerprint);
+
+  if (error) {
+    throw error;
+  }
 
   if (data && data.length > 0) {
     return true;
@@ -61,11 +74,29 @@ export const trialFingerprintExists = async ({
   return false;
 };
 
-export const freeTrialToStripeTimestamp = (freeTrial: FreeTrial | null) => {
-  if (!freeTrial) return undefined;
-  // 1. Add days
-  let trialEnd = addDays(new Date(), freeTrial.length);
-  trialEnd = addSeconds(trialEnd, 10);
+export const getFreeTrialAfterFingerprint = async ({
+  sb,
+  freeTrial,
+  fingerprint,
+}: {
+  sb: SupabaseClient;
+  freeTrial: FreeTrial | null;
+  fingerprint: string | null | undefined;
+}): Promise<FreeTrial | null> => {
+  if (!freeTrial) return null;
 
-  return Math.ceil(trialEnd.getTime() / 1000);
+  if (freeTrial.unique_fingerprint && fingerprint) {
+    let exists = await trialFingerprintExists({
+      sb,
+      fingerprint,
+      freeTrialId: freeTrial.id,
+    });
+
+    if (exists) {
+      console.log("Free trial fingerprint exists");
+      return null;
+    }
+  }
+
+  return freeTrial;
 };

@@ -100,13 +100,21 @@ cusRouter.post("", async (req: any, res: any) => {
       });
 
       if (defaultProduct) {
+        const org = await OrgService.getFullOrg({
+          sb: req.sb,
+          orgId: req.orgId,
+        });
         await createFullCusProduct({
           sb: req.sb,
-          customer: createdCustomer,
-          product: defaultProduct,
-          prices: defaultProduct.prices,
-          entitlements: defaultProduct.entitlements,
-          optionsList: [],
+          attachParams: {
+            org,
+            customer: createdCustomer,
+            product: defaultProduct,
+            prices: defaultProduct.prices,
+            entitlements: defaultProduct.entitlements,
+            freeTrial: null,
+            optionsList: [],
+          },
         });
       }
     } catch (error) {
