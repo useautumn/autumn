@@ -1,9 +1,15 @@
 # Autumn
 
-<!-- Use github hero -->
-
 ![Autumn](assets/github_hero.png)
 
-[Autumn](https://useautumn.com) is an open-source pricing & billing platform. It is an abstraction layer between Stripe and your application, and allows you to implement pricing in just a few minutes. No more dealing with webhooks, upgrades / downgrades, cancellations or payment fails. Autumn handles it all for you.
+[Autumn](https://useautumn.com) is an open-source layer between Stripe and your application, allowing you to create any pricing model and embed it within minutes. On Autumn you can build:
+- Subscriptions
+- Credit systems & top ups
+- Usage-based models & overages
+- Custom plans for large customers
+
+All this without having to handle webhooks, upgrades/downgrades, cancellations or payment fails.
 
 **Docs**: https://docs.useautumn.com
+
+## How it works
