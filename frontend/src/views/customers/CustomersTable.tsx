@@ -25,6 +25,7 @@ export const CustomersTable = ({ customers }: { customers: Customer[] }) => {
           <TableHead className="">Customer</TableHead>
           <TableHead>Customer ID</TableHead>
           <TableHead>Email</TableHead>
+          <TableHead>Fingerprint</TableHead>
           <TableHead>Created At</TableHead>
           <TableHead className="w-20"></TableHead>
         </TableRow>
@@ -40,12 +41,13 @@ export const CustomersTable = ({ customers }: { customers: Customer[] }) => {
               {customer.name}
             </TableCell>
             <TableCell className="min-w-32 font-mono text-t2">
-              {" "}
               {customer.id}{" "}
             </TableCell>
-            <TableCell className="min-w-32 text-t2 w-full">
-              {" "}
+            <TableCell className="min-w-48 text-t2">
               {customer.email}{" "}
+            </TableCell>
+            <TableCell className="max-w-48 text-t2 min-w-32 w-full">
+              {customer.fingerprint}
             </TableCell>
             <TableCell className="max-w-48 min-w-32">
               {formatUnixToDateTime(customer.created_at).date}

@@ -53,6 +53,7 @@ export const CusProductSchema = z.object({
   ended_at: z.number().optional().nullable(),
 
   options: z.array(FeatureOptionsSchema),
+  free_trial_id: z.string().optional().nullable(),
 
   // Fixed-cycle configuration
   processor: z

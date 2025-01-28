@@ -192,7 +192,6 @@ export default function CustomerProductView({
   };
 
   const createProduct = async () => {
-    console.log("options", requiredOptions);
     try {
       // TODO: Update product
       const entitlements = product.entitlements.map((e) => {

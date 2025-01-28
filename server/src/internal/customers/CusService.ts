@@ -77,7 +77,8 @@ export class CusService {
           ),
           customer_entitlements:customer_entitlements(
             *, entitlement:entitlements(*, feature:features(*))
-          )
+          ),
+          free_trial:free_trials(*)
         ), 
         
         entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 

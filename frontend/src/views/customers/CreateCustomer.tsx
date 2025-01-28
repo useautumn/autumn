@@ -26,6 +26,7 @@ function CreateCustomer() {
     name: "",
     id: "",
     email: "",
+    fingerprint: "",
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +35,10 @@ function CreateCustomer() {
     setIsLoading(true);
 
     try {
-      await CusService.createCustomer(axiosInstance, fields);
+      await CusService.createCustomer(axiosInstance, {
+        ...fields,
+        fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
+      });
       toast.success("Customer created successfully");
       navigateTo(`/customers/${fields.id}`, router, env);
     } catch (error) {
@@ -81,8 +85,21 @@ function CreateCustomer() {
             onChange={(e) => setFields({ ...fields, email: e.target.value })}
           />
         </div>
+        <div>
+          <FieldLabel>Fingerprint</FieldLabel>
+          <Input
+            value={fields.fingerprint}
+            onChange={(e) =>
+              setFields({ ...fields, fingerprint: e.target.value })
+            }
+          />
+        </div>
         <DialogFooter>
-          <Button onClick={handleCreate} isLoading={isLoading} variant="gradientPrimary">
+          <Button
+            onClick={handleCreate}
+            isLoading={isLoading}
+            variant="gradientPrimary"
+          >
             Create
           </Button>
         </DialogFooter>

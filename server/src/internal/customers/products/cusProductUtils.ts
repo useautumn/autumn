@@ -28,6 +28,7 @@ import { EntitlementService } from "@/internal/products/entitlements/Entitlement
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService.js";
 import {
+  getFreeTrialAfterFingerprint,
   trialFingerprintExists,
   validateFreeTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -401,18 +402,11 @@ export const processFreeTrialInput = async ({
     await FreeTrialService.insert({ sb, data: freeTrial });
   }
 
-  if (freeTrial?.unique_fingerprint && customer.fingerprint) {
-    let exists = await trialFingerprintExists({
-      sb,
-      fingerprint: customer.fingerprint,
-      freeTrialId: freeTrial.id,
-    });
-
-    if (exists) {
-      console.log("Trial fingerprint already exists");
-      return null;
-    }
-  }
+  freeTrial = await getFreeTrialAfterFingerprint({
+    sb,
+    freeTrial,
+    fingerprint: customer.fingerprint,
+  });
 
   return freeTrial;
 };
@@ -457,6 +451,7 @@ export const getFullCusProductData = async ({
   });
 
   let newOptionsList: FeatureOptions[] = [];
+
   for (const options of optionsListInput) {
     const feature = features.find(
       (feature) => feature.id === options.feature_id
@@ -477,6 +472,12 @@ export const getFullCusProductData = async ({
   }
 
   if (!isCustom) {
+    let freeTrial = await getFreeTrialAfterFingerprint({
+      sb,
+      freeTrial: fullProduct.free_trial,
+      fingerprint: customer.fingerprint,
+    });
+
     return {
       customer,
       product: fullProduct,
@@ -485,7 +486,7 @@ export const getFullCusProductData = async ({
       optionsList: newOptionsList,
       prices: fullProduct.prices,
       entitlements: fullProduct.entitlements,
-      freeTrial: fullProduct.free_trial,
+      freeTrial,
     };
   }
 
