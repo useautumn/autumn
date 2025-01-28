@@ -18,8 +18,8 @@ export const createStripeCustomer = async ({
 
   try {
     const stripeCustomer = await stripeCli.customers.create({
-      name: customer.name,
-      email: customer.email,
+      name: customer.name || undefined,
+      email: customer.email || undefined,
     });
     return stripeCustomer;
   } catch (error: any) {
