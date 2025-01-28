@@ -18,6 +18,7 @@ import { useProductsContext } from "./ProductsContext";
 import { PlusIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { slugify } from "@/utils/formatUtils/formatTextUtils";
 
 function CreateProduct() {
   const { env, mutate } = useProductsContext();
@@ -32,6 +33,8 @@ function CreateProduct() {
     is_add_on: false,
     is_default: false,
   });
+
+  const [idChanged, setIdChanged] = useState(false);
 
   const [open, setOpen] = useState(false);
 
@@ -70,7 +73,13 @@ function CreateProduct() {
             <Input
               placeholder="eg. Starter Product"
               value={fields.name}
-              onChange={(e) => setFields({ ...fields, name: e.target.value })}
+              onChange={(e) => {
+                const newFields = { ...fields, name: e.target.value };
+                if (!idChanged) {
+                  newFields.id = slugify(e.target.value);
+                }
+                setFields(newFields);
+              }}
             />
           </div>
           <div className="w-full">
@@ -78,38 +87,41 @@ function CreateProduct() {
             <Input
               placeholder="eg. Product ID"
               value={fields.id}
-              onChange={(e) => setFields({ ...fields, id: e.target.value })}
+              onChange={(e) => {
+                setFields({ ...fields, id: e.target.value });
+                setIdChanged(true);
+              }}
             />
           </div>
         </div>
         <div className="flex w-full gap-2">
-        <div className="w-full">
-          <FieldLabel>Group</FieldLabel>
-          <Input
-            placeholder="eg. Product Group"
-            value={fields.group}
-            onChange={(e) => setFields({ ...fields, group: e.target.value })}
-          />
+          <div className="w-full">
+            <FieldLabel>Group</FieldLabel>
+            <Input
+              placeholder="eg. Product Group"
+              value={fields.group}
+              onChange={(e) => setFields({ ...fields, group: e.target.value })}
+            />
+          </div>
+          <div className="w-full"></div>
         </div>
-        <div className="w-full"></div>
-        </div>
-        <div className="flex flex-col gap-2 text-xs"> 
-        <div className="flex items-center gap-2 ml-1 text-t2">
-          <Checkbox
-            size="sm"
-            checked={fields.is_add_on}
-            onCheckedChange={(e) => setFields({ ...fields, is_add_on: e })}
-          />
-          <p className="mt-[1px]">This product is an add on</p>
-        </div>
-        <div className="flex items-center gap-2 ml-1 text-t2">
-          <Checkbox
-            size="sm"
-            checked={fields.is_default}
-            onCheckedChange={(e) => setFields({ ...fields, is_default: e })}
-          />
-          <p className="mt-[1px]">This product is the default product</p>
-        </div>
+        <div className="flex flex-col gap-2 text-xs">
+          <div className="flex items-center gap-2 ml-1 text-t2">
+            <Checkbox
+              size="sm"
+              checked={fields.is_add_on}
+              onCheckedChange={(e) => setFields({ ...fields, is_add_on: e })}
+            />
+            <p className="mt-[1px]">This product is an add on</p>
+          </div>
+          <div className="flex items-center gap-2 ml-1 text-t2">
+            <Checkbox
+              size="sm"
+              checked={fields.is_default}
+              onCheckedChange={(e) => setFields({ ...fields, is_default: e })}
+            />
+            <p className="mt-[1px]">This product is the default product</p>
+          </div>
         </div>
 
         <DialogFooter>

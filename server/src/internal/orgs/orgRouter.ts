@@ -125,3 +125,60 @@ orgRouter.post("/stripe", async (req: any, res) => {
     }
   }
 });
+
+orgRouter.delete("/stripe", async (req: any, res) => {
+  // 1. Get org
+  try {
+    const org = await OrgService.getFullOrg({
+      sb: req.sb,
+      orgId: req.org.id,
+    });
+
+    // 2. Delete webhook endpoint
+    const testStripeCli = createStripeCli({ org, env: AppEnv.Sandbox });
+    const liveStripeCli = createStripeCli({ org, env: AppEnv.Live });
+
+    const testWebhooks = await testStripeCli.webhookEndpoints.list();
+    const liveWebhooks = await liveStripeCli.webhookEndpoints.list();
+
+    for (const webhook of testWebhooks.data) {
+      if (webhook.url.includes(org.id)) {
+        await testStripeCli.webhookEndpoints.del(webhook.id);
+      }
+    }
+
+    for (const webhook of liveWebhooks.data) {
+      if (webhook.url.includes(org.id)) {
+        await liveStripeCli.webhookEndpoints.del(webhook.id);
+      }
+    }
+
+    await OrgService.update({
+      sb: req.sb,
+      orgId: req.org.id,
+      updates: {
+        stripe_connected: false,
+        stripe_config: null,
+        default_currency: undefined,
+      },
+    });
+
+    const clerkCli = createClerkCli();
+    await clerkCli.organizations.updateOrganization(req.org.id, {
+      publicMetadata: {
+        stripe_connected: false,
+        default_currency: undefined,
+      },
+    });
+
+    res.status(200).json({
+      message: "Stripe disconnected",
+    });
+  } catch (error) {
+    handleRequestError({
+      error,
+      res,
+      action: "delete stripe",
+    });
+  }
+});

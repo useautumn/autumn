@@ -1,11 +1,13 @@
 import { z } from "zod";
+import { AppEnv } from "../genModels.js";
 
 export const CustomerSchema = z.object({
   internal_id: z.string(),
   org_id: z.string(),
   created_at: z.number(),
-  env: z.string(),
+  env: z.nativeEnum(AppEnv),
   processor: z.any(),
+  fingerprint: z.string().nullable(),
 
   id: z.string(), // given by user
   name: z.string(),

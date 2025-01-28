@@ -13,7 +13,7 @@ export class OrgService {
     return await axiosInstance.post(`/organization/stripe`, data);
   }
 
-  static async syncStripe(axiosInstance: AxiosInstance) {
-    return await axiosInstance.post(`/organization/sync`);
+  static async disconnectStripe(axiosInstance: AxiosInstance) {
+    return await axiosInstance.delete(`/organization/stripe`);
   }
 }

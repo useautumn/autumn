@@ -1,4 +1,6 @@
 export const ErrCode = {
+  // General
+  InvalidInputs: "invalid_inputs",
   // Org
   OrgNotFound: "org_not_found",
 

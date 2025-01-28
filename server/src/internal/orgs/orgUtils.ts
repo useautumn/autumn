@@ -18,3 +18,9 @@ export const getStripeWebhookSecret = (org: Organization, env: AppEnv) => {
 
   return decryptData(webhookSecret);
 };
+
+export const initDefaultConfig = () => {
+  return {
+    free_trial_paid_to_paid: false,
+  };
+};

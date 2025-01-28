@@ -32,8 +32,10 @@ import {
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "@clerk/nextjs";
+import { useAxiosSWR } from "@/services/useAxiosSwr";
+import LoadingScreen from "../general/LoadingScreen";
 
-function ConnectStripe({ org }: { org: Organization }) {
+function ConnectStripe() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
@@ -45,8 +47,16 @@ function ConnectStripe({ org }: { org: Organization }) {
   const [defaultCurrency, setDefaultCurrency] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  // const { getToken } = useAuth();
-  const { session } = useSession();
+  const {
+    data: orgData,
+    mutate: mutateOrg,
+    isLoading: isOrgLoading,
+  } = useAxiosSWR({
+    url: `/organization`,
+    env: AppEnv.Live,
+  });
+
+  const org = orgData?.org;
 
   const handleConnectStripe = async () => {
     if (!testApiKey || !liveApiKey || !successUrl || !defaultCurrency) {
@@ -84,12 +94,37 @@ function ConnectStripe({ org }: { org: Organization }) {
     setIsLoading(false);
   };
 
-  if (org.stripe_connected) {
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const handleDisconnectStripe = async () => {
+    try {
+      setIsDisconnecting(true);
+      await OrgService.disconnectStripe(axiosInstance);
+      await mutateOrg();
+      toast.success("Successfully disconnected from Stripe");
+    } catch (error) {
+      toast.error(getBackendErr(error, "Failed to disconnect Stripe"));
+    }
+    setIsDisconnecting(false);
+  };
+
+  if (isOrgLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (org?.stripe_connected) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <p className="text-md font-medium text-t3">
           Stripe already connected 🎉🎉🎉
         </p>
+        <Button
+          onClick={handleDisconnectStripe}
+          variant="gradientSecondary"
+          className="mt-4"
+          isLoading={isDisconnecting}
+        >
+          Disconnect Stripe
+        </Button>
       </div>
     );
   }

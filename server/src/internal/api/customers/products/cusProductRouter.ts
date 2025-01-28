@@ -1,15 +1,10 @@
 import { Router } from "express";
-import RecaseError from "@/utils/errorUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import {
   AppEnv,
   BillingType,
-  Customer,
   Entitlement,
-  EntitlementWithFeature,
   FeatureOptions,
-  FullProduct,
-  Organization,
-  Price,
   ProcessorType,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -27,7 +22,7 @@ import {
   haveDifferentRecurringIntervals,
 } from "@/internal/prices/priceUtils.js";
 import { PricesInput } from "@autumn/shared";
-import { getFullCusProductData } from "./cusProductUtils.js";
+import { getFullCusProductData } from "../../../customers/products/cusProductUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
@@ -36,20 +31,17 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 import chalk from "chalk";
+import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 
 export const attachRouter = Router();
 
 const checkAddProductErrors = async ({
-  product,
-  prices,
-  entitlements,
-  optionsList,
+  attachParams,
 }: {
-  product: FullProduct;
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
-  optionsList: FeatureOptions[];
+  attachParams: AttachParams;
 }) => {
+  const { product, prices, entitlements, optionsList } = attachParams;
+
   // 1. Check if product has different recurring intervals
   if (haveDifferentRecurringIntervals(prices)) {
     throw new RecaseError({
@@ -60,7 +52,6 @@ const checkAddProductErrors = async ({
   }
 
   // 2. Check if options are valid
-
   for (const price of prices) {
     const billingType = getBillingType(price.config!);
     if (billingType === BillingType.UsageInAdvance) {
@@ -92,25 +83,30 @@ const checkAddProductErrors = async ({
 const handleExistingProduct = async ({
   req,
   res,
-  org,
-  env,
-  customer,
-  product,
+  attachParams,
 }: {
   req: any;
   res: any;
-  org: Organization;
-  env: AppEnv;
-  customer: Customer;
-  product: FullProduct;
+  attachParams: AttachParams;
 }) => {
   const { sb } = req;
+  const { customer, product, org } = attachParams;
+  const env = customer.env;
+
+  // 1. Fetch existing product by group
   const currentProduct = await CusProductService.getCurrentProductByGroup({
     sb,
     internalCustomerId: customer.internal_id,
     productGroup: product.group,
   });
 
+  console.log(
+    `Current cus product: ${chalk.yellow(
+      currentProduct?.product.name || "None"
+    )}`
+  );
+
+  // 2. If same product, delete future product or throw error
   if (currentProduct?.product.internal_id === product.internal_id) {
     // If there's a future product, delete, else
     const deletedCusProduct = await CusProductService.deleteFutureProduct({
@@ -169,18 +165,15 @@ const handleExistingProduct = async ({
 const checkStripeConnections = async ({
   req,
   res,
-  customer,
-  product,
-  org,
-  env,
+  attachParams,
 }: {
   req: any;
   res: any;
-  customer: Customer;
-  product: FullProduct;
-  org: Organization;
-  env: AppEnv;
+  attachParams: AttachParams;
 }) => {
+  const { org, customer, product } = attachParams;
+  const env = customer.env;
+
   if (!org.stripe_connected) {
     throw new RecaseError({
       message: "Please connect to Stripe to add products",
@@ -235,7 +228,16 @@ const checkStripeConnections = async ({
 };
 
 attachRouter.post("", async (req: any, res) => {
-  const { customer_id, product_id, prices, entitlements, options } = req.body;
+  const {
+    customer_id,
+    product_id,
+    is_custom,
+    prices,
+    entitlements,
+    free_trial,
+    options,
+  } = req.body;
+
   const { orgId, env } = req;
 
   const sb = req.sb;
@@ -248,15 +250,7 @@ attachRouter.post("", async (req: any, res) => {
 
   try {
     // 1. Get full customer product data
-    const {
-      customer,
-      product,
-      org,
-      prices,
-      entitlements,
-      features,
-      optionsList,
-    } = await getFullCusProductData({
+    const attachParams = await getFullCusProductData({
       sb,
       customerId: customer_id,
       productId: product_id,
@@ -265,119 +259,77 @@ attachRouter.post("", async (req: any, res) => {
       pricesInput,
       entsInput,
       optionsListInput,
+      freeTrialInput: free_trial,
+      isCustom: is_custom,
     });
 
-    await checkStripeConnections({ req, res, customer, product, org, env });
+    // -------------------- ERROR CHECKING --------------------
 
-    // 2. Check for add product errors -- different recurring intervals and invalid options
+    // 1. Check for normal errors (eg. options, different recurring intervals)
     await checkAddProductErrors({
-      product,
-      prices,
-      entitlements,
-      optionsList,
+      attachParams,
     });
 
+    // 2. Check for existing product and fetch
     const curCusProduct = await handleExistingProduct({
       req,
       res,
-      org,
-      env,
-      customer,
-      product,
+      attachParams,
     });
 
     if (curCusProduct === true) {
       return;
     }
 
-    console.log(
-      `Current cus product: ${chalk.yellow(
-        curCusProduct?.product.name || "None"
-      )}`
-    );
+    // 3. Check for stripe connection
+    await checkStripeConnections({ req, res, attachParams });
 
-    // 3. Handle free product, no existing product
+    // -------------------- ATTACH PRODUCT --------------------
+
+    // SCENARIO 1: Free product, no existing product
     if (!curCusProduct && isFreeProduct(prices)) {
       await handleAddFreeProduct({
         req,
         res,
-        customer,
-        product,
-        org,
-        env,
-        prices,
-        entitlements,
-        optionsList,
+        attachParams,
       });
       return;
     }
 
-    // 4. Handle no payment method, checkout required
+    // SCENARIO 2: No payment method, checkout required
     const paymentMethod = await getCusPaymentMethod({
-      org,
-      env,
-      stripeId: customer.processor.id,
+      org: attachParams.org,
+      env: attachParams.customer.env,
+      stripeId: attachParams.customer.processor.id,
     });
 
     if (!paymentMethod) {
       await handleCreateCheckout({
         req,
         res,
-        customer,
-        product,
-        prices,
-        org,
-        env,
-        entitlements,
-        optionsList,
+        attachParams,
       });
       return;
     }
 
-    // 3. Handle change product
-    if (!product.is_add_on && curCusProduct) {
+    // SCENARIO 3: Switching product
+    if (!attachParams.product.is_add_on && curCusProduct) {
       await handleChangeProduct({
         req,
         res,
-        customer,
-        product,
+        attachParams,
         curCusProduct,
-        prices,
-        entitlements,
-        org,
-        env,
-        features,
-        optionsList,
       });
-
       return;
     }
 
-    // 4. If customer doesn't have payment method, create Stripe checkout
+    // SCENARIO 4: No existing product, not free product
     await handleAddProduct({
       req,
       res,
-      customer,
-      product,
-      prices,
-      entitlements,
-      org,
-      env,
-      optionsList,
+      attachParams,
     });
   } catch (error: any) {
-    if (error instanceof RecaseError) {
-      error.print();
-      res.status(error.statusCode).send({
-        message: error.message,
-        code: error.code,
-      });
-    } else {
-      console.log("Unknown error:", error);
-      res.status(500).send({
-        error: ErrCode.InternalError,
-        message: ErrorMessages.InternalError,
-      });
-    }
+    handleRequestError({ res, error, action: "attach product" });
   }
 });

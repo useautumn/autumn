@@ -218,14 +218,14 @@ export class ProductService {
     const { data, error } = await sb
       .from("products")
       .select(
-        `
-      *,
-      entitlements (
-        *,
-        feature:features (id, name, type)
-      ),
-      prices (*)
-    `
+        ` *,
+        free_trial:free_trials(*),
+        entitlements (
+          *,
+          feature:features (id, name, type)
+        ),
+        prices (*)
+      `
       )
       .eq("id", productId)
       .eq("org_id", orgId)
