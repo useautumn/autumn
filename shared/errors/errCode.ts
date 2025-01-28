@@ -55,6 +55,7 @@ export const ErrCode = {
   // Entitlements
   InvalidEntitlement: "invalid_entitlement",
   CreateEntitlementFailed: "create_entitlement_failed",
+  DeleteEntitlementFailed: "delete_entitlement_failed",
 
   // Invoice
   CreateInvoiceFailed: "create_invoice_failed",

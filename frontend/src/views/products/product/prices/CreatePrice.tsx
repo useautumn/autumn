@@ -10,10 +10,11 @@ import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import {
   PricingConfig,
+  validateConfig,
   validateFixedConfig,
   validateUsageConfig,
 } from "./PricingConfig";
-import { PriceType } from "@autumn/shared";
+import { CreatePriceSchema, PriceType } from "@autumn/shared";
 import { useProductContext } from "../ProductContext";
 import { generateId } from "@/utils/genUtils";
 
@@ -21,35 +22,28 @@ export const CreatePrice = () => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [price, setPrice] = useState<any>(null);
-  const { env, product, setProduct, prices } = useProductContext();
 
-  // const axiosInstance = useAxiosInstance({ env });
+  const { product, setProduct } = useProductContext();
 
   const handleCreatePrice = async () => {
-    let config: any = null;
-
     if (!price) {
       return;
     }
 
-    if (price.config.type == PriceType.Usage) {
-      config = validateUsageConfig(price?.config);
-    } else if (price.config.type == PriceType.Fixed) {
-      config = validateFixedConfig(price?.config, prices);
-    }
+    const config = validateConfig(price, product.prices);
 
     if (!config) {
       return;
     }
 
     setLoading(true);
-    const newPrice = {
-      ...price,
-      id: generateId("pr"),
+
+    const newPrice = CreatePriceSchema.parse({
+      name: price.name,
       config,
-      // created_at: Date.now(),
-      // id: product.prices.length,
-    };
+    });
+
+    console.log("New price: ", newPrice);
 
     setProduct({
       ...product,

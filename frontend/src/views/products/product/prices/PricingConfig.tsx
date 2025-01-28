@@ -1,13 +1,11 @@
 import { BillingInterval, BillWhen, PriceType } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import CreateFixedPrice from "./CreateFixedPrice";
 import CreateUsagePrice from "./CreateUsagePrice";
 import toast from "react-hot-toast";
-import { invalidNumber } from "@/utils/genUtils";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
+import { invalidNumber } from "@/utils/genUtils";
 import { Input } from "@/components/ui/input";
 import { validBillingInterval } from "@/utils/product/priceUtils";
 
@@ -18,8 +16,6 @@ export const PricingConfig = ({
   price?: any;
   setPrice: any;
 }) => {
-  const { env, prices } = useProductContext();
-
   const defaultFixedConfig = {
     type: PriceType.Fixed,
     amount: "",
@@ -28,7 +24,8 @@ export const PricingConfig = ({
 
   const defaultUsageConfig = {
     type: PriceType.Usage,
-    entitlement_id: "",
+    internal_feature_id: "",
+    feature_id: "",
     bill_when: BillWhen.InAdvance,
     interval: BillingInterval.Month,
     usage_tiers: [
@@ -43,36 +40,25 @@ export const PricingConfig = ({
   const [priceType, setPriceType] = useState(
     price?.config?.type || PriceType.Fixed
   );
+
   const [name, setName] = useState(price?.name || "");
   const [usageTiers, setUsageTiers] = useState<any[]>([]);
   const [fixedConfig, setFixedConfig] = useState(
-    price?.config.amount ? price.config : defaultFixedConfig
+    price?.config || defaultFixedConfig
   );
   const [usageConfig, setUsageConfig]: any = useState(
-    price?.config.entitlement_id ? price.config : defaultUsageConfig
+    price?.config || defaultUsageConfig
   );
 
+  const [originalPrice, _] = useState(price);
+
   useEffect(() => {
-    if (priceType === PriceType.Fixed) {
-      setPrice({
-        name: name,
-        config: {
-          ...fixedConfig,
-          type: PriceType.Fixed,
-        },
-        id: price?.id,
-      });
-    } else if (priceType === PriceType.Usage) {
-      setPrice({
-        name: name,
-        config: {
-          ...usageConfig,
-          type: PriceType.Usage,
-        },
-        id: price?.id,
-      });
-    }
-  }, [fixedConfig, usageConfig, priceType, setPrice, name]);
+    setPrice({
+      ...originalPrice,
+      name: name,
+      config: priceType === PriceType.Fixed ? fixedConfig : usageConfig,
+    });
+  }, [fixedConfig, usageConfig, priceType, name, setPrice, originalPrice]);
 
   return (
     <>
@@ -109,17 +95,12 @@ export const PricingConfig = ({
   );
 };
 
+// Validate usage price config
 export const validateUsageConfig = (usageConfig: any) => {
   const config = { ...usageConfig };
-  const { entitlement_id, billing_units, bill_when, threshold, interval } =
-    config;
+  const { bill_when, interval } = config;
 
   if (bill_when === BillWhen.BelowThreshold) {
-    // if (invalidNumber(threshold)) {
-    //   toast.error("Please fill out all fields");
-    //   return null;
-    // }
-    // config.threshold = parseFloat(threshold);
   } else if (bill_when === BillWhen.InAdvance) {
     if (!interval) {
       toast.error("Please fill out all fields");
@@ -148,6 +129,7 @@ export const validateUsageConfig = (usageConfig: any) => {
   return config;
 };
 
+// Validate fixed price config
 export const validateFixedConfig = (fixedConfig: any, prices: any) => {
   if (!validBillingInterval(prices, fixedConfig)) {
     toast.error("Can't have two prices with different billing intervals");
@@ -161,5 +143,16 @@ export const validateFixedConfig = (fixedConfig: any, prices: any) => {
     return null;
   }
   config.amount = parseFloat(config.amount.toString());
+  return config;
+};
+
+export const validateConfig = (price: any, prices: any) => {
+  const priceType = price.config.type;
+  let config = null;
+  if (priceType === PriceType.Fixed) {
+    config = validateFixedConfig(price.config, prices);
+  } else if (priceType === PriceType.Usage) {
+    config = validateUsageConfig(price.config);
+  }
   return config;
 };

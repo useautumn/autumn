@@ -90,35 +90,38 @@ productRouter.get("/:productId", async (req: any, res) => {
 productRouter.use(entitlementRouter);
 
 productRouter.post("/product_options", async (req: any, res: any) => {
-  const { prices, entitlements } = req.body;
+  const { prices } = req.body;
 
-  const options: FeatureOptions[] = [];
-  // console.log("prices", prices);
-  // console.log("entitlements", entitlements);
+  const features = await FeatureService.getFromReq(req);
+  const featureToOptions: { [key: string]: FeatureOptions } = {};
+
   for (const price of prices) {
     // get billing tyoe
     const billingType = getBillingType(price.config);
+    const feature = features.find(
+      (f) => f.internal_id === price.config.internal_feature_id
+    );
 
     if (billingType === BillingType.UsageBelowThreshold) {
-      let featureId = entitlements.find(
-        (e: EntitlementWithFeature) => e.id === price.config.entitlement_id
-      ).feature_id;
-
-      options.push({
-        feature_id: featureId,
-        threshold: 0,
-      });
+      if (!featureToOptions[feature.id]) {
+        featureToOptions[feature.id] = {
+          feature_id: feature.id,
+          threshold: 0,
+        };
+      } else {
+        featureToOptions[feature.id].threshold = 0;
+      }
     } else if (billingType === BillingType.UsageInAdvance) {
-      let featureId = entitlements.find(
-        (e: EntitlementWithFeature) => e.id === price.config.entitlement_id
-      ).feature_id;
+      if (!featureToOptions[feature.id]) {
+        featureToOptions[feature.id] = {
+          feature_id: feature.id,
+          quantity: 0,
+        };
+      }
 
-      options.push({
-        feature_id: featureId,
-        quantity: 0,
-      });
+      featureToOptions[feature.id].quantity = 0;
     }
   }
 
-  res.status(200).send({ options });
+  res.status(200).send({ options: Object.values(featureToOptions) });
 });

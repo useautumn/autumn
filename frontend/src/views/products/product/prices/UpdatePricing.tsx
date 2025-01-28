@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import {
   PricingConfig,
+  validateConfig,
   validateFixedConfig,
   validateUsageConfig,
 } from "./PricingConfig";
@@ -25,30 +26,25 @@ export default function UpdatePricing({
   selectedPrice: any;
   setSelectedPrice: (price: any) => void;
 }) {
-  const { product, setProduct, prices } = useProductContext();
+  const { product, setProduct } = useProductContext();
 
   const handleDeletePricing = () => {
-    const updatedPrices = prices.filter((price: any) => {
+    const updatedPrices = product.prices.filter((price: any) => {
       return price.id !== selectedPrice.id;
     });
+
     setProduct({ ...product, prices: updatedPrices });
     setOpen(false);
   };
 
   const handleUpdatePricing = () => {
-    let config: any;
-    if (selectedPrice.config.type === PriceType.Fixed) {
-      config = validateFixedConfig(selectedPrice.config, prices);
-    } else if (selectedPrice.config.type === PriceType.Usage) {
-      config = validateUsageConfig(selectedPrice.config);
-    }
+    const config = validateConfig(selectedPrice, product.prices);
 
     if (!config) {
-      toast.error("Invalid pricing configuration");
       return;
     }
 
-    const updatedPrices = prices.map((price: any) => {
+    const updatedPrices = product.prices.map((price: any) => {
       if (price.id === selectedPrice.id) {
         return {
           ...price,
@@ -69,20 +65,30 @@ export default function UpdatePricing({
         <DialogTitle>Update Price</DialogTitle>
 
         <PricingConfig
-          price={{
-            priceType: selectedPrice?.type,
-            config: selectedPrice?.config,
-            name: selectedPrice?.name,
-            id: selectedPrice?.id,
-          }}
+          // price={{
+          //   priceType: selectedPrice?.type,
+          //   config: selectedPrice?.config,
+          //   name: selectedPrice?.name,
+          //   id: selectedPrice?.id,
+          // }}
+          price={selectedPrice}
           setPrice={setSelectedPrice}
         />
 
         <DialogFooter>
-          <Button variant="destructive" className="text-xs" onClick={() => handleDeletePricing()}>
+          <Button
+            variant="destructive"
+            className="text-xs"
+            onClick={() => handleDeletePricing()}
+          >
             Delete
           </Button>
-          <Button onClick={() => handleUpdatePricing()} variant="gradientPrimary">Update Price</Button>
+          <Button
+            onClick={() => handleUpdatePricing()}
+            variant="gradientPrimary"
+          >
+            Update Price
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

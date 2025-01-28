@@ -63,4 +63,23 @@ export class FreeTrialService {
       throw error;
     }
   }
+
+  static async update({
+    sb,
+    freeTrialId,
+    update,
+  }: {
+    sb: SupabaseClient;
+    freeTrialId: string;
+    update: Partial<FreeTrial>;
+  }) {
+    const { error } = await sb
+      .from("free_trials")
+      .update(update)
+      .eq("id", freeTrialId);
+
+    if (error) {
+      throw error;
+    }
+  }
 }

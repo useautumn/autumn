@@ -21,13 +21,15 @@ import {
   FeatureType,
 } from "@autumn/shared";
 import UpdateEntitlement from "./UpdateEntitlement";
-
+import { useProductContext } from "../ProductContext";
+import { getFeature } from "@/utils/product/entitlementUtils";
 export const ProductEntitlementTable = ({
   entitlements,
 }: {
   entitlements: EntitlementWithFeature[];
 }) => {
-  const router = useRouter();
+  const { features } = useProductContext();
+
   const [open, setOpen] = useState(false);
   const [selectedEntitlement, setSelectedEntitlement] =
     useState<Entitlement | null>(null);
@@ -38,7 +40,9 @@ export const ProductEntitlementTable = ({
   };
 
   const getAllowanceString = (entitlement: EntitlementWithFeature) => {
-    if (entitlement.feature?.type === FeatureType.Boolean) {
+    const feature = getFeature(entitlement.internal_feature_id, features);
+
+    if (feature?.type === FeatureType.Boolean) {
       return "";
     }
 
@@ -68,29 +72,36 @@ export const ProductEntitlementTable = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {entitlements.map((entitlement: EntitlementWithFeature) => (
-            <TableRow
-              key={`${entitlement.id}-${entitlement.feature?.id}`}
-              className="cursor-pointer"
-              onClick={() => handleRowClick(entitlement)}
-            >
-              <TableCell className="min-w-40 font-medium">
-                {entitlement.feature?.name}
-              </TableCell>
-              <TableCell className="min-w-40 font-mono text-t2">
-                {entitlement.feature?.id}
-              </TableCell>
-              <TableCell className="min-w-32">
-                <FeatureTypeBadge type={entitlement.feature?.type} />
-              </TableCell>
-              <TableCell className="min-w-48 w-full">
-                {getAllowanceString(entitlement)}
-              </TableCell>
-              <TableCell className="min-w-48">
-                {formatUnixToDateTimeString(entitlement.created_at)}
-              </TableCell>
-            </TableRow>
-          ))}
+          {entitlements.map((entitlement: EntitlementWithFeature) => {
+            const feature = getFeature(
+              entitlement.internal_feature_id,
+              features
+            );
+
+            return (
+              <TableRow
+                key={`${entitlement.id}-${feature?.id}`}
+                className="cursor-pointer"
+                onClick={() => handleRowClick(entitlement)}
+              >
+                <TableCell className="min-w-40 font-medium">
+                  {feature?.name}
+                </TableCell>
+                <TableCell className="min-w-40 font-mono text-t2">
+                  {feature?.id}
+                </TableCell>
+                <TableCell className="min-w-32">
+                  <FeatureTypeBadge type={feature?.type} />
+                </TableCell>
+                <TableCell className="min-w-48 w-full">
+                  {getAllowanceString(entitlement)}
+                </TableCell>
+                <TableCell className="min-w-48">
+                  {formatUnixToDateTimeString(entitlement.created_at)}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </>

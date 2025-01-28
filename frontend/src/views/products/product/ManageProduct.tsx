@@ -14,7 +14,6 @@ export const ManageProduct = ({
   product: any;
   customerData?: any;
 }) => {
-  console.log("Product:", product);
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">

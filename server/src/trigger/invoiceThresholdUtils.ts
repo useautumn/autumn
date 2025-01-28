@@ -159,7 +159,8 @@ const invoiceCustomer = async ({
   const orgId = customer.org_id;
 
   const cusEnt = fullCusProduct.customer_entitlements.find(
-    (ce: any) => ce.entitlement.id == config.entitlement_id
+    (ce: any) =>
+      ce.entitlement.internal_feature_id == config.internal_feature_id
   );
 
   if (!cusEnt) {

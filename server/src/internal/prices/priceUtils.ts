@@ -5,12 +5,9 @@ import {
   BillingInterval,
   BillingType,
   FixedPriceConfig,
-  FullProduct,
-  Organization,
   Price,
   PriceType,
   UsagePriceConfig,
-  PricesInput,
   Entitlement,
   EntitlementWithFeature,
   FeatureOptions,
@@ -127,7 +124,7 @@ export const getPriceEntitlement = (
   let config = price.config as UsagePriceConfig;
 
   const entitlement = entitlements.find(
-    (ent) => ent.id === config.entitlement_id
+    (ent) => ent.internal_feature_id === config.internal_feature_id
   );
 
   return entitlement as EntitlementWithFeature;

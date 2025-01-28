@@ -9,8 +9,9 @@ import {
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { addDays, addSeconds, getTime } from "date-fns";
+import { FreeTrialService } from "./FreeTrialService.js";
 
-export const validateFreeTrial = ({
+export const validateAndInitFreeTrial = ({
   freeTrial,
   internalProductId,
   isCustom = false,
@@ -23,6 +24,7 @@ export const validateFreeTrial = ({
 
   return {
     ...freeTrialSchema,
+    id: generateId("ft"),
     created_at: Date.now(),
     duration: FreeTrialDuration.Day,
     internal_product_id: internalProductId,
@@ -30,7 +32,10 @@ export const validateFreeTrial = ({
   };
 };
 
-export const freeTrialsAreSame = (ft1?: FreeTrial, ft2?: FreeTrial) => {
+export const freeTrialsAreSame = (
+  ft1?: FreeTrial | null,
+  ft2?: FreeTrial | null
+) => {
   if (!ft1 && !ft2) return true;
   if (!ft1 || !ft2) return false;
   return (
@@ -99,4 +104,50 @@ export const getFreeTrialAfterFingerprint = async ({
   }
 
   return freeTrial;
+};
+
+// Init Free Trial
+
+export const handleNewFreeTrial = async ({
+  sb,
+  newFreeTrial,
+  curFreeTrial,
+  internalProductId,
+  isCustom = false,
+}: {
+  sb: SupabaseClient;
+  newFreeTrial: FreeTrial | null;
+  curFreeTrial: FreeTrial | null;
+  internalProductId: string;
+  isCustom: boolean;
+}) => {
+  if (!newFreeTrial) {
+    return null;
+  }
+
+  if (freeTrialsAreSame(curFreeTrial, newFreeTrial)) {
+    return curFreeTrial;
+  }
+
+  const createdFreeTrial = validateAndInitFreeTrial({
+    freeTrial: newFreeTrial,
+    internalProductId,
+    isCustom,
+  });
+
+  if (isCustom && newFreeTrial) {
+    await FreeTrialService.insert({
+      sb,
+      data: createdFreeTrial,
+    });
+  } else if (!isCustom && newFreeTrial) {
+    createdFreeTrial.id = curFreeTrial?.id || createdFreeTrial.id;
+    await FreeTrialService.update({
+      sb,
+      freeTrialId: createdFreeTrial.id,
+      update: createdFreeTrial,
+    });
+  }
+
+  return createdFreeTrial;
 };

@@ -15,7 +15,6 @@ export const CustomerEntitlementSchema = z.object({
 
   customer_product_id: z.string(),
   entitlement_id: z.string().nullable(),
-  custom_entitlement_id: z.string().nullable(),
   created_at: z.number(),
 
   // Balance fields

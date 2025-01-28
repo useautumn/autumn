@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { AppEnv, FrontendProduct, Organization } from "@autumn/shared";
+import {
+  AppEnv,
+  FrontendProduct,
+  FullCusProduct,
+  Organization,
+} from "@autumn/shared";
 
 import { BreadcrumbItem, Breadcrumbs } from "@nextui-org/react";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
@@ -67,6 +72,7 @@ export default function CustomerProductView({
   const axiosInstance = useAxiosInstance({ env });
   const [product, setProduct] = useState<FrontendProduct | null>(null);
   const [options, setOptions] = useState<OptionValue[]>([]);
+
   const { data, isLoading, mutate, error } = useAxiosSWR({
     url: `/customers/${customer_id}/data`,
     env,
@@ -78,19 +84,18 @@ export default function CustomerProductView({
   const [hasChanges, setHasChanges] = useState(false);
   const initialProductRef = useRef<FrontendProduct | null>(null);
 
-  //get the product from the customer data and check if it is active
+  // Get product from customer data and check if it is active
   useEffect(() => {
     if (!data?.products || !data?.customer) return;
 
     const foundProduct = data.products.find((p) => p.id === product_id);
+    console.log("Found Product: ", foundProduct);
     if (!foundProduct) return;
 
     const customerProduct = data.customer.products.find(
-      (p) => p.product_id === product_id
+      (p: FullCusProduct) => p.product_id === product_id
     );
 
-    // console.log("foundProduct", foundProduct);
-    console.log("customerProduc1t", customerProduct);
     const enrichedProduct = enrichProduct(foundProduct, customerProduct);
 
     setOptions(enrichedProduct.options);
@@ -164,7 +169,6 @@ export default function CustomerProductView({
 
   if (isLoading) return <LoadingScreen />;
 
-  const { products } = data;
   const { customer } = data;
 
   if (!product) {
@@ -179,7 +183,7 @@ export default function CustomerProductView({
       });
 
       if (data.options && data.options.length > 0) {
-        console.log("options", data.options);
+        // console.log("options", data.options);
         setRequiredOptions(data.options);
         return;
       }
@@ -193,23 +197,13 @@ export default function CustomerProductView({
 
   const createProduct = async () => {
     try {
-      // TODO: Update product
-      const entitlements = product.entitlements.map((e) => {
-        return {
-          id: e.id,
-          feature_id: e.feature.id,
-
-          allowance: e.allowance,
-          allowance_type: e.allowance_type,
-          interval: e.interval,
-        };
-      });
-
       const { data } = await CusService.addProduct(axiosInstance, customer_id, {
         product_id,
         prices: product.prices,
-        entitlements,
+        entitlements: product.entitlements,
+        free_trial: product.free_trial,
         options: requiredOptions,
+        is_custom: true,
       });
 
       await mutate();
@@ -220,8 +214,9 @@ export default function CustomerProductView({
         setCheckoutDialogOpen(true);
       }
     } catch (error) {
+      console.log("Error creating product: ", error);
       const errObj = getBackendErrObj(error);
-      console.log("Error object:", errObj);
+
       if (errObj?.code === ErrCode.StripeConfigNotFound) {
         toast.error(errObj?.message);
         const redirectUrl = getRedirectUrl(`/customers/${customer_id}`, env);
@@ -271,8 +266,8 @@ export default function CustomerProductView({
         env,
         product,
         setProduct,
-        prices: product.prices,
-        entitlements: product.entitlements,
+        // prices: product.prices,
+        // entitlements: product.entitlements,
         org,
       }}
     >

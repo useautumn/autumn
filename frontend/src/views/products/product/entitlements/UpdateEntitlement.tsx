@@ -7,6 +7,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useProductContext } from "../ProductContext";
+import { toast } from "react-hot-toast";
 
 export default function UpdateEntitlement({
   open,
@@ -19,18 +20,40 @@ export default function UpdateEntitlement({
   selectedEntitlement: any;
   setSelectedEntitlement: (entitlement: any) => void;
 }) {
-  const { entitlements, setProduct, product } = useProductContext();
+  const { setProduct, product } = useProductContext();
 
-  const handleDeleteFeature = () => {
-    const updatedEntitlements = entitlements.filter((entitlement: any) => {
-      return entitlement.id !== selectedEntitlement.id;
+  const handleDeleteEntitlement = () => {
+    const relatedPrice = product.prices.find((price: any) => {
+      return (
+        price.config.internal_feature_id ===
+        selectedEntitlement.internal_feature_id
+      );
     });
-    setProduct({ ...product, entitlements: updatedEntitlements });
+
+    if (relatedPrice) {
+      toast.error(
+        `Cannot remove entitlement used by price "${relatedPrice.name}"`
+      );
+      return;
+    }
+
+    const updatedEntitlements = product.entitlements.filter(
+      (entitlement: any) => {
+        return entitlement.id !== selectedEntitlement.id;
+      }
+    );
+
+    console.log("Updated entitlements: ", updatedEntitlements);
+    setProduct({
+      ...product,
+      entitlements: updatedEntitlements,
+    });
+
     setOpen(false);
   };
 
-  const handleUpdateFeature = () => {
-    const updatedEntitlements = entitlements.map((entitlement: any) => {
+  const handleUpdateEntitlement = () => {
+    const updatedEntitlements = product.entitlements.map((entitlement: any) => {
       if (entitlement.id === selectedEntitlement.id) {
         return {
           ...entitlement,
@@ -58,14 +81,11 @@ export default function UpdateEntitlement({
           <Button
             variant="destructive"
             className="text-xs"
-            onClick={() => handleDeleteFeature()}
+            onClick={handleDeleteEntitlement}
           >
             Delete
           </Button>
-          <Button
-            onClick={() => handleUpdateFeature()}
-            variant="gradientPrimary"
-          >
+          <Button onClick={handleUpdateEntitlement} variant="gradientPrimary">
             Update Entitlement
           </Button>
         </DialogFooter>
