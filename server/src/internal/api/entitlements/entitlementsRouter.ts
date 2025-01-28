@@ -1,6 +1,6 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { EntitlementService } from "@/internal/products/EntitlementService.js";
+import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";

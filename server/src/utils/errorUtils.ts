@@ -1,3 +1,4 @@
+import { ErrCode } from "@autumn/shared";
 import { ZodError } from "zod";
 
 export default class RecaseError extends Error {
@@ -53,6 +54,13 @@ export const handleRequestError = ({
     res.status(error.statusCode).json({
       message: error.message,
       code: error.code,
+    });
+  } else if (error instanceof ZodError) {
+    console.log("Zod error: ", formatZodError(error));
+    res.status(400).json({
+      message: formatZodError(error),
+      code: ErrCode.InvalidInputs,
+      data: formatZodError(error),
     });
   } else {
     console.log(`Unknown error | ${action}`, error);

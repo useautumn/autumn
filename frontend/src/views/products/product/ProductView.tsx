@@ -40,14 +40,13 @@ function ProductView({
 
   useEffect(() => {
     if (data?.product) {
-      setProduct(data.product)
+      setProduct(data.product);
 
       initialProductRef.current = data.product;
     }
   }, [data]);
 
   useEffect(() => {
-
     if (!initialProductRef.current || !product) {
       setHasChanges(false);
       return;
@@ -57,17 +56,20 @@ function ProductView({
       JSON.stringify({
         prices: product.prices,
         entitlements: product.entitlements,
+        free_trial: product.free_trial,
       }) !==
       JSON.stringify({
         prices: initialProductRef.current.prices,
         entitlements: initialProductRef.current.entitlements,
+        free_trial: initialProductRef.current.free_trial,
       });
     setHasChanges(hasChanged);
   }, [product]);
 
   const isNewProduct =
     initialProductRef.current?.entitlements?.length === 0 &&
-    initialProductRef.current?.prices?.length === 0;
+    initialProductRef.current?.prices?.length === 0 &&
+    !initialProductRef.current?.free_trial;
 
   const actionState = {
     disabled: !hasChanges,
@@ -92,6 +94,7 @@ function ProductView({
       await ProductService.updateProduct(axiosInstance, product.id, {
         prices: product.prices,
         entitlements: product.entitlements,
+        free_trial: product.free_trial,
       });
 
       if (isNewProduct) {

@@ -26,39 +26,27 @@ import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import { handleAddProduct } from "../add-product/handleAddProduct.js";
 import { CusProductService } from "../products/CusProductService.js";
+import { AttachParams } from "../products/AttachParams.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 const scheduleStripeSubscription = async ({
-  customer,
-  product,
-  prices,
-  optionsList,
-  entitlements,
+  attachParams,
+  stripeCli,
   endOfBillingPeriod,
-  org,
-  env,
 }: {
-  customer: Customer;
-  product: FullProduct;
-  prices: Price[];
-  optionsList: FeatureOptions[];
-  entitlements: EntitlementWithFeature[];
+  attachParams: AttachParams;
+  stripeCli: Stripe;
   endOfBillingPeriod: number;
-  org: Organization;
-  env: AppEnv;
 }) => {
-  const stripeCli = createStripeCli({ org, env });
+  const { org, customer } = attachParams;
 
   const stripeSubItems = getStripeSubItems({
-    prices,
-    product,
-    org,
-    optionsList,
-    entitlements,
+    attachParams,
   });
 
   const paymentMethod = await getCusPaymentMethod({
     org,
-    env,
+    env: customer.env,
     stripeId: customer.processor.id,
   });
 
@@ -79,33 +67,26 @@ const scheduleStripeSubscription = async ({
 const handleDowngrade = async ({
   req,
   res,
-  customer,
-  product,
+  attachParams,
   curCusProduct,
-  optionsList,
-  prices,
-  entitlements,
-  org,
-  env,
 }: {
   req: any;
   res: any;
-  customer: Customer;
-  product: FullProduct;
-  org: Organization;
-  env: AppEnv;
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
-  optionsList: FeatureOptions[];
+  attachParams: AttachParams;
   curCusProduct: CusProductWithProduct;
 }) => {
   console.log(
-    `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
+    `Handling downgrade from ${curCusProduct.product.name} to ${attachParams.product.name}`
   );
 
   // 1. Cancel current subscription
   console.log("1. Cancelling current subscription (at period end)");
-  const stripeCli = createStripeCli({ org, env });
+
+  const stripeCli = createStripeCli({
+    org: attachParams.org,
+    env: attachParams.customer.env,
+  });
+
   const subscription = await stripeCli.subscriptions.retrieve(
     curCusProduct.processor?.subscription_id!
   );
@@ -117,10 +98,10 @@ const handleDowngrade = async ({
   // 3. Schedule new subscription IF new product is not free...
   console.log("2. Scheduling new subscription");
   let scheduleId;
-  if (!isFreeProduct(prices)) {
+  if (!isFreeProduct(attachParams.prices)) {
     // Delete previous schedules
     const schedules = await stripeCli.subscriptionSchedules.list({
-      customer: customer.processor.id,
+      customer: attachParams.customer.processor.id,
     });
 
     for (const schedule of schedules.data) {
@@ -132,7 +113,7 @@ const handleDowngrade = async ({
       // Delete only if not in the same group
       if (
         (!existingCusProduct ||
-          existingCusProduct.product.group === product.group) &&
+          existingCusProduct.product.group === attachParams.product.group) &&
         schedule.status !== "canceled"
       ) {
         await stripeCli.subscriptionSchedules.cancel(schedule.id);
@@ -140,14 +121,9 @@ const handleDowngrade = async ({
     }
 
     scheduleId = await scheduleStripeSubscription({
-      customer,
-      product,
-      prices,
-      optionsList,
-      entitlements,
+      attachParams,
+      stripeCli,
       endOfBillingPeriod: subscription.current_period_end,
-      org,
-      env,
     });
   }
 
@@ -155,15 +131,12 @@ const handleDowngrade = async ({
   console.log("3. Inserting new full cus product (starts at period end)");
   await createFullCusProduct({
     sb: req.sb,
-    customer,
-    product,
-    prices,
-    entitlements,
-    optionsList,
+    attachParams,
     subscriptionId: undefined,
     startsAt: subscription.current_period_end * 1000,
     subscriptionScheduleId: scheduleId,
     nextResetAt: subscription.current_period_end * 1000,
+    disableFreeTrial: true,
   });
 
   res.status(200).json({ success: true, message: "Downgrade handled" });
@@ -173,19 +146,13 @@ const handleDowngrade = async ({
 const updateStripeSubscription = async ({
   stripeCli,
   subscriptionId,
-  product,
-  prices,
-  optionsList,
-  entitlements,
-  org,
+  attachParams,
+  disableFreeTrial,
 }: {
   stripeCli: Stripe;
   subscriptionId: string;
-  product: FullProduct;
-  prices: Price[];
-  optionsList: FeatureOptions[];
-  entitlements: EntitlementWithFeature[];
-  org: Organization;
+  attachParams: AttachParams;
+  disableFreeTrial?: boolean;
 }) => {
   // HANLDE UPGRADE
 
@@ -193,11 +160,7 @@ const updateStripeSubscription = async ({
 
   // Get stripe subscription from product
   const stripeSubItems = getStripeSubItems({
-    prices,
-    product,
-    org,
-    optionsList,
-    entitlements,
+    attachParams,
   });
 
   // Delete existing subscription items
@@ -208,10 +171,16 @@ const updateStripeSubscription = async ({
     });
   }
 
+  let trialEnd = undefined;
+  if (!disableFreeTrial) {
+    trialEnd = freeTrialToStripeTimestamp(attachParams.freeTrial);
+  }
+
   // Switch subscription
   const subUpdate = await stripeCli.subscriptions.update(subscriptionId, {
     items: stripeSubItems,
     proration_behavior: "always_invoice",
+    trial_end: trialEnd,
   });
 
   return subUpdate;
@@ -220,35 +189,25 @@ const updateStripeSubscription = async ({
 const handleUpgrade = async ({
   req,
   res,
-  customer,
-  product,
-  prices,
-  entitlements,
-  optionsList,
+  attachParams,
   curCusProduct,
   curFullProduct,
-  org,
-  env,
 }: {
   req: any;
   res: any;
-  customer: Customer;
-  product: FullProduct;
-  org: Organization;
-  env: AppEnv;
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
-  optionsList: FeatureOptions[];
+  attachParams: AttachParams;
   curCusProduct: CusProductWithProduct;
   curFullProduct: FullProduct;
 }) => {
+  const { org, customer, product } = attachParams;
+
   console.log(
     `Handling upgrade from ${curFullProduct.name} to ${product.name} for ${customer.id}`
   );
 
   const sameBillingInterval = isSameBillingInterval(curFullProduct, product);
 
-  const stripeCli = createStripeCli({ org, env });
+  const stripeCli = createStripeCli({ org, env: customer.env });
 
   // 1. If current product is free, retire old product
   if (isFreeProduct(curFullProduct.prices)) {
@@ -256,16 +215,13 @@ const handleUpgrade = async ({
     await handleAddProduct({
       req,
       res,
-      customer,
-      product,
-      prices,
-      entitlements,
-      optionsList,
-      org,
-      env,
+      attachParams,
     });
     return;
   }
+
+  const disableFreeTrial =
+    curFullProduct.free_trial && org.config.free_trial_paid_to_paid;
 
   // Maybe do it such that if cur cus product has no subscription ID, we just create a new one?
 
@@ -273,40 +229,34 @@ const handleUpgrade = async ({
   const subUpdate = await updateStripeSubscription({
     subscriptionId: curCusProduct.processor?.subscription_id!,
     stripeCli,
-    product,
-    prices,
-    optionsList,
-    entitlements,
-    org,
+    attachParams,
   });
 
   // Handle backend
   console.log("2. Creating new full cus product");
+
   await createFullCusProduct({
     sb: req.sb,
-    customer,
-    product,
-    prices,
-    entitlements,
-    optionsList,
+    attachParams,
     subscriptionId: subUpdate.id,
     nextResetAt: sameBillingInterval
       ? subUpdate.current_period_end * 1000
       : undefined,
+    disableFreeTrial,
   });
 
-  // 5. Create invoice
-  console.log("4. Creating invoice");
-  const latestInvoice = await stripeCli.invoices.retrieve(
-    subUpdate.latest_invoice as string
-  );
+  // // 5. Create invoice
+  // console.log("4. Creating invoice");
+  // const latestInvoice = await stripeCli.invoices.retrieve(
+  //   subUpdate.latest_invoice as string
+  // );
 
-  await InvoiceService.createInvoiceFromStripe({
-    sb: req.sb,
-    stripeInvoice: latestInvoice,
-    internalCustomerId: customer.internal_id,
-    productIds: [product.id],
-  });
+  // await InvoiceService.createInvoiceFromStripe({
+  //   sb: req.sb,
+  //   stripeInvoice: latestInvoice,
+  //   internalCustomerId: customer.internal_id,
+  //   productIds: [product.id],
+  // });
 
   res.status(200).json({ success: true, message: "Product change handled" });
 };
@@ -314,36 +264,26 @@ const handleUpgrade = async ({
 export const handleChangeProduct = async ({
   req,
   res,
-  customer,
-  org,
-  product,
-  prices,
-  entitlements,
-  optionsList,
+  attachParams,
   curCusProduct,
-  env,
 }: {
   req: any;
   res: any;
-  customer: Customer;
-  product: FullProduct;
-  org: Organization;
-  features: Feature[];
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
-  optionsList: FeatureOptions[];
-  env: AppEnv;
+  attachParams: AttachParams;
   curCusProduct: CusProductWithProduct;
 }) => {
   console.log("Handling change product");
 
   // Get subscription
   const curProduct = curCusProduct.product;
+  const { org, customer, product, prices, entitlements, optionsList } =
+    attachParams;
+
   const curFullProduct = await ProductService.getFullProduct({
     sb: req.sb,
     productId: curProduct.id,
     orgId: org.id,
-    env,
+    env: customer.env,
   });
 
   const isUpgrade = isProductUpgrade(curFullProduct, product);
@@ -352,28 +292,16 @@ export const handleChangeProduct = async ({
     await handleDowngrade({
       req,
       res,
-      customer,
-      product,
+      attachParams,
       curCusProduct,
-      prices,
-      entitlements,
-      optionsList,
-      org,
-      env,
     });
     return;
   } else {
     await handleUpgrade({
       req,
       res,
-      customer,
-      product,
+      attachParams,
       curCusProduct,
-      prices,
-      entitlements,
-      optionsList,
-      org,
-      env,
       curFullProduct,
     });
   }

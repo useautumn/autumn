@@ -25,42 +25,29 @@ import { ErrCode } from "@/errors/errCodes.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import chalk from "chalk";
 import { priceToStripeItem } from "@/external/stripe/stripePriceUtils.js";
+import { AttachParams } from "../products/AttachParams.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 const handleBillNowPrices = async ({
   sb,
-  customer,
-  product,
-  prices,
-  entitlements,
-  optionsList,
-  org,
-  env,
+  attachParams,
 }: {
   sb: SupabaseClient;
-  customer: Customer;
-  product: FullProduct;
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
-  optionsList: FeatureOptions[];
-  org: Organization;
-  env: AppEnv;
+  attachParams: AttachParams;
 }) => {
+  const { org, customer, product, freeTrial } = attachParams;
+
   console.log("Adding product to customer", customer.id, product.id);
 
-  const billNowPrices = getBillNowPrices(prices);
-  const stripeCli = createStripeCli({ org, env });
+  const stripeCli = createStripeCli({ org, env: customer.env });
 
   const subItems = getStripeSubItems({
-    entitlements,
-    product,
-    prices,
-    org,
-    optionsList,
+    attachParams,
   });
 
   const paymentMethod = await getCusPaymentMethod({
     org,
-    env,
+    env: customer.env,
     stripeId: customer.processor.id,
   });
 
@@ -71,6 +58,7 @@ const handleBillNowPrices = async ({
       customer: customer.processor.id,
       default_payment_method: paymentMethod as string,
       items: subItems as any,
+      trial_end: freeTrialToStripeTimestamp(freeTrial),
     });
   } catch (error: any) {
     console.log("Error creating stripe subscription", error?.message || error);
@@ -85,25 +73,21 @@ const handleBillNowPrices = async ({
   // Add product and entitlements to customer
   const cusProd = await createFullCusProduct({
     sb,
-    customer,
-    product,
-    prices,
-    entitlements,
-    optionsList,
+    attachParams,
     subscriptionId: subscription.id,
   });
 
-  // Add invoice
-  const stripeInvoice = await stripeCli.invoices.retrieve(
-    subscription.latest_invoice as string
-  );
+  // // Add invoice
+  // const stripeInvoice = await stripeCli.invoices.retrieve(
+  //   subscription.latest_invoice as string
+  // );
 
-  await InvoiceService.createInvoiceFromStripe({
-    sb,
-    internalCustomerId: customer.internal_id,
-    productIds: [product.id],
-    stripeInvoice,
-  });
+  // await InvoiceService.createInvoiceFromStripe({
+  //   sb,
+  //   internalCustomerId: customer.internal_id,
+  //   productIds: [product.id],
+  //   stripeInvoice,
+  // });
 
   return cusProd;
 };
@@ -111,24 +95,14 @@ const handleBillNowPrices = async ({
 export const handleAddProduct = async ({
   req,
   res,
-  customer,
-  product,
-  prices,
-  entitlements,
-  org,
-  env,
-  optionsList,
+  attachParams,
 }: {
   req: any;
   res: any;
-  customer: Customer;
-  product: FullProduct;
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
-  org: Organization;
-  env: AppEnv;
-  optionsList: FeatureOptions[];
+  attachParams: AttachParams;
 }) => {
+  const { customer, product, prices } = attachParams;
+
   if (product.is_add_on) {
     console.log(
       `Adding add-on ${chalk.yellowBright(
@@ -155,13 +129,7 @@ export const handleAddProduct = async ({
   if (billNowPrices.length > 0) {
     await handleBillNowPrices({
       sb: req.sb,
-      customer,
-      product,
-      prices,
-      entitlements,
-      optionsList,
-      org,
-      env,
+      attachParams,
     });
 
     res.status(200).send({ success: true });
@@ -174,11 +142,7 @@ export const handleAddProduct = async ({
 
   await createFullCusProduct({
     sb: req.sb,
-    customer,
-    product,
-    prices,
-    entitlements,
-    optionsList,
+    attachParams,
     subscriptionId: undefined,
     billLaterOnly: true,
   });

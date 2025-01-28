@@ -10,6 +10,7 @@ import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { getStripeWebhookSecret } from "@/internal/orgs/orgUtils.js";
 import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
+import chalk from "chalk";
 
 export const stripeWebhookRouter = express.Router();
 
@@ -46,6 +47,14 @@ stripeWebhookRouter.post(
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
+
+    console.log(
+      `${chalk.gray(new Date().toISOString())} ${chalk.yellow(
+        "Stripe Webhook: "
+      )} ${request.url} ${request.url.includes("live") ? "   " : ""}| ${
+        event?.type
+      }`
+    );
 
     try {
       switch (event.type) {
@@ -91,6 +100,7 @@ stripeWebhookRouter.post(
             sb: request.sb,
             org,
             invoice,
+            event,
           });
           break;
       }

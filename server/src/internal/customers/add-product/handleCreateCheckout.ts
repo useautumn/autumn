@@ -3,6 +3,7 @@ import {
   AppEnv,
   EntitlementWithFeature,
   FeatureOptions,
+  FreeTrial,
   Price,
 } from "@autumn/shared";
 import { Organization } from "@autumn/shared";
@@ -14,60 +15,53 @@ import {
 } from "@/internal/prices/priceUtils.js";
 import { PricesInput } from "@autumn/shared";
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
+import { AttachParams } from "../products/AttachParams.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 export const handleCreateCheckout = async ({
   req,
   res,
-  customer,
-  product,
-  org,
-  prices,
-  entitlements,
-  optionsList,
-  env,
+  attachParams,
 }: {
   req: any;
   res: any;
-  customer: Customer;
-  product: FullProduct;
-  org: Organization;
-  prices: Price[];
-  entitlements: EntitlementWithFeature[];
-  optionsList: FeatureOptions[];
-  env: AppEnv;
+  attachParams: AttachParams;
 }) => {
   console.log(
-    `Creating checkout for customer ${customer.id}, product ${product.name}`
+    `Creating checkout for customer ${attachParams.customer.id}, product ${attachParams.product.name}`
   );
 
-  const stripeCli = createStripeCli({ org, env });
+  const { customer, org, freeTrial } = attachParams;
+
+  const stripeCli = createStripeCli({
+    org,
+    env: customer.env,
+  });
 
   // Get stripeItems
   const stripeItems = getStripeSubItems({
-    product,
-    prices,
-    org,
-    optionsList,
-    entitlements,
+    attachParams,
   });
 
-  const isRecurring = pricesContainRecurring(prices);
+  const isRecurring = pricesContainRecurring(attachParams.prices);
 
   // Insert metadata
   const metaId = await createCheckoutMetadata({
     sb: req.sb,
-    org,
-    customer,
-    product,
-    prices,
-    optionsList,
-    entitlements,
-    env,
+    attachParams,
   });
+
+  const subscriptionData =
+    freeTrial && isRecurring
+      ? {
+          trial_end: freeTrialToStripeTimestamp(freeTrial),
+        }
+      : undefined;
 
   const checkout = await stripeCli.checkout.sessions.create({
     customer: customer.processor.id,
     line_items: stripeItems,
+    subscription_data: subscriptionData,
     mode: isRecurring ? "subscription" : "payment",
     currency: org.default_currency,
     success_url: org.stripe_config!.success_url,
