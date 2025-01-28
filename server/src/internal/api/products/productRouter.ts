@@ -1,38 +1,27 @@
 import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { Router } from "express";
-import {
-  CreateEntitlement,
-  CreateFreeTrial,
-  CreateFreeTrialSchema,
-  CreatePrice,
-  CreateProductSchema,
-  Entitlement,
-  EntitlementSchema,
-  FreeTrial,
-  FreeTrialDuration,
-  Price,
-  PriceSchema,
-  ProcessorType,
-  Product,
-} from "@autumn/shared";
+import { CreateProductSchema, ProcessorType, Product } from "@autumn/shared";
 
 import RecaseError, {
   formatZodError,
   handleRequestError,
 } from "@/utils/errorUtils.js";
+
 import { ErrCode } from "@/errors/errCodes.js";
+
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
   createStripeProduct,
   deleteStripeProduct,
 } from "@/external/stripe/stripeProductUtils.js";
+
 import { getBillingType } from "@/internal/prices/priceUtils.js";
-import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService.js";
-import { validateFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
+import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 
 export const productApiRouter = Router();
 
@@ -174,127 +163,6 @@ productApiRouter.delete("/:productId", async (req: any, res) => {
   return;
 });
 
-// Update a product
-
-const validatePricesAndEnts = ({
-  prices,
-  entitlements,
-  orgId,
-  internalProductId,
-  curPrices,
-  curEnts,
-}: {
-  prices: CreatePrice[];
-  entitlements: CreateEntitlement[];
-  orgId: string;
-  internalProductId: string;
-  curPrices: Price[];
-  curEnts: Entitlement[];
-}) => {
-  // TODO
-  let newPrices: Price[] = [];
-  const idToPrice: { [key: string]: Price } = {};
-  for (const price of curPrices) {
-    idToPrice[price.id!] = PriceSchema.parse(price);
-  }
-
-  const idToEnt: { [key: string]: Entitlement } = {};
-  for (const ent of curEnts) {
-    idToEnt[ent.id!] = EntitlementSchema.parse(ent);
-  }
-
-  // console.log("Prices: ", prices);
-  // console.log("Ents: ", entitlements);
-
-  for (const price of prices) {
-    let newPrice: Price;
-
-    try {
-      newPrice = PriceSchema.parse(price);
-    } catch (error: any) {
-      throw new RecaseError({
-        message: "Invalid price. " + formatZodError(error),
-        code: ErrCode.InvalidPrice,
-        statusCode: 400,
-        data: error,
-      });
-    }
-
-    if (idToPrice[newPrice.id!]) {
-      // Update
-      newPrices.push({
-        ...idToPrice[newPrice.id!],
-        name: newPrice.name,
-        config: newPrice.config,
-        billing_type: getBillingType(newPrice.config!),
-        internal_product_id: internalProductId,
-      });
-    } else {
-      // Create
-      newPrices.push({
-        // id: generateId("pr"),
-        org_id: orgId,
-        created_at: Date.now(),
-        billing_type: getBillingType(newPrice.config!),
-        internal_product_id: internalProductId,
-        is_custom: false,
-        ...newPrice,
-      });
-    }
-  }
-
-  let newEntitlements: Entitlement[] = [];
-  for (const entitlement of entitlements) {
-    let newEnt: Entitlement;
-
-    try {
-      newEnt = EntitlementSchema.parse(entitlement);
-    } catch (error: any) {
-      throw new RecaseError({
-        message: "Invalid entitlement. " + formatZodError(error),
-        code: ErrCode.InvalidEntitlement,
-        statusCode: 400,
-        data: error,
-      });
-    }
-
-    if (idToEnt[newEnt.id!]) {
-      let curEnt = idToEnt[newEnt.id!];
-
-      if (curEnt.feature_id !== newEnt.feature_id) {
-        throw new RecaseError({
-          message: "Cannot change feature_id",
-          code: ErrCode.InvalidEntitlement,
-          statusCode: 400,
-        });
-      }
-
-      // Update
-      newEntitlements.push({
-        ...idToEnt[newEnt.id!],
-
-        allowance_type: newEnt.allowance_type,
-        allowance: newEnt.allowance,
-        interval: newEnt.interval,
-        internal_product_id: internalProductId,
-      });
-    } else {
-      // Create
-      newEntitlements.push({
-        // id: generateId("ent"),
-        org_id: orgId,
-        created_at: Date.now(),
-        internal_product_id: internalProductId,
-        is_custom: false,
-
-        ...newEnt,
-      });
-    }
-  }
-
-  return { newPrices, newEntitlements };
-};
-
 productApiRouter.post("/:productId", async (req: any, res) => {
   const { productId } = req.params;
   const sb = req.sb;
@@ -302,6 +170,8 @@ productApiRouter.post("/:productId", async (req: any, res) => {
   const env = req.env;
 
   const { prices, entitlements, free_trial } = req.body;
+
+  const features = await FeatureService.getFromReq(req);
 
   try {
     // 1. Get full product
@@ -330,44 +200,65 @@ productApiRouter.post("/:productId", async (req: any, res) => {
       });
     }
 
-    // Add free trial
-    if (free_trial) {
-      const freeTrial = validateFreeTrial({
-        freeTrial: free_trial,
-        internalProductId: fullProduct.internal_id,
-      });
+    await handleNewFreeTrial({
+      sb,
+      curFreeTrial: fullProduct.free_trial,
+      newFreeTrial: free_trial,
+      internalProductId: fullProduct.internal_id,
+      isCustom: false,
+    });
 
-      await FreeTrialService.upsertByInternalProductId(sb, freeTrial);
-    }
-
-    // 3. Validate prices and entitlements
-    const { newPrices, newEntitlements } = validatePricesAndEnts({
-      prices,
-      entitlements,
+    // 1. Handle changing of entitlements
+    await handleNewEntitlements({
+      sb,
+      newEnts: entitlements,
+      curEnts: fullProduct.entitlements,
+      features,
       orgId,
       internalProductId: fullProduct.internal_id,
+      isCustom: false,
+    });
+
+    await handleNewPrices({
+      sb,
+      newPrices: prices,
       curPrices: fullProduct.prices,
-      curEnts: fullProduct.entitlements,
-    });
-
-    // 4. Upsert prices and entitlements
-    await PriceService.upsert({ sb, data: newPrices });
-    await EntitlementService.upsert({ sb, data: newEntitlements });
-
-    // 5. Delete old prices and entitlements
-    await PriceService.deleteIfNotIn({
-      sb,
+      orgId,
       internalProductId: fullProduct.internal_id,
-      priceIds: newPrices.map((p) => p.id!),
-    });
-
-    await EntitlementService.deleteIfNotIn({
-      sb,
-      internalProductId: fullProduct.internal_id,
-      entitlementIds: newEntitlements.map((e) => e.id!),
+      isCustom: false,
     });
 
     res.status(200).send({ message: "Product updated" });
+    return;
+
+    // // 3. Validate prices and entitlements
+    // const { newPrices, newEntitlements } = validatePricesAndEnts({
+    //   prices,
+    //   entitlements,
+    //   orgId,
+    //   internalProductId: fullProduct.internal_id,
+    //   curPrices: fullProduct.prices,
+    //   curEnts: fullProduct.entitlements,
+    // });
+
+    // // 4. Upsert prices and entitlements
+    // await PriceService.upsert({ sb, data: newPrices });
+    // await EntitlementService.upsert({ sb, data: newEntitlements });
+
+    // // 5. Delete old prices and entitlements
+    // await PriceService.deleteIfNotIn({
+    //   sb,
+    //   internalProductId: fullProduct.internal_id,
+    //   priceIds: newPrices.map((p) => p.id!),
+    // });
+
+    // await EntitlementService.deleteIfNotIn({
+    //   sb,
+    //   internalProductId: fullProduct.internal_id,
+    //   entitlementIds: newEntitlements.map((e) => e.id!),
+    // });
+
+    // res.status(200).send({ message: "Product updated" });
   } catch (error) {
     handleRequestError({ error, res, action: "Update product" });
   }

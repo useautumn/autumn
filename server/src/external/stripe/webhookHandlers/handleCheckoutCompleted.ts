@@ -6,14 +6,6 @@ import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtil
 import { AppEnv, Organization } from "@autumn/shared";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 
-const getCheckoutMetadata = (checkoutSession: Stripe.Checkout.Session) => {
-  const metadata: any = checkoutSession.metadata;
-  metadata.prices_input = JSON.parse(metadata.prices_input);
-  metadata.price_ids = JSON.parse(metadata.price_ids);
-  metadata.entitlement_ids = JSON.parse(metadata.entitlement_ids);
-  return metadata;
-};
-
 export const handleCheckoutSessionCompleted = async ({
   sb,
   org,

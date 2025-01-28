@@ -71,19 +71,17 @@ export const initCusEntitlement = ({
   }
 
   // 3. Define expires at (TODO next time...)
-  let isBooleanFeature = feature.type === FeatureType.Boolean;
+  let isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
 
   return {
     id: generateId("cus_ent"),
     internal_customer_id: customer.internal_id,
-    internal_feature_id:
-      entitlement.internal_feature_id || entitlement.feature.internal_id,
+    internal_feature_id: entitlement.internal_feature_id,
+    feature_id: entitlement.feature_id,
     customer_id: customer.id,
-    feature_id: feature.id,
 
     // Foreign keys
     entitlement_id: entitlement.id,
-    custom_entitlement_id: null,
     customer_product_id: cusProductId,
     created_at: Date.now(),
 

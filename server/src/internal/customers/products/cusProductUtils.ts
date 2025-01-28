@@ -29,11 +29,12 @@ import { PriceService } from "@/internal/prices/PriceService.js";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService.js";
 import {
   getFreeTrialAfterFingerprint,
-  trialFingerprintExists,
-  validateFreeTrial,
+  handleNewFreeTrial,
 } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 import { StatusCodes } from "http-status-codes";
+import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
+import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
 
 export const getCustomerProductAndOrg = async ({
   sb,
@@ -373,43 +374,69 @@ export const processPricesAndEntsInput = async ({
   return { prices, entitlements: entsWithFeature };
 };
 
-export const processFreeTrialInput = async ({
+export const processEntsInput = async ({
   sb,
   product,
-  freeTrialInput,
-  customer,
+  entsInput,
 }: {
   sb: SupabaseClient;
   product: FullProduct;
-  freeTrialInput?: FreeTrial;
-
-  customer: Customer;
+  entsInput: Entitlement[];
 }) => {
-  // 1. Validate free trial input
-
-  let freeTrial;
-  if (!freeTrialInput) {
-    return null;
-  } else if (product.free_trial?.id === freeTrialInput.id) {
-    freeTrial = product.free_trial;
-  } else {
-    freeTrial = validateFreeTrial({
-      freeTrial: freeTrialInput,
-      internalProductId: product.internal_id,
-      isCustom: true,
-    });
-
-    await FreeTrialService.insert({ sb, data: freeTrial });
+  const productEnts = [...product.entitlements];
+  const featureToEnt: { [key: string]: Entitlement } = {};
+  for (const ent of productEnts) {
+    featureToEnt[ent.feature_id!] = ent;
   }
 
-  freeTrial = await getFreeTrialAfterFingerprint({
-    sb,
-    freeTrial,
-    fingerprint: customer.fingerprint,
-  });
-
-  return freeTrial;
+  for (const ent of entsInput) {
+    // 1. Handle changed entitlements
+    if (featureToEnt[ent.feature_id!]) {
+      // Check if config is the same
+      if (entsAreSame(featureToEnt[ent.feature_id!], ent)) {
+        continue;
+      }
+    }
+  }
 };
+
+// export const processFreeTrialInput = async ({
+//   sb,
+//   product,
+//   freeTrialInput,
+//   customer,
+// }: {
+//   sb: SupabaseClient;
+//   product: FullProduct;
+//   freeTrialInput?: FreeTrial;
+
+//   customer: Customer;
+// }) => {
+//   // 1. Validate free trial input
+
+//   let freeTrial;
+//   if (!freeTrialInput) {
+//     return null;
+//   } else if (product.free_trial?.id === freeTrialInput.id) {
+//     freeTrial = product.free_trial;
+//   } else {
+//     freeTrial = validateFreeTrial({
+//       freeTrial: freeTrialInput,
+//       internalProductId: product.internal_id,
+//       isCustom: true,
+//     });
+
+//     await FreeTrialService.insert({ sb, data: freeTrial });
+//   }
+
+//   freeTrial = await getFreeTrialAfterFingerprint({
+//     sb,
+//     freeTrial,
+//     fingerprint: customer.fingerprint,
+//   });
+
+//   return freeTrial;
+// };
 
 export const getFullCusProductData = async ({
   sb,
@@ -432,7 +459,7 @@ export const getFullCusProductData = async ({
   env: AppEnv;
   optionsListInput: FeatureOptions[];
 
-  freeTrialInput?: FreeTrial;
+  freeTrialInput: FreeTrial | null;
   isCustom?: boolean;
 }) => {
   // 1. Get customer, product, org & features
@@ -490,19 +517,43 @@ export const getFullCusProductData = async ({
     };
   }
 
-  const { prices, entitlements } = await processPricesAndEntsInput({
+  // 1. Get prices
+  const prices = await handleNewPrices({
     sb,
-    product: fullProduct,
-    pricesInput,
-    entsInput,
+    newPrices: pricesInput,
+    curPrices: fullProduct.prices,
+    internalProductId: fullProduct.internal_id,
+    orgId,
+    isCustom,
+  });
+
+  const entitlements = await handleNewEntitlements({
+    sb,
+    newEnts: entsInput,
+    curEnts: fullProduct.entitlements,
+    internalProductId: fullProduct.internal_id,
+    orgId,
+    isCustom,
     features,
   });
 
-  const freeTrial = await processFreeTrialInput({
+  const entitlementsWithFeature = entitlements!.map((ent) => ({
+    ...ent,
+    feature: features.find((f) => f.internal_id === ent.internal_feature_id),
+  }));
+
+  const freeTrial = await handleNewFreeTrial({
     sb,
-    product: fullProduct,
-    freeTrialInput,
-    customer,
+    curFreeTrial: fullProduct.free_trial,
+    newFreeTrial: freeTrialInput || null,
+    internalProductId: fullProduct.internal_id,
+    isCustom,
+  });
+
+  const uniqueFreeTrial = await getFreeTrialAfterFingerprint({
+    sb,
+    freeTrial: freeTrial,
+    fingerprint: customer.fingerprint,
   });
 
   return {
@@ -512,7 +563,7 @@ export const getFullCusProductData = async ({
     features,
     optionsList: newOptionsList,
     prices,
-    entitlements,
-    freeTrial,
+    entitlements: entitlementsWithFeature,
+    freeTrial: uniqueFreeTrial,
   };
 };

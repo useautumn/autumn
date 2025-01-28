@@ -33,7 +33,7 @@ function CreateUsagePrice({
   usageTiers: any[];
   setUsageTiers: (usageTiers: any[]) => void;
 }) {
-  const { entitlements, env } = useProductContext();
+  const { entitlements, features } = useProductContext();
 
   const setUsageTier = (index: number, key: string, value: string) => {
     const newUsageTiers = [...config.usage_tiers];
@@ -66,11 +66,13 @@ function CreateUsagePrice({
         <div className="w-6/12">
           <FieldLabel>Entitlement</FieldLabel>
           <Select
-            value={config.entitlement_id}
+            value={config.feature_id}
             onValueChange={(value) => {
               setConfig({
                 ...config,
-                entitlement_id: value as string,
+                feature_id: value as string,
+                internal_feature_id: features.find((f) => f.id === value)
+                  ?.internal_id,
               });
             }}
           >
@@ -79,7 +81,10 @@ function CreateUsagePrice({
             </SelectTrigger>
             <SelectContent>
               {entitlements.map((entitlement: EntitlementWithFeature) => (
-                <SelectItem key={entitlement.id} value={entitlement.id!}>
+                <SelectItem
+                  key={entitlement.feature?.id}
+                  value={entitlement.feature?.id}
+                >
                   {entitlement.feature?.name}{" "}
                   <span className="text-t3">({entitlement.feature?.id})</span>
                 </SelectItem>
@@ -246,8 +251,9 @@ export const UsageTierInput = ({
       {isAmount && (
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px]">
           /{" "}
-          {entitlements?.find((e) => e.id == config?.entitlement_id)
-            ?.allowance || "n"}{" "}
+          {entitlements?.find(
+            (e) => e.internal_feature_id == config?.internal_feature_id
+          )?.allowance || "n"}{" "}
           units
         </span>
       )}

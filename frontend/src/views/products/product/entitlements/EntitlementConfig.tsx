@@ -8,7 +8,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { Entitlement, Feature, FeatureType } from "@autumn/shared";
+import {
+  CreateEntitlementSchema,
+  Entitlement,
+  Feature,
+  FeatureType,
+} from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +24,7 @@ import {
   EntInterval,
   EntitlementWithFeature,
 } from "@autumn/shared";
+import { getFeature } from "@/utils/product/entitlementUtils";
 
 export const EntitlementConfig = ({
   isUpdate = false,
@@ -31,11 +37,12 @@ export const EntitlementConfig = ({
 }) => {
   const { features, product } = useProductContext();
 
+  const [originalEntitlement, _] = useState<Entitlement | null>(
+    entitlement || null
+  );
+
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(
-    features?.find(
-      (feature: Feature) =>
-        feature.internal_id === entitlement?.internal_feature_id
-    ) || null
+    getFeature(entitlement?.internal_feature_id, features) || null
   );
 
   const [fields, setFields] = useState({
@@ -46,42 +53,30 @@ export const EntitlementConfig = ({
 
   useEffect(() => {
     if (selectedFeature) {
-      const boolFeature = selectedFeature.type === FeatureType.Boolean;
-      const newEnt = {
-        // For frontend
-        feature: selectedFeature,
-
-        // For backend
-        id: entitlement?.id,
+      const newEnt = CreateEntitlementSchema.parse({
         internal_feature_id: selectedFeature.internal_id,
         feature_id: selectedFeature.id,
-
         ...fields,
+      });
 
-        allowance_type: boolFeature ? undefined : fields.allowance_type,
-        allowance: boolFeature ? undefined : fields.allowance,
-        interval: boolFeature ? undefined : fields.interval,
-      };
-
-      setEntitlement(newEnt);
+      const originalEnt = originalEntitlement ? originalEntitlement : null;
+      setEntitlement({
+        ...originalEnt,
+        ...newEnt,
+        feature: selectedFeature,
+      });
     } else {
       setEntitlement(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFeature, fields]);
+  }, [selectedFeature, fields, originalEntitlement, setEntitlement]);
 
   return (
     <div>
       <FieldLabel>Entitlement </FieldLabel>
       <Select
         value={selectedFeature?.internal_id}
-        defaultValue={entitlement?.internal_feature_id}
         onValueChange={(value) =>
-          setSelectedFeature(
-            features?.find(
-              (feature: Feature) => feature.internal_id === value
-            ) || null
-          )
+          setSelectedFeature(getFeature(value, features))
         }
         disabled={isUpdate}
       >
@@ -89,14 +84,28 @@ export const EntitlementConfig = ({
           <SelectValue placeholder="Select a feature" />
         </SelectTrigger>
         <SelectContent>
-          {features.map((feature: Feature) => (
-            <SelectItem key={feature.internal_id} value={feature.internal_id!}>
-              <div className="flex gap-2 items-center">
-                {feature.name}
-                <FeatureTypeBadge type={feature.type} />
-              </div>
-            </SelectItem>
-          ))}
+          {features
+            .filter((feature: Feature) => {
+              if (selectedFeature?.internal_id == feature.internal_id) {
+                return true;
+              }
+              const existingEnt = product.entitlements.find(
+                (ent: Entitlement) =>
+                  ent.internal_feature_id === feature.internal_id
+              );
+              return !existingEnt;
+            })
+            .map((feature: Feature) => (
+              <SelectItem
+                key={feature.internal_id}
+                value={feature.internal_id!}
+              >
+                <div className="flex gap-2 items-center">
+                  {feature.name}
+                  <FeatureTypeBadge type={feature.type} />
+                </div>
+              </SelectItem>
+            ))}
         </SelectContent>
       </Select>
 
@@ -159,12 +168,5 @@ export const EntitlementConfig = ({
         </div>
       )}
     </div>
-    //     <DialogFooter>
-    //       <Button onClick={handleCreateEntitlement} isLoading={loading}>
-    //         Create
-    //       </Button>
-    //     </DialogFooter>
-    //   </DialogContent>
-    // </Dialog>
   );
 };

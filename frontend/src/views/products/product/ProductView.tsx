@@ -117,8 +117,8 @@ function ProductView({
         env,
         product,
         setProduct,
-        prices: product.prices,
-        entitlements: product.entitlements,
+        // prices: product.prices,
+        // entitlements: product.entitlements,
         org,
       }}
     >

@@ -137,15 +137,23 @@ export class ProductService {
           *,
           feature:features (id, name, type)
         ),
-        prices(*)
+        prices(*),
+        free_trial:free_trials(*)
       `
       )
       .eq("org_id", orgId)
       .eq("env", env)
-      .eq("prices.is_custom", false);
+      .eq("prices.is_custom", false)
+      .eq("entitlements.is_custom", false)
+      .eq("free_trial.is_custom", false);
 
     if (error) {
       throw error;
+    }
+
+    for (const product of data) {
+      product.free_trial =
+        product.free_trial.length > 0 ? product.free_trial[0] : null;
     }
 
     return data;
@@ -231,12 +239,15 @@ export class ProductService {
       .eq("org_id", orgId)
       .eq("env", env)
       .eq("prices.is_custom", false)
+      .eq("entitlements.is_custom", false)
+      .eq("free_trial.is_custom", false)
       .single();
 
     if (error) {
       throw error;
     }
 
+    data.free_trial = data.free_trial.length > 0 ? data.free_trial[0] : null;
     return data;
   }
 

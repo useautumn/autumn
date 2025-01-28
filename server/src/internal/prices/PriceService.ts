@@ -68,6 +68,19 @@ export class PriceService {
     }
   }
 
+  static async deleteByIds({
+    sb,
+    priceIds,
+  }: {
+    sb: SupabaseClient;
+    priceIds: string[];
+  }) {
+    const { error } = await sb.from("prices").delete().in("id", priceIds);
+    if (error) {
+      throw error;
+    }
+  }
+
   static async getPricesFromIds({
     sb,
     priceIds,

@@ -20,7 +20,10 @@ export const UsageTier = z.object({
 export const UsagePriceConfigSchema = z.object({
   type: z.string(),
   bill_when: z.nativeEnum(BillWhen),
-  entitlement_id: z.string(),
+  // entitlement_id: z.string().nullish(),
+  internal_feature_id: z.string(),
+  feature_id: z.string(),
+
   usage_tiers: z.array(UsageTier),
   interval: z.nativeEnum(BillingInterval).optional(),
 });

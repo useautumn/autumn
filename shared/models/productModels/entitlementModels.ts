@@ -13,31 +13,24 @@ export const EntitlementSchema = z.object({
   id: z.string().optional(),
   org_id: z.string().optional(),
   created_at: z.number().optional(),
-
-  internal_feature_id: z.string().optional(),
-  feature_id: z.string().optional(),
+  is_custom: z.boolean().default(false).optional(),
   internal_product_id: z.string().optional(),
 
+  // Part of create entitlement
+  internal_feature_id: z.string().optional(),
+  feature_id: z.string().optional(),
   allowance_type: z.nativeEnum(AllowanceType).optional().nullable(),
   allowance: z.number().optional().nullable(),
   interval: z.nativeEnum(EntInterval).optional().nullable(),
-
-  is_custom: z.boolean().default(false).optional(),
 });
 
-export const CreateEntitlementSchema = EntitlementSchema.omit({
-  id: true,
-  org_id: true,
-  created_at: true,
-  internal_product_id: true,
-  is_custom: true,
+export const CreateEntitlementSchema = z.object({
+  internal_feature_id: z.string(),
+  feature_id: z.string(),
 
-  // Need
-  // internal_feature_id
-  // feature_id
-  // allowance_type
-  // allowance
-  // interval
+  allowance_type: z.nativeEnum(AllowanceType).nullish(),
+  allowance: z.number().nullish(),
+  interval: z.nativeEnum(EntInterval).nullish(),
 });
 
 export type CreateEntitlement = z.infer<typeof CreateEntitlementSchema>;

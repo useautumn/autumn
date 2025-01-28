@@ -5,6 +5,15 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 
 export class FeatureService {
+  static async getFromReq(req: any) {
+    const features = await FeatureService.getFeatures({
+      sb: req.sb,
+      orgId: req.orgId,
+      env: req.env,
+    });
+    return features;
+  }
+
   static async getFeatures({
     sb,
     orgId,
