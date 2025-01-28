@@ -7,11 +7,12 @@ export const CustomerSchema = z.object({
   created_at: z.number(),
   env: z.nativeEnum(AppEnv),
   processor: z.any(),
-  fingerprint: z.string().nullish(),
 
   id: z.string(), // given by user
-  name: z.string(),
-  email: z.string().optional(),
+
+  name: z.string().nullish(),
+  email: z.string().nullish(),
+  fingerprint: z.string().nullish(),
 });
 
 export const CreateCustomerSchema = CustomerSchema.omit({
@@ -23,4 +24,11 @@ export const CreateCustomerSchema = CustomerSchema.omit({
   fingerprint: true,
 });
 
+export const CustomerDataSchema = z.object({
+  name: z.string().nullish(),
+  email: z.string().nullish(),
+  fingerprint: z.string().nullish(),
+});
+
 export type Customer = z.infer<typeof CustomerSchema>;
+export type CustomerData = z.infer<typeof CustomerDataSchema>;
