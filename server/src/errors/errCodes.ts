@@ -64,4 +64,5 @@ export const ErrCode = {
 
   // Invoice
   CreateInvoiceFailed: "create_invoice_failed",
+  PayInvoiceFailed: "pay_invoice_failed",
 };

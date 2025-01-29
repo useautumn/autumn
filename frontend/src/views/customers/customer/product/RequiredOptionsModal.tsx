@@ -1,6 +1,12 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { useEffect, useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 
 interface Option {
   feature_id: string;
@@ -17,30 +23,39 @@ interface OptionValue {
 export default function RequiredOptionsModal({
   requiredOptions,
   createProduct,
-  setRequiredOptions
+  setRequiredOptions,
 }: {
   requiredOptions: Option[];
   createProduct: () => Promise<void>;
   setRequiredOptions: (options: Option[]) => void;
 }) {
-  const [requiredOptionsDialogOpen, setRequiredOptionsDialogOpen] = useState(false);
+  const [requiredOptionsDialogOpen, setRequiredOptionsDialogOpen] =
+    useState(false);
+
+  const [loading, setLoading] = useState(false);
 
   const handleOptionChange = (featureId: string, value: string) => {
     const numValue = parseInt(value, 10);
     const newOptionValues = [...requiredOptions];
-    const existingIndex = newOptionValues.findIndex(o => o.feature_id === featureId);
+    const existingIndex = newOptionValues.findIndex(
+      (o) => o.feature_id === featureId
+    );
     const existingOption = newOptionValues[existingIndex];
-    
-    newOptionValues[existingIndex] = { 
+
+    newOptionValues[existingIndex] = {
       ...existingOption,
-      ...(existingOption.threshold !== undefined ? { threshold: numValue } : { quantity: numValue })
+      ...(existingOption.threshold !== undefined
+        ? { threshold: numValue }
+        : { quantity: numValue }),
     };
-    
+
     setRequiredOptions(newOptionValues);
   };
 
   const handleContinue = async () => {
+    setLoading(true);
     await createProduct();
+    setLoading(false);
     setRequiredOptionsDialogOpen(false);
   };
 
@@ -71,13 +86,21 @@ export default function RequiredOptionsModal({
               <h3 className="font-medium">{option.feature_id}</h3>
               <div className="flex items-center gap-2">
                 <label className="text-sm text-gray-500">
-                  {option.threshold !== undefined ? 'Threshold' : 'Quantity'}:
+                  {option.threshold !== undefined ? "Threshold" : "Quantity"}:
                 </label>
                 <input
                   type="number"
                   min="0"
-                  value={requiredOptions.find(o => o.feature_id === option.feature_id)?.[option.threshold !== undefined ? 'threshold' : 'quantity'] || 0}
-                  onChange={(e) => handleOptionChange(option.feature_id, e.target.value)}
+                  value={
+                    requiredOptions.find(
+                      (o) => o.feature_id === option.feature_id
+                    )?.[
+                      option.threshold !== undefined ? "threshold" : "quantity"
+                    ] || 0
+                  }
+                  onChange={(e) =>
+                    handleOptionChange(option.feature_id, e.target.value)
+                  }
                   className="border rounded px-2 py-1 w-24"
                 />
               </div>
@@ -91,7 +114,7 @@ export default function RequiredOptionsModal({
           >
             Cancel
           </Button>
-          <Button onClick={handleContinue}>
+          <Button onClick={handleContinue} isLoading={loading}>
             Continue
           </Button>
         </div>

@@ -21,6 +21,7 @@ import { faXmark } from "@fortawesome/pro-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductContext } from "../ProductContext";
+import { getFeature } from "@/utils/product/entitlementUtils";
 
 function CreateUsagePrice({
   config,
@@ -33,7 +34,7 @@ function CreateUsagePrice({
   usageTiers: any[];
   setUsageTiers: (usageTiers: any[]) => void;
 }) {
-  const { entitlements, features } = useProductContext();
+  const { features, product } = useProductContext();
 
   const setUsageTier = (index: number, key: string, value: string) => {
     const newUsageTiers = [...config.usage_tiers];
@@ -80,15 +81,21 @@ function CreateUsagePrice({
               <SelectValue placeholder="Select entitlement" />
             </SelectTrigger>
             <SelectContent>
-              {entitlements.map((entitlement: EntitlementWithFeature) => (
-                <SelectItem
-                  key={entitlement.feature?.id}
-                  value={entitlement.feature?.id}
-                >
-                  {entitlement.feature?.name}{" "}
-                  <span className="text-t3">({entitlement.feature?.id})</span>
-                </SelectItem>
-              ))}
+              {product.entitlements.map(
+                (entitlement: EntitlementWithFeature, index: number) => {
+                  const feature = getFeature(
+                    entitlement.internal_feature_id,
+                    features
+                  );
+                  if (!feature) return null;
+                  return (
+                    <SelectItem key={index} value={feature.id!}>
+                      {feature?.name}{" "}
+                      <span className="text-t3">{feature?.id}</span>
+                    </SelectItem>
+                  );
+                }
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -157,7 +164,7 @@ function CreateUsagePrice({
                   onChange={(e) => setUsageTier(index, "from", e.target.value)}
                   isAmount={false}
                   config={config}
-                  entitlements={entitlements}
+                  entitlements={product.entitlements}
                 />
               </div>
               <div
@@ -171,7 +178,7 @@ function CreateUsagePrice({
                   onChange={(e) => setUsageTier(index, "to", e.target.value)}
                   isAmount={false}
                   config={config}
-                  entitlements={entitlements}
+                  entitlements={product.entitlements}
                 />
               </div>
               <div className="flex w-4/12 text-sm items-center">
@@ -182,7 +189,7 @@ function CreateUsagePrice({
                   }
                   isAmount={true}
                   config={config}
-                  entitlements={entitlements}
+                  entitlements={product.entitlements}
                 />
               </div>
             </div>
