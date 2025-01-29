@@ -55,7 +55,10 @@ featureApiRouter.post("", async (req: any, res) => {
       ...data,
     };
 
-    await FeatureService.insert(req.sb, feature);
+    await FeatureService.insert({
+      sb: req.sb,
+      data: feature,
+    });
 
     res.status(200).json({ message: "Feature created" });
   } catch (error) {
