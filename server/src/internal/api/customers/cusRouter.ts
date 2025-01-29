@@ -221,51 +221,59 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
 });
 
 cusRouter.put("", async (req: any, res: any) => {
-  const { id, name, email, fingerprint, next_reset_at } = req.body;
+  try {
+    const { id, name, email, fingerprint, next_reset_at } = req.body;
 
-  if (!id && !email) {
-    throw new RecaseError({
-      message: "Customer ID or email is required",
-      code: ErrCode.InvalidCustomer,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-  }
+    if (!id && !email) {
+      throw new RecaseError({
+        message: "Customer ID or email is required",
+        code: ErrCode.InvalidCustomer,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
 
-  let existing = await CusService.getByIdOrEmail({
-    sb: req.sb,
-    id,
-    email,
-    orgId: req.orgId,
-    env: req.env,
-  });
-
-  let newCustomer: Customer;
-  if (existing) {
-    newCustomer = await CusService.update({
+    let existing = await CusService.getByIdOrEmail({
       sb: req.sb,
-      internalCusId: existing.internal_id,
-      update: { id, name, email, fingerprint },
-    });
-  } else {
-    newCustomer = await createNewCustomer({
-      sb: req.sb,
+      id,
+      email,
       orgId: req.orgId,
       env: req.env,
-      customer: {
-        id,
-        name,
-        email,
-        fingerprint,
-      },
-      nextResetAt: next_reset_at,
     });
-  }
 
-  res.status(200).json({
-    customer: CustomerResponseSchema.parse(newCustomer),
-    success: true,
-    action: existing ? "update" : "create",
-  });
+    console.log("existing", existing);
+    console.log("Request header:", req.headers.authorization);
+    console.log("Org ID:", req.orgId);
+
+    let newCustomer: Customer;
+    if (existing) {
+      newCustomer = await CusService.update({
+        sb: req.sb,
+        internalCusId: existing.internal_id,
+        update: { id, name, email, fingerprint },
+      });
+    } else {
+      newCustomer = await createNewCustomer({
+        sb: req.sb,
+        orgId: req.orgId,
+        env: req.env,
+        customer: {
+          id,
+          name,
+          email,
+          fingerprint,
+        },
+        nextResetAt: next_reset_at,
+      });
+    }
+
+    res.status(200).json({
+      customer: CustomerResponseSchema.parse(newCustomer),
+      success: true,
+      action: existing ? "update" : "create",
+    });
+  } catch (error) {
+    handleRequestError({ error, res, action: "update customer" });
+  }
 });
 
 cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
