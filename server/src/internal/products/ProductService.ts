@@ -277,8 +277,24 @@ export class ProductService {
   }
 
   // Delete product
-  static async deleteProduct(sb: SupabaseClient, productId: string) {
-    const { error } = await sb.from("products").delete().eq("id", productId);
+  static async deleteProduct({
+    sb,
+    productId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    productId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { error } = await sb
+      .from("products")
+      .delete()
+      .eq("id", productId)
+      .eq("org_id", orgId)
+      .eq("env", env);
+
     if (error) {
       throw error;
     }

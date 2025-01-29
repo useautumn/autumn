@@ -123,6 +123,14 @@ productApiRouter.delete("/:productId", async (req: any, res) => {
       env,
     });
 
+    if (!product) {
+      throw new RecaseError({
+        message: `Product ${productId} not found`,
+        code: ErrCode.ProductNotFound,
+        statusCode: 404,
+      });
+    }
+
     // Delete stripe product
     try {
       await deleteStripeProduct(org, env, product);
@@ -144,7 +152,12 @@ productApiRouter.delete("/:productId", async (req: any, res) => {
     }
 
     // 2. Delete prices, entitlements, and product
-    await ProductService.deleteProduct(sb, productId);
+    await ProductService.deleteProduct({
+      sb,
+      productId,
+      orgId,
+      env,
+    });
 
     res.status(200).send({ message: "Product deleted" });
   } catch (error) {
