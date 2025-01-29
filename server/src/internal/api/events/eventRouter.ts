@@ -19,6 +19,7 @@ import { StatusCodes } from "http-status-codes";
 import { CusService } from "@/internal/customers/CusService.js";
 import { Client } from "pg";
 import { Queue } from "bullmq";
+import { createNewCustomer } from "../customers/cusUtils.js";
 
 export const eventsRouter = Router();
 
@@ -54,6 +55,7 @@ const getEventAndCustomer = async (req: any) => {
       statusCode: StatusCodes.BAD_REQUEST,
     });
   }
+
   // 2. Check if customer ID is valid
   customer = await CusService.getCustomer({
     sb: req.sb,
@@ -63,20 +65,17 @@ const getEventAndCustomer = async (req: any) => {
   });
 
   if (!customer) {
-    const newCustomer: Customer = {
-      id: body.customer_id,
-      name: body.customer_data?.name,
-      email: body.customer_data?.email,
-      fingerprint: body.customer_data?.fingerprint,
-
+    customer = await createNewCustomer({
+      sb: req.sb,
+      orgId: req.orgId,
       env: req.env,
-      org_id: req.orgId,
-      internal_id: generateId("cus"),
-      created_at: Date.now(),
-      processor: null,
-    };
-    await CusService.createCustomer({ sb: req.sb, customer: newCustomer });
-    customer = newCustomer;
+      customer: {
+        id: body.customer_id,
+        name: body.customer_data?.name,
+        email: body.customer_data?.email,
+        fingerprint: body.customer_data?.fingerprint,
+      },
+    });
   }
 
   // 3. Insert event
