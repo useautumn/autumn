@@ -1,18 +1,18 @@
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { FreeTrialDuration, FrontendFreeTrial } from "@autumn/shared";
 import { useEffect } from "react";
 import { useState } from "react";
+import { CreateFreeTrial } from "@autumn/shared";
 
 export const FreeTrialConfig = ({
   freeTrial,
   setFreeTrial,
 }: {
-  freeTrial: FrontendFreeTrial;
-  setFreeTrial: (freeTrial: FrontendFreeTrial) => void;
+  freeTrial: CreateFreeTrial;
+  setFreeTrial: (freeTrial: CreateFreeTrial) => void;
 }) => {
-  const [fields, setFields] = useState<FrontendFreeTrial>({
+  const [fields, setFields] = useState<CreateFreeTrial>({
     length: freeTrial?.length || 7,
     unique_fingerprint: freeTrial?.unique_fingerprint || false,
   });
@@ -27,7 +27,9 @@ export const FreeTrialConfig = ({
         <FieldLabel>Length</FieldLabel>
         <Input
           value={fields.length}
-          onChange={(e) => setFields({ ...fields, length: e.target.value })}
+          onChange={(e) =>
+            setFields({ ...fields, length: e.target.value as any })
+          }
           type="number"
           endContent={<p className="text-t3">Days</p>}
         />

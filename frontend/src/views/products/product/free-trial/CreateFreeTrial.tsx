@@ -11,7 +11,7 @@ import { useState } from "react";
 
 import { useProductContext } from "../ProductContext";
 
-import { FreeTrialDuration, FrontendFreeTrial } from "@autumn/shared";
+// import { FrontendFreeTrial } from "@autumn/shared";
 import { FreeTrialConfig } from "./FreeTrialConfig";
 import { toast } from "react-hot-toast";
 
@@ -21,13 +21,13 @@ export const CreateFreeTrial = () => {
   const [price, setPrice] = useState<any>(null);
   const { env, product, setProduct, prices } = useProductContext();
 
-  const [freeTrial, setFreeTrial] = useState<FrontendFreeTrial>({
+  const [freeTrial, setFreeTrial] = useState({
     length: 7,
     unique_fingerprint: false,
   });
 
   const handleCreateFreeTrial = async () => {
-    const lengthInt = parseInt(freeTrial.length as string);
+    const lengthInt = parseInt(freeTrial.length as any);
     if (isNaN(lengthInt)) {
       toast.error("Invalid length");
       return;
