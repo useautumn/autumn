@@ -19,7 +19,6 @@ export const FreeTrialSchema = z.object({
 });
 
 export const CreateFreeTrialSchema = z.object({
-  id: z.string(),
   length: z
     .string()
     .or(z.number())
