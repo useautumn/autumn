@@ -48,7 +48,7 @@ export const EntitlementConfig = ({
   const [fields, setFields] = useState({
     allowance_type: entitlement?.allowance_type || AllowanceType.Fixed,
     allowance: entitlement?.allowance || 0,
-    interval: entitlement?.interval || EntInterval.Minute,
+    interval: entitlement?.interval || EntInterval.Month,
   });
 
   useEffect(() => {

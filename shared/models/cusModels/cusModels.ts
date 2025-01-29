@@ -2,26 +2,24 @@ import { z } from "zod";
 import { AppEnv } from "../genModels.js";
 
 export const CustomerSchema = z.object({
+  id: z.string(), // given by user
+  name: z.string().nullish(),
+  email: z.string().nullish(),
+  fingerprint: z.string().nullish(),
+
+  // Internal
   internal_id: z.string(),
   org_id: z.string(),
   created_at: z.number(),
   env: z.nativeEnum(AppEnv),
   processor: z.any(),
-
-  id: z.string(), // given by user
-
-  name: z.string().nullish(),
-  email: z.string().nullish(),
-  fingerprint: z.string().nullish(),
 });
 
-export const CreateCustomerSchema = CustomerSchema.omit({
-  internal_id: true,
-  org_id: true,
-  created_at: true,
-  env: true,
-  processor: true,
-  fingerprint: true,
+export const CreateCustomerSchema = z.object({
+  id: z.string(),
+  name: z.string().default(""),
+  email: z.string().default(""),
+  fingerprint: z.string().nullish(),
 });
 
 export const CustomerDataSchema = z.object({
@@ -30,5 +28,15 @@ export const CustomerDataSchema = z.object({
   fingerprint: z.string().nullish(),
 });
 
+export const CustomerResponseSchema = CustomerSchema.omit({
+  // created_at: true,
+  // env: true,
+  internal_id: true,
+  org_id: true,
+  processor: true,
+});
+
 export type Customer = z.infer<typeof CustomerSchema>;
 export type CustomerData = z.infer<typeof CustomerDataSchema>;
+export type CustomerResponse = z.infer<typeof CustomerResponseSchema>;
+export type CreateCustomer = z.infer<typeof CreateCustomerSchema>;

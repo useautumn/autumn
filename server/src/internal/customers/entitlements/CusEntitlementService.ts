@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, CustomerEntitlement, ErrCode } from "@autumn/shared";
+import { CustomerEntitlement, ErrCode } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
@@ -132,7 +132,8 @@ export class CustomerEntitlementService {
       )
       .eq("internal_customer_id", internalCustomerId)
       .in("internal_feature_id", internalFeatureIds)
-      .eq("customer_product.status", "active");
+      .eq("customer_product.status", "active")
+      .order("created_at", { ascending: true });
 
     if (error) {
       throw new RecaseError({

@@ -1,6 +1,11 @@
 import { AppEnv } from "@autumn/shared";
 import KSUID from "ksuid";
 
+export const compareStatus = (statusA: string, statusB: string) => {
+  const statusOrder = ["scheduled", "active", "past_due", "expired"];
+  return statusOrder.indexOf(statusA) - statusOrder.indexOf(statusB);
+};
+
 export const generateId = (prefix: string) => {
   if (!prefix) {
     return KSUID.randomSync().string;

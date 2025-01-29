@@ -7,10 +7,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
-import { navigateTo } from "@/utils/genUtils";
+import { compareStatus, navigateTo } from "@/utils/genUtils";
 import { CusProduct } from "@autumn/shared";
 import { useRouter } from "next/navigation";
 import { useCustomerContext } from "./CustomerContext";
+import { StatusBadge } from "../StatusBadge";
 
 export const CustomerProductList = ({
   customer,
@@ -20,7 +21,16 @@ export const CustomerProductList = ({
   products: any;
 }) => {
   const router = useRouter();
-  const {env} = useCustomerContext();
+  const { env } = useCustomerContext();
+
+  const sortedProducts = customer.products.sort((a: any, b: any) => {
+    if (a.status !== b.status) {
+      return compareStatus(a.status, b.status);
+    }
+
+    // return a.product.name.localeCompare(b.product.name);
+    return b.created_at - a.created_at;
+  });
 
   return (
     <div>
@@ -36,7 +46,7 @@ export const CustomerProductList = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {customer.products.map((cusProduct: CusProduct) => {
+          {sortedProducts.map((cusProduct: CusProduct) => {
             return (
               <TableRow
                 key={cusProduct.id}
@@ -55,7 +65,9 @@ export const CustomerProductList = ({
                 <TableCell className="max-w-[100px] overflow-hidden text-ellipsis">
                   {cusProduct.product_id}
                 </TableCell>
-                <TableCell>{cusProduct.status}</TableCell>
+                <TableCell>
+                  <StatusBadge status={cusProduct.status} />
+                </TableCell>
                 <TableCell>
                   {formatUnixToDateTimeString(cusProduct.created_at)}
                 </TableCell>

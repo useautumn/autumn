@@ -32,17 +32,20 @@ export class ProductService {
   }) {
     const { data, error } = await sb
       .from("products")
-      .select("*, prices(*), entitlements(*, feature:features(*))")
+      .select(
+        "*, prices(*), entitlements(*, feature:features(*)), free_trial:free_trials(*)"
+      )
       .eq("org_id", orgId)
       .eq("env", env)
-      .eq("is_default", true)
-      .single();
+      .eq("is_default", true);
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
       throw error;
+    }
+
+    for (const product of data) {
+      product.free_trial =
+        product.free_trial.length > 0 ? product.free_trial[0] : null;
     }
 
     return data;
