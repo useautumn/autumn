@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { AppEnv } from "@autumn/shared";
 import { useAxiosPostSWR, useAxiosSWR } from "@/services/useAxiosSwr";
 import { CustomersContext } from "./CustomersContext";
@@ -38,6 +38,13 @@ function CustomersView({ env }: { env: AppEnv }) {
     },
   });
 
+  useEffect(() => {
+    const fetchData = async () => {
+      await mutate();
+    };
+    fetchData();
+  }, [currentPage, mutate]);
+
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
   if (isLoading) {
@@ -57,6 +64,7 @@ function CustomersView({ env }: { env: AppEnv }) {
             <SearchBar
               query={searchQuery}
               setQuery={setSearchQuery}
+              setCurrentPage={setCurrentPage}
               mutate={mutate}
             />
           </div>

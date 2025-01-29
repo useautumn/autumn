@@ -82,4 +82,27 @@ export class FreeTrialService {
       throw error;
     }
   }
+
+  static async upsert({ sb, data }: { sb: SupabaseClient; data: FreeTrial }) {
+    const { error } = await sb.from("free_trials").upsert(data);
+    if (error) {
+      throw error;
+    }
+  }
+
+  static async delete({
+    sb,
+    freeTrialId,
+  }: {
+    sb: SupabaseClient;
+    freeTrialId: string;
+  }) {
+    const { error } = await sb
+      .from("free_trials")
+      .delete()
+      .eq("id", freeTrialId);
+    if (error) {
+      throw error;
+    }
+  }
 }

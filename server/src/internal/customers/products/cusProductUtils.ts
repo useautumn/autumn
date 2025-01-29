@@ -36,6 +36,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
+import { createNewCustomer } from "@/internal/api/customers/cusUtils.js";
 
 export const getProductAndOrg = async ({
   sb,
@@ -381,56 +382,16 @@ export const processEntsInput = async ({
   }
 };
 
-// export const processFreeTrialInput = async ({
-//   sb,
-//   product,
-//   freeTrialInput,
-//   customer,
-// }: {
-//   sb: SupabaseClient;
-//   product: FullProduct;
-//   freeTrialInput?: FreeTrial;
-
-//   customer: Customer;
-// }) => {
-//   // 1. Validate free trial input
-
-//   let freeTrial;
-//   if (!freeTrialInput) {
-//     return null;
-//   } else if (product.free_trial?.id === freeTrialInput.id) {
-//     freeTrial = product.free_trial;
-//   } else {
-//     freeTrial = validateFreeTrial({
-//       freeTrial: freeTrialInput,
-//       internalProductId: product.internal_id,
-//       isCustom: true,
-//     });
-
-//     await FreeTrialService.insert({ sb, data: freeTrial });
-//   }
-
-//   freeTrial = await getFreeTrialAfterFingerprint({
-//     sb,
-//     freeTrial,
-//     fingerprint: customer.fingerprint,
-//   });
-
-//   return freeTrial;
-// };
-
-const getAndCreateCustomerProduct = async ({
+const getOrCreateCustomer = async ({
   sb,
   customerId,
   customerData,
-  productId,
   orgId,
   env,
 }: {
   sb: SupabaseClient;
   customerId: string;
   customerData: CustomerData;
-  productId: string;
   orgId: string;
   env: AppEnv;
 }) => {
@@ -442,23 +403,17 @@ const getAndCreateCustomerProduct = async ({
   });
 
   if (!customer) {
-    const newCustomer: Customer = {
-      internal_id: generateId("cus"),
-      org_id: orgId,
-      created_at: Date.now(),
+    customer = await createNewCustomer({
+      sb,
+      orgId,
       env,
-      processor: null,
-      id: customerId,
-
-      // customer data fields
-      name: customerData?.name || null,
-      email: customerData?.email || null,
-      fingerprint: customerData?.fingerprint || null,
-    };
-
-    await CusService.createCustomer({ sb, customer: newCustomer });
-
-    customer = newCustomer;
+      customer: {
+        id: customerId,
+        name: customerData.name || "",
+        email: customerData.email || "",
+        fingerprint: customerData.fingerprint,
+      },
+    });
   }
 
   return customer;
@@ -490,11 +445,10 @@ export const getFullCusProductData = async ({
   freeTrialInput: FreeTrial | null;
   isCustom?: boolean;
 }) => {
-  const customer = await getAndCreateCustomerProduct({
+  const customer = await getOrCreateCustomer({
     sb,
     customerId,
     customerData,
-    productId,
     orgId,
     env,
   });

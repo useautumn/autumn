@@ -7,10 +7,12 @@ import { useMemo, useRef, useState } from "react";
 export function SearchBar({
   query,
   setQuery,
+  setCurrentPage,
   mutate,
 }: {
   query: string;
   setQuery: (query: string) => void;
+  setCurrentPage: (page: number) => void;
   mutate: () => Promise<void>;
 }) {
   const [loading, setLoading] = useState(false);
@@ -20,11 +22,12 @@ export function SearchBar({
     () =>
       debounce(async (query: string) => {
         setLoading(true);
+        setCurrentPage(1);
         await mutate();
         inputRef.current?.focus();
         setLoading(false);
       }, 350),
-    [mutate]
+    [mutate, setCurrentPage]
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
