@@ -5,6 +5,109 @@ import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 
 export class CusService {
+  static async getById({
+    sb,
+    id,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    id: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("customers")
+      .select()
+      .eq("id", id)
+      .eq("org_id", orgId)
+      .eq("env", env);
+
+    if (error) {
+      throw new RecaseError({
+        code: ErrCode.InternalError,
+        message: "Failed to get customer by ID",
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+        data: error,
+      });
+    }
+
+    if (data.length === 0) {
+      return null;
+    }
+
+    return data[0];
+  }
+
+  static async getByEmail({
+    sb,
+    email,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    email: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("customers")
+      .select()
+      .eq("email", email);
+
+    if (error) {
+      throw new RecaseError({
+        code: ErrCode.InternalError,
+        message: "Failed to get customer by email",
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+        data: error,
+      });
+    }
+
+    if (data.length === 0) {
+      return null;
+    } else if (data.length > 2) {
+      throw new RecaseError({
+        code: ErrCode.InternalError,
+        message: "Multiple customers found with the same email",
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    return data[0];
+  }
+
+  static async getByIdOrEmail({
+    sb,
+    id,
+    email,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    id: string;
+    email: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("customers")
+      .select()
+      .or(`id.eq.${id},email.eq.${email}`)
+      .eq("org_id", orgId)
+      .eq("env", env)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  }
+
   static async getByInternalId({
     sb,
     internalId,
@@ -199,9 +302,18 @@ export class CusService {
     const { data, error } = await sb
       .from("customers")
       .update(update)
-      .eq("internal_id", internalCusId);
+      .eq("internal_id", internalCusId)
+      .select()
+      .single();
 
     if (error) {
+      if (error.code == "2305") {
+        throw new RecaseError({
+          message: `Customer ${internalCusId} already exists`,
+          code: ErrCode.DuplicateCustomerId,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
       throw new RecaseError({
         message: `Error updating customer...please try again later.`,
         code: ErrCode.InternalError,

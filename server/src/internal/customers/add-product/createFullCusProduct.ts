@@ -72,6 +72,10 @@ export const initCusEntitlement = ({
 
   // 3. Define expires at (TODO next time...)
   let isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
+  let nextResetNull =
+    isBooleanFeature ||
+    entitlement.allowance_type === AllowanceType.Unlimited ||
+    entitlement.interval == EntInterval.Lifetime;
 
   return {
     id: generateId("cus_ent"),
@@ -91,9 +95,7 @@ export const initCusEntitlement = ({
       : entitlement.allowance_type === AllowanceType.Unlimited,
     balance: isBooleanFeature ? null : balance,
     usage_allowed: isBooleanFeature ? null : false,
-    next_reset_at: isBooleanFeature
-      ? null
-      : nextResetAt || nextResetAtCalculated,
+    next_reset_at: nextResetNull ? null : nextResetAt || nextResetAtCalculated,
   };
 };
 

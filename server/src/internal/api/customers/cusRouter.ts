@@ -6,7 +6,14 @@ import RecaseError, {
   handleRequestError,
 } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
-import { CreateCustomerSchema, Customer, ProcessorType } from "@autumn/shared";
+import {
+  AppEnv,
+  CreateCustomer,
+  CreateCustomerSchema,
+  Customer,
+  CustomerResponseSchema,
+  ProcessorType,
+} from "@autumn/shared";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../../customers/CusService.js";
@@ -19,25 +26,88 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { EventService } from "../events/EventService.js";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const cusRouter = Router();
+
+const createNewCustomer = async ({
+  sb,
+  orgId,
+  env,
+  customer,
+  nextResetAt,
+}: {
+  sb: SupabaseClient;
+  orgId: string;
+  env: AppEnv;
+  customer: CreateCustomer;
+  nextResetAt?: number;
+}) => {
+  const org = await OrgService.getFullOrg({
+    sb,
+    orgId,
+  });
+
+  const customerData: Customer = {
+    ...customer,
+    internal_id: generateId("cus"),
+    org_id: orgId,
+    created_at: Date.now(),
+    env,
+  };
+
+  let stripeCustomer: Stripe.Customer | undefined;
+  if (org.stripe_connected) {
+    stripeCustomer = await createStripeCustomer({
+      org,
+      env,
+      customer: customerData,
+    });
+    customerData.processor = {
+      type: ProcessorType.Stripe,
+      id: stripeCustomer?.id,
+    };
+  }
+
+  const newCustomer = await CusService.createCustomer({
+    sb,
+    customer: customerData,
+  });
+
+  // Attach default product to customer
+  const defaultProds = await ProductService.getFullDefaultProduct({
+    sb,
+    orgId,
+    env,
+  });
+
+  for (const product of defaultProds) {
+    await createFullCusProduct({
+      sb,
+      attachParams: {
+        org,
+        customer: newCustomer,
+        product,
+        prices: product.prices,
+        entitlements: product.entitlements,
+        freeTrial: null, // TODO: Free trial not supported on default product yet
+        optionsList: [],
+      },
+      nextResetAt,
+    });
+  }
+
+  return newCustomer;
+};
 
 cusRouter.post("", async (req: any, res: any) => {
   try {
     const data = req.body;
-    const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
 
     // 1. Validate data
-    try {
-      CreateCustomerSchema.parse(data);
-    } catch (error: any) {
-      throw new RecaseError({
-        message: "Invalid customer data, error: " + formatZodError(error),
-        code: ErrCode.InvalidCustomer,
-        statusCode: StatusCodes.BAD_REQUEST,
-        data: error,
-      });
-    }
+    CreateCustomerSchema.parse(data);
 
     // 2. Check if customer ID already exists
     const existingCustomer = await CusService.getCustomer({
@@ -55,95 +125,19 @@ cusRouter.post("", async (req: any, res: any) => {
       });
     }
 
-    // 3. Create stripe customer
-    let stripeCustomer: Stripe.Customer | undefined;
-    if (org.stripe_connected) {
-      stripeCustomer = await createStripeCustomer({
-        org,
-        env: req.env,
-        customer: data,
-      });
-    }
-
-    // 4. Create customer in db
-    const newCustomer: Customer = {
-      ...data,
-      internal_id: generateId("cus"),
-      org_id: req.orgId,
-      created_at: Date.now(),
+    const createdCustomer = await createNewCustomer({
+      sb: req.sb,
+      orgId: req.orgId,
       env: req.env,
-
-      processor: stripeCustomer && {
-        type: ProcessorType.Stripe,
-        id: stripeCustomer.id,
-      },
-    };
-
-    let createdCustomer: Customer;
-    try {
-      createdCustomer = await CusService.createCustomer({
-        sb: req.sb,
-        customer: newCustomer,
-      });
-    } catch (error: any) {
-      throw new RecaseError({
-        message: "Error creating customer",
-        code: ErrCode.CreateCustomerFailed,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
-    }
-
-    // 5. Attach default product to customer
-    try {
-      const defaultProduct = await ProductService.getFullDefaultProduct({
-        sb: req.sb,
-        orgId: req.orgId,
-        env: req.env,
-      });
-
-      if (defaultProduct) {
-        const org = await OrgService.getFullOrg({
-          sb: req.sb,
-          orgId: req.orgId,
-        });
-        await createFullCusProduct({
-          sb: req.sb,
-          attachParams: {
-            org,
-            customer: createdCustomer,
-            product: defaultProduct,
-            prices: defaultProduct.prices,
-            entitlements: defaultProduct.entitlements,
-            freeTrial: null,
-            optionsList: [],
-          },
-        });
-      }
-    } catch (error) {
-      throw new RecaseError({
-        message: "Error attaching default product to customer",
-        code: ErrCode.AttachProductToCustomerFailed,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
-    }
-
-    res.status(200).json({ customer: createdCustomer, success: true });
-  } catch (error: any) {
-    if (error instanceof RecaseError) {
-      error.print();
-      res
-        .status(error.statusCode)
-        .json({ message: error.message, code: error.code });
-      return;
-    }
-
-    console.log("Unknown error creating customer", error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      error: ErrorMessages.InternalError,
-      code: ErrCode.InternalError,
+      customer: data,
     });
+
+    res.status(200).json({
+      customer: CustomerResponseSchema.parse(createdCustomer),
+      success: true,
+    });
+  } catch (error: any) {
+    handleRequestError({ error, res, action: "create customer" });
   }
 });
 
@@ -223,5 +217,144 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
     res.status(200).json({ events });
   } catch (error) {
     handleRequestError({ error, res, action: "get customer events" });
+  }
+});
+
+cusRouter.put("", async (req: any, res: any) => {
+  const { id, name, email, fingerprint, next_reset_at } = req.body;
+
+  if (!id && !email) {
+    throw new RecaseError({
+      message: "Customer ID or email is required",
+      code: ErrCode.InvalidCustomer,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
+  let existing = await CusService.getByIdOrEmail({
+    sb: req.sb,
+    id,
+    email,
+    orgId: req.orgId,
+    env: req.env,
+  });
+
+  let newCustomer: Customer;
+  if (existing) {
+    newCustomer = await CusService.update({
+      sb: req.sb,
+      internalCusId: existing.internal_id,
+      update: { id, name, email, fingerprint },
+    });
+  } else {
+    newCustomer = await createNewCustomer({
+      sb: req.sb,
+      orgId: req.orgId,
+      env: req.env,
+      customer: {
+        id,
+        name,
+        email,
+        fingerprint,
+      },
+      nextResetAt: next_reset_at,
+    });
+  }
+
+  res.status(200).json({
+    customer: CustomerResponseSchema.parse(newCustomer),
+    success: true,
+    action: existing ? "update" : "create",
+  });
+});
+
+cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
+  try {
+    const cusId = req.params.customer_id;
+    const { balances } = req.body;
+
+    const customer = await CusService.getById({
+      sb: req.sb,
+      id: cusId,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    if (!customer) {
+      throw new RecaseError({
+        message: `Customer ${cusId} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    const features = await FeatureService.getFromReq(req);
+    const featuresToUpdate = features.filter((f) =>
+      balances.map((b: any) => b.feature_id).includes(f.id)
+    );
+
+    const cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
+      sb: req.sb,
+      internalCustomerId: customer.internal_id,
+      internalFeatureIds: featuresToUpdate.map((f) => f.internal_id),
+    });
+
+    // console.log("cusEnts", cusEnts);
+    for (const balance of balances) {
+      if (!balance.feature_id) {
+        throw new RecaseError({
+          message: "Feature ID is required",
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+
+      if (typeof balance.balance !== "number") {
+        throw new RecaseError({
+          message: "Balance must be a number",
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+
+      const feature = featuresToUpdate.find((f) => f.id === balance.feature_id);
+      // const cusEntToUpdate = cusEnts.find((e) => e.feature_id === feature.id);
+
+      // How much to update
+      let curBalance = 0;
+      let newBalance = balance.balance;
+      for (const cusEnt of cusEnts) {
+        if (cusEnt.internal_feature_id === feature.internal_id) {
+          curBalance += cusEnt.balance;
+        }
+      }
+
+      let updateAmount = newBalance - curBalance;
+
+      for (const cusEnt of cusEnts) {
+        if (updateAmount == 0) break;
+        if (cusEnt.internal_feature_id === feature.internal_id) {
+          if (cusEnt.balance + updateAmount < 0) {
+            updateAmount += cusEnt.balance;
+            newBalance = 0;
+          } else {
+            newBalance = cusEnt.balance + updateAmount;
+            updateAmount = 0;
+          }
+
+          await CustomerEntitlementService.update({
+            sb: req.sb,
+            id: cusEnt.id,
+            updates: {
+              balance: newBalance,
+            },
+          });
+        }
+      }
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    handleRequestError({ error, res, action: "update customer balances" });
   }
 });
