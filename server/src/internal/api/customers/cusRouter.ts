@@ -222,7 +222,7 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
 
 cusRouter.put("", async (req: any, res: any) => {
   try {
-    const { id, name, email, fingerprint, next_reset_at } = req.body;
+    const { id, name, email, fingerprint, reset_at } = req.body;
 
     if (!id && !email) {
       throw new RecaseError({
@@ -239,10 +239,6 @@ cusRouter.put("", async (req: any, res: any) => {
       orgId: req.orgId,
       env: req.env,
     });
-
-    console.log("existing", existing);
-    console.log("Request header:", req.headers.authorization);
-    console.log("Org ID:", req.orgId);
 
     let newCustomer: Customer;
     if (existing) {
@@ -262,7 +258,7 @@ cusRouter.put("", async (req: any, res: any) => {
           email,
           fingerprint,
         },
-        nextResetAt: next_reset_at,
+        nextResetAt: reset_at,
       });
     }
 
