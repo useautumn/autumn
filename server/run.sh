@@ -1,3 +1,4 @@
 # Run current file
 # npx tsx scripts/alex.ts
-npx tsx scripts/alex_test.ts
+filename=$1
+npx tsx $filename
