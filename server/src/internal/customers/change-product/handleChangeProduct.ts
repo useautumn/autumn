@@ -221,7 +221,7 @@ const handleUpgrade = async ({
   }
 
   const disableFreeTrial =
-    curFullProduct.free_trial && org.config.free_trial_paid_to_paid;
+    curFullProduct.free_trial && org.config?.free_trial_paid_to_paid;
 
   // Maybe do it such that if cur cus product has no subscription ID, we just create a new one?
 
