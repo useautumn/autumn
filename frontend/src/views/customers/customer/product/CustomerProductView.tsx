@@ -153,6 +153,7 @@ export default function CustomerProductView({
         prices: initialProductRef.current.prices,
         entitlements: initialProductRef.current.entitlements,
       });
+
     setHasChanges(hasChanged);
   }, [product]);
 

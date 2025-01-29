@@ -11,8 +11,10 @@ import {
   Entitlement,
   EntitlementWithFeature,
   FeatureOptions,
+  ErrCode,
 } from "@autumn/shared";
 import { AttachParams } from "../customers/products/AttachParams.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
   if (
@@ -44,16 +46,27 @@ export const getBillingInterval = (prices: Price[]) => {
 };
 
 export const pricesOnlyOneOff = (prices: Price[]) => {
-  for (const price of prices) {
-    if (price.billing_type != BillingType.OneOff) {
+  return prices.every((price) => {
+    let interval = price.config?.interval;
+
+    if (!interval || interval != BillingInterval.OneOff) {
       return false;
     }
-  }
-  return true;
+    return true;
+  });
 };
 
 export const pricesContainRecurring = (prices: Price[]) => {
-  return prices.some((price) => price.billing_type != BillingType.OneOff);
+  // TODO: Look into this...
+  return prices.some((price) => {
+    const interval = price.config?.interval;
+
+    if (interval && interval != BillingInterval.OneOff) {
+      return true;
+    }
+
+    return false;
+  });
 };
 
 export const pricesOnlyRequireSetup = (prices: Price[]) => {
@@ -130,6 +143,19 @@ export const getPriceEntitlement = (
   return entitlement as EntitlementWithFeature;
 };
 
+export const getPriceOptions = (
+  price: Price,
+  optionsList: FeatureOptions[]
+) => {
+  let config = price.config as UsagePriceConfig;
+
+  const options = optionsList.find(
+    (options) => options.internal_feature_id === config.internal_feature_id
+  );
+
+  return options;
+};
+
 export const pricesAreSame = (price1: Price, price2: Price) => {
   for (const key in price1.config) {
     const originalValue = (price1.config as any)[key];
@@ -200,4 +226,42 @@ export const getStripeSubItems = ({
     );
   }
   return subItems;
+};
+
+export const getUsageTier = (price: Price, quantity: number) => {
+  let usageConfig = price.config as UsagePriceConfig;
+  for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
+    if (i == usageConfig.usage_tiers.length - 1) {
+      return usageConfig.usage_tiers[i];
+    }
+
+    let tier = usageConfig.usage_tiers[i];
+    if (tier.from <= quantity && tier.to >= quantity) {
+      return tier;
+    }
+  }
+  return usageConfig.usage_tiers[0];
+};
+
+export const getPriceAmount = (price: Price, options: FeatureOptions) => {
+  if (price.billing_type == BillingType.OneOff) {
+    let config = price.config as FixedPriceConfig;
+    return {
+      amountPerUnit: config.amount,
+      quantity: 1,
+    };
+  } else if (price.billing_type == BillingType.UsageInAdvance) {
+    let quantity = options.quantity!;
+    let usageTier = getUsageTier(price, quantity);
+
+    return {
+      amountPerUnit: usageTier.amount,
+      quantity: quantity,
+    };
+  }
+
+  return {
+    amountPerUnit: -1,
+    quantity: -1,
+  };
 };

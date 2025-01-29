@@ -50,9 +50,34 @@ const validatePrice = (price: Price) => {
 };
 
 const pricesAreSame = (price1: Price, price2: Price) => {
-  return (
-    price1.name === price2.name && compareObjects(price1.config, price2.config)
-  );
+  if (price1.name !== price2.name) return false;
+
+  const config1 = price1.config!;
+  const config2 = price2.config!;
+
+  if (config1.type !== config2.type) return false;
+
+  if (config1.type === PriceType.Fixed) {
+    const fixedConfig1 = FixedPriceConfigSchema.parse(config1);
+    const fixedConfig2 = FixedPriceConfigSchema.parse(config2);
+    return (
+      fixedConfig1.amount === fixedConfig2.amount &&
+      fixedConfig1.interval === fixedConfig2.interval
+    );
+  } else {
+    const usageConfig1 = UsagePriceConfigSchema.parse(config1);
+    const usageConfig2 = UsagePriceConfigSchema.parse(config2);
+    return (
+      usageConfig1.bill_when === usageConfig2.bill_when &&
+      usageConfig1.interval === usageConfig2.interval &&
+      usageConfig1.internal_feature_id === usageConfig2.internal_feature_id &&
+      usageConfig1.feature_id === usageConfig2.feature_id &&
+      usageConfig1.usage_tiers.length === usageConfig2.usage_tiers.length &&
+      usageConfig1.usage_tiers.every((tier, index) =>
+        compareObjects(tier, usageConfig2.usage_tiers[index])
+      )
+    );
+  }
 };
 
 const initPrice = ({

@@ -1,32 +1,27 @@
 import {
   getBillLaterPrices,
   getBillNowPrices,
-  getEntOptions,
   getPriceEntitlement,
+  getPriceOptions,
   getStripeSubItems,
   pricesOnlyOneOff,
 } from "@/internal/prices/priceUtils.js";
 
-import {
-  AppEnv,
-  Customer,
-  EntitlementWithFeature,
-  FeatureOptions,
-  FullProduct,
-  Organization,
-  Price,
-} from "@autumn/shared";
+import RecaseError from "@/utils/errorUtils.js";
+import chalk from "chalk";
+
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import { ErrCode } from "@/errors/errCodes.js";
-import { InvoiceService } from "../invoices/InvoiceService.js";
-import chalk from "chalk";
-import { priceToStripeItem } from "@/external/stripe/stripePriceUtils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { getPriceAmount } from "../../prices/priceUtils.js";
+import { AllowanceType, InvoiceStatus } from "@autumn/shared";
+import { InvoiceService } from "../invoices/InvoiceService.js";
+import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 
 const handleBillNowPrices = async ({
   sb,
@@ -92,6 +87,88 @@ const handleBillNowPrices = async ({
   return cusProd;
 };
 
+const handleOneOffPrices = async ({
+  sb,
+  attachParams,
+}: {
+  sb: SupabaseClient;
+  attachParams: AttachParams;
+}) => {
+  const { org, customer, product, prices, optionsList, entitlements } =
+    attachParams;
+
+  // 1. Create invoice
+  const stripeCli = createStripeCli({ org, env: customer.env });
+
+  console.log("   1. Creating invoice");
+  const stripeInvoice = await stripeCli.invoices.create({
+    customer: customer.processor.id,
+    auto_advance: true,
+  });
+
+  // 2. Create invoice items
+  for (const price of prices) {
+    // Calculate amount
+    const options = getPriceOptions(price, optionsList);
+    const entitlement = getPriceEntitlement(price, entitlements);
+    const { amountPerUnit, quantity } = getPriceAmount(price, options!);
+
+    const allowanceStr =
+      entitlement.allowance_type == AllowanceType.Unlimited
+        ? "Unlimited"
+        : entitlement.allowance_type == AllowanceType.None
+        ? "None"
+        : `${entitlement.allowance}`;
+
+    await stripeCli.invoiceItems.create({
+      customer: customer.processor.id,
+      amount: amountPerUnit * quantity * 100,
+      invoice: stripeInvoice.id,
+      description: `Invoice for ${product.name} -- ${quantity}x ${allowanceStr} (${entitlement.feature.name})`,
+    });
+  }
+
+  const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
+    stripeInvoice.id
+  );
+
+  console.log("   2. Paying invoice");
+  const paid = await payForInvoice({
+    fullOrg: org,
+    env: customer.env,
+    customer: customer,
+    invoice: stripeInvoice,
+  });
+
+  if (!paid) {
+    await stripeCli.invoices.voidInvoice(stripeInvoice.id);
+    throw new RecaseError({
+      code: ErrCode.PayInvoiceFailed,
+      message: "Failed to pay invoice",
+      statusCode: 500,
+    });
+  }
+
+  // Insert full customer product
+  console.log("   3. Creating full customer product");
+  await createFullCusProduct({
+    sb,
+    attachParams,
+    lastInvoiceId: finalizedInvoice.id,
+  });
+
+  console.log("   4. Creating invoice from stripe");
+  await InvoiceService.createInvoiceFromStripe({
+    sb,
+    stripeInvoice: finalizedInvoice,
+    internalCustomerId: customer.internal_id,
+    productIds: [product.id],
+    status: InvoiceStatus.Paid,
+  });
+
+  console.log("   ✅ Successfully attached product");
+};
+
 export const handleAddProduct = async ({
   req,
   res,
@@ -120,8 +197,16 @@ export const handleAddProduct = async ({
   // 1. Handle one-off payment products
   if (pricesOnlyOneOff(prices)) {
     console.log("Handling one-off payment products");
+    await handleOneOffPrices({
+      sb: req.sb,
+      attachParams,
+    });
+
+    res.status(200).send({ success: true });
     return;
   }
+
+  // throw new Error("Test");
 
   // 2. Get one-off + fixed cycle prices
   const billNowPrices = getBillNowPrices(prices);
