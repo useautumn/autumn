@@ -42,8 +42,10 @@ const getEventAndCustomer = async (req: any) => {
       org_id: orgId,
       env: env,
       timestamp: Date.now(),
-      properties: {},
-      ...body,
+      properties: body.properties || {},
+
+      event_name: body.event_name,
+      customer_id: body.customer_id,
     };
   } catch (error: any) {
     throw new RecaseError({
@@ -61,11 +63,20 @@ const getEventAndCustomer = async (req: any) => {
   });
 
   if (!customer) {
-    throw new RecaseError({
-      message: "Customer not found",
-      code: ErrCode.CustomerNotFound,
-      statusCode: StatusCodes.NOT_FOUND,
-    });
+    const newCustomer: Customer = {
+      id: body.customer_id,
+      name: body.customer_data?.name,
+      email: body.customer_data?.email,
+      fingerprint: body.customer_data?.fingerprint,
+
+      env: req.env,
+      org_id: req.orgId,
+      internal_id: generateId("cus"),
+      created_at: Date.now(),
+      processor: null,
+    };
+    await CusService.createCustomer({ sb: req.sb, customer: newCustomer });
+    customer = newCustomer;
   }
 
   // 3. Insert event
