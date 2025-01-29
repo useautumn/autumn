@@ -15,9 +15,11 @@ export const OrganizationSchema = z.object({
   stripe_connected: z.boolean().default(false),
   stripe_config: StripeConfigSchema.optional().nullable(),
 
-  config: z.object({
-    free_trial_paid_to_paid: z.boolean().default(false),
-  }),
+  config: z
+    .object({
+      free_trial_paid_to_paid: z.boolean().default(false),
+    })
+    .nullish(),
 });
 
 export type Organization = z.infer<typeof OrganizationSchema>;
