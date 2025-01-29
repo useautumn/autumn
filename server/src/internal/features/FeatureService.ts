@@ -126,15 +126,21 @@ export class FeatureService {
     }
   }
 
-  static async insert(sb: SupabaseClient, feature: Feature) {
+  static async insert({
+    sb,
+    data,
+  }: {
+    sb: SupabaseClient;
+    data: Feature[] | Feature;
+  }) {
     // Insert feature into DB
-
-    let { error } = await sb.from("features").insert(feature);
+    let { error } = await sb.from("features").insert(data);
 
     if (error) {
       if (error.code === "23505") {
+        let id = Array.isArray(data) ? data.map((f) => f.id) : data.id;
         throw new RecaseError({
-          message: `Feature ${feature.id} already exists`,
+          message: `Feature ${id} already exists`,
           code: ErrCode.DuplicateFeatureId,
           statusCode: 400,
         });
