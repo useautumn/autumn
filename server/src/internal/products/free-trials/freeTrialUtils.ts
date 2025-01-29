@@ -122,6 +122,12 @@ export const handleNewFreeTrial = async ({
   isCustom: boolean;
 }) => {
   if (!newFreeTrial) {
+    if (!isCustom && curFreeTrial) {
+      await FreeTrialService.delete({
+        sb,
+        freeTrialId: curFreeTrial.id,
+      });
+    }
     return null;
   }
 
@@ -140,12 +146,12 @@ export const handleNewFreeTrial = async ({
       sb,
       data: createdFreeTrial,
     });
-  } else if (!isCustom && newFreeTrial) {
+  } else if (!isCustom) {
     createdFreeTrial.id = curFreeTrial?.id || createdFreeTrial.id;
-    await FreeTrialService.update({
+
+    await FreeTrialService.upsert({
       sb,
-      freeTrialId: createdFreeTrial.id,
-      update: createdFreeTrial,
+      data: createdFreeTrial,
     });
   }
 

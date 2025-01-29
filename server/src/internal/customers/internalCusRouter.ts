@@ -12,6 +12,7 @@ import {
   FullCustomerEntitlement,
   FullCustomerPrice,
 } from "@autumn/shared";
+import { handleRequestError } from "@/utils/errorUtils.js";
 
 export const cusRouter = Router();
 
@@ -34,15 +35,20 @@ cusRouter.post("/search", async (req: any, res: any) => {
   const pageInt = parseInt(page as string) || 1;
   const cleanedQuery = search ? search.trim().toLowerCase() : "";
 
-  const { data: customers, count } = await CusService.searchCustomers({
-    sb,
-    orgId: org.id,
-    env,
-    search: cleanedQuery,
-    page: pageInt,
-  });
+  try {
+    const { data: customers, count } = await CusService.searchCustomers({
+      sb,
+      orgId: org.id,
+      env,
+      search: cleanedQuery,
+      page: pageInt,
+    });
 
-  res.status(200).send({ customers, totalCount: count });
+    // console.log("customers", customers);
+    res.status(200).send({ customers, totalCount: count });
+  } catch (error) {
+    handleRequestError({ res, error, action: "search customers" });
+  }
 });
 
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {

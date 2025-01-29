@@ -213,6 +213,7 @@ productApiRouter.post("/:productId", async (req: any, res) => {
       });
     }
 
+    console.log("free_trial", free_trial);
     await handleNewFreeTrial({
       sb,
       curFreeTrial: fullProduct.free_trial,

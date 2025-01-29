@@ -31,7 +31,7 @@ export const EditFreeTrialToolbar = ({
   className?: string;
   product: Product;
 }) => {
-  const { mutate, env } = useProductContext();
+  const { mutate, env, setProduct, product: curProduct } = useProductContext();
   const axiosInstance = useAxiosInstance(env);
 
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -39,16 +39,7 @@ export const EditFreeTrialToolbar = ({
   const router = useRouter();
 
   const handleDelete = async () => {
-    // try {
-    //   setDeleteLoading(true);
-    //   await ProductService.deleteProduct(axiosInstance, product.id);
-    //   navigateTo("/products", router, env);
-    // } catch (error) {
-    //   toast.error("Failed to delete product");
-    // } finally {
-    //   setDeleteLoading(false);
-    // }
-    console.log("Edit Free Trial Toolbar Delete Free Trial");
+    setProduct({ ...product, free_trial: null });
   };
   return (
     <DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
