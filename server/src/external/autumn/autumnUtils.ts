@@ -112,7 +112,7 @@ export const isEntitled = async ({
   }
 
   let errText = `You've used up your allowance for ${featureId}.`;
-  if (featureId === FeatureId.MonthlyRevenue) {
+  if (featureId === FeatureId.Revenue) {
     errText = `Looks like you've hit your monthly revenue limit for our plan, congrats 😉.`;
   }
 
