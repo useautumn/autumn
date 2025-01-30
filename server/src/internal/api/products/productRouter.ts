@@ -32,7 +32,7 @@ productApiRouter.post("", async (req: any, res) => {
 
     const org = await OrgService.getFullOrg({
       sb,
-      orgId: req.org.id,
+      orgId: req.orgId,
     });
 
     let newProduct: Product;
@@ -107,7 +107,7 @@ productApiRouter.post("", async (req: any, res) => {
 productApiRouter.delete("/:productId", async (req: any, res) => {
   const { productId } = req.params;
   const sb = req.sb;
-  const orgId = req.org.id;
+  const orgId = req.orgId;
   const env = req.env;
 
   try {
@@ -179,7 +179,7 @@ productApiRouter.delete("/:productId", async (req: any, res) => {
 productApiRouter.post("/:productId", async (req: any, res) => {
   const { productId } = req.params;
   const sb = req.sb;
-  const orgId = req.org.id;
+  const orgId = req.orgId;
   const env = req.env;
 
   const { prices, entitlements, free_trial } = req.body;

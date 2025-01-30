@@ -43,7 +43,6 @@ export const validateFeature = (data: any) => {
 };
 
 featureApiRouter.post("", async (req: any, res) => {
-  let org = req.org;
   let data = req.body;
 
   try {
@@ -51,7 +50,7 @@ featureApiRouter.post("", async (req: any, res) => {
 
     let feature: Feature = {
       internal_id: generateId("fe"),
-      org_id: org.id,
+      org_id: req.orgId,
       created_at: Date.now(),
       env: req.env,
       ...data,
@@ -76,7 +75,7 @@ featureApiRouter.post("/:feature_id", async (req: any, res) => {
   try {
     await FeatureService.updateStrict({
       sb: req.sb,
-      orgId: req.org.id,
+      orgId: req.orgId,
       env: req.env,
       featureId,
 

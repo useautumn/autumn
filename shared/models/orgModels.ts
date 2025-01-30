@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+export const MinOrgSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+});
+
 export const StripeConfigSchema = z.object({
   test_api_key: z.string(),
   live_api_key: z.string(),
@@ -24,3 +29,4 @@ export const OrganizationSchema = z.object({
 
 export type Organization = z.infer<typeof OrganizationSchema>;
 export type StripeConfig = z.infer<typeof StripeConfigSchema>;
+export type MinOrg = z.infer<typeof MinOrgSchema>;

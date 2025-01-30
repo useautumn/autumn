@@ -25,7 +25,7 @@ priceRouter.post("", async (req: any, res) => {
     let price: Price = {
       ...data,
       id: generateId("pr"),
-      org_id: req.org.id,
+      org_id: req.orgId,
       created_at: Date.now(),
       billing_type: getBillingType(data.config),
     };
@@ -90,7 +90,7 @@ priceRouter.delete("/:price_id", async (req: any, res) => {
     await PriceService.deletePriceStrict({
       sb: req.sb,
       priceId: price_id,
-      orgId: req.org.id,
+      orgId: req.orgId,
       env: req.env,
     });
     res.status(200).json({ message: "Price deleted successfully" });

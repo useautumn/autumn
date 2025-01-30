@@ -6,13 +6,19 @@ const createUnkeyCli = () => {
   return new Unkey({ rootKey: process.env.UNKEY_ROOT_KEY! });
 };
 
-export const createKey = async (
-  env: AppEnv,
-  name: string,
-  ownerId: string,
-  prefix: string,
-  meta: any
-) => {
+export const createKey = async ({
+  env,
+  name,
+  ownerId,
+  prefix,
+  meta,
+}: {
+  env: AppEnv;
+  name: string;
+  ownerId: string;
+  prefix: string;
+  meta: any;
+}) => {
   const unkey = createUnkeyCli();
   const key = await unkey.keys.create({
     apiId: UNKEY_API_ID,

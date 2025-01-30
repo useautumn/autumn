@@ -9,7 +9,7 @@ customerEntitlementsRouter.post("/is_allowed", async (req: any, res: any) => {
   const { rows } = await req.pg.query(`
 select * from features WHERE EXISTS (
   SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
-  org_id = ${req.org.id} AND
+  org_id = ${req.orgId} AND
   schema_element->>'metered_feature_id' = ${feature_id}
 )
   `);

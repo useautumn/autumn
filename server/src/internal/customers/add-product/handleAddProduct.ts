@@ -164,6 +164,7 @@ const handleOneOffPrices = async ({
     internalCustomerId: customer.internal_id,
     productIds: [product.id],
     status: InvoiceStatus.Paid,
+    org: org,
   });
 
   console.log("   ✅ Successfully attached product");

@@ -92,14 +92,19 @@ export class Autumn {
     customerId,
     featureId,
     quantity,
+    customer_data,
   }: {
     customerId: string;
     featureId: string;
     quantity?: number;
+    customer_data?: any;
   }) {
-    const data = await this.get(
-      `/entitled?customer_id=${customerId}&feature_id=${featureId}`
-    );
+    const data = await this.post(`/entitled`, {
+      customer_id: customerId,
+      feature_id: featureId,
+      quantity,
+      customer_data,
+    });
 
     return data;
   }

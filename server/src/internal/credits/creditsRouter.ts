@@ -7,11 +7,11 @@ import { CreditSystem } from "@autumn/shared";
 export const creditsRouter = express.Router();
 
 creditsRouter.get("", async (req: any, res) => {
-  let org = req.org;
+  let orgId = req.orgId;
 
   try {
-    let features = await getFeaturesByOrg(org.id);
-    let creditSystems = await CreditService.getByOrg(req.sb, org.id);
+    let features = await getFeaturesByOrg(orgId);
+    let creditSystems = await CreditService.getByOrg(req.sb, orgId);
 
     res.status(200).json({ features, credit_systems: creditSystems });
   } catch (error: any) {
@@ -21,13 +21,13 @@ creditsRouter.get("", async (req: any, res) => {
 });
 
 creditsRouter.post("/systems", async (req: any, res) => {
-  let org = req.org;
+  let orgId = req.orgId;
   let data = req.body;
 
   try {
     let creditSystem: CreditSystem = {
       internal_id: generateId("cs"),
-      org_id: org.id,
+      org_id: orgId,
       created_at: Date.now(),
       ...data,
     };

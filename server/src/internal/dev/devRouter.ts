@@ -7,7 +7,7 @@ import { ApiKeyService } from "./ApiKeyService.js";
 export const devRouter = Router();
 
 devRouter.get("/data", withOrgAuth, async (req: any, res) => {
-  const apiKeys = await ApiKeyService.getByOrg(req.sb, req.org.id, req.env);
+  const apiKeys = await ApiKeyService.getByOrg(req.sb, req.orgId, req.env);
 
   res.status(200).json({
     api_keys: apiKeys,
@@ -16,7 +16,7 @@ devRouter.get("/data", withOrgAuth, async (req: any, res) => {
 
 devRouter.post("/api_key", withOrgAuth, async (req: any, res) => {
   const env = req.env;
-  const org = req.org;
+  const orgId = req.orgId;
   const { name } = req.body;
 
   // 1. Create API key
@@ -25,7 +25,15 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) => {
     prefix = "am_live";
   }
 
-  const apiKey = await createKey(env, name, org.id, prefix, {});
+  const apiKey = await createKey({
+    env,
+    name,
+    ownerId: orgId,
+    prefix,
+    meta: {
+      org_slug: req.minOrg.slug,
+    },
+  });
   if (!apiKey.result) {
     console.error("Failed to create API key", apiKey);
     res.status(500).json({ error: "Failed to create API key" });
@@ -34,7 +42,7 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) => {
 
   const apiKeyData: ApiKey = {
     id: apiKey.result!.keyId,
-    org_id: org.id,
+    org_id: orgId,
     user_id: req.user.id,
     name,
     prefix: apiKey.result!.key.substring(0, 10),
@@ -52,7 +60,7 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) => {
 devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
   const { id } = req.params;
   try {
-    let count = await ApiKeyService.deleteStrict(req.sb, id, req.org.id);
+    let count = await ApiKeyService.deleteStrict(req.sb, id, req.orgId);
     if (count === 0) {
       console.error("API key not found");
       res.status(404).json({ error: "API key not found" });
