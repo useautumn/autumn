@@ -5,6 +5,8 @@ import { Webhook } from "svix";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { createClerkCli } from "../clerkUtils.js";
+import { sendOnboardingEmail } from "./sendOnboardingEmail.js";
 
 const verifyClerkWebhook = async (req: Request, res: Response) => {
   const wh = new Webhook(process.env.CLERK_SIGNING_SECRET!);
@@ -91,5 +93,10 @@ const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
       stripe_connected: false,
       stripe_config: null,
     },
+  });
+
+  await sendOnboardingEmail({
+    orgId: eventData.id,
+    clerkCli: createClerkCli(),
   });
 };
