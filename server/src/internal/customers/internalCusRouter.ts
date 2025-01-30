@@ -3,15 +3,7 @@ import { CusService } from "./CusService.js";
 import { ProductService } from "../products/ProductService.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
 import { FeatureService } from "../features/FeatureService.js";
-import { getBillingType } from "../prices/priceUtils.js";
-import {
-  BillingType,
-  Entitlement,
-  EntitlementWithFeature,
-  FeatureOptions,
-  FullCustomerEntitlement,
-  FullCustomerPrice,
-} from "@autumn/shared";
+import { FullCustomerEntitlement, FullCustomerPrice } from "@autumn/shared";
 import { handleRequestError } from "@/utils/errorUtils.js";
 
 export const cusRouter = Router();
@@ -20,7 +12,7 @@ cusRouter.get("", async (req: any, res: any) => {
   const page = parseInt(req.query.page as string) || 1;
   const { data: customers, count } = await CusService.getCustomers(
     req.sb,
-    req.org.id,
+    req.orgId,
     req.env,
     page
   );
@@ -29,7 +21,7 @@ cusRouter.get("", async (req: any, res: any) => {
 });
 
 cusRouter.post("/search", async (req: any, res: any) => {
-  const { sb, org, env } = req;
+  const { sb, orgId, env } = req;
   const { search, page } = req.body;
 
   const pageInt = parseInt(page as string) || 1;
@@ -38,7 +30,7 @@ cusRouter.post("/search", async (req: any, res: any) => {
   try {
     const { data: customers, count } = await CusService.searchCustomers({
       sb,
-      orgId: org.id,
+      orgId: orgId,
       env,
       search: cleanedQuery,
       page: pageInt,
@@ -86,12 +78,12 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
     const features = await FeatureService.getFeatures({
       sb,
-      orgId: org.id,
+      orgId: orgId,
       env,
     });
 
     // Get all products for the org
-    const products = await ProductService.getFullProducts(sb, org.id, env);
+    const products = await ProductService.getFullProducts(sb, orgId, env);
 
     res.status(200).send({ customer, products, invoices, features });
   } catch (error) {

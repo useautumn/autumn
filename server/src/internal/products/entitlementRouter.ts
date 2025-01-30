@@ -15,13 +15,13 @@ entitlementRouter.post("/:productId/entitlements", async (req: any, res) => {
     await ProductService.getProductStrict({
       sb: req.sb,
       productId,
-      orgId: req.org.id,
+      orgId: req.orgId,
       env: req.env,
     });
 
     const entitlement: Entitlement = {
       id: generateId("ent"),
-      org_id: req.org.id,
+      org_id: req.orgId,
       product_id: productId,
       created_at: Date.now(),
       ...data,

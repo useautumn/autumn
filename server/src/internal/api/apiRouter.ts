@@ -25,21 +25,21 @@ const pricingMiddleware = async (req: any, res: any, next: any) => {
   let method = req.method;
 
   try {
-    if (path == "/features" && method == "POST") {
-      await isEntitled({
-        orgId: req.org.id,
-        env: req.env,
-        featureId: FeatureId.Features,
-      });
-    }
+    // if (path == "/features" && method == "POST") {
+    //   await isEntitled({
+    //     org: req.org,
+    //     env: req.env,
+    //     featureId: FeatureId.Features,
+    //   });
+    // }
 
-    if (path == "/products" && method == "POST") {
-      await isEntitled({
-        orgId: req.org.id,
-        env: req.env,
-        featureId: FeatureId.Products,
-      });
-    }
+    // if (path == "/products" && method == "POST") {
+    //   await isEntitled({
+    //     org: req.org,
+    //     env: req.env,
+    //     featureId: FeatureId.Products,
+    //   });
+    // }
 
     next();
   } catch (error) {
@@ -91,7 +91,7 @@ const pricingMiddleware = async (req: any, res: any, next: any) => {
 };
 
 apiRouter.use(apiAuthMiddleware);
-apiRouter.use(pricingMiddleware);
+// apiRouter.use(pricingMiddleware);
 
 apiRouter.use("/attach", attachRouter);
 apiRouter.use("/customers", cusRouter);

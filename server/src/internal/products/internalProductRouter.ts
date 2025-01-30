@@ -14,11 +14,11 @@ productRouter.get("/data", async (req: any, res) => {
   let sb = req.sb;
 
   try {
-    const products = await ProductService.getProducts(sb, req.org.id, req.env);
+    const products = await ProductService.getProducts(sb, req.orgId, req.env);
 
     const features = await FeatureService.getFeatures({
       sb,
-      orgId: req.org.id,
+      orgId: req.orgId,
       env: req.env,
     });
 
@@ -34,7 +34,7 @@ productRouter.get("/data", async (req: any, res) => {
 productRouter.get("/:productId/data", async (req: any, res) => {
   const { productId } = req.params;
   const sb = req.sb;
-  const orgId = req.org.id;
+  const orgId = req.orgId;
   const env = req.env;
 
   try {
@@ -68,7 +68,7 @@ productRouter.get("/:productId", async (req: any, res) => {
     const Product = await ProductService.getProductStrict({
       sb: req.sb,
       productId,
-      orgId: req.org.id,
+      orgId: req.orgId,
       env: req.env,
     });
 

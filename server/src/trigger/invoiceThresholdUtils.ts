@@ -104,12 +104,14 @@ const handleInvoicePaymentFailure = async ({
   fullCusProduct,
   fullCusPrice,
   finalizedInvoice,
+  fullOrg,
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
   fullCusProduct: FullCusProduct;
   fullCusPrice: FullCustomerPrice;
   finalizedInvoice: Stripe.Invoice;
+  fullOrg: Organization;
 }) => {
   // 1. Update customer product
   console.log("   Handling invoice payment failure...");
@@ -124,6 +126,7 @@ const handleInvoicePaymentFailure = async ({
     internalCustomerId: fullCusProduct.internal_customer_id,
     productIds: [fullCusProduct.product.id],
     status: InvoiceStatus.Void,
+    org: fullOrg,
   });
   console.log("   b. Invoice inserted into db");
 
@@ -205,6 +208,7 @@ const invoiceCustomer = async ({
       fullCusProduct,
       fullCusPrice,
       finalizedInvoice,
+      fullOrg,
     });
     return;
   }
@@ -217,6 +221,7 @@ const invoiceCustomer = async ({
     internalCustomerId: customer.internal_id,
     productIds: [fullCusProduct.product.id],
     status: InvoiceStatus.Paid,
+    org: fullOrg,
   });
 
   // 4. Update customer product

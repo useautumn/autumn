@@ -43,7 +43,15 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
       throw new Error("No org in token");
     }
 
-    req.org = tokenData!.org;
+    // req.org = tokenData!.org;
+    // console.log("tokenData", tokenData);
+
+    let tokenOrg = tokenData!.org as any;
+    req.minOrg = {
+      id: tokenOrg?.id,
+      slug: tokenOrg?.slug,
+    };
+
     req.orgId = tokenData!.org_id;
     req.user = tokenData!.user;
 

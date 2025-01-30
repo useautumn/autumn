@@ -59,12 +59,12 @@ orgRouter.post("/stripe", async (req: any, res) => {
       testWebhook = await createWebhookEndpoint(
         testApiKey,
         AppEnv.Sandbox,
-        req.org.id
+        req.orgId
       );
       liveWebhook = await createWebhookEndpoint(
         liveApiKey,
         AppEnv.Live,
-        req.org.id
+        req.orgId
       );
     } catch (error) {
       throw new RecaseError({
@@ -78,7 +78,7 @@ orgRouter.post("/stripe", async (req: any, res) => {
     // 1. Update org in Supabase
     await OrgService.update({
       sb: req.sb,
-      orgId: req.org.id,
+      orgId: req.orgId,
       updates: {
         stripe_connected: true,
         default_currency: defaultCurrency,
@@ -94,7 +94,7 @@ orgRouter.post("/stripe", async (req: any, res) => {
 
     // 2. Update org in Clerk
     const clerkCli = createClerkCli();
-    await clerkCli.organizations.updateOrganization(req.org.id, {
+    await clerkCli.organizations.updateOrganization(req.orgId, {
       publicMetadata: {
         stripe_connected: true,
         default_currency: defaultCurrency,
@@ -151,7 +151,7 @@ orgRouter.delete("/stripe", async (req: any, res) => {
 
     await OrgService.update({
       sb: req.sb,
-      orgId: req.org.id,
+      orgId: req.orgId,
       updates: {
         stripe_connected: false,
         stripe_config: null,
@@ -160,7 +160,7 @@ orgRouter.delete("/stripe", async (req: any, res) => {
     });
 
     const clerkCli = createClerkCli();
-    await clerkCli.organizations.updateOrganization(req.org.id, {
+    await clerkCli.organizations.updateOrganization(req.orgId, {
       publicMetadata: {
         stripe_connected: false,
         default_currency: undefined,

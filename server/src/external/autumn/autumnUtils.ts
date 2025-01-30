@@ -1,6 +1,8 @@
-import { AppEnv, ErrCode, Organization } from "@autumn/shared";
+import { AppEnv, ErrCode, MinOrg, Organization } from "@autumn/shared";
 import { Autumn } from "./autumnCli.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export enum FeatureId {
   Products = "products",
@@ -70,11 +72,11 @@ export const sendProductEvent = async ({
 };
 
 export const isEntitled = async ({
-  orgId,
+  org,
   env,
   featureId,
 }: {
-  orgId: string;
+  org: MinOrg;
   env: AppEnv;
   featureId: FeatureId;
 }) => {
@@ -86,8 +88,11 @@ export const isEntitled = async ({
 
   try {
     const result = await autumn.entitled({
-      customerId: orgId,
+      customerId: org.id,
       featureId: featureId,
+      customer_data: {
+        name: org.slug,
+      },
     });
 
     console.log("Result:", result);

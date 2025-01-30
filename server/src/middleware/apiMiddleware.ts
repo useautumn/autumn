@@ -24,6 +24,10 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
 
     req.orgId = result.ownerId;
     req.env = result.environment;
+    req.minOrg = {
+      id: result.ownerId,
+      slug: result.meta?.org_slug,
+    };
 
     next();
   } catch (error) {

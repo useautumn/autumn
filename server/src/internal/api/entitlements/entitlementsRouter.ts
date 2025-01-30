@@ -25,7 +25,7 @@ entitlementApiRouter.post("", async (req: any, res) => {
     const product = await ProductService.getProductStrict({
       sb: req.sb,
       productId: product_id,
-      orgId: req.org.id,
+      orgId: req.orgId,
       env: req.env,
     });
 
@@ -39,7 +39,7 @@ entitlementApiRouter.post("", async (req: any, res) => {
 
     const entitlement: Entitlement = {
       id: generateId("ent"),
-      org_id: req.org.id,
+      org_id: req.orgId,
       product_id: product_id,
       created_at: Date.now(),
       ...data,

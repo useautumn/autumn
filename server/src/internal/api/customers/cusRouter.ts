@@ -74,11 +74,7 @@ cusRouter.post("", async (req: any, res: any) => {
 
 cusRouter.get("", async (req: any, res: any) => {
   try {
-    const customers = await CusService.getCustomers(
-      req.sb,
-      req.org.id,
-      req.env
-    );
+    const customers = await CusService.getCustomers(req.sb, req.orgId, req.env);
 
     res.status(200).send({ customers });
   } catch (error) {
@@ -141,7 +137,7 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
     const events = await EventService.getByCustomerId({
       sb: req.sb,
       customerId,
-      org: req.org,
+      orgId: req.orgId,
       env: req.env,
     });
 

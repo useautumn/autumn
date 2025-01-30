@@ -7,7 +7,7 @@ export class OrgService {
   static async getFromReq(req: any) {
     return await this.getFullOrg({
       sb: req.sb,
-      orgId: req.org.id,
+      orgId: req.orgId,
     });
   }
 
