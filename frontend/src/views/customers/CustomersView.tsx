@@ -47,6 +47,7 @@ function CustomersView({ env }: { env: AppEnv }) {
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
+  // return <LoadingScreen />;
   if (isLoading) {
     return <LoadingScreen />;
   }

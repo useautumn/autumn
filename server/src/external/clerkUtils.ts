@@ -12,6 +12,7 @@ export const createClerkCli = () => {
 
 export const createClerkOrg = async (name: string, slug: string) => {
   const clerkCli = createClerkCli();
+
   try {
     let org = await clerkCli.organizations.createOrganization({
       name,
