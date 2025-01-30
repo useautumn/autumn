@@ -16,7 +16,6 @@ import RecaseError, {
 import { generateId } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
-import { StatusCodes } from "http-status-codes";
 import { CusService } from "@/internal/customers/CusService.js";
 import { Client } from "pg";
 import { Queue } from "bullmq";

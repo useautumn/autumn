@@ -20,17 +20,19 @@ export default function UpdatePricing({
   setOpen,
   selectedPrice,
   setSelectedPrice,
+  selectedIndex,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
   selectedPrice: any;
   setSelectedPrice: (price: any) => void;
+  selectedIndex: number;
 }) {
   const { product, setProduct } = useProductContext();
 
   const handleDeletePricing = () => {
-    const updatedPrices = product.prices.filter((price: any) => {
-      return price.id !== selectedPrice.id;
+    const updatedPrices = product.prices.filter((price: any, index: number) => {
+      return index !== selectedIndex;
     });
 
     setProduct({ ...product, prices: updatedPrices });
@@ -44,8 +46,8 @@ export default function UpdatePricing({
       return;
     }
 
-    const updatedPrices = product.prices.map((price: any) => {
-      if (price.id === selectedPrice.id) {
+    const updatedPrices = product.prices.map((price: any, index: number) => {
+      if (index === selectedIndex) {
         return {
           ...price,
           ...selectedPrice,

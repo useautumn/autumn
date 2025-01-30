@@ -127,7 +127,7 @@ orgRouter.delete("/stripe", async (req: any, res) => {
   try {
     const org = await OrgService.getFullOrg({
       sb: req.sb,
-      orgId: req.org.id,
+      orgId: req.orgId,
     });
 
     // 2. Delete webhook endpoint

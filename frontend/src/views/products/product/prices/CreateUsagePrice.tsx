@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AllowanceType,
   BillingInterval,
   BillWhen,
   Entitlement,
@@ -245,6 +246,18 @@ export const UsageTierInput = ({
       />
     );
   }
+
+  const getNumUnits = () => {
+    const entitlement = entitlements?.find(
+      (e) => e.internal_feature_id == config?.internal_feature_id
+    );
+    if (!entitlement) return "n";
+
+    if (entitlement.allowance_type == AllowanceType.Unlimited) return "∞";
+    if (entitlement.allowance_type == AllowanceType.None) return "n";
+
+    return `${entitlement.allowance}`;
+  };
 
   return (
     <div className="relative flex-grow mr-1">

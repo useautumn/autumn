@@ -10,7 +10,6 @@ import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 import { envMiddleware } from "./middleware/envMiddleware.js";
 import pg from "pg";
 
-import { serve } from "inngest/express";
 import { initQueue, initWorkers } from "./queue/queue.js";
 
 const app = express();

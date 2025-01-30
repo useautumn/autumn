@@ -73,9 +73,11 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
   };
   const [open, setOpen] = useState(false);
   const [selectedPrice, setSelectedPrice] = useState<Price | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  const handleRowClick = (price: Price) => {
+  const handleRowClick = (price: Price, index: number) => {
     setSelectedPrice(price);
+    setSelectedIndex(index);
     setOpen(true);
   };
 
@@ -86,6 +88,7 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
         setOpen={setOpen}
         selectedPrice={selectedPrice}
         setSelectedPrice={setSelectedPrice}
+        selectedIndex={selectedIndex || 0}
       />
 
       <Table>
@@ -105,7 +108,7 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
               // key={`${price.id}-${price.created_at}`}
               key={index}
               className="cursor-pointer"
-              onClick={() => handleRowClick(price)}
+              onClick={() => handleRowClick(price, index)}
             >
               <TableCell className="min-w-40 font-medium">
                 {price.name}
