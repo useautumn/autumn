@@ -25,6 +25,16 @@ export class Autumn {
       headers: this.headers,
       body: JSON.stringify(body),
     });
+
+    if (response.status != 200) {
+      try {
+        const error = await response.json();
+        throw new Error(error.message);
+      } catch (error) {
+        throw new Error("Failed to call Autumn API");
+      }
+    }
+
     return response.json();
   }
 

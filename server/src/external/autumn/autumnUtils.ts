@@ -10,11 +10,11 @@ export enum FeatureId {
 }
 
 export const sendFeatureEvent = async ({
-  org,
+  minOrg,
   env,
   incrementBy,
 }: {
-  org: Organization;
+  minOrg: MinOrg;
   env: AppEnv;
   incrementBy: number;
 }) => {
@@ -26,13 +26,13 @@ export const sendFeatureEvent = async ({
     const autumn = new Autumn();
 
     await autumn.sendEvent({
-      customerId: org.id,
+      customerId: minOrg.id,
       eventName: "feature",
       properties: {
         value: incrementBy,
       },
       customer_data: {
-        name: org.slug,
+        name: minOrg.slug,
       },
     });
   } catch (error: any) {
@@ -41,11 +41,11 @@ export const sendFeatureEvent = async ({
 };
 
 export const sendProductEvent = async ({
-  org,
+  minOrg,
   env,
   incrementBy,
 }: {
-  org: Organization;
+  minOrg: MinOrg;
   env: AppEnv;
   incrementBy: number;
 }) => {
@@ -57,13 +57,13 @@ export const sendProductEvent = async ({
     const autumn = new Autumn();
 
     await autumn.sendEvent({
-      customerId: org.id,
+      customerId: minOrg.id,
       eventName: "product",
       properties: {
         value: incrementBy,
       },
       customer_data: {
-        name: org.slug,
+        name: minOrg.slug,
       },
     });
   } catch (error: any) {
@@ -72,11 +72,11 @@ export const sendProductEvent = async ({
 };
 
 export const isEntitled = async ({
-  org,
+  minOrg,
   env,
   featureId,
 }: {
-  org: MinOrg;
+  minOrg: MinOrg;
   env: AppEnv;
   featureId: FeatureId;
 }) => {
@@ -88,10 +88,10 @@ export const isEntitled = async ({
 
   try {
     const result = await autumn.entitled({
-      customerId: org.id,
+      customerId: minOrg.id,
       featureId: featureId,
       customer_data: {
-        name: org.slug,
+        name: minOrg.slug,
       },
     });
 

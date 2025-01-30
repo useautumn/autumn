@@ -205,7 +205,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     }
 
     // 1. Check if customer exists
-    const customer = await CusService.getCustomer({
+    let customer = await CusService.getCustomer({
       sb: req.sb,
       orgId: req.orgId,
       customerId: customer_id,
@@ -213,7 +213,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     });
 
     if (!customer) {
-      await createNewCustomer({
+      customer = await createNewCustomer({
         sb: req.sb,
         orgId: req.orgId,
         env: req.env,
@@ -224,11 +224,6 @@ entitledRouter.post("", async (req: any, res: any) => {
           fingerprint: customer_data.fingerprint,
         },
       });
-      // throw new RecaseError({
-      //   message: `Customer ${customer_id} not found`,
-      //   code: ErrCode.CustomerNotFound,
-      //   statusCode: StatusCodes.NOT_FOUND,
-      // });
     }
 
     // 2. Get features & credit systems
