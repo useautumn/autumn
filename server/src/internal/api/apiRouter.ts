@@ -24,22 +24,27 @@ const pricingMiddleware = async (req: any, res: any, next: any) => {
   let path = req.url;
   let method = req.method;
 
-  try {
-    // if (path == "/features" && method == "POST") {
-    //   await isEntitled({
-    //     org: req.org,
-    //     env: req.env,
-    //     featureId: FeatureId.Features,
-    //   });
-    // }
+  if (req.minOrg.slug == "autumn") {
+    next();
+    return;
+  }
 
-    // if (path == "/products" && method == "POST") {
-    //   await isEntitled({
-    //     org: req.org,
-    //     env: req.env,
-    //     featureId: FeatureId.Products,
-    //   });
-    // }
+  try {
+    if (path == "/features" && method == "POST") {
+      await isEntitled({
+        minOrg: req.minOrg,
+        env: req.env,
+        featureId: FeatureId.Features,
+      });
+    }
+
+    if (path == "/products" && method == "POST") {
+      await isEntitled({
+        minOrg: req.minOrg,
+        env: req.env,
+        featureId: FeatureId.Products,
+      });
+    }
 
     next();
   } catch (error) {
@@ -49,40 +54,32 @@ const pricingMiddleware = async (req: any, res: any, next: any) => {
 
   if (res.statusCode === 200) {
     if (path == "/features" && method === "POST") {
-      const org = await OrgService.getFromReq(req);
-
       await sendFeatureEvent({
-        org,
+        minOrg: req.minOrg,
         env: req.env,
         incrementBy: 1,
       });
     }
 
     if (path.match(/^\/features\/[^\/]+$/) && method === "DELETE") {
-      const org = await OrgService.getFromReq(req);
-
       await sendFeatureEvent({
-        org,
+        minOrg: req.minOrg,
         env: req.env,
         incrementBy: -1,
       });
     }
 
     if (path == "/products" && method === "POST") {
-      const org = await OrgService.getFromReq(req);
-
       await sendProductEvent({
-        org,
+        minOrg: req.minOrg,
         env: req.env,
         incrementBy: 1,
       });
     }
 
     if (path.match(/^\/products\/[^\/]+$/) && method === "DELETE") {
-      const org = await OrgService.getFromReq(req);
-
       await sendProductEvent({
-        org,
+        minOrg: req.minOrg,
         env: req.env,
         incrementBy: -1,
       });
@@ -91,7 +88,7 @@ const pricingMiddleware = async (req: any, res: any, next: any) => {
 };
 
 apiRouter.use(apiAuthMiddleware);
-// apiRouter.use(pricingMiddleware);
+apiRouter.use(pricingMiddleware);
 
 apiRouter.use("/attach", attachRouter);
 apiRouter.use("/customers", cusRouter);
