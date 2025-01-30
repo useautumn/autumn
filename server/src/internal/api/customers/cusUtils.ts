@@ -26,6 +26,10 @@ export const createNewCustomer = async ({
   customer: CreateCustomer;
   nextResetAt?: number;
 }) => {
+  console.log("Creating new customer");
+  console.log("Org ID:", orgId);
+  console.log("Customer data:", customer);
+
   const org = await OrgService.getFullOrg({
     sb,
     orgId,
@@ -33,6 +37,9 @@ export const createNewCustomer = async ({
 
   const customerData: Customer = {
     ...customer,
+    name: customer.name || "",
+    email: customer.email || "",
+
     internal_id: generateId("cus"),
     org_id: orgId,
     created_at: Date.now(),

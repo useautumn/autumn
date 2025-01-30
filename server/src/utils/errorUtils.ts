@@ -60,7 +60,6 @@ export const handleRequestError = ({
     res.status(400).json({
       message: formatZodError(error),
       code: ErrCode.InvalidInputs,
-      data: formatZodError(error),
     });
   } else {
     console.log(`Unknown error | ${action}`, error);

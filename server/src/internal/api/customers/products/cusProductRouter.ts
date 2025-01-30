@@ -32,6 +32,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 import chalk from "chalk";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { Autumn } from "@/external/autumn/autumnCli.js";
 
 export const attachRouter = Router();
 

@@ -4,6 +4,8 @@ import Stripe from "stripe";
 import { generateId } from "@/utils/genUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
+import { Autumn } from "@/external/autumn/autumnCli.js";
+import { CusService } from "../CusService.js";
 
 export class InvoiceService {
   static async createInvoice({
@@ -83,28 +85,44 @@ export class InvoiceService {
       status: status || (stripeInvoice.status as InvoiceStatus | null),
     };
 
-    // Check if invoice already exists
-    // TODO: Fix This
-    const existingInvoice = await this.getInvoiceByStripeId({
-      sb,
-      stripeInvoiceId: stripeInvoice.id,
-    });
+    // // Check if invoice already exists
+    // // TODO: Fix This
+    // const existingInvoice = await this.getInvoiceByStripeId({
+    //   sb,
+    //   stripeInvoiceId: stripeInvoice.id,
+    // });
 
-    if (existingInvoice) {
-      console.log("Invoice already exists");
-      return;
-    }
+    // if (existingInvoice) {
+    //   console.log("Invoice already exists");
+    //   return;
+    // }
 
-    const { error } = await sb.from("invoices").upsert(invoice, {
-      onConflict: "stripe_id",
-    });
+    // // const { error } = await sb
+    // //   .from("invoices")
+    // //   .upsert(invoice, {
+    // //     onConflict: "stripe_id",
+    // //   })
+    // //   .select();
+
+    const { error } = await sb.from("invoices").insert(invoice);
+
+    // const customer = await CusService.getByInternalId({
+    //   sb,
+    //   internalId: invoice.internal_customer_id,
+    // });
+
+    // const autumn = new Autumn();
+    // await autumn.sendEvent({
+    //   customerId: invoice.internal_customer_id,
+    //   eventName: "monthly_revenue",
+    //   properties: {
+    //     value: stripeInvoice.total / 100,
+    //   },
+    // });
 
     if (error) {
       console.log("Failed to create invoice from stripe", error);
-      throw new RecaseError({
-        code: ErrCode.CreateInvoiceFailed,
-        message: error.message,
-      });
+      return;
     }
   }
 }
