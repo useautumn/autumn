@@ -39,23 +39,6 @@ const getEventAndCustomer = async (req: any) => {
     env: env,
   });
 
-  const parsedEvent = CreateEventSchema.parse(req.body);
-
-  const newEvent: Event = {
-    ...parsedEvent,
-
-    properties: parsedEvent.properties || {},
-
-    timestamp: Date.now(),
-    id: generateId("evt"),
-    org_id: orgId,
-    env: env,
-    internal_customer_id: customer.internal_id,
-  };
-
-  // console.log("Customer:", customer);
-  // console.log("Org ID:", req.orgId);
-
   if (!customer) {
     customer = await createNewCustomer({
       sb: req.sb,
@@ -71,6 +54,21 @@ const getEventAndCustomer = async (req: any) => {
   }
 
   // 3. Insert event
+
+  const parsedEvent = CreateEventSchema.parse(req.body);
+
+  const newEvent: Event = {
+    ...parsedEvent,
+
+    properties: parsedEvent.properties || {},
+
+    timestamp: Date.now(),
+    id: generateId("evt"),
+    org_id: orgId,
+    env: env,
+    internal_customer_id: customer.internal_id,
+  };
+
   await EventService.insertEvent(req.sb, newEvent);
 
   return { customer, event: newEvent };
