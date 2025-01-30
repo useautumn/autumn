@@ -4,6 +4,39 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { initDefaultConfig } from "./orgUtils.js";
 
 export class OrgService {
+  static async getFromReq(req: any) {
+    return await this.getFullOrg({
+      sb: req.sb,
+      orgId: req.org.id,
+    });
+  }
+
+  static async getFullOrg({
+    sb,
+    orgId,
+  }: {
+    sb: SupabaseClient;
+    orgId: string;
+  }) {
+    const { data, error } = await sb
+      .from("organizations")
+      .select("*")
+      .eq("id", orgId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new RecaseError({
+        message: "Failed to get org from supabase",
+        code: ErrCode.OrgNotFound,
+        statusCode: 404,
+      });
+    }
+
+    const config = initDefaultConfig();
+
+    return { ...data, config };
+  }
   static async insert({ sb, org }: { sb: SupabaseClient; org: Organization }) {
     // Insert org into supabase
     const { data, error } = await sb.from("organizations").insert(org);
@@ -40,32 +73,5 @@ export class OrgService {
     }
 
     return data;
-  }
-
-  static async getFullOrg({
-    sb,
-    orgId,
-  }: {
-    sb: SupabaseClient;
-    orgId: string;
-  }) {
-    const { data, error } = await sb
-      .from("organizations")
-      .select("*")
-      .eq("id", orgId)
-      .select()
-      .single();
-
-    if (error) {
-      throw new RecaseError({
-        message: "Failed to get org from supabase",
-        code: ErrCode.OrgNotFound,
-        statusCode: 404,
-      });
-    }
-
-    const config = initDefaultConfig();
-
-    return { ...data, config };
   }
 }

@@ -8,6 +8,8 @@ import { CreateFeatureSchema } from "@autumn/shared";
 import express from "express";
 import { generateId } from "@/utils/genUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
+import { sendFeatureEvent } from "@/external/autumn/autumnUtils.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 
 export const featureApiRouter = express.Router();
 
@@ -95,6 +97,11 @@ featureApiRouter.delete("/:featureId", async (req: any, res) => {
   let { featureId } = req.params;
 
   try {
+    const org = await OrgService.getFullOrg({
+      sb: req.sb,
+      orgId,
+    });
+
     // Check if any credit systems are using this feature
     const creditSystems = await FeatureService.getCreditSystemsUsingFeature({
       pg: req.pg,

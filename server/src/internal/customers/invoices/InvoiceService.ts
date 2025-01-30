@@ -1,5 +1,11 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Invoice, InvoiceStatus, ProcessorType } from "@autumn/shared";
+import {
+  AppEnv,
+  Invoice,
+  InvoiceStatus,
+  Organization,
+  ProcessorType,
+} from "@autumn/shared";
 import Stripe from "stripe";
 import { generateId } from "@/utils/genUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -68,12 +74,14 @@ export class InvoiceService {
     internalCustomerId,
     productIds,
     status,
+    org,
   }: {
     sb: SupabaseClient;
     stripeInvoice: Stripe.Invoice;
     internalCustomerId: string;
     productIds: string[];
     status?: InvoiceStatus | null;
+    org: Organization;
   }) {
     const invoice: Invoice = {
       id: generateId("inv"),
@@ -85,44 +93,59 @@ export class InvoiceService {
       status: status || (stripeInvoice.status as InvoiceStatus | null),
     };
 
-    // // Check if invoice already exists
-    // // TODO: Fix This
-    // const existingInvoice = await this.getInvoiceByStripeId({
-    //   sb,
-    //   stripeInvoiceId: stripeInvoice.id,
-    // });
-
-    // if (existingInvoice) {
-    //   console.log("Invoice already exists");
-    //   return;
-    // }
-
-    // // const { error } = await sb
-    // //   .from("invoices")
-    // //   .upsert(invoice, {
-    // //     onConflict: "stripe_id",
-    // //   })
-    // //   .select();
-
     const { error } = await sb.from("invoices").insert(invoice);
 
-    // const customer = await CusService.getByInternalId({
-    //   sb,
-    //   internalId: invoice.internal_customer_id,
-    // });
-
-    // const autumn = new Autumn();
-    // await autumn.sendEvent({
-    //   customerId: invoice.internal_customer_id,
-    //   eventName: "monthly_revenue",
-    //   properties: {
-    //     value: stripeInvoice.total / 100,
-    //   },
-    // });
-
     if (error) {
-      console.log("Failed to create invoice from stripe", error);
+      console.log("Failed to create invoice from stripe", error.message);
       return;
+    }
+
+    console.log("✅ Created invoice from stripe");
+
+    // Send monthly_revenue event
+    try {
+      const customer = await CusService.getByInternalId({
+        sb,
+        internalId: invoice.internal_customer_id,
+      });
+
+      if (customer.env !== AppEnv.Live) {
+        return;
+      }
+
+      const autumn = new Autumn();
+      await autumn.sendEvent({
+        customerId: org.id,
+        eventName: "monthly_revenue",
+        properties: {
+          value: stripeInvoice.total / 100,
+        },
+        customer_data: {
+          name: org.slug,
+        },
+      });
+      console.log("✅ Sent monthly_revenue event");
+    } catch (error) {
+      console.log("Failed to send monthly_revenue event", error);
     }
   }
 }
+
+// // Check if invoice already exists
+// // TODO: Fix This
+// const existingInvoice = await this.getInvoiceByStripeId({
+//   sb,
+//   stripeInvoiceId: stripeInvoice.id,
+// });
+
+// if (existingInvoice) {
+//   console.log("Invoice already exists");
+//   return;
+// }
+
+// // const { error } = await sb
+// //   .from("invoices")
+// //   .upsert(invoice, {
+// //     onConflict: "stripe_id",
+// //   })
+// //   .select();

@@ -71,15 +71,18 @@ export class Autumn {
     customerId,
     eventName,
     properties,
+    customer_data,
   }: {
     customerId: string;
     eventName: string;
     properties?: any;
+    customer_data?: any;
   }) {
     const data = await this.post(`/events`, {
       customer_id: customerId,
       event_name: eventName,
       properties,
+      customer_data,
     });
 
     return data;

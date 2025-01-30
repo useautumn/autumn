@@ -39,7 +39,10 @@ export default function UpdateEntitlement({
 
     const updatedEntitlements = product.entitlements.filter(
       (entitlement: any) => {
-        return entitlement.id !== selectedEntitlement.id;
+        return (
+          entitlement.internal_feature_id !==
+          selectedEntitlement.internal_feature_id
+        );
       }
     );
 
@@ -54,7 +57,10 @@ export default function UpdateEntitlement({
 
   const handleUpdateEntitlement = () => {
     const updatedEntitlements = product.entitlements.map((entitlement: any) => {
-      if (entitlement.id === selectedEntitlement.id) {
+      if (
+        entitlement.internal_feature_id ===
+        selectedEntitlement.internal_feature_id
+      ) {
         return {
           ...entitlement,
           ...selectedEntitlement,
