@@ -20,6 +20,7 @@ export const invalidNumber = (value: any) => {
 
 export const getBackendErr = (error: any, defaultText: string) => {
   if (error.response && error.response.data) {
+    // console.log("Error:", error.response.data);
     const data = error.response.data;
     if (data.message && data.code) {
       return data.message;

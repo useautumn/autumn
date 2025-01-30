@@ -1,3 +1,6 @@
+import { ErrCode } from "@/errors/errCodes.js";
+import RecaseError from "@/utils/errorUtils.js";
+
 export class Autumn {
   private apiKey: string;
   public headers: Record<string, string>;
@@ -29,9 +32,18 @@ export class Autumn {
     if (response.status != 200) {
       try {
         const error = await response.json();
-        throw new Error(error.message);
+
+        throw new RecaseError({
+          message: "Failed to call Autumn API",
+          code: ErrCode.InternalError,
+          data: error,
+        });
       } catch (error) {
-        throw new Error("Failed to call Autumn API");
+        throw new RecaseError({
+          message: "Failed to call Autumn API",
+          code: ErrCode.InternalError,
+          data: error,
+        });
       }
     }
 
