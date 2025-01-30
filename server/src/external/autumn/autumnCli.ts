@@ -98,7 +98,7 @@ export class Autumn {
     quantity?: number;
   }) {
     const data = await this.get(
-      `/entitled?customer_id=${customerId}&feature_id=${featureId}&quantity=${quantity}`
+      `/entitled?customer_id=${customerId}&feature_id=${featureId}`
     );
 
     return data;

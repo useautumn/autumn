@@ -10,10 +10,13 @@ import { featureApiRouter } from "./features/featureApiRouter.js";
 import { entitledRouter } from "./entitled/entitledRouter.js";
 import { attachRouter } from "./customers/products/cusProductRouter.js";
 import {
+  FeatureId,
+  isEntitled,
   sendFeatureEvent,
   sendProductEvent,
 } from "@/external/autumn/autumnUtils.js";
 import { OrgService } from "../orgs/OrgService.js";
+import { handleRequestError } from "@/utils/errorUtils.js";
 
 const apiRouter = Router();
 
@@ -21,7 +24,28 @@ const pricingMiddleware = async (req: any, res: any, next: any) => {
   let path = req.url;
   let method = req.method;
 
-  next();
+  try {
+    if (path == "/features" && method == "POST") {
+      await isEntitled({
+        orgId: req.org.id,
+        env: req.env,
+        featureId: FeatureId.Features,
+      });
+    }
+
+    if (path == "/products" && method == "POST") {
+      await isEntitled({
+        orgId: req.org.id,
+        env: req.env,
+        featureId: FeatureId.Products,
+      });
+    }
+
+    next();
+  } catch (error) {
+    handleRequestError({ error, res, action: "pricingMiddleware" });
+    return;
+  }
 
   if (res.statusCode === 200) {
     if (path == "/features" && method === "POST") {
