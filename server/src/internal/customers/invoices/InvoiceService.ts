@@ -104,19 +104,14 @@ export class InvoiceService {
 
     // Send monthly_revenue event
     try {
-      const customer = await CusService.getByInternalId({
-        sb,
-        internalId: invoice.internal_customer_id,
-      });
-
-      if (customer.env !== AppEnv.Live) {
+      if (!stripeInvoice.livemode) {
         return;
       }
 
       const autumn = new Autumn();
       await autumn.sendEvent({
         customerId: org.id,
-        eventName: "monthly_revenue",
+        eventName: "revenue",
         properties: {
           value: stripeInvoice.total / 100,
         },
@@ -124,9 +119,9 @@ export class InvoiceService {
           name: org.slug,
         },
       });
-      console.log("✅ Sent monthly_revenue event");
+      console.log("✅ Sent revenue event");
     } catch (error) {
-      console.log("Failed to send monthly_revenue event", error);
+      console.log("Failed to send revenue event", error);
     }
   }
 }

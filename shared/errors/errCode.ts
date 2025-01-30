@@ -1,6 +1,7 @@
 export const ErrCode = {
   // General
   InvalidInputs: "invalid_inputs",
+  LimitsReached: "limits_reached",
   // Org
   OrgNotFound: "org_not_found",
 

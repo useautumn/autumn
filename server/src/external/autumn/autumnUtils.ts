@@ -7,6 +7,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 export enum FeatureId {
   Products = "products",
   Features = "features",
+  Revenue = "revenue",
 }
 
 export const sendFeatureEvent = async ({
@@ -86,31 +87,38 @@ export const isEntitled = async ({
 
   const autumn = new Autumn();
 
+  let result;
   try {
-    const result = await autumn.entitled({
+    result = await autumn.entitled({
       customerId: minOrg.id,
       featureId: featureId,
       customer_data: {
         name: minOrg.slug,
       },
     });
-
-    console.log("Result:", result);
-
-    if (result.allowed) {
-      return true;
+  } catch (error: any) {
+    if (error instanceof RecaseError) {
+      console.log("Recase error:", error.data);
     }
 
     throw new RecaseError({
-      message: `You've used up your allowance for feature ${featureId}. Please upgrade your plan or contact hey@useautumn.com to get more!`,
-      code: ErrCode.InternalError,
-      data: result,
-    });
-  } catch (error: any) {
-    throw new RecaseError({
       message: "Failed to check entitlement...",
       code: ErrCode.InternalError,
-      data: error,
     });
   }
+
+  if (result?.allowed) {
+    return true;
+  }
+
+  let errText = `You've used up your allowance for ${featureId}.`;
+  if (featureId === FeatureId.MonthlyRevenue) {
+    errText = `Looks like you've hit your monthly revenue limit for our plan, congrats 😉.`;
+  }
+
+  throw new RecaseError({
+    message: `${errText} Please upgrade your plan or contact hey@useautumn.com to get more!`,
+    code: ErrCode.InternalError,
+    data: result,
+  });
 };

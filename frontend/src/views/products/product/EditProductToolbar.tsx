@@ -32,7 +32,7 @@ export const EditProductToolbar = ({
   product: Product;
 }) => {
   const { mutate, env } = useProductContext();
-  const axiosInstance = useAxiosInstance(env);
+  const axiosInstance = useAxiosInstance({ env });
 
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);

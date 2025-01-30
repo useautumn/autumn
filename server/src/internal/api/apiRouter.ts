@@ -24,25 +24,30 @@ const pricingMiddleware = async (req: any, res: any, next: any) => {
   let path = req.url;
   let method = req.method;
 
-  if (req.minOrg.slug == "autumn") {
+  if (
+    req.minOrg.slug == "autumn" ||
+    req.minOrg.slug == "firecrawl" ||
+    req.minOrg.slug == "pipeline" ||
+    req.minOrg.slug == "alex"
+  ) {
     next();
     return;
   }
 
   try {
-    if (path == "/features" && method == "POST") {
-      await isEntitled({
-        minOrg: req.minOrg,
-        env: req.env,
-        featureId: FeatureId.Features,
-      });
-    }
-
     if (path == "/products" && method == "POST") {
       await isEntitled({
         minOrg: req.minOrg,
         env: req.env,
         featureId: FeatureId.Products,
+      });
+    }
+
+    if (path == "/attach" && method == "POST") {
+      await isEntitled({
+        minOrg: req.minOrg,
+        env: req.env,
+        featureId: FeatureId.Revenue,
       });
     }
 
@@ -53,22 +58,6 @@ const pricingMiddleware = async (req: any, res: any, next: any) => {
   }
 
   if (res.statusCode === 200) {
-    if (path == "/features" && method === "POST") {
-      await sendFeatureEvent({
-        minOrg: req.minOrg,
-        env: req.env,
-        incrementBy: 1,
-      });
-    }
-
-    if (path.match(/^\/features\/[^\/]+$/) && method === "DELETE") {
-      await sendFeatureEvent({
-        minOrg: req.minOrg,
-        env: req.env,
-        incrementBy: -1,
-      });
-    }
-
     if (path == "/products" && method === "POST") {
       await sendProductEvent({
         minOrg: req.minOrg,

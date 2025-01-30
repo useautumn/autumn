@@ -161,16 +161,7 @@ productApiRouter.delete("/:productId", async (req: any, res) => {
 
     res.status(200).send({ message: "Product deleted" });
   } catch (error) {
-    if (error instanceof RecaseError) {
-      res.status(error.statusCode).send({
-        message: error.message,
-        code: error.code,
-      });
-      return;
-    }
-
-    console.error("Failed to delete product", error);
-    res.status(500).send(error);
+    handleRequestError({ error, res, action: "Delete product" });
   }
 
   return;
