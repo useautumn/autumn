@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   AppEnv,
+  CreateEventSchema,
   Customer,
   ErrCode,
   Event,
@@ -28,33 +29,7 @@ const getEventAndCustomer = async (req: any) => {
   const orgId = req.orgId;
   const env = req.env;
 
-  let newEvent: Event;
   let customer: Customer;
-  try {
-    // 1. Validate request body
-    EventSchema.omit({
-      id: true,
-      org_id: true,
-      env: true,
-      properties: true,
-    }).parse(req.body);
-    newEvent = {
-      id: generateId("evt"),
-      org_id: orgId,
-      env: env,
-      timestamp: Date.now(),
-      properties: body.properties || {},
-
-      event_name: body.event_name,
-      customer_id: body.customer_id,
-    };
-  } catch (error: any) {
-    throw new RecaseError({
-      message: "Invalid request body -> " + formatZodError(error),
-      code: ErrCode.InvalidEvent,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-  }
 
   // 2. Check if customer ID is valid
   customer = await CusService.getCustomer({
@@ -63,6 +38,23 @@ const getEventAndCustomer = async (req: any) => {
     customerId: body.customer_id,
     env: env,
   });
+
+  const parsedEvent = CreateEventSchema.parse(req.body);
+
+  const newEvent: Event = {
+    ...parsedEvent,
+
+    properties: parsedEvent.properties || {},
+
+    timestamp: Date.now(),
+    id: generateId("evt"),
+    org_id: orgId,
+    env: env,
+    internal_customer_id: customer.internal_id,
+  };
+
+  // console.log("Customer:", customer);
+  // console.log("Org ID:", req.orgId);
 
   if (!customer) {
     customer = await createNewCustomer({
@@ -137,26 +129,6 @@ eventsRouter.post("", async (req: any, res: any) => {
         features: affectedFeatures,
         event,
       });
-      // await inngest.send({
-      //   name: "autumn/update-balance",
-      //   data: {
-      //     customer,
-      //     features: affectedFeatures,
-      //   },
-      // });
-      // await updateBalanceTask.trigger(
-      //   {
-      //     customer,
-      //     features: affectedFeatures,
-      //   },
-      //   {
-      //     queue: {
-      //       name: "customer",
-      //       concurrencyLimit: 1,
-      //     },
-      //     concurrencyKey: customer.internal_id,
-      //   }
-      // );
     } else {
       console.log("No affected features found");
     }
