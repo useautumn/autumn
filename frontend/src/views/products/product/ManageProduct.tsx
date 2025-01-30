@@ -79,20 +79,26 @@ export const ManageProduct = ({
           <>
             <div className="flex gap-4 w-fit bg-white p-3 rounded-sm border">
               <div className="flex flex-col rounded-sm w-[150px] items-center gap-2">
-              <p className="text-xs text-t2 bg-stone-50 font-medium p-1 w-full text-center">Length </p>
-              <p className="text-sm font-medium">{product.free_trial.length} days</p>
+                <p className="text-xs text-t2 bg-stone-50 font-medium p-1 w-full text-center">
+                  Length{" "}
+                </p>
+                <p className="text-sm font-medium">
+                  {product.free_trial.length} days
+                </p>
+              </div>
+              <div className="flex flex-col rounded-sm w-[150px] items-center gap-2">
+                <p className="text-xs text-t2 bg-stone-50 font-medium p-1 w-full text-center">
+                  Unique Fingerprint
+                </p>
+                <p className="text-sm font-medium">
+                  {product.free_trial.unique_fingerprint ? "Yes" : "No"}
+                </p>
+              </div>
+              <EditFreeTrialToolbar product={product} />
             </div>
-            <div className="flex flex-col rounded-sm w-[150px] items-center gap-2">
-              <p className="text-xs text-t2 bg-stone-50 font-medium p-1 w-full text-center">Unique Fingerprint</p>
-              <p className="text-sm font-medium">{product.free_trial.unique_fingerprint ? "Yes" : "No"}</p>
-            </div>
-            <EditFreeTrialToolbar product={product} />
-          </div>
           </>
         )}
-        {!product.free_trial && (
-          <CreateFreeTrial />
-        )}
+        {!product.free_trial && <CreateFreeTrial />}
       </div>
     </div>
   );
