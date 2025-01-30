@@ -16,6 +16,7 @@ import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
 import { z } from "zod";
+import { createNewCustomer } from "../customers/cusUtils.js";
 
 export const entitledRouter = Router();
 
@@ -183,8 +184,8 @@ const EntitledSchema = z.object({
   quantity: z.number().optional(),
 });
 
-entitledRouter.get("", async (req: any, res: any) => {
-  let { customer_id, feature_id, quantity } = req.query;
+entitledRouter.post("", async (req: any, res: any) => {
+  let { customer_id, feature_id, quantity, customer_data } = req.body;
 
   try {
     try {
@@ -212,11 +213,22 @@ entitledRouter.get("", async (req: any, res: any) => {
     });
 
     if (!customer) {
-      throw new RecaseError({
-        message: `Customer ${customer_id} not found`,
-        code: ErrCode.CustomerNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
+      await createNewCustomer({
+        sb: req.sb,
+        orgId: req.orgId,
+        env: req.env,
+        customer: {
+          id: customer_id,
+          name: customer_data.name,
+          email: customer_data.email,
+          fingerprint: customer_data.fingerprint,
+        },
       });
+      // throw new RecaseError({
+      //   message: `Customer ${customer_id} not found`,
+      //   code: ErrCode.CustomerNotFound,
+      //   statusCode: StatusCodes.NOT_FOUND,
+      // });
     }
 
     // 2. Get features & credit systems
