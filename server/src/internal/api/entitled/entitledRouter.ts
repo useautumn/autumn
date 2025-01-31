@@ -221,9 +221,9 @@ entitledRouter.post("", async (req: any, res: any) => {
         env: req.env,
         customer: {
           id: customer_id,
-          name: customer_data.name,
-          email: customer_data.email,
-          fingerprint: customer_data.fingerprint,
+          name: customer_data?.name,
+          email: customer_data?.email,
+          fingerprint: customer_data?.fingerprint,
         },
       });
     }
