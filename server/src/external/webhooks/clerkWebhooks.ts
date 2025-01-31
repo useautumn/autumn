@@ -7,6 +7,8 @@ import { handleRequestError } from "@/utils/errorUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createClerkCli } from "../clerkUtils.js";
 import { sendOnboardingEmail } from "./sendOnboardingEmail.js";
+import { generatePublishableKey } from "@/utils/encryptUtils.js";
+import { AppEnv } from "@autumn/shared";
 
 const verifyClerkWebhook = async (req: Request, res: Response) => {
   const wh = new Webhook(process.env.CLERK_SIGNING_SECRET!);
@@ -92,6 +94,8 @@ const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
       default_currency: "usd",
       stripe_connected: false,
       stripe_config: null,
+      test_pkey: generatePublishableKey(AppEnv.Sandbox),
+      live_pkey: generatePublishableKey(AppEnv.Live),
     },
   });
 

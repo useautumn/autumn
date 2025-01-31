@@ -36,3 +36,34 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
     return;
   }
 };
+
+export const wsAuthMiddleware = async (req: any) => {
+  const authHeader = req.headers["authorization"];
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return { data: null, error: "Unauthorized" };
+  }
+
+  const apiKey = authHeader.split(" ")[1];
+  if (!apiKey.startsWith("am_") || apiKey.length !== API_KEY_LENGTH) {
+    return { data: null, error: "Unauthorized" };
+  }
+
+  try {
+    const result = await validateApiKey(apiKey);
+
+    return {
+      data: {
+        env: result.environment,
+        orgId: result.ownerId,
+        minOrg: {
+          id: result.ownerId,
+          slug: result.meta?.org_slug,
+        },
+      },
+      error: null,
+    };
+  } catch (error) {
+    return { data: null, error: "Unauthorized" };
+  }
+};

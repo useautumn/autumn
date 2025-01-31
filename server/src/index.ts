@@ -11,10 +11,14 @@ import { envMiddleware } from "./middleware/envMiddleware.js";
 import pg from "pg";
 
 import { initQueue, initWorkers } from "./queue/queue.js";
-
-const app = express();
+import http from "http";
+import { initWs } from "./websockets/initWs.js";
 
 const init = async () => {
+  const app = express();
+  const server = http.createServer(app);
+  const wss = initWs(server);
+
   const pgClient = new pg.Client(process.env.SUPABASE_CONNECTION_STRING || "");
   await pgClient.connect();
 
@@ -60,7 +64,7 @@ const init = async () => {
 
   const PORT = 8080;
 
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 };

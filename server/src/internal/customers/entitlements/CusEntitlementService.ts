@@ -73,18 +73,61 @@ export class CustomerEntitlementService {
     return data;
   }
 
-  static async getActive({
+  static async getActiveByCustomerId({
     sb,
-    internalCustomerId,
+    customerId,
+    orgId,
+    env,
   }: {
     sb: SupabaseClient;
-    internalCustomerId: string;
+    customerId: string;
+    orgId: string;
+    env: string;
   }) {
     const { data, error } = await sb
       .from("customer_entitlements")
-      .select("*, entitlement:entitlements(*)")
-      .eq("internal_customer_id", internalCustomerId)
-      .eq("status", "active");
+      .select(
+        `*, 
+          entitlement:entitlements(*, feature:features(*)), 
+          customer_product:customer_products!inner(*), 
+          customer:customers(*)
+        `
+      )
+      .eq("customer_id", customerId)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env)
+      .eq("customer_product.status", "active");
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getActiveByFeatureAndCusId({
+    sb,
+    cusId,
+    featureId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    cusId: string;
+    featureId: string;
+    orgId: string;
+    env: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_entitlements")
+      .select(
+        "*, customer_product:customer_products!inner(*), entitlement:entitlements!inner(*, feature:features(*)), customer:customers(*)"
+      )
+      .eq("customer_id", cusId)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env)
+      .eq("entitlement.feature_id", featureId)
+      .eq("customer_product.status", "active");
 
     if (error) {
       throw error;
@@ -128,7 +171,7 @@ export class CustomerEntitlementService {
     const { data, error } = await sb
       .from("customer_entitlements")
       .select(
-        "*, customer_product:customer_products!inner(*), entitlement:entitlements(*)"
+        "*, customer_product:customer_products!inner(*), entitlement:entitlements(*, feature:features(*))"
       )
       .eq("internal_customer_id", internalCustomerId)
       .in("internal_feature_id", internalFeatureIds)

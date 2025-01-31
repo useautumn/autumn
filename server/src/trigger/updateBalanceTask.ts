@@ -2,10 +2,12 @@ import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { handleBelowThresholdInvoicing } from "./invoiceThresholdUtils.js";
 import { getBelowThresholdPrice } from "./invoiceThresholdUtils.js";
 
-import { AggregateType, Event, Feature } from "@autumn/shared";
+import { AggregateType, AllowanceType, Event, Feature } from "@autumn/shared";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Customer, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { SbChannelEvent } from "@/websockets/initWs.js";
+import chalk from "chalk";
 
 // 3. Get customer entitlements and sort
 const getCustomerEntitlements = async ({
@@ -111,6 +113,10 @@ export const updateCustomerBalance = async ({
     return;
   }
 
+  const channel = sb.channel(
+    `${customer.org_id}_${customer.env}_${customer.id}`
+  );
+
   // Update customer balance
   const featureIdToDeduction: any = {};
   const meteredFeatures = features.filter(
@@ -126,12 +132,23 @@ export const updateCustomerBalance = async ({
       continue;
     }
 
-    const feature = features.find(
-      (feature) => feature.internal_id === internalFeatureId
-    );
+    const feature = cusEnt.entitlement.feature;
 
-    // 1. Get metered feature deduction
-    if (feature?.type === FeatureType.Metered) {
+    // 1. Skip if customer has unlimited entitlement
+    let unlimitedExists = false;
+    for (const cusEnt of cusEnts) {
+      if (cusEnt.entitlement.allowance_type == AllowanceType.Unlimited) {
+        unlimitedExists = true;
+        break;
+      }
+    }
+
+    if (unlimitedExists) {
+      continue;
+    }
+
+    // 2. Get metered feature deduction
+    if (feature.type === FeatureType.Metered) {
       let deduction = getMeteredDeduction(feature, event);
 
       featureIdToDeduction[internalFeatureId] = {
@@ -141,8 +158,8 @@ export const updateCustomerBalance = async ({
       };
     }
 
-    // 2. Get credit system deduction
-    if (feature?.type === FeatureType.CreditSystem) {
+    // 3. Get credit system deduction
+    if (feature.type === FeatureType.CreditSystem) {
       const deduction = getCreditSystemDeduction({
         meteredFeatures,
         creditSystem: feature,
@@ -170,6 +187,25 @@ export const updateCustomerBalance = async ({
       .from("customer_entitlements")
       .update({ balance: curBalance - deduction })
       .eq("id", cusEnt.id);
+
+    // Send balance updated event to channel
+
+    console.log(
+      `   - Sending balance update event. Feature ${chalk.yellow(
+        feature.id
+      )}, Balance ${chalk.yellow(
+        curBalance - deduction
+      )}, Customer ${chalk.yellow(customer.id)}`
+    );
+
+    await channel.send({
+      type: "broadcast",
+      event: SbChannelEvent.BalanceUpdated,
+      payload: {
+        feature_id: feature.id,
+        balance: curBalance - deduction,
+      },
+    });
 
     if (error) {
       console.error(

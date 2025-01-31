@@ -19,6 +19,8 @@ export const OrganizationSchema = z.object({
   default_currency: z.string(),
   stripe_connected: z.boolean().default(false),
   stripe_config: StripeConfigSchema.optional().nullable(),
+  test_pkey: z.string(),
+  live_pkey: z.string(),
 
   config: z
     .object({

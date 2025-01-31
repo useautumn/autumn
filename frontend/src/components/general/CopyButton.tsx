@@ -26,13 +26,13 @@ function CopyButton({
     <Button
       variant={variant as ButtonProps["variant"]}
       size="icon"
-      className={cn("h-6 w-6 p-0.5", className)}
+      className={cn("h-6 w-6 p-0.5 pl-1", className)}
       onClick={() => {
         navigator.clipboard.writeText(text);
         setCopied(true);
       }}
     >
-      <p>{children}</p>
+      {children}
       {copied ? <Check size={13} /> : <Copy size={13} />}
     </Button>
   );

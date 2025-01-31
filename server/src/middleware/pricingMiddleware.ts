@@ -27,13 +27,13 @@ export const pricingMiddleware = async (req: any, res: any, next: any) => {
       });
     }
 
-    if (path == "/attach" && method == "POST") {
-      await isEntitled({
-        minOrg: req.minOrg,
-        env: req.env,
-        featureId: FeatureId.Revenue,
-      });
-    }
+    // if (path == "/attach" && method == "POST") {
+    //   await isEntitled({
+    //     minOrg: req.minOrg,
+    //     env: req.env,
+    //     featureId: FeatureId.Revenue,
+    //   });
+    // }
 
     next();
   } catch (error) {

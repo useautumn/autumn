@@ -17,6 +17,7 @@ import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
 import { z } from "zod";
 import { createNewCustomer } from "../customers/cusUtils.js";
+import { handleEventSent } from "../events/eventRouter.js";
 
 export const entitledRouter = Router();
 
@@ -185,7 +186,8 @@ const EntitledSchema = z.object({
 });
 
 entitledRouter.post("", async (req: any, res: any) => {
-  let { customer_id, feature_id, quantity, customer_data } = req.body;
+  let { customer_id, feature_id, quantity, customer_data, event_data } =
+    req.body;
 
   try {
     try {
@@ -273,6 +275,25 @@ entitledRouter.post("", async (req: any, res: any) => {
       cusEnts: cusEnts!,
       quantity,
     });
+
+    // Send event if event_data is provided
+    if (allowed && event_data) {
+      await handleEventSent({
+        req,
+        customer_id: customer_id,
+        customer_data: customer_data,
+        event_data: {
+          customer_id: customer_id,
+          ...event_data,
+        },
+      });
+      // await sendFeatureEvent({
+      //   minOrg: req.minOrg,
+      //   env: req.env,
+      //   featureId: feature.id,
+      //   eventData: event_data,
+      // });
+    }
 
     res.status(200).send({ allowed, balances });
   } catch (error) {
