@@ -391,7 +391,7 @@ const getOrCreateCustomer = async ({
 }: {
   sb: SupabaseClient;
   customerId: string;
-  customerData: CustomerData;
+  customerData?: CustomerData;
   orgId: string;
   env: AppEnv;
 }) => {
@@ -409,9 +409,9 @@ const getOrCreateCustomer = async ({
       env,
       customer: {
         id: customerId,
-        name: customerData.name || "",
-        email: customerData.email || "",
-        fingerprint: customerData.fingerprint,
+        name: customerData?.name || "",
+        email: customerData?.email || "",
+        fingerprint: customerData?.fingerprint,
       },
     });
   }
