@@ -96,7 +96,7 @@ export class InvoiceService {
     const { error } = await sb.from("invoices").insert(invoice);
 
     if (error) {
-      console.log("Failed to create invoice from stripe", error.message);
+      console.log("Failed to insert Stripe invoice", error.message);
       return;
     }
 

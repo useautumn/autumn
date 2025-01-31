@@ -28,6 +28,8 @@ export const getOrgFromSession = async () => {
     slug: sessionClaims?.org?.slug,
     default_currency: sessionClaims?.org?.default_currency,
     stripe_connected: sessionClaims?.org?.stripe_connected,
+    test_pkey: "",
+    live_pkey: "",
   };
 
   return org;

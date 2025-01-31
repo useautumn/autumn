@@ -25,7 +25,7 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
       window.location.href = "/sandbox/customers";
       router.refresh();
     }
-  }, [organization]);
+  }, [organization, curOrgId, router]);
   useEffect(() => {
     if (organization && isLoaded) {
       setTimeout(() => {
