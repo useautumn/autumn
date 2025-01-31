@@ -1,9 +1,48 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, Organization } from "@autumn/shared";
+import { AppEnv, ErrCode, Organization } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { initDefaultConfig } from "./orgUtils.js";
 
 export class OrgService {
+  static async getOrgs({ sb }: { sb: SupabaseClient }) {
+    const { data, error } = await sb.from("organizations").select("*");
+    if (error) {
+      throw new Error("Error getting orgs from supabase");
+    }
+    return data;
+  }
+
+  static async getFromPkey({
+    sb,
+    pkey,
+    env,
+  }: {
+    sb: SupabaseClient;
+    pkey: string;
+    env: AppEnv;
+  }) {
+    let fieldName = env === AppEnv.Sandbox ? "test_pkey" : "live_pkey";
+    const { data, error } = await sb
+      .from("organizations")
+      .select("*")
+      .eq(fieldName, pkey)
+      .select()
+      .single();
+
+    if (error) {
+      // if (error.code === "PGRST116") {
+      //   return null;
+      // }
+
+      throw new RecaseError({
+        message: "Error getting org from supabase",
+        code: ErrCode.OrgNotFound,
+        statusCode: 404,
+      });
+    }
+
+    return data;
+  }
   static async getFromReq(req: any) {
     return await this.getFullOrg({
       sb: req.sb,

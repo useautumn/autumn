@@ -1,4 +1,6 @@
+import { AppEnv } from "@autumn/shared";
 import crypto from "crypto";
+import KSUID from "ksuid";
 
 const getKey = () => {
   return crypto
@@ -40,3 +42,14 @@ export function decryptData(encryptedData: string) {
 
   return decrypted.toString("utf8");
 }
+
+export const generatePublishableKey = (env: string) => {
+  // let rand = crypto
+  //   .randomBytes(75) // 75 bytes will give ~100 characters in base64
+  //   .toString("base64")
+  //   .replace(/[+/=]/g, "") // Remove non-URL safe characters
+  //   .slice(0, 100); // Ensure exactly 100 characters
+
+  let envString = env === AppEnv.Sandbox ? "test_" : "live_";
+  return `am_pk_${envString}${KSUID.randomSync().string}`;
+};

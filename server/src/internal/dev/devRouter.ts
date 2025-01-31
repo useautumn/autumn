@@ -3,14 +3,17 @@ import { withOrgAuth } from "@/middleware/authMiddleware.js";
 import { ApiKey, AppEnv } from "@autumn/shared";
 import { Router } from "express";
 import { ApiKeyService } from "./ApiKeyService.js";
+import { OrgService } from "../orgs/OrgService.js";
 
 export const devRouter = Router();
 
 devRouter.get("/data", withOrgAuth, async (req: any, res) => {
   const apiKeys = await ApiKeyService.getByOrg(req.sb, req.orgId, req.env);
+  const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
 
   res.status(200).json({
     api_keys: apiKeys,
+    org,
   });
 });
 

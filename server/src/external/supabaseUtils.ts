@@ -11,24 +11,3 @@ export const createSupabaseClient = () => {
     throw error;
   }
 };
-
-// export const downloadFileToTmp = async (
-//   filePath: string,
-//   localPath: string
-// ) => {
-//   const supabase = createSupabaseClient();
-
-//   const { data, error } = await supabase.storage
-//     .from(BUCKET_NAME)
-//     .download(filePath);
-
-//   if (error) {
-//     throw new Error(`Failed to download file from Supabase: ${error.message}`);
-//   }
-
-//   if (!data) {
-//     throw new Error("No data received from Supabase");
-//   }
-
-//   await writeFile(localPath, Buffer.from(await data.arrayBuffer()));
-// };

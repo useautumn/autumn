@@ -315,7 +315,6 @@ const checkBalanceBelowThreshold = async ({
 // FUNCTION 2: QUEUE CHECK BELOW THRESHOLD PRICE
 export const handleBelowThresholdInvoicing = async ({
   sb,
-  internalCustomerId,
   belowThresholdPrice,
 }: {
   sb: SupabaseClient;

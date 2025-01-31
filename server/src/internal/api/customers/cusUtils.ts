@@ -1,4 +1,4 @@
-import { Customer, ProcessorType } from "@autumn/shared";
+import { CreateCustomerSchema, Customer, ProcessorType } from "@autumn/shared";
 
 import { CreateCustomer } from "@autumn/shared";
 
@@ -35,10 +35,12 @@ export const createNewCustomer = async ({
     orgId,
   });
 
+  const parsedCustomer = CreateCustomerSchema.parse(customer);
+
   const customerData: Customer = {
-    ...customer,
-    name: customer.name || "",
-    email: customer.email || "",
+    ...parsedCustomer,
+    name: parsedCustomer.name || "",
+    email: parsedCustomer.email || "",
 
     internal_id: generateId("cus"),
     org_id: orgId,

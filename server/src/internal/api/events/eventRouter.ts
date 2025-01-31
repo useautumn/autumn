@@ -20,41 +20,52 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { Client } from "pg";
 import { Queue } from "bullmq";
 import { createNewCustomer } from "../customers/cusUtils.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export const eventsRouter = Router();
 
-const getEventAndCustomer = async (req: any) => {
-  const body = req.body;
-  const orgId = req.orgId;
-  const env = req.env;
-
+const getEventAndCustomer = async ({
+  sb,
+  orgId,
+  env,
+  customer_id,
+  customer_data,
+  event_data,
+}: {
+  sb: SupabaseClient;
+  orgId: string;
+  env: AppEnv;
+  customer_id: string;
+  customer_data: any;
+  event_data: any;
+}) => {
   let customer: Customer;
 
   // 2. Check if customer ID is valid
   customer = await CusService.getCustomer({
-    sb: req.sb,
+    sb: sb,
     orgId: orgId,
-    customerId: body.customer_id,
+    customerId: customer_id,
     env: env,
   });
 
   if (!customer) {
     customer = await createNewCustomer({
-      sb: req.sb,
-      orgId: req.orgId,
-      env: req.env,
+      sb: sb,
+      orgId: orgId,
+      env: env,
       customer: {
-        id: body.customer_id,
-        name: body.customer_data?.name,
-        email: body.customer_data?.email,
-        fingerprint: body.customer_data?.fingerprint,
+        id: customer_id,
+        name: customer_data?.name,
+        email: customer_data?.email,
+        fingerprint: customer_data?.fingerprint,
       },
     });
   }
 
   // 3. Insert event
 
-  const parsedEvent = CreateEventSchema.parse(req.body);
+  const parsedEvent = CreateEventSchema.parse(event_data);
 
   const newEvent: Event = {
     ...parsedEvent,
@@ -68,7 +79,7 @@ const getEventAndCustomer = async (req: any) => {
     internal_customer_id: customer.internal_id,
   };
 
-  await EventService.insertEvent(req.sb, newEvent);
+  await EventService.insertEvent(sb, newEvent);
 
   return { customer, event: newEvent };
 };
@@ -103,34 +114,80 @@ const getAffectedFeatures = async ({
   return rows;
 };
 
+export const handleEventSent = async ({
+  req,
+  customer_id,
+  customer_data,
+  event_data,
+}: {
+  req: any;
+  customer_id: string;
+  customer_data: any;
+  event_data: any;
+}) => {
+  const { sb, pg, orgId, env } = req;
+
+  const { customer, event } = await getEventAndCustomer({
+    sb,
+    orgId,
+    env,
+    customer_id,
+    customer_data,
+    event_data,
+  });
+
+  const affectedFeatures = await getAffectedFeatures({
+    pg: pg,
+    event,
+    orgId,
+    env,
+  });
+
+  if (affectedFeatures.length > 0) {
+    let queue: Queue = req.queue;
+    queue.add("update-balance", {
+      customerId: customer.internal_id,
+      customer,
+      features: affectedFeatures,
+      event,
+    });
+  }
+};
+
 eventsRouter.post("", async (req: any, res: any) => {
   const body = req.body;
   const orgId = req.orgId;
   const env = req.env;
 
   try {
-    const { customer, event } = await getEventAndCustomer(req);
+    // const { customer, event } = await getEventAndCustomer(req);
 
-    const affectedFeatures = await getAffectedFeatures({
-      pg: req.pg,
-      event,
-      orgId,
-      env,
+    // const affectedFeatures = await getAffectedFeatures({
+    //   pg: req.pg,
+    //   event,
+    //   orgId,
+    //   env,
+    // });
+
+    // if (affectedFeatures.length > 0) {
+    //   let queue: Queue = req.queue;
+    //   queue.add("update-balance", {
+    //     customerId: customer.internal_id,
+    //     customer,
+    //     features: affectedFeatures,
+    //     event,
+    //   });
+    // } else {
+    //   console.log("No affected features found");
+    // }
+    await handleEventSent({
+      req,
+      customer_id: body.customer_id,
+      customer_data: body.customer_data,
+      event_data: body,
     });
 
-    if (affectedFeatures.length > 0) {
-      let queue: Queue = req.queue;
-      queue.add("update-balance", {
-        customerId: customer.internal_id,
-        customer,
-        features: affectedFeatures,
-        event,
-      });
-    } else {
-      console.log("No affected features found");
-    }
-
-    res.status(200).json({ success: true, event_id: event.id });
+    res.status(200).json({ success: true });
     return;
   } catch (error) {
     handleRequestError({ res, error, action: "POST event failed" });

@@ -8,7 +8,7 @@ Noticed you signed up for Autumn :)
 
 Out of curiosity, are you just looking around or do you have a specific use case in mind?
 
-John
+Ayush
 Co-founder, Autumn
 `;
 };

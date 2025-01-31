@@ -15,7 +15,7 @@ export const sendTextEmail = async ({
 }) => {
   const resend = createCli();
   await resend.emails.send({
-    from: `John <john@${process.env.RESEND_DOMAIN}>`,
+    from: `Ayush <ayush@${process.env.RESEND_DOMAIN}>`,
     to: to,
     subject: subject,
     text: body,
