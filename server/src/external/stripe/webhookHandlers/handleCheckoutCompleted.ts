@@ -36,9 +36,24 @@ export const handleCheckoutSessionCompleted = async ({
   }
 
   console.log(
-    "Handling checkout.completed, autumn metadata:",
+    "   - checkout.completed: autumn metadata:",
     checkoutSession.metadata?.autumn_metadata_id
   );
+
+  // Get product by stripe subscription ID
+  if (checkoutSession.subscription) {
+    const exists = await CusProductService.getActiveByStripeSubId({
+      sb,
+      stripeSubId: checkoutSession.subscription as string,
+    });
+
+    if (exists) {
+      console.log(
+        "   ✅ checkout.completed: subscription already exists, skipping"
+      );
+      return;
+    }
+  }
 
   await CusProductService.expireCurrentProduct({
     sb,
@@ -46,13 +61,13 @@ export const handleCheckoutSessionCompleted = async ({
     productGroup: attachParams.product.group,
   });
 
-  console.log("Creating full customer product");
+  console.log("   - checkout.completed: creating full customer product");
   await createFullCusProduct({
     sb,
     attachParams,
     subscriptionId: checkoutSession.subscription as string | undefined,
   });
 
-  console.log("Successfully handled checkout completed");
+  console.log("   ✅ checkout.completed: successfully created cus product");
   return;
 };
