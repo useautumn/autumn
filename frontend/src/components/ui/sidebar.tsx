@@ -195,7 +195,6 @@ const Sidebar = React.forwardRef<
     if (isMobile) {
       return (
         <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
-          {/* @ts-expect-error -- SheetContent is not a valid prop */}
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
