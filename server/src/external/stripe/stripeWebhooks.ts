@@ -44,7 +44,7 @@ stripeWebhookRouter.post(
       event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
     } catch (err: any) {
       // console.log(`⚠️  Webhook signature verification failed.`, err.message);
-      console.log("Stripe webhook signature verification failed");
+      // console.log("Stripe webhook signature verification failed");
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
@@ -81,6 +81,8 @@ stripeWebhookRouter.post(
           await handleSubscriptionDeleted({
             sb: request.sb,
             subscription: deletedSubscription,
+            org,
+            env,
           });
           break;
 

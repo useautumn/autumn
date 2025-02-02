@@ -56,7 +56,6 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
-  // @ts-expect-error - className is inherited from ComponentPropsWithoutRef<typeof SheetPrimitive.Content>
 >(({ side = "right", className, children, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />

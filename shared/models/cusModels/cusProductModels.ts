@@ -30,11 +30,11 @@ export const BillingCycleAnchorConfig = z.object({
 });
 
 export enum CusProductStatus {
+  Scheduled = "scheduled",
   Active = "active",
   PastDue = "past_due",
   Expired = "expired",
-
-  Scheduled = "scheduled",
+  Unknown = "unknown",
 }
 
 export const CusProductSchema = z.object({
@@ -49,6 +49,7 @@ export const CusProductSchema = z.object({
   status: z.nativeEnum(CusProductStatus),
 
   starts_at: z.number().default(Date.now()),
+  trial_ends_at: z.number().optional().nullable(),
   canceled_at: z.number().optional().nullable(),
   ended_at: z.number().optional().nullable(),
 

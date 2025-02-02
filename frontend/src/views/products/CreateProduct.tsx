@@ -108,17 +108,20 @@ function CreateProduct() {
         <div className="flex flex-col gap-2 text-xs">
           <div className="flex items-center gap-2 ml-1 text-t2">
             <Checkbox
-              size="sm"
+              // size="sm"
               checked={fields.is_add_on}
-              onCheckedChange={(e) => setFields({ ...fields, is_add_on: e })}
+              onCheckedChange={(e) =>
+                setFields({ ...fields, is_add_on: e as boolean })
+              }
             />
             <p className="mt-[1px]">This product is an add on</p>
           </div>
           <div className="flex items-center gap-2 ml-1 text-t2">
             <Checkbox
-              size="sm"
               checked={fields.is_default}
-              onCheckedChange={(e) => setFields({ ...fields, is_default: e })}
+              onCheckedChange={(e) =>
+                setFields({ ...fields, is_default: e as boolean })
+              }
             />
             <p className="mt-[1px]">This product is the default product</p>
           </div>

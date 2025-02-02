@@ -141,7 +141,7 @@ export class CusProductService {
   }) {
     const { data, error } = await sb
       .from("customer_products")
-      .select("*, product:products(*)")
+      .select("*, product:products(*), customer:customers(*)")
       .eq("processor->>subscription_id", stripeSubId)
       .neq("status", CusProductStatus.Expired)
       .single();
@@ -191,6 +191,33 @@ export class CusProductService {
       .from("customer_products")
       .select("*, product:products!inner(*)")
       .eq("processor->>subscription_schedule_id", scheduleId)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getFutureProduct({
+    sb,
+    internalCustomerId,
+    productGroup,
+  }: {
+    sb: SupabaseClient;
+    internalCustomerId: string;
+    productGroup: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_products")
+      .select("*, product:products!inner(*)")
+      .eq("internal_customer_id", internalCustomerId)
+      .eq("product.group", productGroup)
+      .eq("status", CusProductStatus.Scheduled)
       .single();
 
     if (error) {
@@ -255,6 +282,33 @@ export class CusProductService {
         data: error,
       });
     }
+  }
+
+  static async updateByStripeSubId({
+    sb,
+    stripeSubId,
+    updates,
+  }: {
+    sb: SupabaseClient;
+    stripeSubId: string;
+    updates: Partial<CusProduct>;
+  }) {
+    const { data: updated, error } = await sb
+      .from("customer_products")
+      .update(updates)
+      // .eq("status", CusProductStatus.Active)
+      .eq("processor->>subscription_id", stripeSubId)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw error;
+    }
+
+    return updated;
   }
 
   static async expireCurrentProduct({

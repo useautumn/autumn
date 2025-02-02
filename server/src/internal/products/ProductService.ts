@@ -21,7 +21,7 @@ export class ProductService {
     return data;
   }
 
-  static async getFullDefaultProduct({
+  static async getFullDefaultProducts({
     sb,
     orgId,
     env,
