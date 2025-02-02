@@ -105,12 +105,20 @@ export const handleSubscriptionUpdated = async ({
   org: Organization;
   subscription: any;
 }) => {
+  let subStatusMap: {
+    [key: string]: CusProductStatus;
+  } = {
+    trialing: CusProductStatus.Active,
+    active: CusProductStatus.Active,
+    past_due: CusProductStatus.PastDue,
+  };
+
   // 1. Fetch subscription
   const cusProduct = await CusProductService.updateByStripeSubId({
     sb,
     stripeSubId: subscription.id,
     updates: {
-      status: subscription.status,
+      status: subStatusMap[subscription.status] || CusProductStatus.Unknown,
       canceled_at: subscription.canceled_at
         ? subscription.canceled_at * 1000
         : null,

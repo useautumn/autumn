@@ -46,12 +46,4 @@ export const handleInvoicePaid = async ({
     });
     return;
   }
-
-  // console.log("Threshold invoice:", invoice.id);
-  // const cusProduct = await CusProductService.getPastDueByInvoiceId({
-  //   sb,
-  //   invoiceId: invoice.id,
-  // });
-
-  // console.log("Customer product:", cusProduct);
 };

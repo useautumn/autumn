@@ -67,7 +67,7 @@ export const createNewCustomer = async ({
   });
 
   // Attach default product to customer
-  const defaultProds = await ProductService.getFullDefaultProduct({
+  const defaultProds = await ProductService.getFullDefaultProducts({
     sb,
     orgId,
     env,
