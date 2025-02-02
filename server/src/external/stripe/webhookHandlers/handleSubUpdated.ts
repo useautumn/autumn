@@ -105,6 +105,37 @@ export const handleSubscriptionUpdated = async ({
   org: Organization;
   subscription: any;
 }) => {
+  let subStatusMap: {
+    [key: string]: CusProductStatus;
+  } = {
+    trialing: CusProductStatus.Active,
+    active: CusProductStatus.Active,
+    past_due: CusProductStatus.PastDue,
+  };
+
+  // 1. Fetch subscription
+  const cusProduct = await CusProductService.updateByStripeSubId({
+    sb,
+    stripeSubId: subscription.id,
+    updates: {
+      status: subStatusMap[subscription.status] || CusProductStatus.Unknown,
+      canceled_at: subscription.canceled_at
+        ? subscription.canceled_at * 1000
+        : null,
+    },
+  });
+
+  if (cusProduct) {
+    console.log(
+      `subscription.updated: updated customer product ${cusProduct.id}`,
+      {
+        id: cusProduct.id,
+        status: cusProduct.status,
+        canceled_at: cusProduct.canceled_at,
+      }
+    );
+  }
+
   // console.log("Subscription updated:", {
   //   id: subscription.id,
   //   status: subscription.status,
@@ -113,20 +144,20 @@ export const handleSubscriptionUpdated = async ({
   //   schedule_id: subscription.subscription_schedule,
   // });
 
-  // 1. Undo stripe sub cancellation if it was cancelled
-  if (subscription.canceled_at !== null) {
-    await handleSubCanceled({ sb, org, subscription });
-  } else {
-    await undoStripeSubCancellation({ sb, org, subscription });
-  }
+  // // 1. Undo stripe sub cancellation if it was cancelled
+  // if (subscription.canceled_at !== null) {
+  //   await handleSubCanceled({ sb, org, subscription });
+  // } else {
+  //   await undoStripeSubCancellation({ sb, org, subscription });
+  // }
 
-  // 2. Handle subscription past due
-  if (subscription.status === "past_due") {
-    await handleSubPastDue({ sb, org, subscription });
-  }
+  // // 2. Handle subscription past due
+  // if (subscription.status === "past_due") {
+  //   await handleSubPastDue({ sb, org, subscription });
+  // }
 
-  // 3. Finally, handle subscription active
-  if (subscription.status === "active") {
-    await handleSubActive({ sb, org, subscription });
-  }
+  // // 3. Finally, handle subscription active
+  // if (subscription.status === "active") {
+  //   await handleSubActive({ sb, org, subscription });
+  // }
 };

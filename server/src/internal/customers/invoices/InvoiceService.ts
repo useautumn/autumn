@@ -1,17 +1,8 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import {
-  AppEnv,
-  Invoice,
-  InvoiceStatus,
-  Organization,
-  ProcessorType,
-} from "@autumn/shared";
+import { Invoice, InvoiceStatus, Organization } from "@autumn/shared";
 import Stripe from "stripe";
 import { generateId } from "@/utils/genUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
 import { Autumn } from "@/external/autumn/autumnCli.js";
-import { CusService } from "../CusService.js";
 
 export class InvoiceService {
   static async createInvoice({
@@ -96,11 +87,15 @@ export class InvoiceService {
     const { error } = await sb.from("invoices").insert(invoice);
 
     if (error) {
-      console.log("Failed to insert Stripe invoice", error.message);
+      if (error.code == "23505") {
+        console.log("Invoice already exists");
+        return;
+      }
+      console.log("Error inserting Stripe invoice: ", error);
       return;
     }
 
-    console.log("✅ Created invoice from stripe");
+    console.log("   ✅ Created invoice from stripe");
 
     // Send monthly_revenue event
     try {
@@ -119,9 +114,28 @@ export class InvoiceService {
           name: org.slug,
         },
       });
-      console.log("✅ Sent revenue event");
+      console.log("   ✅ Sent revenue event");
     } catch (error) {
       console.log("Failed to send revenue event", error);
+    }
+  }
+
+  static async updateByStripeId({
+    sb,
+    stripeInvoiceId,
+    updates,
+  }: {
+    sb: SupabaseClient;
+    stripeInvoiceId: string;
+    updates: Partial<Invoice>;
+  }) {
+    const { error } = await sb
+      .from("invoices")
+      .update(updates)
+      .eq("stripe_id", stripeInvoiceId);
+
+    if (error) {
+      throw error;
     }
   }
 }

@@ -38,6 +38,7 @@ import { redirect } from "next/navigation";
 import { SidebarProvider } from "../components/ui/sidebar";
 import HomeSidebar from "../views/sidebar/Sidebar";
 import RefreshHandler from "@/components/general/RefreshHandler";
+import { PointerProvider } from "pointer-sdk";
 
 export default async function RootLayout({
   children,
@@ -58,7 +59,7 @@ export default async function RootLayout({
         className={`${inter.className} font-regular`}
         suppressHydrationWarning
       >
-        {/* @ts-expect-error ClerkProvider is not a valid JSX component */}
+        {/* <PointerProvider apiKey={process.env.NEXT_PUBLIC_POINTER_KEY || ""}> */}
         <ClerkProvider>
           <NextUIProvider>
             <SidebarProvider>
@@ -90,6 +91,7 @@ export default async function RootLayout({
             </SidebarProvider>
           </NextUIProvider>
         </ClerkProvider>
+        {/* </PointerProvider> */}
       </body>
     </html>
   );
