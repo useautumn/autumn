@@ -39,7 +39,7 @@ export function SearchBar({
 
   return (
     <div
-      className="rounded-md border-1 shadow-sm py-1 h-8 px-2 text-sm 
+      className="rounded-md border-1 shadow-sm py-1 h-7 px-2 text-sm 
     flex items-center w-full max-w-xs bg-white"
     >
       <FontAwesomeIcon
