@@ -1,8 +1,10 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { AppEnv, Customer } from "@autumn/shared";
+import { AppEnv, CusProductStatus, Customer } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
+import { Client } from "pg";
+import { CusProductService } from "./products/CusProductService.js";
 
 export class CusService {
   static async getById({
@@ -210,6 +212,7 @@ export class CusService {
     search,
     page,
     pageSize = 50,
+    filters,
   }: {
     sb: SupabaseClient;
     orgId: string;
@@ -217,13 +220,19 @@ export class CusService {
     search: string;
     page: number;
     pageSize?: number;
+    filters: any;
   }) {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    const { data, count, error } = await sb
+    let select = "*, products:customer_products(*, product:products(*))";
+    if (filters.status || filters.product_id) {
+      select = `*, products:customer_products!inner(*, product:products!inner(*))`;
+    }
+
+    let query = sb
       .from("customers")
-      .select("*, products:customer_products(*, product:products(*))", {
+      .select(select, {
         count: "exact",
       })
       .eq("org_id", orgId)
@@ -231,6 +240,26 @@ export class CusService {
       .or(`name.ilike.%${search}%,email.ilike.%${search}%`)
       .order("created_at", { ascending: false })
       .range(from, to);
+
+    if (filters?.status === "canceled") {
+      console.log("Adding canceled filter");
+      query
+        .not("customer_products.canceled_at", "is", null)
+        .gt("customer_products.canceled_at", Date.now());
+    } else if (filters?.status === "free_trial") {
+      console.log("Adding free trial filter");
+      query
+        .eq("customer_products.status", CusProductStatus.Active)
+        .gt("customer_products.trial_ends_at", Date.now());
+    }
+
+    if (filters?.product_id) {
+      query.eq("customer_products.product.id", filters.product_id);
+    }
+
+    const { data, count, error } = await query;
+    // console.log(data);
+    // return { data: [], count: 0 };
 
     if (error) {
       throw error;

@@ -36,7 +36,6 @@ export const CustomersTable = ({
   const { env } = useCustomersContext();
   const router = useRouter();
 
-  // console.log("customers", customers);
   const getCusProductsInfo = (cus: CustomerWithProducts) => {
     // const cusProducts = cus.products;
     // console.log("cusProducts", cusProducts);

@@ -21,8 +21,8 @@ cusRouter.get("", async (req: any, res: any) => {
 });
 
 cusRouter.post("/search", async (req: any, res: any) => {
-  const { sb, orgId, env } = req;
-  const { search, page } = req.body;
+  const { pg, sb, orgId, env } = req;
+  const { search, page, filters } = req.body;
 
   const pageInt = parseInt(page as string) || 1;
   const cleanedQuery = search ? search.trim().toLowerCase() : "";
@@ -34,6 +34,7 @@ cusRouter.post("/search", async (req: any, res: any) => {
       env,
       search: cleanedQuery,
       page: pageInt,
+      filters,
     });
 
     // console.log("customers", customers);

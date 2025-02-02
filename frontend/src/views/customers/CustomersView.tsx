@@ -19,22 +19,32 @@ import CreateCustomer from "./CreateCustomer";
 import debounce from "lodash/debounce";
 import { SearchBar } from "./SearchBar";
 import LoadingScreen from "../general/LoadingScreen";
+import FilterButton, { FilterStatus } from "./FilterButton";
 
 function CustomersView({ env }: { env: AppEnv }) {
   // const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const pageSize = 50;
   const [currentPage, setCurrentPage] = React.useState(1);
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [filters, setFilters] = React.useState<any>({});
 
   // url: debouncedSearch
   //   ? `/customers/search?search=${debouncedSearch}&page=${currentPage}`
   //   : `/customers?page=${currentPage}`,
+  // Get products
+
+  const { data: productsData, isLoading: productsLoading } = useAxiosSWR({
+    url: `/products/data`,
+    env,
+  });
+
   const { data, isLoading, error, mutate } = useAxiosPostSWR({
     url: `/customers/search`,
     env,
     data: {
       search: searchQuery,
       page: currentPage,
+      filters,
     },
   });
 
@@ -43,25 +53,33 @@ function CustomersView({ env }: { env: AppEnv }) {
       await mutate();
     };
     fetchData();
-  }, [currentPage, mutate]);
+  }, [currentPage, mutate, filters]);
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
   // return <LoadingScreen />;
-  if (isLoading) {
+  if (isLoading || productsLoading) {
     return <LoadingScreen />;
   }
 
   return (
     <CustomersContext.Provider
-      value={{ customers: data?.customers, env, mutate }}
+      value={{
+        customers: data?.customers,
+        env,
+        mutate,
+        filters,
+        setFilters,
+        products: productsData?.products,
+      }}
     >
       <CustomToaster />
       <div className="flex flex-col gap-4 h-full">
         <h1 className="text-xl font-medium shrink-0">Customers</h1>
 
         <div className="flex justify-between w-full">
-          <div className="relative shrink-0 w-full max-w-md">
+          <div className="relative shrink-0 w-full max-w-md flex gap-2">
+            <FilterButton />
             <SearchBar
               query={searchQuery}
               setQuery={setSearchQuery}
