@@ -67,7 +67,7 @@ export const handleSubscriptionDeleted = async ({
 
     console.log("   ✅ activated future product");
   } else {
-    const defaultProducts = await ProductService.getFullDefaultProduct({
+    const defaultProducts = await ProductService.getFullDefaultProducts({
       sb,
       orgId: org.id,
       env,

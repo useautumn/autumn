@@ -30,11 +30,11 @@ export const BillingCycleAnchorConfig = z.object({
 });
 
 export enum CusProductStatus {
+  Scheduled = "scheduled",
   Active = "active",
   PastDue = "past_due",
   Expired = "expired",
-
-  Scheduled = "scheduled",
+  Unknown = "unknown",
 }
 
 export const CusProductSchema = z.object({
