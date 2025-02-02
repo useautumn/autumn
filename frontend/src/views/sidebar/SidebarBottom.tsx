@@ -15,6 +15,7 @@ import { faBook, faCircleNodes } from "@fortawesome/pro-duotone-svg-icons";
 
 import { TabButton } from "./TabButton";
 import { cn } from "@/lib/utils";
+import { SidebarContact } from "./SidebarContact";
 
 export default function SidebarBottom({
   userName,
@@ -44,6 +45,8 @@ export default function SidebarBottom({
           env={env}
           href="https://docs.useautumn.com"
         />
+          
+        <SidebarContact />
 
         <SidebarMenuItem>
           <div className="flex items-center gap-2 mb-4 mt-2 p-1">
