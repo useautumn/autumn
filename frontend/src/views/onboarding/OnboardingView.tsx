@@ -32,7 +32,7 @@ function OnboardingView({ sessionClaims }: { sessionClaims: any }) {
 
       await createOrganization({ name: fields.name, slug: fields.slug });
       await setActive({ organization: fields.slug });
-      router.refresh();
+      window.location.href = '/sandbox/features';
     } catch (error: any) {
       if (error.message) {
         toast.error(error.message);
@@ -56,9 +56,9 @@ function OnboardingView({ sessionClaims }: { sessionClaims: any }) {
         <div className="w-[430px] shadow-lg rounded-2xl border flex flex-col p-8 bg-white gap-4">
           <p className="text-lg font-bold text-t2">Create an organization</p>
           <div>
-            <FieldLabel>Name</FieldLabel>
+            {/* <FieldLabel>Name</FieldLabel> */}
             <Input
-              placeholder="Organization Name"
+              placeholder="Your unique Organization Name"
               value={fields.name}
               onChange={(e) => {
                 const newFields = { ...fields, name: e.target.value };
@@ -69,7 +69,7 @@ function OnboardingView({ sessionClaims }: { sessionClaims: any }) {
               }}
             />
           </div>
-          <div>
+          {/* <div>
             <FieldLabel>Slug</FieldLabel>
             <Input
               placeholder="Organization Slug"
@@ -79,8 +79,8 @@ function OnboardingView({ sessionClaims }: { sessionClaims: any }) {
                 setFields({ ...fields, slug: e.target.value });
               }}
             />
-          </div>
-          <div className="flex justify-end mt-4">
+          </div> */}
+          <div className="flex justify-end">
             <Button
               className="w-fit"
               onClick={handleCreateOrg}
