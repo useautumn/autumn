@@ -86,7 +86,6 @@ export default function UpdateEntitlement({
         <DialogFooter>
           <Button
             variant="destructive"
-            className="text-xs"
             onClick={handleDeleteEntitlement}
           >
             Delete

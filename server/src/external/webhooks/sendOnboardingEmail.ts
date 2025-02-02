@@ -2,14 +2,18 @@ import { ClerkClient } from "@clerk/express";
 import { sendTextEmail } from "../resend/resendUtils.js";
 
 const getWelcomeEmailBody = (userFirstName: string) => {
-  return `Hey ${userFirstName}!
+  return `hey ${userFirstName} :)
   
-Noticed you signed up for Autumn :) 
+Just wanted to say thank you for signing up to Autumn! 
 
-Out of curiosity, are you just looking around or do you have a specific use case in mind?
+We're super early, so I'm curious--how did you hear about us? Also are you just looking around or do you have a specific use case I can help you with? 
+
+We want to become the easiest way to manage software pricing, so any feedback you have for us is incredibly appreciated.
 
 Ayush
 Co-founder, Autumn
+
+Book a call with me here: https://cal.com/ayrod
 `;
 };
 

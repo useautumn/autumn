@@ -50,7 +50,7 @@ export const EditFreeTrialToolbar = ({
           dim={6}
           className={cn("rounded-full", className)}
         >
-          <FontAwesomeIcon icon={faEllipsisVertical} size="sm" />
+          <FontAwesomeIcon icon={faEllipsisVertical} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">

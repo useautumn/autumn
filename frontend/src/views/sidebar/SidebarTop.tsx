@@ -8,6 +8,7 @@ import { AppEnv } from "@autumn/shared";
 import { OrganizationSwitcher, useOrganization } from "@clerk/nextjs";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import SmallSpinner from "@/components/general/SmallSpinner";
 
 export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
   const { state, toggleSidebar } = useSidebar();
@@ -45,21 +46,21 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
         {state == "expanded" && (
           <div className="flex relative w-full h-7">
             {!hidePlaceholder && (
-              <div className="flex items-center gap-2 text-sm font-medium h-7 absolute left-0 top-0 w-fit px-1">
+              <div className="flex items-center gap-2 text-sm font-medium h-7 absolute left-0 top-0 w-fit">
                 <Avatar
                   size="sm"
                   className="w-5 h-5 mr-1"
                   fallback={orgName[0]}
                   radius="md"
                 />
-                <p className="text-zinc-500">{orgName}</p>
+                {!isLoaded && <SmallSpinner />}
               </div>
             )}
             {isLoaded && (
               <OrganizationSwitcher
                 appearance={{
                   elements: {
-                    organizationSwitcherTrigger: "px-1 bg-zinc-50",
+                    organizationSwitcherTrigger: "pl-0 pr-1 max-w-[160px]",
                   },
                 }}
                 hidePersonal={true}

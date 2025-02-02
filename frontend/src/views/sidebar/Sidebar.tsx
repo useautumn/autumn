@@ -39,9 +39,9 @@ function HomeSidebar({
   env: AppEnv;
 }) {
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className=" bg-zinc-100">
       <SidebarTop orgName={org.name} env={env} />
-      <SidebarContent>
+      <SidebarContent >
         <SidebarGroup className="py-0">
           <SidebarGroupContent>
             <SidebarMenu>
