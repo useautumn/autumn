@@ -223,7 +223,9 @@ export class CusService {
 
     const { data, count, error } = await sb
       .from("customers")
-      .select("*", { count: "exact" })
+      .select("*, products:customer_products(*, product:products(*))", {
+        count: "exact",
+      })
       .eq("org_id", orgId)
       .eq("env", env)
       .or(`name.ilike.%${search}%,email.ilike.%${search}%`)

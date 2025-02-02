@@ -96,7 +96,11 @@ export class InvoiceService {
     const { error } = await sb.from("invoices").insert(invoice);
 
     if (error) {
-      console.log("Failed to insert Stripe invoice", error.message);
+      if (error.code == "23505") {
+        console.log("Invoice already exists");
+        return;
+      }
+      console.log("Error inserting Stripe invoice: ", error);
       return;
     }
 

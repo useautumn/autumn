@@ -38,6 +38,7 @@ import { redirect } from "next/navigation";
 import { SidebarProvider } from "../components/ui/sidebar";
 import HomeSidebar from "../views/sidebar/Sidebar";
 import RefreshHandler from "@/components/general/RefreshHandler";
+import { PointerProvider } from "pointer-sdk";
 
 export default async function RootLayout({
   children,
@@ -58,38 +59,39 @@ export default async function RootLayout({
         className={`${inter.className} font-regular`}
         suppressHydrationWarning
       >
-        {/* @ts-expect-error ClerkProvider is not a valid JSX component */}
-        <ClerkProvider>
-          <NextUIProvider>
-            <SidebarProvider>
-              {org_id && !path.includes("/demo") && (
-                <HomeSidebar
-                  user={sessionClaims?.user as any}
-                  org={org}
-                  path={path}
-                  env={env as AppEnv}
-                />
-              )}
-              <main className="flex flex-col w-full h-screen overflow-hidden">
-                {env === AppEnv.Sandbox && (
-                  <div className="w-full h-5 bg-primary/80 text-white text-xs flex items-center justify-center">
-                    <p className="font-medium">SANDBOX</p>
-                  </div>
+        <PointerProvider apiKey={process.env.NEXT_PUBLIC_POINTER_KEY || ""}>
+          <ClerkProvider>
+            <NextUIProvider>
+              <SidebarProvider>
+                {org_id && !path.includes("/demo") && (
+                  <HomeSidebar
+                    user={sessionClaims?.user as any}
+                    org={org}
+                    path={path}
+                    env={env as AppEnv}
+                  />
                 )}
-
-                {path.includes("/onboarding") ? (
-                  children
-                ) : (
-                  <div className="w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center">
-                    <div className="w-full h-fit max-w-[1048px] flex flex-col gap-4">
-                      {children}
+                <main className="flex flex-col w-full h-screen overflow-hidden">
+                  {env === AppEnv.Sandbox && (
+                    <div className="w-full h-5 bg-primary/80 text-white text-xs flex items-center justify-center">
+                      <p className="font-medium">SANDBOX</p>
                     </div>
-                  </div>
-                )}
-              </main>
-            </SidebarProvider>
-          </NextUIProvider>
-        </ClerkProvider>
+                  )}
+
+                  {path.includes("/onboarding") ? (
+                    children
+                  ) : (
+                    <div className="w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center">
+                      <div className="w-full h-fit max-w-[1048px] flex flex-col gap-4">
+                        {children}
+                      </div>
+                    </div>
+                  )}
+                </main>
+              </SidebarProvider>
+            </NextUIProvider>
+          </ClerkProvider>
+        </PointerProvider>
       </body>
     </html>
   );

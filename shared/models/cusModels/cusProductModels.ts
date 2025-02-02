@@ -49,6 +49,7 @@ export const CusProductSchema = z.object({
   status: z.nativeEnum(CusProductStatus),
 
   starts_at: z.number().default(Date.now()),
+  trial_ends_at: z.number().optional().nullable(),
   canceled_at: z.number().optional().nullable(),
   ended_at: z.number().optional().nullable(),
 

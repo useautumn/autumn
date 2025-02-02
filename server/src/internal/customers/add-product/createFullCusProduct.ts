@@ -130,6 +130,7 @@ export const initCusProduct = ({
   optionsList,
   freeTrial,
   lastInvoiceId,
+  trialEndsAt,
 }: {
   customer: Customer;
   product: FullProduct;
@@ -140,8 +141,14 @@ export const initCusProduct = ({
   optionsList: FeatureOptions[];
   freeTrial: FreeTrial | null;
   lastInvoiceId?: string | null;
+  trialEndsAt?: number | null;
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
+
+  let trialEnds = trialEndsAt;
+  if (!trialEndsAt && freeTrial) {
+    trialEnds = freeTrialToStripeTimestamp(freeTrial)! * 1000;
+  }
 
   return {
     id: cusProdId,
@@ -161,7 +168,7 @@ export const initCusProduct = ({
     },
 
     starts_at: startsAt || Date.now(),
-
+    trial_ends_at: trialEnds,
     options: optionsList || [],
     free_trial_id: freeTrial?.id || null,
   };
@@ -253,6 +260,7 @@ export const createFullCusProduct = async ({
   billLaterOnly = false,
   disableFreeTrial = false,
   lastInvoiceId = null,
+  trialEndsAt = null,
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
@@ -263,6 +271,7 @@ export const createFullCusProduct = async ({
   billLaterOnly?: boolean;
   disableFreeTrial?: boolean;
   lastInvoiceId?: string | null;
+  trialEndsAt?: number | null;
 }) => {
   const { customer, product, prices, entitlements, optionsList, freeTrial } =
     attachParams;
@@ -320,6 +329,7 @@ export const createFullCusProduct = async ({
     optionsList,
     freeTrial,
     lastInvoiceId,
+    trialEndsAt,
   });
 
   await insertFullCusProduct({

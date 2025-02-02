@@ -18,15 +18,11 @@ import { CustomToaster } from "@/components/general/CustomToaster";
 import { ManageProduct } from "@/views/products/product/ManageProduct";
 import { ProductContext } from "@/views/products/product/ProductContext";
 
-import { Button } from "@/components/ui/button";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleDollar, faUpload } from "@fortawesome/pro-duotone-svg-icons";
 import { CusService } from "@/services/customers/CusService";
 import toast from "react-hot-toast";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -37,16 +33,11 @@ import {
   getRedirectUrl,
   navigateTo,
 } from "@/utils/genUtils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
+
 import { ErrCode } from "@autumn/shared";
 import { AddProductButton } from "../add-product/AddProductButton";
 import ErrorScreen from "@/views/general/ErrorScreen";
-import { ProductOptionsButton } from "./ProductOptionsButton";
+
 import { ProductService } from "@/services/products/ProductService";
 import RequiredOptionsModal from "./RequiredOptionsModal";
 import { ProductOptions } from "./ProductOptions";
@@ -89,7 +80,7 @@ export default function CustomerProductView({
     if (!data?.products || !data?.customer) return;
 
     const foundProduct = data.products.find((p) => p.id === product_id);
-    console.log("Found Product: ", foundProduct);
+
     if (!foundProduct) return;
 
     const customerProduct = data.customer.products.find(
@@ -114,15 +105,12 @@ export default function CustomerProductView({
     }
   ) => {
     if (!customerProduct) {
-      console.log("baseProduct", baseProduct);
       return {
         ...baseProduct,
         isActive: false,
         options: [],
       };
     }
-    console.log("baseProduct", baseProduct);
-    console.log("customerProduct", customerProduct);
 
     return {
       ...baseProduct,

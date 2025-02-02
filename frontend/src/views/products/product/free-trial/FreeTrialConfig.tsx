@@ -38,12 +38,10 @@ export const FreeTrialConfig = ({
         <Checkbox
           checked={fields.unique_fingerprint}
           onCheckedChange={(checked) =>
-            setFields({ ...fields, unique_fingerprint: checked })
+            setFields({ ...fields, unique_fingerprint: checked as boolean })
           }
         />
-        <p className="">
-          Only allow one per customer (based on `idempotency_key`)
-        </p>
+        <p className="">Only allow one per customer (based on `fingerprint`)</p>
       </div>
     </div>
   );
