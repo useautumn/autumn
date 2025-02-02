@@ -70,7 +70,11 @@ function CustomersView({ env }: { env: AppEnv }) {
             />
           </div>
           {data?.customers?.length > 0 && (
-            <div className="">
+            <div className="flex items-center gap-8 text-xs">
+              <p>
+                <span className="font-semibold">{data?.totalCount} </span>
+                {data?.totalCount === 1 ? "Customer" : "Customers"}
+              </p>
               <Pagination className="w-[100px] h-8 text-xs">
                 <PaginationContent className="w-full flex justify-between ">
                   <PaginationItem>

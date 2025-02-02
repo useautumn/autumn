@@ -80,7 +80,6 @@ export default function UpdatePricing({
         <DialogFooter>
           <Button
             variant="destructive"
-            className="text-xs"
             onClick={() => handleDeletePricing()}
           >
             Delete

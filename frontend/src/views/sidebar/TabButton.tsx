@@ -28,7 +28,7 @@ export const TabButton = ({
             }
           }}
           className={cn(
-            `cursor-pointer text-zinc-500 transition-all duration-100`,
+            `cursor-pointer text-t2 font-medium transition-all duration-100`,
             isActive && "font-bold text-primary hover:text-primary/80",
             className
           )}
