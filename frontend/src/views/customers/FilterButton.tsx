@@ -67,7 +67,13 @@ export const FilterStatus = () => {
         return (
           <DropdownMenuItem
             key={status}
-            onClick={() => setFilters({ ...filters, status })}
+            onClick={() => {
+              if (isActive) {
+                setFilters({ ...filters, status: undefined });
+              } else {
+                setFilters({ ...filters, status });
+              }
+            }}
             className="flex items-center justify-between cursor-pointer text-sm"
           >
             {keyToTitle(status)}
@@ -93,7 +99,13 @@ export const ProductStatus = () => {
         return (
           <DropdownMenuItem
             key={product.id}
-            onClick={() => setFilters({ ...filters, product_id: product.id })}
+            onClick={() => {
+              if (isActive) {
+                setFilters({ ...filters, product_id: undefined });
+              } else {
+                setFilters({ ...filters, product_id: product.id });
+              }
+            }}
             className="flex items-center justify-between cursor-pointer"
           >
             {product.name}
