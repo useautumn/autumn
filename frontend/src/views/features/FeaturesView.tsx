@@ -90,7 +90,7 @@ function FeaturesView({ env }: { env: AppEnv }) {
             <TableHead>Type</TableHead>
             <TableHead>Event Names</TableHead>
             <TableHead className="w-sm">Created At</TableHead>
-            <TableHead className="w-20"></TableHead>
+            <TableHead></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -100,23 +100,29 @@ function FeaturesView({ env }: { env: AppEnv }) {
               className="cursor-pointer"
               onClick={() => handleRowClick(feature.id)}
             >
-              <TableCell className="min-w-40 font-medium">
+              <TableCell >
                 {feature.name}
               </TableCell>
-              <TableCell className="min-w-40 font-mono text-t2">
+              <TableCell className="font-mono">
                 {feature.id}
               </TableCell>
-              <TableCell className="min-w-32">
+              <TableCell>
                 <FeatureTypeBadge type={feature.type} />
               </TableCell>
-              <TableCell className="w-full">
+              <TableCell>
                 {getMeteredEventNames(feature)}
               </TableCell>
 
-              <TableCell className="min-w-48">
-                {formatUnixToDateTimeString(feature.created_at)}
+              <TableCell className="min-w-20 w-24">
+                <span>
+                  {formatUnixToDateTime(feature.created_at).date}
+                </span>
+                {" "}
+                <span className="text-t3">
+                  {formatUnixToDateTime(feature.created_at).time}
+              </span>
               </TableCell>
-              <TableCell className="w-20">
+              <TableCell className="min-w-4 w-6">
                 <FeatureRowToolbar feature={feature} />
               </TableCell>
             </TableRow>
