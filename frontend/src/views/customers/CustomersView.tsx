@@ -53,7 +53,15 @@ function CustomersView({ env }: { env: AppEnv }) {
       await mutate();
     };
     fetchData();
-  }, [currentPage, mutate, filters]);
+  }, [currentPage, mutate]);
+
+  useEffect(() => {
+    const updateFilters = async () => {
+      await setCurrentPage(1);
+      await mutate();
+    };
+    updateFilters();
+  }, [filters]);
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
@@ -77,19 +85,19 @@ function CustomersView({ env }: { env: AppEnv }) {
       <div className="flex flex-col gap-4 h-fit relative">
         <h1 className="text-xl font-medium shrink-0">Customers</h1>
 
-        <div className="flex justify-between w-full">
-          <div className="relative shrink-0 w-full max-w-md flex items-center gap-2">
-            <FilterButton />
+        <div className="flex justify-between w-full sticky top-0 z-10">
+          <div className="relative w-full max-w-md flex items-center gap-2">
             <SearchBar
               query={searchQuery}
               setQuery={setSearchQuery}
               setCurrentPage={setCurrentPage}
               mutate={mutate}
             />
+            <FilterButton />
           </div>
           {data?.customers?.length > 0 && (
-            <div className="flex items-center gap-8 text-xs border bg-white px-3 rounded-sm">
-              <p className="shrink-0">
+            <div className="flex items-center gap-8 text-xs border bg-white px-3 rounded-sm shrink-0">
+              <p>
                 <span className="font-semibold">{data?.totalCount} </span>
                 {data?.totalCount === 1 ? "Customer" : "Customers"}
               </p>

@@ -22,6 +22,12 @@ import { useCustomersContext } from "./CustomersContext";
 import { Badge } from "@/components/ui/badge";
 import { unixHasPassed } from "@/utils/dateUtils";
 import { z } from "zod";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
   products: z.array(CusProductSchema.extend({ product: ProductSchema })),
@@ -50,29 +56,74 @@ export const CustomersTable = ({
 
       if (status === CusProductStatus.Expired) {
         return null;
-      } else if (status === CusProductStatus.PastDue) {
-        return <Badge variant="red">{name} (Past Due)</Badge>;
+      } 
+      if (status === CusProductStatus.PastDue) {
+        return (
+          <>
+            <span>{name}</span>{" "}
+            <Badge variant="status" className="bg-red-500">
+              Past Due
+            </Badge>
+          </>
+        );
       } else {
         if (cusProduct.canceled_at) {
-          return <Badge variant="yellow">{name} (Canceled)</Badge>;
+          return (
+            <>
+              <span>{name}</span>{" "}
+              <Badge variant="status" className="bg-yellow-500">
+                Canceled
+              </Badge>
+            </>
+          );
         } else if (
           cusProduct.trial_ends_at &&
           !unixHasPassed(cusProduct.trial_ends_at)
         ) {
-          return <Badge variant="green">{name} (Trial)</Badge>;
+          return (
+            <>
+              <span>{name}</span>{" "}
+              <Badge variant="status" className="bg-lime-500">
+                Trial
+              </Badge>
+            </>
+          );
         } else {
-          return <Badge variant="green">{name}</Badge>;
+          return (
+            <>
+              <span>{name}</span>
+            </>
+          );
         }
       }
     };
 
     return (
       <>
-        {customer.products.map((cusProduct: any) => (
-          <React.Fragment key={cusProduct.id}>
-            {getProductBadge(cusProduct)}
-          </React.Fragment>
-        ))}
+        <div className="flex flex-wrap gap-2">
+          {customer.products.slice(0, 1).map((cusProduct: any) => (
+            <div key={cusProduct.id}>
+              {getProductBadge(cusProduct)}
+              {customer.products.length > 1 && (
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <Badge variant="status" className="ml-1 bg-stone-100 text-primary">
+                        +{customer.products.length - 1}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {customer.products
+                        .slice(1)
+                        .map((p: any) => p.product.name)
+                        .join(", ")}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+          ))}
+        </div>
       </>
     );
   };

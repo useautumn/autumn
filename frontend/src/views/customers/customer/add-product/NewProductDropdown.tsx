@@ -117,7 +117,6 @@ const DropdownProductItem = ({
       onClick={async (e) => {
         e.stopPropagation();
         e.preventDefault();
-        console.log("product", product.id);
         setIsLoading(true);
         await handleAddProduct(product.id, setIsLoading);
         // setIsLoading(false);

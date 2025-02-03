@@ -122,7 +122,7 @@ export const ProductStatus = () => {
 export const RenderFilterTrigger = ({ setOpen }: any) => {
   return (
     <DropdownMenuTrigger asChild>
-      <Button size="sm" variant="outline">
+      <Button variant="outline" className="text-t3">
         <FontAwesomeIcon icon={faBarsFilter} className="mr-2 text-t3" />
         Filter
       </Button>
