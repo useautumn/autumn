@@ -39,8 +39,8 @@ export function SearchBar({
 
   return (
     <div
-      className="rounded-md border-1 shadow-sm py-1 h-8 px-2 text-sm 
-    flex items-center bg-white"
+      className="rounded-sm border-1 shadow-sm py-1 h-8 px-2 text-sm 
+    flex items-center w-full bg-white"
     >
       <FontAwesomeIcon
         icon={faMagnifyingGlass}
