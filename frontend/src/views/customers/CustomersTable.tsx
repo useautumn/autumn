@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/tooltip";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
-  products: z.array(CusProductSchema.extend({ product: ProductSchema })),
+  customer_products: z.array(CusProductSchema.extend({ product: ProductSchema })),
 });
 type CustomerWithProducts = z.infer<typeof CustomerWithProductsSchema>;
 
@@ -42,11 +42,16 @@ export const CustomersTable = ({
   const { env } = useCustomersContext();
   const router = useRouter();
 
+  
+
   // console.log("customers", customers);
   const getCusProductsInfo = (customer: CustomerWithProducts) => {
-    // const cusProducts = cus.products;
-    // console.log("cusProducts", cusProducts);
-    if (customer.products.length === 0) {
+    // Filter out expired products first
+    const activeProducts = customer.customer_products.filter(
+      (cusProduct) => cusProduct.status !== CusProductStatus.Expired
+    );
+
+    if (activeProducts.length === 0) {
       return <></>;
     }
 
@@ -54,9 +59,6 @@ export const CustomersTable = ({
       const name = cusProduct.product.name;
       const status = cusProduct.status;
 
-      if (status === CusProductStatus.Expired) {
-        return null;
-      } 
       if (status === CusProductStatus.PastDue) {
         return (
           <>
@@ -101,19 +103,19 @@ export const CustomersTable = ({
     return (
       <>
         <div className="flex flex-wrap gap-2">
-          {customer.products.slice(0, 1).map((cusProduct: any) => (
+          {activeProducts.slice(0, 1).map((cusProduct: any) => (
             <div key={cusProduct.id}>
               {getProductBadge(cusProduct)}
-              {customer.products.length > 1 && (
+              {activeProducts.length > 1 && (
                 <TooltipProvider>
                   <Tooltip delayDuration={0}>
                     <TooltipTrigger>
                       <Badge variant="status" className="ml-1 bg-stone-100 text-primary">
-                        +{customer.products.length - 1}
+                        +{activeProducts.length - 1}
                       </Badge>
                     </TooltipTrigger>
                     <TooltipContent>
-                      {customer.products
+                      {activeProducts
                         .slice(1)
                         .map((p: any) => p.product.name)
                         .join(", ")}

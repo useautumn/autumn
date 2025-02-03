@@ -225,11 +225,13 @@ export class CusService {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let select = "*, products:customer_products(*, product:products(*))";
+    let select = "*, customer_products:customer_products(*, product:products(*))";
+
     if (filters.status || filters.product_id) {
-      select = `*, products:customer_products!inner(*, product:products!inner(*))`;
+      select = `*, customer_products:customer_products!inner(*, product:products!inner(*))`;
     }
 
+    
     let query = sb
       .from("customers")
       .select(select, {
@@ -239,6 +241,8 @@ export class CusService {
       .eq("env", env)
       .or(`name.ilike.%${search}%,email.ilike.%${search}%`)
       .order("created_at", { ascending: false })
+      .order("name", { ascending: true })
+      .order("internal_id", { ascending: true })
       .range(from, to);
 
     if (filters?.status === "canceled") {
@@ -284,6 +288,8 @@ export class CusService {
       .eq("org_id", orgId)
       .eq("env", env)
       .order("created_at", { ascending: false })
+      .order("name", { ascending: true })
+      .order("internal_id", { ascending: true })
       .range(from, to);
 
     if (error) {
