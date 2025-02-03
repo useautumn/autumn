@@ -133,6 +133,7 @@ export const initCusProduct = ({
   trialEndsAt,
   subscriptionStatus,
   canceledAt,
+  createdAt,
 }: {
   customer: Customer;
   product: FullProduct;
@@ -146,6 +147,7 @@ export const initCusProduct = ({
   trialEndsAt?: number | null;
   subscriptionStatus?: CusProductStatus;
   canceledAt?: number | null;
+  createdAt?: number | null;
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
 
@@ -160,7 +162,7 @@ export const initCusProduct = ({
     customer_id: customer.id,
     internal_product_id: product.internal_id,
     product_id: product.id,
-    created_at: Date.now(),
+    created_at: createdAt || Date.now(),
 
     status: subscriptionStatus
       ? subscriptionStatus
@@ -272,6 +274,7 @@ export const createFullCusProduct = async ({
   trialEndsAt = null,
   subscriptionStatus,
   canceledAt = null,
+  createdAt = null,
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
@@ -285,6 +288,7 @@ export const createFullCusProduct = async ({
   trialEndsAt?: number | null;
   subscriptionStatus?: CusProductStatus;
   canceledAt?: number | null;
+  createdAt?: number | null;
 }) => {
   const { customer, product, prices, entitlements, optionsList, freeTrial } =
     attachParams;
@@ -345,6 +349,7 @@ export const createFullCusProduct = async ({
     trialEndsAt,
     subscriptionStatus,
     canceledAt,
+    createdAt,
   });
 
   await insertFullCusProduct({

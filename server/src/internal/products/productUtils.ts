@@ -63,6 +63,7 @@ export const isFreeProduct = (prices: Price[]) => {
 
   let totalPrice = 0;
   for (const price of prices) {
+    console.log(price);
     if ("usage_tiers" in price.config!) {
       totalPrice += price.config!.usage_tiers.reduce(
         (acc, tier) => acc + tier.amount,

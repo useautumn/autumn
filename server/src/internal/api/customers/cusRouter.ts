@@ -234,6 +234,18 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
       internalFeatureIds: featuresToUpdate.map((f) => f.internal_id),
     });
 
+    // Sort cus ents by ent.reset
+    cusEnts.sort((a, b) => {
+      if (a.next_reset_at && !b.next_reset_at) {
+        return -1; // a comes first
+      } else if (!a.next_reset_at && b.next_reset_at) {
+        return 1; // b comes first
+      } else if (a.next_reset_at && b.next_reset_at) {
+        return a.next_reset_at - b.next_reset_at; // sort by date if both have reset_at
+      }
+      return 0;
+    });
+
     // console.log("cusEnts", cusEnts);
     for (const balance of balances) {
       if (!balance.feature_id) {
