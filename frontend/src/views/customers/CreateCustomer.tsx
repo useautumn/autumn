@@ -49,15 +49,15 @@ function CreateCustomer() {
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        <Button
-          variant="dashed"
-          className="w-full"
-          startIcon={<PlusIcon size={15} />}
-        >
-          Create Customer
-        </Button>
-      </DialogTrigger>
+        <DialogTrigger asChild>
+                <Button
+                  variant="dashed"
+                  className="w-full"
+                  startIcon={<PlusIcon size={15} />}
+                >
+                  Create Customer
+          </Button>
+        </DialogTrigger>
       <DialogContent className="w-[400px]">
         <DialogHeader>
           <DialogTitle>Create Customer</DialogTitle>

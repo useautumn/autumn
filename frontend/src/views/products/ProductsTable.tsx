@@ -31,7 +31,7 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
           <TableHead>Type</TableHead>
           <TableHead>Group</TableHead>
           <TableHead>Created At</TableHead>
-          <TableHead className="w-20"></TableHead>
+          <TableHead></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -41,13 +41,13 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
             className="cursor-pointer"
             onClick={() => navigateTo(`/products/${product.id}`, router, env)}
           >
-            <TableCell className="min-w-32 font-medium">
+            <TableCell className="font-medium">
               {product.name}
             </TableCell>
-            <TableCell className="min-w-72 font-mono text-t2">
+            <TableCell className="font-mono">
               {product.id}
             </TableCell>
-            <TableCell className="min-w-32 text-t2 w-full">
+            <TableCell className="min-w-32">
               {product.is_default ? (
                 <Badge variant="outline">Default</Badge>
               ) : product.is_add_on ? (
@@ -56,10 +56,8 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
                 <></>
               )}
             </TableCell>
-            <TableCell className="min-w-32">
-              {product.group}
-            </TableCell>
-            <TableCell className="min-w-32">
+            <TableCell>{product.group}</TableCell>
+            <TableCell className="min-w-20 w-24">
               <span>
                 {formatUnixToDateTime(product.created_at).date}
               </span>
@@ -68,7 +66,7 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
                 {formatUnixToDateTime(product.created_at).time}
               </span>
             </TableCell>
-            <TableCell className="w-20 ">
+            <TableCell className="min-w-4 w-6">
               <ProductRowToolbar product={product} />
             </TableCell>
           </TableRow>

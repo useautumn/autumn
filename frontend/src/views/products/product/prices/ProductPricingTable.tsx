@@ -95,10 +95,9 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
         <TableHeader className="rounded-full">
           <TableRow>
             <TableHead className="">Name</TableHead>
-            <TableHead className="">Price ID</TableHead>
             <TableHead className="">Type</TableHead>
             <TableHead>Amount</TableHead>
-
+            <TableHead className="for-consistency-w-entitlements"> </TableHead>
             <TableHead>Created At</TableHead>
           </TableRow>
         </TableHeader>
@@ -110,20 +109,24 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
               className="cursor-pointer"
               onClick={() => handleRowClick(price, index)}
             >
-              <TableCell className="min-w-40 font-medium">
+              <TableCell>
                 {price.name}
               </TableCell>
-              <TableCell className="min-w-72 font-mono text-t2">
-                <div>{price.id}</div>
-              </TableCell>
-              <TableCell className="min-w-32">
+              <TableCell>
                 <PricingTypeBadge type={price.config?.type || ""} />
               </TableCell>
-              <TableCell className="min-w-32 w-full">
+              <TableCell>
                 {formatAmount(price.config, price.config?.type || "")}
               </TableCell>
-              <TableCell className="min-w-48">
-                {formatUnixToDateTimeString(price.created_at)}
+              <TableCell> </TableCell>
+              <TableCell className="min-w-20 w-24">
+                <span>
+                  {formatUnixToDateTime(price.created_at).date}
+                </span>
+                {" "}
+                <span className="text-t3">
+                  {formatUnixToDateTime(price.created_at).time}
+                </span>
               </TableCell>
             </TableRow>
           ))}
