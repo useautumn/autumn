@@ -13,6 +13,7 @@ import pg from "pg";
 import { initQueue, initWorkers } from "./queue/queue.js";
 import http from "http";
 import { initWs } from "./websockets/initWs.js";
+import { publicRouter } from "./internal/public/publicRouter.js";
 
 const init = async () => {
   const app = express();
@@ -60,6 +61,7 @@ const init = async () => {
   app.use(express.json());
 
   app.use(mainRouter);
+  app.use("/public", publicRouter);
   app.use("/v1", apiRouter);
 
   const PORT = 8080;

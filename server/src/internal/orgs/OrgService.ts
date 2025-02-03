@@ -76,6 +76,25 @@ export class OrgService {
 
     return { ...data, config };
   }
+
+  static async getBySlug({ sb, slug }: { sb: SupabaseClient; slug: string }) {
+    const { data, error } = await sb
+      .from("organizations")
+      .select("*")
+      .eq("slug", slug)
+      .select()
+      .single();
+
+    if (error) {
+      throw new RecaseError({
+        message: "Failed to get org from supabase",
+        code: ErrCode.OrgNotFound,
+        statusCode: 404,
+      });
+    }
+
+    return data;
+  }
   static async insert({ sb, org }: { sb: SupabaseClient; org: Organization }) {
     // Insert org into supabase
     const { data, error } = await sb.from("organizations").insert(org);

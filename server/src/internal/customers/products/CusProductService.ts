@@ -230,6 +230,33 @@ export class CusProductService {
     return data;
   }
 
+  static async getByCustomerId({
+    sb,
+    customerId,
+    inStatuses,
+  }: {
+    sb: SupabaseClient;
+    customerId: string;
+    inStatuses?: string[];
+  }) {
+    const query = sb
+      .from("customer_products")
+      .select("*, customer:customers!inner(*), product:products!inner(*)")
+      .eq("customer_id", customerId);
+
+    if (inStatuses) {
+      query.in("status", inStatuses);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async updateStatusByStripeSubId({
     sb,
     stripeSubId,

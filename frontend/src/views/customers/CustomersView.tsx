@@ -1,13 +1,11 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import { AppEnv } from "@autumn/shared";
 import { useAxiosPostSWR, useAxiosSWR } from "@/services/useAxiosSwr";
 import { CustomersContext } from "./CustomersContext";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { CustomersTable } from "./CustomersTable";
-import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
 import {
   Pagination,
   PaginationContent,
@@ -16,10 +14,9 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import CreateCustomer from "./CreateCustomer";
-import debounce from "lodash/debounce";
 import { SearchBar } from "./SearchBar";
 import LoadingScreen from "../general/LoadingScreen";
-import FilterButton, { FilterStatus } from "./FilterButton";
+import FilterButton from "./FilterButton";
 
 function CustomersView({ env }: { env: AppEnv }) {
   // const [debouncedSearch, setDebouncedSearch] = React.useState("");
