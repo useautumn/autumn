@@ -62,7 +62,7 @@ export const ProductEntitlementTable = ({
         setSelectedEntitlement={setSelectedEntitlement}
       />
       <Table>
-        <TableHeader className="rounded-full">
+        <TableHeader>
           <TableRow>
             <TableHead className="">Feature Name</TableHead>
             <TableHead>Feature ID</TableHead>
@@ -84,20 +84,26 @@ export const ProductEntitlementTable = ({
                 className="cursor-pointer"
                 onClick={() => handleRowClick(entitlement)}
               >
-                <TableCell className="min-w-40 font-medium">
+                <TableCell>
                   {feature?.name}
                 </TableCell>
-                <TableCell className="min-w-40 font-mono text-t2">
+                <TableCell className="font-mono">
                   {feature?.id}
                 </TableCell>
-                <TableCell className="min-w-32">
+                <TableCell>
                   <FeatureTypeBadge type={feature?.type} />
                 </TableCell>
-                <TableCell className="min-w-48 w-full">
+                  <TableCell>
                   {getAllowanceString(entitlement)}
                 </TableCell>
-                <TableCell className="min-w-48">
-                  {formatUnixToDateTimeString(entitlement.created_at)}
+                <TableCell className="min-w-20 w-24">
+                  <span>
+                    {formatUnixToDateTime(entitlement.created_at).date}
+                  </span>
+                  {" "}
+                  <span className="text-t3">
+                    {formatUnixToDateTime(entitlement.created_at).time}
+                  </span>
                 </TableCell>
               </TableRow>
             );

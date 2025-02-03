@@ -91,19 +91,19 @@ export default function CustomerView({
       </div>
       <div className="flex justify-between gap-4">
         {/* main content */}
-        <div className="flex flex-col gap-4 text-t2 text-sm w-full">
+        <div className="flex flex-col gap-4 text-t2 text-sm w-2/3">
           <p className="text-t2 font-medium text-md">Products</p>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <CustomerProductList customer={customer} products={products} />
             <AddProduct />
           </div>
           <p className="text-t2 font-medium text-md">Entitlements</p>
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-2">
             <Tabs defaultValue="metered">
-              <TabsList className="bg-transparent">
+              <TabsList className="bg-transparent h-fit">
                 <TabsTrigger
                   value="metered"
-                  className="text-t2 text-xs font-normal"
+                  className="text-t2 text-xs font-normal "
                 >
                   Metered Features
                 </TabsTrigger>
@@ -204,15 +204,15 @@ export default function CustomerView({
           )}
         </div>
         {/* customer details */}
-        <div className="flex flex-col gap-4 text-t2 text-sm  w-full max-w-[400px] h-fit">
+        <div className="flex flex-col gap-4 text-t2 text-sm w-1/3 max-w-[400px] h-fit">
           <h2 className="text-t2 font-medium text-md">Customer Details</h2>
 
-          <div className="grid grid-cols-[auto_1fr] gap-y-3 gap-x-4 w-full truncate items-center rounded-md px-4">
+          <div className="grid grid-cols-[auto_1fr] gap-y-3 gap-x-4 w-full items-center rounded-md px-4 break-all">
             <p className="text-t3 text-xs font-medium">Name</p>
-            <p>{customer.name}</p>
+            <p >{customer.name}</p>
 
             <p className="text-t3 text-xs font-medium">ID</p>
-            <p className="flex items-center gap-1 font-mono">
+            <p className="flex items-center gap-1 font-mono ">
               {customer.id} <CopyButton text={customer.id} />
             </p>
 
@@ -221,8 +221,11 @@ export default function CustomerView({
               {customer.email}
             </p>
 
+            <p className="text-t3 text-xs font-medium">Fingerprint</p>
+            <p >{customer.fingerprint}</p>
+
             <p className="text-t3 text-xs font-medium">Products</p>
-            <p>
+            <p >
               {customer.products
                 .map(
                   (p) => products.find((prod) => prod.id === p.product_id)?.name

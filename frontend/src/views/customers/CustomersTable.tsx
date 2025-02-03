@@ -22,9 +22,15 @@ import { useCustomersContext } from "./CustomersContext";
 import { Badge } from "@/components/ui/badge";
 import { unixHasPassed } from "@/utils/dateUtils";
 import { z } from "zod";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
-  products: z.array(CusProductSchema.extend({ product: ProductSchema })),
+  customer_products: z.array(CusProductSchema.extend({ product: ProductSchema })),
 });
 type CustomerWithProducts = z.infer<typeof CustomerWithProductsSchema>;
 
@@ -36,10 +42,16 @@ export const CustomersTable = ({
   const { env } = useCustomersContext();
   const router = useRouter();
 
-  const getCusProductsInfo = (cus: CustomerWithProducts) => {
-    // const cusProducts = cus.products;
-    // console.log("cusProducts", cusProducts);
-    if (cus.products.length === 0) {
+  
+
+  // console.log("customers", customers);
+  const getCusProductsInfo = (customer: CustomerWithProducts) => {
+    // Filter out expired products first
+    const activeProducts = customer.customer_products.filter(
+      (cusProduct) => cusProduct.status !== CusProductStatus.Expired
+    );
+
+    if (activeProducts.length === 0) {
       return <></>;
     }
 
@@ -47,31 +59,73 @@ export const CustomersTable = ({
       const name = cusProduct.product.name;
       const status = cusProduct.status;
 
-      if (status === CusProductStatus.Expired) {
-        return null;
-      } else if (status === CusProductStatus.PastDue) {
-        return <Badge variant="red">{name} (Past Due)</Badge>;
+      if (status === CusProductStatus.PastDue) {
+        return (
+          <>
+            <span>{name}</span>{" "}
+            <Badge variant="status" className="bg-red-500">
+              Past Due
+            </Badge>
+          </>
+        );
       } else {
         if (cusProduct.canceled_at) {
-          return <Badge variant="yellow">{name} (Canceled)</Badge>;
+          return (
+            <>
+              <span>{name}</span>{" "}
+              <Badge variant="status" className="bg-yellow-500">
+                Canceled
+              </Badge>
+            </>
+          );
         } else if (
           cusProduct.trial_ends_at &&
           !unixHasPassed(cusProduct.trial_ends_at)
         ) {
-          return <Badge variant="green">{name} (Trial)</Badge>;
+          return (
+            <>
+              <span>{name}</span>{" "}
+              <Badge variant="status" className="bg-lime-500">
+                Trial
+              </Badge>
+            </>
+          );
         } else {
-          return <Badge variant="green">{name}</Badge>;
+          return (
+            <>
+              <span>{name}</span>
+            </>
+          );
         }
       }
     };
 
     return (
       <>
-        {cus.products.map((cusProduct: any) => (
-          <React.Fragment key={cusProduct.id}>
-            {getProductBadge(cusProduct)}
-          </React.Fragment>
-        ))}
+        <div className="flex flex-wrap gap-2">
+          {activeProducts.slice(0, 1).map((cusProduct: any) => (
+            <div key={cusProduct.id}>
+              {getProductBadge(cusProduct)}
+              {activeProducts.length > 1 && (
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger>
+                      <Badge variant="status" className="ml-1 bg-stone-100 text-primary">
+                        +{activeProducts.length - 1}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {activeProducts
+                        .slice(1)
+                        .map((p: any) => p.product.name)
+                        .join(", ")}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+          ))}
+        </div>
       </>
     );
   };
@@ -83,10 +137,9 @@ export const CustomersTable = ({
           <TableHead className="">Customer</TableHead>
           <TableHead>Customer ID</TableHead>
           <TableHead>Email</TableHead>
-          <TableHead>Fingerprint</TableHead>
           <TableHead>Products</TableHead>
           <TableHead>Created At</TableHead>
-          <TableHead className="w-20"></TableHead>
+          {/* <TableHead className="w-20"></TableHead> */}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -96,31 +149,28 @@ export const CustomersTable = ({
             className="cursor-pointer"
             onClick={() => navigateTo(`/customers/${customer.id}`, router, env)}
           >
-            <TableCell className="min-w-32 font-medium">
+            <TableCell>
               {customer.name}
             </TableCell>
-            <TableCell className="min-w-32 font-mono text-t2">
+            <TableCell className="font-mono">
               {customer.id}{" "}
             </TableCell>
-            <TableCell className="min-w-48 text-t2">
+            <TableCell>
               {customer.email}{" "}
             </TableCell>
-            <TableCell className="max-w-48 text-t2 min-w-32">
-              {customer.fingerprint}
-            </TableCell>
-            <TableCell className="min-w-32 w-full">
+            <TableCell>
               {getCusProductsInfo(customer)}
             </TableCell>
-            <TableCell className="max-w-48 min-w-32">
+            <TableCell className="min-w-20 w-24">
               {formatUnixToDateTime(customer.created_at).date}
               <span className="text-t3">
                 {" "}
                 {formatUnixToDateTime(customer.created_at).time}{" "}
               </span>
             </TableCell>
-            <TableCell className="w-20">
-              {/* <ProductRowToolbar product={product} /> */}
-            </TableCell>
+            {/* <TableCell className="w-20">
+              <ProductRowToolbar product={product} />
+            </TableCell> */}
           </TableRow>
         ))}
       </TableBody>
