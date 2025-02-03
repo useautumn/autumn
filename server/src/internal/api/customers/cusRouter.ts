@@ -10,6 +10,7 @@ import {
   AppEnv,
   CreateCustomer,
   CreateCustomerSchema,
+  CusProductStatus,
   Customer,
   CustomerResponseSchema,
   ProcessorType,
@@ -32,6 +33,7 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createNewCustomer } from "./cusUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { getCusBalances } from "@/internal/customers/entitlements/cusEntUtils.js";
 
 export const cusRouter = Router();
 
@@ -328,4 +330,47 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
   res.status(200).json({
     url: portal.url,
   });
+});
+
+// Entitlements
+
+cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
+  const customerId = req.params.customer_id;
+  const balances = await getCusBalances({
+    sb: req.sb,
+    customerId,
+    orgId: req.orgId,
+    env: req.env,
+  });
+
+  res.status(200).json(balances);
+});
+
+cusRouter.get("/:customer_id/products", async (req: any, res: any) => {
+  const customerId = req.params.customer_id;
+
+  const cusProducts = await CusProductService.getByCustomerId({
+    sb: req.sb,
+    customerId,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+  });
+
+  // Clean up:
+  let products = [];
+  for (const cusProduct of cusProducts) {
+    products.push({
+      id: cusProduct.product.id,
+      name: cusProduct.product.name,
+      group: cusProduct.product.group,
+      status: cusProduct.status,
+      created_at: cusProduct.created_at,
+      canceled_at: cusProduct.canceled_at,
+      processor: {
+        type: cusProduct.processor.type,
+        subscription_id: cusProduct.processor.subscription_id || null,
+      },
+    });
+  }
+
+  res.status(200).json(products);
 });

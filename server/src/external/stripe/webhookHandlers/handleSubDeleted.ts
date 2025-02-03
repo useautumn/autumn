@@ -26,8 +26,14 @@ export const handleSubscriptionDeleted = async ({
     stripeSubId: subscription.id,
   });
 
-  if (!cusProduct || cusProduct.customer.env !== env) {
-    console.log("   ⚠️ customer product not found or env mismatch");
+  if (
+    !cusProduct ||
+    cusProduct.customer.env !== env ||
+    cusProduct.customer.org_id !== org.id
+  ) {
+    console.log(
+      "   ⚠️ customer product not found / env mismatch / org mismatch"
+    );
     return;
   }
 

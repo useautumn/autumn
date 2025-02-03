@@ -1,5 +1,5 @@
 import { AppEnv, Customer, Organization } from "@autumn/shared";
-import { Stripe } from "stripe";
+import stripe, { Stripe } from "stripe";
 import { createStripeCli } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -78,4 +78,27 @@ export const getCusPaymentMethod = async ({
   }
 
   return paymentMethod;
+};
+
+// 2. Create a payment method and attach to customer
+export const attachPmToCus = async (
+  stripeCli: Stripe,
+  stripeCusId: string,
+  willFail: boolean = false
+) => {
+  try {
+    let token = willFail ? "tok_chargeCustomerFail" : "tok_visa";
+    const pm = await stripeCli.paymentMethods.create({
+      type: "card",
+      card: {
+        token,
+      },
+    });
+    await stripeCli.paymentMethods.attach(pm.id, {
+      customer: stripeCusId,
+    });
+    console.log("   - Payment method attached");
+  } catch (error) {
+    console.log("   - Error attaching payment method", error);
+  }
 };
