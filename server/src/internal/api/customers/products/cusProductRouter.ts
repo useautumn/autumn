@@ -290,7 +290,11 @@ attachRouter.post("", async (req: any, res) => {
     // -------------------- ATTACH PRODUCT --------------------
 
     // SCENARIO 1: Free product, no existing product
-    if (!curCusProduct && isFreeProduct(attachParams.prices)) {
+
+    if (
+      (!curCusProduct && isFreeProduct(attachParams.prices)) ||
+      (attachParams.product.is_add_on && isFreeProduct(attachParams.prices))
+    ) {
       await handleAddFreeProduct({
         req,
         res,

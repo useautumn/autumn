@@ -27,7 +27,7 @@ import { headers } from "next/headers";
 import { AppEnv } from "@autumn/shared";
 import { SidebarProvider } from "../components/ui/sidebar";
 import HomeSidebar from "../views/sidebar/Sidebar";
-import { AutumnProvider } from "@useautumn/react";
+// import { AutumnProvider } from "@useautumn/react";
 
 export default async function RootLayout({
   children,
@@ -59,29 +59,29 @@ export default async function RootLayout({
                   env={env as AppEnv}
                 />
               )}
-              <AutumnProvider
+              {/* <AutumnProvider
                 publishableKey={
                   process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY || ""
                 }
-              >
-                <main className="flex flex-col w-full h-screen overflow-hidden">
-                  {env === AppEnv.Sandbox && (
-                    <div className="w-full h-5 bg-primary/80 text-white text-xs flex items-center justify-center">
-                      <p className="font-medium">SANDBOX</p>
-                    </div>
-                  )}
+              > */}
+              <main className="flex flex-col w-full h-screen overflow-hidden">
+                {env === AppEnv.Sandbox && (
+                  <div className="w-full h-5 bg-primary/80 text-white text-xs flex items-center justify-center">
+                    <p className="font-medium">SANDBOX</p>
+                  </div>
+                )}
 
-                  {path.includes("/onboarding") ? (
-                    children
-                  ) : (
-                    <div className="w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center">
-                      <div className="w-full h-fit max-w-[1048px] flex flex-col gap-4">
-                        {children}
-                      </div>
+                {path.includes("/onboarding") ? (
+                  children
+                ) : (
+                  <div className="w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center">
+                    <div className="w-full h-fit max-w-[1048px] flex flex-col gap-4">
+                      {children}
                     </div>
-                  )}
-                </main>
-              </AutumnProvider>
+                  </div>
+                )}
+              </main>
+              {/* </AutumnProvider> */}
             </SidebarProvider>
           </NextUIProvider>
         </ClerkProvider>
