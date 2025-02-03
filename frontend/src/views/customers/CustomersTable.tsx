@@ -36,10 +36,11 @@ export const CustomersTable = ({
   const { env } = useCustomersContext();
   const router = useRouter();
 
-  const getCusProductsInfo = (cus: CustomerWithProducts) => {
+  // console.log("customers", customers);
+  const getCusProductsInfo = (customer: CustomerWithProducts) => {
     // const cusProducts = cus.products;
     // console.log("cusProducts", cusProducts);
-    if (cus.products.length === 0) {
+    if (customer.products.length === 0) {
       return <></>;
     }
 
@@ -67,7 +68,7 @@ export const CustomersTable = ({
 
     return (
       <>
-        {cus.products.map((cusProduct: any) => (
+        {customer.products.map((cusProduct: any) => (
           <React.Fragment key={cusProduct.id}>
             {getProductBadge(cusProduct)}
           </React.Fragment>
@@ -83,10 +84,9 @@ export const CustomersTable = ({
           <TableHead className="">Customer</TableHead>
           <TableHead>Customer ID</TableHead>
           <TableHead>Email</TableHead>
-          <TableHead>Fingerprint</TableHead>
           <TableHead>Products</TableHead>
           <TableHead>Created At</TableHead>
-          <TableHead className="w-20"></TableHead>
+          {/* <TableHead className="w-20"></TableHead> */}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -96,31 +96,28 @@ export const CustomersTable = ({
             className="cursor-pointer"
             onClick={() => navigateTo(`/customers/${customer.id}`, router, env)}
           >
-            <TableCell className="min-w-32 font-medium">
+            <TableCell>
               {customer.name}
             </TableCell>
-            <TableCell className="min-w-32 font-mono text-t2">
+            <TableCell className="font-mono">
               {customer.id}{" "}
             </TableCell>
-            <TableCell className="min-w-48 text-t2">
+            <TableCell>
               {customer.email}{" "}
             </TableCell>
-            <TableCell className="max-w-48 text-t2 min-w-32">
-              {customer.fingerprint}
-            </TableCell>
-            <TableCell className="min-w-32 w-full">
+            <TableCell>
               {getCusProductsInfo(customer)}
             </TableCell>
-            <TableCell className="max-w-48 min-w-32">
+            <TableCell className="min-w-20 w-24">
               {formatUnixToDateTime(customer.created_at).date}
               <span className="text-t3">
                 {" "}
                 {formatUnixToDateTime(customer.created_at).time}{" "}
               </span>
             </TableCell>
-            <TableCell className="w-20">
-              {/* <ProductRowToolbar product={product} /> */}
-            </TableCell>
+            {/* <TableCell className="w-20">
+              <ProductRowToolbar product={product} />
+            </TableCell> */}
           </TableRow>
         ))}
       </TableBody>

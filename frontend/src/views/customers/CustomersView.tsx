@@ -74,11 +74,11 @@ function CustomersView({ env }: { env: AppEnv }) {
       }}
     >
       <CustomToaster />
-      <div className="flex flex-col gap-4 h-full">
+      <div className="flex flex-col gap-4 h-fit relative">
         <h1 className="text-xl font-medium shrink-0">Customers</h1>
 
         <div className="flex justify-between w-full">
-          <div className="relative shrink-0 w-full max-w-md flex gap-2">
+          <div className="relative shrink-0 w-full max-w-md flex items-center gap-2">
             <FilterButton />
             <SearchBar
               query={searchQuery}
@@ -88,8 +88,8 @@ function CustomersView({ env }: { env: AppEnv }) {
             />
           </div>
           {data?.customers?.length > 0 && (
-            <div className="flex items-center gap-8 text-xs">
-              <p>
+            <div className="flex items-center gap-8 text-xs border bg-white px-3 rounded-sm">
+              <p className="shrink-0">
                 <span className="font-semibold">{data?.totalCount} </span>
                 {data?.totalCount === 1 ? "Customer" : "Customers"}
               </p>
@@ -133,7 +133,7 @@ function CustomersView({ env }: { env: AppEnv }) {
             </div>
           )}
         </div>
-        <div className="shrink-0">
+        <div className="shrink-0 sticky bottom-0">
           <CreateCustomer />
         </div>
       </div>
