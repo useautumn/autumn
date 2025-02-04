@@ -40,6 +40,7 @@ const publicRouterMiddleware = async (req: any, res: any, next: any) => {
 publicRouter.use(publicRouterMiddleware);
 
 publicRouter.get("/products", async (req: any, res: any) => {
+  console.log("Org:", req.org.slug)
   const products = await ProductService.getFullProducts(
     req.sb,
     req.org.id,
