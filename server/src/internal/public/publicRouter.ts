@@ -87,6 +87,7 @@ const processProduct = (product: FullProduct) => {
 };
 
 publicRouter.get("/products", async (req: any, res: any) => {
+  console.log("Org:", req.org.slug)
   const products = await ProductService.getFullProducts(
     req.sb,
     req.org.id,

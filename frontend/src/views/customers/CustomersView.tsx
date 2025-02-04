@@ -93,7 +93,7 @@ function CustomersView({ env }: { env: AppEnv }) {
             <FilterButton />
           </div>
           {data?.customers?.length > 0 && (
-            <div className="flex items-center gap-8 text-xs border bg-white px-3 rounded-sm shrink-0">
+            <div className="flex items-center gap-8 text-xs border bg-white pr-1 pl-2 rounded-sm shrink-0">
               <p>
                 <span className="font-semibold">{data?.totalCount} </span>
                 {data?.totalCount === 1 ? "Customer" : "Customers"}
