@@ -92,16 +92,7 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
                     {/* <span className="w-[70px] overflow-hidden text-ellipsis whitespace-nowrap">
                       {organization?.id}
                     </span> */}
-                    <Button
-                      onClick={() =>
-                        navigator.clipboard.writeText(organization?.id || "")
-                      }
-                      variant="ghost"
-                      size="sm"
-                      className="p-0 h-4 w-4"
-                    >
                       <CopyButton text={organization?.id || ""} />
-                    </Button>
                   </div>
                 )}
             </div>
