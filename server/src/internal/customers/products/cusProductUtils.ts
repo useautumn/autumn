@@ -1,6 +1,7 @@
 import {
   AllowanceType,
   AppEnv,
+  CusProductStatus,
   Customer,
   CustomerData,
   Entitlement,
@@ -69,11 +70,13 @@ export const processFullCusProduct = (cusProduct: FullCusProduct) => {
       };
     }
   });
+  const trialing =
+    cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
   return {
     id: cusProduct.product.id,
     name: cusProduct.product.name,
     group: cusProduct.product.group,
-    status: cusProduct.status,
+    status: trialing ? CusProductStatus.Trialing : cusProduct.status,
     created_at: cusProduct.created_at,
     canceled_at: cusProduct.canceled_at,
     processor: {
