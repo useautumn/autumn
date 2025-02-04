@@ -38,6 +38,7 @@ const clean = async () => {
   );
 
   await pgCli.end();
+
   console.log("Cleaned up custom entitlements and prices");
 };
 
