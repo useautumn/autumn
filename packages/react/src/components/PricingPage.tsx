@@ -148,7 +148,7 @@ export default function PricingPage({ classNames }: PricingPageProps) {
   }, [classNames]);
 
   return (
-    <div style={styles.container} className={importantClasses?.container}>
+    <div style={styles.container} className={classNames?.container}>
       {data?.map((product: any, index: number) => (
         <PricingCard
           key={product.id || `product-${index}`}
