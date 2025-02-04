@@ -26,4 +26,15 @@ export class CusService {
       ...data,
     });
   }
+
+  static async updateCusEntitlement(
+    axios: AxiosInstance,
+    customer_entitlement_id: string,
+    data: any
+  ) {
+    return await axios.post(
+      `/v1/customers/customer_entitlements/${customer_entitlement_id}`,
+      data
+    );
+  }
 }

@@ -21,16 +21,17 @@ export function FeatureConfig({
   eventNameInput,
   setEventNameInput,
   isUpdate = false,
+  eventNameChanged,
+  setEventNameChanged,
 }: {
   feature: any;
   setFeature: any;
   eventNameInput: string;
   setEventNameInput: any;
   isUpdate?: boolean;
+  eventNameChanged: boolean;
+  setEventNameChanged: any;
 }) {
-  const { env, mutate } = useFeaturesContext();
-  const axiosInstance = useAxiosInstance({ env });
-
   const [fields, setFields] = useState(
     feature.name
       ? {
@@ -59,6 +60,7 @@ export function FeatureConfig({
           },
         }
   );
+
   const [idChanged, setIdChanged] = useState(false);
   const [featureType, setFeatureType] = useState<string>(
     feature.type ? feature.type : FeatureType.Boolean
@@ -116,6 +118,10 @@ export function FeatureConfig({
                 newFields.id = slugify(e.target.value);
               }
               setFields(newFields);
+
+              if (!eventNameChanged) {
+                setEventNameInput(slugify(e.target.value));
+              }
             }}
           />
         </div>
@@ -148,6 +154,7 @@ export function FeatureConfig({
               setConfig={setMeteredConfig}
               eventNameInput={eventNameInput}
               setEventNameInput={setEventNameInput}
+              setEventNameChanged={setEventNameChanged}
             />
           </div>
 
@@ -191,11 +198,13 @@ export const FilterInput = ({
   setConfig,
   eventNameInput,
   setEventNameInput,
+  setEventNameChanged,
 }: {
   config: MeteredConfig;
   setConfig: any;
   eventNameInput: string;
   setEventNameInput: any;
+  setEventNameChanged: any;
 }) => {
   const [inputFocused, setInputFocused] = useState(false);
 
@@ -206,6 +215,7 @@ export const FilterInput = ({
     newFilter.value.push(eventNameInput);
     setConfig({ ...config, filters: [newFilter] });
     setEventNameInput("");
+    setEventNameChanged(true);
   };
 
   const onRemoveClicked = (index: number) => {
@@ -253,7 +263,10 @@ export const FilterInput = ({
         onFocus={() => setInputFocused(true)}
         onBlur={() => setInputFocused(false)}
         value={eventNameInput}
-        onChange={(e) => setEventNameInput(e.target.value)}
+        onChange={(e) => {
+          setEventNameInput(e.target.value);
+          setEventNameChanged(true);
+        }}
       ></input>
     </div>
   );

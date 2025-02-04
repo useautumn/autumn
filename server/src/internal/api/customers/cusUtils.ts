@@ -1,4 +1,9 @@
-import { CreateCustomerSchema, Customer, ProcessorType } from "@autumn/shared";
+import {
+  CreateCustomerSchema,
+  Customer,
+  Organization,
+  ProcessorType,
+} from "@autumn/shared";
 
 import { CreateCustomer } from "@autumn/shared";
 
@@ -90,4 +95,42 @@ export const createNewCustomer = async ({
   }
 
   return newCustomer;
+};
+
+export const attachDefaultProducts = async ({
+  sb,
+  orgId,
+  env,
+  customer,
+  nextResetAt,
+  org,
+}: {
+  sb: SupabaseClient;
+  orgId: string;
+  env: AppEnv;
+  customer: Customer;
+  org: Organization;
+  nextResetAt?: number;
+}) => {
+  const defaultProds = await ProductService.getFullDefaultProducts({
+    sb,
+    orgId,
+    env,
+  });
+
+  for (const product of defaultProds) {
+    await createFullCusProduct({
+      sb,
+      attachParams: {
+        org,
+        customer: customer,
+        product,
+        prices: product.prices,
+        entitlements: product.entitlements,
+        freeTrial: null, // TODO: Free trial not supported on default product yet
+        optionsList: [],
+      },
+      nextResetAt,
+    });
+  }
 };

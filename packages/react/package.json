@@ -1,6 +1,10 @@
 {
   "name": "@useautumn/react",
-  "version": "0.0.0",
+  "version": "0.0.4",
+  "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -8,6 +12,11 @@
     "dev": "tsup --watch",
     "lint": "tsc"
   },
+  "files": [
+    "lib",
+    "dist",
+    "README.md"
+  ],
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0"

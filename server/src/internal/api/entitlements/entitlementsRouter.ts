@@ -1,19 +1,11 @@
 import { ErrCode } from "@/errors/errCodes.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
-import {
-  CusEntWithEntitlement,
-  Entitlement,
-  Feature,
-  FeatureType,
-} from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { Entitlement } from "@autumn/shared";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { Client } from "pg";
 
 export const entitlementApiRouter = Router();
 
