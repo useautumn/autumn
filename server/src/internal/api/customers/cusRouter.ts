@@ -1,39 +1,30 @@
-import { ErrCode } from "@/errors/errCodes.js";
-import { ErrorMessages } from "@/errors/errMessages.js";
-
-import RecaseError, {
-  formatZodError,
-  handleRequestError,
-} from "@/utils/errorUtils.js";
-import { generateId } from "@/utils/genUtils.js";
 import {
-  AppEnv,
-  CreateCustomer,
   CreateCustomerSchema,
   CusProductStatus,
   Customer,
   CustomerResponseSchema,
-  ProcessorType,
 } from "@autumn/shared";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { ErrCode } from "@/errors/errCodes.js";
+import { ErrorMessages } from "@/errors/errMessages.js";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../../customers/CusService.js";
-import {
-  createStripeCustomer,
-  deleteStripeCustomer,
-} from "@/external/stripe/stripeCusUtils.js";
-import Stripe from "stripe";
+import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { EventService } from "../events/EventService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { createNewCustomer } from "./cusUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getCusBalances } from "@/internal/customers/entitlements/cusEntUtils.js";
+import {
+  getCusBalances,
+  getCusBalancesByEntitlement,
+  getCusBalancesByProduct,
+  sortCusEntsForDeduction,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
+import { processFullCusProduct } from "@/internal/customers/products/cusProductUtils.js";
 
 export const cusRouter = Router();
 
@@ -234,17 +225,7 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
       internalFeatureIds: featuresToUpdate.map((f) => f.internal_id),
     });
 
-    // Sort cus ents by ent.reset
-    cusEnts.sort((a, b) => {
-      if (a.next_reset_at && !b.next_reset_at) {
-        return -1; // a comes first
-      } else if (!a.next_reset_at && b.next_reset_at) {
-        return 1; // b comes first
-      } else if (a.next_reset_at && b.next_reset_at) {
-        return a.next_reset_at - b.next_reset_at; // sort by date if both have reset_at
-      }
-      return 0;
-    });
+    sortCusEntsForDeduction(cusEnts);
 
     // console.log("cusEnts", cusEnts);
     for (const balance of balances) {
@@ -306,6 +287,56 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
   }
 });
 
+cusRouter.get("/:customer_id", async (req: any, res: any) => {
+  try {
+    const customerId = req.params.customer_id;
+    const customer = await CusService.getById({
+      sb: req.sb,
+      id: customerId,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    if (!customer) {
+      throw new RecaseError({
+        message: `Customer ${customerId} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    const cusProducts = await CusProductService.getFullByCustomerId({
+      sb: req.sb,
+      customerId,
+      orgId: req.orgId,
+      env: req.env,
+      inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+    });
+
+    let main = [];
+    let addOns = [];
+
+    for (const cusProduct of cusProducts) {
+      let processed = processFullCusProduct(cusProduct);
+
+      let isAddOn = cusProduct.product.is_add_on;
+      if (isAddOn) {
+        addOns.push(processed);
+      } else {
+        main.push(processed);
+      }
+    }
+
+    res.status(200).json({
+      customer: CustomerResponseSchema.parse(customer),
+      products: main,
+      add_ons: addOns,
+    });
+  } catch (error) {
+    handleRequestError({ error, res, action: "get customer" });
+  }
+});
+
 cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
   const customerId = req.params.customer_id;
   const customer = await CusService.getById({
@@ -345,44 +376,62 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 });
 
 // Entitlements
-
 cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
   const customerId = req.params.customer_id;
-  const balances = await getCusBalances({
-    sb: req.sb,
-    customerId,
-    orgId: req.orgId,
-    env: req.env,
-  });
+  const group_by = req.query.group_by;
+
+  let balances: any[] = [];
+  if (group_by == "product") {
+    balances = await getCusBalancesByProduct({
+      sb: req.sb,
+      customerId,
+      orgId: req.orgId,
+      env: req.env,
+    });
+  } else {
+    balances = await getCusBalancesByEntitlement({
+      sb: req.sb,
+      customerId,
+      orgId: req.orgId,
+      env: req.env,
+    });
+  }
+
+  for (const balance of balances) {
+    if (balance.total && balance.balance) {
+      balance.used = balance.total - balance.balance;
+      delete balance.total;
+    }
+  }
 
   res.status(200).json(balances);
 });
 
-cusRouter.get("/:customer_id/products", async (req: any, res: any) => {
-  const customerId = req.params.customer_id;
+// cusRouter.get("/:customer_id/products", async (req: any, res: any) => {
+//   const customerId = req.params.customer_id;
 
-  const cusProducts = await CusProductService.getByCustomerId({
-    sb: req.sb,
-    customerId,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-  });
+//   const cusProducts = await CusProductService.getByCustomerId({
+//     sb: req.sb,
+//     customerId,
+//     inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+//   });
 
-  // Clean up:
-  let products = [];
-  for (const cusProduct of cusProducts) {
-    products.push({
-      id: cusProduct.product.id,
-      name: cusProduct.product.name,
-      group: cusProduct.product.group,
-      status: cusProduct.status,
-      created_at: cusProduct.created_at,
-      canceled_at: cusProduct.canceled_at,
-      processor: {
-        type: cusProduct.processor.type,
-        subscription_id: cusProduct.processor.subscription_id || null,
-      },
-    });
-  }
+//   // Clean up:
+//   let products = [];
+//   for (const cusProduct of cusProducts) {
+//     products.push({
+//       id: cusProduct.product.id,
+//       name: cusProduct.product.name,
+//       group: cusProduct.product.group,
+//       status: cusProduct.status,
+//       created_at: cusProduct.created_at,
+//       canceled_at: cusProduct.canceled_at,
+//       processor: {
+//         type: cusProduct.processor.type,
+//         subscription_id: cusProduct.processor.subscription_id || null,
+//       },
+//     });
+//   }
 
-  res.status(200).json(products);
-});
+//   res.status(200).json(products);
+// });

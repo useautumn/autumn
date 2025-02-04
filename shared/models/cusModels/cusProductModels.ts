@@ -79,7 +79,7 @@ export type FeatureOptions = z.infer<typeof FeatureOptionsSchema>;
 export const FullCusProductSchema = CusProductSchema.extend({
   customer_prices: z.array(
     CustomerPriceSchema.extend({
-      prices: z.array(PriceSchema),
+      price: PriceSchema,
     })
   ),
   customer_entitlements: z.array(

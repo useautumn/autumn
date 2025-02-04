@@ -125,6 +125,7 @@ const handleInvoicePaymentFailure = async ({
     stripeInvoice: finalizedInvoice,
     internalCustomerId: fullCusProduct.internal_customer_id,
     productIds: [fullCusProduct.product.id],
+    internalProductIds: [fullCusProduct.internal_product_id],
     status: InvoiceStatus.Void,
     org: fullOrg,
   });
@@ -220,6 +221,7 @@ const invoiceCustomer = async ({
     stripeInvoice: finalizedInvoice,
     internalCustomerId: customer.internal_id,
     productIds: [fullCusProduct.product.id],
+    internalProductIds: [fullCusProduct.internal_product_id],
     status: InvoiceStatus.Paid,
     org: fullOrg,
   });

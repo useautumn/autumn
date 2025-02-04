@@ -42,6 +42,7 @@ export const handleInvoicePaid = async ({
       stripeInvoice: invoice,
       internalCustomerId: cusProduct.internal_customer_id,
       productIds: [cusProduct.product_id],
+      internalProductIds: [cusProduct.internal_product_id],
       org: org,
     });
     return;

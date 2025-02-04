@@ -1,6 +1,11 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { CusProduct, CusProductStatus, ProcessorType } from "@autumn/shared";
+import {
+  AppEnv,
+  CusProduct,
+  CusProductStatus,
+  ProcessorType,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export class CusProductService {
@@ -243,6 +248,44 @@ export class CusProductService {
       .from("customer_products")
       .select("*, customer:customers!inner(*), product:products!inner(*)")
       .eq("customer_id", customerId);
+
+    if (inStatuses) {
+      query.in("status", inStatuses);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getFullByCustomerId({
+    sb,
+    customerId,
+    orgId,
+    env,
+    inStatuses,
+  }: {
+    sb: SupabaseClient;
+    customerId: string;
+    orgId: string;
+    env: AppEnv;
+    inStatuses?: string[];
+  }) {
+    const query = sb
+      .from("customer_products")
+      .select(
+        `*, product:products!inner(*), customer:customers!inner(*), 
+        customer_entitlements:customer_entitlements!inner(*, entitlement:entitlements!inner(*, feature:features!inner(*))), 
+        customer_prices:customer_prices!inner(*, price:prices!inner(*))
+      `
+      )
+      .eq("customer.id", customerId)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env);
 
     if (inStatuses) {
       query.in("status", inStatuses);

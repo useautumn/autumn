@@ -163,6 +163,7 @@ const handleOneOffPrices = async ({
     stripeInvoice: finalizedInvoice,
     internalCustomerId: customer.internal_id,
     productIds: [product.id],
+    internalProductIds: [product.internal_id],
     status: InvoiceStatus.Paid,
     org: org,
   });

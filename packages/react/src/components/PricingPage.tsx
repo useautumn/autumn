@@ -3,8 +3,6 @@
 import { useAutumnContext } from "../providers/AutumnContext";
 import { useCustomSwr } from "../hooks/useCustomSwr";
 
-// use react swr
-
 export const PricingPage = () => {
   const { publishableKey } = useAutumnContext();
 
@@ -16,7 +14,7 @@ export const PricingPage = () => {
   if (error) return <div>Error: {error.message}</div>;
 
   return (
-    <div className="bg-blue-500 p-4 rounded">
+    <div style={{}} className="bg-blue-500 p-4 rounded">
       {data.map((product: any) => (
         <div key={product.id}>{product.name}</div>
       ))}

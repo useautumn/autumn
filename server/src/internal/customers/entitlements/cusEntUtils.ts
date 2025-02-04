@@ -1,7 +1,16 @@
 import { Client } from "pg";
 import { CustomerEntitlementService } from "./CusEntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { AllowanceType, FeatureType } from "@autumn/shared";
+import {
+  AllowanceType,
+  BillingInterval,
+  CustomerEntitlement,
+  EntInterval,
+  EntitlementWithFeature,
+  FeatureType,
+  FullCustomerEntitlement,
+} from "@autumn/shared";
+import { getEntOptions } from "@/internal/prices/priceUtils.js";
 
 export const getFeatureBalance = async ({
   pg,
@@ -140,4 +149,208 @@ export const getCusBalances = async ({
   }
 
   return Object.values(featureToData);
+};
+
+export const getCusBalancesByProduct = async ({
+  sb,
+  customerId,
+  orgId,
+  env,
+}: {
+  sb: SupabaseClient;
+  customerId: string;
+  orgId: string;
+  env: string;
+}) => {
+  const cusEnts = await CustomerEntitlementService.getActiveByCustomerId({
+    sb,
+    customerId,
+    orgId,
+    env,
+  });
+
+  const data: Record<string, any> = {};
+
+  for (const cusEnt of cusEnts) {
+    const cusProduct = cusEnt.customer_product;
+    const product = cusProduct.product;
+    const feature = cusEnt.entitlement.feature;
+    const entitlement: EntitlementWithFeature = cusEnt.entitlement;
+
+    const key = `${product.id}-${feature.id}`;
+
+    if (!data[key]) {
+      data[key] = {
+        product_id: product.id,
+        feature_id: feature.id,
+        balance: feature.type == FeatureType.Boolean ? undefined : 0,
+        total: feature.type == FeatureType.Boolean ? undefined : 0,
+        unlimited:
+          feature.type == FeatureType.Boolean
+            ? undefined
+            : cusEnt.allowance_type == AllowanceType.Unlimited,
+      };
+    }
+
+    if (feature.type == FeatureType.Boolean) {
+      continue;
+    }
+
+    if (cusEnt.allowance_type == AllowanceType.Unlimited) {
+      data[key].balance = null;
+      data[key].total = null;
+      data[key].unlimited = true;
+    } else if (data[key].unlimited) {
+      continue;
+    } else {
+      if (cusEnt.allowance_type == AllowanceType.None) {
+        data[key].balance += 0;
+      } else {
+        data[key].balance += cusEnt.balance;
+      }
+    }
+
+    const entOption = getEntOptions(cusProduct.options, entitlement);
+    const ent = cusEnt.entitlement;
+
+    if (ent.allowance_type == AllowanceType.Fixed) {
+      let quantity = entOption?.quantity || 1;
+      data[key].total += quantity * entitlement.allowance!;
+    }
+  }
+
+  const balances = Object.values(data);
+
+  balances.sort((a, b) => {
+    return a.product_id.localeCompare(b.product_id);
+  });
+
+  return balances;
+};
+
+export const getCusBalancesByEntitlement = async ({
+  sb,
+  customerId,
+  orgId,
+  env,
+}: {
+  sb: SupabaseClient;
+  customerId: string;
+  orgId: string;
+  env: string;
+}) => {
+  const cusEnts = await CustomerEntitlementService.getActiveByCustomerId({
+    sb,
+    customerId,
+    orgId,
+    env,
+  });
+
+  const data: Record<string, any> = {};
+
+  for (const cusEnt of cusEnts) {
+    const cusProduct = cusEnt.customer_product;
+    const product = cusProduct.product;
+    const feature = cusEnt.entitlement.feature;
+    const ent: EntitlementWithFeature = cusEnt.entitlement;
+
+    const key = `${ent.interval || "no-interval"}-${feature.id}`;
+
+    if (!data[key]) {
+      data[key] = {
+        feature_id: feature.id,
+        interval: ent.interval,
+        balance: feature.type == FeatureType.Boolean ? undefined : 0,
+        total: feature.type == FeatureType.Boolean ? undefined : 0,
+        unlimited:
+          feature.type == FeatureType.Boolean
+            ? undefined
+            : cusEnt.allowance_type == AllowanceType.Unlimited,
+      };
+    }
+
+    if (feature.type == FeatureType.Boolean) {
+      continue;
+    }
+
+    if (cusEnt.allowance_type == AllowanceType.Unlimited) {
+      data[key].balance = null;
+      data[key].total = null;
+      data[key].unlimited = true;
+    } else if (data[key].unlimited) {
+      continue;
+    } else {
+      if (cusEnt.allowance_type == AllowanceType.None) {
+        data[key].balance += 0;
+      } else {
+        data[key].balance += cusEnt.balance;
+      }
+    }
+
+    const entOption = getEntOptions(cusProduct.options, ent);
+
+    if (ent.allowance_type == AllowanceType.Fixed) {
+      let quantity = entOption?.quantity || 1;
+      data[key].total += quantity * ent.allowance!;
+    }
+  }
+
+  const balances = Object.values(data);
+
+  balances.sort((a, b) => {
+    return a.feature_id.localeCompare(b.feature_id);
+  });
+
+  return balances;
+};
+
+export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
+  let intervalOrder: Record<EntInterval, number> = {
+    [EntInterval.Minute]: 0, // 1 minute
+    [EntInterval.Hour]: 1, // 1 hour
+    [EntInterval.Day]: 2, // 1 day
+    [EntInterval.Week]: 3, // 1 week
+    [EntInterval.Month]: 4, // 1 month
+    [EntInterval.Quarter]: 5, // 3 months
+    [EntInterval.Year]: 6, // 1 year
+    [EntInterval.SemiAnnual]: 7, // 6 months
+    [EntInterval.Lifetime]: 8, // 1 time
+  };
+
+  cusEnts.sort((a, b) => {
+    const aEnt = a.entitlement;
+    const bEnt = b.entitlement;
+
+    // 1. If boolean, go first
+    if (aEnt.feature.type == FeatureType.Boolean) {
+      return -1;
+    }
+
+    if (bEnt.feature.type == FeatureType.Boolean) {
+      return 1;
+    }
+
+    // 2. Sort by unlimited (unlimited goes first)
+    if (
+      aEnt.allowance_type == AllowanceType.Unlimited &&
+      bEnt.allowance_type != AllowanceType.Unlimited
+    ) {
+      return -1;
+    }
+
+    if (
+      aEnt.allowance_type != AllowanceType.Unlimited &&
+      bEnt.allowance_type == AllowanceType.Unlimited
+    ) {
+      return 1;
+    }
+
+    // 3. Sort by interval
+    if (aEnt.interval && bEnt.interval) {
+      return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
+    }
+
+    // 4. Sort by created_at
+    return a.created_at - b.created_at;
+  });
 };

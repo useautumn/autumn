@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { PriceSchema } from "./priceModels.js";
-import { EntitlementSchema } from "./entitlementModels.js";
+import {
+  EntitlementSchema,
+  PublicEntitlementSchema,
+} from "./entitlementModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
 import { FreeTrialSchema } from "./freeTrialModels.js";
 
@@ -61,7 +64,19 @@ export const FullProductSchema = ProductSchema.extend({
   free_trial: FreeTrialSchema.optional(),
 });
 
+export const PublicProductSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  is_add_on: z.boolean(),
+  is_default: z.boolean(),
+  group: z.string(),
+  free_trial: FreeTrialSchema.nullish(),
+  entitlements: z.array(PublicEntitlementSchema),
+  fixed_prices: z.array(PriceSchema),
+});
+
 export type Product = z.infer<typeof ProductSchema>;
 export type FrontendProduct = z.infer<typeof FrontendProductSchema>;
 export type FullProduct = z.infer<typeof FullProductSchema>;
 export type CreateProduct = z.infer<typeof CreateProductSchema>;
+export type PublicProduct = z.infer<typeof PublicProductSchema>;

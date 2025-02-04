@@ -7,14 +7,22 @@ import {
   Feature,
   FeatureOptions,
   FeatureType,
+  FixedPriceConfig,
   FixedPriceConfigSchema,
   FreeTrial,
+  FullCusProduct,
   FullProduct,
   Price,
   PriceType,
+  UsagePriceConfig,
   UsagePriceConfigSchema,
 } from "@autumn/shared";
-import { getBillingType, pricesAreSame } from "@/internal/prices/priceUtils.js";
+import {
+  getBillingType,
+  getPriceOptions,
+  getUsageTier,
+  pricesAreSame,
+} from "@/internal/prices/priceUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 import { ErrCode } from "@/errors/errCodes.js";
@@ -37,6 +45,46 @@ import { StatusCodes } from "http-status-codes";
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
 import { createNewCustomer } from "@/internal/api/customers/cusUtils.js";
+
+export const processFullCusProduct = (cusProduct: FullCusProduct) => {
+  // Process prices
+  const prices = cusProduct.customer_prices.map((cp) => {
+    let price = cp.price;
+
+    if (price.config?.type == PriceType.Fixed) {
+      let config = price.config as FixedPriceConfig;
+      return {
+        amount: config.amount,
+        interval: config.interval,
+      };
+    } else {
+      let config = price.config as UsagePriceConfig;
+      let priceOptions = getPriceOptions(price, cusProduct.options);
+      let usageTier = getUsageTier(price, priceOptions?.quantity!);
+
+      return {
+        amount: usageTier.amount,
+        interval: config.interval,
+        quantity: priceOptions?.quantity,
+      };
+    }
+  });
+  return {
+    id: cusProduct.product.id,
+    name: cusProduct.product.name,
+    group: cusProduct.product.group,
+    status: cusProduct.status,
+    created_at: cusProduct.created_at,
+    canceled_at: cusProduct.canceled_at,
+    processor: {
+      type: cusProduct.processor?.type,
+      subscription_id: cusProduct.processor?.subscription_id || null,
+    },
+    prices: prices,
+    // prices: cusProduct.customer_prices,
+    // entitlements: cusProduct.customer_entitlements,
+  };
+};
 
 export const getProductAndOrg = async ({
   sb,

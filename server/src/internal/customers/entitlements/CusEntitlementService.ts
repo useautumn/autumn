@@ -89,7 +89,7 @@ export class CustomerEntitlementService {
       .select(
         `*, 
           entitlement:entitlements(*, feature:features(*)), 
-          customer_product:customer_products!inner(*), 
+          customer_product:customer_products!inner(*, product:products!inner(*)), 
           customer:customers(*)
         `
       )
