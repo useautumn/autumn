@@ -3,105 +3,108 @@ import React, { useState, useEffect } from "react";
 import { useCustomSwr } from "../hooks/useCustomSwr";
 
 const makeImportant = (className?: string) => {
-  if (!className) return '';
-  return className.split(' ').map(cls => `!${cls}`).join(' ');
+  if (!className) return "";
+  return className
+    .split(" ")
+    .map((cls) => `!${cls}`)
+    .join(" ");
 };
 
 const styles = {
   container: {
-    display: 'flex',
-    gap: '16px',
+    display: "flex",
+    gap: "16px",
     flexGrow: 1,
     flexShrink: 0,
     flexBasis: 0,
-    border: '1px solid red',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    borderRadius: '6px',
-    backgroundColor: '#fff',
-    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    border: "1px solid red",
+    justifyContent: "center",
+    overflow: "hidden",
+    borderRadius: "6px",
+    backgroundColor: "#fff",
+    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
   },
   card: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'flex-start',
-    overflow: 'hidden',
-    borderRadius: '6px',
-    border: '1px solid #e5e5e5',
-    backgroundColor: '#fff',
-    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "flex-start",
+    overflow: "hidden",
+    borderRadius: "6px",
+    border: "1px solid #e5e5e5",
+    backgroundColor: "#fff",
+    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
   },
   header: {
-    display: 'flex',
-    width: '100%',
-    flexDirection: 'column' as const,
-    alignItems: 'flex-start',
-    gap: '16px',
-    borderBottom: '1px solid #e5e5e5',
-    backgroundColor: '#fafafa',
-    padding: '48px',
+    display: "flex",
+    width: "100%",
+    flexDirection: "column" as const,
+    alignItems: "flex-start",
+    gap: "16px",
+    borderBottom: "1px solid #e5e5e5",
+    backgroundColor: "#fafafa",
+    padding: "48px",
   },
   titleSection: {
-    display: 'flex',
-    width: '100%',
-    flexDirection: 'column' as const,
-    alignItems: 'flex-start',
-    gap: '8px',
+    display: "flex",
+    width: "100%",
+    flexDirection: "column" as const,
+    alignItems: "flex-start",
+    gap: "8px",
   },
   title: {
-    fontSize: '24px',
+    fontSize: "24px",
     fontWeight: 600,
-    color: '#111',
+    color: "#111",
   },
   description: {
-    fontSize: '18px',
+    fontSize: "18px",
     fontWeight: 500,
-    color: '#111',
+    color: "#111",
   },
   content: {
-    display: 'flex',
-    width: '100%',
-    flexDirection: 'column' as const,
-    alignItems: 'flex-start',
-    gap: '24px',
-    padding: '48px',
-    backgroundColor: '#fff',
+    display: "flex",
+    width: "100%",
+    flexDirection: "column" as const,
+    alignItems: "flex-start",
+    gap: "24px",
+    padding: "48px",
+    backgroundColor: "#fff",
   },
   pricing: {
-    display: 'flex',
-    alignItems: 'flex-end',
-    gap: '8px',
+    display: "flex",
+    alignItems: "flex-end",
+    gap: "8px",
   },
   amount: {
-    fontSize: '32px',
+    fontSize: "32px",
     fontWeight: 600,
-    color: '#111',
+    color: "#111",
   },
   interval: {
-    fontSize: '16px',
+    fontSize: "16px",
     fontWeight: 500,
-    color: '#666',
-    paddingBottom: '4px',
+    color: "#666",
+    paddingBottom: "4px",
   },
   entitlementsList: {
-    display: 'flex',
-    width: '100%',
-    flexDirection: 'column' as const,
-    gap: '8px',
+    display: "flex",
+    width: "100%",
+    flexDirection: "column" as const,
+    gap: "8px",
   },
   entitlementItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    fontSize: '16px',
-    color: '#666',
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    fontSize: "16px",
+    color: "#666",
   },
   purchaseButton: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    fontSize: '16px',
-    color: '#666',
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    fontSize: "16px",
+    color: "#666",
   },
 };
 
@@ -126,14 +129,20 @@ export default function PricingPage({ classNames }: PricingPageProps) {
   const { data, error, isLoading } = useCustomSwr({
     url: "https://api.useautumn.com/public/products",
   });
-  const [importantClasses, setImportantClasses] = useState<PricingPageProps['classNames']>({});
+
+  const [importantClasses, setImportantClasses] = useState<
+    PricingPageProps["classNames"]
+  >({});
 
   useEffect(() => {
     if (classNames) {
-      const important = Object.entries(classNames).reduce((acc, [key, value]) => ({
-        ...acc,
-        [key]: makeImportant(value)
-      }), {});
+      const important = Object.entries(classNames).reduce(
+        (acc, [key, value]) => ({
+          ...acc,
+          [key]: makeImportant(value),
+        }),
+        {}
+      );
       setImportantClasses(important);
     }
   }, [classNames]);
@@ -141,10 +150,10 @@ export default function PricingPage({ classNames }: PricingPageProps) {
   return (
     <div style={styles.container} className={importantClasses?.container}>
       {data?.map((product: any, index: number) => (
-        <PricingCard 
-          key={product.id || `product-${index}`} 
-          product={product} 
-          classNames={importantClasses} 
+        <PricingCard
+          key={product.id || `product-${index}`}
+          product={product}
+          classNames={importantClasses}
         />
       ))}
     </div>
@@ -153,7 +162,7 @@ export default function PricingPage({ classNames }: PricingPageProps) {
 
 interface PricingCardProps {
   product: any;
-  classNames?: PricingPageProps['classNames'];
+  classNames?: PricingPageProps["classNames"];
 }
 
 const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
@@ -172,12 +181,12 @@ const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
           </div>
         </div>
       </div>
-      
+
       <div style={styles.content} className={classNames.content}>
         {fixedPrices.map((price: any, index: number) => (
-          <div 
-            key={price.id || `price-${index}`} 
-            style={styles.pricing} 
+          <div
+            key={price.id || `price-${index}`}
+            style={styles.pricing}
             className={classNames.pricing}
           >
             <span style={styles.amount} className={classNames.amount}>
@@ -189,11 +198,14 @@ const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
           </div>
         ))}
 
-        <div style={styles.entitlementsList} className={classNames.entitlementsList}>
+        <div
+          style={styles.entitlementsList}
+          className={classNames.entitlementsList}
+        >
           {entitlements.map((entitlement: any, index: number) => (
-            <div 
-              key={entitlement.id || `entitlement-${index}`} 
-              style={styles.entitlementItem} 
+            <div
+              key={entitlement.id || `entitlement-${index}`}
+              style={styles.entitlementItem}
               className={classNames.entitlementItem}
             >
               <span>✓</span>
