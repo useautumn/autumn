@@ -73,6 +73,7 @@ export const PublicProductSchema = z.object({
   free_trial: FreeTrialSchema.nullish(),
   entitlements: z.array(PublicEntitlementSchema),
   fixed_prices: z.array(PriceSchema),
+  usage_prices: z.array(PriceSchema),
 });
 
 export type Product = z.infer<typeof ProductSchema>;

@@ -278,9 +278,16 @@ export class CusProductService {
     const query = sb
       .from("customer_products")
       .select(
-        `*, product:products!inner(*), customer:customers!inner(*), 
-        customer_entitlements:customer_entitlements!inner(*, entitlement:entitlements!inner(*, feature:features!inner(*))), 
-        customer_prices:customer_prices!inner(*, price:prices!inner(*))
+        `*, product:products!inner(*), 
+        customer:customers!inner(*),
+        customer_entitlements:customer_entitlements!inner(
+          *, entitlement:entitlements!inner(
+            *, feature:features!inner(*)
+          )
+        ),
+        customer_prices:customer_prices(
+          *, price:prices(*)
+        )
       `
       )
       .eq("customer.id", customerId)
