@@ -185,8 +185,8 @@ cusRouter.put("", async (req: any, res: any) => {
         env: req.env,
         customer: {
           id,
-          name,
-          email,
+          name: name || "",
+          email: email || "",
           fingerprint,
         },
         nextResetAt: reset_at,
