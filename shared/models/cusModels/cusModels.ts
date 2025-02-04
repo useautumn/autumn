@@ -19,8 +19,8 @@ export const CustomerSchema = z.object({
 
 export const CreateCustomerSchema = z.object({
   id: z.string().regex(/^[^\s]+$/),
-  name: z.string().default(""),
-  email: z.string().default(""),
+  name: z.string().nullish(),
+  email: z.string().nullish(),
   fingerprint: z.string().nullish(),
 });
 
