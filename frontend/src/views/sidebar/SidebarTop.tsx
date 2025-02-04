@@ -5,10 +5,16 @@ import { Avatar, cn } from "@nextui-org/react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import { AppEnv } from "@autumn/shared";
-import { OrganizationProfile, OrganizationSwitcher, useOrganization, useUser } from "@clerk/nextjs";
+import {
+  OrganizationProfile,
+  OrganizationSwitcher,
+  useOrganization,
+  useUser,
+} from "@clerk/nextjs";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SmallSpinner from "@/components/general/SmallSpinner";
+import CopyButton from "@/components/general/CopyButton";
 
 export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
   const { state, toggleSidebar } = useSidebar();
@@ -77,23 +83,28 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
                   // }}
                 />
               )}
+              {isLoaded &&
+                (user?.primaryEmailAddress?.emailAddress ===
+                  "johnyeocx@gmail.com" ||
+                  user?.primaryEmailAddress?.emailAddress ===
+                    "ayush@recaseai.com") && (
+                  <div className="text-xs text-gray-500 ml-2 flex items-center gap-1">
+                    {/* <span className="w-[70px] overflow-hidden text-ellipsis whitespace-nowrap">
+                      {organization?.id}
+                    </span> */}
+                    <Button
+                      onClick={() =>
+                        navigator.clipboard.writeText(organization?.id || "")
+                      }
+                      variant="ghost"
+                      size="sm"
+                      className="p-0 h-4 w-4"
+                    >
+                      <CopyButton text={organization?.id || ""} />
+                    </Button>
+                  </div>
+                )}
             </div>
-              {isLoaded && (
-                user?.primaryEmailAddress?.emailAddress === 'johnyeocx@gmail.com' ||
-                user?.primaryEmailAddress?.emailAddress === 'ayush@recaseai.com'
-              ) && (
-                <div className="text-xs text-gray-500 ml-2 flex items-center gap-1">
-                  <span className="w-[70px] overflow-hidden text-ellipsis whitespace-nowrap">{organization?.id}</span>
-                  <Button
-                    onClick={() => navigator.clipboard.writeText(organization?.id || '')}
-                    variant="ghost"
-                    size="sm"
-                    className="p-0 h-4 w-4"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </Button>
-                </div>
-              )}
           </div>
         )}
 
