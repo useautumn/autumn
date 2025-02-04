@@ -12,7 +12,9 @@ import "@fortawesome/fontawesome-svg-core/styles.css";
 config.autoAddCss = false;
 
 const getTitle = async () => {
-  return "Autumn";
+  const isLocalhost = process.env.ENV === "development";
+
+  return isLocalhost ? "Autumn (Dev)" : "Autumn";
 };
 
 export const metadata: Metadata = {
