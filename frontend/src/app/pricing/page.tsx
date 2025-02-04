@@ -9,12 +9,14 @@ export default function Page() {
     >
       <div className="w-full h-full justify-center items-center flex">
         <PricingPage
-          classNames={{
-            container: "flex gap-2 !border-yellow-500",
-            card: "border-yellow-500 !bg-green-300",
-            purchaseButton: "!bg-red-500",
-            entitlementsList: "",
-          }}
+          customerId="123"
+          classNames={
+            {
+              // container: "flex gap-2 !border-yellow-500",
+              // card: "border-yellow-500 !bg-green-300",
+              // entitlementsList: "",
+            }
+          }
         />
       </div>
     </AutumnProvider>
