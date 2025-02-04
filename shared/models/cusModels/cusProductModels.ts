@@ -35,6 +35,7 @@ export enum CusProductStatus {
   PastDue = "past_due",
   Expired = "expired",
   Unknown = "unknown",
+  Trialing = "trialing",
 }
 
 export const CusProductSchema = z.object({
