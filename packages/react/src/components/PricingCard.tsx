@@ -312,10 +312,14 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
     return "Get Started";
   };
 
-  const handleButtonClicked = () => {
+  const handleButtonClicked = async () => {
     if (isCurrentPlan()) {
       return;
     }
+
+    await fetch("/api", {
+      method: "GET",
+    });
 
     console.log("Button clicked");
   };
@@ -336,6 +340,7 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
               padding: "10px 20px",
               borderRadius: "5px",
             }}
+            onClick={handleButtonClicked}
           >
             {renderButtonText()}
           </button>
