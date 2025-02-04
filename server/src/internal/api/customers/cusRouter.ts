@@ -374,10 +374,26 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       }
     }
 
+    // Get entitlements
+    const balances = await getCusBalancesByEntitlement({
+      sb: req.sb,
+      customerId,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    for (const balance of balances) {
+      if (balance.total && balance.balance) {
+        balance.used = balance.total - balance.balance;
+        delete balance.total;
+      }
+    }
+
     res.status(200).json({
       customer: CustomerResponseSchema.parse(customer),
       products: main,
       add_ons: addOns,
+      entitlements: balances,
     });
   } catch (error) {
     handleRequestError({ error, res, action: "get customer" });
