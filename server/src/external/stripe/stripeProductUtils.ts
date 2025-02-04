@@ -13,6 +13,10 @@ export const createStripeProduct = async (
 
     const stripeProduct = await stripe.products.create({
       name: product.name,
+      metadata: {
+        autumn_id: product.id,
+        autumn_internal_id: product.internal_id,
+      },
     });
 
     return stripeProduct;
