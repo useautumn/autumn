@@ -8,7 +8,12 @@ export default function Page() {
       publishableKey={process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY || ""}
     >
       <div className="w-full h-full justify-center items-center flex">
-        <PricingPage className="rounded-full bg-fuchsia-500" />
+        <PricingPage classNames={{ 
+          container: "flex gap-2 !border-yellow-500",
+          card: "border-yellow-500 !bg-green-300",
+          purchaseButton: "",
+          entitlementsList: ""
+        }} />
       </div>
     </AutumnProvider>
   );
