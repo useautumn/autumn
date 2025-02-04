@@ -30,11 +30,13 @@ export const CreateFeature = () => {
   const [loading, setLoading] = useState(false);
   const [feature, setFeature] = useState(defaultFeature);
   const [eventNameInput, setEventNameInput] = useState("");
+  const [eventNameChanged, setEventNameChanged] = useState(false);
 
   useEffect(() => {
     if (open) {
       setFeature(defaultFeature);
       setEventNameInput("");
+      setEventNameChanged(false);
     }
   }, [open]);
 
@@ -92,6 +94,8 @@ export const CreateFeature = () => {
           setFeature={setFeature}
           eventNameInput={eventNameInput}
           setEventNameInput={setEventNameInput}
+          eventNameChanged={eventNameChanged}
+          setEventNameChanged={setEventNameChanged}
         />
 
         <DialogFooter>

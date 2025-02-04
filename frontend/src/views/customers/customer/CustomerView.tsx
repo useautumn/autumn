@@ -2,12 +2,7 @@
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import {
-  AppEnv,
-  FeatureType,
-  FullCustomerEntitlement,
-  Organization,
-} from "@autumn/shared";
+import { AppEnv, FeatureType, FullCustomerEntitlement } from "@autumn/shared";
 import { BreadcrumbItem } from "@nextui-org/react";
 import { Breadcrumbs } from "@nextui-org/react";
 import { CustomerContext } from "./CustomerContext";
@@ -29,10 +24,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSquareUpRight } from "@fortawesome/pro-duotone-svg-icons";
 import { CustomerProductList } from "./CustomerProductList";
-import {
-  formatUnixToDateTime,
-  formatUnixToDateTimeString,
-} from "@/utils/formatUtils/formatDateUtils";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { ManageEntitlements } from "./entitlements/ManageEntitlements";
 import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsList";
 import { navigateTo } from "@/utils/genUtils";
@@ -46,7 +38,12 @@ export default function CustomerView({
   env: AppEnv;
 }) {
   const router = useRouter();
-  const { data, isLoading, error } = useAxiosSWR({
+  const {
+    data,
+    isLoading,
+    error,
+    mutate: cusMutate,
+  } = useAxiosSWR({
     url: `/customers/${customer_id}/data`,
     env,
   });
@@ -70,7 +67,7 @@ export default function CustomerView({
   const { events } = eventsData;
 
   return (
-    <CustomerContext.Provider value={{ customer, products, env }}>
+    <CustomerContext.Provider value={{ customer, products, env, cusMutate }}>
       <CustomToaster />
       <div className="flex flex-col gap-1">
         <Breadcrumbs className="text-t3">
@@ -144,7 +141,7 @@ export default function CustomerView({
                 />
               </TabsContent>
             </Tabs>
-            <ManageEntitlements />
+            {/* <ManageEntitlements /> */}
           </div>
 
           <p className="text-t2 font-medium text-md">Invoices</p>

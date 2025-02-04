@@ -28,6 +28,18 @@ import { processFullCusProduct } from "@/internal/customers/products/cusProductU
 
 export const cusRouter = Router();
 
+cusRouter.get("", async (req: any, res: any) => {
+  try {
+    const customers = await CusService.getCustomers(req.sb, req.orgId, req.env);
+
+    res.status(200).send({ customers });
+  } catch (error) {
+    res
+      .status(StatusCodes.INTERNAL_SERVER_ERROR)
+      .json({ error: ErrorMessages.InternalError });
+  }
+});
+
 cusRouter.post("", async (req: any, res: any) => {
   try {
     const data = req.body;
@@ -67,15 +79,55 @@ cusRouter.post("", async (req: any, res: any) => {
   }
 });
 
-cusRouter.get("", async (req: any, res: any) => {
+cusRouter.put("", async (req: any, res: any) => {
   try {
-    const customers = await CusService.getCustomers(req.sb, req.orgId, req.env);
+    const { id, name, email, fingerprint, reset_at } = req.body;
 
-    res.status(200).send({ customers });
+    if (!id && !email) {
+      throw new RecaseError({
+        message: "Customer ID or email is required",
+        code: ErrCode.InvalidCustomer,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    let existing = await CusService.getByIdOrEmail({
+      sb: req.sb,
+      id,
+      email,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    let newCustomer: Customer;
+    if (existing) {
+      newCustomer = await CusService.update({
+        sb: req.sb,
+        internalCusId: existing.internal_id,
+        update: { id, name, email, fingerprint },
+      });
+    } else {
+      newCustomer = await createNewCustomer({
+        sb: req.sb,
+        orgId: req.orgId,
+        env: req.env,
+        customer: {
+          id,
+          name: name || "",
+          email: email || "",
+          fingerprint,
+        },
+        nextResetAt: reset_at,
+      });
+    }
+
+    res.status(200).json({
+      customer: CustomerResponseSchema.parse(newCustomer),
+      success: true,
+      action: existing ? "update" : "create",
+    });
   } catch (error) {
-    res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: ErrorMessages.InternalError });
+    handleRequestError({ error, res, action: "update customer" });
   }
 });
 
@@ -142,57 +194,52 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
   }
 });
 
-cusRouter.put("", async (req: any, res: any) => {
-  try {
-    const { id, name, email, fingerprint, reset_at } = req.body;
+cusRouter.post(
+  "/customer_entitlements/:customer_entitlement_id",
+  async (req: any, res: any) => {
+    try {
+      const { customer_entitlement_id } = req.params;
+      const { balance, next_reset_at } = req.body;
 
-    if (!id && !email) {
-      throw new RecaseError({
-        message: "Customer ID or email is required",
-        code: ErrCode.InvalidCustomer,
-        statusCode: StatusCodes.BAD_REQUEST,
-      });
-    }
+      if (!Number.isInteger(balance) || balance < 0) {
+        throw new RecaseError({
+          message: "Balance must be a positive integer",
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
 
-    let existing = await CusService.getByIdOrEmail({
-      sb: req.sb,
-      id,
-      email,
-      orgId: req.orgId,
-      env: req.env,
-    });
+      if (
+        next_reset_at !== null &&
+        (!Number.isInteger(next_reset_at) || next_reset_at < 0)
+      ) {
+        throw new RecaseError({
+          message: "Next reset at must be a valid unix timestamp or null",
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
 
-    let newCustomer: Customer;
-    if (existing) {
-      newCustomer = await CusService.update({
+      // Check if org owns the entitlement
+      await CustomerEntitlementService.getByIdStrict({
         sb: req.sb,
-        internalCusId: existing.internal_id,
-        update: { id, name, email, fingerprint },
-      });
-    } else {
-      newCustomer = await createNewCustomer({
-        sb: req.sb,
+        id: customer_entitlement_id,
         orgId: req.orgId,
         env: req.env,
-        customer: {
-          id,
-          name: name || "",
-          email: email || "",
-          fingerprint,
-        },
-        nextResetAt: reset_at,
       });
-    }
 
-    res.status(200).json({
-      customer: CustomerResponseSchema.parse(newCustomer),
-      success: true,
-      action: existing ? "update" : "create",
-    });
-  } catch (error) {
-    handleRequestError({ error, res, action: "update customer" });
+      await CustomerEntitlementService.update({
+        sb: req.sb,
+        id: customer_entitlement_id,
+        updates: { balance, next_reset_at },
+      });
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      handleRequestError({ error, res, action: "update customer entitlement" });
+    }
   }
-});
+);
 
 cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
   try {

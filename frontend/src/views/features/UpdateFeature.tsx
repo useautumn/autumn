@@ -28,10 +28,12 @@ export default function UpdateFeature({
   const axiosInstance = useAxiosInstance({ env });
   const [updateLoading, setUpdateLoading] = useState(false);
   const [eventNameInput, setEventNameInput] = useState("");
+  const [eventNameChanged, setEventNameChanged] = useState(true);
 
   useEffect(() => {
     if (open) {
       setEventNameInput("");
+      setEventNameChanged(true);
     }
   }, [open]);
 
@@ -75,6 +77,8 @@ export default function UpdateFeature({
           eventNameInput={eventNameInput}
           setEventNameInput={setEventNameInput}
           isUpdate={true}
+          eventNameChanged={eventNameChanged}
+          setEventNameChanged={setEventNameChanged}
         />
 
         <DialogFooter>

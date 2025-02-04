@@ -17,9 +17,21 @@ import { useCustomerContext } from "../CustomerContext";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
 import { compareStatus } from "@/utils/genUtils";
 import { StatusBadge } from "../../StatusBadge";
+import { useState } from "react";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogHeader,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { DialogTrigger } from "@/components/ui/dialog";
+import UpdateCusEntitlement from "./UpdateCusEntitlement";
 
 export const CustomerEntitlementsList = ({ customer }: { customer: any }) => {
   const { products } = useCustomerContext();
+  const [selectedCusEntitlement, setSelectedCusEntitlement] =
+    useState<FullCustomerEntitlement | null>(null);
 
   const getProductName = (cusEnt: FullCustomerEntitlement) => {
     const cusProduct = customer.products.find(
@@ -55,8 +67,16 @@ export const CustomerEntitlementsList = ({ customer }: { customer: any }) => {
     return productA.product.name.localeCompare(productB.product.name);
   });
 
+  const handleSelectCusEntitlement = (cusEnt: FullCustomerEntitlement) => {
+    setSelectedCusEntitlement(cusEnt);
+  };
+
   return (
     <div>
+      <UpdateCusEntitlement
+        selectedCusEntitlement={selectedCusEntitlement}
+        setSelectedCusEntitlement={setSelectedCusEntitlement}
+      />
       <Table className="p-2">
         <TableHeader className="bg-transparent">
           <TableRow className="">
@@ -72,7 +92,11 @@ export const CustomerEntitlementsList = ({ customer }: { customer: any }) => {
             const entitlement = cusEnt.entitlement;
             const allowanceType = entitlement.allowance_type;
             return (
-              <TableRow key={cusEnt.id}>
+              <TableRow
+                key={cusEnt.id}
+                onClick={() => handleSelectCusEntitlement(cusEnt)}
+                className="cursor-pointer"
+              >
                 <TableCell className="max-w-[150px] truncate">
                   {getProductName(cusEnt)}
                 </TableCell>

@@ -20,7 +20,12 @@ export const createStripeCustomer = async ({
     const stripeCustomer = await stripeCli.customers.create({
       name: customer.name || undefined,
       email: customer.email || undefined,
+      metadata: {
+        autumn_id: customer.id,
+        autumn_internal_id: customer.internal_id,
+      },
     });
+
     return stripeCustomer;
   } catch (error: any) {
     throw new RecaseError({
