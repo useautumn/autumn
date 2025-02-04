@@ -88,9 +88,9 @@ export class CustomerEntitlementService {
       .from("customer_entitlements")
       .select(
         `*, 
-          entitlement:entitlements(*, feature:features(*)), 
-          customer_product:customer_products!inner(*, product:products!inner(*)), 
-          customer:customers(*)
+          customer:customers!inner(*), 
+          entitlement:entitlements!inner(*, feature:features!inner(*)), 
+          customer_product:customer_products!inner(*, product:products!inner(*))
         `
       )
       .eq("customer_id", customerId)

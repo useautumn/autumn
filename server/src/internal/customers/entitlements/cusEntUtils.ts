@@ -250,26 +250,35 @@ export const getCusBalancesByEntitlement = async ({
 
   for (const cusEnt of cusEnts) {
     const cusProduct = cusEnt.customer_product;
-    const product = cusProduct.product;
     const feature = cusEnt.entitlement.feature;
     const ent: EntitlementWithFeature = cusEnt.entitlement;
 
+    // console.log("--------------------------------");
+    // console.log("Feature:", feature.id, feature.type);
+    // console.log(
+    //   "Entitlement:",
+    //   ent.id,
+    //   ent.allowance,
+    //   ent.interval,
+    //   ent.allowance_type
+    // );
+
     const key = `${ent.interval || "no-interval"}-${feature.id}`;
+
+    const isBoolean = feature.type == FeatureType.Boolean;
+    const isUnlimited = ent.allowance_type == AllowanceType.Unlimited;
 
     if (!data[key]) {
       data[key] = {
         feature_id: feature.id,
         interval: ent.interval,
-        balance: feature.type == FeatureType.Boolean ? undefined : 0,
-        total: feature.type == FeatureType.Boolean ? undefined : 0,
-        unlimited:
-          feature.type == FeatureType.Boolean
-            ? undefined
-            : cusEnt.allowance_type == AllowanceType.Unlimited,
+        balance: isBoolean ? undefined : isUnlimited ? null : 0,
+        total: isBoolean ? undefined : isUnlimited ? null : 0,
+        unlimited: isBoolean ? undefined : isUnlimited,
       };
     }
 
-    if (feature.type == FeatureType.Boolean) {
+    if (isBoolean) {
       continue;
     }
 
