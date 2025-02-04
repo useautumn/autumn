@@ -4,7 +4,38 @@ import Stripe from "stripe";
 import { generateId } from "@/utils/genUtils.js";
 import { Autumn } from "@/external/autumn/autumnCli.js";
 
+export const processInvoice = (invoice: Invoice) => {
+  return {
+    product_ids: invoice.product_ids,
+    stripe_id: invoice.stripe_id,
+    status: invoice.status,
+    total: invoice.total,
+    currency: invoice.currency,
+    created_at: invoice.created_at,
+    hosted_invoice_url: invoice.hosted_invoice_url,
+  };
+};
+
 export class InvoiceService {
+  static async getByInternalCustomerId({
+    sb,
+    internalCustomerId,
+  }: {
+    sb: SupabaseClient;
+    internalCustomerId: string;
+  }) {
+    const { data, error } = await sb
+      .from("invoices")
+      .select("*")
+      .eq("internal_customer_id", internalCustomerId);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async createInvoice({
     sb,
     invoice,
