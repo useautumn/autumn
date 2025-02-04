@@ -224,4 +224,37 @@ export class CustomerEntitlementService {
       throw error;
     }
   }
+
+  static async getByIdStrict({
+    sb,
+    id,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    id: string;
+    orgId: string;
+    env: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_entitlements")
+      .select("*, customer:customers!inner(*)")
+      .eq("id", id)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        throw new RecaseError({
+          message: "Customer entitlement not found",
+          code: ErrCode.CustomerEntitlementNotFound,
+          statusCode: StatusCodes.NOT_FOUND,
+        });
+      }
+      throw error;
+    }
+
+    return data;
+  }
 }

@@ -39,6 +39,7 @@ export const ErrCode = {
   CustomerHasNoPaymentMethod: "customer_has_no_payment_method",
   CustomerHasNoBaseProduct: "customer_has_no_base_product",
   AttachProductToCustomerFailed: "attach_product_to_customer_failed",
+  CustomerEntitlementNotFound: "customer_entitlement_not_found",
 
   // Product
   InvalidProduct: "invalid_product",
