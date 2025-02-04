@@ -37,7 +37,20 @@ export const initQueue = () => {
   }
 };
 
-const numWorkers = 10;
+// export const clearQueue = async (queue: Queue) => {
+//   try {
+//     await queue.clean(0, 0, "active");
+//     await queue.clean(0, 0, "completed");
+//     await queue.clean(0, 0, "failed");
+//     await queue.clean(0, 0, "wait");
+//     await queue.clean(0, 0, "delayed");
+//     console.log("Queue cleared successfully");
+//   } catch (error) {
+//     console.error("Error clearing queue:", error);
+//   }
+// };
+
+const numWorkers = 5;
 
 const initWorker = (id: number, queue: Queue) => {
   // Create supabase client
