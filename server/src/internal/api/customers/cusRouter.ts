@@ -1,4 +1,5 @@
 import {
+  AppEnv,
   CreateCustomerSchema,
   CusProductStatus,
   Customer,
@@ -25,8 +26,78 @@ import {
   sortCusEntsForDeduction,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { processFullCusProduct } from "@/internal/customers/products/cusProductUtils.js";
+import {
+  InvoiceService,
+  processInvoice,
+} from "@/internal/customers/invoices/InvoiceService.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export const cusRouter = Router();
+
+const getCustomerDetails = async ({
+  customer,
+  sb,
+  orgId,
+  env,
+}: {
+  customer: Customer;
+  sb: SupabaseClient;
+  orgId: string;
+  env: AppEnv;
+}) => {
+  const cusProducts = await CusProductService.getFullByCustomerId({
+    sb,
+    customerId: customer.id,
+    orgId,
+    env,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+  });
+
+  let main = [];
+  let addOns = [];
+
+  for (const cusProduct of cusProducts) {
+    let processed = processFullCusProduct(cusProduct);
+
+    let isAddOn = cusProduct.product.is_add_on;
+    if (isAddOn) {
+      addOns.push(processed);
+    } else {
+      main.push(processed);
+    }
+  }
+
+  // Get entitlements
+  const balances = await getCusBalancesByEntitlement({
+    sb,
+    customerId: customer.id,
+    orgId,
+    env,
+  });
+
+  for (const balance of balances) {
+    if (balance.total && balance.balance) {
+      balance.used = balance.total - balance.balance;
+      delete balance.total;
+    }
+  }
+
+  // Get customer invoices
+  const invoices = await InvoiceService.getByInternalCustomerId({
+    sb,
+    internalCustomerId: customer.internal_id,
+  });
+
+  const processedInvoices = invoices.map(processInvoice);
+
+  return {
+    customer,
+    main,
+    addOns,
+    balances,
+    invoices: processedInvoices,
+  };
+};
 
 cusRouter.get("", async (req: any, res: any) => {
   try {
@@ -70,8 +141,19 @@ cusRouter.post("", async (req: any, res: any) => {
       customer: data,
     });
 
+    const { main, addOns, balances, invoices } = await getCustomerDetails({
+      customer: createdCustomer,
+      sb: req.sb,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
     res.status(200).json({
       customer: CustomerResponseSchema.parse(createdCustomer),
+      products: main,
+      add_ons: addOns,
+      entitlements: balances,
+      invoices,
       success: true,
     });
   } catch (error: any) {
@@ -352,48 +434,19 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       });
     }
 
-    const cusProducts = await CusProductService.getFullByCustomerId({
+    const { main, addOns, balances, invoices } = await getCustomerDetails({
+      customer,
       sb: req.sb,
-      customerId,
-      orgId: req.orgId,
-      env: req.env,
-      inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-    });
-
-    let main = [];
-    let addOns = [];
-
-    for (const cusProduct of cusProducts) {
-      let processed = processFullCusProduct(cusProduct);
-
-      let isAddOn = cusProduct.product.is_add_on;
-      if (isAddOn) {
-        addOns.push(processed);
-      } else {
-        main.push(processed);
-      }
-    }
-
-    // Get entitlements
-    const balances = await getCusBalancesByEntitlement({
-      sb: req.sb,
-      customerId,
       orgId: req.orgId,
       env: req.env,
     });
-
-    for (const balance of balances) {
-      if (balance.total && balance.balance) {
-        balance.used = balance.total - balance.balance;
-        delete balance.total;
-      }
-    }
 
     res.status(200).json({
       customer: CustomerResponseSchema.parse(customer),
       products: main,
       add_ons: addOns,
       entitlements: balances,
+      invoices,
     });
   } catch (error) {
     handleRequestError({ error, res, action: "get customer" });
