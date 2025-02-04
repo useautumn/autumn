@@ -1,19 +1,10 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
-import {
-  AppEnv,
-  EntitlementWithFeature,
-  FeatureOptions,
-  FreeTrial,
-  Price,
-} from "@autumn/shared";
-import { Organization } from "@autumn/shared";
-import { FullProduct } from "@autumn/shared";
-import { Customer } from "@autumn/shared";
+
 import {
   getStripeSubItems,
   pricesContainRecurring,
 } from "@/internal/prices/priceUtils.js";
-import { PricesInput } from "@autumn/shared";
+
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -55,6 +46,7 @@ export const handleCreateCheckout = async ({
     freeTrial && isRecurring
       ? {
           trial_end: freeTrialToStripeTimestamp(freeTrial),
+          // trial_
         }
       : undefined;
 

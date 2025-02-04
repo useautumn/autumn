@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { FeatureSchema } from "../featureModels/featureModels.js";
+import { FeatureSchema, FeatureType } from "../featureModels/featureModels.js";
 import { EntInterval } from "../genModels.js";
+import { UsagePriceConfigSchema } from "./usagePriceModels.js";
 
 export enum AllowanceType {
   Fixed = "fixed",
@@ -31,6 +32,18 @@ export const CreateEntitlementSchema = z.object({
   allowance_type: z.nativeEnum(AllowanceType).nullish(),
   allowance: z.number().nullish(),
   interval: z.nativeEnum(EntInterval).nullish(),
+});
+
+export const PublicEntitlementSchema = z.object({
+  feature: z.object({
+    id: z.string(),
+    type: z.nativeEnum(FeatureType),
+    name: z.string(),
+  }),
+  allowance_type: z.nativeEnum(AllowanceType).nullish(),
+  allowance: z.number().nullish(),
+  interval: z.nativeEnum(EntInterval).nullish(),
+  price: UsagePriceConfigSchema.nullish(),
 });
 
 export type CreateEntitlement = z.infer<typeof CreateEntitlementSchema>;

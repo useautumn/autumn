@@ -156,6 +156,7 @@ export default function CustomerView({
                 <TableRow className="bg-white">
                   <TableHead className="w-[150px]">Products</TableHead>
                   <TableHead className="">URL</TableHead>
+                  <TableHead className="">Total</TableHead>
                   <TableHead className="">Created At</TableHead>
                   <TableHead className="">Status</TableHead>
                 </TableRow>
@@ -181,6 +182,10 @@ export default function CustomerView({
                         View Invoice
                         <FontAwesomeIcon icon={faSquareUpRight} />
                       </a>
+                    </TableCell>
+                    <TableCell>
+                      {invoice.total.toFixed(2)}{" "}
+                      {invoice.currency.toUpperCase()}
                     </TableCell>
                     <TableCell>
                       {formatUnixToDateTime(invoice.created_at).date}
@@ -209,7 +214,7 @@ export default function CustomerView({
 
           <div className="grid grid-cols-[auto_1fr] gap-y-3 gap-x-4 w-full items-center rounded-md px-4 break-all">
             <p className="text-t3 text-xs font-medium">Name</p>
-            <p >{customer.name}</p>
+            <p>{customer.name}</p>
 
             <p className="text-t3 text-xs font-medium">ID</p>
             <p className="flex items-center gap-1 font-mono ">
@@ -222,10 +227,10 @@ export default function CustomerView({
             </p>
 
             <p className="text-t3 text-xs font-medium">Fingerprint</p>
-            <p >{customer.fingerprint}</p>
+            <p>{customer.fingerprint}</p>
 
             <p className="text-t3 text-xs font-medium">Products</p>
-            <p >
+            <p>
               {customer.products
                 .map(
                   (p) => products.find((prod) => prod.id === p.product_id)?.name

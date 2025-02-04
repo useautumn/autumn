@@ -8,6 +8,7 @@ import { Customer, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { SbChannelEvent } from "@/websockets/initWs.js";
 import chalk from "chalk";
+import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
 
 // 3. Get customer entitlements and sort
 const getCustomerEntitlements = async ({
@@ -26,12 +27,7 @@ const getCustomerEntitlements = async ({
     internalFeatureIds: internalFeatureIds as string[],
   });
 
-  cusEnts.sort((a, b) => {
-    if (a.balance <= 0) return 1;
-    if (b.balance <= 0) return -1;
-
-    return a.created_at - b.created_at;
-  });
+  sortCusEntsForDeduction(cusEnts);
 
   return cusEnts;
 };

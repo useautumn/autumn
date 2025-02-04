@@ -1,6 +1,15 @@
 import { Router } from "express";
 import { OrgService } from "../orgs/OrgService.js";
-import { AppEnv } from "@autumn/shared";
+import {
+  AppEnv,
+  FullProduct,
+  Price,
+  PriceType,
+  Product,
+  PublicEntitlementSchema,
+  PublicProductSchema,
+  UsagePriceConfig,
+} from "@autumn/shared";
 import { ProductService } from "../products/ProductService.js";
 
 export const publicRouter = Router();
@@ -39,6 +48,44 @@ const publicRouterMiddleware = async (req: any, res: any, next: any) => {
 
 publicRouter.use(publicRouterMiddleware);
 
+const processProduct = (product: FullProduct) => {
+  const ents = product.entitlements;
+  const prices = product.prices;
+
+  const fixedPrices = prices.filter(
+    (p: Price) => p.config!.type === PriceType.Fixed
+  );
+
+  const processdEnts = [];
+
+  for (const ent of ents) {
+    const internalFeatureId = ent.internal_feature_id;
+
+    const relatedPrice = prices.find((p: Price) => {
+      let config = p.config as UsagePriceConfig;
+      if (config.internal_feature_id === internalFeatureId) {
+        return true;
+      }
+      return false;
+    });
+
+    const processedEnt: any = {
+      ...ent,
+    };
+    if (relatedPrice) {
+      processedEnt.price = relatedPrice.config;
+    }
+    processdEnts.push(PublicEntitlementSchema.parse(processedEnt));
+  }
+
+  let processedProduct: any = structuredClone(product);
+  processedProduct.entitlements = processdEnts;
+  processedProduct.fixed_prices = fixedPrices;
+  delete processedProduct.prices;
+
+  return PublicProductSchema.parse(processedProduct);
+};
+
 publicRouter.get("/products", async (req: any, res: any) => {
   const products = await ProductService.getFullProducts(
     req.sb,
@@ -46,5 +93,9 @@ publicRouter.get("/products", async (req: any, res: any) => {
     req.env
   );
 
-  res.status(200).json(products);
+  // Process product for frontend
+  // 1. Fixed prices
+  const processedProducts = products.map(processProduct);
+
+  res.status(200).json(processedProducts);
 });

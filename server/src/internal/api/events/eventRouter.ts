@@ -3,16 +3,10 @@ import {
   AppEnv,
   CreateEventSchema,
   Customer,
-  ErrCode,
   Event,
-  EventSchema,
   Feature,
-  FeatureType,
 } from "@autumn/shared";
-import RecaseError, {
-  formatZodError,
-  handleRequestError,
-} from "@/utils/errorUtils.js";
+import { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";

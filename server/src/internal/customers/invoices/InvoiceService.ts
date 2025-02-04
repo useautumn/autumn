@@ -64,6 +64,7 @@ export class InvoiceService {
     stripeInvoice,
     internalCustomerId,
     productIds,
+    internalProductIds,
     status,
     org,
   }: {
@@ -71,6 +72,7 @@ export class InvoiceService {
     stripeInvoice: Stripe.Invoice;
     internalCustomerId: string;
     productIds: string[];
+    internalProductIds: string[];
     status?: InvoiceStatus | null;
     org: Organization;
   }) {
@@ -82,6 +84,10 @@ export class InvoiceService {
       stripe_id: stripeInvoice.id,
       hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
       status: status || (stripeInvoice.status as InvoiceStatus | null),
+      internal_product_ids: internalProductIds,
+      // Stripe stuff
+      total: stripeInvoice.total / 100,
+      currency: stripeInvoice.currency,
     };
 
     const { error } = await sb.from("invoices").insert(invoice);
