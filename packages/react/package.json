@@ -1,12 +1,18 @@
 {
   "name": "@useautumn/react",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": false,
   "publishConfig": {
     "access": "public"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    }
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
@@ -18,8 +24,9 @@
     "README.md"
   ],
   "peerDependencies": {
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "next": "15.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",
@@ -27,8 +34,6 @@
     "@types/react-dom": "^19.0.3",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.1",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "tailwindcss": "^4.0.3",
     "tsup": "^8.3.6",
     "typescript": "^5.7.3"
