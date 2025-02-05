@@ -10,6 +10,15 @@ export default async function Page() {
     <AutumnProvider
       publishableKey={process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY || ""}
     >
+      <div>
+        <h1 className="text-xl font-medium">Pricing</h1>
+        <p className="text-sm text-t2">
+          A free billing engine for early startups that scales with you.{" "}
+          <span className="text-t3">
+            And yes, this page is powered by Autumn.
+          </span>
+        </p>
+      </div>
       <div className="w-full h-full justify-center items-center flex flex-col gap-4">
         <PricingPage
           customerId={org?.id}
