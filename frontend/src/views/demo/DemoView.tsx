@@ -1,21 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import axios from "axios";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { CustomToaster } from "@/components/general/CustomToaster";
 import toast from "react-hot-toast";
-import {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardContent,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import SmallSpinner from "@/components/general/SmallSpinner";
+import { useState, useEffect } from "react";
+import { CustomToaster } from "@/components/general/CustomToaster";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LoaderCircle } from "lucide-react";
+import { AutumnProvider, PricingPage } from "@useautumn/react";
+import { useAxiosSWR, useDemoSWR } from "@/services/useAxiosSwr";
+import React from "react";
+import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 
-const apiKey = "am_test_3ZNdjaDqtSXteFAB2qdvtrzP";
+const apiKey = "am_live_3ZavonZcha8ENdWwfHbrirU3";
 const baseUrl = "https://api.useautumn.com/v1";
 const headers = {
   Authorization: `Bearer ${apiKey}`,
@@ -27,7 +25,7 @@ const axiosInstance = axios.create({
 });
 
 export default function DemoView() {
-  const customerId = "john";
+  const customerId = "123";
 
   const hasAccessRequest = {
     feature_id: "emails",
@@ -44,62 +42,45 @@ export default function DemoView() {
   const [hasAccessResponse, setHasAccessResponse] = useState(null);
   const [sendEventLoading, setSendEventLoading] = useState(false);
   const [sendEventResponse, setSendEventResponse] = useState(null);
-  const [buyLoading, setBuyLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [emailBalance, setEmailBalance] = useState(0);
-  const [quantities, setQuantities] = useState<any>({
-    enrichment: "",
-    ai: "",
-  });
-
-  const sendUsageUrl = "http://localhost:8080/v1/events";
-
   const [hasProFeatures, setHasProFeatures] = useState<boolean>(false);
 
-  useEffect(() => {
-    const checkFeatures = async () => {
-      try {
-        const data = await checkAccess("pro-analytics");
-        setHasProFeatures(data.allowed);
-        const emailData = await checkAccess("emails");
-        setEmailBalance(emailData.balances[0].balance);
-      } catch (error) {
-        console.error("Error checking features access:", error);
-        setHasProFeatures(false);
-        setEmailBalance(0);
-      }
-    };
+  const { data: customer, mutate: cusMutate } = useDemoSWR({
+    url: `/customers/${customerId}`,
+    apiKey,
+  });
 
+  console.log("Customer:", customer);
+  useEffect(() => {
     const init = async () => {
       setLoading(true);
-      await checkFeatures();
+      // await checkFeatures();
       setLoading(false);
     };
-
     init();
   }, []);
 
-  //Attach Pro Plan to customer
-  const attachProduct = async () => {
-    const { data } = await axiosInstance.post("/attach", {
-      customer_id: customerId,
-      product_id: "pro",
-    });
+  // //Attach Pro Plan to customer
+  // const attachProduct = async () => {
+  //   const { data } = await axiosInstance.post("/attach", {
+  //     customer_id: customerId,
+  //     product_id: "pro",
+  //   });
 
-    if (data.checkout_url) {
-      window.open(data.checkout_url, "_blank");
-    } else {
-      toast.success("Card already on file: automatically upgraded to Pro Plan");
-    }
-  };
+  //   if (data.checkout_url) {
+  //     window.open(data.checkout_url, "_blank");
+  //   } else {
+  //     toast.success("Card already on file: automatically upgraded to Pro Plan");
+  //   }
+  // };
 
   //Check access to Pro features and email balance
   const checkAccess = async (featureId: string) => {
-    const { data } = await axiosInstance.get(
-      `/entitled?customer_id=${customerId}&feature_id=${featureId}`
-    );
-
-    return data;
+    // const { data } = await axiosInstance.get(
+    //   `/entitled?customer_id=${customerId}&feature_id=${featureId}`
+    // );
+    // return data;
   };
 
   //Send usage event for email
@@ -115,23 +96,20 @@ export default function DemoView() {
   };
 
   const handleClicked = async (eventName: string) => {
-    setHasAccessLoading(true);
-    const data = await checkAccess(eventName);
-    setEmailBalance(data.balances[0].balance);
-    setHasAccessLoading(false);
-    setHasAccessResponse(data);
-
-    if (!data.allowed) {
-      toast.error("You're out of " + eventName);
-      return;
-    }
-
-    setSendEventLoading(true);
-    const eventData = await sendUsage("email");
-    setSendEventResponse(eventData);
-    setSendEventLoading(false);
-
-    setEmailBalance(emailBalance - 1);
+    // setHasAccessLoading(true);
+    // const data = await checkAccess(eventName);
+    // setEmailBalance(data.balances[0].balance);
+    // setHasAccessLoading(false);
+    // setHasAccessResponse(data);
+    // if (!data.allowed) {
+    //   toast.error("You're out of " + eventName);
+    //   return;
+    // }
+    // setSendEventLoading(true);
+    // const eventData = await sendUsage("email");
+    // setSendEventResponse(eventData);
+    // setSendEventLoading(false);
+    // setEmailBalance(emailBalance - 1);
   };
 
   return (
@@ -143,35 +121,46 @@ export default function DemoView() {
           </div>
         ) : (
           <>
+            <AutumnProvider
+              publishableKey={
+                process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY || ""
+              }
+            >
+              <PricingPage customerId={customerId} />
+            </AutumnProvider>
             <CustomToaster />
+
             <Card>
-              <CardHeader className="flex justify-between p-3 px-4">
-                <div className="flex justify-between items-center gap-4">
-                  <div className="flex flex-col gap-0">
-                    <p className="text-lg font-semibold text-gray-600">
-                      Upgrade to Pro Plan
-                    </p>
-                  </div>
-                  <Button
-                    isLoading={buyLoading}
-                    onClick={async () => {
-                      setBuyLoading(true);
-                      // setQuantities({
-                      //   enrichment: parseInt(quantities.enrichment),
-                      //   ai: parseInt(quantities.ai),
-                      // });
-                      await attachProduct();
-                      setBuyLoading(false);
-                    }}
-                    disabled={hasProFeatures === true}
-                    className="bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 hover:from-green-500 hover:via-yellow-500 hover:to-pink-500 transition-all duration-700 w-48 shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:shadow-[0_0_20px_rgba(236,72,153,0.7)] bg-[size:200%] hover:bg-right"
-                  >
-                    Buy Pro
-                  </Button>
-                </div>
-              </CardHeader>
+              {customer && (
+                <React.Fragment>
+                  <CardContent className="flex flex-col gap-2 pt-8">
+                    {customer.entitlements.map((entitlement) => (
+                      <div
+                        key={entitlement.feature_id}
+                        className="flex justify-between"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">
+                            {keyToTitle(entitlement.feature_id)}
+                          </p>
+                          <span className="text-lg font-semibold">
+                            {entitlement.balance || "Allowed"}
+                          </span>
+                        </div>
+                        <Button
+                          onClick={() => handleClicked(entitlement.feature_id)}
+                          className="w-[200px]"
+                        >
+                          Use {keyToTitle(entitlement.feature_id)}
+                        </Button>
+                      </div>
+                    ))}
+                  </CardContent>
+                </React.Fragment>
+              )}
             </Card>
-            <Card>
+
+            {/* <Card>
               <CardHeader className="flex justify-between p-3 px-4">
                 <div className="flex justify-between items-center gap-4">
                   <div className="flex flex-col gap-0">
@@ -189,9 +178,9 @@ export default function DemoView() {
                     Send Email
                   </Button>
                 </div>
-                {/* <Button onClick={() => handleClicked("ai")}>Use AI</Button> */}
+                <Button onClick={() => handleClicked("ai")}>Use AI</Button>
               </CardHeader>
-            </Card>
+            </Card> */}
             {hasProFeatures ? (
               <div>
                 <div className="space-y-4">
@@ -317,3 +306,33 @@ const APIPlayground = ({
     </div>
   );
 };
+
+{
+  /* <Card>
+              <CardHeader className="flex justify-between p-3 px-4">
+                <div className="flex justify-between items-center gap-4">
+                  <div className="flex flex-col gap-0">
+                    <p className="text-lg font-semibold text-gray-600">
+                      Upgrade to Pro Plan
+                    </p>
+                  </div>
+                  <Button
+                    isLoading={buyLoading}
+                    onClick={async () => {
+                      setBuyLoading(true);
+                      // setQuantities({
+                      //   enrichment: parseInt(quantities.enrichment),
+                      //   ai: parseInt(quantities.ai),
+                      // });
+                      await attachProduct();
+                      setBuyLoading(false);
+                    }}
+                    disabled={hasProFeatures === true}
+                    className="bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 hover:from-green-500 hover:via-yellow-500 hover:to-pink-500 transition-all duration-700 w-48 shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:shadow-[0_0_20px_rgba(236,72,153,0.7)] bg-[size:200%] hover:bg-right"
+                  >
+                    Buy Pro
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card> */
+}
