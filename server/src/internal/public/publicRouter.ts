@@ -19,6 +19,7 @@ import {
   isProductUpgrade,
 } from "../products/productUtils.js";
 import { FeatureService } from "../features/FeatureService.js";
+import { handleRequestError } from "@/utils/errorUtils.js";
 
 export const publicRouter = Router();
 
@@ -26,10 +27,12 @@ const publicRouterMiddleware = async (req: any, res: any, next: any) => {
   const pkey = req.headers["x-publishable-key"];
 
   if (!pkey) {
+    console.log("No pkey:", pkey);
     return res.status(400).json({ message: "Publishable key is required" });
   }
 
-  if (!pkey.startsWith("am_pk_test") && !pkey.startsWith("am_pk_prod")) {
+  if (!pkey.startsWith("am_pk_test") && !pkey.startsWith("am_pk_live")) {
+    console.log("Invalid pkey:", pkey);
     return res.status(400).json({ message: "Invalid publishable key" });
   }
 
@@ -98,25 +101,29 @@ const processProduct = (product: FullProduct) => {
 };
 
 publicRouter.get("/products", async (req: any, res: any) => {
-  const products = await ProductService.getFullProducts(
-    req.sb,
-    req.org.id,
-    req.env
-  );
+  try {
+    const products = await ProductService.getFullProducts(
+      req.sb,
+      req.org.id,
+      req.env
+    );
 
-  // Order products by price
-  products.sort((a: FullProduct, b: FullProduct) => {
-    const isUpgrade = isProductUpgrade(a, b);
-    if (isUpgrade) {
-      return -1;
-    }
+    // Order products by price
+    products.sort((a: FullProduct, b: FullProduct) => {
+      const isUpgrade = isProductUpgrade(a, b);
+      if (isUpgrade) {
+        return -1;
+      }
 
-    return 1;
-  });
+      return 1;
+    });
 
-  const processedProducts = products.map(processProduct);
+    const processedProducts = products.map(processProduct);
 
-  res.status(200).json(processedProducts);
+    res.status(200).json(processedProducts);
+  } catch (error) {
+    handleRequestError({ error, res, action: "Get public products" });
+  }
 });
 
 publicRouter.get(

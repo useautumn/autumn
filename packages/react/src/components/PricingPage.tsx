@@ -4,6 +4,7 @@ import { useCustomSwr } from "../hooks/useCustomSwr";
 import { PricingPageProps } from "./models";
 import { PricingCard } from "./PricingCard";
 import { PricingPageContext } from "./PricingPageContext";
+import { API_URL } from "../constants";
 
 const makeImportant = (className?: string) => {
   if (!className) return "";
@@ -28,14 +29,13 @@ export default function PricingPage({
   customerId,
 }: PricingPageProps) {
   const { data, error, isLoading } = useCustomSwr({
-    // url: "https://api.useautumn.com/public/products",
-    url: "http://localhost:8080/public/products",
+    url: `${API_URL}/public/products`,
   });
 
   let cusProductsRes: any;
   if (customerId) {
     const res = useCustomSwr({
-      url: `http://localhost:8080/public/customers/${customerId}/products`,
+      url: `${API_URL}/public/customers/${customerId}/products`,
     });
 
     cusProductsRes = res;
@@ -62,7 +62,7 @@ export default function PricingPage({
     return <div>Loading...</div>;
   }
 
-  if (error || (customerId && cusProductsRes?.error)) {
+  if (error) {
     return <div>Error</div>;
   }
 
