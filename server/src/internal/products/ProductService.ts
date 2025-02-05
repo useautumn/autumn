@@ -258,16 +258,22 @@ export class ProductService {
   static async update({
     sb,
     productId,
+    orgId,
+    env,
     update,
   }: {
     sb: SupabaseClient;
     productId: string;
+    orgId: string;
+    env: AppEnv;
     update: any;
   }) {
     const { data, error } = await sb
       .from("products")
       .update(update)
-      .eq("id", productId);
+      .eq("id", productId)
+      .eq("org_id", orgId)
+      .eq("env", env);
 
     if (error) {
       throw new RecaseError({

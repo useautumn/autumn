@@ -1,10 +1,9 @@
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { useDemoSWR } from "@/services/useAxiosSwr";
 import React from "react";
 
 function CustomerBalances({ customer }: { customer: any }) {
   if (!customer) {
-    return <div>Loading...</div>;
+    return <div></div>;
   }
 
   return (

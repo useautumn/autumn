@@ -105,6 +105,36 @@ export const getCustomerDetails = async ({
   };
 };
 
+cusRouter.post("/:search", async (req: any, res: any) => {
+  try {
+    const {
+      search,
+      page_size = 100,
+      // page = 1,
+      last_item,
+      first_item,
+    } = req.body;
+
+    const { data: customers, count } = await CusService.searchCustomers({
+      sb: req.sb,
+      orgId: req.orgId,
+      env: req.env,
+      search,
+      page: null,
+      pageSize: page_size,
+      filters: {},
+      lastItem: last_item,
+      firstItem: first_item,
+    });
+
+    res
+      .status(200)
+      .json({ customers, totalCount: count, count: customers.length });
+  } catch (error) {
+    handleRequestError({ error, res, action: "search customers" });
+  }
+});
+
 cusRouter.get("", async (req: any, res: any) => {
   try {
     const customers = await CusService.getCustomers(req.sb, req.orgId, req.env);

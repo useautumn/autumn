@@ -53,7 +53,7 @@ export default function DemoView() {
   const [sendEventLoading, setSendEventLoading] = useState(false);
   const [sendEventResponse, setSendEventResponse] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [emailBalance, setEmailBalance] = useState(0);
+
   const [hasProFeatures, setHasProFeatures] = useState<boolean>(false);
 
   useEffect(() => {
