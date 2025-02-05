@@ -17,28 +17,9 @@ const styles = {
   container: {
     display: "flex",
     height: "fit-content",
-
-    flexGrow: 1,
-    flexShrink: 0,
-    flexBasis: 0,
-    gap: "2rem",
-    // backgroundColor: "#666",
-
-    justifyContent: "center",
+    gap: "1rem",
+    justifyContent: "space-between",
     width: "100%",
-
-    // display: "flex",
-    // gap: "16px",
-    // flexGrow: 1,
-    // flexShrink: 0,
-    // flexBasis: 0,
-    // border: "1px solid red",
-    // justifyContent: "center",
-    // borderRadius: "6px",
-    // backgroundColor: "#fff",
-    // padding: "16px",
-    // boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-    // overflow: "hidden",
   },
 };
 
@@ -100,29 +81,47 @@ export default function PricingPage({
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: "16px",
-          flexWrap: "wrap",
+          gap: "2rem",
+          // flexWrap: "wrap",
           width: "100%",
         }}
       >
-        <div style={styles.container} className={classNames?.container}>
-          {mainProducts?.map((product: any, index: number) => (
-            <PricingCard
-              key={index}
-              product={product}
-              classNames={importantClasses}
-            />
-          ))}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            // border: "1px solid red",
+            paddingBottom: "0",
+          }}
+        >
+          <h2 style={{ fontSize: "1.2rem", fontWeight: "500" }}>Pricing</h2>
+          <div style={styles.container} className={classNames?.container}>
+            {mainProducts?.map((product: any, index: number) => (
+              <PricingCard
+                key={index}
+                product={product}
+                classNames={importantClasses}
+              />
+            ))}
+          </div>
         </div>
-        <div style={styles.container} className={classNames?.container}>
-          {addOnProducts?.map((product: any, index: number) => (
-            <PricingCard
-              key={index}
-              product={product}
-              classNames={importantClasses}
-            />
-          ))}
-        </div>
+        {addOnProducts && addOnProducts.length > 0 && (
+          <div
+            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+          >
+            <h2 style={{ fontSize: "1.2rem", fontWeight: "500" }}>Add-ons</h2>
+            <div style={styles.container} className={classNames?.container}>
+              {addOnProducts.map((product: any, index: number) => (
+                <PricingCard
+                  key={index}
+                  product={product}
+                  classNames={importantClasses}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </PricingPageContext.Provider>
   );
