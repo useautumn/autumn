@@ -316,15 +316,12 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
       (mainProduct: any) =>
         mainProduct.id === product.id && mainProduct.status === "scheduled"
     );
-    // console.log("Card:", product.id);
-    // console.log("Active:", isActive);
-    // console.log("Scheduled:", isScheduled);
-    // console.log("Main:", mainProducts);
 
     return { isActive, isScheduled };
   };
 
   const renderButtonText = () => {
+    console.log("cusProducts", cusProducts);
     if (!cusProducts) {
       return "Get Started";
     }
