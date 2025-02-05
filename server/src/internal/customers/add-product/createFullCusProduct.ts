@@ -344,7 +344,7 @@ export const createFullCusProduct = async ({
     startsAt,
     subscriptionScheduleId,
     optionsList,
-    freeTrial,
+    freeTrial: disableFreeTrial ? null : freeTrial,
     lastInvoiceId,
     trialEndsAt,
     subscriptionStatus,
