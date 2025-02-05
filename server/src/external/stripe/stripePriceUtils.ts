@@ -30,7 +30,6 @@ export const priceToStripeItem = ({
   // TODO: Implement this
   const billingType = price.billing_type;
   const stripeProductId = product.processor?.id;
-  console.log("Price", price);
 
   if (!stripeProductId) {
     throw new RecaseError({
