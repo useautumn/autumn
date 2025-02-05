@@ -7,21 +7,26 @@ import React from "react";
 import { useAutumnContext } from "../providers/AutumnContext";
 import { motion } from "motion/react";
 
+import { CornerDownRight, CircleCheck } from "lucide-react";
+
 const styles = {
   card: {
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "flex-start",
-    overflow: "hidden",
-    borderRadius: "6px",
-    border: "1px solid #eee",
+    gap: "1rem",
+    // overflow: "hidden",
+    // borderRadius: "6px",
     // minWidth: "300px",
     width: "100%",
-    maxWidth: "450px",
-    height: "100%",
-    boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
-    backgroundColor: "#eee",
-    padding: "10px",
+    // maxWidth: "450px",
+    height: "auto",
+    // padding: "10px",
+    // backgroundColor: "white",
+    background: "linear-gradient(to top, #f4f4f4 1%, white 40%)",
+    padding: "0.8rem",
+    boxShadow: "0 0.5px 2px 0 rgba(0, 0, 0, 0.3)",
+    borderRadius: "6px",
   },
 
   header: {
@@ -29,10 +34,7 @@ const styles = {
     width: "100%",
     flexDirection: "column" as const,
     alignItems: "flex-start",
-    gap: "16px",
     borderBottom: "1px solid #e5e5e5",
-    backgroundColor: "#fafafa",
-    padding: "48px",
   },
 
   titleSection: {
@@ -40,16 +42,18 @@ const styles = {
     width: "100%",
     flexDirection: "column" as const,
     alignItems: "flex-start",
-    gap: "8px",
+    gap: "1rem",
+    // border: "1px solid blue",
   },
   title: {
-    fontSize: "1.2rem",
-    fontWeight: 600,
+    fontSize: "0.8rem",
+    fontWeight: 500,
+    // fontWeight: 600,
     color: "#111",
+    marginBottom: "0.8rem",
   },
   description: {
-    fontSize: "18px",
-    fontWeight: 500,
+    fontSize: "0.8rem",
     color: "#111",
   },
   content: {
@@ -64,38 +68,53 @@ const styles = {
   pricing: {
     display: "flex",
     alignItems: "flex-end",
-    gap: "8px",
+    gap: "0.3rem",
+    // border: "1px solid red",
   },
   amount: {
-    fontSize: "32px",
-    fontWeight: 600,
+    fontSize: "2rem",
+    fontWeight: 500,
     color: "#111",
+    // border: "1px solid blue",
+    lineHeight: "2rem", // Match the font size to align text at bottom
+    display: "flex",
+    alignItems: "flex-end", // Align text to bottom of container
   },
   interval: {
-    fontSize: "16px",
-    fontWeight: 500,
-    color: "#666",
+    fontSize: "0.8rem",
+    lineHeight: "0.8rem",
+    color: "gray",
     paddingBottom: "4px",
   },
   entitlementsList: {
     display: "flex",
+    padding: "0.8rem",
     width: "100%",
     flexDirection: "column" as const,
     gap: "8px",
+    fontSize: "0.9rem",
   },
   entitlementItem: {
     display: "flex",
+    // position: "relative" as const,
     alignItems: "center",
     gap: "4px",
-    fontSize: "16px",
     color: "#666",
   },
   purchaseButton: {
     display: "flex",
+    // position: "relative" as const,
     alignItems: "center",
-    gap: "4px",
-    fontSize: "16px",
-    color: "#666",
+    justifyContent: "center",
+    // fontWeight: 300,
+    fontSize: "0.9rem",
+    color: "white",
+    background: "linear-gradient(to bottom, #3c86fa, #1560FC)",
+    border: "1px solid #0252f7",
+    borderRadius: "6px",
+    padding: "0.3rem 1rem",
+    width: "100%",
+    boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.3)",
   },
 };
 
@@ -211,42 +230,86 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
       const billingInterval = usagePrice.config.interval;
 
       if (billingInterval == BillingInterval.OneOff) {
-        return `${priceString} / ${featureString}`;
+        // return `${priceString} / ${featureString}`;
+        return (
+          <>
+            <span style={styles.amount}>${priceString}</span>
+            <span style={styles.interval}>per {featureString}</span>
+          </>
+        );
       } else {
-        return `${priceString} / ${featureString} / ${billingInterval}`;
+        // return `${priceString} / ${featureString} / ${billingInterval}`;
+        return (
+          <>
+            <span style={styles.amount}>${priceString}</span>
+            <span style={styles.interval}>per {featureString},</span>
+            <span style={styles.interval}>per {billingInterval}</span>
+          </>
+        );
       }
     }
 
     // 2. Billing type is below threshold
     if (usagePrice.billing_type === BillingType.UsageBelowThreshold) {
-      return `${priceString} / ${featureString}`;
+      // return `${priceString} / ${featureString}`;
+      return (
+        <>
+          <span style={styles.amount}>${priceString}</span>
+          <span style={styles.interval}>per {featureString}</span>
+        </>
+      );
     }
 
     // 3. Billing type is usage in arrears
     if (usagePrice.billing_type === BillingType.UsageInArrears) {
-      return `${priceString} / ${featureString}`;
+      // return `${priceString} / ${featureString}`;
+      return (
+        <>
+          <span style={styles.amount}>${priceString}</span>
+          <span style={styles.interval}>per {featureString}</span>
+        </>
+      );
     }
 
-    return "Free";
+    // return "Free";
+    return (
+      <>
+        <span style={styles.amount}>Free</span>
+      </>
+    );
   };
 
   const getMainPrice = () => {
     for (const price of fixedPrices) {
       if (price.config.amount !== 0) {
-        return `${price.config.amount} / ${price.config.interval}`;
+        return (
+          <>
+            <span style={styles.amount}>${price.config.amount}</span>
+            <span style={styles.interval}>per {price.config.interval}</span>
+          </>
+        );
       }
     }
 
     // If multiple usage price:
     if (usagePrices.length > 1) {
-      return `Varies`;
+      // return `Varies`;
+      return (
+        <>
+          <span style={styles.amount}>Varies</span>
+        </>
+      );
     }
 
     if (usagePrices.length === 1) {
       return formatSingleUsagePrice(usagePrices[0]);
     }
 
-    return "Free";
+    return (
+      <>
+        <span style={styles.amount}>Free</span>
+      </>
+    );
   };
 
   // 1. Get remaining entitlements
@@ -284,17 +347,45 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
     return remainingEntitlements;
   };
 
-  const renderEntitlements = () => {
-    const remainingEntitlements = getRemainingEntitlementsSorted();
-
-    if (remainingEntitlements.length === 0) {
-      return <div>No entitlements</div>;
-    }
-
+  const renderEntitlements = (remainingEntitlements: any) => {
     return remainingEntitlements.map((ent: any, index: number) => {
       const featureString = formatEntitlement(ent, true);
 
-      return <div key={index}>- {featureString}</div>;
+      return (
+        <div key={index} style={styles.entitlementItem}>
+          {/* <div
+            style={{
+              position: "relative" as const,
+              // width: "",
+              // border: "1px solid red",
+              height: "0.8rem",
+              paddingLeft: "1rem",
+              paddingRight: "0.5rem",
+            }}
+          >
+            <CornerDownRight
+              style={{
+                width: "0.8rem",
+                height: "0.8rem",
+                position: "absolute" as const,
+                left: "50%",
+                transform: "translate(-50%, -3px)",
+              }}
+            />
+          </div> */}
+          <CircleCheck
+            strokeWidth={2}
+            stroke="dimgrey"
+            fill="lightgrey"
+            style={{
+              width: "0.9rem",
+              height: "0.9rem",
+              marginRight: "0.1rem",
+            }}
+          />
+          {featureString}
+        </div>
+      );
     });
   };
 
@@ -545,16 +636,8 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
             <div style={styles.title} className={classNames.title}>
               {product.name}
             </div>
-            <div>{getMainPrice()}</div>
-            <button
-              style={{
-                backgroundColor: "#000",
-                color: "#fff",
-                padding: "10px 20px",
-                borderRadius: "5px",
-              }}
-              onClick={handleButtonClicked}
-            >
+            <div style={styles.pricing}>{getMainPrice()}</div>
+            <button style={styles.purchaseButton} onClick={handleButtonClicked}>
               {/* Add loading spinner if buttonLoading is true */}
               {buttonLoading ? (
                 <div style={{ display: "flex", alignItems: "center" }}>
@@ -567,7 +650,8 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
                       borderTop: "2px solid transparent",
                       animation: "spin 1s linear infinite",
                     }}
-                  ></div>
+                  />
+                  &#8203;
                 </div>
               ) : (
                 renderButtonText()
@@ -575,7 +659,14 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
             </button>
           </div>
         </div>
-        {renderEntitlements()}
+        {(() => {
+          const remainingEntitlements = getRemainingEntitlementsSorted();
+          return remainingEntitlements.length > 0 ? (
+            <div style={styles.entitlementsList}>
+              {renderEntitlements(remainingEntitlements)}
+            </div>
+          ) : null;
+        })()}
         {/* Show usage prices with entitlements first */}
         {/* <div style={styles.content} className={classNames.content}>
           {firstFixedPrice && (
