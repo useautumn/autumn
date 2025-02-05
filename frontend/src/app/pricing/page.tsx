@@ -1,15 +1,16 @@
-"use client";
-
+import { getOrgFromSession } from "@/utils/serverUtils";
 import { AutumnProvider, PricingPage } from "@useautumn/react";
 
-export default function Page() {
+export default async function Page() {
+  const org = await getOrgFromSession();
+
   return (
     <AutumnProvider
       publishableKey={process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY || ""}
     >
       <div className="w-full h-full justify-center items-center flex">
         <PricingPage
-          customerId="123"
+          customerId={org?.id}
           classNames={
             {
               // container: "flex gap-2 !border-yellow-500",
