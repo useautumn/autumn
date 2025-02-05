@@ -1,13 +1,12 @@
 import { WebSocketServer } from "ws";
 import http from "http";
-import { wsAuthMiddleware } from "@/middleware/apiMiddleware.js";
+
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { AppEnv } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
   getBalanceForFeature,
   getCusBalances,
-  getFeatureBalance,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 
 export enum SbChannelEvent {
@@ -25,7 +24,10 @@ interface RouteInfo {
 }
 
 const getPkey = async (req: any) => {
-  const pkey = req.headers["x-publishable-key"];
+  const query = req.url.split("?")[1];
+  const queryParams = new URLSearchParams(query);
+  const pkey = req.headers["x-publishable-key"] || queryParams.get("pkey");
+
   if (!pkey) {
     throw new Error("No publishable key found");
   }
@@ -145,6 +147,7 @@ const handleRealtimeBalances = async (ws: WebSocket, req: any, params: any) => {
       orgId: org.id,
       env,
     });
+
     ws.send(JSON.stringify({ data: balances, error: null }));
 
     const channel = `${org.id}_${env}_${params.customer_id}`;

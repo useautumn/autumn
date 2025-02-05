@@ -209,10 +209,10 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
       timeString = ` / ${interval}`;
     }
 
+    return `${featureString}`;
     if (withInterval) {
       return `${featureString}${timeString}`;
     } else {
-      return `${featureString}`;
     }
   };
 

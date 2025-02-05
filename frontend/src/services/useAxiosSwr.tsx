@@ -1,6 +1,7 @@
 import useSWR, { SWRConfiguration } from "swr";
 import { useAxiosInstance } from "./useAxiosInstance";
 import { AppEnv } from "@autumn/shared";
+import axios from "axios";
 
 export function useAxiosSWR({
   url,
@@ -49,6 +50,31 @@ export function useAxiosPostSWR({
   const fetcher = async (url: string) => {
     try {
       const res = await axiosInstance.post(url, data);
+      return res.data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  return useSWR(url, fetcher, {
+    refreshInterval: 0,
+    revalidateOnFocus: false,
+    ...options,
+  });
+}
+
+export function useDemoSWR({ url, publishableKey, options = {} }) {
+  const axiosInstance = axios.create({
+    baseURL: "https://api.useautumn.com",
+    // baseURL: "http://localhost:8080",
+    headers: {
+      "x-publishable-key": publishableKey,
+    },
+  });
+
+  const fetcher = async (url: string) => {
+    try {
+      const res = await axiosInstance.get(url);
       return res.data;
     } catch (error) {
       throw error;
