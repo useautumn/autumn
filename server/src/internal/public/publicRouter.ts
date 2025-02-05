@@ -3,6 +3,8 @@ import { OrgService } from "../orgs/OrgService.js";
 import {
   AppEnv,
   CusProductStatus,
+  CustomerResponseSchema,
+  ErrCode,
   FullProduct,
   Price,
   PriceType,
@@ -19,7 +21,10 @@ import {
   isProductUpgrade,
 } from "../products/productUtils.js";
 import { FeatureService } from "../features/FeatureService.js";
-import { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
+import { CusService } from "../customers/CusService.js";
+import { getCustomerDetails } from "../api/customers/cusRouter.js";
 
 export const publicRouter = Router();
 
@@ -99,6 +104,43 @@ const processProduct = (product: FullProduct) => {
 
   return PublicProductSchema.parse(processedProduct);
 };
+
+publicRouter.get("/customers/:customer_id", async (req: any, res: any) => {
+  try {
+    const customerId = req.params.customer_id;
+    const customer = await CusService.getById({
+      sb: req.sb,
+      id: customerId,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    if (!customer) {
+      throw new RecaseError({
+        message: `Customer ${customerId} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    const { main, addOns, balances, invoices } = await getCustomerDetails({
+      customer,
+      sb: req.sb,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    res.status(200).json({
+      customer: CustomerResponseSchema.parse(customer),
+      products: main,
+      add_ons: addOns,
+      entitlements: balances,
+      invoices,
+    });
+  } catch (error) {
+    handleRequestError({ error, res, action: "get customer" });
+  }
+});
 
 publicRouter.get("/products", async (req: any, res: any) => {
   try {
