@@ -321,7 +321,6 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
   };
 
   const renderButtonText = () => {
-    console.log("cusProducts", cusProducts);
     if (!cusProducts) {
       return "Get Started";
     }
