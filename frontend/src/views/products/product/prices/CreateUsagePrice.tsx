@@ -11,7 +11,6 @@ import {
   AllowanceType,
   BillingInterval,
   BillWhen,
-  Entitlement,
   EntitlementWithFeature,
 } from "@autumn/shared";
 import React from "react";

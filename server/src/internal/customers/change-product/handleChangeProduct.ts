@@ -40,7 +40,7 @@ const scheduleStripeSubscription = async ({
 }) => {
   const { org, customer } = attachParams;
 
-  const stripeSubItems = getStripeSubItems({
+  const { items, itemMetas } = getStripeSubItems({
     attachParams,
   });
 
@@ -55,7 +55,7 @@ const scheduleStripeSubscription = async ({
     start_date: endOfBillingPeriod,
     phases: [
       {
-        items: stripeSubItems,
+        items,
         default_payment_method: paymentMethod as string,
       },
     ],
@@ -159,13 +159,13 @@ const updateStripeSubscription = async ({
   const subscription = await stripeCli.subscriptions.retrieve(subscriptionId);
 
   // Get stripe subscription from product
-  const stripeSubItems = getStripeSubItems({
+  const { items, itemMetas } = getStripeSubItems({
     attachParams,
   });
 
   // Delete existing subscription items
   for (const item of subscription.items.data) {
-    stripeSubItems.push({
+    items.push({
       id: item.id,
       deleted: true,
     });
@@ -178,7 +178,7 @@ const updateStripeSubscription = async ({
 
   // Switch subscription
   const subUpdate = await stripeCli.subscriptions.update(subscriptionId, {
-    items: stripeSubItems,
+    items,
     proration_behavior: "always_invoice",
     trial_end: trialEnd,
   });

@@ -20,9 +20,11 @@ import { AttachParams } from "../customers/products/AttachParams.js";
 export const createCheckoutMetadata = async ({
   sb,
   attachParams,
+  itemMetas,
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
+  itemMetas: any[];
 }) => {
   const metaId = generateId("meta");
 
@@ -30,7 +32,10 @@ export const createCheckoutMetadata = async ({
     id: metaId,
     created_at: Date.now(),
     expires_at: addDays(Date.now(), 10).getTime(), // 10 days
-    data: attachParams,
+    data: {
+      ...attachParams,
+      itemMetas,
+    },
   };
 
   await MetadataService.insert(sb, metadata);

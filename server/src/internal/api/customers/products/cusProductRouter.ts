@@ -5,6 +5,7 @@ import {
   BillingType,
   Entitlement,
   FeatureOptions,
+  Price,
   ProcessorType,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -35,10 +36,22 @@ import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 
 export const attachRouter = Router();
 
+const checkoutPricesValid = (prices: Price[]) => {
+  for (const price of prices) {
+    if (price.billing_type === BillingType.UsageBelowThreshold) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 const checkAddProductErrors = async ({
   attachParams,
+  useCheckout = false,
 }: {
   attachParams: AttachParams;
+  useCheckout?: boolean;
 }) => {
   const { product, prices, entitlements, optionsList } = attachParams;
 
@@ -51,10 +64,18 @@ const checkAddProductErrors = async ({
     });
   }
 
+  if (useCheckout && !checkoutPricesValid(prices)) {
+    throw new RecaseError({
+      message: `Can't use /checkout for below threshold prices`,
+      code: ErrCode.InvalidRequest,
+      statusCode: 400,
+    });
+  }
+
   // 2. Check if options are valid
   for (const price of prices) {
     const billingType = getBillingType(price.config!);
-    if (billingType === BillingType.UsageInAdvance) {
+    if (billingType === BillingType.UsageInAdvance && !useCheckout) {
       // Get options for price
       let priceEnt = getPriceEntitlement(price, entitlements);
       let options = getEntOptions(optionsList, priceEnt);
@@ -84,10 +105,12 @@ const handleExistingProduct = async ({
   req,
   res,
   attachParams,
+  useCheckout = false,
 }: {
   req: any;
   res: any;
   attachParams: AttachParams;
+  useCheckout?: boolean;
 }) => {
   const { sb } = req;
   const { customer, product, org } = attachParams;
@@ -140,7 +163,10 @@ const handleExistingProduct = async ({
         success: true,
         message: "Reactivated current product, removed future product",
       });
-      return true;
+      return {
+        done: true,
+        currentProduct,
+      };
     } else {
       throw new RecaseError({
         message: `Customer ${customer.id} already has product ${currentProduct.product_id}`,
@@ -159,7 +185,23 @@ const handleExistingProduct = async ({
     });
   }
 
-  return currentProduct;
+  const curPrices =
+    currentProduct?.customer_prices.map((cp: any) => cp.price) || [];
+  // If there's current product and it's not free and new product is a switch
+  if (
+    currentProduct &&
+    !isFreeProduct(curPrices) &&
+    !product.is_add_on &&
+    useCheckout
+  ) {
+    throw new RecaseError({
+      message: `Can't use checkout for upgrades / downgrades`,
+      code: ErrCode.InvalidRequest,
+      statusCode: 400,
+    });
+  }
+
+  return { currentProduct, done: false };
 };
 
 const checkStripeConnections = async ({
@@ -227,7 +269,7 @@ const checkStripeConnections = async ({
   }
 };
 
-attachRouter.post("", async (req: any, res) => {
+attachRouter.post("/attach", async (req: any, res) => {
   const {
     customer_id,
     product_id,
@@ -238,6 +280,7 @@ attachRouter.post("", async (req: any, res) => {
     entitlements,
     free_trial,
     options,
+    force_checkout,
   } = req.body;
 
   const { orgId, env } = req;
@@ -246,7 +289,7 @@ attachRouter.post("", async (req: any, res) => {
   const pricesInput: PricesInput = prices || [];
   const entsInput: Entitlement[] = entitlements || [];
   const optionsListInput: FeatureOptions[] = options || [];
-
+  const useCheckout = force_checkout || false;
   console.log("--------------------------------");
   console.log("Add product request received");
 
@@ -271,18 +314,18 @@ attachRouter.post("", async (req: any, res) => {
     // 1. Check for normal errors (eg. options, different recurring intervals)
     await checkAddProductErrors({
       attachParams,
+      useCheckout,
     });
 
     // 2. Check for existing product and fetch
-    const curCusProduct = await handleExistingProduct({
+    const { currentProduct, done } = await handleExistingProduct({
       req,
       res,
       attachParams,
+      useCheckout,
     });
 
-    if (curCusProduct === true) {
-      return;
-    }
+    if (done) return;
 
     // 3. Check for stripe connection
     await checkStripeConnections({ req, res, attachParams });
@@ -290,9 +333,8 @@ attachRouter.post("", async (req: any, res) => {
     // -------------------- ATTACH PRODUCT --------------------
 
     // SCENARIO 1: Free product, no existing product
-
     if (
-      (!curCusProduct && isFreeProduct(attachParams.prices)) ||
+      (!currentProduct && isFreeProduct(attachParams.prices)) ||
       (attachParams.product.is_add_on && isFreeProduct(attachParams.prices))
     ) {
       await handleAddFreeProduct({
@@ -310,7 +352,7 @@ attachRouter.post("", async (req: any, res) => {
       stripeId: attachParams.customer.processor.id,
     });
 
-    if (!paymentMethod) {
+    if (!paymentMethod || useCheckout) {
       await handleCreateCheckout({
         req,
         res,
@@ -320,12 +362,12 @@ attachRouter.post("", async (req: any, res) => {
     }
 
     // SCENARIO 3: Switching product
-    if (!attachParams.product.is_add_on && curCusProduct) {
+    if (!attachParams.product.is_add_on && currentProduct) {
       await handleChangeProduct({
         req,
         res,
         attachParams,
-        curCusProduct,
+        curCusProduct: currentProduct,
       });
       return;
     }
