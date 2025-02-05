@@ -93,6 +93,7 @@ export default function PricingPage({
       value={{
         customerId,
         cusProducts: cusProductsRes?.data,
+        cusMutate: cusProductsRes?.mutate,
       }}
     >
       <div

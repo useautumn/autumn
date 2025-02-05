@@ -134,11 +134,12 @@ enum FeatureType {
 }
 
 export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
-  const { cusProducts, customerId } = usePricingPageContext();
+  const { cusProducts, customerId, cusMutate } = usePricingPageContext();
   const { publishableKey } = useAutumnContext();
 
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [userOptions, setUserOptions] = useState<any>([]);
+  const [buttonLoading, setButtonLoading] = useState(false);
 
   const fixedPrices = product.fixed_prices;
   const usagePrices = product.usage_prices;
@@ -299,16 +300,28 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
 
   // Purchase Button
 
-  const isCurrentPlan = () => {
+  const getActiveAndScheduled = () => {
     if (!cusProducts) {
-      return false;
+      return { isActive: false, isScheduled: false };
     }
 
     const mainProducts = cusProducts.main;
 
-    return mainProducts.some(
-      (mainProduct: any) => mainProduct.id === product.id
+    const isActive = mainProducts.some(
+      (mainProduct: any) =>
+        mainProduct.id === product.id && mainProduct.status === "active"
     );
+
+    const isScheduled = mainProducts.some(
+      (mainProduct: any) =>
+        mainProduct.id === product.id && mainProduct.status === "scheduled"
+    );
+    // console.log("Card:", product.id);
+    // console.log("Active:", isActive);
+    // console.log("Scheduled:", isScheduled);
+    // console.log("Main:", mainProducts);
+
+    return { isActive, isScheduled };
   };
 
   const renderButtonText = () => {
@@ -316,8 +329,14 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
       return "Get Started";
     }
 
-    if (isCurrentPlan()) {
+    const { isActive, isScheduled } = getActiveAndScheduled();
+
+    if (isActive) {
       return "Current Plan";
+    }
+
+    if (isScheduled) {
+      return "Scheduled";
     }
 
     return "Get Started";
@@ -356,23 +375,42 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
     if (data.checkout_url) {
       window.open(data.checkout_url, "_blank");
     }
+
+    if (cusMutate) {
+      await cusMutate();
+    }
   };
 
   const handleButtonClicked = async () => {
-    if (isCurrentPlan()) {
-      return;
-    }
+    const { isActive, isScheduled } = getActiveAndScheduled();
 
-    // Get product options
-    const productOptions = await getProductOptions(product.id);
+    const anotherScheduled =
+      cusProducts &&
+      cusProducts.main.some(
+        (mainProduct: any) =>
+          mainProduct.id !== product.id && mainProduct.status === "scheduled"
+      );
 
-    if (productOptions && productOptions.length > 0) {
-      setOptionsOpen(true);
-      setUserOptions(productOptions);
-      return;
-    }
+    const notAllowed = isScheduled || (isActive && !anotherScheduled);
+    // if (notAllowed) {
+    //   return;
+    // }
 
-    await handleAttachProduct();
+    setButtonLoading(true);
+
+    try {
+      // Get product options
+      const productOptions = await getProductOptions(product.id);
+
+      if (productOptions && productOptions.length > 0) {
+        setOptionsOpen(true);
+        setUserOptions(productOptions);
+      } else {
+        await handleAttachProduct();
+      }
+    } catch (error) {}
+
+    setButtonLoading(false);
   };
 
   const optionsRef = useRef<HTMLDivElement>(null);
@@ -449,6 +487,7 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
                     {option.quantity !== null &&
                       option.quantity !== undefined && (
                         <div>
+                          <p>Quantity</p>
                           <input
                             style={{
                               width: "100%",
@@ -466,10 +505,17 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
                           />
                         </div>
                       )}
-                    {option.threshold !== null ||
-                      (option.threshold !== undefined && (
+                    {option.threshold !== null &&
+                      option.threshold !== undefined && (
                         <div>
+                          <p>Threshold</p>
                           <input
+                            style={{
+                              width: "100%",
+                              padding: "10px",
+                              borderRadius: "5px",
+                              border: "1px solid #ccc",
+                            }}
                             type="number"
                             value={option.threshold}
                             onChange={(e) => {
@@ -479,7 +525,7 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
                             }}
                           />
                         </div>
-                      ))}
+                      )}
                   </div>
                 );
               })}
@@ -513,7 +559,23 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
               }}
               onClick={handleButtonClicked}
             >
-              {renderButtonText()}
+              {/* Add loading spinner if buttonLoading is true */}
+              {buttonLoading ? (
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <div
+                    style={{
+                      width: "16px",
+                      height: "16px",
+                      borderRadius: "50%",
+                      border: "2px solid #fff",
+                      borderTop: "2px solid transparent",
+                      animation: "spin 1s linear infinite",
+                    }}
+                  ></div>
+                </div>
+              ) : (
+                renderButtonText()
+              )}
             </button>
           </div>
         </div>
