@@ -24,7 +24,7 @@ function CustomersView({ env }: { env: AppEnv }) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filters, setFilters] = React.useState<any>({});
-
+  const [lastItemStack, setLastItemStack] = React.useState<any[]>([]);
   // url: debouncedSearch
   //   ? `/customers/search?search=${debouncedSearch}&page=${currentPage}`
   //   : `/customers?page=${currentPage}`,
@@ -39,26 +39,40 @@ function CustomersView({ env }: { env: AppEnv }) {
     url: `/customers/search`,
     env,
     data: {
-      search: searchQuery,
       page: currentPage,
+      search: searchQuery,
       filters,
+      last_item: lastItemStack[lastItemStack.length - 1],
     },
   });
 
   useEffect(() => {
     const fetchData = async () => {
+      // If filters changed (not on mount), reset to page 1 and clear lastItem
+      if (Object.keys(filters).length > 0) {
+        setCurrentPage(1);
+        setLastItemStack([]);
+      }
       await mutate();
     };
     fetchData();
-  }, [currentPage, mutate]);
+  }, [currentPage, filters, mutate]);
 
-  useEffect(() => {
-    const updateFilters = async () => {
-      await setCurrentPage(1);
-      await mutate();
-    };
-    updateFilters();
-  }, [filters]);
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     await mutate();
+  //   };
+  //   fetchData();
+  // }, [currentPage, mutate]);
+
+  // useEffect(() => {
+  //   const updateFilters = async () => {
+  //     setCurrentPage(1);
+  //     await mutate();
+  //     setLastItem(null);
+  //   };
+  //   updateFilters();
+  // }, [filters]);
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
@@ -66,6 +80,19 @@ function CustomersView({ env }: { env: AppEnv }) {
   if (isLoading || productsLoading) {
     return <LoadingScreen />;
   }
+
+  const handleNextPage = () => {
+    const lastItem = data?.customers[data?.customers.length - 1];
+    const newLastItemStack = [...lastItemStack, lastItem];
+    setLastItemStack(newLastItemStack);
+    setCurrentPage(currentPage + 1);
+  };
+
+  const handlePreviousPage = () => {
+    const newLastItemStack = lastItemStack.slice(0, -1);
+    setLastItemStack(newLastItemStack);
+    setCurrentPage(currentPage - 1);
+  };
 
   return (
     <CustomersContext.Provider
@@ -102,9 +129,7 @@ function CustomersView({ env }: { env: AppEnv }) {
                 <PaginationContent className="w-full flex justify-between ">
                   <PaginationItem>
                     <PaginationPrevious
-                      onClick={() =>
-                        currentPage > 1 && setCurrentPage((p) => p - 1)
-                      }
+                      onClick={handlePreviousPage}
                       isActive={currentPage !== 1}
                       className="text-xs cursor-pointer p-1 h-6"
                     />
@@ -114,9 +139,7 @@ function CustomersView({ env }: { env: AppEnv }) {
                   </PaginationItem>
                   <PaginationItem>
                     <PaginationNext
-                      onClick={() =>
-                        currentPage < totalPages && setCurrentPage((p) => p + 1)
-                      }
+                      onClick={handleNextPage}
                       isActive={currentPage !== totalPages}
                       className="text-xs cursor-pointer p-1 h-6"
                     />

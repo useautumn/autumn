@@ -3,19 +3,20 @@ import { defineConfig } from "tsup";
 export default defineConfig([
   {
     entry: {
+      index: "src/index.ts",
+    },
+    dts: true,
+    clean: false,
+    banner: {
+      js: "'use client'",
+    },
+  },
+  {
+    entry: {
       "server/index": "src/server/index.ts", // Changed from "server" to "server/index"
     },
     dts: true,
     clean: true,
-  },
-  {
-    entry: {
-      index: "src/index.ts",
-    },
-    dts: true,
-    clean: true,
-    banner: {
-      js: "'use client'",
-    },
+    outDir: "dist",
   },
 ]);

@@ -213,6 +213,8 @@ export class CusService {
     page,
     pageSize = 50,
     filters,
+    lastItem,
+    firstItem,
   }: {
     sb: SupabaseClient;
     orgId: string;
@@ -220,10 +222,20 @@ export class CusService {
     search: string;
     page: number;
     pageSize?: number;
+    lastItem?: { created_at: string; name: string; internal_id: string } | null;
+    firstItem?: {
+      created_at: string;
+      name: string;
+      internal_id: string;
+    } | null;
+
     filters: any;
   }) {
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
+    let from, to;
+    if (page) {
+      from = (page - 1) * pageSize;
+      to = from + pageSize - 1;
+    }
 
     let select =
       "*, customer_products:customer_products(*, product:products(*))";
@@ -235,15 +247,38 @@ export class CusService {
     let query = sb
       .from("customers")
       .select(select, {
-        count: "exact",
+        // count: "exact",
+        count: "planned",
       })
       .eq("org_id", orgId)
       .eq("env", env)
-      .or(`name.ilike.%${search}%,email.ilike.%${search}%,id.ilike.%${search}%`)
       .order("created_at", { ascending: false })
       .order("name", { ascending: true })
       .order("internal_id", { ascending: true })
-      .range(from, to);
+      .limit(pageSize);
+
+    if (page) {
+      query.range(from!, to!);
+    } else if (firstItem) {
+      query.or(
+        `created_at.gt.${firstItem.created_at},` +
+          `and(created_at.eq.${firstItem.created_at},name.lt.${firstItem.name}),` +
+          `and(created_at.eq.${firstItem.created_at},name.eq.${firstItem.name},internal_id.lt.${firstItem.internal_id})`
+      );
+    } else if (lastItem) {
+      query.or(
+        `created_at.lt.${lastItem.created_at},` +
+          `and(created_at.eq.${lastItem.created_at},name.gt.${lastItem.name}),` +
+          `and(created_at.eq.${lastItem.created_at},name.eq.${lastItem.name},internal_id.gt.${lastItem.internal_id})`
+      );
+    }
+
+    if (search && search !== "") {
+      console.log("Adding search filter:", search);
+      query.or(
+        `name.ilike.%${search}%,email.ilike.%${search}%,id.ilike.%${search}%`
+      );
+    }
 
     if (filters?.status === "canceled") {
       console.log("Adding canceled filter");
@@ -262,6 +297,7 @@ export class CusService {
     }
 
     const { data, count, error } = await query;
+
     // console.log(data);
     // return { data: [], count: 0 };
 

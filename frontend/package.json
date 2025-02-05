@@ -54,6 +54,7 @@
     "react-dom": "^18.2.0",
     "react-hot-toast": "^2.4.1",
     "react-hotkeys-hook": "^4.6.1",
+    "react-use-websocket": "^4.13.0",
     "swr": "^2.2.5",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
