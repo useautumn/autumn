@@ -1,6 +1,6 @@
 {
   "name": "@useautumn/react",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "private": false,
   "publishConfig": {
     "access": "public"
@@ -8,6 +8,10 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./server": {
       "types": "./dist/server/index.d.ts",
       "default": "./dist/server/index.js"
