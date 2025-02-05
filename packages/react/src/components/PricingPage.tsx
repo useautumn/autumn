@@ -5,6 +5,7 @@ import { PricingPageProps } from "./models";
 import { PricingCard } from "./PricingCard";
 import { PricingPageContext } from "./PricingPageContext";
 import { API_URL } from "../constants";
+import LoadingSpinner from "./LoadingSpinner";
 
 const makeImportant = (className?: string) => {
   if (!className) return "";
@@ -59,7 +60,7 @@ export default function PricingPage({
   }, [classNames]);
 
   if (isLoading || (customerId && cusProductsRes?.isLoading)) {
-    return <div>Loading...</div>;
+    return <LoadingSpinner color="#000" />;
   }
 
   if (error) {
@@ -95,7 +96,7 @@ export default function PricingPage({
             paddingBottom: "0",
           }}
         >
-          <h2 style={{ fontSize: "1.2rem", fontWeight: "500" }}>Pricing</h2>
+          {/* <h2 style={{ fontSize: "1.2rem", fontWeight: "500" }}>Pricing</h2> */}
           <div style={styles.container} className={classNames?.container}>
             {mainProducts?.map((product: any, index: number) => (
               <PricingCard
@@ -110,7 +111,7 @@ export default function PricingPage({
           <div
             style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
           >
-            <h2 style={{ fontSize: "1.2rem", fontWeight: "500" }}>Add-ons</h2>
+            {/* <h2 style={{ fontSize: "1.2rem", fontWeight: "500" }}>Add-ons</h2> */}
             <div style={styles.container} className={classNames?.container}>
               {addOnProducts.map((product: any, index: number) => (
                 <PricingCard
