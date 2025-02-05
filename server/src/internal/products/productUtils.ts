@@ -105,6 +105,7 @@ export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
       if (!featureToOptions[feature.id]) {
         featureToOptions[feature.id] = {
           feature_id: feature.id,
+          feature_name: feature.name,
           threshold: 0,
         };
       } else {
@@ -114,6 +115,7 @@ export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
       if (!featureToOptions[feature.id]) {
         featureToOptions[feature.id] = {
           feature_id: feature.id,
+          feature_name: feature.name,
           quantity: 0,
         };
       }

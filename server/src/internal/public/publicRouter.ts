@@ -14,7 +14,10 @@ import {
 import { ProductService } from "../products/ProductService.js";
 import { CusProductService } from "../customers/products/CusProductService.js";
 import { processFullCusProduct } from "../customers/products/cusProductUtils.js";
-import { getOptionsFromPrices } from "../products/productUtils.js";
+import {
+  getOptionsFromPrices,
+  isProductUpgrade,
+} from "../products/productUtils.js";
 import { FeatureService } from "../features/FeatureService.js";
 
 export const publicRouter = Router();
@@ -100,6 +103,16 @@ publicRouter.get("/products", async (req: any, res: any) => {
     req.org.id,
     req.env
   );
+
+  // Order products by price
+  products.sort((a: FullProduct, b: FullProduct) => {
+    const isUpgrade = isProductUpgrade(a, b);
+    if (isUpgrade) {
+      return -1;
+    }
+
+    return 1;
+  });
 
   const processedProducts = products.map(processProduct);
 

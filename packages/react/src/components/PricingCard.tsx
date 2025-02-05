@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { API_URL } from "../constants";
 
 import { PricingPageProps } from "./models";
 import { usePricingPageContext } from "./PricingPageContext";
 import React from "react";
 import { useAutumnContext } from "../providers/AutumnContext";
+import { motion } from "motion/react";
 
 const styles = {
   card: {
@@ -135,6 +136,9 @@ enum FeatureType {
 export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
   const { cusProducts, customerId } = usePricingPageContext();
   const { publishableKey } = useAutumnContext();
+
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [userOptions, setUserOptions] = useState<any>([]);
 
   const fixedPrices = product.fixed_prices;
   const usagePrices = product.usage_prices;
@@ -335,6 +339,25 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
     return options;
   };
 
+  const handleAttachProduct = async () => {
+    const res = await fetch("/api/autumn", {
+      method: "POST",
+      body: JSON.stringify({
+        product_id: product.id,
+        customer_id: customerId,
+        options: userOptions,
+      }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await res.json();
+    if (data.checkout_url) {
+      window.open(data.checkout_url, "_blank");
+    }
+  };
+
   const handleButtonClicked = async () => {
     if (isCurrentPlan()) {
       return;
@@ -343,32 +366,135 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
     // Get product options
     const productOptions = await getProductOptions(product.id);
 
-    console.log(productOptions);
+    if (productOptions && productOptions.length > 0) {
+      setOptionsOpen(true);
+      setUserOptions(productOptions);
+      return;
+    }
 
-    // await fetch("/api/autumn", {
-    //   method: "POST",
-    //   body: JSON.stringify({
-    //     product_id: product.id,
-    //     customer_id: customerId,
-    //   }),
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    // });
-
-    // console.log("Button clicked");
+    await handleAttachProduct();
   };
 
-  const [optionsOpen, setOptionsOpen] = useState(false);
-  const [options, setOptions] = useState<any>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
 
   return (
     <React.Fragment>
       {optionsOpen && (
-        <div className="absolute top-0 left-0 w-full h-full bg-black/50">
-          {options.map((option: any) => (
-            <div key={option.id}>{option.name}</div>
-          ))}
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            zIndex: 1000,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          }}
+          // On click outside
+          onClick={(e) => {
+            if (
+              optionsRef.current &&
+              !optionsRef.current.contains(e.target as Node)
+            ) {
+              setOptionsOpen(false);
+            }
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{
+              type: "spring",
+              duration: 0.2,
+              bounce: 0.2,
+            }}
+            style={{
+              width: "500px",
+              height: "300px",
+              backgroundColor: "#fff",
+              borderRadius: "10px",
+              padding: "20px",
+            }}
+            ref={optionsRef}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <h3>Options</h3>
+              <button onClick={() => setOptionsOpen(false)}>X</button>
+            </div>
+            {userOptions &&
+              userOptions.map((option: any, index: number) => {
+                console.log(option);
+
+                return (
+                  <div
+                    key={index}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
+                    <div>{option.feature_name}</div>
+                    {option.quantity !== null &&
+                      option.quantity !== undefined && (
+                        <div>
+                          <input
+                            style={{
+                              width: "100%",
+                              padding: "10px",
+                              borderRadius: "5px",
+                              border: "1px solid #ccc",
+                            }}
+                            type="number"
+                            value={option.quantity}
+                            onChange={(e) => {
+                              let newUserOptions = [...userOptions];
+                              newUserOptions[index].quantity = e.target.value;
+                              setUserOptions(newUserOptions);
+                            }}
+                          />
+                        </div>
+                      )}
+                    {option.threshold !== null ||
+                      (option.threshold !== undefined && (
+                        <div>
+                          <input
+                            type="number"
+                            value={option.threshold}
+                            onChange={(e) => {
+                              let newUserOptions = [...userOptions];
+                              newUserOptions[index].threshold = e.target.value;
+                              setUserOptions(newUserOptions);
+                            }}
+                          />
+                        </div>
+                      ))}
+                  </div>
+                );
+              })}
+            <button
+              style={{
+                backgroundColor: "#000",
+                color: "#fff",
+                padding: "10px 20px",
+                borderRadius: "5px",
+              }}
+              onClick={handleAttachProduct}
+            >
+              Attach
+            </button>
+          </motion.div>
         </div>
       )}
       <div style={styles.card} className={classNames.card}>
