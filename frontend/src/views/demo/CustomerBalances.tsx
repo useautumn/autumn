@@ -2,12 +2,7 @@ import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useDemoSWR } from "@/services/useAxiosSwr";
 import React from "react";
 
-function CustomerBalances({ customerId }: { customerId: string }) {
-  const { data: customer, error } = useDemoSWR({
-    url: `/public/customers/${customerId}`,
-    publishableKey: process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY,
-  });
-
+function CustomerBalances({ customer }: { customer: any }) {
   if (!customer) {
     return <div>Loading...</div>;
   }

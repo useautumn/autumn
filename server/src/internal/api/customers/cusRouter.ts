@@ -33,6 +33,10 @@ import { SupabaseClient } from "@supabase/supabase-js";
 
 export const cusRouter = Router();
 
+const notNullOrUndefined = (value: any) => {
+  return value !== null && value !== undefined;
+};
+
 export const getCustomerDetails = async ({
   customer,
   sb,
@@ -75,7 +79,10 @@ export const getCustomerDetails = async ({
   });
 
   for (const balance of balances) {
-    if (balance.total && balance.balance) {
+    if (
+      notNullOrUndefined(balance.total) &&
+      notNullOrUndefined(balance.balance)
+    ) {
       balance.used = balance.total - balance.balance;
       delete balance.total;
     }
