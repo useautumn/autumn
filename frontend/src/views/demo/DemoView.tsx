@@ -28,6 +28,15 @@ const axiosInstance = axios.create({
 export default function DemoView() {
   const customerId = "123";
 
+  const {
+    data: customer,
+    error,
+    mutate: cusMutate,
+  } = useDemoSWR({
+    url: `/public/customers/${customerId}`,
+    publishableKey: process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY,
+  });
+
   const hasAccessRequest = {
     feature_id: "emails",
     customer_id: customerId,
@@ -56,55 +65,43 @@ export default function DemoView() {
     init();
   }, []);
 
-  // //Attach Pro Plan to customer
-  // const attachProduct = async () => {
-  //   const { data } = await axiosInstance.post("/attach", {
-  //     customer_id: customerId,
-  //     product_id: "pro",
-  //   });
-
-  //   if (data.checkout_url) {
-  //     window.open(data.checkout_url, "_blank");
-  //   } else {
-  //     toast.success("Card already on file: automatically upgraded to Pro Plan");
-  //   }
-  // };
-
   //Check access to Pro features and email balance
   const checkAccess = async (featureId: string) => {
-    // const { data } = await axiosInstance.get(
-    //   `/entitled?customer_id=${customerId}&feature_id=${featureId}`
-    // );
-    // return data;
+    const { data } = await axiosInstance.post("/entitled", {
+      customer_id: customerId,
+      feature_id: featureId,
+    });
+    return data;
   };
 
   //Send usage event for email
-  const sendUsage = async (eventName: string) => {
+  const sendUsage = async (featureId: string) => {
     const { data } = await axiosInstance.post("/events", {
       customer_id: customerId,
-      event_name: eventName,
+      event_name: featureId,
       properties: {},
     });
 
-    // toast.success("Scrape successful");
+    toast.success("Scrape successful");
     return data;
   };
 
   const handleClicked = async (eventName: string) => {
-    // setHasAccessLoading(true);
-    // const data = await checkAccess(eventName);
-    // setEmailBalance(data.balances[0].balance);
-    // setHasAccessLoading(false);
-    // setHasAccessResponse(data);
-    // if (!data.allowed) {
-    //   toast.error("You're out of " + eventName);
-    //   return;
-    // }
-    // setSendEventLoading(true);
-    // const eventData = await sendUsage("email");
-    // setSendEventResponse(eventData);
-    // setSendEventLoading(false);
-    // setEmailBalance(emailBalance - 1);
+    setHasAccessLoading(true);
+    const data = await checkAccess(eventName);
+    setHasAccessResponse(data);
+    setHasAccessLoading(false);
+
+    if (!data.allowed) {
+      toast.error("You're out of " + eventName);
+      return;
+    }
+
+    setSendEventLoading(true);
+    const eventData = await sendUsage(eventName);
+    setSendEventResponse(eventData);
+    setSendEventLoading(false);
+    await cusMutate();
   };
 
   return (
@@ -126,14 +123,14 @@ export default function DemoView() {
             <CustomToaster />
 
             <div className="text-lg font-semibold mt-4">Balances</div>
-            <CustomerBalances customerId={customerId} />
+            <CustomerBalances customer={customer} />
 
             {/* Use Email Credit */}
             <div className="text-lg font-semibold mt-4">Actions</div>
             <div className="flex gap-2">
               <Button
-                // isLoading={buyLoading}
-                onClick={async () => {}}
+                isLoading={hasAccessLoading}
+                onClick={async () => handleClicked("email-credits")}
                 disabled={hasProFeatures === true}
                 className="bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 hover:from-green-500 hover:via-yellow-500 hover:to-pink-500 transition-all duration-700 w-48 shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:shadow-[0_0_20px_rgba(236,72,153,0.7)] bg-[size:200%] hover:bg-right"
               >
