@@ -108,10 +108,13 @@ const processProduct = (product: FullProduct) => {
 publicRouter.get("/customers/:customer_id", async (req: any, res: any) => {
   try {
     const customerId = req.params.customer_id;
+    console.log("Getting customer (public)", customerId);
+    console.log("Org ID", req.org.id);
+    console.log("Env", req.env);
     const customer = await CusService.getById({
       sb: req.sb,
       id: customerId,
-      orgId: req.orgId,
+      orgId: req.org.id,
       env: req.env,
     });
 
@@ -126,7 +129,7 @@ publicRouter.get("/customers/:customer_id", async (req: any, res: any) => {
     const { main, addOns, balances, invoices } = await getCustomerDetails({
       customer,
       sb: req.sb,
-      orgId: req.orgId,
+      orgId: req.org.id,
       env: req.env,
     });
 
