@@ -53,18 +53,18 @@ export const createNewCustomer = async ({
     env,
   };
 
-  let stripeCustomer: Stripe.Customer | undefined;
-  if (org.stripe_connected) {
-    stripeCustomer = await createStripeCustomer({
-      org,
-      env,
-      customer: customerData,
-    });
-    customerData.processor = {
-      type: ProcessorType.Stripe,
-      id: stripeCustomer?.id,
-    };
-  }
+  // let stripeCustomer: Stripe.Customer | undefined;
+  // if (org.stripe_connected) {
+  //   stripeCustomer = await createStripeCustomer({
+  //     org,
+  //     env,
+  //     customer: customerData,
+  //   });
+  //   customerData.processor = {
+  //     type: ProcessorType.Stripe,
+  //     id: stripeCustomer?.id,
+  //   };
+  // }
 
   const newCustomer = await CusService.createCustomer({
     sb,

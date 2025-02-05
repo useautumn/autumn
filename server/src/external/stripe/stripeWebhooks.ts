@@ -54,7 +54,7 @@ stripeWebhookRouter.post(
         "Stripe Webhook: "
       )} ${request.url} ${request.url.includes("live") ? "   " : ""}| ${
         event?.type
-      }`
+      } | ID: ${event?.id}`
     );
 
     try {
