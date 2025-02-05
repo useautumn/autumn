@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@autumn/shared": "*",
+    "@useautumn/react": "latest",
     "@clerk/nextjs": "^6.9.14",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
@@ -35,7 +36,6 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.2",
-    "@useautumn/react": "latest",
     "@wooorm/starry-night": "^3.5.0",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",

@@ -254,6 +254,8 @@ const checkStripeConnections = async ({
     await ProductService.update({
       sb: req.sb,
       productId: product.id,
+      orgId: org.id,
+      env,
       update: {
         processor: {
           id: stripeProduct.id,
