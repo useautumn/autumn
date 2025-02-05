@@ -133,10 +133,10 @@ export const handleNewPrices = async ({
   const updatedPrices: Price[] = [];
 
   for (let newPrice of newPrices) {
-    // Validate entitlement
+    // Validate price
     validatePrice(newPrice);
 
-    // 1. Handle new entitlement
+    // 1. Handle new price
     if (!("id" in newPrice)) {
       createdPrices.push(
         initPrice({
@@ -167,7 +167,10 @@ export const handleNewPrices = async ({
 
     // 2b. If not customm, update existing entitlement
     if (curPrice && !pricesAreSame(curPrice, newPrice) && !isCustom) {
-      updatedPrices.push(newPrice);
+      updatedPrices.push({
+        ...newPrice,
+        billing_type: getBillingType(newPrice.config!),
+      });
     }
   }
 

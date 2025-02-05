@@ -19,15 +19,18 @@ export const priceToStripeItem = ({
   product,
   org,
   options,
+  isCheckout = false,
 }: {
   price: Price;
   product: FullProduct;
   org: Organization;
   options: FeatureOptions | undefined | null;
+  isCheckout: boolean;
 }) => {
   // TODO: Implement this
   const billingType = price.billing_type;
   const stripeProductId = product.processor?.id;
+  console.log("Price", price);
 
   if (!stripeProductId) {
     throw new RecaseError({
@@ -37,10 +40,12 @@ export const priceToStripeItem = ({
     });
   }
 
+  let lineItemMeta = null;
+  let lineItem = null;
   if (billingType == BillingType.OneOff) {
     const config = price.config as FixedPriceConfig;
 
-    return {
+    lineItem = {
       quantity: 1,
       price_data: {
         product: stripeProductId,
@@ -51,7 +56,7 @@ export const priceToStripeItem = ({
   } else if (billingType == BillingType.FixedCycle) {
     const config = price.config as FixedPriceConfig;
 
-    return {
+    lineItem = {
       quantity: 1,
       price_data: {
         product: stripeProductId,
@@ -62,17 +67,15 @@ export const priceToStripeItem = ({
     };
   } else if (billingType == BillingType.UsageInAdvance) {
     const config = price.config as UsagePriceConfig;
+    const quantity = options?.quantity || 1;
 
-    if (!options?.quantity) {
-      throw new RecaseError({
-        code: ErrCode.InvalidOptions,
-        message:
-          "Price options are required for in advance usage prices. Missing: `quantity`",
-        statusCode: 400,
-      });
-    }
+    const adjustableQuantity = isCheckout
+      ? {
+          enabled: true,
+        }
+      : undefined;
 
-    return {
+    lineItem = {
       price_data: {
         product: stripeProductId,
         unit_amount: config.usage_tiers[0].amount * 100,
@@ -81,9 +84,18 @@ export const priceToStripeItem = ({
           ...billingIntervalToStripe(config.interval as BillingInterval),
         },
       },
-      quantity: options.quantity,
+      quantity,
+      adjustable_quantity: adjustableQuantity,
+    };
+    lineItemMeta = {
+      internal_feature_id: config.internal_feature_id,
+      feature_id: config.feature_id,
+      price_id: price.id,
     };
   }
 
-  return null;
+  return {
+    lineItem,
+    lineItemMeta,
+  };
 };

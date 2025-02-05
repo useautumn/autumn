@@ -36,7 +36,7 @@ const handleBillNowPrices = async ({
 
   const stripeCli = createStripeCli({ org, env: customer.env });
 
-  const subItems = getStripeSubItems({
+  const { items, itemMetas } = getStripeSubItems({
     attachParams,
   });
 
@@ -52,7 +52,7 @@ const handleBillNowPrices = async ({
     subscription = await stripeCli.subscriptions.create({
       customer: customer.processor.id,
       default_payment_method: paymentMethod as string,
-      items: subItems as any,
+      items: items as any,
       trial_end: freeTrialToStripeTimestamp(freeTrial),
     });
   } catch (error: any) {

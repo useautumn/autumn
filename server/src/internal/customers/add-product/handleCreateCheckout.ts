@@ -30,8 +30,9 @@ export const handleCreateCheckout = async ({
   });
 
   // Get stripeItems
-  const stripeItems = getStripeSubItems({
+  const { items, itemMetas } = getStripeSubItems({
     attachParams,
+    isCheckout: true,
   });
 
   const isRecurring = pricesContainRecurring(attachParams.prices);
@@ -40,6 +41,7 @@ export const handleCreateCheckout = async ({
   const metaId = await createCheckoutMetadata({
     sb: req.sb,
     attachParams,
+    itemMetas,
   });
 
   const subscriptionData =
@@ -52,7 +54,7 @@ export const handleCreateCheckout = async ({
 
   const checkout = await stripeCli.checkout.sessions.create({
     customer: customer.processor.id,
-    line_items: stripeItems,
+    line_items: items,
     subscription_data: subscriptionData,
     mode: isRecurring ? "subscription" : "payment",
     currency: org.default_currency,

@@ -1,5 +1,10 @@
+import { useState } from "react";
+import { API_URL } from "../constants";
+
 import { PricingPageProps } from "./models";
 import { usePricingPageContext } from "./PricingPageContext";
+import React from "react";
+import { useAutumnContext } from "../providers/AutumnContext";
 
 const styles = {
   card: {
@@ -129,6 +134,8 @@ enum FeatureType {
 
 export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
   const { cusProducts, customerId } = usePricingPageContext();
+  const { publishableKey } = useAutumnContext();
+
   const fixedPrices = product.fixed_prices;
   const usagePrices = product.usage_prices;
   const entitlements = product.entitlements;
@@ -312,73 +319,108 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
     return "Get Started";
   };
 
+  const getProductOptions = async (productId: string) => {
+    const res = await fetch(
+      `${API_URL}/public/products/${product.id}/options`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "x-publishable-key": publishableKey,
+        },
+      }
+    );
+
+    const options = await res.json();
+    return options;
+  };
+
   const handleButtonClicked = async () => {
     if (isCurrentPlan()) {
       return;
     }
 
-    await fetch("/api", {
-      method: "GET",
-    });
+    // Get product options
+    const productOptions = await getProductOptions(product.id);
 
-    console.log("Button clicked");
+    console.log(productOptions);
+
+    // await fetch("/api/autumn", {
+    //   method: "POST",
+    //   body: JSON.stringify({
+    //     product_id: product.id,
+    //     customer_id: customerId,
+    //   }),
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //   },
+    // });
+
+    // console.log("Button clicked");
   };
 
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [options, setOptions] = useState<any>(null);
+
   return (
-    <div style={styles.card} className={classNames.card}>
-      <div style={styles.header} className={classNames.header}>
-        <div style={styles.titleSection} className={classNames.titleSection}>
-          <div style={styles.title} className={classNames.title}>
-            {product.name}
-          </div>
-
-          <div>{getMainPrice()}</div>
-          <button
-            style={{
-              backgroundColor: "#000",
-              color: "#fff",
-              padding: "10px 20px",
-              borderRadius: "5px",
-            }}
-            onClick={handleButtonClicked}
-          >
-            {renderButtonText()}
-          </button>
-        </div>
-      </div>
-
-      {renderEntitlements()}
-
-      {/* Show usage prices with entitlements first */}
-
-      {/* <div style={styles.content} className={classNames.content}>
-        {firstFixedPrice && (
-          <div style={styles.pricing} className={classNames.pricing}>
-            <span style={styles.amount} className={classNames.amount}>
-              ${firstFixedPrice.config.amount}
-            </span>
-            <div style={styles.interval} className={classNames.interval}>
-              per {firstFixedPrice.config.interval}
-            </div>
-          </div>
-        )}
-
-        <div
-          style={styles.entitlementsList}
-          className={classNames.entitlementsList}
-        >
-          {entitlements.map((entitlement: any, index: number) => (
-            <div
-              key={index}
-              style={styles.entitlementItem}
-              className={classNames.entitlementItem}
-            >
-              <span>✓</span>
-              <span>{entitlement.feature.name}</span>
-            </div>
+    <React.Fragment>
+      {optionsOpen && (
+        <div className="absolute top-0 left-0 w-full h-full bg-black/50">
+          {options.map((option: any) => (
+            <div key={option.id}>{option.name}</div>
           ))}
         </div>
-      </div> */}
-    </div>
+      )}
+      <div style={styles.card} className={classNames.card}>
+        <div style={styles.header} className={classNames.header}>
+          <div style={styles.titleSection} className={classNames.titleSection}>
+            <div style={styles.title} className={classNames.title}>
+              {product.name}
+            </div>
+            <div>{getMainPrice()}</div>
+            <button
+              style={{
+                backgroundColor: "#000",
+                color: "#fff",
+                padding: "10px 20px",
+                borderRadius: "5px",
+              }}
+              onClick={handleButtonClicked}
+            >
+              {renderButtonText()}
+            </button>
+          </div>
+        </div>
+        {renderEntitlements()}
+        {/* Show usage prices with entitlements first */}
+        {/* <div style={styles.content} className={classNames.content}>
+          {firstFixedPrice && (
+            <div style={styles.pricing} className={classNames.pricing}>
+              <span style={styles.amount} className={classNames.amount}>
+                ${firstFixedPrice.config.amount}
+              </span>
+              <div style={styles.interval} className={classNames.interval}>
+                per {firstFixedPrice.config.interval}
+              </div>
+            </div>
+          )}
+          <div
+            style={styles.entitlementsList}
+            className={classNames.entitlementsList}
+          >
+            {entitlements.map((entitlement: any, index: number) => (
+              <div
+                key={index}
+                style={styles.entitlementItem}
+                className={classNames.entitlementItem}
+              >
+                <span>✓</span>
+                <span>{entitlement.feature.name}</span>
+              </div>
+            ))}
+          </div>
+        </div> */}
+      </div>
+    </React.Fragment>
   );
 };

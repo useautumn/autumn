@@ -5,6 +5,56 @@ import { CusProductService } from "@/internal/customers/products/CusProductServi
 import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
 import { AppEnv, Organization } from "@autumn/shared";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { createStripeCli } from "../utils.js";
+
+export const itemMetasToOptions = async ({
+  itemMetas,
+  checkoutSession,
+  attachParams,
+  stripeCli,
+}: {
+  itemMetas: any[];
+  checkoutSession: Stripe.Checkout.Session;
+  attachParams: AttachParams;
+  stripeCli: Stripe;
+}) => {
+  // For each line item
+
+  const response = await stripeCli.checkout.sessions.listLineItems(
+    checkoutSession.id
+  );
+
+  const lineItems = response.data;
+
+  for (let i = 0; i < lineItems.length; i++) {
+    const item = lineItems[i];
+    const itemMeta = itemMetas[i];
+
+    if (!itemMeta) {
+      console.log("No item meta found, skipping");
+      continue;
+    }
+
+    // Feature ID:
+    const internalFeatureId = itemMeta.internal_feature_id;
+    const featureId = itemMeta.feature_id;
+
+    const index = attachParams.optionsList.findIndex(
+      (feature) => feature.internal_feature_id == internalFeatureId
+    );
+
+    if (index == -1) {
+      attachParams.optionsList.push({
+        feature_id: featureId,
+        internal_feature_id: internalFeatureId,
+        quantity: item.quantity,
+      });
+    } else {
+      attachParams.optionsList[index].quantity = item.quantity;
+    }
+    console.log(`Updated options list: ${featureId} - ${item.quantity}`);
+  }
+};
 
 export const handleCheckoutSessionCompleted = async ({
   sb,
@@ -23,8 +73,8 @@ export const handleCheckoutSessionCompleted = async ({
     return;
   }
 
+  // Get options
   const attachParams: AttachParams = metadata.data;
-
   if (attachParams.org.id != org.id) {
     console.log("checkout.completed: org doesn't match, skipping");
     return;
@@ -34,6 +84,15 @@ export const handleCheckoutSessionCompleted = async ({
     console.log("checkout.completed: environments don't match, skipping");
     return;
   }
+
+  const itemMetas = metadata.data.itemMetas;
+  const stripeCli = createStripeCli({ org, env });
+  await itemMetasToOptions({
+    itemMetas,
+    checkoutSession,
+    attachParams,
+    stripeCli,
+  });
 
   console.log(
     "   - checkout.completed: autumn metadata:",
@@ -54,12 +113,6 @@ export const handleCheckoutSessionCompleted = async ({
       return;
     }
   }
-
-  await CusProductService.expireCurrentProduct({
-    sb,
-    internalCustomerId: attachParams.customer.internal_id,
-    productGroup: attachParams.product.group,
-  });
 
   console.log("   - checkout.completed: creating full customer product");
   await createFullCusProduct({

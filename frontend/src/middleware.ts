@@ -1,28 +1,13 @@
-import {
-  clerkClient,
-  clerkMiddleware,
-  createRouteMatcher,
-  currentUser,
-} from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { AppEnv } from "@autumn/shared";
-import { revalidatePath } from "next/cache";
 
-const isProtectedRoute = createRouteMatcher([
-  "/",
-  "/(.*)",
-
-  // "(.*)/features/(.*)",
-
-  // "/admin(.*)",
-
-  // "/workflow/(.*)",
-  // "/cli-auth",
-  // "/credits(.*)",
-  // "/onboarding(.*)",
-]);
+const isProtectedRoute = createRouteMatcher(["/", "/(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
+  // Create middleware
+  if (req.nextUrl.pathname == "/api/autumn") return await autumnMiddleware(req);
+
   const path = req.nextUrl.pathname;
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("path", path);
@@ -67,6 +52,56 @@ export default clerkMiddleware(async (auth, req) => {
     headers: requestHeaders,
   });
 });
+
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
+};
+
+// Export another middleware for /api routes?
+export const autumnMiddleware = async (req: NextRequest) => {
+  console.log("API middleware");
+
+  const data = await req.json();
+
+  if (!data.product_id || !data.customer_id) {
+    return NextResponse.json(
+      {
+        error: "Missing product_id or customer_id",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  const autumnApiKey = process.env.AUTUMN_API_KEY;
+
+  const response = await fetch("http://localhost:8080/v1/attach", {
+    method: "POST",
+    body: JSON.stringify(data),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${autumnApiKey}`,
+    },
+  });
+
+  const result = await response.json();
+  return NextResponse.json(result);
+  // if (req.method == "POST") {
+  //   const body = await req.json();
+  //   console.log(body);
+
+  //   return NextResponse.json({
+  //     message: "API middleware",
+  //   });
+  // } else {
+  //   return NextResponse.json(
+  //     {
+  //       error: "Method not allowed",
+  //     },
+  //     {
+  //       status: 405,
+  //     }
+  //   );
+  // }
 };

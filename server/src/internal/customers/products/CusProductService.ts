@@ -81,7 +81,13 @@ export class CusProductService {
   }) {
     const { data, error } = await sb
       .from("customer_products")
-      .select("*, product:products!inner(*)")
+      .select(
+        `
+        *, 
+        product:products!inner(*),
+        customer_prices:customer_prices(*, price:prices!inner(*))
+      `
+      )
       .eq("internal_customer_id", internalCustomerId)
       .eq("product.group", productGroup)
       .eq("product.is_add_on", false)

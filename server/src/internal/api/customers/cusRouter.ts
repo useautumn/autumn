@@ -20,7 +20,6 @@ import { createNewCustomer } from "./cusUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import {
-  getCusBalances,
   getCusBalancesByEntitlement,
   getCusBalancesByProduct,
   sortCusEntsForDeduction,

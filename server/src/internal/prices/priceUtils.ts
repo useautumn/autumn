@@ -203,29 +203,34 @@ export function compareBillingIntervals(
 // Stripe items
 export const getStripeSubItems = ({
   attachParams,
+  isCheckout = false,
 }: {
   attachParams: AttachParams;
+  isCheckout?: boolean;
 }) => {
   const { product, prices, entitlements, optionsList, org } = attachParams;
   const billNowPrices = getBillNowPrices(prices);
 
   let subItems: any[] = [];
+  let itemMetas: any[] = [];
 
   // TODO: Check if non bill now prices can be added to stripe subscription...?
   for (const price of billNowPrices) {
     const priceEnt = getPriceEntitlement(price, entitlements);
     const options = getEntOptions(optionsList, priceEnt);
 
-    subItems.push(
-      priceToStripeItem({
-        price,
-        product,
-        org,
-        options,
-      })
-    );
+    const { lineItem, lineItemMeta } = priceToStripeItem({
+      price,
+      product,
+      org,
+      options,
+      isCheckout,
+    });
+
+    subItems.push(lineItem);
+    itemMetas.push(lineItemMeta);
   }
-  return subItems;
+  return { items: subItems, itemMetas };
 };
 
 export const getUsageTier = (price: Price, quantity: number) => {

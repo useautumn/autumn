@@ -16,7 +16,7 @@ const apiRouter = Router();
 apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
 
-apiRouter.use("/attach", attachRouter);
+apiRouter.use(attachRouter);
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/products", productApiRouter);
 apiRouter.use("/features", featureApiRouter);

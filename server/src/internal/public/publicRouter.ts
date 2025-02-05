@@ -14,6 +14,8 @@ import {
 import { ProductService } from "../products/ProductService.js";
 import { CusProductService } from "../customers/products/CusProductService.js";
 import { processFullCusProduct } from "../customers/products/cusProductUtils.js";
+import { getOptionsFromPrices } from "../products/productUtils.js";
+import { FeatureService } from "../features/FeatureService.js";
 
 export const publicRouter = Router();
 
@@ -142,5 +144,29 @@ publicRouter.get(
       main,
       add_ons: addOns,
     });
+  }
+);
+
+publicRouter.get(
+  "/products/:product_id/options",
+  async (req: any, res: any) => {
+    const product = await ProductService.getFullProductStrict({
+      sb: req.sb,
+      productId: req.params.product_id,
+      orgId: req.org.id,
+      env: req.env,
+    });
+
+    const features = await FeatureService.getFeatures({
+      sb: req.sb,
+      orgId: req.org.id,
+      env: req.env,
+    });
+
+    const prices = product.prices;
+
+    const options = getOptionsFromPrices(prices, features);
+
+    res.status(200).json(options);
   }
 );
