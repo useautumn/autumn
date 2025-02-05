@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@autumn/shared": "*",
+    "@useautumn/react": "latest",
     "@clerk/nextjs": "^6.9.14",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",

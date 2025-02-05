@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { AppEnv } from "@autumn/shared";
+import { autumnMiddleware } from "@useautumn/react/server";
 
 const isProtectedRoute = createRouteMatcher(["/", "/(.*)"]);
 
@@ -55,53 +56,4 @@ export default clerkMiddleware(async (auth, req) => {
 
 export const config = {
   matcher: ["/((?!.*\\..*|_next).*)", "/", "/(api|trpc)(.*)"],
-};
-
-// Export another middleware for /api routes?
-export const autumnMiddleware = async (req: NextRequest) => {
-  console.log("API middleware");
-
-  const data = await req.json();
-
-  if (!data.product_id || !data.customer_id) {
-    return NextResponse.json(
-      {
-        error: "Missing product_id or customer_id",
-      },
-      {
-        status: 400,
-      }
-    );
-  }
-
-  const autumnApiKey = process.env.AUTUMN_API_KEY;
-
-  const response = await fetch("http://localhost:8080/v1/attach", {
-    method: "POST",
-    body: JSON.stringify(data),
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${autumnApiKey}`,
-    },
-  });
-
-  const result = await response.json();
-  return NextResponse.json(result);
-  // if (req.method == "POST") {
-  //   const body = await req.json();
-  //   console.log(body);
-
-  //   return NextResponse.json({
-  //     message: "API middleware",
-  //   });
-  // } else {
-  //   return NextResponse.json(
-  //     {
-  //       error: "Method not allowed",
-  //     },
-  //     {
-  //       status: 405,
-  //     }
-  //   );
-  // }
 };
