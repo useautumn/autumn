@@ -280,7 +280,7 @@ cusRouter.delete("/:customerId", async (req: any, res: any) => {
         stripeId: customer.processor.id,
       });
     } catch (error: any) {
-      console.log("Error deleting stripe customer", error?.message || error);
+      console.log("Couldn't delete stripe customer", error?.message || error);
     }
 
     await CusService.deleteCustomerStrict({
