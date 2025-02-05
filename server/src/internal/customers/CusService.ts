@@ -220,7 +220,7 @@ export class CusService {
     orgId: string;
     env: AppEnv;
     search: string;
-    page: number;
+    page?: number | null;
     pageSize?: number;
     lastItem?: { created_at: string; name: string; internal_id: string } | null;
     firstItem?: {
