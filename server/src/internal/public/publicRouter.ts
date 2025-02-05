@@ -27,10 +27,12 @@ const publicRouterMiddleware = async (req: any, res: any, next: any) => {
   const pkey = req.headers["x-publishable-key"];
 
   if (!pkey) {
+    console.log("No pkey:", pkey);
     return res.status(400).json({ message: "Publishable key is required" });
   }
 
-  if (!pkey.startsWith("am_pk_test") && !pkey.startsWith("am_pk_prod")) {
+  if (!pkey.startsWith("am_pk_test") && !pkey.startsWith("am_pk_live")) {
+    console.log("Invalid pkey:", pkey);
     return res.status(400).json({ message: "Invalid publishable key" });
   }
 

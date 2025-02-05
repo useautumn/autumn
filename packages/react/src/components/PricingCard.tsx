@@ -170,6 +170,7 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
     let featureString = feature.name;
     if (entitlement.allowance_type == AllowanceType.Unlimited) {
       featureString = `Unlimited ${feature.name}`;
+      withInterval = false;
     } else if (entitlement.allowance_type == AllowanceType.Fixed) {
       featureString = `${entitlement.allowance} ${feature.name}`;
     } else if (entitlement.allowance_type == AllowanceType.None) {
@@ -177,11 +178,10 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
     }
 
     // Time string
-
     const interval = entitlement.interval;
     let timeString = "";
     if (interval == EntInterval.Lifetime) {
-      timeString = "(Lifetime)";
+      timeString = "";
     } else {
       timeString = ` / ${interval}`;
     }
@@ -292,7 +292,7 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
     }
 
     return remainingEntitlements.map((ent: any, index: number) => {
-      const featureString = formatEntitlement(ent, false);
+      const featureString = formatEntitlement(ent, true);
 
       return <div key={index}>- {featureString}</div>;
     });

@@ -57,10 +57,6 @@ export default function PricingPage({
       url: `${API_URL}/public/customers/${customerId}/products`,
     });
 
-    if (res.error) {
-      console.log(`Error fetching data for customer ${customerId}`);
-    }
-
     cusProductsRes = res;
   }
 
@@ -86,7 +82,6 @@ export default function PricingPage({
   }
 
   if (error) {
-    console.log("Error fetching products:", error);
     return <div>Error</div>;
   }
 

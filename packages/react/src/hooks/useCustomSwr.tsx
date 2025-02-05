@@ -19,7 +19,13 @@ export function useCustomSwr({
           "x-publishable-key": publishableKey,
         },
       });
+
       if (res.status !== 200) {
+        try {
+          let err = await res.json();
+          console.log(`Failed to fetch ${url}:`, err);
+        } catch (error) {}
+
         throw new Error("Failed to fetch data");
       }
       return res.json();
