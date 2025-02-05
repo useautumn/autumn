@@ -4,12 +4,9 @@ import React from "react";
 
 function CustomerBalances({ customerId }: { customerId: string }) {
   const { data: customer, error } = useDemoSWR({
-    url: `/customers/${customerId}`,
-    apiKey: process.env.NEXT_PUBLIC_AUTUMN_API_KEY,
+    url: `/public/customers/${customerId}`,
+    publishableKey: process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY,
   });
-
-  console.log("Customer", customer);
-  console.log("Error", error);
 
   if (!customer) {
     return <div>Loading...</div>;

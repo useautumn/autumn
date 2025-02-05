@@ -128,6 +128,19 @@ export default function DemoView() {
             <div className="text-lg font-semibold mt-4">Balances</div>
             <CustomerBalances customerId={customerId} />
 
+            {/* Use Email Credit */}
+            <div className="text-lg font-semibold mt-4">Actions</div>
+            <div className="flex gap-2">
+              <Button
+                // isLoading={buyLoading}
+                onClick={async () => {}}
+                disabled={hasProFeatures === true}
+                className="bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 hover:from-green-500 hover:via-yellow-500 hover:to-pink-500 transition-all duration-700 w-48 shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:shadow-[0_0_20px_rgba(236,72,153,0.7)] bg-[size:200%] hover:bg-right"
+              >
+                Create Email
+              </Button>
+            </div>
+
             {/* <Card>
               <CardHeader className="flex justify-between p-3 px-4">
                 <div className="flex justify-between items-center gap-4">
@@ -149,7 +162,9 @@ export default function DemoView() {
                 <Button onClick={() => handleClicked("ai")}>Use AI</Button>
               </CardHeader>
             </Card> */}
-            {hasProFeatures ? (
+
+            {/* PRO FEATURES */}
+            {/* {hasProFeatures ? (
               <div>
                 <div className="space-y-4">
                   <p className="font-semibold text-lg">Pro Analytics</p>
@@ -203,7 +218,7 @@ export default function DemoView() {
               <div>
                 <p>You do not have access to pro features</p>
               </div>
-            )}
+            )} */}
           </>
         )}
       </div>
