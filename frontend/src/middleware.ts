@@ -1,13 +1,13 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { AppEnv } from "@autumn/shared";
-import { autumnMiddleware } from "@useautumn/react/server";
+// import { autumnMiddleware } from "@useautumn/react/server";
 
 const isProtectedRoute = createRouteMatcher(["/", "/(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   // Create middleware
-  if (req.nextUrl.pathname == "/api/autumn") return await autumnMiddleware(req);
+  // if (req.nextUrl.pathname == "/api/autumn") return await autumnMiddleware(req);
 
   const path = req.nextUrl.pathname;
   const requestHeaders = new Headers(req.headers);

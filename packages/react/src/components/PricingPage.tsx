@@ -86,6 +86,7 @@ export default function PricingPage({
   }
 
   if (error) {
+    console.log("Error fetching products:", error);
     return <div>Error</div>;
   }
 
