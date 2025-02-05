@@ -1,5 +1,7 @@
 export const keyToTitle = (key: string) => {
-  return key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+  return key
+    .replace(/[_-]/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 export const keyToTitleFirstCaps = (key: string) => {
