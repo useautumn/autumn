@@ -5,14 +5,16 @@ import { PricingPageProps } from "./models";
 import { usePricingPageContext } from "./PricingPageContext";
 import React from "react";
 import { useAutumnContext } from "../providers/AutumnContext";
-import { motion } from "motion/react";
+import { motion, HTMLMotionProps } from "framer-motion";
 
 import { CornerDownRight, CircleCheck } from "lucide-react";
+import LoadingSpinner from "./LoadingSpinner";
 
 const styles = {
   card: {
     display: "flex",
     flexDirection: "column" as const,
+    position: "relative" as const,
     alignItems: "flex-start",
     gap: "1rem",
     // overflow: "hidden",
@@ -51,6 +53,7 @@ const styles = {
     // fontWeight: 600,
     color: "#111",
     marginBottom: "0.8rem",
+    // zIndex: 2,
   },
   description: {
     fontSize: "0.8rem",
@@ -115,6 +118,7 @@ const styles = {
     padding: "0.3rem 1rem",
     width: "100%",
     boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.3)",
+    zIndex: 2,
   },
 };
 
@@ -516,7 +520,9 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: "rgba(255, 0, 0, 0.5)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)", // for Safari support
           }}
           // On click outside
           onClick={(e) => {
@@ -631,6 +637,25 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
         </div>
       )}
       <div style={styles.card} className={classNames.card}>
+        {buttonLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.5 }}
+            style={{
+              position: "absolute" as const,
+              top: 0,
+              left: 0,
+              width: "100%",
+              height: "100%",
+              backgroundColor: "rgba(255, 255, 255, 0.5)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+              zIndex: 1,
+              borderRadius: "6px",
+            }}
+          />
+        )}
         <div style={styles.header} className={classNames.header}>
           <div style={styles.titleSection} className={classNames.titleSection}>
             <div style={styles.title} className={classNames.title}>
@@ -638,24 +663,7 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
             </div>
             <div style={styles.pricing}>{getMainPrice()}</div>
             <button style={styles.purchaseButton} onClick={handleButtonClicked}>
-              {/* Add loading spinner if buttonLoading is true */}
-              {buttonLoading ? (
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <div
-                    style={{
-                      width: "16px",
-                      height: "16px",
-                      borderRadius: "50%",
-                      border: "2px solid #fff",
-                      borderTop: "2px solid transparent",
-                      animation: "spin 1s linear infinite",
-                    }}
-                  />
-                  &#8203;
-                </div>
-              ) : (
-                renderButtonText()
-              )}
+              {buttonLoading ? <LoadingSpinner /> : renderButtonText()}
             </button>
           </div>
         </div>
