@@ -33,7 +33,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 
 export const cusRouter = Router();
 
-const getCustomerDetails = async ({
+export const getCustomerDetails = async ({
   customer,
   sb,
   orgId,

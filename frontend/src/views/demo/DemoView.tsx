@@ -12,6 +12,7 @@ import { AutumnProvider, PricingPage } from "@useautumn/react";
 import { useAxiosSWR, useDemoSWR } from "@/services/useAxiosSwr";
 import React from "react";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import CustomerBalances from "./CustomerBalances";
 
 const apiKey = "am_live_3ZavonZcha8ENdWwfHbrirU3";
 const baseUrl = "https://api.useautumn.com/v1";
@@ -46,12 +47,6 @@ export default function DemoView() {
   const [emailBalance, setEmailBalance] = useState(0);
   const [hasProFeatures, setHasProFeatures] = useState<boolean>(false);
 
-  const { data: customer, mutate: cusMutate } = useDemoSWR({
-    url: `/customers/${customerId}`,
-    apiKey,
-  });
-
-  console.log("Customer:", customer);
   useEffect(() => {
     const init = async () => {
       setLoading(true);
@@ -130,35 +125,8 @@ export default function DemoView() {
             </AutumnProvider>
             <CustomToaster />
 
-            <Card>
-              {customer && (
-                <React.Fragment>
-                  <CardContent className="flex flex-col gap-2 pt-8">
-                    {customer.entitlements.map((entitlement) => (
-                      <div
-                        key={entitlement.feature_id}
-                        className="flex justify-between"
-                      >
-                        <div>
-                          <p className="text-sm font-medium text-gray-600">
-                            {keyToTitle(entitlement.feature_id)}
-                          </p>
-                          <span className="text-lg font-semibold">
-                            {entitlement.balance || "Allowed"}
-                          </span>
-                        </div>
-                        <Button
-                          onClick={() => handleClicked(entitlement.feature_id)}
-                          className="w-[200px]"
-                        >
-                          Use {keyToTitle(entitlement.feature_id)}
-                        </Button>
-                      </div>
-                    ))}
-                  </CardContent>
-                </React.Fragment>
-              )}
-            </Card>
+            <div className="text-lg font-semibold mt-4">Balances</div>
+            <CustomerBalances customerId={customerId} />
 
             {/* <Card>
               <CardHeader className="flex justify-between p-3 px-4">
