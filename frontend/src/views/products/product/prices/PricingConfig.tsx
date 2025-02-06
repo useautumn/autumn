@@ -26,8 +26,9 @@ export const PricingConfig = ({
     type: PriceType.Usage,
     internal_feature_id: "",
     feature_id: "",
-    bill_when: BillWhen.InAdvance,
+    bill_when: BillWhen.StartOfPeriod,
     interval: BillingInterval.Month,
+    billing_units: "",
     usage_tiers: [
       {
         from: 0,
@@ -102,16 +103,27 @@ export const PricingConfig = ({
 // Validate usage price config
 export const validateUsageConfig = (usageConfig: any) => {
   const config = { ...usageConfig };
-  const { bill_when, interval } = config;
+  const { bill_when, interval, billing_units } = config;
 
   if (bill_when === BillWhen.BelowThreshold) {
-  } else if (bill_when === BillWhen.InAdvance) {
+  } else if (bill_when === BillWhen.StartOfPeriod) {
     if (!interval) {
       toast.error("Please fill out all fields");
       return null;
     }
 
     config.interval = interval;
+  }
+
+  if (bill_when === BillWhen.EndOfPeriod) {
+    if (!billing_units || invalidNumber(billing_units)) {
+      toast.error("Please fill out all fields");
+      return null;
+    }
+
+    config.billing_units = parseFloat(billing_units);
+  } else {
+    config.billing_units = null;
   }
 
   for (let i = 0; i < config.usage_tiers.length; i++) {

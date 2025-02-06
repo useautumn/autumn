@@ -51,6 +51,30 @@ export class CustomerEntitlementService {
     return data;
   }
 
+  static async getActiveByInternalCustomerId({
+    sb,
+    internalCustomerId,
+  }: {
+    sb: SupabaseClient;
+    internalCustomerId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_entitlements")
+      .select(
+        `*, 
+        entitlement:entitlements!inner(*, feature:features!inner(*)), 
+        customer_product:customer_products!inner(*, product:products!inner(*))`
+      )
+      .eq("internal_customer_id", internalCustomerId)
+      .eq("customer_product.status", "active");
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async getCustomerEntitlements({
     sb,
     orgId,
@@ -175,8 +199,7 @@ export class CustomerEntitlementService {
       )
       .eq("internal_customer_id", internalCustomerId)
       .in("internal_feature_id", internalFeatureIds)
-      .eq("customer_product.status", "active")
-      .order("created_at", { ascending: true });
+      .eq("customer_product.status", "active");
 
     if (error) {
       throw new RecaseError({

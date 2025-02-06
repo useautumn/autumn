@@ -27,7 +27,8 @@ export class InvoiceService {
     const { data, error } = await sb
       .from("invoices")
       .select("*")
-      .eq("internal_customer_id", internalCustomerId);
+      .eq("internal_customer_id", internalCustomerId)
+      .limit(100);
 
     if (error) {
       throw error;

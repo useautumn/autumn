@@ -7,21 +7,24 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+
 import {
-  AllowanceType,
   BillingInterval,
   BillWhen,
   EntitlementWithFeature,
+  Price,
+  UsagePriceConfig,
 } from "@autumn/shared";
+
 import React from "react";
 import { keyToTitleFirstCaps } from "@/utils/formatUtils/formatTextUtils";
 import { Button } from "@/components/ui/button";
 import { cn } from "@nextui-org/theme";
 import { faXmark } from "@fortawesome/pro-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductContext } from "../ProductContext";
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { getBillingUnits } from "@/utils/product/priceUtils";
 
 function CreateUsagePrice({
   config,
@@ -60,11 +63,25 @@ function CreateUsagePrice({
     setConfig({ ...config, usage_tiers: newUsageTiers });
   };
 
+  const filteredEntitlements = product.entitlements.filter(
+    (entitlement: EntitlementWithFeature) => {
+      if (
+        product.prices.some((price: Price) => {
+          let config = price.config as UsagePriceConfig;
+          return config.internal_feature_id == entitlement.internal_feature_id;
+        })
+      ) {
+        return false;
+      }
+      return true;
+    }
+  );
+
   return (
     <div className="flex flex-col gap-4 mt-4">
       {/* Entitlement */}
       <div className="flex gap-2 w-full">
-        <div className="w-6/12">
+        <div className="w-full overflow-hidden">
           <FieldLabel>Entitlement</FieldLabel>
           <Select
             value={config.feature_id}
@@ -81,7 +98,7 @@ function CreateUsagePrice({
               <SelectValue placeholder="Select entitlement" />
             </SelectTrigger>
             <SelectContent>
-              {product.entitlements.map(
+              {filteredEntitlements.map(
                 (entitlement: EntitlementWithFeature, index: number) => {
                   const feature = getFeature(
                     entitlement.internal_feature_id,
@@ -100,7 +117,7 @@ function CreateUsagePrice({
           </Select>
         </div>
 
-        <div className="w-6/12">
+        <div className="w-full">
           <FieldLabel>Bill When</FieldLabel>
           <Select
             value={config.bill_when}
@@ -112,11 +129,13 @@ function CreateUsagePrice({
               <SelectValue placeholder="Bill when" />
             </SelectTrigger>
             <SelectContent>
-              {Object.values(BillWhen).map((item) => (
-                <SelectItem key={item} value={item}>
-                  {keyToTitleFirstCaps(item)}
-                </SelectItem>
-              ))}
+              {Object.values(BillWhen)
+                .filter((item) => item != BillWhen.InAdvance)
+                .map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {keyToTitleFirstCaps(item)}
+                  </SelectItem>
+                ))}
             </SelectContent>
           </Select>
         </div>
@@ -124,7 +143,9 @@ function CreateUsagePrice({
 
       {/* Price */}
       <div className="flex gap-2 w-full">
-        {[BillWhen.InAdvance].includes(config.bill_when) && (
+        {[BillWhen.StartOfPeriod, BillWhen.EndOfPeriod].includes(
+          config.bill_when
+        ) && (
           <div className="w-6/12">
             <FieldLabel>Interval</FieldLabel>
             <Select
@@ -144,6 +165,19 @@ function CreateUsagePrice({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        )}
+
+        {[BillWhen.EndOfPeriod].includes(config.bill_when) && (
+          <div className="w-6/12">
+            <FieldLabel>Billing Units</FieldLabel>
+            <Input
+              type="number"
+              value={config.billing_units}
+              onChange={(e) =>
+                setConfig({ ...config, billing_units: e.target.value })
+              }
+            />
           </div>
         )}
       </div>
@@ -246,17 +280,21 @@ export const UsageTierInput = ({
     );
   }
 
-  const getNumUnits = () => {
-    const entitlement = entitlements?.find(
-      (e) => e.internal_feature_id == config?.internal_feature_id
-    );
-    if (!entitlement) return "n";
+  // const getNumUnits = () => {
+  //   if (config.bill_when == BillWhen.EndOfPeriod) {
+  //     return `${config.billing_units} ` || "n";
+  //   }
 
-    if (entitlement.allowance_type == AllowanceType.Unlimited) return "∞";
-    if (entitlement.allowance_type == AllowanceType.None) return "n";
+  //   const entitlement = entitlements?.find(
+  //     (e) => e.internal_feature_id == config?.internal_feature_id
+  //   );
+  //   if (!entitlement) return "n";
 
-    return `${entitlement.allowance}`;
-  };
+  //   if (entitlement.allowance_type == AllowanceType.Unlimited) return "∞";
+  //   if (entitlement.allowance_type == AllowanceType.None) return "n";
+
+  //   return `${entitlement.allowance} `;
+  // };
 
   return (
     <div className="relative flex-grow mr-1">
@@ -269,10 +307,7 @@ export const UsageTierInput = ({
       />
       {isAmount && (
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px]">
-          /{" "}
-          {entitlements?.find(
-            (e) => e.internal_feature_id == config?.internal_feature_id
-          )?.allowance || "n"}{" "}
+          / {getBillingUnits(config, entitlements!)}
           units
         </span>
       )}

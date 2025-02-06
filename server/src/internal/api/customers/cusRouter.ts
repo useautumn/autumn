@@ -73,6 +73,7 @@ export const getCustomerDetails = async ({
   // Get entitlements
   const balances = await getCusBalancesByEntitlement({
     sb,
+    internalCustomerId: customer.internal_id,
     customerId: customer.id,
     orgId,
     env,
@@ -525,6 +526,13 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
   const group_by = req.query.group_by;
 
   let balances: any[] = [];
+  const customer = await CusService.getById({
+    sb: req.sb,
+    id: customerId,
+    orgId: req.orgId,
+    env: req.env,
+  });
+
   if (group_by == "product") {
     balances = await getCusBalancesByProduct({
       sb: req.sb,
@@ -538,6 +546,7 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
       customerId,
       orgId: req.orgId,
       env: req.env,
+      internalCustomerId: customer.internal_id,
     });
   }
 
