@@ -107,29 +107,21 @@ export const getCustomerDetails = async ({
 
 cusRouter.post("/:search", async (req: any, res: any) => {
   try {
-    const {
-      search,
-      page_size = 100,
-      // page = 1,
-      last_item,
-      first_item,
-    } = req.body;
+    const { search, page_size = 50, page = 1, last_item, filters } = req.body;
 
     const { data: customers, count } = await CusService.searchCustomers({
       sb: req.sb,
       orgId: req.orgId,
       env: req.env,
       search,
-      page: null,
-      pageSize: page_size,
-      filters: {},
+      filters,
       lastItem: last_item,
-      firstItem: first_item,
+      pg: req.pg,
+      pageNumber: page,
+      pageSize: page_size,
     });
 
-    res
-      .status(200)
-      .json({ customers, totalCount: count, count: customers.length });
+    res.status(200).json({ customers, totalCount: count });
   } catch (error) {
     handleRequestError({ error, res, action: "search customers" });
   }

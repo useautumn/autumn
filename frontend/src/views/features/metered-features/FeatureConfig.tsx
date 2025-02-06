@@ -70,7 +70,7 @@ export function FeatureConfig({
     setFeature({
       ...feature,
       name: fields.name,
-      id: fields.id,
+      id: isUpdate ? feature.id : fields.id,
       type: featureType,
       config: meteredConfig,
     });

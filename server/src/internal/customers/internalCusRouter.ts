@@ -30,6 +30,7 @@ cusRouter.post("/search", async (req: any, res: any) => {
   try {
     const { data: customers, count } = await CusService.searchCustomers({
       sb,
+      pg,
       orgId: orgId,
       env,
       search: cleanedQuery,

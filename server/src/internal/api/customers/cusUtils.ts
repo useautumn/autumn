@@ -1,8 +1,10 @@
 import {
   CreateCustomerSchema,
+  CusProductSchema,
   Customer,
+  CustomerSchema,
   Organization,
-  ProcessorType,
+  ProductSchema,
 } from "@autumn/shared";
 
 import { CreateCustomer } from "@autumn/shared";
@@ -13,10 +15,9 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { createStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 
 import { generateId } from "@/utils/genUtils.js";
-import Stripe from "stripe";
+import { z } from "zod";
 
 export const createNewCustomer = async ({
   sb,
@@ -133,4 +134,23 @@ export const attachDefaultProducts = async ({
       nextResetAt,
     });
   }
+};
+
+const CusProductResultSchema = CusProductSchema.extend({
+  customer: CustomerSchema,
+  product: ProductSchema,
+});
+
+export const flipProductResults = (
+  cusProducts: z.infer<typeof CusProductResultSchema>[]
+) => {
+  const customers = [];
+
+  for (const cusProduct of cusProducts) {
+    customers.push({
+      ...cusProduct.customer,
+      customer_products: [cusProduct],
+    });
+  }
+  return customers;
 };
