@@ -5,11 +5,18 @@ import { StatusCodes } from "http-status-codes";
 
 export class ProductService {
   // GET
-  static async get(sb: SupabaseClient, productId: string) {
+  static async get(
+    sb: SupabaseClient,
+    productId: string,
+    orgId: string,
+    env: AppEnv
+  ) {
     const { data, error } = await sb
       .from("products")
       .select("*")
       .eq("id", productId)
+      .eq("org_id", orgId)
+      .eq("env", env)
       .single();
 
     if (error) {
@@ -162,14 +169,23 @@ export class ProductService {
     return data;
   }
 
-  static async getEntitlementsByProductId(
-    sb: SupabaseClient,
-    productId: string
-  ) {
+  static async getEntitlementsByProductId({
+    sb,
+    productId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    productId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
     const { data, error } = await sb
       .from("entitlements")
       .select("*, feature:features(id, name, type)")
-      .eq("product_id", productId);
+      .eq("product_id", productId)
+      .eq("org_id", orgId)
+      .eq("env", env);
 
     if (error) {
       if (error.code !== "PGRST116") {

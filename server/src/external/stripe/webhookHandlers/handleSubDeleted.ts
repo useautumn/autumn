@@ -24,6 +24,8 @@ export const handleSubscriptionDeleted = async ({
   const cusProduct = await CusProductService.getActiveByStripeSubId({
     sb,
     stripeSubId: subscription.id,
+    orgId: org.id,
+    env,
   });
 
   if (

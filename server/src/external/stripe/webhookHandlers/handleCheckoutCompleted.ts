@@ -104,6 +104,8 @@ export const handleCheckoutSessionCompleted = async ({
     const exists = await CusProductService.getActiveByStripeSubId({
       sb,
       stripeSubId: checkoutSession.subscription as string,
+      orgId: org.id,
+      env,
     });
 
     if (exists) {
