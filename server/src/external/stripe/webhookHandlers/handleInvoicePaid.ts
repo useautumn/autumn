@@ -1,18 +1,21 @@
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { Organization } from "@autumn/shared";
+import { AppEnv, Organization } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
+import chalk from "chalk";
 import Stripe from "stripe";
 
 export const handleInvoicePaid = async ({
   sb,
   org,
   invoice,
+  env,
   event,
 }: {
   sb: SupabaseClient;
   org: Organization;
   invoice: Stripe.Invoice;
+  env: AppEnv;
   event: Stripe.Event;
 }) => {
   if (invoice.subscription) {
@@ -20,9 +23,18 @@ export const handleInvoicePaid = async ({
     const cusProduct = await CusProductService.getActiveByStripeSubId({
       sb,
       stripeSubId: invoice.subscription as string,
+      orgId: org.id,
+      env,
     });
 
     if (!cusProduct) {
+      // TODO: Send alert
+      console.log(
+        `   ERROR | ${chalk.red("❌")} invoice.paid: customer product not found`
+      );
+      console.log(
+        `   Event ID: ${event.id}, Subscription ID: ${invoice.subscription}, Org ID: ${org.id}, Env: ${env}`
+      );
       return;
     }
 

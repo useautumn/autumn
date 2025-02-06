@@ -39,7 +39,6 @@ stripeWebhookRouter.post(
     }
 
     const webhookSecret = getStripeWebhookSecret(org, env);
-
     try {
       event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
     } catch (err: any) {
@@ -48,6 +47,9 @@ stripeWebhookRouter.post(
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
+
+    // For testing
+    // event = JSON.parse(request.body.toString());
 
     console.log(
       `${chalk.gray(new Date().toISOString())} ${chalk.yellow(
@@ -103,6 +105,7 @@ stripeWebhookRouter.post(
             sb: request.sb,
             org,
             invoice,
+            env,
             event,
           });
           break;

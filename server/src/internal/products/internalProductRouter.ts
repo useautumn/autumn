@@ -72,10 +72,12 @@ productRouter.get("/:productId", async (req: any, res) => {
       env: req.env,
     });
 
-    const entitlements = await ProductService.getEntitlementsByProductId(
-      req.sb,
-      productId
-    );
+    const entitlements = await ProductService.getEntitlementsByProductId({
+      sb: req.sb,
+      productId,
+      orgId: req.orgId,
+      env: req.env,
+    });
 
     const prices = await PriceService.getPricesByProductId(req.sb, productId);
 

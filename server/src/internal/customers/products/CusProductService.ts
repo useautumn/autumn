@@ -8,6 +8,12 @@ import {
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
+const ACTIVE_STATUSES = [
+  CusProductStatus.Active,
+  CusProductStatus.Scheduled,
+  // CusProductStatus.PastDue,
+];
+
 export class CusProductService {
   static async createCusProduct({
     sb,
@@ -146,15 +152,21 @@ export class CusProductService {
   static async getActiveByStripeSubId({
     sb,
     stripeSubId,
+    orgId,
+    env,
   }: {
     sb: SupabaseClient;
     stripeSubId: string;
+    orgId: string;
+    env: AppEnv;
   }) {
     const { data, error } = await sb
       .from("customer_products")
-      .select("*, product:products(*), customer:customers(*)")
+      .select("*, product:products(*), customer:customers!inner(*)")
       .eq("processor->>subscription_id", stripeSubId)
-      .neq("status", CusProductStatus.Expired)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env)
+      .in("status", ACTIVE_STATUSES)
       .single();
 
     if (error) {
