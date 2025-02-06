@@ -335,9 +335,14 @@ attachRouter.post("/attach", async (req: any, res) => {
     // -------------------- ATTACH PRODUCT --------------------
 
     // SCENARIO 1: Free product, no existing product
+    const curProductFree = isFreeProduct(
+      currentProduct?.customer_prices.map((cp: any) => cp.price)
+    );
+    const newProductFree = isFreeProduct(attachParams.prices);
     if (
-      (!currentProduct && isFreeProduct(attachParams.prices)) ||
-      (attachParams.product.is_add_on && isFreeProduct(attachParams.prices))
+      (!currentProduct && newProductFree) ||
+      (curProductFree && newProductFree) ||
+      (attachParams.product.is_add_on && newProductFree)
     ) {
       await handleAddFreeProduct({
         req,
@@ -346,6 +351,8 @@ attachRouter.post("/attach", async (req: any, res) => {
       });
       return;
     }
+
+    console.log("Is free product", isFreeProduct(attachParams.prices));
 
     // SCENARIO 2: No payment method, checkout required
     const paymentMethod = await getCusPaymentMethod({

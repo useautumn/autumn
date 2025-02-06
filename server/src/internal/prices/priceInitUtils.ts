@@ -5,6 +5,7 @@ import {
   BillingType,
   CreatePrice,
   CreatePriceSchema,
+  Entitlement,
   ErrCode,
   Feature,
   FixedPriceConfigSchema,
@@ -122,6 +123,7 @@ const handleStripePrices = async ({
   org,
   env,
   features,
+  entitlements,
 }: {
   sb: SupabaseClient;
   product: Product;
@@ -129,6 +131,7 @@ const handleStripePrices = async ({
   org: Organization;
   env: AppEnv;
   features: Feature[];
+  entitlements: Entitlement[];
 }) => {
   // First get features that need a meter
   const stripeCli = createStripeCli({
@@ -173,7 +176,12 @@ const handleStripePrices = async ({
         // unit_amount: ,
         billing_scheme: "tiered",
         tiers_mode: "volume",
-        // tiers: priceToStripeTiers(price, feature!),
+        tiers: priceToStripeTiers(
+          price,
+          entitlements.find(
+            (e) => e.internal_feature_id === feature!.internal_id
+          )!
+        ),
         currency: "usd",
         recurring: {
           ...(billingIntervalToStripe(config.interval!) as any),
@@ -203,6 +211,7 @@ export const handleNewPrices = async ({
   product,
   org,
   env,
+  entitlements,
 }: {
   sb: SupabaseClient;
   newPrices: Price[];
@@ -213,6 +222,7 @@ export const handleNewPrices = async ({
   product: Product;
   org: Organization;
   env: AppEnv;
+  entitlements: Entitlement[];
 }) => {
   const orgId = org.id;
 
@@ -292,6 +302,7 @@ export const handleNewPrices = async ({
     org,
     env,
     features,
+    entitlements,
   });
   await PriceService.insert({ sb, data: createdPrices });
 

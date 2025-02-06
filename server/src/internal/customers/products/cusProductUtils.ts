@@ -558,19 +558,6 @@ export const getFullCusProductData = async ({
     };
   }
 
-  // 1. Get prices
-  const prices = await handleNewPrices({
-    sb,
-    newPrices: pricesInput,
-    curPrices: fullProduct.prices,
-    internalProductId: fullProduct.internal_id,
-    isCustom,
-    features,
-    env,
-    product: fullProduct,
-    org,
-  });
-
   const entitlements = await handleNewEntitlements({
     sb,
     newEnts: entsInput,
@@ -585,6 +572,20 @@ export const getFullCusProductData = async ({
     ...ent,
     feature: features.find((f) => f.internal_id === ent.internal_feature_id),
   }));
+
+  // 1. Get prices
+  const prices = await handleNewPrices({
+    sb,
+    newPrices: pricesInput,
+    curPrices: fullProduct.prices,
+    internalProductId: fullProduct.internal_id,
+    isCustom,
+    features,
+    env,
+    product: fullProduct,
+    org,
+    entitlements: entitlementsWithFeature,
+  });
 
   const freeTrial = await handleNewFreeTrial({
     sb,

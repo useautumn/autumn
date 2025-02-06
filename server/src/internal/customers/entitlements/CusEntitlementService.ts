@@ -62,8 +62,12 @@ export class CustomerEntitlementService {
       .from("customer_entitlements")
       .select(
         `*, 
-        entitlement:entitlements!inner(*, feature:features!inner(*)), 
-        customer_product:customer_products!inner(*, product:products!inner(*))`
+        entitlement:entitlements!inner(
+          *, feature:features!inner(*)
+        ), 
+        customer_product:customer_products!inner(
+          *, product:products!inner(*)
+        )`
       )
       .eq("internal_customer_id", internalCustomerId)
       .eq("customer_product.status", "active");
@@ -108,16 +112,21 @@ export class CustomerEntitlementService {
     orgId: string;
     env: string;
   }) {
+    console.log("Getting entitlements for customer: ", customerId);
     const { data, error } = await sb
       .from("customer_entitlements")
       .select(
         `*, 
           customer:customers!inner(*), 
-          entitlement:entitlements!inner(*, feature:features!inner(*)), 
-          customer_product:customer_products!inner(*, product:products!inner(*))
+          entitlement:entitlements!inner(
+            *, feature:features!inner(*)
+          ), 
+          customer_product:customer_products!inner(
+            *, product:products!inner(*)
+          )
         `
       )
-      .eq("customer_id", customerId)
+      .eq("customer.id", customerId)
       .eq("customer.org_id", orgId)
       .eq("customer.env", env)
       .eq("customer_product.status", "active");
