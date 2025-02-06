@@ -232,7 +232,7 @@ productApiRouter.post("/:productId", async (req: any, res) => {
       sb,
       newPrices: prices,
       curPrices: fullProduct.prices,
-
+      entitlements,
       internalProductId: fullProduct.internal_id,
       isCustom: false,
       features,
