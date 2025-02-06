@@ -34,7 +34,7 @@ cusRouter.post("/search", async (req: any, res: any) => {
       orgId: orgId,
       env,
       search: cleanedQuery,
-      page: pageInt,
+      pageNumber: pageInt,
       filters,
     });
 
