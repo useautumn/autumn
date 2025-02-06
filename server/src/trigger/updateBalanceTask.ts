@@ -186,22 +186,22 @@ export const updateCustomerBalance = async ({
 
     // Send balance updated event to channel
 
-    console.log(
-      `   - Sending balance update event. Feature ${chalk.yellow(
-        feature.id
-      )}, Balance ${chalk.yellow(
-        curBalance - deduction
-      )}, Customer ${chalk.yellow(customer.id)}`
-    );
+    // console.log(
+    //   `   - Sending balance update event. Feature ${chalk.yellow(
+    //     feature.id
+    //   )}, Balance ${chalk.yellow(
+    //     curBalance - deduction
+    //   )}, Customer ${chalk.yellow(customer.id)}`
+    // );
 
-    await channel.send({
-      type: "broadcast",
-      event: SbChannelEvent.BalanceUpdated,
-      payload: {
-        feature_id: feature.id,
-        balance: curBalance - deduction,
-      },
-    });
+    // await channel.send({
+    //   type: "broadcast",
+    //   event: SbChannelEvent.BalanceUpdated,
+    //   payload: {
+    //     feature_id: feature.id,
+    //     balance: curBalance - deduction,
+    //   },
+    // });
 
     if (error) {
       console.error(

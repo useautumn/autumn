@@ -11,7 +11,7 @@ import {
   Feature,
   FeatureType,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";

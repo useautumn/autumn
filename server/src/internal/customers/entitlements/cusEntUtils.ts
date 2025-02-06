@@ -233,18 +233,28 @@ export const getCusBalancesByEntitlement = async ({
   customerId,
   orgId,
   env,
+  internalCustomerId,
 }: {
   sb: SupabaseClient;
   customerId: string;
   orgId: string;
   env: string;
+  internalCustomerId: string;
 }) => {
-  const cusEnts = await CustomerEntitlementService.getActiveByCustomerId({
-    sb,
-    customerId,
-    orgId,
-    env,
-  });
+  const cusEnts =
+    await CustomerEntitlementService.getActiveByInternalCustomerId({
+      sb,
+      internalCustomerId,
+    });
+
+  // console.log("Cus ents: ", cusEnts);
+
+  // const cusEnts = await CustomerEntitlementService.getActiveByCustomerId({
+  //   sb,
+  //   customerId,
+  //   orgId,
+  //   env,
+  // });
 
   const data: Record<string, any> = {};
 

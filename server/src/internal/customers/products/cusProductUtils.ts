@@ -564,8 +564,11 @@ export const getFullCusProductData = async ({
     newPrices: pricesInput,
     curPrices: fullProduct.prices,
     internalProductId: fullProduct.internal_id,
-    orgId,
     isCustom,
+    features,
+    env,
+    product: fullProduct,
+    org,
   });
 
   const entitlements = await handleNewEntitlements({

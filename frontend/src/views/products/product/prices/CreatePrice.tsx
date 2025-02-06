@@ -8,15 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
-import {
-  PricingConfig,
-  validateConfig,
-  validateFixedConfig,
-  validateUsageConfig,
-} from "./PricingConfig";
+import { PricingConfig, validateConfig } from "./PricingConfig";
 import { CreatePriceSchema, PriceType } from "@autumn/shared";
 import { useProductContext } from "../ProductContext";
-import { generateId } from "@/utils/genUtils";
 
 export const CreatePrice = () => {
   const [open, setOpen] = useState(false);

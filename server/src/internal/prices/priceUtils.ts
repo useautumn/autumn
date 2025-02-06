@@ -14,7 +14,6 @@ import {
   ErrCode,
 } from "@autumn/shared";
 import { AttachParams } from "../customers/products/AttachParams.js";
-import RecaseError from "@/utils/errorUtils.js";
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
   if (
@@ -27,10 +26,15 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
   }
 
   let usageConfig = config as UsagePriceConfig;
-  if (usageConfig.bill_when == BillWhen.InAdvance) {
+  if (
+    usageConfig.bill_when == BillWhen.InAdvance ||
+    usageConfig.bill_when == BillWhen.StartOfPeriod
+  ) {
     return BillingType.UsageInAdvance;
   } else if (usageConfig.bill_when == BillWhen.BelowThreshold) {
     return BillingType.UsageBelowThreshold;
+  } else if (usageConfig.bill_when == BillWhen.EndOfPeriod) {
+    return BillingType.UsageInArrear;
   }
 
   return BillingType.UsageInArrear;
@@ -99,6 +103,16 @@ export const haveDifferentRecurringIntervals = (prices: Price[]) => {
 };
 
 // Get bill now vs bill later prices
+export const getCheckoutRelevantPrices = (prices: Price[]) => {
+  return prices.filter(
+    (price) =>
+      price.billing_type == BillingType.OneOff ||
+      price.billing_type == BillingType.FixedCycle ||
+      price.billing_type == BillingType.UsageInAdvance ||
+      price.billing_type == BillingType.UsageInArrear
+  );
+};
+
 export const getBillNowPrices = (prices: Price[]) => {
   return prices.filter(
     (price) =>
@@ -209,13 +223,14 @@ export const getStripeSubItems = ({
   isCheckout?: boolean;
 }) => {
   const { product, prices, entitlements, optionsList, org } = attachParams;
-  const billNowPrices = getBillNowPrices(prices);
+  // const billNowPrices = getBillNowPrices(prices);
+  const checkoutRelevantPrices = getCheckoutRelevantPrices(prices);
 
   let subItems: any[] = [];
   let itemMetas: any[] = [];
 
   // TODO: Check if non bill now prices can be added to stripe subscription...?
-  for (const price of billNowPrices) {
+  for (const price of checkoutRelevantPrices) {
     const priceEnt = getPriceEntitlement(price, entitlements);
     const options = getEntOptions(optionsList, priceEnt);
 
@@ -230,6 +245,9 @@ export const getStripeSubItems = ({
     subItems.push(lineItem);
     itemMetas.push(lineItemMeta);
   }
+
+  console.log("Line items: ", subItems);
+
   return { items: subItems, itemMetas };
 };
 
@@ -269,4 +287,24 @@ export const getPriceAmount = (price: Price, options: FeatureOptions) => {
     amountPerUnit: -1,
     quantity: -1,
   };
+};
+
+export const priceToStripeTiers = (
+  price: Price,
+  entitlement: EntitlementWithFeature
+) => {
+  let usageConfig = price.config as UsagePriceConfig;
+  const tiers: any[] = [];
+  for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
+    const tier = usageConfig.usage_tiers[i];
+    tiers.push({
+      unit_amount: tier.amount * 100,
+      up_to: tier.to == -1 ? "inf" : tier.to,
+    });
+  }
+  return tiers;
+};
+
+export const priceToEventName = (productName: string, featureName: string) => {
+  return `${productName} - ${featureName}`;
 };

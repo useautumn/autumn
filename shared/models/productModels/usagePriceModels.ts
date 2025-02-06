@@ -2,13 +2,13 @@ import { z } from "zod";
 import { BillingInterval } from "./fixedPriceModels.js";
 
 export enum BillWhen {
+  // Deprecated
   InAdvance = "in_advance",
-  BelowThreshold = "below_threshold",
 
-  // Usage Debt
-  // OnBillingCycle = "on_billing_cycle",
-  // OnUsage = "on_usage",
-  // Usage Credit
+  // Latest
+  StartOfPeriod = "start_of_period",
+  EndOfPeriod = "end_of_period",
+  BelowThreshold = "below_threshold",
 }
 
 export const UsageTier = z.object({
@@ -20,12 +20,19 @@ export const UsageTier = z.object({
 export const UsagePriceConfigSchema = z.object({
   type: z.string(),
   bill_when: z.nativeEnum(BillWhen),
+  billing_units: z.number().nullish(),
+
   // entitlement_id: z.string().nullish(),
   internal_feature_id: z.string(),
   feature_id: z.string(),
 
   usage_tiers: z.array(UsageTier),
   interval: z.nativeEnum(BillingInterval).optional(),
+
+  // For usage in arrear
+  stripe_meter_id: z.string().nullish(),
+  stripe_price_id: z.string().nullish(),
+  stripe_event_name: z.string().nullish(),
 });
 
 export type UsagePriceConfig = z.infer<typeof UsagePriceConfigSchema>;

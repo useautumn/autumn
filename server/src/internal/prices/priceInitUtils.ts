@@ -1,16 +1,27 @@
-import { formatZodError } from "@/utils/errorUtils.js";
+import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
 import { compareObjects, generateId } from "@/utils/genUtils.js";
 import {
+  AppEnv,
+  BillingType,
   CreatePrice,
   CreatePriceSchema,
+  ErrCode,
+  Feature,
   FixedPriceConfigSchema,
+  Organization,
   Price,
   PriceType,
+  Product,
+  UsagePriceConfig,
   UsagePriceConfigSchema,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { getBillingType } from "./priceUtils.js";
+import { getBillingType, priceToStripeTiers } from "./priceUtils.js";
 import { PriceService } from "./PriceService.js";
+import {
+  billingIntervalToStripe,
+  createStripeCli,
+} from "@/external/stripe/utils.js";
 
 // GET PRICES
 const validatePrice = (price: Price) => {
@@ -104,21 +115,107 @@ const initPrice = ({
   };
 };
 
+const handleStripePrices = async ({
+  sb,
+  product,
+  prices,
+  org,
+  env,
+  features,
+}: {
+  sb: SupabaseClient;
+  product: Product;
+  prices: Price[];
+  org: Organization;
+  env: AppEnv;
+  features: Feature[];
+}) => {
+  // First get features that need a meter
+  const stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
+  // Contains usage in arrear
+  const inArrearExists = prices.some(
+    (p) => getBillingType(p.config!) == BillingType.UsageInArrear
+  );
+
+  if (inArrearExists && !org.stripe_connected) {
+    throw new RecaseError({
+      message: "Stripe connection required for usage-based, end of period",
+      code: ErrCode.StripeConfigNotFound,
+      statusCode: 400,
+    });
+  }
+
+  for (const price of prices) {
+    const config = price.config! as UsagePriceConfig;
+    const billingType = getBillingType(config);
+    if (billingType == BillingType.UsageInArrear) {
+      const feature = features.find(
+        (f) => f.internal_id === config.internal_feature_id
+      );
+
+      const meter = await stripeCli.billing.meters.create({
+        display_name: `${product.name} - ${feature!.name}`,
+        event_name: price.id!,
+        default_aggregation: {
+          formula: "sum",
+        },
+      });
+
+      const stripePrice = await stripeCli.prices.create({
+        // product: product.processor!.id,
+        product_data: {
+          name: `${product.name} - ${feature!.name}`,
+        },
+        // unit_amount: ,
+        billing_scheme: "tiered",
+        tiers_mode: "volume",
+        // tiers: priceToStripeTiers(price, feature!),
+        currency: "usd",
+        recurring: {
+          ...(billingIntervalToStripe(config.interval!) as any),
+          meter: meter.id,
+          usage_type: "metered",
+        },
+      });
+
+      let newUsageConfig = {
+        ...config,
+        stripe_meter_id: meter.id,
+        stripe_price_id: stripePrice.id,
+      };
+
+      price.config = newUsageConfig;
+    }
+  }
+};
+
 export const handleNewPrices = async ({
   sb,
   newPrices,
   curPrices,
-  orgId,
   internalProductId,
   isCustom = false,
+  features,
+  product,
+  org,
+  env,
 }: {
   sb: SupabaseClient;
   newPrices: Price[];
   curPrices: Price[];
   internalProductId: string;
-  orgId: string;
   isCustom: boolean;
+  features: Feature[];
+  product: Product;
+  org: Organization;
+  env: AppEnv;
 }) => {
+  const orgId = org.id;
+
   const idToPrice: { [key: string]: Price } = {};
   for (const price of curPrices) {
     idToPrice[price.id!] = price;
@@ -131,6 +228,7 @@ export const handleNewPrices = async ({
 
   const createdPrices: Price[] = [];
   const updatedPrices: Price[] = [];
+  let newInArrearPrices: Price[] = [];
 
   for (let newPrice of newPrices) {
     // Validate price
@@ -171,12 +269,33 @@ export const handleNewPrices = async ({
         ...newPrice,
         billing_type: getBillingType(newPrice.config!),
       });
+      if (getBillingType(newPrice.config!) == BillingType.UsageInArrear) {
+        newInArrearPrices.push(newPrice);
+      }
     }
   }
 
+  // Handle new in arrear prices
+  newInArrearPrices = [
+    ...newInArrearPrices,
+    ...createdPrices.filter(
+      (p) => getBillingType(p.config!) == BillingType.UsageInArrear
+    ),
+  ];
+
   // console.log("Created Ents: ", createdEnts);
   // 1. Create new entitlements
+  await handleStripePrices({
+    sb,
+    product,
+    prices: newInArrearPrices,
+    org,
+    env,
+    features,
+  });
   await PriceService.insert({ sb, data: createdPrices });
+
+  // For created prices, create Stripe price if not already created
 
   // 2. Update existing entitlements and delete removed ones
   if (!isCustom) {

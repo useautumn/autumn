@@ -91,6 +91,22 @@ export const priceToStripeItem = ({
       feature_id: config.feature_id,
       price_id: price.id,
     };
+  } else if (billingType == BillingType.UsageInArrear) {
+    // TODO: Implement this
+    const config = price.config as UsagePriceConfig;
+    const priceId = config.stripe_price_id;
+
+    if (!priceId) {
+      throw new RecaseError({
+        code: ErrCode.PriceNotFound,
+        message: `Couldn't find price: ${price.name}, ${price.id} in Stripe`,
+        statusCode: 400,
+      });
+    }
+
+    lineItem = {
+      price: priceId,
+    };
   }
 
   return {

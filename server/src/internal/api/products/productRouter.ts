@@ -16,7 +16,6 @@ import {
   deleteStripeProduct,
 } from "@/external/stripe/stripeProductUtils.js";
 
-import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -177,6 +176,11 @@ productApiRouter.post("/:productId", async (req: any, res) => {
 
   const features = await FeatureService.getFromReq(req);
 
+  const org = await OrgService.getFullOrg({
+    sb,
+    orgId,
+  });
+
   try {
     // 1. Get full product
     const fullProduct = await ProductService.getFullProductStrict({
@@ -228,9 +232,13 @@ productApiRouter.post("/:productId", async (req: any, res) => {
       sb,
       newPrices: prices,
       curPrices: fullProduct.prices,
-      orgId,
+
       internalProductId: fullProduct.internal_id,
       isCustom: false,
+      features,
+      product: fullProduct,
+      env,
+      org,
     });
 
     res.status(200).send({ message: "Product updated" });

@@ -17,11 +17,12 @@ import { PricingTypeBadge } from "./PricingTypeBadge";
 import { formatCurrency } from "@/utils/formatUtils/formatTextUtils";
 import UpdatePricing from "./UpdatePricing";
 import { useProductContext } from "../ProductContext";
+import { getBillingUnits } from "@/utils/product/priceUtils";
 
 // import UpdatePricing from "./UpdatePricing";
 
 export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
-  const { org } = useProductContext();
+  const { org, product } = useProductContext();
 
   const formatAmount = (config: any, type: string) => {
     const currency = org.default_currency || "USD";
@@ -44,6 +45,7 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
       );
     } else if (type === "usage") {
       // Handle usage price - just show min and max amounts
+      const numUnits = getBillingUnits(config, product.entitlements!);
       if (config.usage_tiers.length > 1) {
         const amounts = config.usage_tiers.map((tier) => tier.amount);
         const minAmount = formatCurrency(Math.min(...amounts));
@@ -52,7 +54,7 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
         return (
           <>
             {minAmount} - {maxAmount}{" "}
-            <span className="text-t3">per {config.billing_units} units</span>
+            <span className="text-t3">per {numUnits} </span>
           </>
         );
       }
@@ -64,8 +66,7 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
       }).format(config.usage_tiers[0].amount);
       return (
         <>
-          {amount}{" "}
-          <span className="text-t3">per {config.billing_units} units</span>
+          {amount} <span className="text-t3">per {numUnits} units</span>
         </>
       );
     }
@@ -109,9 +110,7 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
               className="cursor-pointer"
               onClick={() => handleRowClick(price, index)}
             >
-              <TableCell>
-                {price.name}
-              </TableCell>
+              <TableCell>{price.name}</TableCell>
               <TableCell>
                 <PricingTypeBadge type={price.config?.type || ""} />
               </TableCell>
@@ -120,10 +119,7 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
               </TableCell>
               <TableCell> </TableCell>
               <TableCell className="min-w-20 w-24">
-                <span>
-                  {formatUnixToDateTime(price.created_at).date}
-                </span>
-                {" "}
+                <span>{formatUnixToDateTime(price.created_at).date}</span>{" "}
                 <span className="text-t3">
                   {formatUnixToDateTime(price.created_at).time}
                 </span>

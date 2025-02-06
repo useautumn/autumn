@@ -66,7 +66,7 @@ export class CusProductService {
   }) {
     const { data, error } = await sb
       .from("customer_products")
-      .select("*, product:product_id(*)")
+      .select("*, product:products!inner(*)")
       .eq("internal_customer_id", cusId);
 
     if (error) {
