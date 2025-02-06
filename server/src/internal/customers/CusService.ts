@@ -5,6 +5,8 @@ import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
 import { CusProductService } from "./products/CusProductService.js";
+import { flipProductResults } from "../api/customers/cusUtils.js";
+import { format } from "date-fns";
 
 export class CusService {
   static async getById({
@@ -205,107 +207,215 @@ export class CusService {
   }
 
   //search customers
-  static async searchCustomers({
+
+  static addPaginationAndSearch = ({
+    query,
+    search,
+    pageNumber,
+    pageSize,
+    lastItem,
+    customerPrefix = "",
+  }: {
+    query: any;
+    search: string;
+    pageNumber: number | null;
+    pageSize: number;
+    lastItem: any;
+    customerPrefix: string;
+  }) => {
+    if (search && search !== "") {
+      query.or(
+        `"name".ilike.%${search}%, ` +
+          `"email".ilike.%${search}%, ` +
+          `"id".ilike.%${search}%`,
+        customerPrefix && {
+          foreignTable: "customers",
+          referencedTable: "customers",
+        }
+      );
+    }
+
+    console.log("pageNumber", pageNumber);
+    if (pageNumber) {
+      const from = (pageNumber - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query.range(from, to);
+    } else if (lastItem) {
+      console.log("Using last item");
+      query.or(
+        `"created_at".lt.${lastItem.created_at},` +
+          `and("created_at".eq.${lastItem.created_at},"internal_id".gt.${lastItem.internal_id})`,
+        customerPrefix && {
+          foreignTable: "customers",
+          referencedTable: "customers",
+        }
+      );
+    }
+
+    query.order("created_at", {
+      foreignTable: customerPrefix.slice(0, -1),
+      ascending: false,
+    });
+
+    query.order("internal_id", {
+      foreignTable: customerPrefix.slice(0, -1),
+      ascending: true,
+    });
+    query.limit(pageSize);
+  };
+
+  static async searchCustomersByProduct({
     sb,
+    pg,
     orgId,
     env,
     search,
-    page,
+    filters,
+    pageSize,
+    lastItem,
+    pageNumber,
+  }: {
+    sb: SupabaseClient;
+    pg: Client;
+    orgId: string;
+    env: AppEnv;
+    search: string;
+    filters: any;
+    pageSize: number;
+    lastItem: any;
+    pageNumber: number;
+  }) {
+    const query = sb
+      .from("customer_products")
+      .select(
+        "*, customer:customers!inner(*), product:products!inner(id, name)",
+        {
+          count: "exact",
+        }
+      )
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env);
+
+    if (filters.product_id) {
+      query.eq("product.id", filters.product_id);
+    }
+
+    if (filters?.status === "canceled") {
+      console.log("Adding canceled filter");
+      query
+        .eq("status", CusProductStatus.Active)
+        .not("canceled_at", "is", null);
+    } else if (filters?.status === "free_trial") {
+      console.log("Adding free trial filter");
+      query
+        .eq("status", CusProductStatus.Active)
+        .gt("trial_ends_at", Date.now());
+    }
+
+    this.addPaginationAndSearch({
+      query,
+      search,
+      pageNumber,
+      pageSize,
+      lastItem,
+      customerPrefix: "customers.",
+    });
+
+    const { data, count, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    // Flip
+
+    const customers = flipProductResults(data);
+
+    return { data: customers, count };
+  }
+  static async searchCustomers({
+    sb,
+    pg,
+    orgId,
+    env,
+    search,
     pageSize = 50,
     filters,
     lastItem,
-    firstItem,
+    pageNumber,
   }: {
+    pg: Client;
     sb: SupabaseClient;
     orgId: string;
     env: AppEnv;
     search: string;
-    page?: number | null;
-    pageSize?: number;
     lastItem?: { created_at: string; name: string; internal_id: string } | null;
-    firstItem?: {
-      created_at: string;
-      name: string;
-      internal_id: string;
-    } | null;
-
     filters: any;
+    pageSize?: number;
+    pageNumber: number;
   }) {
-    let from, to;
-    if (page) {
-      from = (page - 1) * pageSize;
-      to = from + pageSize - 1;
+    if (filters.product_id || filters.status) {
+      return await this.searchCustomersByProduct({
+        sb,
+        pg,
+        orgId,
+        env,
+        search,
+        filters,
+        pageSize,
+        lastItem,
+        pageNumber,
+      });
     }
 
     let select =
       "*, customer_products:customer_products(*, product:products(*))";
 
     if (filters.status || filters.product_id) {
-      select = `*, customer_products:customer_products!inner(*, product:products!inner(*))`;
+      select = `*, customer_products:customer_products!inner(*, product:products(*))`;
     }
 
     let query = sb
       .from("customers")
       .select(select, {
-        // count: "exact",
-        count: "planned",
+        count: "exact",
+        // count: "planned", // use for 1M rows...?
       })
       .eq("org_id", orgId)
-      .eq("env", env)
-      .order("created_at", { ascending: false })
-      .order("name", { ascending: true })
-      .order("internal_id", { ascending: true })
-      .limit(pageSize);
+      .eq("env", env);
 
-    if (page) {
-      query.range(from!, to!);
-    } else if (firstItem) {
-      query.or(
-        `created_at.gt.${firstItem.created_at},` +
-          `and(created_at.eq.${firstItem.created_at},name.lt.${firstItem.name}),` +
-          `and(created_at.eq.${firstItem.created_at},name.eq.${firstItem.name},internal_id.lt.${firstItem.internal_id})`
-      );
-    } else if (lastItem) {
-      query.or(
-        `created_at.lt.${lastItem.created_at},` +
-          `and(created_at.eq.${lastItem.created_at},name.gt.${lastItem.name}),` +
-          `and(created_at.eq.${lastItem.created_at},name.eq.${lastItem.name},internal_id.gt.${lastItem.internal_id})`
-      );
-    }
+    this.addPaginationAndSearch({
+      query,
+      search,
+      pageNumber: null,
+      pageSize,
+      lastItem,
+      customerPrefix: "",
+    });
+    // if (filters?.status === "canceled") {
+    //   console.log("Adding canceled filter");
+    //   query
+    //     .not("customer_products.canceled_at", "is", null)
+    //     .gt("customer_products.canceled_at", Date.now());
+    // } else if (filters?.status === "free_trial") {
+    //   console.log("Adding free trial filter");
+    //   query
+    //     .eq("customer_products.status", CusProductStatus.Active)
+    //     .gt("customer_products.trial_ends_at", Date.now());
+    // }
 
-    if (search && search !== "") {
-      console.log("Adding search filter:", search);
-      query.or(
-        `name.ilike.%${search}%,email.ilike.%${search}%,id.ilike.%${search}%`
-      );
-    }
-
-    if (filters?.status === "canceled") {
-      console.log("Adding canceled filter");
-      query
-        .not("customer_products.canceled_at", "is", null)
-        .gt("customer_products.canceled_at", Date.now());
-    } else if (filters?.status === "free_trial") {
-      console.log("Adding free trial filter");
-      query
-        .eq("customer_products.status", CusProductStatus.Active)
-        .gt("customer_products.trial_ends_at", Date.now());
-    }
-
-    if (filters?.product_id) {
-      query.eq("customer_products.product.id", filters.product_id);
-    }
+    // if (filters?.product_id) {
+    //   console.log("Filtering for product:", filters.product_id);
+    //   query.eq("customer_products.product.id", filters.product_id);
+    // }
 
     const { data, count, error } = await query;
-
-    // console.log(data);
-    // return { data: [], count: 0 };
 
     if (error) {
       throw error;
     }
-
-    return { data, count };
+    const totalCount = count && count + pageSize * (pageNumber - 1);
+    return { data, count: totalCount };
   }
 
   static async getCustomers(

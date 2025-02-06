@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { AppEnv } from "@autumn/shared";
 import { useAxiosPostSWR, useAxiosSWR } from "@/services/useAxiosSwr";
 import { CustomersContext } from "./CustomersContext";
@@ -17,18 +17,24 @@ import CreateCustomer from "./CreateCustomer";
 import { SearchBar } from "./SearchBar";
 import LoadingScreen from "../general/LoadingScreen";
 import FilterButton from "./FilterButton";
+import { debounce } from "lodash";
+import SmallSpinner from "@/components/general/SmallSpinner";
 
 function CustomersView({ env }: { env: AppEnv }) {
   // const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const pageSize = 50;
-  const [currentPage, setCurrentPage] = React.useState(1);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [filters, setFilters] = React.useState<any>({});
-  const [lastItemStack, setLastItemStack] = React.useState<any[]>([]);
-  // url: debouncedSearch
-  //   ? `/customers/search?search=${debouncedSearch}&page=${currentPage}`
-  //   : `/customers?page=${currentPage}`,
-  // Get products
+  // const [currentPage, setCurrentPage] = React.useState(1);
+  // const [lastItemStack, setLastItemStack] = React.useState<any[]>([]);
+  const [pagination, setPagination] = React.useState<{
+    page: number;
+    lastItemStack: any;
+  }>({
+    page: 1,
+    lastItemStack: [],
+  });
+  const [paginationLoading, setPaginationLoading] = React.useState(false);
 
   const { data: productsData, isLoading: productsLoading } = useAxiosSWR({
     url: `/products/data`,
@@ -36,34 +42,26 @@ function CustomersView({ env }: { env: AppEnv }) {
   });
 
   const { data, isLoading, error, mutate } = useAxiosPostSWR({
-    url: `/customers/search`,
+    url: `/v1/customers/search`,
     env,
     data: {
-      page: currentPage,
+      page: pagination.page,
+      page_size: pageSize,
       search: searchQuery,
       filters,
-      last_item: lastItemStack[lastItemStack.length - 1],
+      last_item: pagination.lastItemStack[pagination.lastItemStack.length - 1],
     },
   });
 
   useEffect(() => {
+    console.log(pagination.lastItemStack[pagination.lastItemStack.length - 1]);
     const fetchData = async () => {
-      // If filters changed (not on mount), reset to page 1 and clear lastItem
-      if (Object.keys(filters).length > 0) {
-        setCurrentPage(1);
-        setLastItemStack([]);
-      }
+      setPaginationLoading(true);
       await mutate();
+      setPaginationLoading(false);
     };
     fetchData();
-  }, [currentPage, filters, mutate]);
-
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     await mutate();
-  //   };
-  //   fetchData();
-  // }, [currentPage, mutate]);
+  }, [pagination, filters, mutate]);
 
   // useEffect(() => {
   //   const updateFilters = async () => {
@@ -76,22 +74,35 @@ function CustomersView({ env }: { env: AppEnv }) {
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
-  // return <LoadingScreen />;
   if (isLoading || productsLoading) {
     return <LoadingScreen />;
   }
 
-  const handleNextPage = () => {
-    const lastItem = data?.customers[data?.customers.length - 1];
-    const newLastItemStack = [...lastItemStack, lastItem];
-    setLastItemStack(newLastItemStack);
-    setCurrentPage(currentPage + 1);
+  const handleNextPage = async () => {
+    if (pagination.page === totalPages) return;
+    setPagination((prev) => {
+      const lastItem = data?.customers[data?.customers.length - 1];
+      const newItem = {
+        created_at: lastItem.created_at,
+        name: lastItem.name,
+        internal_id: lastItem.internal_id,
+      };
+
+      const newLastItemStack = [...prev.lastItemStack, newItem];
+      return {
+        page: prev.page + 1,
+        lastItemStack: newLastItemStack,
+      };
+    });
   };
 
-  const handlePreviousPage = () => {
-    const newLastItemStack = lastItemStack.slice(0, -1);
-    setLastItemStack(newLastItemStack);
-    setCurrentPage(currentPage - 1);
+  const handlePreviousPage = async () => {
+    if (pagination.page === 1) return;
+    const newLastItemStack = pagination.lastItemStack.slice(0, -1);
+    setPagination({
+      page: pagination.page - 1,
+      lastItemStack: newLastItemStack,
+    });
   };
 
   return (
@@ -114,7 +125,13 @@ function CustomersView({ env }: { env: AppEnv }) {
             <SearchBar
               query={searchQuery}
               setQuery={setSearchQuery}
-              setCurrentPage={setCurrentPage}
+              setCurrentPage={(page: number) => {
+                setPagination({
+                  page: page,
+                  lastItemStack: [],
+                });
+                mutate();
+              }}
               mutate={mutate}
             />
             <FilterButton />
@@ -125,27 +142,33 @@ function CustomersView({ env }: { env: AppEnv }) {
                 <span className="font-semibold">{data?.totalCount} </span>
                 {data?.totalCount === 1 ? "Customer" : "Customers"}
               </p>
-              <Pagination className="w-[100px] h-8 text-xs">
-                <PaginationContent className="w-full flex justify-between ">
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={handlePreviousPage}
-                      isActive={currentPage !== 1}
-                      className="text-xs cursor-pointer p-1 h-6"
-                    />
-                  </PaginationItem>
-                  <PaginationItem className="">
-                    {currentPage} / {totalPages}
-                  </PaginationItem>
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={handleNextPage}
-                      isActive={currentPage !== totalPages}
-                      className="text-xs cursor-pointer p-1 h-6"
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+              {paginationLoading ? (
+                <div className="w-[120px] h-8 flex items-center justify-center">
+                  <SmallSpinner />
+                </div>
+              ) : (
+                <Pagination className="w-[120px] h-8 text-xs">
+                  <PaginationContent className="w-full flex justify-between ">
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={handlePreviousPage}
+                        isActive={pagination.page !== 1}
+                        className="text-xs cursor-pointer p-1 h-6"
+                      />
+                    </PaginationItem>
+                    <PaginationItem className="">
+                      {pagination.page} / {totalPages}
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={handleNextPage}
+                        isActive={pagination.page !== totalPages}
+                        className="text-xs cursor-pointer p-1 h-6"
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              )}
             </div>
           )}
         </div>

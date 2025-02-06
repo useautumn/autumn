@@ -132,29 +132,29 @@ export class InvoiceService {
       return;
     }
 
-    // console.log("   ✅ Created invoice from stripe");
+    console.log("   ✅ Created invoice from stripe");
 
-    // // Send monthly_revenue event
-    // try {
-    //   if (!stripeInvoice.livemode) {
-    //     return;
-    //   }
+    // Send monthly_revenue event
+    try {
+      if (!stripeInvoice.livemode) {
+        return;
+      }
 
-    //   const autumn = new Autumn();
-    //   await autumn.sendEvent({
-    //     customerId: org.id,
-    //     eventName: "revenue",
-    //     properties: {
-    //       value: stripeInvoice.total / 100,
-    //     },
-    //     customer_data: {
-    //       name: org.slug,
-    //     },
-    //   });
-    //   console.log("   ✅ Sent revenue event");
-    // } catch (error) {
-    //   console.log("Failed to send revenue event", error);
-    // }
+      const autumn = new Autumn();
+      await autumn.sendEvent({
+        customerId: org.id,
+        eventName: "revenue",
+        properties: {
+          value: stripeInvoice.total / 100,
+        },
+        customer_data: {
+          name: org.slug,
+        },
+      });
+      console.log("   ✅ Sent revenue event");
+    } catch (error) {
+      console.log("Failed to send revenue event", error);
+    }
   }
 
   static async updateByStripeId({
