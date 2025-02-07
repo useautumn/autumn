@@ -356,6 +356,7 @@ entitledRouter.post("", async (req: any, res: any) => {
         customer_data: customer_data,
         event_data: {
           customer_id: customer_id,
+
           ...event_data,
         },
       });
