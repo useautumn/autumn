@@ -15,6 +15,34 @@ const ACTIVE_STATUSES = [
 ];
 
 export class CusProductService {
+  static async getByIdStrict({
+    sb,
+    id,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    id: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("customer_products")
+      .select("*, customer:customers!inner(*)")
+      .eq("id", id)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  }
   static async createCusProduct({
     sb,
     customerProduct,
@@ -166,13 +194,9 @@ export class CusProductService {
       .eq("processor->>subscription_id", stripeSubId)
       .eq("customer.org_id", orgId)
       .eq("customer.env", env)
-      .in("status", ACTIVE_STATUSES)
-      .single();
+      .in("status", ACTIVE_STATUSES);
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
       throw error;
     }
 
@@ -379,6 +403,36 @@ export class CusProductService {
     }
   }
 
+  static async updateStrict({
+    sb,
+    cusProductId,
+    orgId,
+    env,
+    updates,
+  }: {
+    sb: SupabaseClient;
+    cusProductId: string;
+    orgId: string;
+    env: AppEnv;
+    updates: Partial<CusProduct>;
+  }) {
+    const { error } = await sb
+      .from("customer_products")
+      .update(updates)
+      .eq("id", cusProductId)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env);
+
+    if (error) {
+      throw new RecaseError({
+        message: "Error updating customer product status",
+        code: ErrCode.UpdateCusProductFailed,
+        statusCode: 500,
+        data: error,
+      });
+    }
+  }
+
   static async updateByStripeSubId({
     sb,
     stripeSubId,
@@ -426,7 +480,9 @@ export class CusProductService {
       return;
     }
 
-    console.log(`Expiring current product: ${currentProduct.product.name}`);
+    console.log(
+      `   - expiring current product: ${currentProduct.product.name}`
+    );
     await this.update({
       sb,
       cusProductId: currentProduct.id,

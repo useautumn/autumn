@@ -8,10 +8,24 @@ import {
 } from "@/components/ui/table";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
 import { compareStatus, navigateTo } from "@/utils/genUtils";
-import { CusProduct } from "@autumn/shared";
+import { CusProduct, CusProductStatus } from "@autumn/shared";
 import { useRouter } from "next/navigation";
 import { useCustomerContext } from "./CustomerContext";
 import { StatusBadge } from "../StatusBadge";
+import {
+  DropdownMenuItem,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faEllipsisVertical } from "@fortawesome/pro-regular-svg-icons";
+import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import { CusService } from "@/services/customers/CusService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import SmallSpinner from "@/components/general/SmallSpinner";
 
 export const CustomerProductList = ({
   customer,
@@ -43,6 +57,7 @@ export const CustomerProductList = ({
 
             <TableHead className="">Created At</TableHead>
             <TableHead className="">Ended At</TableHead>
+            <TableHead className="w-[40px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -76,11 +91,83 @@ export const CustomerProductList = ({
                     ? formatUnixToDateTimeString(cusProduct.ended_at)
                     : ""}
                 </TableCell>
+                <TableCell className="!max-w-[50px] min-w-[10px]">
+                  <EditCustomerProductToolbar cusProduct={cusProduct} />
+                </TableCell>
               </TableRow>
             );
           })}
         </TableBody>
       </Table>
     </div>
+  );
+};
+
+const EditCustomerProductToolbar = ({
+  cusProduct,
+}: {
+  cusProduct: CusProduct;
+}) => {
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  return (
+    <DropdownMenu open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button isIcon variant="ghost" dim={6} className="rounded-full w-6 h-6">
+          <FontAwesomeIcon icon={faEllipsisVertical} size="sm" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="text-t2">
+        {/* Update status */}
+        {[
+          CusProductStatus.Active,
+          CusProductStatus.Expired,
+          CusProductStatus.PastDue,
+        ].map((status) => (
+          <DropdownMenuItem
+            key={status}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <UpdateStatusDropdownBtn cusProduct={cusProduct} status={status} />
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
+
+const UpdateStatusDropdownBtn = ({
+  cusProduct,
+  status,
+}: {
+  cusProduct: CusProduct;
+  status: CusProductStatus;
+}) => {
+  const [loading, setLoading] = useState(false);
+  const { env, cusMutate } = useCustomerContext();
+  const axiosInstance = useAxiosInstance({ env });
+
+  return (
+    <Button
+      variant="ghost"
+      dim={5}
+      size="sm"
+      className="h-6 flex justify-between"
+      // isLoading={loading}
+      onClick={async () => {
+        setLoading(true);
+        await CusService.updateCusProductStatus(axiosInstance, cusProduct.id, {
+          status,
+        });
+        await cusMutate();
+        setLoading(false);
+      }}
+    >
+      {keyToTitle(status)}
+      {loading && <SmallSpinner />}
+    </Button>
   );
 };
