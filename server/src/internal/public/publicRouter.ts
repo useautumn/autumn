@@ -141,7 +141,7 @@ publicRouter.get("/customers/:customer_id", async (req: any, res: any) => {
       invoices,
     });
   } catch (error) {
-    handleRequestError({ error, res, action: "get customer" });
+    handleRequestError({ req, error, res, action: "get customer" });
   }
 });
 
@@ -167,7 +167,7 @@ publicRouter.get("/products", async (req: any, res: any) => {
 
     res.status(200).json(processedProducts);
   } catch (error) {
-    handleRequestError({ error, res, action: "Get public products" });
+    handleRequestError({ req, error, res, action: "Get public products" });
   }
 });
 

@@ -1,16 +1,15 @@
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { Organization } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import express from "express";
-import stripe, { Stripe } from "stripe";
+import stripe from "stripe";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";
 import { handleSubscriptionDeleted } from "./webhookHandlers/handleSubDeleted.js";
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { getStripeWebhookSecret } from "@/internal/orgs/orgUtils.js";
 import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
 import chalk from "chalk";
+import { handleRequestError } from "@/utils/errorUtils.js";
 
 export const stripeWebhookRouter = express.Router();
 
@@ -111,18 +110,24 @@ stripeWebhookRouter.post(
           break;
       }
     } catch (error) {
-      if (error instanceof RecaseError) {
-        error.print();
-        response
-          .status(500)
-          .send(`Error handling stripe webhook event: ${error}`);
-        return;
-      }
-      console.log("Unhandled error in stripe webhook event: ", error);
-      response
-        .status(500)
-        .send(`Unhandled error in stripe webhook event: ${error}`);
-      return;
+      handleRequestError({
+        req: request,
+        error,
+        res: response,
+        action: "stripe webhook",
+      });
+      // if (error instanceof RecaseError) {
+      //   error.print();
+      //   response
+      //     .status(500)
+      //     .send(`Error handling stripe webhook event: ${error}`);
+      //   return;
+      // }
+      // console.log("Unhandled error in stripe webhook event: ", error);
+      // response
+      //   .status(500)
+      //   .send(`Unhandled error in stripe webhook event: ${error}`);
+      // return;
     }
 
     response.send();

@@ -73,6 +73,7 @@ export const handleClerkWebhook = async (req: any, res: any) => {
     }
   } catch (error) {
     handleRequestError({
+      req,
       error,
       res,
       action: "Handle Clerk Webhook",

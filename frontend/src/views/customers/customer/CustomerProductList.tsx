@@ -57,7 +57,7 @@ export const CustomerProductList = ({
 
             <TableHead className="">Created At</TableHead>
             <TableHead className="">Ended At</TableHead>
-            <TableHead className=""></TableHead>
+            <TableHead className="w-[40px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -91,7 +91,7 @@ export const CustomerProductList = ({
                     ? formatUnixToDateTimeString(cusProduct.ended_at)
                     : ""}
                 </TableCell>
-                <TableCell>
+                <TableCell className="!max-w-[50px] min-w-[10px]">
                   <EditCustomerProductToolbar cusProduct={cusProduct} />
                 </TableCell>
               </TableRow>
@@ -113,7 +113,7 @@ const EditCustomerProductToolbar = ({
   return (
     <DropdownMenu open={dialogOpen} onOpenChange={setDialogOpen}>
       <DropdownMenuTrigger asChild>
-        <Button isIcon variant="ghost" dim={6} className="rounded-full">
+        <Button isIcon variant="ghost" dim={6} className="rounded-full w-6 h-6">
           <FontAwesomeIcon icon={faEllipsisVertical} size="sm" />
         </Button>
       </DropdownMenuTrigger>

@@ -37,7 +37,7 @@ export const pricingMiddleware = async (req: any, res: any, next: any) => {
 
     next();
   } catch (error) {
-    handleRequestError({ error, res, action: "pricingMiddleware" });
+    handleRequestError({ req, error, res, action: "pricingMiddleware" });
     return;
   }
 

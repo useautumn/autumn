@@ -297,6 +297,6 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     res.status(200).send({ allowed, balances });
   } catch (error) {
-    handleRequestError({ error, res, action: "Failed to GET entitled" });
+    handleRequestError({ req, error, res, action: "Failed to GET entitled" });
   }
 });

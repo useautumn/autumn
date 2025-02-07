@@ -194,13 +194,9 @@ export class CusProductService {
       .eq("processor->>subscription_id", stripeSubId)
       .eq("customer.org_id", orgId)
       .eq("customer.env", env)
-      .in("status", ACTIVE_STATUSES)
-      .single();
+      .in("status", ACTIVE_STATUSES);
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
       throw error;
     }
 
@@ -406,6 +402,7 @@ export class CusProductService {
       });
     }
   }
+
   static async updateStrict({
     sb,
     cusProductId,
@@ -483,7 +480,9 @@ export class CusProductService {
       return;
     }
 
-    console.log(`Expiring current product: ${currentProduct.product.name}`);
+    console.log(
+      `   - expiring current product: ${currentProduct.product.name}`
+    );
     await this.update({
       sb,
       cusProductId: currentProduct.id,

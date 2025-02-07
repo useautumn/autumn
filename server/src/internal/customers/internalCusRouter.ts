@@ -41,7 +41,7 @@ cusRouter.post("/search", async (req: any, res: any) => {
     // console.log("customers", customers);
     res.status(200).send({ customers, totalCount: count });
   } catch (error) {
-    handleRequestError({ res, error, action: "search customers" });
+    handleRequestError({ req, error, res, action: "search customers" });
   }
 });
 
