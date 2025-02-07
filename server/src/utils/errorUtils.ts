@@ -27,11 +27,11 @@ export default class RecaseError extends Error {
   }
 
   print() {
-    console.warn(`RECASE ERROR\n${this.code}: ${this.message}`);
+    console.warn(`RECASE WARNING\n${this.code}: ${this.message}`);
     if (this.data) {
       console.warn(this.data);
     } else {
-      console.warn("No error data");
+      console.warn("No data");
     }
   }
 }
