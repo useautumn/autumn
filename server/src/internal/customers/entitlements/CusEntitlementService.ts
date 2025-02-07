@@ -4,6 +4,72 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
 export class CustomerEntitlementService {
+  static async getCustomerAndEnts({
+    sb,
+    customerId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    customerId: string;
+    orgId: string;
+    env: string;
+  }) {
+    const { data, error } = await sb
+      .from("customers")
+      .select(
+        `*, 
+        customer_products:customer_products!inner(*), 
+        customer_entitlements:customer_entitlements(*, entitlement:entitlements!inner(*))`
+      )
+      .eq("id", customerId)
+      .eq("org_id", orgId)
+      .eq("env", env)
+      .eq("customer_products.status", "active")
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getCusEntsOptimized({
+    sb,
+    customerId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    customerId: string;
+    orgId: string;
+    env: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_entitlements")
+      .select(
+        `*, 
+          entitlement:entitlements!inner(*),
+          customer:customers!inner(*),
+          customer_product:customer_products!inner(*)
+        `
+      )
+      .eq("customer.id", customerId)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env)
+      .eq("customer_product.status", "active");
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async createMany({
     sb,
     customerEntitlements,

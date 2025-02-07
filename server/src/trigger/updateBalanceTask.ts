@@ -79,6 +79,7 @@ const getCreditSystemDeduction = ({
       }
 
       let meteredDeduction = getMeteredDeduction(meteredFeature, event);
+
       creditsUpdate +=
         (meteredDeduction / schema.feature_amount) * schema.credit_amount;
     }
@@ -162,51 +163,92 @@ export const updateCustomerBalance = async ({
         event,
       });
 
-      if (deduction) {
-        featureIdToDeduction[internalFeatureId] = {
-          cusEntId: cusEnt.id,
-          deduction: deduction,
-          feature: feature,
-        };
-      }
+      featureIdToDeduction[internalFeatureId] = {
+        cusEntId: cusEnt.id,
+        deduction: deduction,
+        feature: feature,
+      };
     }
 
     let deduction = featureIdToDeduction[internalFeatureId]?.deduction;
     let curBalance = cusEnt.balance!;
 
-    if (curBalance === undefined || curBalance === null) {
+    if (curBalance === undefined || curBalance === null || !deduction) {
+      continue;
+    }
+  }
+
+  // Feature ID to Deduction
+  const deductions: {
+    deduction: number;
+    feature: Feature;
+  }[] = Object.values(featureIdToDeduction);
+
+  for (const obj of deductions) {
+    if (!obj.deduction) {
       continue;
     }
 
-    // 3. Update customer balance
-    const { error } = await sb
-      .from("customer_entitlements")
-      .update({ balance: curBalance - deduction })
-      .eq("id", cusEnt.id);
+    let toDeduct = obj.deduction;
+    for (const cusEnt of cusEnts) {
+      if (cusEnt.internal_feature_id === obj.feature.internal_id) {
+        // If deduction finished or cusent has no more balance, break
 
-    // Send balance updated event to channel
+        if (toDeduct == 0) {
+          break;
+        }
 
-    // console.log(
-    //   `   - Sending balance update event. Feature ${chalk.yellow(
-    //     feature.id
-    //   )}, Balance ${chalk.yellow(
-    //     curBalance - deduction
-    //   )}, Customer ${chalk.yellow(customer.id)}`
-    // );
+        if (cusEnt.balance == 0) {
+          continue;
+        }
 
-    // await channel.send({
-    //   type: "broadcast",
-    //   event: SbChannelEvent.BalanceUpdated,
-    //   payload: {
-    //     feature_id: feature.id,
-    //     balance: curBalance - deduction,
-    //   },
-    // });
+        let newBalance;
 
-    if (error) {
-      console.error(
-        `   ❌ Failed to update (${feature?.id}: ${deduction}). Error: ${error}`
-      );
+        // If cusEnt has less balance to deduct than 0, deduct the balance and set balance to 0
+        if (cusEnt.balance - toDeduct < 0) {
+          toDeduct -= cusEnt.balance;
+          newBalance = 0;
+        }
+
+        // Else, deduct the balance and set toDeduct to 0
+        else {
+          newBalance = cusEnt.balance - toDeduct;
+          toDeduct = 0;
+        }
+
+        cusEnt.balance = newBalance;
+        await CustomerEntitlementService.update({
+          sb,
+          id: cusEnt.id,
+          updates: {
+            balance: newBalance,
+          },
+        });
+      }
+    }
+
+    // If toDeduct is still not 0, deduct from usage-based price?
+    if (toDeduct <= 0) {
+      continue;
+    }
+
+    // Deduct from usage-based price
+    const usageBasedEnt = cusEnts.find(
+      (cusEnt) => cusEnt.entitlement.usage_allowed
+    );
+
+    if (usageBasedEnt) {
+      console.log("Deducting from usage-based price (entitlement)");
+      let newBalance = usageBasedEnt.balance - toDeduct;
+      await CustomerEntitlementService.update({
+        sb,
+        id: usageBasedEnt.id,
+        updates: {
+          balance: newBalance,
+        },
+      });
+    } else {
+      console.log("No usage-based entitlement found");
     }
   }
 
