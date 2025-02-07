@@ -37,4 +37,15 @@ export class CusService {
       data
     );
   }
+
+  static async updateCusProductStatus(
+    axios: AxiosInstance,
+    customer_product_id: string,
+    data: any
+  ) {
+    return await axios.post(
+      `/v1/customers/customer_products/${customer_product_id}`,
+      data
+    );
+  }
 }
