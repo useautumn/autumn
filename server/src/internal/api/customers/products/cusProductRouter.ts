@@ -317,7 +317,11 @@ attachRouter.post("/attach", async (req: any, res) => {
       useCheckout,
     });
 
-    console.log("Customer:", attachParams.customer);
+    console.log(
+      `Customer: ${chalk.yellow(attachParams.customer.id)}, ${
+        attachParams.customer.name
+      }`
+    );
 
     // 2. Check for existing product and fetch
     const { currentProduct, done } = await handleExistingProduct({
