@@ -15,6 +15,34 @@ const ACTIVE_STATUSES = [
 ];
 
 export class CusProductService {
+  static async getByIdStrict({
+    sb,
+    id,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    id: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("customer_products")
+      .select("*, customer:customers!inner(*)")
+      .eq("id", id)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  }
   static async createCusProduct({
     sb,
     customerProduct,
@@ -392,7 +420,7 @@ export class CusProductService {
     updates: Partial<CusProduct>;
   }) {
     const { error } = await sb
-      .from("customer_products, customer:customers!inner(*)")
+      .from("customer_products")
       .update(updates)
       .eq("id", cusProductId)
       .eq("customer.org_id", orgId)

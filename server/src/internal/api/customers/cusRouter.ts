@@ -592,18 +592,36 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
 cusRouter.post(
   "/customer_products/:customer_product_id",
   async (req: any, res: any) => {
-    const customerId = req.params.customer_id;
-    const customerProductId = req.params.customer_product_id;
-    const { status } = req.body;
+    try {
+      const customerId = req.params.customer_id;
+      const customerProductId = req.params.customer_product_id;
+      const { status } = req.body;
 
-    await CusProductService.updateStrict({
-      sb: req.sb,
-      cusProductId: customerProductId,
-      updates: { status },
-      orgId: req.orgId,
-      env: req.env,
-    });
+      // See if customer owns product
+      const cusProduct = await CusProductService.getByIdStrict({
+        sb: req.sb,
+        id: customerProductId,
+        orgId: req.orgId,
+        env: req.env,
+      });
 
-    res.status(200).json({ success: true });
+      if (!cusProduct) {
+        throw new RecaseError({
+          message: `Customer product ${customerProductId} not found`,
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+
+      await CusProductService.update({
+        sb: req.sb,
+        cusProductId: customerProductId,
+        updates: { status },
+      });
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      handleRequestError({ error, res, action: "update customer product" });
+    }
   }
 );
