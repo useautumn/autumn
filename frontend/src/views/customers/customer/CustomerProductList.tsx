@@ -6,7 +6,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
+import {
+  formatUnixToDateTime,
+  formatUnixToDateTimeString,
+} from "@/utils/formatUtils/formatDateUtils";
 import { compareStatus, navigateTo } from "@/utils/genUtils";
 import { CusProduct, CusProductStatus } from "@autumn/shared";
 import { useRouter } from "next/navigation";
@@ -26,6 +29,7 @@ import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import SmallSpinner from "@/components/general/SmallSpinner";
+import { Badge } from "@/components/ui/badge";
 
 export const CustomerProductList = ({
   customer,
@@ -51,13 +55,12 @@ export const CustomerProductList = ({
       <Table className="p-2">
         <TableHeader className="bg-transparent">
           <TableRow className="">
-            <TableHead className="w-[150px]">Name</TableHead>
+            <TableHead className="">Name</TableHead>
             <TableHead className="">Product ID</TableHead>
-            <TableHead className="">Status</TableHead>
-
+            <TableHead className=""></TableHead>
             <TableHead className="">Created At</TableHead>
-            <TableHead className="">Ended At</TableHead>
-            <TableHead className="w-[40px]"></TableHead>
+            {/* <TableHead className="">Ended At</TableHead> */}
+            <TableHead className=""></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -68,7 +71,7 @@ export const CustomerProductList = ({
                 className="cursor-pointer"
                 onClick={() => {
                   navigateTo(
-                    `/customers/${customer.id}/${cusProduct.product_id}`,
+                    `/customers/${customer.id}/${cusProduct.product_id}?id=${cusProduct.id}`,
                     router,
                     env
                   );
@@ -76,22 +79,36 @@ export const CustomerProductList = ({
               >
                 <TableCell>
                   {products.find((p) => p.id === cusProduct.product_id)?.name}
+                  &nbsp;
+                  {cusProduct.status === "expired" && (
+                    <Badge variant="status" className="bg-stone-800">
+                      expired
+                    </Badge>
+                  )}
+                  {cusProduct.status === "past_due" && (
+                    <Badge variant="status" className="bg-red-500">
+                      past due
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className="max-w-[100px] overflow-hidden text-ellipsis">
                   {cusProduct.product_id}
                 </TableCell>
-                <TableCell>
-                  <StatusBadge status={cusProduct.status} />
+                <TableCell></TableCell>
+                <TableCell className="min-w-20 w-24">
+                  <span>
+                    {formatUnixToDateTime(cusProduct.created_at).date}
+                  </span>{" "}
+                  <span className="text-t3">
+                    {formatUnixToDateTime(cusProduct.created_at).time}
+                  </span>
                 </TableCell>
-                <TableCell>
-                  {formatUnixToDateTimeString(cusProduct.created_at)}
-                </TableCell>
-                <TableCell>
+                {/* <TableCell>
                   {cusProduct.ended_at
                     ? formatUnixToDateTimeString(cusProduct.ended_at)
                     : ""}
-                </TableCell>
-                <TableCell className="!max-w-[50px] min-w-[10px]">
+                </TableCell> */}
+                <TableCell className="min-w-4 w-6">
                   <EditCustomerProductToolbar cusProduct={cusProduct} />
                 </TableCell>
               </TableRow>
@@ -113,8 +130,12 @@ const EditCustomerProductToolbar = ({
   return (
     <DropdownMenu open={dialogOpen} onOpenChange={setDialogOpen}>
       <DropdownMenuTrigger asChild>
-        <Button isIcon variant="ghost" dim={6} className="rounded-full w-6 h-6">
-          <FontAwesomeIcon icon={faEllipsisVertical} size="sm" />
+        <Button variant="ghost" dim={6} className="rounded-full w-4 h-4 p-0">
+          <FontAwesomeIcon
+            icon={faEllipsisVertical}
+            size="sm"
+            className="h-3"
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
@@ -126,6 +147,7 @@ const EditCustomerProductToolbar = ({
         ].map((status) => (
           <DropdownMenuItem
             key={status}
+            className="p-0"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -155,7 +177,7 @@ const UpdateStatusDropdownBtn = ({
       variant="ghost"
       dim={5}
       size="sm"
-      className="h-6 flex justify-between"
+      className="p-2 h-full w-full flex justify-between"
       // isLoading={loading}
       onClick={async () => {
         setLoading(true);
