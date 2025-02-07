@@ -1,7 +1,6 @@
 import { Router } from "express";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import {
-  AppEnv,
   BillingType,
   Entitlement,
   FeatureOptions,
@@ -14,7 +13,6 @@ import {
   getCusPaymentMethod,
 } from "@/external/stripe/stripeCusUtils.js";
 import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
-import { ErrorMessages } from "@/errors/errMessages.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
   getBillingType,
@@ -319,6 +317,8 @@ attachRouter.post("/attach", async (req: any, res) => {
       useCheckout,
     });
 
+    console.log("Customer:", attachParams.customer);
+
     // 2. Check for existing product and fetch
     const { currentProduct, done } = await handleExistingProduct({
       req,
@@ -388,6 +388,6 @@ attachRouter.post("/attach", async (req: any, res) => {
       attachParams,
     });
   } catch (error: any) {
-    handleRequestError({ res, error, action: "attach product" });
+    handleRequestError({ req, res, error, action: "attach product" });
   }
 });

@@ -184,7 +184,7 @@ eventsRouter.post("", async (req: any, res: any) => {
     res.status(200).json({ success: true });
     return;
   } catch (error) {
-    handleRequestError({ res, error, action: "POST event failed" });
+    handleRequestError({ req, res, error, action: "POST event failed" });
     return;
   }
 

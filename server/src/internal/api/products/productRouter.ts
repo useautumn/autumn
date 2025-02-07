@@ -160,7 +160,7 @@ productApiRouter.delete("/:productId", async (req: any, res) => {
 
     res.status(200).send({ message: "Product deleted" });
   } catch (error) {
-    handleRequestError({ error, res, action: "Delete product" });
+    handleRequestError({ req, error, res, action: "Delete product" });
   }
 
   return;
@@ -273,6 +273,6 @@ productApiRouter.post("/:productId", async (req: any, res) => {
 
     // res.status(200).send({ message: "Product updated" });
   } catch (error) {
-    handleRequestError({ error, res, action: "Update product" });
+    handleRequestError({ req, error, res, action: "Update product" });
   }
 });

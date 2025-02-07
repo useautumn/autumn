@@ -95,20 +95,20 @@ export const handleCheckoutSessionCompleted = async ({
   });
 
   console.log(
-    "   - checkout.completed: autumn metadata:",
+    "Handling checkout.completed: autumn metadata:",
     checkoutSession.metadata?.autumn_metadata_id
   );
 
   // Get product by stripe subscription ID
   if (checkoutSession.subscription) {
-    const exists = await CusProductService.getActiveByStripeSubId({
+    const activeCusProducts = await CusProductService.getActiveByStripeSubId({
       sb,
       stripeSubId: checkoutSession.subscription as string,
       orgId: org.id,
       env,
     });
 
-    if (exists) {
+    if (activeCusProducts && activeCusProducts.length > 0) {
       console.log(
         "   ✅ checkout.completed: subscription already exists, skipping"
       );
