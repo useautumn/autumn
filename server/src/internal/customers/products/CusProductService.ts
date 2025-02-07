@@ -378,6 +378,35 @@ export class CusProductService {
       });
     }
   }
+  static async updateStrict({
+    sb,
+    cusProductId,
+    orgId,
+    env,
+    updates,
+  }: {
+    sb: SupabaseClient;
+    cusProductId: string;
+    orgId: string;
+    env: AppEnv;
+    updates: Partial<CusProduct>;
+  }) {
+    const { error } = await sb
+      .from("customer_products, customer:customers!inner(*)")
+      .update(updates)
+      .eq("id", cusProductId)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env);
+
+    if (error) {
+      throw new RecaseError({
+        message: "Error updating customer product status",
+        code: ErrCode.UpdateCusProductFailed,
+        statusCode: 500,
+        data: error,
+      });
+    }
+  }
 
   static async updateByStripeSubId({
     sb,

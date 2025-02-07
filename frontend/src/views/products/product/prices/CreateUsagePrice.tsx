@@ -67,7 +67,7 @@ function CreateUsagePrice({
     (entitlement: EntitlementWithFeature) => {
       if (
         product.prices.some((price: Price) => {
-          let config = price.config as UsagePriceConfig;
+          const config = price.config as UsagePriceConfig;
           return config.internal_feature_id == entitlement.internal_feature_id;
         })
       ) {
