@@ -82,38 +82,6 @@ export const handleSubscriptionUpdated = async ({
 //   }
 // };
 
-// const handleSubCanceled = async ({
-//   sb,
-//   org,
-//   subscription,
-// }: {
-//   sb: any;
-//   org: Organization;
-//   subscription: any;
-// }) => {
-//   // 1. Get cus product
-//   const cusProduct = await CusProductService.getActiveByStripeSubId({
-//     sb,
-//     stripeSubId: subscription.id,
-//     orgId: org.id,
-//     env,
-//   });
-
-//   if (!cusProduct) {
-//     return;
-//   }
-
-//   await sb
-//     .from("customer_products")
-//     .update({
-//       canceled_at: subscription.canceled_at * 1000,
-//       // expires_at: subscription.cancel_at * 1000,
-//     })
-//     .eq("id", cusProduct.id);
-
-//   console.log("Stripe subscription cancelled:", subscription.id);
-// };
-
 // const undoStripeSubCancellation = async ({
 //   sb,
 //   org,

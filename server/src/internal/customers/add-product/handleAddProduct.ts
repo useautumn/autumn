@@ -32,8 +32,6 @@ const handleBillNowPrices = async ({
 }) => {
   const { org, customer, product, freeTrial } = attachParams;
 
-  console.log("Adding product to customer", customer.id, product.id);
-
   const stripeCli = createStripeCli({ org, env: customer.env });
 
   const { items, itemMetas } = getStripeSubItems({

@@ -124,7 +124,7 @@ cusRouter.post("/:search", async (req: any, res: any) => {
 
     res.status(200).json({ customers, totalCount: count });
   } catch (error) {
-    handleRequestError({ error, res, action: "search customers" });
+    handleRequestError({ req, error, res, action: "search customers" });
   }
 });
 
@@ -186,7 +186,7 @@ cusRouter.post("", async (req: any, res: any) => {
       success: true,
     });
   } catch (error: any) {
-    handleRequestError({ error, res, action: "create customer" });
+    handleRequestError({ req, error, res, action: "create customer" });
   }
 });
 
@@ -238,7 +238,7 @@ cusRouter.put("", async (req: any, res: any) => {
       action: existing ? "update" : "create",
     });
   } catch (error) {
-    handleRequestError({ error, res, action: "update customer" });
+    handleRequestError({ req, error, res, action: "update customer" });
   }
 });
 
@@ -285,7 +285,7 @@ cusRouter.delete("/:customerId", async (req: any, res: any) => {
 
     res.status(200).json({ success: true, customer_id: customerId });
   } catch (error) {
-    handleRequestError({ error, res, action: "delete customer" });
+    handleRequestError({ req, error, res, action: "delete customer" });
   }
 });
 
@@ -301,7 +301,7 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
 
     res.status(200).json({ events });
   } catch (error) {
-    handleRequestError({ error, res, action: "get customer events" });
+    handleRequestError({ req, error, res, action: "get customer events" });
   }
 });
 
@@ -347,7 +347,12 @@ cusRouter.post(
 
       res.status(200).json({ success: true });
     } catch (error) {
-      handleRequestError({ error, res, action: "update customer entitlement" });
+      handleRequestError({
+        req,
+        error,
+        res,
+        action: "update customer entitlement",
+      });
     }
   }
 );
@@ -441,7 +446,7 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
 
     res.status(200).json({ success: true });
   } catch (error) {
-    handleRequestError({ error, res, action: "update customer balances" });
+    handleRequestError({ req, error, res, action: "update customer balances" });
   }
 });
 
@@ -478,7 +483,7 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       invoices,
     });
   } catch (error) {
-    handleRequestError({ error, res, action: "get customer" });
+    handleRequestError({ req, error, res, action: "get customer" });
   }
 });
 
@@ -560,35 +565,6 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
   res.status(200).json(balances);
 });
 
-// cusRouter.get("/:customer_id/products", async (req: any, res: any) => {
-//   const customerId = req.params.customer_id;
-
-//   const cusProducts = await CusProductService.getByCustomerId({
-//     sb: req.sb,
-//     customerId,
-//     inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-//   });
-
-//   // Clean up:
-//   let products = [];
-//   for (const cusProduct of cusProducts) {
-//     products.push({
-//       id: cusProduct.product.id,
-//       name: cusProduct.product.name,
-//       group: cusProduct.product.group,
-//       status: cusProduct.status,
-//       created_at: cusProduct.created_at,
-//       canceled_at: cusProduct.canceled_at,
-//       processor: {
-//         type: cusProduct.processor.type,
-//         subscription_id: cusProduct.processor.subscription_id || null,
-//       },
-//     });
-//   }
-
-//   res.status(200).json(products);
-// });
-
 cusRouter.post(
   "/customer_products/:customer_product_id",
   async (req: any, res: any) => {
@@ -621,7 +597,41 @@ cusRouter.post(
 
       res.status(200).json({ success: true });
     } catch (error) {
-      handleRequestError({ error, res, action: "update customer product" });
+      handleRequestError({
+        req,
+        error,
+        res,
+        action: "update customer product",
+      });
     }
   }
 );
+
+// cusRouter.get("/:customer_id/products", async (req: any, res: any) => {
+//   const customerId = req.params.customer_id;
+
+//   const cusProducts = await CusProductService.getByCustomerId({
+//     sb: req.sb,
+//     customerId,
+//     inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+//   });
+
+//   // Clean up:
+//   let products = [];
+//   for (const cusProduct of cusProducts) {
+//     products.push({
+//       id: cusProduct.product.id,
+//       name: cusProduct.product.name,
+//       group: cusProduct.product.group,
+//       status: cusProduct.status,
+//       created_at: cusProduct.created_at,
+//       canceled_at: cusProduct.canceled_at,
+//       processor: {
+//         type: cusProduct.processor.type,
+//         subscription_id: cusProduct.processor.subscription_id || null,
+//       },
+//     });
+//   }
+
+//   res.status(200).json(products);
+// });

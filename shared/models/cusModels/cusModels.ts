@@ -34,7 +34,6 @@ export const CustomerResponseSchema = CustomerSchema.omit({
   // created_at: true,
   // env: true,
   // processor: true,
-  internal_id: true,
   org_id: true,
 });
 

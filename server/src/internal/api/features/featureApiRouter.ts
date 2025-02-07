@@ -63,7 +63,7 @@ featureApiRouter.post("", async (req: any, res) => {
 
     res.status(200).json({ message: "Feature created" });
   } catch (error) {
-    handleRequestError({ error, res, action: "Create feature" });
+    handleRequestError({ req, error, res, action: "Create feature" });
   }
 });
 
@@ -87,7 +87,7 @@ featureApiRouter.post("/:feature_id", async (req: any, res) => {
 
     res.status(200).json({ success: true, feature_id: featureId });
   } catch (error) {
-    handleRequestError({ error, res, action: "Update feature" });
+    handleRequestError({ req, error, res, action: "Update feature" });
   }
 });
 
@@ -126,6 +126,6 @@ featureApiRouter.delete("/:featureId", async (req: any, res) => {
 
     res.status(200).json({ message: "Feature deleted" });
   } catch (error) {
-    handleRequestError({ error, res, action: "Delete feature" });
+    handleRequestError({ req, error, res, action: "Delete feature" });
   }
 });

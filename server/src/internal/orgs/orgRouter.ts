@@ -135,14 +135,13 @@ orgRouter.delete("/stripe", async (req: any, res) => {
     const liveStripeCli = createStripeCli({ org, env: AppEnv.Live });
 
     const testWebhooks = await testStripeCli.webhookEndpoints.list();
-    const liveWebhooks = await liveStripeCli.webhookEndpoints.list();
-
     for (const webhook of testWebhooks.data) {
       if (webhook.url.includes(org.id)) {
         await testStripeCli.webhookEndpoints.del(webhook.id);
       }
     }
 
+    const liveWebhooks = await liveStripeCli.webhookEndpoints.list();
     for (const webhook of liveWebhooks.data) {
       if (webhook.url.includes(org.id)) {
         await liveStripeCli.webhookEndpoints.del(webhook.id);
@@ -172,6 +171,7 @@ orgRouter.delete("/stripe", async (req: any, res) => {
     });
   } catch (error) {
     handleRequestError({
+      req,
       error,
       res,
       action: "delete stripe",

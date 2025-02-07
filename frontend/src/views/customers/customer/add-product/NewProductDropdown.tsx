@@ -28,11 +28,14 @@ function AddProduct() {
   const [searchQuery, setSearchQuery] = useState("");
   const [open, setOpen] = useState(false);
 
-  const filteredProducts = products.filter(
-    (product) =>
+  const filteredProducts = products.filter((product) => {
+    if (product.is_add_on) return true;
+
+    return (
       !customer.products?.some((cp) => cp.product_id === product.id) &&
       product.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    );
+  });
 
   const router = useRouter();
 
