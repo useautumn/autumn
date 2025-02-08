@@ -70,7 +70,6 @@ priceRouter.post("", async (req: any, res) => {
     res.status(200).json({ success: true });
   } catch (error) {
     if (error instanceof RecaseError) {
-      error.print();
       res
         .status(error.statusCode)
         .json({ message: error.message, code: error.code });

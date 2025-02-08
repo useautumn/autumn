@@ -177,6 +177,39 @@ export class CusProductService {
     return data;
   }
 
+  static async getByStripeSubId({
+    sb,
+    stripeSubId,
+    orgId,
+    env,
+    inStatuses,
+  }: {
+    sb: SupabaseClient;
+    stripeSubId: string;
+    orgId: string;
+    env: AppEnv;
+    inStatuses?: string[];
+  }) {
+    const query = sb
+      .from("customer_products")
+      .select("*, product:products(*), customer:customers!inner(*)")
+      .eq("processor->>subscription_id", stripeSubId)
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env);
+
+    if (inStatuses) {
+      query.in("status", inStatuses);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async getActiveByStripeSubId({
     sb,
     stripeSubId,

@@ -206,8 +206,6 @@ export const handleAddProduct = async ({
     return;
   }
 
-  // throw new Error("Test");
-
   // 2. Get one-off + fixed cycle prices
   const billNowPrices = getBillNowPrices(prices);
 

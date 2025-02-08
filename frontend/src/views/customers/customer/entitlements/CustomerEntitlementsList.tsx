@@ -10,11 +10,15 @@ import {
 import {
   AllowanceType,
   CusEntWithFeatureAndEntitlement,
+  FeatureType,
   FullCustomerEntitlement,
 } from "@autumn/shared";
 
 import { useCustomerContext } from "../CustomerContext";
-import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
+import {
+  formatUnixToDateTime,
+  formatUnixToDateTimeString,
+} from "@/utils/formatUtils/formatDateUtils";
 import { compareStatus } from "@/utils/genUtils";
 import { StatusBadge } from "../../StatusBadge";
 import { useState } from "react";
@@ -27,11 +31,41 @@ import {
 import { Button } from "@/components/ui/button";
 import { DialogTrigger } from "@/components/ui/dialog";
 import UpdateCusEntitlement from "./UpdateCusEntitlement";
+import { Badge } from "@/components/ui/badge";
 
-export const CustomerEntitlementsList = ({ customer }: { customer: any }) => {
-  const { products } = useCustomerContext();
+export const CustomerEntitlementsList = ({
+  featureType,
+  showExpired,
+}: {
+  featureType: FeatureType;
+  showExpired: boolean;
+}) => {
+  const { products, customer } = useCustomerContext();
   const [selectedCusEntitlement, setSelectedCusEntitlement] =
     useState<FullCustomerEntitlement | null>(null);
+
+  const filteredEntitlements = customer.entitlements.filter(
+    (cusEnt: FullCustomerEntitlement) => {
+      const featureType = cusEnt.entitlement.feature.type;
+      const cusProduct = customer.products.find(
+        (p) => p.id === cusEnt.customer_product_id
+      );
+      const isExpired = cusProduct?.status === "expired";
+
+      // Filter by feature type
+      const featureTypeMatches =
+        featureType === FeatureType.Boolean
+          ? featureType === FeatureType.Boolean
+          : featureType === FeatureType.Metered &&
+            (featureType === FeatureType.Metered ||
+              featureType === FeatureType.CreditSystem);
+
+      // Filter by expired status
+      const expiredStatusMatches = showExpired ? true : !isExpired;
+
+      return featureTypeMatches && expiredStatusMatches;
+    }
+  );
 
   const getProductName = (cusEnt: FullCustomerEntitlement) => {
     const cusProduct = customer.products.find(
@@ -43,7 +77,7 @@ export const CustomerEntitlementsList = ({ customer }: { customer: any }) => {
     return product?.name;
   };
 
-  const sortedEntitlements = customer.entitlements.sort((a: any, b: any) => {
+  const sortedEntitlements = filteredEntitlements.sort((a: any, b: any) => {
     const statusA = customer.products.find(
       (cp: any) => cp.id === a.customer_product_id
     )?.status;
@@ -80,11 +114,12 @@ export const CustomerEntitlementsList = ({ customer }: { customer: any }) => {
       <Table className="p-2">
         <TableHeader className="bg-transparent">
           <TableRow className="">
-            <TableHead className="w-[150px]">Product</TableHead>
-            <TableHead className="w-[150px]">Feature</TableHead>
+            <TableHead className="">Product</TableHead>
+            <TableHead className="">Feature</TableHead>
             <TableHead className="">Balance</TableHead>
             <TableHead className="">Next Reset</TableHead>
-            <TableHead className="">Status</TableHead>
+            {/* <TableHead className="">Status</TableHead> */}
+            <TableHead className=""></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -98,11 +133,16 @@ export const CustomerEntitlementsList = ({ customer }: { customer: any }) => {
                 className="cursor-pointer"
               >
                 <TableCell className="max-w-[150px] truncate">
-                  {getProductName(cusEnt)}
+                  {getProductName(cusEnt)} &nbsp;
+                  {customer.products.find(
+                    (p: any) => p.id === cusEnt.customer_product_id
+                  )?.status === "expired" && (
+                    <Badge variant="status" className="bg-red-500">
+                      expired
+                    </Badge>
+                  )}
                 </TableCell>
-                <TableCell className="max-w-[150px] truncate">
-                  {entitlement.feature.name}
-                </TableCell>
+                <TableCell>{entitlement.feature.name}</TableCell>
                 <TableCell>
                   {allowanceType == AllowanceType.Unlimited
                     ? "Unlimited"
@@ -110,10 +150,14 @@ export const CustomerEntitlementsList = ({ customer }: { customer: any }) => {
                     ? "None"
                     : cusEnt.balance}
                 </TableCell>
-                <TableCell>
-                  {formatUnixToDateTimeString(cusEnt.next_reset_at)}
+                <TableCell className="min-w-20 w-24">
+                  <span>{formatUnixToDateTime(cusEnt.next_reset_at).date}</span>{" "}
+                  <span className="text-t3">
+                    {formatUnixToDateTime(cusEnt.next_reset_at).time}
+                  </span>
                 </TableCell>
-                <TableCell>
+                <TableCell className="min-w-4 w-6"></TableCell>
+                {/* <TableCell>
                   <StatusBadge
                     status={
                       customer.products.find(
@@ -121,7 +165,7 @@ export const CustomerEntitlementsList = ({ customer }: { customer: any }) => {
                       )?.status
                     }
                   />
-                </TableCell>
+                </TableCell> */}
               </TableRow>
             );
           })}

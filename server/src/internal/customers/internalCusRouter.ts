@@ -4,7 +4,7 @@ import { ProductService } from "../products/ProductService.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
 import { FeatureService } from "../features/FeatureService.js";
 import { FullCustomerEntitlement, FullCustomerPrice } from "@autumn/shared";
-import { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 
 export const cusRouter = Router();
 
@@ -59,6 +59,13 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       customerId: customer_id,
     });
 
+    if (!customer) {
+      throw new RecaseError({
+        message: "Customer not found",
+        code: "CUSTOMER_NOT_FOUND",
+      });
+    }
+
     for (const product of customer.products) {
       product.entitlements = product.customer_entitlements.map(
         (cusEnt: FullCustomerEntitlement) => {
@@ -89,7 +96,6 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
     res.status(200).send({ customer, products, invoices, features });
   } catch (error) {
-    console.error("Failed to get customer data", error);
-    res.status(500).send(error);
+    handleRequestError({ req, error, res, action: "get customer data" });
   }
 });

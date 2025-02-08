@@ -1,13 +1,28 @@
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { CusProductStatus, Organization } from "@autumn/shared";
+import { AppEnv, CusProductStatus, Organization } from "@autumn/shared";
+import Stripe from "stripe";
+import { createStripeCli } from "../utils.js";
+
+const handleSubPastDue = async ({
+  sb,
+  subscription,
+}: {
+  sb: any;
+  subscription: any;
+}) => {
+  // 1. Expire cus products
+  // Cancel subscription entirely
+};
 
 export const handleSubscriptionUpdated = async ({
   sb,
   org,
   subscription,
+  env,
 }: {
   sb: any;
   org: Organization;
+  env: AppEnv;
   subscription: any;
 }) => {
   let subStatusMap: {
@@ -17,6 +32,30 @@ export const handleSubscriptionUpdated = async ({
     active: CusProductStatus.Active,
     past_due: CusProductStatus.PastDue,
   };
+
+  // // Get cus products by stripe sub id
+  // console.log(
+  //   "Org ID:",
+  //   org.id,
+  //   "Env:",
+  //   env,
+  //   "Subscription ID:",
+  //   subscription.id
+  // );
+  const cusProducts = await CusProductService.getByStripeSubId({
+    sb,
+    stripeSubId: subscription.id,
+    orgId: org.id,
+    env,
+    inStatuses: [CusProductStatus.Active],
+  });
+
+  if (cusProducts.length === 0) {
+    console.log(
+      `subscription.updated: no customer products found with stripe sub id: ${subscription.id}`
+    );
+    return;
+  }
 
   // 1. Fetch subscription
   const cusProduct = await CusProductService.updateByStripeSubId({
@@ -39,6 +78,21 @@ export const handleSubscriptionUpdated = async ({
         canceled_at: cusProduct.canceled_at,
       }
     );
+  }
+
+  // Cancel subscription immediately
+  if (subscription.status === "past_due") {
+    const stripeCli = createStripeCli({
+      org,
+      env,
+    });
+
+    console.log("subscription.updated: past due, cancelling:", subscription.id);
+    try {
+      await stripeCli.subscriptions.cancel(subscription.id);
+    } catch (error: any) {
+      console.error("subscription.updated: error cancelling:", error.message);
+    }
   }
 };
 

@@ -339,10 +339,12 @@ attachRouter.post("/attach", async (req: any, res) => {
     // -------------------- ATTACH PRODUCT --------------------
 
     // SCENARIO 1: Free product, no existing product
+
     const curProductFree = isFreeProduct(
-      currentProduct?.customer_prices.map((cp: any) => cp.price)
+      currentProduct?.customer_prices.map((cp: any) => cp.price) || [] // if no current product...
     );
     const newProductFree = isFreeProduct(attachParams.prices);
+
     if (
       (!currentProduct && newProductFree) ||
       (curProductFree && newProductFree) ||

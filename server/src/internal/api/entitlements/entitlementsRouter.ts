@@ -42,7 +42,7 @@ entitlementApiRouter.post("", async (req: any, res) => {
     res.status(200).json({ message: "Entitlement created" });
   } catch (error: any) {
     if (error instanceof RecaseError) {
-      error.print();
+      // error.print();
       res.status(error.statusCode).json({
         code: error.code,
         message: error.message,
