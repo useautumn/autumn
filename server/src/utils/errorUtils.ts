@@ -62,7 +62,10 @@ export const handleRequestError = ({
         req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
       }`
     );
-    console.warn(`Request body:`, req.body);
+    console.warn(
+      `Request body:`,
+      Buffer.isBuffer(req.body) ? JSON.parse(req.body.toString()) : req.body
+    );
 
     error.print();
     console.warn("--------------------------------");
@@ -81,7 +84,11 @@ export const handleRequestError = ({
       req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
     }`
   );
-  console.error(`Request body:`, req.body);
+
+  console.error(
+    `Request body:`,
+    Buffer.isBuffer(req.body) ? JSON.parse(req.body.toString()) : req.body
+  );
 
   if (error instanceof Stripe.errors.StripeError) {
     console.error("STRIPE ERROR");

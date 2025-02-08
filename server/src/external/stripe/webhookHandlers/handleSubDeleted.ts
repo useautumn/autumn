@@ -27,7 +27,7 @@ export const handleSubscriptionDeleted = async ({
   env: AppEnv;
 }) => {
   console.log("Handling subscription.deleted: ", subscription.id);
-  const activeCusProducts = await CusProductService.getActiveByStripeSubId({
+  const activeCusProducts = await CusProductService.getByStripeSubId({
     sb,
     stripeSubId: subscription.id,
     orgId: org.id,
@@ -35,11 +35,13 @@ export const handleSubscriptionDeleted = async ({
   });
 
   if (activeCusProducts.length === 0) {
-    console.log("   ⚠️ no active customer products found");
+    console.log(
+      `   ⚠️ no customer products found with stripe sub id: ${subscription.id}`
+    );
 
     if (subscription.livemode) {
       throw new RecaseError({
-        message: `Stripe subscription.deleted (live): no active customer products found, subscription: ${subscription.id}`,
+        message: `Stripe subscription.deleted (live): no customer products found, subscription: ${subscription.id}`,
         code: ErrCode.NoActiveCusProducts,
         statusCode: 200,
       });
@@ -47,6 +49,8 @@ export const handleSubscriptionDeleted = async ({
 
     return;
   }
+
+  console.log("   ✅ found active customer products");
 
   const handleCusProductDeleted = async (cusProduct: FullCusProduct) => {
     // TODO: Implement
