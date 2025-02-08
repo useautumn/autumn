@@ -10,22 +10,12 @@ import {
   Event,
   Feature,
   FullCustomerEntitlement,
-  FullCustomerPrice,
   Organization,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Customer, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { SbChannelEvent } from "@/websockets/initWs.js";
-import chalk from "chalk";
-import {
-  getRelatedCusPrice,
-  sortCusEntsForDeduction,
-  updateCusEntInStripe,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusService } from "@/internal/customers/CusService.js";
+import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { getCusEntsAndPrices } from "@/internal/api/customers/cusUtils.js";
 
 // 3. Get customer entitlements and sort
@@ -195,44 +185,6 @@ const getFeatureDeductions = ({
   return featureDeductions;
 };
 
-// // 3. Perform deductions and update customer balance
-// const handleUsageAllowedCusEnt = async ({
-//   cusEnt,
-//   cusPrices,
-//   org,
-//   env,
-//   customer,
-//   amountUsed,
-// }: {
-//   cusEnt: FullCustomerEntitlement;
-//   cusPrices: FullCustomerPrice[];
-//   org: Organization;
-//   env: AppEnv;
-//   customer: Customer;
-//   amountUsed: number;
-// }) => {
-//   const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
-
-//   if (!relatedCusPrice) {
-//     return;
-//   }
-
-//   // Send event to Stripe
-//   const stripeCli = createStripeCli({
-//     org,
-//     env,
-//   });
-
-//   await stripeCli.billing.meterEvents.create({
-//     event_name: relatedCusPrice.price.id!,
-//     payload: {
-//       stripe_customer_id: customer.processor.id,
-//       value: amountUsed.toString(),
-//     },
-//   });
-//   console.log("   ✅ Stripe event sent");
-// };
-
 // Main function to update customer balance
 export const updateCustomerBalance = async ({
   sb,
@@ -250,7 +202,7 @@ export const updateCustomerBalance = async ({
   env: AppEnv;
 }) => {
   const startTime = performance.now();
-  const { cusEnts, cusPrices } = await getCusEntsAndPrices({
+  const { cusEnts } = await getCusEntsAndPrices({
     sb,
     internalCustomerId: customer.internal_id,
     internalFeatureIds: features.map((f) => f.internal_id!),
@@ -323,19 +275,6 @@ export const updateCustomerBalance = async ({
             balance: newBalance,
           },
         });
-
-        // // If cus ent has usage_allowed -> update balance
-        // if (cusEnt.usage_allowed) {
-        //   await updateCusEntInStripe({
-        //     cusEnt,
-        //     cusPrices,
-        //     org,
-        //     env,
-        //     customer,
-        //     amountUsed: deducted,
-        //     eventId: event.id + "_1",
-        //   });
-        // }
       }
     }
 
@@ -351,9 +290,6 @@ export const updateCustomerBalance = async ({
 
     if (usageBasedEnt) {
       let newBalance = usageBasedEnt.balance! - toDeduct;
-      // console.log("Cur balance", usageBasedEnt.balance);
-      // console.log("To deduct", toDeduct);
-      // console.log("New balance", newBalance);
 
       await CustomerEntitlementService.update({
         sb,
@@ -362,16 +298,6 @@ export const updateCustomerBalance = async ({
           balance: newBalance,
         },
       });
-
-      // await updateCusEntInStripe({
-      //   cusEnt: usageBasedEnt,
-      //   cusPrices,
-      //   org,
-      //   env,
-      //   customer,
-      //   amountUsed: toDeduct,
-      //   eventId: event.id + "_2",
-      // });
     } else {
       console.log("No usage-based entitlement found");
     }

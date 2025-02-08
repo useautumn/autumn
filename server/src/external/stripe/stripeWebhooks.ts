@@ -8,9 +8,9 @@ import { handleSubscriptionDeleted } from "./webhookHandlers/handleSubDeleted.js
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { getStripeWebhookSecret } from "@/internal/orgs/orgUtils.js";
 import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
-import chalk from "chalk";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { handleRequestError } from "@/utils/errorUtils.js";
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated.js";
+import chalk from "chalk";
 
 export const stripeWebhookRouter = express.Router();
 

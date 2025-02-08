@@ -50,7 +50,6 @@ export const getBillingInterval = (prices: Price[]) => {
 };
 
 export const pricesOnlyOneOff = (prices: Price[]) => {
-  console.log("prices", prices);
   return prices.every((price) => {
     let interval = price.config?.interval;
 
@@ -293,19 +292,19 @@ export const getPriceAmount = (price: Price, options: FeatureOptions) => {
 export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
   let usageConfig = price.config as UsagePriceConfig;
   const tiers: any[] = [];
-  if (entitlement.allowance) {
-    tiers.push({
-      unit_amount: 0,
-      up_to: entitlement.allowance,
-    });
+  // if (entitlement.allowance) {
+  //   tiers.push({
+  //     unit_amount: 0,
+  //     up_to: entitlement.allowance,
+  //   });
 
-    for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-      usageConfig.usage_tiers[i].from += entitlement.allowance;
-      if (usageConfig.usage_tiers[i].to != -1) {
-        usageConfig.usage_tiers[i].to += entitlement.allowance;
-      }
-    }
-  }
+  //   for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
+  //     usageConfig.usage_tiers[i].from += entitlement.allowance;
+  //     if (usageConfig.usage_tiers[i].to != -1) {
+  //       usageConfig.usage_tiers[i].to += entitlement.allowance;
+  //     }
+  //   }
+  // }
 
   for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
     const tier = usageConfig.usage_tiers[i];
