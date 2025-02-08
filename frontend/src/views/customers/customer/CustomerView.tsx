@@ -9,7 +9,7 @@ import { CustomerContext } from "./CustomerContext";
 import { useRouter } from "next/navigation";
 import CopyButton from "@/components/general/CopyButton";
 import { CustomerToolbar } from "./CustomerToolbar";
-
+import { Switch } from "@/components/ui/switch";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import AddProduct from "./add-product/NewProductDropdown";
 import {
@@ -29,6 +29,7 @@ import { ManageEntitlements } from "./entitlements/ManageEntitlements";
 import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsList";
 import { navigateTo } from "@/utils/genUtils";
 import { CustomerEventsList } from "./product/CustomerEventsList";
+import { useState } from "react";
 
 export default function CustomerView({
   customer_id,
@@ -60,6 +61,8 @@ export default function CustomerView({
   if (error) {
     router.push("/customers");
   }
+
+  const [showExpired, setShowExpired] = useState(false);
 
   if (isLoading || eventsLoading) return <LoadingScreen />;
 
@@ -97,51 +100,43 @@ export default function CustomerView({
           <p className="text-t2 font-medium text-md">Entitlements</p>
           <div className="flex flex-col gap-2">
             <Tabs defaultValue="metered">
-              <TabsList className="bg-transparent h-fit">
-                <TabsTrigger
-                  value="metered"
-                  className="text-t2 text-xs font-normal "
-                >
-                  Metered Features
-                </TabsTrigger>
-                <TabsTrigger
-                  value="boolean"
-                  className="text-t2 text-xs font-normal"
-                >
-                  Boolean Features
-                </TabsTrigger>
-              </TabsList>
+              <div className="flex justify-between items-center">
+                <TabsList className="bg-transparent h-fit">
+                  <TabsTrigger
+                    value="metered"
+                    className="text-t2 text-xs font-normal "
+                  >
+                    Metered Features
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="boolean"
+                    className="text-t2 text-xs font-normal"
+                  >
+                    Boolean Features
+                  </TabsTrigger>
+                </TabsList>
+                <div className="flex items-center gap-2">
+                  <p className="text-t3 text-xs">Show Expired</p>
+                  <Switch
+                    checked={showExpired}
+                    className="bg-primary"
+                    onCheckedChange={setShowExpired}
+                  />
+                </div>
+              </div>
               <TabsContent value="metered">
                 <CustomerEntitlementsList
-                  customer={{
-                    ...customer,
-                    entitlements: customer.entitlements.filter(
-                      (cusEnt: FullCustomerEntitlement) => {
-                        const featureType = cusEnt.entitlement.feature.type;
-                        return (
-                          featureType === FeatureType.Metered ||
-                          featureType === FeatureType.CreditSystem
-                        );
-                      }
-                    ),
-                  }}
+                  featureType={FeatureType.Metered}
+                  showExpired={showExpired}
                 />
               </TabsContent>
               <TabsContent value="boolean">
                 <CustomerEntitlementsList
-                  customer={{
-                    ...customer,
-                    entitlements: customer.entitlements.filter(
-                      (cusEnt: FullCustomerEntitlement) => {
-                        const featureType = cusEnt.entitlement.feature.type;
-                        return featureType === FeatureType.Boolean;
-                      }
-                    ),
-                  }}
+                  featureType={FeatureType.Boolean}
+                  showExpired={showExpired}
                 />
               </TabsContent>
             </Tabs>
-            {/* <ManageEntitlements /> */}
           </div>
 
           <p className="text-t2 font-medium text-md">Invoices</p>
@@ -151,16 +146,22 @@ export default function CustomerView({
             <Table className="p-2">
               <TableHeader>
                 <TableRow className="bg-white">
-                  <TableHead className="w-[150px]">Products</TableHead>
-                  <TableHead className="">URL</TableHead>
+                  <TableHead className="">Products</TableHead>
                   <TableHead className="">Total</TableHead>
-                  <TableHead className="">Created At</TableHead>
                   <TableHead className="">Status</TableHead>
+                  <TableHead className="">Created At</TableHead>
+                  <TableHead className=""></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {invoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
+                  <TableRow
+                    key={invoice.id}
+                    onClick={() => {
+                      navigateTo(invoice.hosted_invoice_url, router, env);
+                    }}
+                    className="cursor-pointer"
+                  >
                     <TableCell>
                       {invoice.product_ids
                         .map((p: string) => {
@@ -169,7 +170,7 @@ export default function CustomerView({
                         })
                         .join(", ")}
                     </TableCell>
-                    <TableCell className="max-w-[400px] truncate">
+                    {/* <TableCell>
                       <a
                         href={invoice.hosted_invoice_url}
                         target="_blank"
@@ -179,19 +180,20 @@ export default function CustomerView({
                         View Invoice
                         <FontAwesomeIcon icon={faSquareUpRight} />
                       </a>
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell>
                       {invoice.total.toFixed(2)}{" "}
                       {invoice.currency.toUpperCase()}
                     </TableCell>
-                    <TableCell>
+                    <TableCell>{invoice.status}</TableCell>
+                    <TableCell className="min-w-20 w-24">
                       {formatUnixToDateTime(invoice.created_at).date}
                       <span className="text-t3">
                         {" "}
                         {formatUnixToDateTime(invoice.created_at).time}{" "}
                       </span>
                     </TableCell>
-                    <TableCell>{invoice.status}</TableCell>
+                    <TableCell className="min-w-4 w-6"></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
