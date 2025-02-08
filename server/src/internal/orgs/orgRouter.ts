@@ -106,7 +106,7 @@ orgRouter.post("/stripe", async (req: any, res) => {
     });
   } catch (error: any) {
     if (error instanceof RecaseError) {
-      error.print();
+      error.print(req.logger);
 
       res.status(error.statusCode).json({
         message: error.message,

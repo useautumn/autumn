@@ -126,10 +126,10 @@ export class InvoiceService {
 
     if (error) {
       if (error.code == "23505") {
-        console.log("Invoice already exists");
+        console.log("   🧐 Invoice already exists");
         return;
       }
-      console.log("Error inserting Stripe invoice: ", error);
+      console.log("   ❌ Error inserting Stripe invoice: ", error);
       return;
     }
 

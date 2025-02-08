@@ -14,11 +14,14 @@ import { initQueue, initWorkers } from "./queue/queue.js";
 import http from "http";
 import { initWs } from "./websockets/initWs.js";
 import { publicRouter } from "./internal/public/publicRouter.js";
+import { initLogger } from "./errors/logger.js";
+import RecaseError, { handleRequestError } from "./utils/errorUtils.js";
 
 const init = async () => {
   const app = express();
   const server = http.createServer(app);
   const wss = initWs(server);
+  const logger = initLogger();
 
   const pgClient = new pg.Client(process.env.SUPABASE_CONNECTION_STRING || "");
   await pgClient.connect();
@@ -29,6 +32,7 @@ const init = async () => {
   app.use((req: any, res, next) => {
     req.pg = pgClient;
     req.queue = queue;
+    req.logger = logger;
     next();
   });
 
@@ -59,6 +63,22 @@ const init = async () => {
   });
 
   app.use(express.json());
+
+  // // JSON error handler
+  // app.use((err: any, req: any, res: any, next: any) => {
+  //   // you can error out to stderr still, or not; your choice
+  //   // console.error(err);
+  //   console.log(`JSON error handler: ${err.message}`);
+
+  //   // body-parser will set this to 400 if the json is in error
+  //   if (err.status === 400)
+  //     return res.status(err.status).json({
+  //       message: "Invalid JSON payload",
+  //       code: "INVALID_JSON",
+  //     });
+
+  //   return next(err); // if it's not a 400, let the default error handling do it.
+  // });
 
   app.use(mainRouter);
   app.use("/public", publicRouter);
