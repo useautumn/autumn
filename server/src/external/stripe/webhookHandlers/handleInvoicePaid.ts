@@ -3,7 +3,6 @@ import { CusProductService } from "@/internal/customers/products/CusProductServi
 import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, Organization } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import chalk from "chalk";
 import Stripe from "stripe";
 
 export const handleInvoicePaid = async ({
@@ -70,6 +69,7 @@ export const handleInvoicePaid = async ({
     const batchUpdate = [];
     for (const cusProduct of activeCusProducts) {
       // Create invoice
+
       batchUpdate.push(
         InvoiceService.createInvoiceFromStripe({
           sb,
