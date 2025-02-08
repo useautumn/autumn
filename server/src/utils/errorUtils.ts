@@ -56,10 +56,10 @@ export const handleRequestError = ({
   if (error instanceof RecaseError) {
     console.warn("--------------------------------");
     console.warn("WARNING");
-    console.warn(`${req.method} ${req.path}`);
+    console.warn(`${req.method} ${req.originalUrl}`);
     console.warn(
       `Request from ${
-        req.minOrg.slug || req.org.slug || req.orgId || "unknown"
+        req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
       }`
     );
     console.warn(`Request body:`, req.body);
@@ -75,9 +75,11 @@ export const handleRequestError = ({
 
   console.error("--------------------------------");
   console.error("ERROR");
-  console.error(`${req.method} ${req.path}`);
+  console.error(`${req.method} ${req.originalUrl}`);
   console.error(
-    `Request from ${req.minOrg.slug || req.org.slug || req.orgId || "unknown"}`
+    `Request from ${
+      req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
+    }`
   );
   console.error(`Request body:`, req.body);
 
