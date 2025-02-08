@@ -6,12 +6,14 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 export const handleInvoicePaid = async ({
+  req,
   sb,
   org,
   invoice,
   env,
   event,
 }: {
+  req: any;
   sb: SupabaseClient;
   org: Organization;
   invoice: Stripe.Invoice;
@@ -32,25 +34,26 @@ export const handleInvoicePaid = async ({
       (activeCusProducts.length === 0 && invoice.livemode)
     ) {
       // TODO: Send alert
-      throw new RecaseError({
-        message: `invoice.paid: customer product not found`,
-        code: "invoice_paid_customer_product_not_found",
-        statusCode: 200,
-        data: {
-          stripeInvoiceId: invoice.id,
-          stripeSubscriptionId: invoice.subscription,
-          stripeEventId: event.id,
-          stripeCustomerId: invoice.customer as string,
-          orgId: org.id,
-          env,
-        },
-      });
-      // console.log(
-      //   `   ERROR | ${chalk.red("❌")} invoice.paid: customer product not found`
-      // );
-      // console.log(
-      //   `   Event ID: ${event.id}, Subscription ID: ${invoice.subscription}, Org ID: ${org.id}, Env: ${env}`
-      // );
+      req.logger.warn(
+        `invoice.paid: customer product not found for invoice ${invoice.id}`
+      );
+      req.logger.warn(`Invoice subscription: ${invoice.subscription}`);
+      req.logger.warn(`Invoice customer: ${invoice.customer}`);
+
+      // throw new RecaseError({
+      //   message: `invoice.paid: customer product not found`,
+      //   code: "invoice_paid_customer_product_not_found",
+      //   statusCode: 200,
+      //   data: {
+      //     stripeInvoiceId: invoice.id,
+      //     stripeSubscriptionId: invoice.subscription,
+      //     stripeEventId: event.id,
+      //     stripeCustomerId: invoice.customer as string,
+      //     orgId: org.id,
+      //     env,
+      //   },
+      // });
+
       return;
     }
 

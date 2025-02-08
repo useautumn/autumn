@@ -9,7 +9,7 @@ import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { getStripeWebhookSecret } from "@/internal/orgs/orgUtils.js";
 import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
 import chalk from "chalk";
-import { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 
 export const stripeWebhookRouter = express.Router();
 
@@ -105,6 +105,7 @@ stripeWebhookRouter.post(
             invoice,
             env,
             event,
+            req: request,
           });
           break;
       }
