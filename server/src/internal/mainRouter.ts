@@ -7,6 +7,7 @@ import { creditsRouter } from "./credits/creditsRouter.js";
 import { productRouter } from "./products/internalProductRouter.js";
 import { devRouter } from "./dev/devRouter.js";
 import { cusRouter } from "./customers/internalCusRouter.js";
+import { testRouter } from "./test/testRouter.js";
 
 const mainRouter = Router();
 
@@ -21,5 +22,5 @@ mainRouter.use("/credits", withOrgAuth, creditsRouter);
 mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
-
+mainRouter.use("/test", testRouter);
 export default mainRouter;

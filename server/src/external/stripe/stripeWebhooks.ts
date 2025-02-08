@@ -41,13 +41,12 @@ stripeWebhookRouter.post(
     try {
       event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
     } catch (err: any) {
-      // console.log(`⚠️  Webhook signature verification failed.`, err.message);
-      // console.log("Stripe webhook signature verification failed");
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
 
     // For testing
+    // event = JSON.parse(request.body.toString());
 
     console.log(
       `${chalk.gray(new Date().toISOString())} ${chalk.yellow(
