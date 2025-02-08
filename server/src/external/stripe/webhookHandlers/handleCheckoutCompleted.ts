@@ -6,6 +6,7 @@ import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtil
 import { AppEnv, Organization } from "@autumn/shared";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripeCli } from "../utils.js";
+import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 
 export const itemMetasToOptions = async ({
   itemMetas,
@@ -19,6 +20,10 @@ export const itemMetasToOptions = async ({
   stripeCli: Stripe;
 }) => {
   // For each line item
+
+  if (!itemMetas || itemMetas.length == 0) {
+    return;
+  }
 
   const response = await stripeCli.checkout.sessions.listLineItems(
     checkoutSession.id
@@ -117,6 +122,7 @@ export const handleCheckoutSessionCompleted = async ({
   }
 
   console.log("   - checkout.completed: creating full customer product");
+
   await createFullCusProduct({
     sb,
     attachParams,
@@ -124,5 +130,27 @@ export const handleCheckoutSessionCompleted = async ({
   });
 
   console.log("   ✅ checkout.completed: successfully created cus product");
+
+  // Submit invoice
+  if (checkoutSession.invoice) {
+    try {
+      const invoice = await stripeCli.invoices.retrieve(
+        checkoutSession.invoice as string
+      );
+      await InvoiceService.createInvoiceFromStripe({
+        sb,
+        org,
+        stripeInvoice: invoice,
+        internalCustomerId: attachParams.customer.internal_id,
+        productIds: [attachParams.product.id],
+        internalProductIds: [attachParams.product.internal_id],
+      });
+
+      console.log("   ✅ checkout.completed: successfully created invoice");
+    } catch (error) {
+      console.error("checkout.completed: error creating invoice", error);
+    }
+  }
+
   return;
 };
