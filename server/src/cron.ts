@@ -35,13 +35,6 @@ const resetCustomerEntitlement = async ({
   cusEnt: FullCustomerEntitlementWithProduct;
 }) => {
   try {
-    // console.log(`Resetting cusEnt ${cusEnt.id}`);
-    // console.log(
-    //   `Customer: ${chalk.yellowBright(
-    //     cusEnt.customer_id
-    //   )}, Feature: ${chalk.yellowBright(cusEnt.entitlement.feature_id)}`
-    // );
-
     // 1. Get allowance and quantity
     const allowance = cusEnt.entitlement.allowance || 0;
 
@@ -53,12 +46,6 @@ const resetCustomerEntitlement = async ({
 
     let quantity = (entOptions && entOptions.quantity) || 1;
     const newBalance = allowance * quantity;
-
-    // console.log(
-    //   `Allowance: ${chalk.yellow(allowance)} | Quantity: ${chalk.yellow(
-    //     quantity
-    //   )} | New Balance: ${chalk.yellow(newBalance)}`
-    // );
 
     // 3. Update the next_reset_at for each entitlement
     const nextResetAt = getNextResetAt(

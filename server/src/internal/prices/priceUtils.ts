@@ -270,7 +270,7 @@ export const getPriceAmount = (price: Price, options: FeatureOptions) => {
   if (price.billing_type == BillingType.OneOff) {
     let config = price.config as FixedPriceConfig;
     return {
-      amountPerUnit: config.amount,
+      amountPerUnit: Number(config.amount.toFixed(2)),
       quantity: 1,
     };
   } else if (price.billing_type == BillingType.UsageInAdvance) {
@@ -278,7 +278,7 @@ export const getPriceAmount = (price: Price, options: FeatureOptions) => {
     let usageTier = getUsageTier(price, quantity);
 
     return {
-      amountPerUnit: usageTier.amount,
+      amountPerUnit: Number(usageTier.amount.toFixed(2)),
       quantity: quantity,
     };
   }
@@ -313,9 +313,28 @@ export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
       up_to: tier.to == -1 ? "inf" : tier.to,
     });
   }
+
+  console.log("Tiers: ", tiers);
   return tiers;
 };
 
 export const priceToEventName = (productName: string, featureName: string) => {
   return `${productName} - ${featureName}`;
+};
+
+export const roundPriceAmounts = (price: Price) => {
+  if (price.config!.type == PriceType.Fixed) {
+    const config = price.config as FixedPriceConfig;
+    config.amount = Number(config.amount.toFixed(2));
+    price.config = config;
+  } else if (price.config!.type == PriceType.Usage) {
+    const config = price.config as UsagePriceConfig;
+    for (let i = 0; i < config.usage_tiers.length; i++) {
+      config.usage_tiers[i].amount = Number(
+        config.usage_tiers[i].amount.toFixed(2)
+      );
+    }
+
+    price.config = config;
+  }
 };

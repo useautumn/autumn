@@ -93,6 +93,7 @@ export const PricingConfig = ({
             setConfig={setUsageConfig}
             usageTiers={usageTiers}
             setUsageTiers={setUsageTiers}
+            price={price}
           />
         </TabsContent>
       </Tabs>

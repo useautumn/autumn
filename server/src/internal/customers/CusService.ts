@@ -532,4 +532,43 @@ export class CusService {
   }
 
   // ENTITLEMENTS
+
+  // Get active products
+  static async getActiveProductsByInternalId({
+    sb,
+    internalCustomerId,
+  }: {
+    sb: SupabaseClient;
+    internalCustomerId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customers")
+      .select(
+        `
+          *, 
+          customer_products:customer_products!inner(*, 
+            customer_prices:customer_prices!inner(*, 
+              price:prices!inner(*)
+            ),
+            customer_entitlements:customer_entitlements!inner(*, 
+              entitlement:entitlements!inner(*, 
+                feature:features!inner(*)
+              )
+            )
+          )
+        `
+      )
+      .eq("internal_id", internalCustomerId)
+      .eq("customer_products.status", CusProductStatus.Active)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw error;
+    }
+
+    return data;
+  }
 }
