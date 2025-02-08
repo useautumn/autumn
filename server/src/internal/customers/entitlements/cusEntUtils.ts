@@ -3,14 +3,18 @@ import { CustomerEntitlementService } from "./CusEntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   AllowanceType,
-  BillingInterval,
-  CustomerEntitlement,
+  AppEnv,
+  Customer,
   EntInterval,
   EntitlementWithFeature,
   FeatureType,
   FullCustomerEntitlement,
+  FullCustomerPrice,
+  Organization,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 
 export const getFeatureBalance = async ({
   pg,
@@ -372,4 +376,62 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
     // 4. Sort by created_at
     return a.created_at - b.created_at;
   });
+};
+
+// Get related cusPrice
+export const getRelatedCusPrice = (
+  cusEnt: FullCustomerEntitlement,
+  cusPrices: FullCustomerPrice[]
+) => {
+  return cusPrices.find((cusPrice) => {
+    if (cusPrice.customer_product_id == cusEnt.customer_product_id) {
+      let config = cusPrice.price.config as UsagePriceConfig;
+      return (
+        config.internal_feature_id == cusEnt.entitlement.internal_feature_id
+      );
+    }
+
+    return false;
+  });
+};
+
+// 3. Perform deductions and update customer balance
+export const updateCusEntInStripe = async ({
+  cusEnt,
+  cusPrices,
+  org,
+  env,
+  customer,
+  amountUsed,
+  eventId,
+}: {
+  cusEnt: FullCustomerEntitlement;
+  cusPrices: FullCustomerPrice[];
+  org: Organization;
+  env: AppEnv;
+  customer: Customer;
+  amountUsed: number;
+  eventId: string;
+}) => {
+  const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+
+  if (!relatedCusPrice) {
+    return;
+  }
+
+  // Send event to Stripe
+  const stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
+  await stripeCli.billing.meterEvents.create({
+    event_name: relatedCusPrice.price.id!,
+    payload: {
+      stripe_customer_id: customer.processor.id,
+      value: amountUsed.toString(),
+    },
+    identifier: eventId,
+  });
+  console.log(`   ✅ Stripe event sent, amount: (${amountUsed})`);
 };

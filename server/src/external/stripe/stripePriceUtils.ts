@@ -8,11 +8,16 @@ import {
   Price,
   UsagePriceConfig,
   FeatureOptions,
+  Entitlement,
+  Feature,
+  Product,
 } from "@autumn/shared";
 
 import { billingIntervalToStripe } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
+import Stripe from "stripe";
+import { priceToStripeTiers } from "@/internal/prices/priceUtils.js";
 
 export const priceToStripeItem = ({
   price,
@@ -113,4 +118,40 @@ export const priceToStripeItem = ({
     lineItem,
     lineItemMeta,
   };
+};
+
+export const createStripeMeteredPrice = async ({
+  stripeCli,
+  meterId,
+  product,
+  price,
+  entitlements,
+  feature,
+}: {
+  stripeCli: Stripe;
+  meterId: string;
+  product: Product;
+  price: Price;
+  entitlements: Entitlement[];
+  feature: Feature;
+}) => {
+  return await stripeCli.prices.create({
+    // product: product.processor!.id,
+    product_data: {
+      name: `${product.name} - ${feature!.name}`,
+    },
+    // unit_amount: ,
+    billing_scheme: "tiered",
+    tiers_mode: "volume",
+    tiers: priceToStripeTiers(
+      price,
+      entitlements.find((e) => e.internal_feature_id === feature!.internal_id)!
+    ),
+    currency: "usd",
+    recurring: {
+      ...(billingIntervalToStripe(price.config!.interval!) as any),
+      meter: meterId,
+      usage_type: "metered",
+    },
+  });
 };

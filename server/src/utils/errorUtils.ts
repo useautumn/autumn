@@ -56,7 +56,7 @@ export const handleRequestError = ({
   if (error instanceof RecaseError) {
     console.warn("--------------------------------");
     console.warn("WARNING");
-    console.warn(`${req.method} ${req.path}`);
+    console.warn(`${req.method} ${req.originalUrl}`);
     console.warn(
       `Request from ${
         req.minOrg.slug || req.org.slug || req.orgId || "unknown"
@@ -75,14 +75,20 @@ export const handleRequestError = ({
 
   console.error("--------------------------------");
   console.error("ERROR");
-  console.error(`${req.method} ${req.path}`);
+  console.error(`${req.method} ${req.originalUrl}`);
   console.error(
-    `Request from ${req.minOrg.slug || req.org.slug || req.orgId || "unknown"}`
+    `Request from ${
+      req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
+    }`
   );
-  console.error(`Request body:`, req.body);
+  console.error(
+    `Request body:`,
+    Buffer.isBuffer(req.body) ? JSON.parse(req.body.toString()) : req.body
+  );
 
   if (error instanceof Stripe.errors.StripeError) {
     console.error("STRIPE ERROR");
+    // console.error("Code:", error.m);
     console.error(error.message);
     res.status(400).json({
       message: error.message,

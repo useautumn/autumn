@@ -70,6 +70,8 @@ const initWorker = (id: number, queue: Queue) => {
 
       try {
         await runUpdateBalanceTask(job.data);
+      } catch (error) {
+        console.error("Error updating balance:", error);
       } finally {
         await releaseLock(customerId);
       }
