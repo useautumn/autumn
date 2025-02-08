@@ -27,9 +27,11 @@ export default class RecaseError extends Error {
   }
 
   print(logger: any) {
-    logger.warn(`Code: ${chalk.yellow(this.code)}`);
+    logger.warn(`Code:    ${chalk.yellow(this.code)}`);
     logger.warn(`Message: ${chalk.yellow(this.message)}`);
+
     if (this.data) {
+      logger.warn(`Data:`);
       logger.warn(this.data);
     } else {
       logger.warn("No data");
@@ -65,6 +67,24 @@ const logRequestBody = (logger: any, req: any, level: "warn" | "error") => {
   }
 };
 
+const logReqUrl = (logger: any, req: any, level: "warn" | "error") => {
+  if (req.originalUrl.includes("/webhooks/stripe")) {
+    logger[level](`Stripe webhook: ${req.originalUrl}`);
+    let body = req.body;
+    try {
+      body = Buffer.isBuffer(req.body)
+        ? JSON.parse(req.body.toString())
+        : req.body;
+
+      logger[level](`Event type: ${body.type}, ID: ${body.id}`);
+    } catch (error) {
+      logger[level](`Invalid JSON body`);
+    }
+  } else {
+    logger[level](`${req.method} ${req.originalUrl}`);
+  }
+};
+
 export const handleRequestError = ({
   error,
   req,
@@ -81,15 +101,16 @@ export const handleRequestError = ({
     if (error instanceof RecaseError) {
       logger.warn("--------------------------------");
       logger.warn("RECASE WARNING");
-      logger.warn(`${req.method} ${req.originalUrl}`);
+      // logger.warn(`${req.method} ${req.originalUrl}`);
+      logReqUrl(logger, req, "warn");
       logger.warn(
         `Request from ${
           req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
         } for ${action}`
       );
+      error.print(logger);
       logRequestBody(logger, req, "warn");
 
-      error.print(logger);
       logger.warn("--------------------------------");
       res.status(error.statusCode).json({
         message: error.message,
@@ -100,7 +121,8 @@ export const handleRequestError = ({
 
     logger.error("--------------------------------");
     logger.error("ERROR");
-    logger.error(`${req.method} ${req.originalUrl}`);
+    // logger.error(`${req.method} ${req.originalUrl}`);
+    logReqUrl(logger, req, "error");
     logger.error(
       `Request from ${
         req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
@@ -110,22 +132,22 @@ export const handleRequestError = ({
     logRequestBody(logger, req, "error");
 
     if (error instanceof Stripe.errors.StripeError) {
-      logger.error("STRIPE ERROR");
+      logger.error("Type: StripeError");
       logger.error(error.message);
       res.status(400).json({
         message: error.message,
         code: ErrCode.InvalidInputs,
       });
     } else if (error instanceof ZodError) {
-      logger.error("ZOD ERROR");
+      logger.error("Type: ZodError");
       logger.error(formatZodError(error));
       res.status(400).json({
         message: formatZodError(error),
         code: ErrCode.InvalidInputs,
       });
     } else {
-      logger.error(`UNKNOWN ERROR`);
-      logger.error(`${error}`);
+      logger.error(`Type: Unknown`);
+      logger.error(error);
       res.status(500).json({ message: "Internal server error" });
     }
     logger.error("--------------------------------");
