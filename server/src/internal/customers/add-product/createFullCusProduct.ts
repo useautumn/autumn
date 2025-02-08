@@ -78,11 +78,6 @@ export const initCusEntitlement = ({
 
   // 3. Define expires at (TODO next time...)
   let isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
-  let nextResetNull =
-    isBooleanFeature ||
-    entitlement.allowance_type === AllowanceType.Unlimited ||
-    entitlement.interval == EntInterval.Lifetime;
-
   let usageAllowed = false;
   if (
     relatedPrice &&
@@ -90,6 +85,12 @@ export const initCusEntitlement = ({
   ) {
     usageAllowed = true;
   }
+
+  let nextResetNull =
+    isBooleanFeature ||
+    usageAllowed ||
+    entitlement.allowance_type === AllowanceType.Unlimited ||
+    entitlement.interval == EntInterval.Lifetime;
 
   return {
     id: generateId("cus_ent"),
