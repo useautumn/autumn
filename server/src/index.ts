@@ -64,21 +64,21 @@ const init = async () => {
 
   app.use(express.json());
 
-  // JSON error handler
-  app.use((err: any, req: any, res: any, next: any) => {
-    // you can error out to stderr still, or not; your choice
-    // console.error(err);
-    console.log(`JSON error handler: ${err.message}`);
+  // // JSON error handler
+  // app.use((err: any, req: any, res: any, next: any) => {
+  //   // you can error out to stderr still, or not; your choice
+  //   // console.error(err);
+  //   console.log(`JSON error handler: ${err.message}`);
 
-    // body-parser will set this to 400 if the json is in error
-    if (err.status === 400)
-      return res.status(err.status).json({
-        message: "Invalid JSON payload",
-        code: "INVALID_JSON",
-      });
+  //   // body-parser will set this to 400 if the json is in error
+  //   if (err.status === 400)
+  //     return res.status(err.status).json({
+  //       message: "Invalid JSON payload",
+  //       code: "INVALID_JSON",
+  //     });
 
-    return next(err); // if it's not a 400, let the default error handling do it.
-  });
+  //   return next(err); // if it's not a 400, let the default error handling do it.
+  // });
 
   app.use(mainRouter);
   app.use("/public", publicRouter);
