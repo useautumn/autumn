@@ -1,9 +1,10 @@
-import { createKey, deleteKey, updateKey } from "@/external/unkeyUtils.js";
+import { deleteKey } from "@/external/unkeyUtils.js";
 import { withOrgAuth } from "@/middleware/authMiddleware.js";
-import { ApiKey, AppEnv } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import { Router } from "express";
 import { ApiKeyService } from "./ApiKeyService.js";
 import { OrgService } from "../orgs/OrgService.js";
+import { createKey } from "./api-keys/apiKeyUtils.js";
 
 export const devRouter = Router();
 
@@ -23,40 +24,23 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) => {
   const { name } = req.body;
 
   // 1. Create API key
-  let prefix = "am_test";
+  let prefix = "am_sk_test";
   if (env === AppEnv.Live) {
-    prefix = "am_live";
+    prefix = "am_sk_live";
   }
-
   const apiKey = await createKey({
+    sb: req.sb,
     env,
     name,
-    ownerId: orgId,
+    orgId,
     prefix,
     meta: {
       org_slug: req.minOrg.slug,
     },
   });
-  if (!apiKey.result) {
-    console.error("Failed to create API key", apiKey);
-    res.status(500).json({ error: "Failed to create API key" });
-    return;
-  }
-
-  const apiKeyData: ApiKey = {
-    id: apiKey.result!.keyId,
-    org_id: orgId,
-    user_id: req.user.id,
-    name,
-    prefix: apiKey.result!.key.substring(0, 10),
-    created_at: Date.now(),
-    env,
-  };
-
-  await ApiKeyService.insert(req.sb, apiKeyData);
 
   res.status(200).json({
-    api_key: apiKey.result!.key,
+    api_key: apiKey,
   });
 });
 
@@ -69,8 +53,6 @@ devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
       res.status(404).json({ error: "API key not found" });
       return;
     }
-
-    await deleteKey(id);
   } catch (error) {
     console.error("Failed to delete API key", error);
     res.status(500).json({ error: "Failed to delete API key" });
