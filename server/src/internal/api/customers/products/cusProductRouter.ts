@@ -1,9 +1,11 @@
 import { Router } from "express";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { z } from "zod";
 import {
   BillingType,
   Entitlement,
   FeatureOptions,
+  FeatureOptionsSchema,
   Price,
   ProcessorType,
 } from "@autumn/shared";
@@ -289,11 +291,13 @@ attachRouter.post("/attach", async (req: any, res) => {
   const pricesInput: PricesInput = prices || [];
   const entsInput: Entitlement[] = entitlements || [];
   const optionsListInput: FeatureOptions[] = options || [];
+
   const useCheckout = force_checkout || false;
   console.log("--------------------------------");
   console.log("Add product request received");
 
   try {
+    z.array(FeatureOptionsSchema).parse(optionsListInput);
     // 1. Get full customer product data
     const attachParams = await getFullCusProductData({
       sb,

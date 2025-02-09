@@ -143,9 +143,16 @@ const checkFeatureAccessAllowed = ({
   quantity: number;
 }) => {
   if (originalFeature.type === FeatureType.Boolean) {
+    console.log("Boolean feature", originalFeature.id);
+
     return {
       allowed: cusEnts.some((ent) => ent.feature_id === originalFeature.id),
-      balances: [],
+      balances: [
+        {
+          feature_id: originalFeature.id,
+          balance: null,
+        },
+      ],
     };
   }
 

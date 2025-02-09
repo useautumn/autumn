@@ -25,7 +25,7 @@
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src", "tests"],
+  "include": ["src", "tests", "tests-old/utils.ts", "tests-old/global.ts"],
   "references": [
     {
       "path": "../shared"
