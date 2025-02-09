@@ -3,8 +3,13 @@
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { AppEnv, FeatureType, FullCustomerEntitlement } from "@autumn/shared";
-import { BreadcrumbItem } from "@nextui-org/react";
-import { Breadcrumbs } from "@nextui-org/react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { CustomerContext } from "./CustomerContext";
 import { useRouter } from "next/navigation";
 import CopyButton from "@/components/general/CopyButton";
@@ -73,18 +78,32 @@ export default function CustomerView({
     <CustomerContext.Provider value={{ customer, products, env, cusMutate }}>
       <CustomToaster />
       <div className="flex flex-col gap-1">
-        <Breadcrumbs className="text-t3">
-          <BreadcrumbItem
-            onClick={() => navigateTo("/customers", router, env)}
-            size="sm"
-          >
-            Customers
-          </BreadcrumbItem>
-          <BreadcrumbItem size="sm">{customer.name}</BreadcrumbItem>
-        </Breadcrumbs>
+        <Breadcrumb>
+          <BreadcrumbList className="text-t3 text-xs">
+            <BreadcrumbItem>
+              <BreadcrumbLink
+                className="cursor-pointer"
+                onClick={() => navigateTo("/customers", router, env)}
+              >
+                Customers
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              {customer.name ? customer.name : customer.id}
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         <div className="flex items-center justify-between">
-          <div className="flex gap-2">
-            <h2 className="text-lg text-t1 font-medium">{customer.name}</h2>
+          <div className="flex gap-2 max-w-2/3 w-2/3">
+            <h2 className="flex text-lg text-t1 font-medium gap-2 w-full justify-start">
+              <span className="min-w-0 max-w-[50%] truncate">
+                {customer.name}
+              </span>
+              <span className="min-w-0 max-w-[50%] truncate font-mono text-t3">
+                {customer.id}
+              </span>
+            </h2>
           </div>
           <CustomerToolbar customer={customer} />
         </div>
@@ -149,8 +168,8 @@ export default function CustomerView({
                   <TableHead className="">Products</TableHead>
                   <TableHead className="">Total</TableHead>
                   <TableHead className="">Status</TableHead>
-                  <TableHead className="">Created At</TableHead>
-                  <TableHead className=""></TableHead>
+                  <TableHead className="min-w-0 w-24">Created At</TableHead>
+                  <TableHead className="min-w-0 w-6"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -186,14 +205,14 @@ export default function CustomerView({
                       {invoice.currency.toUpperCase()}
                     </TableCell>
                     <TableCell>{invoice.status}</TableCell>
-                    <TableCell className="min-w-20 w-24">
+                    <TableCell>
                       {formatUnixToDateTime(invoice.created_at).date}
                       <span className="text-t3">
                         {" "}
                         {formatUnixToDateTime(invoice.created_at).time}{" "}
                       </span>
                     </TableCell>
-                    <TableCell className="min-w-4 w-6"></TableCell>
+                    <TableCell></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

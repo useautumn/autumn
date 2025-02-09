@@ -7,17 +7,18 @@ import { getOrgFromSession } from "@/utils/serverUtils";
 export default async function CustomerProductPage({
   params,
 }: {
-  params: { product_id: string; customer_id: string };// explicitly type the expected query param
+  params: Promise<{ product_id: string; customer_id: string }>;
 }) {
-
   const headersList = await headers();
   const env = (headersList.get("env") as AppEnv) || AppEnv.Sandbox;
   const org = await getOrgFromSession();
 
+  const { product_id, customer_id } = await params;
+
   return (
     <CustomerProductView
-      product_id={params.product_id}
-      customer_id={params.customer_id}
+      product_id={product_id}
+      customer_id={customer_id}
       env={env}
       org={org}
     />

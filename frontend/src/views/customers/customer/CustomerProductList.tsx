@@ -58,9 +58,9 @@ export const CustomerProductList = ({
             <TableHead className="">Name</TableHead>
             <TableHead className="">Product ID</TableHead>
             <TableHead className=""></TableHead>
-            <TableHead className="">Created At</TableHead>
+            <TableHead className="min-w-0 w-24">Created At</TableHead>
             {/* <TableHead className="">Ended At</TableHead> */}
-            <TableHead className=""></TableHead>
+            <TableHead className="min-w-0 w-6"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -95,7 +95,7 @@ export const CustomerProductList = ({
                   {cusProduct.product_id}
                 </TableCell>
                 <TableCell></TableCell>
-                <TableCell className="min-w-20 w-24">
+                <TableCell>
                   <span>
                     {formatUnixToDateTime(cusProduct.created_at).date}
                   </span>{" "}
@@ -108,7 +108,7 @@ export const CustomerProductList = ({
                     ? formatUnixToDateTimeString(cusProduct.ended_at)
                     : ""}
                 </TableCell> */}
-                <TableCell className="min-w-4 w-6">
+                <TableCell>
                   <EditCustomerProductToolbar cusProduct={cusProduct} />
                 </TableCell>
               </TableRow>

@@ -8,7 +8,13 @@ import {
   Organization,
 } from "@autumn/shared";
 
-import { BreadcrumbItem, Breadcrumbs } from "@nextui-org/react";
+import {
+  BreadcrumbItem,
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+  BreadcrumbLink,
+} from "@/components/ui/breadcrumb";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 
 import LoadingScreen from "@/views/general/LoadingScreen";
@@ -50,6 +56,7 @@ import { ProductOptionsButton } from "./ProductOptionsButton";
 import { ProductService } from "@/services/products/ProductService";
 import RequiredOptionsModal from "./RequiredOptionsModal";
 import { ProductOptions } from "./ProductOptions";
+import { Breadcrumbs } from "@nextui-org/react";
 
 interface OptionValue {
   feature_id: string;
@@ -303,21 +310,29 @@ export default function CustomerProductView({
       </Dialog>
 
       <div className="flex flex-col gap-2">
-        <Breadcrumbs className="text-t3">
-          <BreadcrumbItem
-            size="sm"
-            onClick={() => navigateTo("/customers", router, env)}
-          >
-            Customers
-          </BreadcrumbItem>
-          <BreadcrumbItem
-            size="sm"
-            onClick={() => navigateTo(`/customers/${customer_id}`, router, env)}
-          >
-            {customer.name}
-          </BreadcrumbItem>
-          <BreadcrumbItem size="sm">{product.name}</BreadcrumbItem>
-        </Breadcrumbs>
+        <Breadcrumb className="text-t3">
+          <BreadcrumbList className="text-t3 text-xs">
+            <BreadcrumbItem>
+              <BreadcrumbLink
+                className="cursor-pointer"
+                onClick={() => navigateTo("/customers", router, env)}
+              >
+                Customers
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbLink
+              className="cursor-pointer"
+              onClick={() =>
+                navigateTo(`/customers/${customer_id}`, router, env)
+              }
+            >
+              {customer.name}
+            </BreadcrumbLink>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>{product.name}</BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
         {product && <ManageProduct product={product} customerData={data} />}
       </div>
 
