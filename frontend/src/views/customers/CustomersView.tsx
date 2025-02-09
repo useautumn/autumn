@@ -54,7 +54,6 @@ function CustomersView({ env }: { env: AppEnv }) {
   });
 
   useEffect(() => {
-    console.log(pagination.lastItemStack[pagination.lastItemStack.length - 1]);
     const fetchData = async () => {
       setPaginationLoading(true);
       await mutate();
