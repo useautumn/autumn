@@ -62,6 +62,7 @@ export const handleCreateCheckout = async ({
     metadata: {
       autumn_metadata_id: metaId,
     },
+    allow_promotion_codes: true,
   });
 
   res.status(200).json({ checkout_url: checkout.url });
