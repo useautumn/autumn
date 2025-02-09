@@ -11,6 +11,7 @@ import {
   Entitlement,
   Feature,
   Product,
+  AllowanceType,
 } from "@autumn/shared";
 
 import { billingIntervalToStripe } from "./utils.js";
@@ -135,18 +136,46 @@ export const createStripeMeteredPrice = async ({
   entitlements: Entitlement[];
   feature: Feature;
 }) => {
+  const relatedEntitlement = entitlements.find(
+    (e) => e.internal_feature_id === feature!.internal_id
+  );
+
+  const isOverage =
+    relatedEntitlement?.allowance_type == AllowanceType.Fixed &&
+    relatedEntitlement.allowance &&
+    relatedEntitlement.allowance > 0;
+
+  let overageStr = "";
+  if (isOverage) {
+    overageStr = ` (overage)`;
+  }
+
+  const tiers = priceToStripeTiers(
+    price,
+    entitlements.find((e) => e.internal_feature_id === feature!.internal_id)!
+  );
+
+  let priceAmountData = {};
+
+  if (tiers.length == 1) {
+    priceAmountData = {
+      unit_amount: tiers[0].unit_amount,
+    };
+  } else {
+    priceAmountData = {
+      billing_scheme: "tiered",
+      tiers_mode: "volume",
+      tiers: tiers,
+    };
+  }
+
   return await stripeCli.prices.create({
     // product: product.processor!.id,
     product_data: {
-      name: `${product.name} - ${feature!.name}`,
+      name: `${product.name} - ${feature!.name}${overageStr}`,
     },
-    // unit_amount: ,
-    billing_scheme: "tiered",
-    tiers_mode: "volume",
-    tiers: priceToStripeTiers(
-      price,
-      entitlements.find((e) => e.internal_feature_id === feature!.internal_id)!
-    ),
+
+    ...priceAmountData,
     currency: "usd",
     recurring: {
       ...(billingIntervalToStripe(price.config!.interval!) as any),

@@ -219,6 +219,56 @@ const handleStripePrices = async ({
   }
 };
 
+const deleteStripePrices = async ({
+  sb,
+  prices,
+  org,
+  env,
+}: {
+  sb: SupabaseClient;
+  prices: Price[];
+  org: Organization;
+  env: AppEnv;
+}) => {
+  const stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
+  for (const price of prices) {
+    const config = price.config! as UsagePriceConfig;
+
+    if (getBillingType(price.config!) == BillingType.UsageInArrear) {
+      if (config.stripe_price_id) {
+        const stripePrice = await stripeCli.prices.retrieve(
+          config.stripe_price_id!
+        );
+
+        // Default product
+
+        await stripeCli.prices.update(config.stripe_price_id!, {
+          active: false,
+        });
+
+        const attachedProductId = stripePrice.product as string;
+        const product = await stripeCli.products.retrieve(attachedProductId);
+        if (!product.active) {
+          await stripeCli.products.del(attachedProductId);
+        } else {
+          await stripeCli.products.update(attachedProductId, {
+            active: false,
+          });
+        }
+      }
+
+      if (config.stripe_meter_id) {
+        await stripeCli.billing.meters.deactivate(config.stripe_meter_id!);
+      }
+      console.log("Deleted stripe price and meter");
+    }
+  }
+};
+
 export const handleNewPrices = async ({
   sb,
   newPrices,
@@ -257,6 +307,7 @@ export const handleNewPrices = async ({
   const createdPrices: Price[] = [];
   const updatedPrices: Price[] = [];
   let newInArrearPrices: Price[] = [];
+  let removedInArrearPrices: Price[] = [];
 
   for (let newPrice of newPrices) {
     // Validate price
@@ -301,6 +352,13 @@ export const handleNewPrices = async ({
       if (getBillingType(newPrice.config!) == BillingType.UsageInArrear) {
         newInArrearPrices.push(newPrice);
       }
+
+      if (
+        getBillingType(curPrice.config!) == BillingType.UsageInArrear &&
+        getBillingType(newPrice.config!) != BillingType.UsageInArrear
+      ) {
+        removedInArrearPrices.push(curPrice);
+      }
     }
   }
 
@@ -323,6 +381,14 @@ export const handleNewPrices = async ({
     features,
     entitlements,
   });
+
+  await deleteStripePrices({
+    sb,
+    prices: [...removedInArrearPrices, ...removedPrices],
+    org,
+    env,
+  });
+
   await PriceService.insert({ sb, data: createdPrices });
 
   // For created prices, create Stripe price if not already created
