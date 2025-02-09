@@ -18,7 +18,7 @@ import { useDevContext } from "./DevContext";
 
 const CreateAPIKey = () => {
   const { env, mutate } = useDevContext();
-  const axiosInstance = useAxiosInstance({env});
+  const axiosInstance = useAxiosInstance({ env });
 
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
@@ -62,7 +62,7 @@ const CreateAPIKey = () => {
           Create API Key
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-[450px]">
+      <DialogContent className="max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Create API Key</DialogTitle>
         </DialogHeader>
