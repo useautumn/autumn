@@ -308,8 +308,9 @@ export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
 
   for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
     const tier = usageConfig.usage_tiers[i];
+
     tiers.push({
-      unit_amount: tier.amount * 100,
+      unit_amount: Math.round(tier.amount * 100),
       up_to: tier.to == -1 ? "inf" : tier.to,
     });
   }
