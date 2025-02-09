@@ -32,4 +32,37 @@ export class ApiKeyService {
 
     return count;
   }
+
+  static async getByHashedKey(sb: SupabaseClient, hashedKey: string) {
+    const { data, error } = await sb
+      .from("api_keys")
+      .select("*")
+      .eq("hashed_key", hashedKey)
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+      throw new Error("Failed to get API key");
+    }
+
+    return data;
+  }
+
+  static async update({
+    sb,
+    update,
+    keyId,
+  }: {
+    sb: SupabaseClient;
+    update: any;
+    keyId: string;
+  }) {
+    const { error } = await sb.from("api_keys").update(update).eq("id", keyId);
+
+    if (error) {
+      throw new Error("Failed to update API key");
+    }
+  }
 }

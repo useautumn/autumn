@@ -15,8 +15,14 @@ const apiRouter = Router();
 
 apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
-
 apiRouter.use(attachRouter);
+
+apiRouter.get("/auth", (req: any, res) => {
+  res.json({
+    message: `Authenticated -- Hello ${req.minOrg?.slug}!`,
+  });
+});
+
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/products", productApiRouter);
 apiRouter.use("/features", featureApiRouter);
