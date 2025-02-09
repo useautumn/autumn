@@ -4,6 +4,7 @@ import {
   CusProductStatus,
   Customer,
   CustomerResponseSchema,
+  FullCustomerPrice,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -16,13 +17,15 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { EventService } from "../events/EventService.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { createNewCustomer } from "./cusUtils.js";
+import { createNewCustomer, getCusEntsAndPrices } from "./cusUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import {
   getCusBalancesByEntitlement,
   getCusBalancesByProduct,
+  getRelatedCusPrice,
   sortCusEntsForDeduction,
+  updateCusEntInStripe,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { processFullCusProduct } from "@/internal/customers/products/cusProductUtils.js";
 import {
@@ -30,6 +33,8 @@ import {
   processInvoice,
 } from "@/internal/customers/invoices/InvoiceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { CusPriceService } from "@/internal/customers/prices/CusPriceService.js";
+import { generateId } from "@/utils/genUtils.js";
 
 export const cusRouter = Router();
 
@@ -305,6 +310,7 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
   }
 });
 
+// Update customer entitlement directly
 cusRouter.post(
   "/customer_entitlements/:customer_entitlement_id",
   async (req: any, res: any) => {
@@ -332,18 +338,51 @@ cusRouter.post(
       }
 
       // Check if org owns the entitlement
-      await CustomerEntitlementService.getByIdStrict({
+      const cusEnt = await CustomerEntitlementService.getByIdStrict({
         sb: req.sb,
         id: customer_entitlement_id,
         orgId: req.orgId,
         env: req.env,
       });
 
+      const amountUsed = cusEnt.balance! - balance;
+
       await CustomerEntitlementService.update({
         sb: req.sb,
         id: customer_entitlement_id,
         updates: { balance, next_reset_at },
       });
+
+      if (cusEnt.usage_allowed) {
+        // Get related usage price
+        const cusPrices: FullCustomerPrice[] =
+          await CusPriceService.getByCusProductId({
+            sb: req.sb,
+            customerProductId: cusEnt.customer_product_id,
+          });
+
+        const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+
+        if (!relatedCusPrice) {
+          res.status(200).json({ success: true });
+          return;
+        }
+
+        const fullOrg = await OrgService.getFullOrg({
+          sb: req.sb,
+          orgId: req.orgId,
+        });
+
+        await updateCusEntInStripe({
+          cusEnt,
+          cusPrices,
+          org: fullOrg,
+          env: req.env,
+          customer: cusEnt.customer,
+          amountUsed,
+          eventId: generateId("manual"),
+        });
+      }
 
       res.status(200).json({ success: true });
     } catch (error) {
@@ -369,6 +408,11 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
       env: req.env,
     });
 
+    const fullOrg = await OrgService.getFullOrg({
+      sb: req.sb,
+      orgId: req.orgId,
+    });
+
     if (!customer) {
       throw new RecaseError({
         message: `Customer ${cusId} not found`,
@@ -382,13 +426,11 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
       balances.map((b: any) => b.feature_id).includes(f.id)
     );
 
-    const cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
+    const { cusEnts, cusPrices } = await getCusEntsAndPrices({
       sb: req.sb,
       internalCustomerId: customer.internal_id,
       internalFeatureIds: featuresToUpdate.map((f) => f.internal_id),
     });
-
-    sortCusEntsForDeduction(cusEnts);
 
     // console.log("cusEnts", cusEnts);
     for (const balance of balances) {
@@ -416,21 +458,24 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
       let newBalance = balance.balance;
       for (const cusEnt of cusEnts) {
         if (cusEnt.internal_feature_id === feature.internal_id) {
-          curBalance += cusEnt.balance;
+          curBalance += cusEnt.balance!;
         }
       }
 
-      let updateAmount = newBalance - curBalance;
+      let toDeduct = curBalance - newBalance;
 
       for (const cusEnt of cusEnts) {
-        if (updateAmount == 0) break;
+        if (toDeduct == 0) break;
         if (cusEnt.internal_feature_id === feature.internal_id) {
-          if (cusEnt.balance + updateAmount < 0) {
-            updateAmount += cusEnt.balance;
+          let amountUsed;
+          if (cusEnt.balance! - toDeduct < 0) {
+            toDeduct -= cusEnt.balance!;
+            amountUsed = cusEnt.balance!;
             newBalance = 0;
           } else {
-            newBalance = cusEnt.balance + updateAmount;
-            updateAmount = 0;
+            newBalance = cusEnt.balance! - toDeduct;
+            amountUsed = toDeduct;
+            toDeduct = 0;
           }
 
           await CustomerEntitlementService.update({
@@ -440,6 +485,21 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
               balance: newBalance,
             },
           });
+
+          console.log("Amount used", amountUsed);
+          console.log("Feature", feature.name);
+
+          if (cusEnt.usage_allowed) {
+            await updateCusEntInStripe({
+              cusEnt,
+              cusPrices,
+              org: fullOrg,
+              env: req.env,
+              customer,
+              amountUsed,
+              eventId: generateId("manual"),
+            });
+          }
         }
       }
     }

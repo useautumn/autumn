@@ -3,8 +3,11 @@ import {
   CusProductSchema,
   Customer,
   CustomerSchema,
+  FullCustomerEntitlement,
+  FullCustomerPrice,
   Organization,
   ProductSchema,
+  UsagePriceConfig,
 } from "@autumn/shared";
 
 import { CreateCustomer } from "@autumn/shared";
@@ -153,4 +156,45 @@ export const flipProductResults = (
     });
   }
   return customers;
+};
+
+export const getCusEntsAndPrices = async ({
+  sb,
+  internalCustomerId,
+  internalFeatureIds,
+}: {
+  sb: SupabaseClient;
+  internalCustomerId: string;
+  internalFeatureIds: string[];
+}) => {
+  const cusWithProducts = await CusService.getActiveProductsByInternalId({
+    sb,
+    internalCustomerId,
+  });
+
+  if (!cusWithProducts) {
+    return { cusEnts: [], cusPrices: [] };
+  }
+
+  const cusProducts = cusWithProducts?.customer_products;
+
+  const cusEnts: FullCustomerEntitlement[] = [];
+  const cusPrices: FullCustomerPrice[] = [];
+  for (const cusProduct of cusProducts) {
+    cusEnts.push(
+      ...cusProduct.customer_entitlements.filter(
+        (cusEnt: FullCustomerEntitlement) =>
+          internalFeatureIds.includes(cusEnt.entitlement.internal_feature_id!)
+      )
+    );
+    cusPrices.push(
+      ...cusProduct.customer_prices.filter((cusPrice: FullCustomerPrice) => {
+        const priceConfig = cusPrice.price.config as UsagePriceConfig;
+
+        return internalFeatureIds.includes(priceConfig.internal_feature_id);
+      })
+    );
+  }
+
+  return { cusEnts, cusPrices };
 };
