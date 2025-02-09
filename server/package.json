@@ -15,7 +15,8 @@
     "cron": "tsx src/cron.ts",
     "cron:start": "node --no-deprecation dist/src/cron.js",
     "clean": "tsx src/clean.ts",
-    "test": "mocha 'tests/**/*.ts'"
+    "test-all": "mocha 'tests/**/*.ts'",
+    "test": "mocha 'tests/$1.ts'"
   },
   "mocha": {
     "node-option": [

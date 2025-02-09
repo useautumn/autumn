@@ -23,6 +23,7 @@ export const createWebhookEndpoint = async (
       "customer.subscription.deleted",
       "checkout.session.completed",
       "invoice.paid",
+      "invoice.upcoming",
       "invoice.created",
       "invoice.finalized",
     ],

@@ -23,9 +23,6 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import {
   getCusBalancesByEntitlement,
   getCusBalancesByProduct,
-  getRelatedCusPrice,
-  sortCusEntsForDeduction,
-  updateCusEntInStripe,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { processFullCusProduct } from "@/internal/customers/products/cusProductUtils.js";
 import {
@@ -33,7 +30,7 @@ import {
   processInvoice,
 } from "@/internal/customers/invoices/InvoiceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { CusPriceService } from "@/internal/customers/prices/CusPriceService.js";
+
 import { generateId } from "@/utils/genUtils.js";
 
 export const cusRouter = Router();
@@ -353,37 +350,6 @@ cusRouter.post(
         updates: { balance, next_reset_at },
       });
 
-      if (cusEnt.usage_allowed) {
-        // Get related usage price
-        const cusPrices: FullCustomerPrice[] =
-          await CusPriceService.getByCusProductId({
-            sb: req.sb,
-            customerProductId: cusEnt.customer_product_id,
-          });
-
-        const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
-
-        if (!relatedCusPrice) {
-          res.status(200).json({ success: true });
-          return;
-        }
-
-        const fullOrg = await OrgService.getFullOrg({
-          sb: req.sb,
-          orgId: req.orgId,
-        });
-
-        await updateCusEntInStripe({
-          cusEnt,
-          cusPrices,
-          org: fullOrg,
-          env: req.env,
-          customer: cusEnt.customer,
-          amountUsed,
-          eventId: generateId("manual"),
-        });
-      }
-
       res.status(200).json({ success: true });
     } catch (error) {
       handleRequestError({
@@ -485,21 +451,6 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
               balance: newBalance,
             },
           });
-
-          console.log("Amount used", amountUsed);
-          console.log("Feature", feature.name);
-
-          if (cusEnt.usage_allowed) {
-            await updateCusEntInStripe({
-              cusEnt,
-              cusPrices,
-              org: fullOrg,
-              env: req.env,
-              customer,
-              amountUsed,
-              eventId: generateId("manual"),
-            });
-          }
         }
       }
     }
