@@ -32,7 +32,12 @@ export class CustomerEntitlementService {
       if (error.code === "PGRST116") {
         return null;
       }
-      throw error;
+      throw new RecaseError({
+        message: "Failed to getCustomerAndEnts (Supabase)",
+        code: ErrCode.InternalError,
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+        data: error,
+      });
     }
 
     return data;
