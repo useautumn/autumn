@@ -46,7 +46,7 @@ export const CustomerEntitlementsList = ({
 
   const filteredEntitlements = customer.entitlements.filter(
     (cusEnt: FullCustomerEntitlement) => {
-      const featureType = cusEnt.entitlement.feature.type;
+      const entFeatureType = cusEnt.entitlement.feature.type;
       const cusProduct = customer.products.find(
         (p) => p.id === cusEnt.customer_product_id
       );
@@ -55,10 +55,9 @@ export const CustomerEntitlementsList = ({
       // Filter by feature type
       const featureTypeMatches =
         featureType === FeatureType.Boolean
-          ? featureType === FeatureType.Boolean
-          : featureType === FeatureType.Metered &&
-            (featureType === FeatureType.Metered ||
-              featureType === FeatureType.CreditSystem);
+          ? entFeatureType === FeatureType.Boolean
+          : entFeatureType === FeatureType.Metered ||
+            entFeatureType === FeatureType.CreditSystem;
 
       // Filter by expired status
       const expiredStatusMatches = showExpired ? true : !isExpired;
@@ -116,8 +115,12 @@ export const CustomerEntitlementsList = ({
           <TableRow className="">
             <TableHead className="">Product</TableHead>
             <TableHead className="">Feature</TableHead>
-            <TableHead className="">Balance</TableHead>
-            <TableHead className="min-w-0 w-24">Next Reset</TableHead>
+            <TableHead className="">
+              {featureType === FeatureType.Metered && "Balance"}
+            </TableHead>
+            <TableHead className="min-w-0 w-24">
+              {featureType === FeatureType.Metered && "Next Reset"}
+            </TableHead>
             {/* <TableHead className="">Status</TableHead> */}
             <TableHead className="min-w-0 w-6"></TableHead>
           </TableRow>
