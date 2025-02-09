@@ -32,12 +32,14 @@ function CreateUsagePrice({
   usageTiers,
   setUsageTiers,
   price,
+  isUpdate = false,
 }: {
   config: any;
   setConfig: (config: any) => void;
   usageTiers: any[];
   setUsageTiers: (usageTiers: any[]) => void;
   price: Price;
+  isUpdate: boolean;
 }) {
   const { features, product } = useProductContext();
 
@@ -67,9 +69,10 @@ function CreateUsagePrice({
 
   const filteredEntitlements = product.entitlements.filter(
     (entitlement: EntitlementWithFeature) => {
-      const config = price.config as UsagePriceConfig;
+      const config = price?.config as UsagePriceConfig;
+
       if (
-        config &&
+        isUpdate &&
         config.internal_feature_id == entitlement.internal_feature_id
       ) {
         return true;
@@ -102,7 +105,7 @@ function CreateUsagePrice({
                   ?.internal_id,
               });
             }}
-            disabled={!!(price.config as UsagePriceConfig)?.internal_feature_id}
+            disabled={isUpdate}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select entitlement" />
