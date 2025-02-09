@@ -117,9 +117,9 @@ export const CustomerEntitlementsList = ({
             <TableHead className="">Product</TableHead>
             <TableHead className="">Feature</TableHead>
             <TableHead className="">Balance</TableHead>
-            <TableHead className="">Next Reset</TableHead>
+            <TableHead className="min-w-0 w-24">Next Reset</TableHead>
             {/* <TableHead className="">Status</TableHead> */}
-            <TableHead className=""></TableHead>
+            <TableHead className="min-w-0 w-6"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -150,13 +150,13 @@ export const CustomerEntitlementsList = ({
                     ? "None"
                     : cusEnt.balance}
                 </TableCell>
-                <TableCell className="min-w-20 w-24">
+                <TableCell>
                   <span>{formatUnixToDateTime(cusEnt.next_reset_at).date}</span>{" "}
                   <span className="text-t3">
                     {formatUnixToDateTime(cusEnt.next_reset_at).time}
                   </span>
                 </TableCell>
-                <TableCell className="min-w-4 w-6"></TableCell>
+                <TableCell></TableCell>
                 {/* <TableCell>
                   <StatusBadge
                     status={
