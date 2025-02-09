@@ -31,11 +31,13 @@ function CreateUsagePrice({
   setConfig,
   usageTiers,
   setUsageTiers,
+  price,
 }: {
   config: any;
   setConfig: (config: any) => void;
   usageTiers: any[];
   setUsageTiers: (usageTiers: any[]) => void;
+  price: Price;
 }) {
   const { features, product } = useProductContext();
 
@@ -65,6 +67,13 @@ function CreateUsagePrice({
 
   const filteredEntitlements = product.entitlements.filter(
     (entitlement: EntitlementWithFeature) => {
+      const config = price.config as UsagePriceConfig;
+      if (
+        config &&
+        config.internal_feature_id == entitlement.internal_feature_id
+      ) {
+        return true;
+      }
       if (
         product.prices.some((price: Price) => {
           const config = price.config as UsagePriceConfig;
@@ -93,6 +102,7 @@ function CreateUsagePrice({
                   ?.internal_id,
               });
             }}
+            disabled={!!(price.config as UsagePriceConfig)?.internal_feature_id}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select entitlement" />

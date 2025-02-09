@@ -15,6 +15,7 @@ import { Client } from "pg";
 import { Queue } from "bullmq";
 import { createNewCustomer } from "../customers/cusUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 
 export const eventsRouter = Router();
 
@@ -121,6 +122,11 @@ export const handleEventSent = async ({
 }) => {
   const { sb, pg, orgId, env } = req;
 
+  const org = await OrgService.getFullOrg({
+    sb,
+    orgId,
+  });
+
   const { customer, event } = await getEventAndCustomer({
     sb,
     orgId,
@@ -144,6 +150,8 @@ export const handleEventSent = async ({
       customer,
       features: affectedFeatures,
       event,
+      org,
+      env,
     });
   }
 };

@@ -236,6 +236,32 @@ export class CusProductService {
     return data;
   }
 
+  static async getEntsAndPrices({
+    sb,
+    cusProductId,
+  }: {
+    sb: SupabaseClient;
+    cusProductId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_products")
+      .select(
+        `
+          *, 
+          customer_entitlements:customer_entitlements!inner(*, entitlement:entitlements!inner(*)), 
+          customer_prices:customer_prices!inner(*, price:prices!inner(*))
+        `
+      )
+      .eq("id", cusProductId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async getPastDueByInvoiceId({
     sb,
     invoiceId,

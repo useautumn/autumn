@@ -1,4 +1,10 @@
-import { Feature } from "@autumn/shared";
+import {
+  Entitlement,
+  Feature,
+  Price,
+  PriceType,
+  UsagePriceConfig,
+} from "@autumn/shared";
 
 export const getFeature = (
   internalFeatureId: string | undefined,

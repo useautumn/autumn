@@ -8,6 +8,7 @@ import {
   CusProduct,
   FeatureOptions,
   FreeTrial,
+  BillingType,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
@@ -17,12 +18,15 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
-import { getEntOptions } from "@/internal/prices/priceUtils.js";
+import { getBillingType, getEntOptions } from "@/internal/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
+import {
+  applyTrialToEntitlement,
+  getEntRelatedPrice,
+} from "@/internal/products/entitlements/entitlementUtils.js";
 
 export const initCusEntitlement = ({
   entitlement,
@@ -32,6 +36,7 @@ export const initCusEntitlement = ({
   options,
   nextResetAt,
   billLaterOnly = false,
+  relatedPrice,
 }: {
   entitlement: EntitlementWithFeature;
   customer: Customer;
@@ -40,6 +45,7 @@ export const initCusEntitlement = ({
   options?: FeatureOptions;
   nextResetAt?: number;
   billLaterOnly?: boolean;
+  relatedPrice?: Price;
 }) => {
   const feature: Feature = entitlement.feature;
 
@@ -77,6 +83,14 @@ export const initCusEntitlement = ({
     entitlement.allowance_type === AllowanceType.Unlimited ||
     entitlement.interval == EntInterval.Lifetime;
 
+  let usageAllowed = false;
+  if (
+    relatedPrice &&
+    getBillingType(relatedPrice.config!) === BillingType.UsageInArrear
+  ) {
+    usageAllowed = true;
+  }
+
   return {
     id: generateId("cus_ent"),
     internal_customer_id: customer.internal_id,
@@ -94,7 +108,7 @@ export const initCusEntitlement = ({
       ? null
       : entitlement.allowance_type === AllowanceType.Unlimited,
     balance: isBooleanFeature ? null : balance,
-    usage_allowed: isBooleanFeature ? null : false,
+    usage_allowed: usageAllowed,
     next_reset_at: nextResetNull ? null : nextResetAt || nextResetAtCalculated,
   };
 };
@@ -309,6 +323,7 @@ export const createFullCusProduct = async ({
 
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
+    const relatedPrice = getEntRelatedPrice(entitlement, prices);
 
     const cusEnt: any = initCusEntitlement({
       entitlement,
@@ -318,6 +333,7 @@ export const createFullCusProduct = async ({
       nextResetAt,
       billLaterOnly,
       freeTrial: disableFreeTrial ? null : freeTrial,
+      relatedPrice,
     });
 
     cusEnts.push(cusEnt);
