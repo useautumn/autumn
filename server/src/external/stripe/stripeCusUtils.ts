@@ -4,6 +4,7 @@ import { createStripeCli } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export const createStripeCustomer = async ({
   org,
@@ -86,11 +87,42 @@ export const getCusPaymentMethod = async ({
 };
 
 // 2. Create a payment method and attach to customer
-export const attachPmToCus = async (
-  stripeCli: Stripe,
-  stripeCusId: string,
-  willFail: boolean = false
-) => {
+export const attachPmToCus = async ({
+  sb,
+  customer,
+  org,
+  env,
+  willFail = false,
+}: {
+  sb: SupabaseClient;
+  customer: Customer;
+  org: Organization;
+  env: AppEnv;
+  willFail?: boolean;
+}) => {
+  // 1. Create stripe customer if not exists
+
+  let stripeCusId = customer.processor?.stripe_id;
+  if (!stripeCusId) {
+    const stripeCustomer = await createStripeCustomer({
+      org,
+      env,
+      customer,
+    });
+
+    await sb
+      .from("customers")
+      .update({
+        processor: {
+          stripe_id: stripeCustomer.id,
+        },
+      })
+      .eq("internal_id", customer.internal_id);
+    stripeCusId = stripeCustomer.id;
+  }
+
+  const stripeCli = createStripeCli({ org, env });
+
   try {
     let token = willFail ? "tok_chargeCustomerFail" : "tok_visa";
     const pm = await stripeCli.paymentMethods.create({
