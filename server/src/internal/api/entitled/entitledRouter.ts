@@ -243,14 +243,23 @@ const getCusEntsActiveInFeatureIds = ({
   const internalFeatureIds = features.map((feature) => feature.internal_id);
   const cusEnts = cusWithEnts.customer_entitlements;
 
-  const activeCusEnts = cusEnts.filter((cusEnt) => {
-    return (
-      internalFeatureIds.includes(cusEnt.internal_feature_id) &&
-      cusWithEnts.customer_products.some(
-        (product) => product.id === cusEnt.customer_product_id
-      )
-    );
-  });
+  const activeCusEnts = cusEnts
+    .filter((cusEnt) => {
+      return (
+        internalFeatureIds.includes(cusEnt.internal_feature_id) &&
+        cusWithEnts.customer_products.some(
+          (product) => product.id === cusEnt.customer_product_id
+        )
+      );
+    })
+    .map((ent) => {
+      return {
+        ...ent,
+        customer_product: cusWithEnts.customer_products.find(
+          (cusProduct) => cusProduct.id === ent.customer_product_id
+        ),
+      };
+    });
 
   return activeCusEnts;
 };
@@ -344,8 +353,10 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     console.log(
       "Relevant customer entitlements:",
-      cusEnts.map((ent) => {
-        return `${ent.feature_id} - ${ent.balance}`;
+      cusEnts.map((ent: any) => {
+        return `${ent.feature_id} - ${ent.balance} (${
+          ent.customer_product ? ent.customer_product.product_id : ""
+        })`;
       })
     );
 
