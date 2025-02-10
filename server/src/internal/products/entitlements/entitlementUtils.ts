@@ -12,6 +12,9 @@ import {
   Feature,
   ErrCode,
   EntitlementSchema,
+  UsagePriceConfig,
+  PriceType,
+  Price,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { addDays } from "date-fns";
@@ -257,4 +260,19 @@ export const handleNewEntitlements = async ({
   console.log(
     `Successfully handled new entitlements. Created ${createdEnts.length}, updated ${updatedEnts.length}, removed ${removedEnts.length}`
   );
+};
+
+// OTHERS
+export const getEntRelatedPrice = (
+  entitlement: Entitlement,
+  prices: Price[]
+) => {
+  return prices.find((price) => {
+    if (price.config?.type === PriceType.Fixed) {
+      return false;
+    }
+
+    const config = price.config as UsagePriceConfig;
+    return config.internal_feature_id === entitlement.internal_feature_id;
+  });
 };

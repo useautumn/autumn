@@ -15,7 +15,9 @@
     "cron": "tsx src/cron.ts",
     "cron:start": "node --no-deprecation dist/src/cron.js",
     "clean": "tsx src/clean.ts",
-    "test": "mocha 'tests/**/*.ts'"
+    "test-all": "mocha 'tests/**/*.ts'",
+    "test": "mocha 'tests/**/*.ts'",
+    "test-02-04": "mocha 'tests/02_usageBased.ts' 'tests/04_entitled.ts'"
   },
   "mocha": {
     "node-option": [
@@ -67,7 +69,7 @@
     "@types/node": "^22.13.0",
     "@types/pg": "^8.11.10",
     "mocha": "^11.1.0",
-    "puppeteer": "^24.1.1",
+    "puppeteer": "^24.2.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3"

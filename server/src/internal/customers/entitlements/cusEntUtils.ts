@@ -3,14 +3,19 @@ import { CustomerEntitlementService } from "./CusEntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   AllowanceType,
-  BillingInterval,
-  CustomerEntitlement,
+  AppEnv,
+  CusProduct,
+  Customer,
   EntInterval,
   EntitlementWithFeature,
   FeatureType,
   FullCustomerEntitlement,
+  FullCustomerPrice,
+  Organization,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 
 export const getFeatureBalance = async ({
   pg,
@@ -228,50 +233,21 @@ export const getCusBalancesByProduct = async ({
   return balances;
 };
 
+type CusEntsWithCusProduct = FullCustomerEntitlement & {
+  customer_product: CusProduct;
+};
+
 export const getCusBalancesByEntitlement = async ({
-  sb,
-  customerId,
-  orgId,
-  env,
-  internalCustomerId,
+  cusEntsWithCusProduct,
 }: {
-  sb: SupabaseClient;
-  customerId: string;
-  orgId: string;
-  env: string;
-  internalCustomerId: string;
+  cusEntsWithCusProduct: CusEntsWithCusProduct[];
 }) => {
-  // const cusEnts =
-  //   await CustomerEntitlementService.getActiveByInternalCustomerId({
-  //     sb,
-  //     internalCustomerId,
-  //   });
-
-  // console.log("Cus ents: ", cusEnts);
-
-  const cusEnts = await CustomerEntitlementService.getActiveByCustomerId({
-    sb,
-    customerId,
-    orgId,
-    env,
-  });
-
   const data: Record<string, any> = {};
 
-  for (const cusEnt of cusEnts) {
+  for (const cusEnt of cusEntsWithCusProduct) {
     const cusProduct = cusEnt.customer_product;
     const feature = cusEnt.entitlement.feature;
     const ent: EntitlementWithFeature = cusEnt.entitlement;
-
-    // console.log("--------------------------------");
-    // console.log("Feature:", feature.id, feature.type);
-    // console.log(
-    //   "Entitlement:",
-    //   ent.id,
-    //   ent.allowance,
-    //   ent.interval,
-    //   ent.allowance_type
-    // );
 
     const key = `${ent.interval || "no-interval"}-${feature.id}`;
 
@@ -292,14 +268,14 @@ export const getCusBalancesByEntitlement = async ({
       continue;
     }
 
-    if (cusEnt.allowance_type == AllowanceType.Unlimited) {
+    if (ent.allowance_type == AllowanceType.Unlimited) {
       data[key].balance = null;
       data[key].total = null;
       data[key].unlimited = true;
     } else if (data[key].unlimited) {
       continue;
     } else {
-      if (cusEnt.allowance_type == AllowanceType.None) {
+      if (ent.allowance_type == AllowanceType.None) {
         data[key].balance += 0;
       } else {
         data[key].balance += cusEnt.balance;
@@ -372,4 +348,62 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
     // 4. Sort by created_at
     return a.created_at - b.created_at;
   });
+};
+
+// Get related cusPrice
+export const getRelatedCusPrice = (
+  cusEnt: FullCustomerEntitlement,
+  cusPrices: FullCustomerPrice[]
+) => {
+  return cusPrices.find((cusPrice) => {
+    if (cusPrice.customer_product_id == cusEnt.customer_product_id) {
+      let config = cusPrice.price.config as UsagePriceConfig;
+      return (
+        config.internal_feature_id == cusEnt.entitlement.internal_feature_id
+      );
+    }
+
+    return false;
+  });
+};
+
+// 3. Perform deductions and update customer balance
+export const updateCusEntInStripe = async ({
+  cusEnt,
+  cusPrices,
+  org,
+  env,
+  customer,
+  amountUsed,
+  eventId,
+}: {
+  cusEnt: FullCustomerEntitlement;
+  cusPrices: FullCustomerPrice[];
+  org: Organization;
+  env: AppEnv;
+  customer: Customer;
+  amountUsed: number;
+  eventId: string;
+}) => {
+  const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+
+  if (!relatedCusPrice) {
+    return;
+  }
+
+  // Send event to Stripe
+  const stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
+  await stripeCli.billing.meterEvents.create({
+    event_name: relatedCusPrice.price.id!,
+    payload: {
+      stripe_customer_id: customer.processor.id,
+      value: amountUsed.toString(),
+    },
+    identifier: eventId,
+  });
+  console.log(`   ✅ Stripe event sent, amount: (${amountUsed})`);
 };
