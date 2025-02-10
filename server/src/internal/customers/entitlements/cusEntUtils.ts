@@ -340,10 +340,12 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
       return 1;
     }
 
+    // If one has a next_reset_at, it should go first
     if (a.next_reset_at && !b.next_reset_at) {
       return -1;
     }
 
+    // If b has a next_reset_at, it should go first
     if (!a.next_reset_at && b.next_reset_at) {
       return 1;
     }
