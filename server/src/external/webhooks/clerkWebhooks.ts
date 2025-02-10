@@ -19,8 +19,7 @@ import {
   ProductSchema,
 } from "@autumn/shared";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { generateId } from "@/utils/genUtils.js";
-import { keyToTitle } from "tests/utils/init.js";
+import { generateId, keyToTitle } from "@/utils/genUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
