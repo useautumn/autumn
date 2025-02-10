@@ -1,6 +1,7 @@
 import {
   AllowanceType,
   AppEnv,
+  CusProductSchema,
   CusProductStatus,
   Customer,
   CustomerData,
@@ -12,6 +13,7 @@ import {
   FixedPriceConfigSchema,
   FreeTrial,
   FullCusProduct,
+  FullCustomerEntitlement,
   FullProduct,
   Price,
   PriceType,
@@ -46,6 +48,21 @@ import { StatusCodes } from "http-status-codes";
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
 import { createNewCustomer } from "@/internal/api/customers/cusUtils.js";
+
+export const fullCusProductToCusEnts = (cusProducts: FullCusProduct[]) => {
+  const cusEnts: FullCustomerEntitlement[] = [];
+
+  for (const cusProduct of cusProducts) {
+    cusEnts.push(
+      ...cusProduct.customer_entitlements.map((cusEnt) => ({
+        ...cusEnt,
+        customer_product: CusProductSchema.parse(cusProduct),
+      }))
+    );
+  }
+
+  return cusEnts;
+};
 
 export const processFullCusProduct = (cusProduct: FullCusProduct) => {
   // Process prices
