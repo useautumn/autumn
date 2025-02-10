@@ -27,7 +27,10 @@ import {
   fullCusProductToCusEnts,
   processFullCusProduct,
 } from "@/internal/customers/products/cusProductUtils.js";
-import { getCusBalancesByEntitlement } from "@/internal/customers/entitlements/cusEntUtils.js";
+import {
+  getCusBalancesByEntitlement,
+  sortCusEntsForDeduction,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 
@@ -263,6 +266,8 @@ export const getCusEntsInFeatures = async ({
   const cusEnts = cusEntsWithCusProduct.filter((cusEnt) =>
     internalFeatureIds.includes(cusEnt.internal_feature_id)
   );
+
+  sortCusEntsForDeduction(cusEnts);
 
   return { cusEnts };
 };
