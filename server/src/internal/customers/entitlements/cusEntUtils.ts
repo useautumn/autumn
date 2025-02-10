@@ -340,6 +340,14 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
       return 1;
     }
 
+    if (a.next_reset_at && !b.next_reset_at) {
+      return -1;
+    }
+
+    if (!a.next_reset_at && b.next_reset_at) {
+      return 1;
+    }
+
     // 3. Sort by interval
     if (aEnt.interval && bEnt.interval) {
       return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
