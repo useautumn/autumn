@@ -17,16 +17,9 @@ import {
   UsagePriceConfigSchema,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import {
-  getBillingType,
-  priceToStripeTiers,
-  roundPriceAmounts,
-} from "./priceUtils.js";
+import { getBillingType, roundPriceAmounts } from "./priceUtils.js";
 import { PriceService } from "./PriceService.js";
-import {
-  billingIntervalToStripe,
-  createStripeCli,
-} from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 import { createStripeMeteredPrice } from "@/external/stripe/stripePriceUtils.js";
 
 // GET PRICES

@@ -19,8 +19,8 @@ export class CustomerEntitlementService {
       .from("customers")
       .select(
         `*, 
-        customer_products:customer_products!inner(*), 
-        customer_entitlements:customer_entitlements(*, entitlement:entitlements!inner(*))`
+        customer_products:customer_products(*), 
+        customer_entitlements:customer_entitlements(*, entitlement:entitlements(*))`
       )
       .eq("id", customerId)
       .eq("org_id", orgId)

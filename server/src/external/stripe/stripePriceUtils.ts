@@ -18,7 +18,6 @@ import { billingIntervalToStripe } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import Stripe from "stripe";
-import { priceToStripeTiers } from "@/internal/prices/priceUtils.js";
 
 export const priceToStripeItem = ({
   price,
@@ -54,7 +53,7 @@ export const priceToStripeItem = ({
       quantity: 1,
       price_data: {
         product: stripeProductId,
-        unit_amount: config.amount * 100,
+        unit_amount: Math.round(config.amount * 100),
         currency: org.default_currency,
       },
     };
@@ -65,7 +64,7 @@ export const priceToStripeItem = ({
       quantity: 1,
       price_data: {
         product: stripeProductId,
-        unit_amount: config.amount * 100,
+        unit_amount: Math.round(config.amount * 100),
         currency: org.default_currency,
         recurring: billingIntervalToStripe(config.interval as BillingInterval),
       },
@@ -83,7 +82,7 @@ export const priceToStripeItem = ({
     lineItem = {
       price_data: {
         product: stripeProductId,
-        unit_amount: config.usage_tiers[0].amount * 100,
+        unit_amount: Math.round(config.usage_tiers[0].amount * 100),
         currency: org.default_currency,
         recurring: {
           ...billingIntervalToStripe(config.interval as BillingInterval),
@@ -121,6 +120,40 @@ export const priceToStripeItem = ({
   };
 };
 
+export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
+  let usageConfig = structuredClone(price.config) as UsagePriceConfig;
+  const tiers: any[] = [];
+  if (entitlement.allowance) {
+    tiers.push({
+      unit_amount: 0,
+      up_to: entitlement.allowance,
+    });
+
+    for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
+      usageConfig.usage_tiers[i].from += entitlement.allowance;
+      if (usageConfig.usage_tiers[i].to != -1) {
+        usageConfig.usage_tiers[i].to += entitlement.allowance;
+      }
+    }
+  }
+
+  for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
+    const tier = usageConfig.usage_tiers[i];
+    const amount = (tier.amount / (usageConfig.billing_units ?? 1)) * 100;
+
+    tiers.push({
+      // unit_amount: Math.round(
+      //   (tier.amount / (usageConfig.billing_units ?? 1)) * 100
+      // ),
+      unit_amount_decimal: amount.toFixed(5),
+      up_to: tier.to == -1 ? "inf" : tier.to,
+    });
+  }
+
+  console.log("Tiers: ", tiers);
+  return tiers;
+};
+
 export const createStripeMeteredPrice = async ({
   stripeCli,
   meterId,
@@ -146,9 +179,9 @@ export const createStripeMeteredPrice = async ({
     relatedEntitlement.allowance > 0;
 
   let overageStr = "";
-  if (isOverage) {
-    overageStr = ` (overage)`;
-  }
+  // if (isOverage) {
+  //   overageStr = ` (overage)`;
+  // }
 
   const tiers = priceToStripeTiers(
     price,
@@ -164,7 +197,7 @@ export const createStripeMeteredPrice = async ({
   } else {
     priceAmountData = {
       billing_scheme: "tiered",
-      tiers_mode: "volume",
+      tiers_mode: "graduated",
       tiers: tiers,
     };
   }

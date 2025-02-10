@@ -7,6 +7,7 @@ import {
   AllowanceType,
   AppEnv,
   CusEntWithEntitlement,
+  CusProductStatus,
   Event,
   Feature,
   FullCustomerEntitlement,
@@ -15,30 +16,7 @@ import {
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Customer, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { getCusEntsAndPrices } from "@/internal/api/customers/cusUtils.js";
-
-// 3. Get customer entitlements and sort
-const getCustomerEntitlements = async ({
-  sb,
-  internalCustomerId,
-  features,
-}: {
-  sb: SupabaseClient;
-  internalCustomerId: string;
-  features: Feature[];
-}) => {
-  const internalFeatureIds = features.map((feature) => feature.internal_id);
-  const cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
-    sb,
-    internalCustomerId,
-    internalFeatureIds: internalFeatureIds as string[],
-  });
-
-  sortCusEntsForDeduction(cusEnts);
-
-  return cusEnts;
-};
+import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
 
 // 2. Functions to get deduction per feature
 export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
@@ -95,51 +73,6 @@ const getCreditSystemDeduction = ({
 
   return creditsUpdate;
 };
-
-// // 1. Get customer entitlements and prices
-// const getCustomerEntitlementsAndPrices = async ({
-//   sb,
-//   internalCustomerId,
-//   features,
-// }: {
-//   sb: SupabaseClient;
-//   internalCustomerId: string;
-//   features: Feature[];
-// }) => {
-//   const internalFeatureIds = features.map((feature) => feature.internal_id);
-//   const cusWithProducts = await CusService.getActiveProductsByInternalId({
-//     sb,
-//     internalCustomerId,
-//   });
-
-//   if (!cusWithProducts) {
-//     return { cusEnts: [], cusPrices: [] };
-//   }
-
-//   const cusProducts = cusWithProducts?.customer_products;
-
-//   const cusEnts: FullCustomerEntitlement[] = [];
-//   const cusPrices: FullCustomerPrice[] = [];
-//   for (const cusProduct of cusProducts) {
-//     cusEnts.push(
-//       ...cusProduct.customer_entitlements.filter(
-//         (cusEnt: FullCustomerEntitlement) =>
-//           internalFeatureIds.includes(cusEnt.entitlement.internal_feature_id)
-//       )
-//     );
-//     cusPrices.push(
-//       ...cusProduct.customer_prices.filter((cusPrice: FullCustomerPrice) => {
-//         const priceConfig = cusPrice.price.config as UsagePriceConfig;
-
-//         return internalFeatureIds.includes(priceConfig.internal_feature_id);
-//       })
-//     );
-//   }
-
-//   sortCusEntsForDeduction(cusEnts);
-
-//   return { cusEnts, cusPrices };
-// };
 
 // 2. Get deductions for each feature
 const getFeatureDeductions = ({
@@ -202,21 +135,36 @@ export const updateCustomerBalance = async ({
   env: AppEnv;
 }) => {
   const startTime = performance.now();
-  const { cusEnts } = await getCusEntsAndPrices({
+  const { cusEnts } = await getCusEntsInFeatures({
     sb,
     internalCustomerId: customer.internal_id,
     internalFeatureIds: features.map((f) => f.internal_id!),
+    inStatuses: [CusProductStatus.Active],
   });
 
   const endTime = performance.now();
-  console.log(`   - Cus ents func ${(endTime - startTime).toFixed(2)}ms`);
+  console.log(
+    `   - getCusEntsInFeatures: ${(endTime - startTime).toFixed(2)}ms`
+  );
+
+  console.log(
+    `   - Customer: ${customer.name} (${customer.id}) [${customer.internal_id}]`
+  );
+  console.log(`   - Features: ${features.map((f) => f.id).join(", ")}`);
+  console.log(
+    "   - CusEnts:",
+    cusEnts.map(
+      (cusEnt: any) =>
+        `${cusEnt.feature_id} - ${cusEnt.balance} (${
+          cusEnt.customer_product ? cusEnt.customer_product.product_id : ""
+        })`
+    )
+  );
 
   if (cusEnts.length === 0 || features.length === 0) {
+    console.log("   - No customer entitlements or features found");
     return;
   }
-
-  console.log(`   - Customer: ${customer.name} (${customer.internal_id})`);
-  console.log(`   - Features: ${features.map((f) => f.id).join(", ")}`);
 
   // Feature ID to Deduction
   const featureDeductions = getFeatureDeductions({
@@ -231,6 +179,7 @@ export const updateCustomerBalance = async ({
   );
 
   // 3. Perform deductions and update customer balance
+
   for (const obj of featureDeductions) {
     if (!obj.deduction) {
       continue;
