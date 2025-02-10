@@ -4,15 +4,18 @@ import { createStripeCli } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export const createStripeCustomer = async ({
   org,
   env,
   customer,
+  testClockId,
 }: {
   org: Organization;
   env: AppEnv;
   customer: Customer;
+  testClockId?: string;
 }) => {
   const stripeCli = createStripeCli({ org, env });
 
@@ -24,6 +27,7 @@ export const createStripeCustomer = async ({
         autumn_id: customer.id,
         autumn_internal_id: customer.internal_id,
       },
+      test_clock: testClockId,
     });
 
     return stripeCustomer;
@@ -86,11 +90,46 @@ export const getCusPaymentMethod = async ({
 };
 
 // 2. Create a payment method and attach to customer
-export const attachPmToCus = async (
-  stripeCli: Stripe,
-  stripeCusId: string,
-  willFail: boolean = false
-) => {
+export const attachPmToCus = async ({
+  sb,
+  customer,
+  org,
+  env,
+  willFail = false,
+  testClockId,
+}: {
+  sb: SupabaseClient;
+  customer: Customer;
+  org: Organization;
+  env: AppEnv;
+  willFail?: boolean;
+  testClockId?: string;
+}) => {
+  // 1. Create stripe customer if not exists
+
+  let stripeCusId = customer.processor?.stripe_id;
+  if (!stripeCusId) {
+    const stripeCustomer = await createStripeCustomer({
+      org,
+      env,
+      customer,
+      testClockId,
+    });
+
+    await sb
+      .from("customers")
+      .update({
+        processor: {
+          id: stripeCustomer.id,
+          type: "stripe",
+        },
+      })
+      .eq("internal_id", customer.internal_id);
+    stripeCusId = stripeCustomer.id;
+  }
+
+  const stripeCli = createStripeCli({ org, env });
+
   try {
     let token = willFail ? "tok_chargeCustomerFail" : "tok_visa";
     const pm = await stripeCli.paymentMethods.create({
@@ -106,4 +145,30 @@ export const attachPmToCus = async (
   } catch (error) {
     console.log("   - Error attaching payment method", error);
   }
+};
+
+export const attachFailedPaymentMethod = async ({
+  stripeCli,
+  customer,
+}: {
+  stripeCli: Stripe;
+  customer: Customer;
+}) => {
+  // Delete existing payment method
+  const paymentMethods = await stripeCli.paymentMethods.list({
+    customer: customer.processor?.id,
+  });
+  for (const pm of paymentMethods.data) {
+    await stripeCli.paymentMethods.detach(pm.id);
+  }
+
+  const pm = await stripeCli.paymentMethods.create({
+    type: "card",
+    card: {
+      token: "tok_chargeCustomerFail",
+    },
+  });
+  await stripeCli.paymentMethods.attach(pm.id, {
+    customer: customer.processor?.id,
+  });
 };

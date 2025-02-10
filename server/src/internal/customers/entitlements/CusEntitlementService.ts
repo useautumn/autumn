@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { CustomerEntitlement, ErrCode } from "@autumn/shared";
+import { CusProductStatus, CustomerEntitlement, ErrCode } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
@@ -19,8 +19,8 @@ export class CustomerEntitlementService {
       .from("customers")
       .select(
         `*, 
-        customer_products:customer_products!inner(*), 
-        customer_entitlements:customer_entitlements(*, entitlement:entitlements!inner(*))`
+        customer_products:customer_products(*), 
+        customer_entitlements:customer_entitlements(*, entitlement:entitlements(*))`
       )
       .eq("id", customerId)
       .eq("org_id", orgId)
@@ -183,7 +183,6 @@ export class CustomerEntitlementService {
     orgId: string;
     env: string;
   }) {
-    console.log("Getting entitlements for customer: ", customerId);
     const { data, error } = await sb
       .from("customer_entitlements")
       .select(
@@ -341,7 +340,9 @@ export class CustomerEntitlementService {
   }) {
     const { data, error } = await sb
       .from("customer_entitlements")
-      .select("*, customer:customers!inner(*)")
+      .select(
+        "*, customer:customers!inner(*), entitlement:entitlements!inner(*)"
+      )
       .eq("id", id)
       .eq("customer.org_id", orgId)
       .eq("customer.env", env)
@@ -355,6 +356,25 @@ export class CustomerEntitlementService {
           statusCode: StatusCodes.NOT_FOUND,
         });
       }
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getByCusProductId({
+    sb,
+    cusProductId,
+  }: {
+    sb: SupabaseClient;
+    cusProductId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_entitlements")
+      .select("*, entitlement:entitlements!inner(*)")
+      .eq("customer_product_id", cusProductId);
+
+    if (error) {
       throw error;
     }
 

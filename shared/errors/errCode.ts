@@ -69,4 +69,7 @@ export const ErrCode = {
 
   // Cus Product
   NoActiveCusProducts: "no_active_cus_products",
+
+  // Cus Price
+  GetCusPriceFailed: "get_cus_price_failed",
 };

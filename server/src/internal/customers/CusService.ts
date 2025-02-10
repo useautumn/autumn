@@ -532,4 +532,53 @@ export class CusService {
   }
 
   // ENTITLEMENTS
+
+  // Get active products
+  static async getFullCusProducts({
+    sb,
+    internalCustomerId,
+    withPrices = false,
+    withProduct = false,
+    inStatuses,
+  }: {
+    sb: SupabaseClient;
+    internalCustomerId: string;
+    withProduct?: boolean;
+    withPrices?: boolean;
+    inStatuses?: CusProductStatus[];
+  }) {
+    const query = sb
+      .from("customers")
+      .select(
+        `
+          *, 
+          customer_products:customer_products!inner(*
+            , customer_entitlements:customer_entitlements(*, 
+              entitlement:entitlements!inner(*, 
+                feature:features!inner(*)
+              )
+            )
+            ${
+              withPrices
+                ? ", customer_prices:customer_prices(*, price:prices!inner(*))"
+                : ""
+            }
+            ${withProduct ? ", product:products!inner(*)" : ""}
+          )
+        `
+      )
+      .eq("internal_id", internalCustomerId);
+
+    if (inStatuses) {
+      query.in("customer_products.status", inStatuses);
+    }
+
+    const { data, error } = await query.single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data.customer_products;
+  }
 }

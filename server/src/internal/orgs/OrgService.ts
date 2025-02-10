@@ -99,7 +99,12 @@ export class OrgService {
     // Insert org into supabase
     const { data, error } = await sb.from("organizations").insert(org);
     if (error) {
-      throw new Error("Error inserting org into supabase");
+      throw new RecaseError({
+        message: "Error inserting org into supabase",
+        code: ErrCode.InternalError,
+        statusCode: 400,
+        data: error,
+      });
     }
 
     return data;
@@ -108,7 +113,12 @@ export class OrgService {
   static async delete({ sb, orgId }: { sb: SupabaseClient; orgId: string }) {
     const { error } = await sb.from("organizations").delete().eq("id", orgId);
     if (error) {
-      throw new Error("Error deleting org from supabase");
+      throw new RecaseError({
+        message: "Error deleting org from supabase",
+        code: ErrCode.InternalError,
+        statusCode: 400,
+        data: error,
+      });
     }
   }
 

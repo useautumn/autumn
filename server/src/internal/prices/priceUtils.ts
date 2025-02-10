@@ -50,7 +50,6 @@ export const getBillingInterval = (prices: Price[]) => {
 };
 
 export const pricesOnlyOneOff = (prices: Price[]) => {
-  console.log("prices", prices);
   return prices.every((price) => {
     let interval = price.config?.interval;
 
@@ -271,7 +270,7 @@ export const getPriceAmount = (price: Price, options: FeatureOptions) => {
   if (price.billing_type == BillingType.OneOff) {
     let config = price.config as FixedPriceConfig;
     return {
-      amountPerUnit: config.amount,
+      amountPerUnit: Number(config.amount.toFixed(2)),
       quantity: 1,
     };
   } else if (price.billing_type == BillingType.UsageInAdvance) {
@@ -279,7 +278,7 @@ export const getPriceAmount = (price: Price, options: FeatureOptions) => {
     let usageTier = getUsageTier(price, quantity);
 
     return {
-      amountPerUnit: usageTier.amount,
+      amountPerUnit: Number(usageTier.amount.toFixed(2)),
       quantity: quantity,
     };
   }
@@ -290,33 +289,23 @@ export const getPriceAmount = (price: Price, options: FeatureOptions) => {
   };
 };
 
-export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
-  let usageConfig = price.config as UsagePriceConfig;
-  const tiers: any[] = [];
-  if (entitlement.allowance) {
-    tiers.push({
-      unit_amount: 0,
-      up_to: entitlement.allowance,
-    });
-
-    for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-      usageConfig.usage_tiers[i].from += entitlement.allowance;
-      if (usageConfig.usage_tiers[i].to != -1) {
-        usageConfig.usage_tiers[i].to += entitlement.allowance;
-      }
-    }
-  }
-
-  for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
-    const tier = usageConfig.usage_tiers[i];
-    tiers.push({
-      unit_amount: tier.amount * 100,
-      up_to: tier.to == -1 ? "inf" : tier.to,
-    });
-  }
-  return tiers;
-};
-
 export const priceToEventName = (productName: string, featureName: string) => {
   return `${productName} - ${featureName}`;
+};
+
+export const roundPriceAmounts = (price: Price) => {
+  if (price.config!.type == PriceType.Fixed) {
+    const config = price.config as FixedPriceConfig;
+    config.amount = Number(config.amount.toFixed(2));
+    price.config = config;
+  } else if (price.config!.type == PriceType.Usage) {
+    const config = price.config as UsagePriceConfig;
+    for (let i = 0; i < config.usage_tiers.length; i++) {
+      config.usage_tiers[i].amount = Number(
+        config.usage_tiers[i].amount.toFixed(2)
+      );
+    }
+
+    price.config = config;
+  }
 };

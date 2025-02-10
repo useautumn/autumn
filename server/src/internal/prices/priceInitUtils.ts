@@ -17,12 +17,10 @@ import {
   UsagePriceConfigSchema,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { getBillingType, priceToStripeTiers } from "./priceUtils.js";
+import { getBillingType, roundPriceAmounts } from "./priceUtils.js";
 import { PriceService } from "./PriceService.js";
-import {
-  billingIntervalToStripe,
-  createStripeCli,
-} from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { createStripeMeteredPrice } from "@/external/stripe/stripePriceUtils.js";
 
 // GET PRICES
 const validatePrice = (price: Price) => {
@@ -155,48 +153,111 @@ const handleStripePrices = async ({
   for (const price of prices) {
     const config = price.config! as UsagePriceConfig;
     const billingType = getBillingType(config);
+
+    // If price.config.meter_id and stripe_price_id, delete
+
     if (billingType == BillingType.UsageInArrear) {
-      const feature = features.find(
-        (f) => f.internal_id === config.internal_feature_id
-      );
+      if (!config.stripe_price_id) {
+        const feature = features.find(
+          (f) => f.internal_id === config.internal_feature_id
+        );
 
-      const meter = await stripeCli.billing.meters.create({
-        display_name: `${product.name} - ${feature!.name}`,
-        event_name: price.id!,
-        default_aggregation: {
-          formula: "sum",
-        },
-      });
+        const meter = await stripeCli.billing.meters.create({
+          display_name: `${product.name} - ${feature!.name}`,
+          event_name: price.id!,
+          default_aggregation: {
+            formula: "sum",
+          },
+        });
 
-      const stripePrice = await stripeCli.prices.create({
-        // product: product.processor!.id,
-        product_data: {
-          name: `${product.name} - ${feature!.name}`,
-        },
-        // unit_amount: ,
-        billing_scheme: "tiered",
-        tiers_mode: "volume",
-        tiers: priceToStripeTiers(
+        const stripePrice = await createStripeMeteredPrice({
+          stripeCli,
+          product,
           price,
-          entitlements.find(
-            (e) => e.internal_feature_id === feature!.internal_id
-          )!
-        ),
-        currency: "usd",
-        recurring: {
-          ...(billingIntervalToStripe(config.interval!) as any),
-          meter: meter.id,
-          usage_type: "metered",
-        },
-      });
+          entitlements,
+          feature: feature!,
+          meterId: meter.id,
+        });
 
-      let newUsageConfig = {
-        ...config,
-        stripe_meter_id: meter.id,
-        stripe_price_id: stripePrice.id,
-      };
+        let newUsageConfig = {
+          ...config,
+          stripe_meter_id: meter.id,
+          stripe_price_id: stripePrice.id,
+        };
 
-      price.config = newUsageConfig;
+        price.config = newUsageConfig;
+      } else {
+        // Update price
+        // Set old price to inactive
+        await stripeCli.prices.update(config.stripe_price_id, {
+          active: false,
+        });
+
+        const feature = features.find(
+          (f) => f.internal_id === config.internal_feature_id
+        );
+
+        const stripePrice = await createStripeMeteredPrice({
+          stripeCli,
+          product,
+          price,
+          entitlements,
+          feature: feature!,
+          meterId: config.stripe_meter_id!,
+        });
+
+        config.stripe_price_id = stripePrice.id;
+      }
+    }
+  }
+};
+
+const deleteStripePrices = async ({
+  sb,
+  prices,
+  org,
+  env,
+}: {
+  sb: SupabaseClient;
+  prices: Price[];
+  org: Organization;
+  env: AppEnv;
+}) => {
+  const stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
+  for (const price of prices) {
+    const config = price.config! as UsagePriceConfig;
+
+    if (getBillingType(price.config!) == BillingType.UsageInArrear) {
+      if (config.stripe_price_id) {
+        const stripePrice = await stripeCli.prices.retrieve(
+          config.stripe_price_id!
+        );
+
+        // Default product
+
+        await stripeCli.prices.update(config.stripe_price_id!, {
+          active: false,
+        });
+
+        const attachedProductId = stripePrice.product as string;
+        const product = await stripeCli.products.retrieve(attachedProductId);
+        if (!product.active) {
+          await stripeCli.products.del(attachedProductId);
+        } else {
+          await stripeCli.products.update(attachedProductId, {
+            active: false,
+          });
+        }
+      }
+
+      if (config.stripe_meter_id) {
+        await stripeCli.billing.meters.deactivate(config.stripe_meter_id!);
+      }
+      console.log("Deleted stripe price and meter");
     }
   }
 };
@@ -239,10 +300,12 @@ export const handleNewPrices = async ({
   const createdPrices: Price[] = [];
   const updatedPrices: Price[] = [];
   let newInArrearPrices: Price[] = [];
+  let removedInArrearPrices: Price[] = [];
 
   for (let newPrice of newPrices) {
     // Validate price
     validatePrice(newPrice);
+    roundPriceAmounts(newPrice);
 
     // 1. Handle new price
     if (!("id" in newPrice)) {
@@ -282,6 +345,13 @@ export const handleNewPrices = async ({
       if (getBillingType(newPrice.config!) == BillingType.UsageInArrear) {
         newInArrearPrices.push(newPrice);
       }
+
+      if (
+        getBillingType(curPrice.config!) == BillingType.UsageInArrear &&
+        getBillingType(newPrice.config!) != BillingType.UsageInArrear
+      ) {
+        removedInArrearPrices.push(curPrice);
+      }
     }
   }
 
@@ -304,6 +374,14 @@ export const handleNewPrices = async ({
     features,
     entitlements,
   });
+
+  await deleteStripePrices({
+    sb,
+    prices: [...removedInArrearPrices, ...removedPrices],
+    org,
+    env,
+  });
+
   await PriceService.insert({ sb, data: createdPrices });
 
   // For created prices, create Stripe price if not already created

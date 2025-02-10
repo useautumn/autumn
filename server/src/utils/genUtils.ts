@@ -16,3 +16,7 @@ export const compareObjects = (obj1: any, obj2: any) => {
   }
   return true;
 };
+
+export const keyToTitle = (key: string) => {
+  return key.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+};

@@ -12,9 +12,11 @@ import { validBillingInterval } from "@/utils/product/priceUtils";
 export const PricingConfig = ({
   price,
   setPrice,
+  isUpdate = false,
 }: {
   price?: any;
   setPrice: any;
+  isUpdate?: boolean;
 }) => {
   const defaultFixedConfig = {
     type: PriceType.Fixed,
@@ -93,6 +95,8 @@ export const PricingConfig = ({
             setConfig={setUsageConfig}
             usageTiers={usageTiers}
             setUsageTiers={setUsageTiers}
+            price={price}
+            isUpdate={isUpdate}
           />
         </TabsContent>
       </Tabs>

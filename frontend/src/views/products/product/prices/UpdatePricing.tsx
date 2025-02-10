@@ -75,13 +75,11 @@ export default function UpdatePricing({
           // }}
           price={selectedPrice}
           setPrice={setSelectedPrice}
+          isUpdate={true}
         />
 
         <DialogFooter>
-          <Button
-            variant="destructive"
-            onClick={() => handleDeletePricing()}
-          >
+          <Button variant="destructive" onClick={() => handleDeletePricing()}>
             Delete
           </Button>
           <Button
