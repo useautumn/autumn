@@ -193,4 +193,19 @@ export class PriceService {
       throw error;
     }
   }
+
+  static async update({
+    sb,
+    priceId,
+    update,
+  }: {
+    sb: SupabaseClient;
+    priceId: string;
+    update: Partial<Price>;
+  }) {
+    const { error } = await sb.from("prices").update(update).eq("id", priceId);
+    if (error) {
+      throw error;
+    }
+  }
 }

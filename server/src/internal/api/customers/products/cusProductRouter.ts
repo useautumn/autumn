@@ -2,12 +2,14 @@ import { Router } from "express";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { z } from "zod";
 import {
+  BillingInterval,
   BillingType,
   Entitlement,
   FeatureOptions,
   FeatureOptionsSchema,
   Price,
   ProcessorType,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 import {
@@ -27,12 +29,21 @@ import { getFullCusProductData } from "../../../customers/products/cusProductUti
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import {
+  billingIntervalToStripe,
+  createStripeCli,
+} from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 import chalk from "chalk";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import {
+  createStripeInAdvancePrice,
+  inAdvanceToStripeTiers,
+  priceToStripeTiers,
+} from "@/external/stripe/stripePriceUtils.js";
+import { PriceService } from "@/internal/prices/PriceService.js";
 
 export const attachRouter = Router();
 
@@ -213,7 +224,7 @@ const checkStripeConnections = async ({
   res: any;
   attachParams: AttachParams;
 }) => {
-  const { org, customer, product } = attachParams;
+  const { org, customer, product, prices, entitlements } = attachParams;
   const env = customer.env;
 
   if (!org.stripe_connected) {
@@ -268,6 +279,24 @@ const checkStripeConnections = async ({
       id: stripeProduct.id,
       type: ProcessorType.Stripe,
     };
+  }
+
+  for (const price of prices) {
+    const billingType = getBillingType(price.config!);
+    if (billingType == BillingType.UsageInAdvance) {
+      const config = price.config! as UsagePriceConfig;
+      if (!config.stripe_price_id) {
+        console.log("Creating stripe price for in advance price");
+        await createStripeInAdvancePrice({
+          sb: req.sb,
+          stripeCli,
+          price,
+          entitlements,
+          product,
+          org,
+        });
+      }
+    }
   }
 };
 
