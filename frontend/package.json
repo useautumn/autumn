@@ -35,7 +35,7 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.47.2",
-    "@useautumn/react": "latest",
+    "@useautumn/react": "^0.0.11",
     "@wooorm/starry-night": "^3.6.0",
     "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",

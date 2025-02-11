@@ -5,9 +5,9 @@ import { PricingPageProps } from "./models";
 import { usePricingPageContext } from "./PricingPageContext";
 import React from "react";
 import { useAutumnContext } from "../providers/AutumnContext";
-import { motion, HTMLMotionProps } from "framer-motion";
+import { motion } from "framer-motion";
 
-import { CornerDownRight, CircleCheck } from "lucide-react";
+import { CircleCheck } from "lucide-react";
 import LoadingSpinner from "./LoadingSpinner";
 
 const styles = {
@@ -455,7 +455,8 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
       body: JSON.stringify({
         product_id: product.id,
         customer_id: customerId,
-        options: userOptions,
+        // options: userOptions,
+        force_checkout: true,
       }),
       headers: {
         "Content-Type": "application/json",
@@ -488,17 +489,18 @@ export const PricingCard = ({ product, classNames = {} }: PricingCardProps) => {
     // }
 
     setButtonLoading(true);
+    console.log("Attaching product");
 
     try {
       // Get product options
-      const productOptions = await getProductOptions(product.id);
+      // const productOptions = await getProductOptions(product.id);
 
-      if (productOptions && productOptions.length > 0) {
-        setOptionsOpen(true);
-        setUserOptions(productOptions);
-      } else {
-        await handleAttachProduct();
-      }
+      // if (productOptions && productOptions.length > 0) {
+      //   setOptionsOpen(true);
+      //   setUserOptions(productOptions);
+      // } else {
+      // }
+      await handleAttachProduct();
     } catch (error) {}
 
     setButtonLoading(false);
