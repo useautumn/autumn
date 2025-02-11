@@ -1,6 +1,4 @@
 import { Request, Response } from "express";
-import { verifySvixSignature } from "./webhookUtils.js";
-import { createSupabaseClient } from "../supabaseUtils.js";
 import { Webhook } from "svix";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
@@ -8,7 +6,161 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { createClerkCli } from "../clerkUtils.js";
 import { sendOnboardingEmail } from "./sendOnboardingEmail.js";
 import { generatePublishableKey } from "@/utils/encryptUtils.js";
-import { AppEnv } from "@autumn/shared";
+import {
+  AggregateType,
+  AllowanceType,
+  AppEnv,
+  BillingInterval,
+  EntInterval,
+  EntitlementSchema,
+  FeatureType,
+  PriceSchema,
+  PriceType,
+  ProductSchema,
+} from "@autumn/shared";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { generateId } from "@/utils/genUtils.js";
+import { keyToTitle } from "tests/utils/init.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
+import { PriceService } from "@/internal/prices/PriceService.js";
+
+const defaultFeatures = [
+  {
+    internal_id: "",
+    id: "pro-analytics",
+    type: FeatureType.Boolean,
+  },
+  {
+    internal_id: "",
+    id: "chat-messages",
+    type: FeatureType.Metered,
+    config: {
+      filters: [
+        {
+          value: ["chat-messages"],
+          property: "",
+          operator: "",
+        },
+      ],
+      aggregate: {
+        type: AggregateType.Count,
+      },
+    },
+  },
+];
+
+const createDefaultProducts = async ({
+  sb,
+  orgId,
+}: {
+  sb: SupabaseClient;
+  orgId: string;
+}) => {
+  const env = AppEnv.Sandbox;
+  const insertedFeatures = defaultFeatures.map((f) => ({
+    ...f,
+    org_id: orgId,
+    env,
+    internal_id: generateId("fe"),
+    name: keyToTitle(f.id),
+  }));
+  const features = await FeatureService.insert({
+    sb,
+    data: insertedFeatures,
+  });
+
+  const defaultProducts = [
+    {
+      id: "free",
+      name: "Free",
+      env: AppEnv.Sandbox,
+      is_default: true,
+      entitlements: [
+        {
+          internal_feature_id: insertedFeatures[1].internal_id,
+          feature_id: insertedFeatures[1].id,
+          allowance: 10,
+          interval: EntInterval.Month,
+          allowance_type: AllowanceType.Fixed,
+        },
+      ],
+      prices: [],
+    },
+    {
+      id: "pro",
+      name: "Pro",
+      env: AppEnv.Sandbox,
+      is_default: false,
+      entitlements: [
+        {
+          internal_feature_id: insertedFeatures[0].internal_id,
+          feature_id: insertedFeatures[0].id,
+        },
+        {
+          internal_feature_id: insertedFeatures[1].internal_id,
+          feature_id: insertedFeatures[1].id,
+          allowance_type: AllowanceType.Unlimited,
+        },
+      ],
+      prices: [
+        {
+          name: "Monthly",
+          config: {
+            type: PriceType.Fixed,
+            amount: 20.5,
+            interval: BillingInterval.Month,
+          },
+        },
+      ],
+    },
+  ];
+
+  for (const product of defaultProducts) {
+    const insertProduct = async (product: any) => {
+      let internalProductId = generateId("pr");
+
+      await ProductService.create({
+        sb,
+        product: ProductSchema.parse({
+          ...product,
+          internal_id: internalProductId,
+          org_id: orgId,
+          env,
+          is_add_on: false,
+          group: "",
+          created_at: Date.now(),
+        }),
+      });
+
+      for (const entitlement of product.entitlements) {
+        await EntitlementService.insert({
+          sb,
+          data: EntitlementSchema.parse({
+            ...entitlement,
+            id: generateId("en"),
+            internal_product_id: internalProductId,
+            created_at: Date.now(),
+          }),
+        });
+      }
+
+      for (const price of product.prices) {
+        await PriceService.insert({
+          sb,
+          data: PriceSchema.parse({
+            ...price,
+            id: generateId("pr"),
+            internal_product_id: internalProductId,
+            created_at: Date.now(),
+          }),
+        });
+      }
+    };
+
+    await insertProduct(product);
+  }
+};
 
 const verifyClerkWebhook = async (req: Request, res: Response) => {
   const wh = new Webhook(process.env.CLERK_SIGNING_SECRET!);
@@ -67,6 +219,7 @@ export const handleClerkWebhook = async (req: any, res: any) => {
           sb: req.sb,
           orgId: eventData.id,
         });
+        console.log(`Deleted org ${eventData.id}`);
 
       default:
         break;
@@ -78,6 +231,7 @@ export const handleClerkWebhook = async (req: any, res: any) => {
       res,
       action: "Handle Clerk Webhook",
     });
+    return;
   }
 
   return void res.status(200).json({
@@ -98,6 +252,23 @@ const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
       test_pkey: generatePublishableKey(AppEnv.Sandbox),
       live_pkey: generatePublishableKey(AppEnv.Live),
     },
+  });
+
+  console.log(`Inserted org ${eventData.id}`);
+
+  await sb.channel(eventData.id).send({
+    type: "broadcast",
+    event: "org.created",
+    payload: {
+      hello: "world -- congrats!",
+    },
+  });
+
+  console.log("Sent supabase broadcast");
+
+  await createDefaultProducts({
+    sb,
+    orgId: eventData.id,
   });
 
   await sendOnboardingEmail({

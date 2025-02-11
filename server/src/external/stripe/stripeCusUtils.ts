@@ -10,10 +10,12 @@ export const createStripeCustomer = async ({
   org,
   env,
   customer,
+  testClockId,
 }: {
   org: Organization;
   env: AppEnv;
   customer: Customer;
+  testClockId?: string;
 }) => {
   const stripeCli = createStripeCli({ org, env });
 
@@ -25,6 +27,7 @@ export const createStripeCustomer = async ({
         autumn_id: customer.id,
         autumn_internal_id: customer.internal_id,
       },
+      test_clock: testClockId,
     });
 
     return stripeCustomer;
@@ -93,12 +96,14 @@ export const attachPmToCus = async ({
   org,
   env,
   willFail = false,
+  testClockId,
 }: {
   sb: SupabaseClient;
   customer: Customer;
   org: Organization;
   env: AppEnv;
   willFail?: boolean;
+  testClockId?: string;
 }) => {
   // 1. Create stripe customer if not exists
 
@@ -108,13 +113,15 @@ export const attachPmToCus = async ({
       org,
       env,
       customer,
+      testClockId,
     });
 
     await sb
       .from("customers")
       .update({
         processor: {
-          stripe_id: stripeCustomer.id,
+          id: stripeCustomer.id,
+          type: "stripe",
         },
       })
       .eq("internal_id", customer.internal_id);
@@ -138,4 +145,30 @@ export const attachPmToCus = async ({
   } catch (error) {
     console.log("   - Error attaching payment method", error);
   }
+};
+
+export const attachFailedPaymentMethod = async ({
+  stripeCli,
+  customer,
+}: {
+  stripeCli: Stripe;
+  customer: Customer;
+}) => {
+  // Delete existing payment method
+  const paymentMethods = await stripeCli.paymentMethods.list({
+    customer: customer.processor?.id,
+  });
+  for (const pm of paymentMethods.data) {
+    await stripeCli.paymentMethods.detach(pm.id);
+  }
+
+  const pm = await stripeCli.paymentMethods.create({
+    type: "card",
+    card: {
+      token: "tok_chargeCustomerFail",
+    },
+  });
+  await stripeCli.paymentMethods.attach(pm.id, {
+    customer: customer.processor?.id,
+  });
 };

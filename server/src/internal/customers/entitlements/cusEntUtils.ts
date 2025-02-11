@@ -4,6 +4,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import {
   AllowanceType,
   AppEnv,
+  CusProduct,
   Customer,
   EntInterval,
   EntitlementWithFeature,
@@ -232,50 +233,21 @@ export const getCusBalancesByProduct = async ({
   return balances;
 };
 
+type CusEntsWithCusProduct = FullCustomerEntitlement & {
+  customer_product: CusProduct;
+};
+
 export const getCusBalancesByEntitlement = async ({
-  sb,
-  customerId,
-  orgId,
-  env,
-  internalCustomerId,
+  cusEntsWithCusProduct,
 }: {
-  sb: SupabaseClient;
-  customerId: string;
-  orgId: string;
-  env: string;
-  internalCustomerId: string;
+  cusEntsWithCusProduct: CusEntsWithCusProduct[];
 }) => {
-  // const cusEnts =
-  //   await CustomerEntitlementService.getActiveByInternalCustomerId({
-  //     sb,
-  //     internalCustomerId,
-  //   });
-
-  // console.log("Cus ents: ", cusEnts);
-
-  const cusEnts = await CustomerEntitlementService.getActiveByCustomerId({
-    sb,
-    customerId,
-    orgId,
-    env,
-  });
-
   const data: Record<string, any> = {};
 
-  for (const cusEnt of cusEnts) {
+  for (const cusEnt of cusEntsWithCusProduct) {
     const cusProduct = cusEnt.customer_product;
     const feature = cusEnt.entitlement.feature;
     const ent: EntitlementWithFeature = cusEnt.entitlement;
-
-    // console.log("--------------------------------");
-    // console.log("Feature:", feature.id, feature.type);
-    // console.log(
-    //   "Entitlement:",
-    //   ent.id,
-    //   ent.allowance,
-    //   ent.interval,
-    //   ent.allowance_type
-    // );
 
     const key = `${ent.interval || "no-interval"}-${feature.id}`;
 
@@ -296,14 +268,14 @@ export const getCusBalancesByEntitlement = async ({
       continue;
     }
 
-    if (cusEnt.allowance_type == AllowanceType.Unlimited) {
+    if (ent.allowance_type == AllowanceType.Unlimited) {
       data[key].balance = null;
       data[key].total = null;
       data[key].unlimited = true;
     } else if (data[key].unlimited) {
       continue;
     } else {
-      if (cusEnt.allowance_type == AllowanceType.None) {
+      if (ent.allowance_type == AllowanceType.None) {
         data[key].balance += 0;
       } else {
         data[key].balance += cusEnt.balance;
