@@ -59,6 +59,7 @@ const resetCustomerEntitlement = async ({
       updates: {
         next_reset_at: nextResetAt,
         balance: newBalance,
+        adjustment: 0,
       },
     });
 

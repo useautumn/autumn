@@ -351,9 +351,19 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     console.log(
       `CusEnts (${customer_id}):`,
-      cusEnts.map((ent: any) => {
-        return `${ent.feature_id} - ${ent.balance} (${
-          ent.customer_product ? ent.customer_product.product_id : ""
+      cusEnts.map((cusEnt: any) => {
+        let balanceStr = cusEnt.balance;
+
+        try {
+          if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
+            balanceStr = "Unlimited";
+          } else if (cusEnt.entitlement.allowance_type === AllowanceType.None) {
+            balanceStr = "None";
+          }
+        } catch (error) {}
+
+        return `${cusEnt.feature_id} - ${balanceStr} (${
+          cusEnt.customer_product ? cusEnt.customer_product.product_id : ""
         })`;
       })
     );

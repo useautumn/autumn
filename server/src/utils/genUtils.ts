@@ -20,3 +20,7 @@ export const compareObjects = (obj1: any, obj2: any) => {
 export const keyToTitle = (key: string) => {
   return key.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 };
+
+export const notNullOrUndefined = (value: any) => {
+  return value !== null && value !== undefined;
+};
