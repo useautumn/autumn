@@ -20,15 +20,17 @@ export class CusProductService {
     id,
     orgId,
     env,
+    withProduct = false,
   }: {
     sb: SupabaseClient;
     id: string;
     orgId: string;
     env: AppEnv;
+    withProduct?: boolean;
   }) {
     const { data, error } = await sb
       .from("customer_products")
-      .select("*, customer:customers!inner(*)")
+      .select(`*, customer:customers!inner(*), product:products!inner(*)`)
       .eq("id", id)
       .eq("customer.org_id", orgId)
       .eq("customer.env", env)

@@ -122,7 +122,10 @@ export const handleInvoiceCreated = async ({
       await CustomerEntitlementService.update({
         sb,
         id: relatedCusEnt.id,
-        updates: { balance: relatedCusEnt.entitlement.allowance },
+        updates: {
+          balance: relatedCusEnt.entitlement.allowance,
+          adjustment: 0,
+        },
       });
     }
   }

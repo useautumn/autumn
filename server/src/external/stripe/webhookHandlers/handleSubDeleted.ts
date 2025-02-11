@@ -1,12 +1,9 @@
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
-  CusProduct,
   CusProductStatus,
   ErrCode,
   FullCusProduct,

@@ -16,6 +16,7 @@ import {
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { notNullOrUndefined } from "@/utils/genUtils.js";
 
 export const getFeatureBalance = async ({
   pg,
@@ -261,6 +262,7 @@ export const getCusBalancesByEntitlement = async ({
         balance: isBoolean ? undefined : isUnlimited ? null : 0,
         total: isBoolean ? undefined : isUnlimited ? null : 0,
         unlimited: isBoolean ? undefined : isUnlimited,
+        adjustment: isBoolean ? undefined : isUnlimited ? null : 0,
       };
     }
 
@@ -272,6 +274,7 @@ export const getCusBalancesByEntitlement = async ({
       data[key].balance = null;
       data[key].total = null;
       data[key].unlimited = true;
+      data[key].adjustment = null;
     } else if (data[key].unlimited) {
       continue;
     } else {
@@ -279,6 +282,7 @@ export const getCusBalancesByEntitlement = async ({
         data[key].balance += 0;
       } else {
         data[key].balance += cusEnt.balance;
+        data[key].adjustment += cusEnt.adjustment;
       }
     }
 
@@ -291,6 +295,17 @@ export const getCusBalancesByEntitlement = async ({
   }
 
   const balances = Object.values(data);
+
+  for (const balance of balances) {
+    if (
+      notNullOrUndefined(balance.total) &&
+      notNullOrUndefined(balance.balance)
+    ) {
+      balance.used = balance.total + balance.adjustment - balance.balance;
+      delete balance.total;
+      delete balance.adjustment;
+    }
+  }
 
   balances.sort((a, b) => {
     return a.feature_id.localeCompare(b.feature_id);

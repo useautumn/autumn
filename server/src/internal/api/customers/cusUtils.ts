@@ -4,6 +4,7 @@ import {
   CusProductStatus,
   Customer,
   CustomerSchema,
+  FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
@@ -33,10 +34,6 @@ import {
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
-
-const notNullOrUndefined = (value: any) => {
-  return value !== null && value !== undefined;
-};
 
 export const createNewCustomer = async ({
   sb,
@@ -155,6 +152,56 @@ export const attachDefaultProducts = async ({
   }
 };
 
+export const expireAndAddDefaultProduct = async ({
+  sb,
+  env,
+  cusProduct,
+  org,
+}: {
+  sb: SupabaseClient;
+  env: AppEnv;
+  cusProduct: FullCusProduct;
+  org: Organization;
+}) => {
+  // 1. Expire current product
+  const defaultProducts = await ProductService.getFullDefaultProducts({
+    sb,
+    orgId: org.id,
+    env,
+  });
+
+  const defaultProd = defaultProducts.find(
+    (p) => p.group === cusProduct.product.group
+  );
+
+  // 1. Expire current product
+  await CusProductService.update({
+    sb,
+    cusProductId: cusProduct.id,
+    updates: { status: CusProductStatus.Expired, ended_at: Date.now() },
+  });
+
+  // 2. Add default product
+  if (defaultProd) {
+    await createFullCusProduct({
+      sb,
+      attachParams: {
+        org,
+        customer: cusProduct.customer,
+        product: defaultProd,
+        prices: defaultProd.prices,
+        entitlements: defaultProd.entitlements,
+        freeTrial: defaultProd.free_trial,
+        optionsList: [],
+      },
+    });
+
+    console.log("   ✅ activated default product");
+  } else {
+    console.log("   ⚠️ no default product to activate");
+  }
+};
+
 const CusProductResultSchema = CusProductSchema.extend({
   customer: CustomerSchema,
   product: ProductSchema,
@@ -212,16 +259,6 @@ export const getCustomerDetails = async ({
   const balances = await getCusBalancesByEntitlement({
     cusEntsWithCusProduct: fullCusProductToCusEnts(fullCusProducts!) as any,
   });
-
-  for (const balance of balances) {
-    if (
-      notNullOrUndefined(balance.total) &&
-      notNullOrUndefined(balance.balance)
-    ) {
-      balance.used = balance.total - balance.balance;
-      delete balance.total;
-    }
-  }
 
   // Get customer invoices
   const invoices = await InvoiceService.getByInternalCustomerId({
