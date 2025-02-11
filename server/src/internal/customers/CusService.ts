@@ -132,36 +132,6 @@ export class CusService {
     return data;
   }
 
-  static async getCustomer({
-    sb,
-    env,
-    orgId,
-    customerId,
-  }: {
-    sb: SupabaseClient;
-    env: AppEnv;
-    orgId: string;
-    customerId: string;
-  }) {
-    const { data, error } = await sb
-      .from("customers")
-      .select()
-      .eq("id", customerId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-
-      throw error;
-    }
-
-    return data;
-  }
-
   static async getFullCustomer({
     sb,
     env,
@@ -333,6 +303,7 @@ export class CusService {
 
     return { data: customers, count };
   }
+
   static async searchCustomers({
     sb,
     pg,

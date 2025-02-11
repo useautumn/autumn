@@ -13,22 +13,22 @@ import chalk from "chalk";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-
-import { ErrCode } from "@/errors/errCodes.js";
 import { AttachParams } from "../products/AttachParams.js";
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getPriceAmount } from "../../prices/priceUtils.js";
-import { AllowanceType, InvoiceStatus } from "@autumn/shared";
+import { AllowanceType, ErrCode, InvoiceStatus } from "@autumn/shared";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
+import { createStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
+import { handleCreateCheckout } from "./handleCreateCheckout.js";
 
 const handleBillNowPrices = async ({
   sb,
   attachParams,
+  res,
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
+  res: any;
 }) => {
   const { org, customer, product, freeTrial } = attachParams;
 
@@ -38,29 +38,30 @@ const handleBillNowPrices = async ({
     attachParams,
   });
 
-  const paymentMethod = await getCusPaymentMethod({
-    org,
-    env: customer.env,
-    stripeId: customer.processor.id,
-  });
-
   let subscription;
-
+  console.log("Creating subscription");
   try {
-    subscription = await stripeCli.subscriptions.create({
-      customer: customer.processor.id,
-      default_payment_method: paymentMethod as string,
-      items: items as any,
-      trial_end: freeTrialToStripeTimestamp(freeTrial),
+    subscription = await createStripeSubscription({
+      stripeCli,
+      customer,
+      org,
+      items,
+      freeTrial,
     });
   } catch (error: any) {
-    console.log("Error creating stripe subscription", error?.message || error);
+    if (
+      error instanceof RecaseError &&
+      error.code === ErrCode.StripeCardDeclined
+    ) {
+      await handleCreateCheckout({
+        sb,
+        res,
+        attachParams,
+      });
+      return;
+    }
 
-    throw new RecaseError({
-      code: ErrCode.CreateStripeSubscriptionFailed,
-      message: "Failed to create stripe subscription",
-      statusCode: 500,
-    });
+    throw error;
   }
 
   // Add product and entitlements to customer
@@ -70,27 +71,17 @@ const handleBillNowPrices = async ({
     subscriptionId: subscription.id,
   });
 
-  // // Add invoice
-  // const stripeInvoice = await stripeCli.invoices.retrieve(
-  //   subscription.latest_invoice as string
-  // );
-
-  // await InvoiceService.createInvoiceFromStripe({
-  //   sb,
-  //   internalCustomerId: customer.internal_id,
-  //   productIds: [product.id],
-  //   stripeInvoice,
-  // });
-
-  return cusProd;
+  res.status(200).send({ success: true });
 };
 
 const handleOneOffPrices = async ({
   sb,
   attachParams,
+  res,
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
+  res: any;
 }) => {
   const { org, customer, product, prices, optionsList, entitlements } =
     attachParams;
@@ -131,7 +122,7 @@ const handleOneOffPrices = async ({
   );
 
   console.log("   2. Paying invoice");
-  const paid = await payForInvoice({
+  const { paid, error } = await payForInvoice({
     fullOrg: org,
     env: customer.env,
     customer: customer,
@@ -139,12 +130,16 @@ const handleOneOffPrices = async ({
   });
 
   if (!paid) {
-    await stripeCli.invoices.voidInvoice(stripeInvoice.id);
-    throw new RecaseError({
-      code: ErrCode.PayInvoiceFailed,
-      message: "Failed to pay invoice",
-      statusCode: 500,
-    });
+    if (error!.code === ErrCode.StripeCardDeclined) {
+      await stripeCli.invoices.voidInvoice(stripeInvoice.id);
+      await handleCreateCheckout({
+        sb,
+        res,
+        attachParams,
+      });
+    } else {
+      throw error;
+    }
   }
 
   // Insert full customer product
@@ -167,6 +162,7 @@ const handleOneOffPrices = async ({
   });
 
   console.log("   ✅ Successfully attached product");
+  res.status(200).send({ success: true });
 };
 
 export const handleAddProduct = async ({
@@ -200,9 +196,9 @@ export const handleAddProduct = async ({
     await handleOneOffPrices({
       sb: req.sb,
       attachParams,
+      res,
     });
 
-    res.status(200).send({ success: true });
     return;
   }
 
@@ -213,9 +209,9 @@ export const handleAddProduct = async ({
     await handleBillNowPrices({
       sb: req.sb,
       attachParams,
+      res,
     });
 
-    res.status(200).send({ success: true });
     return;
   }
 

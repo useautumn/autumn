@@ -22,6 +22,9 @@ export const ErrCode = {
   StripeCreateCustomerFailed: "stripe_create_customer_failed",
   StripeCreateProductFailed: "stripe_create_product_failed",
   StripeCancelSubscriptionFailed: "stripe_cancel_subscription_failed",
+  StripeGetPaymentMethodFailed: "stripe_get_payment_method_failed",
+  StripeCardDeclined: "stripe_card_declined",
+  StripeUpdateSubscriptionFailed: "stripe_update_subscription_failed",
 
   // Price
   PriceNotFound: "price_not_found",
@@ -72,4 +75,7 @@ export const ErrCode = {
 
   // Cus Price
   GetCusPriceFailed: "get_cus_price_failed",
+
+  // Pay for invoice
+  PayInvoiceFailed: "pay_invoice_failed",
 };

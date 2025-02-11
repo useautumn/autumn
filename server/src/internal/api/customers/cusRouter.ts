@@ -30,6 +30,7 @@ import {
   getCusBalancesByProduct,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
+import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
 
 export const cusRouter = Router();
 
@@ -75,10 +76,10 @@ cusRouter.post("", async (req: any, res: any) => {
     CreateCustomerSchema.parse(data);
 
     // 2. Check if customer ID already exists
-    const existingCustomer = await CusService.getCustomer({
+    const existingCustomer = await CusService.getById({
       sb: req.sb,
+      id: data.id,
       orgId: req.orgId,
-      customerId: data.id,
       env: req.env,
     });
 
@@ -169,48 +170,16 @@ cusRouter.put("", async (req: any, res: any) => {
   }
 });
 
-cusRouter.delete("/:customerId", async (req: any, res: any) => {
+cusRouter.delete("/:customer_id", async (req: any, res: any) => {
   try {
-    const customerId = req.params.customerId;
-    let orgId = req.orgId;
-    const fullOrg = await OrgService.getFullOrg({
+    const data = await deleteCusById({
       sb: req.sb,
-      orgId,
-    });
-
-    const customer = await CusService.getCustomer({
-      sb: req.sb,
-      orgId,
-      env: req.env,
-      customerId,
-    });
-
-    if (!customer) {
-      throw new RecaseError({
-        message: `Customer ${customerId} not found`,
-        code: ErrCode.CustomerNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    try {
-      await deleteStripeCustomer({
-        org: fullOrg,
-        env: req.env,
-        stripeId: customer.processor.id,
-      });
-    } catch (error: any) {
-      console.log("Couldn't delete stripe customer", error?.message || error);
-    }
-
-    await CusService.deleteCustomerStrict({
-      sb: req.sb,
-      customerId,
-      orgId,
+      minOrg: req.minOrg,
+      customerId: req.params.customer_id,
       env: req.env,
     });
 
-    res.status(200).json({ success: true, customer_id: customerId });
+    res.status(200).json(data);
   } catch (error) {
     handleRequestError({ req, error, res, action: "delete customer" });
   }

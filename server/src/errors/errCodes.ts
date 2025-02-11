@@ -65,4 +65,7 @@ export const ErrCode = {
   // Invoice
   CreateInvoiceFailed: "create_invoice_failed",
   PayInvoiceFailed: "pay_invoice_failed",
+
+  // Payment errors
+  CardDeclinedError: "card_declined_error",
 };

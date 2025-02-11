@@ -3,6 +3,12 @@ import chalk from "chalk";
 import Stripe from "stripe";
 import { ZodError } from "zod";
 
+export const isPaymentDeclined = (error: any) => {
+  return (
+    error instanceof RecaseError && error.code === ErrCode.StripeCardDeclined
+  );
+};
+
 export default class RecaseError extends Error {
   code: string;
   data: any;

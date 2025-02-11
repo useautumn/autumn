@@ -23,6 +23,7 @@ import {
   getPriceEntitlement,
 } from "@/internal/prices/priceUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 
 dotenv.config();
 
@@ -60,43 +61,43 @@ const createBelowThresholdInvoice = async ({
   return finalizedInvoice;
 };
 
-const payForInvoice = async ({
-  fullOrg,
-  env,
-  stripeCli,
-  customer,
-  invoice,
-}: {
-  fullOrg: Organization;
-  env: AppEnv;
-  stripeCli: Stripe;
-  customer: Customer;
-  invoice: Stripe.Invoice;
-}) => {
-  const paymentMethod = await getCusPaymentMethod({
-    org: fullOrg,
-    env: env as AppEnv,
-    stripeId: customer.processor.id,
-  });
+// const payForInvoice = async ({
+//   fullOrg,
+//   env,
+//   stripeCli,
+//   customer,
+//   invoice,
+// }: {
+//   fullOrg: Organization;
+//   env: AppEnv;
+//   stripeCli: Stripe;
+//   customer: Customer;
+//   invoice: Stripe.Invoice;
+// }) => {
+//   const paymentMethod = await getCusPaymentMethod({
+//     org: fullOrg,
+//     env: env as AppEnv,
+//     stripeId: customer.processor.id,
+//   });
 
-  if (!paymentMethod) {
-    console.log("   ❌ No payment method found");
-    return false;
-  }
+//   if (!paymentMethod) {
+//     console.log("   ❌ No payment method found");
+//     return false;
+//   }
 
-  try {
-    await stripeCli.invoices.pay(invoice.id, {
-      payment_method: paymentMethod as string,
-    });
-  } catch (error: any) {
-    console.log(
-      "   ❌ Stripe error: Failed to pay invoice: " + error?.message || error
-    );
-    return false;
-  }
+//   try {
+//     await stripeCli.invoices.pay(invoice.id, {
+//       payment_method: paymentMethod as string,
+//     });
+//   } catch (error: any) {
+//     console.log(
+//       "   ❌ Stripe error: Failed to pay invoice: " + error?.message || error
+//     );
+//     return false;
+//   }
 
-  return true;
-};
+//   return true;
+// };
 
 const handleInvoicePaymentFailure = async ({
   sb,
@@ -193,10 +194,9 @@ const invoiceCustomer = async ({
 
   // 2. Pay for invoice
   console.log("   b. Paying for invoice...");
-  const paid = await payForInvoice({
+  const { paid, error } = await payForInvoice({
     fullOrg,
     env: customer.env as AppEnv,
-    stripeCli,
     customer,
     invoice: finalizedInvoice,
   });

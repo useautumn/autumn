@@ -249,27 +249,33 @@ const deleteStripePrices = async ({
           config.stripe_price_id!
         );
 
-        // Default product
-
-        await stripeCli.prices.update(config.stripe_price_id!, {
-          active: false,
-        });
-
-        const attachedProductId = stripePrice.product as string;
-        const product = await stripeCli.products.retrieve(attachedProductId);
-        if (!product.active) {
-          await stripeCli.products.del(attachedProductId);
-        } else {
-          await stripeCli.products.update(attachedProductId, {
+        try {
+          await stripeCli.prices.update(config.stripe_price_id!, {
             active: false,
           });
+
+          const attachedProductId = stripePrice.product as string;
+          const product = await stripeCli.products.retrieve(attachedProductId);
+
+          if (!product.active) {
+            await stripeCli.products.del(attachedProductId);
+          } else {
+            await stripeCli.products.update(attachedProductId, {
+              active: false,
+            });
+          }
+        } catch (error: any) {
+          console.log("Error deleting stripe price / product:", error.message);
         }
       }
 
       if (config.stripe_meter_id) {
-        await stripeCli.billing.meters.deactivate(config.stripe_meter_id!);
+        try {
+          await stripeCli.billing.meters.deactivate(config.stripe_meter_id!);
+        } catch (error: any) {
+          console.log("Error deactivating meter:", error.message);
+        }
       }
-      console.log("Deleted stripe price and meter");
     }
   }
 };
@@ -375,8 +381,6 @@ export const handleNewPrices = async ({
     ),
   ];
 
-  // console.log("Created Ents: ", createdEnts);
-  // 1. Create new entitlements
   await handleStripePrices({
     sb,
     product,
