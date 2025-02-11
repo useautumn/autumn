@@ -9,29 +9,18 @@ import {
 
 import {
   AllowanceType,
-  CusEntWithFeatureAndEntitlement,
   FeatureType,
   FullCustomerEntitlement,
 } from "@autumn/shared";
 
 import { useCustomerContext } from "../CustomerContext";
-import {
-  formatUnixToDateTime,
-  formatUnixToDateTimeString,
-} from "@/utils/formatUtils/formatDateUtils";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { compareStatus } from "@/utils/genUtils";
-import { StatusBadge } from "../../StatusBadge";
+
 import { useState } from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogHeader,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { DialogTrigger } from "@/components/ui/dialog";
-import UpdateCusEntitlement from "./UpdateCusEntitlement";
+
 import { Badge } from "@/components/ui/badge";
+import UpdateCusEntitlement from "./UpdateCusEntitlement";
 
 export const CustomerEntitlementsList = ({
   featureType,
@@ -51,7 +40,7 @@ export const CustomerEntitlementsList = ({
         (p) => p.id === cusEnt.customer_product_id
       );
       const isExpired = cusProduct?.status === "expired";
-
+      const isScheduled = cusProduct?.status === "scheduled";
       // Filter by feature type
       const featureTypeMatches =
         featureType === FeatureType.Boolean
@@ -62,7 +51,7 @@ export const CustomerEntitlementsList = ({
       // Filter by expired status
       const expiredStatusMatches = showExpired ? true : !isExpired;
 
-      return featureTypeMatches && expiredStatusMatches;
+      return featureTypeMatches && expiredStatusMatches && !isScheduled;
     }
   );
 

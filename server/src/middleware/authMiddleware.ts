@@ -10,8 +10,7 @@ const getTokenData = async (req: any, res: any) => {
       throw new Error("No token provided");
     }
   } catch (error) {
-    console.log("Error getting token", error);
-    throw new Error("invalid clerk token");
+    throw new Error("clerk token not found in request headers / invalid");
   }
 
   let secretKey = process.env.CLERK_SECRET_KEY;
@@ -42,9 +41,6 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     if (!tokenData?.org_id) {
       throw new Error("No org in token");
     }
-
-    // req.org = tokenData!.org;
-    // console.log("tokenData", tokenData);
 
     let tokenOrg = tokenData!.org as any;
     req.minOrg = {

@@ -65,33 +65,34 @@ export const FeaturesTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {features.map((feature: Feature) => (
-            <TableRow
-              key={feature.internal_id}
-              className="cursor-pointer"
-              onClick={() => handleRowClick(feature.id)}
-            >
-              <TableCell>{feature.name}</TableCell>
-              <TableCell className="font-mono">{feature.id}</TableCell>
-              <TableCell>
-                <FeatureTypeBadge type={feature.type} />
-              </TableCell>
-              {!onboarding && (
-                <TableCell>{getMeteredEventNames(feature)}</TableCell>
-              )}
-              {!onboarding && (
-                <TableCell className="min-w-20 w-24">
-                  <span>{formatUnixToDateTime(feature.created_at).date}</span>{" "}
-                  <span className="text-t3">
-                    {formatUnixToDateTime(feature.created_at).time}
-                  </span>
+          {features &&
+            features.map((feature: Feature) => (
+              <TableRow
+                key={feature.internal_id}
+                className="cursor-pointer"
+                onClick={() => handleRowClick(feature.id)}
+              >
+                <TableCell>{feature.name}</TableCell>
+                <TableCell className="font-mono">{feature.id}</TableCell>
+                <TableCell>
+                  <FeatureTypeBadge type={feature.type} />
                 </TableCell>
-              )}
-              <TableCell className="min-w-4 w-6">
-                <FeatureRowToolbar feature={feature} />
-              </TableCell>
-            </TableRow>
-          ))}
+                {!onboarding && (
+                  <TableCell>{getMeteredEventNames(feature)}</TableCell>
+                )}
+                {!onboarding && (
+                  <TableCell className="min-w-20 w-24">
+                    <span>{formatUnixToDateTime(feature.created_at).date}</span>{" "}
+                    <span className="text-t3">
+                      {formatUnixToDateTime(feature.created_at).time}
+                    </span>
+                  </TableCell>
+                )}
+                <TableCell className="min-w-4 w-6">
+                  <FeatureRowToolbar feature={feature} />
+                </TableCell>
+              </TableRow>
+            ))}
         </TableBody>
       </Table>
     </>

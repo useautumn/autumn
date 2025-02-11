@@ -7,6 +7,7 @@ import { EntitlementWithFeature } from "@autumn/shared";
 import { BillingType } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { getBillingType } from "../prices/priceUtils.js";
+import { OrgService } from "../orgs/OrgService.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -14,8 +15,12 @@ productRouter.get("/data", async (req: any, res) => {
   let sb = req.sb;
 
   try {
-    const products = await ProductService.getProducts(sb, req.orgId, req.env);
+    await OrgService.getFullOrg({
+      sb,
+      orgId: req.orgId,
+    });
 
+    const products = await ProductService.getProducts(sb, req.orgId, req.env);
     const features = await FeatureService.getFeatures({
       sb,
       orgId: req.orgId,

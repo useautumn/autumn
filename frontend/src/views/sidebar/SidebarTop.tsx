@@ -41,6 +41,7 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
     }
   }, [organization, isLoaded]);
 
+  const primaryEmail = user?.primaryEmailAddress?.emailAddress;
   return (
     <SidebarHeader className="px-3 pt-4 mb-2 w-full">
       <div
@@ -83,10 +84,9 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
                 />
               )}
               {isLoaded &&
-                (user?.primaryEmailAddress?.emailAddress ===
-                  "johnyeocx@gmail.com" ||
-                  user?.primaryEmailAddress?.emailAddress ===
-                    "ayush@recaseai.com") && (
+                (primaryEmail === "johnyeocx@gmail.com" ||
+                  primaryEmail === "ayush@recaseai.com" ||
+                  primaryEmail == "johnyeo10@gmail.com") && (
                   <div className="text-xs text-gray-500 ml-2 flex items-center gap-1">
                     {/* <span className="w-[70px] overflow-hidden text-ellipsis whitespace-nowrap">
                       {organization?.id}

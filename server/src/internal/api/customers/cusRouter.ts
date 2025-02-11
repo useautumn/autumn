@@ -498,13 +498,13 @@ cusRouter.post(
       }
 
       if (status == CusProductStatus.Expired) {
+        const stripeCli = createStripeCli({
+          org,
+          env: req.env,
+        });
         // Check if customer has any other active products
         // 1. Cancel stripe subscription?
         if (cusProduct.processor.subscription_id) {
-          const stripeCli = createStripeCli({
-            org,
-            env: req.env,
-          });
           try {
             await stripeCli.subscriptions.cancel(
               cusProduct.processor.subscription_id
@@ -525,15 +525,59 @@ cusRouter.post(
 
         // 2. Expire current product
         // console.log(cusProduct);
-        console.log(
-          `Expiring product ${cusProduct.product.name} for ${customerId} (attaching default if exists)`
-        );
-        await expireAndAddDefaultProduct({
-          sb: req.sb,
-          org,
-          env: req.env,
-          cusProduct,
-        });
+        if (!cusProduct.product.is_add_on) {
+          if (cusProduct.status == CusProductStatus.Scheduled) {
+            console.log(
+              `Cancelling scheduled product ${cusProduct.product.name} for ${customerId}`
+            );
+
+            try {
+              await stripeCli.subscriptionSchedules.cancel(
+                cusProduct.processor.subscription_schedule_id!
+              );
+            } catch (error: any) {
+              console.log("Failed to cancel scheduled product:", error.message);
+            }
+
+            console.log("Updating status to expired");
+            await CusProductService.deleteFutureProduct({
+              sb: req.sb,
+              internalCustomerId: cusProduct.customer.internal_id,
+              productGroup: cusProduct.product.group,
+            });
+
+            // Re activate current product
+            console.log("Reactivating current product");
+            const curActiveProducts = await CusService.getFullCusProducts({
+              sb: req.sb,
+              internalCustomerId: cusProduct.customer.internal_id,
+              withProduct: true,
+              inStatuses: [CusProductStatus.Active],
+            });
+
+            const activeProducts = curActiveProducts.filter(
+              (p: any) => p.product.group == cusProduct.product.group
+            );
+            for (const activeProduct of activeProducts) {
+              await stripeCli.subscriptions.update(
+                activeProduct.processor.subscription_id!,
+                {
+                  cancel_at: null,
+                }
+              );
+            }
+          } else {
+            console.log(
+              `Expiring product ${cusProduct.product.name} for ${customerId} (attaching default if exists)`
+            );
+            await expireAndAddDefaultProduct({
+              sb: req.sb,
+              org,
+              env: req.env,
+              cusProduct,
+            });
+          }
+        }
       }
 
       if (!cusProduct) {
