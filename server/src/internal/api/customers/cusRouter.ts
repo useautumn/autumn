@@ -17,96 +17,20 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { EventService } from "../events/EventService.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { createNewCustomer, getCusEntsAndPrices } from "./cusUtils.js";
+import {
+  createNewCustomer,
+  getCusEntsInFeatures,
+  getCustomerDetails,
+} from "./cusUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import {
   getCusBalancesByEntitlement,
   getCusBalancesByProduct,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { processFullCusProduct } from "@/internal/customers/products/cusProductUtils.js";
-import {
-  InvoiceService,
-  processInvoice,
-} from "@/internal/customers/invoices/InvoiceService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
-
-import { generateId } from "@/utils/genUtils.js";
+import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
 
 export const cusRouter = Router();
-
-const notNullOrUndefined = (value: any) => {
-  return value !== null && value !== undefined;
-};
-
-export const getCustomerDetails = async ({
-  customer,
-  sb,
-  orgId,
-  env,
-}: {
-  customer: Customer;
-  sb: SupabaseClient;
-  orgId: string;
-  env: AppEnv;
-}) => {
-  const cusProducts = await CusProductService.getFullByCustomerId({
-    sb,
-    customerId: customer.id,
-    orgId,
-    env,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-  });
-
-  let main = [];
-  let addOns = [];
-
-  for (const cusProduct of cusProducts) {
-    let processed = processFullCusProduct(cusProduct);
-
-    let isAddOn = cusProduct.product.is_add_on;
-    if (isAddOn) {
-      addOns.push(processed);
-    } else {
-      main.push(processed);
-    }
-  }
-
-  // Get entitlements
-  const balances = await getCusBalancesByEntitlement({
-    sb,
-    internalCustomerId: customer.internal_id,
-    customerId: customer.id,
-    orgId,
-    env,
-  });
-
-  for (const balance of balances) {
-    if (
-      notNullOrUndefined(balance.total) &&
-      notNullOrUndefined(balance.balance)
-    ) {
-      balance.used = balance.total - balance.balance;
-      delete balance.total;
-    }
-  }
-
-  // Get customer invoices
-  const invoices = await InvoiceService.getByInternalCustomerId({
-    sb,
-    internalCustomerId: customer.internal_id,
-  });
-
-  const processedInvoices = invoices.map(processInvoice);
-
-  return {
-    customer,
-    main,
-    addOns,
-    balances,
-    invoices: processedInvoices,
-  };
-};
 
 cusRouter.post("/:search", async (req: any, res: any) => {
   try {
@@ -374,11 +298,6 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
       env: req.env,
     });
 
-    const fullOrg = await OrgService.getFullOrg({
-      sb: req.sb,
-      orgId: req.orgId,
-    });
-
     if (!customer) {
       throw new RecaseError({
         message: `Customer ${cusId} not found`,
@@ -392,7 +311,7 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
       balances.map((b: any) => b.feature_id).includes(f.id)
     );
 
-    const { cusEnts, cusPrices } = await getCusEntsAndPrices({
+    const { cusEnts } = await getCusEntsInFeatures({
       sb: req.sb,
       internalCustomerId: customer.internal_id,
       internalFeatureIds: featuresToUpdate.map((f) => f.internal_id),
@@ -549,6 +468,14 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
     env: req.env,
   });
 
+  const fullCusProducts = await CusService.getFullCusProducts({
+    sb: req.sb,
+    internalCustomerId: customer.internal_id,
+    withPrices: true,
+  });
+
+  const cusEntsWithCusProduct = fullCusProductToCusEnts(fullCusProducts!);
+
   if (group_by == "product") {
     balances = await getCusBalancesByProduct({
       sb: req.sb,
@@ -558,11 +485,7 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
     });
   } else {
     balances = await getCusBalancesByEntitlement({
-      sb: req.sb,
-      customerId,
-      orgId: req.orgId,
-      env: req.env,
-      internalCustomerId: customer.internal_id,
+      cusEntsWithCusProduct: cusEntsWithCusProduct as any,
     });
   }
 

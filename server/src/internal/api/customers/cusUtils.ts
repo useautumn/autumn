@@ -1,6 +1,7 @@
 import {
   CreateCustomerSchema,
   CusProductSchema,
+  CusProductStatus,
   Customer,
   CustomerSchema,
   FullCustomerEntitlement,
@@ -21,6 +22,18 @@ import { createFullCusProduct } from "@/internal/customers/add-product/createFul
 
 import { generateId } from "@/utils/genUtils.js";
 import { z } from "zod";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import {
+  fullCusProductToCusEnts,
+  processFullCusProduct,
+} from "@/internal/customers/products/cusProductUtils.js";
+import { getCusBalancesByEntitlement } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
+import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+
+const notNullOrUndefined = (value: any) => {
+  return value !== null && value !== undefined;
+};
 
 export const createNewCustomer = async ({
   sb,
@@ -158,43 +171,98 @@ export const flipProductResults = (
   return customers;
 };
 
-export const getCusEntsAndPrices = async ({
+export const getCustomerDetails = async ({
+  customer,
+  sb,
+  orgId,
+  env,
+}: {
+  customer: Customer;
+  sb: SupabaseClient;
+  orgId: string;
+  env: AppEnv;
+}) => {
+  const fullCusProducts = await CusService.getFullCusProducts({
+    sb,
+    internalCustomerId: customer.internal_id,
+    withProduct: true,
+    withPrices: true,
+    inStatuses: [CusProductStatus.Active],
+  });
+
+  let main = [];
+  let addOns = [];
+
+  // 1. Process products
+  for (const cusProduct of fullCusProducts) {
+    let processed = processFullCusProduct(cusProduct);
+
+    let isAddOn = cusProduct.product.is_add_on;
+    if (isAddOn) {
+      addOns.push(processed);
+    } else {
+      main.push(processed);
+    }
+  }
+
+  // Get entitlements
+  const balances = await getCusBalancesByEntitlement({
+    cusEntsWithCusProduct: fullCusProductToCusEnts(fullCusProducts!) as any,
+  });
+
+  for (const balance of balances) {
+    if (
+      notNullOrUndefined(balance.total) &&
+      notNullOrUndefined(balance.balance)
+    ) {
+      balance.used = balance.total - balance.balance;
+      delete balance.total;
+    }
+  }
+
+  // Get customer invoices
+  const invoices = await InvoiceService.getByInternalCustomerId({
+    sb,
+    internalCustomerId: customer.internal_id,
+  });
+
+  const processedInvoices = invoices.map(processInvoice);
+
+  return {
+    customer,
+    main,
+    addOns,
+    balances,
+    invoices: processedInvoices,
+  };
+};
+
+export const getCusEntsInFeatures = async ({
   sb,
   internalCustomerId,
   internalFeatureIds,
+  inStatuses = [CusProductStatus.Active],
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
   internalFeatureIds: string[];
+  inStatuses?: CusProductStatus[];
 }) => {
-  const cusWithProducts = await CusService.getActiveProductsByInternalId({
+  const fullCusProducts = await CusService.getFullCusProducts({
     sb,
     internalCustomerId,
+    inStatuses: inStatuses,
   });
 
-  if (!cusWithProducts) {
-    return { cusEnts: [], cusPrices: [] };
+  const cusEntsWithCusProduct = fullCusProductToCusEnts(fullCusProducts!);
+
+  if (!cusEntsWithCusProduct) {
+    return { cusEnts: [] };
   }
 
-  const cusProducts = cusWithProducts?.customer_products;
+  const cusEnts = cusEntsWithCusProduct.filter((cusEnt) =>
+    internalFeatureIds.includes(cusEnt.internal_feature_id)
+  );
 
-  const cusEnts: FullCustomerEntitlement[] = [];
-  const cusPrices: FullCustomerPrice[] = [];
-  for (const cusProduct of cusProducts) {
-    cusEnts.push(
-      ...cusProduct.customer_entitlements.filter(
-        (cusEnt: FullCustomerEntitlement) =>
-          internalFeatureIds.includes(cusEnt.entitlement.internal_feature_id!)
-      )
-    );
-    cusPrices.push(
-      ...cusProduct.customer_prices.filter((cusPrice: FullCustomerPrice) => {
-        const priceConfig = cusPrice.price.config as UsagePriceConfig;
-
-        return internalFeatureIds.includes(priceConfig.internal_feature_id);
-      })
-    );
-  }
-
-  return { cusEnts, cusPrices };
+  return { cusEnts };
 };

@@ -94,7 +94,7 @@ export const handleInvoiceCreated = async ({
         continue;
       }
 
-      const usage = -relatedCusEnt.balance;
+      const usage = relatedCusEnt.entitlement.allowance - relatedCusEnt.balance;
 
       const usageTimestamp = Math.round(
         subDays(new Date(invoice.created * 1000), 7).getTime() / 1000

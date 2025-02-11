@@ -24,7 +24,7 @@ import { FeatureService } from "../features/FeatureService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../customers/CusService.js";
-import { getCustomerDetails } from "../api/customers/cusRouter.js";
+import { getCustomerDetails } from "../api/customers/cusUtils.js";
 
 export const publicRouter = Router();
 
