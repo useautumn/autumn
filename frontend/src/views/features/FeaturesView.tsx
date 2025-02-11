@@ -7,6 +7,7 @@ import { Feature, FeatureType } from "@autumn/shared";
 import { CreateFeature } from "./CreateFeature";
 import { AppEnv } from "@autumn/shared";
 import LoadingScreen from "../general/LoadingScreen";
+import { FeaturesTable } from "./FeaturesTable";
 import {
   Table,
   TableHeader,
@@ -25,8 +26,8 @@ import UpdateFeature from "./UpdateFeature";
 import { CustomToaster } from "@/components/general/CustomToaster";
 
 function FeaturesView({ env }: { env: AppEnv }) {
-  const [open, setOpen] = useState(false);
-  const [selectedFeature, setSelectedFeature] = useState<any>(null);
+  // const [open, setOpen] = useState(false);
+  // const [selectedFeature, setSelectedFeature] = useState<any>(null);
 
   const { data, isLoading, error, mutate } = useAxiosSWR({
     url: `/features`,
@@ -38,26 +39,26 @@ function FeaturesView({ env }: { env: AppEnv }) {
     return <LoadingScreen />;
   }
 
-  const handleRowClick = (id: string) => {
-    const feature = data?.features.find(
-      (feature: Feature) => feature.id === id
-    );
-    setSelectedFeature(feature);
-    setOpen(true);
-  };
+  // const handleRowClick = (id: string) => {
+  //   const feature = data?.features.find(
+  //     (feature: Feature) => feature.id === id
+  //   );
+  //   setSelectedFeature(feature);
+  //   setOpen(true);
+  // };
 
   const features = data?.features.filter(
     (feature: Feature) => feature.type !== "credit_system"
   );
 
-  const getMeteredEventNames = (feature: Feature) => {
-    if (feature.type !== FeatureType.Metered) return "";
+  // const getMeteredEventNames = (feature: Feature) => {
+  //   if (feature.type !== FeatureType.Metered) return "";
 
-    if (!feature.config.filters || feature.config.filters.length === 0)
-      return "";
+  //   if (!feature.config.filters || feature.config.filters.length === 0)
+  //     return "";
 
-    return feature.config.filters[0].value.join(", ");
-  };
+  //   return feature.config.filters[0].value.join(", ");
+  // };
 
   return (
     <FeaturesContext.Provider
@@ -75,8 +76,9 @@ function FeaturesView({ env }: { env: AppEnv }) {
           Define the metered and boolean features your users are entitled to
         </p>
       </div>
+      <FeaturesTable />
 
-      <UpdateFeature
+      {/* <UpdateFeature
         open={open}
         setOpen={setOpen}
         selectedFeature={selectedFeature}
@@ -128,7 +130,7 @@ function FeaturesView({ env }: { env: AppEnv }) {
             </TableRow>
           ))}
         </TableBody>
-      </Table>
+      </Table> */}
 
       <CreateFeature />
     </FeaturesContext.Provider>

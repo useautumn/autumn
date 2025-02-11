@@ -34,8 +34,17 @@ import { cn } from "@/lib/utils";
 import { useSession } from "@clerk/nextjs";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
+import SmallSpinner from "@/components/general/SmallSpinner";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCcStripe, faStripeS } from "@fortawesome/free-brands-svg-icons";
 
-function ConnectStripe() {
+function ConnectStripe({
+  className,
+  onboarding,
+}: {
+  className?: string;
+  onboarding?: boolean;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
@@ -43,8 +52,8 @@ function ConnectStripe() {
 
   const [testApiKey, setTestApiKey] = useState("");
   const [liveApiKey, setLiveApiKey] = useState("");
-  const [successUrl, setSuccessUrl] = useState("");
-  const [defaultCurrency, setDefaultCurrency] = useState("");
+  const [successUrl, setSuccessUrl] = useState("https://useautumn.com");
+  const [defaultCurrency, setDefaultCurrency] = useState("USD");
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -59,7 +68,7 @@ function ConnectStripe() {
   const org = orgData?.org;
 
   const handleConnectStripe = async () => {
-    if (!testApiKey || !liveApiKey || !successUrl || !defaultCurrency) {
+    if (!testApiKey || !successUrl || !defaultCurrency) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -74,17 +83,15 @@ function ConnectStripe() {
     try {
       await OrgService.connectStripe(axiosInstance, {
         testApiKey,
-        liveApiKey,
+        liveApiKey: onboarding ? testApiKey : liveApiKey,
         successUrl,
         defaultCurrency,
       });
 
       toast.success("Successfully connected to Stripe");
-
-      if (redirect) {
+      await mutateOrg();
+      if (redirect && !onboarding) {
         navigateTo(redirect, router, AppEnv.Live);
-      } else {
-        router.push("/");
       }
     } catch (error) {
       console.log("Failed to connect Stripe", error);
@@ -108,19 +115,23 @@ function ConnectStripe() {
   };
 
   if (isOrgLoading) {
-    return <LoadingScreen />;
+    return <SmallSpinner />;
   }
 
   if (org?.stripe_connected) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <p className="text-md font-medium text-t3">
-          Stripe already connected 🎉🎉🎉
-        </p>
+      <div
+        className={cn(
+          "flex flex-col gap-4",
+          className,
+          onboarding && "flex-row justify-between items-center"
+        )}
+      >
+        <p className="text-t3 text-sm">Stripe Connected &nbsp; ✅</p>
         <Button
           onClick={handleDisconnectStripe}
           variant="gradientSecondary"
-          className="mt-4"
+          className={`${onboarding ? "w-fit" : ""}`}
           isLoading={isDisconnecting}
         >
           Disconnect Stripe
@@ -130,80 +141,59 @@ function ConnectStripe() {
   }
 
   return (
-    <>
+    <div className={cn("flex flex-col font-regular gap-4", className)}>
       <CustomToaster />
-      <div className="flex flex-col items-center justify-center h-screen">
-        <div className="w-[430px] shadow-lg rounded-2xl border flex flex-col p-8 bg-white">
-          <p className="text-md font-bold text-t2">
-            Please connect your Stripe account
-          </p>
-          <p className="text-t3 text-xs mt-1">
-            Your credentials will be encrypted and stored safely
-          </p>
-          <div className="flex flex-col font-regular mt-4 gap-4">
-            <div>
-              <FieldLabel>Test API Key</FieldLabel>
-              <Input
-                value={testApiKey}
-                onChange={(e) => setTestApiKey(e.target.value)}
-              />
-            </div>
+      <div className="flex flex-col font-regular gap-4">
+        <div>
+          <FieldLabel>Stripe Test Secret API Key</FieldLabel>
+          <Input
+            value={testApiKey}
+            placeholder="sk_test_..."
+            onChange={(e) => setTestApiKey(e.target.value)}
+          />
+        </div>
 
-            <div>
-              <FieldLabel>Live API Key</FieldLabel>
-              <Input
-                value={liveApiKey}
-                onChange={(e) => setLiveApiKey(e.target.value)}
-              />
-            </div>
-            <div>
-              <FieldLabel>Success URL</FieldLabel>
-              <Input
-                value={successUrl}
-                onChange={(e) => setSuccessUrl(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <FieldLabel>Default Currency</FieldLabel>
-              <CurrencySelect
-                defaultCurrency={defaultCurrency}
-                setDefaultCurrency={setDefaultCurrency}
-              />
-              {/* <Select
-                value={defaultCurrency}
-                onValueChange={(value) => setDefaultCurrency(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {stripeCurrencyCodes.map((currency) => (
-                    <SelectItem
-                      key={currency.code}
-                      value={currency.code}
-                      onClick={() => setDefaultCurrency(currency.code)}
-                    >
-                      {currency.currency} - {currency.code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select> */}
-            </div>
-
-            <div className="flex justify-end mt-4">
-              <Button
-                className="w-fit"
-                onClick={handleConnectStripe}
-                isLoading={isLoading}
-              >
-                Connect Stripe
-              </Button>
-            </div>
+        {!onboarding && (
+          <div>
+            <FieldLabel>Stripe Live Secret API Key</FieldLabel>
+            <Input
+              value={liveApiKey}
+              placeholder="sk_live_..."
+              onChange={(e) => setLiveApiKey(e.target.value)}
+            />
+          </div>
+        )}
+        <div className="flex gap-2 w-full">
+          <div className="w-full truncate">
+            <FieldLabel>Success URL after Stripe payment</FieldLabel>
+            <Input
+              value={successUrl}
+              onChange={(e) => setSuccessUrl(e.target.value)}
+            />
+          </div>
+          <div className="w-1/4 min-w-32">
+            <FieldLabel>Currency</FieldLabel>
+            <CurrencySelect
+              defaultCurrency={defaultCurrency}
+              setDefaultCurrency={setDefaultCurrency}
+            />
           </div>
         </div>
+
+        <div className="flex justify-end">
+          <Button
+            className="w-fit"
+            variant="gradientPrimary"
+            onClick={handleConnectStripe}
+            disabled={org?.stripe_connected}
+            isLoading={isLoading}
+            startIcon={<FontAwesomeIcon icon={faStripeS} className="mr-2" />}
+          >
+            Connect Stripe
+          </Button>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 

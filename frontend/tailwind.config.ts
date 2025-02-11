@@ -107,6 +107,13 @@ export default {
       },
     },
   },
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  plugins: [require("tailwindcss-animate"), nextui(nextUiConfig)],
+  plugins: [
+    require("tailwindcss-animate"),
+    nextui(nextUiConfig),
+    function ({ addBase, theme }) {
+      addBase({
+        body: { fontSize: theme("fontSize.sm") },
+      });
+    },
+  ],
 } satisfies Config;

@@ -23,6 +23,7 @@ import { EnvDropdown } from "./EnvDropdown";
 import { AppEnv } from "@autumn/shared";
 
 import SidebarBottom from "./SidebarBottom";
+import { createClient } from "@supabase/supabase-js";
 
 function HomeSidebar({
   user,
@@ -40,8 +41,8 @@ function HomeSidebar({
 }) {
   return (
     <Sidebar collapsible="icon" className=" bg-zinc-100">
-      <SidebarTop orgName={org.name} env={env} />
-      <SidebarContent >
+      <SidebarTop orgName={org.name || " "} env={env} />
+      <SidebarContent>
         <SidebarGroup className="py-0">
           <SidebarGroupContent>
             <SidebarMenu>

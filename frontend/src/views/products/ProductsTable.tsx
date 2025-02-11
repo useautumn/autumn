@@ -20,7 +20,7 @@ import { useProductsContext } from "./ProductsContext";
 import { Badge } from "@/components/ui/badge";
 
 export const ProductsTable = ({ products }: { products: Product[] }) => {
-  const { env } = useProductsContext();
+  const { env, onboarding } = useProductsContext();
   const router = useRouter();
   return (
     <Table>
@@ -29,9 +29,11 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
           <TableHead className="">Name</TableHead>
           <TableHead>Product ID</TableHead>
           <TableHead>Type</TableHead>
-          <TableHead>Group</TableHead>
-          <TableHead>Created At</TableHead>
-          <TableHead></TableHead>
+          {!onboarding && <TableHead>Group</TableHead>}
+          {!onboarding && (
+            <TableHead className="min-w-0 w-28">Created At</TableHead>
+          )}
+          <TableHead className="min-w-0 w-10"></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -41,12 +43,8 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
             className="cursor-pointer"
             onClick={() => navigateTo(`/products/${product.id}`, router, env)}
           >
-            <TableCell className="font-medium">
-              {product.name}
-            </TableCell>
-            <TableCell className="font-mono">
-              {product.id}
-            </TableCell>
+            <TableCell className="font-medium">{product.name}</TableCell>
+            <TableCell className="font-mono">{product.id}</TableCell>
             <TableCell className="min-w-32">
               {product.is_default ? (
                 <Badge variant="outline">Default</Badge>
@@ -56,17 +54,16 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
                 <></>
               )}
             </TableCell>
-            <TableCell>{product.group}</TableCell>
-            <TableCell className="min-w-20 w-24">
-              <span>
-                {formatUnixToDateTime(product.created_at).date}
-              </span>
-              {" "}
-              <span className="text-t3">
-                {formatUnixToDateTime(product.created_at).time}
-              </span>
-            </TableCell>
-            <TableCell className="min-w-4 w-6">
+            {!onboarding && <TableCell>{product.group}</TableCell>}
+            {!onboarding && (
+              <TableCell>
+                <span>{formatUnixToDateTime(product.created_at).date}</span>{" "}
+                <span className="text-t3">
+                  {formatUnixToDateTime(product.created_at).time}
+                </span>
+              </TableCell>
+            )}
+            <TableCell>
               <ProductRowToolbar product={product} />
             </TableCell>
           </TableRow>
