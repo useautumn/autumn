@@ -132,17 +132,22 @@ const handleStripePrices = async ({
   entitlements: Entitlement[];
 }) => {
   // First get features that need a meter
-  const stripeCli = createStripeCli({
-    org,
-    env,
-  });
 
   // Contains usage in arrear
   const inArrearExists = prices.some(
     (p) => getBillingType(p.config!) == BillingType.UsageInArrear
   );
 
-  if (inArrearExists && !org.stripe_connected) {
+  if (!inArrearExists) {
+    return;
+  }
+
+  const stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
+  if (!org.stripe_connected) {
     throw new RecaseError({
       message: "Stripe connection required for usage-based, end of period",
       code: ErrCode.StripeConfigNotFound,
@@ -223,6 +228,13 @@ const deleteStripePrices = async ({
   org: Organization;
   env: AppEnv;
 }) => {
+  const inArrearExists = prices.some(
+    (p) => getBillingType(p.config!) == BillingType.UsageInArrear
+  );
+
+  if (!inArrearExists) {
+    return;
+  }
   const stripeCli = createStripeCli({
     org,
     env,
