@@ -32,11 +32,11 @@ import {
   faBuilding,
   faExternalLinkAlt,
 } from "@fortawesome/pro-duotone-svg-icons";
-let SUPABASE_URL = "https://tqjsbqmimvflvkwdoucx.supabase.co";
-let SUPABASE_KEY =
+const SUPABASE_URL = "https://tqjsbqmimvflvkwdoucx.supabase.co";
+const SUPABASE_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxanNicW1pbXZmbHZrd2RvdWN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNjU0NTEsImV4cCI6MjA1MTg0MTQ1MX0.ndNu1-ObwQy5rzbmqQPvNRCG6z4GYkZKy_WkGo3AXNs";
 
-let supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 function OnboardingView({
   sessionClaims,
@@ -363,8 +363,8 @@ function OnboardingView({
                     defined above.
                   </span>
                   <span>
-                    If it's a metered (usage-based) feature, send us the usage
-                    data.
+                    If it&apos;s a metered (usage-based) feature, send us the
+                    usage data.
                   </span>
                 </p>
                 <div className="w-full lg:w-2/3 min-w-md max-w-xl flex flex-col gap-2">
@@ -401,8 +401,8 @@ function OnboardingView({
             <Step title="Done!">
               <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
                 <p className="text-t2 gap-2 w-full lg:w-1/3">
-                  You're all set! Go to the Customers tab to manage your users,
-                  and read our{" "}
+                  You&apos;re all set! Go to the Customers tab to manage your
+                  users, and read our{" "}
                   <a
                     className="text-primary underline font-semibold break-none"
                     href="https://docs.useautumn.com"
