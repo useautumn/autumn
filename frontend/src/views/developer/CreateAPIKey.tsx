@@ -48,7 +48,9 @@ const CreateAPIKey = () => {
       });
 
       setApiKey(api_key);
-      setApiCreated && setApiCreated(true);
+      if (setApiCreated) {
+        setApiCreated(true);
+      }
       await mutate();
     } catch (error) {
       console.log("Error:", error);

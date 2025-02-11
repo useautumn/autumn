@@ -83,8 +83,8 @@ export default async function RootLayout({
                         Autumn is coming to mobile soon
                       </h2>
                       <p className="text-gray-600">
-                        We're currently designed for larger screens. Come back
-                        on your desktop?
+                        We&apos;re currently designed for larger screens. Come
+                        back on your desktop?
                       </p>
                     </div>
                   </div>
