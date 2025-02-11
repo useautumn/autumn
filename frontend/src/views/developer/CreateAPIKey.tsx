@@ -17,7 +17,8 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useDevContext } from "./DevContext";
 
 const CreateAPIKey = () => {
-  const { env, mutate } = useDevContext();
+  const { env, mutate, onboarding, apiKeyName, setApiCreated, apiCreated } =
+    useDevContext();
   const axiosInstance = useAxiosInstance({ env });
 
   const [loading, setLoading] = useState(false);
@@ -39,13 +40,15 @@ const CreateAPIKey = () => {
   }, [copied]);
 
   const handleCreate = async () => {
+    console.log("creating api key", apiKeyName ? apiKeyName : name);
     setLoading(true);
     try {
       const { api_key } = await DevService.createAPIKey(axiosInstance, {
-        name,
+        name: apiKeyName ? apiKeyName : name,
       });
 
       setApiKey(api_key);
+      setApiCreated && setApiCreated(true);
       await mutate();
     } catch (error) {
       console.log("Error:", error);
@@ -58,7 +61,17 @@ const CreateAPIKey = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="" startIcon={<Plus size={15} />} variant="dashed">
+        <Button
+          className={`${onboarding ? "w-fit" : "w-full"}`}
+          startIcon={<Plus size={15} />}
+          variant={onboarding ? "gradientPrimary" : "dashed"}
+          disabled={apiCreated ? true : false}
+          onClick={() => {
+            if (apiKeyName) {
+              handleCreate();
+            }
+          }}
+        >
           Create API Key
         </Button>
       </DialogTrigger>

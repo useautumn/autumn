@@ -25,12 +25,10 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
   const [hidePlaceholder, setHidePlaceholder] = useState(false);
 
   useEffect(() => {
-    if (organization) {
-      setCurOrgId(organization.id);
-    }
+    if (organization) setCurOrgId(organization.id);
 
-    if (curOrgId !== null && organization?.id !== curOrgId) {
-      window.location.href = "/sandbox/customers";
+    if (organization && curOrgId !== null && organization?.id !== curOrgId) {
+      window.location.href = "/sandbox/products";
       router.refresh();
     }
   }, [organization, curOrgId, router]);
@@ -65,11 +63,12 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
                   {!isLoaded && <SmallSpinner />}
                 </div>
               )}
-              {isLoaded && (
+              {isLoaded && organization && (
                 <OrganizationSwitcher
                   appearance={{
                     elements: {
-                      organizationSwitcherTrigger: "pl-0 pr-1 max-w-[160px]",
+                      organizationSwitcherTrigger:
+                        "flex pl-0 pr-1 max-w-[160px]",
                     },
                   }}
                   hidePersonal={true}
@@ -92,7 +91,7 @@ export function SidebarTop({ orgName, env }: { orgName: string; env: AppEnv }) {
                     {/* <span className="w-[70px] overflow-hidden text-ellipsis whitespace-nowrap">
                       {organization?.id}
                     </span> */}
-                      <CopyButton text={organization?.id || ""} />
+                    <CopyButton text={organization?.id || ""} />
                   </div>
                 )}
             </div>
