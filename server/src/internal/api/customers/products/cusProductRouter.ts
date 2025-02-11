@@ -294,7 +294,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
   const useCheckout = force_checkout || false;
   console.log("--------------------------------");
-  console.log("Add product request received");
+  console.log("ATTACH PRODUCT REQUEST");
 
   try {
     z.array(FeatureOptionsSchema).parse(optionsListInput);
@@ -322,9 +322,9 @@ attachRouter.post("/attach", async (req: any, res) => {
     });
 
     console.log(
-      `Customer: ${chalk.yellow(attachParams.customer.id)}, ${
-        attachParams.customer.name
-      }`
+      `Customer: ${chalk.yellow(
+        `${attachParams.customer.id} (${attachParams.customer.name})`
+      )}`
     );
 
     // 2. Check for existing product and fetch
@@ -354,6 +354,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       (curProductFree && newProductFree) ||
       (attachParams.product.is_add_on && newProductFree)
     ) {
+      console.log("SCENARIO 1: FREE PRODUCT");
       await handleAddFreeProduct({
         req,
         res,
@@ -361,8 +362,6 @@ attachRouter.post("/attach", async (req: any, res) => {
       });
       return;
     }
-
-    console.log("Is free product", isFreeProduct(attachParams.prices));
 
     // SCENARIO 2: No payment method, checkout required
     const paymentMethod = await getCusPaymentMethod({
@@ -372,8 +371,9 @@ attachRouter.post("/attach", async (req: any, res) => {
     });
 
     if (!paymentMethod || useCheckout) {
+      console.log("SCENARIO 2: NO PAYMENT METHOD, CHECKOUT REQUIRED");
       await handleCreateCheckout({
-        req,
+        sb,
         res,
         attachParams,
       });
@@ -382,6 +382,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // SCENARIO 3: Switching product
     if (!attachParams.product.is_add_on && currentProduct) {
+      console.log("SCENARIO 3: SWITCHING PRODUCT (PAYMENT METHOD EXISTS)");
       await handleChangeProduct({
         req,
         res,
@@ -392,6 +393,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     }
 
     // SCENARIO 4: No existing product, not free product
+    console.log("SCENARIO 4: ADDING PRODUCT");
     await handleAddProduct({
       req,
       res,

@@ -37,10 +37,10 @@ const getEventAndCustomer = async ({
   let customer: Customer;
 
   // 2. Check if customer ID is valid
-  customer = await CusService.getCustomer({
+  customer = await CusService.getById({
     sb: sb,
+    id: customer_id,
     orgId: orgId,
-    customerId: customer_id,
     env: env,
   });
 

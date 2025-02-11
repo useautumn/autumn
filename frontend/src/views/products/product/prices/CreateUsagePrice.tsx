@@ -89,6 +89,13 @@ function CreateUsagePrice({
     }
   );
 
+  const getBillWhen = () => {
+    if (config.bill_when == BillWhen.InAdvance) {
+      return BillWhen.StartOfPeriod;
+    }
+    return config.bill_when;
+  };
+
   return (
     <div className="flex flex-col gap-4 mt-4">
       {/* Entitlement */}
@@ -133,7 +140,7 @@ function CreateUsagePrice({
         <div className="w-full">
           <FieldLabel>Bill When</FieldLabel>
           <Select
-            value={config.bill_when}
+            value={getBillWhen()}
             onValueChange={(value) =>
               setConfig({ ...config, bill_when: value as BillWhen })
             }
@@ -157,7 +164,7 @@ function CreateUsagePrice({
       {/* Price */}
       <div className="flex gap-2 w-full">
         {[BillWhen.StartOfPeriod, BillWhen.EndOfPeriod].includes(
-          config.bill_when
+          getBillWhen()
         ) && (
           <div className="w-6/12">
             <FieldLabel>Interval</FieldLabel>
@@ -181,7 +188,7 @@ function CreateUsagePrice({
           </div>
         )}
 
-        {[BillWhen.EndOfPeriod].includes(config.bill_when) && (
+        {[BillWhen.EndOfPeriod].includes(getBillWhen()) && (
           <div className="w-6/12">
             <FieldLabel>Billing Units</FieldLabel>
             <Input

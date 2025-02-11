@@ -463,9 +463,9 @@ const getOrCreateCustomer = async ({
   orgId: string;
   env: AppEnv;
 }) => {
-  let customer = await CusService.getCustomer({
+  let customer = await CusService.getById({
     sb,
-    customerId,
+    id: customerId,
     orgId,
     env,
   });

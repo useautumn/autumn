@@ -8,13 +8,14 @@ import {
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export const handleCreateCheckout = async ({
-  req,
+  sb,
   res,
   attachParams,
 }: {
-  req: any;
+  sb: SupabaseClient;
   res: any;
   attachParams: AttachParams;
 }) => {
@@ -39,7 +40,7 @@ export const handleCreateCheckout = async ({
 
   // Insert metadata
   const metaId = await createCheckoutMetadata({
-    sb: req.sb,
+    sb,
     attachParams,
     itemMetas,
   });
