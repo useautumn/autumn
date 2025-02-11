@@ -118,7 +118,7 @@ export const CustomerEntitlementsList = ({
             <TableHead className="">
               {featureType === FeatureType.Metered && "Balance"}
             </TableHead>
-            <TableHead className="min-w-0 w-24">
+            <TableHead className="min-w-0 w-28">
               {featureType === FeatureType.Metered && "Next Reset"}
             </TableHead>
             {/* <TableHead className="">Status</TableHead> */}
