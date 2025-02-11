@@ -10,7 +10,7 @@ import {
   formatUnixToDateTime,
   formatUnixToDateTimeString,
 } from "@/utils/formatUtils/formatDateUtils";
-import { compareStatus, navigateTo } from "@/utils/genUtils";
+import { compareStatus, getBackendErr, navigateTo } from "@/utils/genUtils";
 import { CusProduct, CusProductStatus } from "@autumn/shared";
 import { useRouter } from "next/navigation";
 import { useCustomerContext } from "./CustomerContext";
@@ -30,6 +30,7 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Badge } from "@/components/ui/badge";
+import toast from "react-hot-toast";
 
 export const CustomerProductList = ({
   customer,
@@ -141,9 +142,9 @@ const EditCustomerProductToolbar = ({
       <DropdownMenuContent className="text-t2">
         {/* Update status */}
         {[
-          CusProductStatus.Active,
+          // CusProductStatus.Active,
           CusProductStatus.Expired,
-          CusProductStatus.PastDue,
+          // CusProductStatus.PastDue,
         ].map((status) => (
           <DropdownMenuItem
             key={status}
@@ -181,11 +182,19 @@ const UpdateStatusDropdownBtn = ({
       // isLoading={loading}
       onClick={async () => {
         setLoading(true);
-        await CusService.updateCusProductStatus(axiosInstance, cusProduct.id, {
-          status,
-        });
-        await cusMutate();
-        setLoading(false);
+        try {
+          await CusService.updateCusProductStatus(
+            axiosInstance,
+            cusProduct.id,
+            {
+              status,
+            }
+          );
+          await cusMutate();
+        } catch (error) {
+          setLoading(false);
+          toast.error(getBackendErr(error, "Failed to update status"));
+        }
       }}
     >
       {keyToTitle(status)}

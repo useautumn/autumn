@@ -19,6 +19,7 @@ import { CustomerEntitlementService } from "@/internal/customers/entitlements/Cu
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import {
   createNewCustomer,
+  expireAndAddDefaultProduct,
   getCusEntsInFeatures,
   getCustomerDetails,
 } from "./cusUtils.js";
@@ -267,11 +268,12 @@ cusRouter.post(
       });
 
       const amountUsed = cusEnt.balance! - balance;
+      const adjustment = cusEnt.adjustment! - amountUsed;
 
       await CustomerEntitlementService.update({
         sb: req.sb,
         id: customer_entitlement_id,
-        updates: { balance, next_reset_at },
+        updates: { balance, next_reset_at, adjustment },
       });
 
       res.status(200).json({ success: true });
@@ -368,6 +370,7 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
             id: cusEnt.id,
             updates: {
               balance: newBalance,
+              adjustment: cusEnt.adjustment! - amountUsed,
             },
           });
         }
@@ -502,6 +505,7 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
 cusRouter.post(
   "/customer_products/:customer_product_id",
   async (req: any, res: any) => {
+    const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
     try {
       const customerId = req.params.customer_id;
       const customerProductId = req.params.customer_product_id;
@@ -513,7 +517,55 @@ cusRouter.post(
         id: customerProductId,
         orgId: req.orgId,
         env: req.env,
+        withProduct: true,
       });
+
+      if (status == cusProduct.status) {
+        throw new RecaseError({
+          message: `Product ${cusProduct.product.name} already has status: ${status}`,
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+
+      if (status == CusProductStatus.Expired) {
+        // Check if customer has any other active products
+        // 1. Cancel stripe subscription?
+        if (cusProduct.processor.subscription_id) {
+          const stripeCli = createStripeCli({
+            org,
+            env: req.env,
+          });
+          try {
+            await stripeCli.subscriptions.cancel(
+              cusProduct.processor.subscription_id
+            );
+          } catch (error: any) {
+            console.log(
+              "Error canceling stripe subscription (from manual cusProduct)"
+            );
+            if (error.raw.code == "resource_missing") {
+              console.log(
+                `Subscription ${cusProduct.processor.subscription_id} not found in Stripe`
+              );
+            } else {
+              console.log(error.message);
+            }
+          }
+        }
+
+        // 2. Expire current product
+        // console.log(cusProduct);
+        console.log(
+          `Expiring product ${cusProduct.product.name} for ${customerId} (attaching default if exists)`
+        );
+        await expireAndAddDefaultProduct({
+          sb: req.sb,
+          org,
+          env: req.env,
+          cusProduct,
+        });
+      }
 
       if (!cusProduct) {
         throw new RecaseError({
