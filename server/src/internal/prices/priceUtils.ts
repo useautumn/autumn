@@ -241,6 +241,7 @@ export const getStripeSubItems = ({
       org,
       options,
       isCheckout,
+      relatedEnt: priceEnt,
     });
 
     subItems.push(lineItem);

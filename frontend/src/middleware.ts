@@ -17,9 +17,12 @@ export default clerkMiddleware(async (auth, req) => {
   // Check for session claims
   const { sessionClaims }: { sessionClaims: any } = await auth();
 
+  if (isProtectedRoute(req)) {
+    await auth.protect();
+  }
+
   if (!sessionClaims?.org_id && !req.nextUrl.pathname.includes("/onboarding")) {
-    console.log(req.nextUrl.pathname, "Redirecting to onboarding");
-    const onboardingUrl = new URL("/onboarding", req.url);
+    const onboardingUrl = new URL("/sandbox/onboarding", req.url);
     if (req.nextUrl.pathname !== "/") {
       onboardingUrl.searchParams.set(
         "toast",
@@ -28,12 +31,6 @@ export default clerkMiddleware(async (auth, req) => {
     }
     return NextResponse.redirect(onboardingUrl);
   }
-
-  // if (sessionClaims?.org_id && req.nextUrl.pathname.includes("/onboarding")) {
-  //   const url = new URL("/", req.url);
-  //   console.log("Redirecting to home");
-  //   return NextResponse.redirect(url);
-  // }
 
   if (path === "/") {
     return NextResponse.redirect(new URL("/customers", req.url));
@@ -47,10 +44,6 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.rewrite(new URL(newPath, req.url), {
       headers: requestHeaders,
     });
-  }
-
-  if (isProtectedRoute(req)) {
-    await auth.protect();
   }
 
   requestHeaders.set("env", AppEnv.Live);

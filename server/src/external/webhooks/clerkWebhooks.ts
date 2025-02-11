@@ -64,7 +64,8 @@ const createDefaultProducts = async ({
     internal_id: generateId("fe"),
     name: keyToTitle(f.id),
   }));
-  const features = await FeatureService.insert({
+
+  await FeatureService.insert({
     sb,
     data: insertedFeatures,
   });
@@ -115,6 +116,7 @@ const createDefaultProducts = async ({
     },
   ];
 
+  const batchInsert = [];
   for (const product of defaultProducts) {
     const insertProduct = async (product: any) => {
       let internalProductId = generateId("pr");
@@ -157,8 +159,10 @@ const createDefaultProducts = async ({
       }
     };
 
-    await insertProduct(product);
+    batchInsert.push(insertProduct(product));
   }
+
+  await Promise.all(batchInsert);
 };
 
 const verifyClerkWebhook = async (req: Request, res: Response) => {
@@ -240,38 +244,47 @@ export const handleClerkWebhook = async (req: any, res: any) => {
 };
 
 const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
-  await OrgService.insert({
-    sb,
-    org: {
-      id: eventData.id,
-      slug: eventData.slug,
-      default_currency: "usd",
-      stripe_connected: false,
-      stripe_config: null,
-      test_pkey: generatePublishableKey(AppEnv.Sandbox),
-      live_pkey: generatePublishableKey(AppEnv.Live),
-    },
-  });
+  try {
+    await OrgService.insert({
+      sb,
+      org: {
+        id: eventData.id,
+        slug: eventData.slug,
+        default_currency: "usd",
+        stripe_connected: false,
+        stripe_config: null,
+        test_pkey: generatePublishableKey(AppEnv.Sandbox),
+        live_pkey: generatePublishableKey(AppEnv.Live),
+      },
+    });
 
-  console.log(`Inserted org ${eventData.id}`);
+    console.log(`Inserted org ${eventData.id}`);
+  } catch (error) {
+    console.error("Failed to insert org", error);
+  }
 
-  await sb.channel(eventData.id).send({
-    type: "broadcast",
-    event: "org.created",
-    payload: {
-      hello: "world -- congrats!",
-    },
-  });
+  const batch = [];
 
-  console.log("Sent supabase broadcast");
+  try {
+    batch.push(
+      createDefaultProducts({
+        sb,
+        orgId: eventData.id,
+      })
+    );
 
-  await createDefaultProducts({
-    sb,
-    orgId: eventData.id,
-  });
+    batch.push(
+      sendOnboardingEmail({
+        orgId: eventData.id,
+        clerkCli: createClerkCli(),
+      })
+    );
 
-  await sendOnboardingEmail({
-    orgId: eventData.id,
-    clerkCli: createClerkCli(),
-  });
+    await Promise.all(batch);
+  } catch (error) {
+    console.error(
+      "Failed to create default products or send onboarding email",
+      error
+    );
+  }
 };

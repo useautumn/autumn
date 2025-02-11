@@ -71,6 +71,20 @@ const handleBillNowPrices = async ({
     subscriptionId: subscription.id,
   });
 
+  // Create invoice
+  const latestInvoice = await stripeCli.invoices.retrieve(
+    subscription.latest_invoice as string
+  );
+
+  await InvoiceService.createInvoiceFromStripe({
+    sb,
+    stripeInvoice: latestInvoice,
+    internalCustomerId: customer.internal_id,
+    productIds: [product.id],
+    internalProductIds: [product.internal_id],
+    org: org,
+  });
+
   res.status(200).send({ success: true });
 };
 

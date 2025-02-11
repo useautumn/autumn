@@ -91,6 +91,11 @@ export const CustomerProductList = ({
                       past due
                     </Badge>
                   )}
+                  {cusProduct.status === "scheduled" && (
+                    <Badge variant="status" className="bg-blue-500">
+                      scheduled
+                    </Badge>
+                  )}
                 </TableCell>
                 <TableCell className="max-w-[100px] overflow-hidden text-ellipsis">
                   {cusProduct.product_id}

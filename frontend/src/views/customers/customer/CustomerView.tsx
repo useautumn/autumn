@@ -177,7 +177,8 @@ export default function CustomerView({
                   <TableRow
                     key={invoice.id}
                     onClick={() => {
-                      navigateTo(invoice.hosted_invoice_url, router, env);
+                      // navigateTo(invoice.hosted_invoice_url, router, env);
+                      window.open(invoice.hosted_invoice_url, "_blank");
                     }}
                     className="cursor-pointer"
                   >

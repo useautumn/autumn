@@ -3,13 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { toast } from "react-hot-toast";
 import { useOrganizationList } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import Step from "@/components/ui/step";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ConnectStripe from "./ConnectStripe";
 import { FeaturesTable } from "../features/FeaturesTable";
 import { AppEnv, Feature } from "@autumn/shared";
@@ -18,8 +16,6 @@ import { FeaturesContext } from "../features/FeaturesContext";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import ConfettiExplosion from "react-confetti-explosion";
 import { createClient } from "@supabase/supabase-js";
-import { navigateTo } from "@/utils/genUtils";
-import { useRouter } from "next/navigation";
 import { CreateFeature } from "../features/CreateFeature";
 import { ProductsContext } from "../products/ProductsContext";
 import { ProductsTable } from "../products/ProductsTable";
@@ -32,11 +28,8 @@ import {
   faBuilding,
   faExternalLinkAlt,
 } from "@fortawesome/pro-duotone-svg-icons";
-const SUPABASE_URL = "https://tqjsbqmimvflvkwdoucx.supabase.co";
-const SUPABASE_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxanNicW1pbXZmbHZrd2RvdWN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzYyNjU0NTEsImV4cCI6MjA1MTg0MTQ1MX0.ndNu1-ObwQy5rzbmqQPvNRCG6z4GYkZKy_WkGo3AXNs";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { OrgService } from "@/services/OrgService";
 
 function OnboardingView({
   sessionClaims,
@@ -45,31 +38,17 @@ function OnboardingView({
   sessionClaims: any;
   env: AppEnv;
 }) {
-  const { org_id, user, org } = sessionClaims || {};
+  const { org_id, org } = sessionClaims || {};
   const searchParams = useSearchParams();
-  const { createOrganization, setActive } = useOrganizationList();
   const [loading, setLoading] = useState(false);
   const [isExploding, setIsExploding] = useState(false);
-  const [orgId, setOrgId] = useState(org_id);
   const [apiKeyName, setApiKeyName] = useState("");
   const [apiCreated, setApiCreated] = useState(false);
-  //get features for the org
-  const {
-    data,
-    isLoading,
-    error,
-    mutate: featuresMutate,
-  } = useAxiosSWR({
-    url: `/features`,
-    env: env,
-    withAuth: true,
-  });
+  const [orgCreated, setOrgCreated] = useState(org_id ? true : false);
+  const { createOrganization, setActive } = useOrganizationList();
 
-  const features = data?.features.filter(
-    (feature: Feature) => feature.type !== "credit_system"
-  );
+  const axiosInstance = useAxiosInstance({ env });
 
-  //get products for the org
   const {
     data: productData,
     mutate: productMutate,
@@ -80,25 +59,36 @@ function OnboardingView({
     withAuth: true,
   });
 
-  //supabase realtime to update products and features when org is created
-  useEffect(() => {
-    if (!orgId) return;
+  const features = productData?.features.filter(
+    (feature: Feature) => feature.type !== "credit_system"
+  );
 
-    supabase
-      .channel(orgId)
-      .on(
-        "broadcast",
-        {
-          event: "org.created",
-        },
-        async (payload) => {
-          console.log("org created");
-          await featuresMutate();
-          await productMutate();
+  const pollForOrg = async () => {
+    for (let i = 0; i < 5; i++) {
+      console.log("polling for org, attempt", i);
+      const requiredProdLength = env == AppEnv.Sandbox ? 2 : 0;
+      try {
+        const { data } = await axiosInstance.get(`/products/data`);
+        if (data.products.length != requiredProdLength) {
+          throw new Error("Products not created");
         }
-      )
-      .subscribe();
-  }, [orgId, featuresMutate, productMutate]);
+        setOrgCreated(true);
+        return;
+      } catch (error) {}
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    window.location.reload();
+  };
+
+  useEffect(() => {
+    const refreshData = async () => {
+      await productMutate();
+    };
+    if (orgCreated) {
+      refreshData();
+    }
+  }, [orgCreated, productMutate]);
 
   useEffect(() => {
     const toastMessage = searchParams.get("toast");
@@ -119,12 +109,11 @@ function OnboardingView({
       const org = await createOrganization({
         name: fields.name,
       });
-      setOrgId(org.id);
-      console.log("org id", org.id);
+      // setOrgId(org.id);
       await setActive({ organization: org.id });
+      await pollForOrg();
       toast.success(`Created your organization: ${org.name}`);
 
-      // window.location.href = "/sandbox/products";
       setIsExploding(true);
     } catch (error: any) {
       if (error.message) {
@@ -134,7 +123,6 @@ function OnboardingView({
       }
     }
     setLoading(false);
-    if (env !== AppEnv.Sandbox) window.location.href = "/sandbox/onboarding";
   };
 
   // const [slugEditted, setSlugEditted] = useState(false);
@@ -201,18 +189,8 @@ function OnboardingView({
             </div>
           </div>
         </Step>
-        {/* <div>
-            <FieldLabel>Slug</FieldLabel>
-            <Input
-              placeholder="Organization Slug"
-              value={fields.slug}
-              onChange={(e) => {
-                setSlugEditted(true);
-                setFields({ ...fields, slug: e.target.value });
-              }}
-            />
-          </div> */}
-        {org?.id && (
+
+        {orgCreated && (
           <>
             <Step title="Connect your Stripe test account">
               <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
@@ -262,13 +240,12 @@ function OnboardingView({
                   <FeaturesContext.Provider
                     value={{
                       features: features,
-                      dbConns: data?.dbConns,
                       env,
-                      mutate: featuresMutate,
+                      mutate: productMutate,
                       onboarding: true,
                     }}
                   >
-                    {isLoading ? (
+                    {productLoading ? (
                       <SmallSpinner />
                     ) : (
                       <div className="flex flex-col gap-2">

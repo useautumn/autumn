@@ -12,6 +12,7 @@ import {
   Feature,
   Product,
   AllowanceType,
+  EntitlementWithFeature,
 } from "@autumn/shared";
 
 import { billingIntervalToStripe } from "./utils.js";
@@ -25,12 +26,14 @@ export const priceToStripeItem = ({
   org,
   options,
   isCheckout = false,
+  relatedEnt,
 }: {
   price: Price;
   product: FullProduct;
   org: Organization;
   options: FeatureOptions | undefined | null;
   isCheckout: boolean;
+  relatedEnt: EntitlementWithFeature | undefined;
 }) => {
   // TODO: Implement this
   const billingType = price.billing_type;
@@ -79,9 +82,20 @@ export const priceToStripeItem = ({
         }
       : undefined;
 
+    const productData =
+      isCheckout && relatedEnt
+        ? {
+            product_data: {
+              name: `${product.name} - ${relatedEnt.feature.name} (${relatedEnt.allowance})`,
+            },
+          }
+        : {
+            product: stripeProductId,
+          };
+
     lineItem = {
       price_data: {
-        product: stripeProductId,
+        ...productData,
         unit_amount: Math.round(config.usage_tiers[0].amount * 100),
         currency: org.default_currency,
         recurring: {

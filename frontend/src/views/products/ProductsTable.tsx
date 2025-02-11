@@ -37,37 +37,38 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {products.map((product) => (
-          <TableRow
-            key={product.id}
-            className="cursor-pointer"
-            onClick={() => navigateTo(`/products/${product.id}`, router, env)}
-          >
-            <TableCell className="font-medium">{product.name}</TableCell>
-            <TableCell className="font-mono">{product.id}</TableCell>
-            <TableCell className="min-w-32">
-              {product.is_default ? (
-                <Badge variant="outline">Default</Badge>
-              ) : product.is_add_on ? (
-                <Badge variant="outline">Add-On</Badge>
-              ) : (
-                <></>
-              )}
-            </TableCell>
-            {!onboarding && <TableCell>{product.group}</TableCell>}
-            {!onboarding && (
-              <TableCell>
-                <span>{formatUnixToDateTime(product.created_at).date}</span>{" "}
-                <span className="text-t3">
-                  {formatUnixToDateTime(product.created_at).time}
-                </span>
+        {products &&
+          products.map((product) => (
+            <TableRow
+              key={product.id}
+              className="cursor-pointer"
+              onClick={() => navigateTo(`/products/${product.id}`, router, env)}
+            >
+              <TableCell className="font-medium">{product.name}</TableCell>
+              <TableCell className="font-mono">{product.id}</TableCell>
+              <TableCell className="min-w-32">
+                {product.is_default ? (
+                  <Badge variant="outline">Default</Badge>
+                ) : product.is_add_on ? (
+                  <Badge variant="outline">Add-On</Badge>
+                ) : (
+                  <></>
+                )}
               </TableCell>
-            )}
-            <TableCell>
-              <ProductRowToolbar product={product} />
-            </TableCell>
-          </TableRow>
-        ))}
+              {!onboarding && <TableCell>{product.group}</TableCell>}
+              {!onboarding && (
+                <TableCell>
+                  <span>{formatUnixToDateTime(product.created_at).date}</span>{" "}
+                  <span className="text-t3">
+                    {formatUnixToDateTime(product.created_at).time}
+                  </span>
+                </TableCell>
+              )}
+              <TableCell>
+                <ProductRowToolbar product={product} />
+              </TableCell>
+            </TableRow>
+          ))}
       </TableBody>
     </Table>
   );
