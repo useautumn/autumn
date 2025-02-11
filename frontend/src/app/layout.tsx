@@ -53,7 +53,7 @@ export default async function RootLayout({
         <ClerkProvider>
           <NextUIProvider>
             <SidebarProvider>
-              {org_id && !path.includes("/demo") && (
+              {!path.includes("/demo") && (
                 <HomeSidebar
                   user={sessionClaims?.user as any}
                   org={org}
@@ -73,15 +73,22 @@ export default async function RootLayout({
                   </div>
                 )}
 
-                {path.includes("/onboarding") ? (
-                  children
-                ) : (
-                  <div className="w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center">
-                    <div className="w-full h-fit max-w-[1048px] flex flex-col gap-4">
-                      {children}
+                <div className="w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center">
+                  <div className="hidden md:flex w-full h-fit max-w-[1048px] flex-col gap-4">
+                    {children}
+                  </div>
+                  <div className="md:hidden w-full h-full flex items-center justify-center">
+                    <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+                      <h2 className="text-xl font-semibold mb-2">
+                        Autumn is coming to mobile soon
+                      </h2>
+                      <p className="text-gray-600">
+                        We&apos;re currently designed for larger screens. Come
+                        back on your desktop?
+                      </p>
                     </div>
                   </div>
-                )}
+                </div>
               </main>
               {/* </AutumnProvider> */}
             </SidebarProvider>

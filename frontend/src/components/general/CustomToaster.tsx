@@ -3,9 +3,9 @@ import { Toaster } from "react-hot-toast";
 export const CustomToaster = () => {
   return (
     <Toaster
-      position="bottom-center"
+      position="top-center"
       toastOptions={{
-        duration: 2000,
+        duration: 4000,
         style: { fontSize: "14px" },
       }}
     />

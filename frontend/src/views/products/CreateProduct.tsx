@@ -114,7 +114,7 @@ function CreateProduct() {
                 setFields({ ...fields, is_add_on: e as boolean })
               }
             />
-            <p className="mt-[1px]">This product is an add on</p>
+            <p className="mt-[1px]">This product is an add-on</p>
           </div>
           <div className="flex items-center gap-2 ml-1 text-t2">
             <Checkbox
@@ -123,7 +123,9 @@ function CreateProduct() {
                 setFields({ ...fields, is_default: e as boolean })
               }
             />
-            <p className="mt-[1px]">This product is the default product</p>
+            <p className="mt-[1px]">
+              Add this product to customers by default on creation
+            </p>
           </div>
         </div>
 

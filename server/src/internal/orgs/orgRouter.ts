@@ -15,6 +15,13 @@ import { AppEnv } from "@autumn/shared";
 export const orgRouter = express.Router();
 
 orgRouter.get("", async (req: any, res) => {
+  if (!req.orgId) {
+    res.status(400).json({
+      message: "Missing orgId",
+    });
+    return;
+  }
+
   const org = await OrgService.getFullOrg({
     sb: req.sb,
     orgId: req.orgId,

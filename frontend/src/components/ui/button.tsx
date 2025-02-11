@@ -32,7 +32,7 @@ const buttonVariants = cva(
         gradientPrimary:
           "bg-gradient-to-b font-semibold border border-primary from-primary/65 to-primary text-white hover:from-primary hover:to-primary shadow-sm shadow-purple-500/50",
         gradientSecondary:
-          "border border-stone-300 font-semibold bg-gradient-to-b from-white to-stone-100 text-t1 hover:from-stone-300 hover:to-stone-400 shadow-sm text-xs",
+          "border border-stone-300 font-semibold bg-gradient-to-b from-white to-stone-100 text-t1 hover:from-stone-300 hover:to-stone-400 shadow-sm",
       },
       size: {
         default: "h-8 px-3 flex items-center gap-1",

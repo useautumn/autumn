@@ -16,6 +16,7 @@ export const TabButton = ({
   const path = usePathname();
   const isActive = path.includes(value);
   const router = useRouter();
+
   return (
     <SidebarMenuItem key={value}>
       <SidebarMenuButton asChild>

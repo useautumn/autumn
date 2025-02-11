@@ -18,16 +18,22 @@ export default clerkMiddleware(async (auth, req) => {
   const { sessionClaims }: { sessionClaims: any } = await auth();
 
   if (!sessionClaims?.org_id && !req.nextUrl.pathname.includes("/onboarding")) {
-    console.log("Redirecting to onboarding");
+    console.log(req.nextUrl.pathname, "Redirecting to onboarding");
     const onboardingUrl = new URL("/onboarding", req.url);
+    if (req.nextUrl.pathname !== "/") {
+      onboardingUrl.searchParams.set(
+        "toast",
+        "Please create an organization to continue"
+      );
+    }
     return NextResponse.redirect(onboardingUrl);
   }
 
-  if (sessionClaims?.org_id && req.nextUrl.pathname.includes("/onboarding")) {
-    const url = new URL("/", req.url);
-    console.log("Redirecting to home");
-    return NextResponse.redirect(url);
-  }
+  // if (sessionClaims?.org_id && req.nextUrl.pathname.includes("/onboarding")) {
+  //   const url = new URL("/", req.url);
+  //   console.log("Redirecting to home");
+  //   return NextResponse.redirect(url);
+  // }
 
   if (path === "/") {
     return NextResponse.redirect(new URL("/customers", req.url));
