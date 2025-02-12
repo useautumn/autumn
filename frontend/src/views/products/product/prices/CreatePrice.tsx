@@ -37,8 +37,6 @@ export const CreatePrice = () => {
       config,
     });
 
-    console.log("New price: ", newPrice);
-
     setProduct({
       ...product,
       prices: [...product.prices, newPrice],

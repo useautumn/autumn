@@ -7,11 +7,14 @@ import {
   CusProduct,
   Customer,
   EntInterval,
+  Entitlement,
   EntitlementWithFeature,
+  FeatureOptions,
   FeatureType,
   FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
+  Price,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
@@ -431,4 +434,27 @@ export const updateCusEntInStripe = async ({
     identifier: eventId,
   });
   console.log(`   ✅ Stripe event sent, amount: (${amountUsed})`);
+};
+
+// Get balance
+export const getResetBalance = ({
+  entitlement,
+  options,
+  relatedPrice,
+}: {
+  entitlement: Entitlement;
+  options: FeatureOptions | undefined | null;
+  relatedPrice: Price | undefined | null;
+}) => {
+  if (!options || !relatedPrice) {
+    return entitlement.allowance;
+  }
+
+  let quantity = options?.quantity || 1;
+  let billingUnits =
+    relatedPrice && (relatedPrice.config as UsagePriceConfig).billing_units;
+  let fromQtyBalance = quantity && billingUnits ? quantity * billingUnits : 0;
+  let balance = fromQtyBalance || entitlement.allowance;
+
+  return balance;
 };

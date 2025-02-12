@@ -3,6 +3,7 @@ import {
   EntInterval,
   FullCustomerEntitlement,
   FullCustomerEntitlementSchema,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { CustomerEntitlementService } from "./internal/customers/entitlements/CusEntitlementService.js";
 import { createSupabaseClient } from "./external/supabaseUtils.js";
@@ -14,6 +15,10 @@ import chalk from "chalk";
 import { z } from "zod";
 import { format } from "date-fns";
 import { CronJob } from "cron";
+import {
+  getRelatedCusPrice,
+  getResetBalance,
+} from "./internal/customers/entitlements/cusEntUtils.js";
 
 dotenv.config();
 
@@ -35,17 +40,33 @@ const resetCustomerEntitlement = async ({
   cusEnt: FullCustomerEntitlementWithProduct;
 }) => {
   try {
-    // 1. Get allowance and quantity
-    const allowance = cusEnt.entitlement.allowance || 0;
+    if (cusEnt.usage_allowed) {
+      return;
+    }
+
+    // Fetch related price
+    const { data: cusPrices, error: cusPricesError } = await sb
+      .from("customer_prices")
+      .select("*, price:prices!inner(*)")
+      .eq("customer_product_id", cusEnt.customer_product_id);
+
+    if (cusPricesError) {
+      console.log("Error fetching customer prices:", cusPricesError);
+      throw new Error("Error fetching customer prices");
+    }
 
     // 2. Quantity is from prices...
+    const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
     const entOptions = getEntOptions(
       cusEnt.customer_product.options,
       cusEnt.entitlement
     );
 
-    let quantity = (entOptions && entOptions.quantity) || 1;
-    const newBalance = allowance * quantity;
+    const resetBalance = getResetBalance({
+      entitlement: cusEnt.entitlement,
+      options: entOptions,
+      relatedPrice: relatedCusPrice?.price,
+    });
 
     // 3. Update the next_reset_at for each entitlement
     const nextResetAt = getNextResetAt(
@@ -58,7 +79,7 @@ const resetCustomerEntitlement = async ({
       id: cusEnt.id,
       updates: {
         next_reset_at: nextResetAt,
-        balance: newBalance,
+        balance: resetBalance,
         adjustment: 0,
       },
     });
@@ -68,10 +89,12 @@ const resetCustomerEntitlement = async ({
         cusEnt.customer_id
       )} | feature: ${chalk.yellow(
         cusEnt.feature_id
-      )} | new balance: ${chalk.green(newBalance)}`
+      )} | new balance: ${chalk.green(resetBalance)}`
     );
   } catch (error: any) {
-    console.log(`Failed to reset ${cusEnt.id}, error: ${error}`);
+    console.log(
+      `Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`
+    );
   }
 };
 
@@ -91,7 +114,7 @@ export const cronTask = async () => {
     let resets = [];
     for (const cusEnt of cusEntitlements) {
       resets.push(
-        await resetCustomerEntitlement({
+        resetCustomerEntitlement({
           sb,
           cusEnt: cusEnt as FullCustomerEntitlementWithProduct,
         })
@@ -121,6 +144,6 @@ const job = new CronJob(
   "UTC" // timezone (adjust as needed)
 );
 
-job.start();
+// job.start();
 
-// cronTask();
+cronTask();

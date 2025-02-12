@@ -40,10 +40,9 @@ import chalk from "chalk";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import {
   createStripeInAdvancePrice,
-  inAdvanceToStripeTiers,
-  priceToStripeTiers,
+  createStripeInArrearPrice,
+  createStripePriceIFNotExist,
 } from "@/external/stripe/stripePriceUtils.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
 
 export const attachRouter = Router();
 
@@ -281,23 +280,20 @@ const checkStripeConnections = async ({
     };
   }
 
+  const batchPriceUpdates = [];
   for (const price of prices) {
-    const billingType = getBillingType(price.config!);
-    if (billingType == BillingType.UsageInAdvance) {
-      const config = price.config! as UsagePriceConfig;
-      if (!config.stripe_price_id) {
-        console.log("Creating stripe price for in advance price");
-        await createStripeInAdvancePrice({
-          sb: req.sb,
-          stripeCli,
-          price,
-          entitlements,
-          product,
-          org,
-        });
-      }
-    }
+    batchPriceUpdates.push(
+      createStripePriceIFNotExist({
+        sb: req.sb,
+        stripeCli,
+        price,
+        entitlements,
+        product,
+        org,
+      })
+    );
   }
+  await Promise.all(batchPriceUpdates);
 };
 
 attachRouter.post("/attach", async (req: any, res) => {

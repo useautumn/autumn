@@ -119,7 +119,10 @@ export const validateUsageConfig = (usageConfig: any) => {
     config.interval = interval;
   }
 
-  if (bill_when === BillWhen.EndOfPeriod) {
+  if (
+    bill_when === BillWhen.EndOfPeriod ||
+    bill_when === BillWhen.StartOfPeriod
+  ) {
     if (!billing_units || invalidNumber(billing_units)) {
       toast.error("Please fill out all fields");
       return null;
