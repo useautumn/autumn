@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { CusProductStatus, CustomerEntitlement, ErrCode } from "@autumn/shared";
+import { CustomerEntitlement, ErrCode } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
@@ -19,7 +19,7 @@ export class CustomerEntitlementService {
       .from("customers")
       .select(
         `*, 
-        customer_products:customer_products(*), 
+        customer_products:customer_products!inner(*), 
         customer_entitlements:customer_entitlements(*, entitlement:entitlements(*))`
       )
       .eq("id", customerId)

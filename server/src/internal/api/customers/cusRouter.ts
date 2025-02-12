@@ -29,7 +29,10 @@ import {
   getCusBalancesByEntitlement,
   getCusBalancesByProduct,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
+import {
+  fullCusProductToCusEnts,
+  fullCusProductToCusPrices,
+} from "@/internal/customers/products/cusProductUtils.js";
 import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
 
 export const cusRouter = Router();
@@ -446,7 +449,8 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
     withPrices: true,
   });
 
-  const cusEntsWithCusProduct = fullCusProductToCusEnts(fullCusProducts!);
+  const cusEntsWithCusProduct = fullCusProductToCusEnts(fullCusProducts);
+  const cusPrices = fullCusProductToCusPrices(fullCusProducts);
 
   if (group_by == "product") {
     balances = await getCusBalancesByProduct({
@@ -458,6 +462,7 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
   } else {
     balances = await getCusBalancesByEntitlement({
       cusEntsWithCusProduct: cusEntsWithCusProduct as any,
+      cusPrices,
     });
   }
 

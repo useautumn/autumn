@@ -190,20 +190,39 @@ export const createStripeInAdvancePrice = async ({
   const relatedEnt = getPriceEntitlement(price, entitlements);
   const config = price.config as UsagePriceConfig;
 
-  const stripePrice = await stripeCli.prices.create({
-    product_data: {
-      name: `${product.name} - ${
-        config.billing_units == 1 ? "" : `${config.billing_units} `
-      }${relatedEnt.feature.name}`,
-    },
-    currency: org.default_currency,
-    billing_scheme: "tiered",
-    tiers_mode: "graduated",
-    tiers: inAdvanceToStripeTiers(price, relatedEnt),
-    recurring: {
-      ...(recurringData as any),
-    },
-  });
+  // If one off, just create price...?
+
+  let stripePrice = null;
+  let productName = `${product.name} - ${
+    config.billing_units == 1 ? "" : `${config.billing_units} `
+  }${relatedEnt.feature.name}`;
+
+  if (
+    config.usage_tiers.length == 1 &&
+    price.config!.interval == BillingInterval.OneOff
+  ) {
+    const amount = config.usage_tiers[0].amount;
+    stripePrice = await stripeCli.prices.create({
+      product_data: {
+        name: productName,
+      },
+      unit_amount: Math.round(amount * 100),
+      currency: org.default_currency,
+    });
+  } else {
+    stripePrice = await stripeCli.prices.create({
+      product_data: {
+        name: productName,
+      },
+      currency: org.default_currency,
+      billing_scheme: "tiered",
+      tiers_mode: "graduated",
+      tiers: inAdvanceToStripeTiers(price, relatedEnt),
+      recurring: {
+        ...(recurringData as any),
+      },
+    });
+  }
 
   config.stripe_price_id = stripePrice.id;
 
