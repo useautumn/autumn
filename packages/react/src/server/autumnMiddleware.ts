@@ -3,7 +3,6 @@ import { API_URL } from "../constants";
 
 // Export another middleware for /api xroutes?
 export const autumnMiddleware = async (req: any) => {
-  console.log("Inside autumn middleware!");
   if (req.method !== "POST" || req.nextUrl.pathname !== "/api/autumn") {
     return;
   }

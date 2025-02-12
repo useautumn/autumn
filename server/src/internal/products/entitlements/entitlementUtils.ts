@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullOrUndefined } from "@/utils/genUtils.js";
 import {
   EntInterval,
   FreeTrial,
@@ -113,7 +113,7 @@ export const validateEntitlement = ({
   }
 
   if (parsedEnt.allowance_type == AllowanceType.Fixed) {
-    if (!parsedEnt.allowance || parsedEnt.allowance <= 0) {
+    if (!notNullOrUndefined(parsedEnt.allowance) || parsedEnt.allowance! < 0) {
       throw new RecaseError({
         code: ErrCode.InvalidEntitlement,
         message: `Allowance is required for feature ${parsedEnt.feature_id}`,

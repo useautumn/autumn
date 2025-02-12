@@ -1,11 +1,17 @@
 import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
-import { compareObjects, generateId } from "@/utils/genUtils.js";
+import {
+  compareObjects,
+  generateId,
+  notNullOrUndefined,
+} from "@/utils/genUtils.js";
 import {
   AppEnv,
+  BillingInterval,
   BillingType,
   CreatePrice,
   CreatePriceSchema,
   Entitlement,
+  EntitlementWithFeature,
   ErrCode,
   Feature,
   FixedPriceConfigSchema,
@@ -17,39 +23,66 @@ import {
   UsagePriceConfigSchema,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { getBillingType, roundPriceAmounts } from "./priceUtils.js";
+import {
+  getBillingType,
+  getPriceEntitlement,
+  roundPriceAmounts,
+} from "./priceUtils.js";
 import { PriceService } from "./PriceService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createStripeMeteredPrice } from "@/external/stripe/stripePriceUtils.js";
+import { CusProductService } from "../customers/products/CusProductService.js";
 
 // GET PRICES
-const validatePrice = (price: Price) => {
+const validatePrice = (
+  price: Price,
+  relatedEnt?: Entitlement | undefined | null
+) => {
   if (!price.config?.type) {
-    return {
-      valid: false,
-      error: "Missing `type` field in price config",
-    };
+    throw new RecaseError({
+      message: "Missing `type` field in price config",
+      code: ErrCode.InvalidPriceConfig,
+      statusCode: 400,
+    });
   }
 
   if (price.config?.type == PriceType.Fixed) {
-    try {
-      FixedPriceConfigSchema.parse(price.config);
-    } catch (error: any) {
-      console.log("Error validating price config", error);
-      return {
-        valid: false,
-        error: "Invalid fixed price config | " + formatZodError(error),
-      };
-    }
+    FixedPriceConfigSchema.parse(price.config);
+    // try {
+    // } catch (error: any) {
+    //   console.log("Error validating price config", error);
+    //   return {
+    //     valid: false,
+    //     error: "Invalid fixed price config | " + formatZodError(error),
+    //   };
+    // }
   } else {
-    try {
-      UsagePriceConfigSchema.parse(price.config);
-    } catch (error: any) {
-      console.log("Error validating price config", error);
-      return {
-        valid: false,
-        error: "Invalid usage price config | " + formatZodError(error),
-      };
+    UsagePriceConfigSchema.parse(price.config);
+
+    const config = price.config! as UsagePriceConfig;
+
+    if (
+      (config.interval == BillingInterval.OneOff &&
+        config.usage_tiers.length > 1) ||
+      (config.interval == BillingInterval.OneOff &&
+        notNullOrUndefined(relatedEnt) &&
+        relatedEnt?.allowance &&
+        relatedEnt!.allowance > 0)
+    ) {
+      throw new RecaseError({
+        message:
+          "One off start of period prices cannot have multiple tiers (including allowance)",
+        code: ErrCode.InvalidPriceConfig,
+        statusCode: 400,
+      });
+    }
+
+    if (config.usage_tiers.length == 0) {
+      throw new RecaseError({
+        message: "Usage based prices should have at least one tier",
+        code: ErrCode.InvalidPriceConfig,
+        statusCode: 400,
+      });
     }
   }
 
@@ -228,11 +261,12 @@ const deleteStripePrices = async ({
   org: Organization;
   env: AppEnv;
 }) => {
-  const inArrearExists = prices.some(
-    (p) => getBillingType(p.config!) == BillingType.UsageInArrear
-  );
+  const deleteExists = prices.some((p) => {
+    const config = p.config! as UsagePriceConfig;
+    return notNullOrUndefined(config.stripe_price_id);
+  });
 
-  if (!inArrearExists) {
+  if (!deleteExists) {
     return;
   }
   const stripeCli = createStripeCli({
@@ -243,40 +277,45 @@ const deleteStripePrices = async ({
   for (const price of prices) {
     const config = price.config! as UsagePriceConfig;
 
-    if (getBillingType(price.config!) == BillingType.UsageInArrear) {
-      if (config.stripe_price_id) {
+    if (config.stripe_price_id) {
+      try {
         const stripePrice = await stripeCli.prices.retrieve(
           config.stripe_price_id!
         );
 
-        try {
-          await stripeCli.prices.update(config.stripe_price_id!, {
+        await stripeCli.prices.update(config.stripe_price_id!, {
+          active: false,
+        });
+
+        const attachedProductId = stripePrice.product as string;
+        const product = await stripeCli.products.retrieve(attachedProductId);
+
+        if (!product.active) {
+          await stripeCli.products.del(attachedProductId);
+        } else {
+          await stripeCli.products.update(attachedProductId, {
             active: false,
           });
-
-          const attachedProductId = stripePrice.product as string;
-          const product = await stripeCli.products.retrieve(attachedProductId);
-
-          if (!product.active) {
-            await stripeCli.products.del(attachedProductId);
-          } else {
-            await stripeCli.products.update(attachedProductId, {
-              active: false,
-            });
-          }
-        } catch (error: any) {
-          console.log("Error deleting stripe price / product:", error.message);
         }
-      }
 
-      if (config.stripe_meter_id) {
-        try {
-          await stripeCli.billing.meters.deactivate(config.stripe_meter_id!);
-        } catch (error: any) {
-          console.log("Error deactivating meter:", error.message);
-        }
+        console.log("Deleted stripe price:", config.stripe_price_id);
+      } catch (error: any) {
+        console.log("Error deleting stripe price / product:", error.message);
       }
     }
+
+    if (config.stripe_meter_id) {
+      try {
+        await stripeCli.billing.meters.deactivate(config.stripe_meter_id!);
+        console.log("Deleted stripe meter:", config.stripe_meter_id);
+      } catch (error: any) {
+        console.log("Error deactivating meter:", error.message);
+      }
+    }
+
+    // if (getBillingType(price.config!) == BillingType.UsageInArrear) {
+
+    // }
   }
 };
 
@@ -318,11 +357,18 @@ export const handleNewPrices = async ({
   const createdPrices: Price[] = [];
   const updatedPrices: Price[] = [];
   let newInArrearPrices: Price[] = [];
-  let removedInArrearPrices: Price[] = [];
+
+  let updatedOrRemovedPrices: Price[] = [];
 
   for (let newPrice of newPrices) {
     // Validate price
-    validatePrice(newPrice);
+
+    const relatedEnt = getPriceEntitlement(
+      newPrice,
+      entitlements as EntitlementWithFeature[]
+    );
+
+    validatePrice(newPrice, relatedEnt);
     roundPriceAmounts(newPrice);
 
     // 1. Handle new price
@@ -364,39 +410,38 @@ export const handleNewPrices = async ({
         newInArrearPrices.push(newPrice);
       }
 
-      if (
-        getBillingType(curPrice.config!) == BillingType.UsageInArrear &&
-        getBillingType(newPrice.config!) != BillingType.UsageInArrear
-      ) {
-        removedInArrearPrices.push(curPrice);
-      }
+      updatedOrRemovedPrices.push(curPrice);
     }
   }
 
-  // Handle new in arrear prices
-  newInArrearPrices = [
-    ...newInArrearPrices,
-    ...createdPrices.filter(
-      (p) => getBillingType(p.config!) == BillingType.UsageInArrear
-    ),
-  ];
+  const hasUpdate =
+    updatedPrices.length > 0 ||
+    removedPrices.length > 0 ||
+    createdPrices.length > 0;
 
-  await handleStripePrices({
-    sb,
-    product,
-    prices: newInArrearPrices,
-    org,
-    env,
-    features,
-    entitlements,
-  });
+  if (!isCustom && hasUpdate) {
+    const cusProducts = await CusProductService.getByProductId(
+      sb,
+      internalProductId
+    );
 
-  await deleteStripePrices({
-    sb,
-    prices: [...removedInArrearPrices, ...removedPrices],
-    org,
-    env,
-  });
+    if (cusProducts.length > 0) {
+      throw new RecaseError({
+        message: "Cannot update prices for product with customers",
+        code: ErrCode.ProductHasCustomers,
+        statusCode: 400,
+      });
+    }
+  }
+
+  // if (!isCustom) {
+  //   await deleteStripePrices({
+  //     sb,
+  //     prices: [...updatedOrRemovedPrices, ...removedPrices],
+  //     org,
+  //     env,
+  //   });
+  // }
 
   await PriceService.insert({ sb, data: createdPrices });
 
