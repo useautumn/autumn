@@ -6,10 +6,12 @@ import {
 } from "@/utils/genUtils.js";
 import {
   AppEnv,
+  BillingInterval,
   BillingType,
   CreatePrice,
   CreatePriceSchema,
   Entitlement,
+  EntitlementWithFeature,
   ErrCode,
   Feature,
   FixedPriceConfigSchema,
@@ -21,40 +23,66 @@ import {
   UsagePriceConfigSchema,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { getBillingType, roundPriceAmounts } from "./priceUtils.js";
+import {
+  getBillingType,
+  getPriceEntitlement,
+  roundPriceAmounts,
+} from "./priceUtils.js";
 import { PriceService } from "./PriceService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createStripeMeteredPrice } from "@/external/stripe/stripePriceUtils.js";
 import { CusProductService } from "../customers/products/CusProductService.js";
 
 // GET PRICES
-const validatePrice = (price: Price) => {
+const validatePrice = (
+  price: Price,
+  relatedEnt?: Entitlement | undefined | null
+) => {
   if (!price.config?.type) {
-    return {
-      valid: false,
-      error: "Missing `type` field in price config",
-    };
+    throw new RecaseError({
+      message: "Missing `type` field in price config",
+      code: ErrCode.InvalidPriceConfig,
+      statusCode: 400,
+    });
   }
 
   if (price.config?.type == PriceType.Fixed) {
-    try {
-      FixedPriceConfigSchema.parse(price.config);
-    } catch (error: any) {
-      console.log("Error validating price config", error);
-      return {
-        valid: false,
-        error: "Invalid fixed price config | " + formatZodError(error),
-      };
-    }
+    FixedPriceConfigSchema.parse(price.config);
+    // try {
+    // } catch (error: any) {
+    //   console.log("Error validating price config", error);
+    //   return {
+    //     valid: false,
+    //     error: "Invalid fixed price config | " + formatZodError(error),
+    //   };
+    // }
   } else {
-    try {
-      UsagePriceConfigSchema.parse(price.config);
-    } catch (error: any) {
-      console.log("Error validating price config", error);
-      return {
-        valid: false,
-        error: "Invalid usage price config | " + formatZodError(error),
-      };
+    UsagePriceConfigSchema.parse(price.config);
+
+    const config = price.config! as UsagePriceConfig;
+
+    if (
+      (config.interval == BillingInterval.OneOff &&
+        config.usage_tiers.length > 1) ||
+      (config.interval == BillingInterval.OneOff &&
+        notNullOrUndefined(relatedEnt) &&
+        relatedEnt?.allowance &&
+        relatedEnt!.allowance > 0)
+    ) {
+      throw new RecaseError({
+        message:
+          "One off start of period prices cannot have multiple tiers (including allowance)",
+        code: ErrCode.InvalidPriceConfig,
+        statusCode: 400,
+      });
+    }
+
+    if (config.usage_tiers.length == 0) {
+      throw new RecaseError({
+        message: "Usage based prices should have at least one tier",
+        code: ErrCode.InvalidPriceConfig,
+        statusCode: 400,
+      });
     }
   }
 
@@ -334,7 +362,13 @@ export const handleNewPrices = async ({
 
   for (let newPrice of newPrices) {
     // Validate price
-    validatePrice(newPrice);
+
+    const relatedEnt = getPriceEntitlement(
+      newPrice,
+      entitlements as EntitlementWithFeature[]
+    );
+
+    validatePrice(newPrice, relatedEnt);
     roundPriceAmounts(newPrice);
 
     // 1. Handle new price

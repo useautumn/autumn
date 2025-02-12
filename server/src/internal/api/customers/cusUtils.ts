@@ -26,6 +26,7 @@ import { z } from "zod";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
   fullCusProductToCusEnts,
+  fullCusProductToCusPrices,
   processFullCusProduct,
 } from "@/internal/customers/products/cusProductUtils.js";
 import {
@@ -232,7 +233,7 @@ export const getCustomerDetails = async ({
   orgId: string;
   env: AppEnv;
 }) => {
-  const fullCusProducts = await CusService.getFullCusProducts({
+  const fullCusProducts: any = await CusService.getFullCusProducts({
     sb,
     internalCustomerId: customer.internal_id,
     withProduct: true,
@@ -257,7 +258,8 @@ export const getCustomerDetails = async ({
 
   // Get entitlements
   const balances = await getCusBalancesByEntitlement({
-    cusEntsWithCusProduct: fullCusProductToCusEnts(fullCusProducts!) as any,
+    cusEntsWithCusProduct: fullCusProductToCusEnts(fullCusProducts) as any,
+    cusPrices: fullCusProductToCusPrices(fullCusProducts),
   });
 
   // Get customer invoices

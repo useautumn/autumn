@@ -14,6 +14,7 @@ import {
   FreeTrial,
   FullCusProduct,
   FullCustomerEntitlement,
+  FullCustomerPrice,
   FullProduct,
   Price,
   PriceType,
@@ -62,6 +63,16 @@ export const fullCusProductToCusEnts = (cusProducts: FullCusProduct[]) => {
   }
 
   return cusEnts;
+};
+
+export const fullCusProductToCusPrices = (cusProducts: FullCusProduct[]) => {
+  const cusPrices: FullCustomerPrice[] = [];
+
+  for (const cusProduct of cusProducts) {
+    cusPrices.push(...cusProduct.customer_prices);
+  }
+
+  return cusPrices;
 };
 
 export const processFullCusProduct = (cusProduct: FullCusProduct) => {
@@ -570,7 +581,12 @@ export const getFullCusProductData = async ({
       features,
       optionsList: newOptionsList,
       prices: fullProduct.prices,
-      entitlements: fullProduct.entitlements,
+      entitlements: fullProduct.entitlements.map((ent: any) => ({
+        ...ent,
+        feature: features.find(
+          (f) => f.internal_id === ent.internal_feature_id
+        ),
+      })),
       freeTrial,
     };
   }

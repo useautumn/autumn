@@ -243,8 +243,10 @@ type CusEntsWithCusProduct = FullCustomerEntitlement & {
 
 export const getCusBalancesByEntitlement = async ({
   cusEntsWithCusProduct,
+  cusPrices,
 }: {
   cusEntsWithCusProduct: CusEntsWithCusProduct[];
+  cusPrices: FullCustomerPrice[];
 }) => {
   const data: Record<string, any> = {};
 
@@ -293,7 +295,14 @@ export const getCusBalancesByEntitlement = async ({
 
     if (ent.allowance_type == AllowanceType.Fixed) {
       let quantity = entOption?.quantity || 1;
-      data[key].total += quantity * ent.allowance!;
+      // data[key].total += quantity * ent.allowance!;
+      let total = getResetBalance({
+        entitlement: ent,
+        options: entOption,
+        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+      });
+
+      data[key].total += total;
     }
   }
 
@@ -365,6 +374,15 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
 
     // If b has a next_reset_at, it should go first
     if (!a.next_reset_at && b.next_reset_at) {
+      return 1;
+    }
+
+    // If one has usage_allowed, it should go last
+    if (!a.usage_allowed && b.usage_allowed) {
+      return -1;
+    }
+
+    if (!b.usage_allowed && a.usage_allowed) {
       return 1;
     }
 

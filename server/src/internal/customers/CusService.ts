@@ -1,5 +1,10 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { AppEnv, CusProductStatus, Customer } from "@autumn/shared";
+import {
+  AppEnv,
+  CusProductStatus,
+  Customer,
+  FullCusProduct,
+} from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
@@ -518,38 +523,67 @@ export class CusService {
     withPrices?: boolean;
     inStatuses?: CusProductStatus[];
   }) {
-    const query = sb
-      .from("customers")
-      .select(
-        `
-          *, 
-          customer_products:customer_products(*
-            , customer_entitlements:customer_entitlements(*, 
-              entitlement:entitlements!inner(*, 
-                feature:features!inner(*)
-              )
-            )
-            ${
-              withPrices
-                ? ", customer_prices:customer_prices(*, price:prices!inner(*))"
-                : ""
-            }
-            ${withProduct ? ", product:products!inner(*)" : ""}
+    const selectQuery = [
+      "*",
+      withProduct ? "product:products!inner(*)" : "",
+      withPrices
+        ? "customer_prices:customer_prices(*, price:prices!inner(*))"
+        : "",
+      `customer_entitlements:customer_entitlements!inner(*, 
+          entitlement:entitlements(*, 
+            feature:features!inner(*)
           )
-        `
-      )
-      .eq("internal_id", internalCustomerId);
+      )`,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
+    const query = sb
+      .from("customer_products")
+      .select(selectQuery)
+      .eq("internal_customer_id", internalCustomerId);
 
     if (inStatuses) {
-      query.in("customer_products.status", inStatuses);
+      query.in("status", inStatuses);
     }
 
-    const { data, error } = await query.single();
+    // query.limit(100);
+    // TODO: Limit 100 cus products? (for one time add ons...)
+    // SORT by created_at?
+
+    const { data, error } = await query;
 
     if (error) {
       throw error;
     }
 
-    return data.customer_products;
+    return data as any;
   }
 }
+
+// const query = sb
+//   .from("customers")
+//   .select(
+//     `
+//       *,
+//       customer_products:customer_products(*
+//         , customer_entitlements:customer_entitlements(*,
+//           entitlement:entitlements!inner(*,
+//             feature:features!inner(*)
+//           )
+//         )
+//         ${
+//           withPrices
+//             ? ", customer_prices:customer_prices(*, price:prices!inner(*))"
+//             : ""
+//         }
+//         ${withProduct ? ", product:products!inner(*)" : ""}
+//       )
+//     `
+//   )
+//   .eq("internal_id", internalCustomerId)
+//   .order("customer_products.created_at", {
+//     ascending: false,
+//     referencedTable: "customer_products",
+//   })
+//   .limit(15, { referencedTable: "customer_products" });

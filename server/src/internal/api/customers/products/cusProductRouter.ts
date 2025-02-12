@@ -363,6 +363,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     if (done) return;
 
     // 3. Check for stripe connection
+
     await checkStripeConnections({ req, res, attachParams });
 
     // -------------------- ATTACH PRODUCT --------------------
