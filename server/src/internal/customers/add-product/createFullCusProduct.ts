@@ -9,6 +9,7 @@ import {
   FeatureOptions,
   FreeTrial,
   BillingType,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
@@ -27,6 +28,7 @@ import {
   applyTrialToEntitlement,
   getEntRelatedPrice,
 } from "@/internal/products/entitlements/entitlementUtils.js";
+import { getResetBalance } from "../entitlements/cusEntUtils.js";
 
 export const initCusEntitlement = ({
   entitlement,
@@ -47,13 +49,11 @@ export const initCusEntitlement = ({
   billLaterOnly?: boolean;
   relatedPrice?: Price;
 }) => {
-  const feature: Feature = entitlement.feature;
-
-  // 1. Initialize balance...
-  let allowance = entitlement.allowance || 0;
-  let quantity = options?.quantity || 1;
-
-  let balance = billLaterOnly ? 0 : allowance * quantity;
+  const resetBalance = getResetBalance({
+    entitlement,
+    options,
+    relatedPrice,
+  });
 
   // 2. Define reset interval (interval at which balance is reset to quantity * allowance)
   let reset_interval = entitlement.interval as EntInterval;
@@ -88,7 +88,6 @@ export const initCusEntitlement = ({
 
   let nextResetNull =
     isBooleanFeature ||
-    usageAllowed ||
     entitlement.allowance_type === AllowanceType.Unlimited ||
     entitlement.interval == EntInterval.Lifetime;
 
@@ -108,7 +107,7 @@ export const initCusEntitlement = ({
     unlimited: isBooleanFeature
       ? null
       : entitlement.allowance_type === AllowanceType.Unlimited,
-    balance: isBooleanFeature ? null : balance,
+    balance: isBooleanFeature ? null : resetBalance,
     usage_allowed: usageAllowed,
     next_reset_at: nextResetNull ? null : nextResetAt || nextResetAtCalculated,
   };

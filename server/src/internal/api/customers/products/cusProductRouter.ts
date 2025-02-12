@@ -2,12 +2,14 @@ import { Router } from "express";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { z } from "zod";
 import {
+  BillingInterval,
   BillingType,
   Entitlement,
   FeatureOptions,
   FeatureOptionsSchema,
   Price,
   ProcessorType,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 import {
@@ -27,12 +29,20 @@ import { getFullCusProductData } from "../../../customers/products/cusProductUti
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import {
+  billingIntervalToStripe,
+  createStripeCli,
+} from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 import chalk from "chalk";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import {
+  createStripeInAdvancePrice,
+  createStripeInArrearPrice,
+  createStripePriceIFNotExist,
+} from "@/external/stripe/stripePriceUtils.js";
 
 export const attachRouter = Router();
 
@@ -213,7 +223,7 @@ const checkStripeConnections = async ({
   res: any;
   attachParams: AttachParams;
 }) => {
-  const { org, customer, product } = attachParams;
+  const { org, customer, product, prices, entitlements } = attachParams;
   const env = customer.env;
 
   if (!org.stripe_connected) {
@@ -269,6 +279,21 @@ const checkStripeConnections = async ({
       type: ProcessorType.Stripe,
     };
   }
+
+  const batchPriceUpdates = [];
+  for (const price of prices) {
+    batchPriceUpdates.push(
+      createStripePriceIFNotExist({
+        sb: req.sb,
+        stripeCli,
+        price,
+        entitlements,
+        product,
+        org,
+      })
+    );
+  }
+  await Promise.all(batchPriceUpdates);
 };
 
 attachRouter.post("/attach", async (req: any, res) => {
@@ -338,6 +363,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     if (done) return;
 
     // 3. Check for stripe connection
+
     await checkStripeConnections({ req, res, attachParams });
 
     // -------------------- ATTACH PRODUCT --------------------

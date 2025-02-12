@@ -188,7 +188,9 @@ function CreateUsagePrice({
           </div>
         )}
 
-        {[BillWhen.EndOfPeriod].includes(getBillWhen()) && (
+        {[BillWhen.StartOfPeriod, BillWhen.EndOfPeriod].includes(
+          getBillWhen()
+        ) && (
           <div className="w-6/12">
             <FieldLabel>Billing Units</FieldLabel>
             <Input

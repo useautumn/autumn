@@ -24,6 +24,7 @@ import { createNewCustomer } from "../customers/cusUtils.js";
 import { handleEventSent } from "../events/eventRouter.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
 
 export const entitledRouter = Router();
 
@@ -259,6 +260,7 @@ const getCusEntsActiveInFeatureIds = ({
       };
     });
 
+  // no need to sort?
   return activeCusEnts;
 };
 
@@ -322,17 +324,25 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     let cusEnts: CusEntWithEntitlement[] | null = null;
     if (!res1) {
-      let customer = await createNewCustomer({
+      // Check if customer exists
+      let customer = await CusService.getByInternalId({
         sb: req.sb,
-        orgId: req.orgId,
-        env: req.env,
-        customer: {
-          id: customer_id,
-          name: customer_data?.name,
-          email: customer_data?.email,
-          fingerprint: customer_data?.fingerprint,
-        },
+        internalId: customer_id,
       });
+
+      if (!customer) {
+        customer = await createNewCustomer({
+          sb: req.sb,
+          orgId: req.orgId,
+          env: req.env,
+          customer: {
+            id: customer_id,
+            name: customer_data?.name,
+            email: customer_data?.email,
+            fingerprint: customer_data?.fingerprint,
+          },
+        });
+      }
 
       cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
         sb: req.sb,

@@ -7,11 +7,14 @@ import {
   CusProduct,
   Customer,
   EntInterval,
+  Entitlement,
   EntitlementWithFeature,
+  FeatureOptions,
   FeatureType,
   FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
+  Price,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
@@ -240,8 +243,10 @@ type CusEntsWithCusProduct = FullCustomerEntitlement & {
 
 export const getCusBalancesByEntitlement = async ({
   cusEntsWithCusProduct,
+  cusPrices,
 }: {
   cusEntsWithCusProduct: CusEntsWithCusProduct[];
+  cusPrices: FullCustomerPrice[];
 }) => {
   const data: Record<string, any> = {};
 
@@ -290,7 +295,14 @@ export const getCusBalancesByEntitlement = async ({
 
     if (ent.allowance_type == AllowanceType.Fixed) {
       let quantity = entOption?.quantity || 1;
-      data[key].total += quantity * ent.allowance!;
+      // data[key].total += quantity * ent.allowance!;
+      let total = getResetBalance({
+        entitlement: ent,
+        options: entOption,
+        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+      });
+
+      data[key].total += total;
     }
   }
 
@@ -365,6 +377,15 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
       return 1;
     }
 
+    // If one has usage_allowed, it should go last
+    if (!a.usage_allowed && b.usage_allowed) {
+      return -1;
+    }
+
+    if (!b.usage_allowed && a.usage_allowed) {
+      return 1;
+    }
+
     // 3. Sort by interval
     if (aEnt.interval && bEnt.interval) {
       return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
@@ -431,4 +452,27 @@ export const updateCusEntInStripe = async ({
     identifier: eventId,
   });
   console.log(`   ✅ Stripe event sent, amount: (${amountUsed})`);
+};
+
+// Get balance
+export const getResetBalance = ({
+  entitlement,
+  options,
+  relatedPrice,
+}: {
+  entitlement: Entitlement;
+  options: FeatureOptions | undefined | null;
+  relatedPrice: Price | undefined | null;
+}) => {
+  if (!options || !relatedPrice) {
+    return entitlement.allowance;
+  }
+
+  let quantity = options?.quantity || 1;
+  let billingUnits =
+    relatedPrice && (relatedPrice.config as UsagePriceConfig).billing_units;
+  let fromQtyBalance = quantity && billingUnits ? quantity * billingUnits : 0;
+  let balance = fromQtyBalance || entitlement.allowance;
+
+  return balance;
 };

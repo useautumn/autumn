@@ -170,7 +170,8 @@ export class CusProductService {
     const { data, error } = await sb
       .from("customer_products")
       .select("*")
-      .eq("internal_product_id", internalProductId);
+      .eq("internal_product_id", internalProductId)
+      .limit(1);
 
     if (error) {
       throw error;

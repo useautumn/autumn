@@ -141,7 +141,10 @@ productApiRouter.delete("/:productId", async (req: any, res) => {
     }
 
     // Check if there are any customers with this product
-    const cusProducts = await CusProductService.getByProductId(sb, productId);
+    const cusProducts = await CusProductService.getByProductId(
+      sb,
+      product.internal_id
+    );
     if (cusProducts.length > 0) {
       throw new RecaseError({
         message: "Cannot delete product with customers",
@@ -195,16 +198,6 @@ productApiRouter.post("/:productId", async (req: any, res) => {
         message: "Product not found",
         code: ErrCode.ProductNotFound,
         statusCode: 404,
-      });
-    }
-
-    // 2. If customer is on this product, don't allow changes
-    const cusProducts = await CusProductService.getByProductId(sb, productId);
-    if (cusProducts.length > 0) {
-      throw new RecaseError({
-        message: "Cannot update product with customers",
-        code: ErrCode.ProductHasCustomers,
-        statusCode: 400,
       });
     }
 

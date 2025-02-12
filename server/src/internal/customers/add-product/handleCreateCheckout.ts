@@ -64,6 +64,11 @@ export const handleCreateCheckout = async ({
       autumn_metadata_id: metaId,
     },
     allow_promotion_codes: true,
+    invoice_creation: !isRecurring
+      ? {
+          enabled: true,
+        }
+      : undefined,
   });
 
   res.status(200).json({ checkout_url: checkout.url });

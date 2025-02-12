@@ -37,7 +37,10 @@ export const getBillingUnits = (
 ) => {
   if (!entitlements) return "(error)";
 
-  if (config.bill_when == BillWhen.EndOfPeriod) {
+  if (
+    config.bill_when == BillWhen.EndOfPeriod ||
+    config.bill_when == BillWhen.StartOfPeriod
+  ) {
     return `${config.billing_units} ` || "n";
   }
 

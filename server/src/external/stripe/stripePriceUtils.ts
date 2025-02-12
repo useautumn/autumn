@@ -19,6 +19,12 @@ import { billingIntervalToStripe } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import Stripe from "stripe";
+import {
+  getBillingType,
+  getPriceEntitlement,
+} from "@/internal/prices/priceUtils.js";
+import { PriceService } from "@/internal/prices/PriceService.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export const priceToStripeItem = ({
   price,
@@ -82,26 +88,16 @@ export const priceToStripeItem = ({
         }
       : undefined;
 
-    const productData =
-      isCheckout && relatedEnt
-        ? {
-            product_data: {
-              name: `${product.name} - ${relatedEnt.feature.name} (${relatedEnt.allowance})`,
-            },
-          }
-        : {
-            product: stripeProductId,
-          };
+    if (!config.stripe_price_id) {
+      throw new RecaseError({
+        code: ErrCode.PriceNotFound,
+        message: `Price ${price.id} has no Stripe price id`,
+        statusCode: 400,
+      });
+    }
 
     lineItem = {
-      price_data: {
-        ...productData,
-        unit_amount: Math.round(config.usage_tiers[0].amount * 100),
-        currency: org.default_currency,
-        recurring: {
-          ...billingIntervalToStripe(config.interval as BillingInterval),
-        },
-      },
+      price: config.stripe_price_id,
       quantity,
       adjustable_quantity: adjustableQuantity,
     };
@@ -134,6 +130,111 @@ export const priceToStripeItem = ({
   };
 };
 
+export const inAdvanceToStripeTiers = (
+  price: Price,
+  entitlement: Entitlement
+) => {
+  let usageConfig = structuredClone(price.config) as UsagePriceConfig;
+
+  const billingUnits = usageConfig.billing_units;
+  const numFree = entitlement.allowance
+    ? Math.round(entitlement.allowance! / billingUnits!)
+    : 0;
+
+  const tiers: any[] = [];
+
+  if (numFree > 0) {
+    tiers.push({
+      unit_amount_decimal: 0,
+      up_to: numFree,
+    });
+  }
+  for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
+    const tier = usageConfig.usage_tiers[i];
+    const amount = tier.amount * 100;
+    const upTo =
+      tier.to == -1
+        ? "inf"
+        : Math.round((tier.to - numFree) / billingUnits!) + numFree;
+
+    tiers.push({
+      unit_amount_decimal: amount.toFixed(5),
+      up_to: upTo,
+    });
+  }
+  // console.log("Tiers:", tiers);
+
+  return tiers;
+};
+
+export const createStripeInAdvancePrice = async ({
+  sb,
+  stripeCli,
+  price,
+  entitlements,
+  product,
+  org,
+}: {
+  sb: SupabaseClient;
+  stripeCli: Stripe;
+  price: Price;
+  entitlements: EntitlementWithFeature[];
+  product: Product;
+  org: Organization;
+}) => {
+  let recurringData = undefined;
+  if (price.config!.interval != BillingInterval.OneOff) {
+    recurringData = billingIntervalToStripe(price.config!.interval!);
+  }
+
+  const relatedEnt = getPriceEntitlement(price, entitlements);
+  const config = price.config as UsagePriceConfig;
+
+  // If one off, just create price...?
+
+  let stripePrice = null;
+  let productName = `${product.name} - ${
+    config.billing_units == 1 ? "" : `${config.billing_units} `
+  }${relatedEnt.feature.name}`;
+
+  if (
+    config.usage_tiers.length == 1 &&
+    price.config!.interval == BillingInterval.OneOff
+  ) {
+    const amount = config.usage_tiers[0].amount;
+    stripePrice = await stripeCli.prices.create({
+      product_data: {
+        name: productName,
+      },
+      unit_amount: Math.round(amount * 100),
+      currency: org.default_currency,
+    });
+  } else {
+    stripePrice = await stripeCli.prices.create({
+      product_data: {
+        name: productName,
+      },
+      currency: org.default_currency,
+      billing_scheme: "tiered",
+      tiers_mode: "graduated",
+      tiers: inAdvanceToStripeTiers(price, relatedEnt),
+      recurring: {
+        ...(recurringData as any),
+      },
+    });
+  }
+
+  config.stripe_price_id = stripePrice.id;
+
+  // New config
+  price.config = config;
+  await PriceService.update({
+    sb,
+    priceId: price.id!,
+    update: { config },
+  });
+};
+
 export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
   let usageConfig = structuredClone(price.config) as UsagePriceConfig;
   const tiers: any[] = [];
@@ -156,15 +257,11 @@ export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
     const amount = (tier.amount / (usageConfig.billing_units ?? 1)) * 100;
 
     tiers.push({
-      // unit_amount: Math.round(
-      //   (tier.amount / (usageConfig.billing_units ?? 1)) * 100
-      // ),
       unit_amount_decimal: amount.toFixed(5),
       up_to: tier.to == -1 ? "inf" : tier.to,
     });
   }
 
-  console.log("Tiers: ", tiers);
   return tiers;
 };
 
@@ -230,4 +327,133 @@ export const createStripeMeteredPrice = async ({
       usage_type: "metered",
     },
   });
+};
+
+export const createStripeInArrearPrice = async ({
+  sb,
+  stripeCli,
+  product,
+  price,
+  entitlements,
+}: {
+  sb: SupabaseClient;
+  stripeCli: Stripe;
+  product: Product;
+  price: Price;
+  entitlements: EntitlementWithFeature[];
+}) => {
+  let config = price.config as UsagePriceConfig;
+  // 1. Create meter
+  const feature = entitlements.find(
+    (e) => e.internal_feature_id === config.internal_feature_id
+  )!.feature;
+
+  const meter = await stripeCli.billing.meters.create({
+    display_name: `${product.name} - ${feature!.name}`,
+    event_name: price.id!,
+    default_aggregation: {
+      formula: "sum",
+    },
+  });
+
+  const tiers = priceToStripeTiers(
+    price,
+    entitlements.find((e) => e.internal_feature_id === feature!.internal_id)!
+  );
+
+  let priceAmountData = {};
+
+  if (tiers.length == 1) {
+    priceAmountData = {
+      unit_amount: tiers[0].unit_amount,
+    };
+  } else {
+    priceAmountData = {
+      billing_scheme: "tiered",
+      tiers_mode: "graduated",
+      tiers: tiers,
+    };
+  }
+
+  const stripePrice = await stripeCli.prices.create({
+    // product: product.processor!.id,
+    product_data: {
+      name: `${product.name} - ${feature!.name}`,
+    },
+
+    ...priceAmountData,
+    currency: "usd",
+    recurring: {
+      ...(billingIntervalToStripe(price.config!.interval!) as any),
+      meter: meter.id,
+      usage_type: "metered",
+    },
+  });
+
+  config.stripe_price_id = stripePrice.id;
+  config.stripe_meter_id = meter.id;
+  await PriceService.update({
+    sb,
+    priceId: price.id!,
+    update: { config },
+  });
+};
+
+export const createStripePriceIFNotExist = async ({
+  sb,
+  stripeCli,
+  price,
+  entitlements,
+  product,
+  org,
+}: {
+  sb: SupabaseClient;
+  stripeCli: Stripe;
+  price: Price;
+  entitlements: EntitlementWithFeature[];
+  product: Product;
+  org: Organization;
+}) => {
+  const billingType = getBillingType(price.config!);
+  let config = price.config! as UsagePriceConfig;
+
+  try {
+    if (config.stripe_price_id) {
+      const stripePrice = await stripeCli.prices.retrieve(
+        config.stripe_price_id
+      );
+      if (!stripePrice) {
+        console.log("Stripe price not found, creating...");
+      }
+    }
+  } catch (error) {
+    console.log("Stripe price not found");
+    config.stripe_price_id = undefined;
+    config.stripe_meter_id = undefined;
+  }
+
+  if (billingType == BillingType.UsageInAdvance) {
+    if (!config.stripe_price_id) {
+      console.log("Creating stripe price for in advance price");
+      await createStripeInAdvancePrice({
+        sb,
+        stripeCli,
+        price,
+        entitlements,
+        product,
+        org,
+      });
+    }
+  } else if (billingType == BillingType.UsageInArrear) {
+    if (!config.stripe_price_id) {
+      console.log("Creating stripe price for in arrear price");
+      await createStripeInArrearPrice({
+        sb,
+        stripeCli,
+        price,
+        entitlements,
+        product,
+      });
+    }
+  }
 };
