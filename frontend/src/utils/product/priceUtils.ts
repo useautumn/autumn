@@ -39,7 +39,8 @@ export const getBillingUnits = (
 
   if (
     config.bill_when == BillWhen.EndOfPeriod ||
-    config.bill_when == BillWhen.StartOfPeriod
+    config.bill_when == BillWhen.StartOfPeriod ||
+    config.bill_when == BillWhen.InAdvance
   ) {
     return `${config.billing_units} ` || "n";
   }
