@@ -126,7 +126,7 @@ export const EntitlementConfig = ({
             <TabsList>
               <TabsTrigger value="fixed">Fixed</TabsTrigger>
               <TabsTrigger value="unlimited">Unlimited</TabsTrigger>
-              <TabsTrigger value="none">None</TabsTrigger>
+              {/* <TabsTrigger value="none">None</TabsTrigger> */}
             </TabsList>
             <TabsContent value="fixed">
               <div className="flex gap-2 items-center mt-4">

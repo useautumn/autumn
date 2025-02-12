@@ -25,6 +25,7 @@ import { getBillingType, roundPriceAmounts } from "./priceUtils.js";
 import { PriceService } from "./PriceService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createStripeMeteredPrice } from "@/external/stripe/stripePriceUtils.js";
+import { CusProductService } from "../customers/products/CusProductService.js";
 
 // GET PRICES
 const validatePrice = (price: Price) => {
@@ -379,24 +380,34 @@ export const handleNewPrices = async ({
     }
   }
 
-  await handleStripePrices({
-    sb,
-    product,
-    prices: newInArrearPrices,
-    org,
-    env,
-    features,
-    entitlements,
-  });
+  const hasUpdate =
+    updatedPrices.length > 0 ||
+    removedPrices.length > 0 ||
+    createdPrices.length > 0;
 
-  await deleteStripePrices({
-    sb,
-    prices: [...updatedOrRemovedPrices, ...removedPrices],
-    org,
-    env,
-  });
+  if (!isCustom && hasUpdate) {
+    const cusProducts = await CusProductService.getByProductId(
+      sb,
+      internalProductId
+    );
 
-  // throw new Error("Not implemented");
+    if (cusProducts.length > 0) {
+      throw new RecaseError({
+        message: "Cannot update prices for product with customers",
+        code: ErrCode.ProductHasCustomers,
+        statusCode: 400,
+      });
+    }
+  }
+
+  // if (!isCustom) {
+  //   await deleteStripePrices({
+  //     sb,
+  //     prices: [...updatedOrRemovedPrices, ...removedPrices],
+  //     org,
+  //     env,
+  //   });
+  // }
 
   await PriceService.insert({ sb, data: createdPrices });
 
