@@ -325,9 +325,11 @@ entitledRouter.post("", async (req: any, res: any) => {
     let cusEnts: CusEntWithEntitlement[] | null = null;
     if (!res1) {
       // Check if customer exists
-      let customer = await CusService.getByInternalId({
+      let customer = await CusService.getById({
         sb: req.sb,
-        internalId: customer_id,
+        id: customer_id,
+        orgId: req.orgId,
+        env: req.env,
       });
 
       if (!customer) {

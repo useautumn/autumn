@@ -20,6 +20,7 @@ import {
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { notNullOrUndefined } from "@/utils/genUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const getFeatureBalance = async ({
   pg,
@@ -468,11 +469,16 @@ export const getResetBalance = ({
     return entitlement.allowance;
   }
 
-  let quantity = options?.quantity || 1;
-  let billingUnits =
-    relatedPrice && (relatedPrice.config as UsagePriceConfig).billing_units;
-  let fromQtyBalance = quantity && billingUnits ? quantity * billingUnits : 0;
-  let balance = fromQtyBalance || entitlement.allowance;
+  let quantity = options?.quantity;
+  let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
 
-  return balance;
+  if (!quantity || !billingUnits) {
+    throw new RecaseError({
+      message: "Quantity or billing units not found",
+      code: "ENT_RESET_BALANCE_QTY_OR_BILLING_UNITS_NOT_FOUND",
+      statusCode: 500,
+    });
+  }
+
+  return quantity * billingUnits;
 };

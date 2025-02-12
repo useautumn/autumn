@@ -28,9 +28,9 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
     console.log(`Time taken to verify key: ${timeEnd - timeStart}ms`);
 
     if (valid && data) {
-      console.log(
-        `Autumn API verification successful for ${data.meta.org_slug} (${data.env})`
-      );
+      // console.log(
+      //   `Autumn API verification successful for ${data.meta.org_slug} (${data.env})`
+      // );
       req.orgId = data.org_id;
       req.env = data.env;
       req.minOrg = {
@@ -58,7 +58,7 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
       apiKey,
     });
 
-    console.log(`Unkey verification successul for ${result.meta?.org_slug}`);
+    // console.log(`Unkey verification successul for ${result.meta?.org_slug}`);
     req.orgId = result.ownerId;
     req.env = result.environment;
     req.minOrg = {
