@@ -54,14 +54,21 @@ export const createStripeSubscription = async ({
     });
     return subscription;
   } catch (error: any) {
-    console.log("Error creating stripe subscription", error?.message || error);
+    // console.log("Error creating stripe subscription", error?.message || error);
     if (isStripeCardDeclined(error)) {
+      console.log(
+        "Warning: Failed to create stripe subscription, card was declined",
+        error.message,
+        error.decline_code
+      );
       throw new RecaseError({
         code: ErrCode.StripeCardDeclined,
         message: `Card was declined, Stripe decline code: ${error.decline_code}`,
         statusCode: 500,
       });
     }
+
+    console.log("Error creating stripe subscription", error?.message || error);
 
     throw new RecaseError({
       code: ErrCode.CreateStripeSubscriptionFailed,

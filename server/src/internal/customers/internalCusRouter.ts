@@ -80,9 +80,10 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     }
 
     // Get customer invoices
-    const invoices = await InvoiceService.getInvoices({
+    const invoices = await InvoiceService.getByInternalCustomerId({
       sb,
       internalCustomerId: customer.internal_id,
+      limit: 10,
     });
 
     const features = await FeatureService.getFeatures({

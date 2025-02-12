@@ -20,16 +20,18 @@ export class InvoiceService {
   static async getByInternalCustomerId({
     sb,
     internalCustomerId,
+    limit = 100,
   }: {
     sb: SupabaseClient;
     internalCustomerId: string;
+    limit?: number;
   }) {
     const { data, error } = await sb
       .from("invoices")
       .select("*")
       .eq("internal_customer_id", internalCustomerId)
       .order("created_at", { ascending: false })
-      .limit(100);
+      .limit(limit);
 
     if (error) {
       throw error;
@@ -51,24 +53,24 @@ export class InvoiceService {
     }
   }
 
-  static async getInvoices({
-    sb,
-    internalCustomerId,
-  }: {
-    sb: SupabaseClient;
-    internalCustomerId: string;
-  }) {
-    const { data, error } = await sb
-      .from("invoices")
-      .select("*")
-      .eq("internal_customer_id", internalCustomerId)
-      .order("created_at", { ascending: false });
+  // static async getInvoices({
+  //   sb,
+  //   internalCustomerId,
+  // }: {
+  //   sb: SupabaseClient;
+  //   internalCustomerId: string;
+  // }) {
+  //   const { data, error } = await sb
+  //     .from("invoices")
+  //     .select("*")
+  //     .eq("internal_customer_id", internalCustomerId)
+  //     .order("created_at", { ascending: false }).limit(10);
 
-    if (error) {
-      throw error;
-    }
-    return data;
-  }
+  //   if (error) {
+  //     throw error;
+  //   }
+  //   return data;
+  // }
 
   static async getInvoiceByStripeId({
     sb,
