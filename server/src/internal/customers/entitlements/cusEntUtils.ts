@@ -295,8 +295,6 @@ export const getCusBalancesByEntitlement = async ({
     const entOption = getEntOptions(cusProduct.options, ent);
 
     if (ent.allowance_type == AllowanceType.Fixed) {
-      let quantity = entOption?.quantity || 1;
-      // data[key].total += quantity * ent.allowance!;
       let total = getResetBalance({
         entitlement: ent,
         options: entOption,
@@ -473,11 +471,16 @@ export const getResetBalance = ({
   let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
 
   if (!quantity || !billingUnits) {
-    throw new RecaseError({
-      message: "Quantity or billing units not found",
-      code: "ENT_RESET_BALANCE_QTY_OR_BILLING_UNITS_NOT_FOUND",
-      statusCode: 500,
-    });
+    console.log("WARNING: Quantity or billing units not found");
+    console.log("Entitlement:", entitlement.id, entitlement.feature_id);
+    console.log("Options:", options);
+    console.log(
+      "Related price:",
+      relatedPrice.name,
+      relatedPrice.id,
+      relatedPrice.config
+    );
+    return entitlement.allowance;
   }
 
   return quantity * billingUnits;
