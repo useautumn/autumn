@@ -27,7 +27,10 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSquareUpRight } from "@fortawesome/pro-duotone-svg-icons";
+import {
+  faArrowUpRightFromSquare,
+  faSquareUpRight,
+} from "@fortawesome/pro-duotone-svg-icons";
 import { CustomerProductList } from "./CustomerProductList";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { ManageEntitlements } from "./entitlements/ManageEntitlements";
@@ -35,6 +38,9 @@ import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsLis
 import { navigateTo } from "@/utils/genUtils";
 import { CustomerEventsList } from "./product/CustomerEventsList";
 import { useState } from "react";
+import Link from "next/link";
+import { faStripe, faStripeS } from "@fortawesome/free-brands-svg-icons";
+import { getStripeCusLink } from "@/utils/linkUtils";
 
 export default function CustomerView({
   customer_id,
@@ -233,7 +239,10 @@ export default function CustomerView({
 
           <div className="grid grid-cols-[auto_1fr] gap-y-3 gap-x-4 w-full items-center rounded-md px-4 break-all">
             <p className="text-t3 text-xs font-medium">Name</p>
-            <p>{customer.name}</p>
+            <div className="flex gap-2">
+              {/* <p>{customer.name}</p> */}
+              <p>{customer.name}</p>
+            </div>
 
             <p className="text-t3 text-xs font-medium">ID</p>
             <p className="flex items-center gap-1 font-mono ">
@@ -241,9 +250,13 @@ export default function CustomerView({
             </p>
 
             <p className="text-t3 text-xs font-medium">Email</p>
-            <p className="border border-blue-500 text-blue-500 rounded-md px-2 py-0.5 w-fit">
-              {customer.email}
-            </p>
+            {customer.email ? (
+              <p className="border border-blue-500 text-blue-500 px-2 py-0.5 w-fit">
+                {customer.email}
+              </p>
+            ) : (
+              <p className="text-t3 text-xs font-medium">N/A</p>
+            )}
 
             <p className="text-t3 text-xs font-medium">Fingerprint</p>
             <p>{customer.fingerprint}</p>
@@ -256,6 +269,23 @@ export default function CustomerView({
                 )
                 .join(", ")}
             </p>
+
+            {customer.processor?.id && (
+              <Link
+                className="!cursor-pointer hover:underline"
+                href={getStripeCusLink(customer.processor?.id, env)}
+                target="_blank"
+              >
+                <div className="flex justify-center items-center bg-[#675DFF] w-fit px-2 gap-2">
+                  <FontAwesomeIcon icon={faStripe} className="text-white h-6" />
+                  <FontAwesomeIcon
+                    icon={faArrowUpRightFromSquare}
+                    className="text-white"
+                    size="xs"
+                  />
+                </div>
+              </Link>
+            )}
           </div>
         </div>
       </div>

@@ -422,12 +422,13 @@ export const createStripePriceIFNotExist = async ({
       const stripePrice = await stripeCli.prices.retrieve(
         config.stripe_price_id
       );
-      if (!stripePrice) {
-        console.log("Stripe price not found, creating...");
+
+      if (!stripePrice.active) {
+        throw new Error("inactive price");
       }
     }
   } catch (error) {
-    console.log("Stripe price not found");
+    console.log("Stripe price not found / inactive");
     config.stripe_price_id = undefined;
     config.stripe_meter_id = undefined;
   }
