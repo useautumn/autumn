@@ -57,10 +57,11 @@ export const createStripeSubscription = async ({
     // console.log("Error creating stripe subscription", error?.message || error);
     if (isStripeCardDeclined(error)) {
       console.log(
-        "Warning: Failed to create stripe subscription, card was declined",
-        error.message,
-        error.decline_code
+        "Warning: Failed to create stripe subscription, card declined"
       );
+      console.log("Error code:", error.code);
+      console.log("Decline code:", error.decline_code);
+      console.log("Message:", error.message);
       throw new RecaseError({
         code: ErrCode.StripeCardDeclined,
         message: `Card was declined, Stripe decline code: ${error.decline_code}`,
@@ -131,7 +132,7 @@ export const updateStripeSubscription = async ({
     if (isStripeCardDeclined(error)) {
       throw new RecaseError({
         code: ErrCode.StripeCardDeclined,
-        message: `Card was declined, Stripe decline code: ${error.decline_code}`,
+        message: `Card was declined, Stripe decline code: ${error.decline_code}, Code: ${error.code}`,
         statusCode: 500,
       });
     }

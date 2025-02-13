@@ -576,15 +576,16 @@ cusRouter.post(
               );
             }
           } else {
-            console.log(
-              `Expiring product ${cusProduct.product.name} for ${customerId} (attaching default if exists)`
-            );
-            await expireAndAddDefaultProduct({
-              sb: req.sb,
-              org,
-              env: req.env,
-              cusProduct,
-            });
+            // Don't need to delete, stripe will do it...
+            // console.log(
+            //   `Expiring product ${cusProduct.product.name} for ${customerId} (attaching default if exists)`
+            // );
+            // await expireAndAddDefaultProduct({
+            //   sb: req.sb,
+            //   org,
+            //   env: req.env,
+            //   cusProduct,
+            // });
           }
         }
       }
