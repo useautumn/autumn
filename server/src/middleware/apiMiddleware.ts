@@ -22,10 +22,10 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
 
   // Try verify via Autumn
   try {
-    const timeStart = Date.now();
+    // const timeStart = Date.now();
     const { valid, data } = await verifyKey({ sb: req.sb, key: apiKey });
-    const timeEnd = Date.now();
-    console.log(`Time taken to verify key: ${timeEnd - timeStart}ms`);
+    // const timeEnd = Date.now();
+    // console.log(`Time taken to verify key: ${timeEnd - timeStart}ms`);
 
     if (valid && data) {
       // console.log(
