@@ -393,41 +393,45 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
 });
 
 cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
-  const customerId = req.params.customer_id;
-  const customer = await CusService.getById({
-    sb: req.sb,
-    id: customerId,
-    orgId: req.orgId,
-    env: req.env,
-  });
-
-  if (!customer) {
-    throw new RecaseError({
-      message: `Customer ${customerId} not found`,
-      code: ErrCode.CustomerNotFound,
-      statusCode: StatusCodes.NOT_FOUND,
+  try {
+    const customerId = req.params.customer_id;
+    const customer = await CusService.getById({
+      sb: req.sb,
+      id: customerId,
+      orgId: req.orgId,
+      env: req.env,
     });
-  }
 
-  if (!customer.processor.id) {
-    throw new RecaseError({
-      message: `Customer ${customerId} not connected to Stripe`,
-      code: ErrCode.InvalidRequest,
-      statusCode: StatusCodes.BAD_REQUEST,
+    if (!customer) {
+      throw new RecaseError({
+        message: `Customer ${customerId} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    if (!customer.processor?.id) {
+      throw new RecaseError({
+        message: `Customer ${customerId} not connected to Stripe`,
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
+
+    const stripeCli = createStripeCli({ org, env: req.env });
+    const portal = await stripeCli.billingPortal.sessions.create({
+      customer: customer.processor.id,
+      return_url: org.stripe_config.success_url,
     });
+
+    res.status(200).json({
+      url: portal.url,
+    });
+  } catch (error) {
+    handleRequestError({ req, error, res, action: "get billing portal" });
   }
-
-  const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
-
-  const stripeCli = createStripeCli({ org, env: req.env });
-  const portal = await stripeCli.billingPortal.sessions.create({
-    customer: customer.processor.id,
-    return_url: org.stripe_config.success_url,
-  });
-
-  res.status(200).json({
-    url: portal.url,
-  });
 });
 
 // Entitlements
