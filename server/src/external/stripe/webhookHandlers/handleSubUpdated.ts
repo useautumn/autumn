@@ -93,6 +93,16 @@ export const handleSubscriptionUpdated = async ({
     } catch (error: any) {
       console.error("subscription.updated: error cancelling:", error.message);
     }
+
+    // Void latest invoice
+    try {
+      await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
+    } catch (error) {
+      console.error(
+        "subscription.updated: error voiding latest invoice:",
+        error
+      );
+    }
   }
 };
 
