@@ -227,9 +227,9 @@ const UpdateStatusDropdownBtn = ({
           );
           await cusMutate();
         } catch (error) {
-          setLoading(false);
           toast.error(getBackendErr(error, "Failed to update status"));
         }
+        setLoading(false);
       }}
     >
       {keyToTitle(status)}

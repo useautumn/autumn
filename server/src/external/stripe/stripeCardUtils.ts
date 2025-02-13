@@ -4,6 +4,7 @@ export const isStripeCardDeclined = (error: any) => {
     error.code === "expired_card" ||
     error.code === "incorrect_cvc" ||
     error.code === "processing_error" ||
-    error.code === "incorrect_number"
+    error.code === "incorrect_number" ||
+    error.code == "subscription_payment_intent_requires_action"
   );
 };
