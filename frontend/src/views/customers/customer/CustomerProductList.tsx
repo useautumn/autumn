@@ -25,12 +25,16 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsisVertical } from "@fortawesome/pro-regular-svg-icons";
+import { faArrowUpRightFromSquare } from "@fortawesome/pro-duotone-svg-icons";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Badge } from "@/components/ui/badge";
 import toast from "react-hot-toast";
+import { faStripe, faStripeS } from "@fortawesome/free-brands-svg-icons";
+import Link from "next/link";
+import { getStripeSubLink } from "@/utils/linkUtils";
 
 export const CustomerProductList = ({
   customer,
@@ -59,13 +63,15 @@ export const CustomerProductList = ({
             <TableHead className="">Name</TableHead>
             <TableHead className="">Product ID</TableHead>
             <TableHead className=""></TableHead>
-            <TableHead className="min-w-0 w-24">Created At</TableHead>
+            <TableHead className="w-10" id="links"></TableHead>
+            <TableHead className="min-w-0 w-28">Created At</TableHead>
             {/* <TableHead className="">Ended At</TableHead> */}
             <TableHead className="min-w-0 w-6"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sortedProducts.map((cusProduct: CusProduct) => {
+            console.log(cusProduct);
             return (
               <TableRow
                 key={cusProduct.id}
@@ -99,6 +105,34 @@ export const CustomerProductList = ({
                 </TableCell>
                 <TableCell className="max-w-[100px] overflow-hidden text-ellipsis">
                   {cusProduct.product_id}
+                </TableCell>
+                <TableCell>
+                  {cusProduct.processor?.subscription_id && (
+                    <Link
+                      href={getStripeSubLink(
+                        cusProduct.processor?.subscription_id,
+                        env
+                      )}
+                      target="_blank"
+                      onClick={(e) => {
+                        // e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                    >
+                      <div className="flex justify-center items-center bg-[#675DFF] w-fit px-2 gap-2 h-6">
+                        <FontAwesomeIcon
+                          icon={faStripeS}
+                          className="text-white"
+                          size="xs"
+                        />
+                        <FontAwesomeIcon
+                          icon={faArrowUpRightFromSquare}
+                          className="text-white"
+                          size="xs"
+                        />
+                      </div>
+                    </Link>
+                  )}
                 </TableCell>
                 <TableCell></TableCell>
                 <TableCell>
@@ -146,11 +180,7 @@ const EditCustomerProductToolbar = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
         {/* Update status */}
-        {[
-          // CusProductStatus.Active,
-          CusProductStatus.Expired,
-          // CusProductStatus.PastDue,
-        ].map((status) => (
+        {[CusProductStatus.Expired].map((status) => (
           <DropdownMenuItem
             key={status}
             className="p-0"
