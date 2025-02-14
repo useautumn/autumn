@@ -19,10 +19,6 @@ function CreditSystemsView({ env }: { env: AppEnv }) {
 
   if (isLoading) return <LoadingScreen />;
 
-  const creditSystems = data?.features.filter(
-    (feature) => feature.type === FeatureType.CreditSystem
-  );
-
   return (
     <CreditsContext.Provider
       value={{
@@ -38,7 +34,7 @@ function CreditSystemsView({ env }: { env: AppEnv }) {
           Define the credit systems your users are entitled to
         </p>
       </div>
-      <CreditSystemsTable creditSystems={creditSystems} />
+      <CreditSystemsTable />
       <CreateCreditSystem />
     </CreditsContext.Provider>
   );

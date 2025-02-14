@@ -22,48 +22,47 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faXmark } from "@fortawesome/pro-solid-svg-icons";
 import { useCreditsContext } from "./CreditsContext";
 import { PlusIcon } from "lucide-react";
-import { Feature, FeatureType, CreditSystemConfig } from "@autumn/shared";
+import { Feature, FeatureType } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
+import CreditSystemConfig from "./CreditSystemConfig";
 
-const defaultFields = {
+const defaultCreditSystem = {
   name: "",
   id: "",
-};
-
-const defaultConfig = {
-  schema: [{ metered_feature_id: "", feature_amount: 0, credit_amount: 0 }],
+  type: FeatureType.CreditSystem,
+  config: {
+    schema: [{ metered_feature_id: "", feature_amount: 0, credit_amount: 0 }],
+  },
 };
 
 function CreateCreditSystem() {
-  const { features, mutate, env } = useCreditsContext();
+  const { mutate, env } = useCreditsContext();
   const axiosInstance = useAxiosInstance({ env: env });
 
-  const [fields, setFields] = useState(defaultFields);
-  const [creditSystemConfig, setCreditSystemConfig] =
-    useState<CreditSystemConfig>(defaultConfig);
-
   const [isLoading, setIsLoading] = useState(false);
-  const [idChanged, setIdChanged] = useState(false);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    setFields(defaultFields);
-    setCreditSystemConfig(defaultConfig);
-    setIdChanged(false);
-  }, []);
+  const [creditSystem, setCreditSystem] =
+    useState<Feature>(defaultCreditSystem);
 
-  const handleSubmit = async () => {
-    if (!fields.id || !fields.name) {
+  useEffect(() => {
+    if (open) {
+      setCreditSystem(defaultCreditSystem);
+    }
+  }, [open]);
+
+  const handleCreateCreditSystem = async () => {
+    if (!creditSystem.id || !creditSystem.name) {
       toast.error("Please fill in all fields");
       return;
     }
 
-    if (creditSystemConfig.schema.length === 0) {
+    if (creditSystem.config.schema.length === 0) {
       toast.error("Need at least one metered feature");
       return;
     }
 
-    for (const item of creditSystemConfig.schema) {
+    for (const item of creditSystem.config.schema) {
       if (!item.metered_feature_id) {
         toast.error("Select a metered feature");
         return;
@@ -78,10 +77,10 @@ function CreateCreditSystem() {
     setIsLoading(true);
     try {
       await FeatureService.createFeature(axiosInstance, {
-        name: fields.name,
-        id: fields.id,
+        name: creditSystem.name,
+        id: creditSystem.id,
         type: FeatureType.CreditSystem,
-        config: creditSystemConfig,
+        config: creditSystem.config,
       });
       await mutate();
       setOpen(false);
@@ -89,29 +88,6 @@ function CreateCreditSystem() {
       toast.error(getBackendErr(error, "Failed to create credit system"));
     }
     setIsLoading(false);
-  };
-
-  const addSchemaItem = () => {
-    setCreditSystemConfig({
-      ...creditSystemConfig,
-      schema: [
-        ...creditSystemConfig.schema,
-        { metered_feature_id: "", feature_amount: 0, credit_amount: 0 },
-      ],
-    });
-  };
-
-  const removeSchemaItem = (index: number) => {
-    setCreditSystemConfig({
-      ...creditSystemConfig,
-      schema: creditSystemConfig.schema.filter((_, i) => i !== index),
-    });
-  };
-
-  const handleSchemaChange = (index: number, field: string, value: string) => {
-    const newSchema = [...creditSystemConfig.schema];
-    newSchema[index] = { ...newSchema[index], [field]: value };
-    setCreditSystemConfig({ ...creditSystemConfig, schema: newSchema });
   };
 
   return (
@@ -129,8 +105,12 @@ function CreateCreditSystem() {
         <DialogHeader>
           <DialogTitle>Create Credit System</DialogTitle>
         </DialogHeader>
+        <CreditSystemConfig
+          creditSystem={creditSystem}
+          setCreditSystem={setCreditSystem}
+        />
 
-        <div className="flex flex-col gap-4">
+        {/* <div className="flex flex-col gap-4">
           <div className="flex gap-4 w-full">
             <div className="w-full">
               <FieldLabel>Name</FieldLabel>
@@ -235,9 +215,13 @@ function CreateCreditSystem() {
               Add
             </Button>
           </div>
-        </div>
+        </div> */}
         <DialogFooter>
-          <Button onClick={handleSubmit} isLoading={isLoading} variant="gradientPrimary">
+          <Button
+            onClick={handleCreateCreditSystem}
+            isLoading={isLoading}
+            variant="gradientPrimary"
+          >
             Create
           </Button>
         </DialogFooter>
