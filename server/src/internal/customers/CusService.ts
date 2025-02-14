@@ -181,6 +181,26 @@ export class CusService {
     return data;
   }
 
+  static async getByStripeId({
+    sb,
+    stripeId,
+  }: {
+    sb: SupabaseClient;
+    stripeId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customers")
+      .select()
+      .eq("processor->>id", stripeId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   //search customers
 
   static addPaginationAndSearch = ({
