@@ -37,19 +37,6 @@ export const initQueue = () => {
   }
 };
 
-// export const clearQueue = async (queue: Queue) => {
-//   try {
-//     await queue.clean(0, 0, "active");
-//     await queue.clean(0, 0, "completed");
-//     await queue.clean(0, 0, "failed");
-//     await queue.clean(0, 0, "wait");
-//     await queue.clean(0, 0, "delayed");
-//     console.log("Queue cleared successfully");
-//   } catch (error) {
-//     console.error("Error clearing queue:", error);
-//   }
-// };
-
 const numWorkers = 5;
 
 const initWorker = (id: number, queue: Queue) => {
@@ -79,7 +66,7 @@ const initWorker = (id: number, queue: Queue) => {
 
     {
       ...getRedisConnection(),
-      concurrency: 10,
+      concurrency: 3,
     }
   );
 
@@ -87,10 +74,15 @@ const initWorker = (id: number, queue: Queue) => {
     console.log(`Worker ${id} ready`);
   });
 
-  worker.on("error", (error) => {
+  worker.on("error", async (error) => {
     console.log("WORKER ERROR:\n");
     console.log(error);
-    process.exit(1);
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  });
+
+  worker.on("failed", (job, error) => {
+    console.log("WORKER FAILED:\n");
+    console.log(error);
   });
 };
 
