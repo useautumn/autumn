@@ -10,6 +10,7 @@ import {
   FreeTrial,
   BillingType,
   UsagePriceConfig,
+  CollectionMethod,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
@@ -148,6 +149,7 @@ export const initCusProduct = ({
   subscriptionStatus,
   canceledAt,
   createdAt,
+  collectionMethod,
 }: {
   customer: Customer;
   product: FullProduct;
@@ -162,6 +164,7 @@ export const initCusProduct = ({
   subscriptionStatus?: CusProductStatus;
   canceledAt?: number | null;
   createdAt?: number | null;
+  collectionMethod?: CollectionMethod;
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
 
@@ -196,6 +199,7 @@ export const initCusProduct = ({
     options: optionsList || [],
     free_trial_id: freeTrial?.id || null,
     canceled_at: canceledAt,
+    collection_method: collectionMethod || CollectionMethod.ChargeAutomatically,
   };
 };
 
@@ -289,6 +293,7 @@ export const createFullCusProduct = async ({
   subscriptionStatus,
   canceledAt = null,
   createdAt = null,
+  collectionMethod = CollectionMethod.ChargeAutomatically,
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
@@ -303,6 +308,7 @@ export const createFullCusProduct = async ({
   subscriptionStatus?: CusProductStatus;
   canceledAt?: number | null;
   createdAt?: number | null;
+  collectionMethod?: CollectionMethod;
 }) => {
   const { customer, product, prices, entitlements, optionsList, freeTrial } =
     attachParams;
@@ -366,6 +372,7 @@ export const createFullCusProduct = async ({
     subscriptionStatus,
     canceledAt,
     createdAt,
+    collectionMethod,
   });
 
   await insertFullCusProduct({

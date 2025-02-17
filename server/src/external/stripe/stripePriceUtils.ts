@@ -15,16 +15,44 @@ import {
   EntitlementWithFeature,
 } from "@autumn/shared";
 
-import { billingIntervalToStripe } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import Stripe from "stripe";
 import {
   getBillingType,
+  getPriceAmount,
   getPriceEntitlement,
+  getPriceOptions,
 } from "@/internal/prices/priceUtils.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+export const billingIntervalToStripe = (interval: BillingInterval) => {
+  switch (interval) {
+    case BillingInterval.Month:
+      return {
+        interval: "month",
+        interval_count: 1,
+      };
+    case BillingInterval.Quarter:
+      return {
+        interval: "month",
+        interval_count: 3,
+      };
+    case BillingInterval.SemiAnnual:
+      return {
+        interval: "month",
+        interval_count: 6,
+      };
+    case BillingInterval.Year:
+      return {
+        interval: "year",
+        interval_count: 1,
+      };
+    default:
+      break;
+  }
+};
 
 export const priceToStripeItem = ({
   price,
@@ -456,5 +484,39 @@ export const createStripePriceIFNotExist = async ({
         product,
       });
     }
+  }
+};
+
+export const pricesToInvoiceItems = async ({
+  sb,
+  stripeCli,
+  attachParams,
+  stripeInvoiceId,
+}: {
+  sb: SupabaseClient;
+  stripeCli: Stripe;
+  attachParams: AttachParams;
+  stripeInvoiceId: string;
+}) => {
+  const { prices, optionsList, entitlements, product, customer } = attachParams;
+  for (const price of prices) {
+    // Calculate amount
+    const options = getPriceOptions(price, optionsList);
+    const entitlement = getPriceEntitlement(price, entitlements);
+    const { amountPerUnit, quantity } = getPriceAmount(price, options!);
+
+    const allowanceStr =
+      entitlement.allowance_type == AllowanceType.Unlimited
+        ? "Unlimited"
+        : entitlement.allowance_type == AllowanceType.None
+        ? "None"
+        : `${entitlement.allowance}`;
+
+    await stripeCli.invoiceItems.create({
+      customer: customer.processor.id,
+      amount: amountPerUnit * quantity * 100,
+      invoice: stripeInvoiceId,
+      description: `Invoice for ${product.name} -- ${quantity}x ${allowanceStr} (${entitlement.feature.name})`,
+    });
   }
 };

@@ -1,4 +1,4 @@
-import { Customer, ErrCode } from "@autumn/shared";
+import { Customer, ErrCode, InvoiceStatus } from "@autumn/shared";
 
 import { AppEnv } from "@autumn/shared";
 
@@ -8,6 +8,8 @@ import { getCusPaymentMethod } from "./stripeCusUtils.js";
 import { createStripeCli } from "./utils.js";
 import RecaseError, { isPaymentDeclined } from "@/utils/errorUtils.js";
 import { isStripeCardDeclined } from "./stripeCardUtils.js";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 
 export const payForInvoice = async ({
   fullOrg,
@@ -72,4 +74,32 @@ export const payForInvoice = async ({
       }),
     };
   }
+};
+
+export const updateInvoiceIfExists = async ({
+  sb,
+  invoice,
+}: {
+  sb: SupabaseClient;
+  invoice: Stripe.Invoice;
+}) => {
+  const existingInvoice = await InvoiceService.getInvoiceByStripeId({
+    sb,
+    stripeInvoiceId: invoice.id,
+  });
+
+  if (existingInvoice) {
+    await InvoiceService.updateByStripeId({
+      sb,
+      stripeInvoiceId: invoice.id,
+      updates: {
+        status: invoice.status as InvoiceStatus,
+        hosted_invoice_url: invoice.hosted_invoice_url,
+      },
+    });
+    console.log(`Updated invoice status to ${invoice.status}`);
+    return true;
+  }
+
+  return false;
 };

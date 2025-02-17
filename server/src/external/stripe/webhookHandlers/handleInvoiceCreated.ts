@@ -10,7 +10,7 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
-import { differenceInHours, format, subDays, subMinutes } from "date-fns";
+import { differenceInHours, format, subDays } from "date-fns";
 
 export const handleInvoiceCreated = async ({
   sb,

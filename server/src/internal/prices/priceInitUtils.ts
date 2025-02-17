@@ -434,6 +434,8 @@ export const handleNewPrices = async ({
     }
   }
 
+  // Check if prices have same billing interval
+
   // if (!isCustom) {
   //   await deleteStripePrices({
   //     sb,

@@ -5,6 +5,7 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { Check, ChevronRight, Circle } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import SmallSpinner from "../general/SmallSpinner";
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
 
@@ -80,8 +81,9 @@ const DropdownMenuItem = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> & {
     inset?: boolean;
+    isLoading?: boolean;
   }
->(({ className, inset, ...props }, ref) => (
+>(({ className, inset, isLoading, ...props }, ref) => (
   <DropdownMenuPrimitive.Item
     ref={ref}
     className={cn(
@@ -95,7 +97,16 @@ const DropdownMenuItem = React.forwardRef<
       className
     )}
     {...props}
-  />
+  >
+    {isLoading ? (
+      <>
+        {props.children}
+        <SmallSpinner />
+      </>
+    ) : (
+      props.children
+    )}
+  </DropdownMenuPrimitive.Item>
 ));
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName;
 

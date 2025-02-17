@@ -29,10 +29,7 @@ import { getFullCusProductData } from "../../../customers/products/cusProductUti
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import {
-  billingIntervalToStripe,
-  createStripeCli,
-} from "@/external/stripe/utils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
@@ -43,6 +40,7 @@ import {
   createStripeInArrearPrice,
   createStripePriceIFNotExist,
 } from "@/external/stripe/stripePriceUtils.js";
+import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoiceOnly.js";
 
 export const attachRouter = Router();
 
@@ -83,6 +81,7 @@ const checkAddProductErrors = async ({
   }
 
   // 2. Check if options are valid
+
   for (const price of prices) {
     const billingType = getBillingType(price.config!);
     if (billingType === BillingType.UsageInAdvance && !useCheckout) {
@@ -308,6 +307,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     free_trial,
     options,
     force_checkout,
+    invoice_only,
   } = req.body;
 
   const { orgId, env } = req;
@@ -316,6 +316,7 @@ attachRouter.post("/attach", async (req: any, res) => {
   const pricesInput: PricesInput = prices || [];
   const entsInput: Entitlement[] = entitlements || [];
   const optionsListInput: FeatureOptions[] = options || [];
+  const invoiceOnly = invoice_only || false;
 
   const useCheckout = force_checkout || false;
   console.log("--------------------------------");
@@ -363,7 +364,6 @@ attachRouter.post("/attach", async (req: any, res) => {
     if (done) return;
 
     // 3. Check for stripe connection
-
     await checkStripeConnections({ req, res, attachParams });
 
     // -------------------- ATTACH PRODUCT --------------------
@@ -389,7 +389,18 @@ attachRouter.post("/attach", async (req: any, res) => {
       return;
     }
 
-    // SCENARIO 2: No payment method, checkout required
+    // SCENARIO 2: Invoice only
+    if (invoiceOnly) {
+      await handleInvoiceOnly({
+        req,
+        res,
+        attachParams,
+        curCusProduct: currentProduct,
+      });
+      return;
+    }
+
+    // SCENARIO 3: No payment method, checkout required
     const paymentMethod = await getCusPaymentMethod({
       org: attachParams.org,
       env: attachParams.customer.env,
@@ -406,7 +417,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       return;
     }
 
-    // SCENARIO 3: Switching product
+    // SCENARIO 4: Switching product
     if (!attachParams.product.is_add_on && currentProduct) {
       console.log("SCENARIO 3: SWITCHING PRODUCT (PAYMENT METHOD EXISTS)");
       await handleChangeProduct({
@@ -418,7 +429,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       return;
     }
 
-    // SCENARIO 4: No existing product, not free product
+    // SCENARIO 5: No existing product, not free product
     console.log("SCENARIO 4: ADDING PRODUCT");
     await handleAddProduct({
       req,
