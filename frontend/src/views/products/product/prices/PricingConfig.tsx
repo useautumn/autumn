@@ -153,11 +153,11 @@ export const validateUsageConfig = (usageConfig: any) => {
 };
 
 // Validate fixed price config
-export const validateFixedConfig = (fixedConfig: any, prices: any) => {
-  if (!validBillingInterval(prices, fixedConfig)) {
-    toast.error("Can't have two prices with different billing intervals");
-    return null;
-  }
+export const validateFixedConfig = (fixedConfig: any) => {
+  // if (!validBillingInterval(prices, fixedConfig)) {
+  //   toast.error("Can't have two prices with different billing intervals");
+  //   return null;
+  // }
 
   const config = { ...fixedConfig };
 
@@ -173,7 +173,7 @@ export const validateConfig = (price: any, prices: any) => {
   const priceType = price.config.type;
   let config = null;
   if (priceType === PriceType.Fixed) {
-    config = validateFixedConfig(price.config, prices);
+    config = validateFixedConfig(price.config);
   } else if (priceType === PriceType.Usage) {
     config = validateUsageConfig(price.config);
   }

@@ -57,6 +57,7 @@ import { ProductService } from "@/services/products/ProductService";
 import RequiredOptionsModal from "./RequiredOptionsModal";
 import { ProductOptions } from "./ProductOptions";
 import { Breadcrumbs } from "@nextui-org/react";
+import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 
 interface OptionValue {
   feature_id: string;
@@ -85,10 +86,12 @@ export default function CustomerProductView({
     env,
   });
 
-  const [url, setUrl] = useState<string | null>(null);
+  const [url, setUrl] = useState<any>(null);
+
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [requiredOptions, setRequiredOptions] = useState<OptionValue[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [useInvoice, setUseInvoice] = useState(false);
   const initialProductRef = useRef<FrontendProduct | null>(null);
 
   const searchParams = useSearchParams();
@@ -189,7 +192,7 @@ export default function CustomerProductView({
     return <div>Product not found</div>;
   }
 
-  const handleCreateProduct = async () => {
+  const handleCreateProduct = async (useInvoiceLatest?: boolean) => {
     try {
       const { data } = await ProductService.getRequiredOptions(axiosInstance, {
         prices: product.prices,
@@ -203,13 +206,15 @@ export default function CustomerProductView({
       }
 
       // Continue with product creation if no required options
-      await createProduct();
+      await createProduct(
+        useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice
+      );
     } catch (error) {
       toast.error(getBackendErr(error, "Error checking required options"));
     }
   };
 
-  const createProduct = async () => {
+  const createProduct = async (useInvoiceLatest?: boolean) => {
     try {
       const { data } = await CusService.addProduct(axiosInstance, customer_id, {
         product_id,
@@ -218,13 +223,26 @@ export default function CustomerProductView({
         free_trial: product.free_trial,
         options: requiredOptions,
         is_custom: true,
+        invoice_only:
+          useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,
       });
 
       await mutate();
       toast.success("Product created successfully");
 
       if (data.checkout_url) {
-        setUrl(data.checkout_url);
+        setUrl({
+          type: "checkout",
+          value: data.checkout_url,
+        });
+        setCheckoutDialogOpen(true);
+      }
+
+      if (data.invoice_url) {
+        setUrl({
+          type: "invoice",
+          value: data.invoice_url,
+        });
         setCheckoutDialogOpen(true);
       }
     } catch (error) {
@@ -302,10 +320,10 @@ export default function CustomerProductView({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Checkout</DialogTitle>
+            <DialogTitle>{url && keyToTitle(url.type)}</DialogTitle>
           </DialogHeader>
 
-          {url && <CopyCheckoutURL url={url} />}
+          {url && <CopyUrl url={url.value} isInvoice={url.type == "invoice"} />}
         </DialogContent>
       </Dialog>
 
@@ -342,16 +360,27 @@ export default function CustomerProductView({
         <AddProductButton
           handleCreateProduct={handleCreateProduct}
           actionState={actionState}
+          setUseInvoice={setUseInvoice}
         />
       </div>
     </ProductContext.Provider>
   );
 }
 
-export const CopyCheckoutURL = ({ url }: { url: string }) => {
+export const CopyUrl = ({
+  url,
+  isInvoice = false,
+}: {
+  url: string;
+  isInvoice: boolean;
+}) => {
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-gray-500">This link will expire in 24 hours</p>
+      {!isInvoice && (
+        <p className="text-sm text-gray-500">
+          This link will expire in 24 hours
+        </p>
+      )}
       <div className="w-full bg-gray-100 p-3 rounded-md">
         <Link
           className="text-xs text-t2 break-all hover:underline"

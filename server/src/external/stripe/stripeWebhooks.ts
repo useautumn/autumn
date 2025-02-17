@@ -11,6 +11,7 @@ import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated.js";
 import chalk from "chalk";
+import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 
 export const stripeWebhookRouter = express.Router();
 
@@ -116,6 +117,17 @@ stripeWebhookRouter.post(
             sb: request.sb,
             org,
             invoice: createdInvoice,
+            env,
+            event,
+          });
+          break;
+
+        case "invoice.finalized":
+          const finalizedInvoice = event.data.object;
+          await handleInvoiceFinalized({
+            sb: request.sb,
+            org,
+            invoice: finalizedInvoice,
             env,
             event,
           });

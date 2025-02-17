@@ -15,11 +15,10 @@ export const FeatureOptionsSchema = z.object({
   quantity: z.number().optional().nullable(),
 });
 
-// export const FeatureOptionsInputSchema = z.object({
-//   feature_id: z.string(),
-//   threshold: z.number().optional().nullable(),
-//   quantity: z.number().optional().nullable(),
-// });
+export enum CollectionMethod {
+  ChargeAutomatically = "charge_automatically",
+  SendInvoice = "send_invoice",
+}
 
 export const BillingCycleAnchorConfig = z.object({
   month: z.number(),
@@ -56,6 +55,7 @@ export const CusProductSchema = z.object({
 
   options: z.array(FeatureOptionsSchema),
   free_trial_id: z.string().optional().nullable(),
+  collection_method: z.nativeEnum(CollectionMethod),
 
   // Fixed-cycle configuration
   processor: z

@@ -94,17 +94,20 @@ export class Autumn {
     eventName,
     properties,
     customer_data,
+    idempotency_key,
   }: {
     customerId: string;
     eventName: string;
     properties?: any;
     customer_data?: any;
+    idempotency_key?: string;
   }) {
     const data = await this.post(`/events`, {
       customer_id: customerId,
       event_name: eventName,
       properties,
       customer_data,
+      idempotency_key,
     });
 
     return data;

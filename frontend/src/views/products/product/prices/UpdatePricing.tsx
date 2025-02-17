@@ -1,10 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  PricingConfig,
-  validateConfig,
-  validateFixedConfig,
-  validateUsageConfig,
-} from "./PricingConfig";
+import { PricingConfig, validateConfig } from "./PricingConfig";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +7,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useProductContext } from "../ProductContext";
-import { PriceType } from "@autumn/shared";
-import toast from "react-hot-toast";
 
 export default function UpdatePricing({
   open,
