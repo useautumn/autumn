@@ -205,6 +205,12 @@ export const handleInvoiceOnly = async ({
     stripeSub.latest_invoice as string
   );
 
+  try {
+    await stripeCli.invoices.sendInvoice(stripeInvoice.id);
+  } catch (error: any) {
+    console.log("Failed to send stripe invoice:", error.message);
+  }
+
   await InvoiceService.createInvoiceFromStripe({
     sb: req.sb,
     stripeInvoice,
