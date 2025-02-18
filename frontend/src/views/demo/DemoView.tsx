@@ -35,7 +35,7 @@ const colorizeJSON = (json: any) => {
 
 export default function DemoView() {
   const customerId = "ayush";
-  const eventName = "logs";
+  const eventName = "pages";
 
   const {
     data: customer,
@@ -55,7 +55,7 @@ export default function DemoView() {
     event_name: eventName,
     customer_id: customerId,
     properties: {
-      value: 2500,
+      value: 1,
     },
   };
 
@@ -92,6 +92,9 @@ export default function DemoView() {
     const { data } = await axiosInstance.post("/events", {
       customer_id: customerId,
       event_name: featureId,
+      properties: {
+        value: 1,
+      },
     });
 
     return data;
@@ -137,7 +140,7 @@ export default function DemoView() {
                       product_id: "pro",
                       options: [
                         {
-                          feature_id: "seats",
+                          feature_id: "team-members",
                           quantity: 2,
                         },
                       ],
@@ -149,26 +152,26 @@ export default function DemoView() {
                 >
                   Buy Pro
                 </Button>
-                <Button variant="gradientPrimary" onClick={() => {}}>
+                {/* <Button variant="gradientPrimary" onClick={() => {}}>
                   Buy Team
-                </Button>
+                </Button> */}
               </div>
               <CustomToaster />
 
-              <div className="text-lg font-semibold mt-4">Chat</div>
+              <div className="text-lg font-semibold mt-4">App</div>
               <div className="flex gap-2">
-                <Input
+                {/* <Input
                   placeholder="Enter message"
                   className="w-full"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                />
+                /> */}
                 <Button
                   isLoading={hasAccessLoading}
                   onClick={async () => handleClicked()}
                   className="font-semibold bg-gradient-to-b border-b-2 border-red-500 from-red-500 to-red-300 hover:bg-gradient-to-r hover:from-green-500 hover:via-yellow-500 hover:to-pink-500 transition-all duration-700 w-48 shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:shadow-[0_0_20px_rgba(236,72,153,0.7)] bg-[size:200%] hover:bg-right"
                 >
-                  Log
+                  New Page
                 </Button>
               </div>
               <CustomerBalances customer={customer} />
