@@ -139,12 +139,13 @@ export default function DemoView() {
                       customer_id: customerId,
                       product_id: "pro",
                       options: [
-                        {
-                          feature_id: "team-members",
-                          quantity: 2,
-                        },
+                        // {
+                        //   feature_id: "team-members",
+                        //   quantity: 2,
+                        // },
                       ],
                     });
+                    // console.log(data);
 
                     data.checkout_url &&
                       window.open(data.checkout_url, "_blank");
@@ -157,8 +158,11 @@ export default function DemoView() {
                 </Button> */}
               </div>
               <CustomToaster />
-
-              <div className="text-lg font-semibold mt-4">App</div>
+              <div className="text-lg font-semibold mt-4">
+                Hello, {customer?.customer.name}
+              </div>
+              <CustomerBalances customer={customer} />
+              <div className="text-lg font-semibold mt-4">Subframe App</div>
               <div className="flex gap-2">
                 {/* <Input
                   placeholder="Enter message"
@@ -173,8 +177,50 @@ export default function DemoView() {
                 >
                   New Page
                 </Button>
+                <Button
+                  variant="gradientSecondary"
+                  onClick={async () => {
+                    const { data } = await axiosInstance.post("/events", {
+                      customer_id: customerId,
+                      event_name: "team-members",
+                      properties: {
+                        value: 1,
+                      },
+                    });
+                    await cusMutate();
+                  }}
+                >
+                  Add Seat
+                </Button>
+                <Button
+                  variant="gradientSecondary"
+                  onClick={async () => {
+                    const { data } = await axiosInstance.post("/events", {
+                      customer_id: customerId,
+                      event_name: "team-members",
+                      properties: {
+                        value: -1,
+                      },
+                    });
+                    await cusMutate();
+                    console.log(data);
+                  }}
+                >
+                  Remove Seat
+                </Button>
+                <Button
+                  variant="gradientSecondary"
+                  onClick={async () => {
+                    const { data } = await axiosInstance.get(
+                      `/customers/${customerId}/billing_portal`
+                    );
+                    window.open(data.url, "_blank");
+                  }}
+                >
+                  Manage Subscription
+                </Button>
               </div>
-              <CustomerBalances customer={customer} />
+
               {/* <Card>
                 <CardHeader className="flex justify-between p-3 px-4">
                   <div className="flex justify-between items-center gap-4">
