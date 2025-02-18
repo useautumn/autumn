@@ -50,10 +50,10 @@ export default async function RootLayout({
         suppressHydrationWarning
       >
         {/* <PointerProvider apiKey={process.env.NEXT_PUBLIC_POINTER_KEY || ""}> */}
-        <ClerkProvider>
-          <NextUIProvider>
-            <SidebarProvider>
-              <PostHogProvider>
+        <PostHogProvider>
+          <ClerkProvider>
+            <NextUIProvider>
+              <SidebarProvider>
                 {!path.includes("/demo") && (
                   <HomeSidebar
                     user={sessionClaims?.user as any}
@@ -92,10 +92,10 @@ export default async function RootLayout({
                   </div>
                 </main>
                 {/* </AutumnProvider> */}
-              </PostHogProvider>
-            </SidebarProvider>
-          </NextUIProvider>
-        </ClerkProvider>
+              </SidebarProvider>
+            </NextUIProvider>
+          </ClerkProvider>
+        </PostHogProvider>
         {/* </PointerProvider> */}
       </body>
     </html>
