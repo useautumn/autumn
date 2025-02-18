@@ -98,7 +98,10 @@ export const handleSubscriptionDeleted = async ({
       });
 
       console.log("   ✅ activated future product");
-    } else {
+    }
+
+    // Activate default product
+    else if (!cusProduct.product.is_add_on) {
       const defaultProducts = await ProductService.getFullDefaultProducts({
         sb,
         orgId: org.id,

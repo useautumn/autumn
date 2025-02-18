@@ -195,14 +195,22 @@ export const updateCustomerBalance = async ({
           break;
         }
 
-        if (cusEnt.balance! <= 0) {
+        // If cus end has no balance, and toDeduct will make it negative, skip, else add to balance
+        if (cusEnt.balance! <= 0 && toDeduct > 0) {
           continue;
         }
 
         let newBalance, deducted;
 
+        // If toDeduct is negative, add to balance and set toDeduct to 0
+        if (toDeduct < 0) {
+          newBalance = cusEnt.balance! - toDeduct;
+          deducted = toDeduct;
+          toDeduct = 0;
+        }
+
         // If cusEnt has less balance to deduct than 0, deduct the balance and set balance to 0
-        if (cusEnt.balance! - toDeduct < 0) {
+        else if (cusEnt.balance! - toDeduct < 0) {
           toDeduct -= cusEnt.balance!;
           deducted = cusEnt.balance!;
           newBalance = 0;
@@ -228,7 +236,7 @@ export const updateCustomerBalance = async ({
     }
 
     // If toDeduct is still not 0, deduct from usage-based price?
-    if (toDeduct <= 0) {
+    if (toDeduct == 0) {
       continue;
     }
 
