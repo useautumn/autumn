@@ -18,9 +18,11 @@ function CustomerBalances({ customer }: { customer: any }) {
             {keyToTitle(entitlement.feature_id)}
           </p>
           <p className="text-lg font-bold text-t2/90">
-            {`${entitlement.balance} / ${
-              entitlement.balance + entitlement.used
-            }` || "Allowed"}
+            {entitlement.balance == null
+              ? "✅"
+              : `${entitlement.balance} / ${
+                  entitlement.balance + entitlement.used
+                }` || "Allowed"}
           </p>
         </div>
       ))}
