@@ -29,6 +29,10 @@ export const validateFeature = (data: any) => {
         statusCode: 400,
       });
     }
+
+    if (!config.group_by) {
+      config.group_by = null;
+    }
   }
 
   try {
@@ -41,6 +45,8 @@ export const validateFeature = (data: any) => {
     });
   }
 };
+
+// /entitled customer_id & feature_id & group_by
 
 featureApiRouter.post("", async (req: any, res) => {
   let data = req.body;

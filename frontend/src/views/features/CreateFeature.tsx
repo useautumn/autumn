@@ -15,6 +15,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { FeatureService } from "@/services/FeatureService";
 import { FeatureConfig } from "./metered-features/FeatureConfig";
 import { getBackendErr } from "@/utils/genUtils";
+import { validateFeature } from "./featureUtils";
 
 const defaultFeature = {
   type: FeatureType.Boolean,
@@ -49,12 +50,18 @@ export const CreateFeature = () => {
     ) {
       config.filters[0].value.push(eventNameInput);
     }
+
     return config;
   };
 
   const handleCreateFeature = async () => {
     if (!feature.name || !feature.id || !feature.type || !feature.config) {
       toast.error("Please fill out all fields");
+      return;
+    }
+
+    feature.config = updateConfig();
+    if (!validateFeature(feature)) {
       return;
     }
 
