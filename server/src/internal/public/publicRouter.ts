@@ -74,27 +74,7 @@ const processProduct = (product: FullProduct) => {
     (p: Price) => p.config!.type === PriceType.Usage
   );
 
-  // const processdEnts = [];
-
-  // for (const ent of ents) {
-  //   const internalFeatureId = ent.internal_feature_id;
-
-  //   const relatedPrice = prices.find((p: Price) => {
-  //     let config = p.config as UsagePriceConfig;
-  //     if (config.internal_feature_id === internalFeatureId) {
-  //       return true;
-  //     }
-  //     return false;
-  //   });
-
-  //   const processedEnt: any = {
-  //     ...ent,
-  //   };
-  //   if (relatedPrice) {
-  //     processedEnt.price = relatedPrice.config;
-  //   }
-  //   processdEnts.push(PublicEntitlementSchema.parse(processedEnt));
-  // }
+  console.log("Prices:", product.prices);
 
   let processedProduct: any = structuredClone(product);
   // processedProduct.entitlements = processdEnts;
