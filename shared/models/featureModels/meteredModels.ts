@@ -9,7 +9,12 @@ export interface Aggregate {
   property: string | null;
 }
 
+export interface GroupBy {
+  property: string;
+}
+
 export interface MeteredConfig {
   filters: Expression[];
   aggregate: Aggregate;
+  group_by?: GroupBy;
 }
