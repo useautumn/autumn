@@ -376,13 +376,27 @@ export const createStripeInArrearPrice = async ({
     (e) => e.internal_feature_id === config.internal_feature_id
   )!.feature;
 
-  const meter = await stripeCli.billing.meters.create({
-    display_name: `${product.name} - ${feature!.name}`,
-    event_name: price.id!,
-    default_aggregation: {
-      formula: "sum",
-    },
-  });
+  // 1. Get meter by event_name
+
+  let meter;
+  try {
+    meter = await stripeCli.billing.meters.create({
+      display_name: `${product.name} - ${feature!.name}`,
+      event_name: price.id!,
+      default_aggregation: {
+        formula: "sum",
+      },
+    });
+  } catch (error: any) {
+    const meters = await stripeCli.billing.meters.list({
+      limit: 100,
+      status: "active",
+    });
+    meter = meters.data.find((m) => m.event_name == price.id!);
+    if (!meter) {
+      throw error;
+    }
+  }
 
   const tiers = priceToStripeTiers(
     price,
@@ -390,18 +404,11 @@ export const createStripeInArrearPrice = async ({
   );
 
   let priceAmountData = {};
-
-  if (tiers.length == 1) {
-    priceAmountData = {
-      unit_amount: tiers[0].unit_amount,
-    };
-  } else {
-    priceAmountData = {
-      billing_scheme: "tiered",
-      tiers_mode: "graduated",
-      tiers: tiers,
-    };
-  }
+  priceAmountData = {
+    billing_scheme: "tiered",
+    tiers_mode: "graduated",
+    tiers: tiers,
+  };
 
   const stripePrice = await stripeCli.prices.create({
     // product: product.processor!.id,
@@ -413,13 +420,13 @@ export const createStripeInArrearPrice = async ({
     currency: "usd",
     recurring: {
       ...(billingIntervalToStripe(price.config!.interval!) as any),
-      meter: meter.id,
+      meter: meter!.id,
       usage_type: "metered",
     },
   });
 
   config.stripe_price_id = stripePrice.id;
-  config.stripe_meter_id = meter.id;
+  config.stripe_meter_id = meter!.id;
   await PriceService.update({
     sb,
     priceId: price.id!,

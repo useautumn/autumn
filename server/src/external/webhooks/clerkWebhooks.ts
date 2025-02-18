@@ -23,6 +23,7 @@ import { generateId, keyToTitle } from "@/utils/genUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
+import { getBillingType } from "@/internal/prices/priceUtils.js";
 
 const defaultFeatures = [
   {
@@ -142,6 +143,7 @@ const createDefaultProducts = async ({
             id: generateId("en"),
             internal_product_id: internalProductId,
             created_at: Date.now(),
+            org_id: orgId,
           }),
         });
       }
@@ -154,6 +156,8 @@ const createDefaultProducts = async ({
             id: generateId("pr"),
             internal_product_id: internalProductId,
             created_at: Date.now(),
+            org_id: orgId,
+            billing_type: getBillingType(price.config),
           }),
         });
       }

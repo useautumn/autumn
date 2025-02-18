@@ -61,7 +61,7 @@ export function FeatureConfig({
         }
   );
 
-  const [idChanged, setIdChanged] = useState(false);
+  const [idChanged, setIdChanged] = useState(!!feature.id);
   const [featureType, setFeatureType] = useState<string>(
     feature.type ? feature.type : FeatureType.Boolean
   );
