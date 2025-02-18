@@ -29,7 +29,7 @@ import { headers } from "next/headers";
 import { AppEnv } from "@autumn/shared";
 import { SidebarProvider } from "../components/ui/sidebar";
 import HomeSidebar from "../views/sidebar/Sidebar";
-// import { AutumnProvider } from "@useautumn/react";
+import { PostHogProvider } from "./providers";
 
 export default async function RootLayout({
   children,
@@ -53,44 +53,46 @@ export default async function RootLayout({
         <ClerkProvider>
           <NextUIProvider>
             <SidebarProvider>
-              {!path.includes("/demo") && (
-                <HomeSidebar
-                  user={sessionClaims?.user as any}
-                  org={org}
-                  path={path}
-                  env={env as AppEnv}
-                />
-              )}
-              {/* <AutumnProvider
+              <PostHogProvider>
+                {!path.includes("/demo") && (
+                  <HomeSidebar
+                    user={sessionClaims?.user as any}
+                    org={org}
+                    path={path}
+                    env={env as AppEnv}
+                  />
+                )}
+                {/* <AutumnProvider
                 publishableKey={
                   process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY || ""
                 }
               > */}
-              <main className="flex flex-col w-full h-screen overflow-hidden">
-                {env === AppEnv.Sandbox && (
-                  <div className="w-full h-5 bg-primary/80 text-white text-xs flex items-center justify-center">
-                    <p className="font-medium">SANDBOX</p>
-                  </div>
-                )}
+                <main className="flex flex-col w-full h-screen overflow-hidden">
+                  {env === AppEnv.Sandbox && (
+                    <div className="w-full h-5 bg-primary/80 text-white text-xs flex items-center justify-center">
+                      <p className="font-medium">SANDBOX</p>
+                    </div>
+                  )}
 
-                <div className="w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center">
-                  <div className="hidden md:flex w-full h-fit max-w-[1048px] flex-col gap-4">
-                    {children}
-                  </div>
-                  <div className="md:hidden w-full h-full flex items-center justify-center">
-                    <div className="bg-white p-6 rounded-lg shadow-sm text-center">
-                      <h2 className="text-xl font-semibold mb-2">
-                        Autumn is coming to mobile soon
-                      </h2>
-                      <p className="text-gray-600">
-                        We&apos;re currently designed for larger screens. Come
-                        back on your desktop?
-                      </p>
+                  <div className="w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center">
+                    <div className="hidden md:flex w-full h-fit max-w-[1048px] flex-col gap-4">
+                      {children}
+                    </div>
+                    <div className="md:hidden w-full h-full flex items-center justify-center">
+                      <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+                        <h2 className="text-xl font-semibold mb-2">
+                          Autumn is coming to mobile soon
+                        </h2>
+                        <p className="text-gray-600">
+                          We&apos;re currently designed for larger screens. Come
+                          back on your desktop?
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </main>
-              {/* </AutumnProvider> */}
+                </main>
+                {/* </AutumnProvider> */}
+              </PostHogProvider>
             </SidebarProvider>
           </NextUIProvider>
         </ClerkProvider>
