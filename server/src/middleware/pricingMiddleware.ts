@@ -8,7 +8,7 @@ export const pricingMiddleware = async (req: any, res: any, next: any) => {
 
   let host = req.headers.host;
   if (
-    host.includes("localhost") ||
+    // host.includes("localhost") ||
     req.minOrg.slug == "autumn" ||
     req.minOrg.slug == "firecrawl" ||
     req.minOrg.slug == "pipeline" ||
@@ -27,35 +27,29 @@ export const pricingMiddleware = async (req: any, res: any, next: any) => {
       });
     }
 
-    // if (path == "/attach" && method == "POST") {
-    //   await isEntitled({
-    //     minOrg: req.minOrg,
-    //     env: req.env,
-    //     featureId: FeatureId.Revenue,
-    //   });
-    // }
-
     next();
+
+    if (res.statusCode === 200) {
+      if (path == "/products" && method === "POST") {
+        console.log("sending product create event");
+        await sendProductEvent({
+          minOrg: req.minOrg,
+          env: req.env,
+          incrementBy: 1,
+        });
+      }
+
+      if (path.match(/^\/products\/[^\/]+$/) && method === "DELETE") {
+        console.log("sending product delete event");
+        await sendProductEvent({
+          minOrg: req.minOrg,
+          env: req.env,
+          incrementBy: -1,
+        });
+      }
+    }
   } catch (error) {
     handleRequestError({ req, error, res, action: "pricingMiddleware" });
     return;
-  }
-
-  if (res.statusCode === 200) {
-    if (path == "/products" && method === "POST") {
-      await sendProductEvent({
-        minOrg: req.minOrg,
-        env: req.env,
-        incrementBy: 1,
-      });
-    }
-
-    if (path.match(/^\/products\/[^\/]+$/) && method === "DELETE") {
-      await sendProductEvent({
-        minOrg: req.minOrg,
-        env: req.env,
-        incrementBy: -1,
-      });
-    }
   }
 };
