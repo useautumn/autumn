@@ -26,7 +26,7 @@ const axiosInstance = axios.create({
 
 const colorizeJSON = (json: any) => {
   const jsonString = JSON.stringify(json, null, 2);
-  return jsonString.replace(/\btrue\b|\bfalse\b/g, (match) =>
+  return jsonString?.replace(/\btrue\b|\bfalse\b/g, (match) =>
     match === "true"
       ? `<span class="text-lime-500">true</span>`
       : `<span class="text-red-400">false</span>`
@@ -34,12 +34,13 @@ const colorizeJSON = (json: any) => {
 };
 
 export default function DemoView() {
-  const customerId = "ayush";
-  const eventName = "pages";
+  const customerId = "hahnbee";
+  const eventName = "chat-responses";
 
   const {
     data: customer,
     error,
+    isLoading: customerLoading,
     mutate: cusMutate,
   } = useDemoSWR({
     url: `/public/customers/${customerId}`,
@@ -47,26 +48,29 @@ export default function DemoView() {
   });
 
   const hasAccessRequest = {
-    feature_id: eventName,
     customer_id: customerId,
+    feature_id: eventName,
   };
 
   const sendEventRequest = {
-    event_name: eventName,
     customer_id: customerId,
-    properties: {
-      value: 1,
-    },
+    event_name: eventName,
+    // properties: {
+    //   value: 1,
+    // },
+  };
+
+  const getCustomerRequest = {
+    customer_id: customerId,
   };
 
   const [hasAccessLoading, setHasAccessLoading] = useState(false);
   const [hasAccessResponse, setHasAccessResponse] = useState(null);
+  const [getCustomerResponse, setGetCustomerResponse] = useState(null);
   const [sendEventLoading, setSendEventLoading] = useState(false);
   const [sendEventResponse, setSendEventResponse] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
   const [hasProModels, setHasProModels] = useState<boolean>(false);
-  const [showPremiumModels, setShowPremiumModels] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -77,6 +81,10 @@ export default function DemoView() {
     };
     init();
   }, []);
+
+  useEffect(() => {
+    setGetCustomerResponse(customer?.entitlements);
+  }, [customer]);
 
   //Check access to Pro features and email balance
   const checkAccess = async (featureId: string) => {
@@ -119,8 +127,8 @@ export default function DemoView() {
   };
 
   return (
-    <div className="w-full flex justify-start pl-12">
-      <div className="flex gap-32 p-4 w-[900px] relative">
+    <div className="w-full h-fit bg-stone-50 flex justify-start absolute top-0 left-0">
+      <div className="flex p-4 w-full gap-32 relative">
         <div className="flex flex-col gap-4 min-w-[700px]">
           {loading ? (
             <div className="flex justify-center items-center h-[500px]">
@@ -128,10 +136,10 @@ export default function DemoView() {
             </div>
           ) : (
             <>
-              {/* <AutumnProvider publishableKey={publishableKey || ""}>
+              <AutumnProvider publishableKey={publishableKey || ""}>
                 <PricingPage customerId={customerId} />
-              </AutumnProvider> */}
-              <div className="flex gap-2">
+              </AutumnProvider>
+              {/* <div className="flex gap-2">
                 <Button
                   variant="gradientPrimary"
                   onClick={async () => {
@@ -153,16 +161,10 @@ export default function DemoView() {
                 >
                   Buy Pro
                 </Button>
-                {/* <Button variant="gradientPrimary" onClick={() => {}}>
-                  Buy Team
-                </Button> */}
-              </div>
+              </div> */}
               <CustomToaster />
-              <div className="text-lg font-semibold mt-4">
-                Hello, {customer?.customer.name}
-              </div>
               <CustomerBalances customer={customer} />
-              <div className="text-lg font-semibold mt-4">Subframe App</div>
+              <div className="text-lg font-semibold mt-4">Mintlify App</div>
               <div className="flex gap-2">
                 {/* <Input
                   placeholder="Enter message"
@@ -175,40 +177,49 @@ export default function DemoView() {
                   onClick={async () => handleClicked()}
                   className="font-semibold bg-gradient-to-b border-b-2 border-red-500 from-red-500 to-red-300 hover:bg-gradient-to-r hover:from-green-500 hover:via-yellow-500 hover:to-pink-500 transition-all duration-700 w-48 shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:shadow-[0_0_20px_rgba(236,72,153,0.7)] bg-[size:200%] hover:bg-right"
                 >
-                  New Page
+                  Use AI Chat
                 </Button>
                 <Button
                   variant="gradientSecondary"
                   onClick={async () => {
-                    const { data } = await axiosInstance.post("/events", {
+                    const { data } = await axiosInstance.post("/entitled", {
                       customer_id: customerId,
-                      event_name: "team-members",
-                      properties: {
-                        value: 1,
+                      feature_id: "editors",
+                      event_data: {
+                        event_name: "editors",
+                        properties: {
+                          value: 1,
+                        },
                       },
                     });
-                    await cusMutate();
-                  }}
-                >
-                  Add Seat
-                </Button>
-                <Button
-                  variant="gradientSecondary"
-                  onClick={async () => {
-                    const { data } = await axiosInstance.post("/events", {
-                      customer_id: customerId,
-                      event_name: "team-members",
-                      properties: {
-                        value: -1,
-                      },
-                    });
-                    await cusMutate();
                     console.log(data);
+                    !data.allowed && toast.error("You're out of editors");
+                    await cusMutate();
                   }}
                 >
-                  Remove Seat
+                  Add Editor
                 </Button>
                 <Button
+                  variant="gradientSecondary"
+                  onClick={async () => {
+                    const { data } = await axiosInstance.post("/entitled", {
+                      customer_id: customerId,
+                      feature_id: "editors",
+                      required_quantity: -1,
+                      event_data: {
+                        event_name: "editors",
+                        properties: {
+                          value: -1,
+                        },
+                      },
+                    });
+                    console.log(data);
+                    await cusMutate();
+                  }}
+                >
+                  Remove Editor
+                </Button>
+                {/* <Button
                   variant="gradientSecondary"
                   onClick={async () => {
                     const { data } = await axiosInstance.get(
@@ -218,7 +229,7 @@ export default function DemoView() {
                   }}
                 >
                   Manage Subscription
-                </Button>
+                </Button> */}
               </div>
 
               {/* <Card>
@@ -313,6 +324,13 @@ export default function DemoView() {
             request={sendEventRequest}
             response={sendEventResponse}
             loading={sendEventLoading}
+          />
+          <APIPlayground
+            title="Get Customer"
+            endpoint="GET /customers/:customer_id"
+            request={getCustomerRequest}
+            response={getCustomerResponse}
+            loading={customerLoading}
           />
         </div>
       </div>
