@@ -109,6 +109,11 @@ export const validateUsageConfig = (usageConfig: any) => {
   const config = { ...usageConfig };
   const { bill_when, interval, billing_units } = config;
 
+  if (!config.internal_feature_id) {
+    toast.error("Please select an entitlement");
+    return null;
+  }
+
   if (bill_when === BillWhen.BelowThreshold) {
   } else if (bill_when === BillWhen.StartOfPeriod) {
     if (!interval) {
@@ -172,6 +177,12 @@ export const validateFixedConfig = (fixedConfig: any) => {
 export const validateConfig = (price: any, prices: any) => {
   const priceType = price.config.type;
   let config = null;
+
+  if (!price.name) {
+    toast.error("Please fill out a name");
+    return null;
+  }
+
   if (priceType === PriceType.Fixed) {
     config = validateFixedConfig(price.config);
   } else if (priceType === PriceType.Usage) {

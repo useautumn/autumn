@@ -116,18 +116,22 @@ const handleOneOffPrices = async ({
     const entitlement = getPriceEntitlement(price, entitlements);
     const { amountPerUnit, quantity } = getPriceAmount(price, options!);
 
-    const allowanceStr =
-      entitlement.allowance_type == AllowanceType.Unlimited
-        ? "Unlimited"
-        : entitlement.allowance_type == AllowanceType.None
-        ? "None"
-        : `${entitlement.allowance}`;
+    let allowanceStr = "";
+    if (entitlement) {
+      allowanceStr =
+        entitlement.allowance_type == AllowanceType.Unlimited
+          ? "Unlimited"
+          : entitlement.allowance_type == AllowanceType.None
+          ? "None"
+          : `${entitlement.allowance}`;
+      allowanceStr = `x ${allowanceStr} (${entitlement.feature.name})`;
+    }
 
     await stripeCli.invoiceItems.create({
       customer: customer.processor.id,
       amount: amountPerUnit * quantity * 100,
       invoice: stripeInvoice.id,
-      description: `Invoice for ${product.name} -- ${quantity}x ${allowanceStr} (${entitlement.feature.name})`,
+      description: `Invoice for ${product.name} -- ${quantity}${allowanceStr}`,
     });
   }
 

@@ -271,10 +271,15 @@ const EntitledSchema = z.object({
 });
 
 entitledRouter.post("", async (req: any, res: any) => {
-  let { customer_id, feature_id, quantity, customer_data, event_data } =
-    req.body;
+  let {
+    customer_id,
+    feature_id,
+    required_quantity,
+    customer_data,
+    event_data,
+  } = req.body;
 
-  quantity = quantity ? parseInt(quantity) : 1;
+  const quantity = required_quantity ? parseInt(required_quantity) : 1;
 
   const { orgId, env, sb } = req;
 

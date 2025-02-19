@@ -98,7 +98,10 @@ const getAffectedFeatures = async ({
       and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
     )
 
-    select * from features WHERE EXISTS (
+    select * from features WHERE 
+    org_id = '${orgId}'
+    and env = '${env}'
+    and EXISTS (
       SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
       schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
     )
@@ -162,26 +165,6 @@ eventsRouter.post("", async (req: any, res: any) => {
   const env = req.env;
 
   try {
-    // const { customer, event } = await getEventAndCustomer(req);
-
-    // const affectedFeatures = await getAffectedFeatures({
-    //   pg: req.pg,
-    //   event,
-    //   orgId,
-    //   env,
-    // });
-
-    // if (affectedFeatures.length > 0) {
-    //   let queue: Queue = req.queue;
-    //   queue.add("update-balance", {
-    //     customerId: customer.internal_id,
-    //     customer,
-    //     features: affectedFeatures,
-    //     event,
-    //   });
-    // } else {
-    //   console.log("No affected features found");
-    // }
     await handleEventSent({
       req,
       customer_id: body.customer_id,
