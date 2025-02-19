@@ -119,7 +119,7 @@ export default function MintDemo({
     setHasAccessLoading(false);
 
     if (!data.allowed) {
-      toast.error("You're out of " + eventName);
+      toast.error("You're out of AI chat responses");
       return;
     }
 
