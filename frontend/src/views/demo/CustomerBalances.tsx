@@ -7,20 +7,24 @@ function CustomerBalances({ customer }: { customer: any }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="flex gap-4">
       {customer.entitlements.map((entitlement) => (
         <div
           key={entitlement.feature_id}
-          className="flex flex-col justify-between h-24 border border-zinc-200 bg-white p-4 rounded-md shadow-sm bg-gradient-to-b from-white to-zinc-100"
+          className="flex flex-col justify-between w-36 gap-3 border border-zinc-200 bg-white p-4 rounded-md shadow-sm bg-gradient-to-b from-white to-zinc-100"
         >
           {/* <div> */}
           <p className="text-sm font-medium text-gray-600">
             {keyToTitle(entitlement.feature_id)}
           </p>
           <p className="text-lg font-bold text-t2/90">
-            {`${entitlement.balance} / ${
-              entitlement.balance + entitlement.used
-            }` || "Allowed"}
+            {entitlement.unlimited === true
+              ? "Unlimited"
+              : entitlement.balance !== undefined
+              ? `${entitlement.balance} / ${
+                  entitlement.balance + entitlement.used
+                }`
+              : "✅"}
           </p>
         </div>
       ))}
