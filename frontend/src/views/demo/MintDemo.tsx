@@ -57,7 +57,7 @@ export default function MintDemo({
 
   const sendEventRequestEditorsPlus = {
     customer_id: customerId,
-    event_name: "editors",
+    event_name: eventName,
     properties: {
       value: 1,
     },
@@ -65,7 +65,7 @@ export default function MintDemo({
 
   const sendEventRequestEditorsMinus = {
     customer_id: customerId,
-    event_name: "editors",
+    event_name: eventName,
     properties: {
       value: -1,
     },
