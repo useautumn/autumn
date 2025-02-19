@@ -52,12 +52,12 @@ export default function MintDemo({
 
   const sendEventRequestChat = {
     customer_id: customerId,
-    event_name: eventName,
+    event_name: "chat-responses",
   };
 
   const sendEventRequestEditorsPlus = {
     customer_id: customerId,
-    event_name: eventName,
+    event_name: "editors",
     properties: {
       value: 1,
     },
@@ -65,7 +65,7 @@ export default function MintDemo({
 
   const sendEventRequestEditorsMinus = {
     customer_id: customerId,
-    event_name: eventName,
+    event_name: "editors",
     properties: {
       value: -1,
     },
@@ -111,11 +111,15 @@ export default function MintDemo({
     return data;
   };
 
+  useEffect(() => {
+    setSendEventRequest(sendEventRequestChat);
+  }, [eventName]);
+
   const handleClicked = async () => {
-    setEventName("chat-responses");
     setHasAccessLoading(true);
-    const data = await checkAccess(eventName);
+    const data = await checkAccess("chat-responses");
     setHasAccessResponse(data);
+    await setSendEventRequest(sendEventRequestChat);
     setHasAccessLoading(false);
 
     if (!data.allowed) {
