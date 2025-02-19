@@ -50,80 +50,6 @@ const sortProducts = (products: any[]) => {
   });
 };
 
-// 1. Get main price
-const getMainPrice = (
-  product: FullProduct,
-  defaultCurrency: string,
-  features: Feature[]
-) => {
-  // If is free
-  if (isFreeProduct(product.prices)) {
-    return {
-      amount: "Free",
-      feature_id: null,
-      interval: null,
-    };
-  }
-
-  const fixedPrice = product.prices.find(
-    (p: Price) => p.config?.type === PriceType.Fixed
-  );
-
-  let result: any = {
-    amount: "Custom",
-    interval: null,
-    feature_id: null,
-  };
-
-  if (fixedPrice) {
-    const config = fixedPrice.config as FixedPriceConfig;
-
-    result.amount = config.amount.toString();
-
-    if (config.interval != BillingInterval.OneOff) {
-      result.interval = `/ ${keyToTitle(config.interval)}`;
-    }
-  }
-
-  const usagePrice = product.prices.find(
-    (p: Price) => p.config?.type === PriceType.Usage
-  );
-
-  if (usagePrice) {
-    const config = usagePrice.config as UsagePriceConfig;
-
-    result.amount =
-      config.usage_tiers.length > 1
-        ? `From ${config.usage_tiers[0].amount.toString()}`
-        : config.usage_tiers[0].amount.toString();
-
-    // If it's seat based
-    const feature = features.find((f) => f.id == config.feature_id) as Feature;
-    const billingType = getBillingType(config);
-
-    let billingUnits = config.billing_units!;
-    if (billingUnits > 1) {
-      result.interval = `/ ${billingUnits} ${feature.name}`;
-    } else {
-      result.interval = `/ ${feature.name}`;
-    }
-
-    if (billingType == BillingType.UsageInAdvance) {
-      if (config.interval != BillingInterval.OneOff) {
-        result.interval += ` / ${keyToTitle(config.interval!)}`;
-      }
-    }
-
-    result.feature_id = feature.id;
-  }
-
-  const currency = defaultCurrency ? defaultCurrency : "usd";
-  const symbol = getSymbolFromCurrency(currency.toUpperCase());
-  result.amount = `${symbol}${result.amount}`;
-
-  return result;
-};
-
 function formatNumber(num: number) {
   if (num >= 1000000) {
     return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
@@ -158,6 +84,82 @@ const getPriceString = (currency: string, feature: Feature, price: Price) => {
   }
 };
 
+// 1. Get main price
+const getMainPrice = (
+  product: FullProduct,
+  defaultCurrency: string,
+  features: Feature[]
+) => {
+  // If is free
+  if (isFreeProduct(product.prices)) {
+    return {
+      amount: "Free",
+      feature_id: null,
+      interval: null,
+    };
+  }
+
+  const fixedPrice = product.prices.find(
+    (p: Price) => p.config?.type === PriceType.Fixed
+  );
+
+  let result: any = {
+    amount: "Custom",
+    interval: null,
+    feature_id: null,
+  };
+
+  if (fixedPrice) {
+    const config = fixedPrice.config as FixedPriceConfig;
+
+    result.amount = config.amount.toString();
+
+    if (config.interval != BillingInterval.OneOff) {
+      result.interval = `/ ${keyToTitle(config.interval)}`;
+    }
+  } else {
+    const usagePrice = product.prices.find(
+      (p: Price) => p.config?.type === PriceType.Usage
+    );
+
+    if (usagePrice) {
+      const config = usagePrice.config as UsagePriceConfig;
+
+      result.amount =
+        config.usage_tiers.length > 1
+          ? `From ${config.usage_tiers[0].amount.toString()}`
+          : config.usage_tiers[0].amount.toString();
+
+      // If it's seat based
+      const feature = features.find(
+        (f) => f.id == config.feature_id
+      ) as Feature;
+      const billingType = getBillingType(config);
+
+      let billingUnits = config.billing_units!;
+      if (billingUnits > 1) {
+        result.interval = `/ ${billingUnits} ${feature.name}`;
+      } else {
+        result.interval = `/ ${feature.name}`;
+      }
+
+      if (billingType == BillingType.UsageInAdvance) {
+        if (config.interval != BillingInterval.OneOff) {
+          result.interval += ` / ${keyToTitle(config.interval!)}`;
+        }
+      }
+
+      result.feature_id = feature.id;
+    }
+  }
+
+  const currency = defaultCurrency ? defaultCurrency : "usd";
+  const symbol = getSymbolFromCurrency(currency.toUpperCase());
+  result.amount = `${symbol}${result.amount}`;
+
+  return result;
+};
+
 // 2. Process main products
 const processProduct = (org: Organization, product: FullProduct) => {
   // 1. Get main price
@@ -182,7 +184,9 @@ const processProduct = (org: Organization, product: FullProduct) => {
     const relatedPrice = getEntRelatedPrice(e, product.prices);
     let formattedAllowance = formatNumber(e.allowance!);
     if (!relatedPrice) {
-      if (e.allowance && e.allowance > 0) {
+      if (e.allowance_type == AllowanceType.Unlimited) {
+        entString += `Unlimited `;
+      } else if (e.allowance && e.allowance > 0) {
         entString += `${formattedAllowance} `;
       }
 
