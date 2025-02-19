@@ -143,8 +143,8 @@ export default function DemoView() {
                       ],
                     });
 
-                    data.checkout_url &&
-                      window.open(data.checkout_url, "_blank");
+                    // data.checkout_url &&
+                    //   window.open(data.checkout_url, "_blank");
                   }}
                 >
                   Buy Pro
