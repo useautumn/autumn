@@ -17,10 +17,14 @@ export default clerkMiddleware(async (auth, req) => {
   requestHeaders.set("path", path);
   requestHeaders.set("origin", req.nextUrl.origin);
 
+  if (path.includes("/demo")) {
+    return NextResponse.next();
+  }
+
   // Check for session claims
   const { sessionClaims }: { sessionClaims: any } = await auth();
 
-  if (isProtectedRoute(req) && !path.includes("/demo")) {
+  if (isProtectedRoute(req)) {
     await auth.protect();
   }
 
