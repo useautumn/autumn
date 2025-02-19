@@ -191,8 +191,10 @@ export default function DemoView() {
                         },
                       },
                     });
-                    console.log(data);
-                    !data.allowed && toast.error("You're out of editors");
+
+                    if (!data.allowed) {
+                      toast.error("You're out of editors");
+                    }
                     await cusMutate();
                   }}
                 >
