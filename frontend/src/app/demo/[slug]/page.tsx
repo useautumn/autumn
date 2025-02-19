@@ -1,20 +1,17 @@
 import { createClient } from "@/utils/supabase/server";
-import DemoView from "@/views/demo/DemoView";
+
 import DynamicDemoView from "@/views/demo/DynamicDemo";
 import MintDemoView from "@/views/demo/MintDemo";
 
-export default async function DemoPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default async function DemoPage({ params }) {
   // console.log(params);
+  const { slug } = await params;
 
   const sb = await createClient();
   const { data, error } = await sb
     .from("demo")
     .select("*")
-    .eq("slug", params.slug)
+    .eq("slug", slug)
     .single();
 
   if (error) {

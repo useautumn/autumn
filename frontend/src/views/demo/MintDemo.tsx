@@ -167,8 +167,9 @@ export default function MintDemoView({
                           },
                         }
                       );
-                      console.log(data);
-                      !data.allowed && toast.error("You're out of editors");
+                      if (!data.allowed) {
+                        toast.error("You're out of editors");
+                      }
                       await cusMutate();
                     }}
                   >
@@ -191,7 +192,7 @@ export default function MintDemoView({
                           },
                         }
                       );
-                      console.log(data);
+
                       await cusMutate();
                     }}
                   >
