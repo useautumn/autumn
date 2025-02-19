@@ -65,14 +65,14 @@ export default function DemoView() {
   const [sendEventResponse, setSendEventResponse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
-  const [hasProModels, setHasProModels] = useState<boolean>(false);
-  const [showPremiumModels, setShowPremiumModels] = useState(false);
+  // const [hasProModels, setHasProModels] = useState<boolean>(false);
+  // const [showPremiumModels, setShowPremiumModels] = useState(false);
 
   useEffect(() => {
     const init = async () => {
       setLoading(true);
       // const hasProModels = await checkPremiumModels();
-      setHasProModels(hasProModels);
+      // setHasProModels(hasProModels);
       setLoading(false);
     };
     init();
@@ -149,9 +149,7 @@ export default function DemoView() {
                 >
                   Buy Pro
                 </Button>
-                <Button variant="gradientPrimary" onClick={() => {}}>
-                  Buy Team
-                </Button>
+                <Button variant="gradientPrimary">Buy Team</Button>
               </div>
               <CustomToaster />
 
