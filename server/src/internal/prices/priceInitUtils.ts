@@ -342,6 +342,25 @@ export const handleNewPrices = async ({
   env: AppEnv;
   entitlements: Entitlement[];
 }) => {
+  if (!newPrices) {
+    return;
+  }
+
+  for (const price of newPrices) {
+    let config = price.config! as UsagePriceConfig;
+    if (config.feature_id) {
+      const feature = features.find((f) => f.id === config.feature_id);
+      if (!feature) {
+        throw new RecaseError({
+          message: `Feature ${config.feature_id} not found for price ${price.name}`,
+          code: ErrCode.FeatureNotFound,
+          statusCode: 400,
+        });
+      }
+      config.internal_feature_id = feature.internal_id!;
+    }
+  }
+
   const orgId = org.id;
 
   const idToPrice: { [key: string]: Price } = {};
@@ -433,17 +452,6 @@ export const handleNewPrices = async ({
       });
     }
   }
-
-  // Check if prices have same billing interval
-
-  // if (!isCustom) {
-  //   await deleteStripePrices({
-  //     sb,
-  //     prices: [...updatedOrRemovedPrices, ...removedPrices],
-  //     org,
-  //     env,
-  //   });
-  // }
 
   await PriceService.insert({ sb, data: createdPrices });
 
