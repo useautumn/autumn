@@ -135,6 +135,10 @@ publicRouter.get(
     for (const cusProduct of cusProducts) {
       let processed = processFullCusProduct(cusProduct);
 
+      if (processed.status == CusProductStatus.Trialing) {
+        processed.status = CusProductStatus.Active;
+      }
+
       let isAddOn = cusProduct.product.is_add_on;
       if (isAddOn) {
         addOns.push(processed);
@@ -142,6 +146,8 @@ publicRouter.get(
         main.push(processed);
       }
     }
+
+    // console.log("main", main);
 
     res.status(200).json({
       main,
