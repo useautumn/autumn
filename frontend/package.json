@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@useautumn/react": "^0.0.12",
     "@autumn/shared": "*",
     "@clerk/nextjs": "^6.9.14",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
