@@ -118,7 +118,6 @@ export default function PricingPage({
             <div
               style={{
                 ...styles.container,
-                ...styles.addonContainer,
               }}
               className={classNames?.container}
             >

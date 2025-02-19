@@ -60,7 +60,9 @@ const publicRouterMiddleware = async (req: any, res: any, next: any) => {
 
     console.log("Public request from:", org.slug);
     next();
-  } catch (error) {
+  } catch (error: any) {
+    console.log("Failed to get org from pkey");
+    console.log("Error code:", error.code);
     return res.status(400).json({ message: "Invalid publishable key" });
   }
 };

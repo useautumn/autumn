@@ -17,7 +17,7 @@
     "clean": "tsx src/clean.ts",
     "test-all": "mocha 'tests/**/*.ts'",
     "test": "mocha 'tests/**/*.ts'",
-    "test-custom": "mocha 'tests/05_trial.ts'"
+    "test-custom": "mocha 'tests/02_usage.ts'"
   },
   "mocha": {
     "node-option": [

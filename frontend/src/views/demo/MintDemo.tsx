@@ -11,33 +11,27 @@ import { AutumnProvider, PricingPage } from "@useautumn/react";
 import { useDemoSWR } from "@/services/useAxiosSwr";
 import CustomerBalances from "./CustomerBalances";
 import { Input } from "@/components/ui/input";
+import { APIPlayground } from "./APIPlayground";
 
-const colorizeJSON = (json: any) => {
-  const jsonString = JSON.stringify(json, null, 2);
-  return jsonString?.replace(/\btrue\b|\bfalse\b/g, (match) =>
-    match === "true"
-      ? `<span class="text-lime-500">true</span>`
-      : `<span class="text-red-400">false</span>`
-  );
-};
+// const endpoint = "https://app.useautumn.com";
+const endpoint = "http://localhost:8080";
 
-export default function DemoView() {
+export default function MintDemoView({
+  publishableKey,
+  secretKey,
+}: {
+  publishableKey: string;
+  secretKey: string;
+}) {
   const customerId = "hahnbee";
   const eventName = "chat-responses";
 
-  const baseUrl = "http://localhost:8080";
-  const apiKey = process.env.NEXT_PUBLIC_AUTUMN_API_KEY;
-
-  const headers = {
-    Authorization: `Bearer ${apiKey}`,
-  };
-
   const axiosInstance = axios.create({
-    baseURL: baseUrl,
-    headers,
+    baseURL: endpoint,
+    headers: {
+      Authorization: `Bearer ${secretKey}`,
+    },
   });
-
-  const publishableKey = process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY;
 
   const {
     data: customer,
@@ -46,7 +40,7 @@ export default function DemoView() {
     mutate: cusMutate,
   } = useDemoSWR({
     url: `/public/customers/${customerId}`,
-    publishableKey: publishableKey || "",
+    publishableKey: publishableKey!,
   });
 
   const hasAccessRequest = {
@@ -87,7 +81,7 @@ export default function DemoView() {
 
   //Check access to Pro features and email balance
   const checkAccess = async (featureId: string) => {
-    const { data } = await axiosInstance.post("/entitled", {
+    const { data } = await axiosInstance.post("/v1/entitled", {
       customer_id: customerId,
       feature_id: featureId,
     });
@@ -96,7 +90,7 @@ export default function DemoView() {
 
   //Send usage event for email
   const sendUsage = async (featureId: string) => {
-    const { data } = await axiosInstance.post("/events", {
+    const { data } = await axiosInstance.post("/v1/events", {
       customer_id: customerId,
       event_name: featureId,
       properties: {
@@ -126,7 +120,7 @@ export default function DemoView() {
   };
 
   return (
-    <AutumnProvider publishableKey={publishableKey || ""} endpoint={baseUrl}>
+    <AutumnProvider publishableKey={publishableKey} endpoint={endpoint}>
       <div className="w-full h-fit bg-white flex justify-start absolute top-0 left-0">
         <div className="flex p-4 w-full gap-32 relative">
           <div className="flex flex-col gap-4 min-w-[700px]">
@@ -160,16 +154,19 @@ export default function DemoView() {
                   <Button
                     variant="gradientSecondary"
                     onClick={async () => {
-                      const { data } = await axiosInstance.post("/entitled", {
-                        customer_id: customerId,
-                        feature_id: "editors",
-                        event_data: {
-                          event_name: "editors",
-                          properties: {
-                            value: 1,
+                      const { data } = await axiosInstance.post(
+                        "/v1/entitled",
+                        {
+                          customer_id: customerId,
+                          feature_id: "editors",
+                          event_data: {
+                            event_name: "editors",
+                            properties: {
+                              value: 1,
+                            },
                           },
-                        },
-                      });
+                        }
+                      );
                       console.log(data);
                       !data.allowed && toast.error("You're out of editors");
                       await cusMutate();
@@ -180,17 +177,20 @@ export default function DemoView() {
                   <Button
                     variant="gradientSecondary"
                     onClick={async () => {
-                      const { data } = await axiosInstance.post("/entitled", {
-                        customer_id: customerId,
-                        feature_id: "editors",
-                        required_quantity: -1,
-                        event_data: {
-                          event_name: "editors",
-                          properties: {
-                            value: -1,
+                      const { data } = await axiosInstance.post(
+                        "/v1/entitled",
+                        {
+                          customer_id: customerId,
+                          feature_id: "editors",
+                          required_quantity: -1,
+                          event_data: {
+                            event_name: "editors",
+                            properties: {
+                              value: -1,
+                            },
                           },
-                        },
-                      });
+                        }
+                      );
                       console.log(data);
                       await cusMutate();
                     }}
@@ -245,52 +245,3 @@ export default function DemoView() {
     </AutumnProvider>
   );
 }
-
-const APIPlayground = ({
-  title,
-  endpoint,
-  request,
-  response,
-  loading,
-}: {
-  title: string;
-  endpoint: string;
-  request: any;
-  response: any;
-  loading: boolean;
-}) => {
-  return (
-    <div className="flex flex-col gap-4 bg-gray-900 p-4 rounded-sm">
-      <div className="flex flex-col gap-2">
-        <p className="text-md font-semibold text-white">{title}</p>
-        <pre className="bg-gray-600 p-2 rounded text-sm text-gray-200">
-          {endpoint}
-        </pre>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <p className="text-sm text-gray-400">Request</p>
-        <pre className="bg-gray-600 p-2 rounded text-sm text-gray-200">
-          {JSON.stringify(request, null, 2)}
-        </pre>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <p className="text-sm text-gray-400">Response</p>
-        <pre className="bg-gray-600 p-2 rounded text-sm text-gray-200">
-          {loading ? (
-            <SmallSpinner />
-          ) : response === null ? (
-            "No response"
-          ) : (
-            <div
-              dangerouslySetInnerHTML={{
-                __html: colorizeJSON(response),
-              }}
-            />
-          )}
-        </pre>
-      </div>
-    </div>
-  );
-};
