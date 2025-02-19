@@ -320,7 +320,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
   const useCheckout = force_checkout || false;
   console.log("--------------------------------");
-  console.log("ATTACH PRODUCT REQUEST");
+  console.log(`ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
 
   try {
     z.array(FeatureOptionsSchema).parse(optionsListInput);

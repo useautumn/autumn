@@ -68,6 +68,7 @@ export default function UpdateEntitlement({
       }
       return entitlement;
     });
+
     setProduct({ ...product, entitlements: updatedEntitlements });
     setOpen(false);
   };
@@ -84,10 +85,7 @@ export default function UpdateEntitlement({
         />
 
         <DialogFooter>
-          <Button
-            variant="destructive"
-            onClick={handleDeleteEntitlement}
-          >
+          <Button variant="destructive" onClick={handleDeleteEntitlement}>
             Delete
           </Button>
           <Button onClick={handleUpdateEntitlement} variant="gradientPrimary">

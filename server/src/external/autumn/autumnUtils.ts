@@ -67,6 +67,7 @@ export const sendProductEvent = async ({
         name: minOrg.slug,
       },
     });
+    console.log("sent product event", incrementBy);
   } catch (error: any) {
     console.log("Failed to send product event", error?.message || error);
   }

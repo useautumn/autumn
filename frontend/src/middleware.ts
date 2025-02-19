@@ -1,4 +1,8 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import {
+  clerkMiddleware,
+  createRouteMatcher,
+  getAuth,
+} from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { AppEnv } from "@autumn/shared";
 import { autumnMiddleware } from "@useautumn/react/server";

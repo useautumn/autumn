@@ -76,7 +76,7 @@ export default function DemoView() {
     const init = async () => {
       setLoading(true);
       // const hasProModels = await checkPremiumModels();
-      setHasProModels(hasProModels);
+      // setHasProModels(hasProModels);
       setLoading(false);
     };
     init();
@@ -152,8 +152,8 @@ export default function DemoView() {
                     });
                     // console.log(data);
 
-                    data.checkout_url &&
-                      window.open(data.checkout_url, "_blank");
+                    // data.checkout_url &&
+                    //   window.open(data.checkout_url, "_blank");
                   }}
                 >
                   Buy Pro
