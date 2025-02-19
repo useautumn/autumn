@@ -4,11 +4,13 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 
 import {
+  AppEnv,
   CreateEntitlementSchema,
   Entitlement,
   Feature,
@@ -25,6 +27,10 @@ import {
   EntitlementWithFeature,
 } from "@autumn/shared";
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { Button } from "@/components/ui/button";
+import { PlusIcon } from "lucide-react";
+import { envToPath, navigateTo } from "@/utils/genUtils";
+import { useRouter } from "next/navigation";
 
 export const EntitlementConfig = ({
   isUpdate = false,
@@ -35,7 +41,8 @@ export const EntitlementConfig = ({
   entitlement: EntitlementWithFeature | Entitlement | null;
   setEntitlement: (entitlement: EntitlementWithFeature | null) => void;
 }) => {
-  const { features, product } = useProductContext();
+  const { features, product, env } = useProductContext();
+  const router = useRouter();
 
   const [originalEntitlement, _] = useState<Entitlement | null>(
     entitlement || null
@@ -106,6 +113,16 @@ export const EntitlementConfig = ({
                 </div>
               </SelectItem>
             ))}
+          <Button
+            className="flex w-full text-xs font-medium bg-white shadow-none text-primary hover:bg-stone-200"
+            onClick={() => {
+              window.location.href =
+                env === AppEnv.Sandbox ? "/sandbox/features" : "/features";
+            }}
+          >
+            <PlusIcon className="w-3 h-3 mr-2" />
+            Create new feature
+          </Button>
         </SelectContent>
       </Select>
 

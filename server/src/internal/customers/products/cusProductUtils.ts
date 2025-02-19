@@ -572,6 +572,7 @@ export const getFullCusProductData = async ({
       sb,
       freeTrial: fullProduct.free_trial,
       fingerprint: customer.fingerprint,
+      internalCustomerId: customer.internal_id,
     });
 
     return {
@@ -632,6 +633,7 @@ export const getFullCusProductData = async ({
     sb,
     freeTrial: freeTrial,
     fingerprint: customer.fingerprint,
+    internalCustomerId: customer.internal_id,
   });
 
   return {

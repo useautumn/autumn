@@ -12,7 +12,8 @@ export class Autumn {
       Authorization: `Bearer ${this.apiKey}`,
       "Content-Type": "application/json",
     };
-    this.baseUrl = "https://api.useautumn.com/v1";
+    // this.baseUrl = "https://api.useautumn.com/v1";
+    this.baseUrl = "http://localhost:8080/v1";
   }
 
   async get(path: string) {
