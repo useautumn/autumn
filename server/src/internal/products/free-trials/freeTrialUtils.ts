@@ -84,31 +84,74 @@ export const trialFingerprintExists = async ({
   return false;
 };
 
+export const trialWithCustomerExists = async ({
+  sb,
+  internalCustomerId,
+  freeTrialId,
+}: {
+  sb: SupabaseClient;
+  internalCustomerId: string;
+  freeTrialId: string;
+}) => {
+  const { data, error } = await sb
+    .from("customer_products")
+    .select("*, customer:customers!inner(*)")
+    .eq("internal_customer_id", internalCustomerId)
+    .eq("free_trial_id", freeTrialId);
+
+  if (error) {
+    throw error;
+  }
+
+  if (data && data.length > 0) {
+    return true;
+  }
+
+  return false;
+};
+
 export const getFreeTrialAfterFingerprint = async ({
   sb,
   freeTrial,
   fingerprint,
+  internalCustomerId,
 }: {
   sb: SupabaseClient;
   freeTrial: FreeTrial | null;
   fingerprint: string | null | undefined;
+  internalCustomerId: string;
 }): Promise<FreeTrial | null> => {
   if (!freeTrial) return null;
 
-  if (freeTrial.unique_fingerprint && fingerprint) {
+  let uniqueFreeTrial: FreeTrial | null = freeTrial;
+  if (uniqueFreeTrial.unique_fingerprint && fingerprint) {
     let exists = await trialFingerprintExists({
       sb,
       fingerprint,
-      freeTrialId: freeTrial.id,
+      freeTrialId: uniqueFreeTrial.id,
     });
 
     if (exists) {
       console.log("Free trial fingerprint exists");
-      return null;
+      uniqueFreeTrial = null;
     }
   }
 
-  return freeTrial;
+  if (uniqueFreeTrial) {
+    // Check if same customer exists
+    let exists = await trialWithCustomerExists({
+      sb,
+      internalCustomerId,
+      freeTrialId: uniqueFreeTrial.id,
+    });
+
+    if (exists) {
+      console.log("Free trial with customer exists");
+      uniqueFreeTrial = null;
+    }
+  }
+
+  return uniqueFreeTrial;
 };
 
 // Init Free Trial

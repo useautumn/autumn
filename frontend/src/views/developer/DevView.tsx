@@ -41,7 +41,7 @@ export default function DevScreen({ env }: { env: AppEnv }) {
           API keys are used to authenticate your requests to the API. Learn more{" "}
           <a
             className="text-primary hover:text-primary/80 cursor-pointer"
-            href="https://docs.recaseai.com"
+            href="https://docs.useautumn.com"
             target="_blank"
           >
             here
