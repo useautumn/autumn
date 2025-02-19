@@ -71,7 +71,7 @@ export default function DemoView() {
   const [sendEventResponse, setSendEventResponse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [hasProModels, setHasProModels] = useState<boolean>(false);
-
+  const [message, setMessage] = useState("");
   useEffect(() => {
     const init = async () => {
       setLoading(true);
@@ -127,7 +127,7 @@ export default function DemoView() {
   };
 
   return (
-    <div className="w-full h-fit bg-stone-50 flex justify-start absolute top-0 left-0">
+    <div className="w-full h-fit bg-white flex justify-start absolute top-0 left-0">
       <div className="flex p-4 w-full gap-32 relative">
         <div className="flex flex-col gap-4 min-w-[700px]">
           {loading ? (
@@ -136,9 +136,6 @@ export default function DemoView() {
             </div>
           ) : (
             <>
-              <AutumnProvider publishableKey={publishableKey || ""}>
-                <PricingPage customerId={customerId} />
-              </AutumnProvider>
               {/* <div className="flex gap-2">
                 <Button
                   variant="gradientPrimary"
@@ -163,19 +160,21 @@ export default function DemoView() {
                 </Button>
               </div> */}
               <CustomToaster />
-              <CustomerBalances customer={customer} />
-              <div className="text-lg font-semibold mt-4">Mintlify App</div>
+              <div className="text-xl font-extrabold mt-2 -mb-2">Mintlify</div>
+              <p className="text-lg">
+                Start building modern documentation in under five minutes
+              </p>
               <div className="flex gap-2">
-                {/* <Input
-                  placeholder="Enter message"
+                <Input
+                  placeholder="Search or ask..."
                   className="w-full"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                /> */}
+                />
                 <Button
                   isLoading={hasAccessLoading}
                   onClick={async () => handleClicked()}
-                  className="font-semibold bg-gradient-to-b border-b-2 border-red-500 from-red-500 to-red-300 hover:bg-gradient-to-r hover:from-green-500 hover:via-yellow-500 hover:to-pink-500 transition-all duration-700 w-48 shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:shadow-[0_0_20px_rgba(236,72,153,0.7)] bg-[size:200%] hover:bg-right"
+                  className="font-semibold bg-gradient-to-b from-emerald-400 to-emerald-500 hover:bg-gradient-to-b hover:from-emerald-500 hover:to-emerald-600 border-t border-emerald-500"
                 >
                   Use AI Chat
                 </Button>
@@ -231,6 +230,21 @@ export default function DemoView() {
                   Manage Subscription
                 </Button> */}
               </div>
+              <div className="text-lg font-semibold mt-4 -mb-3">Account</div>
+              <p className="text-sm text-t3">
+                Hi {customer?.name ? customer?.name : customerId}, you have
+                access to:
+              </p>
+              <CustomerBalances customer={customer} />
+              <div className="text-lg font-semibold mt-2">Pricing</div>
+              <AutumnProvider publishableKey={publishableKey || ""}>
+                <PricingPage customerId={customerId} />
+              </AutumnProvider>
+              <p className="text-xs text-t3">
+                You can make a test purchase to see what happens. Use the Stripe
+                test card <span className="font-bold">4242 4242 4242 4242</span>{" "}
+                with any expiration date, CVC and cardholder details.
+              </p>
 
               {/* <Card>
                 <CardHeader className="flex justify-between p-3 px-4">
