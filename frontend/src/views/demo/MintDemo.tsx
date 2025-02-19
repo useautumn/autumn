@@ -111,10 +111,6 @@ export default function MintDemo({
     return data;
   };
 
-  useEffect(() => {
-    setSendEventRequest(sendEventRequestChat);
-  }, [eventName]);
-
   const handleClicked = async () => {
     setHasAccessLoading(true);
     const data = await checkAccess("chat-responses");
