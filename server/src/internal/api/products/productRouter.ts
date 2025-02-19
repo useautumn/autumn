@@ -24,6 +24,11 @@ import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 
 export const productApiRouter = Router();
 
+productApiRouter.get("", async (req: any, res) => {
+  const products = await ProductService.getProducts(req.sb, req.orgId, req.env);
+  res.status(200).send(products);
+});
+
 productApiRouter.post("", async (req: any, res) => {
   try {
     const { product } = req.body;

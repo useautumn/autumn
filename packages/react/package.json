@@ -49,6 +49,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "motion": "^12.2.0",
+    "react-hot-toast": "^2.5.2",
     "swr": "^2.3.0",
     "tailwind-merge": "^3.0.1"
   }

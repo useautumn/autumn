@@ -183,6 +183,14 @@ export const handleNewEntitlements = async ({
   orgId: string;
   isCustom: boolean;
 }) => {
+  // Add internal_feature_id to newEnts
+  for (const ent of newEnts) {
+    const feature = features.find((f) => f.id === ent.feature_id);
+    if (feature) {
+      ent.internal_feature_id = feature.internal_id;
+    }
+  }
+
   const idToEnt: { [key: string]: Entitlement } = {};
   for (const ent of curEnts) {
     idToEnt[ent.id!] = ent;

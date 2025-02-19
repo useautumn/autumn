@@ -5,6 +5,7 @@ import {
   CusProductStatus,
   CustomerResponseSchema,
   ErrCode,
+  FeatureType,
   FullProduct,
   Price,
   PriceType,
@@ -25,6 +26,8 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../customers/CusService.js";
 import { getCustomerDetails } from "../api/customers/cusUtils.js";
+import publicProductsRouter from "./getPublicProducts.js";
+import { publicAttachRouter } from "./publicAttach.js";
 
 export const publicRouter = Router();
 
@@ -54,6 +57,8 @@ const publicRouterMiddleware = async (req: any, res: any, next: any) => {
     });
     req.org = org;
     req.env = env;
+
+    console.log("Public request from:", org.slug);
     next();
   } catch (error) {
     return res.status(400).json({ message: "Invalid publishable key" });
@@ -61,29 +66,6 @@ const publicRouterMiddleware = async (req: any, res: any, next: any) => {
 };
 
 publicRouter.use(publicRouterMiddleware);
-
-const processProduct = (product: FullProduct) => {
-  const ents = product.entitlements;
-  const prices = product.prices;
-
-  const fixedPrices = prices.filter(
-    (p: Price) => p.config!.type === PriceType.Fixed
-  );
-
-  const usagePrices = prices.filter(
-    (p: Price) => p.config!.type === PriceType.Usage
-  );
-
-  console.log("Prices:", product.prices);
-
-  let processedProduct: any = structuredClone(product);
-  // processedProduct.entitlements = processdEnts;
-  processedProduct.fixed_prices = fixedPrices;
-  processedProduct.usage_prices = usagePrices;
-  delete processedProduct.prices;
-
-  return PublicProductSchema.parse(processedProduct);
-};
 
 publicRouter.get("/customers/:customer_id", async (req: any, res: any) => {
   try {
@@ -122,32 +104,6 @@ publicRouter.get("/customers/:customer_id", async (req: any, res: any) => {
     });
   } catch (error) {
     handleRequestError({ req, error, res, action: "get customer" });
-  }
-});
-
-publicRouter.get("/products", async (req: any, res: any) => {
-  try {
-    const products = await ProductService.getFullProducts(
-      req.sb,
-      req.org.id,
-      req.env
-    );
-
-    // Order products by price
-    products.sort((a: FullProduct, b: FullProduct) => {
-      const isUpgrade = isProductUpgrade(a, b);
-      if (isUpgrade) {
-        return -1;
-      }
-
-      return 1;
-    });
-
-    const processedProducts = products.map(processProduct);
-
-    res.status(200).json(processedProducts);
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "Get public products" });
   }
 });
 
@@ -215,3 +171,6 @@ publicRouter.get(
     res.status(200).json(options);
   }
 );
+
+publicRouter.use("/products", publicProductsRouter);
+publicRouter.use("/attach", publicAttachRouter);

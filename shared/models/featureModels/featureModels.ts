@@ -31,4 +31,12 @@ export const CreateFeatureSchema = FeatureSchema.omit({
   env: true,
 });
 
+export const FeatureResponseSchema = z.object({
+  internal_id: z.string(),
+  id: z.string(),
+  name: z.string(),
+  type: z.nativeEnum(FeatureType),
+  config: z.any(),
+});
+
 export type Feature = z.infer<typeof FeatureSchema>;

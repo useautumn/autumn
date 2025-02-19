@@ -44,7 +44,7 @@ import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoic
 
 export const attachRouter = Router();
 
-const checkoutPricesValid = (prices: Price[]) => {
+export const checkoutPricesValid = (prices: Price[]) => {
   for (const price of prices) {
     if (price.billing_type === BillingType.UsageBelowThreshold) {
       return false;
@@ -54,7 +54,7 @@ const checkoutPricesValid = (prices: Price[]) => {
   return true;
 };
 
-const checkAddProductErrors = async ({
+export const checkAddProductErrors = async ({
   attachParams,
   useCheckout = false,
 }: {
@@ -110,7 +110,7 @@ const checkAddProductErrors = async ({
   }
 };
 
-const handleExistingProduct = async ({
+export const handleExistingProduct = async ({
   req,
   res,
   attachParams,
@@ -213,7 +213,7 @@ const handleExistingProduct = async ({
   return { currentProduct, done: false };
 };
 
-const checkStripeConnections = async ({
+export const checkStripeConnections = async ({
   req,
   res,
   attachParams,

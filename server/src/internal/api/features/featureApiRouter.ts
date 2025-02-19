@@ -3,7 +3,12 @@ import RecaseError, {
   formatZodError,
   handleRequestError,
 } from "@/utils/errorUtils.js";
-import { AggregateType, Feature, FeatureType } from "@autumn/shared";
+import {
+  AggregateType,
+  Feature,
+  FeatureResponseSchema,
+  FeatureType,
+} from "@autumn/shared";
 import { CreateFeatureSchema } from "@autumn/shared";
 import express from "express";
 import { generateId } from "@/utils/genUtils.js";
@@ -41,6 +46,13 @@ export const validateFeature = (data: any) => {
     });
   }
 };
+
+featureApiRouter.get("", async (req: any, res) => {
+  let features = await FeatureService.getFromReq(req);
+  res
+    .status(200)
+    .json(features.map((feature) => FeatureResponseSchema.parse(feature)));
+});
 
 featureApiRouter.post("", async (req: any, res) => {
   let data = req.body;

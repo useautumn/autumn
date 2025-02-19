@@ -4,17 +4,17 @@ import { SWRConfiguration } from "swr";
 import { useAutumnContext } from "../providers/AutumnContext";
 
 export function useCustomSwr({
-  url,
+  path,
   options = {},
 }: {
-  url: string;
+  path: string;
   options?: SWRConfiguration;
 }) {
-  const { publishableKey } = useAutumnContext();
+  const { publishableKey, endpoint } = useAutumnContext();
 
-  const fetcher = async (url: string) => {
+  const fetcher = async (path: string) => {
     try {
-      const res = await fetch(url, {
+      const res = await fetch(`${endpoint}${path}`, {
         headers: {
           "x-publishable-key": publishableKey,
         },
@@ -23,7 +23,7 @@ export function useCustomSwr({
       if (res.status !== 200) {
         try {
           let err = await res.json();
-          console.log(`Failed to fetch ${url}:`, err);
+          console.log(`Failed to fetch ${endpoint}${path}:`, err);
         } catch (error) {}
 
         throw new Error("Failed to fetch data");
@@ -34,7 +34,7 @@ export function useCustomSwr({
     }
   };
 
-  return useSWR(url, fetcher, {
+  return useSWR(path, fetcher, {
     refreshInterval: 0,
     revalidateOnFocus: false,
     ...options,
