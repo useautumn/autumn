@@ -124,7 +124,7 @@ export default function MintDemo({
     }
 
     setSendEventLoading(true);
-    const eventData = await sendUsage(eventName);
+    const eventData = await sendUsage("chat-responses");
     setSendEventResponse(eventData);
     setSendEventLoading(false);
     await cusMutate();
