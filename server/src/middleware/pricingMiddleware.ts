@@ -7,13 +7,7 @@ export const pricingMiddleware = async (req: any, res: any, next: any) => {
   let method = req.method;
 
   let host = req.headers.host;
-  if (
-    // host.includes("localhost") ||
-    req.minOrg.slug == "autumn" ||
-    req.minOrg.slug == "firecrawl" ||
-    req.minOrg.slug == "pipeline" ||
-    req.minOrg.slug == "alex"
-  ) {
+  if (host.includes("localhost")) {
     next();
     return;
   }
