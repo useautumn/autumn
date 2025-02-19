@@ -256,7 +256,9 @@ export default function DemoView() {
                       },
                     });
                     setHasAccessResponse(data);
-                    !data.allowed && toast.error("You're out of editors");
+                    if (!data.allowed) {
+                      toast.error("You're out of editors");
+                    }
                     await cusMutate();
                   }}
                 >
@@ -360,82 +362,6 @@ export default function DemoView() {
                 <span className="font-bold">4242 4242 4242 4242</span> with any
                 expiration date, CVC and cardholder details.
               </p>
-
-              {/* <Card>
-                <CardHeader className="flex justify-between p-3 px-4">
-                  <div className="flex justify-between items-center gap-4">
-                    <div className="flex flex-col gap-0">
-                      <p className="text-sm font-medium text-gray-600">
-                        Email Balance:
-                      </p>
-                      <span className="text-lg font-semibold">
-                        {emailBalance || 0}
-                      </span>
-                    </div>
-                    <Button
-                      onClick={() => handleClicked("emails")}
-                      className="bg-blue-500 hover:bg-blue-600 transition-colors w-48"
-                    >
-                      Send Email
-                    </Button>
-                  </div>
-                  <Button onClick={() => handleClicked("ai")}>Use AI</Button>
-                </CardHeader>
-              </Card> */}
-              {/* PRO FEATURES */}
-              {/* {hasProFeatures ? (
-                <div>
-                  <div className="space-y-4">
-                    <p className="font-semibold text-lg">Pro Analytics</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Card>
-                        <CardHeader>
-                          <h4 className="text-lg">User Activity</h4>
-                          <div className="flex items-center gap-2">
-                            <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center">
-                              <span className="text-xl font-bold text-white">
-                                87
-                              </span>
-                            </div>
-                            <div>
-                              <p className="text-sm text-zinc-500">
-                                Active Users
-                              </p>
-                              <p className="text-green-500 text-sm">
-                                ↑ 1% from last week
-                              </p>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                      <Card>
-                        <CardHeader>
-                          <h4 className="text-lg">Engagement</h4>
-                          <div className="flex items-center gap-2">
-                            <div className="h-12 w-12 rounded-full bg-purple-500 flex items-center justify-center">
-                              <span className="text-xl font-bold text-white">
-                                5.2
-                              </span>
-                            </div>
-                            <div>
-                              <p className="text-sm text-zinc-500">
-                                Avg Session (min)
-                              </p>
-                              <p className="text-red-500 text-sm">
-                                ↓ 3% from last week
-                              </p>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <p>You do not have access to pro features</p>
-                </div>
-              )} */}
             </>
           )}
         </div>
