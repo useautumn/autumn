@@ -41,7 +41,7 @@ function HomeSidebar({
 }) {
   return (
     <Sidebar collapsible="icon" className=" bg-zinc-100">
-      <SidebarTop orgName={org.name || " "} env={env} />
+      <SidebarTop orgName={org?.name || " "} env={env} />
       <SidebarContent>
         <SidebarGroup className="py-0">
           <SidebarGroupContent>
@@ -83,8 +83,8 @@ function HomeSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarBottom
-        userName={user.first_name}
-        userEmail={user.email}
+        userName={user?.first_name || " "}
+        userEmail={user?.email || " "}
         env={env}
       />
     </Sidebar>
