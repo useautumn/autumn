@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input";
 import { APIPlayground } from "./APIPlayground";
 import Image from "next/image";
 
-const endpoint = "https://api.useautumn.com";
-// const endpoint = "http://localhost:8080";
+// const endpoint = "https://api.useautumn.com";
+const endpoint = "http://localhost:8080";
 
 export default function MintDemo({
   publishableKey,

@@ -194,7 +194,6 @@ export const PricingCard = ({
     if (res.status !== 200) {
       // Get data
       const data = await res.json();
-      console.log("data:", data);
 
       if (data.message) {
         toast.error(data.message);
@@ -227,6 +226,11 @@ export const PricingCard = ({
       );
 
     const notAllowed = isScheduled || (isActive && !anotherScheduled);
+
+    if (notAllowed) {
+      toast.error("Already on this plan");
+      return;
+    }
 
     setButtonLoading(true);
 
