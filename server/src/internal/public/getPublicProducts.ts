@@ -1,4 +1,5 @@
 import {
+  AllowanceType,
   BillingInterval,
   BillingType,
   Feature,
@@ -189,7 +190,10 @@ const processProduct = (org: Organization, product: FullProduct) => {
     } else {
       // Related price
       let allowance = e.allowance!;
-      if (allowance > 0) {
+
+      if (e.allowance_type == AllowanceType.Unlimited) {
+        entString += `Unlimited ${e.feature.name}`;
+      } else if (allowance > 0) {
         entString += `${formattedAllowance} ${e.feature.name}`;
         let priceStr = getPriceString(
           org.default_currency,
