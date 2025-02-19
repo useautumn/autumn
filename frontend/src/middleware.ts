@@ -20,7 +20,7 @@ export default clerkMiddleware(async (auth, req) => {
   // Check for session claims
   const { sessionClaims }: { sessionClaims: any } = await auth();
 
-  if (isProtectedRoute(req)) {
+  if (isProtectedRoute(req) && !path.includes("/demo")) {
     await auth.protect();
   }
 
