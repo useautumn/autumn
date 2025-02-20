@@ -63,6 +63,7 @@ export const EntitlementConfig = ({
       const newEnt = CreateEntitlementSchema.parse({
         internal_feature_id: selectedFeature.internal_id,
         feature_id: selectedFeature.id,
+        feature: selectedFeature,
         ...fields,
       });
 
@@ -151,10 +152,11 @@ export const EntitlementConfig = ({
                   placeholder="eg. 100"
                   className="w-30"
                   value={fields.allowance}
+                  type="number"
                   onChange={(e) =>
                     setFields({
                       ...fields,
-                      allowance: Number(e.target.value),
+                      allowance: parseInt(e.target.value) || 0,
                     })
                   }
                 />
