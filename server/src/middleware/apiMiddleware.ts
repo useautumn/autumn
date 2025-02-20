@@ -44,19 +44,20 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
       console.log(`Autumn API verification failed`);
     }
   } catch (error) {
-    console.log("Failed to fetch key from Autumn");
+    console.log("Error: Failed to fetch key from Autumn");
+    console.log("Error: ", error);
   }
 
   // Fallback: Verify via Unkey
   try {
     const result = await validateApiKey(apiKey);
 
-    await migrateKey({
-      sb: req.sb,
-      keyId: result.keyId ?? "",
-      meta: { org_slug: result.meta?.org_slug },
-      apiKey,
-    });
+    // await migrateKey({
+    //   sb: req.sb,
+    //   keyId: result.keyId ?? "",
+    //   meta: { org_slug: result.meta?.org_slug },
+    //   apiKey,
+    // });
 
     // console.log(`Unkey verification successul for ${result.meta?.org_slug}`);
     req.orgId = result.ownerId;
@@ -68,7 +69,8 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
 
     next();
   } catch (error) {
-    console.log("Unkey  API verification failed");
+    console.log("WARNING: Unkey API verification failed");
+    console.log(error);
     withOrgAuth(req, res, next);
     return;
   }

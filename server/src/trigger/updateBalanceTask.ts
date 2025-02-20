@@ -256,7 +256,9 @@ export const updateCustomerBalance = async ({
         },
       });
     } else {
-      console.log("No usage-based entitlement found");
+      console.log(
+        `   - Remaining deduction: ${toDeduct}, no usage-based entitlement found`
+      );
     }
   }
 
@@ -272,7 +274,9 @@ export const runUpdateBalanceTask = async (payload: any) => {
     const { customer, features, event, org, env } = payload;
 
     console.log("--------------------------------");
-    console.log("Inside updateBalanceTask...");
+    console.log(
+      `UPDATING BALANCE FOR CUSTOMER (${customer.id}), ORG: ${org.slug}`
+    );
 
     console.log("1. Updating customer balance...");
     const cusEnts: any = await updateCustomerBalance({

@@ -10,28 +10,27 @@ import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 import { envMiddleware } from "./middleware/envMiddleware.js";
 import pg from "pg";
 
-import { initQueue, initWorkers } from "./queue/queue.js";
+import { initWorkers } from "./queue/queue.js";
 import http from "http";
 import { initWs } from "./websockets/initWs.js";
 import { publicRouter } from "./internal/public/publicRouter.js";
 import { initLogger } from "./errors/logger.js";
-import RecaseError, { handleRequestError } from "./utils/errorUtils.js";
+import { QueueManager } from "./queue/QueueManager.js";
 
 const init = async () => {
   const app = express();
-  const server = http.createServer(app);
-  const wss = initWs(server);
+
   const logger = initLogger();
+  const server = http.createServer(app);
 
   const pgClient = new pg.Client(process.env.SUPABASE_CONNECTION_STRING || "");
   await pgClient.connect();
 
-  const queue = initQueue();
-  const workers = initWorkers(queue);
+  await QueueManager.getInstance(); // initialize the queue manager
+  await initWorkers();
 
   app.use((req: any, res, next) => {
     req.pg = pgClient;
-    req.queue = queue;
     req.logger = logger;
     next();
   });

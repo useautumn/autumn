@@ -27,5 +27,10 @@ export default async function DemoPage({ params }) {
     );
   }
 
-  return <DynamicDemoView />;
+  return (
+    <DynamicDemoView
+      publishableKey={data.publishable_key}
+      secretKey={data.secret_key}
+    />
+  );
 }
