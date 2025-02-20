@@ -33,8 +33,6 @@ export const AddProductButton = ({
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
-  console.log(actionState);
-
   const handleClick = async (e: any, isInvoice: boolean) => {
     e.preventDefault();
     e.stopPropagation();
