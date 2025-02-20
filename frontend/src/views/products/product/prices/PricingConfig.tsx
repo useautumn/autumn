@@ -28,7 +28,7 @@ export const PricingConfig = ({
     type: PriceType.Usage,
     internal_feature_id: "",
     feature_id: "",
-    bill_when: BillWhen.StartOfPeriod,
+    bill_when: BillWhen.EndOfPeriod,
     interval: BillingInterval.Month,
     billing_units: "",
     usage_tiers: [
@@ -138,6 +138,7 @@ export const validateUsageConfig = (usageConfig: any) => {
     config.billing_units = null;
   }
 
+  // Check individual tier validity
   for (let i = 0; i < config.usage_tiers.length; i++) {
     const tier = config.usage_tiers[i];
     if (
@@ -146,6 +147,17 @@ export const validateUsageConfig = (usageConfig: any) => {
       invalidNumber(tier.amount)
     ) {
       toast.error("Please fill out all tier fields");
+      return null;
+    }
+
+    // Check current tier's range is valid
+    if (
+      parseFloat(tier.to) !== -1 &&
+      parseFloat(tier.to) < parseFloat(tier.from)
+    ) {
+      toast.error(
+        "Each tier's 'to' value must be greater than its 'from' value"
+      );
       return null;
     }
 

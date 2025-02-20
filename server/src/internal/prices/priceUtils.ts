@@ -298,7 +298,7 @@ export const priceToEventName = (productName: string, featureName: string) => {
 export const roundPriceAmounts = (price: Price) => {
   if (price.config!.type == PriceType.Fixed) {
     const config = price.config as FixedPriceConfig;
-    config.amount = Number(config.amount.toFixed(2));
+    config.amount = Number(config.amount.toFixed(10));
     price.config = config;
   } else if (price.config!.type == PriceType.Usage) {
     const config = price.config as UsagePriceConfig;

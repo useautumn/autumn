@@ -38,6 +38,10 @@ function ProductView({
     env,
   });
 
+  //this is to make sure pricing for unlimited entitlements can't be applied
+  const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
+    useState<"unlimited" | number>(0);
+
   useEffect(() => {
     if (data?.product) {
       setProduct(data.product);
@@ -117,8 +121,8 @@ function ProductView({
         env,
         product,
         setProduct,
-        // prices: product.prices,
-        // entitlements: product.entitlements,
+        selectedEntitlementAllowance,
+        setSelectedEntitlementAllowance,
         org,
       }}
     >
