@@ -86,6 +86,10 @@ export class OrgService {
       .single();
 
     if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+
       throw new RecaseError({
         message: "Failed to get org from supabase",
         code: ErrCode.OrgNotFound,

@@ -5,8 +5,42 @@ import { Router } from "express";
 import { ApiKeyService } from "./ApiKeyService.js";
 import { OrgService } from "../orgs/OrgService.js";
 import { createKey } from "./api-keys/apiKeyUtils.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export const devRouter = Router();
+
+export const handleCreateApiKey = async ({
+  sb,
+  env,
+  name,
+  orgId,
+  orgSlug,
+}: {
+  sb: SupabaseClient;
+  env: AppEnv;
+  name: string;
+  orgId: string;
+  orgSlug: string;
+}) => {
+  // 1. Create API key
+  let prefix = "am_sk_test";
+  if (env === AppEnv.Live) {
+    prefix = "am_sk_live";
+  }
+
+  const apiKey = await createKey({
+    sb,
+    env,
+    name,
+    orgId,
+    prefix,
+    meta: {
+      org_slug: orgSlug,
+    },
+  });
+
+  return apiKey;
+};
 
 devRouter.get("/data", withOrgAuth, async (req: any, res) => {
   const apiKeys = await ApiKeyService.getByOrg(req.sb, req.orgId, req.env);

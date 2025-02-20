@@ -31,7 +31,8 @@ export const initLogger = () => {
     },
   });
 
-  logger.info("Logger initialized");
+  // logger.info("Logger initialized");
+  console.log("Logger initialized");
 
   return logger;
 };
