@@ -6,7 +6,10 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faFileInvoiceDollar } from "@fortawesome/pro-duotone-svg-icons";
+import {
+  faFileInvoiceDollar,
+  faUpload,
+} from "@fortawesome/pro-duotone-svg-icons";
 import { useState } from "react";
 
 import {
@@ -66,6 +69,8 @@ export const AddProductButton = ({
         variant="gradientPrimary"
         className="w-fit gap-2"
         isLoading={loading}
+        disabled={actionState.disabled}
+        startIcon={<FontAwesomeIcon icon={faUpload} />}
       >
         {actionState.buttonText}
       </Button>
@@ -82,6 +87,8 @@ export const AddProductButton = ({
                 onClick={() => setOpen(true)}
                 variant="gradientPrimary"
                 className="w-fit gap-2"
+                startIcon={<FontAwesomeIcon icon={faUpload} />}
+                disabled={actionState.disabled}
               >
                 {actionState.buttonText}
               </Button>
