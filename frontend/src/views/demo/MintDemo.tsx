@@ -52,7 +52,7 @@ export default function MintDemo({
 
   const sendEventRequestChat = {
     customer_id: customerId,
-    event_name: eventName,
+    event_name: "chat-responses",
   };
 
   const sendEventRequestEditorsPlus = {
@@ -112,19 +112,19 @@ export default function MintDemo({
   };
 
   const handleClicked = async () => {
-    setEventName("chat-responses");
     setHasAccessLoading(true);
-    const data = await checkAccess(eventName);
+    const data = await checkAccess("chat-responses");
     setHasAccessResponse(data);
+    await setSendEventRequest(sendEventRequestChat);
     setHasAccessLoading(false);
 
     if (!data.allowed) {
-      toast.error("You're out of " + eventName);
+      toast.error("You're out of AI chat responses");
       return;
     }
 
     setSendEventLoading(true);
-    const eventData = await sendUsage(eventName);
+    const eventData = await sendUsage("chat-responses");
     setSendEventResponse(eventData);
     setSendEventLoading(false);
     await cusMutate();

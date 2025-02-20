@@ -17,6 +17,12 @@ export default clerkMiddleware(async (auth, req) => {
   requestHeaders.set("path", path);
   requestHeaders.set("origin", req.nextUrl.origin);
 
+  if (path.includes("/demo")) {
+    return NextResponse.next({
+      headers: requestHeaders,
+    });
+  }
+
   // Check for session claims
   const { sessionClaims }: { sessionClaims: any } = await auth();
 
