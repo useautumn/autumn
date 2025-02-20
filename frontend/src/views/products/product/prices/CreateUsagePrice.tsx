@@ -240,7 +240,7 @@ function CreateUsagePrice({
         {selectedEntitlementAllowance === "unlimited" ? (
           <p className="rounded-sm px-2 py-1 bg-yellow-100 border border-yellow-500 text-yellow-500 text-xs mb-2">
             This entitlement has <span className="font-bold">unlimited</span>{" "}
-            usage, so you can't apply pricing.
+            usage, so you can&apos;t apply pricing.
           </p>
         ) : (
           selectedEntitlementAllowance !== 0 && (

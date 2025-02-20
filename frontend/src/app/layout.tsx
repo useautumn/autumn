@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
-import { NextUIProvider } from "@nextui-org/react";
+import { cn, NextUIProvider } from "@nextui-org/react";
 import { Inter } from "next/font/google";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -80,12 +80,19 @@ export default async function RootLayout({
               > */}
                 <main className="flex flex-col w-full h-screen overflow-hidden">
                   {env === AppEnv.Sandbox && (
-                    <div className="w-full h-5 bg-primary/80 text-white text-xs flex items-center justify-center">
-                      <p className="font-medium">SANDBOX</p>
+                    <div className="w-full h-10 bg-primary/80 text-white text-sm flex items-center justify-center">
+                      <p className="font-medium">
+                        You&apos;re in sandbox mode.
+                      </p>
                     </div>
                   )}
 
-                  <div className="w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center">
+                  <div
+                    className={cn(
+                      "w-full h-full overflow-scroll bg-stone-50 p-6 flex justify-center"
+                      // env === AppEnv.Sandbox && "bg-slate-200"
+                    )}
+                  >
                     <div className="hidden md:flex w-full h-fit max-w-[1048px] flex-col gap-4">
                       {children}
                     </div>

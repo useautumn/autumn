@@ -38,7 +38,8 @@ export default function DevScreen({ env }: { env: AppEnv }) {
       <div>
         <h1 className="text-xl font-medium">API Keys</h1>
         <p className="text-sm text-t2">
-          API keys are used to authenticate your requests to the API. Learn more{" "}
+          API keys are used to securely authenticate your requests to the API
+          from your server. Learn more{" "}
           <a
             className="text-primary hover:text-primary/80 cursor-pointer"
             href="https://docs.useautumn.com"
@@ -53,15 +54,21 @@ export default function DevScreen({ env }: { env: AppEnv }) {
 
       <CreateAPIKey />
 
-      <div>
+      <div className="mt-4">
         <h1 className="text-lg font-medium">Publishable Key</h1>
         <p className="text-sm text-t2">
-          Publishable keys are used to authenticate your requests to the API
-          from the client.
+          Publishable keys are used to make requests to our public API. You can
+          safely use this from your frontend.
         </p>
         <div className="flex flex-col gap-2 mt-4">
-          <CopyPublishableKey type="Test" value={data?.org?.test_pkey} />
-          <CopyPublishableKey type="Live" value={data?.org?.live_pkey} />
+          {env === AppEnv.Sandbox ? (
+            <CopyPublishableKey type="Sandbox" value={data?.org?.test_pkey} />
+          ) : (
+            <CopyPublishableKey
+              type="Production"
+              value={data?.org?.live_pkey}
+            />
+          )}
         </div>
       </div>
     </DevContext.Provider>
@@ -72,7 +79,7 @@ const CopyPublishableKey = ({
   type,
   value,
 }: {
-  type: "Test" | "Live";
+  type: "Sandbox" | "Production";
   value: string;
 }) => {
   return (
