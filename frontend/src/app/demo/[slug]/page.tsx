@@ -31,6 +31,9 @@ export default async function DemoPage({ params }) {
     <DynamicDemoView
       publishableKey={data.publishable_key}
       secretKey={data.secret_key}
+      slug={slug}
+      name={data.name}
+      buttons={data.buttons}
     />
   );
 }

@@ -16,35 +16,22 @@ import Image from "next/image";
 import { checkAccess, createAxiosInstance, sendUsage } from "./autumnBackend";
 import DemoSidebar from "./DemoSidebar";
 
-// const endpoint = "https://api.useautumn.com";
-// const endpoint = "http://localhost:8080";
 const endpoint = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-const data = {
-  companyName: "Keywords",
-  customerId: "hahnbee",
-};
-
-const buttons = [
-  {
-    feature_id: "log-ingestion",
-    text: "Ingest Logs",
-    value: 100,
-  },
-];
+const customerId = "ayush";
 
 export default function DynamicDemo({
   publishableKey,
   secretKey,
+  slug,
+  name,
+  buttons,
 }: {
   publishableKey: string;
   secretKey: string;
+  slug: string;
+  name: string;
+  buttons: any[];
 }) {
-  const [eventName, setEventName] = useState("chat-responses");
-  // const customerId = "hahnbee";
-
-  const { companyName, customerId } = data;
-
   const axiosInstance = createAxiosInstance(secretKey, endpoint!);
 
   const {
@@ -58,33 +45,12 @@ export default function DynamicDemo({
     endpoint: endpoint,
   });
 
-  const hasAccessRequest = {
-    customer_id: customerId,
-    feature_id: eventName,
-  };
-
-  const sendEventRequestChat = {
-    customer_id: customerId,
-    event_name: eventName,
-  };
-
-  const getCustomerRequest = {
-    customer_id: customerId,
-  };
-
+  const [entitledReq, setEntitledReq] = useState({});
+  const [eventsReq, setEventsReq] = useState({});
   const [hasAccessLoading, setHasAccessLoading] = useState(false);
   const [hasAccessResponse, setHasAccessResponse] = useState(null);
-  const [sendEventRequest, setSendEventRequest] =
-    useState(sendEventRequestChat);
-  const [getCustomerResponse, setGetCustomerResponse] = useState(null);
   const [sendEventLoading, setSendEventLoading] = useState(false);
   const [sendEventResponse, setSendEventResponse] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    setGetCustomerResponse(customer?.entitlements);
-  }, [customer]);
 
   const handleBtnClicked = async ({
     featureId,
@@ -93,21 +59,34 @@ export default function DynamicDemo({
     featureId: string;
     value: number;
   }) => {
-    setHasAccessLoading(true);
-    const data = await checkAccess({
-      axiosInstance,
-      customerId,
-      featureId,
-    });
-    setHasAccessResponse(data);
-    setHasAccessLoading(false);
+    if (value > 0) {
+      setHasAccessLoading(true);
+      setEntitledReq({
+        customer_id: customerId,
+        feature_id: featureId,
+      });
+      const data = await checkAccess({
+        axiosInstance,
+        customerId,
+        featureId,
+      });
+      setHasAccessResponse(data);
+      setHasAccessLoading(false);
 
-    if (!data.allowed) {
-      toast.error("You're out of " + featureId);
-      return;
+      if (!data.allowed) {
+        toast.error("You're out of " + featureId);
+        return;
+      }
     }
 
     setSendEventLoading(true);
+    setEventsReq({
+      customer_id: customerId,
+      event_name: featureId,
+      properties: {
+        value,
+      },
+    });
     const eventData = await sendUsage({
       axiosInstance,
       customerId,
@@ -126,24 +105,21 @@ export default function DynamicDemo({
         <div className="flex flex-col gap-4 flex-2 w-full px-10 pt-4">
           <CustomToaster />
           <div className="flex gap-4 items-center">
-            <div className="text-xl font-extrabold">{companyName}</div>
+            <div className="text-xl font-extrabold">{name}</div>
           </div>
 
           <div className="flex gap-2">
             {buttons.map((button, index) => (
-              <Button
+              <ActionButton
                 key={index}
-                isLoading={hasAccessLoading}
-                onClick={async () =>
+                buttonData={button}
+                handleClicked={() =>
                   handleBtnClicked({
                     featureId: button.feature_id,
                     value: button.value,
                   })
                 }
-                variant="gradientPrimary"
-              >
-                {button.text}
-              </Button>
+              />
             ))}
           </div>
 
@@ -174,14 +150,14 @@ export default function DynamicDemo({
           <APIPlayground
             title="Check Feature Access"
             endpoint="GET /entitled"
-            request={hasAccessRequest}
+            request={entitledReq}
             response={hasAccessResponse}
             loading={hasAccessLoading}
           />
           <APIPlayground
             title="Send Usage Event"
             endpoint="POST /events"
-            request={sendEventRequest}
+            request={eventsReq}
             response={sendEventResponse}
             loading={sendEventLoading}
           />
@@ -197,3 +173,26 @@ export default function DynamicDemo({
     </AutumnProvider>
   );
 }
+
+export const ActionButton = ({
+  buttonData,
+  handleClicked,
+}: {
+  buttonData: any;
+  handleClicked: () => void;
+}) => {
+  const [loading, setLoading] = useState(false);
+  return (
+    <Button
+      isLoading={loading}
+      onClick={async () => {
+        setLoading(true);
+        await handleClicked();
+        setLoading(false);
+      }}
+      variant="gradientPrimary"
+    >
+      {buttonData.display_name}
+    </Button>
+  );
+};
