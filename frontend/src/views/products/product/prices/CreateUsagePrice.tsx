@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 
 import {
+  AllowanceType,
   BillingInterval,
   BillWhen,
   EntitlementWithFeature,
@@ -16,7 +17,7 @@ import {
   UsagePriceConfig,
 } from "@autumn/shared";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { keyToTitleFirstCaps } from "@/utils/formatUtils/formatTextUtils";
 import { Button } from "@/components/ui/button";
 import { cn } from "@nextui-org/theme";
@@ -41,11 +42,31 @@ function CreateUsagePrice({
   price: Price;
   isUpdate: boolean;
 }) {
-  const { features, product } = useProductContext();
+  const {
+    features,
+    product,
+    selectedEntitlementAllowance,
+    setSelectedEntitlementAllowance,
+  } = useProductContext();
+
+  useEffect(() => {
+    // find the entitlement with the feature_id, and console log the entitlements allowance
+    const entitlement = product.entitlements.find(
+      (e) => e.feature_id == config.feature_id
+    );
+    if (entitlement?.allowance_type == AllowanceType.Unlimited) {
+      setSelectedEntitlementAllowance("unlimited");
+      return;
+    }
+    setSelectedEntitlementAllowance(entitlement?.allowance || 0);
+  }, [config.feature_id]);
 
   const setUsageTier = (index: number, key: string, value: string) => {
     const newUsageTiers = [...config.usage_tiers];
     newUsageTiers[index] = { ...newUsageTiers[index], [key]: value };
+    if (key === "to") {
+      newUsageTiers[index + 1].from = value;
+    }
     setConfig({ ...config, usage_tiers: newUsageTiers });
   };
 
@@ -70,6 +91,11 @@ function CreateUsagePrice({
   const filteredEntitlements = product.entitlements.filter(
     (entitlement: EntitlementWithFeature) => {
       const config = price?.config as UsagePriceConfig;
+      const feature = getFeature(entitlement.internal_feature_id, features);
+
+      if (feature?.type === "boolean") {
+        return false;
+      }
 
       if (
         isUpdate &&
@@ -115,23 +141,29 @@ function CreateUsagePrice({
             disabled={isUpdate}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select entitlement" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {filteredEntitlements.map(
-                (entitlement: EntitlementWithFeature, index: number) => {
-                  const feature = getFeature(
-                    entitlement.internal_feature_id,
-                    features
-                  );
-                  if (!feature) return null;
-                  return (
-                    <SelectItem key={index} value={feature.id!}>
-                      {feature?.name}{" "}
-                      <span className="text-t3">{feature?.id}</span>
-                    </SelectItem>
-                  );
-                }
+              {filteredEntitlements.length === 0 ? (
+                <SelectItem value="none" disabled>
+                  No metered entitlements
+                </SelectItem>
+              ) : (
+                filteredEntitlements.map(
+                  (entitlement: EntitlementWithFeature, index: number) => {
+                    const feature = getFeature(
+                      entitlement.internal_feature_id,
+                      features
+                    );
+                    if (!feature) return null;
+                    return (
+                      <SelectItem key={index} value={feature.id!}>
+                        {feature?.name}{" "}
+                        <span className="text-t3">{feature?.id}</span>
+                      </SelectItem>
+                    );
+                  }
+                )
               )}
             </SelectContent>
           </Select>
@@ -140,13 +172,13 @@ function CreateUsagePrice({
         <div className="w-full">
           <FieldLabel>Bill When</FieldLabel>
           <Select
-            value={getBillWhen()}
+            value={!isUpdate ? config.bill_when : getBillWhen()}
             onValueChange={(value) =>
               setConfig({ ...config, bill_when: value as BillWhen })
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Bill when" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {Object.values(BillWhen)
@@ -205,6 +237,20 @@ function CreateUsagePrice({
       </div>
       <div className="flex flex-col gap-1">
         <p className="text-t3 text-sm mt-2 mb-2">Tiers</p>
+        {selectedEntitlementAllowance === "unlimited" ? (
+          <p className="rounded-sm px-2 py-1 bg-yellow-100 border border-yellow-500 text-yellow-500 text-xs mb-2">
+            This entitlement has <span className="font-bold">unlimited</span>{" "}
+            usage, so you can't apply pricing.
+          </p>
+        ) : (
+          selectedEntitlementAllowance !== 0 && (
+            <p className="rounded-sm px-2 py-1 bg-yellow-100 border border-yellow-500 text-yellow-500 text-xs mb-2">
+              This entitlement has an allowance of{" "}
+              <span className="font-bold">{selectedEntitlementAllowance}</span>.
+              Overage pricing will be applied after the allowance is used.
+            </p>
+          )
+        )}
         <div className="flex">
           <p className="w-4/12 text-t3 text-xs">From</p>
           <p className="w-4/12 text-t3 text-xs">To</p>
@@ -216,9 +262,9 @@ function CreateUsagePrice({
             <div className="w-full flex items-center">
               <div className="flex w-4/12 text-sm">
                 <UsageTierInput
-                  value={tier.from}
+                  value={tier.from || 0}
                   onChange={(e) => setUsageTier(index, "from", e.target.value)}
-                  isAmount={false}
+                  type="from"
                   config={config}
                   entitlements={product.entitlements}
                 />
@@ -231,8 +277,10 @@ function CreateUsagePrice({
               >
                 <UsageTierInput
                   value={tier.to}
-                  onChange={(e) => setUsageTier(index, "to", e.target.value)}
-                  isAmount={false}
+                  onChange={(e) => {
+                    setUsageTier(index, "to", e.target.value);
+                  }}
+                  type="to"
                   config={config}
                   entitlements={product.entitlements}
                 />
@@ -243,7 +291,7 @@ function CreateUsagePrice({
                   onChange={(e) =>
                     setUsageTier(index, "amount", e.target.value)
                   }
-                  isAmount={true}
+                  type="amount"
                   config={config}
                   entitlements={product.entitlements}
                 />
@@ -281,21 +329,21 @@ export default CreateUsagePrice;
 export const UsageTierInput = ({
   value,
   onChange,
-  isAmount,
+  type,
   config,
   entitlements,
 }: {
   value: number;
   onChange: (e: any) => void;
-  isAmount: boolean;
+  type: "from" | "to" | "amount";
   config?: any;
   entitlements?: any[];
 }) => {
-  if (!isAmount && value == -1) {
+  if ((type === "to" && value === -1) || type === "from") {
     return (
       <Input
         className="outline-none bg-transparent shadow-none flex-grow mr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        value="♾️"
+        value={value === -1 ? "♾️" : value}
         disabled
         type="text"
       />
@@ -321,13 +369,16 @@ export const UsageTierInput = ({
   return (
     <div className="relative flex-grow mr-1">
       <Input
-        className="outline-none w-full pr-16 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className={cn(
+          "outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+          type === "amount" && "pr-12"
+        )}
         value={value}
         onChange={onChange}
         type="number"
         step="any"
       />
-      {isAmount && (
+      {type === "amount" && (
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px]">
           / {getBillingUnits(config, entitlements!)}
           units

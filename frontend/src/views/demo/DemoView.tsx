@@ -36,7 +36,7 @@ const colorizeJSON = (json: any) => {
 
 export default function DemoView() {
   const [eventName, setEventName] = useState("chat-responses");
-  const customerId = "hahnbee";
+  const customerId = "ayush";
 
   const {
     data: customer,

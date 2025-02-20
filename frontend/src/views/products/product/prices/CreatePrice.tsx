@@ -17,7 +17,8 @@ export const CreatePrice = () => {
   const [loading, setLoading] = useState(false);
   const [price, setPrice] = useState<any>(null);
 
-  const { product, setProduct } = useProductContext();
+  const { product, setProduct, selectedEntitlementAllowance } =
+    useProductContext();
 
   const handleCreatePrice = async () => {
     if (!price) {
@@ -65,6 +66,7 @@ export const CreatePrice = () => {
             onClick={handleCreatePrice}
             isLoading={loading}
             variant="gradientPrimary"
+            disabled={selectedEntitlementAllowance === "unlimited"}
           >
             Create Price
           </Button>
