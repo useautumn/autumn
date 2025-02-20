@@ -11,7 +11,7 @@ function CustomerBalances({ customer }: { customer: any }) {
       {customer.entitlements.map((entitlement) => (
         <div
           key={entitlement.feature_id}
-          className="flex flex-col justify-between w-36 gap-3 border border-zinc-200 bg-white p-4 rounded-md shadow-sm bg-gradient-to-b from-white to-zinc-100"
+          className="flex flex-col justify-between w-36 gap-3 border bg-white p-4 rounded-md"
         >
           {/* <div> */}
           <p className="text-sm font-medium text-gray-600">
