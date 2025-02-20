@@ -63,10 +63,14 @@ export function useAxiosPostSWR({
   });
 }
 
-export function useDemoSWR({ url, publishableKey, options = {} }) {
+export function useDemoSWR({
+  url,
+  publishableKey,
+  options = {},
+  endpoint = "https://api.useautumn.com",
+}) {
   const axiosInstance = axios.create({
-    baseURL: "https://api.useautumn.com",
-    // baseURL: "http://localhost:8080",
+    baseURL: endpoint,
     headers: {
       "x-publishable-key": publishableKey,
     },

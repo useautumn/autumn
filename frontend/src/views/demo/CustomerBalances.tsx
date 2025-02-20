@@ -7,7 +7,7 @@ function CustomerBalances({ customer }: { customer: any }) {
   }
 
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-4 flex-wrap">
       {customer.entitlements.map((entitlement) => (
         <div
           key={entitlement.feature_id}

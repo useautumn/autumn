@@ -1,54 +1,74 @@
 import { Job, Queue, Worker } from "bullmq";
 import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
-import { Redis } from "ioredis";
+import { QueueManager } from "./QueueManager.js";
 
-const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+const NUM_WORKERS = 5;
 
-async function acquireLock(
-  customerId: string,
-  timeout = 30000
-): Promise<boolean> {
+export const getRedisConnection = ({
+  useBackup = false,
+}: {
+  useBackup?: boolean;
+}) => {
+  let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+
+  if (useBackup) {
+    redisUrl = process.env.REDIS_BACKUP_URL || "redis://localhost:6379";
+  }
+
+  return {
+    connection: {
+      url: redisUrl,
+      // enableOfflineQueue: false,
+    },
+  };
+};
+
+async function acquireLock({
+  customerId,
+  timeout = 30000,
+  useBackup = false,
+}: {
+  customerId: string;
+  timeout?: number;
+  useBackup?: boolean;
+}): Promise<boolean> {
+  // const redis = getRedisClient({ useBackup });
+  const redis = await QueueManager.getConnection({ useBackup });
+
   const lockKey = `lock:customer:${customerId}`;
   const acquired = await redis.set(lockKey, "1", "PX", timeout, "NX");
   return acquired === "OK";
 }
 
-async function releaseLock(customerId: string): Promise<void> {
+async function releaseLock({
+  customerId,
+  useBackup,
+}: {
+  customerId: string;
+  useBackup: boolean;
+}): Promise<void> {
+  const redis = await QueueManager.getConnection({ useBackup });
   const lockKey = `lock:customer:${customerId}`;
   await redis.del(lockKey);
 }
 
-const getRedisConnection = () => {
-  let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-
-  return {
-    connection: {
-      url: redisUrl,
-    },
-  };
-};
-
-export const initQueue = () => {
-  try {
-    return new Queue("autumn", getRedisConnection());
-  } catch (error) {
-    console.error("Error initialising queue:\n", error);
-    process.exit(1);
-  }
-};
-
-const numWorkers = 5;
-
-const initWorker = (id: number, queue: Queue) => {
-  // Create supabase client
-
+const initWorker = ({
+  id,
+  queue,
+  useBackup,
+}: {
+  id: number;
+  queue: Queue;
+  useBackup: boolean;
+}) => {
   let worker = new Worker(
     "autumn",
     async (job: Job) => {
+      // console.log("JOB ID:", job.id, `(${useBackup ? "BACKUP" : "MAIN"})`);
+      // console.log("EVENT ID:", job.data.event.id);
       const { customerId } = job.data;
 
-      while (!(await acquireLock(customerId, 10000))) {
-        // console.log(`Customer ${customer.id} locked by another worker`);
+      while (!(await acquireLock({ customerId, timeout: 10000, useBackup }))) {
         await queue.add(job.name, job.data, {
           delay: 50,
         });
@@ -60,37 +80,57 @@ const initWorker = (id: number, queue: Queue) => {
       } catch (error) {
         console.error("Error updating balance:", error);
       } finally {
-        await releaseLock(customerId);
+        await releaseLock({ customerId, useBackup });
       }
     },
-
     {
-      ...getRedisConnection(),
-      concurrency: 3,
+      ...getRedisConnection({ useBackup }),
+      concurrency: 1,
+      removeOnComplete: {
+        count: 0,
+      },
+      removeOnFail: {
+        count: 0,
+      },
+      drainDelay: 1000,
+      maxStalledCount: 0,
     }
   );
 
   worker.on("ready", () => {
-    console.log(`Worker ${id} ready`);
+    console.log(`Worker ${id} ready (${useBackup ? "BACKUP" : "MAIN"})`);
   });
 
-  worker.on("error", async (error) => {
-    console.log("WORKER ERROR:\n");
-    console.log(error);
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+  worker.on("stalled", (jobId: string) => {
+    console.log(`Worker ${id} stalled (${useBackup ? "BACKUP" : "MAIN"})`);
+    console.log("JOB ID:", jobId);
+  });
+
+  // Check jobs left in queue
+
+  worker.on("error", async (error: any) => {
+    if (error.code !== "ECONNREFUSED") {
+      console.log("WORKER ERROR:", error.message);
+    }
   });
 
   worker.on("failed", (job, error) => {
-    console.log("WORKER FAILED:\n");
-    console.log(error);
+    console.log("WORKER FAILED:", error.message);
   });
 };
 
-export const initWorkers = (queue: Queue) => {
+export const initWorkers = async () => {
   const workers = [];
-  for (let i = 0; i < numWorkers; i++) {
-    workers.push(initWorker(i, queue));
+
+  const mainQueue = await QueueManager.getQueue({ useBackup: false });
+  const backupQueue = await QueueManager.getQueue({ useBackup: true });
+
+  for (let i = 0; i < NUM_WORKERS; i++) {
+    workers.push(initWorker({ id: i, queue: mainQueue, useBackup: false }));
+    workers.push(initWorker({ id: i, queue: backupQueue, useBackup: true }));
   }
+
+  // Get stalled jobs
 
   return workers;
 };

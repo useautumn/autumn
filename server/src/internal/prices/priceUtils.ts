@@ -304,7 +304,7 @@ export const roundPriceAmounts = (price: Price) => {
     const config = price.config as UsagePriceConfig;
     for (let i = 0; i < config.usage_tiers.length; i++) {
       config.usage_tiers[i].amount = Number(
-        config.usage_tiers[i].amount.toFixed(2)
+        config.usage_tiers[i].amount.toFixed(10)
       );
     }
 

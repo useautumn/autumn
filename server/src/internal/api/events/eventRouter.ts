@@ -6,7 +6,7 @@ import {
   Event,
   Feature,
 } from "@autumn/shared";
-import { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
@@ -16,6 +16,7 @@ import { Queue } from "bullmq";
 import { createNewCustomer } from "../customers/cusUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { QueueManager } from "@/queue/QueueManager.js";
 
 export const eventsRouter = Router();
 
@@ -147,15 +148,39 @@ export const handleEventSent = async ({
   });
 
   if (affectedFeatures.length > 0) {
-    let queue: Queue = req.queue;
-    queue.add("update-balance", {
+    // let queue: Queue = req.queue;
+
+    const payload = {
       customerId: customer.internal_id,
       customer,
       features: affectedFeatures,
       event,
       org,
       env,
-    });
+    };
+
+    const queue = await QueueManager.getQueue({ useBackup: false });
+
+    try {
+      // Add timeout to queue operation
+      await queue.add("update-balance", payload);
+      // console.log("Added update-balance to queue");
+    } catch (error: any) {
+      try {
+        console.log("Adding update-balance to backup queue");
+        const backupQueue = await QueueManager.getQueue({ useBackup: true });
+        await backupQueue.add("update-balance", payload);
+      } catch (error: any) {
+        throw new RecaseError({
+          message: "Failed to add update-balance to queue (backup)",
+          code: "EVENT_QUEUE_ERROR",
+          statusCode: 500,
+          data: {
+            message: error.message,
+          },
+        });
+      }
+    }
   }
 };
 

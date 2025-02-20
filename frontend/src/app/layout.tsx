@@ -43,6 +43,16 @@ export default async function RootLayout({
   const { sessionClaims }: { sessionClaims: any } = await auth();
   const { org_id, org } = sessionClaims || {};
 
+  if (path.includes("/demo")) {
+    return (
+      <html lang="en" suppressHydrationWarning>
+        <PostHogProvider>
+          <body suppressHydrationWarning>{children}</body>
+        </PostHogProvider>
+      </html>
+    );
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -62,6 +72,7 @@ export default async function RootLayout({
                     env={env as AppEnv}
                   />
                 )}
+
                 {/* <AutumnProvider
                 publishableKey={
                   process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY || ""
