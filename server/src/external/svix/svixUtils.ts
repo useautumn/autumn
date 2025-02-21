@@ -1,5 +1,5 @@
-import { AppEnv } from "@shared/models/genModels.js";
-import { Organization } from "@shared/models/orgModels.js";
+import { AppEnv } from "@autumn/shared";
+import { Organization } from "@autumn/shared";
 import { Svix } from "svix";
 
 export const createSvixCli = () => {
