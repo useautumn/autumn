@@ -92,6 +92,7 @@ export const checkAddProductErrors = async ({
       // Get options for price
       let priceEnt = getPriceEntitlement(price, entitlements);
       let options = getEntOptions(optionsList, priceEnt);
+
       if (!notNullOrUndefined(options?.quantity)) {
         throw new RecaseError({
           message: `Pass in 'quantity' for feature ${priceEnt.feature_id} in options`,
@@ -342,6 +343,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     options,
     force_checkout,
     invoice_only,
+    success_url,
   } = req.body;
 
   const { orgId, env } = req;
@@ -351,8 +353,10 @@ attachRouter.post("/attach", async (req: any, res) => {
   const entsInput: Entitlement[] = entitlements || [];
   const optionsListInput: FeatureOptions[] = options || [];
   const invoiceOnly = invoice_only || false;
+  const successUrl = success_url || undefined;
 
   let forceCheckout = force_checkout || false;
+
   console.log("--------------------------------");
   console.log(`ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
 
@@ -371,6 +375,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       freeTrialInput: free_trial,
       isCustom: is_custom,
     });
+    attachParams.successUrl = successUrl;
 
     console.log(
       `Customer: ${chalk.yellow(
@@ -383,6 +388,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     let hasPm = await customerHasPm({ attachParams });
     const useCheckout = !hasPm || forceCheckout;
+
     console.log(
       `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(
         forceCheckout

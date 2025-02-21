@@ -30,6 +30,7 @@ import { PriceService } from "@/internal/prices/PriceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripeCli } from "./utils.js";
+import { notNullOrUndefined } from "@/utils/genUtils.js";
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
     case BillingInterval.Month:
@@ -112,9 +113,15 @@ export const priceToStripeItem = ({
     const config = price.config as UsagePriceConfig;
     // const quantity = options?.quantity || 1;
 
+    let quantity = options?.quantity;
     if (options?.quantity === 0 && isCheckout) {
       console.log(`Quantity for ${config.feature_id} is 0`);
       return null;
+    } else if (
+      (options?.quantity == null || options?.quantity == undefined) &&
+      isCheckout
+    ) {
+      quantity = 1;
     }
 
     const adjustableQuantity = isCheckout
@@ -133,7 +140,7 @@ export const priceToStripeItem = ({
 
     lineItem = {
       price: config.stripe_price_id,
-      quantity: options?.quantity!,
+      quantity: quantity,
       adjustable_quantity: adjustableQuantity,
     };
     lineItemMeta = {
