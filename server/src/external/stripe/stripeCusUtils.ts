@@ -71,22 +71,26 @@ export const getCusPaymentMethod = async ({
     stripeId
   )) as Stripe.Customer;
 
-  const paymentMethod = stripeCustomer.invoice_settings.default_payment_method;
+  let paymentMethodId = stripeCustomer.invoice_settings.default_payment_method;
 
-  if (!paymentMethod) {
-    const paymentMethods = await stripeCli.paymentMethods.list({
+  if (!paymentMethodId) {
+    let res = await stripeCli.paymentMethods.list({
       customer: stripeId,
-      type: "card",
     });
 
-    if (paymentMethods.data.length === 0) {
+    // const paymentMethods = res.data.filter((pm) => pm.type === "card" );
+
+    const paymentMethods = res.data;
+    paymentMethods.sort((a, b) => b.created - a.created);
+
+    if (res.data.length === 0) {
       return null;
     }
 
-    return paymentMethods.data[0].id;
+    return paymentMethods[0].id;
   }
 
-  return paymentMethod;
+  return paymentMethodId;
 };
 
 // 2. Create a payment method and attach to customer
@@ -107,7 +111,7 @@ export const attachPmToCus = async ({
 }) => {
   // 1. Create stripe customer if not exists
 
-  let stripeCusId = customer.processor?.stripe_id;
+  let stripeCusId = customer.processor?.id;
   if (!stripeCusId) {
     const stripeCustomer = await createStripeCustomer({
       org,
@@ -126,6 +130,10 @@ export const attachPmToCus = async ({
       })
       .eq("internal_id", customer.internal_id);
     stripeCusId = stripeCustomer.id;
+    customer.processor = {
+      id: stripeCustomer.id,
+      type: "stripe",
+    };
   }
 
   const stripeCli = createStripeCli({ org, env });

@@ -90,14 +90,28 @@ export class CusProductService {
   static async getByInternalCusId({
     sb,
     cusId,
+    inStatuses,
+    productGroup,
   }: {
     sb: SupabaseClient;
     cusId: string;
+    inStatuses?: string[];
+    productGroup?: string;
   }) {
-    const { data, error } = await sb
+    const query = sb
       .from("customer_products")
       .select("*, product:products!inner(*)")
       .eq("internal_customer_id", cusId);
+
+    if (inStatuses) {
+      query.in("status", inStatuses);
+    }
+
+    if (productGroup) {
+      query.eq("product.group", productGroup);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw error;
@@ -120,7 +134,7 @@ export class CusProductService {
       .select(
         `
         *, 
-        product:products!inner(*),
+        product:products!inner(*, prices(*)),
         customer_prices:customer_prices(*, price:prices!inner(*))
       `
       )

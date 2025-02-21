@@ -536,12 +536,14 @@ export class CusService {
     withPrices = false,
     withProduct = false,
     inStatuses,
+    productGroup,
   }: {
     sb: SupabaseClient;
     internalCustomerId: string;
     withProduct?: boolean;
     withPrices?: boolean;
     inStatuses?: CusProductStatus[];
+    productGroup?: string;
   }) {
     const selectQuery = [
       "*",
@@ -549,7 +551,7 @@ export class CusService {
       withPrices
         ? "customer_prices:customer_prices(*, price:prices!inner(*))"
         : "",
-      `customer_entitlements:customer_entitlements!inner(*, 
+      `customer_entitlements:customer_entitlements(*, 
           entitlement:entitlements(*, 
             feature:features!inner(*)
           )
@@ -565,6 +567,10 @@ export class CusService {
 
     if (inStatuses) {
       query.in("status", inStatuses);
+    }
+
+    if (productGroup) {
+      query.eq("product.group", productGroup);
     }
 
     // query.limit(100);

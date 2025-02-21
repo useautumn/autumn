@@ -3,7 +3,6 @@ import {
   getBillNowPrices,
   getPriceEntitlement,
   getPriceOptions,
-  getStripeSubItems,
   pricesOnlyOneOff,
 } from "@/internal/prices/priceUtils.js";
 
@@ -20,6 +19,7 @@ import { InvoiceService } from "../invoices/InvoiceService.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { createStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
 import { handleCreateCheckout } from "./handleCreateCheckout.js";
+import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 
 const handleBillNowPrices = async ({
   sb,
@@ -34,7 +34,7 @@ const handleBillNowPrices = async ({
 
   const stripeCli = createStripeCli({ org, env: customer.env });
 
-  const { items, itemMetas } = getStripeSubItems({
+  const { items, itemMetas } = await getStripeSubItems({
     attachParams,
   });
 

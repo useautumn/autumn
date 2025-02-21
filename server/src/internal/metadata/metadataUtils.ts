@@ -8,6 +8,8 @@ import {
   Organization,
   AppEnv,
   FeatureOptions,
+  CusProduct,
+  FullCusProduct,
 } from "@autumn/shared";
 
 import { generateId } from "@/utils/genUtils.js";

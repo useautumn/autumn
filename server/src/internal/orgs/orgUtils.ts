@@ -1,6 +1,60 @@
 import { decryptData } from "@/utils/encryptUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, ErrCode, Organization } from "@autumn/shared";
+import { createSvixApp } from "@/external/svix/svixUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+
+export const initOrgSvixApps = async ({
+  id,
+  slug,
+}: {
+  id: string;
+  slug: string;
+}) => {
+  const batchCreate = [];
+  batchCreate.push(
+    createSvixApp({
+      name: `${slug}_${AppEnv.Sandbox}`,
+      orgId: id,
+      env: AppEnv.Sandbox,
+    })
+  );
+  batchCreate.push(
+    createSvixApp({
+      name: `${slug}_${AppEnv.Live}`,
+      orgId: id,
+      env: AppEnv.Live,
+    })
+  );
+
+  const [sandboxApp, liveApp] = await Promise.all(batchCreate);
+
+  return { sandboxApp, liveApp };
+};
+
+export const deleteStripeWebhook = async ({
+  org,
+  env,
+}: {
+  org: Organization;
+  env: AppEnv;
+}) => {
+  const stripeCli = createStripeCli({ org, env });
+  const webhookEndpoints = await stripeCli.webhookEndpoints.list({
+    limit: 100,
+  });
+
+  for (const webhook of webhookEndpoints.data) {
+    if (webhook.url.includes(org.id)) {
+      try {
+        await stripeCli.webhookEndpoints.del(webhook.id);
+      } catch (error: any) {
+        console.log(`Failed to delete stripe webhook (${env}) ${webhook.url}`);
+        console.log(error.message);
+      }
+    }
+  }
+};
 
 export const getStripeWebhookSecret = (org: Organization, env: AppEnv) => {
   if (!org.stripe_config) {

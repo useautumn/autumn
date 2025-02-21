@@ -127,7 +127,7 @@ export const updateStripeSubscription = async ({
     });
     return subUpdate;
   } catch (error: any) {
-    console.log("Error updating stripe subscription", error.message);
+    console.log("Error updating stripe subscription.", error.message);
 
     if (isStripeCardDeclined(error)) {
       throw new RecaseError({

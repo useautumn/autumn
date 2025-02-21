@@ -2,7 +2,6 @@ import { createStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import {
   getBillNowPrices,
-  getStripeSubItems,
   pricesOnlyOneOff,
 } from "@/internal/prices/priceUtils.js";
 import { createFullCusProduct } from "./createFullCusProduct.js";
@@ -18,7 +17,10 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 import { CusProductService } from "../products/CusProductService.js";
 import Stripe from "stripe";
-import { pricesToInvoiceItems } from "@/external/stripe/stripePriceUtils.js";
+import {
+  getStripeSubItems,
+  pricesToInvoiceItems,
+} from "@/external/stripe/stripePriceUtils.js";
 
 export const voidLatestInvoice = async ({
   stripeCli,
@@ -174,7 +176,7 @@ export const handleInvoiceOnly = async ({
 
   // 1. Create stripe subscription (with invoice)
   console.log("   - Creating stripe subscription");
-  const { items, itemMetas } = getStripeSubItems({
+  const { items, itemMetas } = await getStripeSubItems({
     attachParams,
   });
 

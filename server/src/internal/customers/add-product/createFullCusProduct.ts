@@ -9,12 +9,11 @@ import {
   FeatureOptions,
   FreeTrial,
   BillingType,
-  UsagePriceConfig,
   CollectionMethod,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
-import { Customer, Feature, FeatureType } from "@autumn/shared";
+import { Customer, FeatureType } from "@autumn/shared";
 import { EntitlementWithFeature, FullProduct } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { ErrCode } from "@/errors/errCodes.js";
