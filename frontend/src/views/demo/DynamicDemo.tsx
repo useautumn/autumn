@@ -51,6 +51,12 @@ export default function DynamicDemo({
   const [hasAccessResponse, setHasAccessResponse] = useState(null);
   const [sendEventLoading, setSendEventLoading] = useState(false);
   const [sendEventResponse, setSendEventResponse] = useState(null);
+  const [getCustomerRequest] = useState({ customer_id: customerId });
+  const [getCustomerResponse, setGetCustomerResponse] = useState(null);
+
+  useEffect(() => {
+    setGetCustomerResponse(customer?.entitlements);
+  }, [customer]);
 
   const handleBtnClicked = async ({
     featureId,
@@ -100,15 +106,14 @@ export default function DynamicDemo({
 
   return (
     <AutumnProvider publishableKey={publishableKey || ""} endpoint={endpoint}>
-      <div className="w-screen h-screen flex justify-between overflow-x-hidden">
-        <DemoSidebar />
-        <div className="flex flex-col gap-4 flex-2 w-full px-10 pt-4">
+      <div className="w-full h-screen flex justify-between">
+        <div className="flex flex-col gap-4 w-full px-10 pt-4">
           <CustomToaster />
           <div className="flex gap-4 items-center">
             <div className="text-xl font-extrabold">{name}</div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {buttons.map((button, index) => (
               <ActionButton
                 key={index}
@@ -140,7 +145,7 @@ export default function DynamicDemo({
             with any expiration date, CVC and cardholder details.
           </p>
         </div>
-        <div className="w-[600px] space-y-4 flex flex-col bg-gray-900 p-4 h-full min-h-fit">
+        <div className="space-y-4 flex flex-col bg-gray-900 p-4 h-full min-h-fit w-[400px]">
           <Image
             src="/demo-assets/autumn-logo.png"
             alt="Autumn Logo"
@@ -161,13 +166,13 @@ export default function DynamicDemo({
             response={sendEventResponse}
             loading={sendEventLoading}
           />
-          {/* <APIPlayground
+          <APIPlayground
             title="Get Customer"
             endpoint="GET /customers/:customer_id"
             request={getCustomerRequest}
             response={getCustomerResponse}
             loading={customerLoading}
-          /> */}
+          />
         </div>
       </div>
     </AutumnProvider>
