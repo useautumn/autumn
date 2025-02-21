@@ -1,20 +1,34 @@
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ErrCode } from "@autumn/shared";
 
-const allowedEndpoints = ["/entitled", "/attach"];
-export const publicAuthMiddleware = async (req: any, res: any, next: any) => {
-  const pkey = req.headers["x-publishable-key"];
+const allowedEndpoints = ["/v1/entitled", "/v1/attach"];
 
-  console.log("Request:", req.originalUrl);
+export const verifyPublishableKey = async (req: any, res: any, next: any) => {
+  if (!allowedEndpoints.includes(req.originalUrl)) {
+    return {
+      error: ErrCode.EndpointNotPublic,
+      fallback: true,
+      statusCode: null,
+    };
+  }
+
+  const pkey =
+    req.headers["x-publishable-key"] || req.headers["X-Publishable-Key"];
 
   if (!pkey) {
-    console.log("No pkey:", pkey);
-    return res.status(400).json({ message: "Publishable key is required" });
+    return {
+      error: ErrCode.NoPublishableKey,
+      fallback: true,
+      statusCode: null,
+    };
   }
 
   if (!pkey.startsWith("am_pk_test") && !pkey.startsWith("am_pk_live")) {
-    console.log("Invalid pkey:", pkey);
-    return res.status(400).json({ message: "Invalid publishable key" });
+    return {
+      error: ErrCode.InvalidPublishableKey,
+      fallback: true,
+      statusCode: null,
+    };
   }
 
   let env: AppEnv = pkey.startsWith("am_pk_test")
@@ -28,15 +42,26 @@ export const publicAuthMiddleware = async (req: any, res: any, next: any) => {
       pkey: pkey,
       env: env,
     });
-    req.org = org;
+
+    req.minOrg = {
+      id: org.id,
+      slug: org.slug,
+    };
+    req.orgId = org.id;
     req.env = env;
     req.isPublic = true;
 
     console.log("Public request from:", org.slug);
     next();
+    return {
+      error: null,
+    };
   } catch (error: any) {
-    console.log("Failed to get org from pkey");
-    console.log("Error code:", error.code);
-    return res.status(400).json({ message: "Invalid publishable key" });
+    console.log(`Failed to get org from publishable key ${pkey}`);
+    return {
+      error: ErrCode.GetOrgFromPublishableKeyFailed,
+      fallback: false,
+      statusCode: 500,
+    };
   }
 };

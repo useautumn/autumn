@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
@@ -8,14 +8,8 @@ import CreateAPIKey from "./CreateAPIKey";
 import { ApiKey, AppEnv } from "@autumn/shared";
 import { Toaster } from "react-hot-toast";
 import { DevContext } from "./DevContext";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { APIKeyToolbar } from "./APIKeyToolbar";
 import { APIKeyTable } from "./APIKeyTable";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import CopyButton from "@/components/general/CopyButton";
-import { AppPortal } from "svix-react";
-import { useEntitled } from "@/hooks/useEntitled";
 
 import "svix-react/style.css";
 
@@ -24,12 +18,6 @@ export default function DevScreen({ env }: { env: AppEnv }) {
     url: "/dev/data",
     env: env,
     withAuth: true,
-  });
-
-  // Get entitled
-  const { entitled, loading, error } = useEntitled({
-    customerId: data?.org?.id,
-    featureId: "webhooks",
   });
 
   if (isLoading) return <LoadingScreen />;
@@ -82,7 +70,7 @@ export default function DevScreen({ env }: { env: AppEnv }) {
         </div>
       </div>
 
-      <div className="mt-4">
+      {/* <div className="mt-4">
         <h1 className="text-lg font-medium mb-4">Webhooks</h1>
         <div className="h-fit w-full -translate-x-6">
           <AppPortal
@@ -94,7 +82,7 @@ export default function DevScreen({ env }: { env: AppEnv }) {
             fullSize={true}
           />
         </div>
-      </div>
+      </div> */}
     </DevContext.Provider>
   );
 }

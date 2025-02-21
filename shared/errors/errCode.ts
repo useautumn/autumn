@@ -7,6 +7,8 @@ export const ErrCode = {
 
   NoPublishableKey: "no_publishable_key",
   InvalidPublishableKey: "invalid_publishable_key",
+  GetOrgFromPublishableKeyFailed: "get_org_from_publishable_key_failed",
+  EndpointNotPublic: "endpoint_not_public",
 
   // General
   InvalidInputs: "invalid_inputs",
