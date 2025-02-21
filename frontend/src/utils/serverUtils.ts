@@ -1,6 +1,6 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { Organization } from "@autumn/shared";
+import { FrontendOrganization } from "@autumn/shared";
 export const onboardingComplete = async () => {
   const authData = await auth();
   const clerkCli = await clerkClient();
@@ -23,13 +23,12 @@ export const onboardingComplete = async () => {
 export const getOrgFromSession = async () => {
   const { sessionClaims }: { sessionClaims: any } = await auth();
 
-  const org: Organization = {
+  const org: FrontendOrganization = {
     id: sessionClaims?.org?.id,
     slug: sessionClaims?.org?.slug,
     default_currency: sessionClaims?.org?.default_currency,
     stripe_connected: sessionClaims?.org?.stripe_connected,
-    test_pkey: "",
-    live_pkey: "",
+    created_at: 0,
   };
 
   return org;

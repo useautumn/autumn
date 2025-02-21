@@ -40,6 +40,15 @@ export const OrganizationSchema = z.object({
     .nullish(),
 });
 
+export const FrontendOrganizationSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  default_currency: z.string(),
+  stripe_connected: z.boolean().default(false),
+  created_at: z.number(),
+});
+
 export type Organization = z.infer<typeof OrganizationSchema>;
 export type StripeConfig = z.infer<typeof StripeConfigSchema>;
 export type MinOrg = z.infer<typeof MinOrgSchema>;
+export type FrontendOrganization = z.infer<typeof FrontendOrganizationSchema>;

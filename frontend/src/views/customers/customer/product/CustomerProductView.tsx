@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   AppEnv,
+  FrontendOrganization,
   FrontendProduct,
   FullCusProduct,
-  Organization,
 } from "@autumn/shared";
 
 import {
@@ -24,9 +24,6 @@ import { CustomToaster } from "@/components/general/CustomToaster";
 import { ManageProduct } from "@/views/products/product/ManageProduct";
 import { ProductContext } from "@/views/products/product/ProductContext";
 
-import { Button } from "@/components/ui/button";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleDollar, faUpload } from "@fortawesome/pro-duotone-svg-icons";
 import { CusService } from "@/services/customers/CusService";
 import toast from "react-hot-toast";
 import {
@@ -43,20 +40,15 @@ import {
   getRedirectUrl,
   navigateTo,
 } from "@/utils/genUtils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
+
 import { ErrCode } from "@autumn/shared";
 import { AddProductButton } from "../add-product/AddProductButton";
 import ErrorScreen from "@/views/general/ErrorScreen";
-import { ProductOptionsButton } from "./ProductOptionsButton";
+
 import { ProductService } from "@/services/products/ProductService";
 import RequiredOptionsModal from "./RequiredOptionsModal";
 import { ProductOptions } from "./ProductOptions";
-import { Breadcrumbs } from "@nextui-org/react";
+
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 
 interface OptionValue {
@@ -74,7 +66,7 @@ export default function CustomerProductView({
   product_id: string;
   customer_id: string;
   env: AppEnv;
-  org: Organization;
+  org: FrontendOrganization;
 }) {
   const router = useRouter();
   const axiosInstance = useAxiosInstance({ env });
