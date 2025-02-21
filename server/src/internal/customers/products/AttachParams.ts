@@ -20,4 +20,5 @@ export type AttachParams = {
   optionsList: FeatureOptions[];
 
   curCusProduct?: FullCusProduct | undefined;
+  successUrl?: string | undefined;
 };
