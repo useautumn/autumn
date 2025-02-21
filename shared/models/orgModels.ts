@@ -13,6 +13,11 @@ export const StripeConfigSchema = z.object({
   success_url: z.string(),
 });
 
+export const SvixConfigSchema = z.object({
+  sandbox_app_id: z.string(),
+  live_app_id: z.string(),
+});
+
 export const OrganizationSchema = z.object({
   id: z.string(),
   slug: z.string(),
@@ -21,6 +26,12 @@ export const OrganizationSchema = z.object({
   stripe_config: StripeConfigSchema.optional().nullable(),
   test_pkey: z.string(),
   live_pkey: z.string(),
+  created_at: z.number(),
+
+  svix_config: z.object({
+    sandbox_app_id: z.string(),
+    live_app_id: z.string(),
+  }),
 
   config: z
     .object({

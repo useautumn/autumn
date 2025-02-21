@@ -3,7 +3,7 @@ import { Stripe } from "stripe";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
-import { AppEnv, Organization, UsagePriceConfig } from "@autumn/shared";
+import { AppEnv, Organization } from "@autumn/shared";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripeCli } from "../utils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
@@ -120,6 +120,8 @@ export const handleCheckoutSessionCompleted = async ({
       return;
     }
   }
+
+  // Handle upgrade / downgrade
 
   console.log("   - checkout.completed: creating full customer product");
 

@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --no-deprecation --exec tsx src/index.ts --ignore scripts",
+    "dev": "nodemon --no-deprecation --exec tsx src/index.ts --ignore scripts --ignore tests",
     "start": "tsx src/index.ts",
     "queue:dev": "tsx watch src/queue.ts",
     "build": "tsc -b",
@@ -17,7 +17,8 @@
     "clean": "tsx src/clean.ts",
     "test-all": "mocha 'tests/**/*.ts'",
     "test": "mocha 'tests/**/*.ts'",
-    "test-custom": "mocha 'tests/02_usage.ts'"
+    "test-upgrade": "mocha 'tests/06_upgrade.ts' 'tests/07_downgrade.ts'",
+    "test-custom": "mocha 'tests/06_upgrade.ts'"
   },
   "mocha": {
     "node-option": [

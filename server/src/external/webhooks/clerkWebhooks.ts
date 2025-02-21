@@ -24,6 +24,12 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { createSvixApp, deleteSvixApp } from "../svix/svixUtils.js";
+import {
+  deleteStripeWebhook,
+  initOrgSvixApps,
+} from "@/internal/orgs/orgUtils.js";
+import { createStripeCli } from "../stripe/utils.js";
 
 const defaultFeatures = [
   {
@@ -222,11 +228,13 @@ export const handleClerkWebhook = async (req: any, res: any) => {
         break;
 
       case "organization.deleted":
-        await OrgService.delete({
-          sb: req.sb,
-          orgId: eventData.id,
-        });
-        console.log(`Deleted org ${eventData.id}`);
+        await handleOrgDeleted(req.sb, eventData);
+        break;
+      // await OrgService.delete({
+      //   sb: req.sb,
+      //   orgId: eventData.id,
+      // });
+      // console.log(`Deleted org ${eventData.id}`);
 
       default:
         break;
@@ -248,7 +256,17 @@ export const handleClerkWebhook = async (req: any, res: any) => {
 };
 
 const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
+  console.log(
+    `Handling organization.created: ${eventData.slug} (${eventData.id})`
+  );
   try {
+    // 1. Create svix webhoooks
+    const { sandboxApp, liveApp } = await initOrgSvixApps({
+      slug: eventData.slug,
+      id: eventData.id,
+    });
+
+    // 2. Insert org
     await OrgService.insert({
       sb,
       org: {
@@ -259,6 +277,11 @@ const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
         stripe_config: null,
         test_pkey: generatePublishableKey(AppEnv.Sandbox),
         live_pkey: generatePublishableKey(AppEnv.Live),
+        created_at: eventData.created_at,
+        svix_config: {
+          sandbox_app_id: sandboxApp.id,
+          live_app_id: liveApp.id,
+        },
       },
     });
 
@@ -290,5 +313,65 @@ const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
       "Failed to create default products or send onboarding email",
       error
     );
+  }
+};
+
+const handleOrgDeleted = async (sb: SupabaseClient, eventData: any) => {
+  console.log(
+    `Handling organization.deleted: ${eventData.slug} (${eventData.id})`
+  );
+
+  const org = await OrgService.getFullOrg({
+    sb,
+    orgId: eventData.id,
+  });
+
+  // 1. Delete svix webhooks
+
+  try {
+    console.log("1. Deleting svix webhooks");
+    const batch = [];
+    if (org.svix_config.sandbox_app_id) {
+      batch.push(
+        deleteSvixApp({
+          appId: org.svix_config.sandbox_app_id,
+        })
+      );
+    }
+    if (org.svix_config.live_app_id) {
+      batch.push(
+        deleteSvixApp({
+          appId: org.svix_config.live_app_id,
+        })
+      );
+    }
+
+    await Promise.all(batch);
+
+    // 2. Delete stripe webhooks
+    console.log("2. Deleting stripe webhooks");
+    if (org.stripe_config) {
+      await deleteStripeWebhook({
+        org: org,
+        env: AppEnv.Sandbox,
+      });
+
+      await deleteStripeWebhook({
+        org: org,
+        env: AppEnv.Live,
+      });
+    }
+
+    // 3. Delete org
+    console.log("3. Deleting org");
+    await OrgService.delete({
+      sb,
+      orgId: eventData.id,
+    });
+
+    console.log(`Deleted org ${org.slug} (${org.id})`);
+  } catch (error) {
+    console.log("Failed to delete organization", error);
+    return;
   }
 };

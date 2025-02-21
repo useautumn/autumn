@@ -3,6 +3,7 @@ import {
   EntitlementWithFeature,
   FeatureOptions,
   FreeTrial,
+  FullCusProduct,
   FullProduct,
   Organization,
   Price,
@@ -17,4 +18,6 @@ export type AttachParams = {
   entitlements: EntitlementWithFeature[];
   freeTrial: FreeTrial | null;
   optionsList: FeatureOptions[];
+
+  curCusProduct?: FullCusProduct | undefined;
 };

@@ -2,7 +2,6 @@ import {
   BillingInterval,
   BillingType,
   FixedPriceConfig,
-  PriceOptions,
   Organization,
   FullProduct,
   Price,
@@ -13,6 +12,7 @@ import {
   Product,
   AllowanceType,
   EntitlementWithFeature,
+  CusProductStatus,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -20,6 +20,8 @@ import { ErrCode } from "@/errors/errCodes.js";
 import Stripe from "stripe";
 import {
   getBillingType,
+  getCheckoutRelevantPrices,
+  getEntOptions,
   getPriceAmount,
   getPriceEntitlement,
   getPriceOptions,
@@ -27,6 +29,7 @@ import {
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { createStripeCli } from "./utils.js";
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
     case BillingInterval.Month:
@@ -54,20 +57,19 @@ export const billingIntervalToStripe = (interval: BillingInterval) => {
   }
 };
 
+// GET STRIPE LINE / SUB ITEM
 export const priceToStripeItem = ({
   price,
   product,
   org,
   options,
   isCheckout = false,
-  relatedEnt,
 }: {
   price: Price;
   product: FullProduct;
   org: Organization;
   options: FeatureOptions | undefined | null;
   isCheckout: boolean;
-  relatedEnt: EntitlementWithFeature | undefined;
 }) => {
   // TODO: Implement this
   const billingType = price.billing_type;
@@ -108,7 +110,12 @@ export const priceToStripeItem = ({
     };
   } else if (billingType == BillingType.UsageInAdvance) {
     const config = price.config as UsagePriceConfig;
-    const quantity = options?.quantity || 1;
+    // const quantity = options?.quantity || 1;
+
+    if (options?.quantity === 0 && isCheckout) {
+      console.log(`Quantity for ${config.feature_id} is 0`);
+      return null;
+    }
 
     const adjustableQuantity = isCheckout
       ? {
@@ -126,7 +133,7 @@ export const priceToStripeItem = ({
 
     lineItem = {
       price: config.stripe_price_id,
-      quantity,
+      quantity: options?.quantity!,
       adjustable_quantity: adjustableQuantity,
     };
     lineItemMeta = {
@@ -156,6 +163,74 @@ export const priceToStripeItem = ({
     lineItem,
     lineItemMeta,
   };
+};
+
+// STRIPE TO SUB ITEMS
+export const getStripeSubItems = async ({
+  attachParams,
+  isCheckout = false,
+}: {
+  attachParams: AttachParams;
+  isCheckout?: boolean;
+}) => {
+  const { product, prices, entitlements, optionsList, org, curCusProduct } =
+    attachParams;
+  const checkoutRelevantPrices = getCheckoutRelevantPrices(prices);
+
+  let subItems: any[] = [];
+  let itemMetas: any[] = [];
+
+  // TODO: Check if non bill now prices can be added to stripe subscription...?
+
+  // // 1. Check current period end...
+  // if (curCusProduct && curCusProduct.processor?.subscription_id) {
+  //   const subId = curCusProduct.processor.subscription_id;
+  //   const stripeCli = createStripeCli({
+  //     org,
+  //     env: curCusProduct.customer.env,
+  //   });
+
+  //   const sub = await stripeCli.subscriptions.retrieve(subId);
+
+  //   const prorationConfig: any = {};
+  //   if (sub.status !== CusProductStatus.Trialing) {
+  //     const curPeriodStart = sub.current_period_start * 1000;
+  //     const curPeriodEnd = sub.current_period_end * 1000;
+
+  //     prorationConfig.current_period_start = curPeriodStart;
+  //     prorationConfig.current_period_end = curPeriodEnd;
+
+  //     const curPrices = curCusProduct.customer_prices.map((p) => p.price!);
+
+  //     prorationConfig.curPrices = curPrices;
+  //   }
+  // }
+
+  for (const price of checkoutRelevantPrices) {
+    const priceEnt = getPriceEntitlement(price, entitlements);
+    const options = getEntOptions(optionsList, priceEnt);
+
+    const stripeItem = priceToStripeItem({
+      price,
+      product,
+      org,
+      options,
+      isCheckout,
+    });
+
+    if (!stripeItem) {
+      continue;
+    }
+
+    const { lineItem, lineItemMeta } = stripeItem;
+
+    subItems.push(lineItem);
+    itemMetas.push(lineItemMeta);
+  }
+
+  console.log("Line items: ", subItems);
+
+  return { items: subItems, itemMetas };
 };
 
 export const inAdvanceToStripeTiers = (

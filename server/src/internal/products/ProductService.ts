@@ -197,40 +197,6 @@ export class ProductService {
     return data;
   }
 
-  static async getFullProduct({
-    sb,
-    productId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    productId: string;
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const { data, error } = await sb
-      .from("products")
-      .select(
-        `*,
-        entitlements (
-          *,
-          feature:features (id, name, type)
-        ),
-        prices (*)
-      `
-      )
-      .eq("id", productId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
   static async getFullProductStrict({
     sb,
     productId,

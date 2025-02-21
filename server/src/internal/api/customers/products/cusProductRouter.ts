@@ -26,7 +26,10 @@ import {
 } from "@/internal/prices/priceUtils.js";
 import { PricesInput } from "@autumn/shared";
 import { getFullCusProductData } from "../../../customers/products/cusProductUtils.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
+import {
+  isFreeProduct,
+  isProductUpgrade,
+} from "@/internal/products/productUtils.js";
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
@@ -41,6 +44,7 @@ import {
   createStripePriceIFNotExist,
 } from "@/external/stripe/stripePriceUtils.js";
 import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoiceOnly.js";
+import { notNullOrUndefined } from "@/utils/genUtils.js";
 
 export const attachRouter = Router();
 
@@ -88,9 +92,17 @@ export const checkAddProductErrors = async ({
       // Get options for price
       let priceEnt = getPriceEntitlement(price, entitlements);
       let options = getEntOptions(optionsList, priceEnt);
-      if (!options?.quantity) {
+      if (!notNullOrUndefined(options?.quantity)) {
         throw new RecaseError({
           message: `Pass in 'quantity' for feature ${priceEnt.feature_id} in options`,
+          code: ErrCode.InvalidOptions,
+          statusCode: 400,
+        });
+      }
+
+      if (options?.quantity === 0 && prices.length === 0) {
+        throw new RecaseError({
+          message: `When there's only one price, quantity must be greater than 0`,
           code: ErrCode.InvalidOptions,
           statusCode: 400,
         });
@@ -194,23 +206,30 @@ export const handleExistingProduct = async ({
     });
   }
 
-  const curPrices =
-    currentProduct?.customer_prices.map((cp: any) => cp.price) || [];
-  // If there's current product and it's not free and new product is a switch
-  if (
-    currentProduct &&
-    !isFreeProduct(curPrices) &&
-    !product.is_add_on &&
-    useCheckout
-  ) {
-    throw new RecaseError({
-      message: `Can't use checkout for upgrades / downgrades`,
-      code: ErrCode.InvalidRequest,
-      statusCode: 400,
-    });
+  if (currentProduct && useCheckout) {
+    // If not downgrade to free, throw error
+    let downgradeToFree =
+      !isProductUpgrade(currentProduct.product, product) &&
+      isFreeProduct(attachParams.prices);
+
+    let upgradeFromFree =
+      isProductUpgrade(currentProduct.product, product) &&
+      isFreeProduct(
+        currentProduct?.customer_prices.map((cp: any) => cp.price) || []
+      );
+
+    let isAddOn = attachParams.product.is_add_on;
+
+    if (!downgradeToFree && !upgradeFromFree && !isAddOn) {
+      throw new RecaseError({
+        message: `Either payment method not found, or force_checkout is true: unable to perform upgrade / downgrade`,
+        code: ErrCode.InvalidRequest,
+        statusCode: 400,
+      });
+    }
   }
 
-  return { currentProduct, done: false };
+  return { curCusProduct: currentProduct, done: false };
 };
 
 export const checkStripeConnections = async ({
@@ -295,6 +314,21 @@ export const checkStripeConnections = async ({
   await Promise.all(batchPriceUpdates);
 };
 
+export const customerHasPm = async ({
+  attachParams,
+}: {
+  attachParams: AttachParams;
+}) => {
+  // SCENARIO 3: No payment method, checkout required
+  const paymentMethod = await getCusPaymentMethod({
+    org: attachParams.org,
+    env: attachParams.customer.env,
+    stripeId: attachParams.customer.processor.id,
+  });
+
+  return notNullOrUndefined(paymentMethod) ? true : false;
+};
+
 attachRouter.post("/attach", async (req: any, res) => {
   const {
     customer_id,
@@ -318,14 +352,13 @@ attachRouter.post("/attach", async (req: any, res) => {
   const optionsListInput: FeatureOptions[] = options || [];
   const invoiceOnly = invoice_only || false;
 
-  const useCheckout = force_checkout || false;
+  let forceCheckout = force_checkout || false;
   console.log("--------------------------------");
   console.log(`ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
 
   try {
     z.array(FeatureOptionsSchema).parse(optionsListInput);
-    // 1. Get full customer product data
-    const attachParams = await getFullCusProductData({
+    const attachParams: AttachParams = await getFullCusProductData({
       sb,
       customerId: customer_id,
       productId: product_id,
@@ -339,6 +372,23 @@ attachRouter.post("/attach", async (req: any, res) => {
       isCustom: is_custom,
     });
 
+    console.log(
+      `Customer: ${chalk.yellow(
+        `${attachParams.customer.id} (${attachParams.customer.name})`
+      )}`
+    );
+
+    // 3. Check for stripe connection
+    await checkStripeConnections({ req, res, attachParams });
+
+    let hasPm = await customerHasPm({ attachParams });
+    const useCheckout = !hasPm || forceCheckout;
+    console.log(
+      `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(
+        forceCheckout
+      )}, Use Checkout: ${chalk.yellow(useCheckout)}`
+    );
+
     // -------------------- ERROR CHECKING --------------------
 
     // 1. Check for normal errors (eg. options, different recurring intervals)
@@ -347,14 +397,8 @@ attachRouter.post("/attach", async (req: any, res) => {
       useCheckout,
     });
 
-    console.log(
-      `Customer: ${chalk.yellow(
-        `${attachParams.customer.id} (${attachParams.customer.name})`
-      )}`
-    );
-
     // 2. Check for existing product and fetch
-    const { currentProduct, done } = await handleExistingProduct({
+    const { curCusProduct, done } = await handleExistingProduct({
       req,
       res,
       attachParams,
@@ -363,20 +407,18 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     if (done) return;
 
-    // 3. Check for stripe connection
-    await checkStripeConnections({ req, res, attachParams });
-
     // -------------------- ATTACH PRODUCT --------------------
 
     // SCENARIO 1: Free product, no existing product
-
     const curProductFree = isFreeProduct(
-      currentProduct?.customer_prices.map((cp: any) => cp.price) || [] // if no current product...
+      curCusProduct?.customer_prices.map((cp: any) => cp.price) || [] // if no current product...
     );
+
     const newProductFree = isFreeProduct(attachParams.prices);
+    attachParams.curCusProduct = !curProductFree ? curCusProduct : null;
 
     if (
-      (!currentProduct && newProductFree) ||
+      (!curCusProduct && newProductFree) ||
       (curProductFree && newProductFree) ||
       (attachParams.product.is_add_on && newProductFree)
     ) {
@@ -395,19 +437,12 @@ attachRouter.post("/attach", async (req: any, res) => {
         req,
         res,
         attachParams,
-        curCusProduct: currentProduct,
+        curCusProduct,
       });
       return;
     }
 
-    // SCENARIO 3: No payment method, checkout required
-    const paymentMethod = await getCusPaymentMethod({
-      org: attachParams.org,
-      env: attachParams.customer.env,
-      stripeId: attachParams.customer.processor.id,
-    });
-
-    if (!paymentMethod || useCheckout) {
+    if (useCheckout) {
       console.log("SCENARIO 2: NO PAYMENT METHOD, CHECKOUT REQUIRED");
       await handleCreateCheckout({
         sb,
@@ -418,13 +453,14 @@ attachRouter.post("/attach", async (req: any, res) => {
     }
 
     // SCENARIO 4: Switching product
-    if (!attachParams.product.is_add_on && currentProduct) {
+
+    if (!attachParams.product.is_add_on && curCusProduct) {
       console.log("SCENARIO 3: SWITCHING PRODUCT (PAYMENT METHOD EXISTS)");
       await handleChangeProduct({
         req,
         res,
         attachParams,
-        curCusProduct: currentProduct,
+        curCusProduct,
       });
       return;
     }

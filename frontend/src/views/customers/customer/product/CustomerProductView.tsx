@@ -93,6 +93,8 @@ export default function CustomerProductView({
   const [hasChanges, setHasChanges] = useState(false);
   const [useInvoice, setUseInvoice] = useState(false);
   const initialProductRef = useRef<FrontendProduct | null>(null);
+  const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
+    useState<"unlimited" | number>(0);
 
   const searchParams = useSearchParams();
 
@@ -298,6 +300,8 @@ export default function CustomerProductView({
         env,
         product,
         setProduct,
+        selectedEntitlementAllowance,
+        setSelectedEntitlementAllowance,
         // prices: product.prices,
         // entitlements: product.entitlements,
         org,

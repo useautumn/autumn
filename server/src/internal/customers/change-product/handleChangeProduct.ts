@@ -1,5 +1,5 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getStripeSubItems } from "@/internal/prices/priceUtils.js";
+import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
   isFreeProduct,
@@ -16,10 +16,8 @@ import { handleAddProduct } from "../add-product/handleAddProduct.js";
 import { CusProductService } from "../products/CusProductService.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import chalk from "chalk";
-import RecaseError, { isPaymentDeclined } from "@/utils/errorUtils.js";
 import { updateStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
-import { handleCreateCheckout } from "../add-product/handleCreateCheckout.js";
+import { InvoiceService } from "../invoices/InvoiceService.js";
 
 const scheduleStripeSubscription = async ({
   attachParams,
@@ -32,7 +30,7 @@ const scheduleStripeSubscription = async ({
 }) => {
   const { org, customer } = attachParams;
 
-  const { items, itemMetas } = getStripeSubItems({
+  const { items, itemMetas } = await getStripeSubItems({
     attachParams,
   });
 
@@ -151,7 +149,7 @@ const handleStripeSubUpdate = async ({
   const subscription = await stripeCli.subscriptions.retrieve(subscriptionId);
 
   // Get stripe subscription from product
-  const { items, itemMetas } = getStripeSubItems({
+  const { items, itemMetas } = await getStripeSubItems({
     attachParams,
   });
 
@@ -215,10 +213,27 @@ const handleUpgrade = async ({
     return;
   }
 
-  const disableFreeTrial =
-    curFullProduct.free_trial && org.config?.free_trial_paid_to_paid;
+  // 2. If current product is a trial, just start a new period
+  if (curCusProduct.trial_ends_at && curCusProduct.trial_ends_at > Date.now()) {
+    console.log(
+      "NOTE: Current product is a trial, cancel and start new subscription"
+    );
 
-  // Maybe do it such that if cur cus product has no subscription ID, we just create a new one?
+    await handleAddProduct({
+      req,
+      res,
+      attachParams,
+    });
+
+    await stripeCli.subscriptions.cancel(
+      curCusProduct.processor?.subscription_id!
+    );
+
+    return;
+  }
+  // const disableFreeTrial =
+  //   curCusProduct.free_trial_id && org.config?.free_trial_paid_to_paid;
+  const disableFreeTrial = false;
 
   console.log("1. Updating current subscription to new product");
   let subUpdate;
@@ -226,6 +241,7 @@ const handleUpgrade = async ({
     subscriptionId: curCusProduct.processor?.subscription_id!,
     stripeCli,
     attachParams,
+    disableFreeTrial,
   });
 
   // Handle backend
@@ -239,6 +255,19 @@ const handleUpgrade = async ({
       : undefined,
     disableFreeTrial,
   });
+
+  // // Insert latest invoice
+  // const stripeInvoice = await stripeCli.invoices.retrieve(
+  //   subUpdate.latest_invoice as string
+  // );
+  // await InvoiceService.createInvoiceFromStripe({
+  //   sb: req.sb,
+  //   stripeInvoice,
+  //   internalCustomerId: customer.id,
+  //   org: org,
+  //   productIds: [product.id],
+  //   internalProductIds: [product.id],
+  // });
 
   res.status(200).json({ success: true, message: "Product change handled" });
 };
@@ -259,7 +288,7 @@ export const handleChangeProduct = async ({
   const { org, customer, product, prices, entitlements, optionsList } =
     attachParams;
 
-  const curFullProduct = await ProductService.getFullProduct({
+  const curFullProduct = await ProductService.getFullProductStrict({
     sb: req.sb,
     productId: curProduct.id,
     orgId: org.id,

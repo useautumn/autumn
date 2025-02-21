@@ -1,15 +1,14 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
 
-import {
-  getStripeSubItems,
-  pricesContainRecurring,
-} from "@/internal/prices/priceUtils.js";
+import { pricesContainRecurring } from "@/internal/prices/priceUtils.js";
 
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-
+import { BillingType, FixedPriceConfig } from "@autumn/shared";
+import { differenceInDays, format } from "date-fns";
+import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 export const handleCreateCheckout = async ({
   sb,
   res,
@@ -23,7 +22,7 @@ export const handleCreateCheckout = async ({
     `Creating checkout for customer ${attachParams.customer.id}, product ${attachParams.product.name}`
   );
 
-  const { customer, org, freeTrial } = attachParams;
+  const { customer, org, freeTrial, curCusProduct } = attachParams;
 
   const stripeCli = createStripeCli({
     org,
@@ -31,7 +30,7 @@ export const handleCreateCheckout = async ({
   });
 
   // Get stripeItems
-  const { items, itemMetas } = getStripeSubItems({
+  const { items, itemMetas } = await getStripeSubItems({
     attachParams,
     isCheckout: true,
   });
