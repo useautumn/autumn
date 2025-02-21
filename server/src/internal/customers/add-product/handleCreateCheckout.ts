@@ -13,10 +13,12 @@ export const handleCreateCheckout = async ({
   sb,
   res,
   attachParams,
+  successUrl,
 }: {
   sb: SupabaseClient;
   res: any;
   attachParams: AttachParams;
+  successUrl: string;
 }) => {
   console.log(
     `Creating checkout for customer ${attachParams.customer.id}, product ${attachParams.product.name}`
@@ -58,7 +60,7 @@ export const handleCreateCheckout = async ({
     subscription_data: subscriptionData,
     mode: isRecurring ? "subscription" : "payment",
     currency: org.default_currency,
-    success_url: org.stripe_config!.success_url,
+    success_url: successUrl || org.stripe_config!.success_url,
     metadata: {
       autumn_metadata_id: metaId,
     },
