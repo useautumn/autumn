@@ -1,4 +1,13 @@
 export const ErrCode = {
+  // Auth
+  NoAuthHeader: "no_auth_header",
+  InvalidAuthHeader: "invalid_auth_header",
+  FailedToVerifySecretKey: "failed_to_verify_secret_key",
+  FailedToFetchKeyFromAutumn: "failed_to_fetch_key_from_autumn",
+
+  NoPublishableKey: "no_publishable_key",
+  InvalidPublishableKey: "invalid_publishable_key",
+
   // General
   InvalidInputs: "invalid_inputs",
   LimitsReached: "limits_reached",

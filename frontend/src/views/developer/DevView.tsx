@@ -14,12 +14,22 @@ import { APIKeyTable } from "./APIKeyTable";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import CopyButton from "@/components/general/CopyButton";
+import { AppPortal } from "svix-react";
+import { useEntitled } from "@/hooks/useEntitled";
+
+import "svix-react/style.css";
 
 export default function DevScreen({ env }: { env: AppEnv }) {
   const { data, isLoading, mutate } = useAxiosSWR({
     url: "/dev/data",
     env: env,
     withAuth: true,
+  });
+
+  // Get entitled
+  const { entitled, loading, error } = useEntitled({
+    customerId: data?.org?.id,
+    featureId: "webhooks",
   });
 
   if (isLoading) return <LoadingScreen />;
@@ -69,6 +79,20 @@ export default function DevScreen({ env }: { env: AppEnv }) {
               value={data?.org?.live_pkey}
             />
           )}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <h1 className="text-lg font-medium mb-4">Webhooks</h1>
+        <div className="h-fit w-full -translate-x-6">
+          <AppPortal
+            url={data?.svix_dashboard_url}
+            style={{
+              width: "105%",
+              height: "100%",
+            }}
+            fullSize={true}
+          />
         </div>
       </div>
     </DevContext.Provider>

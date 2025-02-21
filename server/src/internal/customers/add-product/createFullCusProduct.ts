@@ -29,6 +29,8 @@ import {
   getEntRelatedPrice,
 } from "@/internal/products/entitlements/entitlementUtils.js";
 import { getResetBalance } from "../entitlements/cusEntUtils.js";
+import { sendSvixEvent } from "@/external/svix/svixUtils.js";
+import { processFullCusProduct } from "../products/cusProductUtils.js";
 
 export const initCusEntitlement = ({
   entitlement,
@@ -241,6 +243,7 @@ export const insertFullCusProduct = async ({
   const { error: priceError } = await sb
     .from("customer_prices")
     .insert(cusPrices);
+
   if (priceError) {
     console.log("Error inserting customer prices: ", priceError);
     throw new RecaseError({
@@ -380,6 +383,19 @@ export const createFullCusProduct = async ({
     cusEnts,
     cusPrices,
   });
+
+  // // Send webhook
+  // await sendSvixEvent({
+  //   org: customer.org,
+  //   eventType: "product.attached",
+  //   data: processFullCusProduct({
+  //     customer,
+  //     product,
+  //     prices,
+  //     entitlements,
+  //     optionsList,
+  //   }),
+  // });
 
   return cusProd;
 };
