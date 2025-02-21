@@ -375,6 +375,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       freeTrialInput: free_trial,
       isCustom: is_custom,
     });
+    attachParams.successUrl = successUrl;
 
     console.log(
       `Customer: ${chalk.yellow(
@@ -453,7 +454,6 @@ attachRouter.post("/attach", async (req: any, res) => {
         sb,
         res,
         attachParams,
-        successUrl,
       });
       return;
     }
