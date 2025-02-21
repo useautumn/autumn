@@ -317,9 +317,7 @@ const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
 };
 
 const handleOrgDeleted = async (sb: SupabaseClient, eventData: any) => {
-  console.log(
-    `Handling organization.deleted: ${eventData.slug} (${eventData.id})`
-  );
+  console.log(`Handling organization.deleted: (${eventData.id})`);
 
   const org = await OrgService.getFullOrg({
     sb,

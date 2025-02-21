@@ -10,7 +10,7 @@ export class ApiKeyService {
       .eq("env", env);
 
     if (error) {
-      throw new Error("Failed to get API key");
+      throw error;
     }
 
     return data;
@@ -44,7 +44,8 @@ export class ApiKeyService {
       if (error.code === "PGRST116") {
         return null;
       }
-      throw new Error("Failed to get API key");
+
+      throw error;
     }
 
     return data;
@@ -62,7 +63,7 @@ export class ApiKeyService {
     const { error } = await sb.from("api_keys").update(update).eq("id", keyId);
 
     if (error) {
-      throw new Error("Failed to update API key");
+      throw error;
     }
   }
 }

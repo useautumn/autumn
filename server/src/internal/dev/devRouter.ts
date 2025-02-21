@@ -6,6 +6,7 @@ import { ApiKeyService } from "./ApiKeyService.js";
 import { OrgService } from "../orgs/OrgService.js";
 import { createKey } from "./api-keys/apiKeyUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { getSvixDashboardUrl } from "@/external/svix/svixUtils.js";
 
 export const devRouter = Router();
 
@@ -46,9 +47,21 @@ devRouter.get("/data", withOrgAuth, async (req: any, res) => {
   const apiKeys = await ApiKeyService.getByOrg(req.sb, req.orgId, req.env);
   const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
 
+  // Get svix dashboard url
+  let svixDashboardUrl = null;
+  try {
+    svixDashboardUrl = await getSvixDashboardUrl({
+      org,
+      env: req.env,
+    });
+  } catch (error) {
+    console.error("Failed to get svix dashboard url", error);
+  }
+
   res.status(200).json({
     api_keys: apiKeys,
     org,
+    svix_dashboard_url: svixDashboardUrl,
   });
 });
 

@@ -485,7 +485,6 @@ cusRouter.post(
   async (req: any, res: any) => {
     const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
     try {
-      const customerId = req.params.customer_id;
       const customerProductId = req.params.customer_product_id;
       const { status } = req.body;
 
@@ -506,12 +505,44 @@ cusRouter.post(
         });
       }
 
-      if (status == CusProductStatus.Expired) {
+      // 1. If current product is scheduled:
+      if (cusProduct.status == CusProductStatus.Scheduled) {
         const stripeCli = createStripeCli({
           org,
           env: req.env,
         });
-        // Check if customer has any other active products
+
+        if (cusProduct.processor.subscription_schedule_id) {
+          await stripeCli.subscriptionSchedules.cancel(
+            cusProduct.processor.subscription_schedule_id
+          );
+        }
+
+        await CusProductService.deleteFutureProduct({
+          sb: req.sb,
+          internalCustomerId: cusProduct.customer.internal_id,
+          productGroup: cusProduct.product.group,
+        });
+
+        // Activate current product
+        const curCusProduct = await CusProductService.getCurrentProductByGroup({
+          sb: req.sb,
+          internalCustomerId: cusProduct.customer.internal_id,
+          productGroup: cusProduct.product.group,
+        });
+
+        if (curCusProduct && curCusProduct.processor.subscription_id) {
+          await stripeCli.subscriptions.update(
+            curCusProduct.processor.subscription_id!,
+            { cancel_at: null }
+          );
+        }
+      } else {
+        // For regular products
+        const stripeCli = createStripeCli({
+          org,
+          env: req.env,
+        });
 
         // Case 1: Stripe subscription exists
         // Just cancel stripe subscription, webhook will expire and activate default product
@@ -534,50 +565,7 @@ cusRouter.post(
           }
         }
 
-        // Case 2: Stripe subscription schedule exists
-        else if (cusProduct.processor.subscription_schedule_id) {
-          try {
-            await stripeCli.subscriptionSchedules.cancel(
-              cusProduct.processor.subscription_schedule_id
-            );
-          } catch (error: any) {
-            console.log(
-              "Error canceling stripe subscription schedule (from manual cusProduct)"
-            );
-            console.log(error.message);
-          }
-
-          // Delete future product
-          await CusProductService.deleteFutureProduct({
-            sb: req.sb,
-            internalCustomerId: cusProduct.customer.internal_id,
-            productGroup: cusProduct.product.group,
-          });
-
-          // Reactivate current product
-          const curActiveProducts = await CusService.getFullCusProducts({
-            sb: req.sb,
-            internalCustomerId: cusProduct.internal_customer_id,
-            inStatuses: [CusProductStatus.Active],
-            productGroup: cusProduct.product.group,
-            withProduct: true,
-          });
-
-          for (const activeProduct of curActiveProducts) {
-            console.log(
-              "Reactivating current product:",
-              activeProduct.product.name
-            );
-            await stripeCli.subscriptions.update(
-              activeProduct.processor.subscription_id!,
-              {
-                cancel_at: null,
-              }
-            );
-          }
-        }
-
-        // Case 3: No stripe subscription or schedule exists
+        // Case 2: No stripe subscription or schedule exists
         else {
           // If not add on, expire and add default product
           if (!cusProduct.product.is_add_on) {
@@ -587,10 +575,7 @@ cusRouter.post(
               env: req.env,
               cusProduct,
             });
-          }
-
-          // If not, just expire current product
-          else {
+          } else {
             await CusProductService.update({
               sb: req.sb,
               cusProductId: customerProductId,
@@ -599,20 +584,6 @@ cusRouter.post(
           }
         }
       }
-
-      if (!cusProduct) {
-        throw new RecaseError({
-          message: `Customer product ${customerProductId} not found`,
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      await CusProductService.update({
-        sb: req.sb,
-        cusProductId: customerProductId,
-        updates: { status },
-      });
 
       res.status(200).json({ success: true });
     } catch (error) {
@@ -625,32 +596,3 @@ cusRouter.post(
     }
   }
 );
-
-// cusRouter.get("/:customer_id/products", async (req: any, res: any) => {
-//   const customerId = req.params.customer_id;
-
-//   const cusProducts = await CusProductService.getByCustomerId({
-//     sb: req.sb,
-//     customerId,
-//     inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-//   });
-
-//   // Clean up:
-//   let products = [];
-//   for (const cusProduct of cusProducts) {
-//     products.push({
-//       id: cusProduct.product.id,
-//       name: cusProduct.product.name,
-//       group: cusProduct.product.group,
-//       status: cusProduct.status,
-//       created_at: cusProduct.created_at,
-//       canceled_at: cusProduct.canceled_at,
-//       processor: {
-//         type: cusProduct.processor.type,
-//         subscription_id: cusProduct.processor.subscription_id || null,
-//       },
-//     });
-//   }
-
-//   res.status(200).json(products);
-// });

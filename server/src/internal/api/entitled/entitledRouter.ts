@@ -367,7 +367,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     }
 
     console.log(
-      `CusEnts (${customer_id}):`,
+      `${req.isPublic ? "(Public)" : ""} CusEnts (${customer_id}):`,
       cusEnts.map((cusEnt: any) => {
         let balanceStr = cusEnt.balance;
 
@@ -392,7 +392,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       quantity,
     });
 
-    if (allowed && event_data) {
+    if (allowed && event_data && !req.isPublic) {
       handleEventSent({
         req,
         customer_id: customer_id,
