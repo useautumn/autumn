@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
@@ -8,12 +8,10 @@ import CreateAPIKey from "./CreateAPIKey";
 import { ApiKey, AppEnv } from "@autumn/shared";
 import { Toaster } from "react-hot-toast";
 import { DevContext } from "./DevContext";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { APIKeyToolbar } from "./APIKeyToolbar";
 import { APIKeyTable } from "./APIKeyTable";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import CopyButton from "@/components/general/CopyButton";
+
+import "svix-react/style.css";
 
 export default function DevScreen({ env }: { env: AppEnv }) {
   const { data, isLoading, mutate } = useAxiosSWR({
@@ -71,6 +69,20 @@ export default function DevScreen({ env }: { env: AppEnv }) {
           )}
         </div>
       </div>
+
+      {/* <div className="mt-4">
+        <h1 className="text-lg font-medium mb-4">Webhooks</h1>
+        <div className="h-fit w-full -translate-x-6">
+          <AppPortal
+            url={data?.svix_dashboard_url}
+            style={{
+              width: "105%",
+              height: "100%",
+            }}
+            fullSize={true}
+          />
+        </div>
+      </div> */}
     </DevContext.Provider>
   );
 }

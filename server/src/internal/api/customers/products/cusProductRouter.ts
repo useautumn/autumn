@@ -2,14 +2,14 @@ import { Router } from "express";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { z } from "zod";
 import {
-  BillingInterval,
   BillingType,
+  CusProduct,
   Entitlement,
   FeatureOptions,
   FeatureOptionsSchema,
+  FullCusProduct,
   Price,
   ProcessorType,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 import {
@@ -38,11 +38,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 import chalk from "chalk";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
-import {
-  createStripeInAdvancePrice,
-  createStripeInArrearPrice,
-  createStripePriceIFNotExist,
-} from "@/external/stripe/stripePriceUtils.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
 import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoiceOnly.js";
 import { notNullOrUndefined } from "@/utils/genUtils.js";
 
@@ -233,6 +229,35 @@ export const handleExistingProduct = async ({
   return { curCusProduct: currentProduct, done: false };
 };
 
+export const handlePublicAttachErrors = async ({
+  curCusProduct,
+  isPublic,
+}: {
+  curCusProduct: FullCusProduct | null;
+  isPublic: boolean;
+}) => {
+  if (!isPublic) {
+    return;
+  }
+
+  if (!curCusProduct) {
+    return;
+  }
+
+  // 1. If on paid plan, not allowed to switch product
+  const curProductFree = isFreeProduct(
+    curCusProduct?.customer_prices.map((cp: any) => cp.price) || [] // if no current product...
+  );
+
+  if (!curProductFree) {
+    throw new RecaseError({
+      message: "Public attach: not allowed to upgrade / downgrade (from paid)",
+      code: ErrCode.InvalidRequest,
+      statusCode: 400,
+    });
+  }
+};
+
 export const checkStripeConnections = async ({
   req,
   res,
@@ -331,6 +356,11 @@ export const customerHasPm = async ({
 };
 
 attachRouter.post("/attach", async (req: any, res) => {
+  // if (req.isPublic) {
+  //   await handlePublicAttach(req, res);
+  //   return;
+  // }
+
   const {
     customer_id,
     product_id,
@@ -355,10 +385,13 @@ attachRouter.post("/attach", async (req: any, res) => {
   const invoiceOnly = invoice_only || false;
   const successUrl = success_url || undefined;
 
-  let forceCheckout = force_checkout || false;
+  // PUBLIC STUFF
+  let forceCheckout = req.isPublic || force_checkout || false;
+  let isCustom = req.isPublic || is_custom || false;
 
   console.log("--------------------------------");
-  console.log(`ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
+  let publicStr = req.isPublic ? "(Public) " : "";
+  console.log(`${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
 
   try {
     z.array(FeatureOptionsSchema).parse(optionsListInput);
@@ -373,7 +406,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       entsInput,
       optionsListInput,
       freeTrialInput: free_trial,
-      isCustom: is_custom,
+      isCustom,
     });
     attachParams.successUrl = successUrl;
 
@@ -409,6 +442,11 @@ attachRouter.post("/attach", async (req: any, res) => {
       res,
       attachParams,
       useCheckout,
+    });
+
+    await handlePublicAttachErrors({
+      curCusProduct,
+      isPublic: req.isPublic,
     });
 
     if (done) return;
@@ -449,7 +487,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     }
 
     if (useCheckout) {
-      console.log("SCENARIO 2: NO PAYMENT METHOD, CHECKOUT REQUIRED");
+      console.log("SCENARIO 2: USING CHECKOUT");
       await handleCreateCheckout({
         sb,
         res,
@@ -461,7 +499,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     // SCENARIO 4: Switching product
 
     if (!attachParams.product.is_add_on && curCusProduct) {
-      console.log("SCENARIO 3: SWITCHING PRODUCT (PAYMENT METHOD EXISTS)");
+      console.log("SCENARIO 3: SWITCHING PRODUCT");
       await handleChangeProduct({
         req,
         res,

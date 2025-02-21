@@ -60,6 +60,7 @@
     "react-hotkeys-hook": "^4.6.1",
     "react-use-websocket": "^4.13.0",
     "sonner": "^1.7.4",
+    "svix-react": "^1.13.3",
     "swr": "^2.2.5",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
