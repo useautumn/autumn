@@ -600,6 +600,7 @@ export const getFullCusProductData = async ({
     orgId,
     isCustom,
     features,
+    prices: pricesInput,
   });
 
   const entitlementsWithFeature = entitlements!.map((ent) => ({

@@ -29,8 +29,7 @@ import {
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
-import { createStripeCli } from "./utils.js";
-import { notNullOrUndefined } from "@/utils/genUtils.js";
+
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
     case BillingInterval.Month:
@@ -308,16 +307,21 @@ export const createStripeInAdvancePrice = async ({
     config.billing_units == 1 ? "" : `${config.billing_units} `
   }${relatedEnt.feature.name}`;
 
-  if (
-    config.usage_tiers.length == 1 &&
-    price.config!.interval == BillingInterval.OneOff
-  ) {
+  if (price.config!.interval == BillingInterval.OneOff) {
+    if (config.usage_tiers.length > 1) {
+      throw new RecaseError({
+        code: ErrCode.InvalidRequest,
+        message:
+          "For one off start of period price, can only have one usage tier...",
+        statusCode: 400,
+      });
+    }
     const amount = config.usage_tiers[0].amount;
     stripePrice = await stripeCli.prices.create({
       product_data: {
         name: productName,
       },
-      unit_amount: Math.round(amount * 100),
+      unit_amount_decimal: Math.round(amount * 100).toString(),
       currency: org.default_currency,
     });
   } else {
