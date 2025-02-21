@@ -114,6 +114,7 @@ export const priceToStripeItem = ({
     // const quantity = options?.quantity || 1;
 
     let quantity = options?.quantity;
+
     if (options?.quantity === 0 && isCheckout) {
       console.log(`Quantity for ${config.feature_id} is 0`);
       return null;
