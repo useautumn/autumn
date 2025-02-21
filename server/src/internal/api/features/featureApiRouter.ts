@@ -14,6 +14,7 @@ import express from "express";
 import { generateId } from "@/utils/genUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 
 export const featureApiRouter = express.Router();
 
@@ -124,7 +125,21 @@ featureApiRouter.delete("/:featureId", async (req: any, res) => {
     }
 
     // Get prices that use this feature
-    // Get entitlements / prices that use this feature
+    const ents: any[] = await EntitlementService.getByFeature({
+      sb: req.sb,
+      orgId,
+      internalFeatureId: feature.internal_id,
+      env: req.env,
+      withProduct: true,
+    });
+
+    if (ents.length > 0) {
+      throw new RecaseError({
+        message: `Feature ${featureId} is used in ${ents[0].product.name}`,
+        code: ErrCode.InvalidFeature,
+        statusCode: 400,
+      });
+    }
 
     await FeatureService.deleteStrict({
       sb: req.sb,
