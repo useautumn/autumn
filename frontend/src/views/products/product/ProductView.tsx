@@ -11,7 +11,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { ManageProduct } from "./ManageProduct";
 
-import { AppEnv, FrontendProduct, Organization } from "@autumn/shared";
+import { AppEnv, FrontendProduct, FrontendOrganization } from "@autumn/shared";
 import { toast } from "react-hot-toast";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
@@ -24,7 +24,7 @@ function ProductView({
 }: {
   product_id: string;
   env: AppEnv;
-  org: Organization;
+  org: FrontendOrganization;
 }) {
   const router = useRouter();
   const axiosInstance = useAxiosInstance({ env });
