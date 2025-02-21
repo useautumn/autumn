@@ -56,6 +56,11 @@ const publicRouterMiddleware = async (req: any, res: any, next: any) => {
       env: env,
     });
     req.org = org;
+    req.minOrg = {
+      id: org.id,
+      slug: org.slug,
+    };
+    req.orgId = org.id;
     req.env = env;
 
     console.log("Public request from:", org.slug);
