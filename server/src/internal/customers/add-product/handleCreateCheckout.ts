@@ -13,18 +13,16 @@ export const handleCreateCheckout = async ({
   sb,
   res,
   attachParams,
-  successUrl,
 }: {
   sb: SupabaseClient;
   res: any;
   attachParams: AttachParams;
-  successUrl: string;
 }) => {
   console.log(
     `Creating checkout for customer ${attachParams.customer.id}, product ${attachParams.product.name}`
   );
 
-  const { customer, org, freeTrial, curCusProduct } = attachParams;
+  const { customer, org, freeTrial, successUrl } = attachParams;
 
   const stripeCli = createStripeCli({
     org,
