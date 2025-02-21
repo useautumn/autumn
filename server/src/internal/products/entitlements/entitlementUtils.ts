@@ -144,6 +144,25 @@ export const validateEntitlement = ({
   }
 };
 
+export const validateRemovedEnts = ({
+  removedEnts,
+  prices,
+}: {
+  removedEnts: Entitlement[];
+  prices: Price[];
+}) => {
+  for (const ent of removedEnts) {
+    const relatedPrice = getEntRelatedPrice(ent, prices);
+    if (relatedPrice) {
+      throw new RecaseError({
+        code: ErrCode.InvalidEntitlement,
+        message: `Cannot remove entitlement with usage-based price (${ent.feature_id})`,
+        statusCode: 400,
+      });
+    }
+  }
+};
+
 export const initEntitlement = ({
   ent,
   features,
@@ -215,6 +234,7 @@ export const handleNewEntitlements = async ({
   const removedEnts: Entitlement[] = curEnts.filter(
     (ent) => !newEnts.some((e: Entitlement) => e.id === ent.id)
   );
+  validateRemovedEnts({ removedEnts, prices });
 
   const createdEnts: Entitlement[] = [];
   const updatedEnts: Entitlement[] = [];
