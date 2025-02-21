@@ -1,30 +1,23 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-import RecaseError, {
-  formatZodError,
-  handleRequestError,
-} from "@/utils/errorUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import {
   AllowanceType,
   CusEntWithEntitlement,
   CusProduct,
-  CusProductStatus,
   Customer,
-  CustomerEntitlement,
   Feature,
   FeatureType,
 } from "@autumn/shared";
 
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { Client } from "pg";
 import { z } from "zod";
 import { createNewCustomer } from "../customers/cusUtils.js";
 import { handleEventSent } from "../events/eventRouter.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
 
 export const entitledRouter = Router();
 
@@ -367,7 +360,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     }
 
     console.log(
-      `${req.isPublic ? "(Public)" : ""} CusEnts (${customer_id}):`,
+      `${req.isPublic ? "(Public) " : ""}CusEnts (${customer_id}):`,
       cusEnts.map((cusEnt: any) => {
         let balanceStr = cusEnt.balance;
 
