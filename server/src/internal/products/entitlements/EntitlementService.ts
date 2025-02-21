@@ -147,4 +147,27 @@ export class EntitlementService {
       throw error;
     }
   }
+
+  static async getByFeature({
+    sb,
+    internalFeatureId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    internalFeatureId: string;
+    orgId: string;
+    env: string;
+  }) {
+    const { data, error } = await sb
+      .from("entitlements")
+      .select("*")
+      .eq("internal_feature_id", internalFeatureId);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
 }

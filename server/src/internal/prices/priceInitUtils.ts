@@ -1,10 +1,11 @@
-import RecaseError, { formatZodError } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import {
   compareObjects,
   generateId,
   notNullOrUndefined,
 } from "@/utils/genUtils.js";
 import {
+  AllowanceType,
   AppEnv,
   BillingInterval,
   BillingType,
@@ -48,14 +49,6 @@ const validatePrice = (
 
   if (price.config?.type == PriceType.Fixed) {
     FixedPriceConfigSchema.parse(price.config);
-    // try {
-    // } catch (error: any) {
-    //   console.log("Error validating price config", error);
-    //   return {
-    //     valid: false,
-    //     error: "Invalid fixed price config | " + formatZodError(error),
-    //   };
-    // }
   } else {
     UsagePriceConfigSchema.parse(price.config);
 
@@ -83,6 +76,27 @@ const validatePrice = (
         code: ErrCode.InvalidPriceConfig,
         statusCode: 400,
       });
+    }
+
+    if (relatedEnt?.allowance_type == AllowanceType.Unlimited) {
+      if (config.interval == BillingInterval.OneOff) {
+        throw new RecaseError({
+          message: `Usage-based price cannot have unlimited allowance (${relatedEnt.feature_id})`,
+          code: ErrCode.InvalidPriceConfig,
+          statusCode: 400,
+        });
+      }
+    }
+
+    const billingType = getBillingType(config);
+    if (billingType == BillingType.UsageInArrear) {
+      if (config.interval == BillingInterval.OneOff) {
+        throw new RecaseError({
+          message: "One off prices must be billed at start of period",
+          code: ErrCode.InvalidPriceConfig,
+          statusCode: 400,
+        });
+      }
     }
   }
 
@@ -112,6 +126,7 @@ const pricesAreSame = (price1: Price, price2: Price) => {
     const usageConfig2 = UsagePriceConfigSchema.parse(config2);
     return (
       usageConfig1.bill_when === usageConfig2.bill_when &&
+      usageConfig1.billing_units === usageConfig2.billing_units &&
       usageConfig1.interval === usageConfig2.interval &&
       usageConfig1.internal_feature_id === usageConfig2.internal_feature_id &&
       usageConfig1.feature_id === usageConfig2.feature_id &&
@@ -145,178 +160,6 @@ const initPrice = ({
     billing_type: getBillingType(priceSchema.config),
     is_custom: isCustom,
   };
-};
-
-const handleStripePrices = async ({
-  sb,
-  product,
-  prices,
-  org,
-  env,
-  features,
-  entitlements,
-}: {
-  sb: SupabaseClient;
-  product: Product;
-  prices: Price[];
-  org: Organization;
-  env: AppEnv;
-  features: Feature[];
-  entitlements: Entitlement[];
-}) => {
-  // First get features that need a meter
-
-  // Contains usage in arrear
-  const inArrearExists = prices.some(
-    (p) => getBillingType(p.config!) == BillingType.UsageInArrear
-  );
-
-  if (!inArrearExists) {
-    return;
-  }
-
-  const stripeCli = createStripeCli({
-    org,
-    env,
-  });
-
-  if (!org.stripe_connected) {
-    throw new RecaseError({
-      message: "Stripe connection required for usage-based, end of period",
-      code: ErrCode.StripeConfigNotFound,
-      statusCode: 400,
-    });
-  }
-
-  for (const price of prices) {
-    const config = price.config! as UsagePriceConfig;
-    const billingType = getBillingType(config);
-
-    // If price.config.meter_id and stripe_price_id, delete
-
-    if (billingType == BillingType.UsageInArrear) {
-      if (!config.stripe_price_id) {
-        const feature = features.find(
-          (f) => f.internal_id === config.internal_feature_id
-        );
-
-        const meter = await stripeCli.billing.meters.create({
-          display_name: `${product.name} - ${feature!.name}`,
-          event_name: price.id!,
-          default_aggregation: {
-            formula: "sum",
-          },
-        });
-
-        const stripePrice = await createStripeMeteredPrice({
-          stripeCli,
-          product,
-          price,
-          entitlements,
-          feature: feature!,
-          meterId: meter.id,
-        });
-
-        let newUsageConfig = {
-          ...config,
-          stripe_meter_id: meter.id,
-          stripe_price_id: stripePrice.id,
-        };
-
-        price.config = newUsageConfig;
-      } else {
-        // Update price
-        // Set old price to inactive
-        await stripeCli.prices.update(config.stripe_price_id, {
-          active: false,
-        });
-
-        const feature = features.find(
-          (f) => f.internal_id === config.internal_feature_id
-        );
-
-        const stripePrice = await createStripeMeteredPrice({
-          stripeCli,
-          product,
-          price,
-          entitlements,
-          feature: feature!,
-          meterId: config.stripe_meter_id!,
-        });
-
-        config.stripe_price_id = stripePrice.id;
-      }
-    }
-  }
-};
-
-const deleteStripePrices = async ({
-  sb,
-  prices,
-  org,
-  env,
-}: {
-  sb: SupabaseClient;
-  prices: Price[];
-  org: Organization;
-  env: AppEnv;
-}) => {
-  const deleteExists = prices.some((p) => {
-    const config = p.config! as UsagePriceConfig;
-    return notNullOrUndefined(config.stripe_price_id);
-  });
-
-  if (!deleteExists) {
-    return;
-  }
-  const stripeCli = createStripeCli({
-    org,
-    env,
-  });
-
-  for (const price of prices) {
-    const config = price.config! as UsagePriceConfig;
-
-    if (config.stripe_price_id) {
-      try {
-        const stripePrice = await stripeCli.prices.retrieve(
-          config.stripe_price_id!
-        );
-
-        await stripeCli.prices.update(config.stripe_price_id!, {
-          active: false,
-        });
-
-        const attachedProductId = stripePrice.product as string;
-        const product = await stripeCli.products.retrieve(attachedProductId);
-
-        if (!product.active) {
-          await stripeCli.products.del(attachedProductId);
-        } else {
-          await stripeCli.products.update(attachedProductId, {
-            active: false,
-          });
-        }
-
-        console.log("Deleted stripe price:", config.stripe_price_id);
-      } catch (error: any) {
-        console.log("Error deleting stripe price / product:", error.message);
-      }
-    }
-
-    if (config.stripe_meter_id) {
-      try {
-        await stripeCli.billing.meters.deactivate(config.stripe_meter_id!);
-        console.log("Deleted stripe meter:", config.stripe_meter_id);
-      } catch (error: any) {
-        console.log("Error deactivating meter:", error.message);
-      }
-    }
-
-    // if (getBillingType(price.config!) == BillingType.UsageInArrear) {
-
-    // }
-  }
 };
 
 export const handleNewPrices = async ({
@@ -421,6 +264,15 @@ export const handleNewPrices = async ({
 
     // 2b. If not customm, update existing entitlement
     if (curPrice && !pricesAreSame(curPrice, newPrice) && !isCustom) {
+      let curConfig = curPrice.config! as UsagePriceConfig;
+      if (curConfig.stripe_price_id) {
+        throw new RecaseError({
+          message: `Price "${curPrice.name}" is linked to Stripe and cannot be updated. Try deleting and creating new one.`,
+          code: ErrCode.InvalidPriceConfig,
+          statusCode: 400,
+        });
+      }
+
       updatedPrices.push({
         ...newPrice,
         billing_type: getBillingType(newPrice.config!),
@@ -478,3 +330,175 @@ export const handleNewPrices = async ({
     `Successfully handled new prices. Created ${createdPrices.length}, updated ${updatedPrices.length}, removed ${removedPrices.length}`
   );
 };
+
+// const handleStripePrices = async ({
+//   sb,
+//   product,
+//   prices,
+//   org,
+//   env,
+//   features,
+//   entitlements,
+// }: {
+//   sb: SupabaseClient;
+//   product: Product;
+//   prices: Price[];
+//   org: Organization;
+//   env: AppEnv;
+//   features: Feature[];
+//   entitlements: Entitlement[];
+// }) => {
+//   // First get features that need a meter
+
+//   // Contains usage in arrear
+//   const inArrearExists = prices.some(
+//     (p) => getBillingType(p.config!) == BillingType.UsageInArrear
+//   );
+
+//   if (!inArrearExists) {
+//     return;
+//   }
+
+//   const stripeCli = createStripeCli({
+//     org,
+//     env,
+//   });
+
+//   if (!org.stripe_connected) {
+//     throw new RecaseError({
+//       message: "Stripe connection required for usage-based, end of period",
+//       code: ErrCode.StripeConfigNotFound,
+//       statusCode: 400,
+//     });
+//   }
+
+//   for (const price of prices) {
+//     const config = price.config! as UsagePriceConfig;
+//     const billingType = getBillingType(config);
+
+//     // If price.config.meter_id and stripe_price_id, delete
+
+//     if (billingType == BillingType.UsageInArrear) {
+//       if (!config.stripe_price_id) {
+//         const feature = features.find(
+//           (f) => f.internal_id === config.internal_feature_id
+//         );
+
+//         const meter = await stripeCli.billing.meters.create({
+//           display_name: `${product.name} - ${feature!.name}`,
+//           event_name: price.id!,
+//           default_aggregation: {
+//             formula: "sum",
+//           },
+//         });
+
+//         const stripePrice = await createStripeMeteredPrice({
+//           stripeCli,
+//           product,
+//           price,
+//           entitlements,
+//           feature: feature!,
+//           meterId: meter.id,
+//         });
+
+//         let newUsageConfig = {
+//           ...config,
+//           stripe_meter_id: meter.id,
+//           stripe_price_id: stripePrice.id,
+//         };
+
+//         price.config = newUsageConfig;
+//       } else {
+//         // Update price
+//         // Set old price to inactive
+//         await stripeCli.prices.update(config.stripe_price_id, {
+//           active: false,
+//         });
+
+//         const feature = features.find(
+//           (f) => f.internal_id === config.internal_feature_id
+//         );
+
+//         const stripePrice = await createStripeMeteredPrice({
+//           stripeCli,
+//           product,
+//           price,
+//           entitlements,
+//           feature: feature!,
+//           meterId: config.stripe_meter_id!,
+//         });
+
+//         config.stripe_price_id = stripePrice.id;
+//       }
+//     }
+//   }
+// };
+
+// const deleteStripePrices = async ({
+//   sb,
+//   prices,
+//   org,
+//   env,
+// }: {
+//   sb: SupabaseClient;
+//   prices: Price[];
+//   org: Organization;
+//   env: AppEnv;
+// }) => {
+//   const deleteExists = prices.some((p) => {
+//     const config = p.config! as UsagePriceConfig;
+//     return notNullOrUndefined(config.stripe_price_id);
+//   });
+
+//   if (!deleteExists) {
+//     return;
+//   }
+//   const stripeCli = createStripeCli({
+//     org,
+//     env,
+//   });
+
+//   for (const price of prices) {
+//     const config = price.config! as UsagePriceConfig;
+
+//     if (config.stripe_price_id) {
+//       try {
+//         const stripePrice = await stripeCli.prices.retrieve(
+//           config.stripe_price_id!
+//         );
+
+//         await stripeCli.prices.update(config.stripe_price_id!, {
+//           active: false,
+//         });
+
+//         const attachedProductId = stripePrice.product as string;
+//         const product = await stripeCli.products.retrieve(attachedProductId);
+
+//         if (!product.active) {
+//           await stripeCli.products.del(attachedProductId);
+//         } else {
+//           await stripeCli.products.update(attachedProductId, {
+//             active: false,
+//           });
+//         }
+
+//         console.log("Deleted stripe price:", config.stripe_price_id);
+//       } catch (error: any) {
+//         console.log("Error deleting stripe price / product:", error.message);
+//       }
+//     }
+
+//     if (config.stripe_meter_id) {
+//       try {
+//         await stripeCli.billing.meters.deactivate(config.stripe_meter_id!);
+//         console.log("Deleted stripe meter:", config.stripe_meter_id);
+//       } catch (error: any) {
+//         console.log("Error deactivating meter:", error.message);
+//       }
+//     }
+
+//     // if (getBillingType(price.config!) == BillingType.UsageInArrear) {
+
+//     // }
+//   }
+// };
