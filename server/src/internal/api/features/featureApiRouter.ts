@@ -13,8 +13,8 @@ import { CreateFeatureSchema } from "@autumn/shared";
 import express from "express";
 import { generateId } from "@/utils/genUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
-import { sendFeatureEvent } from "@/external/autumn/autumnUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 
 export const featureApiRouter = express.Router();
 
@@ -108,22 +108,34 @@ featureApiRouter.delete("/:featureId", async (req: any, res) => {
   let { featureId } = req.params;
 
   try {
-    const org = await OrgService.getFullOrg({
-      sb: req.sb,
-      orgId,
-    });
-
-    // Check if any credit systems are using this feature
-    const creditSystems = await FeatureService.getCreditSystemsUsingFeature({
-      pg: req.pg,
-      orgId,
-      featureId,
-      env: req.env,
-    });
+    const { feature, creditSystems } =
+      await FeatureService.getWithCreditSystems({
+        sb: req.sb,
+        orgId,
+        featureId,
+        env: req.env,
+      });
 
     if (creditSystems.length > 0) {
       throw new RecaseError({
-        message: `Feature ${featureId} is used in a credit system`,
+        message: `Feature ${featureId} is used by credit system ${creditSystems[0].id}`,
+        code: ErrCode.InvalidFeature,
+        statusCode: 400,
+      });
+    }
+
+    // Get prices that use this feature
+    const ents: any[] = await EntitlementService.getByFeature({
+      sb: req.sb,
+      orgId,
+      internalFeatureId: feature.internal_id,
+      env: req.env,
+      withProduct: true,
+    });
+
+    if (ents.length > 0) {
+      throw new RecaseError({
+        message: `Feature ${featureId} is used in ${ents[0].product.name}`,
         code: ErrCode.InvalidFeature,
         statusCode: 400,
       });

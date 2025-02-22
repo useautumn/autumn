@@ -208,4 +208,27 @@ export class PriceService {
       throw error;
     }
   }
+
+  static async getByFeature({
+    sb,
+    internalFeatureId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    internalFeatureId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("prices")
+      .select("*")
+      .eq("config->>internal_feature_id", internalFeatureId);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
 }

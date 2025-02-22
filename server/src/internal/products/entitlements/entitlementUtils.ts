@@ -83,9 +83,11 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 export const validateEntitlement = ({
   ent,
   features,
+  relatedPrice,
 }: {
   ent: CreateEntitlement | Entitlement;
   features: Feature[];
+  relatedPrice: Price | null | undefined;
 }) => {
   const parsedEnt = CreateEntitlementSchema.parse(ent);
 
@@ -125,6 +127,36 @@ export const validateEntitlement = ({
       throw new RecaseError({
         code: ErrCode.InvalidEntitlement,
         message: `Interval is required for feature ${parsedEnt.feature_id}`,
+        statusCode: 400,
+      });
+    }
+  }
+
+  if (relatedPrice) {
+    // Don't allow unlimited allowance for usage-based prices
+    if (parsedEnt.allowance_type == AllowanceType.Unlimited) {
+      throw new RecaseError({
+        code: ErrCode.InvalidEntitlement,
+        message: `Unlimited allowance is not allowed for usage-based prices (${parsedEnt.feature_id})`,
+        statusCode: 400,
+      });
+    }
+  }
+};
+
+export const validateRemovedEnts = ({
+  removedEnts,
+  prices,
+}: {
+  removedEnts: Entitlement[];
+  prices: Price[];
+}) => {
+  for (const ent of removedEnts) {
+    const relatedPrice = getEntRelatedPrice(ent, prices);
+    if (relatedPrice) {
+      throw new RecaseError({
+        code: ErrCode.InvalidEntitlement,
+        message: `Cannot remove entitlement with usage-based price (${ent.feature_id})`,
         statusCode: 400,
       });
     }
@@ -174,6 +206,7 @@ export const handleNewEntitlements = async ({
   orgId,
   internalProductId,
   isCustom = false,
+  prices,
 }: {
   sb: SupabaseClient;
   newEnts: Entitlement[] | CreateEntitlement[];
@@ -182,6 +215,7 @@ export const handleNewEntitlements = async ({
   internalProductId: string;
   orgId: string;
   isCustom: boolean;
+  prices: Price[];
 }) => {
   // Add internal_feature_id to newEnts
   for (const ent of newEnts) {
@@ -200,13 +234,15 @@ export const handleNewEntitlements = async ({
   const removedEnts: Entitlement[] = curEnts.filter(
     (ent) => !newEnts.some((e: Entitlement) => e.id === ent.id)
   );
+  validateRemovedEnts({ removedEnts, prices });
 
   const createdEnts: Entitlement[] = [];
   const updatedEnts: Entitlement[] = [];
 
   for (let newEnt of newEnts) {
     // Validate entitlement
-    validateEntitlement({ ent: newEnt, features });
+    const relatedPrice = getEntRelatedPrice(newEnt, prices);
+    validateEntitlement({ ent: newEnt, features, relatedPrice });
 
     // 1. Handle new entitlement
     if (!("id" in newEnt)) {
