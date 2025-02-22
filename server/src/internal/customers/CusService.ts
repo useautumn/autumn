@@ -580,6 +580,7 @@ export class CusService {
     const { data, error } = await query;
 
     if (error) {
+      console.log("CusService.getFullCusProducts failed", error);
       throw error;
     }
 
