@@ -1,10 +1,10 @@
-import { validateApiKey } from "@/external/unkeyUtils.js";
 import { withOrgAuth } from "./authMiddleware.js";
-import { migrateKey, verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
-import { verifyPublishableKey } from "./publicAuthMiddleware.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, ErrCode } from "@autumn/shared";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import {
+  verifyBearerPublishableKey,
+  verifyPublishableKey,
+} from "./publicAuthMiddleware.js";
+import { ErrCode } from "@autumn/shared";
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
   const authHeader =
@@ -22,7 +22,12 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
     return {
       error: ErrCode.InvalidAuthHeader,
       fallback: true,
+      statusCode: null,
     };
+  }
+
+  if (apiKey.startsWith("am_pk")) {
+    return await verifyBearerPublishableKey(apiKey, req, res, next);
   }
 
   // Try verify via Autumn
@@ -41,6 +46,8 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 
       return {
         error: null,
+        fallback: null,
+        statusCode: null,
       };
     } else {
       console.log(`Autumn API verification failed`);
@@ -77,6 +84,7 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
     if (error && !fallback) {
       res.status(statusCode).json({
         message: error,
+        code: error,
       });
       return;
     }
@@ -84,6 +92,7 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
     console.log("Error: verifySecretKey failed", error);
     res.status(500).json({
       message: "Failed to verify secret key -- internal server error",
+      code: ErrCode.FailedToVerifySecretKey,
     });
     return;
   }
@@ -103,6 +112,7 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
     if (error && !fallback) {
       res.status(statusCode).json({
         message: error,
+        code: error,
       });
       return;
     }
@@ -110,6 +120,7 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
     console.log("Error: verifyPublishableKey failed", error);
     res.status(500).json({
       message: "Failed to verify publishable key -- internal server error",
+      code: ErrCode.FailedToVerifyPublishableKey,
     });
     return;
   }

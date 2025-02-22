@@ -55,6 +55,14 @@ const publicRouterMiddleware = async (req: any, res: any, next: any) => {
       pkey: pkey,
       env: env,
     });
+
+    if (!org) {
+      return res
+        .status(401)
+        .json({
+          message: "Unauthorized -- org not found for this publishable key",
+        });
+    }
     req.org = org;
     req.minOrg = {
       id: org.id,

@@ -30,9 +30,9 @@ export class OrgService {
       .single();
 
     if (error) {
-      // if (error.code === "PGRST116") {
-      //   return null;
-      // }
+      if (error.code === "PGRST116") {
+        return null;
+      }
 
       throw new RecaseError({
         message: "Error getting org from supabase",

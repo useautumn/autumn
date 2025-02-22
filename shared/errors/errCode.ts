@@ -9,10 +9,12 @@ export const ErrCode = {
   InvalidPublishableKey: "invalid_publishable_key",
   GetOrgFromPublishableKeyFailed: "get_org_from_publishable_key_failed",
   EndpointNotPublic: "endpoint_not_public",
+  FailedToVerifyPublishableKey: "failed_to_verify_publishable_key",
 
   // General
   InvalidInputs: "invalid_inputs",
   LimitsReached: "limits_reached",
+  InvalidRequest: "invalid_request",
   // Org
   OrgNotFound: "org_not_found",
 
