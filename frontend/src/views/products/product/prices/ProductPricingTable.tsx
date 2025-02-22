@@ -46,10 +46,19 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
     } else if (type === "usage") {
       // Handle usage price - just show min and max amounts
       const numUnits = getBillingUnits(config, product.entitlements!);
+      const formatUsageAmount = (amount: number) => {
+        const currency = org.default_currency || "USD";
+        return new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: currency,
+          minimumFractionDigits: 0, // Allow any number of decimal places
+          maximumFractionDigits: 10, // Maximum of 10 decimal places
+        }).format(amount);
+      };
       if (config.usage_tiers.length > 1) {
         const amounts = config.usage_tiers.map((tier) => tier.amount);
-        const minAmount = formatCurrency(Math.min(...amounts));
-        const maxAmount = formatCurrency(Math.max(...amounts));
+        const minAmount = formatUsageAmount(Math.min(...amounts));
+        const maxAmount = formatUsageAmount(Math.max(...amounts));
 
         return (
           <>
@@ -60,10 +69,7 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
       }
 
       // Single tier - just show the amount
-      const amount = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: currency,
-      }).format(config.usage_tiers[0].amount);
+      const amount = formatUsageAmount(config.usage_tiers[0].amount);
       return (
         <>
           {amount} <span className="text-t3">per {numUnits} units</span>
