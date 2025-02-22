@@ -39,6 +39,8 @@ export const ErrCode = {
   StripeCardDeclined: "stripe_card_declined",
   StripeUpdateSubscriptionFailed: "stripe_update_subscription_failed",
 
+  StripeCreateSubscriptionFailed: "stripe_create_subscription_failed",
+
   // Price
   PriceNotFound: "price_not_found",
   CreatePriceFailed: "create_price_failed",

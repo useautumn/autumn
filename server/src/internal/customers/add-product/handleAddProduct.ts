@@ -51,7 +51,8 @@ const handleBillNowPrices = async ({
   } catch (error: any) {
     if (
       error instanceof RecaseError &&
-      error.code === ErrCode.StripeCardDeclined
+      (error.code === ErrCode.StripeCardDeclined ||
+        error.code === ErrCode.CreateStripeSubscriptionFailed)
     ) {
       await handleCreateCheckout({
         sb,

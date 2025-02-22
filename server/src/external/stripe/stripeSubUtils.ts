@@ -55,27 +55,30 @@ export const createStripeSubscription = async ({
     return subscription;
   } catch (error: any) {
     // console.log("Error creating stripe subscription", error?.message || error);
-    if (isStripeCardDeclined(error)) {
-      console.log(
-        "Warning: Failed to create stripe subscription, card declined"
-      );
-      console.log("Error code:", error.code);
-      console.log("Decline code:", error.decline_code);
-      console.log("Message:", error.message);
-      throw new RecaseError({
-        code: ErrCode.StripeCardDeclined,
-        message: `Card was declined, Stripe decline code: ${error.decline_code}`,
-        statusCode: 500,
-      });
-    }
-
-    console.log("Error creating stripe subscription", error?.message || error);
+    console.log("Warning: Failed to create stripe subscription");
+    console.log("Error code:", error.code);
+    console.log("Message:", error.message);
+    console.log("Decline code:", error.decline_code);
 
     throw new RecaseError({
+      // code: ErrCode.StripeCardDeclined,
       code: ErrCode.CreateStripeSubscriptionFailed,
-      message: "Failed to create stripe subscription",
+      message: `Stripe subscription failed (${error.code}): ${error.message}`,
       statusCode: 500,
     });
+
+    // if (isStripeCardDeclined(error)) {
+
+    // }
+
+    // console.log("Error creating stripe subscription", error?.message || error);
+    // console.log("Error code:", error.code);
+
+    // throw new RecaseError({
+    //   code: ErrCode.CreateStripeSubscriptionFailed,
+    //   message: "Failed to create stripe subscription",
+    //   statusCode: 500,
+    // });
   }
 };
 
