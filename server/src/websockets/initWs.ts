@@ -2,7 +2,7 @@ import { WebSocketServer } from "ws";
 import http from "http";
 
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ErrCode } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
   getBalanceForFeature,
@@ -43,6 +43,14 @@ const getPkey = async (req: any) => {
   const env = pkey.startsWith("am_pk_test_") ? AppEnv.Sandbox : AppEnv.Live;
   const sb = createSupabaseClient();
   const org = await OrgService.getFromPkey({ sb, pkey, env });
+
+  if (!org) {
+    return {
+      error: ErrCode.OrgNotFound,
+      fallback: false,
+      statusCode: 401,
+    };
+  }
 
   req.env = env;
   req.org = org;
