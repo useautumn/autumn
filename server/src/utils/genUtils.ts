@@ -26,3 +26,7 @@ export const keyToTitle = (key: string) => {
 export const notNullOrUndefined = (value: any) => {
   return value !== null && value !== undefined;
 };
+
+export const nullOrUndefined = (value: any) => {
+  return value === null || value === undefined;
+};

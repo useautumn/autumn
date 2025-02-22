@@ -33,6 +33,7 @@ import { PriceService } from "./PriceService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createStripeMeteredPrice } from "@/external/stripe/stripePriceUtils.js";
 import { CusProductService } from "../customers/products/CusProductService.js";
+import { isFreeProduct } from "../products/productUtils.js";
 
 // GET PRICES
 const validatePrice = (
@@ -303,6 +304,19 @@ export const handleNewPrices = async ({
         statusCode: 400,
       });
     }
+  }
+
+  // If product is default, can't have any paid prices
+  if (
+    product.is_default &&
+    !isCustom &&
+    !isFreeProduct([...createdPrices, ...updatedPrices])
+  ) {
+    throw new RecaseError({
+      message: "Default product cannot have paid prices",
+      code: ErrCode.InvalidProduct,
+      statusCode: 400,
+    });
   }
 
   await PriceService.insert({ sb, data: createdPrices });

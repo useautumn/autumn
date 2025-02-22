@@ -29,6 +29,7 @@ import {
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { nullOrUndefined } from "@/utils/genUtils.js";
 
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
@@ -117,16 +118,14 @@ export const priceToStripeItem = ({
     if (options?.quantity === 0 && isCheckout) {
       console.log(`Quantity for ${config.feature_id} is 0`);
       return null;
-    } else if (
-      (options?.quantity == null || options?.quantity == undefined) &&
-      isCheckout
-    ) {
+    } else if (nullOrUndefined(quantity) && isCheckout) {
       quantity = 1;
     }
 
     const adjustableQuantity = isCheckout
       ? {
           enabled: true,
+          maximum: 999999,
         }
       : undefined;
 
@@ -187,32 +186,6 @@ export const getStripeSubItems = async ({
   let subItems: any[] = [];
   let itemMetas: any[] = [];
 
-  // TODO: Check if non bill now prices can be added to stripe subscription...?
-
-  // // 1. Check current period end...
-  // if (curCusProduct && curCusProduct.processor?.subscription_id) {
-  //   const subId = curCusProduct.processor.subscription_id;
-  //   const stripeCli = createStripeCli({
-  //     org,
-  //     env: curCusProduct.customer.env,
-  //   });
-
-  //   const sub = await stripeCli.subscriptions.retrieve(subId);
-
-  //   const prorationConfig: any = {};
-  //   if (sub.status !== CusProductStatus.Trialing) {
-  //     const curPeriodStart = sub.current_period_start * 1000;
-  //     const curPeriodEnd = sub.current_period_end * 1000;
-
-  //     prorationConfig.current_period_start = curPeriodStart;
-  //     prorationConfig.current_period_end = curPeriodEnd;
-
-  //     const curPrices = curCusProduct.customer_prices.map((p) => p.price!);
-
-  //     prorationConfig.curPrices = curPrices;
-  //   }
-  // }
-
   for (const price of checkoutRelevantPrices) {
     const priceEnt = getPriceEntitlement(price, entitlements);
     const options = getEntOptions(optionsList, priceEnt);
@@ -268,7 +241,7 @@ export const inAdvanceToStripeTiers = (
         : Math.round((tier.to - numFree) / billingUnits!) + numFree;
 
     tiers.push({
-      unit_amount_decimal: amount.toFixed(5),
+      unit_amount_decimal: amount,
       up_to: upTo,
     });
   }
@@ -321,7 +294,7 @@ export const createStripeInAdvancePrice = async ({
       product_data: {
         name: productName,
       },
-      unit_amount_decimal: Math.round(amount * 100).toString(),
+      unit_amount_decimal: (amount * 100).toString(),
       currency: org.default_currency,
     });
   } else {
@@ -372,7 +345,7 @@ export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
     const amount = (tier.amount / (usageConfig.billing_units ?? 1)) * 100;
 
     tiers.push({
-      unit_amount_decimal: amount.toFixed(5),
+      unit_amount_decimal: amount,
       up_to: tier.to == -1 ? "inf" : tier.to,
     });
   }
