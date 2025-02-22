@@ -387,7 +387,10 @@ attachRouter.post("/attach", async (req: any, res) => {
 
   // PUBLIC STUFF
   let forceCheckout = req.isPublic || force_checkout || false;
-  let isCustom = !req.isPublic || is_custom || false;
+  let isCustom = is_custom || false;
+  if (req.isPublic) {
+    isCustom = false;
+  }
 
   console.log("--------------------------------");
   let publicStr = req.isPublic ? "(Public) " : "";
