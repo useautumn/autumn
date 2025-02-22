@@ -387,7 +387,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
   // PUBLIC STUFF
   let forceCheckout = req.isPublic || force_checkout || false;
-  let isCustom = req.isPublic || is_custom || false;
+  let isCustom = !req.isPublic || is_custom || false;
 
   console.log("--------------------------------");
   let publicStr = req.isPublic ? "(Public) " : "";
@@ -425,7 +425,9 @@ attachRouter.post("/attach", async (req: any, res) => {
     console.log(
       `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(
         forceCheckout
-      )}, Use Checkout: ${chalk.yellow(useCheckout)}`
+      )}, Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
+        isCustom
+      )}`
     );
 
     // -------------------- ERROR CHECKING --------------------
