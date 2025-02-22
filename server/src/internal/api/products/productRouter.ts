@@ -228,6 +228,7 @@ productApiRouter.post("/:productId", async (req: any, res) => {
       orgId,
       internalProductId: fullProduct.internal_id,
       isCustom: false,
+      prices,
     });
 
     await handleNewPrices({

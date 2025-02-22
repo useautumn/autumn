@@ -1,6 +1,6 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, Feature } from "@autumn/shared";
+import { AppEnv, Feature, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 
@@ -179,5 +179,38 @@ export class FeatureService {
 
       throw error;
     }
+  }
+
+  static async getWithCreditSystems({
+    sb,
+    featureId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    featureId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("features")
+      .select("*")
+      .eq("org_id", orgId)
+      .eq("env", env)
+      .or(`id.eq.${featureId},type.eq.${FeatureType.CreditSystem}`);
+
+    if (error) {
+      throw error;
+    }
+
+    let feature = data.find((f) => f.id === featureId);
+    let creditSystems = data.filter(
+      (f) => f.type === FeatureType.CreditSystem && f.id !== featureId
+    );
+
+    return {
+      feature,
+      creditSystems,
+    };
   }
 }
