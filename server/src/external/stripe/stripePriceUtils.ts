@@ -423,11 +423,13 @@ export const createStripeInArrearPrice = async ({
   product,
   price,
   entitlements,
+  org,
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
   product: Product;
   price: Price;
+  org: Organization;
   entitlements: EntitlementWithFeature[];
 }) => {
   let config = price.config as UsagePriceConfig;
@@ -477,7 +479,7 @@ export const createStripeInArrearPrice = async ({
     },
 
     ...priceAmountData,
-    currency: "usd",
+    currency: org.default_currency,
     recurring: {
       ...(billingIntervalToStripe(price.config!.interval!) as any),
       meter: meter!.id,
@@ -549,6 +551,7 @@ export const createStripePriceIFNotExist = async ({
         price,
         entitlements,
         product,
+        org,
       });
     }
   }
