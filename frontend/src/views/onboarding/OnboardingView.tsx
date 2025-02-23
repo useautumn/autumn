@@ -237,7 +237,7 @@ function OnboardingView({
                 />
               </div>
             </Step>
-            <Step title="Set up your pricing models">
+            <Step title="Set up your pricing model">
               <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
                 <div className="flex flex-col gap-2 text-t2 w-full lg:w-1/3">
                   <p>
@@ -294,7 +294,7 @@ function OnboardingView({
                 </div>
               </div>
             </Step>
-            <Step title="Create an Autumn API Key">
+            <Step title="Create an Autumn Secret Key">
               <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
                 <div className="text-t2 flex flex-col gap-2 w-full lg:w-1/3">
                   <p>
