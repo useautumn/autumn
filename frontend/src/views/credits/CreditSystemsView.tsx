@@ -31,7 +31,8 @@ function CreditSystemsView({ env }: { env: AppEnv }) {
       <div>
         <h1 className="text-xl font-medium">Credits</h1>
         <p className="text-sm text-t2">
-          Define the credit systems your users are entitled to
+          Define a credits system to bill for your users' usage. These are made
+          of other metered features.
         </p>
       </div>
       <CreditSystemsTable />

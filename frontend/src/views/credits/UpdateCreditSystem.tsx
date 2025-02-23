@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
-import { useCreditsContext } from "./CreditsContext";
+import { useFeaturesContext } from "../features/FeaturesContext";
+import { validateCreditSystem } from "./CreateCreditSystem";
 
 function UpdateCreditSystem({
   open,
@@ -25,10 +26,16 @@ function UpdateCreditSystem({
   setSelectedCreditSystem: (creditSystem: Feature) => void;
 }) {
   const [updateLoading, setUpdateLoading] = useState(false);
-  const { env } = useCreditsContext();
+  const { env, mutate } = useFeaturesContext();
   const axiosInstance = useAxiosInstance({ env });
 
   const handleUpdateCreditSystem = async () => {
+    const validationError = validateCreditSystem(selectedCreditSystem);
+    if (validationError) {
+      toast.error(validationError);
+      return;
+    }
+
     setUpdateLoading(true);
     try {
       await FeatureService.updateFeature(
@@ -38,6 +45,7 @@ function UpdateCreditSystem({
           ...selectedCreditSystem,
         }
       );
+      await mutate();
       setOpen(false);
     } catch (error) {
       toast.error("Failed to update credit system");

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FeaturesContext } from "./FeaturesContext";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { Feature, FeatureType } from "@autumn/shared";
@@ -24,8 +24,16 @@ import { FeatureRowToolbar } from "./FeatureRowToolbar";
 import { FeatureTypeBadge } from "./FeatureTypeBadge";
 import UpdateFeature from "./UpdateFeature";
 import { CustomToaster } from "@/components/general/CustomToaster";
+import { Button } from "@/components/ui/button";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBarsFilter } from "@fortawesome/pro-regular-svg-icons";
+import { faDollarCircle } from "@fortawesome/pro-duotone-svg-icons";
+import { cn } from "@/lib/utils";
+import { CreditSystemsTable } from "../credits/CreditSystemsTable";
+import CreateCreditSystem from "../credits/CreateCreditSystem";
 
 function FeaturesView({ env }: { env: AppEnv }) {
+  const [showCredits, setShowCredits] = useState(false);
   // const [open, setOpen] = useState(false);
   // const [selectedFeature, setSelectedFeature] = useState<any>(null);
 
@@ -34,6 +42,16 @@ function FeaturesView({ env }: { env: AppEnv }) {
     env: env,
     withAuth: true,
   });
+
+  const creditSystems = data?.features.filter(
+    (feature: Feature) => feature.type === FeatureType.CreditSystem
+  );
+
+  useEffect(() => {
+    if (creditSystems?.length > 0) {
+      setShowCredits(true);
+    }
+  }, [creditSystems]);
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -67,72 +85,50 @@ function FeaturesView({ env }: { env: AppEnv }) {
         dbConns: data?.dbConns,
         env,
         mutate,
+        creditSystems: creditSystems,
       }}
     >
       <CustomToaster />
       <div>
         <h1 className="text-t1 text-xl font-medium">Features</h1>
-        <p className="text-sm text-t2">
-          Define the metered and boolean features your users are entitled to
-        </p>
+        <div className="flex justify-between items-center">
+          <p className="text-sm text-t2">
+            Define the features of your application you want to charge for.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className={cn(
+              "text-t3 w-fit",
+              showCredits && "bg-zinc-200 text-t2 hover:bg-zinc-200"
+            )}
+            disabled={creditSystems.length > 0}
+            onClick={() =>
+              setShowCredits(creditSystems.length > 0 ? true : !showCredits)
+            }
+          >
+            <FontAwesomeIcon icon={faDollarCircle} className="mr-2" />
+            Credit Systems
+          </Button>
+        </div>
       </div>
+
       <FeaturesTable />
-
-      {/* <UpdateFeature
-        open={open}
-        setOpen={setOpen}
-        selectedFeature={selectedFeature}
-        setSelectedFeature={setSelectedFeature}
-      />
-      <Table>
-        <TableHeader className="rounded-full">
-          <TableRow className="border-none">
-            <TableHead className="">Name</TableHead>
-            <TableHead>ID</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Event Names</TableHead>
-            <TableHead className="w-sm">Created At</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {features.map((feature: Feature) => (
-            <TableRow
-              key={feature.internal_id}
-              className="cursor-pointer"
-              onClick={() => handleRowClick(feature.id)}
-            >
-              <TableCell >
-                {feature.name}
-              </TableCell>
-              <TableCell className="font-mono">
-                {feature.id}
-              </TableCell>
-              <TableCell>
-                <FeatureTypeBadge type={feature.type} />
-              </TableCell>
-              <TableCell>
-                {getMeteredEventNames(feature)}
-              </TableCell>
-
-              <TableCell className="min-w-20 w-24">
-                <span>
-                  {formatUnixToDateTime(feature.created_at).date}
-                </span>
-                {" "}
-                <span className="text-t3">
-                  {formatUnixToDateTime(feature.created_at).time}
-              </span>
-              </TableCell>
-              <TableCell className="min-w-4 w-6">
-                <FeatureRowToolbar feature={feature} />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table> */}
-
       <CreateFeature />
+
+      {showCredits && (
+        <div className="flex flex-col gap-4 h-fit mt-6">
+          <div>
+            <h2 className="text-lg font-medium">Credits</h2>
+            <p className="text-sm text-t2">
+              Create a credit-based system where features consume credits from a
+              shared balance (e.g., each AI chat message costs 3 credits)
+            </p>
+          </div>
+          <CreditSystemsTable />
+          <CreateCreditSystem />
+        </div>
+      )}
     </FeaturesContext.Provider>
   );
 }
