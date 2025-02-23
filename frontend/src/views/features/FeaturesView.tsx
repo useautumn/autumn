@@ -122,7 +122,10 @@ function FeaturesView({ env }: { env: AppEnv }) {
             <h2 className="text-lg font-medium">Credits</h2>
             <p className="text-sm text-t2">
               Create a credit-based system where features consume credits from a
-              shared balance (e.g., each AI chat message costs 3 credits)
+              shared balance{" "}
+              <span className="text-t3">
+                (eg, 1 AI chat message costs 3 credits).
+              </span>
             </p>
           </div>
           <CreditSystemsTable />
