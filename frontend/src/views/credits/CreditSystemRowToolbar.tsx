@@ -16,7 +16,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { Feature } from "@autumn/shared";
 import { FeatureService } from "@/services/FeatureService";
 import { getBackendErr } from "@/utils/genUtils";
-import { useCreditsContext } from "./CreditsContext";
+import { useFeaturesContext } from "../features/FeaturesContext";
 
 export const CreditSystemRowToolbar = ({
   className,
@@ -25,13 +25,14 @@ export const CreditSystemRowToolbar = ({
   className?: string;
   creditSystem: Feature;
 }) => {
-  const { env, mutate } = useCreditsContext();
+  const { env, mutate } = useFeaturesContext();
   const axiosInstance = useAxiosInstance({ env });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const handleDelete = async () => {
     setDeleteLoading(true);
+    console.log(creditSystem);
     try {
       await FeatureService.deleteFeature(axiosInstance, creditSystem.id);
       await mutate();
