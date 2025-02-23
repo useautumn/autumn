@@ -27,7 +27,21 @@ productRouter.get("/data", async (req: any, res) => {
       env: req.env,
     });
 
-    res.status(200).json({ products, features });
+    const org = await OrgService.getFullOrg({
+      sb,
+      orgId: req.orgId,
+    });
+
+    res.status(200).json({
+      products,
+      features,
+      org: {
+        id: org.id,
+        name: org.name,
+        test_pkey: org.test_pkey,
+        live_pkey: org.live_pkey,
+      },
+    });
   } catch (error) {
     console.error("Failed to get products", error);
     res.status(500).send(error);
