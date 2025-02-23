@@ -68,7 +68,7 @@ export const PricingConfig = ({
   }, [fixedConfig, usageConfig, priceType, name, setPrice, originalPrice]);
 
   return (
-    <>
+    <div className="overflow-hidden flex flex-col gap-4">
       <div className="flex flex-col">
         <FieldLabel>Name</FieldLabel>
         <Input
@@ -100,7 +100,7 @@ export const PricingConfig = ({
           />
         </TabsContent>
       </Tabs>
-    </>
+    </div>
   );
 };
 

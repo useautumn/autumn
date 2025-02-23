@@ -79,7 +79,7 @@ export const EntitlementConfig = ({
   }, [selectedFeature, fields, originalEntitlement, setEntitlement]);
 
   return (
-    <div>
+    <div className="overflow-hidden">
       <FieldLabel>Entitlement </FieldLabel>
       <Select
         value={selectedFeature?.internal_id}
