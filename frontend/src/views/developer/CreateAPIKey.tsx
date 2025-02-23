@@ -74,12 +74,12 @@ const CreateAPIKey = () => {
             }
           }}
         >
-          Create API Key
+          Create Secret API Key
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>Create API Key</DialogTitle>
+          <DialogTitle>Create Secret API Key</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-y-4">
           {apiKey ? (
