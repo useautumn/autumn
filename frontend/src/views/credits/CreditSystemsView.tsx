@@ -7,7 +7,7 @@ import CreateCreditSystem from "./CreateCreditSystem";
 import { useFeaturesContext } from "../features/FeaturesContext";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
-import { CreditsContext } from "./CreditsContext";
+import { FeaturesContext } from "../features/FeaturesContext";
 import { CreditSystemsTable } from "./CreditSystemsTable";
 import { CustomToaster } from "@/components/general/CustomToaster";
 
@@ -20,7 +20,7 @@ function CreditSystemsView({ env }: { env: AppEnv }) {
   if (isLoading) return <LoadingScreen />;
 
   return (
-    <CreditsContext.Provider
+    <FeaturesContext.Provider
       value={{
         features: data?.features,
         env: env,
@@ -31,12 +31,13 @@ function CreditSystemsView({ env }: { env: AppEnv }) {
       <div>
         <h1 className="text-xl font-medium">Credits</h1>
         <p className="text-sm text-t2">
-          Define the credit systems your users are entitled to
+          Define a credits system to bill for your users&apos; usage. These are
+          made of other metered features.
         </p>
       </div>
       <CreditSystemsTable />
       <CreateCreditSystem />
-    </CreditsContext.Provider>
+    </FeaturesContext.Provider>
   );
 }
 

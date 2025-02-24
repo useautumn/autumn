@@ -54,12 +54,12 @@ function HomeSidebar({
                 title="Features"
                 env={env}
               />
-              <TabButton
+              {/* <TabButton
                 value="credits"
                 icon={<FontAwesomeIcon icon={faBadgeDollar} />}
                 title="Credits"
                 env={env}
-              />
+              /> */}
               <TabButton
                 value="products"
                 icon={<FontAwesomeIcon icon={faFileLines} />}

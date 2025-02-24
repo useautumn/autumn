@@ -17,26 +17,44 @@ import { Input } from "@/components/ui/input";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import toast from "react-hot-toast";
-import { slugify } from "@/utils/formatUtils/formatTextUtils";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark } from "@fortawesome/pro-solid-svg-icons";
-import { useCreditsContext } from "./CreditsContext";
 import { PlusIcon } from "lucide-react";
 import { Feature, FeatureType } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
 import CreditSystemConfig from "./CreditSystemConfig";
-
+import { useFeaturesContext } from "../features/FeaturesContext";
 const defaultCreditSystem = {
   name: "",
   id: "",
   type: FeatureType.CreditSystem,
   config: {
-    schema: [{ metered_feature_id: "", feature_amount: 0, credit_amount: 0 }],
+    schema: [{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 }],
   },
 };
 
+export const validateCreditSystem = (creditSystem: Feature): string | null => {
+  if (!creditSystem.id || !creditSystem.name) {
+    return "Please fill in all fields";
+  }
+
+  if (creditSystem.config.schema.length === 0) {
+    return "Need at least one metered feature";
+  }
+
+  for (const item of creditSystem.config.schema) {
+    if (!item.metered_feature_id) {
+      return "Select a metered feature";
+    }
+
+    if (item.feature_amount <= 0 || item.credit_amount <= 0) {
+      return "Credit amount must be greater than 0";
+    }
+  }
+
+  return null;
+};
+
 function CreateCreditSystem() {
-  const { mutate, env } = useCreditsContext();
+  const { mutate, env } = useFeaturesContext();
   const axiosInstance = useAxiosInstance({ env: env });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -52,26 +70,10 @@ function CreateCreditSystem() {
   }, [open]);
 
   const handleCreateCreditSystem = async () => {
-    if (!creditSystem.id || !creditSystem.name) {
-      toast.error("Please fill in all fields");
+    const validationError = validateCreditSystem(creditSystem);
+    if (validationError) {
+      toast.error(validationError);
       return;
-    }
-
-    if (creditSystem.config.schema.length === 0) {
-      toast.error("Need at least one metered feature");
-      return;
-    }
-
-    for (const item of creditSystem.config.schema) {
-      if (!item.metered_feature_id) {
-        toast.error("Select a metered feature");
-        return;
-      }
-
-      if (item.feature_amount <= 0 || item.credit_amount <= 0) {
-        toast.error("Feature amount and credit amount must be greater than 0");
-        return;
-      }
     }
 
     setIsLoading(true);

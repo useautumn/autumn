@@ -33,11 +33,12 @@ export default function DevScreen({ env }: { env: AppEnv }) {
           style: { fontSize: "14px" },
         }}
       />
+      <h1 className="text-xl font-medium">Developer</h1>
       <div>
-        <h1 className="text-xl font-medium">API Keys</h1>
+        <h2 className="text-lg font-medium">Secret API Keys</h2>
         <p className="text-sm text-t2">
-          API keys are used to securely authenticate your requests to the API
-          from your server. Learn more{" "}
+          API keys are used to securely authenticate your requests from your
+          server. Learn more{" "}
           <a
             className="text-primary hover:text-primary/80 cursor-pointer"
             href="https://docs.useautumn.com"
@@ -53,12 +54,13 @@ export default function DevScreen({ env }: { env: AppEnv }) {
       <CreateAPIKey />
 
       <div className="mt-4">
-        <h1 className="text-lg font-medium">Publishable Key</h1>
+        <h2 className="text-lg font-medium">Publishable Key</h2>
         <p className="text-sm text-t2">
-          Publishable keys are used to make requests to our public API. You can
-          safely use this from your frontend.
+          You can safely use this from your frontend with certain endpoints,
+          such as <span className="font-mono text-red-500">/attach</span> and{" "}
+          <span className="font-mono text-red-500">/entitled</span>.
         </p>
-        <div className="flex flex-col gap-2 mt-4">
+        <div className="flex flex-col gap-2 mt-4 w-[450px] border rounded-sm bg-white px-2 py-1">
           {env === AppEnv.Sandbox ? (
             <CopyPublishableKey type="Sandbox" value={data?.org?.test_pkey} />
           ) : (
@@ -87,7 +89,7 @@ export default function DevScreen({ env }: { env: AppEnv }) {
   );
 }
 
-const CopyPublishableKey = ({
+export const CopyPublishableKey = ({
   type,
   value,
 }: {
@@ -95,10 +97,10 @@ const CopyPublishableKey = ({
   value: string;
 }) => {
   return (
-    <div className="px-4 py-2 bg-white flex justify-between w-[450px] border rounded-sm">
-      <div className="flex items-center gap-2">
-        <div className="text-sm font-medium">{type}</div>
-        <div className="text-sm text-t2">{value}</div>
+    <div className="flex justify-between w-full">
+      <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
+        <div className="text-sm font-medium">{type} Publishable Key</div>
+        <div className="text-sm text-t2 truncate">{value}</div>
       </div>
       <CopyButton text={value} />
     </div>

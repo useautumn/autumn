@@ -30,6 +30,7 @@ import {
 } from "@fortawesome/pro-duotone-svg-icons";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { OrgService } from "@/services/OrgService";
+import { CopyPublishableKey } from "../developer/DevView";
 
 function OnboardingView({
   sessionClaims,
@@ -46,6 +47,7 @@ function OnboardingView({
   const [apiCreated, setApiCreated] = useState(false);
   const [orgCreated, setOrgCreated] = useState(org_id ? true : false);
   const { createOrganization, setActive } = useOrganizationList();
+  // const [publishableKey, setPublishableKey] = useState("");
 
   const axiosInstance = useAxiosInstance({ env });
 
@@ -59,36 +61,51 @@ function OnboardingView({
     withAuth: true,
   });
 
+  const publishableKey =
+    env === AppEnv.Sandbox
+      ? productData?.org?.test_pkey
+      : productData?.org?.live_pkey;
+
   const features = productData?.features.filter(
     (feature: Feature) => feature.type !== "credit_system"
   );
 
   const pollForOrg = async () => {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       console.log("polling for org, attempt", i);
       const requiredProdLength = env == AppEnv.Sandbox ? 2 : 0;
       try {
-        const { data } = await axiosInstance.get(`/products/data`);
-        if (data.products.length != requiredProdLength) {
+        const response = await axiosInstance.get("/products/data");
+        const pollingData = response.data;
+
+        if (pollingData?.products.length != requiredProdLength) {
           throw new Error("Products not created");
         }
-        setOrgCreated(true);
+        await setOrgCreated(true);
+        await productMutate();
         return;
-      } catch (error) {}
+      } catch (error) {
+        console.log("error", error);
+      }
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
     window.location.reload();
   };
 
-  useEffect(() => {
-    const refreshData = async () => {
-      await productMutate();
-    };
-    if (orgCreated) {
-      refreshData();
-    }
-  }, [orgCreated, productMutate]);
+  // useEffect(() => {
+  //   const refreshData = async () => {
+  //     await productMutate();
+  //     if (env === AppEnv.Sandbox) {
+  //       setPublishableKey(productData?.org?.test_pkey);
+  //     } else {
+  //       setPublishableKey(productData?.org?.live_pkey);
+  //     }
+  //   };
+  //   if (orgCreated) {
+  //     refreshData();
+  //   }
+  // }, [orgCreated, productMutate]);
 
   useEffect(() => {
     const toastMessage = searchParams.get("toast");
@@ -109,11 +126,10 @@ function OnboardingView({
       const org = await createOrganization({
         name: fields.name,
       });
-      // setOrgId(org.id);
+
       await setActive({ organization: org.id });
       await pollForOrg();
       toast.success(`Created your organization: ${org.name}`);
-
       setIsExploding(true);
     } catch (error: any) {
       if (error.message) {
@@ -221,20 +237,20 @@ function OnboardingView({
                 />
               </div>
             </Step>
-            <Step title="Set up your pricing models">
+            <Step title="Set up your pricing model">
               <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
                 <div className="flex flex-col gap-2 text-t2 w-full lg:w-1/3">
                   <p>
-                    <span className="font-bold">Features</span> are the benefits
-                    your users are entitled to.{" "}
-                    <span className="font-bold">Products</span> are how you
-                    charge for them.
+                    First, create your{" "}
+                    <span className="font-bold">Features</span>, the parts of
+                    your application you charge for.
                   </p>
                   <p>
-                    Define your own application features, and create the pricing
-                    you want: subscriptions, usage-based, overages, credits, or
-                    a a combination!
+                    Then, create your{" "}
+                    <span className="font-bold">Products</span>, which are the
+                    pricing plans that grant access to those features.
                   </p>
+                  <p>Some examples have been created for you.</p>
                 </div>
                 <div className="w-full lg:w-2/3 min-w-md max-w-xl flex flex-col gap-6">
                   <FeaturesContext.Provider
@@ -278,13 +294,22 @@ function OnboardingView({
                 </div>
               </div>
             </Step>
-            <Step title="Create an Autumn API Key">
+            <Step title="Create an Autumn Secret Key">
               <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-                <p className="text-t2 w-full lg:w-1/3">
-                  Generate an API key to start integrating Autumn into your
-                  application.
-                </p>
-                <div className="w-full lg:w-2/3 min-w-md max-w-xl flex gap-2 bg-white p-4 rounded-sm border">
+                <div className="text-t2 flex flex-col gap-2 w-full lg:w-1/3">
+                  <p>
+                    Your <span className="font-bold">Publishable Key</span> is
+                    safe for frontend use. It&apos;s limited to non-sensitive
+                    operations, like getting a Stripe Checkout URL and feature
+                    access checks.
+                  </p>
+                  <p>
+                    Your <span className="font-bold">Secret Key</span> belongs
+                    on your backend server and has full API access, including
+                    for sending usage events.
+                  </p>
+                </div>
+                <div className="w-full lg:w-2/3 min-w-md max-w-xl flex gap-2 bg-white p-4 rounded-sm border h-fit">
                   <DevContext.Provider
                     value={{
                       env,
@@ -296,37 +321,67 @@ function OnboardingView({
                       setApiCreated,
                     }}
                   >
-                    <Input
-                      placeholder="API Key Name"
-                      value={apiKeyName}
-                      disabled={apiCreated}
-                      onChange={(e) => setApiKeyName(e.target.value)}
-                    />
-                    <CreateAPIKey />
+                    <div className="flex flex-col gap-2 w-full">
+                      <div className="border rounded-sm px-2 py-1">
+                        {env === AppEnv.Sandbox ? (
+                          <CopyPublishableKey
+                            type="Sandbox"
+                            value={productData?.org?.test_pkey}
+                          />
+                        ) : (
+                          <CopyPublishableKey
+                            type="Production"
+                            value={productData?.org?.live_pkey}
+                          />
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Secret API Key Name"
+                          value={apiKeyName}
+                          disabled={apiCreated}
+                          onChange={(e) => setApiKeyName(e.target.value)}
+                        />
+                        <CreateAPIKey />
+                      </div>
+                    </div>
                   </DevContext.Provider>
                 </div>
               </div>
             </Step>
             <Step title="Attach a Product">
               <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-                <p className="flex flex-col gap-2 text-t2 w-full lg:w-1/3">
-                  Call this endpoint when a user wants to purchase one of the
-                  products we defined above.
-                  <span>
-                    Autumn will return a Stripe checkout URL that you should
-                    redirect the user to.
-                  </span>
-                </p>
+                <div className="flex flex-col gap-2 text-t2 w-full lg:w-1/3">
+                  <p>
+                    The <span className="font-mono text-red-500">/attach</span>{" "}
+                    endpoint will return a Stripe Checkout URL that you should
+                    redirect your user to, when they want to purchase one of the
+                    products above.
+                  </p>
+                  <p>
+                    You can do this directly from your frontend using the
+                    Publishable API Key.
+                  </p>
+                </div>
                 <div className="w-full lg:w-2/3 min-w-md max-w-xl">
                   <CodeDisplay
                     code={`const response = await fetch('https://api.useautumn.com/v1/attach', {
   method: "POST",
-  headers: {Authorization: 'Bearer <Autumn API Key>', 'Content-Type': 'application/json'},
-  body: JSON.stringify({
-    "customer_id": internal_user_id, //Use your internal user ID
-    "product_id": "pro"
-  })
-})`}
+  headers: {Authorization: 'Bearer ${publishableKey}', 'Content-Type': 'application/json'},
+  body: JSON.stringify(
+    {
+      "customer_id": "<YOUR_INTERNAL_USER_ID>", //Use your internal user ID
+      "product_id": "pro" //Set above in the 'Products' table
+    }
+  )
+})
+
+const data = await response.json();
+const checkoutUrl = data.checkout_url;
+
+// Redirect the user to the checkout URL
+window.location.href = checkoutUrl;
+`}
                     language="javascript"
                   />
                 </div>
@@ -336,39 +391,50 @@ function OnboardingView({
               <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
                 <p className="text-t2 flex flex-col gap-2 w-full lg:w-1/3">
                   <span>
-                    Check whether a user has access to any of the features we
-                    defined above.
+                    If you have a feature with access restrictions, check
+                    whether a user can access it by calling the{" "}
+                    <span className="font-mono text-red-500">/entitled</span>{" "}
+                    endpoint.
                   </span>
                   <span>
                     If it&apos;s a metered (usage-based) feature, send us the
-                    usage data.
+                    usage data by calling the{" "}
+                    <span className="font-mono text-red-500">/events</span>{" "}
+                    endpoint. You must use your{" "}
+                    <span className="font-bold">Secret API Key</span> for this.
                   </span>
                 </p>
                 <div className="w-full lg:w-2/3 min-w-md max-w-xl flex flex-col gap-2">
-                  <h2 className="text-t2 font-medium text-md">Check Access</h2>
+                  <h2 className="text-t2 font-medium text-md">
+                    Check Feature Access
+                  </h2>
                   <CodeDisplay
                     code={`const response = await fetch('https://api.useautumn.com/v1/entitled', {
   method: "POST",
-  headers: {Authorization: 'Bearer <Autumn API Key>', 'Content-Type': 'application/json'},
-  body: JSON.stringify({
-    "customer_id": internal_user_id, //Use your internal user ID
-    "feature_id": "chat-messages"
-  })
+  headers: {Authorization: 'Bearer ${publishableKey}', 'Content-Type': 'application/json'},
+  body: JSON.stringify(
+    {
+      "customer_id": "<YOUR_INTERNAL_USER_ID>", //Use your internal user ID
+      "feature_id": "chat-messages" //Set above in the 'Features' table
+    }
+  )
 })`}
                     language="javascript"
                   />
 
                   <h2 className="text-t2 font-medium text-md mt-4">
-                    Send Usage (if metered)
+                    Send Usage Events
                   </h2>
                   <CodeDisplay
                     code={`await fetch('https://api.useautumn.com/v1/events', {
   method: "POST",
-  headers: {Authorization: 'Bearer <Autumn API Key>', 'Content-Type': 'application/json'},
-  body: JSON.stringify({
-    "customer_id": internal_user_id, //Use your internal user ID
-    "event_name": "chat-message"
-  })
+  headers: {Authorization: 'Bearer <AUTUMN_SECRET_API_KEY>', 'Content-Type': 'application/json'},
+  body: JSON.stringify(
+    {
+      "customer_id": "<YOUR_INTERNAL_USER_ID>", //Use your internal user ID
+      "event_name": "chat-message" //Set above in the 'Features' table
+    }
+  )
 })`}
                     language="javascript"
                   />

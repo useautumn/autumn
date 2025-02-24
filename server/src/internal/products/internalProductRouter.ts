@@ -37,6 +37,7 @@ productRouter.get("/data", async (req: any, res) => {
       features,
       org: {
         id: org.id,
+        name: org.name,
         test_pkey: org.test_pkey,
         live_pkey: org.live_pkey,
       },
