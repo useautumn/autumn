@@ -6,9 +6,9 @@ const getWelcomeEmailBody = (userFirstName: string) => {
   
 Just wanted to say thank you for signing up to Autumn! 
 
-We're super early, so I'm curious--how did you hear about us? Also are you just looking around or do you have a specific use case I can help you with? 
+I'm curious--how did you hear about us? Also are you just looking around or do you have a specific use case I can help you with? 
 
-We want to become the easiest way to manage software pricing, so any feedback you have for us is incredibly appreciated.
+Whatever the reason, any feedback you have for us is incredibly appreciated. And anything you need I'm here to help.
 
 Ayush
 Co-founder, Autumn

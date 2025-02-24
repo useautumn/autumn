@@ -54,7 +54,7 @@ export const EntitlementConfig = ({
 
   const [fields, setFields] = useState({
     allowance_type: entitlement?.allowance_type || AllowanceType.Fixed,
-    allowance: entitlement?.allowance || 0,
+    allowance: entitlement?.allowance || "",
     interval: entitlement?.interval || EntInterval.Month,
   });
 
@@ -65,6 +65,7 @@ export const EntitlementConfig = ({
         feature_id: selectedFeature.id,
         feature: selectedFeature,
         ...fields,
+        allowance: fields.allowance ? Number(fields.allowance) : 0,
       });
 
       const originalEnt = originalEntitlement ? originalEntitlement : null;
@@ -79,7 +80,7 @@ export const EntitlementConfig = ({
   }, [selectedFeature, fields, originalEntitlement, setEntitlement]);
 
   return (
-    <div>
+    <div className="overflow-hidden">
       <FieldLabel>Entitlement </FieldLabel>
       <Select
         value={selectedFeature?.internal_id}
@@ -156,7 +157,7 @@ export const EntitlementConfig = ({
                   onChange={(e) =>
                     setFields({
                       ...fields,
-                      allowance: parseInt(e.target.value) || 0,
+                      allowance: e.target.value,
                     })
                   }
                 />

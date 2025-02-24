@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useCreditsContext } from "./CreditsContext";
+import { useFeaturesContext } from "../features/FeaturesContext";
 
 function CreditSystemConfig({
   creditSystem,
@@ -24,7 +24,7 @@ function CreditSystemConfig({
   creditSystem: Feature;
   setCreditSystem: (creditSystem: Feature) => void;
 }) {
-  const { features } = useCreditsContext();
+  const { features } = useFeaturesContext();
   const [fields, setFields] = useState<any>(
     creditSystem.name
       ? {
@@ -44,7 +44,7 @@ function CreditSystemConfig({
           schema: [
             {
               metered_feature_id: "",
-              feature_amount: 0,
+              feature_amount: 1,
               credit_amount: 0,
             },
           ],
@@ -61,7 +61,7 @@ function CreditSystemConfig({
     const newSchema = [...creditSystemConfig.schema];
     newSchema.push({
       metered_feature_id: "",
-      feature_amount: 0,
+      feature_amount: 1,
       credit_amount: 0,
     });
 
@@ -85,8 +85,8 @@ function CreditSystemConfig({
   }, [fields, creditSystemConfig]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-4 w-full">
+    <div className="flex flex-col gap-4 overflow-hidden">
+      <div className="flex gap-2 w-full">
         <div className="w-full">
           <FieldLabel>Name</FieldLabel>
           <Input
@@ -114,73 +114,83 @@ function CreditSystemConfig({
         </div>
       </div>
 
-      <div>
+      <div className="flex flex-col gap-2">
         {/* <FieldLabel>Schema</FieldLabel> */}
-        <p className="text-sm text-t2 font-medium mb-2">Schema</p>
-        <div className="grid grid-cols-12 gap-2 gap-y-1 mb-4">
-          <FieldLabel className="!mb-0 col-span-5 flex items-end">
-            Meter
-          </FieldLabel>
-          <FieldLabel className="!mb-0 col-span-3">Metered Amount</FieldLabel>
-          <FieldLabel className="!mb-0 col-span-3">Credit Amount</FieldLabel>
-          <p className="col-span-1"></p>
+        <div className="flex flex-col w-full">
+          <div className="flex w-full gap-2">
+            <FieldLabel className="w-full">Metered Feature</FieldLabel>
+            {/* <FieldLabel className="!mb-0 col-span-3">Metered Amount</FieldLabel> */}
+            <FieldLabel className="w-full">Credit Amount</FieldLabel>
+          </div>
 
-          {creditSystemConfig.schema.map((item, index) => (
-            <React.Fragment key={index}>
-              <Select
-                onValueChange={(value) => {
-                  handleSchemaChange(index, "metered_feature_id", value);
-                }}
-                value={item.metered_feature_id}
-              >
-                <SelectTrigger className="col-span-5">
-                  <SelectValue placeholder="eg. API Calls" />
-                </SelectTrigger>
-                <SelectContent>
-                  {features
-                    ?.filter(
-                      (feature: Feature) => feature.type === FeatureType.Metered
-                    )
-                    .map((feature: Feature) => (
-                      <SelectItem key={feature.id} value={feature.id!}>
-                        {feature.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-
-              <Input
-                className="col-span-3"
-                type="number"
-                value={item.feature_amount}
-                onChange={(e) =>
-                  handleSchemaChange(index, "feature_amount", e.target.value)
-                }
-              />
-              <Input
-                className="col-span-3"
-                type="number"
-                value={item.credit_amount}
-                onChange={(e) =>
-                  handleSchemaChange(index, "credit_amount", e.target.value)
-                }
-              />
-              <div className="col-span-1 flex items-center justify-end">
-                <Button
-                  variant="ghost"
-                  onClick={() => removeSchemaItem(index)}
-                  isIcon
-                  dim={6}
-                  className="text-t3"
-                >
-                  <FontAwesomeIcon icon={faXmark} />
-                </Button>
-              </div>
-            </React.Fragment>
-          ))}
+          <div className="flex flex-col w-full gap-2 overflow-hidden">
+            {creditSystemConfig.schema.map((item, index) => (
+              <React.Fragment key={index}>
+                <div className="flex w-full gap-2">
+                  <div className="w-full overflow-hidden">
+                    <Select
+                      onValueChange={(value) => {
+                        handleSchemaChange(index, "metered_feature_id", value);
+                      }}
+                      value={item.metered_feature_id}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {features
+                          ?.filter(
+                            (feature: Feature) =>
+                              feature.type === FeatureType.Metered
+                          )
+                          .map((feature: Feature) => (
+                            <SelectItem key={feature.id} value={feature.id!}>
+                              {feature.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {/* <Input
+                  className="col-span-3"
+                  type="number"
+                  value={item.feature_amount}
+                  onChange={(e) =>
+                    handleSchemaChange(index, "feature_amount", e.target.value)
+                  }
+                /> */}
+                  <div className="flex w-full gap-2">
+                    <Input
+                      className="w-full"
+                      type="number"
+                      value={item.credit_amount}
+                      onChange={(e) =>
+                        handleSchemaChange(
+                          index,
+                          "credit_amount",
+                          e.target.value
+                        )
+                      }
+                    />
+                    <div className="flex items-center justify-end">
+                      <Button
+                        variant="ghost"
+                        onClick={() => removeSchemaItem(index)}
+                        isIcon
+                        dim={6}
+                        className="text-t3"
+                      >
+                        <FontAwesomeIcon icon={faXmark} />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
 
-        <Button variant="secondary" onClick={addSchemaItem}>
+        <Button variant="secondary" className="w-fit" onClick={addSchemaItem}>
           Add
         </Button>
       </div>

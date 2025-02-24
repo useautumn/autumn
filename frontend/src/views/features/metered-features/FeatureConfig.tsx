@@ -106,7 +106,7 @@ export function FeatureConfig({
           <TabsTrigger value={FeatureType.Metered}>Metered</TabsTrigger>
         </TabsList>
       </Tabs>
-      <div className="flex gap-4 w-full">
+      <div className="flex gap-2 w-full">
         <div className="w-full">
           <FieldLabel>Name</FieldLabel>
           <Input
@@ -143,12 +143,12 @@ export function FeatureConfig({
       {featureType === FeatureType.Metered && (
         <>
           <div className="">
-            <FieldLabel>Filter</FieldLabel>
+            <FieldLabel>Event Name</FieldLabel>
 
-            <div className="flex gap-1 mb-2 text-sm bor">
+            {/* <div className="flex gap-1 mb-2 text-sm bor">
               <p className="text-t2 font-mono">event_name</p>
               <p className="text-sm text-t3">is one of</p>
-            </div>
+            </div> */}
             <FilterInput
               config={meteredConfig}
               setConfig={setMeteredConfig}
@@ -259,7 +259,7 @@ export const FilterInput = ({
       ))}
       <input
         className="outline-none w-[10px] flex-grow"
-        placeholder="eg. api_request"
+        placeholder="eg. chat-messages"
         onFocus={() => setInputFocused(true)}
         onBlur={() => setInputFocused(false)}
         value={eventNameInput}
