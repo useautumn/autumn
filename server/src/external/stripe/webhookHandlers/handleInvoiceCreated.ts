@@ -104,7 +104,8 @@ export const handleInvoiceCreated = async ({
         event_name: price.id!,
         payload: {
           stripe_customer_id: customer.processor.id,
-          value: Math.round(usage).toString(),
+          // value: Math.round(usage).toString(),
+          value: usage.toString(),
         },
         timestamp: usageTimestamp,
       });

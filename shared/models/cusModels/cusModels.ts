@@ -18,7 +18,7 @@ export const CustomerSchema = z.object({
 });
 
 export const CreateCustomerSchema = z.object({
-  id: z.string().regex(/^[^\s]+$/),
+  id: z.string().regex(/^[^\s]+$/), // id is not allowed whitespace characters
   name: z.string().nullish(),
   email: z.string().nullish(),
   fingerprint: z.string().nullish(),

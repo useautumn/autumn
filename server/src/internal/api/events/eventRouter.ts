@@ -12,7 +12,6 @@ import { generateId } from "@/utils/genUtils.js";
 import { EventService } from "./EventService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { Client } from "pg";
-import { Queue } from "bullmq";
 import { createNewCustomer } from "../customers/cusUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
