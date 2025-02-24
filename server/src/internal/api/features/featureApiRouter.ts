@@ -116,13 +116,13 @@ featureApiRouter.delete("/:featureId", async (req: any, res) => {
         env: req.env,
       });
 
-    // if (creditSystems.length > 0) {
-    //   throw new RecaseError({
-    //     message: `Feature ${featureId} is used by credit system ${creditSystems[0].id}`,
-    //     code: ErrCode.InvalidFeature,
-    //     statusCode: 400,
-    //   });
-    // }
+    if (creditSystems.length > 0) {
+      throw new RecaseError({
+        message: `Feature ${featureId} is used by credit system ${creditSystems[0].id}`,
+        code: ErrCode.InvalidFeature,
+        statusCode: 400,
+      });
+    }
 
     // Get prices that use this feature
     const ents: any[] = await EntitlementService.getByFeature({
