@@ -17,6 +17,7 @@ import { CustomerEntitlementService } from "@/internal/customers/entitlements/Cu
 import { Customer, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
+import { Decimal } from "decimal.js";
 
 // 2. Functions to get deduction per feature
 export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
@@ -202,29 +203,30 @@ export const updateCustomerBalance = async ({
 
         let newBalance, deducted;
 
+        let cusEntBalance = new Decimal(cusEnt.balance!);
+
         // If toDeduct is negative, add to balance and set toDeduct to 0
         if (toDeduct < 0) {
-          newBalance = cusEnt.balance! - toDeduct;
+          newBalance = cusEntBalance.minus(toDeduct).toNumber();
           deducted = toDeduct;
           toDeduct = 0;
         }
 
         // If cusEnt has less balance to deduct than 0, deduct the balance and set balance to 0
-        else if (cusEnt.balance! - toDeduct < 0) {
-          toDeduct -= cusEnt.balance!;
-          deducted = cusEnt.balance!;
-          newBalance = 0;
+        else if (cusEntBalance.minus(toDeduct).lt(0)) {
+          toDeduct = new Decimal(toDeduct).minus(cusEntBalance).toNumber(); // toDeduct = toDeduct - cusEntBalance
+          deducted = cusEntBalance.toNumber(); // deducted = cusEntBalance
+          newBalance = 0; // newBalance = 0
         }
 
         // Else, deduct the balance and set toDeduct to 0
         else {
-          newBalance = cusEnt.balance! - toDeduct;
+          newBalance = cusEntBalance.minus(toDeduct).toNumber();
           deducted = toDeduct;
           toDeduct = 0;
         }
 
         cusEnt.balance = newBalance;
-
         await CustomerEntitlementService.update({
           sb,
           id: cusEnt.id,
@@ -240,14 +242,24 @@ export const updateCustomerBalance = async ({
       continue;
     }
 
+    console.log(`Still have to deduct ${toDeduct} from ${obj.feature.id}`);
+
     // Deduct from usage-based price
     const usageBasedEnt = cusEnts.find(
-      (cusEnt: CusEntWithEntitlement) => cusEnt.usage_allowed
+      (cusEnt: CusEntWithEntitlement) =>
+        cusEnt.usage_allowed &&
+        cusEnt.entitlement.internal_feature_id == obj.feature.internal_id
+    );
+
+    console.log(
+      "Usage based ent: ",
+      usageBasedEnt?.feature_id,
+      usageBasedEnt?.balance
     );
 
     if (usageBasedEnt) {
       let newBalance = usageBasedEnt.balance! - toDeduct;
-
+      console.log("New balance: ", newBalance);
       await CustomerEntitlementService.update({
         sb,
         id: usageBasedEnt.id,

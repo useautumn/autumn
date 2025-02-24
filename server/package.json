@@ -48,6 +48,7 @@
     "cron": "^3.5.0",
     "currency-symbol-map": "^5.1.0",
     "date-fns": "^4.1.0",
+    "decimal.js": "^10.5.0",
     "dotenv": "^16.4.7",
     "express": "^4.21.1",
     "http-status-codes": "^2.3.0",
