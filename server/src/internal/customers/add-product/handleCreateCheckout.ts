@@ -6,9 +6,11 @@ import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { BillingType, FixedPriceConfig } from "@autumn/shared";
-import { differenceInDays, format } from "date-fns";
+
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
+import { ErrCode } from "@/errors/errCodes.js";
+import RecaseError from "@/utils/errorUtils.js";
+
 export const handleCreateCheckout = async ({
   sb,
   res,
@@ -30,10 +32,21 @@ export const handleCreateCheckout = async ({
   });
 
   // Get stripeItems
-  const { items, itemMetas } = await getStripeSubItems({
+  const itemSets = await getStripeSubItems({
     attachParams,
     isCheckout: true,
   });
+
+  if (itemSets.length === 0) {
+    throw new RecaseError({
+      code: ErrCode.ProductHasNoPrices,
+      message: "Product has no prices",
+    });
+  }
+
+  // Handle first item set
+  const { items, itemMetas, subMeta } = itemSets[0];
+  attachParams.itemSets = itemSets;
 
   const isRecurring = pricesContainRecurring(attachParams.prices);
 
@@ -44,13 +57,14 @@ export const handleCreateCheckout = async ({
     itemMetas,
   });
 
-  const subscriptionData =
-    freeTrial && isRecurring
-      ? {
-          trial_end: freeTrialToStripeTimestamp(freeTrial),
-          // trial_
-        }
-      : undefined;
+  const subscriptionData = isRecurring
+    ? {
+        trial_end: freeTrial
+          ? freeTrialToStripeTimestamp(freeTrial)
+          : undefined,
+        metadata: subMeta,
+      }
+    : undefined;
 
   const checkout = await stripeCli.checkout.sessions.create({
     customer: customer.processor.id,

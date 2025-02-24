@@ -63,14 +63,14 @@ export const checkAddProductErrors = async ({
 }) => {
   const { product, prices, entitlements, optionsList } = attachParams;
 
-  // 1. Check if product has different recurring intervals
-  if (haveDifferentRecurringIntervals(prices)) {
-    throw new RecaseError({
-      message: `Product ${product.id} has different recurring intervals`,
-      code: ErrCode.ProductHasDifferentRecurringIntervals,
-      statusCode: 400,
-    });
-  }
+  // // 1. Check if product has different recurring intervals
+  // if (haveDifferentRecurringIntervals(prices)) {
+  //   throw new RecaseError({
+  //     message: `Product ${product.id} has different recurring intervals`,
+  //     code: ErrCode.ProductHasDifferentRecurringIntervals,
+  //     statusCode: 400,
+  //   });
+  // }
 
   if (useCheckout && !checkoutPricesValid(prices)) {
     throw new RecaseError({
@@ -150,36 +150,22 @@ export const handleExistingProduct = async ({
   // 2. If same product, delete future product or throw error
   if (currentProduct?.product.internal_id === product.internal_id) {
     // If there's a future product, delete, else
-    const deletedCusProduct = await CusProductService.deleteFutureProduct({
+    const deleted = await CusProductService.deleteFutureProduct({
       sb,
+      org,
+      env,
       internalCustomerId: customer.internal_id,
       productGroup: product.group,
     });
 
-    if (deletedCusProduct) {
-      const stripeCli = createStripeCli({ org, env });
-      if (deletedCusProduct.processor.subscription_schedule_id) {
-        await stripeCli.subscriptionSchedules.cancel(
-          deletedCusProduct.processor.subscription_schedule_id
-        );
-      }
-      // Continue current product subscription
-      if (currentProduct.processor.subscription_id) {
-        await stripeCli.subscriptions.update(
-          currentProduct.processor.subscription_id,
-          {
-            cancel_at_period_end: false,
-          }
-        );
-      }
-
+    if (deleted) {
       console.log(
         "Added product same as current product, deleted future product"
       );
 
       res.status(200).send({
         success: true,
-        message: "Reactivated current product, removed future product",
+        message: "Reactivated current product, removed future product(s)",
       });
       return {
         done: true,
@@ -356,11 +342,6 @@ export const customerHasPm = async ({
 };
 
 attachRouter.post("/attach", async (req: any, res) => {
-  // if (req.isPublic) {
-  //   await handlePublicAttach(req, res);
-  //   return;
-  // }
-
   const {
     customer_id,
     product_id,

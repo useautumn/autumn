@@ -52,7 +52,7 @@ export const handleInvoicePaid = async ({
 }) => {
   if (invoice.subscription) {
     // Get customer product
-    const activeCusProducts = await CusProductService.getActiveByStripeSubId({
+    const activeCusProducts = await CusProductService.getByStripeSubId({
       sb,
       stripeSubId: invoice.subscription as string,
       orgId: org.id,

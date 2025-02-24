@@ -181,36 +181,93 @@ export const getStripeSubItems = async ({
 }) => {
   const { product, prices, entitlements, optionsList, org, curCusProduct } =
     attachParams;
+
   const checkoutRelevantPrices = getCheckoutRelevantPrices(prices);
 
-  let subItems: any[] = [];
-  let itemMetas: any[] = [];
+  // First do interval to prices
+  const intervalToPrices: Record<string, Price[]> = {};
 
   for (const price of checkoutRelevantPrices) {
-    const priceEnt = getPriceEntitlement(price, entitlements);
-    const options = getEntOptions(optionsList, priceEnt);
-
-    const stripeItem = priceToStripeItem({
-      price,
-      product,
-      org,
-      options,
-      isCheckout,
-    });
-
-    if (!stripeItem) {
-      continue;
+    if (!intervalToPrices[price.config!.interval!]) {
+      intervalToPrices[price.config!.interval!] = [];
     }
-
-    const { lineItem, lineItemMeta } = stripeItem;
-
-    subItems.push(lineItem);
-    itemMetas.push(lineItemMeta);
+    intervalToPrices[price.config!.interval!].push(price);
   }
 
-  console.log("Line items: ", subItems);
+  // Combine one off prices with top interval
+  let oneOffPrices =
+    intervalToPrices[BillingInterval.OneOff] &&
+    intervalToPrices[BillingInterval.OneOff].length > 0;
 
-  return { items: subItems, itemMetas };
+  if (oneOffPrices && Object.keys(intervalToPrices).length > 1) {
+    const nextIntervalKey = Object.keys(intervalToPrices)[0];
+    intervalToPrices[nextIntervalKey!].push(
+      ...intervalToPrices[BillingInterval.OneOff]
+    );
+    delete intervalToPrices[BillingInterval.OneOff];
+  }
+
+  const itemSets: any[] = [];
+
+  for (const interval in intervalToPrices) {
+    // Get prices for this interval
+    const prices = intervalToPrices[interval];
+    let subItems: any[] = [];
+    let itemMetas: any[] = [];
+
+    let usage_features = [];
+
+    for (const price of prices) {
+      const priceEnt = getPriceEntitlement(price, entitlements);
+      const options = getEntOptions(optionsList, priceEnt);
+
+      if (price.billing_type == BillingType.UsageInArrear) {
+        usage_features.push({
+          internal_id: priceEnt.feature.internal_id,
+          id: priceEnt.feature.id,
+        });
+      }
+
+      const stripeItem = priceToStripeItem({
+        price,
+        product,
+        org,
+        options,
+        isCheckout,
+      });
+
+      if (!stripeItem) {
+        continue;
+      }
+
+      const { lineItem, lineItemMeta } = stripeItem;
+
+      subItems.push(lineItem);
+      itemMetas.push(lineItemMeta);
+    }
+
+    itemSets.push({
+      items: subItems,
+      itemMetas,
+      interval,
+      subMeta: {
+        usage_features: JSON.stringify(usage_features),
+      },
+    });
+  }
+
+  itemSets.sort((a, b) => {
+    let order = [
+      BillingInterval.Year,
+      BillingInterval.SemiAnnual,
+      BillingInterval.Quarter,
+      BillingInterval.Month,
+      BillingInterval.OneOff,
+    ];
+    return order.indexOf(a.interval) - order.indexOf(b.interval);
+  });
+
+  return itemSets;
 };
 
 export const inAdvanceToStripeTiers = (

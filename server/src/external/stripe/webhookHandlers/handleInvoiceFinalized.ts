@@ -4,6 +4,7 @@ import { getBillingType } from "@/internal/prices/priceUtils.js";
 import {
   AppEnv,
   BillingType,
+  CusProductStatus,
   InvoiceStatus,
   Organization,
   UsagePriceConfig,
@@ -30,11 +31,12 @@ export const handleInvoiceFinalized = async ({
 }) => {
   // Get stripe subscriptions
   if (invoice.subscription) {
-    const activeProducts = await CusProductService.getActiveByStripeSubId({
+    const activeProducts = await CusProductService.getByStripeSubId({
       sb,
       stripeSubId: invoice.subscription as string,
       orgId: org.id,
       env,
+      inStatuses: [CusProductStatus.Active],
     });
 
     if (activeProducts.length != 1) {

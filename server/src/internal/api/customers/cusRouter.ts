@@ -1,10 +1,8 @@
 import {
-  AppEnv,
   CreateCustomerSchema,
   CusProductStatus,
   Customer,
   CustomerResponseSchema,
-  FullCustomerPrice,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -12,14 +10,13 @@ import { ErrorMessages } from "@/errors/errMessages.js";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../../customers/CusService.js";
-import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
+
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { EventService } from "../events/EventService.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import {
   createNewCustomer,
-  expireAndAddDefaultProduct,
   getCusEntsInFeatures,
   getCustomerDetails,
 } from "./cusUtils.js";
@@ -30,8 +27,11 @@ import {
   getCusBalancesByProduct,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import {
+  cancelCusProductSubscriptions,
+  expireAndActivate,
   fullCusProductToCusEnts,
   fullCusProductToCusPrices,
+  uncancelCurrentProduct,
 } from "@/internal/customers/products/cusProductUtils.js";
 import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
 
@@ -212,7 +212,7 @@ cusRouter.post(
       const { customer_entitlement_id } = req.params;
       const { balance, next_reset_at } = req.body;
 
-      if (!Number.isInteger(balance) || balance < 0) {
+      if (!Number.isInteger(balance)) {
         throw new RecaseError({
           message: "Balance must be a positive integer",
           code: ErrCode.InvalidRequest,
@@ -238,6 +238,14 @@ cusRouter.post(
         orgId: req.orgId,
         env: req.env,
       });
+
+      if (balance < 0 && !cusEnt.usage_allowed) {
+        throw new RecaseError({
+          message: "Entitlement does not allow usage",
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
 
       const amountUsed = cusEnt.balance! - balance;
       const adjustment = cusEnt.adjustment! - amountUsed;
@@ -507,82 +515,52 @@ cusRouter.post(
 
       // 1. If current product is scheduled:
       if (cusProduct.status == CusProductStatus.Scheduled) {
-        const stripeCli = createStripeCli({
-          org,
-          env: req.env,
-        });
-
-        if (cusProduct.processor.subscription_schedule_id) {
-          await stripeCli.subscriptionSchedules.cancel(
-            cusProduct.processor.subscription_schedule_id
-          );
-        }
-
         await CusProductService.deleteFutureProduct({
           sb: req.sb,
           internalCustomerId: cusProduct.customer.internal_id,
           productGroup: cusProduct.product.group,
+          org,
+          env: req.env,
         });
 
-        // Activate current product
-        const curCusProduct = await CusProductService.getCurrentProductByGroup({
+        await uncancelCurrentProduct({
+          sb: req.sb,
+          internalCustomerId: cusProduct.customer.internal_id,
+          productGroup: cusProduct.product.group,
+          org,
+          env: req.env,
+        });
+      } else {
+        const futureProduct = await CusProductService.getFutureProduct({
           sb: req.sb,
           internalCustomerId: cusProduct.customer.internal_id,
           productGroup: cusProduct.product.group,
         });
 
-        if (curCusProduct && curCusProduct.processor.subscription_id) {
-          await stripeCli.subscriptions.update(
-            curCusProduct.processor.subscription_id!,
-            { cancel_at: null }
-          );
+        if (futureProduct) {
+          throw new RecaseError({
+            message: `Please delete scheduled product ${futureProduct.product.name} first`,
+            code: ErrCode.InvalidRequest,
+            statusCode: StatusCodes.BAD_REQUEST,
+          });
         }
-      } else {
         // For regular products
-        const stripeCli = createStripeCli({
+        // 1. Cancel stripe subscriptions
+        const cancelled = await cancelCusProductSubscriptions({
+          sb: req.sb,
+          cusProduct,
           org,
           env: req.env,
         });
 
-        // Case 1: Stripe subscription exists
-        // Just cancel stripe subscription, webhook will expire and activate default product
-        if (cusProduct.processor.subscription_id) {
-          try {
-            await stripeCli.subscriptions.cancel(
-              cusProduct.processor.subscription_id
-            );
-          } catch (error: any) {
-            console.log(
-              "Error canceling stripe subscription (from manual cusProduct)"
-            );
-            if (error.raw.code == "resource_missing") {
-              console.log(
-                `Subscription ${cusProduct.processor.subscription_id} not found in Stripe`
-              );
-            } else {
-              console.log(error.message);
-            }
-          }
-        }
-
-        // Case 2: No stripe subscription or schedule exists
-        else {
-          // If not add on, expire and add default product
-          if (!cusProduct.product.is_add_on) {
-            await expireAndAddDefaultProduct({
-              sb: req.sb,
-              org,
-              env: req.env,
-              cusProduct,
-            });
-          } else {
-            await CusProductService.update({
-              sb: req.sb,
-              cusProductId: customerProductId,
-              updates: { status: CusProductStatus.Expired },
-            });
-          }
-        }
+        if (!cancelled) {
+          await expireAndActivate({
+            sb: req.sb,
+            env: req.env,
+            cusProduct,
+            org,
+          });
+        } // else will be handled by webhook
       }
 
       res.status(200).json({ success: true });

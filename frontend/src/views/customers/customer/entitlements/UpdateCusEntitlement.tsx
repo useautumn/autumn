@@ -69,8 +69,8 @@ function UpdateCusEntitlement({
     cusEnt: FullCustomerEntitlement
   ) => {
     const balanceInt = parseInt(updateFields.balance);
-    if (isNaN(balanceInt) || balanceInt < 0) {
-      toast.error("Balance must be a positive integer");
+    if (isNaN(balanceInt)) {
+      toast.error("Balance not valid");
       return;
     }
 

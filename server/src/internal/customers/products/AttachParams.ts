@@ -21,4 +21,6 @@ export type AttachParams = {
 
   curCusProduct?: FullCusProduct | undefined;
   successUrl?: string | undefined;
+  // remainingItemSets?: any[];
+  itemSets?: any[];
 };

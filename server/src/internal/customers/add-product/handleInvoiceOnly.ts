@@ -175,55 +175,72 @@ export const handleInvoiceOnly = async ({
 
   // 1. Create stripe subscription (with invoice)
   console.log("   - Creating stripe subscription");
-  const { items, itemMetas } = await getStripeSubItems({
+  const itemSets = await getStripeSubItems({
     attachParams,
   });
 
-  // Create subscription
-  const stripeCli = createStripeCli({ org, env });
-  const stripeSub = await stripeCli.subscriptions.create({
-    customer: customer.processor.id,
-    items,
-    collection_method: "send_invoice",
-    days_until_due: 30,
-  });
+  let stripeSubs: Stripe.Subscription[] = [];
+  for (const itemSet of itemSets) {
+    const { items } = itemSet;
+    // Create subscription
+    const stripeCli = createStripeCli({ org, env });
+    const stripeSub = await stripeCli.subscriptions.create({
+      customer: customer.processor.id,
+      collection_method: "send_invoice",
+      days_until_due: 30,
+      items,
+    });
+    stripeSubs.push(stripeSub);
+  }
 
   // 1. Add full cus product
   console.log("   - Adding full cus product");
   await createFullCusProduct({
     sb: req.sb,
     attachParams,
-    subscriptionId: stripeSub.id,
-    lastInvoiceId: stripeSub.latest_invoice as string,
+    subscriptionId: stripeSubs[0].id,
+    subscriptionIds: stripeSubs.map((s) => s.id),
+    lastInvoiceId: stripeSubs[0].latest_invoice as string,
     collectionMethod: CollectionMethod.SendInvoice,
   });
 
-  // Get stripe invoice
-  console.log("   - Inserting stripe invoice into db");
-  // 1. Finalize invoice
-  await stripeCli.invoices.finalizeInvoice(stripeSub.latest_invoice as string);
-  const stripeInvoice = await stripeCli.invoices.retrieve(
-    stripeSub.latest_invoice as string
-  );
+  const stripeCli = createStripeCli({ org, env });
+  let firstInvoice;
+  for (const stripeSub of stripeSubs) {
+    // Get stripe invoice
+    console.log("   - Inserting stripe invoice into db");
+    // 1. Finalize invoice
+    await stripeCli.invoices.finalizeInvoice(
+      stripeSub.latest_invoice as string
+    );
 
-  try {
-    await stripeCli.invoices.sendInvoice(stripeInvoice.id);
-  } catch (error: any) {
-    console.log("Failed to send stripe invoice:", error.message);
+    const stripeInvoice = await stripeCli.invoices.retrieve(
+      stripeSub.latest_invoice as string
+    );
+
+    if (!firstInvoice) {
+      firstInvoice = stripeInvoice;
+    }
+
+    try {
+      await stripeCli.invoices.sendInvoice(stripeInvoice.id);
+    } catch (error: any) {
+      console.log("Failed to send stripe invoice:", error.message);
+    }
+
+    await InvoiceService.createInvoiceFromStripe({
+      sb: req.sb,
+      stripeInvoice,
+      internalCustomerId: customer.internal_id,
+      org,
+      productIds: [product.id],
+      internalProductIds: [product.internal_id],
+    });
   }
-
-  await InvoiceService.createInvoiceFromStripe({
-    sb: req.sb,
-    stripeInvoice,
-    internalCustomerId: customer.internal_id,
-    org,
-    productIds: [product.id],
-    internalProductIds: [product.internal_id],
-  });
 
   console.log("   ✅ Done");
 
   res.status(200).json({
-    invoice_url: stripeInvoice.hosted_invoice_url,
+    invoice_url: firstInvoice?.hosted_invoice_url,
   });
 };

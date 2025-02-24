@@ -10,6 +10,8 @@ import {
   FreeTrial,
   BillingType,
   CollectionMethod,
+  Organization,
+  AppEnv,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
@@ -151,6 +153,8 @@ export const initCusProduct = ({
   canceledAt,
   createdAt,
   collectionMethod,
+  subscriptionIds,
+  subscriptionScheduleIds,
 }: {
   customer: Customer;
   product: FullProduct;
@@ -166,6 +170,8 @@ export const initCusProduct = ({
   canceledAt?: number | null;
   createdAt?: number | null;
   collectionMethod?: CollectionMethod;
+  subscriptionIds?: string[];
+  subscriptionScheduleIds?: string[];
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
 
@@ -201,6 +207,8 @@ export const initCusProduct = ({
     free_trial_id: freeTrial?.id || null,
     canceled_at: canceledAt,
     collection_method: collectionMethod || CollectionMethod.ChargeAutomatically,
+    subscription_ids: subscriptionIds,
+    scheduled_ids: subscriptionScheduleIds,
   };
 };
 
@@ -255,11 +263,15 @@ export const insertFullCusProduct = async ({
 };
 
 export const expireOrDeleteCusProduct = async ({
+  org,
+  env,
   sb,
   customer,
   startsAt,
   productGroup,
 }: {
+  org: Organization;
+  env: AppEnv;
   sb: SupabaseClient;
   customer: Customer;
   startsAt?: number;
@@ -271,8 +283,11 @@ export const expireOrDeleteCusProduct = async ({
       sb,
       internalCustomerId: customer.internal_id,
       productGroup,
+      org,
+      env,
     });
   } else {
+    console.log("Expiring current product");
     await CusProductService.expireCurrentProduct({
       sb,
       internalCustomerId: customer.internal_id,
@@ -286,7 +301,6 @@ export const createFullCusProduct = async ({
   attachParams,
   startsAt,
   subscriptionId,
-  subscriptionScheduleId,
   nextResetAt,
   billLaterOnly = false,
   disableFreeTrial = false,
@@ -296,12 +310,13 @@ export const createFullCusProduct = async ({
   canceledAt = null,
   createdAt = null,
   collectionMethod = CollectionMethod.ChargeAutomatically,
+  subscriptionIds = [],
+  subscriptionScheduleIds = [],
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
   startsAt?: number;
   subscriptionId?: string;
-  subscriptionScheduleId?: string;
   nextResetAt?: number;
   billLaterOnly?: boolean;
   disableFreeTrial?: boolean;
@@ -311,9 +326,18 @@ export const createFullCusProduct = async ({
   canceledAt?: number | null;
   createdAt?: number | null;
   collectionMethod?: CollectionMethod;
+  subscriptionIds?: string[];
+  subscriptionScheduleIds?: string[];
 }) => {
-  const { customer, product, prices, entitlements, optionsList, freeTrial } =
-    attachParams;
+  const {
+    customer,
+    product,
+    prices,
+    entitlements,
+    optionsList,
+    freeTrial,
+    org,
+  } = attachParams;
 
   if (!product.is_add_on) {
     await expireOrDeleteCusProduct({
@@ -321,6 +345,8 @@ export const createFullCusProduct = async ({
       customer,
       startsAt,
       productGroup: product.group,
+      org,
+      env: customer.env,
     });
   }
 
@@ -366,7 +392,6 @@ export const createFullCusProduct = async ({
     product,
     subscriptionId,
     startsAt,
-    subscriptionScheduleId,
     optionsList,
     freeTrial: disableFreeTrial ? null : freeTrial,
     lastInvoiceId,
@@ -375,6 +400,8 @@ export const createFullCusProduct = async ({
     canceledAt,
     createdAt,
     collectionMethod,
+    subscriptionIds,
+    subscriptionScheduleIds,
   });
 
   await insertFullCusProduct({
