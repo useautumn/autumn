@@ -531,6 +531,26 @@ cusRouter.post(
           env: req.env,
         });
       } else {
+        if (cusProduct.product.is_add_on) {
+          await cancelCusProductSubscriptions({
+            sb: req.sb,
+            cusProduct,
+            org,
+            env: req.env,
+          });
+
+          await CusProductService.update({
+            sb: req.sb,
+            cusProductId: cusProduct.id,
+            updates: {
+              status: CusProductStatus.Expired,
+              ended_at: Date.now(),
+            },
+          });
+
+          res.status(200).json({ success: true });
+          return;
+        }
         const futureProduct = await CusProductService.getFutureProduct({
           sb: req.sb,
           internalCustomerId: cusProduct.customer.internal_id,
