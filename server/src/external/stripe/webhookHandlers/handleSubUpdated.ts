@@ -33,15 +33,8 @@ export const handleSubscriptionUpdated = async ({
     past_due: CusProductStatus.PastDue,
   };
 
-  // // Get cus products by stripe sub id
-  // console.log(
-  //   "Org ID:",
-  //   org.id,
-  //   "Env:",
-  //   env,
-  //   "Subscription ID:",
-  //   subscription.id
-  // );
+  // Get cus products by stripe sub id
+
   const cusProducts = await CusProductService.getByStripeSubId({
     sb,
     stripeSubId: subscription.id,

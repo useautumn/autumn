@@ -20,6 +20,7 @@ import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { createStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
 import { handleCreateCheckout } from "./handleCreateCheckout.js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
+import Stripe from "stripe";
 
 const handleBillNowPrices = async ({
   sb,
@@ -34,57 +35,69 @@ const handleBillNowPrices = async ({
 
   const stripeCli = createStripeCli({ org, env: customer.env });
 
-  const { items, itemMetas } = await getStripeSubItems({
+  let itemSets = await getStripeSubItems({
     attachParams,
   });
 
-  let subscription;
-  console.log("Creating subscription");
-  try {
-    subscription = await createStripeSubscription({
-      stripeCli,
-      customer,
-      org,
-      items,
-      freeTrial,
-    });
-  } catch (error: any) {
-    if (
-      error instanceof RecaseError &&
-      (error.code === ErrCode.StripeCardDeclined ||
-        error.code === ErrCode.CreateStripeSubscriptionFailed)
-    ) {
-      await handleCreateCheckout({
-        sb,
-        res,
-        attachParams,
+  let subscriptions: Stripe.Subscription[] = [];
+  let invoiceIds: string[] = [];
+  for (const itemSet of itemSets) {
+    const { items } = itemSet;
+
+    try {
+      // Should create 2 subscriptions
+      let subscription = await createStripeSubscription({
+        stripeCli,
+        customer,
+        org,
+        items,
+        freeTrial,
+        metadata: itemSet.subMeta,
       });
-      return;
+
+      subscriptions.push(subscription);
+      invoiceIds.push(subscription.latest_invoice as string);
+    } catch (error: any) {
+      if (
+        error instanceof RecaseError &&
+        (error.code === ErrCode.StripeCardDeclined ||
+          error.code === ErrCode.CreateStripeSubscriptionFailed)
+      ) {
+        await handleCreateCheckout({
+          sb,
+          res,
+          attachParams,
+        });
+        return;
+      }
+
+      throw error;
     }
-
-    throw error;
   }
-
   // Add product and entitlements to customer
-  const cusProd = await createFullCusProduct({
+  await createFullCusProduct({
     sb,
     attachParams,
-    subscriptionId: subscription.id,
+    subscriptionIds: subscriptions.map((s) => s.id),
+    subscriptionId: subscriptions[0].id,
   });
 
-  // Create invoice
-  const latestInvoice = await stripeCli.invoices.retrieve(
-    subscription.latest_invoice as string
-  );
+  for (const invoiceId of invoiceIds) {
+    try {
+      const invoice = await stripeCli.invoices.retrieve(invoiceId);
 
-  await InvoiceService.createInvoiceFromStripe({
-    sb,
-    stripeInvoice: latestInvoice,
-    internalCustomerId: customer.internal_id,
-    productIds: [product.id],
-    internalProductIds: [product.internal_id],
-    org: org,
-  });
+      await InvoiceService.createInvoiceFromStripe({
+        sb,
+        stripeInvoice: invoice,
+        internalCustomerId: customer.internal_id,
+        productIds: [product.id],
+        internalProductIds: [product.internal_id],
+        org,
+      });
+    } catch (error) {
+      console.error("handleBillNowPrices: error retrieving invoice", error);
+    }
+  }
 
   res.status(200).send({ success: true });
 };

@@ -1,9 +1,11 @@
 import { ErrCode } from "@/errors/errCodes.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
   CusProduct,
   CusProductStatus,
+  Organization,
   ProcessorType,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -135,7 +137,9 @@ export class CusProductService {
         `
         *, 
         product:products!inner(*, prices(*)),
-        customer_prices:customer_prices(*, price:prices!inner(*))
+        customer_prices:customer_prices(*, price:prices!inner(*)),
+        customer_entitlements:customer_entitlements!inner(*, entitlement:entitlements!inner(*, feature:features!inner(*))),
+        customer:customers!inner(*)
       `
       )
       .eq("internal_customer_id", internalCustomerId)
@@ -210,13 +214,46 @@ export class CusProductService {
     const query = sb
       .from("customer_products")
       .select("*, product:products(*), customer:customers!inner(*)")
-      .eq("processor->>subscription_id", stripeSubId)
+      .or(
+        `processor->>'subscription_id'.eq.'${stripeSubId}', subscription_ids.cs.{${stripeSubId}}`
+      )
       .eq("customer.org_id", orgId)
       .eq("customer.env", env);
 
     if (inStatuses) {
       query.in("status", inStatuses);
     }
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getByStripeScheduledId({
+    sb,
+    stripeScheduledId,
+    orgId,
+    env,
+    inStatuses,
+  }: {
+    sb: SupabaseClient;
+    stripeScheduledId: string;
+    orgId: string;
+    env: AppEnv;
+    inStatuses?: string[];
+  }) {
+    const query = sb
+      .from("customer_products")
+      .select("*, product:products(*), customer:customers!inner(*)")
+      .or(
+        `processor->>'subscription_schedule_id'.eq.'${stripeScheduledId}', scheduled_ids.cs.{${stripeScheduledId}}`
+      )
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env);
 
     const { data, error } = await query;
 
@@ -607,38 +644,66 @@ export class CusProductService {
     sb,
     internalCustomerId,
     productGroup,
+    org,
+    env,
   }: {
     sb: SupabaseClient;
+    org: Organization;
+    env: AppEnv;
     internalCustomerId: string;
     productGroup: string;
   }) {
-    // 1. Get all products in same group
+    // // 1. Get all products in same group
     const { data, error } = await sb
       .from("customer_products")
       .select("*, product:products!inner(*)")
       .eq("internal_customer_id", internalCustomerId)
       .eq("product.group", productGroup)
-      .eq("status", CusProductStatus.Scheduled);
+      .in("status", [CusProductStatus.Scheduled]);
 
-    if (!data || data.length === 0) {
+    if (error) {
+      throw error;
+    }
+
+    if (data.length === 0) {
       return null;
     }
 
-    // Delete product
-    const { error: deleteError } = await sb
-      .from("customer_products")
-      .delete()
-      .eq("id", data[0].id)
-      .select()
-      .single();
+    let scheduledProduct = data[0];
 
-    if (deleteError) {
-      if (deleteError.code === "PGRST116") {
-        return null;
+    // Handle scheduled product
+    const stripeCli = createStripeCli({
+      org,
+      env,
+    });
+
+    if (scheduledProduct) {
+      let batchCancelSchedule = [];
+
+      if (
+        scheduledProduct.scheduled_ids &&
+        scheduledProduct.scheduled_ids.length > 0
+      ) {
+        let scheduleIds = scheduledProduct.scheduled_ids;
+        const cancelSchedule = async (scheduleId: string) => {
+          try {
+            await stripeCli.subscriptionSchedules.cancel(scheduleId);
+          } catch (error: any) {
+            console.log(
+              `   - failed to cancel stripe schedule: ${scheduleId}, product: ${scheduledProduct.product.name}, org: ${org.slug}`,
+              error.message
+            );
+          }
+        };
+        for (const scheduleId of scheduleIds) {
+          batchCancelSchedule.push(cancelSchedule(scheduleId));
+        }
+        await Promise.all(batchCancelSchedule);
       }
-      throw deleteError;
+
+      await sb.from("customer_products").delete().eq("id", scheduledProduct.id);
     }
 
-    return data[0];
+    return scheduledProduct;
   }
 }

@@ -14,6 +14,17 @@ import {
   ErrCode,
 } from "@autumn/shared";
 import { AttachParams } from "../customers/products/AttachParams.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
+import { Decimal } from "decimal.js";
+
+const BillintIntervalOrder = [
+  BillingInterval.Year,
+  BillingInterval.SemiAnnual,
+  BillingInterval.Quarter,
+  BillingInterval.Month,
+  BillingInterval.OneOff,
+];
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
   if (
@@ -41,12 +52,24 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 };
 
 export const getBillingInterval = (prices: Price[]) => {
-  for (const price of prices) {
-    if (price.config && price.config.interval) {
-      return price.config.interval;
-    }
+  const pricesCopy = structuredClone(prices);
+
+  pricesCopy.sort((a, b) => {
+    return (
+      BillintIntervalOrder.indexOf(a.config!.interval!) -
+      BillintIntervalOrder.indexOf(b.config!.interval!)
+    );
+  });
+
+  if (pricesCopy.length == 0) {
+    throw new RecaseError({
+      message: "No prices found, can't get billing interval",
+      code: ErrCode.InvalidRequest,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
   }
-  return null;
+
+  return pricesCopy[pricesCopy.length - 1].config!.interval as BillingInterval;
 };
 
 export const pricesOnlyOneOff = (prices: Price[]) => {
@@ -251,6 +274,40 @@ export const getPriceAmount = (price: Price, options: FeatureOptions) => {
     amountPerUnit: -1,
     quantity: -1,
   };
+};
+
+export const getPriceForOverage = (price: Price, overage: number) => {
+  let usageConfig = price.config as UsagePriceConfig;
+  let billingType = getBillingType(usageConfig);
+  if (billingType !== BillingType.UsageInArrear) {
+    throw new RecaseError({
+      message: `getPriceForUsage not implemented for this billing type: ${billingType}`,
+      code: ErrCode.InvalidRequest,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
+  let amount = 0;
+  let remainingUsage = overage;
+  for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
+    let tier = usageConfig.usage_tiers[i];
+
+    let amountUsed = 0;
+    if (tier.to < 0) {
+      amountUsed = remainingUsage;
+    } else {
+      amountUsed = Math.min(remainingUsage, tier.to - tier.from);
+    }
+
+    amount += new Decimal(tier.amount).mul(amountUsed).toNumber();
+    remainingUsage -= amountUsed;
+
+    if (remainingUsage <= 0) {
+      break;
+    }
+  }
+
+  return Number(amount.toFixed(10));
 };
 
 export const priceToEventName = (productName: string, featureName: string) => {

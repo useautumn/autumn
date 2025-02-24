@@ -3,10 +3,11 @@ import { Stripe } from "stripe";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
-import { AppEnv, Organization } from "@autumn/shared";
+import { AppEnv, CusProductStatus, Organization } from "@autumn/shared";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripeCli } from "../utils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { createStripeSubscription } from "../stripeSubUtils.js";
 
 export const itemMetasToOptions = async ({
   itemMetas,
@@ -106,11 +107,12 @@ export const handleCheckoutSessionCompleted = async ({
 
   // Get product by stripe subscription ID
   if (checkoutSession.subscription) {
-    const activeCusProducts = await CusProductService.getActiveByStripeSubId({
+    const activeCusProducts = await CusProductService.getByStripeSubId({
       sb,
       stripeSubId: checkoutSession.subscription as string,
       orgId: org.id,
       env,
+      inStatuses: [CusProductStatus.Active],
     });
 
     if (activeCusProducts && activeCusProducts.length > 0) {
@@ -121,26 +123,50 @@ export const handleCheckoutSessionCompleted = async ({
     }
   }
 
-  // Handle upgrade / downgrade
+  // Create other subscriptions
+  const itemSets = attachParams.itemSets;
+  let remainingSets = itemSets ? itemSets.slice(1) : [];
+
+  let otherSubscriptions: string[] = [];
+  let invoiceIds: string[] = [checkoutSession.invoice as string];
+
+  if (remainingSets && remainingSets.length > 0) {
+    for (const itemSet of remainingSets) {
+      const stripeCli = createStripeCli({ org, env });
+      const subscription = await createStripeSubscription({
+        stripeCli,
+        customer: attachParams.customer,
+        org,
+        items: itemSet.items,
+        freeTrial: attachParams.freeTrial, // add free trial to subscription...
+        metadata: itemSet.subMeta,
+      });
+
+      otherSubscriptions.push(subscription.id);
+      invoiceIds.push(subscription.latest_invoice as string);
+    }
+  }
+  if (checkoutSession.subscription) {
+    otherSubscriptions.push(checkoutSession.subscription as string);
+  }
 
   console.log("   - checkout.completed: creating full customer product");
 
   await createFullCusProduct({
     sb,
     attachParams,
-    subscriptionId: checkoutSession.subscription as string | undefined,
+    subscriptionId: checkoutSession.subscription as string,
+    subscriptionIds: otherSubscriptions,
   });
 
   // Remove subscription item?
 
   console.log("   ✅ checkout.completed: successfully created cus product");
-
-  // Submit invoice
-  if (checkoutSession.invoice) {
+  console.log("   Invoices: ", invoiceIds);
+  for (const invoiceId of invoiceIds) {
     try {
-      const invoice = await stripeCli.invoices.retrieve(
-        checkoutSession.invoice as string
-      );
+      const invoice = await stripeCli.invoices.retrieve(invoiceId);
+
       await InvoiceService.createInvoiceFromStripe({
         sb,
         org,

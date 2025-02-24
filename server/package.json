@@ -18,7 +18,7 @@
     "test-all": "mocha 'tests/**/*.ts'",
     "test": "mocha 'tests/**/*.ts'",
     "test-upgrade": "mocha 'tests/06_upgrade.ts' 'tests/07_downgrade.ts'",
-    "test-custom": "mocha 'tests/03_switchPlan.ts'"
+    "test-custom": "mocha 'tests/02_usage.ts'"
   },
   "mocha": {
     "node-option": [

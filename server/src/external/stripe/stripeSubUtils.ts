@@ -13,12 +13,14 @@ export const createStripeSubscription = async ({
   org,
   items,
   freeTrial,
+  metadata = {},
 }: {
   stripeCli: Stripe;
   customer: Customer;
   items: any;
   freeTrial: FreeTrial | null;
   org: Organization;
+  metadata?: any;
 }) => {
   // 1. Get payment method
   let paymentMethod;
@@ -51,6 +53,7 @@ export const createStripeSubscription = async ({
       items: items as any,
       trial_end: freeTrialToStripeTimestamp(freeTrial),
       payment_behavior: "error_if_incomplete",
+      metadata,
     });
     return subscription;
   } catch (error: any) {
@@ -121,13 +124,16 @@ export const updateStripeSubscription = async ({
   }
 
   try {
-    const subUpdate = await stripeCli.subscriptions.update(subscriptionId, {
+    const sub = await stripeCli.subscriptions.update(subscriptionId, {
       items,
       proration_behavior: "always_invoice",
       trial_end: trialEnd,
       payment_behavior: "error_if_incomplete",
       default_payment_method: paymentMethod as string,
     });
+
+    const subUpdate = await stripeCli.subscriptions.retrieve(subscriptionId);
+
     return subUpdate;
   } catch (error: any) {
     console.log("Error updating stripe subscription.", error.message);
@@ -146,4 +152,30 @@ export const updateStripeSubscription = async ({
       statusCode: 500,
     });
   }
+};
+
+export const getStripeSubs = async ({
+  stripeCli,
+  subIds,
+}: {
+  stripeCli: Stripe;
+  subIds: string[];
+}) => {
+  const batchGet = [];
+  const getStripeSub = async (subId: string) => {
+    try {
+      const sub = await stripeCli.subscriptions.retrieve(subId);
+      return sub;
+    } catch (error: any) {
+      console.log("Error getting stripe subscription.", error.message);
+      return null;
+    }
+  };
+
+  for (const subId of subIds) {
+    batchGet.push(getStripeSub(subId));
+  }
+  const subs = await Promise.all(batchGet);
+
+  return subs.filter((sub) => sub !== null);
 };

@@ -58,6 +58,8 @@ export const CusProductSchema = z.object({
   collection_method: z.nativeEnum(CollectionMethod),
 
   // Fixed-cycle configuration
+  subscription_ids: z.array(z.string()).nullish(),
+  scheduled_ids: z.array(z.string()).nullish(),
   processor: z
     .object({
       type: z.nativeEnum(ProcessorType),
