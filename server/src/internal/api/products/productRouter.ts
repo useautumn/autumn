@@ -83,13 +83,13 @@ productApiRouter.post("", async (req: any, res) => {
     }
 
     // 1. Create Stripe product if needed
-    if (org.stripe_connected) {
-      const stripeProduct = await createStripeProduct(org, req.env, newProduct);
-      newProduct.processor = {
-        id: stripeProduct.id,
-        type: ProcessorType.Stripe,
-      };
-    }
+    // if (org.stripe_connected) {
+    //   const stripeProduct = await createStripeProduct(org, req.env, newProduct);
+    //   newProduct.processor = {
+    //     id: stripeProduct.id,
+    //     type: ProcessorType.Stripe,
+    //   };
+    // }
 
     await ProductService.create({ sb, product: newProduct });
 
