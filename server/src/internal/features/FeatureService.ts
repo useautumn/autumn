@@ -1,6 +1,6 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, Feature, FeatureType } from "@autumn/shared";
+import { AppEnv, CreditSchemaItem, Feature, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 
@@ -207,6 +207,13 @@ export class FeatureService {
     let creditSystems = data.filter(
       (f) => f.type === FeatureType.CreditSystem && f.id !== featureId
     );
+
+    creditSystems = creditSystems.filter((f) => {
+      let schema = f.config.schema;
+      return schema.some(
+        (s: CreditSchemaItem) => s.metered_feature_id === featureId
+      );
+    });
 
     return {
       feature,
