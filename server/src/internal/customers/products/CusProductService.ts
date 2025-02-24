@@ -264,31 +264,31 @@ export class CusProductService {
     return data;
   }
 
-  static async getActiveByStripeSubId({
-    sb,
-    stripeSubId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    stripeSubId: string;
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const { data, error } = await sb
-      .from("customer_products")
-      .select("*, product:products(*), customer:customers!inner(*)")
-      .eq("processor->>subscription_id", stripeSubId)
-      .eq("customer.org_id", orgId)
-      .eq("customer.env", env)
-      .in("status", ACTIVE_STATUSES);
+  // static async getActiveByStripeSubId({
+  //   sb,
+  //   stripeSubId,
+  //   orgId,
+  //   env,
+  // }: {
+  //   sb: SupabaseClient;
+  //   stripeSubId: string;
+  //   orgId: string;
+  //   env: AppEnv;
+  // }) {
+  //   const { data, error } = await sb
+  //     .from("customer_products")
+  //     .select("*, product:products(*), customer:customers!inner(*)")
+  //     .eq("processor->>subscription_id", stripeSubId)
+  //     .eq("customer.org_id", orgId)
+  //     .eq("customer.env", env)
+  //     .in("status", ACTIVE_STATUSES);
 
-    if (error) {
-      throw error;
-    }
+  //   if (error) {
+  //     throw error;
+  //   }
 
-    return data;
-  }
+  //   return data;
+  // }
 
   static async getEntsAndPrices({
     sb,
