@@ -78,3 +78,15 @@ export const initDefaultConfig = () => {
     free_trial_paid_to_paid: false,
   };
 };
+
+export const createOrgResponse = (org: Organization) => {
+  return {
+    id: org.id,
+    slug: org.slug,
+    default_currency: org.default_currency,
+    stripe_connected: org.stripe_connected,
+    created_at: org.created_at,
+    test_pkey: org.test_pkey,
+    live_pkey: org.live_pkey,
+  };
+};

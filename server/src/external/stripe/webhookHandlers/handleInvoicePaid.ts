@@ -65,6 +65,7 @@ export const handleInvoicePaid = async ({
         req.logger.warn(
           `invoice.paid: customer product not found for invoice ${invoice.id}`
         );
+        req.logger.warn(`Organization: ${org?.slug}`);
         req.logger.warn(`Invoice subscription: ${invoice.subscription}`);
         req.logger.warn(`Invoice customer: ${invoice.customer}`);
       } else {
