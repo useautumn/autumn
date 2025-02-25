@@ -8,24 +8,45 @@ import {
 } from "@/components/ui/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import CopyButton from "@/components/general/CopyButton";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
 
 export const CustomerEventsList = ({ events }: { events: any }) => {
+  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+
+  console.log(events);
+
   return (
     <div className="flex flex-col gap-1">
+      <Dialog
+        open={!!selectedEvent}
+        onOpenChange={() => setSelectedEvent(null)}
+      >
+        <DialogContent className="w-fit max-w-3xl p-4">
+          <DialogTitle>Event Details</DialogTitle>
+          <pre className="bg-stone-800 text-white p-4 rounded-md overflow-auto w-fit">
+            {JSON.stringify(selectedEvent, null, 2)}
+          </pre>
+        </DialogContent>
+      </Dialog>
       <Table className="p-2">
         <TableHeader className="bg-transparent">
           <TableRow>
             <TableHead>Event Name</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Event ID</TableHead>
-            <TableHead className="min-w-0 w-24">Timestamp</TableHead>
-            <TableHead className="min-w-0 w-6"></TableHead>
+            <TableHead className="min-w-22 w-24">Timestamp</TableHead>
+            <TableHead className="min-w-6 w-6"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {events.map((event: any) => {
             return (
-              <TableRow key={event.id} className="group">
+              <TableRow
+                key={event.id}
+                className="group cursor-pointer"
+                onClick={() => setSelectedEvent(event)}
+              >
                 <TableCell className="font-mono">{event.event_name}</TableCell>
                 <TableCell className="font-mono">
                   <span className="text-t3">POST </span>
