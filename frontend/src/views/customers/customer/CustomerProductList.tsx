@@ -62,8 +62,7 @@ export const CustomerProductList = ({
           <TableRow className="">
             <TableHead className="">Name</TableHead>
             <TableHead className="">Product ID</TableHead>
-            <TableHead className=""></TableHead>
-            <TableHead className="w-10" id="links"></TableHead>
+            <TableHead className="">Status</TableHead>
             <TableHead className="min-w-0 w-28">Created At</TableHead>
             {/* <TableHead className="">Ended At</TableHead> */}
             <TableHead className="min-w-0 w-6"></TableHead>
@@ -86,55 +85,55 @@ export const CustomerProductList = ({
               >
                 <TableCell>
                   {products.find((p) => p.id === cusProduct.product_id)?.name}
-                  &nbsp;
-                  {cusProduct.status === "expired" && (
-                    <Badge variant="status" className="bg-stone-800">
-                      expired
-                    </Badge>
-                  )}
-                  {cusProduct.status === "past_due" && (
-                    <Badge variant="status" className="bg-red-500">
-                      past due
-                    </Badge>
-                  )}
-                  {cusProduct.status === "scheduled" && (
-                    <Badge variant="status" className="bg-blue-500">
-                      scheduled
-                    </Badge>
-                  )}
                 </TableCell>
-                <TableCell className="max-w-[100px] overflow-hidden text-ellipsis">
+                <TableCell className="overflow-hidden text-ellipsis">
                   {cusProduct.product_id}
                 </TableCell>
                 <TableCell>
-                  {cusProduct.processor?.subscription_id && (
-                    <Link
-                      href={getStripeSubLink(
-                        cusProduct.processor?.subscription_id,
-                        env
-                      )}
-                      target="_blank"
-                      onClick={(e) => {
-                        // e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                    >
-                      <div className="flex justify-center items-center bg-[#675DFF] w-fit px-2 gap-2 h-6">
-                        <FontAwesomeIcon
-                          icon={faStripeS}
-                          className="text-white"
-                          size="xs"
-                        />
-                        <FontAwesomeIcon
-                          icon={faArrowUpRightFromSquare}
-                          className="text-white"
-                          size="xs"
-                        />
-                      </div>
-                    </Link>
-                  )}
+                  <div className="flex gap-0.5 items-center">
+                    {cusProduct.status === "active" && (
+                      <Badge variant="status" className="bg-lime-500 h-fit">
+                        active
+                      </Badge>
+                    )}
+                    {cusProduct.status === "expired" && (
+                      <Badge variant="status" className="bg-stone-800 h-fit">
+                        expired
+                      </Badge>
+                    )}
+                    {cusProduct.status === "past_due" && (
+                      <Badge variant="status" className="bg-red-500 h-fit">
+                        past due
+                      </Badge>
+                    )}
+                    {cusProduct.status === "scheduled" && (
+                      <Badge variant="status" className="bg-blue-500 h-fit">
+                        scheduled
+                      </Badge>
+                    )}
+                    {cusProduct.processor?.subscription_id && (
+                      <Link
+                        href={getStripeSubLink(
+                          cusProduct.processor?.subscription_id,
+                          env
+                        )}
+                        target="_blank"
+                        onClick={(e) => {
+                          // e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <div className="flex justify-center items-center w-fit px-2 gap-2 h-6">
+                          <FontAwesomeIcon
+                            icon={faArrowUpRightFromSquare}
+                            className="text-[#665CFF]"
+                            size="xs"
+                          />
+                        </div>
+                      </Link>
+                    )}
+                  </div>
                 </TableCell>
-                <TableCell></TableCell>
                 <TableCell>
                   <span>
                     {formatUnixToDateTime(cusProduct.created_at).date}

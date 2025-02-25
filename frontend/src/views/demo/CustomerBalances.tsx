@@ -6,6 +6,14 @@ function CustomerBalances({ customer }: { customer: any }) {
     return <div></div>;
   }
 
+  if (!customer.entitlements || customer.entitlements.length === 0) {
+    return (
+      <div className="text-sm text-gray-600">
+        Nothing (make a payment to change that!)
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-4 flex-wrap">
       {customer.entitlements.map((entitlement) => (
@@ -21,9 +29,11 @@ function CustomerBalances({ customer }: { customer: any }) {
             {entitlement.unlimited === true
               ? "Unlimited"
               : entitlement.balance !== undefined
-              ? `${entitlement.balance} / ${
-                  entitlement.balance + entitlement.used
-                }`
+              ? entitlement.balance + entitlement.used === 0
+                ? `Used: ${-entitlement.balance}`
+                : `${entitlement.balance} / ${
+                    entitlement.balance + entitlement.used
+                  }`
               : "✅"}
           </p>
         </div>
