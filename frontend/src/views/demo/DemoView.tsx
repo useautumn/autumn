@@ -11,385 +11,206 @@ import { AutumnProvider, PricingPage } from "@useautumn/react";
 import { useDemoSWR } from "@/services/useAxiosSwr";
 import CustomerBalances from "./CustomerBalances";
 import { Input } from "@/components/ui/input";
+import { APIPlayground } from "./APIPlayground";
+import Image from "next/image";
+import { checkAccess, createAxiosInstance, sendUsage } from "./autumnBackend";
+import DemoSidebar from "./DemoSidebar";
 
-const apiKey = process.env.NEXT_PUBLIC_AUTUMN_API_KEY;
-const publishableKey = process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY;
-const baseUrl = "https://api.useautumn.com/v1";
-const headers = {
-  Authorization: `Bearer ${apiKey}`,
-};
+const endpoint = process.env.NEXT_PUBLIC_BACKEND_URL;
+const customerId = "ayush";
 
-const axiosInstance = axios.create({
-  baseURL: baseUrl,
-  headers,
-});
+const buttons = [
+  {
+    value: 1,
+    feature_id: "articles",
+    display_name: "Send Article",
+  },
+];
 
-const colorizeJSON = (json: any) => {
-  const jsonString = JSON.stringify(json, null, 2);
-  return jsonString.replace(/\btrue\b|\bfalse\b/g, (match) =>
-    match === "true"
-      ? `<span class="text-lime-500">true</span>`
-      : `<span class="text-red-400">false</span>`
+export default function DynamicDemo({
+  // publishableKey,
+  // secretKey,
+  slug,
+  name,
+}: // buttons,
+{
+  // publishableKey: string;
+  secretKey: string;
+  slug: string;
+  name: string;
+  // buttons: any[];
+}) {
+  const axiosInstance = createAxiosInstance(
+    process.env.NEXT_PUBLIC_AUTUMN_API_KEY!,
+    endpoint!
   );
-};
+  const publishableKey = process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY;
 
-export default function DemoView() {
-  const customerId = "ayush";
-  const eventName = "tests";
-  const value = 250;
+  console.log(publishableKey);
+  console.log(process.env.NEXT_PUBLIC_AUTUMN_API_KEY);
 
   const {
     data: customer,
     error,
+    isLoading: customerLoading,
     mutate: cusMutate,
   } = useDemoSWR({
     url: `/public/customers/${customerId}`,
-    publishableKey: publishableKey || "",
+    publishableKey: process.env.NEXT_PUBLIC_AUTUMN_PUBLISHABLE_KEY!,
+    endpoint: endpoint,
   });
 
-  const hasAccessRequest = {
-    feature_id: eventName,
-    customer_id: customerId,
-  };
-
-  const sendEventRequest = {
-    event_name: eventName,
-    customer_id: customerId,
-    properties: {
-      value: value,
-    },
-  };
-
+  const [entitledReq, setEntitledReq] = useState({});
+  const [eventsReq, setEventsReq] = useState({});
   const [hasAccessLoading, setHasAccessLoading] = useState(false);
   const [hasAccessResponse, setHasAccessResponse] = useState(null);
   const [sendEventLoading, setSendEventLoading] = useState(false);
   const [sendEventResponse, setSendEventResponse] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
-  const [hasProModels, setHasProModels] = useState<boolean>(false);
-  const [showPremiumModels, setShowPremiumModels] = useState(false);
+  const [getCustomerRequest] = useState({ customer_id: customerId });
+  const [getCustomerResponse, setGetCustomerResponse] = useState(null);
 
   useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      // const hasProModels = await checkPremiumModels();
-      setHasProModels(hasProModels);
-      setLoading(false);
-    };
-    init();
-  }, []);
+    setGetCustomerResponse(customer?.entitlements);
+  }, [customer]);
 
-  //Check access to Pro features and email balance
-  const checkAccess = async (featureId: string) => {
-    const { data } = await axiosInstance.post("/entitled", {
-      customer_id: customerId,
-      feature_id: featureId,
-    });
-    return data;
-  };
+  const handleBtnClicked = async ({
+    featureId,
+    value,
+  }: {
+    featureId: string;
+    value: number;
+  }) => {
+    if (value > 0) {
+      setHasAccessLoading(true);
+      setEntitledReq({
+        customer_id: customerId,
+        feature_id: featureId,
+      });
+      const data = await checkAccess({
+        axiosInstance,
+        customerId,
+        featureId,
+      });
+      setHasAccessResponse(data);
+      setHasAccessLoading(false);
 
-  //Send usage event for email
-  const sendUsage = async (featureId: string) => {
-    const { data } = await axiosInstance.post("/events", {
-      customer_id: customerId,
-      event_name: featureId,
-      properties: {
-        value: value,
-      },
-    });
-
-    return data;
-  };
-
-  const handleClicked = async () => {
-    setHasAccessLoading(true);
-    const data = await checkAccess(eventName);
-    setHasAccessResponse(data);
-    setHasAccessLoading(false);
-
-    if (!data.allowed) {
-      toast.error("You're out of " + eventName);
-      return;
+      if (!data.allowed) {
+        toast.error("You're out of " + featureId);
+        return;
+      }
     }
 
     setSendEventLoading(true);
-    const eventData = await sendUsage(eventName);
+    setEventsReq({
+      customer_id: customerId,
+      event_name: featureId,
+      properties: {
+        value,
+      },
+    });
+    const eventData = await sendUsage({
+      axiosInstance,
+      customerId,
+      featureId,
+      value,
+    });
     setSendEventResponse(eventData);
     setSendEventLoading(false);
     await cusMutate();
   };
 
   return (
-    <div className="w-full flex justify-start pl-12">
-      <div className="flex gap-32 p-4 w-[900px] relative">
-        <div className="flex flex-col gap-4 min-w-[700px]">
-          {loading ? (
-            <div className="flex justify-center items-center h-[500px]">
-              <LoaderCircle className="animate-spin text-primary" size={30} />
-            </div>
-          ) : (
-            <>
-              <AutumnProvider publishableKey={publishableKey || ""}>
-                <PricingPage customerId={customerId} />
-              </AutumnProvider>
-              <div className="flex gap-2">
-                {/* <Button
-                  variant="gradientPrimary"
-                  onClick={async () => {
-                    const { data } = await axiosInstance.post("/attach", {
-                      customer_id: customerId,
-                      product_id: "pro",
-                      force_checkout: true,
-                      // options: [
-                      //   {
-                      //     feature_id: "seats",
-                      //     quantity: 2,
-                      //   },
-                      // ],
-                    });
+    <AutumnProvider publishableKey={publishableKey || ""} endpoint={endpoint}>
+      <div className="w-full h-screen flex justify-between">
+        <div className="flex flex-col gap-4 w-full px-10 pt-4">
+          <CustomToaster />
+          <div className="flex gap-4 items-center">
+            <div className="text-xl font-extrabold">{name}</div>
+          </div>
 
-                    data.checkout_url &&
-                      window.open(data.checkout_url, "_blank");
-                  }}
-                >
-                  Buy Pro
-                </Button> */}
-              </div>
-              <CustomToaster />
-              <CustomerBalances customer={customer} />
-              <div className="text-lg font-semibold mt-4">Smartester App</div>
-              <div className="flex gap-2">
-                {/* <Input
-                  placeholder="Enter message"
-                  className="w-full"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                /> */}
-                <Button
-                  isLoading={hasAccessLoading}
-                  onClick={async () => handleClicked()}
-                  className="font-semibold bg-gradient-to-b border-b-2 border-red-500 from-red-500 to-red-300 hover:bg-gradient-to-r hover:from-green-500 hover:via-yellow-500 hover:to-pink-500 transition-all duration-700 w-48 shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:shadow-[0_0_20px_rgba(236,72,153,0.7)] bg-[size:200%] hover:bg-right"
-                >
-                  Test
-                </Button>
-                {/* <Button
-                  variant="gradientSecondary"
-                  onClick={async () => {
-                    const { data } = await axiosInstance.post("/events", {
-                      customer_id: customerId,
-                      event_name: "seats",
-                      properties: {
-                        value: 1,
-                      },
-                    });
-                    await cusMutate();
-                  }}
-                >
-                  Add Seat
-                </Button>
-                <Button
-                  variant="gradientSecondary"
-                  onClick={async () => {
-                    const { data } = await axiosInstance.post("/events", {
-                      customer_id: customerId,
-                      event_name: "seats",
-                      properties: {
-                        value: -1,
-                      },
-                    });
-                    await cusMutate();
-                    console.log(data);
-                  }}
-                >
-                  Remove Seat
-                </Button>
-                <Button
-                  variant="gradientSecondary"
-                  onClick={async () => {
-                    const { data } = await axiosInstance.get(
-                      `/customers/${customerId}/billing_portal`
-                    );
-                    window.open(data.url, "_blank");
-                  }}
-                >
-                  Manage Subscription
-                </Button> */}
-              </div>
+          <div className="flex gap-2 flex-wrap">
+            {buttons.map((button, index) => (
+              <ActionButton
+                key={index}
+                buttonData={button}
+                handleClicked={() =>
+                  handleBtnClicked({
+                    featureId: button.feature_id,
+                    value: button.value,
+                  })
+                }
+              />
+            ))}
+          </div>
 
-              {/* <Card>
-                <CardHeader className="flex justify-between p-3 px-4">
-                  <div className="flex justify-between items-center gap-4">
-                    <div className="flex flex-col gap-0">
-                      <p className="text-sm font-medium text-gray-600">
-                        Email Balance:
-                      </p>
-                      <span className="text-lg font-semibold">
-                        {emailBalance || 0}
-                      </span>
-                    </div>
-                    <Button
-                      onClick={() => handleClicked("emails")}
-                      className="bg-blue-500 hover:bg-blue-600 transition-colors w-48"
-                    >
-                      Send Email
-                    </Button>
-                  </div>
-                  <Button onClick={() => handleClicked("ai")}>Use AI</Button>
-                </CardHeader>
-              </Card> */}
-              {/* PRO FEATURES */}
-              {/* {hasProFeatures ? (
-                <div>
-                  <div className="space-y-4">
-                    <p className="font-semibold text-lg">Pro Analytics</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Card>
-                        <CardHeader>
-                          <h4 className="text-lg">User Activity</h4>
-                          <div className="flex items-center gap-2">
-                            <div className="h-12 w-12 rounded-full bg-blue-500 flex items-center justify-center">
-                              <span className="text-xl font-bold text-white">
-                                87
-                              </span>
-                            </div>
-                            <div>
-                              <p className="text-sm text-zinc-500">
-                                Active Users
-                              </p>
-                              <p className="text-green-500 text-sm">
-                                ↑ 1% from last week
-                              </p>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                      <Card>
-                        <CardHeader>
-                          <h4 className="text-lg">Engagement</h4>
-                          <div className="flex items-center gap-2">
-                            <div className="h-12 w-12 rounded-full bg-purple-500 flex items-center justify-center">
-                              <span className="text-xl font-bold text-white">
-                                5.2
-                              </span>
-                            </div>
-                            <div>
-                              <p className="text-sm text-zinc-500">
-                                Avg Session (min)
-                              </p>
-                              <p className="text-red-500 text-sm">
-                                ↓ 3% from last week
-                              </p>
-                            </div>
-                          </div>
-                        </CardHeader>
-                      </Card>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <p>You do not have access to pro features</p>
-                </div>
-              )} */}
-            </>
-          )}
+          <div className="text-lg font-medium mt-4 -mb-3">Billing</div>
+          <p className="text-sm text-t3">You have access to:</p>
+          <CustomerBalances customer={customer} />
+          <div className="text-lg font-medium mt-2">Pricing</div>
+
+          <div className="min-w-[600px]">
+            <PricingPage customerId={customerId} />
+          </div>
+
+          <p className="text-xs text-t3">
+            Make a test purchase to see how Autumn handles it. Use the Stripe
+            test card <span className="font-bold">4242 4242 4242 4242</span>{" "}
+            with any expiration date, CVC and cardholder details.
+          </p>
         </div>
-        <div className="w-2/4 space-y-4 flex flex-col gap-8 w-[500px] bg-gray-900 p-4 rounded-sm">
+        <div className="space-y-4 flex flex-col bg-gray-900 p-4 h-full min-h-fit w-[400px]">
+          <Image
+            src="/demo-assets/autumn-logo.png"
+            alt="Autumn Logo"
+            width={100}
+            height={100}
+          />
           <APIPlayground
             title="Check Feature Access"
             endpoint="GET /entitled"
-            request={hasAccessRequest}
+            request={entitledReq}
             response={hasAccessResponse}
             loading={hasAccessLoading}
           />
           <APIPlayground
             title="Send Usage Event"
             endpoint="POST /events"
-            request={sendEventRequest}
+            request={eventsReq}
             response={sendEventResponse}
             loading={sendEventLoading}
           />
+          <APIPlayground
+            title="Get Customer"
+            endpoint="GET /customers/:customer_id"
+            request={getCustomerRequest}
+            response={getCustomerResponse}
+            loading={customerLoading}
+          />
         </div>
       </div>
-    </div>
+    </AutumnProvider>
   );
 }
 
-const APIPlayground = ({
-  title,
-  endpoint,
-  request,
-  response,
-  loading,
+export const ActionButton = ({
+  buttonData,
+  handleClicked,
 }: {
-  title: string;
-  endpoint: string;
-  request: any;
-  response: any;
-  loading: boolean;
+  buttonData: any;
+  handleClicked: () => void;
 }) => {
+  const [loading, setLoading] = useState(false);
   return (
-    <div className="flex flex-col gap-4 bg-gray-900 p-4 rounded-sm">
-      <div className="flex flex-col gap-2">
-        <p className="text-md font-semibold text-white">{title}</p>
-        <pre className="bg-gray-600 p-2 rounded text-sm text-gray-200">
-          {endpoint}
-        </pre>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <p className="text-sm text-gray-400">Request</p>
-        <pre className="bg-gray-600 p-2 rounded text-sm text-gray-200">
-          {JSON.stringify(request, null, 2)}
-        </pre>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <p className="text-sm text-gray-400">Response</p>
-        <pre className="bg-gray-600 p-2 rounded text-sm text-gray-200">
-          {loading ? (
-            <SmallSpinner />
-          ) : response === null ? (
-            "No response"
-          ) : (
-            <div
-              dangerouslySetInnerHTML={{
-                __html: colorizeJSON(response),
-              }}
-            />
-          )}
-        </pre>
-      </div>
-    </div>
+    <Button
+      isLoading={loading}
+      onClick={async () => {
+        setLoading(true);
+        await handleClicked();
+        setLoading(false);
+      }}
+      variant="gradientPrimary"
+    >
+      {buttonData.display_name}
+    </Button>
   );
 };
-
-{
-  /* <Card>
-              <CardHeader className="flex justify-between p-3 px-4">
-                <div className="flex justify-between items-center gap-4">
-                  <div className="flex flex-col gap-0">
-                    <p className="text-lg font-semibold text-gray-600">
-                      Upgrade to Pro Plan
-                    </p>
-                  </div>
-                  <Button
-                    isLoading={buyLoading}
-                    onClick={async () => {
-                      setBuyLoading(true);
-                      // setQuantities({
-                      //   enrichment: parseInt(quantities.enrichment),
-                      //   ai: parseInt(quantities.ai),
-                      // });
-                      await attachProduct();
-                      setBuyLoading(false);
-                    }}
-                    disabled={hasProFeatures === true}
-                    className="bg-gradient-to-r from-red-500 via-purple-500 to-blue-500 hover:from-green-500 hover:via-yellow-500 hover:to-pink-500 transition-all duration-700 w-48 shadow-[0_0_15px_rgba(168,85,247,0.5)] hover:shadow-[0_0_20px_rgba(236,72,153,0.7)] bg-[size:200%] hover:bg-right"
-                  >
-                    Buy Pro
-                  </Button>
-                </div>
-              </CardHeader>
-            </Card> */
-}
