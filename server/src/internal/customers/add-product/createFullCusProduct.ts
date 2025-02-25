@@ -287,7 +287,6 @@ export const expireOrDeleteCusProduct = async ({
       env,
     });
   } else {
-    console.log("Expiring current product");
     await CusProductService.expireCurrentProduct({
       sb,
       internalCustomerId: customer.internal_id,

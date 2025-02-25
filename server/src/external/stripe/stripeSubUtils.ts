@@ -1,4 +1,4 @@
-import { ErrCode, FreeTrial } from "@autumn/shared";
+import { CusProductStatus, ErrCode, FreeTrial } from "@autumn/shared";
 
 import { Customer, Organization } from "@autumn/shared";
 import Stripe from "stripe";
@@ -178,4 +178,18 @@ export const getStripeSubs = async ({
   const subs = await Promise.all(batchGet);
 
   return subs.filter((sub) => sub !== null);
+};
+
+export const stripeToAutumnSubStatus = (stripeSubStatus: string) => {
+  switch (stripeSubStatus) {
+    case "trialing":
+      return CusProductStatus.Active;
+    case "active":
+      return CusProductStatus.Active;
+    case "past_due":
+      return CusProductStatus.PastDue;
+
+    default:
+      return stripeSubStatus;
+  }
 };
