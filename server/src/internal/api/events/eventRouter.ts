@@ -16,6 +16,7 @@ import { createNewCustomer } from "../customers/cusUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { QueueManager } from "@/queue/QueueManager.js";
+import { subDays } from "date-fns";
 
 export const eventsRouter = Router();
 
@@ -62,16 +63,22 @@ const getEventAndCustomer = async ({
 
   const parsedEvent = CreateEventSchema.parse(event_data);
 
+  let eventTimestamp = Date.now();
+  if (parsedEvent.timestamp) {
+    let thirtyDaysAgo = subDays(new Date(), 30).getTime();
+    if (parsedEvent.timestamp > thirtyDaysAgo) {
+      eventTimestamp = parsedEvent.timestamp;
+    }
+  }
+
   const newEvent: Event = {
     ...parsedEvent,
-
     properties: parsedEvent.properties || {},
-
-    timestamp: Date.now(),
     id: generateId("evt"),
     org_id: orgId,
     env: env,
     internal_customer_id: customer.internal_id,
+    timestamp: eventTimestamp,
   };
 
   await EventService.insertEvent(sb, newEvent);

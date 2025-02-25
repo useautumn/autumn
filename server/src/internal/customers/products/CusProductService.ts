@@ -594,7 +594,7 @@ export class CusProductService {
     }
 
     console.log(
-      `   - expiring current product: ${currentProduct.product.name}`
+      `   - updating cusProduct status to expired: ${currentProduct.product.name}`
     );
     await this.update({
       sb,
