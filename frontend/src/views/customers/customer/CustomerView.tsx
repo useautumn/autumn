@@ -276,11 +276,14 @@ export default function CustomerView({
                 href={getStripeCusLink(customer.processor?.id, env)}
                 target="_blank"
               >
-                <div className="flex justify-center items-center bg-[#675DFF] w-fit px-2 gap-2">
-                  <FontAwesomeIcon icon={faStripe} className="text-white h-6" />
+                <div className="flex justify-center items-center w-fit gap-2">
+                  <FontAwesomeIcon
+                    icon={faStripe}
+                    className="text-[#675DFF] h-6"
+                  />
                   <FontAwesomeIcon
                     icon={faArrowUpRightFromSquare}
-                    className="text-white"
+                    className="text-[#675DFF]"
                     size="xs"
                   />
                 </div>
