@@ -100,6 +100,7 @@ function UpdateCusEntitlement({
           <DialogTitle>
             {feature.name} - {cusProduct?.product.name}
           </DialogTitle>
+          <div className="text-t3 text-sm font-mono">{feature.id}</div>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <div>

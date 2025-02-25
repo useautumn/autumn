@@ -35,8 +35,8 @@ export const CustomerEventsList = ({ events }: { events: any }) => {
             <TableHead>Event Name</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Event ID</TableHead>
-            <TableHead className="min-w-22 w-24">Timestamp</TableHead>
-            <TableHead className="min-w-6 w-6"></TableHead>
+            <TableHead className="min-w-0 w-28">Timestamp</TableHead>
+            <TableHead className="min-w-0 w-6"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
