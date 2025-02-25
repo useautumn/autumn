@@ -27,19 +27,7 @@ const buttons = [
   },
 ];
 
-export default function DynamicDemo({
-  // publishableKey,
-  // secretKey,
-  slug,
-  name,
-}: // buttons,
-{
-  // publishableKey: string;
-  secretKey: string;
-  slug: string;
-  name: string;
-  // buttons: any[];
-}) {
+export default function DynamicDemo() {
   const axiosInstance = createAxiosInstance(
     process.env.NEXT_PUBLIC_AUTUMN_API_KEY!,
     endpoint!
@@ -125,7 +113,7 @@ export default function DynamicDemo({
         <div className="flex flex-col gap-4 w-full px-10 pt-4">
           <CustomToaster />
           <div className="flex gap-4 items-center">
-            <div className="text-xl font-extrabold">{name}</div>
+            <div className="text-xl font-extrabold">Demo</div>
           </div>
 
           <div className="flex gap-2 flex-wrap">
