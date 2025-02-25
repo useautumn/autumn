@@ -102,11 +102,11 @@ export const CustomerEntitlementsList = ({
       <Table className="p-2">
         <TableHeader className="bg-transparent">
           <TableRow className="">
-            <TableHead className="">Product</TableHead>
             <TableHead className="">Feature</TableHead>
             <TableHead className="">
               {featureType === FeatureType.Metered && "Balance"}
             </TableHead>
+            <TableHead className="">Product</TableHead>
             <TableHead className="min-w-0 w-28">
               {featureType === FeatureType.Metered && "Next Reset"}
             </TableHead>
@@ -124,6 +124,14 @@ export const CustomerEntitlementsList = ({
                 onClick={() => handleSelectCusEntitlement(cusEnt)}
                 className="cursor-pointer"
               >
+                <TableCell>{entitlement.feature.name}</TableCell>
+                <TableCell>
+                  {allowanceType == AllowanceType.Unlimited
+                    ? "Unlimited"
+                    : allowanceType == AllowanceType.None
+                    ? "None"
+                    : cusEnt.balance}
+                </TableCell>
                 <TableCell className="max-w-[150px] truncate">
                   {getProductName(cusEnt)} &nbsp;
                   {customer.products.find(
@@ -133,14 +141,6 @@ export const CustomerEntitlementsList = ({
                       expired
                     </Badge>
                   )}
-                </TableCell>
-                <TableCell>{entitlement.feature.name}</TableCell>
-                <TableCell>
-                  {allowanceType == AllowanceType.Unlimited
-                    ? "Unlimited"
-                    : allowanceType == AllowanceType.None
-                    ? "None"
-                    : cusEnt.balance}
                 </TableCell>
                 <TableCell>
                   <span>{formatUnixToDateTime(cusEnt.next_reset_at).date}</span>{" "}

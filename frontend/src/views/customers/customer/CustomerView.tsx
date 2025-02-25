@@ -174,7 +174,7 @@ export default function CustomerView({
                   <TableHead className="">Products</TableHead>
                   <TableHead className="">Total</TableHead>
                   <TableHead className="">Status</TableHead>
-                  <TableHead className="min-w-0 w-24">Created At</TableHead>
+                  <TableHead className="min-w-0 w-28">Created At</TableHead>
                   <TableHead className="min-w-0 w-6"></TableHead>
                 </TableRow>
               </TableHeader>
