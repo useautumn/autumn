@@ -140,6 +140,7 @@ export const handleCheckoutSessionCompleted = async ({
         items: itemSet.items,
         freeTrial: attachParams.freeTrial, // add free trial to subscription...
         metadata: itemSet.subMeta,
+        prices: itemSet.prices,
       });
 
       otherSubscriptions.push(subscription.id);
