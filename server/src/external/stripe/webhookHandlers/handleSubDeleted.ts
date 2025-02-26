@@ -219,18 +219,6 @@ export const handleSubscriptionDeleted = async ({
       return;
     }
 
-    // if (cusProduct.status === CusProductStatus.Expired) {
-    //   return;
-    // }
-
-    // await billForRemainingUsages({
-    //   sb,
-    //   fullCusProduct: cusProduct,
-    //   subscription,
-    //   org,
-    //   customer: cusProduct.customer,
-    // });
-
     // 1. Expire current product
     await CusProductService.update({
       sb,
@@ -247,9 +235,10 @@ export const handleSubscriptionDeleted = async ({
 
     const activatedFuture = await activateFutureProduct({
       sb,
-      env,
       cusProduct,
+      subscription,
       org,
+      env,
     });
 
     if (activatedFuture) {

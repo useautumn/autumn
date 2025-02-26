@@ -69,7 +69,6 @@ const handleDowngrade = async ({
 
   // 1. Cancel current subscription
   console.log("1. Cancelling current subscription (at period end)");
-
   const stripeCli = createStripeCli({
     org: attachParams.org,
     env: attachParams.customer.env,
@@ -111,7 +110,6 @@ const handleDowngrade = async ({
 
   // 3. Schedule new subscription IF new product is not free...
   console.log("2. Scheduling new subscription");
-
   let subscriptionScheduleIds: any[] = [];
   if (!isFreeProduct(attachParams.prices)) {
     // Delete previous schedules
@@ -123,12 +121,13 @@ const handleDowngrade = async ({
       const existingCusProduct = await CusProductService.getByScheduleId({
         sb: req.sb,
         scheduleId: schedule.id,
+        orgId: attachParams.org.id,
+        env: attachParams.customer.env,
       });
 
-      // Delete only if not in the same group
       if (
-        (!existingCusProduct ||
-          existingCusProduct.product.group === attachParams.product.group) &&
+        existingCusProduct &&
+        existingCusProduct.product.group === attachParams.product.group &&
         schedule.status !== "canceled"
       ) {
         await stripeCli.subscriptionSchedules.cancel(schedule.id);

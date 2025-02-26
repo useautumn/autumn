@@ -179,8 +179,7 @@ export const getStripeSubItems = async ({
   attachParams: AttachParams;
   isCheckout?: boolean;
 }) => {
-  const { product, prices, entitlements, optionsList, org, curCusProduct } =
-    attachParams;
+  const { product, prices, entitlements, optionsList, org } = attachParams;
 
   const checkoutRelevantPrices = getCheckoutRelevantPrices(prices);
 
@@ -195,6 +194,7 @@ export const getStripeSubItems = async ({
   }
 
   // Combine one off prices with top interval
+  // if (isCheckout) {
   let oneOffPrices =
     intervalToPrices[BillingInterval.OneOff] &&
     intervalToPrices[BillingInterval.OneOff].length > 0;
@@ -206,6 +206,7 @@ export const getStripeSubItems = async ({
     );
     delete intervalToPrices[BillingInterval.OneOff];
   }
+  // }
 
   const itemSets: any[] = [];
 
@@ -253,6 +254,7 @@ export const getStripeSubItems = async ({
       subMeta: {
         usage_features: JSON.stringify(usage_features),
       },
+      prices,
     });
   }
 

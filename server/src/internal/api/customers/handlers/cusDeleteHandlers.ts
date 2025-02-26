@@ -43,7 +43,8 @@ export const deleteCusById = async ({
   }
 
   try {
-    if (customer.processor?.id) {
+    // Only delete stripe customer in sandbox
+    if (customer.processor?.id && env === AppEnv.Sandbox) {
       await deleteStripeCustomer({
         org: fullOrg,
         env: env,

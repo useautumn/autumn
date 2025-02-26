@@ -42,6 +42,7 @@ export const sendUsageAndReset = async ({
 
   const stripeCli = createStripeCli({ org, env });
   const customer = activeProduct.customer;
+
   for (const cusPrice of cusPrices) {
     const price = cusPrice.price;
     const config = price.config as UsagePriceConfig;
@@ -83,8 +84,6 @@ export const sendUsageAndReset = async ({
       },
       timestamp: usageTimestamp,
     });
-
-    // Log meter event...
 
     console.log(`Submitted meter event for ${customer.name}, ${customer.id}`);
     console.log(

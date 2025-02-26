@@ -14,7 +14,12 @@ import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { getPriceAmount } from "../../prices/priceUtils.js";
-import { AllowanceType, ErrCode, InvoiceStatus } from "@autumn/shared";
+import {
+  AllowanceType,
+  BillingInterval,
+  ErrCode,
+  InvoiceStatus,
+} from "@autumn/shared";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { createStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
@@ -41,7 +46,12 @@ const handleBillNowPrices = async ({
 
   let subscriptions: Stripe.Subscription[] = [];
   let invoiceIds: string[] = [];
+
   for (const itemSet of itemSets) {
+    if (itemSet.interval === BillingInterval.OneOff) {
+      continue;
+    }
+
     const { items } = itemSet;
 
     try {
@@ -53,11 +63,13 @@ const handleBillNowPrices = async ({
         items,
         freeTrial,
         metadata: itemSet.subMeta,
+        prices: itemSet.prices,
       });
 
       subscriptions.push(subscription);
       invoiceIds.push(subscription.latest_invoice as string);
     } catch (error: any) {
+      throw error;
       if (
         error instanceof RecaseError &&
         (error.code === ErrCode.StripeCardDeclined ||
@@ -74,6 +86,7 @@ const handleBillNowPrices = async ({
       throw error;
     }
   }
+
   // Add product and entitlements to customer
   await createFullCusProduct({
     sb,

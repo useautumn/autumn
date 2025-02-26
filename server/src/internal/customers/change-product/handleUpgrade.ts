@@ -53,6 +53,12 @@ const handleStripeSubUpdate = async ({
   // 1. Update the first one, cancel subsequent ones, create new ones
   const existingSubIds = curCusProduct.subscription_ids!;
 
+  // console.log("existingSubIds", existingSubIds);
+  // console.log("Subscription ID:", curCusProduct.processor?.subscription_id);
+  // console.log("Current cus product:", curCusProduct);
+
+  // throw new Error("Not implemented");
+
   const firstExistingSubId = existingSubIds[0];
   const firstItemSet = itemSets[0];
 
@@ -80,6 +86,7 @@ const handleStripeSubUpdate = async ({
     trialEnd,
     org: attachParams.org,
     customer: attachParams.customer,
+    prices: firstItemSet.prices,
   });
 
   // 2. Cancel old subscriptions
@@ -265,11 +272,17 @@ export const handleUpgrade = async ({
     return;
   }
 
-  // 2. If current product is a trial, just start a new period
+  // 2. TO FIX: If current product is a trial, just start a new period (with new subscription_ids)
   if (curCusProduct.trial_ends_at && curCusProduct.trial_ends_at > Date.now()) {
     console.log(
       "NOTE: Current product is a trial, cancel and start new subscription"
     );
+
+    // throw new RecaseError({
+    //   message: "Not implemented",
+    //   code: ErrCode.UpgradeFailed,
+    //   statusCode: StatusCodes.NOT_IMPLEMENTED,
+    // });
 
     await handleAddProduct({
       req,
@@ -277,12 +290,20 @@ export const handleUpgrade = async ({
       attachParams,
     });
 
-    await stripeCli.subscriptions.cancel(
-      curCusProduct.processor?.subscription_id!
-    );
-
-    return;
+    for (const subId of curCusProduct.subscription_ids!) {
+      try {
+        await stripeCli.subscriptions.cancel(subId);
+      } catch (error) {
+        throw new RecaseError({
+          message: `Handling upgrade (cur product on trial): failed to cancel subscription ${subId}`,
+          code: ErrCode.StripeCancelSubscriptionFailed,
+          statusCode: StatusCodes.BAD_REQUEST,
+          data: error,
+        });
+      }
+    }
   }
+
   // const disableFreeTrial =
   //   curCusProduct.free_trial_id && org.config?.free_trial_paid_to_paid;
   const disableFreeTrial = false;
@@ -296,6 +317,7 @@ export const handleUpgrade = async ({
   });
 
   console.log("2. Updating current subscription to new product");
+
   let { subUpdate, newSubIds, invoiceIds } = await handleStripeSubUpdate({
     sb: req.sb,
     curCusProduct,
