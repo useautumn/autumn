@@ -8,7 +8,11 @@ import {
 } from "@/internal/products/productUtils.js";
 import Stripe from "stripe";
 
-import { CusProductWithProduct, FullCusProduct } from "@autumn/shared";
+import {
+  BillingInterval,
+  CusProductWithProduct,
+  FullCusProduct,
+} from "@autumn/shared";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 
@@ -30,21 +34,31 @@ const scheduleStripeSubscription = async ({
   endOfBillingPeriod: number;
 }) => {
   const { org, customer } = attachParams;
-  const { items, subMeta } = itemSet;
+  const { items, prices, subMeta } = itemSet;
   const paymentMethod = await getCusPaymentMethod({
     org,
     env: customer.env,
     stripeId: customer.processor.id,
   });
 
+  let subItems = items.filter(
+    (item: any, index: number) =>
+      prices[index].config!.interval !== BillingInterval.OneOff
+  );
+  let oneOffItems = items.filter(
+    (item: any, index: number) =>
+      prices[index].config!.interval === BillingInterval.OneOff
+  );
+
   const newSubscriptionSchedule = await stripeCli.subscriptionSchedules.create({
     customer: customer.processor.id,
     start_date: endOfBillingPeriod,
     phases: [
       {
-        items,
+        items: subItems,
         default_payment_method: paymentMethod as string,
         metadata: itemSet.subMeta,
+        add_invoice_items: oneOffItems,
       },
     ],
   });
