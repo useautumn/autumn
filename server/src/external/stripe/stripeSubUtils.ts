@@ -1,4 +1,10 @@
-import { CusProductStatus, ErrCode, FreeTrial } from "@autumn/shared";
+import {
+  BillingInterval,
+  CusProductStatus,
+  ErrCode,
+  FreeTrial,
+  Price,
+} from "@autumn/shared";
 
 import { Customer, Organization } from "@autumn/shared";
 import Stripe from "stripe";
@@ -14,6 +20,7 @@ export const createStripeSubscription = async ({
   items,
   freeTrial,
   metadata = {},
+  prices,
 }: {
   stripeCli: Stripe;
   customer: Customer;
@@ -21,6 +28,7 @@ export const createStripeSubscription = async ({
   freeTrial: FreeTrial | null;
   org: Organization;
   metadata?: any;
+  prices: Price[];
 }) => {
   // 1. Get payment method
   let paymentMethod;
@@ -46,14 +54,24 @@ export const createStripeSubscription = async ({
     });
   }
 
+  let subItems = items.filter(
+    (i: any, index: number) =>
+      prices[index].config!.interval !== BillingInterval.OneOff
+  );
+  let invoiceItems = items.filter(
+    (i: any, index: number) =>
+      prices[index].config!.interval === BillingInterval.OneOff
+  );
+
   try {
     const subscription = await stripeCli.subscriptions.create({
       customer: customer.processor.id,
       default_payment_method: paymentMethod as string,
-      items: items as any,
+      items: subItems as any,
       trial_end: freeTrialToStripeTimestamp(freeTrial),
       payment_behavior: "error_if_incomplete",
       metadata,
+      add_invoice_items: invoiceItems,
     });
     return subscription;
   } catch (error: any) {
@@ -92,12 +110,14 @@ export const updateStripeSubscription = async ({
   subscriptionId,
   items,
   trialEnd,
+  prices,
 }: {
   org: Organization;
   customer: Customer;
   stripeCli: Stripe;
   subscriptionId: string;
   items: any;
+  prices: Price[];
   trialEnd?: number;
 }) => {
   let paymentMethod;
@@ -123,13 +143,26 @@ export const updateStripeSubscription = async ({
     });
   }
 
+  let subItems = items.filter(
+    (i: any, index: number) =>
+      i.deleted || prices[index].config!.interval !== BillingInterval.OneOff
+  );
+  let invoiceItems = items.filter((i: any, index: number) => {
+    if (index < prices.length) {
+      return prices[index].config!.interval === BillingInterval.OneOff;
+    }
+
+    return false;
+  });
+
   try {
     const sub = await stripeCli.subscriptions.update(subscriptionId, {
-      items,
+      items: subItems,
       proration_behavior: "always_invoice",
       trial_end: trialEnd,
       payment_behavior: "error_if_incomplete",
       default_payment_method: paymentMethod as string,
+      add_invoice_items: invoiceItems,
     });
 
     const subUpdate = await stripeCli.subscriptions.retrieve(subscriptionId);
@@ -191,5 +224,21 @@ export const stripeToAutumnSubStatus = (stripeSubStatus: string) => {
 
     default:
       return stripeSubStatus;
+  }
+};
+
+export const deleteScheduledIds = async ({
+  stripeCli,
+  scheduledIds,
+}: {
+  stripeCli: Stripe;
+  scheduledIds: string[];
+}) => {
+  for (const scheduledId of scheduledIds) {
+    try {
+      await stripeCli.subscriptionSchedules.cancel(scheduledId);
+    } catch (error: any) {
+      console.log("Error deleting scheduled id.", error.message);
+    }
   }
 };

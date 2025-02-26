@@ -38,6 +38,8 @@ export const ErrCode = {
   StripeGetPaymentMethodFailed: "stripe_get_payment_method_failed",
   StripeCardDeclined: "stripe_card_declined",
   StripeUpdateSubscriptionFailed: "stripe_update_subscription_failed",
+  StripeCancelSubscriptionScheduleFailed:
+    "stripe_cancel_subscription_schedule_failed",
 
   StripeCreateSubscriptionFailed: "stripe_create_subscription_failed",
 
@@ -71,6 +73,7 @@ export const ErrCode = {
   CreateStripeSubscriptionFailed: "create_stripe_subscription_failed",
   UpdateCusProductFailed: "update_customer_product_failed",
   DefaultProductNotAllowedPrice: "default_product_not_allowed_price",
+  UpgradeFailed: "upgrade_failed",
 
   // Entitlements
   InvalidEntitlement: "invalid_entitlement",

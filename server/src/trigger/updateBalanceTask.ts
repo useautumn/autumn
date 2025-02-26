@@ -67,8 +67,13 @@ const getCreditSystemDeduction = ({
 
       let meteredDeduction = getMeteredDeduction(meteredFeature, event);
 
-      creditsUpdate +=
-        (meteredDeduction / schema.feature_amount) * schema.credit_amount;
+      let meteredDeductionDecimal = new Decimal(meteredDeduction);
+      let featureAmountDecimal = new Decimal(schema.feature_amount);
+      let creditAmountDecimal = new Decimal(schema.credit_amount);
+      creditsUpdate += meteredDeductionDecimal
+        .div(featureAmountDecimal)
+        .mul(creditAmountDecimal)
+        .toNumber();
     }
   }
 
@@ -227,6 +232,7 @@ export const updateCustomerBalance = async ({
         }
 
         cusEnt.balance = newBalance;
+
         await CustomerEntitlementService.update({
           sb,
           id: cusEnt.id,
@@ -242,7 +248,7 @@ export const updateCustomerBalance = async ({
       continue;
     }
 
-    console.log(`Still have to deduct ${toDeduct} from ${obj.feature.id}`);
+    console.log(`   - Still have to deduct ${toDeduct} from ${obj.feature.id}`);
 
     // Deduct from usage-based price
     const usageBasedEnt = cusEnts.find(
@@ -251,15 +257,16 @@ export const updateCustomerBalance = async ({
         cusEnt.entitlement.internal_feature_id == obj.feature.internal_id
     );
 
-    console.log(
-      "Usage based ent: ",
-      usageBasedEnt?.feature_id,
-      usageBasedEnt?.balance
-    );
+    // console.log(
+    //   "   - Usage based ent: ",
+    //   usageBasedEnt?.feature_id,
+    //   usageBasedEnt?.balance
+    // );
 
     if (usageBasedEnt) {
-      let newBalance = usageBasedEnt.balance! - toDeduct;
-      console.log("New balance: ", newBalance);
+      let usageBasedEntBalance = new Decimal(usageBasedEnt.balance!);
+      let newBalance = usageBasedEntBalance.minus(toDeduct).toNumber();
+
       await CustomerEntitlementService.update({
         sb,
         id: usageBasedEnt.id,

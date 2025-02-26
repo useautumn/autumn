@@ -53,6 +53,8 @@ import { createNewCustomer } from "@/internal/api/customers/cusUtils.js";
 import { CusProductService } from "./CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
+import Stripe from "stripe";
+import { deleteScheduledIds } from "@/external/stripe/stripeSubUtils.js";
 
 // 1. Delete future product
 export const uncancelCurrentProduct = async ({
@@ -241,15 +243,22 @@ export const expireAndActivate = async ({
 
 export const activateFutureProduct = async ({
   sb,
-  env,
   cusProduct,
+  subscription,
   org,
+  env,
 }: {
   sb: SupabaseClient;
-  env: AppEnv;
   cusProduct: FullCusProduct;
+  subscription: Stripe.Subscription;
   org: Organization;
+  env: AppEnv;
 }) => {
+  const stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
   const futureProduct = await CusProductService.getFutureProduct({
     sb,
     internalCustomerId: cusProduct.internal_customer_id,
@@ -260,20 +269,41 @@ export const activateFutureProduct = async ({
     return false;
   }
 
-  await CusProductService.update({
-    sb,
-    cusProductId: futureProduct.id,
-    updates: { status: CusProductStatus.Active },
-  });
-
-  return true;
+  if (!subscription.cancel_at_period_end) {
+    console.log(
+      "   🔔 Subscription canceled before period end, deleting scheduled products"
+    );
+    await deleteScheduledIds({
+      stripeCli,
+      scheduledIds: futureProduct.scheduled_ids,
+    });
+    await CusProductService.delete({
+      sb,
+      cusProductId: futureProduct.id,
+    });
+    return false;
+  } else {
+    await CusProductService.update({
+      sb,
+      cusProductId: futureProduct.id,
+      updates: { status: CusProductStatus.Active },
+    });
+    return true;
+  }
 };
 
 // OTHERS
-export const fullCusProductToCusEnts = (cusProducts: FullCusProduct[]) => {
+export const fullCusProductToCusEnts = (
+  cusProducts: FullCusProduct[],
+  inStatuses: CusProductStatus[] = [CusProductStatus.Active]
+) => {
   const cusEnts: FullCustomerEntitlement[] = [];
 
   for (const cusProduct of cusProducts) {
+    if (!inStatuses.includes(cusProduct.status)) {
+      continue;
+    }
+
     cusEnts.push(
       ...cusProduct.customer_entitlements.map((cusEnt) => ({
         ...cusEnt,

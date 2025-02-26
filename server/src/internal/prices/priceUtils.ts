@@ -279,6 +279,7 @@ export const getPriceAmount = (price: Price, options: FeatureOptions) => {
 export const getPriceForOverage = (price: Price, overage: number) => {
   let usageConfig = price.config as UsagePriceConfig;
   let billingType = getBillingType(usageConfig);
+
   if (billingType !== BillingType.UsageInArrear) {
     throw new RecaseError({
       message: `getPriceForUsage not implemented for this billing type: ${billingType}`,
@@ -299,7 +300,12 @@ export const getPriceForOverage = (price: Price, overage: number) => {
       amountUsed = Math.min(remainingUsage, tier.to - tier.from);
     }
 
-    amount += new Decimal(tier.amount).mul(amountUsed).toNumber();
+    // Divide amount by billing units
+    let amountPerUnit = new Decimal(tier.amount)
+      .div(usageConfig.billing_units!)
+      .toNumber();
+
+    amount += amountPerUnit * amountUsed;
     remainingUsage -= amountUsed;
 
     if (remainingUsage <= 0) {

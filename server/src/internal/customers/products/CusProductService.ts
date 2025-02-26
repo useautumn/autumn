@@ -264,32 +264,6 @@ export class CusProductService {
     return data;
   }
 
-  // static async getActiveByStripeSubId({
-  //   sb,
-  //   stripeSubId,
-  //   orgId,
-  //   env,
-  // }: {
-  //   sb: SupabaseClient;
-  //   stripeSubId: string;
-  //   orgId: string;
-  //   env: AppEnv;
-  // }) {
-  //   const { data, error } = await sb
-  //     .from("customer_products")
-  //     .select("*, product:products(*), customer:customers!inner(*)")
-  //     .eq("processor->>subscription_id", stripeSubId)
-  //     .eq("customer.org_id", orgId)
-  //     .eq("customer.env", env)
-  //     .in("status", ACTIVE_STATUSES);
-
-  //   if (error) {
-  //     throw error;
-  //   }
-
-  //   return data;
-  // }
-
   static async getEntsAndPrices({
     sb,
     cusProductId,
@@ -343,24 +317,39 @@ export class CusProductService {
   static async getByScheduleId({
     sb,
     scheduleId,
+    orgId,
+    env,
   }: {
     sb: SupabaseClient;
     scheduleId: string;
+    orgId: string;
+    env: AppEnv;
   }) {
     const { data, error } = await sb
       .from("customer_products")
-      .select("*, product:products!inner(*)")
-      .eq("processor->>subscription_schedule_id", scheduleId)
-      .single();
+      .select("*, product:products!inner(*), customer:customers!inner(*)")
+      // .eq("processor->>subscription_schedule_id", scheduleId)
+      .contains("scheduled_ids", [scheduleId])
+      .eq("customer.org_id", orgId)
+      .eq("customer.env", env);
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
       throw error;
     }
 
-    return data;
+    if (data.length === 0) {
+      return null;
+    }
+
+    if (data.length > 1) {
+      throw new RecaseError({
+        message: `Multiple cus products found for schedule id: ${scheduleId}`,
+        code: ErrCode.MultipleProductsFound,
+        statusCode: 500,
+      });
+    }
+
+    return data[0];
   }
 
   static async getFutureProduct({
@@ -705,5 +694,22 @@ export class CusProductService {
     }
 
     return scheduledProduct;
+  }
+
+  static async delete({
+    sb,
+    cusProductId,
+  }: {
+    sb: SupabaseClient;
+    cusProductId: string;
+  }) {
+    const { error } = await sb
+      .from("customer_products")
+      .delete()
+      .eq("id", cusProductId);
+
+    if (error) {
+      throw error;
+    }
   }
 }

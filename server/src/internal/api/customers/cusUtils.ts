@@ -185,13 +185,18 @@ export const getCustomerDetails = async ({
     internalCustomerId: customer.internal_id,
     withProduct: true,
     withPrices: true,
-    inStatuses: [CusProductStatus.Active],
+    inStatuses: [
+      CusProductStatus.Active,
+      CusProductStatus.PastDue,
+      CusProductStatus.Scheduled,
+    ],
   });
 
   let main = [];
   let addOns = [];
 
   // 1. Process products
+
   for (const cusProduct of fullCusProducts) {
     let processed = processFullCusProduct(cusProduct);
 
