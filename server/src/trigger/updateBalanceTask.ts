@@ -11,6 +11,7 @@ import {
   Event,
   Feature,
   FullCustomerEntitlement,
+  FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
@@ -18,67 +19,11 @@ import { Customer, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
 import { Decimal } from "decimal.js";
-
-// 2. Functions to get deduction per feature
-export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
-  let config = meteredFeature.config;
-  let aggregate = config.aggregate;
-
-  if (aggregate.type == AggregateType.Count) {
-    return 1;
-  }
-
-  if (aggregate.type == AggregateType.Sum) {
-    let property = aggregate.property;
-    let value = event.properties[property] || 0;
-
-    let floatVal = parseFloat(value);
-    if (isNaN(floatVal)) {
-      return 0;
-    }
-
-    return floatVal;
-  }
-
-  return 0;
-};
-
-const getCreditSystemDeduction = ({
-  meteredFeatures,
-  creditSystem,
-  event,
-}: {
-  meteredFeatures: Feature[];
-  creditSystem: Feature;
-  event: Event;
-}) => {
-  let creditsUpdate = 0;
-  let meteredFeatureIds = meteredFeatures.map((feature) => feature.id);
-
-  for (const schema of creditSystem.config.schema) {
-    if (meteredFeatureIds.includes(schema.metered_feature_id)) {
-      let meteredFeature = meteredFeatures.find(
-        (feature) => feature.id === schema.metered_feature_id
-      );
-
-      if (!meteredFeature) {
-        continue;
-      }
-
-      let meteredDeduction = getMeteredDeduction(meteredFeature, event);
-
-      let meteredDeductionDecimal = new Decimal(meteredDeduction);
-      let featureAmountDecimal = new Decimal(schema.feature_amount);
-      let creditAmountDecimal = new Decimal(schema.credit_amount);
-      creditsUpdate += meteredDeductionDecimal
-        .div(featureAmountDecimal)
-        .mul(creditAmountDecimal)
-        .toNumber();
-    }
-  }
-
-  return creditsUpdate;
-};
+import { adjustAllowance } from "./adjustAllowance.js";
+import {
+  getMeteredDeduction,
+  getCreditSystemDeduction,
+} from "./deductUtils.js";
 
 // 2. Get deductions for each feature
 const getFeatureDeductions = ({
@@ -141,11 +86,12 @@ export const updateCustomerBalance = async ({
   env: AppEnv;
 }) => {
   const startTime = performance.now();
-  const { cusEnts } = await getCusEntsInFeatures({
+  const { cusEnts, cusPrices } = await getCusEntsInFeatures({
     sb,
     internalCustomerId: customer.internal_id,
     internalFeatureIds: features.map((f) => f.internal_id!),
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    withPrices: event.adjust_allowance === true,
   });
 
   const endTime = performance.now();
@@ -172,7 +118,22 @@ export const updateCustomerBalance = async ({
     return;
   }
 
-  // Feature ID to Deduction
+  // 1. Adjust allowance if needed
+  if (event.adjust_allowance === true) {
+    await adjustAllowance({
+      sb,
+      env,
+      cusEnts,
+      event,
+      customer,
+      org,
+      cusPrices: cusPrices as FullCustomerPrice[],
+      affectedFeature: features[0],
+    });
+    throw new Error("Not implemented");
+  }
+
+  // 1. Get deductions for each feature
   const featureDeductions = getFeatureDeductions({
     cusEnts,
     event,
@@ -184,8 +145,7 @@ export const updateCustomerBalance = async ({
     featureDeductions.map((f) => `${f.feature.id}: ${f.deduction}`)
   );
 
-  // 3. Perform deductions and update customer balance
-
+  // 2. Perform deductions and update customer balance
   for (const obj of featureDeductions) {
     if (!obj.deduction) {
       continue;

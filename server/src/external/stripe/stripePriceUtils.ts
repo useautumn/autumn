@@ -29,7 +29,7 @@ import {
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
-import { nullOrUndefined } from "@/utils/genUtils.js";
+import { notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
 
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
@@ -61,12 +61,14 @@ export const billingIntervalToStripe = (interval: BillingInterval) => {
 // GET STRIPE LINE / SUB ITEM
 export const priceToStripeItem = ({
   price,
+  relatedEnt,
   product,
   org,
   options,
   isCheckout = false,
 }: {
   price: Price;
+  relatedEnt: EntitlementWithFeature;
   product: FullProduct;
   org: Organization;
   options: FeatureOptions | undefined | null;
@@ -112,13 +114,16 @@ export const priceToStripeItem = ({
   } else if (billingType == BillingType.UsageInAdvance) {
     const config = price.config as UsagePriceConfig;
     // const quantity = options?.quantity || 1;
-
     let quantity = options?.quantity;
 
+    // 1. If quantity is 0 and is checkout, skip over line item
     if (options?.quantity === 0 && isCheckout) {
       console.log(`Quantity for ${config.feature_id} is 0`);
       return null;
-    } else if (nullOrUndefined(quantity) && isCheckout) {
+    }
+
+    // 2. If quantity is null or undefined and is checkout, default to 1
+    else if (nullOrUndefined(quantity) && isCheckout) {
       quantity = 1;
     }
 
@@ -126,6 +131,7 @@ export const priceToStripeItem = ({
       ? {
           enabled: true,
           maximum: 999999,
+          minimum: relatedEnt.allowance,
         }
       : undefined;
 
@@ -142,11 +148,11 @@ export const priceToStripeItem = ({
       quantity: quantity,
       adjustable_quantity: adjustableQuantity,
     };
-    lineItemMeta = {
-      internal_feature_id: config.internal_feature_id,
-      feature_id: config.feature_id,
-      price_id: price.id,
-    };
+    // lineItemMeta = {
+    //   internal_feature_id: config.internal_feature_id,
+    //   feature_id: config.feature_id,
+    //   price_id: price.id,
+    // };
   } else if (billingType == BillingType.UsageInArrear) {
     // TODO: Implement this
     const config = price.config as UsagePriceConfig;
@@ -217,7 +223,7 @@ export const getStripeSubItems = async ({
     let itemMetas: any[] = [];
 
     let usage_features = [];
-
+    let inAdvanceFeatures = [];
     for (const price of prices) {
       const priceEnt = getPriceEntitlement(price, entitlements);
       const options = getEntOptions(optionsList, priceEnt);
@@ -229,12 +235,20 @@ export const getStripeSubItems = async ({
         });
       }
 
+      if (price.billing_type == BillingType.UsageInAdvance) {
+        inAdvanceFeatures.push({
+          internal_id: priceEnt.feature.internal_id,
+          id: priceEnt.feature.id,
+        });
+      }
+
       const stripeItem = priceToStripeItem({
         price,
         product,
         org,
         options,
         isCheckout,
+        relatedEnt: priceEnt,
       });
 
       if (!stripeItem) {
@@ -253,6 +267,7 @@ export const getStripeSubItems = async ({
       interval,
       subMeta: {
         usage_features: JSON.stringify(usage_features),
+        in_advance_features: JSON.stringify(inAdvanceFeatures),
       },
       prices,
     });

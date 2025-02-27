@@ -3,6 +3,7 @@ import {
   AppEnv,
   CreateEventSchema,
   Customer,
+  ErrCode,
   Event,
   Feature,
 } from "@autumn/shared";
@@ -79,6 +80,7 @@ const getEventAndCustomer = async ({
     env: env,
     internal_customer_id: customer.internal_id,
     timestamp: eventTimestamp,
+    adjust_allowance: parsedEvent.adjust_allowance || false,
   };
 
   await EventService.insertEvent(sb, newEvent);
@@ -153,9 +155,17 @@ export const handleEventSent = async ({
     env,
   });
 
-  if (affectedFeatures.length > 0) {
-    // let queue: Queue = req.queue;
+  if (event.adjust_allowance === true && affectedFeatures.length > 1) {
+    throw new RecaseError({
+      message: `Not allowed to adjust allowance for features and credit systems: ${affectedFeatures
+        .map((f) => f.id)
+        .join(", ")}`,
+      code: ErrCode.AdjustAllowanceNotAllowed,
+      statusCode: 400,
+    });
+  }
 
+  if (affectedFeatures.length > 0) {
     const payload = {
       customerId: customer.internal_id,
       customer,

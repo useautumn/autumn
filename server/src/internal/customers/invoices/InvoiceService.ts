@@ -102,6 +102,7 @@ export class InvoiceService {
     internalProductIds,
     status,
     org,
+    sendRevenueEvent = true,
   }: {
     sb: SupabaseClient;
     stripeInvoice: Stripe.Invoice;
@@ -110,6 +111,7 @@ export class InvoiceService {
     internalProductIds: string[];
     status?: InvoiceStatus | null;
     org: Organization;
+    sendRevenueEvent?: boolean;
   }) {
     const invoice: Invoice = {
       id: generateId("inv"),
@@ -142,7 +144,7 @@ export class InvoiceService {
 
     // Send monthly_revenue event
     try {
-      if (!stripeInvoice.livemode) {
+      if (!stripeInvoice.livemode || !sendRevenueEvent) {
         return;
       }
 

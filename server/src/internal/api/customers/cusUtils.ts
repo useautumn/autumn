@@ -237,16 +237,19 @@ export const getCusEntsInFeatures = async ({
   internalCustomerId,
   internalFeatureIds,
   inStatuses = [CusProductStatus.Active],
+  withPrices = false,
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
   internalFeatureIds: string[];
   inStatuses?: CusProductStatus[];
+  withPrices?: boolean;
 }) => {
   const fullCusProducts = await CusService.getFullCusProducts({
     sb,
     internalCustomerId,
     inStatuses: inStatuses,
+    withPrices: withPrices,
   });
 
   const cusEntsWithCusProduct = fullCusProductToCusEnts(
@@ -264,5 +267,11 @@ export const getCusEntsInFeatures = async ({
 
   sortCusEntsForDeduction(cusEnts);
 
-  return { cusEnts };
+  if (!withPrices) {
+    return { cusEnts, cusPrices: undefined };
+  }
+
+  const cusPrices = fullCusProductToCusPrices(fullCusProducts, inStatuses);
+
+  return { cusEnts, cusPrices };
 };

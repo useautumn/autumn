@@ -3,26 +3,35 @@ import { Stripe } from "stripe";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
-import { AppEnv, CusProductStatus, Organization } from "@autumn/shared";
+import {
+  AppEnv,
+  BillingType,
+  CusProductStatus,
+  Organization,
+  UsagePriceConfig,
+} from "@autumn/shared";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripeCli } from "../utils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { createStripeSubscription } from "../stripeSubUtils.js";
+import { getBillingType } from "@/internal/prices/priceUtils.js";
 
 export const itemMetasToOptions = async ({
-  itemMetas,
   checkoutSession,
   attachParams,
   stripeCli,
 }: {
-  itemMetas: any[];
   checkoutSession: Stripe.Checkout.Session;
   attachParams: AttachParams;
   stripeCli: Stripe;
 }) => {
-  // For each line item
+  const usageInAdvanceExists = attachParams.prices.some(
+    (price) =>
+      getBillingType(price.config as UsagePriceConfig) ==
+      BillingType.UsageInAdvance
+  );
 
-  if (!itemMetas || itemMetas.length == 0) {
+  if (!usageInAdvanceExists) {
     return;
   }
 
@@ -32,34 +41,29 @@ export const itemMetasToOptions = async ({
 
   const lineItems = response.data;
 
-  for (let i = 0; i < lineItems.length; i++) {
-    const item = lineItems[i];
-    const itemMeta = itemMetas[i];
-
-    if (!itemMeta) {
-      console.log("No item meta found, skipping");
+  for (const price of attachParams.prices) {
+    let config = price.config as UsagePriceConfig;
+    if (getBillingType(config) != BillingType.UsageInAdvance) {
       continue;
     }
 
-    // Feature ID:
-    const internalFeatureId = itemMeta.internal_feature_id;
-    const featureId = itemMeta.feature_id;
-
-    const index = attachParams.optionsList.findIndex(
-      (feature) => feature.internal_feature_id == internalFeatureId
+    const lineItem = lineItems.find(
+      (li: any) => li.price.id == config.stripe_price_id
     );
 
-    if (index == -1) {
-      attachParams.optionsList.push({
-        feature_id: featureId,
-        internal_feature_id: internalFeatureId,
-        quantity: item.quantity,
-      });
-    } else {
-      attachParams.optionsList[index].quantity = item.quantity;
+    let quantity = 0;
+    if (lineItem) {
+      quantity = lineItem.quantity || 0;
     }
-    console.log(`Updated options list: ${featureId} - ${item.quantity}`);
+
+    const index = attachParams.optionsList.findIndex(
+      (feature) => feature.internal_feature_id == config.internal_feature_id
+    );
+
+    attachParams.optionsList[index].quantity = quantity;
   }
+
+  return;
 };
 
 export const handleCheckoutSessionCompleted = async ({
@@ -91,10 +95,8 @@ export const handleCheckoutSessionCompleted = async ({
     return;
   }
 
-  const itemMetas = metadata.data.itemMetas;
   const stripeCli = createStripeCli({ org, env });
   await itemMetasToOptions({
-    itemMetas,
     checkoutSession,
     attachParams,
     stripeCli,
@@ -185,3 +187,33 @@ export const handleCheckoutSessionCompleted = async ({
 
   return;
 };
+
+// Old quantity method
+// for (let i = 0; i < lineItems.length; i++) {
+//   const item = lineItems[i];
+//   const itemMeta = itemMetas[i];
+
+//   if (!itemMeta) {
+//     console.log("No item meta found, skipping");
+//     continue;
+//   }
+
+//   // Feature ID:
+//   const internalFeatureId = itemMeta.internal_feature_id;
+//   const featureId = itemMeta.feature_id;
+
+//   const index = attachParams.optionsList.findIndex(
+//     (feature) => feature.internal_feature_id == internalFeatureId
+//   );
+
+//   if (index == -1) {
+//     attachParams.optionsList.push({
+//       feature_id: featureId,
+//       internal_feature_id: internalFeatureId,
+//       quantity: item.quantity,
+//     });
+//   } else {
+//     attachParams.optionsList[index].quantity = item.quantity;
+//   }
+//   console.log(`Updated options list: ${featureId} - ${item.quantity}`);
+// }

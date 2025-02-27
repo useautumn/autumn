@@ -12,6 +12,7 @@ import { useFeaturesContext } from "./FeaturesContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import toast from "react-hot-toast";
 import { FeatureType } from "@autumn/shared";
+import { getBackendErr } from "@/utils/genUtils";
 
 export default function UpdateFeature({
   open,
@@ -61,7 +62,7 @@ export default function UpdateFeature({
       await mutate();
       setOpen(false);
     } catch (error) {
-      toast.error("Failed to update feature");
+      toast.error(getBackendErr(error, "Failed to update feature"));
     }
     setUpdateLoading(false);
   };
