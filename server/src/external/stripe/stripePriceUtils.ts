@@ -212,7 +212,6 @@ export const getStripeSubItems = async ({
     );
     delete intervalToPrices[BillingInterval.OneOff];
   }
-  // }
 
   const itemSets: any[] = [];
 
@@ -570,6 +569,27 @@ export const createStripeInArrearPrice = async ({
   });
 };
 
+export const createStripeArrearProratedPrice = async ({
+  sb,
+  stripeCli,
+  price,
+  entitlements,
+  product,
+  org,
+}: {
+  sb: SupabaseClient;
+  stripeCli: Stripe;
+  price: Price;
+  entitlements: EntitlementWithFeature[];
+  product: Product;
+  org: Organization;
+}) => {
+  const relatedEnt = getPriceEntitlement(price, entitlements);
+  const config = price.config as UsagePriceConfig;
+
+  const tiers = priceToStripeTiers(price, relatedEnt);
+};
+
 export const createStripePriceIFNotExist = async ({
   sb,
   stripeCli,
@@ -628,6 +648,15 @@ export const createStripePriceIFNotExist = async ({
         org,
       });
     }
+  } else if (billingType == BillingType.InArrearProrated) {
+    await createStripeInAdvancePrice({
+      sb,
+      stripeCli,
+      price,
+      entitlements,
+      product,
+      org,
+    });
   }
 };
 

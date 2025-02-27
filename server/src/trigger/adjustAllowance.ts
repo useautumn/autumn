@@ -15,13 +15,18 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import chalk from "chalk";
 import { getMeteredDeduction } from "./deductUtils.js";
 import { getRelatedCusPrice } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import {
+  getBillingType,
+  getPriceForOverage,
+} from "@/internal/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   getInAdvanceSub,
   getStripeSubs,
 } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { format } from "date-fns";
+import { Decimal } from "decimal.js";
 
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
@@ -32,89 +37,103 @@ export const adjustAllowance = async ({
   env,
   org,
   affectedFeature,
-  cusEnts,
-  event,
+  cusEnt,
   cusPrices,
+  event,
   customer,
+  originalBalance,
+  deduction,
 }: {
   sb: SupabaseClient;
   env: AppEnv;
   affectedFeature: Feature;
   org: Organization;
-  cusEnts: FullCustomerEntitlement[];
-  event: Event;
+  cusEnt: CusEntWithCusProduct;
   cusPrices: FullCustomerPrice[];
+  event: Event;
   customer: Customer;
+  originalBalance: number;
+  deduction: number;
 }) => {
   // Get customer entitlement
-  let cusEnt, cusPrice;
-  for (const ce of cusEnts) {
-    let relatedCusPrice = getRelatedCusPrice(ce, cusPrices);
 
-    if (!relatedCusPrice) {
-      continue;
-    }
+  console.log(`Adjusting allowance for ${cusEnt.entitlement.feature.name}`);
+  console.log(`Customer: ${customer.name} (${customer.id}), Org: ${org.slug}`);
 
-    let priceConfig = relatedCusPrice.price.config as UsagePriceConfig;
-    if (getBillingType(priceConfig) !== BillingType.UsageInAdvance) {
-      continue;
-    }
+  let relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
 
-    cusEnt = ce;
-    cusPrice = relatedCusPrice;
-    break;
-  }
-
-  if (!cusEnt || !cusPrice) {
-    console.log(
-      `Customer: ${customer.name} (${customer.id}), Org: ${org.slug}`
-    );
-    console.log(
-      "Not usage_in_advance price / entitlement found for feature",
-      affectedFeature.id
-    );
+  if (!relatedCusPrice || !cusEnt.customer_product) {
+    console.log("No related cus price / cus product found");
     return;
   }
 
-  const deduction = getMeteredDeduction(affectedFeature, event);
-  console.log(
-    `Adjusting allowance for feature: ${chalk.yellow(
-      affectedFeature.id
-    )}, Value: ${chalk.yellow(deduction)}`
+  // Get sub
+  let stripeCli = createStripeCli({ org, env });
+  const stripeSubs = await getStripeSubs({
+    stripeCli,
+    subIds: cusEnt.customer_product.subscription_ids!,
+  });
+
+  let stripeSub = stripeSubs[0];
+
+  let priceConfig = relatedCusPrice.price.config as UsagePriceConfig;
+  let subItem = stripeSub.items.data.find(
+    (item) => item.price.id === priceConfig.stripe_price_id
   );
 
-  // 1. Update subscription
-  const cusProduct = (cusEnt as CusEntWithCusProduct).customer_product;
-  if (!cusProduct) {
-    console.log("❗️❗️❗️ ERROR: customer product not found");
-  }
+  let originalUsage = new Decimal(cusEnt.entitlement.allowance!)
+    .minus(originalBalance)
+    .toNumber();
 
-  const stripeCli = createStripeCli({
-    org,
-    env,
+  let newUsage = new Decimal(originalUsage).plus(deduction).toNumber();
+  console.log(`Original usage: ${originalUsage}`);
+  console.log("New usage:", newUsage);
+  let featureName = affectedFeature.name;
+
+  subItem = await stripeCli.subscriptionItems.create({
+    subscription: stripeSub.id,
+    price: priceConfig.stripe_price_id!,
+    quantity: originalUsage,
+    proration_date: stripeSub.current_period_end,
   });
 
-  let subToUpdate = await getInAdvanceSub({
-    stripeCli,
-    subIds: cusProduct.subscription_ids!,
-    feature: affectedFeature,
+  await stripeCli.subscriptionItems.update(subItem.id, {
+    quantity: newUsage,
+    proration_behavior: "create_prorations",
   });
 
-  if (!subToUpdate) {
-    console.log("No subscription to update");
-    return;
-  }
+  // if (!subItem) {
+  //   console.log(
+  //     `Creating sub item for feature ${featureName} ${originalUsage}`
+  //   );
+  //   subItem = await stripeCli.subscriptionItems.create({
+  //     subscription: stripeSub.id,
+  //     price: priceConfig.stripe_price_id!,
+  //     quantity: newUsage,
+  //     proration_behavior: "create_prorations",
+  //   });
+  // } else {
+  //   subItem = await stripeCli.subscriptionItems.create({
+  //     subscription: stripeSub.id,
+  //     price: priceConfig.stripe_price_id!,
+  //     quantity: originalUsage,
+  //     proration_date: stripeSub.current_period_end,
+  //   });
 
-  let config = cusPrice.price.config as UsagePriceConfig;
-  await stripeCli.subscriptions.update(subToUpdate.id, {
-    items: [
-      {
-        id: subToUpdate.items.data[0].id,
-        price: config.stripe_price_id!,
-        quantity: subToUpdate.items.data[0].quantity + deduction,
-      },
-    ],
+  //   await stripeCli.subscriptionItems.update(subItem.id, {
+  //     quantity: newUsage,
+  //     proration_behavior: "create_prorations",
+  //   });
+  // }
+
+  await stripeCli.subscriptionItems.del(subItem.id, {
+    proration_date: stripeSub.current_period_end,
   });
 
-  throw new Error("Not implemented");
+  // await stripeCli.subscriptionItems.update(subItem.id, {
+  //   proration_date: stripeSub.current_period_end,
+  //   quantity: 0,
+  // });
+
+  // console.log(`Updated sub item quantity to 0 for period end`);
 };

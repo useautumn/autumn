@@ -126,6 +126,7 @@ const pricesAreSame = (price1: Price, price2: Price) => {
     const usageConfig1 = UsagePriceConfigSchema.parse(config1);
     const usageConfig2 = UsagePriceConfigSchema.parse(config2);
     return (
+      usageConfig1.should_prorate === usageConfig2.should_prorate &&
       usageConfig1.bill_when === usageConfig2.bill_when &&
       usageConfig1.billing_units === usageConfig2.billing_units &&
       usageConfig1.interval === usageConfig2.interval &&

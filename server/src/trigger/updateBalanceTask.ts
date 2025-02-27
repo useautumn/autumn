@@ -91,7 +91,7 @@ export const updateCustomerBalance = async ({
     internalCustomerId: customer.internal_id,
     internalFeatureIds: features.map((f) => f.internal_id!),
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-    withPrices: event.adjust_allowance === true,
+    withPrices: true,
   });
 
   const endTime = performance.now();
@@ -116,21 +116,6 @@ export const updateCustomerBalance = async ({
   if (cusEnts.length === 0 || features.length === 0) {
     console.log("   - No customer entitlements or features found");
     return;
-  }
-
-  // 1. Adjust allowance if needed
-  if (event.adjust_allowance === true) {
-    await adjustAllowance({
-      sb,
-      env,
-      cusEnts,
-      event,
-      customer,
-      org,
-      cusPrices: cusPrices as FullCustomerPrice[],
-      affectedFeature: features[0],
-    });
-    throw new Error("Not implemented");
   }
 
   // 1. Get deductions for each feature
@@ -191,6 +176,7 @@ export const updateCustomerBalance = async ({
           toDeduct = 0;
         }
 
+        let originalBalance = cusEnt.balance!;
         cusEnt.balance = newBalance;
 
         await CustomerEntitlementService.update({
@@ -200,6 +186,20 @@ export const updateCustomerBalance = async ({
             balance: newBalance,
           },
         });
+
+        // if (originalBalance < 0) {
+        //   await adjustAllowance({
+        //     sb,
+        //     env,
+        //     affectedFeature: obj.feature,
+        //     org,
+        //     cusEnt: cusEnt as any,
+        //     cusPrices: cusPrices as any,
+        //     event,
+        //     customer,
+        //     newBalance,
+        //   });
+        // }
       }
     }
 
@@ -217,12 +217,6 @@ export const updateCustomerBalance = async ({
         cusEnt.entitlement.internal_feature_id == obj.feature.internal_id
     );
 
-    // console.log(
-    //   "   - Usage based ent: ",
-    //   usageBasedEnt?.feature_id,
-    //   usageBasedEnt?.balance
-    // );
-
     if (usageBasedEnt) {
       let usageBasedEntBalance = new Decimal(usageBasedEnt.balance!);
       let newBalance = usageBasedEntBalance.minus(toDeduct).toNumber();
@@ -233,6 +227,19 @@ export const updateCustomerBalance = async ({
         updates: {
           balance: newBalance,
         },
+      });
+
+      await adjustAllowance({
+        sb,
+        env,
+        affectedFeature: obj.feature,
+        org,
+        cusEnt: usageBasedEnt as any,
+        cusPrices: cusPrices as any,
+        event,
+        customer,
+        originalBalance: usageBasedEntBalance.toNumber(),
+        deduction: toDeduct,
       });
     } else {
       console.log(
