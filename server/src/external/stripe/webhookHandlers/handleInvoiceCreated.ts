@@ -15,6 +15,7 @@ import { differenceInHours, format, subDays } from "date-fns";
 import { getStripeSubs } from "../stripeSubUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { Decimal } from "decimal.js";
 
 export const sendUsageAndReset = async ({
   sb,
@@ -69,30 +70,34 @@ export const sendUsageAndReset = async ({
       continue;
     }
 
-    const usage = relatedCusEnt.entitlement.allowance - relatedCusEnt.balance;
+    let allowance = relatedCusEnt.entitlement.allowance;
+    let balance = relatedCusEnt.balance;
+    const usage = new Decimal(allowance).minus(balance).toNumber();
 
     const usageTimestamp = Math.round(
       subDays(new Date(invoice.created * 1000), 7).getTime() / 1000
     );
 
-    const meterEvent = await stripeCli.billing.meterEvents.create({
+    await stripeCli.billing.meterEvents.create({
       event_name: price.id!,
       payload: {
         stripe_customer_id: customer.processor.id,
         value: Math.round(usage).toString(),
-        // value: usage.toString(),
       },
       timestamp: usageTimestamp,
     });
 
     console.log(`Submitted meter event for ${customer.name}, ${customer.id}`);
+    console.log(`Feature ID: ${relatedCusEnt.entitlement.feature_id}`);
+    console.log(
+      `Allowance: ${allowance}, Balance: ${balance}, Usage: ${usage}`
+    );
     console.log(
       "Invoice created: ",
       format(new Date(invoice.created * 1000), "yyyy-MM-dd"),
       "Usage timestamp: ",
       format(new Date(usageTimestamp * 1000), "yyyy-MM-dd")
     );
-    console.log(`${relatedCusEnt.entitlement.feature_id} - ${usage}`);
 
     // reset balance
     await CustomerEntitlementService.update({

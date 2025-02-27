@@ -26,6 +26,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useProductContext } from "../ProductContext";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { getBillingUnits } from "@/utils/product/priceUtils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function CreateUsagePrice({
   config,
@@ -235,6 +236,7 @@ function CreateUsagePrice({
           </div>
         )}
       </div>
+
       <div className="flex flex-col gap-1">
         <p className="text-t3 text-sm mt-2 mb-2">Tiers</p>
         {selectedEntitlementAllowance === "unlimited" ? (

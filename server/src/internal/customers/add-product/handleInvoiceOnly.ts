@@ -21,25 +21,25 @@ import {
   pricesToInvoiceItems,
 } from "@/external/stripe/stripePriceUtils.js";
 
-export const voidLatestInvoice = async ({
-  stripeCli,
-  subId,
-}: {
-  stripeCli: Stripe;
-  subId: string;
-}) => {
-  // 1. Get sub
-  const sub = await stripeCli.subscriptions.retrieve(subId);
+// export const voidLatestInvoice = async ({
+//   stripeCli,
+//   subId,
+// }: {
+//   stripeCli: Stripe;
+//   subId: string;
+// }) => {
+//   // 1. Get sub
+//   const sub = await stripeCli.subscriptions.retrieve(subId);
 
-  // 2. Void latest invoice?
-  const invoice = await stripeCli.invoices.retrieve(
-    sub.latest_invoice as string
-  );
+//   // 2. Void latest invoice?
+//   const invoice = await stripeCli.invoices.retrieve(
+//     sub.latest_invoice as string
+//   );
 
-  if (invoice.status !== "paid") {
-    await stripeCli.invoices.voidInvoice(sub.latest_invoice as string);
-  }
-};
+//   if (invoice.status !== "paid") {
+//     await stripeCli.invoices.voidInvoice(sub.latest_invoice as string);
+//   }
+// };
 
 export const removeCurrentProduct = async ({
   sb,

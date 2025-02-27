@@ -218,6 +218,7 @@ export const getCustomerDetails = async ({
   const invoices = await InvoiceService.getByInternalCustomerId({
     sb,
     internalCustomerId: customer.internal_id,
+    limit: 20,
   });
 
   const processedInvoices = invoices.map(processInvoice);
