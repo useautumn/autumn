@@ -45,6 +45,9 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
   } else if (usageConfig.bill_when == BillWhen.BelowThreshold) {
     return BillingType.UsageBelowThreshold;
   } else if (usageConfig.bill_when == BillWhen.EndOfPeriod) {
+    if (usageConfig.should_prorate) {
+      return BillingType.InArrearProrated;
+    }
     return BillingType.UsageInArrear;
   }
 
@@ -280,7 +283,10 @@ export const getPriceForOverage = (price: Price, overage: number) => {
   let usageConfig = price.config as UsagePriceConfig;
   let billingType = getBillingType(usageConfig);
 
-  if (billingType !== BillingType.UsageInArrear) {
+  if (
+    billingType !== BillingType.UsageInArrear &&
+    billingType !== BillingType.InArrearProrated
+  ) {
     throw new RecaseError({
       message: `getPriceForUsage not implemented for this billing type: ${billingType}`,
       code: ErrCode.InvalidRequest,

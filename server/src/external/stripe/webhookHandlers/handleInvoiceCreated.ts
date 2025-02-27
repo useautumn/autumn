@@ -13,7 +13,10 @@ import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { differenceInHours, format, subDays } from "date-fns";
 import { getStripeSubs } from "../stripeSubUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import {
+  getBillingType,
+  getPriceEntitlement,
+} from "@/internal/prices/priceUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
 
@@ -169,6 +172,56 @@ export const handleInvoiceCreated = async ({
       // Probably just created
       return;
     }
+
+    // Create invoice for end of period prorated
+
+    const stripeCli = createStripeCli({ org, env });
+    const cusProductWithEntsAndPrices =
+      await CusProductService.getEntsAndPrices({
+        sb,
+        cusProductId: activeProduct.id,
+      });
+
+    const cusEnts = cusProductWithEntsAndPrices.customer_entitlements;
+    const cusPrices = cusProductWithEntsAndPrices.customer_prices;
+
+    for (const cusPrice of cusPrices) {
+      const price = cusPrice.price;
+      const config = price.config as UsagePriceConfig;
+
+      if (getBillingType(price.config) !== BillingType.InArrearProrated) {
+        continue;
+      }
+
+      let stripeSub = await stripeCli.subscriptions.retrieve(
+        invoice.subscription as string
+      );
+
+      let relatedCusEnt = cusEnts.find(
+        (ent: any) => ent.internal_feature_id === config.internal_feature_id
+      );
+
+      if (!relatedCusEnt) {
+        console.log("No related cus ent found");
+        continue;
+      }
+
+      let usage = relatedCusEnt.entitlement.allowance! - relatedCusEnt.balance!;
+
+      console.log(`Updating sub item for next period, usage: ${usage}`);
+      let subItem = await stripeCli.subscriptionItems.create({
+        subscription: invoice.subscription as string,
+        price: config.stripe_price_id!,
+        quantity: usage,
+      });
+
+      console.log("Deleting sub item with proration at date end");
+      await stripeCli.subscriptionItems.del(subItem.id, {
+        proration_date: stripeSub.current_period_end,
+      });
+    }
+
+    return;
 
     const stripeSubs = await getStripeSubs({
       stripeCli: createStripeCli({ org, env }),

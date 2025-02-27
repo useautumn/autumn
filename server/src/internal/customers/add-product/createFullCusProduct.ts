@@ -83,9 +83,11 @@ export const initCusEntitlement = ({
   // 3. Define expires at (TODO next time...)
   let isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
   let usageAllowed = false;
+
   if (
     relatedPrice &&
-    getBillingType(relatedPrice.config!) === BillingType.UsageInArrear
+    (getBillingType(relatedPrice.config!) === BillingType.UsageInArrear ||
+      getBillingType(relatedPrice.config!) === BillingType.InArrearProrated)
   ) {
     usageAllowed = true;
   }
