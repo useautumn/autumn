@@ -81,7 +81,7 @@ export const sendUsageAndReset = async ({
     const usage = relatedCusEnt.entitlement.allowance - relatedCusEnt.balance;
 
     const usageTimestamp = Math.round(
-      subDays(new Date(invoice.created * 1000), 7).getTime() / 1000
+      subDays(new Date(invoice.created * 1000), 1).getTime() / 1000
     );
 
     const meterEvent = await stripeCli.billing.meterEvents.create({
