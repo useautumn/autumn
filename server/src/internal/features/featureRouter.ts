@@ -1,7 +1,7 @@
 import express from "express";
 import { DBConnService } from "./DBConnService.js";
 import { generateId } from "@/utils/genUtils.js";
-import { Feature, FeatureSchema } from "@autumn/shared";
+
 import { FeatureService } from "./FeatureService.js";
 
 export const featureRouter = express.Router();

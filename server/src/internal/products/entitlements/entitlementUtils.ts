@@ -163,6 +163,28 @@ export const validateRemovedEnts = ({
   }
 };
 
+export const validateUpdatedEnts = ({
+  updatedEnts,
+  prices,
+}: {
+  updatedEnts: Entitlement[];
+  prices: Price[];
+}) => {
+  for (const ent of updatedEnts) {
+    const relatedPrice = getEntRelatedPrice(ent, prices);
+    if (relatedPrice) {
+      let config = relatedPrice.config as UsagePriceConfig;
+      if (config.stripe_price_id) {
+        throw new RecaseError({
+          code: ErrCode.InvalidEntitlement,
+          message: `Stripe price already exists for ${ent.feature_id}`,
+          statusCode: 400,
+        });
+      }
+    }
+  }
+};
+
 export const initEntitlement = ({
   ent,
   features,
@@ -280,6 +302,8 @@ export const handleNewEntitlements = async ({
       updatedEnts.push(EntitlementSchema.parse(newEnt));
     }
   }
+
+  validateUpdatedEnts({ updatedEnts, prices });
 
   // 1. Create new entitlements
   await EntitlementService.insert({ sb, data: createdEnts });

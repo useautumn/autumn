@@ -40,7 +40,7 @@ import chalk from "chalk";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
 import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoiceOnly.js";
-import { notNullOrUndefined } from "@/utils/genUtils.js";
+import { notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
 
 export const attachRouter = Router();
 
@@ -84,12 +84,15 @@ export const checkAddProductErrors = async ({
 
   for (const price of prices) {
     const billingType = getBillingType(price.config!);
-    if (billingType === BillingType.UsageInAdvance && !useCheckout) {
+
+    if (billingType === BillingType.UsageInAdvance) {
       // Get options for price
+
       let priceEnt = getPriceEntitlement(price, entitlements);
       let options = getEntOptions(optionsList, priceEnt);
 
-      if (!notNullOrUndefined(options?.quantity)) {
+      // 1. If not checkout, quantity should be defined
+      if (!useCheckout && nullOrUndefined(options?.quantity)) {
         throw new RecaseError({
           message: `Pass in 'quantity' for feature ${priceEnt.feature_id} in options`,
           code: ErrCode.InvalidOptions,
@@ -97,7 +100,21 @@ export const checkAddProductErrors = async ({
         });
       }
 
-      if (options?.quantity === 0 && prices.length === 0) {
+      // 2. Quantity must be >= feature allowance
+      if (
+        notNullOrUndefined(options?.quantity) &&
+        priceEnt.allowance &&
+        options!.quantity! < priceEnt.allowance
+      ) {
+        throw new RecaseError({
+          message: `Quantity must be greater than or equal to allowance (${priceEnt.allowance})`,
+          code: ErrCode.InvalidOptions,
+          statusCode: 400,
+        });
+      }
+
+      // 2. If there's only one price, quantity must be greater than 0
+      if (options?.quantity === 0 && prices.length === 1) {
         throw new RecaseError({
           message: `When there's only one price, quantity must be greater than 0`,
           code: ErrCode.InvalidOptions,

@@ -315,10 +315,17 @@ export const fullCusProductToCusEnts = (
   return cusEnts;
 };
 
-export const fullCusProductToCusPrices = (cusProducts: FullCusProduct[]) => {
+export const fullCusProductToCusPrices = (
+  cusProducts: FullCusProduct[],
+  inStatuses: CusProductStatus[] = [CusProductStatus.Active]
+) => {
   const cusPrices: FullCustomerPrice[] = [];
 
   for (const cusProduct of cusProducts) {
+    if (!inStatuses.includes(cusProduct.status)) {
+      continue;
+    }
+
     cusPrices.push(...cusProduct.customer_prices);
   }
 

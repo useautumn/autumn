@@ -11,11 +11,6 @@ export interface Aggregate {
   property: string | null;
 }
 
-export interface MeteredConfig {
-  filters: Expression[];
-  aggregate: Aggregate;
-}
-
 export const ExpressionSchema = z.object({
   property: z.string(),
   operator: z.string(),
@@ -31,3 +26,5 @@ export const MeteredConfigSchema = z.object({
   filters: z.array(ExpressionSchema),
   aggregate: AggregateSchema,
 });
+
+export type MeteredConfig = z.infer<typeof MeteredConfigSchema>;

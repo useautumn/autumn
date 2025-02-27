@@ -14,6 +14,7 @@ import { AggregateType, Expression, MeteredConfig } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFeaturesContext } from "../FeaturesContext";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function FeatureConfig({
   feature,
@@ -54,10 +55,10 @@ export function FeatureConfig({
               value: [],
             },
           ],
-          aggregate: {
-            type: "count",
-            property: null,
-          },
+          // aggregate: {
+          //   type: "count",
+          //   property: null,
+          // },
         }
   );
 
@@ -158,7 +159,7 @@ export function FeatureConfig({
             />
           </div>
 
-          <div>
+          {/* <div>
             <FieldLabel>Aggregate</FieldLabel>
             <Select
               value={meteredConfig.aggregate.type}
@@ -186,7 +187,7 @@ export function FeatureConfig({
                 onChange={(e) => setAggregate("property", e.target.value)}
               />
             </div>
-          )}
+          )} */}
         </>
       )}
     </div>
