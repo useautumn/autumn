@@ -89,13 +89,28 @@ const handleStripeSubUpdate = async ({
     prices: firstItemSet.prices,
   });
 
-  // 2. Cancel old subscriptions
-  let remainingExistingSubIds = existingSubIds.slice(1);
-  for (const subId of remainingExistingSubIds) {
-    await stripeCli.subscriptions.cancel(subId);
+  try {
+    // Insert latest invoice ID
+    const subUpdateInvoice = await stripeCli.invoices.retrieve(
+      subUpdate.latest_invoice as string
+    );
+    await InvoiceService.createInvoiceFromStripe({
+      sb,
+      stripeInvoice: subUpdateInvoice,
+      internalCustomerId: attachParams.customer.internal_id,
+      org: attachParams.org,
+      productIds: [attachParams.product.id],
+      internalProductIds: [attachParams.product.internal_id],
+    });
+    console.log("   - Inserted latest invoice ID for subscription update");
+  } catch (error) {
+    console.log(
+      "Error inserting latest invoice ID for subscription update",
+      error
+    );
   }
 
-  // 3. Create new subscriptions
+  // 2. Create new subscriptions
   let newSubIds = [];
   newSubIds.push(firstExistingSubId);
   const newItemSets = itemSets.slice(1);
@@ -107,14 +122,19 @@ const handleStripeSubUpdate = async ({
       items: itemSet.items,
       metadata: itemSet.subMeta,
     });
+
     newSubIds.push(newSub.id);
     invoiceIds.push(newSub.latest_invoice as string);
   }
+
+  // 3. Cancel old subscriptions
+  let remainingExistingSubIds = existingSubIds.slice(1);
 
   return {
     subUpdate,
     newSubIds,
     invoiceIds,
+    remainingExistingSubIds,
   };
 };
 
@@ -318,16 +338,17 @@ export const handleUpgrade = async ({
 
   console.log("2. Updating current subscription to new product");
 
-  let { subUpdate, newSubIds, invoiceIds } = await handleStripeSubUpdate({
-    sb: req.sb,
-    curCusProduct,
-    stripeCli,
-    attachParams,
-    disableFreeTrial,
-  });
+  let { subUpdate, newSubIds, invoiceIds, remainingExistingSubIds } =
+    await handleStripeSubUpdate({
+      sb: req.sb,
+      curCusProduct,
+      stripeCli,
+      attachParams,
+      disableFreeTrial,
+    });
 
   console.log(
-    "2.5. Remove old subscription ID from old cus product and expire"
+    "2.1. Remove old subscription ID from old cus product and expire"
   );
   await CusProductService.update({
     sb: req.sb,
@@ -343,6 +364,14 @@ export const handleUpgrade = async ({
       status: CusProductStatus.Expired,
     },
   });
+
+  if (remainingExistingSubIds && remainingExistingSubIds.length > 0) {
+    console.log("2.2. Canceling old subscriptions");
+    for (const subId of remainingExistingSubIds) {
+      console.log("   - Cancelling old subscription", subId);
+      await stripeCli.subscriptions.cancel(subId);
+    }
+  }
 
   // Handle backend
   console.log("3. Creating new full cus product");

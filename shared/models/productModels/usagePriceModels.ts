@@ -8,6 +8,9 @@ export enum BillWhen {
   // Latest
   StartOfPeriod = "start_of_period",
   EndOfPeriod = "end_of_period",
+
+  // Seat based
+  Licensed = "on_usage",
   BelowThreshold = "below_threshold",
 }
 
