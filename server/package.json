@@ -18,7 +18,8 @@
     "test-all": "mocha 'tests/**/*.ts'",
     "test": "mocha 'tests/**/*.ts' --ignore 'tests/09_advanced_usage.ts'",
     "test-upgrade": "mocha 'tests/06_upgrade.ts' 'tests/07_downgrade.ts'",
-    "test-custom": "mocha --timeout 1000000 'tests/09_advanced_usage.ts'"
+    "test-custom": "mocha --timeout 1000000 'tests/07_downgrade.ts' 'tests/09_advanced_usage.ts'",
+    "test-custom2": "mocha --timeout 1000000 'tests/09_advanced_usage.ts'"
   },
   "mocha": {
     "node-option": [

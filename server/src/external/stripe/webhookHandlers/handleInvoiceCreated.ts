@@ -70,9 +70,22 @@ export const sendUsageAndReset = async ({
       continue;
     }
 
+<<<<<<< HEAD
     let allowance = relatedCusEnt.entitlement.allowance;
     let balance = relatedCusEnt.balance;
     const usage = new Decimal(allowance).minus(balance).toNumber();
+=======
+    // If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
+    if (relatedCusEnt.balance > 0 && !relatedCusEnt.next_reset_at) {
+      console.log(
+        `Org: ${org.slug}, Customer: ${customer.name} (${customer.id}), Feature: ${relatedCusEnt.entitlement.feature_id}`
+      );
+      console.log("Balance > 0, next_reset_at is null, skipping");
+      continue;
+    }
+
+    const usage = relatedCusEnt.entitlement.allowance - relatedCusEnt.balance;
+>>>>>>> main
 
     const usageTimestamp = Math.round(
       subDays(new Date(invoice.created * 1000), 7).getTime() / 1000

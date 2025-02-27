@@ -249,7 +249,10 @@ export const getCusEntsInFeatures = async ({
     inStatuses: inStatuses,
   });
 
-  const cusEntsWithCusProduct = fullCusProductToCusEnts(fullCusProducts!);
+  const cusEntsWithCusProduct = fullCusProductToCusEnts(
+    fullCusProducts!,
+    inStatuses
+  );
 
   if (!cusEntsWithCusProduct) {
     return { cusEnts: [] };
