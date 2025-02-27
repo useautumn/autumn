@@ -145,7 +145,7 @@ export const updateCustomerBalance = async ({
     sb,
     internalCustomerId: customer.internal_id,
     internalFeatureIds: features.map((f) => f.internal_id!),
-    inStatuses: [CusProductStatus.Active],
+    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
   });
 
   const endTime = performance.now();
@@ -154,7 +154,7 @@ export const updateCustomerBalance = async ({
   );
 
   console.log(
-    `   - Customer: ${customer.name} (${customer.id}) [${customer.internal_id}]`
+    `   - Customer: ${customer.name} (${customer.id}) [${customer.internal_id}] (${customer.env})`
   );
   console.log(`   - Features: ${features.map((f) => f.id).join(", ")}`);
   console.log(

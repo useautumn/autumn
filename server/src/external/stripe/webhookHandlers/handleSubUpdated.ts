@@ -40,7 +40,7 @@ export const handleSubscriptionUpdated = async ({
     stripeSubId: subscription.id,
     orgId: org.id,
     env,
-    inStatuses: [CusProductStatus.Active],
+    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
   });
 
   if (cusProducts.length === 0) {
@@ -76,7 +76,8 @@ export const handleSubscriptionUpdated = async ({
   // Cancel subscription immediately
   if (
     subscription.status === "past_due" &&
-    org.id != "org_2tTviFjeMRFkGkBt8pTdqRHzyFW"
+    org.id != "org_2tTviFjeMRFkGkBt8pTdqRHzyFW" &&
+    org.id != "org_2s4vfEyYVgFZDlOwcMHjsHR0eef"
   ) {
     const stripeCli = createStripeCli({
       org,
