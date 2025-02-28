@@ -219,6 +219,13 @@ export const handleSubscriptionDeleted = async ({
       return;
     }
 
+    if (cusProduct.status === CusProductStatus.Expired) {
+      console.log(
+        `   ⚠️ customer product already expired, skipping: ${cusProduct.id}, from stripe sub: ${subscription.id}`
+      );
+      return;
+    }
+
     // 1. Expire current product
     await CusProductService.update({
       sb,
