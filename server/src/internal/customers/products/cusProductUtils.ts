@@ -357,10 +357,10 @@ export const processFullCusProduct = (cusProduct: FullCusProduct) => {
     status: trialing ? CusProductStatus.Trialing : cusProduct.status,
     created_at: cusProduct.created_at,
     canceled_at: cusProduct.canceled_at,
-    // processor: {
-    //   type: cusProduct.processor?.type,
-    //   subscription_id: cusProduct.processor?.subscription_id || null,
-    // },
+    processor: {
+      type: cusProduct.processor?.type,
+      subscription_id: cusProduct.processor?.subscription_id || null,
+    },
     subscription_ids: cusProduct.subscription_ids || [],
     prices: prices,
     starts_at: cusProduct.starts_at,
