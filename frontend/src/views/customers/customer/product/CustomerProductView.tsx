@@ -201,7 +201,7 @@ export default function CustomerProductView({
 
   const handleCreateProduct = async (useInvoiceLatest?: boolean) => {
     try {
-      if (!hasOptionsChanges && !options) {
+      if (!product.isActive) {
         const { data } = await ProductService.getRequiredOptions(
           axiosInstance,
           {
