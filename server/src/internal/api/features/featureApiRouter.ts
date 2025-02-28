@@ -43,6 +43,10 @@ const validateMeteredConfig = (config: MeteredConfig) => {
     property: "value",
   };
 
+  if (!newConfig.group_by) {
+    newConfig.group_by = null;
+  }
+
   return newConfig;
 };
 

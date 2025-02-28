@@ -22,9 +22,14 @@ export const AggregateSchema = z.object({
   property: z.string().nullable(),
 });
 
+export const GroupBySchema = z.object({
+  property: z.string(),
+});
+
 export const MeteredConfigSchema = z.object({
   filters: z.array(ExpressionSchema),
   aggregate: AggregateSchema,
+  group_by: GroupBySchema.nullable(),
 });
 
 export type MeteredConfig = z.infer<typeof MeteredConfigSchema>;
