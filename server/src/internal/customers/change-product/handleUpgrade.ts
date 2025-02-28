@@ -408,5 +408,8 @@ export const handleUpgrade = async ({
   await Promise.all(batchInsertInvoice);
   console.log("✅ Done!");
 
-  res.status(200).json({ success: true, message: "Product change handled" });
+  res.status(200).json({
+    success: true,
+    message: `Successfully attached ${product.name} to ${customer.name} -- upgraded from ${curFullProduct.name}`,
+  });
 };

@@ -234,7 +234,8 @@ export const getStripeSubItems = async ({
 
       if (
         billingType == BillingType.UsageInArrear ||
-        billingType == BillingType.InArrearProrated
+        billingType == BillingType.InArrearProrated ||
+        billingType == BillingType.UsageInAdvance
       ) {
         usage_features.push({
           internal_id: priceEnt.feature.internal_id,

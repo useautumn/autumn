@@ -112,7 +112,10 @@ const handleBillNowPrices = async ({
     }
   }
 
-  res.status(200).send({ success: true });
+  res.status(200).send({
+    success: true,
+    message: `Successfully created subscription and attached ${product.name} to ${customer.name}`,
+  });
 };
 
 const handleOneOffPrices = async ({
@@ -207,7 +210,10 @@ const handleOneOffPrices = async ({
   });
 
   console.log("   ✅ Successfully attached product");
-  res.status(200).send({ success: true });
+  res.status(200).send({
+    success: true,
+    message: `Successfully purchased ${product.name} and attached to ${customer.name}`,
+  });
 };
 
 export const handleAddProduct = async ({
