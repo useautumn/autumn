@@ -57,6 +57,13 @@ interface OptionValue {
   quantity?: number;
 }
 
+export enum ProductActionState {
+  NoChanges = "no_changes",
+  UpdateOptionsOnly = "update_options_only",
+  CreateCustomVersion = "create_custom_version",
+  EnableProduct = "enable_product",
+}
+
 export default function CustomerProductView({
   product_id,
   customer_id,
@@ -82,11 +89,12 @@ export default function CustomerProductView({
 
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [requiredOptions, setRequiredOptions] = useState<OptionValue[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
   const [useInvoice, setUseInvoice] = useState(false);
   const initialProductRef = useRef<FrontendProduct | null>(null);
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
     useState<"unlimited" | number>(0);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [hasOptionsChanges, setHasOptionsChanges] = useState(false);
 
   const searchParams = useSearchParams();
 
@@ -164,8 +172,13 @@ export default function CustomerProductView({
         entitlements: initialProductRef.current.entitlements,
       });
 
+    const hasOptionsChanged =
+      JSON.stringify(options) !==
+      JSON.stringify(initialProductRef.current.options);
+
     setHasChanges(hasChanged);
-  }, [product]);
+    setHasOptionsChanges(hasOptionsChanged);
+  }, [product, options]);
 
   if (error) {
     console.log("Use Axios SWR Error: ", error);
@@ -188,15 +201,19 @@ export default function CustomerProductView({
 
   const handleCreateProduct = async (useInvoiceLatest?: boolean) => {
     try {
-      const { data } = await ProductService.getRequiredOptions(axiosInstance, {
-        prices: product.prices,
-        entitlements: product.entitlements,
-      });
+      if (!hasOptionsChanges && !options) {
+        const { data } = await ProductService.getRequiredOptions(
+          axiosInstance,
+          {
+            prices: product.prices,
+            entitlements: product.entitlements,
+          }
+        );
 
-      if (data.options && data.options.length > 0) {
-        // console.log("options", data.options);
-        setRequiredOptions(data.options);
-        return;
+        if (data.options && data.options.length > 0) {
+          setRequiredOptions(data.options);
+          return;
+        }
       }
 
       // Continue with product creation if no required options
@@ -215,14 +232,14 @@ export default function CustomerProductView({
         prices: product.prices,
         entitlements: product.entitlements,
         free_trial: product.free_trial,
-        options: requiredOptions,
+        options: product.isActive ? options : requiredOptions,
         is_custom: true,
         invoice_only:
           useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,
       });
 
       await mutate();
-      toast.success("Product created successfully");
+      toast.success(data.message);
 
       if (data.checkout_url) {
         setUrl({
@@ -254,17 +271,35 @@ export default function CustomerProductView({
   };
 
   const getProductActionState = () => {
-    if (product.isActive && !hasChanges && !product.is_add_on) {
+    // Case 1: Product is active, no changes, and is not an add-on
+    if (
+      product.isActive &&
+      !hasOptionsChanges &&
+      !hasChanges &&
+      !product.is_add_on
+    ) {
       return {
         buttonText: "Update Product",
         tooltipText: "No changes have been made to update",
         disabled: true,
       };
     }
+
+    if (product.isActive && hasOptionsChanges && !hasChanges) {
+      return {
+        buttonText: "Update Options",
+        tooltipText: "You're editing the quantity of a live product",
+        disabled: false,
+        state: ProductActionState.UpdateOptionsOnly,
+        successMessage: "Product updated successfully",
+      };
+    }
+
     if (product.isActive && !product.is_add_on) {
       return {
         buttonText: "Update Product",
         tooltipText: `You're editing the live product ${product.name} and updating it to a custom version for ${customer.name}`,
+
         disabled: true, //TODO: remove this
       };
     }
@@ -350,7 +385,9 @@ export default function CustomerProductView({
         {product && <ManageProduct product={product} customerData={data} />}
       </div>
 
-      {options.length > 0 && <ProductOptions options={options} />}
+      {options.length > 0 && (
+        <ProductOptions options={options} setOptions={setOptions} />
+      )}
       <div className="flex justify-end gap-2">
         {/* <ProductOptionsButton /> */}
         <AddProductButton
