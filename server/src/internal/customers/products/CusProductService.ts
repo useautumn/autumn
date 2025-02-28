@@ -276,7 +276,7 @@ export class CusProductService {
       .select(
         `
           *, 
-          customer_entitlements:customer_entitlements!inner(*, entitlement:entitlements!inner(*)), 
+          customer_entitlements:customer_entitlements!inner(*, entitlement:entitlements!inner(*, feature:features!inner(*))), 
           customer_prices:customer_prices!inner(*, price:prices!inner(*))
         `
       )

@@ -181,7 +181,7 @@ export const handleInvoiceOnly = async ({
 
   let stripeSubs: Stripe.Subscription[] = [];
   for (const itemSet of itemSets) {
-    const { items } = itemSet;
+    const { items, subMeta } = itemSet;
     // Create subscription
     const stripeCli = createStripeCli({ org, env });
     const stripeSub = await stripeCli.subscriptions.create({
@@ -189,6 +189,7 @@ export const handleInvoiceOnly = async ({
       collection_method: "send_invoice",
       days_until_due: 30,
       items,
+      metadata: subMeta,
     });
     stripeSubs.push(stripeSub);
   }

@@ -169,6 +169,9 @@ export const priceToStripeItem = ({
     lineItem = {
       price: priceId,
     };
+  } else if (billingType == BillingType.InArrearProrated) {
+    // TODO: Implement this
+    return null;
   }
 
   return {
@@ -218,24 +221,22 @@ export const getStripeSubItems = async ({
   for (const interval in intervalToPrices) {
     // Get prices for this interval
     const prices = intervalToPrices[interval];
+
     let subItems: any[] = [];
     let itemMetas: any[] = [];
 
     let usage_features = [];
-    let inAdvanceFeatures = [];
+
     for (const price of prices) {
       const priceEnt = getPriceEntitlement(price, entitlements);
       const options = getEntOptions(optionsList, priceEnt);
+      const billingType = getBillingType(price.config!);
 
-      if (price.billing_type == BillingType.UsageInArrear) {
+      if (
+        billingType == BillingType.UsageInArrear ||
+        billingType == BillingType.InArrearProrated
+      ) {
         usage_features.push({
-          internal_id: priceEnt.feature.internal_id,
-          id: priceEnt.feature.id,
-        });
-      }
-
-      if (price.billing_type == BillingType.UsageInAdvance) {
-        inAdvanceFeatures.push({
           internal_id: priceEnt.feature.internal_id,
           id: priceEnt.feature.id,
         });
@@ -266,7 +267,6 @@ export const getStripeSubItems = async ({
       interval,
       subMeta: {
         usage_features: JSON.stringify(usage_features),
-        in_advance_features: JSON.stringify(inAdvanceFeatures),
       },
       prices,
     });
@@ -648,15 +648,6 @@ export const createStripePriceIFNotExist = async ({
         org,
       });
     }
-  } else if (billingType == BillingType.InArrearProrated) {
-    await createStripeInAdvancePrice({
-      sb,
-      stripeCli,
-      price,
-      entitlements,
-      product,
-      org,
-    });
   }
 };
 
