@@ -35,6 +35,11 @@ function CustomerBalances({ customer }: { customer: any }) {
                     entitlement.balance + entitlement.used
                   }`
               : "✅"}
+            {/* {entitlement.balance == null
+              ? "✅"
+              : `${entitlement.balance} / ${
+                  entitlement.balance + entitlement.used
+                }` || "Allowed"} */}
           </p>
         </div>
       ))}
