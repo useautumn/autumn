@@ -245,32 +245,39 @@ export const deleteScheduledIds = async ({
 };
 
 // Get in advance sub
-export const getInAdvanceSub = async ({
+export const getUsageBasedSub = async ({
   stripeCli,
   subIds,
   feature,
+  stripeSubs,
 }: {
   stripeCli: Stripe;
   subIds: string[];
   feature: Feature;
+  stripeSubs?: Stripe.Subscription[];
 }) => {
-  let subs = await getStripeSubs({
-    stripeCli,
-    subIds,
-  });
+  let subs;
+  if (stripeSubs) {
+    subs = stripeSubs;
+  } else {
+    subs = await getStripeSubs({
+      stripeCli,
+      subIds,
+    });
+  }
 
   for (const stripeSub of subs) {
-    let inAdvanceFeatures: string[] | null = null;
+    let usageFeatures: string[] | null = null;
 
     try {
-      inAdvanceFeatures = JSON.parse(stripeSub.metadata.in_advance_features);
+      usageFeatures = JSON.parse(stripeSub.metadata.usage_features);
     } catch (error) {
       continue;
     }
 
     if (
-      !inAdvanceFeatures ||
-      inAdvanceFeatures.find(
+      !usageFeatures ||
+      usageFeatures.find(
         (feat: any) => feat.internal_id == feature.internal_id
       ) === undefined
     ) {

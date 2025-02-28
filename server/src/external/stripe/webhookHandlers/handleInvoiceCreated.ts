@@ -4,36 +4,218 @@ import {
   AppEnv,
   BillingType,
   CusProductStatus,
+  Customer,
+  EntInterval,
   FullCusProduct,
+  FullCustomerEntitlement,
+  FullCustomerPrice,
+  InvoiceItem,
   Organization,
+  Price,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { differenceInHours, format, subDays } from "date-fns";
-import { getStripeSubs } from "../stripeSubUtils.js";
+import { getStripeSubs, getUsageBasedSub } from "../stripeSubUtils.js";
 import {
   getBillingType,
   getPriceEntitlement,
+  getPriceForOverage,
 } from "@/internal/prices/priceUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
+import { InvoiceItemService } from "@/internal/customers/invoices/InvoiceItemService.js";
+import { createStripeInvoiceItem } from "@/internal/customers/invoices/invoiceItemUtils.js";
+import { getRelatedCusEnt } from "@/internal/customers/prices/cusPriceUtils.js";
+import { getNextEntitlementReset } from "@/utils/timeUtils.js";
+import { generateId } from "@/utils/genUtils.js";
+
+const handleInArrearProrated = async ({
+  sb,
+  cusEnts,
+  cusPrice,
+  customer,
+  org,
+  env,
+  invoice,
+  usageSub,
+}: {
+  sb: SupabaseClient;
+  cusEnts: FullCustomerEntitlement[];
+  cusPrice: FullCustomerPrice;
+  customer: Customer;
+  org: Organization;
+  env: AppEnv;
+  invoice: Stripe.Invoice;
+  usageSub: Stripe.Subscription;
+}) => {
+  const cusEnt = getRelatedCusEnt({
+    cusPrice,
+    cusEnts,
+  });
+
+  if (!cusEnt) {
+    console.log("No related cus ent found");
+    return;
+  }
+
+  // Sub.current_period start is start of the NEW period...
+  // Invoice.period_start is start of the OLD period...
+
+  let invoiceItem = await InvoiceItemService.getNotAddedToStripe({
+    sb,
+    cusPriceId: cusPrice.id,
+  });
+
+  if (invoiceItem) {
+    await createStripeInvoiceItem({
+      stripeCli: createStripeCli({ org, env }),
+      customer: customer,
+      invoiceItem: invoiceItem,
+      feature: cusEnt.entitlement.feature,
+      invoiceId: invoice.id,
+    });
+    console.log("   ✅ Added last invoice item to Stripe");
+
+    await InvoiceItemService.update({
+      sb,
+      invoiceItemId: invoiceItem.id,
+      updates: {
+        added_to_stripe: true,
+      },
+    });
+
+    console.log("   ✅ Set `added_to_stripe` to true for invoice item");
+  }
+
+  // Reset?
+  if (cusEnt.next_reset_at) {
+    await CustomerEntitlementService.update({
+      sb,
+      id: cusEnt.id,
+      updates: {
+        next_reset_at: getNextEntitlementReset(
+          null,
+          cusEnt.entitlement.interval as EntInterval
+        ).getTime(),
+      },
+    });
+  } else {
+    // Create invoice for new usage?
+    let allowance = cusEnt.entitlement.allowance!;
+    let balance = cusEnt.balance!;
+
+    let amount = getPriceForOverage(cusPrice.price, -balance);
+    let quantity = allowance - balance;
+    let billingUnits =
+      (cusPrice.price.config as UsagePriceConfig).billing_units || 1;
+    quantity = Math.ceil(quantity / billingUnits!) * billingUnits!; // round up to nearest billing unit
+
+    if (balance >= 0) {
+      console.log("   ✅ Balance >= 0, no need to create Autumn invoice item");
+      return;
+    }
+
+    let newInvoiceItem: InvoiceItem = {
+      id: generateId("inv_item"),
+      customer_price_id: cusPrice.id,
+      added_to_stripe: false,
+      customer_id: customer.id,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+      currency: org.default_currency,
+      period_start: usageSub.current_period_start * 1000,
+      period_end: usageSub.current_period_end * 1000,
+      proration_start: usageSub.current_period_start * 1000,
+      proration_end: usageSub.current_period_end * 1000,
+      quantity: quantity,
+      amount: amount,
+    };
+    await InvoiceItemService.insert({
+      sb,
+      data: newInvoiceItem,
+    });
+    console.log("   ✅ Created new Autumn invoice item");
+  }
+};
+
+const handleUsageInArrear = async ({
+  sb,
+  invoice,
+  customer,
+  relatedCusEnt,
+  stripeCli,
+  price,
+}: {
+  sb: SupabaseClient;
+  invoice: Stripe.Invoice;
+  customer: Customer;
+  relatedCusEnt: FullCustomerEntitlement;
+  stripeCli: Stripe;
+  price: Price;
+}) => {
+  let allowance = relatedCusEnt.entitlement.allowance!;
+  let balance = relatedCusEnt.balance!;
+
+  // If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
+  if (relatedCusEnt.balance! > 0 && !relatedCusEnt.next_reset_at) {
+    console.log("Balance > 0 and next_reset_at is null, skipping");
+    return;
+  }
+
+  const usage = new Decimal(allowance).minus(balance).toNumber();
+  const usageTimestamp = Math.round(
+    subDays(new Date(invoice.created * 1000), 7).getTime() / 1000
+  );
+
+  await stripeCli.billing.meterEvents.create({
+    event_name: price.id!,
+    payload: {
+      stripe_customer_id: customer.processor.id,
+      value: Math.round(usage).toString(),
+    },
+    timestamp: usageTimestamp,
+  });
+
+  console.log(`Submitted meter event for ${customer.name}, ${customer.id}`);
+  console.log(`Feature ID: ${relatedCusEnt.entitlement.feature.id}`);
+  console.log(`Allowance: ${allowance}, Balance: ${balance}, Usage: ${usage}`);
+  console.log(
+    "Invoice created: ",
+    format(new Date(invoice.created * 1000), "yyyy-MM-dd"),
+    "Usage timestamp: ",
+    format(new Date(usageTimestamp * 1000), "yyyy-MM-dd")
+  );
+
+  // reset balance
+  await CustomerEntitlementService.update({
+    sb,
+    id: relatedCusEnt.id,
+    updates: {
+      balance: allowance,
+      adjustment: 0,
+    },
+  });
+
+  // console.log("Reset balance & adjustment");
+};
 
 export const sendUsageAndReset = async ({
   sb,
   activeProduct,
   org,
   env,
-  usageFeatures,
   invoice,
+  stripeSubs,
 }: {
   sb: SupabaseClient;
   activeProduct: FullCusProduct;
   org: Organization;
   env: AppEnv;
-  usageFeatures: any[];
   invoice: Stripe.Invoice;
+  stripeSubs: Stripe.Subscription[];
 }) => {
   // Get cus ents
   const cusProductWithEntsAndPrices = await CusProductService.getEntsAndPrices({
@@ -49,77 +231,68 @@ export const sendUsageAndReset = async ({
 
   for (const cusPrice of cusPrices) {
     const price = cusPrice.price;
-    const config = price.config as UsagePriceConfig;
+    let billingType = getBillingType(price.config);
 
-    if (getBillingType(price.config.type) !== BillingType.UsageInArrear) {
+    if (
+      billingType !== BillingType.UsageInArrear &&
+      billingType !== BillingType.InArrearProrated
+    ) {
       continue;
     }
 
-    let featureExists = usageFeatures.find(
-      (usageFeature: any) =>
-        usageFeature.internal_id === config.internal_feature_id
-    );
-
-    if (!featureExists) {
-      continue;
-    }
-
-    // Calculate usage
-    const relatedCusEnt = cusEnts.find(
-      (ent: any) => ent.internal_feature_id === config.internal_feature_id
-    );
+    let relatedCusEnt = getRelatedCusEnt({
+      cusPrice,
+      cusEnts,
+    });
 
     if (!relatedCusEnt) {
       continue;
     }
 
-    let allowance = relatedCusEnt.entitlement.allowance;
-    let balance = relatedCusEnt.balance;
+    let usageBasedSub = await getUsageBasedSub({
+      stripeCli,
+      subIds: activeProduct.subscription_ids || [],
+      feature: relatedCusEnt.entitlement.feature,
+      stripeSubs,
+    });
 
-    // If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
-    if (relatedCusEnt.balance > 0 && !relatedCusEnt.next_reset_at) {
-      console.log(
-        `Org: ${org.slug}, Customer: ${customer.name} (${customer.id}), Feature: ${relatedCusEnt.entitlement.feature_id}`
-      );
-      console.log("Balance > 0, next_reset_at is null, skipping");
+    if (!usageBasedSub || usageBasedSub.id != invoice.subscription) {
       continue;
     }
 
-    const usage = new Decimal(allowance).minus(balance).toNumber();
-    const usageTimestamp = Math.round(
-      subDays(new Date(invoice.created * 1000), 7).getTime() / 1000
-    );
-
-    await stripeCli.billing.meterEvents.create({
-      event_name: price.id!,
-      payload: {
-        stripe_customer_id: customer.processor.id,
-        value: Math.round(usage).toString(),
-      },
-      timestamp: usageTimestamp,
-    });
-
-    console.log(`Submitted meter event for ${customer.name}, ${customer.id}`);
-    console.log(`Feature ID: ${relatedCusEnt.entitlement.feature_id}`);
+    console.log("invoice.created, handling end of period usage");
     console.log(
-      `Allowance: ${allowance}, Balance: ${balance}, Usage: ${usage}`
+      `   - Org: ${org.slug}, Customer: ${customer.name} (${customer.id})`
     );
-    console.log(
-      "Invoice created: ",
-      format(new Date(invoice.created * 1000), "yyyy-MM-dd"),
-      "Usage timestamp: ",
-      format(new Date(usageTimestamp * 1000), "yyyy-MM-dd")
-    );
+    console.log("   - Feature: ", relatedCusEnt.entitlement.feature.id);
 
-    // reset balance
-    await CustomerEntitlementService.update({
-      sb,
-      id: relatedCusEnt.id,
-      updates: {
-        balance: relatedCusEnt.entitlement.allowance,
-        adjustment: 0,
-      },
-    });
+    if (billingType == BillingType.InArrearProrated) {
+      console.log("   ✨ In arrear (PRORATED)");
+      await handleInArrearProrated({
+        sb,
+        cusEnts,
+        cusPrice,
+        customer,
+        org,
+        env,
+        invoice,
+        usageSub: usageBasedSub,
+      });
+      continue;
+    }
+
+    if (billingType == BillingType.UsageInArrear) {
+      console.log("   ✨ In arrear (NO PRORATION)");
+      await handleUsageInArrear({
+        sb,
+        invoice,
+        customer,
+        relatedCusEnt,
+        stripeCli,
+        price,
+      });
+    }
+    // For regular end of period billing
   }
 };
 
@@ -175,81 +348,35 @@ export const handleInvoiceCreated = async ({
 
     // Create invoice for end of period prorated
 
-    const stripeCli = createStripeCli({ org, env });
-    const cusProductWithEntsAndPrices =
-      await CusProductService.getEntsAndPrices({
-        sb,
-        cusProductId: activeProduct.id,
-      });
-
-    const cusEnts = cusProductWithEntsAndPrices.customer_entitlements;
-    const cusPrices = cusProductWithEntsAndPrices.customer_prices;
-
-    for (const cusPrice of cusPrices) {
-      const price = cusPrice.price;
-      const config = price.config as UsagePriceConfig;
-
-      if (getBillingType(price.config) !== BillingType.InArrearProrated) {
-        continue;
-      }
-
-      let stripeSub = await stripeCli.subscriptions.retrieve(
-        invoice.subscription as string
-      );
-
-      let relatedCusEnt = cusEnts.find(
-        (ent: any) => ent.internal_feature_id === config.internal_feature_id
-      );
-
-      if (!relatedCusEnt) {
-        console.log("No related cus ent found");
-        continue;
-      }
-
-      let usage = relatedCusEnt.entitlement.allowance! - relatedCusEnt.balance!;
-
-      console.log(`Updating sub item for next period, usage: ${usage}`);
-      let subItem = await stripeCli.subscriptionItems.create({
-        subscription: invoice.subscription as string,
-        price: config.stripe_price_id!,
-        quantity: usage,
-      });
-
-      console.log("Deleting sub item with proration at date end");
-      await stripeCli.subscriptionItems.del(subItem.id, {
-        proration_date: stripeSub.current_period_end,
-      });
-    }
-
-    return;
-
     const stripeSubs = await getStripeSubs({
       stripeCli: createStripeCli({ org, env }),
       subIds: activeProduct.subscription_ids,
     });
 
-    for (const sub of stripeSubs) {
-      if (sub.id != invoice.subscription) {
-        continue;
-      }
+    await sendUsageAndReset({
+      sb,
+      activeProduct,
+      org,
+      env,
+      // usageFeatures,
+      stripeSubs,
+      invoice,
+    });
 
-      const subMeta = sub.metadata;
-      let usageFeatures: any[] = [];
-      try {
-        usageFeatures = JSON.parse(subMeta.usage_features as string);
-      } catch (error: any) {
-        console.log("Failed to parse usage features.", error.message);
-        continue;
-      }
+    // for (const sub of stripeSubs) {
+    //   if (sub.id != invoice.subscription) {
+    //     continue;
+    //   }
 
-      await sendUsageAndReset({
-        sb,
-        activeProduct,
-        org,
-        env,
-        usageFeatures,
-        invoice,
-      });
-    }
+    //   const subMeta = sub.metadata;
+    //   let usageFeatures: any[] = [];
+    //   try {
+    //     usageFeatures = JSON.parse(subMeta.usage_features as string);
+    //   } catch (error: any) {
+    //     console.log("Failed to parse usage features.", error.message);
+    //     continue;
+    //   }
+
+    // }
   }
 };

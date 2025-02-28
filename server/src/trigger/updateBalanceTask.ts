@@ -176,7 +176,6 @@ export const updateCustomerBalance = async ({
           toDeduct = 0;
         }
 
-        let originalBalance = cusEnt.balance!;
         cusEnt.balance = newBalance;
 
         await CustomerEntitlementService.update({
@@ -187,19 +186,18 @@ export const updateCustomerBalance = async ({
           },
         });
 
-        // if (originalBalance < 0) {
-        //   await adjustAllowance({
-        //     sb,
-        //     env,
-        //     affectedFeature: obj.feature,
-        //     org,
-        //     cusEnt: cusEnt as any,
-        //     cusPrices: cusPrices as any,
-        //     event,
-        //     customer,
-        //     newBalance,
-        //   });
-        // }
+        await adjustAllowance({
+          sb,
+          env,
+          affectedFeature: obj.feature,
+          org,
+          cusEnt: cusEnt as any,
+          cusPrices: cusPrices as any,
+          event,
+          customer,
+          originalBalance: cusEntBalance.toNumber(),
+          newBalance,
+        });
       }
     }
 
@@ -239,7 +237,7 @@ export const updateCustomerBalance = async ({
         event,
         customer,
         originalBalance: usageBasedEntBalance.toNumber(),
-        deduction: toDeduct,
+        newBalance,
       });
     } else {
       console.log(
