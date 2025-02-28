@@ -1,6 +1,9 @@
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
-import { updateStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
+import {
+  getStripeSubs,
+  updateStripeSubscription,
+} from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import {
   getBillingType,
@@ -48,24 +51,20 @@ const handleStripeSubUpdate = async ({
     attachParams,
   });
 
-  // How to handle upgrade with multiple subscriptions...
-
   // 1. Update the first one, cancel subsequent ones, create new ones
   const existingSubIds = curCusProduct.subscription_ids!;
 
-  // console.log("existingSubIds", existingSubIds);
-  // console.log("Subscription ID:", curCusProduct.processor?.subscription_id);
-  // console.log("Current cus product:", curCusProduct);
+  const stripeSubs = await getStripeSubs({
+    stripeCli,
+    subIds: existingSubIds,
+  });
 
-  // throw new Error("Not implemented");
+  stripeSubs.sort((a, b) => b.current_period_end - a.current_period_end);
 
-  const firstExistingSubId = existingSubIds[0];
+  const firstExistingSubId = stripeSubs[0].id;
   const firstItemSet = itemSets[0];
+  const subscription = stripeSubs[0];
 
-  // 1. Replace existing subscription with new one
-  const subscription = await stripeCli.subscriptions.retrieve(
-    firstExistingSubId
-  );
   for (const item of subscription.items.data) {
     firstItemSet.items.push({
       id: item.id,
