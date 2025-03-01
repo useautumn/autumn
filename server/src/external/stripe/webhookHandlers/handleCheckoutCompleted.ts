@@ -41,6 +41,7 @@ export const itemMetasToOptions = async ({
 
   const lineItems = response.data;
 
+  // Should still work with old method?
   for (const price of attachParams.prices) {
     let config = price.config as UsagePriceConfig;
     if (getBillingType(config) != BillingType.UsageInAdvance) {
@@ -60,7 +61,15 @@ export const itemMetasToOptions = async ({
       (feature) => feature.internal_feature_id == config.internal_feature_id
     );
 
-    attachParams.optionsList[index].quantity = quantity;
+    if (index == -1) {
+      attachParams.optionsList.push({
+        feature_id: config.feature_id,
+        internal_feature_id: config.internal_feature_id,
+        quantity,
+      });
+    } else {
+      attachParams.optionsList[index].quantity = quantity;
+    }
   }
 
   return;

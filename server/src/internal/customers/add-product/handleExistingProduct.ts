@@ -128,13 +128,17 @@ export const handleExistingProduct = async ({
 
   // Case 5: Main product exists, different from new product
   if (curMainProduct && useCheckout) {
-    // If not downgrade to free, throw error
+    let mainProductWithPrices = {
+      ...curMainProduct.product,
+      prices: curMainProduct.customer_prices.map((cp: any) => cp.price),
+    };
+
     let downgradeToFree =
-      !isProductUpgrade(curMainProduct.product, product) &&
+      !isProductUpgrade(mainProductWithPrices, product) &&
       isFreeProduct(attachParams.prices);
 
     let upgradeFromFree =
-      isProductUpgrade(curMainProduct.product, product) &&
+      isProductUpgrade(mainProductWithPrices, product) &&
       isFreeProduct(
         curMainProduct?.customer_prices.map((cp: any) => cp.price) || []
       );

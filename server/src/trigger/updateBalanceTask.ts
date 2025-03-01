@@ -360,7 +360,6 @@ export const updateCustomerBalance = async ({
   // 4. Perform deductions and update customer balance
   for (const obj of featureDeductions) {
     let { feature, deduction: toDeduct } = obj;
-    let groupByVal = event.properties[feature.config.group_by?.property!];
 
     for (const cusEnt of cusEnts) {
       toDeduct = await deductAllowanceFromCusEnt({

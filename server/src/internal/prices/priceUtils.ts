@@ -55,14 +55,23 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 };
 
 export const getBillingInterval = (prices: Price[]) => {
+  if (prices.length === 0) {
+    return BillingInterval.OneOff;
+  }
+
   const pricesCopy = structuredClone(prices);
 
-  pricesCopy.sort((a, b) => {
-    return (
-      BillintIntervalOrder.indexOf(a.config!.interval!) -
-      BillintIntervalOrder.indexOf(b.config!.interval!)
-    );
-  });
+  try {
+    pricesCopy.sort((a, b) => {
+      return (
+        BillintIntervalOrder.indexOf(a.config!.interval!) -
+        BillintIntervalOrder.indexOf(b.config!.interval!)
+      );
+    });
+  } catch (error) {
+    console.log("Error sorting prices:", error);
+    throw error;
+  }
 
   if (pricesCopy.length == 0) {
     throw new RecaseError({

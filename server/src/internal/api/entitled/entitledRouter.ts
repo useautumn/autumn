@@ -149,8 +149,10 @@ const getMeteredEntitledResult = ({
       balance: actual,
     };
 
+    // feature.config.group_by will always be defined
+    // TODO: Rework this...
     if (group) {
-      let groupField = feature.config.group_by?.property;
+      let groupField = feature.config?.group_by?.property;
       newBalance[groupField] = group;
     }
 
@@ -438,7 +440,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     }
 
     // 3. If group is provided, but feature does not have group_by, throw error
-    if (notNullOrUndefined(group) && !feature.config.group_by) {
+    if (notNullOrUndefined(group) && !feature.config?.group_by) {
       throw new RecaseError({
         message: `Feature ${feature.id} does not support group_by`,
         code: ErrCode.FeatureNotFound,
