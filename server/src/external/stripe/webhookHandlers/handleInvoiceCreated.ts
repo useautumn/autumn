@@ -269,7 +269,27 @@ export const sendUsageAndReset = async ({
       continue;
     }
 
+<<<<<<< HEAD
     console.log("invoice.created, handling end of period usage");
+=======
+    const usage = relatedCusEnt.entitlement.allowance - relatedCusEnt.balance;
+
+    const usageTimestamp = Math.round(
+      subDays(new Date(invoice.created * 1000), 1).getTime() / 1000
+    );
+
+    const meterEvent = await stripeCli.billing.meterEvents.create({
+      event_name: price.id!,
+      payload: {
+        stripe_customer_id: customer.processor.id,
+        value: Math.round(usage).toString(),
+        // value: usage.toString(),
+      },
+      timestamp: usageTimestamp,
+    });
+
+    console.log(`Submitted meter event for ${customer.name}, ${customer.id}`);
+>>>>>>> main
     console.log(
       `   - Org: ${org.slug}, Customer: ${customer.name} (${customer.id})`
     );
