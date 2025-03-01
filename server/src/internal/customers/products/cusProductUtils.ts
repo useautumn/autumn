@@ -371,7 +371,9 @@ export const processFullCusProduct = (cusProduct: FullCusProduct) => {
       type: cusProduct.processor?.type,
       subscription_id: cusProduct.processor?.subscription_id || null,
     },
+    subscription_ids: cusProduct.subscription_ids || [],
     prices: prices,
+    starts_at: cusProduct.starts_at,
     // prices: cusProduct.customer_prices,
     // entitlements: cusProduct.customer_entitlements,
   };

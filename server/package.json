@@ -16,7 +16,7 @@
     "cron:start": "node --no-deprecation dist/src/cron.js",
     "clean": "tsx src/clean.ts",
     "test-all": "mocha 'tests/**/*.ts'",
-    "test": "mocha 'tests/**/*.ts' --ignore 'tests/09_advanced_usage.ts'",
+    "test": "mocha 'tests/**/*.ts'",
     "test-upgrade": "mocha 'tests/06_upgrade.ts' 'tests/07_downgrade.ts'",
     "test-custom": "mocha --timeout 1000000 'tests/03_cancel.ts' 'tests/05_trial.ts'"
   },
