@@ -127,11 +127,7 @@ const handleStripeSubUpdate = async ({
   }
 
   // 3. Cancel old subscriptions
-<<<<<<< HEAD
-  let remainingExistingSubIds = existingSubIds.slice(1);
-=======
   let remainingExistingSubIds = stripeSubs.slice(1).map((sub) => sub.id);
->>>>>>> main
 
   return {
     subUpdate,

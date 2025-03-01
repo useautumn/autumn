@@ -170,7 +170,8 @@ const deductAllowanceFromCusEnt = async ({
   }
 
   cusEntBalance = new Decimal(balance!);
-  if (cusEntBalance.lte(0)) {
+  if (cusEntBalance.lte(0) && toDeduct > 0) {
+    // Don't deduct if balance is negative and toDeduct is positive, if not, just add to balance
     return toDeduct;
   }
 
@@ -362,6 +363,10 @@ export const updateCustomerBalance = async ({
     let { feature, deduction: toDeduct } = obj;
 
     for (const cusEnt of cusEnts) {
+      if (cusEnt.entitlement.internal_feature_id != feature.internal_id) {
+        continue;
+      }
+
       toDeduct = await deductAllowanceFromCusEnt({
         toDeduct,
         cusEnt,
