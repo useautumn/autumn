@@ -22,7 +22,7 @@ export const getGroupbalanceFromParams = ({
   feature: Feature;
   cusEnt: CusEntWithEntitlement;
 }) => {
-  if (!feature.config.group_by) {
+  if (!feature.config?.group_by) {
     return {
       groupField: null,
       groupVal: null,
@@ -31,7 +31,7 @@ export const getGroupbalanceFromParams = ({
     };
   }
 
-  let groupField = feature.config.group_by.property;
+  let groupField = feature.config?.group_by?.property;
   if (nullOrUndefined(params[groupField])) {
     return {
       groupField: null,
@@ -58,7 +58,7 @@ export const getGroupValFromEvent = ({
   event: Event;
   feature: Feature;
 }) => {
-  if (!feature.config.group_by) {
+  if (!feature.config?.group_by) {
     return null;
   }
 
@@ -187,7 +187,7 @@ export const initGroupBalances = async ({
   cusEnts: CusEntWithEntitlement[];
   groupValue: any;
 }) => {
-  let groupField = feature.config.group_by?.property;
+  let groupField = feature.config?.group_by?.property;
   if (!groupField) {
     return;
   }
@@ -217,7 +217,7 @@ export const initGroupBalancesForEvent = async ({
   let meteredFeatures = features.filter((f) => f.type == FeatureType.Metered);
 
   for (const feature of meteredFeatures) {
-    const groupField = feature.config.group_by?.property;
+    const groupField = feature.config?.group_by?.property;
     if (!groupField) {
       continue;
     }
