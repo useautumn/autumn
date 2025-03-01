@@ -557,7 +557,7 @@ export const getMinCusEntBalance = ({
   groupVal?: any;
 }) => {
   if (!cusEnt.balances) {
-    return cusEnt.balance!;
+    return newBalance || cusEnt.balance!;
   }
 
   let balances = [];
@@ -585,5 +585,6 @@ export const getMinCusEntBalance = ({
     balances.push(newBalance!);
   }
 
+  console.log("Balances: ", balances);
   return Math.min(...balances);
 };

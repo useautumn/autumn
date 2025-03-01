@@ -65,22 +65,12 @@ export const removeCurrentProduct = async ({
     },
   });
 
-  if (curCusProduct.processor?.subscription_id) {
-    // Cancel stripe subscription
-    const stripeCli = createStripeCli({ org, env });
+  // Cancel stripe subscription
+  const stripeCli = createStripeCli({ org, env });
 
-    // TODO: If config.cancel unpaid invoice to upgrade
-    // await voidLatestInvoice({
-    //   stripeCli,
-    //   subId: curCusProduct.processor.subscription_id,
-    // });
-
-    await stripeCli.subscriptions.cancel(
-      curCusProduct.processor.subscription_id
-    );
+  for (const subId of curCusProduct.subscription_ids || []) {
+    await stripeCli.subscriptions.cancel(subId);
   }
-
-  // 3. Void latest invoice (if exists...)
 };
 
 export const invoiceOnlyOneOff = async ({
