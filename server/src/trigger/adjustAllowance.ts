@@ -46,6 +46,7 @@ export const adjustAllowance = async ({
   customer,
   originalBalance,
   newBalance,
+  deduction,
 }: {
   sb: SupabaseClient;
   env: AppEnv;
@@ -57,6 +58,7 @@ export const adjustAllowance = async ({
   customer: Customer;
   originalBalance: number;
   newBalance: number;
+  deduction: number;
 }) => {
   // Get customer entitlement
 
@@ -77,22 +79,30 @@ export const adjustAllowance = async ({
   let boundaryCrossed = false;
   let billingUnits =
     (cusPrice.price.config as UsagePriceConfig).billing_units || 1;
+
+  // Rework this...
+  // console.log("Original balance:", originalBalance);
+  // console.log("New balance:", newBalance);
   for (let i = -billingUnits!; i < -newBalance; i += billingUnits!) {
     let origUsage = -originalBalance;
     let newUsage = -newBalance;
     let boundary = i + billingUnits!;
 
-    if (origUsage <= boundary && newUsage > boundary) {
+    // Usage increasing and crossed boundary
+    if (origUsage <= boundary && newUsage > boundary && deduction > 0) {
       boundaryCrossed = true;
       break;
-    } else if (newUsage <= boundary && origUsage > boundary) {
+    }
+
+    // Usage decreasing and crossed boundary
+    else if (newUsage <= boundary && origUsage > boundary && deduction < 0) {
       boundaryCrossed = true;
       break;
     }
   }
 
   if (!boundaryCrossed) {
-    console.log("Boundary not crossed, skipping");
+    console.log("   - In arrear prorated: boundary not crossed, skipping");
     return;
   }
 
@@ -120,11 +130,10 @@ export const adjustAllowance = async ({
     return;
   }
 
-  // 1. Get latest invoice item within current period
-  let latestInvoiceItem = await InvoiceItemService.getLatestInvoiceItem({
+  // 1. Get latest invoice item not added to Stripe... otherwise might be have created_at on same time?
+  let latestInvoiceItem = await InvoiceItemService.getNotAddedToStripe({
     sb,
     cusPriceId: cusPrice.id,
-    periodStart: sub.current_period_start * 1000,
   });
 
   let now = Date.now();

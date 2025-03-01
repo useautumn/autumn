@@ -31,6 +31,8 @@ import { createStripeInvoiceItem } from "@/internal/customers/invoices/invoiceIt
 import { getRelatedCusEnt } from "@/internal/customers/prices/cusPriceUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
 import { generateId } from "@/utils/genUtils.js";
+import { getMinCusEntBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getResetBalancesUpdate } from "@/internal/customers/entitlements/groupByUtils.js";
 
 const handleInArrearProrated = async ({
   sb,
@@ -60,9 +62,6 @@ const handleInArrearProrated = async ({
     console.log("No related cus ent found");
     return;
   }
-
-  // Sub.current_period start is start of the NEW period...
-  // Invoice.period_start is start of the OLD period...
 
   let invoiceItem = await InvoiceItemService.getNotAddedToStripe({
     sb,
@@ -105,15 +104,16 @@ const handleInArrearProrated = async ({
   } else {
     // Create invoice for new usage?
     let allowance = cusEnt.entitlement.allowance!;
-    let balance = cusEnt.balance!;
+    // let balance = cusEnt.balance!;
+    let minBalance = getMinCusEntBalance({ cusEnt });
 
-    let amount = getPriceForOverage(cusPrice.price, -balance);
-    let quantity = allowance - balance;
+    let amount = getPriceForOverage(cusPrice.price, -minBalance);
+    let quantity = allowance - minBalance;
     let billingUnits =
       (cusPrice.price.config as UsagePriceConfig).billing_units || 1;
     quantity = Math.ceil(quantity / billingUnits!) * billingUnits!; // round up to nearest billing unit
 
-    if (balance >= 0) {
+    if (minBalance >= 0) {
       console.log("   ✅ Balance >= 0, no need to create Autumn invoice item");
       return;
     }
@@ -148,6 +148,7 @@ const handleUsageInArrear = async ({
   relatedCusEnt,
   stripeCli,
   price,
+  usageSub,
 }: {
   sb: SupabaseClient;
   invoice: Stripe.Invoice;
@@ -155,9 +156,11 @@ const handleUsageInArrear = async ({
   relatedCusEnt: FullCustomerEntitlement;
   stripeCli: Stripe;
   price: Price;
+  usageSub: Stripe.Subscription;
 }) => {
   let allowance = relatedCusEnt.entitlement.allowance!;
-  let balance = relatedCusEnt.balance!;
+  // let balance = relatedCusEnt.balance!;
+  let minBalance = getMinCusEntBalance({ cusEnt: relatedCusEnt });
 
   // If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
   if (relatedCusEnt.balance! > 0 && !relatedCusEnt.next_reset_at) {
@@ -165,9 +168,9 @@ const handleUsageInArrear = async ({
     return;
   }
 
-  const usage = new Decimal(allowance).minus(balance).toNumber();
+  const usage = new Decimal(allowance).minus(minBalance).toNumber();
   const usageTimestamp = Math.round(
-    subDays(new Date(invoice.created * 1000), 7).getTime() / 1000
+    subDays(new Date(invoice.created * 1000), 1).getTime() / 1000
   );
 
   await stripeCli.billing.meterEvents.create({
@@ -181,7 +184,9 @@ const handleUsageInArrear = async ({
 
   console.log(`Submitted meter event for ${customer.name}, ${customer.id}`);
   console.log(`Feature ID: ${relatedCusEnt.entitlement.feature.id}`);
-  console.log(`Allowance: ${allowance}, Balance: ${balance}, Usage: ${usage}`);
+  console.log(
+    `Allowance: ${allowance}, Min Balance: ${minBalance}, Usage: ${usage}`
+  );
   console.log(
     "Invoice created: ",
     format(new Date(invoice.created * 1000), "yyyy-MM-dd"),
@@ -190,12 +195,16 @@ const handleUsageInArrear = async ({
   );
 
   // reset balance
+  let resetBalancesUpdate = getResetBalancesUpdate({ cusEnt: relatedCusEnt });
   await CustomerEntitlementService.update({
     sb,
     id: relatedCusEnt.id,
     updates: {
-      balance: allowance,
+      ...resetBalancesUpdate,
       adjustment: 0,
+      next_reset_at: relatedCusEnt.next_reset_at
+        ? usageSub.current_period_end * 1000
+        : null, // TODO: check if this is correct
     },
   });
 
@@ -290,6 +299,7 @@ export const sendUsageAndReset = async ({
         relatedCusEnt,
         stripeCli,
         price,
+        usageSub: usageBasedSub,
       });
     }
     // For regular end of period billing

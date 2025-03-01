@@ -14,7 +14,6 @@ import { CreateFeatureSchema } from "@autumn/shared";
 import express from "express";
 import { generateId } from "@/utils/genUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 
 export const featureApiRouter = express.Router();
@@ -38,10 +37,17 @@ const validateMeteredConfig = (config: MeteredConfig) => {
     });
   }
 
-  newConfig.aggregate = {
-    type: AggregateType.Sum,
-    property: "value",
-  };
+  if (config.aggregate.type == AggregateType.Count) {
+    newConfig.aggregate = {
+      type: AggregateType.Count,
+      property: null,
+    }; // to continue testing support for count...
+  } else {
+    newConfig.aggregate = {
+      type: AggregateType.Sum,
+      property: "value",
+    };
+  }
 
   if (!newConfig.group_by) {
     newConfig.group_by = null;

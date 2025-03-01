@@ -55,6 +55,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import Stripe from "stripe";
 import { deleteScheduledIds } from "@/external/stripe/stripeSubUtils.js";
+import { sortCusEntsForDeduction } from "../entitlements/cusEntUtils.js";
 
 // 1. Delete future product
 export const uncancelCurrentProduct = async ({
@@ -311,6 +312,8 @@ export const fullCusProductToCusEnts = (
       }))
     );
   }
+
+  sortCusEntsForDeduction(cusEnts);
 
   return cusEnts;
 };
