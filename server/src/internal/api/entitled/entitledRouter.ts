@@ -18,103 +18,82 @@ import { createNewCustomer } from "../customers/cusUtils.js";
 import { handleEventSent } from "../events/eventRouter.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import {
+  cusEntsContainFeature,
+  getFeatureBalance,
+  getUnlimitedAndUsageAllowed,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
+import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
+import { notNullOrUndefined } from "@/utils/genUtils.js";
+import {
+  getGroupBalanceFromEvent,
+  initGroupBalances,
+} from "@/internal/customers/entitlements/groupByUtils.js";
+
+type CusWithEnts = Customer & {
+  customer_products: CusProduct[];
+  customer_entitlements: CusEntWithEntitlement[];
+};
+
+const EntitledSchema = z.object({
+  customer_id: z.string(),
+  feature_id: z.string(),
+  required_quantity: z.number(),
+});
 
 export const entitledRouter = Router();
 
-const calculateFeatureBalance = ({
-  cusEnts,
-  featureId,
-}: {
-  cusEnts: CusEntWithEntitlement[];
-  featureId: string;
-}) => {
-  let balance = 0;
-  for (const cusEnt of cusEnts) {
-    if (cusEnt.feature_id === featureId) {
-      if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
-        return {
-          balance: null,
-          unlimited: true,
-        };
-      }
-      balance += cusEnt.balance!;
-    }
-  }
-
-  return {
-    balance,
-    unlimited: false,
-  };
-};
-
-const checkEntitlementAllowed = ({
+const getRequiredAndActualBalance = ({
   cusEnts,
   feature,
   originalFeatureId,
-  quantity,
+  required,
+  group,
 }: {
   cusEnts: CusEntWithEntitlement[];
   feature: Feature;
   originalFeatureId: string;
-  quantity: number;
+  required: number;
+  group: any;
 }) => {
-  // Check if at least one customer entitlement is for the original feature
-  const cusEnt = cusEnts.find((ent) => ent.feature_id === feature.id);
-
-  if (!cusEnt) {
-    return null;
-  }
-
-  let required = quantity;
-
+  let requiredBalance = required;
   if (
     feature.type === FeatureType.CreditSystem &&
     feature.id !== originalFeatureId
   ) {
-    const schema = feature.config.schema.find(
-      (schema: any) => schema.metered_feature_id === originalFeatureId
-    );
-
-    required = (1 / schema.feature_amount) * schema.credit_amount;
+    requiredBalance = featureToCreditSystem({
+      featureId: originalFeatureId,
+      creditSystem: feature,
+      amount: required,
+    });
   }
 
-  const balance = calculateFeatureBalance({ cusEnts, featureId: feature.id });
+  const actualBalance = getFeatureBalance({
+    cusEnts,
+    internalFeatureId: feature.internal_id!,
+    group,
+  });
+
   return {
-    feature_id: feature.id,
-    balance: balance.balance,
-    unlimited: balance.unlimited,
-    required: required,
+    required: requiredBalance,
+    actual: actualBalance,
+    group,
   };
 };
 
-const checkFeatureAccessAllowed = ({
+const getMeteredEntitledResult = ({
   originalFeature,
   creditSystems,
   cusEnts,
   quantity,
+  group,
 }: {
   originalFeature: Feature;
   creditSystems: Feature[];
   cusEnts: CusEntWithEntitlement[];
   quantity: number;
+  group: any;
 }) => {
-  if (originalFeature.type === FeatureType.Boolean) {
-    const allowed = cusEnts.some(
-      (ent) => ent.feature_id === originalFeature.id
-    );
-    return {
-      allowed,
-      balances: allowed
-        ? [
-            {
-              feature_id: originalFeature.id,
-              balance: null,
-            },
-          ]
-        : [],
-    };
-  }
-
   // If no entitlements -> return false
   if (!cusEnts || cusEnts.length === 0) {
     return {
@@ -123,52 +102,61 @@ const checkFeatureAccessAllowed = ({
     };
   }
 
-  // 1. Calculate balance for feature
   let allowed = true;
   const balances = [];
-  for (const feature of [originalFeature, ...creditSystems]) {
-    const allowance = checkEntitlementAllowed({
-      cusEnts,
-      feature,
-      originalFeatureId: originalFeature.id,
-      quantity,
-    });
 
-    if (!allowance) {
+  for (const feature of [originalFeature, ...creditSystems]) {
+    // 1. Skip if feature not among cusEnt
+    if (!cusEntsContainFeature({ cusEnts, feature })) {
       continue;
     }
 
-    // Unlimited
-    const hasUnlimited = cusEnts.some(
-      (ent) =>
-        ent.internal_feature_id === feature.internal_id &&
-        ent.entitlement.allowance_type === AllowanceType.Unlimited
-    );
+    // 2. Handle unlimited / usage allowed features
+    let { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
+      cusEnts,
+      internalFeatureId: feature.internal_id!,
+    });
 
-    const hasUsageAllowed = cusEnts.some(
-      (ent) =>
-        ent.internal_feature_id === feature.internal_id && ent.usage_allowed
-    );
-
-    if (hasUnlimited) {
-      allowed = true;
-    } else if (hasUsageAllowed) {
-      allowed = true;
-    } else if (allowance.balance! < allowance.required) {
-      allowed = false;
+    if (unlimited || usageAllowed) {
+      balances.push({
+        feature_id: feature.id,
+        unlimited,
+        usage_allowed: usageAllowed,
+        required: null,
+        balance: unlimited
+          ? null
+          : getFeatureBalance({
+              cusEnts,
+              internalFeatureId: feature.internal_id!,
+              group,
+            }),
+      });
+      continue;
     }
 
-    // if (!allowance.unlimited && allowance.balance! < allowance.required) {
-    //   allowed = false;
-    // }
-
-    balances.push({
-      feature_id: feature.id,
-      required: allowance.required,
-      balance: hasUnlimited ? null : allowance.balance,
-      unlimited: hasUnlimited ? true : undefined,
-      usage_allowed: hasUsageAllowed ? true : undefined,
+    // 3. Get required and actual balance
+    const { required, actual } = getRequiredAndActualBalance({
+      cusEnts,
+      feature,
+      originalFeatureId: originalFeature.id,
+      required: quantity,
+      group,
     });
+
+    let newBalance: any = {
+      feature_id: feature.id,
+      required,
+      balance: actual,
+    };
+
+    if (group) {
+      let groupField = feature.config.group_by?.property;
+      newBalance[groupField] = group;
+    }
+
+    balances.push(newBalance);
+
+    allowed = allowed && actual! >= required;
   }
 
   return {
@@ -177,9 +165,33 @@ const checkFeatureAccessAllowed = ({
   };
 };
 
-// 1. Get entitlements for customer
+// Helper functions
+const getBooleanEntitledResult = ({
+  cusEnts,
+  res,
+  feature,
+}: {
+  cusEnts: CusEntWithEntitlement[];
+  res: any;
+  feature: Feature;
+}) => {
+  const allowed = cusEnts.some(
+    (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
+  );
+  return res.status(200).send({
+    allowed,
+    balances: allowed
+      ? [
+          {
+            feature_id: feature.id,
+            balance: null,
+          },
+        ]
+      : [],
+  });
+};
 
-// 1. From features, get relevant features & credit systems
+// Main functions
 const getFeaturesAndCreditSystems2 = async ({
   sb,
   orgId,
@@ -211,11 +223,6 @@ const getFeaturesAndCreditSystems2 = async ({
   });
 
   return { feature, creditSystems };
-};
-
-type CusWithEnts = Customer & {
-  customer_products: CusProduct[];
-  customer_entitlements: CusEntWithEntitlement[];
 };
 
 const getCusEntsActiveInFeatureIds = ({
@@ -257,112 +264,32 @@ const getCusEntsActiveInFeatureIds = ({
   return activeCusEnts;
 };
 
-const EntitledSchema = z.object({
-  customer_id: z.string(),
-  feature_id: z.string(),
-  quantity: z.number().optional(),
-});
-
-entitledRouter.post("", async (req: any, res: any) => {
-  let {
-    customer_id,
-    feature_id,
-    required_quantity,
-    customer_data,
-    event_data,
-  } = req.body;
-
-  const quantity = required_quantity ? parseInt(required_quantity) : 1;
-
-  const { orgId, env, sb } = req;
-
+const logEntitled = ({
+  req,
+  customer_id,
+  cusEnts,
+}: {
+  req: any;
+  customer_id: string;
+  cusEnts: CusEntWithEntitlement[];
+}) => {
   try {
-    const timings: Record<string, number> = {};
-
-    const startParallel = Date.now();
-    const batchQuery = [
-      CustomerEntitlementService.getCustomerAndEnts({
-        sb,
-        customerId: customer_id,
-        orgId,
-        env,
-      }).then((result) => {
-        timings.cusEnts = Date.now() - startParallel;
-        return result;
-      }),
-      getFeaturesAndCreditSystems2({
-        sb,
-        orgId,
-        env,
-        featureId: feature_id,
-      }).then((result) => {
-        timings.features = Date.now() - startParallel;
-        return result;
-      }),
-    ];
-
-    const [res1, res2] = await Promise.all(batchQuery);
-    const totalTime = Date.now() - startParallel;
-
-    console.log("Query timings:", {
-      customerEntitlements: timings.cusEnts,
-      features: timings.features,
-      total: totalTime,
-    });
-
-    const { feature, creditSystems }: any = res2;
-
-    if (!feature) {
-      throw new RecaseError({
-        message: "Feature not found",
-        code: ErrCode.FeatureNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    let cusEnts: CusEntWithEntitlement[] | null = null;
-    if (!res1) {
-      // Check if customer exists
-      let customer = await CusService.getById({
-        sb: req.sb,
-        id: customer_id,
-        orgId: req.orgId,
-        env: req.env,
-      });
-
-      if (!customer) {
-        customer = await createNewCustomer({
-          sb: req.sb,
-          orgId: req.orgId,
-          env: req.env,
-          customer: {
-            id: customer_id,
-            name: customer_data?.name,
-            email: customer_data?.email,
-            fingerprint: customer_data?.fingerprint,
-          },
-        });
-      }
-
-      cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
-        sb: req.sb,
-        internalCustomerId: customer.internal_id,
-        internalFeatureIds: [
-          ...creditSystems.map((cs: any) => cs.internal_id),
-          feature.internal_id,
-        ],
-      });
-    } else {
-      cusEnts = getCusEntsActiveInFeatureIds({
-        cusWithEnts: res1 as CusWithEnts,
-        features: [feature, ...creditSystems],
-      });
-    }
-
     console.log(
       `${req.isPublic ? "(Public) " : ""}CusEnts (${customer_id}):`,
       cusEnts.map((cusEnt: any) => {
         let balanceStr = cusEnt.balance;
+        let group = req.body.group;
+
+        try {
+          if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
+            balanceStr = "Unlimited";
+          } else if (group) {
+            let groupBalance = cusEnt.balances?.[group].balance;
+            balanceStr = `${groupBalance || "null"} (${group})`;
+          }
+        } catch (error) {
+          balanceStr = "failed_to_get_balance";
+        }
 
         try {
           if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
@@ -377,12 +304,163 @@ entitledRouter.post("", async (req: any, res: any) => {
         })`;
       })
     );
+  } catch (error) {
+    console.log("Failed to log entitled", error);
+  }
+};
 
-    const { allowed, balances } = checkFeatureAccessAllowed({
+// FETCH FUNCTION
+const getCusEntsAndFeatures = async ({
+  req,
+}: {
+  req: any;
+  sb: SupabaseClient;
+}) => {
+  const timings: Record<string, number> = {};
+
+  let { customer_id, feature_id, customer_data } = req.body;
+  let { sb, orgId, env } = req;
+
+  // 1. Get customer entitlements & features / credit systems
+  const startParallel = Date.now();
+  const batchQuery = [
+    CustomerEntitlementService.getCustomerAndEnts({
+      sb,
+      customerId: customer_id,
+      orgId,
+      env,
+    }).then((result) => {
+      timings.cusEnts = Date.now() - startParallel;
+      return result;
+    }),
+    getFeaturesAndCreditSystems2({
+      sb,
+      orgId,
+      env,
+      featureId: feature_id,
+    }).then((result) => {
+      timings.features = Date.now() - startParallel;
+      return result;
+    }),
+  ];
+
+  const [res1, res2] = await Promise.all(batchQuery);
+  const totalTime = Date.now() - startParallel;
+
+  console.log("Query timings:", {
+    customerEntitlements: timings.cusEnts,
+    features: timings.features,
+    total: totalTime,
+  });
+
+  // 2. Get active customer entitlements for features
+  const { feature, creditSystems }: any = res2;
+
+  if (!feature) {
+    throw new RecaseError({
+      message: "Feature not found",
+      code: ErrCode.FeatureNotFound,
+      statusCode: StatusCodes.NOT_FOUND,
+    });
+  }
+
+  let cusEnts: CusEntWithEntitlement[] | null = null;
+  if (!res1) {
+    // Check if customer exists
+    let customer = await CusService.getById({
+      sb: req.sb,
+      id: customer_id,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    if (!customer) {
+      customer = await createNewCustomer({
+        sb: req.sb,
+        orgId: req.orgId,
+        env: req.env,
+        customer: {
+          id: customer_id,
+          name: customer_data?.name,
+          email: customer_data?.email,
+          fingerprint: customer_data?.fingerprint,
+        },
+      });
+    }
+
+    cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
+      sb,
+      internalCustomerId: customer.internal_id,
+      internalFeatureIds: [
+        ...creditSystems.map((cs: any) => cs.internal_id),
+        feature.internal_id,
+      ],
+    });
+  } else {
+    cusEnts = getCusEntsActiveInFeatureIds({
+      cusWithEnts: res1 as CusWithEnts,
+      features: [feature, ...creditSystems],
+    });
+  }
+
+  return { cusEnts, feature, creditSystems };
+};
+
+entitledRouter.post("", async (req: any, res: any) => {
+  let {
+    customer_id,
+    feature_id,
+    required_quantity,
+    customer_data,
+    event_data,
+    group,
+  } = req.body;
+
+  const quantity = required_quantity ? parseInt(required_quantity) : 1;
+
+  const { orgId, env, sb } = req;
+
+  try {
+    // 1. Get cusEnts & features
+    const { cusEnts, feature, creditSystems } = await getCusEntsAndFeatures({
+      sb,
+      req,
+    });
+    logEntitled({ req, customer_id, cusEnts: cusEnts! });
+
+    // 2. If boolean, return true
+    if (feature.type === FeatureType.Boolean) {
+      return getBooleanEntitledResult({
+        res,
+        cusEnts,
+        feature,
+      });
+    }
+
+    // 3. If group is provided, but feature does not have group_by, throw error
+    if (notNullOrUndefined(group) && !feature.config.group_by) {
+      throw new RecaseError({
+        message: `Feature ${feature.id} does not support group_by`,
+        code: ErrCode.FeatureNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    if (notNullOrUndefined(group)) {
+      await initGroupBalances({
+        sb,
+        cusEnts: cusEnts!,
+        groupValue: group,
+        feature,
+      });
+    }
+
+    const { allowed, balances } = getMeteredEntitledResult({
       originalFeature: feature,
       creditSystems,
       cusEnts: cusEnts!,
       quantity,
+      group,
     });
 
     if (allowed && event_data && !req.isPublic) {
@@ -407,41 +485,3 @@ entitledRouter.post("", async (req: any, res: any) => {
     handleRequestError({ req, error, res, action: "Failed to GET entitled" });
   }
 });
-
-// // 1. Get all features / credit systems for a particular feature_id
-// const getFeaturesAndCreditSystems = async ({
-//   pg,
-//   orgId,
-//   feature_id,
-//   env,
-// }: {
-//   pg: Client;
-//   orgId: string;
-//   feature_id: string;
-//   env: string;
-// }) => {
-//   const query = `
-//   select * from features WHERE EXISTS (
-//       SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
-//       type = 'credit_system'
-//       AND org_id = '${orgId}'
-//       AND schema_element->>'metered_feature_id' = '${feature_id}'
-//       AND env = '${env}'
-//   )
-
-//   UNION all
-
-//   SELECT * FROM features
-//   WHERE org_id = '${orgId}'
-//   AND id = '${feature_id}'
-//   AND env = '${env}'`;
-
-//   const { rows } = await pg.query(query);
-
-//   const feature = rows.find((row: any) => row.id === feature_id);
-//   const creditSystems = rows.filter(
-//     (row: any) => row.type === "credit_system" && row.id !== feature_id
-//   );
-
-//   return { feature, creditSystems };
-// };

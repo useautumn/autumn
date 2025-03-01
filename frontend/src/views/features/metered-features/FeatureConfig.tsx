@@ -154,7 +154,7 @@ export function FeatureConfig({
             />
           </div>
 
-          {/* <div>
+          <div>
             {groupByExists ? (
               <div>
                 <FieldLabel>Group By</FieldLabel>
@@ -190,7 +190,7 @@ export function FeatureConfig({
                 Group By
               </Button>
             )}
-          </div> */}
+          </div>
 
           {/* <div>
             <FieldLabel>Aggregate</FieldLabel>

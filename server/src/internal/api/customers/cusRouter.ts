@@ -106,6 +106,7 @@ cusRouter.post("", async (req: any, res: any) => {
       sb: req.sb,
       orgId: req.orgId,
       env: req.env,
+      params: req.query,
     });
 
     res.status(200).json({
@@ -170,6 +171,46 @@ cusRouter.put("", async (req: any, res: any) => {
     });
   } catch (error) {
     handleRequestError({ req, error, res, action: "update customer" });
+  }
+});
+
+// BY CUSTOMER ID
+
+cusRouter.get("/:customer_id", async (req: any, res: any) => {
+  try {
+    const customerId = req.params.customer_id;
+    const customer = await CusService.getById({
+      sb: req.sb,
+      id: customerId,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    if (!customer) {
+      throw new RecaseError({
+        message: `Customer ${customerId} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    const { main, addOns, balances, invoices } = await getCustomerDetails({
+      customer,
+      sb: req.sb,
+      orgId: req.orgId,
+      env: req.env,
+      params: req.query,
+    });
+
+    res.status(200).json({
+      customer: CustomerResponseSchema.parse(customer),
+      products: main,
+      add_ons: addOns,
+      entitlements: balances,
+      invoices,
+    });
+  } catch (error) {
+    handleRequestError({ req, error, res, action: "get customer" });
   }
 });
 
@@ -363,43 +404,6 @@ cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
   }
 });
 
-cusRouter.get("/:customer_id", async (req: any, res: any) => {
-  try {
-    const customerId = req.params.customer_id;
-    const customer = await CusService.getById({
-      sb: req.sb,
-      id: customerId,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    if (!customer) {
-      throw new RecaseError({
-        message: `Customer ${customerId} not found`,
-        code: ErrCode.CustomerNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    const { main, addOns, balances, invoices } = await getCustomerDetails({
-      customer,
-      sb: req.sb,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    res.status(200).json({
-      customer: CustomerResponseSchema.parse(customer),
-      products: main,
-      add_ons: addOns,
-      entitlements: balances,
-      invoices,
-    });
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "get customer" });
-  }
-});
-
 cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
   try {
     const customerId = req.params.customer_id;
@@ -445,7 +449,6 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 // Entitlements
 cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
   const customerId = req.params.customer_id;
-  const group_by = req.query.group_by;
 
   let balances: any[] = [];
   const customer = await CusService.getById({
@@ -464,19 +467,11 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
   const cusEntsWithCusProduct = fullCusProductToCusEnts(fullCusProducts);
   const cusPrices = fullCusProductToCusPrices(fullCusProducts);
 
-  if (group_by == "product") {
-    balances = await getCusBalancesByProduct({
-      sb: req.sb,
-      customerId,
-      orgId: req.orgId,
-      env: req.env,
-    });
-  } else {
-    balances = await getCusBalancesByEntitlement({
-      cusEntsWithCusProduct: cusEntsWithCusProduct as any,
-      cusPrices,
-    });
-  }
+  balances = await getCusBalancesByEntitlement({
+    cusEntsWithCusProduct: cusEntsWithCusProduct as any,
+    cusPrices,
+    groupVals: req.query,
+  });
 
   for (const balance of balances) {
     if (balance.total && balance.balance) {
