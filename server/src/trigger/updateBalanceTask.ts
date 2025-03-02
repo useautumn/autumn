@@ -31,6 +31,8 @@ import {
 import { nullOrUndefined } from "@/utils/genUtils.js";
 import { getMinCusEntBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
 
+// Decimal.set({ precision: 12 }); // 12 DP precision
+
 type DeductParams = {
   sb: SupabaseClient;
   env: AppEnv;
@@ -142,10 +144,12 @@ const deductAllowanceFromCusEnt = async ({
   toDeduct,
   deductParams,
   cusEnt,
+  features,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
   cusEnt: FullCustomerEntitlement;
+  features: Feature[];
 }) => {
   const { sb, feature, env, org, cusPrices, customer, event } = deductParams;
 
@@ -160,7 +164,11 @@ const deductAllowanceFromCusEnt = async ({
     event,
     feature,
     cusEnt,
+    features,
   });
+
+  // console.log("Group val:", groupVal);
+  // console.log("Balance:", balance);
 
   if (groupVal && nullOrUndefined(balance)) {
     console.log(
@@ -170,6 +178,7 @@ const deductAllowanceFromCusEnt = async ({
   }
 
   cusEntBalance = new Decimal(balance!);
+
   if (cusEntBalance.lte(0) && toDeduct > 0) {
     // Don't deduct if balance is negative and toDeduct is positive, if not, just add to balance
     return toDeduct;
@@ -233,10 +242,12 @@ const deductFromUsageBasedCusEnt = async ({
   toDeduct,
   deductParams,
   cusEnts,
+  features,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
   cusEnts: FullCustomerEntitlement[];
+  features: Feature[];
 }) => {
   const { sb, feature, env, org, cusPrices, customer, event } = deductParams;
 
@@ -370,6 +381,7 @@ export const updateCustomerBalance = async ({
       toDeduct = await deductAllowanceFromCusEnt({
         toDeduct,
         cusEnt,
+        features,
         deductParams: {
           sb,
           feature,
@@ -389,6 +401,7 @@ export const updateCustomerBalance = async ({
     await deductFromUsageBasedCusEnt({
       toDeduct,
       cusEnts,
+      features,
       deductParams: {
         sb,
         feature,

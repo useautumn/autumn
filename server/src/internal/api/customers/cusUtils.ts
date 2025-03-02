@@ -33,6 +33,7 @@ import {
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { initGroupBalancesFromGetCus } from "@/internal/customers/entitlements/groupByUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const createNewCustomer = async ({
   sb,

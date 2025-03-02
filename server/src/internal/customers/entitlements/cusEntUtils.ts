@@ -556,35 +556,27 @@ export const getMinCusEntBalance = ({
   newBalance?: number;
   groupVal?: any;
 }) => {
+  // If no balances object exists, return newBalance or cusEnt.balance
   if (!cusEnt.balances) {
-    return newBalance || cusEnt.balance!;
+    return notNullOrUndefined(newBalance) ? newBalance! : cusEnt.balance!;
   }
 
   let balances = [];
 
   for (const group in cusEnt.balances) {
-    // If groupVal exists and newBalance exists, skip if group is groupVal
-    if (
-      notNullOrUndefined(newBalance) &&
-      notNullOrUndefined(groupVal) &&
-      group === groupVal
-    ) {
-      continue;
+    if (group === groupVal && notNullOrUndefined(newBalance)) {
+      balances.push(newBalance!);
+    } else {
+      balances.push(cusEnt.balances[group].balance);
     }
-
-    balances.push(cusEnt.balances[group].balance);
   }
 
-  // If groupVal does not exist and newBalance does not exist, push balance
-  if (!groupVal && nullOrUndefined(newBalance)) {
+  // Always add the main balance
+  if (!groupVal && notNullOrUndefined(newBalance)) {
+    balances.push(newBalance!);
+  } else {
     balances.push(cusEnt.balance!);
   }
 
-  // If newBalance exists, push newBalance
-  if (notNullOrUndefined(newBalance)) {
-    balances.push(newBalance!);
-  }
-
-  console.log("Balances: ", balances);
   return Math.min(...balances);
 };

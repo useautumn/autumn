@@ -80,25 +80,20 @@ export const adjustAllowance = async ({
   let billingUnits =
     (cusPrice.price.config as UsagePriceConfig).billing_units || 1;
 
-  // Rework this...
-  // console.log("Original balance:", originalBalance);
-  // console.log("New balance:", newBalance);
-  for (let i = -billingUnits!; i < -newBalance; i += billingUnits!) {
-    let origUsage = -originalBalance;
-    let newUsage = -newBalance;
-    let boundary = i + billingUnits!;
+  let origUsage = -originalBalance;
+  let newUsage = -newBalance;
 
-    // Usage increasing and crossed boundary
-    if (origUsage <= boundary && newUsage > boundary && deduction > 0) {
-      boundaryCrossed = true;
-      break;
-    }
+  // Find which billing unit boundaries we're in
+  let origBoundary = Math.floor(origUsage / billingUnits!) * billingUnits!;
+  let newBoundary = Math.floor(newUsage / billingUnits!) * billingUnits!;
 
-    // Usage decreasing and crossed boundary
-    else if (newUsage <= boundary && origUsage > boundary && deduction < 0) {
-      boundaryCrossed = true;
-      break;
-    }
+  if (
+    // Usage increase: moved to a higher billing unit boundary
+    (newBoundary > origBoundary && deduction > 0) ||
+    // Usage decrease: moved to a lower billing unit boundary
+    (newBoundary < origBoundary && deduction < 0)
+  ) {
+    boundaryCrossed = true;
   }
 
   if (!boundaryCrossed) {

@@ -21,7 +21,6 @@ import { differenceInHours, format, subDays } from "date-fns";
 import { getStripeSubs, getUsageBasedSub } from "../stripeSubUtils.js";
 import {
   getBillingType,
-  getPriceEntitlement,
   getPriceForOverage,
 } from "@/internal/prices/priceUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
@@ -91,16 +90,20 @@ const handleInArrearProrated = async ({
 
   // Reset?
   if (cusEnt.next_reset_at) {
+    let resetBalancesUpdate = getResetBalancesUpdate({ cusEnt });
     await CustomerEntitlementService.update({
       sb,
       id: cusEnt.id,
       updates: {
+        ...resetBalancesUpdate,
         next_reset_at: getNextEntitlementReset(
           null,
           cusEnt.entitlement.interval as EntInterval
         ).getTime(),
       },
     });
+
+    console.log("   ✅ Reset next_reset_at");
   } else {
     // Create invoice for new usage?
     let allowance = cusEnt.entitlement.allowance!;
@@ -117,6 +120,10 @@ const handleInArrearProrated = async ({
       console.log("   ✅ Balance >= 0, no need to create Autumn invoice item");
       return;
     }
+
+    console.log("   🔍 Min balance: ", minBalance);
+    console.log("   🔍 Allowance: ", allowance);
+    console.log("   🔍 Quantity: ", quantity);
 
     let newInvoiceItem: InvoiceItem = {
       id: generateId("inv_item"),

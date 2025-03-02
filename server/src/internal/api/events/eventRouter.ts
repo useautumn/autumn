@@ -18,6 +18,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { QueueManager } from "@/queue/QueueManager.js";
 import { subDays } from "date-fns";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const eventsRouter = Router();
 
@@ -89,36 +90,47 @@ const getEventAndCustomer = async ({
 };
 
 const getAffectedFeatures = async ({
-  pg,
+  // pg,
+  sb,
   event,
   orgId,
   env,
 }: {
-  pg: Client;
+  // pg: Client;
+  sb: SupabaseClient;
   event: Event;
   orgId: string;
   env: AppEnv;
 }) => {
-  const { rows }: { rows: Feature[] } = await pg.query(`
-    with features_with_event as (
-      select * from features
-      where org_id = '${orgId}'
-      and env = '${env}'
-      and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
-    )
+  const { feature, creditSystems } = await FeatureService.getWithCreditSystems({
+    sb,
+    orgId,
+    env,
+    featureId: event.event_name,
+  });
 
-    select * from features WHERE 
-    org_id = '${orgId}'
-    and env = '${env}'
-    and EXISTS (
-      SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
-      schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
-    )
-    UNION all
-    select * from features_with_event
-  `);
+  return [feature, ...creditSystems];
 
-  return rows;
+  // const { rows }: { rows: Feature[] } = await pg.query(`
+  //   with features_with_event as (
+  //     select * from features
+  //     where org_id = '${orgId}'
+  //     and env = '${env}'
+  //     and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
+  //   )
+
+  //   select * from features WHERE
+  //   org_id = '${orgId}'
+  //   and env = '${env}'
+  //   and EXISTS (
+  //     SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
+  //     schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
+  //   )
+  //   UNION all
+  //   select * from features_with_event
+  // `);
+
+  // return rows;
 };
 
 export const handleEventSent = async ({
@@ -149,7 +161,8 @@ export const handleEventSent = async ({
   });
 
   const affectedFeatures = await getAffectedFeatures({
-    pg: pg,
+    // pg: pg,
+    sb,
     event,
     orgId,
     env,
