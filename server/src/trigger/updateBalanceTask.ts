@@ -154,7 +154,7 @@ const deductAllowanceFromCusEnt = async ({
   const { sb, feature, env, org, cusPrices, customer, event } = deductParams;
 
   if (toDeduct == 0) {
-    return;
+    return 0;
   }
 
   let newBalance, deducted;
