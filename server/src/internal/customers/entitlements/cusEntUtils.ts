@@ -267,7 +267,7 @@ export const getCusBalancesByEntitlement = async ({
     let isBoolean = feature.type == FeatureType.Boolean;
     const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
       cusEnts: cusEntsWithCusProduct,
-      internalFeatureId: feature.id,
+      internalFeatureId: feature.internal_id!,
     });
 
     // 2. Handle groupVal
@@ -290,10 +290,13 @@ export const getCusBalancesByEntitlement = async ({
         interval: ent.interval,
         unlimited: isBoolean ? undefined : unlimited,
         balance: isBoolean ? undefined : unlimited ? null : 0,
-        total: isBoolean ? undefined : unlimited ? null : 0,
-        adjustment: isBoolean ? undefined : unlimited ? null : 0,
+        total: isBoolean || unlimited ? undefined : 0,
+        adjustment: isBoolean || unlimited ? undefined : 0,
+        used: isBoolean ? undefined : unlimited ? null : 0,
       };
-    } else if (isBoolean || unlimited) {
+    }
+
+    if (isBoolean || unlimited) {
       continue;
     }
 
@@ -495,6 +498,7 @@ export const getUnlimitedAndUsageAllowed = ({
   internalFeatureId: string;
 }) => {
   // Unlimited
+
   const unlimited = cusEnts.some(
     (ent) =>
       ent.internal_feature_id === internalFeatureId &&
