@@ -451,6 +451,7 @@ export class CusProductService {
     return data;
   }
 
+  // Can Delete
   static async updateStatusByStripeSubId({
     sb,
     stripeSubId,
@@ -548,7 +549,10 @@ export class CusProductService {
       .from("customer_products")
       .update(updates)
       // .eq("status", CusProductStatus.Active)
-      .eq("processor->>subscription_id", stripeSubId)
+      // .eq("processor->>subscription_id", stripeSubId)
+      .or(
+        `processor->>'subscription_id'.eq.'${stripeSubId}', subscription_ids.cs.{${stripeSubId}}`
+      )
       .select()
       .single();
 
