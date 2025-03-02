@@ -26,6 +26,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useProductContext } from "../ProductContext";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { getBillingUnits } from "@/utils/product/priceUtils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function CreateUsagePrice({
   config,
@@ -235,6 +236,18 @@ function CreateUsagePrice({
           </div>
         )}
       </div>
+      {[BillWhen.EndOfPeriod].includes(getBillWhen()) && (
+        <div className="w-full flex items-center gap-2 pl-1">
+          <Checkbox
+            checked={config.should_prorate}
+            onCheckedChange={(checked) =>
+              setConfig({ ...config, should_prorate: checked })
+            }
+          />
+          <p className="text-t3 text-sm">Prorate based on billing period</p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-1">
         <p className="text-t3 text-sm mt-2 mb-2">Tiers</p>
         {selectedEntitlementAllowance === "unlimited" ? (

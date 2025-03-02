@@ -8,36 +8,65 @@ import {
   Feature,
   FeatureResponseSchema,
   FeatureType,
+  MeteredConfig,
 } from "@autumn/shared";
 import { CreateFeatureSchema } from "@autumn/shared";
 import express from "express";
 import { generateId } from "@/utils/genUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 
 export const featureApiRouter = express.Router();
 
+const defaultMeteredConfig = (data: any) => {
+  let config = data.config;
+  config.aggregate = {
+    type: AggregateType.Sum,
+    property: "value",
+  };
+  return config;
+};
+
+const validateMeteredConfig = (config: MeteredConfig) => {
+  let newConfig = { ...config };
+  if (config.filters.length == 0 || config.filters[0].value.length == 0) {
+    throw new RecaseError({
+      message: `Event name is required for metered feature`,
+      code: ErrCode.InvalidFeature,
+      statusCode: 400,
+    });
+  }
+
+  if (config.aggregate?.type == AggregateType.Count) {
+    newConfig.aggregate = {
+      type: AggregateType.Count,
+      property: null,
+    }; // to continue testing support for count...
+  } else {
+    newConfig.aggregate = {
+      type: AggregateType.Sum,
+      property: "value",
+    };
+  }
+
+  if (!newConfig.group_by) {
+    newConfig.group_by = null;
+  }
+
+  return newConfig;
+};
+
 export const validateFeature = (data: any) => {
   let featureType = data.type;
-  if (featureType == FeatureType.Metered) {
-    // 1. Check if property is provided
 
-    let config = data.config;
-    if (
-      config.aggregate.type == AggregateType.Sum &&
-      !config.aggregate.property
-    ) {
-      throw new RecaseError({
-        message: `Property is required for sum aggregate`,
-        code: ErrCode.InvalidFeature,
-        statusCode: 400,
-      });
-    }
+  let config = data.config;
+  if (featureType == FeatureType.Metered) {
+    config = validateMeteredConfig(config);
   }
 
   try {
-    CreateFeatureSchema.parse(data);
+    const parsedFeature = CreateFeatureSchema.parse({ ...data, config });
+    return parsedFeature;
   } catch (error: any) {
     throw new RecaseError({
       message: `Invalid feature: ${formatZodError(error)}`,
@@ -58,14 +87,14 @@ featureApiRouter.post("", async (req: any, res) => {
   let data = req.body;
 
   try {
-    validateFeature(data);
+    let parsedFeature = validateFeature(data);
 
     let feature: Feature = {
       internal_id: generateId("fe"),
       org_id: req.orgId,
       created_at: Date.now(),
       env: req.env,
-      ...data,
+      ...parsedFeature,
     };
 
     await FeatureService.insert({
@@ -93,7 +122,7 @@ featureApiRouter.post("/:feature_id", async (req: any, res) => {
 
       updates: {
         name: data.name || undefined,
-        config: data.config || undefined,
+        config: data.config ? validateMeteredConfig(data.config) : undefined,
       },
     });
 

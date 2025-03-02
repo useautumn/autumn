@@ -15,6 +15,7 @@ export const ErrCode = {
   InvalidInputs: "invalid_inputs",
   LimitsReached: "limits_reached",
   InvalidRequest: "invalid_request",
+
   // Org
   OrgNotFound: "org_not_found",
 
@@ -87,6 +88,7 @@ export const ErrCode = {
   InvalidEvent: "invalid_event",
   CreateEventFailed: "create_event_failed",
   DuplicateEvent: "duplicate_event",
+  AdjustAllowanceNotAllowed: "adjust_allowance_not_allowed",
 
   // Cus Product
   NoActiveCusProducts: "no_active_cus_products",

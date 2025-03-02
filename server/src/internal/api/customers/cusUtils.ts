@@ -32,6 +32,8 @@ import {
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { initGroupBalancesFromGetCus } from "@/internal/customers/entitlements/groupByUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const createNewCustomer = async ({
   sb,
@@ -169,34 +171,32 @@ export const flipProductResults = (
   return customers;
 };
 
-export const getCustomerDetails = async ({
-  customer,
+// getCustomerDetails helpers
+const getCusInvoices = async ({
   sb,
-  orgId,
-  env,
+  internalCustomerId,
+  limit = 20,
 }: {
-  customer: Customer;
   sb: SupabaseClient;
-  orgId: string;
-  env: AppEnv;
+  internalCustomerId: string;
+  limit?: number;
 }) => {
-  const fullCusProducts: any = await CusService.getFullCusProducts({
+  // Get customer invoices
+  const invoices = await InvoiceService.getByInternalCustomerId({
     sb,
-    internalCustomerId: customer.internal_id,
-    withProduct: true,
-    withPrices: true,
-    inStatuses: [
-      CusProductStatus.Active,
-      CusProductStatus.PastDue,
-      CusProductStatus.Scheduled,
-    ],
+    internalCustomerId,
+    limit,
   });
 
+  const processedInvoices = invoices.map(processInvoice);
+
+  return processedInvoices;
+};
+
+const processFullCusProducts = (fullCusProducts: any) => {
+  // Process full cus products
   let main = [];
   let addOns = [];
-
-  // 1. Process products
-
   for (const cusProduct of fullCusProducts) {
     let processed = processFullCusProduct(cusProduct);
 
@@ -208,19 +208,58 @@ export const getCustomerDetails = async ({
     }
   }
 
+  return { main, addOns };
+};
+
+export const getCustomerDetails = async ({
+  customer,
+  sb,
+  orgId,
+  env,
+  params = {},
+}: {
+  customer: Customer;
+  sb: SupabaseClient;
+  orgId: string;
+  env: AppEnv;
+  params?: any;
+}) => {
+  // 1. Get full customer products & processed invoices
+  const [fullCusProducts, processedInvoices] = await Promise.all([
+    CusService.getFullCusProducts({
+      sb,
+      internalCustomerId: customer.internal_id,
+      withProduct: true,
+      withPrices: true,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
+    }),
+    getCusInvoices({
+      sb,
+      internalCustomerId: customer.internal_id,
+      limit: 20,
+    }),
+  ]);
+
+  // 2. Initialize group by balances
+  let cusEnts = fullCusProductToCusEnts(fullCusProducts) as any;
+  await initGroupBalancesFromGetCus({
+    sb,
+    cusEnts,
+    params,
+  });
+
   // Get entitlements
   const balances = await getCusBalancesByEntitlement({
-    cusEntsWithCusProduct: fullCusProductToCusEnts(fullCusProducts) as any,
+    cusEntsWithCusProduct: cusEnts,
     cusPrices: fullCusProductToCusPrices(fullCusProducts),
+    groupVals: params,
   });
 
-  // Get customer invoices
-  const invoices = await InvoiceService.getByInternalCustomerId({
-    sb,
-    internalCustomerId: customer.internal_id,
-  });
-
-  const processedInvoices = invoices.map(processInvoice);
+  const { main, addOns } = processFullCusProducts(fullCusProducts);
 
   return {
     customer,
@@ -236,16 +275,19 @@ export const getCusEntsInFeatures = async ({
   internalCustomerId,
   internalFeatureIds,
   inStatuses = [CusProductStatus.Active],
+  withPrices = false,
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
   internalFeatureIds: string[];
   inStatuses?: CusProductStatus[];
+  withPrices?: boolean;
 }) => {
   const fullCusProducts = await CusService.getFullCusProducts({
     sb,
     internalCustomerId,
     inStatuses: inStatuses,
+    withPrices: withPrices,
   });
 
   const cusEntsWithCusProduct = fullCusProductToCusEnts(
@@ -263,5 +305,11 @@ export const getCusEntsInFeatures = async ({
 
   sortCusEntsForDeduction(cusEnts);
 
-  return { cusEnts };
+  if (!withPrices) {
+    return { cusEnts, cusPrices: undefined };
+  }
+
+  const cusPrices = fullCusProductToCusPrices(fullCusProducts, inStatuses);
+
+  return { cusEnts, cusPrices };
 };

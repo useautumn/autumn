@@ -3,7 +3,6 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { z } from "zod";
 import {
   BillingType,
-  CusProduct,
   Entitlement,
   FeatureOptions,
   FeatureOptionsSchema,
@@ -17,30 +16,27 @@ import {
   getCusPaymentMethod,
 } from "@/external/stripe/stripeCusUtils.js";
 import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+
 import {
   getBillingType,
   getEntOptions,
   getPriceEntitlement,
-  haveDifferentRecurringIntervals,
 } from "@/internal/prices/priceUtils.js";
 import { PricesInput } from "@autumn/shared";
 import { getFullCusProductData } from "../../../customers/products/cusProductUtils.js";
-import {
-  isFreeProduct,
-  isProductUpgrade,
-} from "@/internal/products/productUtils.js";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
-import chalk from "chalk";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
 import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoiceOnly.js";
-import { notNullOrUndefined } from "@/utils/genUtils.js";
+import { notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
+import chalk from "chalk";
+import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
 
 export const attachRouter = Router();
 
@@ -84,12 +80,15 @@ export const checkAddProductErrors = async ({
 
   for (const price of prices) {
     const billingType = getBillingType(price.config!);
-    if (billingType === BillingType.UsageInAdvance && !useCheckout) {
+
+    if (billingType === BillingType.UsageInAdvance) {
       // Get options for price
+
       let priceEnt = getPriceEntitlement(price, entitlements);
       let options = getEntOptions(optionsList, priceEnt);
 
-      if (!notNullOrUndefined(options?.quantity)) {
+      // 1. If not checkout, quantity should be defined
+      if (!useCheckout && nullOrUndefined(options?.quantity)) {
         throw new RecaseError({
           message: `Pass in 'quantity' for feature ${priceEnt.feature_id} in options`,
           code: ErrCode.InvalidOptions,
@@ -97,7 +96,21 @@ export const checkAddProductErrors = async ({
         });
       }
 
-      if (options?.quantity === 0 && prices.length === 0) {
+      // 2. Quantity must be >= feature allowance
+      if (
+        notNullOrUndefined(options?.quantity) &&
+        priceEnt.allowance &&
+        options!.quantity! < priceEnt.allowance
+      ) {
+        throw new RecaseError({
+          message: `Quantity must be greater than or equal to allowance (${priceEnt.allowance})`,
+          code: ErrCode.InvalidOptions,
+          statusCode: 400,
+        });
+      }
+
+      // 2. If there's only one price, quantity must be greater than 0
+      if (options?.quantity === 0 && prices.length === 1) {
         throw new RecaseError({
           message: `When there's only one price, quantity must be greater than 0`,
           code: ErrCode.InvalidOptions,
@@ -117,102 +130,6 @@ export const checkAddProductErrors = async ({
       }
     }
   }
-};
-
-export const handleExistingProduct = async ({
-  req,
-  res,
-  attachParams,
-  useCheckout = false,
-}: {
-  req: any;
-  res: any;
-  attachParams: AttachParams;
-  useCheckout?: boolean;
-}) => {
-  const { sb } = req;
-  const { customer, product, org } = attachParams;
-  const env = customer.env;
-
-  // 1. Fetch existing product by group
-  const currentProduct = await CusProductService.getCurrentProductByGroup({
-    sb,
-    internalCustomerId: customer.internal_id,
-    productGroup: product.group,
-  });
-
-  console.log(
-    `Current cus product: ${chalk.yellow(
-      currentProduct?.product.name || "None"
-    )}`
-  );
-
-  // 2. If same product, delete future product or throw error
-  if (currentProduct?.product.internal_id === product.internal_id) {
-    // If there's a future product, delete, else
-    const deleted = await CusProductService.deleteFutureProduct({
-      sb,
-      org,
-      env,
-      internalCustomerId: customer.internal_id,
-      productGroup: product.group,
-    });
-
-    if (deleted) {
-      console.log(
-        "Added product same as current product, deleted future product"
-      );
-
-      res.status(200).send({
-        success: true,
-        message: "Reactivated current product, removed future product(s)",
-      });
-      return {
-        done: true,
-        currentProduct,
-      };
-    } else {
-      throw new RecaseError({
-        message: `Customer ${customer.id} already has product ${currentProduct.product_id}`,
-        code: ErrCode.CustomerAlreadyHasProduct,
-        statusCode: 400,
-      });
-    }
-  }
-
-  // 3. If no existing product, check if new product is add-on
-  if (!currentProduct && product.is_add_on) {
-    throw new RecaseError({
-      message: `Customer has no base product`,
-      code: ErrCode.CustomerHasNoBaseProduct,
-      statusCode: 400,
-    });
-  }
-
-  if (currentProduct && useCheckout) {
-    // If not downgrade to free, throw error
-    let downgradeToFree =
-      !isProductUpgrade(currentProduct.product, product) &&
-      isFreeProduct(attachParams.prices);
-
-    let upgradeFromFree =
-      isProductUpgrade(currentProduct.product, product) &&
-      isFreeProduct(
-        currentProduct?.customer_prices.map((cp: any) => cp.price) || []
-      );
-
-    let isAddOn = attachParams.product.is_add_on;
-
-    if (!downgradeToFree && !upgradeFromFree && !isAddOn) {
-      throw new RecaseError({
-        message: `Either payment method not found, or force_checkout is true: unable to perform upgrade / downgrade`,
-        code: ErrCode.InvalidRequest,
-        statusCode: 400,
-      });
-    }
-  }
-
-  return { curCusProduct: currentProduct, done: false };
 };
 
 export const handlePublicAttachErrors = async ({
@@ -428,6 +345,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       res,
       attachParams,
       useCheckout,
+      invoiceOnly,
     });
 
     await handlePublicAttachErrors({
@@ -445,7 +363,6 @@ attachRouter.post("/attach", async (req: any, res) => {
     );
 
     const newProductFree = isFreeProduct(attachParams.prices);
-    attachParams.curCusProduct = !curProductFree ? curCusProduct : null;
 
     if (
       (!curCusProduct && newProductFree) ||

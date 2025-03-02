@@ -45,6 +45,9 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
   } else if (usageConfig.bill_when == BillWhen.BelowThreshold) {
     return BillingType.UsageBelowThreshold;
   } else if (usageConfig.bill_when == BillWhen.EndOfPeriod) {
+    if (usageConfig.should_prorate) {
+      return BillingType.InArrearProrated;
+    }
     return BillingType.UsageInArrear;
   }
 
@@ -52,14 +55,23 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
 };
 
 export const getBillingInterval = (prices: Price[]) => {
+  if (prices.length === 0) {
+    return BillingInterval.OneOff;
+  }
+
   const pricesCopy = structuredClone(prices);
 
-  pricesCopy.sort((a, b) => {
-    return (
-      BillintIntervalOrder.indexOf(a.config!.interval!) -
-      BillintIntervalOrder.indexOf(b.config!.interval!)
-    );
-  });
+  try {
+    pricesCopy.sort((a, b) => {
+      return (
+        BillintIntervalOrder.indexOf(a.config!.interval!) -
+        BillintIntervalOrder.indexOf(b.config!.interval!)
+      );
+    });
+  } catch (error) {
+    console.log("Error sorting prices:", error);
+    throw error;
+  }
 
   if (pricesCopy.length == 0) {
     throw new RecaseError({
@@ -132,7 +144,8 @@ export const getCheckoutRelevantPrices = (prices: Price[]) => {
       price.billing_type == BillingType.OneOff ||
       price.billing_type == BillingType.FixedCycle ||
       price.billing_type == BillingType.UsageInAdvance ||
-      price.billing_type == BillingType.UsageInArrear
+      price.billing_type == BillingType.UsageInArrear ||
+      price.billing_type == BillingType.InArrearProrated
   );
 };
 
@@ -280,7 +293,10 @@ export const getPriceForOverage = (price: Price, overage: number) => {
   let usageConfig = price.config as UsagePriceConfig;
   let billingType = getBillingType(usageConfig);
 
-  if (billingType !== BillingType.UsageInArrear) {
+  if (
+    billingType !== BillingType.UsageInArrear &&
+    billingType !== BillingType.InArrearProrated
+  ) {
     throw new RecaseError({
       message: `getPriceForUsage not implemented for this billing type: ${billingType}`,
       code: ErrCode.InvalidRequest,

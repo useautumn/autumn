@@ -24,6 +24,17 @@ export const CustomerEntitlementSchema = z.object({
   usage_allowed: z.boolean().nullable(),
   next_reset_at: z.number().nullable(),
   adjustment: z.number().nullish().default(0),
+
+  // Group by fields
+  balances: z
+    .record(
+      z.string(),
+      z.object({
+        balance: z.number(),
+        adjustment: z.number(),
+      })
+    )
+    .nullish(),
 });
 
 export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({

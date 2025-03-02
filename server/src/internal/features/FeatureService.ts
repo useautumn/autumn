@@ -3,6 +3,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, CreditSchemaItem, Feature, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Client } from "pg";
+import { creditSystemContainsFeature } from "./creditSystemUtils.js";
 
 export class FeatureService {
   static async getFromReq(req: any) {
@@ -204,16 +205,16 @@ export class FeatureService {
     }
 
     let feature = data.find((f) => f.id === featureId);
-    let creditSystems = data.filter(
-      (f) => f.type === FeatureType.CreditSystem && f.id !== featureId
-    );
 
-    creditSystems = creditSystems.filter((f) => {
-      let schema = f.config.schema;
-      return schema.some(
-        (s: CreditSchemaItem) => s.metered_feature_id === featureId
-      );
-    });
+    let creditSystems = data.filter(
+      (f) =>
+        f.type === FeatureType.CreditSystem &&
+        f.id !== featureId &&
+        creditSystemContainsFeature({
+          creditSystem: f,
+          meteredFeatureId: featureId,
+        })
+    );
 
     return {
       feature,

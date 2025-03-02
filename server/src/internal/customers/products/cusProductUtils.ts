@@ -55,6 +55,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import Stripe from "stripe";
 import { deleteScheduledIds } from "@/external/stripe/stripeSubUtils.js";
+import { sortCusEntsForDeduction } from "../entitlements/cusEntUtils.js";
 
 // 1. Delete future product
 export const uncancelCurrentProduct = async ({
@@ -312,13 +313,22 @@ export const fullCusProductToCusEnts = (
     );
   }
 
+  sortCusEntsForDeduction(cusEnts);
+
   return cusEnts;
 };
 
-export const fullCusProductToCusPrices = (cusProducts: FullCusProduct[]) => {
+export const fullCusProductToCusPrices = (
+  cusProducts: FullCusProduct[],
+  inStatuses: CusProductStatus[] = [CusProductStatus.Active]
+) => {
   const cusPrices: FullCustomerPrice[] = [];
 
   for (const cusProduct of cusProducts) {
+    if (!inStatuses.includes(cusProduct.status)) {
+      continue;
+    }
+
     cusPrices.push(...cusProduct.customer_prices);
   }
 
@@ -369,50 +379,128 @@ export const processFullCusProduct = (cusProduct: FullCusProduct) => {
   };
 };
 
-export const getProductAndOrg = async ({
-  sb,
+// GET CUSTOMER PRODUCT & ORG IN PARALLEL
 
+const getOrCreateCustomer = async ({
+  sb,
+  customerId,
+  customerData,
+  orgId,
+  env,
+}: {
+  sb: SupabaseClient;
+  customerId: string;
+  customerData?: CustomerData;
+  orgId: string;
+  env: AppEnv;
+}) => {
+  let customer = await CusService.getById({
+    sb,
+    id: customerId,
+    orgId,
+    env,
+  });
+
+  if (!customer) {
+    customer = await createNewCustomer({
+      sb,
+      orgId,
+      env,
+      customer: {
+        id: customerId,
+        name: customerData?.name || "",
+        email: customerData?.email || "",
+        fingerprint: customerData?.fingerprint,
+      },
+    });
+  }
+
+  return customer;
+};
+
+export const getCustomerProductFeaturesAndOrg = async ({
+  sb,
+  customerId,
+  customerData,
   productId,
   orgId,
   env,
 }: {
   sb: SupabaseClient;
-
+  customerData?: CustomerData;
+  customerId: string;
   productId: string;
   orgId: string;
   env: AppEnv;
 }) => {
-  let fullProduct;
-  try {
-    fullProduct = await ProductService.getFullProductStrict({
+  const getProduct = async () => {
+    let fullProduct;
+    try {
+      fullProduct = await ProductService.getFullProductStrict({
+        sb,
+        productId,
+        orgId,
+        env,
+      });
+
+      return fullProduct;
+    } catch (error) {
+      throw new RecaseError({
+        message: `Failed to get product ${productId}`,
+        statusCode: StatusCodes.NOT_FOUND,
+        code: ErrCode.ProductNotFound,
+      });
+    }
+  };
+
+  const getOrg = async () => {
+    let fullOrg;
+    try {
+      fullOrg = await OrgService.getFullOrg({
+        sb,
+        orgId,
+      });
+      return fullOrg;
+    } catch (error) {
+      throw new RecaseError({
+        message: `Failed to get organization ${orgId}`,
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+        code: ErrCode.InternalError,
+      });
+    }
+  };
+
+  const getFeatures = async () => {
+    try {
+      const features = await FeatureService.getFeatures({
+        sb,
+        orgId,
+        env,
+      });
+      return features;
+    } catch (error) {
+      throw new RecaseError({
+        message: `Failed to get features for organization ${orgId}`,
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+        code: ErrCode.InternalError,
+      });
+    }
+  };
+
+  const [customer, product, org, features] = await Promise.all([
+    getOrCreateCustomer({
       sb,
-      productId,
+      customerId,
+      customerData,
       orgId,
       env,
-    });
-  } catch (error) {
-    throw new RecaseError({
-      message: `Failed to get product ${productId}`,
-      statusCode: StatusCodes.NOT_FOUND,
-      code: ErrCode.ProductNotFound,
-    });
-  }
+    }),
+    getProduct(),
+    getOrg(),
+    getFeatures(),
+  ]);
 
-  let fullOrg;
-  try {
-    fullOrg = await OrgService.getFullOrg({
-      sb,
-      orgId,
-    });
-  } catch (error) {
-    throw new RecaseError({
-      message: `Failed to get organization ${orgId}`,
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-      code: ErrCode.InternalError,
-    });
-  }
-
-  return { fullProduct, org: fullOrg };
+  return { customer, product, org, features };
 };
 
 // GET PRICES
@@ -713,43 +801,6 @@ export const processEntsInput = async ({
   }
 };
 
-const getOrCreateCustomer = async ({
-  sb,
-  customerId,
-  customerData,
-  orgId,
-  env,
-}: {
-  sb: SupabaseClient;
-  customerId: string;
-  customerData?: CustomerData;
-  orgId: string;
-  env: AppEnv;
-}) => {
-  let customer = await CusService.getById({
-    sb,
-    id: customerId,
-    orgId,
-    env,
-  });
-
-  if (!customer) {
-    customer = await createNewCustomer({
-      sb,
-      orgId,
-      env,
-      customer: {
-        id: customerId,
-        name: customerData?.name || "",
-        email: customerData?.email || "",
-        fingerprint: customerData?.fingerprint,
-      },
-    });
-  }
-
-  return customer;
-};
-
 export const getFullCusProductData = async ({
   sb,
   customerId,
@@ -776,27 +827,16 @@ export const getFullCusProductData = async ({
   freeTrialInput: FreeTrial | null;
   isCustom?: boolean;
 }) => {
-  const customer = await getOrCreateCustomer({
-    sb,
-    customerId,
-    customerData,
-    orgId,
-    env,
-  });
-
   // 1. Get customer, product, org & features
-  const { fullProduct, org } = await getProductAndOrg({
-    sb,
-    productId,
-    orgId,
-    env,
-  });
-
-  const features = await FeatureService.getFeatures({
-    sb,
-    orgId,
-    env,
-  });
+  const { customer, product, org, features } =
+    await getCustomerProductFeaturesAndOrg({
+      sb,
+      customerId,
+      customerData,
+      productId,
+      orgId,
+      env,
+    });
 
   let newOptionsList: FeatureOptions[] = [];
 
@@ -822,19 +862,19 @@ export const getFullCusProductData = async ({
   if (!isCustom) {
     let freeTrial = await getFreeTrialAfterFingerprint({
       sb,
-      freeTrial: fullProduct.free_trial,
+      freeTrial: product.free_trial,
       fingerprint: customer.fingerprint,
       internalCustomerId: customer.internal_id,
     });
 
     return {
       customer,
-      product: fullProduct,
+      product,
       org,
       features,
       optionsList: newOptionsList,
-      prices: fullProduct.prices,
-      entitlements: fullProduct.entitlements.map((ent: any) => ({
+      prices: product.prices,
+      entitlements: product.entitlements.map((ent: any) => ({
         ...ent,
         feature: features.find(
           (f) => f.internal_id === ent.internal_feature_id
@@ -847,8 +887,8 @@ export const getFullCusProductData = async ({
   const entitlements = await handleNewEntitlements({
     sb,
     newEnts: entsInput,
-    curEnts: fullProduct.entitlements,
-    internalProductId: fullProduct.internal_id,
+    curEnts: product.entitlements,
+    internalProductId: product.internal_id,
     orgId,
     isCustom,
     features,
@@ -864,21 +904,21 @@ export const getFullCusProductData = async ({
   const prices = await handleNewPrices({
     sb,
     newPrices: pricesInput,
-    curPrices: fullProduct.prices,
-    internalProductId: fullProduct.internal_id,
+    curPrices: product.prices,
+    internalProductId: product.internal_id,
     isCustom,
     features,
     env,
-    product: fullProduct,
+    product,
     org,
     entitlements: entitlementsWithFeature,
   });
 
   const freeTrial = await handleNewFreeTrial({
     sb,
-    curFreeTrial: fullProduct.free_trial,
+    curFreeTrial: product.free_trial,
     newFreeTrial: freeTrialInput || null,
-    internalProductId: fullProduct.internal_id,
+    internalProductId: product.internal_id,
     isCustom,
   });
 
@@ -891,7 +931,7 @@ export const getFullCusProductData = async ({
 
   return {
     customer,
-    product: fullProduct,
+    product,
     org,
     features,
     optionsList: newOptionsList,

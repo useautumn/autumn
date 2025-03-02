@@ -176,7 +176,10 @@ const handleDowngrade = async ({
     disableFreeTrial: true,
   });
 
-  res.status(200).json({ success: true, message: "Downgrade handled" });
+  res.status(200).json({
+    success: true,
+    message: `Successfully scheduled downgrade to ${attachParams.product.name} for customer ${attachParams.customer.name}`,
+  });
 };
 
 export const handleChangeProduct = async ({
