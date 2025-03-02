@@ -89,47 +89,36 @@ const getEventAndCustomer = async ({
 };
 
 const getAffectedFeatures = async ({
-  // pg,
-  sb,
+  pg,
   event,
   orgId,
   env,
 }: {
-  // pg: Client;
-  sb: SupabaseClient;
+  pg: Client;
   event: Event;
   orgId: string;
   env: AppEnv;
 }) => {
-  const { feature, creditSystems } = await FeatureService.getWithCreditSystems({
-    sb,
-    orgId,
-    env,
-    featureId: event.event_name,
-  });
+  const { rows }: { rows: Feature[] } = await pg.query(`
+    with features_with_event as (
+      select * from features
+      where org_id = '${orgId}'
+      and env = '${env}'
+      and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
+    )
 
-  return [feature, ...creditSystems];
+    select * from features WHERE
+    org_id = '${orgId}'
+    and env = '${env}'
+    and EXISTS (
+      SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
+      schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
+    )
+    UNION all
+    select * from features_with_event
+  `);
 
-  // const { rows }: { rows: Feature[] } = await pg.query(`
-  //   with features_with_event as (
-  //     select * from features
-  //     where org_id = '${orgId}'
-  //     and env = '${env}'
-  //     and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
-  //   )
-
-  //   select * from features WHERE
-  //   org_id = '${orgId}'
-  //   and env = '${env}'
-  //   and EXISTS (
-  //     SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
-  //     schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
-  //   )
-  //   UNION all
-  //   select * from features_with_event
-  // `);
-
-  // return rows;
+  return rows;
 };
 
 export const handleEventSent = async ({
@@ -160,8 +149,7 @@ export const handleEventSent = async ({
   });
 
   const affectedFeatures = await getAffectedFeatures({
-    // pg: pg,
-    sb,
+    pg: pg,
     event,
     orgId,
     env,
