@@ -37,7 +37,7 @@ const validateMeteredConfig = (config: MeteredConfig) => {
     });
   }
 
-  if (config.aggregate.type == AggregateType.Count) {
+  if (config.aggregate?.type == AggregateType.Count) {
     newConfig.aggregate = {
       type: AggregateType.Count,
       property: null,

@@ -17,13 +17,13 @@ export const validateFeature = (feature: Feature) => {
     }
 
     const meteredConfig = feature.config as MeteredConfig;
-    const aggregate = meteredConfig.aggregate;
-    if (aggregate.type === AggregateType.Sum) {
-      if (!aggregate.property) {
-        toast.error("Aggregate property is required");
-        return false;
-      }
-    }
+    // const aggregate = meteredConfig.aggregate;
+    // if (aggregate.type === AggregateType.Sum) {
+    //   if (!aggregate.property) {
+    //     toast.error("Aggregate property is required");
+    //     return false;
+    //   }
+    // }
 
     if (meteredConfig.group_by) {
       if (!meteredConfig.group_by.property) {
