@@ -88,7 +88,6 @@ export const ErrCode = {
   InvalidEvent: "invalid_event",
   CreateEventFailed: "create_event_failed",
   DuplicateEvent: "duplicate_event",
-  AdjustAllowanceNotAllowed: "adjust_allowance_not_allowed",
 
   // Cus Product
   NoActiveCusProducts: "no_active_cus_products",
