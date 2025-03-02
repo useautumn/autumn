@@ -345,6 +345,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       res,
       attachParams,
       useCheckout,
+      invoiceOnly,
     });
 
     await handlePublicAttachErrors({

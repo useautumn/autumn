@@ -4,6 +4,7 @@ import {
   FeatureType,
   Event,
   FullCustomerEntitlement,
+  CreditSchemaItem,
 } from "@autumn/shared";
 import { CustomerEntitlementService } from "./CusEntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -82,6 +83,7 @@ export const getGroupBalanceFromEvent = ({
     )!;
   }
 
+  // TODO: Add support for credit systems?
   let groupVal = getGroupValFromEvent({ event, feature: feature! });
 
   if (nullOrUndefined(groupVal)) {
@@ -269,8 +271,9 @@ export const initGroupBalancesFromGetCus = async ({
     let groupValue = params[query];
 
     let feature = features.find(
-      (f) => f.config.group_by?.property == groupField
+      (f) => f.config?.group_by?.property == groupField
     );
+
     if (!feature || nullOrUndefined(groupValue)) {
       continue;
     }
@@ -307,6 +310,7 @@ export const getResetBalancesUpdate = ({
     let newBalances = { ...cusEnt.balances };
     for (const groupVal in newBalances) {
       newBalances[groupVal].balance = cusEnt.entitlement.allowance || 0;
+      newBalances[groupVal].adjustment = 0;
     }
     update = { balances: newBalances };
   }
@@ -314,5 +318,6 @@ export const getResetBalancesUpdate = ({
   return {
     ...update,
     balance: cusEnt.entitlement.allowance || 0,
+    adjustment: 0,
   };
 };

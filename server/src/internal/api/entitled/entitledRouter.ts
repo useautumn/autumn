@@ -25,10 +25,7 @@ import {
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import { notNullOrUndefined } from "@/utils/genUtils.js";
-import {
-  getGroupBalanceFromEvent,
-  initGroupBalances,
-} from "@/internal/customers/entitlements/groupByUtils.js";
+import { initGroupBalances } from "@/internal/customers/entitlements/groupByUtils.js";
 
 type CusWithEnts = Customer & {
   customer_products: CusProduct[];
@@ -428,6 +425,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       sb,
       req,
     });
+
     logEntitled({ req, customer_id, cusEnts: cusEnts! });
 
     // 2. If boolean, return true

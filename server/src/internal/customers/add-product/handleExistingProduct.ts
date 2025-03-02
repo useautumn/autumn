@@ -70,11 +70,13 @@ export const handleExistingProduct = async ({
   res,
   attachParams,
   useCheckout = false,
+  invoiceOnly = false,
 }: {
   req: any;
   res: any;
   attachParams: AttachParams;
   useCheckout?: boolean;
+  invoiceOnly?: boolean;
 }): Promise<{ curCusProduct: FullCusProduct | null; done: boolean }> => {
   const { sb } = req;
   const { customer, product } = attachParams;
@@ -152,6 +154,15 @@ export const handleExistingProduct = async ({
         statusCode: 400,
       });
     }
+  }
+
+  if (curMainProduct && invoiceOnly) {
+    // return { curCusProduct: curMainProduct, done: true };
+    throw new RecaseError({
+      message: `Please contact hey@useautumn.com to enable upgrading / downgrading through invoice`,
+      code: ErrCode.CustomerAlreadyHasProduct,
+      statusCode: 400,
+    });
   }
 
   return { curCusProduct: curMainProduct, done: false };
