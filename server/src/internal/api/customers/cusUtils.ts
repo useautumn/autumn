@@ -216,13 +216,13 @@ export const getCustomerDetails = async ({
   sb,
   orgId,
   env,
-  params,
+  params = {},
 }: {
   customer: Customer;
   sb: SupabaseClient;
   orgId: string;
   env: AppEnv;
-  params: any;
+  params?: any;
 }) => {
   // 1. Get full customer products & processed invoices
   const [fullCusProducts, processedInvoices] = await Promise.all([
