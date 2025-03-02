@@ -21,25 +21,25 @@ import {
   pricesToInvoiceItems,
 } from "@/external/stripe/stripePriceUtils.js";
 
-export const voidLatestInvoice = async ({
-  stripeCli,
-  subId,
-}: {
-  stripeCli: Stripe;
-  subId: string;
-}) => {
-  // 1. Get sub
-  const sub = await stripeCli.subscriptions.retrieve(subId);
+// export const voidLatestInvoice = async ({
+//   stripeCli,
+//   subId,
+// }: {
+//   stripeCli: Stripe;
+//   subId: string;
+// }) => {
+//   // 1. Get sub
+//   const sub = await stripeCli.subscriptions.retrieve(subId);
 
-  // 2. Void latest invoice?
-  const invoice = await stripeCli.invoices.retrieve(
-    sub.latest_invoice as string
-  );
+//   // 2. Void latest invoice?
+//   const invoice = await stripeCli.invoices.retrieve(
+//     sub.latest_invoice as string
+//   );
 
-  if (invoice.status !== "paid") {
-    await stripeCli.invoices.voidInvoice(sub.latest_invoice as string);
-  }
-};
+//   if (invoice.status !== "paid") {
+//     await stripeCli.invoices.voidInvoice(sub.latest_invoice as string);
+//   }
+// };
 
 export const removeCurrentProduct = async ({
   sb,
@@ -65,22 +65,12 @@ export const removeCurrentProduct = async ({
     },
   });
 
-  if (curCusProduct.processor?.subscription_id) {
-    // Cancel stripe subscription
-    const stripeCli = createStripeCli({ org, env });
+  // Cancel stripe subscription
+  const stripeCli = createStripeCli({ org, env });
 
-    // TODO: If config.cancel unpaid invoice to upgrade
-    // await voidLatestInvoice({
-    //   stripeCli,
-    //   subId: curCusProduct.processor.subscription_id,
-    // });
-
-    await stripeCli.subscriptions.cancel(
-      curCusProduct.processor.subscription_id
-    );
+  for (const subId of curCusProduct.subscription_ids || []) {
+    await stripeCli.subscriptions.cancel(subId);
   }
-
-  // 3. Void latest invoice (if exists...)
 };
 
 export const invoiceOnlyOneOff = async ({
@@ -181,7 +171,7 @@ export const handleInvoiceOnly = async ({
 
   let stripeSubs: Stripe.Subscription[] = [];
   for (const itemSet of itemSets) {
-    const { items } = itemSet;
+    const { items, subMeta } = itemSet;
     // Create subscription
     const stripeCli = createStripeCli({ org, env });
     const stripeSub = await stripeCli.subscriptions.create({
@@ -189,6 +179,7 @@ export const handleInvoiceOnly = async ({
       collection_method: "send_invoice",
       days_until_due: 30,
       items,
+      metadata: subMeta,
     });
     stripeSubs.push(stripeSub);
   }

@@ -52,6 +52,7 @@ export const FrontendProductSchema = ProductSchema.omit({
     })
   ),
   free_trial: FreeTrialSchema,
+  options: z.any(),
 });
 
 export const FullProductSchema = ProductSchema.extend({

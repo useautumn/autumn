@@ -8,6 +8,9 @@ export enum BillWhen {
   // Latest
   StartOfPeriod = "start_of_period",
   EndOfPeriod = "end_of_period",
+
+  // Seat based
+  // Licensed = "on_usage",
   BelowThreshold = "below_threshold",
 }
 
@@ -33,6 +36,8 @@ export const UsagePriceConfigSchema = z.object({
   stripe_meter_id: z.string().nullish(),
   stripe_price_id: z.string().nullish(),
   stripe_event_name: z.string().nullish(),
+
+  should_prorate: z.boolean().optional(),
 });
 
 export type UsagePriceConfig = z.infer<typeof UsagePriceConfigSchema>;

@@ -1,9 +1,6 @@
 import { Router } from "express";
 import { getFullCusProductData } from "../customers/products/cusProductUtils.js";
-import {
-  checkStripeConnections,
-  handleExistingProduct,
-} from "../api/customers/products/cusProductRouter.js";
+import { checkStripeConnections } from "../api/customers/products/cusProductRouter.js";
 import { checkAddProductErrors } from "../api/customers/products/cusProductRouter.js";
 import chalk from "chalk";
 import { isFreeProduct } from "../products/productUtils.js";
@@ -11,6 +8,7 @@ import { handleAddFreeProduct } from "../customers/add-product/handleAddFreeProd
 import { handleCreateCheckout } from "../customers/add-product/handleCreateCheckout.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { AttachParams } from "../customers/products/AttachParams.js";
+import { handleExistingProduct } from "../customers/add-product/handleExistingProduct.js";
 
 export const publicAttachRouter = Router();
 

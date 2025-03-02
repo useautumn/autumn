@@ -38,6 +38,7 @@ export const PricingConfig = ({
         amount: 0.0,
       },
     ],
+    should_prorate: false,
   };
 
   const [priceType, setPriceType] = useState(
@@ -166,6 +167,7 @@ export const validateUsageConfig = (usageConfig: any) => {
     config.usage_tiers[i].amount = parseFloat(config.usage_tiers[i].amount);
   }
 
+  config.should_prorate = config.should_prorate || false;
   return config;
 };
 

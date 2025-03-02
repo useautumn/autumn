@@ -35,6 +35,7 @@ import toast from "react-hot-toast";
 import { faStripe, faStripeS } from "@fortawesome/free-brands-svg-icons";
 import Link from "next/link";
 import { getStripeSubLink } from "@/utils/linkUtils";
+import React from "react";
 
 export const CustomerProductList = ({
   customer,
@@ -111,7 +112,33 @@ export const CustomerProductList = ({
                         scheduled
                       </Badge>
                     )}
-                    {cusProduct.processor?.subscription_id && (
+                    {cusProduct.subscription_ids &&
+                      cusProduct.subscription_ids.length > 0 && (
+                        <React.Fragment>
+                          {cusProduct.subscription_ids.map((subId: string) => {
+                            return (
+                              <Link
+                                key={subId}
+                                href={getStripeSubLink(subId, env)}
+                                target="_blank"
+                                onClick={(e) => {
+                                  // e.preventDefault();
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <div className="flex justify-center items-center w-fit px-2 gap-2 h-6">
+                                  <FontAwesomeIcon
+                                    icon={faArrowUpRightFromSquare}
+                                    className="text-[#665CFF]"
+                                    size="xs"
+                                  />
+                                </div>
+                              </Link>
+                            );
+                          })}
+                        </React.Fragment>
+                      )}
+                    {/* {cusProduct.processor?.subscription_id && (
                       <Link
                         href={getStripeSubLink(
                           cusProduct.processor?.subscription_id,
@@ -131,7 +158,7 @@ export const CustomerProductList = ({
                           />
                         </div>
                       </Link>
-                    )}
+                    )} */}
                   </div>
                 </TableCell>
                 <TableCell>

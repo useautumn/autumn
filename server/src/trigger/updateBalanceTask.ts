@@ -3,7 +3,6 @@ import { handleBelowThresholdInvoicing } from "./invoiceThresholdUtils.js";
 import { getBelowThresholdPrice } from "./invoiceThresholdUtils.js";
 
 import {
-  AggregateType,
   AllowanceType,
   AppEnv,
   CusEntWithEntitlement,
@@ -11,6 +10,7 @@ import {
   Event,
   Feature,
   FullCustomerEntitlement,
+  FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
@@ -18,66 +18,29 @@ import { Customer, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
 import { Decimal } from "decimal.js";
+import { adjustAllowance } from "./adjustAllowance.js";
+import {
+  getMeteredDeduction,
+  getCreditSystemDeduction,
+} from "./deductUtils.js";
+import {
+  getGroupBalanceFromEvent,
+  getGroupBalanceUpdate,
+  initGroupBalancesForEvent,
+} from "@/internal/customers/entitlements/groupByUtils.js";
+import { nullOrUndefined } from "@/utils/genUtils.js";
+import { getMinCusEntBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
 
-// 2. Functions to get deduction per feature
-export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
-  let config = meteredFeature.config;
-  let aggregate = config.aggregate;
+// Decimal.set({ precision: 12 }); // 12 DP precision
 
-  if (aggregate.type == AggregateType.Count) {
-    return 1;
-  }
-
-  if (aggregate.type == AggregateType.Sum) {
-    let property = aggregate.property;
-    let value = event.properties[property] || 0;
-
-    let floatVal = parseFloat(value);
-    if (isNaN(floatVal)) {
-      return 0;
-    }
-
-    return floatVal;
-  }
-
-  return 0;
-};
-
-const getCreditSystemDeduction = ({
-  meteredFeatures,
-  creditSystem,
-  event,
-}: {
-  meteredFeatures: Feature[];
-  creditSystem: Feature;
+type DeductParams = {
+  sb: SupabaseClient;
+  env: AppEnv;
+  org: Organization;
+  cusPrices: FullCustomerPrice[];
+  customer: Customer;
   event: Event;
-}) => {
-  let creditsUpdate = 0;
-  let meteredFeatureIds = meteredFeatures.map((feature) => feature.id);
-
-  for (const schema of creditSystem.config.schema) {
-    if (meteredFeatureIds.includes(schema.metered_feature_id)) {
-      let meteredFeature = meteredFeatures.find(
-        (feature) => feature.id === schema.metered_feature_id
-      );
-
-      if (!meteredFeature) {
-        continue;
-      }
-
-      let meteredDeduction = getMeteredDeduction(meteredFeature, event);
-
-      let meteredDeductionDecimal = new Decimal(meteredDeduction);
-      let featureAmountDecimal = new Decimal(schema.feature_amount);
-      let creditAmountDecimal = new Decimal(schema.credit_amount);
-      creditsUpdate += meteredDeductionDecimal
-        .div(featureAmountDecimal)
-        .mul(creditAmountDecimal)
-        .toNumber();
-    }
-  }
-
-  return creditsUpdate;
+  feature: Feature;
 };
 
 // 2. Get deductions for each feature
@@ -124,6 +87,230 @@ const getFeatureDeductions = ({
   return featureDeductions;
 };
 
+const logBalanceUpdate = ({
+  timeTaken,
+  customer,
+  features,
+  cusEnts,
+  featureDeductions,
+  event,
+  org,
+}: {
+  timeTaken: string;
+  customer: Customer;
+  features: Feature[];
+  cusEnts: FullCustomerEntitlement[];
+  featureDeductions: any;
+  event: Event;
+  org: Organization;
+}) => {
+  console.log(`   - getCusEntsInFeatures: ${timeTaken}ms`);
+  console.log(
+    `   - Customer: ${customer.id} (${customer.env}) | Org: ${
+      org.slug
+    } | Features: ${features.map((f) => f.id).join(", ")}`
+  );
+  console.log("   - Properties:", event.properties);
+  console.log(
+    "   - CusEnts:",
+    cusEnts.map((cusEnt: any) => {
+      let balanceStr = cusEnt.balance;
+      let { groupVal, balance } = getGroupBalanceFromEvent({
+        event,
+        cusEnt,
+        features,
+      });
+
+      try {
+        if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
+          balanceStr = "Unlimited";
+        } else if (groupVal) {
+          balanceStr = `${balance} [${groupVal}]`;
+        }
+      } catch (error) {
+        balanceStr = "failed_to_get_balance";
+      }
+
+      return `${cusEnt.feature_id} - ${balanceStr} (${
+        cusEnt.customer_product ? cusEnt.customer_product.product_id : ""
+      })`;
+    }),
+    "| Deductions:",
+    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`)
+  );
+};
+
+const deductAllowanceFromCusEnt = async ({
+  toDeduct,
+  deductParams,
+  cusEnt,
+  features,
+}: {
+  toDeduct: number;
+  deductParams: DeductParams;
+  cusEnt: FullCustomerEntitlement;
+  features: Feature[];
+}) => {
+  const { sb, feature, env, org, cusPrices, customer, event } = deductParams;
+
+  if (toDeduct == 0) {
+    return;
+  }
+
+  let newBalance, deducted;
+
+  let cusEntBalance;
+  let { groupVal, balance } = getGroupBalanceFromEvent({
+    event,
+    feature,
+    cusEnt,
+    features,
+  });
+
+  // console.log("Group val:", groupVal);
+  // console.log("Balance:", balance);
+
+  if (groupVal && nullOrUndefined(balance)) {
+    console.log(
+      `   - No balance found for group by value: ${groupVal}, for customer: ${customer.id}, skipping`
+    );
+    return toDeduct;
+  }
+
+  cusEntBalance = new Decimal(balance!);
+
+  if (cusEntBalance.lte(0) && toDeduct > 0) {
+    // Don't deduct if balance is negative and toDeduct is positive, if not, just add to balance
+    return toDeduct;
+  }
+
+  // If toDeduct is negative, add to balance and set toDeduct to 0
+  if (toDeduct < 0) {
+    newBalance = cusEntBalance.minus(toDeduct).toNumber();
+    deducted = toDeduct;
+    toDeduct = 0;
+  }
+
+  // If cusEnt has less balance to deduct than 0, deduct the balance and set balance to 0
+  else if (cusEntBalance.minus(toDeduct).lt(0)) {
+    toDeduct = new Decimal(toDeduct).minus(cusEntBalance).toNumber(); // toDeduct = toDeduct - cusEntBalance
+    deducted = cusEntBalance.toNumber(); // deducted = cusEntBalance
+    newBalance = 0; // newBalance = 0
+  }
+
+  // Else, deduct the balance and set toDeduct to 0
+  else {
+    newBalance = cusEntBalance.minus(toDeduct).toNumber();
+    deducted = toDeduct;
+    toDeduct = 0;
+  }
+
+  await CustomerEntitlementService.update({
+    sb,
+    id: cusEnt.id,
+    updates: getGroupBalanceUpdate({
+      groupVal,
+      cusEnt,
+      newBalance,
+    }),
+  });
+
+  await adjustAllowance({
+    sb,
+    env,
+    org,
+    cusPrices: cusPrices as any,
+    event,
+    customer,
+    affectedFeature: feature,
+    cusEnt: cusEnt as any,
+    originalBalance: getMinCusEntBalance({ cusEnt }),
+    newBalance: getMinCusEntBalance({ cusEnt, newBalance, groupVal }),
+    deduction: deducted,
+  });
+
+  if (groupVal) {
+    cusEnt.balances![groupVal].balance = newBalance;
+  } else {
+    cusEnt.balance = newBalance;
+  }
+
+  return toDeduct;
+};
+
+const deductFromUsageBasedCusEnt = async ({
+  toDeduct,
+  deductParams,
+  cusEnts,
+  features,
+}: {
+  toDeduct: number;
+  deductParams: DeductParams;
+  cusEnts: FullCustomerEntitlement[];
+  features: Feature[];
+}) => {
+  const { sb, feature, env, org, cusPrices, customer, event } = deductParams;
+
+  // Deduct from usage-based price
+  const usageBasedEnt = cusEnts.find(
+    (cusEnt: CusEntWithEntitlement) =>
+      cusEnt.usage_allowed &&
+      cusEnt.entitlement.internal_feature_id == feature.internal_id
+  );
+
+  if (!usageBasedEnt) {
+    console.log(
+      `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no usage-based entitlement found`
+    );
+    return;
+  }
+
+  // Group by value
+  let { groupVal, balance } = getGroupBalanceFromEvent({
+    event,
+    feature,
+    cusEnt: usageBasedEnt,
+  });
+
+  if (groupVal && nullOrUndefined(balance)) {
+    console.log(
+      `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no group balance found`
+    );
+    return;
+  }
+
+  let usageBasedEntBalance = new Decimal(balance!);
+  let newBalance = usageBasedEntBalance.minus(toDeduct).toNumber();
+
+  await CustomerEntitlementService.update({
+    sb,
+    id: usageBasedEnt.id,
+    updates: getGroupBalanceUpdate({
+      groupVal,
+      cusEnt: usageBasedEnt,
+      newBalance,
+    }),
+  });
+
+  await adjustAllowance({
+    sb,
+    env,
+    affectedFeature: feature,
+    org,
+    cusEnt: usageBasedEnt as any,
+    cusPrices: cusPrices as any,
+    event,
+    customer,
+    originalBalance: getMinCusEntBalance({ cusEnt: usageBasedEnt }),
+    newBalance: getMinCusEntBalance({
+      cusEnt: usageBasedEnt,
+      newBalance,
+      groupVal,
+    }),
+    deduction: toDeduct,
+  });
+};
+
 // Main function to update customer balance
 export const updateCustomerBalance = async ({
   sb,
@@ -141,144 +328,90 @@ export const updateCustomerBalance = async ({
   env: AppEnv;
 }) => {
   const startTime = performance.now();
-  const { cusEnts } = await getCusEntsInFeatures({
+  const { cusEnts, cusPrices } = await getCusEntsInFeatures({
     sb,
     internalCustomerId: customer.internal_id,
     internalFeatureIds: features.map((f) => f.internal_id!),
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    withPrices: true,
   });
 
   const endTime = performance.now();
-  console.log(
-    `   - getCusEntsInFeatures: ${(endTime - startTime).toFixed(2)}ms`
-  );
 
-  console.log(
-    `   - Customer: ${customer.name} (${customer.id}) [${customer.internal_id}] (${customer.env})`
-  );
-  console.log(`   - Features: ${features.map((f) => f.id).join(", ")}`);
-  console.log(
-    "   - CusEnts:",
-    cusEnts.map(
-      (cusEnt: any) =>
-        `${cusEnt.feature_id} - ${cusEnt.balance} (${
-          cusEnt.customer_product ? cusEnt.customer_product.product_id : ""
-        })`
-    )
-  );
-
-  if (cusEnts.length === 0 || features.length === 0) {
-    console.log("   - No customer entitlements or features found");
-    return;
-  }
-
-  // Feature ID to Deduction
+  // 1. Get deductions for each feature
   const featureDeductions = getFeatureDeductions({
     cusEnts,
     event,
     features,
   });
 
-  console.log(
-    "   - Deductions:",
-    featureDeductions.map((f) => `${f.feature.id}: ${f.deduction}`)
-  );
+  logBalanceUpdate({
+    timeTaken: (endTime - startTime).toFixed(2),
+    customer,
+    features,
+    cusEnts,
+    featureDeductions,
+    event,
+    org,
+  });
 
-  // 3. Perform deductions and update customer balance
+  // 2. Handle group_by initialization
+  await initGroupBalancesForEvent({
+    sb,
+    features,
+    cusEnts,
+    properties: event.properties,
+  });
 
+  // 3. Return if no customer entitlements or features found
+  if (cusEnts.length === 0 || features.length === 0) {
+    console.log("   - No customer entitlements or features found");
+    return;
+  }
+
+  // 4. Perform deductions and update customer balance
   for (const obj of featureDeductions) {
-    if (!obj.deduction) {
-      continue;
-    }
+    let { feature, deduction: toDeduct } = obj;
 
-    let toDeduct = obj.deduction;
-
-    // 1. Deduct from entitlement (till 0)
     for (const cusEnt of cusEnts) {
-      if (cusEnt.internal_feature_id === obj.feature.internal_id) {
-        // If deduction finished or cusent has no more balance, break
-        if (toDeduct == 0) {
-          break;
-        }
-
-        // If cus end has no balance, and toDeduct will make it negative, skip, else add to balance
-        if (cusEnt.balance! <= 0 && toDeduct > 0) {
-          continue;
-        }
-
-        let newBalance, deducted;
-
-        let cusEntBalance = new Decimal(cusEnt.balance!);
-
-        // If toDeduct is negative, add to balance and set toDeduct to 0
-        if (toDeduct < 0) {
-          newBalance = cusEntBalance.minus(toDeduct).toNumber();
-          deducted = toDeduct;
-          toDeduct = 0;
-        }
-
-        // If cusEnt has less balance to deduct than 0, deduct the balance and set balance to 0
-        else if (cusEntBalance.minus(toDeduct).lt(0)) {
-          toDeduct = new Decimal(toDeduct).minus(cusEntBalance).toNumber(); // toDeduct = toDeduct - cusEntBalance
-          deducted = cusEntBalance.toNumber(); // deducted = cusEntBalance
-          newBalance = 0; // newBalance = 0
-        }
-
-        // Else, deduct the balance and set toDeduct to 0
-        else {
-          newBalance = cusEntBalance.minus(toDeduct).toNumber();
-          deducted = toDeduct;
-          toDeduct = 0;
-        }
-
-        cusEnt.balance = newBalance;
-
-        await CustomerEntitlementService.update({
-          sb,
-          id: cusEnt.id,
-          updates: {
-            balance: newBalance,
-          },
-        });
+      if (cusEnt.entitlement.internal_feature_id != feature.internal_id) {
+        continue;
       }
+
+      toDeduct = await deductAllowanceFromCusEnt({
+        toDeduct,
+        cusEnt,
+        features,
+        deductParams: {
+          sb,
+          feature,
+          env,
+          org,
+          cusPrices: cusPrices as any[],
+          customer,
+          event,
+        },
+      });
     }
 
-    // If toDeduct is still not 0, deduct from usage-based price?
     if (toDeduct == 0) {
       continue;
     }
 
-    console.log(`   - Still have to deduct ${toDeduct} from ${obj.feature.id}`);
-
-    // Deduct from usage-based price
-    const usageBasedEnt = cusEnts.find(
-      (cusEnt: CusEntWithEntitlement) =>
-        cusEnt.usage_allowed &&
-        cusEnt.entitlement.internal_feature_id == obj.feature.internal_id
-    );
-
-    // console.log(
-    //   "   - Usage based ent: ",
-    //   usageBasedEnt?.feature_id,
-    //   usageBasedEnt?.balance
-    // );
-
-    if (usageBasedEnt) {
-      let usageBasedEntBalance = new Decimal(usageBasedEnt.balance!);
-      let newBalance = usageBasedEntBalance.minus(toDeduct).toNumber();
-
-      await CustomerEntitlementService.update({
+    await deductFromUsageBasedCusEnt({
+      toDeduct,
+      cusEnts,
+      features,
+      deductParams: {
         sb,
-        id: usageBasedEnt.id,
-        updates: {
-          balance: newBalance,
-        },
-      });
-    } else {
-      console.log(
-        `   - Remaining deduction: ${toDeduct}, no usage-based entitlement found`
-      );
-    }
+        feature,
+        env,
+        org,
+        cusPrices: cusPrices as any[],
+        customer,
+        event,
+      },
+    });
   }
 
   return cusEnts;

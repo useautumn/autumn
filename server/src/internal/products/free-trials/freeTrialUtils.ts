@@ -154,8 +154,6 @@ export const getFreeTrialAfterFingerprint = async ({
   return uniqueFreeTrial;
 };
 
-// Init Free Trial
-
 export const handleNewFreeTrial = async ({
   sb,
   newFreeTrial,

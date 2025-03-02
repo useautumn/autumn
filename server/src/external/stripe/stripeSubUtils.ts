@@ -2,6 +2,7 @@ import {
   BillingInterval,
   CusProductStatus,
   ErrCode,
+  Feature,
   FreeTrial,
   Price,
 } from "@autumn/shared";
@@ -241,4 +242,50 @@ export const deleteScheduledIds = async ({
       console.log("Error deleting scheduled id.", error.message);
     }
   }
+};
+
+// Get in advance sub
+export const getUsageBasedSub = async ({
+  stripeCli,
+  subIds,
+  feature,
+  stripeSubs,
+}: {
+  stripeCli: Stripe;
+  subIds: string[];
+  feature: Feature;
+  stripeSubs?: Stripe.Subscription[];
+}) => {
+  let subs;
+  if (stripeSubs) {
+    subs = stripeSubs;
+  } else {
+    subs = await getStripeSubs({
+      stripeCli,
+      subIds,
+    });
+  }
+
+  for (const stripeSub of subs) {
+    let usageFeatures: string[] | null = null;
+
+    try {
+      usageFeatures = JSON.parse(stripeSub.metadata.usage_features);
+    } catch (error) {
+      continue;
+    }
+
+    if (
+      !usageFeatures ||
+      usageFeatures.find(
+        (feat: any) => feat.internal_id == feature.internal_id
+      ) === undefined
+    ) {
+      continue;
+    }
+
+    return stripeSub;
+  }
+
+  return null;
 };

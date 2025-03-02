@@ -1,14 +1,16 @@
-import { Client } from "pg";
 import { CustomerEntitlementService } from "./CusEntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   AllowanceType,
   AppEnv,
+  CreditSchemaItem,
+  CusEntWithEntitlement,
   CusProduct,
   Customer,
   EntInterval,
   Entitlement,
   EntitlementWithFeature,
+  Feature,
   FeatureOptions,
   FeatureType,
   FullCustomerEntitlement,
@@ -19,39 +21,40 @@ import {
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { notNullOrUndefined } from "@/utils/genUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+import { notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
+import { Decimal } from "decimal.js";
+import { getGroupbalanceFromParams } from "./groupByUtils.js";
 
-export const getFeatureBalance = async ({
-  pg,
-  customerId,
-  featureId,
-  orgId,
-}: {
-  pg: Client;
-  customerId: string;
-  featureId: string;
-  orgId: string;
-}) => {
-  const { rows } = await pg.query(
-    `
-    select sum(balance) from customer_entitlements ce  JOIN 
-    customer_products cp on ce.customer_product_id = cp.id
+// export const getFeatureBalance = async ({
+//   pg,
+//   customerId,
+//   featureId,
+//   orgId,
+// }: {
+//   pg: Client;
+//   customerId: string;
+//   featureId: string;
+//   orgId: string;
+// }) => {
+//   const { rows } = await pg.query(
+//     `
+//     select sum(balance) from customer_entitlements ce  JOIN
+//     customer_products cp on ce.customer_product_id = cp.id
 
-    where org_id = $1
-    and customer_id = $2
-    and feature_id = $3
-    and cp.status = 'active'
-  `,
-    [orgId, customerId, featureId]
-  );
+//     where org_id = $1
+//     and customer_id = $2
+//     and feature_id = $3
+//     and cp.status = 'active'
+//   `,
+//     [orgId, customerId, featureId]
+//   );
 
-  if (rows.length === 0) {
-    return null;
-  }
+//   if (rows.length === 0) {
+//     return null;
+//   }
 
-  return parseFloat(rows[0].sum);
-};
+//   return parseFloat(rows[0].sum);
+// };
 
 export const getBalanceForFeature = async ({
   sb,
@@ -242,12 +245,15 @@ type CusEntsWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
 };
 
+// IMPORTANT FUNCTION
 export const getCusBalancesByEntitlement = async ({
   cusEntsWithCusProduct,
   cusPrices,
+  groupVals,
 }: {
   cusEntsWithCusProduct: CusEntsWithCusProduct[];
   cusPrices: FullCustomerPrice[];
+  groupVals: any;
 }) => {
   const data: Record<string, any> = {};
 
@@ -255,54 +261,49 @@ export const getCusBalancesByEntitlement = async ({
     const cusProduct = cusEnt.customer_product;
     const feature = cusEnt.entitlement.feature;
     const ent: EntitlementWithFeature = cusEnt.entitlement;
-
     const key = `${ent.interval || "no-interval"}-${feature.id}`;
 
-    const isBoolean = feature.type == FeatureType.Boolean;
-    const isUnlimited = ent.allowance_type == AllowanceType.Unlimited;
+    // 1. Handle boolean
+    let isBoolean = feature.type == FeatureType.Boolean;
+    const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
+      cusEnts: cusEntsWithCusProduct,
+      internalFeatureId: feature.id,
+    });
 
+    // 2. Handle groupVal
+    const {
+      groupField,
+      groupVal,
+      balance: groupBalance,
+      adjustment: groupAdjustment,
+    } = getGroupbalanceFromParams({
+      params: groupVals,
+      feature,
+      cusEnt,
+    });
+
+    // 2. Initialize data
     if (!data[key]) {
       data[key] = {
+        [groupField]: groupVal ? groupVal : undefined,
         feature_id: feature.id,
         interval: ent.interval,
-        balance: isBoolean ? undefined : isUnlimited ? null : 0,
-        total: isBoolean ? undefined : isUnlimited ? null : 0,
-        unlimited: isBoolean ? undefined : isUnlimited,
-        adjustment: isBoolean ? undefined : isUnlimited ? null : 0,
+        unlimited: isBoolean ? undefined : unlimited,
+        balance: isBoolean ? undefined : unlimited ? null : 0,
+        total: isBoolean ? undefined : unlimited ? null : 0,
+        adjustment: isBoolean ? undefined : unlimited ? null : 0,
       };
-    }
-
-    if (isBoolean) {
+    } else if (isBoolean || unlimited) {
       continue;
     }
 
-    if (ent.allowance_type == AllowanceType.Unlimited) {
-      data[key].balance = null;
-      data[key].total = null;
-      data[key].unlimited = true;
-      data[key].adjustment = null;
-    } else if (data[key].unlimited) {
-      continue;
-    } else {
-      if (ent.allowance_type == AllowanceType.None) {
-        data[key].balance += 0;
-      } else {
-        data[key].balance += cusEnt.balance;
-        data[key].adjustment += cusEnt.adjustment;
-      }
-    }
-
-    const entOption = getEntOptions(cusProduct.options, ent);
-
-    if (ent.allowance_type == AllowanceType.Fixed) {
-      let total = getResetBalance({
-        entitlement: ent,
-        options: entOption,
-        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
-      });
-
-      data[key].total += total;
-    }
+    data[key].balance += groupBalance || 0;
+    data[key].adjustment += groupAdjustment || 0;
+    data[key].total += getResetBalance({
+      entitlement: ent,
+      options: getEntOptions(cusProduct.options, ent),
+      relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+    });
   }
 
   const balances = Object.values(data);
@@ -484,4 +485,98 @@ export const getResetBalance = ({
   }
 
   return quantity * billingUnits;
+};
+
+export const getUnlimitedAndUsageAllowed = ({
+  cusEnts,
+  internalFeatureId,
+}: {
+  cusEnts: FullCustomerEntitlement[] | CusEntWithEntitlement[];
+  internalFeatureId: string;
+}) => {
+  // Unlimited
+  const unlimited = cusEnts.some(
+    (ent) =>
+      ent.internal_feature_id === internalFeatureId &&
+      ent.entitlement.allowance_type === AllowanceType.Unlimited
+  );
+
+  const usageAllowed = cusEnts.some(
+    (ent) => ent.internal_feature_id === internalFeatureId && ent.usage_allowed
+  );
+
+  return { unlimited, usageAllowed };
+};
+
+export const getFeatureBalance = ({
+  cusEnts,
+  internalFeatureId,
+  group,
+}: {
+  cusEnts: FullCustomerEntitlement[] | CusEntWithEntitlement[];
+  internalFeatureId: string;
+  group?: any;
+}) => {
+  let balance = 0;
+  for (const ent of cusEnts) {
+    if (ent.internal_feature_id === internalFeatureId) {
+      if (ent.entitlement.allowance_type === AllowanceType.Unlimited) {
+        return null;
+      }
+
+      if (notNullOrUndefined(group)) {
+        balance += ent.balances?.[group]?.balance || 0;
+      } else {
+        balance += ent.balance || 0;
+      }
+    }
+  }
+
+  return balance;
+};
+
+export const cusEntsContainFeature = ({
+  cusEnts,
+  feature,
+}: {
+  cusEnts: FullCustomerEntitlement[] | CusEntWithEntitlement[];
+  feature: Feature;
+}) => {
+  return cusEnts.some(
+    (cusEnt) => cusEnt.internal_feature_id === feature.internal_id!
+  );
+};
+
+export const getMinCusEntBalance = ({
+  cusEnt,
+  newBalance,
+  groupVal,
+}: {
+  cusEnt: FullCustomerEntitlement | CusEntWithEntitlement;
+  newBalance?: number;
+  groupVal?: any;
+}) => {
+  // If no balances object exists, return newBalance or cusEnt.balance
+  if (!cusEnt.balances) {
+    return notNullOrUndefined(newBalance) ? newBalance! : cusEnt.balance!;
+  }
+
+  let balances = [];
+
+  for (const group in cusEnt.balances) {
+    if (group === groupVal && notNullOrUndefined(newBalance)) {
+      balances.push(newBalance!);
+    } else {
+      balances.push(cusEnt.balances[group].balance);
+    }
+  }
+
+  // Always add the main balance
+  if (!groupVal && notNullOrUndefined(newBalance)) {
+    balances.push(newBalance!);
+  } else {
+    balances.push(cusEnt.balance!);
+  }
+
+  return Math.min(...balances);
 };

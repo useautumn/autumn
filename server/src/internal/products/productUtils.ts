@@ -24,6 +24,7 @@ export const isProductUpgrade = (
   }
 
   // 1. If biling interval is same:
+
   let billingInterval1 = getBillingInterval(product1.prices);
   let billingInterval2 = getBillingInterval(product2.prices);
 

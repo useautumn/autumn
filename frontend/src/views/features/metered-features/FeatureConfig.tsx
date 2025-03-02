@@ -9,11 +9,13 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { cn } from "@/lib/utils";
 import { useHotkeys } from "react-hotkeys-hook";
-import { XIcon } from "lucide-react";
+import { PlusIcon, XIcon } from "lucide-react";
 import { AggregateType, Expression, MeteredConfig } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFeaturesContext } from "../FeaturesContext";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 
 export function FeatureConfig({
   feature,
@@ -54,11 +56,15 @@ export function FeatureConfig({
               value: [],
             },
           ],
-          aggregate: {
-            type: "count",
-            property: null,
-          },
+          // aggregate: {
+          //   type: "count",
+          //   property: null,
+          // },
         }
+  );
+
+  const [groupByExists, setGroupByExists] = useState(
+    feature.config.group_by ? true : false
   );
 
   const [idChanged, setIdChanged] = useState(!!feature.id);
@@ -76,22 +82,12 @@ export function FeatureConfig({
     });
   }, [featureType, meteredConfig, fields]);
 
-  // useEffect(() => {
-  //   setFields({
-  //     name: "",
-  //     id: "",
-  //   });
-  //   setIdChanged(false);
-  // }, []);
-
   const setAggregate = (key: string, value: string) => {
     setMeteredConfig({
       ...meteredConfig,
       aggregate: { ...meteredConfig.aggregate, [key]: value },
     });
   };
-
-  // console.log(feature.type)
 
   return (
     <div className="flex flex-col gap-4">
@@ -159,6 +155,44 @@ export function FeatureConfig({
           </div>
 
           <div>
+            {groupByExists ? (
+              <div>
+                <FieldLabel>Group By</FieldLabel>
+                <Input
+                  placeholder="eg. app_id"
+                  value={meteredConfig.group_by?.property || ""}
+                  onChange={(e) =>
+                    setMeteredConfig({
+                      ...meteredConfig,
+                      group_by: {
+                        ...meteredConfig.group_by,
+                        property: e.target.value,
+                      },
+                    })
+                  }
+                />
+              </div>
+            ) : (
+              <Button
+                className="h-7 border rounded-none text-t3 text-xs"
+                variant="outline"
+                startIcon={<PlusIcon size={12} />}
+                onClick={() => {
+                  setMeteredConfig({
+                    ...meteredConfig,
+                    group_by: {
+                      property: "",
+                    },
+                  });
+                  setGroupByExists(true);
+                }}
+              >
+                Group By
+              </Button>
+            )}
+          </div>
+
+          {/* <div>
             <FieldLabel>Aggregate</FieldLabel>
             <Select
               value={meteredConfig.aggregate.type}
@@ -179,14 +213,30 @@ export function FeatureConfig({
           </div>
           {meteredConfig.aggregate.type == AggregateType.Sum && (
             <div>
-              <FieldLabel>Property</FieldLabel>
+              <FieldLabel>Sum Property</FieldLabel>
               <Input
-                placeholder="Property"
+                placeholder="eg. value"
                 value={meteredConfig.aggregate.property || ""}
                 onChange={(e) => setAggregate("property", e.target.value)}
               />
             </div>
           )}
+
+          
+
+          {/* <div>
+            <FieldLabel>Group By Property</FieldLabel>
+            <Input
+              placeholder="eg. app_id"
+              value={meteredConfig.group_by || ""}
+              onChange={(e) =>
+                setMeteredConfig({
+                  ...meteredConfig,
+                  group_by: e.target.value,
+                })
+              }
+            />
+          </div> */}
         </>
       )}
     </div>

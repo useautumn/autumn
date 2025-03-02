@@ -3,7 +3,6 @@ import {
   EntInterval,
   FullCustomerEntitlement,
   FullCustomerEntitlementSchema,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import { CustomerEntitlementService } from "./internal/customers/entitlements/CusEntitlementService.js";
 import { createSupabaseClient } from "./external/supabaseUtils.js";
@@ -19,6 +18,7 @@ import {
   getRelatedCusPrice,
   getResetBalance,
 } from "./internal/customers/entitlements/cusEntUtils.js";
+import { getResetBalancesUpdate } from "./internal/customers/entitlements/groupByUtils.js";
 
 dotenv.config();
 
@@ -74,12 +74,16 @@ const resetCustomerEntitlement = async ({
       cusEnt.entitlement.interval as EntInterval
     );
 
+    let resetBalanceUpdate = getResetBalancesUpdate({
+      cusEnt,
+    });
     await CustomerEntitlementService.update({
       sb,
       id: cusEnt.id,
       updates: {
+        // balance: resetBalance,
+        ...resetBalanceUpdate,
         next_reset_at: nextResetAt,
-        balance: resetBalance,
         adjustment: 0,
       },
     });

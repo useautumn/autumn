@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { faCartShopping } from "@fortawesome/pro-duotone-svg-icons/faCartShopping";
+import { ProductActionState } from "../product/CustomerProductView";
 
 export const AddProductButton = ({
   setUseInvoice,
@@ -58,7 +59,10 @@ export const AddProductButton = ({
 
   const [loading, setLoading] = useState(false);
 
-  if (!setUseInvoice) {
+  if (
+    !setUseInvoice ||
+    actionState.state === ProductActionState.UpdateOptionsOnly
+  ) {
     return (
       <Button
         onClick={async () => {

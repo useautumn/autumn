@@ -8,25 +8,11 @@ import { CreateFeature } from "./CreateFeature";
 import { AppEnv } from "@autumn/shared";
 import LoadingScreen from "../general/LoadingScreen";
 import { FeaturesTable } from "./FeaturesTable";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
-import {
-  formatUnixToDateTime,
-  formatUnixToDateTimeString,
-} from "@/utils/formatUtils/formatDateUtils";
-import { FeatureRowToolbar } from "./FeatureRowToolbar";
-import { FeatureTypeBadge } from "./FeatureTypeBadge";
-import UpdateFeature from "./UpdateFeature";
+
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBarsFilter } from "@fortawesome/pro-regular-svg-icons";
+
 import { faDollarCircle } from "@fortawesome/pro-duotone-svg-icons";
 import { cn } from "@/lib/utils";
 import { CreditSystemsTable } from "../credits/CreditSystemsTable";
