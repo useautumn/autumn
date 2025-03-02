@@ -17,7 +17,7 @@
     "clean": "tsx src/clean.ts",
     "test-all": "mocha 'tests/**/*.ts'",
     "test": "mocha 'tests/**/*.ts' --ignore ",
-    "test-custom": "mocha --timeout 1000000 'tests/09_advanced_usage.ts' 'tests/10_multi_interval.ts' 'tests/11_arrear_prorated.ts' 'tests/12_group_by.ts'"
+    "test-custom": "mocha --timeout 1000000 'tests/09_advanced_usage.ts'"
   },
   "mocha": {
     "node-option": [
