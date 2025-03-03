@@ -355,6 +355,22 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
       return 1;
     }
 
+    // 1. If a is credit system and b is not, a should go last
+    if (
+      aEnt.feature.type == FeatureType.CreditSystem &&
+      bEnt.feature.type != FeatureType.CreditSystem
+    ) {
+      return 1;
+    }
+
+    // 2. If a is not credit system and b is, a should go first
+    if (
+      aEnt.feature.type != FeatureType.CreditSystem &&
+      bEnt.feature.type == FeatureType.CreditSystem
+    ) {
+      return -1;
+    }
+
     // 2. Sort by unlimited (unlimited goes first)
     if (
       aEnt.allowance_type == AllowanceType.Unlimited &&

@@ -7,15 +7,16 @@ import cors from "cors";
 import chalk from "chalk";
 import { apiRouter } from "./internal/api/apiRouter.js";
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
-import { envMiddleware } from "./middleware/envMiddleware.js";
+
 import pg from "pg";
 
 import { initWorkers } from "./queue/queue.js";
 import http from "http";
-import { initWs } from "./websockets/initWs.js";
 import { publicRouter } from "./internal/public/publicRouter.js";
 import { initLogger } from "./errors/logger.js";
 import { QueueManager } from "./queue/QueueManager.js";
+import { AppEnv } from "@autumn/shared";
+import { createSupabaseClient } from "./external/supabaseUtils.js";
 
 const init = async () => {
   const app = express();
@@ -28,15 +29,22 @@ const init = async () => {
 
   await QueueManager.getInstance(); // initialize the queue manager
   await initWorkers();
+  const supabaseClient = createSupabaseClient();
 
   app.use((req: any, res, next) => {
+    req.sb = supabaseClient;
     req.pg = pgClient;
     req.logger = logger;
     next();
   });
 
   app.use(cors());
-  app.use(envMiddleware);
+
+  app.use((req: any, res: any, next: any) => {
+    req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
+    next();
+  });
+
   app.use("/webhooks", webhooksRouter);
 
   app.use((req: any, res, next) => {
