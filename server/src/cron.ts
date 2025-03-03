@@ -77,6 +77,7 @@ const resetCustomerEntitlement = async ({
     let resetBalanceUpdate = getResetBalancesUpdate({
       cusEnt,
     });
+
     await CustomerEntitlementService.update({
       sb,
       id: cusEnt.id,
