@@ -16,8 +16,9 @@
     "cron:start": "node --no-deprecation dist/src/cron.js",
     "clean": "tsx src/clean.ts",
     "test-all": "mocha 'tests/**/*.ts'",
-    "test": "mocha --timeout 1000000 'tests/**/*.ts' --ignore 'tests/01_product.ts'",
-    "test-custom": "mocha --timeout 1000000 'tests/09_advanced_usage.ts' 'tests/10_multi_interval.ts' 'tests/11_arrear_prorated.ts' 'tests/12_group_by.ts'"
+    "testa": "mocha --timeout 10000000 'tests/alex/**/*.ts'",
+    "test": "mocha --timeout 10000000 'tests/**/*.ts'",
+    "test-custom": "mocha --timeout 10000000 'tests/03_cancel.ts'"
   },
   "mocha": {
     "node-option": [
