@@ -5,6 +5,7 @@ import RecaseError, {
 } from "@/utils/errorUtils.js";
 import {
   AggregateType,
+  CreditSystemConfig,
   Feature,
   FeatureResponseSchema,
   FeatureType,
@@ -29,6 +30,7 @@ const defaultMeteredConfig = (data: any) => {
 
 const validateMeteredConfig = (config: MeteredConfig) => {
   let newConfig = { ...config };
+
   if (config.filters.length == 0 || config.filters[0].value.length == 0) {
     throw new RecaseError({
       message: `Event name is required for metered feature`,
@@ -56,12 +58,43 @@ const validateMeteredConfig = (config: MeteredConfig) => {
   return newConfig;
 };
 
+const validateCreditSystem = (config: CreditSystemConfig) => {
+  let schema = config.schema;
+  if (!schema || schema.length == 0) {
+    throw new RecaseError({
+      message: `At least one metered feature is required for credit system`,
+      code: ErrCode.InvalidFeature,
+      statusCode: 400,
+    });
+  }
+
+  let newConfig = { ...config };
+  for (let i = 0; i < schema.length; i++) {
+    newConfig.schema[i].feature_amount = 1;
+
+    let creditAmount = parseFloat(newConfig.schema[i].credit_amount.toString());
+    if (isNaN(creditAmount)) {
+      throw new RecaseError({
+        message: `Credit amount should be a number`,
+        code: ErrCode.InvalidFeature,
+        statusCode: 400,
+      });
+    }
+
+    schema[i].credit_amount = creditAmount;
+  }
+
+  return newConfig;
+};
+
 export const validateFeature = (data: any) => {
   let featureType = data.type;
 
   let config = data.config;
   if (featureType == FeatureType.Metered) {
     config = validateMeteredConfig(config);
+  } else if (featureType == FeatureType.CreditSystem) {
+    config = validateCreditSystem(config);
   }
 
   try {
@@ -114,6 +147,21 @@ featureApiRouter.post("/:feature_id", async (req: any, res) => {
   let data = req.body;
 
   try {
+    let feature = await FeatureService.getById({
+      sb: req.sb,
+      orgId: req.orgId,
+      env: req.env,
+      featureId,
+    });
+
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${featureId} not found`,
+        code: ErrCode.InvalidFeature,
+        statusCode: 404,
+      });
+    }
+
     await FeatureService.updateStrict({
       sb: req.sb,
       orgId: req.orgId,
@@ -122,7 +170,12 @@ featureApiRouter.post("/:feature_id", async (req: any, res) => {
 
       updates: {
         name: data.name || undefined,
-        config: data.config ? validateMeteredConfig(data.config) : undefined,
+        config:
+          feature.type == FeatureType.CreditSystem
+            ? validateCreditSystem(data.config)
+            : feature.type == FeatureType.Metered
+            ? validateMeteredConfig(data.config)
+            : data.config,
       },
     });
 
