@@ -21,6 +21,7 @@ import {
   getBillingType,
   getEntOptions,
   getPriceEntitlement,
+  priceIsOneOffAndTiered,
 } from "@/internal/prices/priceUtils.js";
 import { PricesInput } from "@autumn/shared";
 import { getFullCusProductData } from "../../../customers/products/cusProductUtils.js";
@@ -92,6 +93,18 @@ export const checkAddProductErrors = async ({
         throw new RecaseError({
           message: `Pass in 'quantity' for feature ${priceEnt.feature_id} in options`,
           code: ErrCode.InvalidOptions,
+          statusCode: 400,
+        });
+      }
+
+      if (
+        nullOrUndefined(options?.quantity) &&
+        priceIsOneOffAndTiered(price, priceEnt)
+      ) {
+        throw new RecaseError({
+          code: ErrCode.InvalidRequest,
+          message:
+            "Quantity is required for start of period price that is one off and tiered",
           statusCode: 400,
         });
       }

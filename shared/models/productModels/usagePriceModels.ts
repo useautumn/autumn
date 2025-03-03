@@ -35,6 +35,7 @@ export const UsagePriceConfigSchema = z.object({
   // For usage in arrear
   stripe_meter_id: z.string().nullish(),
   stripe_price_id: z.string().nullish(),
+  stripe_product_id: z.string().nullish(),
   stripe_event_name: z.string().nullish(),
 
   should_prorate: z.boolean().optional(),

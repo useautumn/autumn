@@ -295,10 +295,11 @@ export const getPriceForOverage = (price: Price, overage: number) => {
 
   if (
     billingType !== BillingType.UsageInArrear &&
-    billingType !== BillingType.InArrearProrated
+    billingType !== BillingType.InArrearProrated &&
+    billingType !== BillingType.UsageInAdvance
   ) {
     throw new RecaseError({
-      message: `getPriceForUsage not implemented for this billing type: ${billingType}`,
+      message: `getPriceForOverage not implemented for this billing type: ${billingType}`,
       code: ErrCode.InvalidRequest,
       statusCode: StatusCodes.BAD_REQUEST,
     });
@@ -351,4 +352,18 @@ export const roundPriceAmounts = (price: Price) => {
 
     price.config = config;
   }
+};
+
+export const priceIsOneOffAndTiered = (
+  price: Price,
+  relatedEnt: EntitlementWithFeature
+) => {
+  let config = price.config as UsagePriceConfig;
+  return (
+    (config.interval == BillingInterval.OneOff &&
+      config.usage_tiers.length > 0 &&
+      relatedEnt.allowance &&
+      relatedEnt.allowance > 0) ||
+    (config.interval == BillingInterval.OneOff && config.usage_tiers.length > 1)
+  );
 };

@@ -55,21 +55,21 @@ const validatePrice = (
 
     const config = price.config! as UsagePriceConfig;
 
-    if (
-      (config.interval == BillingInterval.OneOff &&
-        config.usage_tiers.length > 1) ||
-      (config.interval == BillingInterval.OneOff &&
-        notNullOrUndefined(relatedEnt) &&
-        relatedEnt?.allowance &&
-        relatedEnt!.allowance > 0)
-    ) {
-      throw new RecaseError({
-        message:
-          "One off start of period prices cannot have multiple tiers (including allowance)",
-        code: ErrCode.InvalidPriceConfig,
-        statusCode: 400,
-      });
-    }
+    // if (
+    //   (config.interval == BillingInterval.OneOff &&
+    //     config.usage_tiers.length > 1) ||
+    //   (config.interval == BillingInterval.OneOff &&
+    //     notNullOrUndefined(relatedEnt) &&
+    //     relatedEnt?.allowance &&
+    //     relatedEnt!.allowance > 0)
+    // ) {
+    //   throw new RecaseError({
+    //     message:
+    //       "One off start of period prices cannot have multiple tiers (including allowance)",
+    //     code: ErrCode.InvalidPriceConfig,
+    //     statusCode: 400,
+    //   });
+    // }
 
     if (config.usage_tiers.length == 0) {
       throw new RecaseError({
