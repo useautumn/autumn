@@ -490,7 +490,8 @@ export const getResetBalance = ({
   let quantity = options?.quantity;
   let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
 
-  if (!quantity || !billingUnits) {
+  // if (!quantity || !billingUnits) {
+  if (nullOrUndefined(quantity) || nullOrUndefined(billingUnits)) {
     console.log("WARNING: Quantity or billing units not found");
     console.log("Entitlement:", entitlement.id, entitlement.feature_id);
     console.log("Options:", options);
@@ -503,7 +504,14 @@ export const getResetBalance = ({
     return entitlement.allowance;
   }
 
-  return quantity * billingUnits;
+  try {
+    return quantity! * billingUnits!;
+  } catch (error) {
+    console.log(
+      "WARNING: Failed to return quantity * billing units, returning allowance..."
+    );
+    return entitlement.allowance;
+  }
 };
 
 export const getUnlimitedAndUsageAllowed = ({

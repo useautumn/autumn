@@ -19,6 +19,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import Stripe from "stripe";
 import {
+  compareBillingIntervals,
   getBillingType,
   getCheckoutRelevantPrices,
   getEntOptions,
@@ -191,6 +192,10 @@ export const getStripeSubItems = async ({
   const { product, prices, entitlements, optionsList, org } = attachParams;
 
   const checkoutRelevantPrices = getCheckoutRelevantPrices(prices);
+  checkoutRelevantPrices.sort((a, b) => {
+    // Put year prices first
+    return -compareBillingIntervals(a.config!.interval!, b.config!.interval!);
+  });
 
   // First do interval to prices
   const intervalToPrices: Record<string, Price[]> = {};
@@ -202,16 +207,15 @@ export const getStripeSubItems = async ({
     intervalToPrices[price.config!.interval!].push(price);
   }
 
-  // Combine one off prices with top interval
-  // if (isCheckout) {
   let oneOffPrices =
     intervalToPrices[BillingInterval.OneOff] &&
     intervalToPrices[BillingInterval.OneOff].length > 0;
 
+  // If there are multiple intervals, add one off prices to the top interval
   if (oneOffPrices && Object.keys(intervalToPrices).length > 1) {
     const nextIntervalKey = Object.keys(intervalToPrices)[0];
     intervalToPrices[nextIntervalKey!].push(
-      ...intervalToPrices[BillingInterval.OneOff]
+      ...structuredClone(intervalToPrices[BillingInterval.OneOff])
     );
     delete intervalToPrices[BillingInterval.OneOff];
   }

@@ -243,9 +243,9 @@ export function compareBillingIntervals(
   const priority = {
     [BillingInterval.OneOff]: 0,
     [BillingInterval.Month]: 1,
-    [BillingInterval.Year]: 2,
-    [BillingInterval.Quarter]: 3,
-    [BillingInterval.SemiAnnual]: 4,
+    [BillingInterval.Quarter]: 2,
+    [BillingInterval.SemiAnnual]: 3,
+    [BillingInterval.Year]: 4,
   };
 
   return priority[a] - priority[b];
