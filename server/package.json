@@ -15,10 +15,12 @@
     "cron": "tsx src/cron.ts",
     "cron:start": "node --no-deprecation dist/src/cron.js",
     "clean": "tsx src/clean.ts",
-    "test-all": "mocha 'tests/**/*.ts'",
-    "testa": "mocha --timeout 10000000 'tests/alex/**/*.ts'",
-    "test": "mocha --timeout 10000000 'tests/**/*.ts'",
-    "test-custom": "mocha --timeout 10000000 'tests/03_cancel.ts'"
+
+    "testa-parallel": "mocha 'tests/alex/00_setup.ts' && mocha --parallel --timeout 10000000 'tests/alex/**/*.ts' --ignore 'tests/alex/00_setup.ts'",
+    "testa": "mocha 'tests/alex/00_setup.ts' && mocha --timeout 10000000 'tests/alex/01_free.ts' --ignore 'tests/alex/00_setup.ts'",
+
+    "test": "mocha --timeout 10000000 'tests/**/*.ts' --ignore 'tests/alex/**/*.ts'",
+    "test-custom": "mocha --timeout 1000000 'tests/01_product.ts'"
   },
   "mocha": {
     "node-option": [

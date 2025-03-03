@@ -30,6 +30,10 @@ import {
 } from "@/internal/customers/entitlements/groupByUtils.js";
 import { nullOrUndefined } from "@/utils/genUtils.js";
 import { getMinCusEntBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import {
+  creditSystemContainsFeature,
+  featureToCreditSystem,
+} from "@/internal/features/creditSystemUtils.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
 
@@ -83,6 +87,24 @@ const getFeatureDeductions = ({
       deduction,
     });
   }
+
+  featureDeductions.sort((a, b) => {
+    if (
+      a.feature.type === FeatureType.CreditSystem &&
+      b.feature.type !== FeatureType.CreditSystem
+    ) {
+      return 1;
+    }
+
+    if (
+      a.feature.type !== FeatureType.CreditSystem &&
+      b.feature.type === FeatureType.CreditSystem
+    ) {
+      return -1;
+    }
+
+    return a.feature.id.localeCompare(b.feature.id);
+  });
 
   return featureDeductions;
 };
@@ -145,11 +167,13 @@ const deductAllowanceFromCusEnt = async ({
   deductParams,
   cusEnt,
   features,
+  featureDeductions,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
   cusEnt: FullCustomerEntitlement;
   features: Feature[];
+  featureDeductions: any;
 }) => {
   const { sb, feature, env, org, cusPrices, customer, event } = deductParams;
 
@@ -233,6 +257,33 @@ const deductAllowanceFromCusEnt = async ({
     cusEnt.balances![groupVal].balance = newBalance;
   } else {
     cusEnt.balance = newBalance;
+  }
+
+  // Deduct credit amounts too
+  if (feature.type === FeatureType.Metered) {
+    for (let i = 0; i < featureDeductions.length; i++) {
+      let { feature: creditSystem, deduction } = featureDeductions[i];
+
+      if (
+        creditSystem.type === FeatureType.CreditSystem &&
+        creditSystemContainsFeature({
+          creditSystem: creditSystem,
+          meteredFeatureId: feature.id!,
+        })
+      ) {
+        // toDeduct -= deduction;
+        let creditAmount = featureToCreditSystem({
+          featureId: feature.id!,
+          creditSystem: creditSystem,
+          amount: deducted,
+        });
+        let newDeduction = new Decimal(deduction)
+          .minus(creditAmount)
+          .toNumber();
+
+        featureDeductions[i].deduction = newDeduction;
+      }
+    }
   }
 
   return toDeduct;
@@ -391,6 +442,7 @@ export const updateCustomerBalance = async ({
           customer,
           event,
         },
+        featureDeductions,
       });
     }
 

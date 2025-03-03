@@ -4,7 +4,7 @@ import { AppEnv } from "@autumn/shared";
 import postgres from "postgres";
 import pg from "pg";
 
-const createPostgresClient = () => {
+export const createPostgresClient = () => {
   return postgres(process.env.SUPABASE_CONNECTION_STRING || "");
 };
 
