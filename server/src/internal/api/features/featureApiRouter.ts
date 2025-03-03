@@ -69,7 +69,7 @@ const validateCreditSystem = (config: CreditSystemConfig) => {
   }
 
   let newConfig = { ...config };
-  for (let i = 0; i < schema.length; i++) {
+  for (let i = 0; i < newConfig.schema.length; i++) {
     newConfig.schema[i].feature_amount = 1;
 
     let creditAmount = parseFloat(newConfig.schema[i].credit_amount.toString());
@@ -81,7 +81,7 @@ const validateCreditSystem = (config: CreditSystemConfig) => {
       });
     }
 
-    schema[i].credit_amount = creditAmount;
+    newConfig.schema[i].credit_amount = creditAmount;
   }
 
   return newConfig;
