@@ -359,6 +359,10 @@ export const priceIsOneOffAndTiered = (
   relatedEnt: EntitlementWithFeature
 ) => {
   let config = price.config as UsagePriceConfig;
+  if (config.type == PriceType.Fixed) {
+    return false;
+  }
+
   return (
     (config.interval == BillingInterval.OneOff &&
       config.usage_tiers.length > 0 &&

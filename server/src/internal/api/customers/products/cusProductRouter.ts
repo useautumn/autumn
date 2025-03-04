@@ -81,17 +81,6 @@ export const checkAddProductErrors = async ({
 
   for (const price of prices) {
     const billingType = getBillingType(price.config!);
-    if (
-      priceIsOneOffAndTiered(price, getPriceEntitlement(price, entitlements))
-    ) {
-      if (billingType === BillingType.UsageInAdvance) {
-        throw new RecaseError({
-          message: `One off and tiered prices are not allowed for usage in advance`,
-          code: ErrCode.InvalidRequest,
-          statusCode: 400,
-        });
-      }
-    }
 
     if (billingType === BillingType.UsageInAdvance) {
       // Get options for price

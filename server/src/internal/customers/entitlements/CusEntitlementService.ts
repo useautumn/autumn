@@ -332,17 +332,26 @@ export class CustomerEntitlementService {
     id,
     orgId,
     env,
+    withCusProduct = false,
   }: {
     sb: SupabaseClient;
     id: string;
     orgId: string;
     env: string;
+    withCusProduct?: boolean;
   }) {
+    const selectQuery = [
+      "*",
+      withCusProduct ? "customer_product:customer_products!inner(*)" : "",
+      `entitlement:entitlements!inner(*, feature:features!inner(*))`,
+      `customer:customers!inner(*)`,
+    ]
+      .filter(Boolean)
+      .join(", ");
+
     const { data, error } = await sb
       .from("customer_entitlements")
-      .select(
-        "*, customer:customers!inner(*), entitlement:entitlements!inner(*)"
-      )
+      .select(selectQuery)
       .eq("id", id)
       .eq("customer.org_id", orgId)
       .eq("customer.env", env)
