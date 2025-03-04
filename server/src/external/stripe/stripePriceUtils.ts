@@ -8,11 +8,9 @@ import {
   UsagePriceConfig,
   FeatureOptions,
   Entitlement,
-  Feature,
   Product,
   AllowanceType,
   EntitlementWithFeature,
-  CusProductStatus,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -33,6 +31,7 @@ import { PriceService } from "@/internal/prices/PriceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { nullOrUndefined } from "@/utils/genUtils.js";
+import { Decimal } from "decimal.js";
 
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
