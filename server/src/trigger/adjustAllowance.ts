@@ -244,6 +244,10 @@ export const adjustAllowance = async ({
 }) => {
   // Get customer entitlement
 
+  if (originalBalance == newBalance) {
+    return;
+  }
+
   // 1. Check if price is prorated in arrear, if not skip...
   let logger = logtail;
   let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
@@ -255,9 +259,6 @@ export const adjustAllowance = async ({
 
   let origUsage = -originalBalance;
   let newUsage = -newBalance;
-  if (originalBalance == newBalance) {
-    return;
-  }
 
   logger.info(`Updating prorated in arrear usage for ${affectedFeature.name}`);
   logger.info(
@@ -303,11 +304,17 @@ export const adjustAllowance = async ({
     return;
   }
 
-  await stripeCli.subscriptionItems.update(subItem.id, {
-    quantity: quantity,
-    proration_behavior: "create_prorations",
-  });
-  logger.info(`   ✅ Adjusted sub item ${subItem.id} to ${quantity}`);
+  try {
+    await stripeCli.subscriptionItems.update(subItem.id, {
+      quantity: quantity,
+      proration_behavior: "create_prorations",
+    });
+    logger.info(`   ✅ Adjusted sub item ${subItem.id} to ${quantity}`);
+  } catch (error: any) {
+    logger.error(`❗️ Error updating subscription item`);
+    logger.error(error);
+    return;
+  }
 
   return;
 };

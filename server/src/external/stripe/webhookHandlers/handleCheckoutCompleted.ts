@@ -164,18 +164,10 @@ export const handleCheckoutSessionCompleted = async ({
 
       // Add new subscription item
       let config = autumnPrice.config as UsagePriceConfig;
-      await stripeCli.subscriptions.update(
-        checkoutSession.subscription as string,
-        {
-          items: [
-            {
-              id: item.id,
-              price: config.stripe_price_id!,
-              quantity: 0, // some other quantity?
-            },
-          ],
-        }
-      );
+      await stripeCli.subscriptionItems.update(item.id, {
+        price: config.stripe_price_id!,
+        quantity: 0,
+      });
     }
   }
 
