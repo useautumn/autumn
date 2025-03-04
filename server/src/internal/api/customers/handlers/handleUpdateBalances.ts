@@ -66,11 +66,27 @@ export const handleUpdateBalances = async (req: any, res: any) => {
     const cusId = req.params.customer_id;
     const { sb, env } = req;
     const { balances } = req.body;
+    if (!Array.isArray(balances)) {
+      throw new RecaseError({
+        message: "Balances must be an array",
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
     const { customer, features, org } = await getCusFeaturesAndOrg(req, cusId);
 
     const featuresToUpdate = features.filter((f: any) =>
       balances.map((b: any) => b.feature_id).includes(f.id)
     );
+
+    if (featuresToUpdate.length === 0) {
+      throw new RecaseError({
+        message: "No valid features found to update",
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
 
     // Can't update feature -> credit system here...
 
