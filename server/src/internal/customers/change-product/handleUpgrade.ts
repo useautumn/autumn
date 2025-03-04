@@ -10,7 +10,10 @@ import {
   getPriceForOverage,
 } from "@/internal/prices/priceUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
+import {
+  attachToInsertParams,
+  isFreeProduct,
+} from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   CusProductWithProduct,
@@ -41,7 +44,7 @@ const handleStripeSubUpdate = async ({
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
-  curCusProduct: CusProductWithProduct;
+  curCusProduct: FullCusProduct;
   attachParams: AttachParams;
   disableFreeTrial?: boolean;
 }) => {
@@ -65,7 +68,12 @@ const handleStripeSubUpdate = async ({
   const firstItemSet = itemSets[0];
   const subscription = stripeSubs[0];
 
+  // let curPrices = curCusProduct.customer_prices.map((cp) => cp.price);
   for (const item of subscription.items.data) {
+    // Only want to cancel the item that belongs to current cus product...
+    let priceId = item.price.id;
+
+    // Check if prices
     firstItemSet.items.push({
       id: item.id,
       deleted: true,
@@ -272,13 +280,12 @@ export const handleUpgrade = async ({
   curCusProduct: FullCusProduct;
   curFullProduct: FullProduct;
 }) => {
-  const { org, customer, product } = attachParams;
+  const { org, customer, products } = attachParams;
+  let product = products[0];
 
   console.log(
     `Upgrading ${curFullProduct.name} to ${product.name} for ${customer.id}`
   );
-
-  // const sameBillingInterval = isSameBillingInterval(curFullProduct, product);
 
   const stripeCli = createStripeCli({ org, env: customer.env });
 
@@ -298,12 +305,6 @@ export const handleUpgrade = async ({
     console.log(
       "NOTE: Current product is a trial, cancel and start new subscription"
     );
-
-    // throw new RecaseError({
-    //   message: "Not implemented",
-    //   code: ErrCode.UpgradeFailed,
-    //   statusCode: StatusCodes.NOT_IMPLEMENTED,
-    // });
 
     await handleAddProduct({
       req,
@@ -325,8 +326,6 @@ export const handleUpgrade = async ({
     }
   }
 
-  // const disableFreeTrial =
-  //   curCusProduct.free_trial_id && org.config?.free_trial_paid_to_paid;
   const disableFreeTrial = false;
 
   // 1. Bill for remaining usages
@@ -378,8 +377,7 @@ export const handleUpgrade = async ({
   console.log("3. Creating new full cus product");
   await createFullCusProduct({
     sb: req.sb,
-    attachParams,
-    // subscriptionId: subUpdate.id,
+    attachParams: attachToInsertParams(attachParams, products[0]),
     subscriptionIds: newSubIds,
     nextResetAt: subUpdate.current_period_end
       ? subUpdate.current_period_end * 1000
@@ -400,8 +398,8 @@ export const handleUpgrade = async ({
         stripeInvoice,
         internalCustomerId: customer.internal_id,
         org,
-        productIds: [product.id],
-        internalProductIds: [product.internal_id],
+        productIds: [products[0].id],
+        internalProductIds: [products[0].internal_id],
       });
     });
   }
