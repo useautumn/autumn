@@ -15,10 +15,10 @@
     "cron": "tsx src/cron.ts",
     "cron:start": "node --no-deprecation dist/src/cron.js",
     "clean": "tsx src/clean.ts",
-    "test-all": "mocha 'tests/**/*.ts'",
-    "testa": "mocha --timeout 10000000 'tests/alex/**/*.ts'",
-    "test": "mocha --timeout 10000000 'tests/**/*.ts'",
-    "test-custom": "mocha --timeout 10000000 'tests/03_cancel.ts'"
+    "testa-parallel": "mocha 'tests/alex/00_setup.ts' && mocha --parallel --timeout 10000000 'tests/alex/**/*.ts' --ignore 'tests/alex/00_setup.ts'",
+    "testa": "mocha 'tests/alex/00_setup.ts' && mocha --timeout 10000000 'tests/alex/01_free.ts' --ignore 'tests/alex/00_setup.ts'",
+    "test": "mocha --timeout 10000000 'tests/**/*.ts' --ignore 'tests/alex/**/*.ts'",
+    "test-custom": "mocha --timeout 1000000 'tests/01_product.ts'"
   },
   "mocha": {
     "node-option": [
@@ -31,6 +31,7 @@
     "@anthropic-ai/sdk": "^0.32.1",
     "@autumn/shared": "*",
     "@clerk/express": "^1.3.22",
+    "@logtail/node": "^0.5.2",
     "@mendable/firecrawl-js": "^1.17.0",
     "@slack/events-api": "^3.0.1",
     "@slack/web-api": "^7.8.0",
@@ -67,6 +68,7 @@
     "svix": "^1.45.1",
     "tsc-alias": "^1.8.10",
     "tsx": "^4.19.2",
+    "vigilant-js": "^2.0.9",
     "ws": "^8.18.0"
   },
   "devDependencies": {

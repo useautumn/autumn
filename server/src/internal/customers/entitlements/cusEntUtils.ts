@@ -355,6 +355,22 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
       return 1;
     }
 
+    // 1. If a is credit system and b is not, a should go last
+    if (
+      aEnt.feature.type == FeatureType.CreditSystem &&
+      bEnt.feature.type != FeatureType.CreditSystem
+    ) {
+      return 1;
+    }
+
+    // 2. If a is not credit system and b is, a should go first
+    if (
+      aEnt.feature.type != FeatureType.CreditSystem &&
+      bEnt.feature.type == FeatureType.CreditSystem
+    ) {
+      return -1;
+    }
+
     // 2. Sort by unlimited (unlimited goes first)
     if (
       aEnt.allowance_type == AllowanceType.Unlimited &&
@@ -474,7 +490,8 @@ export const getResetBalance = ({
   let quantity = options?.quantity;
   let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
 
-  if (!quantity || !billingUnits) {
+  // if (!quantity || !billingUnits) {
+  if (nullOrUndefined(quantity) || nullOrUndefined(billingUnits)) {
     console.log("WARNING: Quantity or billing units not found");
     console.log("Entitlement:", entitlement.id, entitlement.feature_id);
     console.log("Options:", options);
@@ -487,7 +504,14 @@ export const getResetBalance = ({
     return entitlement.allowance;
   }
 
-  return quantity * billingUnits;
+  try {
+    return quantity! * billingUnits!;
+  } catch (error) {
+    console.log(
+      "WARNING: Failed to return quantity * billing units, returning allowance..."
+    );
+    return entitlement.allowance;
+  }
 };
 
 export const getUnlimitedAndUsageAllowed = ({

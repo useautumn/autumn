@@ -68,7 +68,7 @@ function UpdateCusEntitlement({
   const handleUpdateCusEntitlement = async (
     cusEnt: FullCustomerEntitlement
   ) => {
-    const balanceInt = parseInt(updateFields.balance);
+    const balanceInt = parseFloat(updateFields.balance);
     if (isNaN(balanceInt)) {
       toast.error("Balance not valid");
       return;

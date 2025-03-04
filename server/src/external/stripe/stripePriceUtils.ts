@@ -19,18 +19,21 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import Stripe from "stripe";
 import {
+  compareBillingIntervals,
   getBillingType,
   getCheckoutRelevantPrices,
   getEntOptions,
   getPriceAmount,
   getPriceEntitlement,
+  getPriceForOverage,
   getPriceOptions,
+  priceIsOneOffAndTiered,
 } from "@/internal/prices/priceUtils.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
-
+import { Decimal } from "decimal.js";
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
     case BillingInterval.Month:
@@ -111,9 +114,39 @@ export const priceToStripeItem = ({
         recurring: billingIntervalToStripe(config.interval as BillingInterval),
       },
     };
+  } else if (
+    billingType == BillingType.UsageInAdvance &&
+    priceIsOneOffAndTiered(price, relatedEnt)
+  ) {
+    const config = price.config as UsagePriceConfig;
+    let quantity = options?.quantity!;
+    let overage = quantity * config.billing_units! - relatedEnt.allowance!;
+    // console.log("Overage:", overage);
+    // console.log("Quantity:", quantity);
+    // console.log("Allowance:", relatedEnt.allowance);
+    if (overage <= 0) {
+      return null;
+    }
+    const amount = getPriceForOverage(price, overage);
+    // let perUnitAmount = new Decimal(amount).div(overage).toNumber();
+    if (!config.stripe_product_id) {
+      console.log(
+        `WARNING: One off & tiered in advance price has no stripe product id: ${price.id}, ${relatedEnt.feature.name}`
+      );
+    }
+    lineItem = {
+      price_data: {
+        product: config.stripe_product_id
+          ? config.stripe_product_id
+          : stripeProductId,
+        unit_amount: Number(amount.toFixed(2)) * 100,
+        currency: org.default_currency,
+      },
+      // quantity: overage,
+      quantity: 1,
+    };
   } else if (billingType == BillingType.UsageInAdvance) {
     const config = price.config as UsagePriceConfig;
-    // const quantity = options?.quantity || 1;
     let quantity = options?.quantity;
 
     // 1. If quantity is 0 and is checkout, skip over line item
@@ -171,7 +204,14 @@ export const priceToStripeItem = ({
     };
   } else if (billingType == BillingType.InArrearProrated) {
     // TODO: Implement this
-    return null;
+    if (isCheckout) {
+      let config = price.config as UsagePriceConfig;
+      lineItem = {
+        price: config.stripe_price_id!,
+      };
+    } else {
+      return null;
+    }
   }
 
   return {
@@ -191,6 +231,10 @@ export const getStripeSubItems = async ({
   const { product, prices, entitlements, optionsList, org } = attachParams;
 
   const checkoutRelevantPrices = getCheckoutRelevantPrices(prices);
+  checkoutRelevantPrices.sort((a, b) => {
+    // Put year prices first
+    return -compareBillingIntervals(a.config!.interval!, b.config!.interval!);
+  });
 
   // First do interval to prices
   const intervalToPrices: Record<string, Price[]> = {};
@@ -202,16 +246,15 @@ export const getStripeSubItems = async ({
     intervalToPrices[price.config!.interval!].push(price);
   }
 
-  // Combine one off prices with top interval
-  // if (isCheckout) {
   let oneOffPrices =
     intervalToPrices[BillingInterval.OneOff] &&
     intervalToPrices[BillingInterval.OneOff].length > 0;
 
+  // If there are multiple intervals, add one off prices to the top interval
   if (oneOffPrices && Object.keys(intervalToPrices).length > 1) {
     const nextIntervalKey = Object.keys(intervalToPrices)[0];
     intervalToPrices[nextIntervalKey!].push(
-      ...intervalToPrices[BillingInterval.OneOff]
+      ...structuredClone(intervalToPrices[BillingInterval.OneOff])
     );
     delete intervalToPrices[BillingInterval.OneOff];
   }
@@ -354,15 +397,13 @@ export const createStripeInAdvancePrice = async ({
     config.billing_units == 1 ? "" : `${config.billing_units} `
   }${relatedEnt.feature.name}`;
 
-  if (price.config!.interval == BillingInterval.OneOff) {
-    if (config.usage_tiers.length > 1) {
-      throw new RecaseError({
-        code: ErrCode.InvalidRequest,
-        message:
-          "For one off start of period price, can only have one usage tier...",
-        statusCode: 400,
-      });
-    }
+  if (priceIsOneOffAndTiered(price, relatedEnt)) {
+    let stripeProduct = await stripeCli.products.create({
+      name: productName,
+    });
+
+    config.stripe_product_id = stripeProduct.id;
+  } else if (price.config!.interval == BillingInterval.OneOff) {
     const amount = config.usage_tiers[0].amount;
     stripePrice = await stripeCli.prices.create({
       product_data: {
@@ -371,6 +412,7 @@ export const createStripeInAdvancePrice = async ({
       unit_amount_decimal: (amount * 100).toString(),
       currency: org.default_currency,
     });
+    config.stripe_price_id = stripePrice.id;
   } else {
     stripePrice = await stripeCli.prices.create({
       product_data: {
@@ -384,9 +426,8 @@ export const createStripeInAdvancePrice = async ({
         ...(recurringData as any),
       },
     });
+    config.stripe_price_id = stripePrice.id;
   }
-
-  config.stripe_price_id = stripePrice.id;
 
   // New config
   price.config = config;
@@ -569,28 +610,30 @@ export const createStripeInArrearPrice = async ({
     update: { config },
   });
 };
-
-export const createStripeArrearProratedPrice = async ({
-  sb,
+const getProductIdFromPrice = async ({
   stripeCli,
   price,
-  entitlements,
-  product,
-  org,
 }: {
-  sb: SupabaseClient;
   stripeCli: Stripe;
   price: Price;
-  entitlements: EntitlementWithFeature[];
-  product: Product;
-  org: Organization;
 }) => {
-  const relatedEnt = getPriceEntitlement(price, entitlements);
   const config = price.config as UsagePriceConfig;
+  if (!config.stripe_product_id) {
+    return null;
+  }
 
-  const tiers = priceToStripeTiers(price, relatedEnt);
+  try {
+    const stripeProduct = await stripeCli.products.retrieve(
+      config.stripe_product_id!
+    );
+    if (!stripeProduct.active) {
+      return null;
+    }
+    return config.stripe_product_id;
+  } catch (error) {
+    return null;
+  }
 };
-
 export const createStripePriceIFNotExist = async ({
   sb,
   stripeCli,
@@ -607,6 +650,7 @@ export const createStripePriceIFNotExist = async ({
   org: Organization;
 }) => {
   const billingType = getBillingType(price.config!);
+
   let config = price.config! as UsagePriceConfig;
 
   try {
@@ -626,7 +670,34 @@ export const createStripePriceIFNotExist = async ({
   }
 
   if (billingType == BillingType.UsageInAdvance) {
-    if (!config.stripe_price_id) {
+    // If tiered and one off
+    let relatedEnt = getPriceEntitlement(price, entitlements);
+    let isOneOffAndTiered = priceIsOneOffAndTiered(price, relatedEnt);
+
+    if (isOneOffAndTiered) {
+      // Check if product_id doesn't exist -- create
+      let productId = await getProductIdFromPrice({
+        stripeCli,
+        price,
+      });
+
+      if (!productId) {
+        console.log(
+          "Creating stripe product for in advance price, one off & tiered"
+        );
+        await createStripeInAdvancePrice({
+          sb,
+          stripeCli,
+          price,
+          entitlements,
+          product,
+          org,
+        });
+      }
+    }
+
+    // For the rest
+    if (!isOneOffAndTiered && !config.stripe_price_id) {
       console.log("Creating stripe price for in advance price");
       await createStripeInAdvancePrice({
         sb,
@@ -637,7 +708,10 @@ export const createStripePriceIFNotExist = async ({
         org,
       });
     }
-  } else if (billingType == BillingType.UsageInArrear) {
+  } else if (
+    billingType == BillingType.UsageInArrear ||
+    billingType == BillingType.InArrearProrated
+  ) {
     if (!config.stripe_price_id) {
       console.log("Creating stripe price for in arrear price");
       await createStripeInArrearPrice({

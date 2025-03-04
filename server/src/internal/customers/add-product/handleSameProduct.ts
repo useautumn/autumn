@@ -3,6 +3,7 @@ import {
   ErrCode,
   Feature,
   FullCusProduct,
+  FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
   UsagePriceConfig,
@@ -18,6 +19,8 @@ import {
 } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
+import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
+import { Decimal } from "decimal.js";
 
 const getOptionsToUpdate = (oldOptionsList: any[], newOptionsList: any[]) => {
   let differentOptionsExist = false;
@@ -29,7 +32,10 @@ const getOptionsToUpdate = (oldOptionsList: any[], newOptionsList: any[]) => {
     );
 
     if (existingOptions?.quantity !== newOptions.quantity) {
-      optionsToUpdate.push(newOptions);
+      optionsToUpdate.push({
+        new: newOptions,
+        old: existingOptions,
+      });
     }
   }
 
@@ -40,39 +46,40 @@ const updateFeatureQuantity = async ({
   sb,
   org,
   customer,
-  curMainProduct,
+  curCusProduct,
   optionsToUpdate,
 }: {
   sb: SupabaseClient;
   org: Organization;
   customer: Customer;
-  curMainProduct: FullCusProduct;
+  curCusProduct: FullCusProduct;
   optionsToUpdate: any[];
 }) => {
-  const stripeCli = await createStripeCli({
+  const stripeCli = createStripeCli({
     org,
     env: customer.env,
   });
 
   const stripeSubs = await getStripeSubs({
     stripeCli: stripeCli,
-    subIds: curMainProduct.subscription_ids || [],
+    subIds: curCusProduct.subscription_ids || [],
   });
 
   for (const options of optionsToUpdate) {
+    const { new: newOptions, old: oldOptions } = options;
     const subToUpdate = await getUsageBasedSub({
       stripeCli: stripeCli,
-      subIds: curMainProduct.subscription_ids || [],
+      subIds: curCusProduct.subscription_ids || [],
       feature: {
-        internal_id: options.internal_feature_id,
-        id: options.feature_id,
+        internal_id: newOptions.internal_feature_id,
+        id: newOptions.feature_id,
       } as Feature,
       stripeSubs: stripeSubs,
     });
 
     if (!subToUpdate) {
       throw new RecaseError({
-        message: `Failed to update quantity for ${options.feature_id} to ${options.quantity} -- couldn't find subscription`,
+        message: `Failed to update quantity for ${newOptions.feature_id} to ${newOptions.quantity} -- couldn't find subscription`,
         code: ErrCode.InternalError,
         statusCode: 500,
       });
@@ -80,10 +87,10 @@ const updateFeatureQuantity = async ({
 
     // Update subscription
     // Get price
-    const relatedPrice = curMainProduct.customer_prices.find(
+    const relatedPrice = curCusProduct.customer_prices.find(
       (cusPrice: FullCustomerPrice) =>
         (cusPrice.price.config as UsagePriceConfig).internal_feature_id ==
-        options.internal_feature_id
+        newOptions.internal_feature_id
     );
 
     let config = relatedPrice?.price.config as UsagePriceConfig;
@@ -97,26 +104,55 @@ const updateFeatureQuantity = async ({
       subItem = await stripeCli.subscriptionItems.create({
         subscription: subToUpdate.id,
         price: config.stripe_price_id as string,
-        quantity: options.quantity,
+        quantity: newOptions.quantity,
       });
 
       console.log(
-        `   ✅ Successfully created subscription item for feature ${options.feature_id}: ${options.quantity}`
+        `   ✅ Successfully created subscription item for feature ${newOptions.feature_id}: ${newOptions.quantity}`
       );
     } else {
       // Update quantity
       await stripeCli.subscriptionItems.update(subItem.id, {
-        quantity: options.quantity,
+        quantity: newOptions.quantity,
       });
       console.log(
-        `   ✅ Successfully updated subscription item for feature ${options.feature_id}: ${options.quantity}`
+        `   ✅ Successfully updated subscription item for feature ${newOptions.feature_id}: ${newOptions.quantity}`
       );
+    }
+
+    // Update cus ent
+    let difference = newOptions.quantity - oldOptions.quantity;
+    let cusEnt = curCusProduct.customer_entitlements.find(
+      (cusEnt: FullCustomerEntitlement) =>
+        cusEnt.entitlement.internal_feature_id == newOptions.internal_feature_id
+    );
+
+    if (cusEnt) {
+      let updates: any = {
+        balance: new Decimal(cusEnt?.balance || 0).plus(difference).toNumber(),
+      };
+      if (cusEnt.balances) {
+        updates.balances = { ...cusEnt.balances };
+        for (const [key, value] of Object.entries(cusEnt.balances)) {
+          updates.balances[key] = {
+            ...cusEnt.balances[key],
+            balance: new Decimal(value.balance || 0)
+              .plus(difference)
+              .toNumber(),
+          };
+        }
+      }
+      await CustomerEntitlementService.update({
+        sb,
+        id: cusEnt.id,
+        updates,
+      });
     }
   }
 
   await CusProductService.update({
     sb,
-    cusProductId: curMainProduct.id,
+    cusProductId: curCusProduct.id,
     updates: { options: optionsToUpdate },
   });
 };
@@ -174,13 +210,14 @@ export const handleSameMainProduct = async ({
       sb,
       org,
       customer,
-      curMainProduct,
+      curCusProduct: curMainProduct,
       optionsToUpdate,
     });
 
     for (const option of optionsToUpdate) {
+      const { new: newOption, old: oldOption } = option;
       messages.push(
-        `Successfully updated quantity for ${option.feature_id} to ${option.quantity}`
+        `Successfully updated quantity for ${newOption.feature_id} from ${oldOption.quantity} to ${newOption.quantity}`
       );
     }
   }
@@ -242,7 +279,7 @@ export const handleSameAddOnProduct = async ({
   let messages: string[] = [];
   for (const option of optionsToUpdate) {
     messages.push(
-      `Updated quantity for ${option.feature_id} to ${option.quantity}`
+      `Updated quantity for ${option.new.feature_id} to ${option.new.quantity}`
     );
   }
 

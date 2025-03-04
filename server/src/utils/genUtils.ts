@@ -30,3 +30,11 @@ export const notNullOrUndefined = (value: any) => {
 export const nullOrUndefined = (value: any) => {
   return value === null || value === undefined;
 };
+
+export const nullish = (value: any) => {
+  return value === null || value === undefined;
+};
+
+export const notNullish = (value: any) => {
+  return !nullish(value);
+};
