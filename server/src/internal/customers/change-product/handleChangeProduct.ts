@@ -11,6 +11,7 @@ import Stripe from "stripe";
 import {
   BillingInterval,
   CusProductWithProduct,
+  ErrCode,
   FullCusProduct,
 } from "@autumn/shared";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
@@ -21,6 +22,8 @@ import { AttachParams } from "../products/AttachParams.js";
 import { handleUpgrade } from "./handleUpgrade.js";
 import { differenceInDays } from "date-fns";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
 
 const scheduleStripeSubscription = async ({
   attachParams,
@@ -195,8 +198,19 @@ export const handleChangeProduct = async ({
 }) => {
   // Get subscription
   const curProduct = curCusProduct.product;
-  const { org, customer, product, prices, entitlements, optionsList } =
+  const { org, customer, products, prices, entitlements, optionsList } =
     attachParams;
+
+  // Can only upgrade once for now
+  if (products.length > 1) {
+    throw new RecaseError({
+      message: `Can't handle upgrade / downgrade for multiple products`,
+      code: ErrCode.UpgradeFailed,
+      statusCode: StatusCodes.NOT_IMPLEMENTED,
+    });
+  }
+
+  let product = products[0];
 
   const curFullProduct = await ProductService.getFullProductStrict({
     sb: req.sb,

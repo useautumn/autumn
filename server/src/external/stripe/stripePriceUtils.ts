@@ -105,7 +105,12 @@ export const priceToStripeItem = ({
     };
   } else if (billingType == BillingType.FixedCycle) {
     const config = price.config as FixedPriceConfig;
-
+    // if (config.stripe_price_id) {
+    //   lineItem = {
+    //     price: config.stripe_price_id,
+    //     quantity: 1,
+    //   };
+    // } else {
     lineItem = {
       quantity: 1,
       price_data: {
@@ -115,6 +120,7 @@ export const priceToStripeItem = ({
         recurring: billingIntervalToStripe(config.interval as BillingInterval),
       },
     };
+    // }
   } else if (
     billingType == BillingType.UsageInAdvance &&
     priceIsOneOffAndTiered(price, relatedEnt)
@@ -637,6 +643,42 @@ const getProductIdFromPrice = async ({
     return null;
   }
 };
+
+const createStripeFixedCyclePrice = async ({
+  sb,
+  stripeCli,
+  price,
+  product,
+  org,
+}: {
+  sb: SupabaseClient;
+  stripeCli: Stripe;
+  price: Price;
+  product: Product;
+  org: Organization;
+}) => {
+  const config = price.config as FixedPriceConfig;
+
+  let amount = new Decimal(config.amount).mul(100).toNumber();
+  const stripePrice = await stripeCli.prices.create({
+    product: product.processor!.id,
+    // unit_amount_decimal: amount.toString(),
+    unit_amount: amount,
+    currency: org.default_currency,
+    recurring: {
+      ...(billingIntervalToStripe(config.interval!) as any),
+    },
+  });
+
+  config.stripe_price_id = stripePrice.id;
+
+  await PriceService.update({
+    sb,
+    priceId: price.id!,
+    update: { config },
+  });
+};
+
 export const createStripePriceIFNotExist = async ({
   sb,
   stripeCli,
@@ -672,6 +714,15 @@ export const createStripePriceIFNotExist = async ({
     config.stripe_meter_id = undefined;
   }
 
+  // if (billingType == BillingType.FixedCycle) {
+  //   await createStripeFixedCyclePrice({
+  //     sb,
+  //     stripeCli,
+  //     price,
+  //     product,
+  //     org,
+  //   });
+  // } else
   if (billingType == BillingType.UsageInAdvance) {
     // If tiered and one off
     let relatedEnt = getPriceEntitlement(price, entitlements);
