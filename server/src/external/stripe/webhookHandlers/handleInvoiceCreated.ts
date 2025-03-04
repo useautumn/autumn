@@ -250,8 +250,8 @@ export const sendUsageAndReset = async ({
     let billingType = getBillingType(price.config);
 
     if (
-      billingType !== BillingType.UsageInArrear &&
-      billingType !== BillingType.InArrearProrated
+      billingType !== BillingType.UsageInArrear
+      // && billingType !== BillingType.InArrearProrated
     ) {
       continue;
     }
@@ -282,20 +282,20 @@ export const sendUsageAndReset = async ({
     );
     console.log("   - Feature: ", relatedCusEnt.entitlement.feature.id);
 
-    if (billingType == BillingType.InArrearProrated) {
-      console.log("   ✨ In arrear (PRORATED)");
-      await handleInArrearProrated({
-        sb,
-        cusEnts,
-        cusPrice,
-        customer,
-        org,
-        env,
-        invoice,
-        usageSub: usageBasedSub,
-      });
-      continue;
-    }
+    // if (billingType == BillingType.InArrearProrated) {
+    //   console.log("   ✨ In arrear (PRORATED)");
+    //   await handleInArrearProrated({
+    //     sb,
+    //     cusEnts,
+    //     cusPrice,
+    //     customer,
+    //     org,
+    //     env,
+    //     invoice,
+    //     usageSub: usageBasedSub,
+    //   });
+    //   continue;
+    // }
 
     if (billingType == BillingType.UsageInArrear) {
       console.log("   ✨ In arrear (NO PRORATION)");
