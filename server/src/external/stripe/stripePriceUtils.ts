@@ -8,11 +8,9 @@ import {
   UsagePriceConfig,
   FeatureOptions,
   Entitlement,
-  Feature,
   Product,
   AllowanceType,
   EntitlementWithFeature,
-  CusProductStatus,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -33,8 +31,9 @@ import {
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
-import { notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
+import { nullOrUndefined } from "@/utils/genUtils.js";
 import { Decimal } from "decimal.js";
+
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
     case BillingInterval.Month:
@@ -210,15 +209,34 @@ export const priceToStripeItem = ({
       price: priceId,
     };
   } else if (billingType == BillingType.InArrearProrated) {
-    // TODO: Implement this
-    if (isCheckout) {
-      let config = price.config as UsagePriceConfig;
+    const config = price.config as UsagePriceConfig;
+    // For now, let quantity be 0...
+    let quantity = 0;
+    if (quantity == 0 && isCheckout) {
+      // Get product id...
       lineItem = {
-        price: config.stripe_price_id!,
+        price: config.stripe_placeholder_price_id,
       };
     } else {
-      return null;
+      lineItem = {
+        price: config.stripe_price_id,
+        quantity: quantity,
+      };
     }
+
+    // OLD
+    // TODO: Implement this
+    // if (isCheckout) {
+    //   let config = price.config as UsagePriceConfig;
+    //   lineItem = {
+    //     price: config.stripe_price_id!,
+    //   };
+    // } else {
+    //   return null;
+    // }
+    // lineItem = {
+    //   price: price.config!.stripe_price_id!,
+    // };
   }
 
   return {
@@ -436,6 +454,20 @@ export const createStripeInAdvancePrice = async ({
       },
     });
     config.stripe_price_id = stripePrice.id;
+
+    // If in_arrear_prorated, create placeholder price
+    let billingType = getBillingType(price.config!);
+    if (billingType == BillingType.InArrearProrated) {
+      let placeholderPrice = await createStripeMeteredPrice({
+        sb,
+        stripeCli,
+        price,
+        entitlements,
+        product,
+        org,
+      });
+      config.stripe_placeholder_price_id = placeholderPrice.id;
+    }
   }
 
   // New config
@@ -466,7 +498,10 @@ export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
 
   for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
     const tier = usageConfig.usage_tiers[i];
-    const amount = (tier.amount / (usageConfig.billing_units ?? 1)) * 100;
+    let amount = new Decimal(tier.amount)
+      .div(usageConfig.billing_units ?? 1)
+      .mul(100)
+      .toString();
 
     tiers.push({
       unit_amount_decimal: amount,
@@ -478,44 +513,56 @@ export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
 };
 
 export const createStripeMeteredPrice = async ({
+  sb,
   stripeCli,
-  meterId,
-  product,
   price,
   entitlements,
-  feature,
+  product,
+  org,
 }: {
+  sb: SupabaseClient;
   stripeCli: Stripe;
-  meterId: string;
-  product: Product;
   price: Price;
-  entitlements: Entitlement[];
-  feature: Feature;
+  entitlements: EntitlementWithFeature[];
+  product: Product;
+  org: Organization;
 }) => {
-  const relatedEntitlement = entitlements.find(
-    (e) => e.internal_feature_id === feature!.internal_id
-  );
+  const config = price.config as UsagePriceConfig;
+  const feature = entitlements.find(
+    (e) => e.internal_feature_id === config.internal_feature_id
+  )!.feature;
 
-  const isOverage =
-    relatedEntitlement?.allowance_type == AllowanceType.Fixed &&
-    relatedEntitlement.allowance &&
-    relatedEntitlement.allowance > 0;
-
-  let overageStr = "";
-  // if (isOverage) {
-  //   overageStr = ` (overage)`;
-  // }
+  let meter;
+  try {
+    meter = await stripeCli.billing.meters.create({
+      display_name: `${product.name} - ${feature!.name}`,
+      event_name: price.id!,
+      default_aggregation: {
+        formula: "sum",
+      },
+    });
+  } catch (error: any) {
+    const meters = await stripeCli.billing.meters.list({
+      limit: 100,
+      status: "active",
+    });
+    meter = meters.data.find((m) => m.event_name == price.id!);
+    if (!meter) {
+      throw error;
+    }
+  }
 
   const tiers = priceToStripeTiers(
     price,
     entitlements.find((e) => e.internal_feature_id === feature!.internal_id)!
   );
 
-  let priceAmountData = {};
+  let relatedEnt = getPriceEntitlement(price, entitlements);
 
-  if (tiers.length == 1) {
+  let priceAmountData = {};
+  if (relatedEnt.allowance == 0 && tiers.length == 1) {
     priceAmountData = {
-      unit_amount: tiers[0].unit_amount,
+      unit_amount_decimal: tiers[0].unit_amount_decimal,
     };
   } else {
     priceAmountData = {
@@ -525,21 +572,87 @@ export const createStripeMeteredPrice = async ({
     };
   }
 
-  return await stripeCli.prices.create({
+  const stripePrice = await stripeCli.prices.create({
     // product: product.processor!.id,
     product_data: {
-      name: `${product.name} - ${feature!.name}${overageStr}`,
+      name: `${product.name} - ${feature!.name}`,
     },
 
     ...priceAmountData,
-    currency: "usd",
+    currency: org.default_currency,
     recurring: {
       ...(billingIntervalToStripe(price.config!.interval!) as any),
-      meter: meterId,
+      meter: meter!.id,
       usage_type: "metered",
     },
   });
+
+  return stripePrice;
 };
+
+// export const createStripeMeteredPrice = async ({
+//   stripeCli,
+//   meterId,
+//   product,
+//   price,
+//   entitlements,
+//   feature,
+// }: {
+//   stripeCli: Stripe;
+//   meterId: string;
+//   product: Product;
+//   price: Price;
+//   entitlements: Entitlement[];
+//   feature: Feature;
+// }) => {
+//   const relatedEntitlement = entitlements.find(
+//     (e) => e.internal_feature_id === feature!.internal_id
+//   );
+
+//   const isOverage =
+//     relatedEntitlement?.allowance_type == AllowanceType.Fixed &&
+//     relatedEntitlement.allowance &&
+//     relatedEntitlement.allowance > 0;
+
+//   let overageStr = "";
+//   // if (isOverage) {
+//   //   overageStr = ` (overage)`;
+//   // }
+
+//   const tiers = priceToStripeTiers(
+//     price,
+//     entitlements.find((e) => e.internal_feature_id === feature!.internal_id)!
+//   );
+
+//   let priceAmountData = {};
+
+//   if (tiers.length == 1) {
+//     priceAmountData = {
+//       unit_amount: tiers[0].unit_amount,
+//     };
+//   } else {
+//     priceAmountData = {
+//       billing_scheme: "tiered",
+//       tiers_mode: "graduated",
+//       tiers: tiers,
+//     };
+//   }
+
+//   return await stripeCli.prices.create({
+//     // product: product.processor!.id,
+//     product_data: {
+//       name: `${product.name} - ${feature!.name}${overageStr}`,
+//     },
+
+//     ...priceAmountData,
+//     currency: "usd",
+//     recurring: {
+//       ...(billingIntervalToStripe(price.config!.interval!) as any),
+//       meter: meterId,
+//       usage_type: "metered",
+//     },
+//   });
+// };
 
 export const createStripeInArrearPrice = async ({
   sb,
@@ -619,6 +732,7 @@ export const createStripeInArrearPrice = async ({
     update: { config },
   });
 };
+
 const getProductIdFromPrice = async ({
   stripeCli,
   price,
@@ -714,15 +828,6 @@ export const createStripePriceIFNotExist = async ({
     config.stripe_meter_id = undefined;
   }
 
-  // if (billingType == BillingType.FixedCycle) {
-  //   await createStripeFixedCyclePrice({
-  //     sb,
-  //     stripeCli,
-  //     price,
-  //     product,
-  //     org,
-  //   });
-  // } else
   if (billingType == BillingType.UsageInAdvance) {
     // If tiered and one off
     let relatedEnt = getPriceEntitlement(price, entitlements);
@@ -762,13 +867,22 @@ export const createStripePriceIFNotExist = async ({
         org,
       });
     }
-  } else if (
-    billingType == BillingType.UsageInArrear ||
-    billingType == BillingType.InArrearProrated
-  ) {
+  } else if (billingType == BillingType.UsageInArrear) {
     if (!config.stripe_price_id) {
       console.log("Creating stripe price for in arrear price");
       await createStripeInArrearPrice({
+        sb,
+        stripeCli,
+        price,
+        entitlements,
+        product,
+        org,
+      });
+    }
+  } else if (billingType == BillingType.InArrearProrated) {
+    if (!config.stripe_price_id) {
+      console.log("Creating stripe price for in arrear prorated price");
+      await createStripeInAdvancePrice({
         sb,
         stripeCli,
         price,
