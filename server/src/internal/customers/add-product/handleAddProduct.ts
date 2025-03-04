@@ -3,6 +3,7 @@ import {
   getBillNowPrices,
   getPriceEntitlement,
   getPriceOptions,
+  getProductForPrice,
   pricesOnlyOneOff,
 } from "@/internal/prices/priceUtils.js";
 
@@ -26,6 +27,7 @@ import { createStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
 import { handleCreateCheckout } from "./handleCreateCheckout.js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import Stripe from "stripe";
+import { attachToInsertParams } from "@/internal/products/productUtils.js";
 
 const handleBillNowPrices = async ({
   sb,
@@ -87,12 +89,18 @@ const handleBillNowPrices = async ({
   }
 
   // Add product and entitlements to customer
-  await createFullCusProduct({
-    sb,
-    attachParams,
-    subscriptionIds: subscriptions.map((s) => s.id),
-    subscriptionId: subscriptions[0].id,
-  });
+  const batchInsert = [];
+  for (const product of products) {
+    batchInsert.push(
+      createFullCusProduct({
+        sb,
+        attachParams: attachToInsertParams(attachParams, product),
+        subscriptionIds: subscriptions.map((s) => s.id),
+        subscriptionId: subscriptions[0].id,
+      })
+    );
+  }
+  await Promise.all(batchInsert);
 
   for (const invoiceId of invoiceIds) {
     try {
@@ -102,8 +110,8 @@ const handleBillNowPrices = async ({
         sb,
         stripeInvoice: invoice,
         internalCustomerId: customer.internal_id,
-        productIds: [product.id],
-        internalProductIds: [product.internal_id],
+        productIds: products.map((p) => p.id),
+        internalProductIds: products.map((p) => p.internal_id),
         org,
       });
     } catch (error) {
@@ -113,7 +121,9 @@ const handleBillNowPrices = async ({
 
   res.status(200).send({
     success: true,
-    message: `Successfully created subscription and attached ${product.name} to ${customer.name}`,
+    message: `Successfully created subscriptions and attached ${products
+      .map((p) => p.name)
+      .join(", ")} to ${customer.name}`,
   });
 };
 
@@ -126,7 +136,7 @@ const handleOneOffPrices = async ({
   attachParams: AttachParams;
   res: any;
 }) => {
-  const { org, customer, product, prices, optionsList, entitlements } =
+  const { org, customer, products, prices, optionsList, entitlements } =
     attachParams;
 
   // 1. Create invoice
@@ -156,11 +166,13 @@ const handleOneOffPrices = async ({
       allowanceStr = `x ${allowanceStr} (${entitlement.feature.name})`;
     }
 
+    let product = getProductForPrice(price, products);
+
     await stripeCli.invoiceItems.create({
       customer: customer.processor.id,
       amount: amountPerUnit * quantity * 100,
       invoice: stripeInvoice.id,
-      description: `Invoice for ${product.name} -- ${quantity}${allowanceStr}`,
+      description: `Invoice for ${product?.name} -- ${quantity}${allowanceStr}`,
     });
   }
 
@@ -191,19 +203,25 @@ const handleOneOffPrices = async ({
 
   // Insert full customer product
   console.log("   3. Creating full customer product");
-  await createFullCusProduct({
-    sb,
-    attachParams,
-    lastInvoiceId: finalizedInvoice.id,
-  });
+  const batchInsert = [];
+  for (const product of products) {
+    batchInsert.push(
+      createFullCusProduct({
+        sb,
+        attachParams: attachToInsertParams(attachParams, product),
+        lastInvoiceId: finalizedInvoice.id,
+      })
+    );
+  }
+  await Promise.all(batchInsert);
 
   console.log("   4. Creating invoice from stripe");
   await InvoiceService.createInvoiceFromStripe({
     sb,
     stripeInvoice: finalizedInvoice,
     internalCustomerId: customer.internal_id,
-    productIds: [product.id],
-    internalProductIds: [product.internal_id],
+    productIds: products.map((p) => p.id),
+    internalProductIds: products.map((p) => p.internal_id),
     status: InvoiceStatus.Paid,
     org: org,
   });
@@ -211,7 +229,9 @@ const handleOneOffPrices = async ({
   console.log("   ✅ Successfully attached product");
   res.status(200).send({
     success: true,
-    message: `Successfully purchased ${product.name} and attached to ${customer.name}`,
+    message: `Successfully purchased ${products
+      .map((p) => p.name)
+      .join(", ")} and attached to ${customer.name}`,
   });
 };
 
@@ -224,20 +244,22 @@ export const handleAddProduct = async ({
   res: any;
   attachParams: AttachParams;
 }) => {
-  const { customer, product, prices } = attachParams;
+  const { customer, products, prices } = attachParams;
 
-  if (product.is_add_on) {
-    console.log(
-      `Adding add-on ${chalk.yellowBright(
-        product.name
-      )} to customer ${chalk.yellowBright(customer.id)}`
-    );
-  } else {
-    console.log(
-      `Adding product ${chalk.yellowBright(
-        product.name
-      )} to customer ${chalk.yellowBright(customer.id)}`
-    );
+  for (const product of products) {
+    if (product.is_add_on) {
+      console.log(
+        `Adding add-on ${chalk.yellowBright(
+          product.name
+        )} to customer ${chalk.yellowBright(customer.id)}`
+      );
+    } else {
+      console.log(
+        `Adding product ${chalk.yellowBright(
+          product.name
+        )} to customer ${chalk.yellowBright(customer.id)}`
+      );
+    }
   }
 
   // 1. Handle one-off payment products
@@ -269,12 +291,18 @@ export const handleAddProduct = async ({
 
   const billLaterPrices = getBillLaterPrices(prices);
 
-  await createFullCusProduct({
-    sb: req.sb,
-    attachParams,
-    subscriptionId: undefined,
-    billLaterOnly: true,
-  });
+  const batchInsert = [];
+  for (const product of products) {
+    batchInsert.push(
+      createFullCusProduct({
+        sb: req.sb,
+        attachParams: attachToInsertParams(attachParams, product),
+        subscriptionId: undefined,
+        billLaterOnly: true,
+      })
+    );
+  }
+  await Promise.all(batchInsert);
 
   console.log("Successfully created full cus product");
 
