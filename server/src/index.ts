@@ -17,6 +17,7 @@ import { initLogger } from "./errors/logger.js";
 import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
 import { createSupabaseClient } from "./external/supabaseUtils.js";
+import logtail from "./external/logtail/logtailUtils.js";
 
 const init = async () => {
   const app = express();
@@ -28,13 +29,13 @@ const init = async () => {
   await pgClient.connect();
 
   await QueueManager.getInstance(); // initialize the queue manager
-  await initWorkers();
+  await initWorkers(logtail);
   const supabaseClient = createSupabaseClient();
-
   app.use((req: any, res, next) => {
     req.sb = supabaseClient;
     req.pg = pgClient;
     req.logger = logger;
+
     next();
   });
 

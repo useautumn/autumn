@@ -1,6 +1,7 @@
 import { Job, Queue, Worker } from "bullmq";
 import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
 import { QueueManager } from "./QueueManager.js";
+import { createLogtailLogger } from "@/external/logtail/logtailUtils.js";
 
 const NUM_WORKERS = 5;
 
@@ -56,10 +57,12 @@ const initWorker = ({
   id,
   queue,
   useBackup,
+  logtail,
 }: {
   id: number;
   queue: Queue;
   useBackup: boolean;
+  logtail: any;
 }) => {
   let worker = new Worker(
     "autumn",
@@ -76,7 +79,7 @@ const initWorker = ({
       }
 
       try {
-        await runUpdateBalanceTask(job.data);
+        await runUpdateBalanceTask({ payload: job.data, logger: logtail });
       } catch (error) {
         console.error("Error updating balance:", error);
       } finally {
@@ -119,15 +122,19 @@ const initWorker = ({
   });
 };
 
-export const initWorkers = async () => {
+export const initWorkers = async (logtail: any) => {
   const workers = [];
 
   const mainQueue = await QueueManager.getQueue({ useBackup: false });
   const backupQueue = await QueueManager.getQueue({ useBackup: true });
 
   for (let i = 0; i < NUM_WORKERS; i++) {
-    workers.push(initWorker({ id: i, queue: mainQueue, useBackup: false }));
-    workers.push(initWorker({ id: i, queue: backupQueue, useBackup: true }));
+    workers.push(
+      initWorker({ id: i, queue: mainQueue, useBackup: false, logtail })
+    );
+    workers.push(
+      initWorker({ id: i, queue: backupQueue, useBackup: true, logtail })
+    );
   }
 
   // Get stalled jobs

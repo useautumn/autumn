@@ -30,7 +30,7 @@ import { Decimal } from "decimal.js";
 import { InvoiceItemService } from "@/internal/customers/invoices/InvoiceItemService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { createStripeInvoiceItem } from "@/internal/customers/invoices/invoiceItemUtils.js";
-
+import logtail from "@/external/logtail/logtailUtils.js";
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
 };
@@ -42,7 +42,6 @@ export const adjustAllowance = async ({
   affectedFeature,
   cusEnt,
   cusPrices,
-  event,
   customer,
   originalBalance,
   newBalance,
@@ -54,7 +53,6 @@ export const adjustAllowance = async ({
   org: Organization;
   cusEnt: CusEntWithCusProduct;
   cusPrices: FullCustomerPrice[];
-  event: Event;
   customer: Customer;
   originalBalance: number;
   newBalance: number;
@@ -63,6 +61,7 @@ export const adjustAllowance = async ({
   // Get customer entitlement
 
   // 1. Check if price is prorated in arrear, if not skip...
+  let logger = logtail;
   let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
   let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
   let cusProduct = cusEnt.customer_product;
@@ -97,19 +96,21 @@ export const adjustAllowance = async ({
   }
 
   if (!boundaryCrossed) {
-    console.log("   - In arrear prorated: boundary not crossed, skipping");
+    logger.info("   - In arrear prorated: boundary not crossed, skipping");
     return;
   }
 
-  console.log(`Updating prorated in arrear usage for ${affectedFeature.name}`);
-  console.log(
+  logger.info(`Updating prorated in arrear usage for ${affectedFeature.name}`);
+  logger.info(
     `   - Customer: ${customer.name} (${customer.id}), Org: ${org.slug}`
   );
-  console.log(`   - Allowance: ${cusEnt.entitlement.allowance!}`);
-  console.log(`   - Balance: ${originalBalance} -> ${newBalance}`);
+  logger.info(`   - Allowance: ${cusEnt.entitlement.allowance!}`);
+  logger.info(`   - Balance: ${originalBalance} -> ${newBalance}`);
 
   if (!cusProduct) {
-    console.log("❗️ Error: can't adjust allowance, no customer product found");
+    logger.error(
+      "❗️ Error: can't adjust allowance, no customer product found"
+    );
     return;
   }
 
@@ -121,7 +122,7 @@ export const adjustAllowance = async ({
   });
 
   if (!sub) {
-    console.log("❗️ Error: can't adjust allowance, no usage-based sub found");
+    logger.error("❗️ Error: can't adjust allowance, no usage-based sub found");
     return;
   }
 
@@ -174,7 +175,7 @@ export const adjustAllowance = async ({
       },
     });
 
-    console.log("   ✅ Updated latest invoice item and inserted into Stripe");
+    logger.info("   ✅ Updated latest invoice item and inserted into Stripe");
   }
 
   // Insert new invoice item
@@ -212,7 +213,7 @@ export const adjustAllowance = async ({
       sb,
       data: newInvoiceItem,
     });
-    console.log("   ✅ Inserted new invoice item");
+    logger.info("   ✅ Inserted new invoice item");
   }
 
   return;

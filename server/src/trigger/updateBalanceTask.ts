@@ -24,11 +24,11 @@ import {
   getCreditSystemDeduction,
 } from "./deductUtils.js";
 import {
-  getGroupBalanceFromEvent,
+  getGroupBalanceFromProperties,
   getGroupBalanceUpdate,
   initGroupBalancesForEvent,
 } from "@/internal/customers/entitlements/groupByUtils.js";
-import { nullOrUndefined } from "@/utils/genUtils.js";
+import { notNullish, nullish, nullOrUndefined } from "@/utils/genUtils.js";
 import { getMinCusEntBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
 import {
   creditSystemContainsFeature,
@@ -43,7 +43,7 @@ type DeductParams = {
   org: Organization;
   cusPrices: FullCustomerPrice[];
   customer: Customer;
-  event: Event;
+  properties: any;
   feature: Feature;
 };
 
@@ -137,8 +137,8 @@ const logBalanceUpdate = ({
     "   - CusEnts:",
     cusEnts.map((cusEnt: any) => {
       let balanceStr = cusEnt.balance;
-      let { groupVal, balance } = getGroupBalanceFromEvent({
-        event,
+      let { groupVal, balance } = getGroupBalanceFromProperties({
+        properties: event.properties,
         cusEnt,
         features,
       });
@@ -162,20 +162,23 @@ const logBalanceUpdate = ({
   );
 };
 
-const deductAllowanceFromCusEnt = async ({
+export const deductAllowanceFromCusEnt = async ({
   toDeduct,
   deductParams,
   cusEnt,
   features,
   featureDeductions,
+  willDeductCredits = false,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
   cusEnt: FullCustomerEntitlement;
   features: Feature[];
   featureDeductions: any;
+  willDeductCredits?: boolean;
 }) => {
-  const { sb, feature, env, org, cusPrices, customer, event } = deductParams;
+  const { sb, feature, env, org, cusPrices, customer, properties } =
+    deductParams;
 
   if (toDeduct == 0) {
     return 0;
@@ -184,17 +187,14 @@ const deductAllowanceFromCusEnt = async ({
   let newBalance, deducted;
 
   let cusEntBalance;
-  let { groupVal, balance } = getGroupBalanceFromEvent({
-    event,
+  let { groupVal, balance } = getGroupBalanceFromProperties({
+    properties,
     feature,
     cusEnt,
     features,
   });
 
-  // console.log("Group val:", groupVal);
-  // console.log("Balance:", balance);
-
-  if (groupVal && nullOrUndefined(balance)) {
+  if (notNullish(groupVal) && nullish(balance)) {
     console.log(
       `   - No balance found for group by value: ${groupVal}, for customer: ${customer.id}, skipping`
     );
@@ -244,7 +244,6 @@ const deductAllowanceFromCusEnt = async ({
     env,
     org,
     cusPrices: cusPrices as any,
-    event,
     customer,
     affectedFeature: feature,
     cusEnt: cusEnt as any,
@@ -260,7 +259,7 @@ const deductAllowanceFromCusEnt = async ({
   }
 
   // Deduct credit amounts too
-  if (feature.type === FeatureType.Metered) {
+  if (feature.type === FeatureType.Metered && willDeductCredits) {
     for (let i = 0; i < featureDeductions.length; i++) {
       let { feature: creditSystem, deduction } = featureDeductions[i];
 
@@ -289,7 +288,7 @@ const deductAllowanceFromCusEnt = async ({
   return toDeduct;
 };
 
-const deductFromUsageBasedCusEnt = async ({
+export const deductFromUsageBasedCusEnt = async ({
   toDeduct,
   deductParams,
   cusEnts,
@@ -300,7 +299,8 @@ const deductFromUsageBasedCusEnt = async ({
   cusEnts: FullCustomerEntitlement[];
   features: Feature[];
 }) => {
-  const { sb, feature, env, org, cusPrices, customer, event } = deductParams;
+  const { sb, feature, env, org, cusPrices, customer, properties } =
+    deductParams;
 
   // Deduct from usage-based price
   const usageBasedEnt = cusEnts.find(
@@ -317,8 +317,8 @@ const deductFromUsageBasedCusEnt = async ({
   }
 
   // Group by value
-  let { groupVal, balance } = getGroupBalanceFromEvent({
-    event,
+  let { groupVal, balance } = getGroupBalanceFromProperties({
+    properties,
     feature,
     cusEnt: usageBasedEnt,
   });
@@ -350,7 +350,6 @@ const deductFromUsageBasedCusEnt = async ({
     org,
     cusEnt: usageBasedEnt as any,
     cusPrices: cusPrices as any,
-    event,
     customer,
     originalBalance: getMinCusEntBalance({ cusEnt: usageBasedEnt }),
     newBalance: getMinCusEntBalance({
@@ -440,9 +439,10 @@ export const updateCustomerBalance = async ({
           org,
           cusPrices: cusPrices as any[],
           customer,
-          event,
+          properties: event.properties,
         },
         featureDeductions,
+        willDeductCredits: true,
       });
     }
 
@@ -461,7 +461,7 @@ export const updateCustomerBalance = async ({
         org,
         cusPrices: cusPrices as any[],
         customer,
-        event,
+        properties: event.properties,
       },
     });
   }
@@ -470,7 +470,13 @@ export const updateCustomerBalance = async ({
 };
 
 // MAIN FUNCTION
-export const runUpdateBalanceTask = async (payload: any) => {
+export const runUpdateBalanceTask = async ({
+  payload,
+  logger,
+}: {
+  payload: any;
+  logger: any;
+}) => {
   try {
     const sb = createSupabaseClient();
 
@@ -482,7 +488,6 @@ export const runUpdateBalanceTask = async (payload: any) => {
       `UPDATING BALANCE FOR CUSTOMER (${customer.id}), ORG: ${org.slug}`
     );
 
-    console.log("1. Updating customer balance...");
     const cusEnts: any = await updateCustomerBalance({
       sb,
       customer,
@@ -493,7 +498,6 @@ export const runUpdateBalanceTask = async (payload: any) => {
     });
 
     if (!cusEnts || cusEnts.length === 0) {
-      console.log("✅ No customer entitlements found, skipping");
       return;
     }
     console.log("   ✅ Customer balance updated");
@@ -519,7 +523,18 @@ export const runUpdateBalanceTask = async (payload: any) => {
       console.log("   ✅ No below threshold price found");
     }
   } catch (error) {
-    console.log(`Error updating customer balance`);
-    console.log(error);
+    if (logger) {
+      logger.use((log: any) => {
+        return {
+          ...log,
+          data: payload,
+        };
+      });
+
+      logger.error(`ERROR UPDATING BALANCE`);
+      logger.error(error);
+    } else {
+      console.log(error);
+    }
   }
 };
