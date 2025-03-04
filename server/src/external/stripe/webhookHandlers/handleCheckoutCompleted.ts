@@ -144,28 +144,6 @@ export const handleCheckoutSessionCompleted = async ({
       );
       return;
     }
-
-    // Remove in arrear prorated
-    const sub = await stripeCli.subscriptions.retrieve(
-      checkoutSession.subscription as string
-    );
-
-    const prices = attachParams.prices;
-    for (const price of prices) {
-      let billingType = getBillingType(price.config as UsagePriceConfig);
-      if (billingType != BillingType.InArrearProrated) {
-        continue;
-      }
-
-      let config = price.config as UsagePriceConfig;
-      let subItem = sub.items.data.find(
-        (item) => item.price.id == config.stripe_price_id
-      );
-
-      if (subItem) {
-        await stripeCli.subscriptionItems.del(subItem.id);
-      }
-    }
   }
 
   // Create other subscriptions

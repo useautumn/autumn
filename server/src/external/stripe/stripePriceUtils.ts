@@ -32,7 +32,11 @@ import {
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
-import { notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
+import {
+  notNullOrUndefined,
+  nullish,
+  nullOrUndefined,
+} from "@/utils/genUtils.js";
 import { Decimal } from "decimal.js";
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
@@ -203,15 +207,31 @@ export const priceToStripeItem = ({
       price: priceId,
     };
   } else if (billingType == BillingType.InArrearProrated) {
-    // TODO: Implement this
-    if (isCheckout) {
-      let config = price.config as UsagePriceConfig;
-      lineItem = {
-        price: config.stripe_price_id!,
-      };
-    } else {
-      return null;
+    const config = price.config as UsagePriceConfig;
+    let quantity = options?.quantity;
+
+    if (nullish(quantity)) {
+      quantity = relatedEnt.allowance;
     }
+
+    lineItem = {
+      price: config.stripe_price_id,
+      quantity: quantity,
+    };
+
+    // OLD
+    // TODO: Implement this
+    // if (isCheckout) {
+    //   let config = price.config as UsagePriceConfig;
+    //   lineItem = {
+    //     price: config.stripe_price_id!,
+    //   };
+    // } else {
+    //   return null;
+    // }
+    // lineItem = {
+    //   price: price.config!.stripe_price_id!,
+    // };
   }
 
   return {
@@ -708,13 +728,22 @@ export const createStripePriceIFNotExist = async ({
         org,
       });
     }
-  } else if (
-    billingType == BillingType.UsageInArrear ||
-    billingType == BillingType.InArrearProrated
-  ) {
+  } else if (billingType == BillingType.UsageInArrear) {
     if (!config.stripe_price_id) {
       console.log("Creating stripe price for in arrear price");
       await createStripeInArrearPrice({
+        sb,
+        stripeCli,
+        price,
+        entitlements,
+        product,
+        org,
+      });
+    }
+  } else if (billingType == BillingType.InArrearProrated) {
+    if (!config.stripe_price_id) {
+      console.log("Creating stripe price for in arrear prorated price");
+      await createStripeInAdvancePrice({
         sb,
         stripeCli,
         price,
