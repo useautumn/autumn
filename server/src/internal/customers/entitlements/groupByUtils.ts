@@ -52,27 +52,27 @@ export const getGroupbalanceFromParams = ({
   return { groupField, groupVal, balance, adjustment };
 };
 // 1. Event contains group_by value
-export const getGroupValFromEvent = ({
-  event,
+export const getGroupValFromProperties = ({
+  properties,
   feature,
 }: {
-  event: Event;
+  properties: any;
   feature: Feature;
 }) => {
   if (!feature.config?.group_by) {
     return null;
   }
 
-  return event.properties[feature.config.group_by.property];
+  return properties[feature.config.group_by.property];
 };
 
-export const getGroupBalanceFromEvent = ({
-  event,
+export const getGroupBalanceFromProperties = ({
+  properties,
   feature,
   features,
   cusEnt,
 }: {
-  event: Event;
+  properties: any;
   feature?: Feature;
   features?: Feature[];
   cusEnt: CusEntWithEntitlement;
@@ -84,7 +84,7 @@ export const getGroupBalanceFromEvent = ({
   }
 
   // TODO: Add support for credit systems?
-  let groupVal = getGroupValFromEvent({ event, feature: feature! });
+  let groupVal = getGroupValFromProperties({ properties, feature: feature! });
 
   if (nullOrUndefined(groupVal)) {
     return {
@@ -135,6 +135,7 @@ export const getGroupBalanceUpdate = ({
   };
 };
 
+// INIT UTILS
 const initCusEntGroupBalance = async ({
   sb,
   cusEnt,
@@ -287,6 +288,46 @@ export const initGroupBalancesFromGetCus = async ({
       return [feature, ...creditSystems].some((f) => {
         return cusEnt.entitlement.internal_feature_id == f.internal_id;
       });
+    });
+
+    if (affectedCusEnts.length > 0) {
+      await initGroupBalances({
+        sb,
+        feature,
+        cusEnts: affectedCusEnts,
+        groupValue,
+      });
+    }
+  }
+};
+
+export const initGroupBalancesFromUpdateBalances = async ({
+  sb,
+  cusEnts,
+  updates,
+  features,
+}: {
+  sb: SupabaseClient;
+  updates: any;
+  cusEnts: CusEntWithEntitlement[];
+  features: Feature[];
+}) => {
+  for (const update of updates) {
+    let featureId = update.feature_id;
+    let feature = features.find((f) => f.id == featureId);
+    if (!feature) {
+      continue;
+    }
+
+    let groupField = feature.config?.group_by?.property;
+    let groupValue = update[groupField];
+
+    if (nullOrUndefined(groupValue)) {
+      continue;
+    }
+
+    let affectedCusEnts = cusEnts.filter((cusEnt) => {
+      return cusEnt.entitlement.internal_feature_id == feature.internal_id;
     });
 
     if (affectedCusEnts.length > 0) {

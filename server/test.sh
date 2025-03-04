@@ -28,7 +28,6 @@ elif [ "$1" == "alex" ]; then
 elif [ "$1" == "alex-custom" ]; then
     FILE_TO_TEST="$2"
     npx mocha --timeout 10000000 "tests/alex/$FILE_TO_TEST.ts"
-
 elif [ "$1" == "custom" ]; then
     FILE_TO_TEST="$2"
     npx mocha --timeout 10000000 "tests/$FILE_TO_TEST.ts"
@@ -38,3 +37,9 @@ else
     --ignore 'tests/00_setup.ts' \
     --ignore 'tests/alex/**/*.ts'
 fi
+
+
+
+# All advanced parallel
+# 'tests/advanced/09_advanced_usage1.ts' 'tests/advanced/09_advanced_usage2.ts' 'tests/advanced/10_multi_interval1.ts' 'tests/advanced/10_multi_interval2.ts' \
+#     'tests/advanced/11_arrear_prorated.ts' 'tests/advanced/11_arrear_prorated2.ts' 'tests/advanced/12_group_by.ts' \
