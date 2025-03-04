@@ -32,7 +32,7 @@ type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
 };
 
-export const adjustAllowance = async ({
+export const adjustAllowanceOld = async ({
   sb,
   env,
   org,
@@ -214,6 +214,106 @@ export const adjustAllowance = async ({
       data: newInvoiceItem,
     });
     logger.info("   ✅ Inserted new invoice item");
+  }
+
+  return;
+};
+
+export const adjustAllowance = async ({
+  sb,
+  env,
+  org,
+  affectedFeature,
+  cusEnt,
+  cusPrices,
+  customer,
+  originalBalance,
+  newBalance,
+  deduction,
+}: {
+  sb: SupabaseClient;
+  env: AppEnv;
+  affectedFeature: Feature;
+  org: Organization;
+  cusEnt: CusEntWithCusProduct;
+  cusPrices: FullCustomerPrice[];
+  customer: Customer;
+  originalBalance: number;
+  newBalance: number;
+  deduction: number;
+}) => {
+  // Get customer entitlement
+
+  if (originalBalance == newBalance) {
+    return;
+  }
+
+  // 1. Check if price is prorated in arrear, if not skip...
+  let logger = logtail;
+  let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+  let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
+  let cusProduct = cusEnt.customer_product;
+  if (!cusPrice || billingType !== BillingType.InArrearProrated) {
+    return;
+  }
+
+  let origUsage = -originalBalance;
+  let newUsage = -newBalance;
+
+  logger.info(`Updating prorated in arrear usage for ${affectedFeature.name}`);
+  logger.info(
+    `   - Customer: ${customer.name} (${customer.id}), Org: ${org.slug}`
+  );
+  logger.info(`   - Allowance: ${cusEnt.entitlement.allowance!}`);
+  logger.info(`   - Balance: ${originalBalance} -> ${newBalance}`);
+
+  if (!cusProduct) {
+    logger.error(
+      "❗️ Error: can't adjust allowance, no customer product found"
+    );
+    return;
+  }
+
+  let stripeCli = createStripeCli({ org, env });
+  let sub = await getUsageBasedSub({
+    stripeCli,
+    subIds: cusProduct.subscription_ids!,
+    feature: affectedFeature,
+  });
+
+  if (!sub) {
+    logger.error("❗️ Error: can't adjust allowance, no usage-based sub found");
+    return;
+  }
+
+  // Update sub item
+  let config = cusPrice.price.config as UsagePriceConfig;
+  let subItem = sub.items.data.find(
+    (item) => item.price.id === config.stripe_price_id
+  );
+
+  if (!subItem) {
+    logger.error("❗️ Error: can't adjust allowance, no sub item found");
+    return;
+  }
+
+  const quantity = newUsage + cusEnt.entitlement.allowance!;
+
+  if (quantity < 0) {
+    logger.error("❗️ Error: can't adjust allowance, quantity is negative");
+    return;
+  }
+
+  try {
+    await stripeCli.subscriptionItems.update(subItem.id, {
+      quantity: quantity,
+      proration_behavior: "create_prorations",
+    });
+    logger.info(`   ✅ Adjusted sub item ${subItem.id} to ${quantity}`);
+  } catch (error: any) {
+    logger.error(`❗️ Error updating subscription item`);
+    logger.error(error);
+    return;
   }
 
   return;

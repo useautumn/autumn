@@ -156,7 +156,8 @@ export const getBillNowPrices = (prices: Price[]) => {
       price.billing_type == BillingType.OneOff ||
       price.billing_type == BillingType.FixedCycle ||
       price.billing_type == BillingType.UsageInAdvance ||
-      price.billing_type == BillingType.UsageInArrear
+      price.billing_type == BillingType.UsageInArrear ||
+      price.billing_type == BillingType.InArrearProrated
   );
 };
 

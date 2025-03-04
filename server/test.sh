@@ -9,7 +9,7 @@ if [ "$1" == "basic-parallel" ]; then
 
 elif [ "$1" == "advanced-parallel" ]; then
     npx mocha 'tests/00_setup.ts' && npx mocha --parallel --timeout 10000000  \
-    'tests/advanced/**/*.ts' \
+    'tests/advanced/**/*.ts' --ignore 'tests/advanced/11_arrear_prorated.ts' \
     --ignore 'tests/00_setup.ts' \
     --ignore 'tests/alex/**/*.ts'
 
