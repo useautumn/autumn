@@ -69,7 +69,6 @@ const handleBillNowPrices = async ({
       subscriptions.push(subscription);
       invoiceIds.push(subscription.latest_invoice as string);
     } catch (error: any) {
-      throw error;
       if (
         error instanceof RecaseError &&
         (error.code === ErrCode.StripeCardDeclined ||
