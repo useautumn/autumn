@@ -11,11 +11,30 @@ import {
 
 export type AttachParams = {
   customer: Customer;
-  product: FullProduct;
+  products: FullProduct[];
+
   org: Organization;
 
   prices: Price[];
   entitlements: EntitlementWithFeature[];
+
+  freeTrial: FreeTrial | null;
+  optionsList: FeatureOptions[];
+
+  curCusProduct?: FullCusProduct | undefined;
+  successUrl?: string | undefined;
+  // remainingItemSets?: any[];
+  itemSets?: any[];
+};
+
+export type InsertCusProductParams = {
+  customer: Customer;
+  org: Organization;
+
+  product: FullProduct;
+  prices: Price[];
+  entitlements: EntitlementWithFeature[];
+
   freeTrial: FreeTrial | null;
   optionsList: FeatureOptions[];
 

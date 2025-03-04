@@ -170,9 +170,9 @@ export const handleSameMainProduct = async ({
   attachParams: AttachParams;
   res: any;
 }) => {
-  const { optionsList: newOptionsList, product, org, customer } = attachParams;
-  // 1. Check if scheduled product exists or quantity is updated
-  const diffQuantityExists = false;
+  const { optionsList: newOptionsList, products, org, customer } = attachParams;
+
+  let product = products[0];
 
   const optionsToUpdate = getOptionsToUpdate(
     curMainProduct.options,
@@ -242,12 +242,13 @@ export const handleSameAddOnProduct = async ({
 }: {
   sb: SupabaseClient;
   curSameProduct: FullCusProduct;
-  curMainProduct: FullCusProduct;
+  curMainProduct: FullCusProduct | null;
   attachParams: AttachParams;
   res: any;
 }) => {
-  const { optionsList: newOptionsList, prices, product } = attachParams;
+  const { optionsList: newOptionsList, prices, products } = attachParams;
 
+  let product = products[0];
   if (pricesOnlyOneOff(prices)) {
     return {
       done: false,
@@ -256,7 +257,7 @@ export const handleSameAddOnProduct = async ({
   }
 
   let optionsToUpdate = getOptionsToUpdate(
-    curMainProduct.options,
+    curSameProduct.options,
     newOptionsList
   );
 

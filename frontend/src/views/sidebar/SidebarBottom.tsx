@@ -36,12 +36,12 @@ export default function SidebarBottom({
   return (
     <SidebarFooter>
       <SidebarMenu className={cn(expanded)}>
-        <TabButton
+        {/* <TabButton
           value="pricing"
           icon={<FontAwesomeIcon icon={faWallet} />}
           title="Pricing"
           env={env}
-        />
+        /> */}
         <TabButton
           value="integrations/stripe"
           icon={<FontAwesomeIcon icon={faCircleNodes} />}

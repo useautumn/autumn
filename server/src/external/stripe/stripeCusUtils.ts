@@ -1,10 +1,61 @@
-import { AppEnv, Customer, Organization } from "@autumn/shared";
+import { AppEnv, Customer, Organization, ProcessorType } from "@autumn/shared";
 import stripe, { Stripe } from "stripe";
 import { createStripeCli } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { CusService } from "@/internal/customers/CusService.js";
+
+export const createStripeCusIfNotExists = async ({
+  sb,
+  org,
+  env,
+  customer,
+}: {
+  sb: SupabaseClient;
+  org: Organization;
+  env: AppEnv;
+  customer: Customer;
+}) => {
+  let createNew = false;
+  const stripeCli = createStripeCli({ org, env });
+  if (!customer.processor || !customer.processor.id) {
+    createNew = true;
+  } else {
+    try {
+      await stripeCli.customers.retrieve(customer.processor.id);
+    } catch (error) {
+      createNew = true;
+    }
+  }
+
+  if (createNew) {
+    const stripeCustomer = await createStripeCustomer({
+      org,
+      env,
+      customer,
+    });
+
+    await CusService.update({
+      sb,
+      internalCusId: customer.internal_id,
+      update: {
+        processor: {
+          id: stripeCustomer.id,
+          type: ProcessorType.Stripe,
+        },
+      },
+    });
+
+    customer.processor = {
+      id: stripeCustomer.id,
+      type: ProcessorType.Stripe,
+    };
+  }
+
+  return;
+};
 
 export const createStripeCustomer = async ({
   org,
