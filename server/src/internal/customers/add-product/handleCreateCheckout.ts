@@ -84,12 +84,10 @@ export const handleCreateCheckout = async ({
       : undefined,
   });
 
-  res
-    .status(200)
-    .json({
-      checkout_url: checkout.url,
-      success: true,
-      message: "Successfully created Stripe checkout",
-    });
+  res.status(200).json({
+    checkout_url: checkout.url,
+    success: true,
+    message: "Successfully created Stripe checkout",
+  });
   return;
 };
