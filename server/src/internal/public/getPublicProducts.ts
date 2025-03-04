@@ -264,11 +264,11 @@ publicProductsRouter.get("", async (req: any, res: any) => {
   try {
     const org = req.org;
 
-    const products = await ProductService.getFullProducts(
-      req.sb,
-      req.org.id,
-      req.env
-    );
+    const products = await ProductService.getFullProducts({
+      sb: req.sb,
+      orgId: req.org.id,
+      env: req.env,
+    });
 
     // 1. Sort prices
     sortProductPrices(products);

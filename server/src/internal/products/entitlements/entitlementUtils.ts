@@ -15,6 +15,7 @@ import {
   UsagePriceConfig,
   PriceType,
   Price,
+  FullProduct,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { addDays } from "date-fns";
@@ -343,4 +344,13 @@ export const getEntRelatedPrice = (
     const config = price.config as UsagePriceConfig;
     return config.internal_feature_id === entitlement.internal_feature_id;
   });
+};
+
+export const getEntitlementsForProduct = (
+  product: FullProduct,
+  entitlements: EntitlementWithFeature[]
+) => {
+  return entitlements.filter(
+    (ent) => ent.internal_product_id === product.internal_id
+  );
 };

@@ -21,7 +21,9 @@ export const handleCreateCheckout = async ({
   attachParams: AttachParams;
 }) => {
   console.log(
-    `Creating checkout for customer ${attachParams.customer.id}, product ${attachParams.product.name}`
+    `Creating checkout for customer ${
+      attachParams.customer.id
+    }, products ${attachParams.products.map((p) => p.name)}`
   );
 
   const { customer, org, freeTrial, successUrl } = attachParams;
@@ -84,12 +86,10 @@ export const handleCreateCheckout = async ({
       : undefined,
   });
 
-  res
-    .status(200)
-    .json({
-      checkout_url: checkout.url,
-      success: true,
-      message: "Successfully created Stripe checkout",
-    });
+  res.status(200).json({
+    checkout_url: checkout.url,
+    success: true,
+    message: "Successfully created Stripe checkout",
+  });
   return;
 };

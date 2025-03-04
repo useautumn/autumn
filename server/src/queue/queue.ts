@@ -1,7 +1,7 @@
 import { Job, Queue, Worker } from "bullmq";
 import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
 import { QueueManager } from "./QueueManager.js";
-import { createLogtailLogger } from "@/external/logtail/logtailUtils.js";
+import { createLogtail } from "@/external/logtail/logtailUtils.js";
 
 const NUM_WORKERS = 5;
 
@@ -122,11 +122,12 @@ const initWorker = ({
   });
 };
 
-export const initWorkers = async (logtail: any) => {
+export const initWorkers = async () => {
   const workers = [];
 
   const mainQueue = await QueueManager.getQueue({ useBackup: false });
   const backupQueue = await QueueManager.getQueue({ useBackup: true });
+  const logtail = createLogtail();
 
   for (let i = 0; i < NUM_WORKERS; i++) {
     workers.push(

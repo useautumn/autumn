@@ -36,7 +36,7 @@ const handleBillNowPrices = async ({
   attachParams: AttachParams;
   res: any;
 }) => {
-  const { org, customer, product, freeTrial } = attachParams;
+  const { org, customer, products, freeTrial } = attachParams;
 
   const stripeCli = createStripeCli({ org, env: customer.env });
 

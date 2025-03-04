@@ -3,25 +3,16 @@ import { handleRequestError } from "@/utils/errorUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import {
-  CusProductStatus,
-  ErrCode,
-  Feature,
-  FeatureType,
-} from "@autumn/shared";
+import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getCusEntsInFeatures } from "../cusUtils.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 import {
   deductAllowanceFromCusEnt,
   deductFromUsageBasedCusEnt,
 } from "@/trigger/updateBalanceTask.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import logtail from "@/external/logtail/logtailUtils.js";
+
 import {
   getGroupBalanceFromProperties,
   initGroupBalancesFromUpdateBalances,
@@ -62,10 +53,11 @@ const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
 
 export const handleUpdateBalances = async (req: any, res: any) => {
   try {
-    const logger = logtail;
+    const logger = req.logtail;
     const cusId = req.params.customer_id;
     const { sb, env } = req;
     const { balances } = req.body;
+
     if (!Array.isArray(balances)) {
       throw new RecaseError({
         message: "Balances must be an array",

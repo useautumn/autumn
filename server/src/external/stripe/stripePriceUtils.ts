@@ -27,6 +27,7 @@ import {
   getPriceEntitlement,
   getPriceForOverage,
   getPriceOptions,
+  getProductForPrice,
   priceIsOneOffAndTiered,
 } from "@/internal/prices/priceUtils.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
@@ -228,7 +229,7 @@ export const getStripeSubItems = async ({
   attachParams: AttachParams;
   isCheckout?: boolean;
 }) => {
-  const { product, prices, entitlements, optionsList, org } = attachParams;
+  const { products, prices, entitlements, optionsList, org } = attachParams;
 
   const checkoutRelevantPrices = getCheckoutRelevantPrices(prices);
   checkoutRelevantPrices.sort((a, b) => {
@@ -285,6 +286,8 @@ export const getStripeSubItems = async ({
           id: priceEnt.feature.id,
         });
       }
+
+      let product = getProductForPrice(price, products)!;
 
       const stripeItem = priceToStripeItem({
         price,
@@ -737,7 +740,8 @@ export const pricesToInvoiceItems = async ({
   attachParams: AttachParams;
   stripeInvoiceId: string;
 }) => {
-  const { prices, optionsList, entitlements, product, customer } = attachParams;
+  const { prices, optionsList, entitlements, products, customer } =
+    attachParams;
   for (const price of prices) {
     // Calculate amount
     const options = getPriceOptions(price, optionsList);
@@ -754,6 +758,8 @@ export const pricesToInvoiceItems = async ({
           : `${entitlement.allowance}`;
       allowanceStr = `x ${allowanceStr} (${entitlement.feature.name})`;
     }
+
+    let product = getProductForPrice(price, products)!;
 
     await stripeCli.invoiceItems.create({
       customer: customer.processor.id,

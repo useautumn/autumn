@@ -138,8 +138,18 @@ export class ProductService {
     return data;
   }
 
-  static async getFullProducts(sb: SupabaseClient, orgId: string, env: AppEnv) {
-    const { data, error } = await sb
+  static async getFullProducts({
+    sb,
+    orgId,
+    env,
+    inIds,
+  }: {
+    sb: SupabaseClient;
+    orgId: string;
+    env: AppEnv;
+    inIds?: string[];
+  }) {
+    const query = sb
       .from("products")
       .select(
         `*,
@@ -157,6 +167,12 @@ export class ProductService {
       .eq("entitlements.is_custom", false)
       .eq("free_trial.is_custom", false);
 
+    if (inIds) {
+      query.in("id", inIds);
+    }
+
+    const { data, error } = await query;
+
     if (error) {
       throw error;
     }
@@ -164,34 +180,6 @@ export class ProductService {
     for (const product of data) {
       product.free_trial =
         product.free_trial.length > 0 ? product.free_trial[0] : null;
-    }
-
-    return data;
-  }
-
-  static async getEntitlementsByProductId({
-    sb,
-    productId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    productId: string;
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const { data, error } = await sb
-      .from("entitlements")
-      .select("*, feature:features(id, name, type)")
-      .eq("product_id", productId)
-      .eq("org_id", orgId)
-      .eq("env", env);
-
-    if (error) {
-      if (error.code !== "PGRST116") {
-        return [];
-      }
-      throw error;
     }
 
     return data;
@@ -236,26 +224,48 @@ export class ProductService {
     return data;
   }
 
-  // UPDATES
-  static async update({
+  static async getEntitlementsByProductId({
     sb,
     productId,
     orgId,
     env,
-    update,
   }: {
     sb: SupabaseClient;
     productId: string;
     orgId: string;
     env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("entitlements")
+      .select("*, feature:features(id, name, type)")
+      .eq("product_id", productId)
+      .eq("org_id", orgId)
+      .eq("env", env);
+
+    if (error) {
+      if (error.code !== "PGRST116") {
+        return [];
+      }
+      throw error;
+    }
+
+    return data;
+  }
+
+  // UPDATES
+  static async update({
+    sb,
+    internalId,
+    update,
+  }: {
+    sb: SupabaseClient;
+    internalId: string;
     update: any;
   }) {
     const { data, error } = await sb
       .from("products")
       .update(update)
-      .eq("id", productId)
-      .eq("org_id", orgId)
-      .eq("env", env);
+      .eq("internal_id", internalId);
 
     if (error) {
       throw new RecaseError({

@@ -10,6 +10,7 @@ import { CusPriceService } from "@/internal/customers/prices/CusPriceService.js"
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+
 const getCusOrgAndCusPrice = async ({
   sb,
   cusEnt,

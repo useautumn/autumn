@@ -1,9 +1,13 @@
 import {
+  AppEnv,
   BillingInterval,
   BillingType,
+  EntitlementWithFeature,
   Feature,
+  Organization,
   Price,
   PriceType,
+  ProcessorType,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
@@ -12,6 +16,14 @@ import {
   getBillingInterval,
   getBillingType,
 } from "@/internal/prices/priceUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { ProductService } from "./ProductService.js";
+import { SupabaseClient } from "@supabase/supabase-js";
+import {
+  AttachParams,
+  InsertCusProductParams,
+} from "../customers/products/AttachParams.js";
+import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
 
 export const isProductUpgrade = (
   product1: FullProduct,
@@ -126,4 +138,68 @@ export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
   }
 
   return Object.values(featureToOptions);
+};
+
+export const checkStripeProductExists = async ({
+  sb,
+  org,
+  env,
+  product,
+}: {
+  sb: SupabaseClient;
+  org: Organization;
+  env: AppEnv;
+  product: FullProduct;
+}) => {
+  let createNew = false;
+  let stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
+  if (!product.processor || !product.processor.id) {
+    createNew = true;
+  } else {
+    try {
+      await stripeCli.products.retrieve(product.processor!.id);
+    } catch (error) {
+      createNew = true;
+    }
+  }
+
+  if (createNew) {
+    console.log("Creating new product in Stripe");
+    const stripeProduct = await stripeCli.products.create({
+      name: product.name,
+    });
+
+    await ProductService.update({
+      sb,
+      internalId: product.internal_id,
+      update: {
+        processor: { id: stripeProduct.id, type: ProcessorType.Stripe },
+      },
+    });
+
+    product.processor = {
+      id: stripeProduct.id,
+      type: ProcessorType.Stripe,
+    };
+  }
+};
+
+export const getPricesForProduct = (product: FullProduct, prices: Price[]) => {
+  return prices.filter((p) => p.internal_product_id === product.internal_id);
+};
+
+export const attachToInsertParams = (
+  attachParams: AttachParams,
+  product: FullProduct
+) => {
+  return {
+    ...attachParams,
+    product,
+    prices: getPricesForProduct(product, attachParams.prices),
+    entitlements: getEntitlementsForProduct(product, attachParams.entitlements),
+  } as InsertCusProductParams;
 };
