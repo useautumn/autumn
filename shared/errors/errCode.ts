@@ -51,6 +51,7 @@ export const ErrCode = {
   InvalidPriceId: "invalid_price_id",
   InvalidPriceOptions: "invalid_price_options",
   InvalidPriceConfig: "invalid_price_config",
+  CusPriceNotFound: "cus_price_not_found",
 
   // Customer
   InvalidCustomer: "invalid_customer",

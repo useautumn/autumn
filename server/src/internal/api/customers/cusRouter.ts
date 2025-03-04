@@ -35,6 +35,7 @@ import {
 } from "@/internal/customers/products/cusProductUtils.js";
 import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
+import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 
 export const cusRouter = Router();
 
@@ -249,65 +250,7 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
 // Update customer entitlement directly
 cusRouter.post(
   "/customer_entitlements/:customer_entitlement_id",
-  async (req: any, res: any) => {
-    try {
-      const { customer_entitlement_id } = req.params;
-      const { balance, next_reset_at } = req.body;
-
-      if (!Number.isInteger(balance)) {
-        throw new RecaseError({
-          message: "Balance must be a positive integer",
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      if (
-        next_reset_at !== null &&
-        (!Number.isInteger(next_reset_at) || next_reset_at < 0)
-      ) {
-        throw new RecaseError({
-          message: "Next reset at must be a valid unix timestamp or null",
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      // Check if org owns the entitlement
-      const cusEnt = await CustomerEntitlementService.getByIdStrict({
-        sb: req.sb,
-        id: customer_entitlement_id,
-        orgId: req.orgId,
-        env: req.env,
-      });
-
-      if (balance < 0 && !cusEnt.usage_allowed) {
-        throw new RecaseError({
-          message: "Entitlement does not allow usage",
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      const amountUsed = cusEnt.balance! - balance;
-      const adjustment = cusEnt.adjustment! - amountUsed;
-
-      await CustomerEntitlementService.update({
-        sb: req.sb,
-        id: customer_entitlement_id,
-        updates: { balance, next_reset_at, adjustment },
-      });
-
-      res.status(200).json({ success: true });
-    } catch (error) {
-      handleRequestError({
-        req,
-        error,
-        res,
-        action: "update customer entitlement",
-      });
-    }
-  }
+  handleUpdateEntitlement
 );
 
 cusRouter.post("/:customer_id/balances", handleUpdateBalances);
