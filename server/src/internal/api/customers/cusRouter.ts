@@ -34,6 +34,8 @@ import {
   uncancelCurrentProduct,
 } from "@/internal/customers/products/cusProductUtils.js";
 import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
+import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
+import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 
 export const cusRouter = Router();
 
@@ -248,161 +250,10 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
 // Update customer entitlement directly
 cusRouter.post(
   "/customer_entitlements/:customer_entitlement_id",
-  async (req: any, res: any) => {
-    try {
-      const { customer_entitlement_id } = req.params;
-      const { balance, next_reset_at } = req.body;
-
-      if (!Number.isInteger(balance)) {
-        throw new RecaseError({
-          message: "Balance must be a positive integer",
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      if (
-        next_reset_at !== null &&
-        (!Number.isInteger(next_reset_at) || next_reset_at < 0)
-      ) {
-        throw new RecaseError({
-          message: "Next reset at must be a valid unix timestamp or null",
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      // Check if org owns the entitlement
-      const cusEnt = await CustomerEntitlementService.getByIdStrict({
-        sb: req.sb,
-        id: customer_entitlement_id,
-        orgId: req.orgId,
-        env: req.env,
-      });
-
-      if (balance < 0 && !cusEnt.usage_allowed) {
-        throw new RecaseError({
-          message: "Entitlement does not allow usage",
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      const amountUsed = cusEnt.balance! - balance;
-      const adjustment = cusEnt.adjustment! - amountUsed;
-
-      await CustomerEntitlementService.update({
-        sb: req.sb,
-        id: customer_entitlement_id,
-        updates: { balance, next_reset_at, adjustment },
-      });
-
-      res.status(200).json({ success: true });
-    } catch (error) {
-      handleRequestError({
-        req,
-        error,
-        res,
-        action: "update customer entitlement",
-      });
-    }
-  }
+  handleUpdateEntitlement
 );
 
-cusRouter.post("/:customer_id/balances", async (req: any, res: any) => {
-  try {
-    const cusId = req.params.customer_id;
-    const { balances } = req.body;
-
-    const customer = await CusService.getById({
-      sb: req.sb,
-      id: cusId,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    if (!customer) {
-      throw new RecaseError({
-        message: `Customer ${cusId} not found`,
-        code: ErrCode.CustomerNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    const features = await FeatureService.getFromReq(req);
-    const featuresToUpdate = features.filter((f) =>
-      balances.map((b: any) => b.feature_id).includes(f.id)
-    );
-
-    const { cusEnts } = await getCusEntsInFeatures({
-      sb: req.sb,
-      internalCustomerId: customer.internal_id,
-      internalFeatureIds: featuresToUpdate.map((f) => f.internal_id),
-    });
-
-    // console.log("cusEnts", cusEnts);
-    for (const balance of balances) {
-      if (!balance.feature_id) {
-        throw new RecaseError({
-          message: "Feature ID is required",
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      if (typeof balance.balance !== "number") {
-        throw new RecaseError({
-          message: "Balance must be a number",
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      const feature = featuresToUpdate.find((f) => f.id === balance.feature_id);
-      // const cusEntToUpdate = cusEnts.find((e) => e.feature_id === feature.id);
-
-      // How much to update
-      let curBalance = 0;
-      let newBalance = balance.balance;
-      for (const cusEnt of cusEnts) {
-        if (cusEnt.internal_feature_id === feature.internal_id) {
-          curBalance += cusEnt.balance!;
-        }
-      }
-
-      let toDeduct = curBalance - newBalance;
-
-      for (const cusEnt of cusEnts) {
-        if (toDeduct == 0) break;
-        if (cusEnt.internal_feature_id === feature.internal_id) {
-          let amountUsed;
-          if (cusEnt.balance! - toDeduct < 0) {
-            toDeduct -= cusEnt.balance!;
-            amountUsed = cusEnt.balance!;
-            newBalance = 0;
-          } else {
-            newBalance = cusEnt.balance! - toDeduct;
-            amountUsed = toDeduct;
-            toDeduct = 0;
-          }
-
-          await CustomerEntitlementService.update({
-            sb: req.sb,
-            id: cusEnt.id,
-            updates: {
-              balance: newBalance,
-              adjustment: cusEnt.adjustment! - amountUsed,
-            },
-          });
-        }
-      }
-    }
-
-    res.status(200).json({ success: true });
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "update customer balances" });
-  }
-});
+cusRouter.post("/:customer_id/balances", handleUpdateBalances);
 
 cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
   try {

@@ -7,6 +7,8 @@ import {
   AppEnv,
   BillingType,
   CusProductStatus,
+  Entitlement,
+  EntitlementWithFeature,
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";
@@ -14,7 +16,11 @@ import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripeCli } from "../utils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { createStripeSubscription } from "../stripeSubUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import {
+  getBillingType,
+  getPriceEntitlement,
+  priceIsOneOffAndTiered,
+} from "@/internal/prices/priceUtils.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -39,7 +45,7 @@ export const itemMetasToOptions = async ({
     checkoutSession.id
   );
 
-  const lineItems = response.data;
+  const lineItems: Stripe.LineItem[] = response.data;
 
   // Should still work with old method?
   for (const price of attachParams.prices) {
@@ -49,12 +55,20 @@ export const itemMetasToOptions = async ({
     }
 
     const lineItem = lineItems.find(
-      (li: any) => li.price.id == config.stripe_price_id
+      (li: any) =>
+        li.price.id == config.stripe_price_id ||
+        li.price.product == config.stripe_product_id
     );
 
     let quantity = 0;
     if (lineItem) {
-      quantity = lineItem.quantity || 0;
+      // 1. Handle one off tiered
+      let relatedEnt = getPriceEntitlement(price, attachParams.entitlements);
+      if (priceIsOneOffAndTiered(price, relatedEnt)) {
+        quantity = (lineItem.quantity || 0) + (relatedEnt.allowance || 0);
+      } else {
+        quantity = lineItem.quantity || 0;
+      }
     }
 
     const index = attachParams.optionsList.findIndex(
@@ -71,8 +85,6 @@ export const itemMetasToOptions = async ({
       attachParams.optionsList[index].quantity = quantity;
     }
   }
-
-  return;
 };
 
 export const handleCheckoutSessionCompleted = async ({
@@ -131,6 +143,28 @@ export const handleCheckoutSessionCompleted = async ({
         "   ✅ checkout.completed: subscription already exists, skipping"
       );
       return;
+    }
+
+    // Remove in arrear prorated
+    const sub = await stripeCli.subscriptions.retrieve(
+      checkoutSession.subscription as string
+    );
+
+    const prices = attachParams.prices;
+    for (const price of prices) {
+      let billingType = getBillingType(price.config as UsagePriceConfig);
+      if (billingType != BillingType.InArrearProrated) {
+        continue;
+      }
+
+      let config = price.config as UsagePriceConfig;
+      let subItem = sub.items.data.find(
+        (item) => item.price.id == config.stripe_price_id
+      );
+
+      if (subItem) {
+        await stripeCli.subscriptionItems.del(subItem.id);
+      }
     }
   }
 
