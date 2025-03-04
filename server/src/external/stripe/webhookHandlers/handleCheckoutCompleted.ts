@@ -144,6 +144,39 @@ export const handleCheckoutSessionCompleted = async ({
       );
       return;
     }
+
+    // Check if any prices are in arrear prorated
+    const subscription = await stripeCli.subscriptions.retrieve(
+      checkoutSession.subscription as string
+    );
+
+    for (const item of subscription.items.data) {
+      let stripePriceId = item.price.id;
+      let autumnPrice = attachParams.prices.find(
+        (p) =>
+          (p.config! as UsagePriceConfig).stripe_placeholder_price_id ==
+          stripePriceId
+      );
+
+      if (!autumnPrice) {
+        continue;
+      }
+
+      // Add new subscription item
+      let config = autumnPrice.config as UsagePriceConfig;
+      await stripeCli.subscriptions.update(
+        checkoutSession.subscription as string,
+        {
+          items: [
+            {
+              id: item.id,
+              price: config.stripe_price_id!,
+              quantity: 0, // some other quantity?
+            },
+          ],
+        }
+      );
+    }
   }
 
   // Create other subscriptions
