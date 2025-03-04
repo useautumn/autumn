@@ -123,6 +123,16 @@ function CreateUsagePrice({
     return config.bill_when;
   };
 
+  const getBillingTypeName = (billWhen: BillWhen) => {
+    const billWhenToType = {
+      [BillWhen.StartOfPeriod]: "Prepaid",
+      [BillWhen.EndOfPeriod]: "Pay per usage",
+      [BillWhen.BelowThreshold]: "Below threshold",
+    };
+
+    return billWhenToType[billWhen];
+  };
+
   return (
     <div className="flex flex-col gap-4 mt-4">
       {/* Entitlement */}
@@ -171,7 +181,7 @@ function CreateUsagePrice({
         </div>
 
         <div className="w-full">
-          <FieldLabel>Bill When</FieldLabel>
+          <FieldLabel>Billing Type</FieldLabel>
           <Select
             value={!isUpdate ? config.bill_when : getBillWhen()}
             onValueChange={(value) =>
@@ -186,7 +196,7 @@ function CreateUsagePrice({
                 .filter((item) => item != BillWhen.InAdvance)
                 .map((item) => (
                   <SelectItem key={item} value={item}>
-                    {keyToTitleFirstCaps(item)}
+                    {getBillingTypeName(item)}
                   </SelectItem>
                 ))}
             </SelectContent>
