@@ -457,7 +457,10 @@ export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
 
   for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
     const tier = usageConfig.usage_tiers[i];
-    const amount = (tier.amount / (usageConfig.billing_units ?? 1)) * 100;
+    let amount = new Decimal(tier.amount)
+      .div(usageConfig.billing_units ?? 1)
+      .mul(100)
+      .toString();
 
     tiers.push({
       unit_amount_decimal: amount,
