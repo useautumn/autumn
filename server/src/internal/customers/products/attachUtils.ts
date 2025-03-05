@@ -7,7 +7,6 @@ import {
   Feature,
   FeatureOptions,
   FreeTrial,
-  FullProduct,
   Price,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -121,6 +120,16 @@ const getProducts = async ({
     if (products.length === 0) {
       throw new RecaseError({
         message: "No products found",
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    if (products.length != productIds.length) {
+      // Get product ids that were not found
+      throw new RecaseError({
+        message:
+          "Number of products found does not match number of product ids",
         code: ErrCode.InvalidRequest,
         statusCode: StatusCodes.BAD_REQUEST,
       });

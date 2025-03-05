@@ -33,6 +33,7 @@ import { InvoiceService } from "../invoices/InvoiceService.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
 import { CusProductService } from "../products/CusProductService.js";
+import { attachParamsToInvoice } from "../invoices/invoiceUtils.js";
 
 // UPGRADE FUNCTIONS
 const handleStripeSubUpdate = async ({
@@ -68,19 +69,28 @@ const handleStripeSubUpdate = async ({
   const firstItemSet = itemSets[0];
   const subscription = stripeSubs[0];
 
-  // let curPrices = curCusProduct.customer_prices.map((cp) => cp.price);
-  for (const item of subscription.items.data) {
-    // Only want to cancel the item that belongs to current cus product...
-    let priceId = item.price.id;
+  let curPrices = curCusProduct.customer_prices.map((cp) => cp.price);
 
-    // Check if prices
+  // 1. DELETE ITEMS FROM CURRENT SUB THAT CORRESPOND TO OLD PRODUCT
+  for (const item of subscription.items.data) {
+    let stripePriceExists = curPrices.some(
+      (p) => p.config!.stripe_price_id === item.price.id
+    );
+
+    let stripeProdExists =
+      item.price.product == curCusProduct.product.processor?.id;
+
+    if (!stripePriceExists && !stripeProdExists) {
+      continue;
+    }
+
     firstItemSet.items.push({
       id: item.id,
       deleted: true,
     });
   }
 
-  let trialEnd = undefined;
+  let trialEnd;
   if (!disableFreeTrial) {
     trialEnd = freeTrialToStripeTimestamp(attachParams.freeTrial);
   }
@@ -97,17 +107,10 @@ const handleStripeSubUpdate = async ({
   });
 
   try {
-    // Insert latest invoice ID
-    const subUpdateInvoice = await stripeCli.invoices.retrieve(
-      subUpdate.latest_invoice as string
-    );
-    await InvoiceService.createInvoiceFromStripe({
+    await attachParamsToInvoice({
       sb,
-      stripeInvoice: subUpdateInvoice,
-      internalCustomerId: attachParams.customer.internal_id,
-      org: attachParams.org,
-      productIds: [attachParams.product.id],
-      internalProductIds: [attachParams.product.internal_id],
+      attachParams,
+      invoiceId: subUpdate.latest_invoice as string,
     });
     console.log("   - Inserted latest invoice ID for subscription update");
   } catch (error) {

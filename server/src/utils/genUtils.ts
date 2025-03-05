@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import KSUID from "ksuid";
 
 export const generateId = (prefix: string) => {
@@ -37,4 +38,8 @@ export const nullish = (value: any) => {
 
 export const notNullish = (value: any) => {
   return !nullish(value);
+};
+
+export const formatUnixToDateTime = (unixDate: number) => {
+  return format(new Date(unixDate), "yyyy MMM dd HH:mm:ss");
 };

@@ -1,9 +1,11 @@
 import {
   BillingInterval,
+  CusProduct,
   CusProductStatus,
   ErrCode,
   Feature,
   FreeTrial,
+  FullCusProduct,
   Price,
 } from "@autumn/shared";
 
@@ -288,4 +290,29 @@ export const getUsageBasedSub = async ({
   }
 
   return null;
+};
+
+export const getSubItemsForCusProduct = async ({
+  stripeSub,
+  cusProduct,
+}: {
+  stripeSub: Stripe.Subscription;
+  cusProduct: FullCusProduct;
+}) => {
+  let prices = cusProduct.customer_prices.map((cp) => cp.price);
+  let product = cusProduct.product;
+
+  let subItems = [];
+  for (const item of stripeSub.items.data) {
+    if (item.price.product == product.processor?.id) {
+      subItems.push(item);
+    } else if (prices.some((p) => p.config?.stripe_price_id == item.price.id)) {
+      subItems.push(item);
+    }
+  }
+  let otherSubItems = stripeSub.items.data.filter(
+    (item) => !subItems.some((i) => i.id == item.id)
+  );
+
+  return { subItems, otherSubItems };
 };

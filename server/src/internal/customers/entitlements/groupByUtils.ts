@@ -343,14 +343,17 @@ export const initGroupBalancesFromUpdateBalances = async ({
 
 export const getResetBalancesUpdate = ({
   cusEnt,
+  allowance,
 }: {
   cusEnt: CusEntWithEntitlement;
+  allowance?: number;
 }) => {
   let update = {};
+  let newBalance = allowance || cusEnt.entitlement.allowance || 0;
   if (cusEnt.balances) {
     let newBalances = { ...cusEnt.balances };
     for (const groupVal in newBalances) {
-      newBalances[groupVal].balance = cusEnt.entitlement.allowance || 0;
+      newBalances[groupVal].balance = newBalance;
       newBalances[groupVal].adjustment = 0;
     }
     update = { balances: newBalances };
@@ -358,7 +361,7 @@ export const getResetBalancesUpdate = ({
 
   return {
     ...update,
-    balance: cusEnt.entitlement.allowance || 0,
+    balance: newBalance,
     adjustment: 0,
   };
 };

@@ -42,6 +42,8 @@ const getExistingCusProducts = async ({
       sb,
       internalCustomerId: customer.internal_id,
       withProduct: true,
+      withPrices: true,
+      inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
     });
   }
 
@@ -166,6 +168,7 @@ export const handleExistingProduct = async ({
       product,
       customer,
     });
+
   console.log(
     `Single product: current main customer_product: ${chalk.yellow(
       curMainProduct?.product.name || "None"
@@ -242,10 +245,13 @@ export const handleExistingProduct = async ({
     }
   }
 
-  // Remove curMainProduct if it's free?
+  // If main product is free, or attached product is an add-on, treat as if adding new product
   if (
-    curMainProduct &&
-    isFreeProduct(curMainProduct.customer_prices.map((cp: any) => cp.price))
+    (curMainProduct &&
+      isFreeProduct(
+        curMainProduct.customer_prices.map((cp: any) => cp.price)
+      )) ||
+    attachParams.products[0].is_add_on
   ) {
     curMainProduct = null;
   }

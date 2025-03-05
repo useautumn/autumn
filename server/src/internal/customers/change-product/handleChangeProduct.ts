@@ -2,6 +2,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
+  attachToInsertParams,
   isFreeProduct,
   isProductUpgrade,
   isSameBillingInterval,
@@ -13,6 +14,7 @@ import {
   CusProductWithProduct,
   ErrCode,
   FullCusProduct,
+  FullProduct,
 } from "@autumn/shared";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
@@ -20,10 +22,17 @@ import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { CusProductService } from "../products/CusProductService.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { handleUpgrade } from "./handleUpgrade.js";
-import { differenceInDays } from "date-fns";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { differenceInDays, sub } from "date-fns";
+import {
+  getStripeSubs,
+  getSubItemsForCusProduct,
+} from "@/external/stripe/stripeSubUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
+import {
+  handleDowngrade,
+  removePreviousScheduledProducts,
+} from "./handleDowngrade.js";
 
 const scheduleStripeSubscription = async ({
   attachParams,
@@ -69,7 +78,7 @@ const scheduleStripeSubscription = async ({
   return newSubscriptionSchedule.id;
 };
 
-const handleDowngrade = async ({
+const handleDowngradeOld = async ({
   req,
   res,
   attachParams,
@@ -80,18 +89,22 @@ const handleDowngrade = async ({
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
 }) => {
+  let product = attachParams.products[0];
+
   console.log(
-    `Handling downgrade from ${curCusProduct.product.name} to ${attachParams.product.name}`
+    `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
   );
 
   // 1. Cancel current subscription
   console.log("1. Cancelling current subscription (at period end)");
+
   const stripeCli = createStripeCli({
     org: attachParams.org,
     env: attachParams.customer.env,
   });
+  const { customer } = attachParams;
 
-  // 1. Fetch current subscriptions
+  // 2. Fetch current subscriptions
   const curSubscriptions = await getStripeSubs({
     stripeCli,
     subIds: curCusProduct.subscription_ids!,
@@ -104,52 +117,34 @@ const handleDowngrade = async ({
     }
   }
 
-  for (const subscription of curSubscriptions) {
-    let periodEnd = subscription.current_period_end;
-    // If difference in days is greater than 10, cancel at period end
+  for (const curSub of curSubscriptions) {
+    // either schedule removal or cancel at period end
+
+    let periodEnd = curSub.current_period_end;
     let latestEndDate = new Date(latestPeriodEnd * 1000);
     let curEndDate = new Date(periodEnd * 1000);
-    console.log(
-      `Difference in days: ${differenceInDays(latestEndDate, curEndDate)}`
-    );
 
     if (differenceInDays(latestEndDate, curEndDate) > 10) {
-      await stripeCli.subscriptions.update(subscription.id, {
+      await stripeCli.subscriptions.update(curSub.id, {
         cancel_at: latestPeriodEnd,
       });
     } else {
-      await stripeCli.subscriptions.update(subscription.id, {
+      await stripeCli.subscriptions.update(curSub.id, {
         cancel_at_period_end: true,
       });
-      console.log(`Cancelled subscription ${subscription.id} at period end`);
+      console.log(`Cancelled subscription ${curSub.id} at period end`);
     }
   }
 
   // 3. Schedule new subscription IF new product is not free...
-  console.log("2. Scheduling new subscription");
+  console.log("2. Scheduling new subscriptions");
   let subscriptionScheduleIds: any[] = [];
   if (!isFreeProduct(attachParams.prices)) {
-    // Delete previous schedules
-    const schedules = await stripeCli.subscriptionSchedules.list({
-      customer: attachParams.customer.processor.id,
+    await removePreviousScheduledProducts({
+      sb: req.sb,
+      stripeCli,
+      attachParams,
     });
-
-    for (const schedule of schedules.data) {
-      const existingCusProduct = await CusProductService.getByScheduleId({
-        sb: req.sb,
-        scheduleId: schedule.id,
-        orgId: attachParams.org.id,
-        env: attachParams.customer.env,
-      });
-
-      if (
-        existingCusProduct &&
-        existingCusProduct.product.group === attachParams.product.group &&
-        schedule.status !== "canceled"
-      ) {
-        await stripeCli.subscriptionSchedules.cancel(schedule.id);
-      }
-    }
 
     // Schedule all the new subscriptions to start at period end
     const itemSets = await getStripeSubItems({
@@ -171,7 +166,7 @@ const handleDowngrade = async ({
   console.log("3. Inserting new full cus product (starts at period end)");
   await createFullCusProduct({
     sb: req.sb,
-    attachParams,
+    attachParams: attachToInsertParams(attachParams, product),
     subscriptionId: undefined,
     startsAt: latestPeriodEnd * 1000,
     subscriptionScheduleIds: subscriptionScheduleIds,
@@ -181,7 +176,7 @@ const handleDowngrade = async ({
 
   res.status(200).json({
     success: true,
-    message: `Successfully scheduled downgrade to ${attachParams.product.name} for customer ${attachParams.customer.name}`,
+    message: `Successfully scheduled downgrade to ${product.name} for customer ${attachParams.customer.name}`,
   });
 };
 
