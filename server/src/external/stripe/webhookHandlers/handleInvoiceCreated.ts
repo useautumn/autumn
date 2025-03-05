@@ -10,6 +10,7 @@ import {
   FullCustomerEntitlement,
   FullCustomerPrice,
   InvoiceItem,
+  LoggerAction,
   Organization,
   Price,
   UsagePriceConfig,
@@ -17,7 +18,7 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
-import { differenceInHours, format, subDays } from "date-fns";
+import { differenceInMinutes, format, subDays } from "date-fns";
 import { getStripeSubs, getUsageBasedSub } from "../stripeSubUtils.js";
 import {
   getBillingType,
@@ -29,9 +30,10 @@ import { InvoiceItemService } from "@/internal/customers/invoices/InvoiceItemSer
 import { createStripeInvoiceItem } from "@/internal/customers/invoices/invoiceItemUtils.js";
 import { getRelatedCusEnt } from "@/internal/customers/prices/cusPriceUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
-import { generateId } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, generateId } from "@/utils/genUtils.js";
 import { getMinCusEntBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/entitlements/groupByUtils.js";
+import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 
 const handleInArrearProrated = async ({
   sb,
@@ -156,6 +158,7 @@ const handleUsageInArrear = async ({
   stripeCli,
   price,
   usageSub,
+  logger,
 }: {
   sb: SupabaseClient;
   invoice: Stripe.Invoice;
@@ -164,14 +167,14 @@ const handleUsageInArrear = async ({
   stripeCli: Stripe;
   price: Price;
   usageSub: Stripe.Subscription;
+  logger: any;
 }) => {
   let allowance = relatedCusEnt.entitlement.allowance!;
-  // let balance = relatedCusEnt.balance!;
   let minBalance = getMinCusEntBalance({ cusEnt: relatedCusEnt });
 
   // If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
   if (relatedCusEnt.balance! > 0 && !relatedCusEnt.next_reset_at) {
-    console.log("Balance > 0 and next_reset_at is null, skipping");
+    logger.info("Balance > 0 and next_reset_at is null, skipping");
     return;
   }
 
@@ -180,7 +183,7 @@ const handleUsageInArrear = async ({
     subDays(new Date(invoice.created * 1000), 1).getTime() / 1000
   );
 
-  await stripeCli.billing.meterEvents.create({
+  const meterEvent = await stripeCli.billing.meterEvents.create({
     event_name: price.id!,
     payload: {
       stripe_customer_id: customer.processor.id,
@@ -189,20 +192,27 @@ const handleUsageInArrear = async ({
     timestamp: usageTimestamp,
   });
 
-  console.log(`Submitted meter event for ${customer.name}, ${customer.id}`);
-  console.log(`Feature ID: ${relatedCusEnt.entitlement.feature.id}`);
-  console.log(
+  let feature = relatedCusEnt.entitlement.feature;
+  logger.info(
+    `✅ Submitted meter event for customer ${customer.id}, feature: ${feature.id}`
+  );
+  logger.info(
     `Allowance: ${allowance}, Min Balance: ${minBalance}, Usage: ${usage}`
   );
-  console.log(
-    "Invoice created: ",
-    format(new Date(invoice.created * 1000), "yyyy-MM-dd"),
-    "Usage timestamp: ",
-    format(new Date(usageTimestamp * 1000), "yyyy-MM-dd")
+
+  let invoiceCreatedStr = formatUnixToDateTime(invoice.created * 1000);
+  let usageTimestampStr = formatUnixToDateTime(usageTimestamp * 1000);
+  logger.info(
+    `Invoice created: ${invoiceCreatedStr}, Usage timestamp: ${usageTimestampStr}`
   );
 
   // reset balance
-  let resetBalancesUpdate = getResetBalancesUpdate({ cusEnt: relatedCusEnt });
+  // TODO: If lifetime, reset to 0...
+  let ent = relatedCusEnt.entitlement;
+  let resetBalancesUpdate = getResetBalancesUpdate({
+    cusEnt: relatedCusEnt,
+    allowance: ent.interval == EntInterval.Lifetime ? 0 : ent.allowance!,
+  });
   await CustomerEntitlementService.update({
     sb,
     id: relatedCusEnt.id,
@@ -214,8 +224,7 @@ const handleUsageInArrear = async ({
         : null, // TODO: check if this is correct
     },
   });
-
-  // console.log("Reset balance & adjustment");
+  logger.info("✅ Successfully reset balance & adjustment");
 };
 
 export const sendUsageAndReset = async ({
@@ -225,6 +234,7 @@ export const sendUsageAndReset = async ({
   env,
   invoice,
   stripeSubs,
+  logger,
 }: {
   sb: SupabaseClient;
   activeProduct: FullCusProduct;
@@ -232,6 +242,7 @@ export const sendUsageAndReset = async ({
   env: AppEnv;
   invoice: Stripe.Invoice;
   stripeSubs: Stripe.Subscription[];
+  logger: any;
 }) => {
   // Get cus ents
   const cusProductWithEntsAndPrices = await CusProductService.getEntsAndPrices({
@@ -249,10 +260,7 @@ export const sendUsageAndReset = async ({
     const price = cusPrice.price;
     let billingType = getBillingType(price.config);
 
-    if (
-      billingType !== BillingType.UsageInArrear
-      // && billingType !== BillingType.InArrearProrated
-    ) {
+    if (billingType !== BillingType.UsageInArrear) {
       continue;
     }
 
@@ -276,29 +284,12 @@ export const sendUsageAndReset = async ({
       continue;
     }
 
-    console.log("invoice.created, handling end of period usage");
-    console.log(
-      `   - Org: ${org.slug}, Customer: ${customer.name} (${customer.id})`
+    logger.info(
+      `✨ Handling end of period usage for customer ${customer.name}, org: ${org.slug}`
     );
-    console.log("   - Feature: ", relatedCusEnt.entitlement.feature.id);
-
-    // if (billingType == BillingType.InArrearProrated) {
-    //   console.log("   ✨ In arrear (PRORATED)");
-    //   await handleInArrearProrated({
-    //     sb,
-    //     cusEnts,
-    //     cusPrice,
-    //     customer,
-    //     org,
-    //     env,
-    //     invoice,
-    //     usageSub: usageBasedSub,
-    //   });
-    //   continue;
-    // }
+    logger.info(`   - Feature: ${relatedCusEnt.entitlement.feature.id}`);
 
     if (billingType == BillingType.UsageInArrear) {
-      console.log("   ✨ In arrear (NO PRORATION)");
       await handleUsageInArrear({
         sb,
         invoice,
@@ -307,10 +298,30 @@ export const sendUsageAndReset = async ({
         stripeCli,
         price,
         usageSub: usageBasedSub,
+        logger,
       });
     }
     // For regular end of period billing
   }
+};
+
+const invoiceCusProductCreatedDifference = ({
+  invoice,
+  cusProduct,
+  minutes = 60,
+}: {
+  invoice: Stripe.Invoice;
+  cusProduct: FullCusProduct;
+  minutes?: number;
+}) => {
+  return (
+    Math.abs(
+      differenceInMinutes(
+        new Date(cusProduct.created_at),
+        new Date(invoice.created * 1000)
+      )
+    ) < minutes
+  );
 };
 
 export const handleInvoiceCreated = async ({
@@ -326,10 +337,14 @@ export const handleInvoiceCreated = async ({
   env: AppEnv;
   event: Stripe.Event;
 }) => {
-  console.log("Invoice created: ", invoice.id);
+  const logger = createLogtailWithContext({
+    org: org,
+    invoice: invoice,
+    action: LoggerAction.StripeWebhookInvoiceCreated,
+  });
+
   // Get stripe subscriptions
   if (invoice.subscription) {
-    console.log("Subscription ID:", invoice.subscription);
     const activeProducts = await CusProductService.getByStripeSubId({
       sb,
       stripeSubId: invoice.subscription as string,
@@ -338,62 +353,53 @@ export const handleInvoiceCreated = async ({
       inStatuses: [CusProductStatus.Active, CusProductStatus.Expired],
     });
 
-    if (activeProducts.length != 1) {
-      console.log(
-        "Invalid number of active products for invoice.created: ",
-        activeProducts.length
+    if (activeProducts.length == 0) {
+      logger.warn(
+        `Stripe invoice.created -- no active products found (${org.slug})`
       );
       return;
     }
-
-    const activeProduct = activeProducts[0];
-
-    if (
-      Math.abs(
-        differenceInHours(
-          new Date(activeProduct.created_at),
-          new Date(invoice.created * 1000)
-        )
-      ) < 1
-    ) {
-      console.log(
-        "invoice.created: cus product created < an hour ago, skipping"
-      );
-      // Probably just created
-      return;
-    }
-
-    // Create invoice for end of period prorated
 
     const stripeSubs = await getStripeSubs({
       stripeCli: createStripeCli({ org, env }),
-      subIds: activeProduct.subscription_ids,
+      subIds: activeProducts.map((p) => p.subscription_ids).flat(),
     });
 
-    await sendUsageAndReset({
-      sb,
-      activeProduct,
-      org,
-      env,
-      // usageFeatures,
-      stripeSubs,
-      invoice,
-    });
+    for (const activeProduct of activeProducts) {
+      let invoiceCreatedRecently = invoiceCusProductCreatedDifference({
+        invoice,
+        cusProduct: activeProduct,
+        minutes: 10,
+      });
 
-    // for (const sub of stripeSubs) {
-    //   if (sub.id != invoice.subscription) {
-    //     continue;
-    //   }
+      if (invoiceCreatedRecently) {
+        return;
+      }
 
-    //   const subMeta = sub.metadata;
-    //   let usageFeatures: any[] = [];
-    //   try {
-    //     usageFeatures = JSON.parse(subMeta.usage_features as string);
-    //   } catch (error: any) {
-    //     console.log("Failed to parse usage features.", error.message);
-    //     continue;
-    //   }
-
-    // }
+      await sendUsageAndReset({
+        sb,
+        activeProduct,
+        org,
+        env,
+        stripeSubs,
+        invoice,
+        logger,
+      });
+    }
   }
 };
+
+// if (billingType == BillingType.InArrearProrated) {
+//   console.log("   ✨ In arrear (PRORATED)");
+//   await handleInArrearProrated({
+//     sb,
+//     cusEnts,
+//     cusPrice,
+//     customer,
+//     org,
+//     env,
+//     invoice,
+//     usageSub: usageBasedSub,
+//   });
+//   continue;
+// }

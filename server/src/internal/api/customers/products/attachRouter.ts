@@ -40,6 +40,7 @@ import { handleExistingProduct } from "@/internal/customers/add-product/handleEx
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoiceOnly.js";
+import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 
 export const attachRouter = Router();
 
@@ -276,6 +277,8 @@ attachRouter.post("/attach", async (req: any, res) => {
 
   try {
     z.array(FeatureOptionsSchema).parse(optionsListInput);
+
+    // Get curCusProducts too...
     const attachParams: AttachParams = await getFullCusProductData({
       sb,
       customerId: customer_id,
@@ -374,18 +377,17 @@ attachRouter.post("/attach", async (req: any, res) => {
       return;
     }
 
-    // // SCENARIO 4: Switching product
-
-    // if (!attachParams.product.is_add_on && curCusProduct) {
-    //   console.log("SCENARIO 3: SWITCHING PRODUCT");
-    //   await handleChangeProduct({
-    //     req,
-    //     res,
-    //     attachParams,
-    //     curCusProduct,
-    //   });
-    //   return;
-    // }
+    // SCENARIO 4: Switching product
+    if (curCusProduct) {
+      console.log("SCENARIO 3: SWITCHING PRODUCT");
+      await handleChangeProduct({
+        req,
+        res,
+        attachParams,
+        curCusProduct,
+      });
+      return;
+    }
 
     // // SCENARIO 5: No existing product, not free product
     // console.log("SCENARIO 4: ADDING PRODUCT");

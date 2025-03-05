@@ -48,9 +48,6 @@ stripeWebhookRouter.post(
       return;
     }
 
-    // For testing
-    // event = JSON.parse(request.body.toString());
-
     console.log(
       `${chalk.gray(new Date().toISOString())} ${chalk.yellow(
         "Stripe Webhook: "

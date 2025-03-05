@@ -249,7 +249,12 @@ export const adjustAllowance = async ({
   }
 
   // 1. Check if price is prorated in arrear, if not skip...
-  let logger = logtail;
+  let logger = createLogtailWithContext({
+    org_id: org.id,
+    org_slug: org.slug,
+    action: LoggerAction.AdjustAllowance,
+  });
+
   let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
   let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
   let cusProduct = cusEnt.customer_product;

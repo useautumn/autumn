@@ -24,6 +24,7 @@ import {
   InsertCusProductParams,
 } from "../customers/products/AttachParams.js";
 import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
+import { Decimal } from "decimal.js";
 
 export const isProductUpgrade = (
   product1: FullProduct,
@@ -43,7 +44,7 @@ export const isProductUpgrade = (
   // 1. Get total price for each product
   const getTotalPrice = (product: FullProduct) => {
     // Get each product's price prorated to a year
-    let totalPrice = 0;
+    let totalPrice = new Decimal(0);
     for (const price of product.prices) {
       let interval = price.config?.interval;
 
@@ -53,12 +54,12 @@ export const isProductUpgrade = (
 
       if ("usage_tiers" in price.config!) {
         // Just get total price for first tier
-        totalPrice += price.config!.usage_tiers[0].amount;
+        totalPrice = totalPrice.plus(price.config!.usage_tiers[0].amount);
       } else {
-        totalPrice += price.config!.amount;
+        totalPrice = totalPrice.plus(price.config!.amount);
       }
     }
-    return totalPrice;
+    return totalPrice.toNumber();
   };
 
   if (billingInterval1 == billingInterval2) {
