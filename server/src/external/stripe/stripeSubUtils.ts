@@ -316,3 +316,34 @@ export const getSubItemsForCusProduct = async ({
 
   return { subItems, otherSubItems };
 };
+
+export const getStripeSchedules = async ({
+  stripeCli,
+  scheduleIds,
+}: {
+  stripeCli: Stripe;
+  scheduleIds: string[];
+}) => {
+  const batchGet = [];
+  const getStripeSchedule = async (scheduleId: string) => {
+    try {
+      const schedule = await stripeCli.subscriptionSchedules.retrieve(
+        scheduleId
+      );
+      const firstItem = schedule.phases[0].items[0];
+      const price = await stripeCli.prices.retrieve(firstItem.price as string);
+      return { schedule, interval: price.recurring?.interval };
+    } catch (error: any) {
+      console.log("Error getting stripe schedule.", error.message);
+      return null;
+    }
+  };
+
+  for (const scheduleId of scheduleIds) {
+    batchGet.push(getStripeSchedule(scheduleId));
+  }
+
+  let schedulesAndSubs = await Promise.all(batchGet);
+
+  return schedulesAndSubs.filter((schedule) => schedule !== null);
+};

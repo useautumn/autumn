@@ -25,6 +25,7 @@ export type AttachParams = {
   successUrl?: string | undefined;
   // remainingItemSets?: any[];
   itemSets?: any[];
+  cusProducts?: FullCusProduct[];
 };
 
 export type InsertCusProductParams = {

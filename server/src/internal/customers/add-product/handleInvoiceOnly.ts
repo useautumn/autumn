@@ -21,26 +21,6 @@ import {
   pricesToInvoiceItems,
 } from "@/external/stripe/stripePriceUtils.js";
 
-// export const voidLatestInvoice = async ({
-//   stripeCli,
-//   subId,
-// }: {
-//   stripeCli: Stripe;
-//   subId: string;
-// }) => {
-//   // 1. Get sub
-//   const sub = await stripeCli.subscriptions.retrieve(subId);
-
-//   // 2. Void latest invoice?
-//   const invoice = await stripeCli.invoices.retrieve(
-//     sub.latest_invoice as string
-//   );
-
-//   if (invoice.status !== "paid") {
-//     await stripeCli.invoices.voidInvoice(sub.latest_invoice as string);
-//   }
-// };
-
 export const removeCurrentProduct = async ({
   sb,
   customer,
@@ -56,7 +36,6 @@ export const removeCurrentProduct = async ({
 }) => {
   console.log("   - Removing current product");
   // 1. Expire current product
-
   CusProductService.update({
     sb,
     cusProductId: curCusProduct.id,
@@ -69,7 +48,9 @@ export const removeCurrentProduct = async ({
   const stripeCli = createStripeCli({ org, env });
 
   for (const subId of curCusProduct.subscription_ids || []) {
-    await stripeCli.subscriptions.cancel(subId);
+    await stripeCli.subscriptions.cancel(subId, {
+      prorate: true,
+    });
   }
 };
 

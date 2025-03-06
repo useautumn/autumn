@@ -26,29 +26,30 @@ import {
 } from "@/internal/customers/add-product/handleSameProduct.js";
 import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
 
-const getExistingCusProducts = async ({
+export const getExistingCusProducts = async ({
   sb,
   product,
-  customer,
   cusProducts,
 }: {
   sb: SupabaseClient;
   product: Product;
-  customer: Customer;
-  cusProducts?: FullCusProduct[];
+  cusProducts: FullCusProduct[];
 }) => {
-  if (!cusProducts) {
-    cusProducts = await CusService.getFullCusProducts({
-      sb,
-      internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
-      inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-    });
-  }
+  // if (!cusProducts) {
+  // cusProducts = await CusService.getFullCusProducts({
+  //   sb,
+  //   internalCustomerId: customer.internal_id,
+  //   withProduct: true,
+  //   withPrices: true,
+  //   inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+  // });
+  // }
 
   let curMainProduct = cusProducts!.find(
-    (cp: any) => cp.product.group === product.group && !cp.product.is_add_on
+    (cp: any) =>
+      cp.product.group === product.group &&
+      !cp.product.is_add_on &&
+      cp.status === CusProductStatus.Active
   );
 
   const curSameProduct = cusProducts!.find(
@@ -56,7 +57,10 @@ const getExistingCusProducts = async ({
   );
 
   const curScheduledProduct = cusProducts!.find(
-    (cp: any) => cp.status === CusProductStatus.Scheduled
+    (cp: any) =>
+      cp.status === CusProductStatus.Scheduled &&
+      cp.product.group === product.group &&
+      !cp.product.is_add_on
   );
 
   return { curMainProduct, curSameProduct, curScheduledProduct };
@@ -73,22 +77,12 @@ const handleExistingMultipleProducts = async ({
 }) => {
   let { customer, products } = attachParams;
 
-  // Get all of customer's products
-  let cusProducts = await CusService.getFullCusProducts({
-    sb,
-    internalCustomerId: customer.internal_id,
-    withProduct: true,
-    withPrices: true,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-  });
-
   for (const product of products) {
     let { curMainProduct, curSameProduct, curScheduledProduct }: any =
       await getExistingCusProducts({
         sb,
         product,
-        customer,
-        cusProducts,
+        cusProducts: attachParams.cusProducts!,
       });
 
     // 2. If existing same product
@@ -153,6 +147,16 @@ export const handleExistingProduct = async ({
   const { sb } = req;
   const { customer, products } = attachParams;
 
+  const cusProducts = await CusService.getFullCusProducts({
+    sb,
+    internalCustomerId: customer.internal_id,
+    withProduct: true,
+    withPrices: true,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+  });
+
+  attachParams.cusProducts = cusProducts;
+
   if (products.length > 1) {
     return await handleExistingMultipleProducts({
       sb,
@@ -166,7 +170,7 @@ export const handleExistingProduct = async ({
     await getExistingCusProducts({
       sb,
       product,
-      customer,
+      cusProducts,
     });
 
   console.log(

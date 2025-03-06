@@ -1,6 +1,7 @@
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import {
+  getStripeSchedules,
   getStripeSubs,
   updateStripeSubscription,
 } from "@/external/stripe/stripeSubUtils.js";
@@ -34,6 +35,7 @@ import { AttachParams } from "../products/AttachParams.js";
 import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
 import { CusProductService } from "../products/CusProductService.js";
 import { attachParamsToInvoice } from "../invoices/invoiceUtils.js";
+import { updateScheduledSubWithNewItems } from "./scheduleUtils.js";
 
 // UPGRADE FUNCTIONS
 const handleStripeSubUpdate = async ({
@@ -105,6 +107,30 @@ const handleStripeSubUpdate = async ({
     customer: attachParams.customer,
     prices: firstItemSet.prices,
   });
+
+  // If scheduled_ids exist, need to update schedule too!
+  if (curCusProduct.scheduled_ids && curCusProduct.scheduled_ids.length > 0) {
+    let schedules = await getStripeSchedules({
+      stripeCli,
+      scheduleIds: curCusProduct.scheduled_ids,
+    });
+
+    for (const scheduleObj of schedules) {
+      const { interval } = scheduleObj;
+      // Get corresponding item set
+      const itemSet = itemSets.find((itemSet) => itemSet.interval === interval);
+      if (!itemSet) {
+        continue;
+      }
+
+      await updateScheduledSubWithNewItems({
+        scheduleObj,
+        newItems: itemSet.items,
+        stripeCli,
+        curCusProduct,
+      });
+    }
+  }
 
   try {
     await attachParamsToInvoice({

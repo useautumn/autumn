@@ -380,3 +380,10 @@ export const processFullCusProduct = (cusProduct: FullCusProduct) => {
 };
 
 // GET CUSTOMER PRODUCT & ORG IN PARALLEL
+export const fullCusProductToProduct = (cusProduct: FullCusProduct) => {
+  return {
+    ...cusProduct.product,
+    prices: cusProduct.customer_prices.map((cp) => cp.price),
+    entitlements: cusProduct.customer_entitlements.map((ce) => ce.entitlement),
+  };
+};

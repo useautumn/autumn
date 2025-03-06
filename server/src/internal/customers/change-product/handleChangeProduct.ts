@@ -29,10 +29,7 @@ import {
 } from "@/external/stripe/stripeSubUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
-import {
-  handleDowngrade,
-  removePreviousScheduledProducts,
-} from "./handleDowngrade.js";
+import { handleDowngrade } from "./handleDowngrade.js";
 
 const scheduleStripeSubscription = async ({
   attachParams,
@@ -140,11 +137,11 @@ const handleDowngradeOld = async ({
   console.log("2. Scheduling new subscriptions");
   let subscriptionScheduleIds: any[] = [];
   if (!isFreeProduct(attachParams.prices)) {
-    await removePreviousScheduledProducts({
-      sb: req.sb,
-      stripeCli,
-      attachParams,
-    });
+    // await removePreviousScheduledProducts({
+    //   sb: req.sb,
+    //   stripeCli,
+    //   attachParams,
+    // });
 
     // Schedule all the new subscriptions to start at period end
     const itemSets = await getStripeSubItems({

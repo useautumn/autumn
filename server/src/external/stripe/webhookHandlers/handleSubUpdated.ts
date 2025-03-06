@@ -51,7 +51,7 @@ export const handleSubscriptionUpdated = async ({
   }
 
   // 1. Fetch subscription
-  const cusProduct = await CusProductService.updateByStripeSubId({
+  const updatedCusProducts = await CusProductService.updateByStripeSubId({
     sb,
     stripeSubId: subscription.id,
     updates: {
@@ -62,13 +62,13 @@ export const handleSubscriptionUpdated = async ({
     },
   });
 
-  if (cusProduct) {
+  if (updatedCusProducts.length > 0) {
     console.log(
-      `subscription.updated: updated customer product ${cusProduct.id}`,
+      `subscription.updated: updated ${updatedCusProducts.length} customer products`,
       {
-        id: cusProduct.id,
-        status: cusProduct.status,
-        canceled_at: cusProduct.canceled_at,
+        ids: updatedCusProducts.map((cp) => cp.id),
+        status: updatedCusProducts[0].status,
+        canceled_at: updatedCusProducts[0].canceled_at,
       }
     );
   }
