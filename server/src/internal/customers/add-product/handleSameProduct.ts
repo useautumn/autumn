@@ -14,6 +14,7 @@ import { CusProductService } from "../products/CusProductService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
 import {
+  getStripeSchedules,
   getStripeSubs,
   getUsageBasedSub,
 } from "@/external/stripe/stripeSubUtils.js";
@@ -21,6 +22,10 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
 import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
+import {
+  cancelFutureProductSchedule,
+  getFilteredScheduleItems,
+} from "../change-product/scheduleUtils.js";
 
 const getOptionsToUpdate = (oldOptionsList: any[], newOptionsList: any[]) => {
   let differentOptionsExist = false;
@@ -179,7 +184,7 @@ export const handleSameMainProduct = async ({
     newOptionsList
   );
 
-  if (optionsToUpdate.length === 0 || curScheduledProduct) {
+  if (optionsToUpdate.length === 0 && !curScheduledProduct) {
     // Update options
     throw new RecaseError({
       message: `Customer already has product ${product.name}, can't attach again`,
@@ -189,14 +194,28 @@ export const handleSameMainProduct = async ({
   }
 
   let messages: string[] = [];
+
   if (curScheduledProduct) {
-    // Delete scheduled product
-    await CusProductService.deleteFutureProduct({
-      sb,
+    // 1. Delete future product
+    const stripeCli = createStripeCli({
       org,
       env: customer.env,
-      internalCustomerId: customer.internal_id,
-      productGroup: product.group,
+    });
+
+    await cancelFutureProductSchedule({
+      sb,
+      curScheduledProduct,
+      stripeCli,
+      org,
+      env: customer.env,
+      curCusProduct: curMainProduct,
+      attachParams,
+    });
+
+    // Delete scheduled product
+    await CusProductService.delete({
+      sb,
+      cusProductId: curScheduledProduct.id,
     });
 
     messages.push(
