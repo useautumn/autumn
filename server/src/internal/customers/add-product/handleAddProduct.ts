@@ -33,11 +33,14 @@ const handleBillNowPrices = async ({
   sb,
   attachParams,
   res,
+  req,
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
   res: any;
+  req: any;
 }) => {
+  const logger = req.logtail;
   const { org, customer, products, freeTrial } = attachParams;
 
   const stripeCli = createStripeCli({ org, env: customer.env });
@@ -80,6 +83,7 @@ const handleBillNowPrices = async ({
           sb,
           res,
           attachParams,
+          req,
         });
         return;
       }
@@ -115,7 +119,7 @@ const handleBillNowPrices = async ({
         org,
       });
     } catch (error) {
-      console.error("handleBillNowPrices: error retrieving invoice", error);
+      logger.error("handleBillNowPrices: error retrieving invoice", error);
     }
   }
 
@@ -128,10 +132,12 @@ const handleBillNowPrices = async ({
 };
 
 const handleOneOffPrices = async ({
+  req,
   sb,
   attachParams,
   res,
 }: {
+  req: any;
   sb: SupabaseClient;
   attachParams: AttachParams;
   res: any;
@@ -193,6 +199,7 @@ const handleOneOffPrices = async ({
       await stripeCli.invoices.voidInvoice(stripeInvoice.id);
       await handleCreateCheckout({
         sb,
+        req,
         res,
         attachParams,
       });
@@ -244,17 +251,18 @@ export const handleAddProduct = async ({
   res: any;
   attachParams: AttachParams;
 }) => {
+  const logger = req.logtail;
   const { customer, products, prices } = attachParams;
 
   for (const product of products) {
     if (product.is_add_on) {
-      console.log(
+      logger.info(
         `Adding add-on ${chalk.yellowBright(
           product.name
         )} to customer ${chalk.yellowBright(customer.id)}`
       );
     } else {
-      console.log(
+      logger.info(
         `Adding product ${chalk.yellowBright(
           product.name
         )} to customer ${chalk.yellowBright(customer.id)}`
@@ -267,6 +275,7 @@ export const handleAddProduct = async ({
     console.log("Handling one-off payment products");
     await handleOneOffPrices({
       sb: req.sb,
+      req,
       attachParams,
       res,
     });
@@ -280,6 +289,7 @@ export const handleAddProduct = async ({
   if (billNowPrices.length > 0) {
     await handleBillNowPrices({
       sb: req.sb,
+      req,
       attachParams,
       res,
     });
@@ -287,7 +297,7 @@ export const handleAddProduct = async ({
     return;
   }
 
-  console.log("Creating bill later prices");
+  logger.info("Creating bill later prices");
 
   const billLaterPrices = getBillLaterPrices(prices);
 
@@ -304,7 +314,7 @@ export const handleAddProduct = async ({
   }
   await Promise.all(batchInsert);
 
-  console.log("Successfully created full cus product");
+  logger.info("Successfully created full cus product");
 
   res.status(200).send({ success: true });
 };

@@ -36,6 +36,7 @@ import {
 import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
+import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 
 export const cusRouter = Router();
 
@@ -255,6 +256,11 @@ cusRouter.post(
 
 cusRouter.post("/:customer_id/balances", handleUpdateBalances);
 
+cusRouter.post(
+  "/customer_products/:customer_product_id",
+  handleCusProductExpired
+);
+
 cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
   try {
     const customerId = req.params.customer_id;
@@ -333,110 +339,3 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
 
   res.status(200).json(balances);
 });
-
-cusRouter.post(
-  "/customer_products/:customer_product_id",
-  async (req: any, res: any) => {
-    const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
-    try {
-      const customerProductId = req.params.customer_product_id;
-      const { status } = req.body;
-
-      // See if customer owns product
-      const cusProduct = await CusProductService.getByIdStrict({
-        sb: req.sb,
-        id: customerProductId,
-        orgId: req.orgId,
-        env: req.env,
-        withProduct: true,
-      });
-
-      if (status == cusProduct.status) {
-        throw new RecaseError({
-          message: `Product ${cusProduct.product.name} already has status: ${status}`,
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
-
-      // 1. If current product is scheduled:
-      if (cusProduct.status == CusProductStatus.Scheduled) {
-        await CusProductService.deleteFutureProduct({
-          sb: req.sb,
-          internalCustomerId: cusProduct.customer.internal_id,
-          productGroup: cusProduct.product.group,
-          org,
-          env: req.env,
-        });
-
-        await uncancelCurrentProduct({
-          sb: req.sb,
-          internalCustomerId: cusProduct.customer.internal_id,
-          productGroup: cusProduct.product.group,
-          org,
-          env: req.env,
-        });
-      } else {
-        if (cusProduct.product.is_add_on) {
-          await cancelCusProductSubscriptions({
-            sb: req.sb,
-            cusProduct,
-            org,
-            env: req.env,
-          });
-
-          await CusProductService.update({
-            sb: req.sb,
-            cusProductId: cusProduct.id,
-            updates: {
-              status: CusProductStatus.Expired,
-              ended_at: Date.now(),
-            },
-          });
-
-          res.status(200).json({ success: true });
-          return;
-        }
-        const futureProduct = await CusProductService.getFutureProduct({
-          sb: req.sb,
-          internalCustomerId: cusProduct.customer.internal_id,
-          productGroup: cusProduct.product.group,
-        });
-
-        if (futureProduct) {
-          throw new RecaseError({
-            message: `Please delete scheduled product ${futureProduct.product.name} first`,
-            code: ErrCode.InvalidRequest,
-            statusCode: StatusCodes.BAD_REQUEST,
-          });
-        }
-        // For regular products
-        // 1. Cancel stripe subscriptions
-        const cancelled = await cancelCusProductSubscriptions({
-          sb: req.sb,
-          cusProduct,
-          org,
-          env: req.env,
-        });
-
-        if (!cancelled) {
-          await expireAndActivate({
-            sb: req.sb,
-            env: req.env,
-            cusProduct,
-            org,
-          });
-        } // else will be handled by webhook
-      }
-
-      res.status(200).json({ success: true });
-    } catch (error) {
-      handleRequestError({
-        req,
-        error,
-        res,
-        action: "update customer product",
-      });
-    }
-  }
-);

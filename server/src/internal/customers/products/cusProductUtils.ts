@@ -54,7 +54,10 @@ import { CusProductService } from "./CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import Stripe from "stripe";
-import { deleteScheduledIds } from "@/external/stripe/stripeSubUtils.js";
+import {
+  deleteScheduledIds,
+  subIsPrematurelyCanceled,
+} from "@/external/stripe/stripeSubUtils.js";
 import { sortCusEntsForDeduction } from "../entitlements/cusEntUtils.js";
 
 // 1. Delete future product
@@ -210,7 +213,7 @@ export const activateDefaultProduct = async ({
     },
   });
 
-  console.log("   ✅ activated default product");
+  console.log(`   ✅ activated default product: ${defaultProd.group}`);
   return true;
 };
 
@@ -270,10 +273,11 @@ export const activateFutureProduct = async ({
     return false;
   }
 
-  if (!subscription.cancel_at_period_end) {
+  if (subIsPrematurelyCanceled(subscription)) {
     console.log(
-      "   🔔 Subscription canceled before period end, deleting scheduled products"
+      "   🔔 Subscription prematurely canceled, deleting scheduled products"
     );
+
     await deleteScheduledIds({
       stripeCli,
       scheduledIds: futureProduct.scheduled_ids,

@@ -2,8 +2,6 @@ import RecaseError from "@/utils/errorUtils.js";
 
 import {
   CusProductStatus,
-  Customer,
-  Entitlement,
   EntitlementWithFeature,
   FullCusProduct,
   Price,
@@ -25,26 +23,15 @@ import {
   handleSameMainProduct,
 } from "@/internal/customers/add-product/handleSameProduct.js";
 import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
+import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 
 export const getExistingCusProducts = async ({
-  sb,
   product,
   cusProducts,
 }: {
-  sb: SupabaseClient;
   product: Product;
   cusProducts: FullCusProduct[];
 }) => {
-  // if (!cusProducts) {
-  // cusProducts = await CusService.getFullCusProducts({
-  //   sb,
-  //   internalCustomerId: customer.internal_id,
-  //   withProduct: true,
-  //   withPrices: true,
-  //   inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-  // });
-  // }
-
   let curMainProduct = cusProducts!.find(
     (cp: any) =>
       cp.product.group === product.group &&
@@ -67,20 +54,15 @@ export const getExistingCusProducts = async ({
 };
 
 const handleExistingMultipleProducts = async ({
-  sb,
-
   attachParams,
 }: {
-  sb: SupabaseClient;
-
   attachParams: AttachParams;
 }) => {
-  let { customer, products } = attachParams;
+  let { products } = attachParams;
 
   for (const product of products) {
     let { curMainProduct, curSameProduct, curScheduledProduct }: any =
       await getExistingCusProducts({
-        sb,
         product,
         cusProducts: attachParams.cusProducts!,
       });
@@ -126,8 +108,6 @@ const handleExistingMultipleProducts = async ({
     }
   }
 
-  console.log("Multiple products: no current product found");
-
   return { curCusProduct: null, done: false };
 };
 
@@ -144,7 +124,7 @@ export const handleExistingProduct = async ({
   useCheckout?: boolean;
   invoiceOnly?: boolean;
 }): Promise<{ curCusProduct: FullCusProduct | null; done: boolean }> => {
-  const { sb } = req;
+  const { sb, logtail: logger } = req;
   const { customer, products } = attachParams;
 
   const cusProducts = await CusService.getFullCusProducts({
@@ -159,7 +139,6 @@ export const handleExistingProduct = async ({
 
   if (products.length > 1) {
     return await handleExistingMultipleProducts({
-      sb,
       attachParams,
     });
   }
@@ -168,20 +147,17 @@ export const handleExistingProduct = async ({
 
   let { curMainProduct, curSameProduct, curScheduledProduct }: any =
     await getExistingCusProducts({
-      sb,
       product,
       cusProducts,
     });
 
-  console.log(
-    `Single product: current main customer_product: ${chalk.yellow(
+  logger.info(
+    `Checking existing product | curMain: ${chalk.yellow(
       curMainProduct?.product.name || "None"
-    )}`
-  );
-
-  console.log(
-    `Single product: current same product exists: ${chalk.yellow(
-      curSameProduct ? "Yes" : "No"
+    )} | curSame: ${chalk.yellow(
+      curSameProduct?.product.name || "None"
+    )} | curScheduled: ${chalk.yellow(
+      curScheduledProduct?.product.name || "None"
     )}`
   );
 
@@ -201,6 +177,7 @@ export const handleExistingProduct = async ({
       curMainProduct,
       curScheduledProduct,
       attachParams,
+      req,
       res,
     });
   }
@@ -218,22 +195,21 @@ export const handleExistingProduct = async ({
 
   // Case 5: Main product exists, different from new product
   if (curMainProduct && useCheckout) {
-    let mainProductWithPrices = {
-      ...curMainProduct.product,
-      prices: curMainProduct.customer_prices.map(
-        (cp: any) => cp.price
-      ) as Price[],
-      entitlements: curMainProduct.customer_entitlements.map(
-        (ce: any) => ce.entitlement
-      ) as EntitlementWithFeature[],
-    };
+    let mainProductPrices = getPricesForCusProduct({
+      cusProduct: curMainProduct,
+    });
 
     let downgradeToFree =
-      !isProductUpgrade(mainProductWithPrices, product) &&
-      isFreeProduct(attachParams.prices);
+      !isProductUpgrade({
+        prices1: mainProductPrices,
+        prices2: attachParams.prices,
+      }) && isFreeProduct(attachParams.prices);
 
     let upgradeFromFree =
-      isProductUpgrade(mainProductWithPrices, product) &&
+      isProductUpgrade({
+        prices1: mainProductPrices,
+        prices2: attachParams.prices,
+      }) &&
       isFreeProduct(
         curMainProduct?.customer_prices.map((cp: any) => cp.price) || []
       );
@@ -268,6 +244,9 @@ export const handleExistingProduct = async ({
       statusCode: 400,
     });
   }
+
+  attachParams.curCusProduct = curMainProduct;
+  attachParams.curScheduledProduct = curScheduledProduct;
 
   return { curCusProduct: curMainProduct || null, done: false };
 };

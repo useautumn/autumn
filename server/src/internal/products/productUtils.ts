@@ -26,26 +26,29 @@ import {
 import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
 import { Decimal } from "decimal.js";
 
-export const isProductUpgrade = (
-  product1: FullProduct,
-  product2: FullProduct
-) => {
-  if (product1.is_default) {
-    return true;
-  } else if (product2.is_default) {
-    return false;
-  }
+export const isProductUpgrade = ({
+  prices1,
+  prices2,
+}: {
+  prices1: Price[];
+  prices2: Price[];
+}) => {
+  // if (product1.is_default) {
+  //   return true;
+  // } else if (product2.is_default) {
+  //   return false;
+  // }
 
   // 1. If biling interval is same:
 
-  let billingInterval1 = getBillingInterval(product1.prices);
-  let billingInterval2 = getBillingInterval(product2.prices);
+  let billingInterval1 = getBillingInterval(prices1);
+  let billingInterval2 = getBillingInterval(prices2);
 
   // 1. Get total price for each product
-  const getTotalPrice = (product: FullProduct) => {
+  const getTotalPrice = (prices: Price[]) => {
     // Get each product's price prorated to a year
     let totalPrice = new Decimal(0);
-    for (const price of product.prices) {
+    for (const price of prices) {
       let interval = price.config?.interval;
 
       if (!interval || interval === BillingInterval.OneOff) {
@@ -63,7 +66,7 @@ export const isProductUpgrade = (
   };
 
   if (billingInterval1 == billingInterval2) {
-    return getTotalPrice(product1) < getTotalPrice(product2);
+    return getTotalPrice(prices1) < getTotalPrice(prices2);
   } else {
     return compareBillingIntervals(billingInterval1, billingInterval2) < 0;
   }

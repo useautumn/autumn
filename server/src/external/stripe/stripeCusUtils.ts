@@ -200,6 +200,12 @@ export const attachPmToCus = async ({
     await stripeCli.paymentMethods.attach(pm.id, {
       customer: stripeCusId,
     });
+
+    await stripeCli.customers.update(stripeCusId, {
+      invoice_settings: {
+        default_payment_method: pm.id,
+      },
+    });
     // console.log("   - Payment method attached");
   } catch (error) {
     console.log("   - Error attaching payment method", error);

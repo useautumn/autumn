@@ -13,6 +13,7 @@ import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated.js"
 import chalk from "chalk";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
+import { format } from "date-fns";
 
 export const stripeWebhookRouter = express.Router();
 
@@ -49,7 +50,7 @@ stripeWebhookRouter.post(
     }
 
     console.log(
-      `${chalk.gray(new Date().toISOString())} ${chalk.yellow(
+      `${chalk.gray(format(new Date(), "dd MMM HH:mm:ss"))} ${chalk.yellow(
         "Stripe Webhook: "
       )} ${request.url} ${request.url.includes("live") ? "   " : ""}| ${
         event?.type
