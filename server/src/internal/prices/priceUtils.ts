@@ -12,13 +12,14 @@ import {
   EntitlementWithFeature,
   FeatureOptions,
   ErrCode,
+  FullProduct,
 } from "@autumn/shared";
-import { AttachParams } from "../customers/products/AttachParams.js";
+
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { Decimal } from "decimal.js";
 
-const BillintIntervalOrder = [
+const BillingIntervalOrder = [
   BillingInterval.Year,
   BillingInterval.SemiAnnual,
   BillingInterval.Quarter,
@@ -64,8 +65,8 @@ export const getBillingInterval = (prices: Price[]) => {
   try {
     pricesCopy.sort((a, b) => {
       return (
-        BillintIntervalOrder.indexOf(a.config!.interval!) -
-        BillintIntervalOrder.indexOf(b.config!.interval!)
+        BillingIntervalOrder.indexOf(b.config!.interval!) -
+        BillingIntervalOrder.indexOf(a.config!.interval!)
       );
     });
   } catch (error) {
@@ -189,7 +190,9 @@ export const getPriceEntitlement = (
   let config = price.config as UsagePriceConfig;
 
   const entitlement = entitlements.find(
-    (ent) => ent.internal_feature_id === config.internal_feature_id
+    (ent) =>
+      ent.internal_feature_id === config.internal_feature_id &&
+      ent.internal_product_id === price.internal_product_id
   );
 
   return entitlement as EntitlementWithFeature;
@@ -370,5 +373,11 @@ export const priceIsOneOffAndTiered = (
       relatedEnt.allowance &&
       relatedEnt.allowance > 0) ||
     (config.interval == BillingInterval.OneOff && config.usage_tiers.length > 1)
+  );
+};
+
+export const getProductForPrice = (price: Price, products: FullProduct[]) => {
+  return products.find(
+    (product) => product.internal_id === price.internal_product_id
   );
 };

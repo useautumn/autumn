@@ -93,7 +93,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     });
 
     // Get all products for the org
-    const products = await ProductService.getFullProducts(sb, orgId, env);
+    const products = await ProductService.getFullProducts({ sb, orgId, env });
 
     res.status(200).send({ customer, products, invoices, features });
   } catch (error) {

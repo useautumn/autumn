@@ -40,6 +40,7 @@ export const handleSubCreated = async ({
           .from("customer_products")
           .update({
             subscription_ids: subIds,
+            // status: CusProductStatus.Active,
           })
           .eq("id", cusProd.id);
       };

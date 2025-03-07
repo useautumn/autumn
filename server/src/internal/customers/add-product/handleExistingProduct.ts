@@ -2,13 +2,15 @@ import RecaseError from "@/utils/errorUtils.js";
 
 import {
   CusProductStatus,
-  Customer,
+  EntitlementWithFeature,
   FullCusProduct,
+  Price,
   Product,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 
 import {
+  getPricesForProduct,
   isFreeProduct,
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
@@ -20,49 +22,93 @@ import {
   handleSameAddOnProduct,
   handleSameMainProduct,
 } from "@/internal/customers/add-product/handleSameProduct.js";
+import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
+import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 
-const getExistingCusProducts = async ({
-  sb,
+export const getExistingCusProducts = async ({
   product,
-  customer,
+  cusProducts,
 }: {
-  sb: SupabaseClient;
   product: Product;
-  customer: Customer;
+  cusProducts: FullCusProduct[];
 }) => {
-  const cusProducts = await CusService.getFullCusProducts({
-    sb,
-    internalCustomerId: customer.internal_id,
-    withProduct: true,
-    withPrices: true,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-    productGroup: product.group,
-  });
-
-  const curMainProduct = cusProducts.find(
-    (cp: any) => cp.product.group === product.group && !cp.product.is_add_on
+  let curMainProduct = cusProducts.find(
+    (cp: any) =>
+      cp.product.group === product.group &&
+      !cp.product.is_add_on &&
+      cp.status === CusProductStatus.Active
   );
 
-  const curSameProduct = cusProducts.find(
+  const curSameProduct = cusProducts!.find(
     (cp: any) => cp.product.internal_id === product.internal_id
   );
 
-  const curScheduledProduct = cusProducts.find(
-    (cp: any) => cp.status === CusProductStatus.Scheduled
-  );
-
-  console.log(
-    `Current main customer_product: ${chalk.yellow(
-      curMainProduct?.product.name || "None"
-    )}`
-  );
-  console.log(
-    `Current same product exists: ${chalk.yellow(
-      curSameProduct ? "Yes" : "No"
-    )}`
+  const curScheduledProduct = cusProducts!.find(
+    (cp: any) =>
+      cp.status === CusProductStatus.Scheduled &&
+      cp.product.group === product.group &&
+      !cp.product.is_add_on
   );
 
   return { curMainProduct, curSameProduct, curScheduledProduct };
+};
+
+const handleExistingMultipleProducts = async ({
+  attachParams,
+}: {
+  attachParams: AttachParams;
+}) => {
+  let { products } = attachParams;
+
+  for (const product of products) {
+    let { curMainProduct, curSameProduct, curScheduledProduct }: any =
+      await getExistingCusProducts({
+        product,
+        cusProducts: attachParams.cusProducts!,
+      });
+
+    // 2. If existing same product
+    if (curSameProduct) {
+      // 2a. If add-on product, only allow if prices are one-off
+      let prices = getPricesForProduct(product, attachParams.prices);
+      let allowed = product.is_add_on && pricesOnlyOneOff(prices);
+      if (!allowed) {
+        throw new RecaseError({
+          message: `Product ${product.name} is already attached, can't attach again`,
+          code: ErrCode.InvalidRequest,
+          statusCode: 400,
+        });
+      }
+    }
+
+    // 3. If existing scheduled product, can't remove...
+    if (curScheduledProduct) {
+      throw new RecaseError({
+        message: `Can't attach multiple products at once when scheduled product exists...`,
+        code: ErrCode.InvalidRequest,
+        statusCode: 400,
+      });
+    }
+
+    // Set curMainProduct to null if it's free
+    if (
+      curMainProduct &&
+      isFreeProduct(curMainProduct.customer_prices.map((cp: any) => cp.price))
+    ) {
+      curMainProduct = null;
+    }
+
+    // 3. If existing main product, can't upgrade / downgrade
+    if (curMainProduct && !product.is_add_on) {
+      throw new RecaseError({
+        message: `Upgrade / downgrade to ${product.name} not allowed with multiple products`,
+        code: ErrCode.InvalidRequest,
+        statusCode: 400,
+      });
+    }
+  }
+
+  return { curCusProduct: null, done: false };
 };
 
 export const handleExistingProduct = async ({
@@ -78,24 +124,42 @@ export const handleExistingProduct = async ({
   useCheckout?: boolean;
   invoiceOnly?: boolean;
 }): Promise<{ curCusProduct: FullCusProduct | null; done: boolean }> => {
-  const { sb } = req;
-  const { customer, product } = attachParams;
+  const { sb, logtail: logger } = req;
+  const { customer, products } = attachParams;
 
-  const { curMainProduct, curSameProduct, curScheduledProduct } =
-    await getExistingCusProducts({
-      sb,
-      product,
-      customer,
-    });
+  const cusProducts = await CusService.getFullCusProducts({
+    sb,
+    internalCustomerId: customer.internal_id,
+    withProduct: true,
+    withPrices: true,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+  });
 
-  // Case 1: No base product, can't attach add-on
-  if (!curMainProduct && product.is_add_on) {
-    throw new RecaseError({
-      message: `Customer has no base product, can't attach add-on`,
-      code: ErrCode.CustomerHasNoBaseProduct,
-      statusCode: 400,
+  attachParams.cusProducts = cusProducts;
+
+  if (products.length > 1) {
+    return await handleExistingMultipleProducts({
+      attachParams,
     });
   }
+
+  const product = products[0];
+
+  let { curMainProduct, curSameProduct, curScheduledProduct }: any =
+    await getExistingCusProducts({
+      product,
+      cusProducts,
+    });
+
+  logger.info(
+    `Checking existing product | curMain: ${chalk.yellow(
+      curMainProduct?.product.name || "None"
+    )} | curSame: ${chalk.yellow(
+      curSameProduct?.product.name || "None"
+    )} | curScheduled: ${chalk.yellow(
+      curScheduledProduct?.product.name || "None"
+    )}`
+  );
 
   // Case 2: Current product is scheduled
   if (curScheduledProduct?.product.internal_id === product.internal_id) {
@@ -113,6 +177,7 @@ export const handleExistingProduct = async ({
       curMainProduct,
       curScheduledProduct,
       attachParams,
+      req,
       res,
     });
   }
@@ -122,7 +187,7 @@ export const handleExistingProduct = async ({
     return await handleSameAddOnProduct({
       sb,
       curSameProduct,
-      curMainProduct,
+      curMainProduct: curMainProduct || null,
       attachParams,
       res,
     });
@@ -130,22 +195,26 @@ export const handleExistingProduct = async ({
 
   // Case 5: Main product exists, different from new product
   if (curMainProduct && useCheckout) {
-    let mainProductWithPrices = {
-      ...curMainProduct.product,
-      prices: curMainProduct.customer_prices.map((cp: any) => cp.price),
-    };
+    let mainProductPrices = getPricesForCusProduct({
+      cusProduct: curMainProduct,
+    });
 
     let downgradeToFree =
-      !isProductUpgrade(mainProductWithPrices, product) &&
-      isFreeProduct(attachParams.prices);
+      !isProductUpgrade({
+        prices1: mainProductPrices,
+        prices2: attachParams.prices,
+      }) && isFreeProduct(attachParams.prices);
 
     let upgradeFromFree =
-      isProductUpgrade(mainProductWithPrices, product) &&
+      isProductUpgrade({
+        prices1: mainProductPrices,
+        prices2: attachParams.prices,
+      }) &&
       isFreeProduct(
         curMainProduct?.customer_prices.map((cp: any) => cp.price) || []
       );
 
-    let isAddOn = attachParams.product.is_add_on;
+    let isAddOn = product.is_add_on;
 
     if (!downgradeToFree && !upgradeFromFree && !isAddOn) {
       throw new RecaseError({
@@ -154,6 +223,17 @@ export const handleExistingProduct = async ({
         statusCode: 400,
       });
     }
+  }
+
+  // If main product is free, or attached product is an add-on, treat as if adding new product
+  if (
+    (curMainProduct &&
+      isFreeProduct(
+        curMainProduct.customer_prices.map((cp: any) => cp.price)
+      )) ||
+    attachParams.products[0].is_add_on
+  ) {
+    curMainProduct = null;
   }
 
   if (curMainProduct && invoiceOnly) {
@@ -165,5 +245,8 @@ export const handleExistingProduct = async ({
     });
   }
 
-  return { curCusProduct: curMainProduct, done: false };
+  attachParams.curCusProduct = curMainProduct;
+  attachParams.curScheduledProduct = curScheduledProduct;
+
+  return { curCusProduct: curMainProduct || null, done: false };
 };

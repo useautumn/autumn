@@ -117,7 +117,7 @@ export const getFreeTrialAfterFingerprint = async ({
   internalCustomerId,
 }: {
   sb: SupabaseClient;
-  freeTrial: FreeTrial | null;
+  freeTrial: FreeTrial | null | undefined;
   fingerprint: string | null | undefined;
   internalCustomerId: string;
 }): Promise<FreeTrial | null> => {
@@ -163,7 +163,7 @@ export const handleNewFreeTrial = async ({
 }: {
   sb: SupabaseClient;
   newFreeTrial: FreeTrial | null;
-  curFreeTrial: FreeTrial | null;
+  curFreeTrial: FreeTrial | null | undefined;
   internalProductId: string;
   isCustom: boolean;
 }) => {

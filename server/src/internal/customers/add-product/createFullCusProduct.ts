@@ -24,7 +24,10 @@ import RecaseError from "@/utils/errorUtils.js";
 import { getBillingType, getEntOptions } from "@/internal/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
-import { AttachParams } from "../products/AttachParams.js";
+import {
+  AttachParams,
+  InsertCusProductParams,
+} from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import {
   applyTrialToEntitlement,
@@ -315,7 +318,8 @@ export const createFullCusProduct = async ({
   subscriptionScheduleIds = [],
 }: {
   sb: SupabaseClient;
-  attachParams: AttachParams;
+  attachParams: InsertCusProductParams;
+
   startsAt?: number;
   subscriptionId?: string;
   nextResetAt?: number;

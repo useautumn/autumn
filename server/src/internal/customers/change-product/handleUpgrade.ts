@@ -1,6 +1,7 @@
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import {
+  getStripeSchedules,
   getStripeSubs,
   updateStripeSubscription,
 } from "@/external/stripe/stripeSubUtils.js";
@@ -10,7 +11,10 @@ import {
   getPriceForOverage,
 } from "@/internal/prices/priceUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
+import {
+  attachToInsertParams,
+  isFreeProduct,
+} from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   CusProductWithProduct,
@@ -30,6 +34,8 @@ import { InvoiceService } from "../invoices/InvoiceService.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
 import { CusProductService } from "../products/CusProductService.js";
+import { attachParamsToInvoice } from "../invoices/invoiceUtils.js";
+import { updateScheduledSubWithNewItems } from "./scheduleUtils.js";
 
 // UPGRADE FUNCTIONS
 const handleStripeSubUpdate = async ({
@@ -41,7 +47,7 @@ const handleStripeSubUpdate = async ({
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
-  curCusProduct: CusProductWithProduct;
+  curCusProduct: FullCusProduct;
   attachParams: AttachParams;
   disableFreeTrial?: boolean;
 }) => {
@@ -65,14 +71,28 @@ const handleStripeSubUpdate = async ({
   const firstItemSet = itemSets[0];
   const subscription = stripeSubs[0];
 
+  let curPrices = curCusProduct.customer_prices.map((cp) => cp.price);
+
+  // 1. DELETE ITEMS FROM CURRENT SUB THAT CORRESPOND TO OLD PRODUCT
   for (const item of subscription.items.data) {
+    let stripePriceExists = curPrices.some(
+      (p) => p.config!.stripe_price_id === item.price.id
+    );
+
+    let stripeProdExists =
+      item.price.product == curCusProduct.product.processor?.id;
+
+    if (!stripePriceExists && !stripeProdExists) {
+      continue;
+    }
+
     firstItemSet.items.push({
       id: item.id,
       deleted: true,
     });
   }
 
-  let trialEnd = undefined;
+  let trialEnd;
   if (!disableFreeTrial) {
     trialEnd = freeTrialToStripeTimestamp(attachParams.freeTrial);
   }
@@ -88,18 +108,35 @@ const handleStripeSubUpdate = async ({
     prices: firstItemSet.prices,
   });
 
+  // If scheduled_ids exist, need to update schedule too!
+  if (curCusProduct.scheduled_ids && curCusProduct.scheduled_ids.length > 0) {
+    let schedules = await getStripeSchedules({
+      stripeCli,
+      scheduleIds: curCusProduct.scheduled_ids,
+    });
+
+    for (const scheduleObj of schedules) {
+      const { interval } = scheduleObj;
+      // Get corresponding item set
+      const itemSet = itemSets.find((itemSet) => itemSet.interval === interval);
+      if (!itemSet) {
+        continue;
+      }
+
+      await updateScheduledSubWithNewItems({
+        scheduleObj,
+        newItems: itemSet.items,
+        stripeCli,
+        cusProducts: [curCusProduct, attachParams.curScheduledProduct],
+      });
+    }
+  }
+
   try {
-    // Insert latest invoice ID
-    const subUpdateInvoice = await stripeCli.invoices.retrieve(
-      subUpdate.latest_invoice as string
-    );
-    await InvoiceService.createInvoiceFromStripe({
+    await attachParamsToInvoice({
       sb,
-      stripeInvoice: subUpdateInvoice,
-      internalCustomerId: attachParams.customer.internal_id,
-      org: attachParams.org,
-      productIds: [attachParams.product.id],
-      internalProductIds: [attachParams.product.internal_id],
+      attachParams,
+      invoiceId: subUpdate.latest_invoice as string,
     });
     console.log("   - Inserted latest invoice ID for subscription update");
   } catch (error) {
@@ -138,10 +175,12 @@ const handleStripeSubUpdate = async ({
 };
 
 const billForRemainingUsages = async ({
+  logger,
   sb,
   attachParams,
   curCusProduct,
 }: {
+  logger: any;
   sb: SupabaseClient;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
@@ -201,11 +240,11 @@ const billForRemainingUsages = async ({
   });
 
   // 2. Add items to invoice
-  console.log("Bill for remaining usages");
+  logger.info("Bill for remaining usages");
   for (const item of itemsToInvoice) {
     const amount = getPriceForOverage(item.price, item.overage);
 
-    console.log(
+    logger.info(
       `   feature: ${item.featureId}, overage: ${item.overage}, amount: ${amount}`
     );
 
@@ -272,19 +311,19 @@ export const handleUpgrade = async ({
   curCusProduct: FullCusProduct;
   curFullProduct: FullProduct;
 }) => {
-  const { org, customer, product } = attachParams;
+  const logger = req.logtail;
+  const { org, customer, products } = attachParams;
+  let product = products[0];
 
-  console.log(
+  logger.info(
     `Upgrading ${curFullProduct.name} to ${product.name} for ${customer.id}`
   );
-
-  // const sameBillingInterval = isSameBillingInterval(curFullProduct, product);
 
   const stripeCli = createStripeCli({ org, env: customer.env });
 
   // 1. If current product is free, retire old product
   if (isFreeProduct(curFullProduct.prices)) {
-    console.log("NOTE: Current product is free, using add product flow");
+    logger.info("NOTE: Current product is free, using add product flow");
     await handleAddProduct({
       req,
       res,
@@ -295,15 +334,9 @@ export const handleUpgrade = async ({
 
   // 2. TO FIX: If current product is a trial, just start a new period (with new subscription_ids)
   if (curCusProduct.trial_ends_at && curCusProduct.trial_ends_at > Date.now()) {
-    console.log(
+    logger.info(
       "NOTE: Current product is a trial, cancel and start new subscription"
     );
-
-    // throw new RecaseError({
-    //   message: "Not implemented",
-    //   code: ErrCode.UpgradeFailed,
-    //   statusCode: StatusCodes.NOT_IMPLEMENTED,
-    // });
 
     await handleAddProduct({
       req,
@@ -325,19 +358,18 @@ export const handleUpgrade = async ({
     }
   }
 
-  // const disableFreeTrial =
-  //   curCusProduct.free_trial_id && org.config?.free_trial_paid_to_paid;
   const disableFreeTrial = false;
 
   // 1. Bill for remaining usages
-  console.log("1. Bill for remaining usages");
+  logger.info("1. Bill for remaining usages");
   await billForRemainingUsages({
     sb: req.sb,
     attachParams,
     curCusProduct,
+    logger,
   });
 
-  console.log("2. Updating current subscription to new product");
+  logger.info("2. Updating current subscription to new product");
 
   let { subUpdate, newSubIds, invoiceIds, remainingExistingSubIds } =
     await handleStripeSubUpdate({
@@ -348,7 +380,7 @@ export const handleUpgrade = async ({
       disableFreeTrial,
     });
 
-  console.log(
+  logger.info(
     "2.1. Remove old subscription ID from old cus product and expire"
   );
   await CusProductService.update({
@@ -367,19 +399,18 @@ export const handleUpgrade = async ({
   });
 
   if (remainingExistingSubIds && remainingExistingSubIds.length > 0) {
-    console.log("2.2. Canceling old subscriptions");
+    logger.info("2.2. Canceling old subscriptions");
     for (const subId of remainingExistingSubIds) {
-      console.log("   - Cancelling old subscription", subId);
+      logger.info("   - Cancelling old subscription", subId);
       await stripeCli.subscriptions.cancel(subId);
     }
   }
 
   // Handle backend
-  console.log("3. Creating new full cus product");
+  logger.info("3. Creating new full cus product");
   await createFullCusProduct({
     sb: req.sb,
-    attachParams,
-    // subscriptionId: subUpdate.id,
+    attachParams: attachToInsertParams(attachParams, products[0]),
     subscriptionIds: newSubIds,
     nextResetAt: subUpdate.current_period_end
       ? subUpdate.current_period_end * 1000
@@ -389,8 +420,8 @@ export const handleUpgrade = async ({
   });
 
   // Create invoices
-  console.log("4. Creating invoices");
-  console.log("Invoice IDs: ", invoiceIds);
+  logger.info("4. Creating invoices");
+  logger.info("Invoice IDs: ", invoiceIds);
   const batchInsertInvoice = [];
   for (const invoiceId of invoiceIds) {
     batchInsertInvoice.push(async () => {
@@ -400,14 +431,14 @@ export const handleUpgrade = async ({
         stripeInvoice,
         internalCustomerId: customer.internal_id,
         org,
-        productIds: [product.id],
-        internalProductIds: [product.internal_id],
+        productIds: [products[0].id],
+        internalProductIds: [products[0].internal_id],
       });
     });
   }
 
   await Promise.all(batchInsertInvoice);
-  console.log("✅ Done!");
+  logger.info("✅ Done!");
 
   res.status(200).json({
     success: true,

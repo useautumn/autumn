@@ -13,15 +13,20 @@ import RecaseError from "@/utils/errorUtils.js";
 
 export const handleCreateCheckout = async ({
   sb,
+  req,
   res,
   attachParams,
 }: {
   sb: SupabaseClient;
+  req: any;
   res: any;
   attachParams: AttachParams;
 }) => {
-  console.log(
-    `Creating checkout for customer ${attachParams.customer.id}, product ${attachParams.product.name}`
+  const logger = req.logtail;
+  logger.info(
+    `Creating checkout for customer ${
+      attachParams.customer.id
+    }, products ${attachParams.products.map((p) => p.name)}`
   );
 
   const { customer, org, freeTrial, successUrl } = attachParams;
@@ -86,8 +91,6 @@ export const handleCreateCheckout = async ({
 
   res.status(200).json({
     checkout_url: checkout.url,
-    // success: true,
-    // message: "Successfully created Stripe checkout",
   });
   return;
 };

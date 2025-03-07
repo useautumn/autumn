@@ -12,6 +12,7 @@ import {
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 import {
+  createStripeCusIfNotExists,
   createStripeCustomer,
   getCusPaymentMethod,
 } from "@/external/stripe/stripeCusUtils.js";
@@ -21,23 +22,25 @@ import {
   getBillingType,
   getEntOptions,
   getPriceEntitlement,
+  getProductForPrice,
   priceIsOneOffAndTiered,
 } from "@/internal/prices/priceUtils.js";
 import { PricesInput } from "@autumn/shared";
-import { getFullCusProductData } from "../../../customers/products/cusProductUtils.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
-import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
+import { getFullCusProductData } from "@/internal/customers/products/attachUtils.js";
+import {
+  checkStripeProductExists,
+  isFreeProduct,
+} from "@/internal/products/productUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
-import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoiceOnly.js";
 import { notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
 import chalk from "chalk";
 import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
+import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
+import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
+import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoiceOnly.js";
+import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 
 export const attachRouter = Router();
 
@@ -58,16 +61,7 @@ export const checkAddProductErrors = async ({
   attachParams: AttachParams;
   useCheckout?: boolean;
 }) => {
-  const { product, prices, entitlements, optionsList } = attachParams;
-
-  // // 1. Check if product has different recurring intervals
-  // if (haveDifferentRecurringIntervals(prices)) {
-  //   throw new RecaseError({
-  //     message: `Product ${product.id} has different recurring intervals`,
-  //     code: ErrCode.ProductHasDifferentRecurringIntervals,
-  //     statusCode: 400,
-  //   });
-  // }
+  const { prices, entitlements, optionsList } = attachParams;
 
   if (useCheckout && !checkoutPricesValid(prices)) {
     throw new RecaseError({
@@ -78,13 +72,11 @@ export const checkAddProductErrors = async ({
   }
 
   // 2. Check if options are valid
-
   for (const price of prices) {
     const billingType = getBillingType(price.config!);
 
     if (billingType === BillingType.UsageInAdvance) {
       // Get options for price
-
       let priceEnt = getPriceEntitlement(price, entitlements);
       let options = getEntOptions(optionsList, priceEnt);
 
@@ -176,14 +168,12 @@ export const handlePublicAttachErrors = async ({
 
 export const checkStripeConnections = async ({
   req,
-  res,
   attachParams,
 }: {
   req: any;
-  res: any;
   attachParams: AttachParams;
 }) => {
-  const { org, customer, product, prices, entitlements } = attachParams;
+  const { org, customer, products, prices, entitlements } = attachParams;
   const env = customer.env;
 
   if (!org.stripe_connected) {
@@ -196,59 +186,36 @@ export const checkStripeConnections = async ({
 
   const stripeCli = createStripeCli({ org, env });
 
-  if (!customer.processor || !customer.processor.id) {
-    const stripeCustomer = await createStripeCustomer({ org, env, customer });
-
-    await CusService.update({
+  const batchProductUpdates = [
+    createStripeCusIfNotExists({
       sb: req.sb,
-      internalCusId: customer.internal_id,
-      update: {
-        processor: {
-          id: stripeCustomer.id,
-          type: ProcessorType.Stripe,
-        },
-      },
-    });
-
-    customer.processor = {
-      id: stripeCustomer.id,
-      type: ProcessorType.Stripe,
-    };
-  }
-
-  if (!product.processor || !product.processor.id) {
-    const stripeProduct = await stripeCli.products.create({
-      name: product.name,
-    });
-
-    await ProductService.update({
-      sb: req.sb,
-      productId: product.id,
-      orgId: org.id,
+      org,
       env,
-      update: {
-        processor: {
-          id: stripeProduct.id,
-          type: ProcessorType.Stripe,
-        },
-      },
-    });
-
-    product.processor = {
-      id: stripeProduct.id,
-      type: ProcessorType.Stripe,
-    };
+      customer,
+    }),
+  ];
+  for (const product of products) {
+    batchProductUpdates.push(
+      checkStripeProductExists({
+        sb: req.sb,
+        org,
+        env,
+        product,
+      })
+    );
   }
+  await Promise.all(batchProductUpdates);
 
   const batchPriceUpdates = [];
   for (const price of prices) {
+    let product = getProductForPrice(price, products);
     batchPriceUpdates.push(
       createStripePriceIFNotExist({
         sb: req.sb,
         stripeCli,
         price,
         entitlements,
-        product,
+        product: product!,
         org,
       })
     );
@@ -281,6 +248,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     prices,
     entitlements,
     free_trial,
+    product_ids,
     options,
     force_checkout,
     invoice_only,
@@ -288,6 +256,7 @@ attachRouter.post("/attach", async (req: any, res) => {
   } = req.body;
 
   const { orgId, env } = req;
+  const logger = req.logtail;
 
   const sb = req.sb;
   const pricesInput: PricesInput = prices || [];
@@ -303,12 +272,14 @@ attachRouter.post("/attach", async (req: any, res) => {
     isCustom = false;
   }
 
-  console.log("--------------------------------");
+  logger.info("--------------------------------");
   let publicStr = req.isPublic ? "(Public) " : "";
-  console.log(`${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
+  logger.info(`${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
 
   try {
     z.array(FeatureOptionsSchema).parse(optionsListInput);
+
+    // Get curCusProducts too...
     const attachParams: AttachParams = await getFullCusProductData({
       sb,
       customerId: customer_id,
@@ -321,22 +292,24 @@ attachRouter.post("/attach", async (req: any, res) => {
       optionsListInput,
       freeTrialInput: free_trial,
       isCustom,
+      productIds: product_ids,
     });
+
     attachParams.successUrl = successUrl;
 
-    console.log(
+    logger.info(
       `Customer: ${chalk.yellow(
         `${attachParams.customer.id} (${attachParams.customer.name})`
       )}`
     );
 
     // 3. Check for stripe connection
-    await checkStripeConnections({ req, res, attachParams });
+    await checkStripeConnections({ req, attachParams });
 
     let hasPm = await customerHasPm({ attachParams });
     const useCheckout = !hasPm || forceCheckout;
 
-    console.log(
+    logger.info(
       `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(
         forceCheckout
       )}, Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
@@ -368,21 +341,14 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     if (done) return;
 
-    // -------------------- ATTACH PRODUCT --------------------
+    // // -------------------- ATTACH PRODUCT --------------------
 
     // SCENARIO 1: Free product, no existing product
-    const curProductFree = isFreeProduct(
-      curCusProduct?.customer_prices.map((cp: any) => cp.price) || [] // if no current product...
-    );
+    const newProductsFree = isFreeProduct(attachParams.prices);
+    const allAddOns = attachParams.products.every((p) => p.is_add_on);
 
-    const newProductFree = isFreeProduct(attachParams.prices);
-
-    if (
-      (!curCusProduct && newProductFree) ||
-      (curProductFree && newProductFree) ||
-      (attachParams.product.is_add_on && newProductFree)
-    ) {
-      console.log("SCENARIO 1: FREE PRODUCT");
+    if ((!curCusProduct && newProductsFree) || (allAddOns && newProductsFree)) {
+      logger.info("SCENARIO 1: FREE PRODUCT");
       await handleAddFreeProduct({
         req,
         res,
@@ -403,9 +369,10 @@ attachRouter.post("/attach", async (req: any, res) => {
     }
 
     if (useCheckout) {
-      console.log("SCENARIO 2: USING CHECKOUT");
+      logger.info("SCENARIO 2: USING CHECKOUT");
       await handleCreateCheckout({
         sb,
+        req,
         res,
         attachParams,
       });
@@ -413,9 +380,8 @@ attachRouter.post("/attach", async (req: any, res) => {
     }
 
     // SCENARIO 4: Switching product
-
-    if (!attachParams.product.is_add_on && curCusProduct) {
-      console.log("SCENARIO 3: SWITCHING PRODUCT");
+    if (curCusProduct) {
+      logger.info("SCENARIO 3: SWITCHING PRODUCT");
       await handleChangeProduct({
         req,
         res,
@@ -426,7 +392,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     }
 
     // SCENARIO 5: No existing product, not free product
-    console.log("SCENARIO 4: ADDING PRODUCT");
+    logger.info("SCENARIO 4: ADDING PRODUCT");
     await handleAddProduct({
       req,
       res,

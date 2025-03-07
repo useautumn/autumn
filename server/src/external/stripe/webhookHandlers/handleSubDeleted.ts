@@ -26,6 +26,8 @@ import { createStripeCli } from "../utils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { payForInvoice } from "../stripeInvoiceUtils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { differenceInSeconds } from "date-fns";
+import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
 
 const billForRemainingUsages = async ({
   sb,
@@ -204,6 +206,9 @@ export const handleSubscriptionDeleted = async ({
     return;
   }
 
+  // Prematurely canceled if cancel_at_period_end is false or cancel_at is more than 20 seconds apart from current_period_end
+  let prematurelyCanceled = subIsPrematurelyCanceled(subscription);
+
   const handleCusProductDeleted = async (
     cusProduct: FullCusProduct,
     subscription: Stripe.Subscription
@@ -221,12 +226,37 @@ export const handleSubscriptionDeleted = async ({
 
     if (cusProduct.status === CusProductStatus.Expired) {
       console.log(
-        `   ⚠️ customer product already expired, skipping: ${cusProduct.id}, from stripe sub: ${subscription.id}`
+        `   ⚠️ customer product already expired, skipping: ${cusProduct.product.name} (${cusProduct.id})`
       );
       return;
     }
 
-    // 1. Expire current product
+    // If there's scheduled_id, skip?
+    // Prematurely canceled
+    if (
+      cusProduct.scheduled_ids &&
+      cusProduct.scheduled_ids.length > 0 &&
+      !prematurelyCanceled
+    ) {
+      console.log(
+        `   ⚠️ Cus product ${cusProduct.product.name} (${cusProduct.id}) has scheduled_ids and not prematurely canceled: removing subscription_id from cus product`
+      );
+
+      // Remove subscription_id from cus product
+      await CusProductService.update({
+        sb,
+        cusProductId: cusProduct.id,
+        updates: {
+          subscription_ids: cusProduct.subscription_ids?.filter(
+            (id) => id !== subscription.id
+          ),
+        },
+      });
+
+      return;
+    }
+
+    // 1. Expire current product -> Probably going to be a problem...?
     await CusProductService.update({
       sb,
       cusProductId: cusProduct.id,

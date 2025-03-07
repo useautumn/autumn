@@ -103,7 +103,7 @@ export const handleRequestError = ({
   action: string;
 }) => {
   try {
-    const logger = req.logger;
+    const logger = req.logtail;
     if (error instanceof RecaseError) {
       logger.warn("--------------------------------");
       logger.warn("RECASE WARNING");
