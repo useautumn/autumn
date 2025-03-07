@@ -58,6 +58,7 @@ export class CusPriceService {
     }
 
     if (data.length === 0) {
+      return null;
       throw new RecaseError({
         message: `No customer price found for usage based entitlement ${cusEnt.entitlement.internal_feature_id}`,
         code: ErrCode.CusPriceNotFound,

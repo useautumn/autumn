@@ -103,6 +103,11 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       env: req.env,
     });
 
+    if (!cusPrice) {
+      res.status(200).json({ success: true });
+      return;
+    }
+
     await adjustAllowance({
       sb: req.sb,
       env: req.env,

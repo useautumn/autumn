@@ -45,7 +45,7 @@ export const removeCurrentProduct = async ({
   });
 
   // Cancel stripe subscription
-  const stripeCli = createStripeCli({ org, env });
+  const stripeCli = createStripeCli({ org, env: customer.env });
 
   for (const subId of curCusProduct.subscription_ids || []) {
     await stripeCli.subscriptions.cancel(subId, {
@@ -163,6 +163,10 @@ export const handleInvoiceOnly = async ({
       metadata: subMeta,
     });
     stripeSubs.push(stripeSub);
+
+    await stripeCli.subscriptions.update(stripeSub.id, {
+      collection_method: "charge_automatically",
+    });
   }
 
   // 1. Add full cus product
@@ -173,7 +177,8 @@ export const handleInvoiceOnly = async ({
     subscriptionId: stripeSubs[0].id,
     subscriptionIds: stripeSubs.map((s) => s.id),
     lastInvoiceId: stripeSubs[0].latest_invoice as string,
-    collectionMethod: CollectionMethod.SendInvoice,
+    // collectionMethod: CollectionMethod.SendInvoice,
+    collectionMethod: CollectionMethod.ChargeAutomatically,
   });
 
   const stripeCli = createStripeCli({ org, env });
@@ -192,12 +197,6 @@ export const handleInvoiceOnly = async ({
 
     if (!firstInvoice) {
       firstInvoice = stripeInvoice;
-    }
-
-    try {
-      await stripeCli.invoices.sendInvoice(stripeInvoice.id);
-    } catch (error: any) {
-      console.log("Failed to send stripe invoice:", error.message);
     }
 
     await InvoiceService.createInvoiceFromStripe({
