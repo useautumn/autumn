@@ -373,7 +373,7 @@ export const handleInvoiceCreated = async ({
       });
 
       if (invoiceCreatedRecently) {
-        return;
+        continue; // Skip this product but process others
       }
 
       await sendUsageAndReset({
