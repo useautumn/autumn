@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
-import { AppEnv } from "@shared/models/genModels.js";
+import { AppEnv } from "@autumn/shared";
 import Stripe from "stripe";
 import { CusProductStatus, Organization } from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
@@ -52,7 +52,7 @@ export const handleSubscriptionScheduleCanceled = async ({
           await stripeCli.subscriptionSchedules.cancel(id);
           console.log("   - Cancelled scheduled id", id);
         } catch (error) {
-          console.error('Failed to cancel subscription schedule:', id, error);
+          console.error("Failed to cancel subscription schedule:", id, error);
         }
       }
 
