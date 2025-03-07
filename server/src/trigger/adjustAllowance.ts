@@ -1,4 +1,4 @@
-import { FullCustomerEntitlement } from "@shared/models/cusModels/cusEntModels/cusEntitlementModels.js";
+import { FullCustomerEntitlement } from "@autumn/shared";
 import {
   AppEnv,
   BillingType,
@@ -26,7 +26,7 @@ import { InvoiceItemService } from "@/internal/customers/invoices/InvoiceItemSer
 import { generateId } from "@/utils/genUtils.js";
 import { createStripeInvoiceItem } from "@/internal/customers/invoices/invoiceItemUtils.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
-import { LoggerAction } from "@shared/logger/LoggerAction.js";
+import { LoggerAction } from "@autumn/shared";
 
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;

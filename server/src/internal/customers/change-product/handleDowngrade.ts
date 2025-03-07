@@ -8,7 +8,7 @@ import {
   getSubItemsForCusProduct,
 } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { FullCusProduct } from "@shared/models/cusModels/cusProductModels.js";
+import { FullCusProduct } from "@autumn/shared";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { BillingInterval } from "@autumn/shared";
