@@ -100,7 +100,8 @@ const handleBillNowPrices = async ({
         sb,
         attachParams: attachToInsertParams(attachParams, product),
         subscriptionIds: subscriptions.map((s) => s.id),
-        subscriptionId: subscriptions[0].id,
+        subscriptionId:
+          subscriptions.length > 0 ? subscriptions[0].id : undefined,
       })
     );
   }

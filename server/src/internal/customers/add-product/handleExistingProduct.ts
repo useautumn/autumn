@@ -32,7 +32,7 @@ export const getExistingCusProducts = async ({
   product: Product;
   cusProducts: FullCusProduct[];
 }) => {
-  let curMainProduct = cusProducts!.find(
+  let curMainProduct = cusProducts.find(
     (cp: any) =>
       cp.product.group === product.group &&
       !cp.product.is_add_on &&
