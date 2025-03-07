@@ -99,7 +99,7 @@ export const handleInvoicePaid = async ({
 
     // console.log("Handling invoice.paid:", invoice.id);
 
-    InvoiceService.createInvoiceFromStripe({
+    await InvoiceService.createInvoiceFromStripe({
       sb,
       stripeInvoice: invoice,
       internalCustomerId: activeCusProducts[0].internal_customer_id,
