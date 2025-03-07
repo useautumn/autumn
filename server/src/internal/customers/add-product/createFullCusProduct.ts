@@ -24,18 +24,13 @@ import RecaseError from "@/utils/errorUtils.js";
 import { getBillingType, getEntOptions } from "@/internal/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
-import {
-  AttachParams,
-  InsertCusProductParams,
-} from "../products/AttachParams.js";
+import { InsertCusProductParams } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import {
   applyTrialToEntitlement,
   getEntRelatedPrice,
 } from "@/internal/products/entitlements/entitlementUtils.js";
 import { getResetBalance } from "../entitlements/cusEntUtils.js";
-import { sendSvixEvent } from "@/external/svix/svixUtils.js";
-import { processFullCusProduct } from "../products/cusProductUtils.js";
 
 export const initCusEntitlement = ({
   entitlement,

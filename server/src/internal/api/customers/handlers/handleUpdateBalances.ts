@@ -23,6 +23,11 @@ import {
   nullish,
   nullOrUndefined,
 } from "@/utils/genUtils.js";
+import {
+  getUnlimitedAndUsageAllowed,
+  updateCusEntInStripe,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
+import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 
 const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
   // 1. Get customer
@@ -104,7 +109,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
     );
     logger.info(
       `Features to update: ${balances.map(
-        (b: any) => `${b.feature_id} - ${b.balance}`
+        (b: any) => `${b.feature_id} - ${b.unlimited ? "unlimited" : b.balance}`
       )}`
     );
 
@@ -119,7 +124,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
         });
       }
 
-      if (typeof balance.balance !== "number") {
+      if (typeof balance.balance !== "number" && balance.unlimited !== true) {
         throw new RecaseError({
           message: "Balance must be a number",
           code: ErrCode.InvalidRequest,
@@ -128,6 +133,28 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       }
 
       const feature = featuresToUpdate.find((f) => f.id === balance.feature_id);
+
+      if (balance.unlimited === true) {
+        featureDeductions.push({
+          feature,
+          unlimited: true,
+          toDeduct: 0,
+        });
+        continue;
+      }
+
+      let { unlimited } = getUnlimitedAndUsageAllowed({
+        cusEnts,
+        internalFeatureId: feature.internal_id,
+      });
+
+      if (unlimited) {
+        throw new RecaseError({
+          message: `Can't set balance for unlimited feature: ${feature.id}`,
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
 
       // Get deductions
       let newBalance = balance.balance;
@@ -171,10 +198,37 @@ export const handleUpdateBalances = async (req: any, res: any) => {
     }
 
     const batchDeduct = [];
+
     for (const featureDeduction of featureDeductions) {
       // 1. Deduct from allowance
       const performDeduction = async () => {
         let { toDeduct, feature, properties } = featureDeduction;
+
+        // Handle unlimited
+        if (featureDeduction.unlimited) {
+          // Get one active cusEnt and set unlimited to true
+          const cusEnt = cusEnts.find(
+            (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
+          );
+
+          if (!cusEnt) {
+            logger.warn(
+              `No active cus ent to set unlimited balance for feature: ${feature.id}`
+            );
+            return;
+          }
+
+          await CustomerEntitlementService.update({
+            sb: req.sb,
+            id: cusEnt.id,
+            updates: {
+              unlimited: true,
+              next_reset_at: null,
+            },
+          });
+
+          return;
+        }
 
         for (const cusEnt of cusEnts) {
           if (

@@ -77,6 +77,7 @@ export const handleSubscriptionUpdated = async ({
   if (
     subscription.status === "past_due" &&
     org.id != "org_2tTviFjeMRFkGkBt8pTdqRHzyFW" &&
+    org.id != "org_2tDI2UpEHtlXDGQmgZIzcaMh08s" &&
     org.id != "org_2s4vfEyYVgFZDlOwcMHjsHR0eef"
   ) {
     const stripeCli = createStripeCli({
