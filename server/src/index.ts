@@ -17,7 +17,8 @@ import { initLogger } from "./errors/logger.js";
 import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
 import { createSupabaseClient } from "./external/supabaseUtils.js";
-import logtail from "./external/logtail/logtailUtils.js";
+import { createLogtail } from "./external/logtail/logtailUtils.js";
+import { format } from "date-fns";
 
 const init = async () => {
   const app = express();
@@ -29,12 +30,15 @@ const init = async () => {
   await pgClient.connect();
 
   await QueueManager.getInstance(); // initialize the queue manager
-  await initWorkers(logtail);
+  await initWorkers();
   const supabaseClient = createSupabaseClient();
+
   app.use((req: any, res, next) => {
     req.sb = supabaseClient;
     req.pg = pgClient;
     req.logger = logger;
+
+    req.logtail = createLogtail();
 
     next();
   });
@@ -62,7 +66,7 @@ const init = async () => {
     const methodColor: any = methodToColor[method] || chalk.gray;
 
     console.log(
-      `${chalk.gray(new Date().toISOString())} ${methodColor(
+      `${chalk.gray(format(new Date(), "dd MMM HH:mm:ss"))} ${methodColor(
         method
       )} ${chalk.white(path)}`
     );

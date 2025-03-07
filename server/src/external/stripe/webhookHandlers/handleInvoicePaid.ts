@@ -99,23 +99,24 @@ export const handleInvoicePaid = async ({
 
     // console.log("Handling invoice.paid:", invoice.id);
 
-    const batchUpdate = [];
-    for (const cusProduct of activeCusProducts) {
-      // Create invoice
+    await InvoiceService.createInvoiceFromStripe({
+      sb,
+      stripeInvoice: invoice,
+      internalCustomerId: activeCusProducts[0].internal_customer_id,
+      productIds: activeCusProducts.map((p) => p.product_id),
+      internalProductIds: activeCusProducts.map((p) => p.internal_product_id),
+      org: org,
+    });
+    // const batchUpdate = [];
+    // for (const cusProduct of activeCusProducts) {
+    //   // Create invoice
 
-      batchUpdate.push(
-        InvoiceService.createInvoiceFromStripe({
-          sb,
-          stripeInvoice: invoice,
-          internalCustomerId: cusProduct.internal_customer_id,
-          productIds: [cusProduct.product_id],
-          internalProductIds: [cusProduct.internal_product_id],
-          org: org,
-        })
-      );
-    }
+    //   batchUpdate.push(
 
-    await Promise.all(batchUpdate);
+    //   );
+    // }
+
+    // await Promise.all(batchUpdate);
   } else {
     await handleOneOffInvoicePaid({
       sb,

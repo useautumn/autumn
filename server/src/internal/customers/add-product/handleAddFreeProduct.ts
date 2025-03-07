@@ -13,6 +13,7 @@ import {
 import { Customer } from "@autumn/shared";
 import { createFullCusProduct } from "./createFullCusProduct.js";
 import { AttachParams } from "../products/AttachParams.js";
+import { attachToInsertParams } from "@/internal/products/productUtils.js";
 
 export const handleAddFreeProduct = async ({
   req,
@@ -23,21 +24,25 @@ export const handleAddFreeProduct = async ({
   res: any;
   attachParams: AttachParams;
 }) => {
-  const { customer, product, prices, entitlements, optionsList } = attachParams;
-
-  console.log(`Adding free product ${product.name} to customer ${customer.id}`);
-
-  // 1. Just add product and entitlements
-  await createFullCusProduct({
-    sb: req.sb,
-    attachParams,
-    subscriptionId: undefined,
-    billLaterOnly: false,
-  });
+  const { customer, products } = attachParams;
 
   console.log(
-    `Successfully added free product ${product.name} to customer ${customer.id}`
+    `Adding free product(s) ${products.map(
+      (product) => product.name
+    )} to customer ${customer.id}`
   );
+
+  // 1. Just add product and entitlements
+  for (const product of products) {
+    await createFullCusProduct({
+      sb: req.sb,
+      attachParams: attachToInsertParams(attachParams, product),
+      subscriptionId: undefined,
+      billLaterOnly: false,
+    });
+  }
+
+  console.log(`Successfully added free products`);
 
   res.status(200).json({ success: true });
 };

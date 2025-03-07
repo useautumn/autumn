@@ -4,8 +4,6 @@ import {
   BillingType,
   CusProduct,
   Customer,
-  ErrCode,
-  Event,
   Feature,
   FullCustomerPrice,
   InvoiceItem,
@@ -20,17 +18,16 @@ import {
   getPriceForOverage,
 } from "@/internal/prices/priceUtils.js";
 
-import {
-  getStripeSubs,
-  getUsageBasedSub,
-} from "@/external/stripe/stripeSubUtils.js";
+import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 
 import { Decimal } from "decimal.js";
 import { InvoiceItemService } from "@/internal/customers/invoices/InvoiceItemService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { createStripeInvoiceItem } from "@/internal/customers/invoices/invoiceItemUtils.js";
-import logtail from "@/external/logtail/logtailUtils.js";
+import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
+import { LoggerAction } from "@shared/logger/LoggerAction.js";
+
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
 };
@@ -59,9 +56,12 @@ export const adjustAllowanceOld = async ({
   deduction: number;
 }) => {
   // Get customer entitlement
+  const logger = createLogtailWithContext({
+    org_id: org.id,
+    org_slug: org.slug,
+    action: LoggerAction.AdjustAllowance,
+  });
 
-  // 1. Check if price is prorated in arrear, if not skip...
-  let logger = logtail;
   let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
   let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
   let cusProduct = cusEnt.customer_product;
@@ -249,7 +249,12 @@ export const adjustAllowance = async ({
   }
 
   // 1. Check if price is prorated in arrear, if not skip...
-  let logger = logtail;
+  let logger = createLogtailWithContext({
+    org_id: org.id,
+    org_slug: org.slug,
+    action: LoggerAction.AdjustAllowance,
+  });
+
   let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
   let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
   let cusProduct = cusEnt.customer_product;

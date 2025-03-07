@@ -20,26 +20,8 @@ import {
   getStripeSubItems,
   pricesToInvoiceItems,
 } from "@/external/stripe/stripePriceUtils.js";
-
-// export const voidLatestInvoice = async ({
-//   stripeCli,
-//   subId,
-// }: {
-//   stripeCli: Stripe;
-//   subId: string;
-// }) => {
-//   // 1. Get sub
-//   const sub = await stripeCli.subscriptions.retrieve(subId);
-
-//   // 2. Void latest invoice?
-//   const invoice = await stripeCli.invoices.retrieve(
-//     sub.latest_invoice as string
-//   );
-
-//   if (invoice.status !== "paid") {
-//     await stripeCli.invoices.voidInvoice(sub.latest_invoice as string);
-//   }
-// };
+import { AttachParams } from "../products/AttachParams.js";
+import { attachToInsertParams } from "@/internal/products/productUtils.js";
 
 export const removeCurrentProduct = async ({
   sb,
@@ -56,7 +38,6 @@ export const removeCurrentProduct = async ({
 }) => {
   console.log("   - Removing current product");
   // 1. Expire current product
-
   CusProductService.update({
     sb,
     cusProductId: curCusProduct.id,
@@ -69,7 +50,9 @@ export const removeCurrentProduct = async ({
   const stripeCli = createStripeCli({ org, env: customer.env });
 
   for (const subId of curCusProduct.subscription_ids || []) {
-    await stripeCli.subscriptions.cancel(subId);
+    await stripeCli.subscriptions.cancel(subId, {
+      prorate: true,
+    });
   }
 };
 
@@ -141,16 +124,16 @@ export const handleInvoiceOnly = async ({
 }: {
   req: any;
   res: any;
-  attachParams: any;
+  attachParams: AttachParams;
   curCusProduct: any;
 }) => {
   console.log("SCENARIO: INVOICE ONLY");
-  const { org, env, customer, prices, product } = attachParams;
+  const { org, customer, prices, products } = attachParams;
 
   // If current product, expire and cancel stripe subscription
-  if (curCusProduct && !product.is_add_on) {
-    // Handle removal of current product
-  }
+  // if (curCusProduct && !product.is_add_on) {
+  //   // Handle removal of current product
+  // }
 
   // Handle one off prices
   if (pricesOnlyOneOff(prices)) {
@@ -165,6 +148,7 @@ export const handleInvoiceOnly = async ({
 
   // 1. Create stripe subscription (with invoice)
   console.log("   - Creating stripe subscription");
+  const stripeCli = createStripeCli({ org, env: customer.env });
   const itemSets = await getStripeSubItems({
     attachParams,
   });
@@ -173,7 +157,7 @@ export const handleInvoiceOnly = async ({
   for (const itemSet of itemSets) {
     const { items, subMeta } = itemSet;
     // Create subscription
-    const stripeCli = createStripeCli({ org, env });
+
     const stripeSub = await stripeCli.subscriptions.create({
       customer: customer.processor.id,
       collection_method: "send_invoice",
@@ -190,17 +174,18 @@ export const handleInvoiceOnly = async ({
 
   // 1. Add full cus product
   console.log("   - Adding full cus product");
-  await createFullCusProduct({
-    sb: req.sb,
-    attachParams,
-    subscriptionId: stripeSubs[0].id,
-    subscriptionIds: stripeSubs.map((s) => s.id),
-    lastInvoiceId: stripeSubs[0].latest_invoice as string,
-    // collectionMethod: CollectionMethod.SendInvoice,
-    collectionMethod: CollectionMethod.ChargeAutomatically,
-  });
+  for (const product of products) {
+    await createFullCusProduct({
+      sb: req.sb,
+      attachParams: attachToInsertParams(attachParams, product),
+      subscriptionId: stripeSubs[0].id,
+      subscriptionIds: stripeSubs.map((s) => s.id),
+      lastInvoiceId: stripeSubs[0].latest_invoice as string,
+      // collectionMethod: CollectionMethod.SendInvoice,
+      collectionMethod: CollectionMethod.ChargeAutomatically,
+    });
+  }
 
-  const stripeCli = createStripeCli({ org, env });
   let firstInvoice;
   for (const stripeSub of stripeSubs) {
     // Get stripe invoice
@@ -223,8 +208,8 @@ export const handleInvoiceOnly = async ({
       stripeInvoice,
       internalCustomerId: customer.internal_id,
       org,
-      productIds: [product.id],
-      internalProductIds: [product.internal_id],
+      productIds: products.map((p) => p.id),
+      internalProductIds: products.map((p) => p.internal_id),
     });
   }
 

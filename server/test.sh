@@ -3,6 +3,7 @@
 # TEST PARALLEL
 if [ "$1" == "basic-parallel" ]; then
     npx mocha 'tests/00_setup.ts' && npx mocha --parallel --timeout 10000000  \
+    'tests/attach/**/*.ts' \
     'tests/basic/**/*.ts' \
     --ignore 'tests/00_setup.ts' \
     --ignore 'tests/alex/**/*.ts'
@@ -30,6 +31,10 @@ elif [ "$1" == "alex-custom" ]; then
     npx mocha --timeout 10000000 "tests/alex/$FILE_TO_TEST.ts"
 elif [ "$1" == "custom" ]; then
     FILE_TO_TEST="$2"
+    ARG3="$3"
+    if [ "$ARG3" == "setup" ]; then
+        npx mocha --timeout 10000000 'tests/00_setup.ts'
+    fi
     npx mocha --timeout 10000000 "tests/$FILE_TO_TEST.ts"
 else
     npx mocha --timeout 10000000 'tests/00_setup.ts' && npx mocha --timeout 10000000  \

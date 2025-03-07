@@ -1,11 +1,10 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { createStripeCli } from "../utils.js";
+
 import { AppEnv } from "@shared/models/genModels.js";
 import Stripe from "stripe";
-import { ErrCode, Organization } from "@autumn/shared";
+import { CusProductStatus, Organization } from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { StatusCodes } from "http-status-codes";
+import { createStripeCli } from "../utils.js";
 
 export const handleSubscriptionScheduleCanceled = async ({
   sb,
@@ -18,42 +17,87 @@ export const handleSubscriptionScheduleCanceled = async ({
   org: Organization;
   env: AppEnv;
 }) => {
-  const stripeCli = createStripeCli({
-    org,
-    env,
-  });
-
-  const cusProduct = await CusProductService.getByScheduleId({
+  const cusProductsOnSchedule = await CusProductService.getByScheduleId({
     sb,
     scheduleId: schedule.id,
     orgId: org.id,
     env,
   });
 
-  if (cusProduct) {
-    console.log("Handling subscription_schedule.canceled");
-    await CusProductService.delete({
-      sb,
-      cusProductId: cusProduct.id,
-    });
-    console.log("   - Deleted cus product");
-
-    for (const subId of cusProduct?.subscription_ids!) {
-      if (subId === schedule.id) {
-        continue;
-      }
-
-      try {
-        await stripeCli.subscriptions.cancel(subId);
-      } catch (error) {
-        throw new RecaseError({
-          message: `handleSubScheduleCanceled: failed to cancel subscription ${subId}`,
-          code: ErrCode.StripeCancelSubscriptionScheduleFailed,
-          statusCode: 200,
-          data: error,
-        });
-      }
-    }
-    console.log("   - Cancelled all other scheduled subs");
+  if (cusProductsOnSchedule.length === 0) {
+    console.log("   - subscription_schedule.canceled: no cus products found");
+    return;
   }
+
+  console.log("Handling subscription_schedule.canceled");
+  console.log(
+    "   - Found",
+    cusProductsOnSchedule.length,
+    "cus products on schedule"
+  );
+  for (const cusProduct of cusProductsOnSchedule) {
+    console.log("   - Cus product", cusProduct.product.name, cusProduct.status);
+
+    // Delete other scheduled IDs?
+
+    const stripeCli = createStripeCli({ org, env });
+
+    if (cusProduct.status === CusProductStatus.Scheduled) {
+      let otherScheduledIds = cusProduct.scheduled_ids?.filter(
+        (id: string) => id !== schedule.id
+      );
+
+      for (const id of otherScheduledIds) {
+        try {
+          await stripeCli.subscriptionSchedules.cancel(id);
+          console.log("   - Cancelled scheduled id", id);
+        } catch (error) {
+          console.error('Failed to cancel subscription schedule:', id, error);
+        }
+      }
+
+      await CusProductService.delete({
+        sb,
+        cusProductId: cusProduct.id,
+      });
+    } else {
+      // Here -> Should do something different, maybe... reactivate future product?
+      await CusProductService.update({
+        sb,
+        cusProductId: cusProduct.id,
+        updates: {
+          scheduled_ids: cusProduct.scheduled_ids?.filter(
+            (id: string) => id !== schedule.id
+          ),
+        },
+      });
+    }
+  }
+
+  // if (cusProduct) {
+  //   console.log("Handling subscription_schedule.canceled");
+  //   await CusProductService.delete({
+  //     sb,
+  //     cusProductId: cusProduct.id,
+  //   });
+  //   console.log("   - Deleted cus product");
+
+  //   for (const subId of cusProduct?.subscription_ids!) {
+  //     if (subId === schedule.id) {
+  //       continue;
+  //     }
+
+  //     try {
+  //       await stripeCli.subscriptions.cancel(subId);
+  //     } catch (error) {
+  //       throw new RecaseError({
+  //         message: `handleSubScheduleCanceled: failed to cancel subscription ${subId}`,
+  //         code: ErrCode.StripeCancelSubscriptionScheduleFailed,
+  //         statusCode: 200,
+  //         data: error,
+  //       });
+  //     }
+  //   }
+  //   console.log("   - Cancelled all other scheduled subs");
+  // }
 };

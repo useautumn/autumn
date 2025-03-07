@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { getFullCusProductData } from "../customers/products/cusProductUtils.js";
-import { checkStripeConnections } from "../api/customers/products/cusProductRouter.js";
-import { checkAddProductErrors } from "../api/customers/products/cusProductRouter.js";
+import { getFullCusProductData } from "@/internal/customers/products/attachUtils.js";
+import { checkStripeConnections } from "@/internal/api/customers/products/attachRouter.js";
+import { checkAddProductErrors } from "@/internal/api/customers/products/attachRouter.js";
 import chalk from "chalk";
-import { isFreeProduct } from "../products/productUtils.js";
-import { handleAddFreeProduct } from "../customers/add-product/handleAddFreeProduct.js";
-import { handleCreateCheckout } from "../customers/add-product/handleCreateCheckout.js";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
+import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
-import { AttachParams } from "../customers/products/AttachParams.js";
-import { handleExistingProduct } from "../customers/add-product/handleExistingProduct.js";
+import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
 
 export const publicAttachRouter = Router();
 

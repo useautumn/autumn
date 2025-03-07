@@ -8,16 +8,15 @@ import { priceRouter } from "./prices/priceRouter.js";
 import { entitlementApiRouter } from "./entitlements/entitlementsRouter.js";
 import { featureApiRouter } from "./features/featureApiRouter.js";
 import { entitledRouter } from "./entitled/entitledRouter.js";
-import { attachRouter } from "./customers/products/cusProductRouter.js";
+import { attachRouter } from "./customers/products/attachRouter.js";
 import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
-import logtail from "@/external/logtail/logtailUtils.js";
 
 const apiRouter = Router();
 
 apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
 apiRouter.use((req: any, res: any, next: any) => {
-  logtail.use((log: any) => {
+  req.logtail.use((log: any) => {
     return {
       ...log,
       org_id: req.minOrg?.id,
@@ -27,6 +26,7 @@ apiRouter.use((req: any, res: any, next: any) => {
       body: req.body,
     };
   });
+
   next();
 });
 

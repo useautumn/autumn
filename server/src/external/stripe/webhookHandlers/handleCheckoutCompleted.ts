@@ -20,7 +20,12 @@ import {
   getBillingType,
   getPriceEntitlement,
   priceIsOneOffAndTiered,
+  pricesOnlyOneOff,
 } from "@/internal/prices/priceUtils.js";
+import {
+  attachToInsertParams,
+  getPricesForProduct,
+} from "@/internal/products/productUtils.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -201,14 +206,19 @@ export const handleCheckoutSessionCompleted = async ({
 
   console.log("   - checkout.completed: creating full customer product");
 
-  await createFullCusProduct({
-    sb,
-    attachParams,
-    subscriptionId: checkoutSession.subscription as string,
-    subscriptionIds: otherSubscriptions,
-  });
-
-  // Remove subscription item?
+  const products = attachParams.products;
+  for (const product of products) {
+    let pricesForProduct = getPricesForProduct(product, attachParams.prices);
+    let isOneOff = pricesOnlyOneOff(pricesForProduct);
+    await createFullCusProduct({
+      sb,
+      attachParams: attachToInsertParams(attachParams, product),
+      subscriptionId: !isOneOff
+        ? (checkoutSession.subscription as string)
+        : undefined,
+      subscriptionIds: !isOneOff ? otherSubscriptions : undefined,
+    });
+  }
 
   console.log("   ✅ checkout.completed: successfully created cus product");
   console.log("   Invoices: ", invoiceIds);
@@ -221,8 +231,8 @@ export const handleCheckoutSessionCompleted = async ({
         org,
         stripeInvoice: invoice,
         internalCustomerId: attachParams.customer.internal_id,
-        productIds: [attachParams.product.id],
-        internalProductIds: [attachParams.product.internal_id],
+        productIds: products.map((p) => p.id),
+        internalProductIds: products.map((p) => p.internal_id),
       });
 
       console.log("   ✅ checkout.completed: successfully created invoice");

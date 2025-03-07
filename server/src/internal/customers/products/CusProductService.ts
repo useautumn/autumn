@@ -337,19 +337,7 @@ export class CusProductService {
       throw error;
     }
 
-    if (data.length === 0) {
-      return null;
-    }
-
-    if (data.length > 1) {
-      throw new RecaseError({
-        message: `Multiple cus products found for schedule id: ${scheduleId}`,
-        code: ErrCode.MultipleProductsFound,
-        statusCode: 500,
-      });
-    }
-
-    return data[0];
+    return data;
   }
 
   static async getFutureProduct({
@@ -540,26 +528,29 @@ export class CusProductService {
     sb,
     stripeSubId,
     updates,
+    excludeIds,
   }: {
     sb: SupabaseClient;
     stripeSubId: string;
     updates: Partial<CusProduct>;
+    excludeIds?: string[];
   }) {
-    const { data: updated, error } = await sb
+    const query = sb
       .from("customer_products")
       .update(updates)
       // .eq("status", CusProductStatus.Active)
       // .eq("processor->>subscription_id", stripeSubId)
       .or(
         `processor->>'subscription_id'.eq.'${stripeSubId}', subscription_ids.cs.{${stripeSubId}}`
-      )
-      .select()
-      .single();
+      );
+
+    if (excludeIds) {
+      query.neq("id", excludeIds);
+    }
+
+    const { data: updated, error } = await query.select();
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
       throw error;
     }
 
@@ -633,6 +624,7 @@ export class CusProductService {
 
   // DELETE
 
+  // TO CHECK WHAT'S UP
   static async deleteFutureProduct({
     sb,
     internalCustomerId,
@@ -671,28 +663,28 @@ export class CusProductService {
     });
 
     if (scheduledProduct) {
-      let batchCancelSchedule = [];
+      // let batchCancelSchedule = [];
 
-      if (
-        scheduledProduct.scheduled_ids &&
-        scheduledProduct.scheduled_ids.length > 0
-      ) {
-        let scheduleIds = scheduledProduct.scheduled_ids;
-        const cancelSchedule = async (scheduleId: string) => {
-          try {
-            await stripeCli.subscriptionSchedules.cancel(scheduleId);
-          } catch (error: any) {
-            console.log(
-              `   - failed to cancel stripe schedule: ${scheduleId}, product: ${scheduledProduct.product.name}, org: ${org.slug}`,
-              error.message
-            );
-          }
-        };
-        for (const scheduleId of scheduleIds) {
-          batchCancelSchedule.push(cancelSchedule(scheduleId));
-        }
-        await Promise.all(batchCancelSchedule);
-      }
+      // if (
+      //   scheduledProduct.scheduled_ids &&
+      //   scheduledProduct.scheduled_ids.length > 0
+      // ) {
+      //   let scheduleIds = scheduledProduct.scheduled_ids;
+      //   const cancelSchedule = async (scheduleId: string) => {
+      //     try {
+      //       await stripeCli.subscriptionSchedules.cancel(scheduleId);
+      //     } catch (error: any) {
+      //       console.log(
+      //         `   - failed to cancel stripe schedule: ${scheduleId}, product: ${scheduledProduct.product.name}, org: ${org.slug}`,
+      //         error.message
+      //       );
+      //     }
+      //   };
+      //   for (const scheduleId of scheduleIds) {
+      //     batchCancelSchedule.push(cancelSchedule(scheduleId));
+      //   }
+      //   await Promise.all(batchCancelSchedule);
+      // }
 
       await sb.from("customer_products").delete().eq("id", scheduledProduct.id);
     }

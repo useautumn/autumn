@@ -18,6 +18,7 @@ export const initLogger = () => {
           10: "gray",
           message: "reset",
           greyMessage: "gray",
+          time: "darkGray",
         },
       },
     },
@@ -32,7 +33,6 @@ export const initLogger = () => {
   });
 
   // logger.info("Logger initialized");
-  console.log("Logger initialized");
 
   return logger;
 };

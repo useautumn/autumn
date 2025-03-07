@@ -1,9 +1,11 @@
 import {
   BillingInterval,
+  CusProduct,
   CusProductStatus,
   ErrCode,
   Feature,
   FreeTrial,
+  FullCusProduct,
   Price,
 } from "@autumn/shared";
 
@@ -13,6 +15,7 @@ import { getCusPaymentMethod } from "./stripeCusUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { isStripeCardDeclined } from "./stripeCardUtils.js";
+import { differenceInSeconds } from "date-fns";
 
 export const createStripeSubscription = async ({
   stripeCli,
@@ -288,4 +291,72 @@ export const getUsageBasedSub = async ({
   }
 
   return null;
+};
+
+export const getSubItemsForCusProduct = async ({
+  stripeSub,
+  cusProduct,
+}: {
+  stripeSub: Stripe.Subscription;
+  cusProduct: FullCusProduct;
+}) => {
+  let prices = cusProduct.customer_prices.map((cp) => cp.price);
+  let product = cusProduct.product;
+
+  let subItems = [];
+  for (const item of stripeSub.items.data) {
+    if (item.price.product == product.processor?.id) {
+      subItems.push(item);
+    } else if (prices.some((p) => p.config?.stripe_price_id == item.price.id)) {
+      subItems.push(item);
+    }
+  }
+  let otherSubItems = stripeSub.items.data.filter(
+    (item) => !subItems.some((i) => i.id == item.id)
+  );
+
+  return { subItems, otherSubItems };
+};
+
+export const getStripeSchedules = async ({
+  stripeCli,
+  scheduleIds,
+}: {
+  stripeCli: Stripe;
+  scheduleIds: string[];
+}) => {
+  const batchGet = [];
+  const getStripeSchedule = async (scheduleId: string) => {
+    try {
+      const schedule = await stripeCli.subscriptionSchedules.retrieve(
+        scheduleId
+      );
+      const firstItem = schedule.phases[0].items[0];
+      const price = await stripeCli.prices.retrieve(firstItem.price as string);
+      return { schedule, interval: price.recurring?.interval };
+    } catch (error: any) {
+      console.log("Error getting stripe schedule.", error.message);
+      return null;
+    }
+  };
+
+  for (const scheduleId of scheduleIds) {
+    batchGet.push(getStripeSchedule(scheduleId));
+  }
+
+  let schedulesAndSubs = await Promise.all(batchGet);
+
+  return schedulesAndSubs.filter((schedule) => schedule !== null);
+};
+
+// OTHERS
+export const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
+  if (sub.cancel_at_period_end) {
+    return false;
+  }
+
+  return (
+    differenceInSeconds(sub.current_period_end * 1000, sub.cancel_at! * 1000) >
+    20
+  );
 };
