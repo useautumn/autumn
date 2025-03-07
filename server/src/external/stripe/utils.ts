@@ -65,7 +65,6 @@ export const calculateMetered1Price = ({
       amtUsed = Math.min(usage, tier.to);
     }
     const price = tier.amount * (amtUsed / (usageConfig.billing_units ?? 1));
-    // console.log("Amount: ", tier.amount, "Used: ", amtUsed, "Price: ", price);
     totalPrice += price;
     usage -= amtUsed;
   }
