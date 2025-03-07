@@ -178,54 +178,59 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       });
     }
 
+    const batchDeduct = [];
     for (const featureDeduction of featureDeductions) {
       // 1. Deduct from allowance
-      let { toDeduct, feature, properties } = featureDeduction;
+      const performDeduction = async () => {
+        let { toDeduct, feature, properties } = featureDeduction;
 
-      for (const cusEnt of cusEnts) {
-        if (
-          cusEnt.internal_feature_id !== featureDeduction.feature.internal_id
-        ) {
-          continue;
+        for (const cusEnt of cusEnts) {
+          if (
+            cusEnt.internal_feature_id !== featureDeduction.feature.internal_id
+          ) {
+            continue;
+          }
+
+          toDeduct = await deductAllowanceFromCusEnt({
+            toDeduct,
+            deductParams: {
+              sb: req.sb,
+              feature,
+              env: req.env,
+              org,
+              cusPrices: cusPrices as any[],
+              customer,
+              properties,
+            },
+            cusEnt,
+            features,
+            featureDeductions: [], // not important because not deducting credits
+            willDeductCredits: false,
+          });
         }
 
-        toDeduct = await deductAllowanceFromCusEnt({
+        if (toDeduct == 0) {
+          return;
+        }
+
+        await deductFromUsageBasedCusEnt({
           toDeduct,
+          cusEnts,
+          features,
           deductParams: {
-            sb: req.sb,
+            sb,
             feature,
-            env: req.env,
+            env,
             org,
             cusPrices: cusPrices as any[],
             customer,
             properties,
           },
-          cusEnt,
-          features,
-          featureDeductions,
-          willDeductCredits: false,
         });
-      }
-
-      if (toDeduct == 0) {
-        continue;
-      }
-
-      await deductFromUsageBasedCusEnt({
-        toDeduct,
-        cusEnts,
-        features,
-        deductParams: {
-          sb,
-          feature,
-          env,
-          org,
-          cusPrices: cusPrices as any[],
-          customer,
-          properties,
-        },
-      });
+      };
+      batchDeduct.push(performDeduction());
     }
+    await Promise.all(batchDeduct);
     logger.info("   ✅ Successfully updated balances");
 
     res.status(200).json({ success: true });
