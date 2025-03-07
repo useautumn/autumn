@@ -51,7 +51,9 @@ export const handleSubscriptionScheduleCanceled = async ({
         try {
           await stripeCli.subscriptionSchedules.cancel(id);
           console.log("   - Cancelled scheduled id", id);
-        } catch (error) {}
+        } catch (error) {
+          console.error('Failed to cancel subscription schedule:', id, error);
+        }
       }
 
       await CusProductService.delete({
