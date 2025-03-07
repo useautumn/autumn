@@ -256,6 +256,7 @@ attachRouter.post("/attach", async (req: any, res) => {
   } = req.body;
 
   const { orgId, env } = req;
+  const logger = req.logtail;
 
   const sb = req.sb;
   const pricesInput: PricesInput = prices || [];
@@ -271,9 +272,9 @@ attachRouter.post("/attach", async (req: any, res) => {
     isCustom = false;
   }
 
-  console.log("--------------------------------");
+  logger.info("--------------------------------");
   let publicStr = req.isPublic ? "(Public) " : "";
-  console.log(`${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
+  logger.info(`${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
 
   try {
     z.array(FeatureOptionsSchema).parse(optionsListInput);
@@ -296,7 +297,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     attachParams.successUrl = successUrl;
 
-    console.log(
+    logger.info(
       `Customer: ${chalk.yellow(
         `${attachParams.customer.id} (${attachParams.customer.name})`
       )}`
@@ -308,7 +309,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     let hasPm = await customerHasPm({ attachParams });
     const useCheckout = !hasPm || forceCheckout;
 
-    console.log(
+    logger.info(
       `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(
         forceCheckout
       )}, Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
@@ -347,7 +348,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     const allAddOns = attachParams.products.every((p) => p.is_add_on);
 
     if ((!curCusProduct && newProductsFree) || (allAddOns && newProductsFree)) {
-      console.log("SCENARIO 1: FREE PRODUCT");
+      logger.info("SCENARIO 1: FREE PRODUCT");
       await handleAddFreeProduct({
         req,
         res,
@@ -368,9 +369,10 @@ attachRouter.post("/attach", async (req: any, res) => {
     // }
 
     if (useCheckout) {
-      console.log("SCENARIO 2: USING CHECKOUT");
+      logger.info("SCENARIO 2: USING CHECKOUT");
       await handleCreateCheckout({
         sb,
+        req,
         res,
         attachParams,
       });
@@ -379,7 +381,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // SCENARIO 4: Switching product
     if (curCusProduct) {
-      console.log("SCENARIO 3: SWITCHING PRODUCT");
+      logger.info("SCENARIO 3: SWITCHING PRODUCT");
       await handleChangeProduct({
         req,
         res,
@@ -389,13 +391,13 @@ attachRouter.post("/attach", async (req: any, res) => {
       return;
     }
 
-    // // SCENARIO 5: No existing product, not free product
-    // console.log("SCENARIO 4: ADDING PRODUCT");
-    // await handleAddProduct({
-    //   req,
-    //   res,
-    //   attachParams,
-    // });
+    // SCENARIO 5: No existing product, not free product
+    logger.info("SCENARIO 4: ADDING PRODUCT");
+    await handleAddProduct({
+      req,
+      res,
+      attachParams,
+    });
   } catch (error: any) {
     handleRequestError({ req, res, error, action: "attach product" });
   }

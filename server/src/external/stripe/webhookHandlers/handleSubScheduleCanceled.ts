@@ -4,6 +4,7 @@ import { AppEnv } from "@shared/models/genModels.js";
 import Stripe from "stripe";
 import { CusProductStatus, Organization } from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { createStripeCli } from "../utils.js";
 
 export const handleSubscriptionScheduleCanceled = async ({
   sb,
@@ -36,12 +37,29 @@ export const handleSubscriptionScheduleCanceled = async ({
   );
   for (const cusProduct of cusProductsOnSchedule) {
     console.log("   - Cus product", cusProduct.product.name, cusProduct.status);
+
+    // Delete other scheduled IDs?
+
+    const stripeCli = createStripeCli({ org, env });
+
     if (cusProduct.status === CusProductStatus.Scheduled) {
+      let otherScheduledIds = cusProduct.scheduled_ids?.filter(
+        (id: string) => id !== schedule.id
+      );
+
+      for (const id of otherScheduledIds) {
+        try {
+          await stripeCli.subscriptionSchedules.cancel(id);
+          console.log("   - Cancelled scheduled id", id);
+        } catch (error) {}
+      }
+
       await CusProductService.delete({
         sb,
         cusProductId: cusProduct.id,
       });
     } else {
+      // Here -> Should do something different, maybe... reactivate future product?
       await CusProductService.update({
         sb,
         cusProductId: cusProduct.id,

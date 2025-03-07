@@ -167,14 +167,17 @@ export const handleSameMainProduct = async ({
   curScheduledProduct,
   curMainProduct,
   attachParams,
+  req,
   res,
 }: {
   sb: SupabaseClient;
   curScheduledProduct: any;
   curMainProduct: FullCusProduct;
   attachParams: AttachParams;
+  req: any;
   res: any;
 }) => {
+  const logger = req.logtail;
   const { optionsList: newOptionsList, products, org, customer } = attachParams;
 
   let product = products[0];
@@ -204,12 +207,11 @@ export const handleSameMainProduct = async ({
 
     await cancelFutureProductSchedule({
       sb,
-      curScheduledProduct,
-      stripeCli,
       org,
-      env: customer.env,
-      curCusProduct: curMainProduct,
-      attachParams,
+      stripeCli,
+      cusProducts: attachParams.cusProducts!,
+      product: product,
+      logger,
     });
 
     // Delete scheduled product

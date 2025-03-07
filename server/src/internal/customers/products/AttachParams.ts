@@ -21,11 +21,13 @@ export type AttachParams = {
   freeTrial: FreeTrial | null;
   optionsList: FeatureOptions[];
 
-  curCusProduct?: FullCusProduct | undefined;
   successUrl?: string | undefined;
   // remainingItemSets?: any[];
   itemSets?: any[];
   cusProducts?: FullCusProduct[];
+
+  curCusProduct?: FullCusProduct | undefined;
+  curScheduledProduct?: FullCusProduct | undefined | null;
 };
 
 export type InsertCusProductParams = {
@@ -39,8 +41,10 @@ export type InsertCusProductParams = {
   freeTrial: FreeTrial | null;
   optionsList: FeatureOptions[];
 
-  curCusProduct?: FullCusProduct | undefined;
   successUrl?: string | undefined;
   // remainingItemSets?: any[];
   itemSets?: any[];
+
+  // OTHERS
+  curCusProduct?: FullCusProduct | undefined;
 };

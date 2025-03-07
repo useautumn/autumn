@@ -127,7 +127,7 @@ const handleStripeSubUpdate = async ({
         scheduleObj,
         newItems: itemSet.items,
         stripeCli,
-        curCusProduct,
+        cusProducts: [curCusProduct, attachParams.curScheduledProduct],
       });
     }
   }
@@ -175,10 +175,12 @@ const handleStripeSubUpdate = async ({
 };
 
 const billForRemainingUsages = async ({
+  logger,
   sb,
   attachParams,
   curCusProduct,
 }: {
+  logger: any;
   sb: SupabaseClient;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
@@ -238,11 +240,11 @@ const billForRemainingUsages = async ({
   });
 
   // 2. Add items to invoice
-  console.log("Bill for remaining usages");
+  logger.info("Bill for remaining usages");
   for (const item of itemsToInvoice) {
     const amount = getPriceForOverage(item.price, item.overage);
 
-    console.log(
+    logger.info(
       `   feature: ${item.featureId}, overage: ${item.overage}, amount: ${amount}`
     );
 
@@ -309,10 +311,11 @@ export const handleUpgrade = async ({
   curCusProduct: FullCusProduct;
   curFullProduct: FullProduct;
 }) => {
+  const logger = req.logtail;
   const { org, customer, products } = attachParams;
   let product = products[0];
 
-  console.log(
+  logger.info(
     `Upgrading ${curFullProduct.name} to ${product.name} for ${customer.id}`
   );
 
@@ -320,7 +323,7 @@ export const handleUpgrade = async ({
 
   // 1. If current product is free, retire old product
   if (isFreeProduct(curFullProduct.prices)) {
-    console.log("NOTE: Current product is free, using add product flow");
+    logger.info("NOTE: Current product is free, using add product flow");
     await handleAddProduct({
       req,
       res,
@@ -331,7 +334,7 @@ export const handleUpgrade = async ({
 
   // 2. TO FIX: If current product is a trial, just start a new period (with new subscription_ids)
   if (curCusProduct.trial_ends_at && curCusProduct.trial_ends_at > Date.now()) {
-    console.log(
+    logger.info(
       "NOTE: Current product is a trial, cancel and start new subscription"
     );
 
@@ -358,14 +361,15 @@ export const handleUpgrade = async ({
   const disableFreeTrial = false;
 
   // 1. Bill for remaining usages
-  console.log("1. Bill for remaining usages");
+  logger.info("1. Bill for remaining usages");
   await billForRemainingUsages({
     sb: req.sb,
     attachParams,
     curCusProduct,
+    logger,
   });
 
-  console.log("2. Updating current subscription to new product");
+  logger.info("2. Updating current subscription to new product");
 
   let { subUpdate, newSubIds, invoiceIds, remainingExistingSubIds } =
     await handleStripeSubUpdate({
@@ -376,7 +380,7 @@ export const handleUpgrade = async ({
       disableFreeTrial,
     });
 
-  console.log(
+  logger.info(
     "2.1. Remove old subscription ID from old cus product and expire"
   );
   await CusProductService.update({
@@ -395,15 +399,15 @@ export const handleUpgrade = async ({
   });
 
   if (remainingExistingSubIds && remainingExistingSubIds.length > 0) {
-    console.log("2.2. Canceling old subscriptions");
+    logger.info("2.2. Canceling old subscriptions");
     for (const subId of remainingExistingSubIds) {
-      console.log("   - Cancelling old subscription", subId);
+      logger.info("   - Cancelling old subscription", subId);
       await stripeCli.subscriptions.cancel(subId);
     }
   }
 
   // Handle backend
-  console.log("3. Creating new full cus product");
+  logger.info("3. Creating new full cus product");
   await createFullCusProduct({
     sb: req.sb,
     attachParams: attachToInsertParams(attachParams, products[0]),
@@ -416,8 +420,8 @@ export const handleUpgrade = async ({
   });
 
   // Create invoices
-  console.log("4. Creating invoices");
-  console.log("Invoice IDs: ", invoiceIds);
+  logger.info("4. Creating invoices");
+  logger.info("Invoice IDs: ", invoiceIds);
   const batchInsertInvoice = [];
   for (const invoiceId of invoiceIds) {
     batchInsertInvoice.push(async () => {
@@ -434,7 +438,7 @@ export const handleUpgrade = async ({
   }
 
   await Promise.all(batchInsertInvoice);
-  console.log("✅ Done!");
+  logger.info("✅ Done!");
 
   res.status(200).json({
     success: true,

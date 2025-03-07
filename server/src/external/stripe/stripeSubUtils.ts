@@ -15,6 +15,7 @@ import { getCusPaymentMethod } from "./stripeCusUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { isStripeCardDeclined } from "./stripeCardUtils.js";
+import { differenceInSeconds } from "date-fns";
 
 export const createStripeSubscription = async ({
   stripeCli,
@@ -346,4 +347,16 @@ export const getStripeSchedules = async ({
   let schedulesAndSubs = await Promise.all(batchGet);
 
   return schedulesAndSubs.filter((schedule) => schedule !== null);
+};
+
+// OTHERS
+export const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
+  if (sub.cancel_at_period_end) {
+    return false;
+  }
+
+  return (
+    differenceInSeconds(sub.current_period_end * 1000, sub.cancel_at! * 1000) >
+    20
+  );
 };

@@ -19,7 +19,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { Decimal } from "decimal.js";
 
-const BillintIntervalOrder = [
+const BillingIntervalOrder = [
   BillingInterval.Year,
   BillingInterval.SemiAnnual,
   BillingInterval.Quarter,
@@ -65,8 +65,8 @@ export const getBillingInterval = (prices: Price[]) => {
   try {
     pricesCopy.sort((a, b) => {
       return (
-        BillintIntervalOrder.indexOf(a.config!.interval!) -
-        BillintIntervalOrder.indexOf(b.config!.interval!)
+        BillingIntervalOrder.indexOf(b.config!.interval!) -
+        BillingIntervalOrder.indexOf(a.config!.interval!)
       );
     });
   } catch (error) {

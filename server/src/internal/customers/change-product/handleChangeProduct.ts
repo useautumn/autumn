@@ -3,33 +3,24 @@ import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
   attachToInsertParams,
+  getPricesForProduct,
   isFreeProduct,
   isProductUpgrade,
-  isSameBillingInterval,
 } from "@/internal/products/productUtils.js";
 import Stripe from "stripe";
 
-import {
-  BillingInterval,
-  CusProductWithProduct,
-  ErrCode,
-  FullCusProduct,
-  FullProduct,
-} from "@autumn/shared";
+import { BillingInterval, ErrCode, FullCusProduct } from "@autumn/shared";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 
-import { CusProductService } from "../products/CusProductService.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { handleUpgrade } from "./handleUpgrade.js";
-import { differenceInDays, sub } from "date-fns";
-import {
-  getStripeSubs,
-  getSubItemsForCusProduct,
-} from "@/external/stripe/stripeSubUtils.js";
+import { differenceInDays } from "date-fns";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { handleDowngrade } from "./handleDowngrade.js";
+import { getPricesForCusProduct } from "./scheduleUtils.js";
 
 const scheduleStripeSubscription = async ({
   attachParams,
@@ -211,7 +202,15 @@ export const handleChangeProduct = async ({
     env: customer.env,
   });
 
-  const isUpgrade = isProductUpgrade(curFullProduct, product);
+  let curPrices = getPricesForCusProduct({
+    cusProduct: attachParams.curCusProduct!,
+  });
+  let newPrices = attachParams.prices;
+
+  const isUpgrade = isProductUpgrade({
+    prices1: curPrices,
+    prices2: newPrices,
+  });
 
   if (!isUpgrade) {
     await handleDowngrade({

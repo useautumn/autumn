@@ -663,28 +663,28 @@ export class CusProductService {
     });
 
     if (scheduledProduct) {
-      let batchCancelSchedule = [];
+      // let batchCancelSchedule = [];
 
-      if (
-        scheduledProduct.scheduled_ids &&
-        scheduledProduct.scheduled_ids.length > 0
-      ) {
-        let scheduleIds = scheduledProduct.scheduled_ids;
-        const cancelSchedule = async (scheduleId: string) => {
-          try {
-            await stripeCli.subscriptionSchedules.cancel(scheduleId);
-          } catch (error: any) {
-            console.log(
-              `   - failed to cancel stripe schedule: ${scheduleId}, product: ${scheduledProduct.product.name}, org: ${org.slug}`,
-              error.message
-            );
-          }
-        };
-        for (const scheduleId of scheduleIds) {
-          batchCancelSchedule.push(cancelSchedule(scheduleId));
-        }
-        await Promise.all(batchCancelSchedule);
-      }
+      // if (
+      //   scheduledProduct.scheduled_ids &&
+      //   scheduledProduct.scheduled_ids.length > 0
+      // ) {
+      //   let scheduleIds = scheduledProduct.scheduled_ids;
+      //   const cancelSchedule = async (scheduleId: string) => {
+      //     try {
+      //       await stripeCli.subscriptionSchedules.cancel(scheduleId);
+      //     } catch (error: any) {
+      //       console.log(
+      //         `   - failed to cancel stripe schedule: ${scheduleId}, product: ${scheduledProduct.product.name}, org: ${org.slug}`,
+      //         error.message
+      //       );
+      //     }
+      //   };
+      //   for (const scheduleId of scheduleIds) {
+      //     batchCancelSchedule.push(cancelSchedule(scheduleId));
+      //   }
+      //   await Promise.all(batchCancelSchedule);
+      // }
 
       await sb.from("customer_products").delete().eq("id", scheduledProduct.id);
     }

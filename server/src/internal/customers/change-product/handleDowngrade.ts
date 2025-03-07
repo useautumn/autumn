@@ -14,6 +14,7 @@ import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { BillingInterval } from "@autumn/shared";
 import {
   cancelFutureProductSchedule,
+  getScheduleIdsFromCusProducts,
   updateScheduledSubWithNewItems,
 } from "./scheduleUtils.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
@@ -54,6 +55,7 @@ const scheduleStripeSubscription = async ({
   const newSubscriptionSchedule = await stripeCli.subscriptionSchedules.create({
     customer: customer.processor.id,
     start_date: endOfBillingPeriod,
+
     phases: [
       {
         items: subItems,
@@ -94,13 +96,14 @@ export const handleDowngrade = async ({
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
 }) => {
+  const logger = req.logtail;
   let product = attachParams.products[0];
-  console.log(
+  logger.info(
     `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
   );
 
   // Make use of stripe subscription schedules to handle the downgrade
-  console.log("1. Cancelling current subscription (at period end)");
+  logger.info("1. Cancelling current subscription (at period end)");
   const stripeCli = createStripeCli({
     org: attachParams.org,
     env: attachParams.customer.env,
@@ -142,14 +145,19 @@ export const handleDowngrade = async ({
   }
 
   // 3. Schedule new subscription IF new product is not free...
-  console.log("2. Schedule new subscription");
+  logger.info("2. Schedule new subscription");
 
   // 1. Fetch scheduled subs
+  let oldScheduledIds: string[] = getScheduleIdsFromCusProducts({
+    cusProducts: [curCusProduct, attachParams.curScheduledProduct],
+  });
+
   let schedules: any[] = [];
-  if (curCusProduct.scheduled_ids && curCusProduct.scheduled_ids.length > 0) {
+
+  if (oldScheduledIds.length > 0) {
     schedules = await getStripeSchedules({
       stripeCli,
-      scheduleIds: curCusProduct.scheduled_ids,
+      scheduleIds: oldScheduledIds,
     });
   }
 
@@ -158,16 +166,8 @@ export const handleDowngrade = async ({
     attachParams,
   });
 
-  // 1. Cancel any future scheduled products
-  await cancelFutureProductSchedule({
-    sb: req.sb,
-    org: attachParams.org,
-    stripeCli,
-    cusProducts: attachParams.cusProducts!,
-    product: product,
-  });
-
   let scheduledIds: string[] = [];
+
   for (const itemSet of itemSets) {
     let scheduleObj = schedules.find(
       (schedule) => schedule.interval === itemSet.interval
@@ -178,18 +178,21 @@ export const handleDowngrade = async ({
         scheduleObj,
         newItems: itemSet.items,
         stripeCli,
-        curCusProduct,
+        cusProducts: [curCusProduct, attachParams.curScheduledProduct],
       });
       scheduledIds.push(scheduleObj.schedule.id);
-      res.status(200).send({ success: true });
-      return;
     } else {
-      const { otherSubItems, otherSub } = intervalToOtherSubs[itemSet.interval];
+      const otherSubObj = intervalToOtherSubs[itemSet.interval];
 
-      let otherCusProducts = await getCusProductsWithStripeSubIds({
-        cusProducts: attachParams.cusProducts!,
-        stripeSubId: otherSub.id,
-      });
+      let otherSub = otherSubObj?.otherSub || null;
+      let otherSubItems = otherSubObj?.otherSubItems || [];
+
+      let otherCusProducts = otherSub
+        ? await getCusProductsWithStripeSubIds({
+            cusProducts: attachParams.cusProducts!,
+            stripeSubId: otherSub.id,
+          })
+        : [];
 
       // If there is other sub items
       itemSet.items.push(
@@ -223,8 +226,6 @@ export const handleDowngrade = async ({
     }
   }
 
-  // 2. If there are no item sets (downgrade to free), remove from scheduled ids?
-
   // Remove scheduled ids from curCusProduct
   await CusProductService.update({
     sb: req.sb,
@@ -236,8 +237,42 @@ export const handleDowngrade = async ({
     },
   });
 
+  // For scheduled products that are not in same interval, remove from schedule
+  for (const scheduleObj of schedules) {
+    const { schedule, interval } = scheduleObj;
+
+    let intervalsToRemove = [];
+    if (!itemSets.some((itemSet) => itemSet.interval === interval)) {
+      intervalsToRemove.push(interval);
+    }
+
+    await cancelFutureProductSchedule({
+      sb: req.sb,
+      org: attachParams.org,
+      stripeCli,
+      cusProducts: attachParams.cusProducts!,
+      product: product,
+      includeOldItems: false,
+      logger: req.logtail,
+      inIntervals: intervalsToRemove,
+    });
+  }
+
+  // // Handle free product
+  // if (itemSets.length === 0) {
+  //   await cancelFutureProductSchedule({
+  //     sb: req.sb,
+  //     org: attachParams.org,
+  //     stripeCli,
+  //     cusProducts: attachParams.cusProducts!,
+  //     product: product,
+  //     includeOldItems: false,
+  //     logger: req.logtail,
+  //   });
+  // }
+
   // 4. Update cus product
-  console.log("3. Inserting new full cus product (starts at period end)");
+  logger.info("3. Inserting new full cus product (starts at period end)");
   await createFullCusProduct({
     sb: req.sb,
     attachParams: attachToInsertParams(attachParams, product),
