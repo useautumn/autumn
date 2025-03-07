@@ -30,8 +30,6 @@ import {
   roundPriceAmounts,
 } from "./priceUtils.js";
 import { PriceService } from "./PriceService.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { createStripeMeteredPrice } from "@/external/stripe/stripePriceUtils.js";
 import { CusProductService } from "../customers/products/CusProductService.js";
 import { isFreeProduct } from "../products/productUtils.js";
 

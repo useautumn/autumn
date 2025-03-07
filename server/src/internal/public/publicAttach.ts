@@ -67,7 +67,7 @@ export const handlePublicAttach = async (req: any, res: any) => {
       if (done) return;
 
       // 3. Check for stripe connection
-      await checkStripeConnections({ req, res, attachParams });
+      await checkStripeConnections({ req, attachParams });
 
       // -------------------- ATTACH PRODUCT --------------------
 
@@ -84,7 +84,7 @@ export const handlePublicAttach = async (req: any, res: any) => {
       if (
         (!curCusProduct && newProductFree) ||
         (curProductFree && newProductFree) ||
-        (attachParams.product.is_add_on && newProductFree)
+        (attachParams.products[0].is_add_on && newProductFree)
       ) {
         console.log("PUBLIC SCENARIO 1: ADDING FREE PRODUCT");
         await handleAddFreeProduct({
@@ -99,6 +99,7 @@ export const handlePublicAttach = async (req: any, res: any) => {
       console.log("PUBLIC SCENARIO 2: CREATING CHECKOUT");
       await handleCreateCheckout({
         sb,
+        req,
         res,
         attachParams,
       });

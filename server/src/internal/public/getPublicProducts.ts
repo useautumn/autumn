@@ -41,7 +41,10 @@ const PricingPlanSchema = z.object({
 // 1. Sort by upgrade / downgrade
 const sortProducts = (products: any[]) => {
   products.sort((a: FullProduct, b: FullProduct) => {
-    const isUpgrade = isProductUpgrade(a, b);
+    const isUpgrade = isProductUpgrade({
+      prices1: a.prices,
+      prices2: b.prices,
+    });
     if (isUpgrade) {
       return -1;
     }
@@ -271,6 +274,8 @@ publicProductsRouter.get("", async (req: any, res: any) => {
     });
 
     // 1. Sort prices
+    // Sort products
+    sortProducts(products);
     sortProductPrices(products);
 
     // 1. Process products
