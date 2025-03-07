@@ -1,4 +1,5 @@
 import {
+  AllowanceType,
   CusProductSchema,
   EntInterval,
   FullCustomerEntitlement,
@@ -69,6 +70,47 @@ const resetCustomerEntitlement = async ({
     });
 
     // 3. Update the next_reset_at for each entitlement
+
+    // Handle if entitlement changed to unlimited...
+    let entitlement = cusEnt.entitlement;
+    if (entitlement.allowance_type === AllowanceType.Unlimited) {
+      await CustomerEntitlementService.update({
+        sb,
+        id: cusEnt.id,
+        updates: {
+          unlimited: true,
+          next_reset_at: null,
+        },
+      });
+
+      console.log(
+        `Reset ${cusEnt.id} | customer: ${chalk.yellow(
+          cusEnt.customer_id
+        )} | feature: ${chalk.yellow(
+          cusEnt.feature_id
+        )} | new balance: unlimited`
+      );
+      return;
+    }
+
+    if (entitlement.interval === EntInterval.Lifetime) {
+      await CustomerEntitlementService.update({
+        sb,
+        id: cusEnt.id,
+        updates: {
+          next_reset_at: null,
+        },
+      });
+
+      console.log(
+        `Reset ${cusEnt.id} | customer: ${chalk.yellow(
+          cusEnt.customer_id
+        )} | feature: ${chalk.yellow(
+          cusEnt.feature_id
+        )} | reset to lifetime (next_reset_at: null)`
+      );
+      return;
+    }
     const nextResetAt = getNextResetAt(
       new Date(cusEnt.next_reset_at!),
       cusEnt.entitlement.interval as EntInterval
@@ -116,17 +158,21 @@ export const cronTask = async () => {
       sb,
     });
 
-    let resets = [];
-    for (const cusEnt of cusEntitlements) {
-      resets.push(
-        resetCustomerEntitlement({
-          sb,
-          cusEnt: cusEnt as FullCustomerEntitlementWithProduct,
-        })
-      );
-    }
+    const batchSize = 20;
+    for (let i = 0; i < cusEntitlements.length; i += batchSize) {
+      const batch = cusEntitlements.slice(i, i + batchSize);
+      const batchResets = [];
+      for (const cusEnt of batch) {
+        batchResets.push(
+          resetCustomerEntitlement({
+            sb,
+            cusEnt: cusEnt as FullCustomerEntitlementWithProduct,
+          })
+        );
+      }
 
-    await Promise.all(resets);
+      await Promise.all(batchResets);
+    }
 
     console.log(
       "FINISHED RESET CRON:",
