@@ -243,9 +243,6 @@ export class ProductService {
       .eq("env", env);
 
     if (error) {
-      if (error.code !== "PGRST116") {
-        return [];
-      }
       throw error;
     }
 

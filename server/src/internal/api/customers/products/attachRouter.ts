@@ -358,15 +358,15 @@ attachRouter.post("/attach", async (req: any, res) => {
     }
 
     // SCENARIO 2: Invoice only
-    // if (invoiceOnly) {
-    //   await handleInvoiceOnly({
-    //     req,
-    //     res,
-    //     attachParams,
-    //     curCusProduct,
-    //   });
-    //   return;
-    // }
+    if (invoiceOnly) {
+      await handleInvoiceOnly({
+        req,
+        res,
+        attachParams,
+        curCusProduct,
+      });
+      return;
+    }
 
     if (useCheckout) {
       logger.info("SCENARIO 2: USING CHECKOUT");

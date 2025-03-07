@@ -244,8 +244,11 @@ export const cancelFutureProductSchedule = async ({
       }
 
       const subWithSameInterval = curSubs.find(
-        (sub) => sub.items.data[0].price.recurring?.interval === interval
+        (sub) =>
+          sub.items.data.length > 0 &&
+          sub.items.data[0]?.price?.recurring?.interval === interval
       );
+
       if (subWithSameInterval) {
         await stripeCli.subscriptions.update(subWithSameInterval.id, {
           cancel_at: null,
@@ -280,7 +283,7 @@ export const cancelFutureProductSchedule = async ({
     for (const cusProduct of cusProducts) {
       // 1. Check if contains one of the curMainSubIds
       if (
-        cusProduct.id !== curMainProduct.id &&
+        cusProduct.id === curMainProduct.id ||
         !curMainSubIds?.some((subId) =>
           cusProduct?.subscription_ids?.includes(subId)
         )
