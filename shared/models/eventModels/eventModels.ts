@@ -13,6 +13,7 @@ export const EventSchema = z.object({
   org_id: z.string(),
   timestamp: z.number(),
   internal_customer_id: z.string(),
+  value: z.number().nullish(),
 });
 
 export const CreateEventSchema = z.object({
@@ -21,6 +22,7 @@ export const CreateEventSchema = z.object({
   properties: z.record(z.string(), z.any()).nullish(),
   timestamp: z.number().nullish(),
   idempotency_key: z.string().nullish(),
+  value: z.number().nullish(),
 });
 
 export type Event = z.infer<typeof EventSchema>;
