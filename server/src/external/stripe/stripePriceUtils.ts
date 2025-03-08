@@ -459,10 +459,8 @@ export const createStripePriceIFNotExist = async ({
       );
 
       if (!stripePrice.active) {
-        if (!stripePrice.active) {
-          config.stripe_price_id = undefined;
-          config.stripe_meter_id = undefined;
-        }
+        config.stripe_price_id = undefined;
+        config.stripe_meter_id = undefined;
       }
 
       if (config.stripe_product_id) {

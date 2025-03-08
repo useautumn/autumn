@@ -28,13 +28,16 @@ export const handleAttachRaceCondition = async ({
 
     let originalJson = res.json;
     res.json = async function (body: any) {
-      if (lockKey) {
+      try {
         await clearLock({ lockKey, logger: req.logtail });
+      } catch (error) {
+        req.logtail.warn("❗️❗️ Error clearing lock");
+        req.logtail.warn(error);
       }
       originalJson.call(this, body);
     };
 
-    // return lockKey;
+    return lockKey;
   } catch (error) {
     if (error instanceof RecaseError) {
       throw error;
