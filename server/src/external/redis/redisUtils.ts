@@ -2,7 +2,13 @@ import { ErrCode } from "@/errors/errCodes.js";
 import { QueueManager } from "@/queue/QueueManager.js";
 import RecaseError from "@/utils/errorUtils.js";
 
-export const handleAttachRaceCondition = async ({ req }: { req: any }) => {
+export const handleAttachRaceCondition = async ({
+  req,
+  res,
+}: {
+  req: any;
+  res: any;
+}) => {
   const redisConn = await QueueManager.getConnection({ useBackup: false });
   const customerId = req.body.customer_id;
   const orgId = req.orgId;
@@ -19,7 +25,16 @@ export const handleAttachRaceCondition = async ({ req }: { req: any }) => {
     }
     // Create lock with 5 second timeout
     await redisConn.set(lockKey, "1", "PX", 5000, "NX");
-    return lockKey;
+
+    let originalJson = res.json;
+    res.json = async function (body: any) {
+      if (lockKey) {
+        await clearLock({ lockKey, logger: req.logtail });
+      }
+      originalJson.call(this, body);
+    };
+
+    // return lockKey;
   } catch (error) {
     if (error instanceof RecaseError) {
       throw error;

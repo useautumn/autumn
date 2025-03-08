@@ -149,21 +149,11 @@ stripeWebhookRouter.post(
         res: response,
         action: "stripe webhook",
       });
-      // if (error instanceof RecaseError) {
-      //   error.print();
-      //   response
-      //     .status(500)
-      //     .send(`Error handling stripe webhook event: ${error}`);
-      //   return;
-      // }
-      // console.log("Unhandled error in stripe webhook event: ", error);
-      // response
-      //   .status(500)
-      //   .send(`Unhandled error in stripe webhook event: ${error}`);
-      // return;
+      return;
     }
 
-    response.send();
+    // DO NOT DELETE -- RESPONSIBLE FOR SENDING SUCCESSFUL RESPONSE TO STRIPE...
+    response.status(200).send();
   }
 );
 

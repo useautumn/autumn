@@ -179,15 +179,19 @@ const handleUsageInArrear = async ({
   }
 
   const usage = new Decimal(allowance).minus(minBalance).toNumber();
+  const billingUnits = (price.config as UsagePriceConfig).billing_units || 1;
+  const roundedUsage =
+    Math.ceil(new Decimal(usage).div(billingUnits).toNumber()) * billingUnits;
+
   const usageTimestamp = Math.round(
     subDays(new Date(invoice.created * 1000), 1).getTime() / 1000
   );
 
-  const meterEvent = await stripeCli.billing.meterEvents.create({
+  await stripeCli.billing.meterEvents.create({
     event_name: price.id!,
     payload: {
       stripe_customer_id: customer.processor.id,
-      value: Math.round(usage).toString(),
+      value: roundedUsage.toString(),
     },
     timestamp: usageTimestamp,
   });
@@ -197,7 +201,7 @@ const handleUsageInArrear = async ({
     `✅ Submitted meter event for customer ${customer.id}, feature: ${feature.id}`
   );
   logger.info(
-    `Allowance: ${allowance}, Min Balance: ${minBalance}, Usage: ${usage}`
+    `Allowance: ${allowance}, Min Balance: ${minBalance}, Usage: ${usage}, Rounded: ${roundedUsage}`
   );
 
   let invoiceCreatedStr = formatUnixToDateTime(invoice.created * 1000);

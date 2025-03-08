@@ -301,12 +301,13 @@ export const handleSubscriptionDeleted = async ({
     });
 
     // Cancel other subscriptions
+
     await cancelCusProductSubscriptions({
       sb,
       cusProduct,
       org,
       env,
-      excludeIds: [cusProduct.id],
+      excludeIds: [subscription.id],
     });
   };
 

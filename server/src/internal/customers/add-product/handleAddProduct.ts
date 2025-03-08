@@ -235,7 +235,7 @@ const handleOneOffPrices = async ({
   });
 
   console.log("   ✅ Successfully attached product");
-  res.status(200).send({
+  res.status(200).json({
     success: true,
     message: `Successfully purchased ${products
       .map((p) => p.name)
@@ -317,5 +317,5 @@ export const handleAddProduct = async ({
 
   logger.info("Successfully created full cus product");
 
-  res.status(200).send({ success: true });
+  res.status(200).json({ success: true });
 };
