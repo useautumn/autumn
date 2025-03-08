@@ -8,12 +8,10 @@ import {
   FeatureOptionsSchema,
   FullCusProduct,
   Price,
-  ProcessorType,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 import {
   createStripeCusIfNotExists,
-  createStripeCustomer,
   getCusPaymentMethod,
 } from "@/external/stripe/stripeCusUtils.js";
 import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
@@ -41,6 +39,11 @@ import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAdd
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoiceOnly.js";
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
+
+import {
+  clearLock,
+  handleAttachRaceCondition,
+} from "@/external/redis/redisUtils.js";
 
 export const attachRouter = Router();
 
@@ -276,7 +279,10 @@ attachRouter.post("/attach", async (req: any, res) => {
   let publicStr = req.isPublic ? "(Public) " : "";
   logger.info(`${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
 
+  let lockKey;
   try {
+    lockKey = await handleAttachRaceCondition({ req });
+
     z.array(FeatureOptionsSchema).parse(optionsListInput);
 
     // Get curCusProducts too...
@@ -403,5 +409,9 @@ attachRouter.post("/attach", async (req: any, res) => {
     });
   } catch (error: any) {
     handleRequestError({ req, res, error, action: "attach product" });
+  } finally {
+    if (lockKey) {
+      await clearLock({ lockKey, logger });
+    }
   }
 });
