@@ -109,6 +109,24 @@ export const validateFeature = (data: any) => {
   }
 };
 
+export const initNewFeature = ({
+  data,
+  orgId,
+  env,
+}: {
+  data: any;
+  orgId: string;
+  env: any;
+}) => {
+  return {
+    ...data,
+    org_id: orgId,
+    env,
+    created_at: Date.now(),
+    internal_id: generateId("fe"),
+  };
+};
+
 featureApiRouter.get("", async (req: any, res) => {
   let features = await FeatureService.getFromReq(req);
   res
