@@ -170,7 +170,12 @@ export const checkStripeProductExists = async ({
     createNew = true;
   } else {
     try {
-      await stripeCli.products.retrieve(product.processor!.id);
+      let stripeProduct = await stripeCli.products.retrieve(
+        product.processor!.id
+      );
+      if (!stripeProduct.active) {
+        createNew = true;
+      }
     } catch (error) {
       createNew = true;
     }

@@ -392,6 +392,47 @@ const getProductIdFromPrice = async ({
   }
 };
 
+export const pricesToInvoiceItems = async ({
+  sb,
+  stripeCli,
+  attachParams,
+  stripeInvoiceId,
+}: {
+  sb: SupabaseClient;
+  stripeCli: Stripe;
+  attachParams: AttachParams;
+  stripeInvoiceId: string;
+}) => {
+  const { prices, optionsList, entitlements, products, customer } =
+    attachParams;
+  for (const price of prices) {
+    // Calculate amount
+    const options = getPriceOptions(price, optionsList);
+    const entitlement = getPriceEntitlement(price, entitlements);
+    const { amountPerUnit, quantity } = getPriceAmount(price, options!);
+
+    let allowanceStr = "";
+    if (entitlement) {
+      allowanceStr =
+        entitlement.allowance_type == AllowanceType.Unlimited
+          ? "Unlimited"
+          : entitlement.allowance_type == AllowanceType.None
+          ? "None"
+          : `${entitlement.allowance}`;
+      allowanceStr = `x ${allowanceStr} (${entitlement.feature.name})`;
+    }
+
+    let product = getProductForPrice(price, products)!;
+
+    await stripeCli.invoiceItems.create({
+      customer: customer.processor.id,
+      amount: amountPerUnit * quantity * 100,
+      invoice: stripeInvoiceId,
+      description: `Invoice for ${product.name} -- ${quantity}${allowanceStr}`,
+    });
+  }
+};
+
 export const createStripePriceIFNotExist = async ({
   sb,
   stripeCli,
@@ -418,14 +459,29 @@ export const createStripePriceIFNotExist = async ({
       );
 
       if (!stripePrice.active) {
-        throw new Error("inactive price");
+        if (!stripePrice.active) {
+          config.stripe_price_id = undefined;
+          config.stripe_meter_id = undefined;
+        }
+      }
+
+      if (config.stripe_product_id) {
+        const stripeProduct = await stripeCli.products.retrieve(
+          config.stripe_product_id as string
+        );
+
+        if (!stripeProduct.active) {
+          config.stripe_product_id = null;
+        }
       }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log("Stripe price not found / inactive");
+    console.log("Error:", error.message);
     config.stripe_price_id = undefined;
     config.stripe_meter_id = undefined;
   }
+
   if (billingType == BillingType.FixedCycle) {
     if (!config.stripe_price_id) {
       console.log("Creating stripe fixed cycle price");
@@ -500,46 +556,5 @@ export const createStripePriceIFNotExist = async ({
         org,
       });
     }
-  }
-};
-
-export const pricesToInvoiceItems = async ({
-  sb,
-  stripeCli,
-  attachParams,
-  stripeInvoiceId,
-}: {
-  sb: SupabaseClient;
-  stripeCli: Stripe;
-  attachParams: AttachParams;
-  stripeInvoiceId: string;
-}) => {
-  const { prices, optionsList, entitlements, products, customer } =
-    attachParams;
-  for (const price of prices) {
-    // Calculate amount
-    const options = getPriceOptions(price, optionsList);
-    const entitlement = getPriceEntitlement(price, entitlements);
-    const { amountPerUnit, quantity } = getPriceAmount(price, options!);
-
-    let allowanceStr = "";
-    if (entitlement) {
-      allowanceStr =
-        entitlement.allowance_type == AllowanceType.Unlimited
-          ? "Unlimited"
-          : entitlement.allowance_type == AllowanceType.None
-          ? "None"
-          : `${entitlement.allowance}`;
-      allowanceStr = `x ${allowanceStr} (${entitlement.feature.name})`;
-    }
-
-    let product = getProductForPrice(price, products)!;
-
-    await stripeCli.invoiceItems.create({
-      customer: customer.processor.id,
-      amount: amountPerUnit * quantity * 100,
-      invoice: stripeInvoiceId,
-      description: `Invoice for ${product.name} -- ${quantity}${allowanceStr}`,
-    });
   }
 };

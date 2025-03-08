@@ -156,7 +156,6 @@ const initPrice = ({
     ...priceSchema.config,
     stripe_meter_id: null,
     stripe_price_id: null,
-    stripe_product_id: null,
     stripe_placeholder_price_id: null,
   };
 
