@@ -300,7 +300,7 @@ export default function CustomerProductView({
         buttonText: "Update Product",
         tooltipText: `You're editing the live product ${product.name} and updating it to a custom version for ${customer.name}`,
 
-        disabled: true, //TODO: remove this
+        disabled: false, //TODO: remove this
       };
     }
     if (hasChanges) {
