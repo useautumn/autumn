@@ -242,6 +242,12 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
       env: req.env,
     });
 
+    for (const event of events) {
+      if (!event.value) {
+        delete event.value;
+      }
+    }
+
     res.status(200).json({ events });
   } catch (error) {
     handleRequestError({ req, error, res, action: "get customer events" });

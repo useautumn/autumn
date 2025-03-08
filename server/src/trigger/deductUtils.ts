@@ -10,7 +10,7 @@ export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
   let aggregate = config.aggregate;
 
   if (meteredFeature.type == FeatureType.CreditSystem) {
-    return event.properties.value || DEFAULT_VALUE;
+    return event.value || event.properties.value || DEFAULT_VALUE;
   }
 
   if (aggregate.type == AggregateType.Count) {
@@ -19,7 +19,7 @@ export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
 
   if (aggregate.type == AggregateType.Sum) {
     let property = aggregate.property;
-    let value = event.properties[property] || DEFAULT_VALUE;
+    let value = event.value || event.properties[property] || DEFAULT_VALUE;
 
     let floatVal = parseFloat(value);
     if (isNaN(floatVal)) {
