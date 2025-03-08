@@ -117,25 +117,17 @@ export const handleExistingProduct = async ({
   attachParams,
   useCheckout = false,
   invoiceOnly = false,
+  isCustom = false,
 }: {
   req: any;
   res: any;
   attachParams: AttachParams;
   useCheckout?: boolean;
   invoiceOnly?: boolean;
+  isCustom?: boolean;
 }): Promise<{ curCusProduct: FullCusProduct | null; done: boolean }> => {
   const { sb, logtail: logger } = req;
-  const { customer, products } = attachParams;
-
-  const cusProducts = await CusService.getFullCusProducts({
-    sb,
-    internalCustomerId: customer.internal_id,
-    withProduct: true,
-    withPrices: true,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-  });
-
-  attachParams.cusProducts = cusProducts;
+  const { customer, products, cusProducts } = attachParams;
 
   if (products.length > 1) {
     return await handleExistingMultipleProducts({
@@ -148,7 +140,7 @@ export const handleExistingProduct = async ({
   let { curMainProduct, curSameProduct, curScheduledProduct }: any =
     await getExistingCusProducts({
       product,
-      cusProducts,
+      cusProducts: cusProducts || [],
     });
 
   logger.info(
@@ -160,6 +152,9 @@ export const handleExistingProduct = async ({
       curScheduledProduct?.product.name || "None"
     )}`
   );
+
+  attachParams.curCusProduct = curMainProduct;
+  attachParams.curScheduledProduct = curScheduledProduct;
 
   // Case 2: Current product is scheduled
   if (curScheduledProduct?.product.internal_id === product.internal_id) {
@@ -179,6 +174,7 @@ export const handleExistingProduct = async ({
       attachParams,
       req,
       res,
+      isCustom,
     });
   }
 
@@ -234,6 +230,7 @@ export const handleExistingProduct = async ({
     attachParams.products[0].is_add_on
   ) {
     curMainProduct = null;
+    attachParams.curCusProduct = undefined;
   }
 
   if (curMainProduct && invoiceOnly) {
@@ -244,9 +241,6 @@ export const handleExistingProduct = async ({
       statusCode: 400,
     });
   }
-
-  attachParams.curCusProduct = curMainProduct;
-  attachParams.curScheduledProduct = curScheduledProduct;
 
   return { curCusProduct: curMainProduct || null, done: false };
 };

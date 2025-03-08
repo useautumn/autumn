@@ -207,6 +207,7 @@ export const handleCheckoutSessionCompleted = async ({
   console.log("   - checkout.completed: creating full customer product");
 
   const products = attachParams.products;
+
   for (const product of products) {
     let pricesForProduct = getPricesForProduct(product, attachParams.prices);
     let isOneOff = pricesOnlyOneOff(pricesForProduct);

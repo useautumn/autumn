@@ -332,6 +332,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       attachParams,
       useCheckout,
       invoiceOnly,
+      isCustom,
     });
 
     await handlePublicAttachErrors({
@@ -382,11 +383,13 @@ attachRouter.post("/attach", async (req: any, res) => {
     // SCENARIO 4: Switching product
     if (curCusProduct) {
       logger.info("SCENARIO 3: SWITCHING PRODUCT");
+
       await handleChangeProduct({
         req,
         res,
         attachParams,
         curCusProduct,
+        isCustom,
       });
       return;
     }

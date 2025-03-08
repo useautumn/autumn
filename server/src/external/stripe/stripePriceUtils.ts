@@ -7,7 +7,6 @@ import {
   Price,
   UsagePriceConfig,
   FeatureOptions,
-  Entitlement,
   Product,
   AllowanceType,
   EntitlementWithFeature,
@@ -28,16 +27,18 @@ import {
   getProductForPrice,
   priceIsOneOffAndTiered,
 } from "@/internal/prices/priceUtils.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
+
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { nullOrUndefined } from "@/utils/genUtils.js";
-import { Decimal } from "decimal.js";
+
 import {
   createStripeFixedCyclePrice,
   createStripeInAdvancePrice,
   createStripeInArrearPrice,
 } from "./createStripePrice.js";
+
+import { getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";
 
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
@@ -74,6 +75,7 @@ export const priceToStripeItem = ({
   org,
   options,
   isCheckout = false,
+  existingUsage,
 }: {
   price: Price;
   relatedEnt: EntitlementWithFeature;
@@ -81,6 +83,7 @@ export const priceToStripeItem = ({
   org: Organization;
   options: FeatureOptions | undefined | null;
   isCheckout: boolean;
+  existingUsage: number;
 }) => {
   // TODO: Implement this
   const billingType = price.billing_type;
@@ -212,8 +215,7 @@ export const priceToStripeItem = ({
     };
   } else if (billingType == BillingType.InArrearProrated) {
     const config = price.config as UsagePriceConfig;
-    // For now, let quantity be 0...
-    let quantity = 0;
+    let quantity = existingUsage || 0;
     if (quantity == 0 && isCheckout) {
       // Get product id...
       lineItem = {
@@ -222,7 +224,7 @@ export const priceToStripeItem = ({
     } else {
       lineItem = {
         price: config.stripe_price_id,
-        quantity: quantity,
+        quantity,
       };
     }
 
@@ -255,7 +257,8 @@ export const getStripeSubItems = async ({
   attachParams: AttachParams;
   isCheckout?: boolean;
 }) => {
-  const { products, prices, entitlements, optionsList, org } = attachParams;
+  const { products, prices, entitlements, optionsList, org, cusProducts } =
+    attachParams;
 
   const checkoutRelevantPrices = getCheckoutRelevantPrices(prices);
   checkoutRelevantPrices.sort((a, b) => {
@@ -295,12 +298,16 @@ export const getStripeSubItems = async ({
     let subItems: any[] = [];
     let itemMetas: any[] = [];
 
-    let usage_features = [];
+    let usage_features: any[] = [];
 
     for (const price of prices) {
       const priceEnt = getPriceEntitlement(price, entitlements);
       const options = getEntOptions(optionsList, priceEnt);
       const billingType = getBillingType(price.config!);
+      const existingUsage = getExistingUsageFromCusProducts({
+        entitlement: priceEnt,
+        cusProducts: attachParams.cusProducts,
+      });
 
       if (
         billingType == BillingType.UsageInArrear ||
@@ -322,6 +329,7 @@ export const getStripeSubItems = async ({
         options,
         isCheckout,
         relatedEnt: priceEnt,
+        existingUsage,
       });
 
       if (!stripeItem) {
