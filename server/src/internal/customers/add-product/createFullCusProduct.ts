@@ -12,8 +12,10 @@ import {
   CollectionMethod,
   Organization,
   AppEnv,
+  FullCusProduct,
+  FullCustomerEntitlement,
 } from "@autumn/shared";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, nullish } from "@/utils/genUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
 import { Customer, FeatureType } from "@autumn/shared";
 import { EntitlementWithFeature, FullProduct } from "@autumn/shared";
@@ -31,38 +33,86 @@ import {
   getEntRelatedPrice,
 } from "@/internal/products/entitlements/entitlementUtils.js";
 import { getResetBalance } from "../entitlements/cusEntUtils.js";
+import { CusService } from "../CusService.js";
+import { getExistingCusProducts } from "./handleExistingProduct.js";
 
-export const initCusEntitlement = ({
+const initCusEntBalance = ({
   entitlement,
-  customer,
-  cusProductId,
-  freeTrial,
   options,
-  nextResetAt,
-  billLaterOnly = false,
   relatedPrice,
+  existingCusEnt,
 }: {
   entitlement: EntitlementWithFeature;
-  customer: Customer;
-  cusProductId: string;
-  freeTrial: FreeTrial | null;
   options?: FeatureOptions;
-  nextResetAt?: number;
-  billLaterOnly?: boolean;
   relatedPrice?: Price;
+  existingCusEnt?: FullCustomerEntitlement;
 }) => {
+  if (entitlement.feature.type === FeatureType.Boolean) {
+    return null;
+  }
+
   const resetBalance = getResetBalance({
     entitlement,
     options,
     relatedPrice,
   });
 
-  // 2. Define reset interval (interval at which balance is reset to quantity * allowance)
-  let reset_interval = entitlement.interval as EntInterval;
+  if (!existingCusEnt || !entitlement.carry_from_previous) {
+    return resetBalance;
+  }
+
+  let existingAllowanceType = existingCusEnt.entitlement.allowance_type;
+  if (
+    nullish(existingCusEnt.balance) ||
+    existingAllowanceType === AllowanceType.Unlimited
+  ) {
+    return resetBalance;
+  }
+
+  // Calculate existing usage
+  let existingAllowance = existingCusEnt.entitlement.allowance!;
+  let existingUsage = existingAllowance - existingCusEnt.balance!;
+
+  let newBalance = resetBalance! - existingUsage;
+
+  return newBalance;
+};
+
+const initCusEntNextResetAt = ({
+  entitlement,
+  nextResetAt,
+  keepResetIntervals,
+  existingCusEnt,
+  freeTrial,
+}: {
+  entitlement: EntitlementWithFeature;
+  nextResetAt?: number;
+  keepResetIntervals?: boolean;
+  existingCusEnt?: FullCustomerEntitlement;
+  freeTrial: FreeTrial | null;
+}) => {
+  // 1. If entitlement is boolean, or unlimited, or lifetime, then next reset at is null
+  if (
+    entitlement.feature.type === FeatureType.Boolean ||
+    entitlement.allowance_type === AllowanceType.Unlimited ||
+    entitlement.interval == EntInterval.Lifetime
+  ) {
+    return null;
+  }
+
+  // 2. If nextResetAt (hardcoded), just return that...
+  if (nextResetAt) {
+    return nextResetAt;
+  }
+
+  // 3. If keepResetIntervals is true, return existing next reset at...
+  if (keepResetIntervals && existingCusEnt?.next_reset_at) {
+    return existingCusEnt.next_reset_at;
+  }
+
+  // 4. Calculate next reset at...
   let nextResetAtCalculated = null;
   let trialEndTimestamp = freeTrialToStripeTimestamp(freeTrial);
-
-  // 2. If free trial applies, set next reset at to trial end timestamp
   if (
     freeTrial &&
     applyTrialToEntitlement(entitlement, freeTrial) &&
@@ -71,12 +121,56 @@ export const initCusEntitlement = ({
     nextResetAtCalculated = new Date(trialEndTimestamp! * 1000);
   }
 
-  if (reset_interval && reset_interval != EntInterval.Lifetime) {
-    nextResetAtCalculated = getNextEntitlementReset(
-      nextResetAtCalculated,
-      reset_interval
-    ).getTime();
-  }
+  let resetInterval = entitlement.interval as EntInterval;
+  nextResetAtCalculated = getNextEntitlementReset(
+    nextResetAtCalculated,
+    resetInterval
+  ).getTime();
+
+  return nextResetAtCalculated;
+};
+
+export const initCusEntitlement = ({
+  entitlement,
+  customer,
+  cusProductId,
+  freeTrial,
+  options,
+  nextResetAt,
+  relatedPrice,
+  existingCusEnt,
+  keepResetIntervals = false,
+}: {
+  entitlement: EntitlementWithFeature;
+  customer: Customer;
+  cusProductId: string;
+  freeTrial: FreeTrial | null;
+  options?: FeatureOptions;
+  nextResetAt?: number;
+  relatedPrice?: Price;
+  existingCusEnt?: FullCustomerEntitlement;
+  keepResetIntervals?: boolean;
+}) => {
+  // const resetBalance = getResetBalance({
+  //   entitlement,
+  //   options,
+  //   relatedPrice,
+  // });
+
+  let balance = initCusEntBalance({
+    entitlement,
+    options,
+    relatedPrice,
+    existingCusEnt,
+  });
+
+  let nextResetAtValue = initCusEntNextResetAt({
+    entitlement,
+    nextResetAt,
+    keepResetIntervals,
+    existingCusEnt,
+    freeTrial,
+  });
 
   // 3. Define expires at (TODO next time...)
   let isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
@@ -90,10 +184,7 @@ export const initCusEntitlement = ({
     usageAllowed = true;
   }
 
-  let nextResetNull =
-    isBooleanFeature ||
-    entitlement.allowance_type === AllowanceType.Unlimited ||
-    entitlement.interval == EntInterval.Lifetime;
+  // Calculate balance...
 
   return {
     id: generateId("cus_ent"),
@@ -111,9 +202,9 @@ export const initCusEntitlement = ({
     unlimited: isBooleanFeature
       ? null
       : entitlement.allowance_type === AllowanceType.Unlimited,
-    balance: isBooleanFeature ? null : resetBalance,
+    balance: isBooleanFeature ? null : balance,
     usage_allowed: usageAllowed,
-    next_reset_at: nextResetNull ? null : nextResetAt || nextResetAtCalculated,
+    next_reset_at: nextResetAtValue,
   };
 };
 
@@ -295,6 +386,32 @@ export const expireOrDeleteCusProduct = async ({
   }
 };
 
+export const getExistingCusProduct = async ({
+  sb,
+  cusProducts,
+  product,
+  internalCustomerId,
+}: {
+  sb: SupabaseClient;
+  cusProducts?: FullCusProduct[];
+  product: FullProduct;
+  internalCustomerId: string;
+}) => {
+  if (!cusProducts) {
+    cusProducts = await CusService.getFullCusProducts({
+      sb,
+      internalCustomerId,
+    });
+  }
+
+  const { curMainProduct } = await getExistingCusProducts({
+    product,
+    cusProducts: cusProducts as FullCusProduct[],
+  });
+
+  return curMainProduct;
+};
+
 export const createFullCusProduct = async ({
   sb,
   attachParams,
@@ -311,6 +428,8 @@ export const createFullCusProduct = async ({
   collectionMethod = CollectionMethod.ChargeAutomatically,
   subscriptionIds = [],
   subscriptionScheduleIds = [],
+
+  keepResetIntervals = false,
 }: {
   sb: SupabaseClient;
   attachParams: InsertCusProductParams;
@@ -328,6 +447,7 @@ export const createFullCusProduct = async ({
   collectionMethod?: CollectionMethod;
   subscriptionIds?: string[];
   subscriptionScheduleIds?: string[];
+  keepResetIntervals?: boolean;
 }) => {
   const {
     customer,
@@ -338,6 +458,17 @@ export const createFullCusProduct = async ({
     freeTrial,
     org,
   } = attachParams;
+
+  // Try to get current cus product or set to null...
+  let curCusProduct;
+  try {
+    curCusProduct = await getExistingCusProduct({
+      sb,
+      cusProducts: attachParams.cusProducts,
+      product,
+      internalCustomerId: customer.internal_id,
+    });
+  } catch (error) {}
 
   if (!product.is_add_on) {
     await expireOrDeleteCusProduct({
@@ -358,6 +489,9 @@ export const createFullCusProduct = async ({
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
     const relatedPrice = getEntRelatedPrice(entitlement, prices);
+    const existingCusEnt = curCusProduct?.customer_entitlements.find(
+      (ce) => ce.internal_feature_id === entitlement.internal_feature_id
+    );
 
     const cusEnt: any = initCusEntitlement({
       entitlement,
@@ -365,9 +499,10 @@ export const createFullCusProduct = async ({
       cusProductId: cusProdId,
       options: options || undefined,
       nextResetAt,
-      billLaterOnly,
       freeTrial: disableFreeTrial ? null : freeTrial,
       relatedPrice,
+      existingCusEnt,
+      keepResetIntervals,
     });
 
     cusEnts.push(cusEnt);

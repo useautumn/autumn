@@ -33,18 +33,21 @@ export const isProductUpgrade = ({
   prices1: Price[];
   prices2: Price[];
 }) => {
-  // if (product1.is_default) {
-  //   return true;
-  // } else if (product2.is_default) {
-  //   return false;
-  // }
-
-  // 1. If biling interval is same:
+  if (
+    prices1.every(
+      (p) => getBillingType(p.config!) === BillingType.UsageInArrear
+    ) &&
+    prices2.every(
+      (p) => getBillingType(p.config!) === BillingType.UsageInArrear
+    )
+  ) {
+    return true;
+  }
 
   let billingInterval1 = getBillingInterval(prices1);
   let billingInterval2 = getBillingInterval(prices2);
 
-  // 1. Get total price for each product
+  // 2. Get total price for each product
   const getTotalPrice = (prices: Price[]) => {
     // Get each product's price prorated to a year
     let totalPrice = new Decimal(0);
@@ -65,9 +68,11 @@ export const isProductUpgrade = ({
     return totalPrice.toNumber();
   };
 
+  // 3. Compare prices
   if (billingInterval1 == billingInterval2) {
     return getTotalPrice(prices1) < getTotalPrice(prices2);
   } else {
+    // If billing interval is different, compare the billing intervals
     return compareBillingIntervals(billingInterval1, billingInterval2) < 0;
   }
 };

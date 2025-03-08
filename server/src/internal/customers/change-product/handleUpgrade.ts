@@ -298,22 +298,73 @@ const billForRemainingUsages = async ({
   });
 };
 
+const handleOnlyEntsChanged = async ({
+  req,
+  res,
+  attachParams,
+  curCusProduct,
+}: {
+  req: any;
+  res: any;
+  attachParams: AttachParams;
+  curCusProduct: FullCusProduct;
+}) => {
+  const logger = req.logtail;
+  logger.info("Only entitlements changed, no need to update prices");
+
+  // Remove subscription from previous cus product
+  await CusProductService.update({
+    sb: req.sb,
+    cusProductId: curCusProduct.id,
+    updates: {
+      subscription_ids: [],
+    },
+  });
+
+  await createFullCusProduct({
+    sb: req.sb,
+    attachParams: attachToInsertParams(attachParams, attachParams.products[0]),
+    subscriptionIds: curCusProduct.subscription_ids || [],
+    disableFreeTrial: false,
+    keepResetIntervals: true,
+  });
+
+  logger.info("✅ Successfully updated entitlements for product");
+
+  res.status(200).json({
+    success: true,
+    message: `Successfully updated entitlements for ${curCusProduct.product.name}`,
+  });
+};
+
 export const handleUpgrade = async ({
   req,
   res,
   attachParams,
   curCusProduct,
   curFullProduct,
+  hasPricesChanged = true,
 }: {
   req: any;
   res: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
   curFullProduct: FullProduct;
+  hasPricesChanged?: boolean;
 }) => {
   const logger = req.logtail;
   const { org, customer, products } = attachParams;
   let product = products[0];
+
+  if (!hasPricesChanged) {
+    await handleOnlyEntsChanged({
+      req,
+      res,
+      attachParams,
+      curCusProduct,
+    });
+    return;
+  }
 
   logger.info(
     `Upgrading ${curFullProduct.name} to ${product.name} for ${customer.id}`
@@ -412,10 +463,10 @@ export const handleUpgrade = async ({
     sb: req.sb,
     attachParams: attachToInsertParams(attachParams, products[0]),
     subscriptionIds: newSubIds,
-    nextResetAt: subUpdate.current_period_end
-      ? subUpdate.current_period_end * 1000
-      : undefined,
-
+    // nextResetAt: subUpdate.current_period_end
+    //   ? subUpdate.current_period_end * 1000
+    //   : undefined,
+    keepResetIntervals: true,
     disableFreeTrial,
   });
 

@@ -106,6 +106,7 @@ export const createNewCustomer = async ({
         entitlements: product.entitlements,
         freeTrial: null, // TODO: Free trial not supported on default product yet
         optionsList: [],
+        cusProducts: [],
       },
       nextResetAt,
     });
