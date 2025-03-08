@@ -80,12 +80,21 @@ export const createStripeMeteredPrice = async ({
     };
   }
 
-  const stripePrice = await stripeCli.prices.create({
-    // product: product.processor!.id,
-    product_data: {
-      name: `${product.name} - ${feature!.name}`,
-    },
+  let productData = {};
+  if (config.stripe_product_id) {
+    productData = {
+      product: config.stripe_product_id,
+    };
+  } else {
+    productData = {
+      product_data: {
+        name: `${product.name} - ${feature!.name}`,
+      },
+    };
+  }
 
+  const stripePrice = await stripeCli.prices.create({
+    ...productData,
     ...priceAmountData,
     currency: org.default_currency,
     recurring: {
@@ -200,6 +209,19 @@ export const createStripeInAdvancePrice = async ({
     config.billing_units == 1 ? "" : `${config.billing_units} `
   }${relatedEnt.feature.name}`;
 
+  let productData = {};
+  if (config.stripe_product_id) {
+    productData = {
+      product: config.stripe_product_id,
+    };
+  } else {
+    productData = {
+      product_data: {
+        name: productName,
+      },
+    };
+  }
+
   if (priceIsOneOffAndTiered(price, relatedEnt)) {
     let stripeProduct = await stripeCli.products.create({
       name: productName,
@@ -209,9 +231,7 @@ export const createStripeInAdvancePrice = async ({
   } else if (price.config!.interval == BillingInterval.OneOff) {
     const amount = config.usage_tiers[0].amount;
     stripePrice = await stripeCli.prices.create({
-      product_data: {
-        name: productName,
-      },
+      ...productData,
       unit_amount_decimal: (amount * 100).toString(),
       currency: org.default_currency,
     });
@@ -234,9 +254,7 @@ export const createStripeInAdvancePrice = async ({
     }
 
     stripePrice = await stripeCli.prices.create({
-      product_data: {
-        name: productName,
-      },
+      ...productData,
       currency: org.default_currency,
       ...priceAmountData,
       recurring: {
@@ -245,6 +263,7 @@ export const createStripeInAdvancePrice = async ({
     });
 
     config.stripe_price_id = stripePrice.id;
+    config.stripe_product_id = stripePrice.product as string;
     let billingType = getBillingType(price.config!);
 
     // CREATE PLACEHOLDER PRICE FOR INARREAR PRORATED PRICING
@@ -365,12 +384,21 @@ export const createStripeInArrearPrice = async ({
     };
   }
 
-  const stripePrice = await stripeCli.prices.create({
-    // product: product.processor!.id,
-    product_data: {
-      name: `${product.name} - ${feature!.name}`,
-    },
+  let productData = {};
+  if (config.stripe_product_id) {
+    productData = {
+      product: config.stripe_product_id,
+    };
+  } else {
+    productData = {
+      product_data: {
+        name: `${product.name} - ${feature!.name}`,
+      },
+    };
+  }
 
+  const stripePrice = await stripeCli.prices.create({
+    ...productData,
     ...priceAmountData,
     currency: org.default_currency,
     recurring: {
@@ -381,6 +409,7 @@ export const createStripeInArrearPrice = async ({
   });
 
   config.stripe_price_id = stripePrice.id;
+  config.stripe_product_id = stripePrice.product as string;
   config.stripe_meter_id = meter!.id;
   await PriceService.update({
     sb,
