@@ -135,7 +135,10 @@ export class FeatureService {
     data: Feature[] | Feature;
   }) {
     // Insert feature into DB
-    let { error } = await sb.from("features").insert(data);
+    let { data: insertedData, error } = await sb
+      .from("features")
+      .insert(data)
+      .select();
 
     if (error) {
       if (error.code === "23505") {
@@ -148,6 +151,8 @@ export class FeatureService {
       }
       throw error;
     }
+
+    return insertedData;
   }
 
   static async deleteStrict({

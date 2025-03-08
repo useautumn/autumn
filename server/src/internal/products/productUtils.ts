@@ -2,12 +2,17 @@ import {
   AppEnv,
   BillingInterval,
   BillingType,
+  Entitlement,
+  EntitlementSchema,
   EntitlementWithFeature,
+  ErrCode,
   Feature,
   Organization,
   Price,
+  PriceSchema,
   PriceType,
   ProcessorType,
+  ProductSchema,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
@@ -25,6 +30,10 @@ import {
 } from "../customers/products/AttachParams.js";
 import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
 import { Decimal } from "decimal.js";
+import { generateId } from "@/utils/genUtils.js";
+import { PriceService } from "../prices/PriceService.js";
+import { EntitlementService } from "./entitlements/EntitlementService.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const isProductUpgrade = ({
   prices1,
@@ -216,4 +225,83 @@ export const attachToInsertParams = (
     prices: getPricesForProduct(product, attachParams.prices),
     entitlements: getEntitlementsForProduct(product, attachParams.entitlements),
   } as InsertCusProductParams;
+};
+
+// COPY PRODUCT
+export const copyProduct = async ({
+  sb,
+  product,
+  toOrgId,
+  toEnv,
+  features,
+}: {
+  sb: SupabaseClient;
+  product: FullProduct;
+  toOrgId: string;
+  toEnv: AppEnv;
+  features: Feature[];
+}) => {
+  const newProduct = {
+    ...product,
+    name: `${product.name}`,
+    id: `${product.id}`,
+    internal_id: generateId("prod"),
+    org_id: toOrgId,
+    env: toEnv,
+    processor: null,
+  };
+
+  const newPrices = product.prices.map((price) => {
+    let copiedPrice = structuredClone(price);
+
+    delete copiedPrice.config!.stripe_price_id;
+    delete (copiedPrice.config! as UsagePriceConfig).stripe_meter_id;
+    delete (copiedPrice.config! as UsagePriceConfig).stripe_product_id;
+
+    return PriceSchema.parse({
+      ...copiedPrice,
+      id: generateId("pr"),
+      org_id: toOrgId,
+      internal_product_id: newProduct.internal_id,
+      env: toEnv,
+    });
+  });
+
+  const newEntitlements = product.entitlements.map(
+    (entitlement: Entitlement) => {
+      let feature = features.find((f) => f.id === entitlement.feature_id);
+      if (!feature) {
+        throw new RecaseError({
+          message: `Feature ${entitlement.feature_id} not found`,
+          code: ErrCode.FeatureNotFound,
+          statusCode: 404,
+        });
+      }
+
+      return EntitlementSchema.parse({
+        ...entitlement,
+        id: generateId("ent"),
+        org_id: toOrgId,
+        internal_product_id: newProduct.internal_id,
+        internal_feature_id: feature.internal_id,
+      });
+    }
+  );
+
+  await ProductService.create({
+    sb,
+    product: ProductSchema.parse(newProduct),
+  });
+
+  await Promise.all([
+    PriceService.insert({
+      sb,
+      data: newPrices,
+    }),
+
+    EntitlementService.insert({
+      sb,
+      data: newEntitlements,
+    }),
+  ]);
 };

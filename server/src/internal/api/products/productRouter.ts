@@ -1,7 +1,13 @@
 import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { Router } from "express";
-import { CreateProductSchema, ProcessorType, Product } from "@autumn/shared";
+import {
+  AppEnv,
+  CreateFeatureSchema,
+  CreateProductSchema,
+  ProcessorType,
+  Product,
+} from "@autumn/shared";
 
 import RecaseError, {
   formatZodError,
@@ -21,6 +27,8 @@ import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUti
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
+import { initNewFeature } from "../features/featureApiRouter.js";
+import { copyProduct } from "@/internal/products/productUtils.js";
 
 export const productApiRouter = Router();
 
@@ -277,5 +285,97 @@ productApiRouter.post("/:productId", async (req: any, res) => {
     // res.status(200).send({ message: "Product updated" });
   } catch (error) {
     handleRequestError({ req, error, res, action: "Update product" });
+  }
+});
+
+productApiRouter.post("/:productId/copy", async (req: any, res) => {
+  const { productId } = req.params;
+  const sb = req.sb;
+  const orgId = req.orgId;
+  const env = req.env;
+
+  try {
+    if (env == AppEnv.Live) {
+      throw new RecaseError({
+        message: "Can only copy product from sandbox to live",
+        code: ErrCode.InvalidRequest,
+        statusCode: 400,
+      });
+    }
+
+    // 1. Check if product exists in live already...
+    const existingLiveProd = await ProductService.getProductStrict({
+      sb,
+      productId,
+      orgId,
+      env: AppEnv.Live,
+    });
+
+    if (existingLiveProd) {
+      throw new RecaseError({
+        message: "Product already exists in live... can't copy again",
+        code: ErrCode.ProductAlreadyExists,
+        statusCode: 400,
+      });
+    }
+
+    // 1. Get sandbox product
+    const sandboxProduct = await ProductService.getFullProductStrict({
+      sb,
+      productId,
+      orgId,
+      env,
+    });
+
+    let sandboxFeatures = await FeatureService.getFeatures({
+      sb,
+      orgId,
+      env,
+    });
+
+    let liveFeatures = await FeatureService.getFeatures({
+      sb,
+      orgId,
+      env: AppEnv.Live,
+    });
+
+    // 1. Copy features
+    for (const sandboxFeature of sandboxFeatures) {
+      const liveFeature = liveFeatures.find((f) => f.id == sandboxFeature.id);
+
+      if (liveFeature && sandboxFeature.type !== liveFeature.type) {
+        throw new RecaseError({
+          message: `Feature ${sandboxFeature.name} exists in live, but has a different config. Please match them then try again.`,
+          code: ErrCode.InvalidRequest,
+          statusCode: 400,
+        });
+      }
+
+      if (!liveFeature) {
+        let newFeature = await FeatureService.insert({
+          sb,
+          data: initNewFeature({
+            data: CreateFeatureSchema.parse(sandboxFeature),
+            orgId,
+            env: AppEnv.Live,
+          }),
+        });
+
+        liveFeatures.push(newFeature);
+      }
+    }
+
+    // 2. Copy product
+    await copyProduct({
+      sb,
+      product: sandboxProduct,
+      toOrgId: orgId,
+      toEnv: AppEnv.Live,
+      features: liveFeatures,
+    });
+    // 2. Get product from sandbox
+    res.status(200).send({ message: "Product copied" });
+  } catch (error) {
+    handleRequestError({ req, error, res, action: "Copy product" });
   }
 });
