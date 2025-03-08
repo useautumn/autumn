@@ -77,7 +77,8 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
     ent1.internal_feature_id === ent2.internal_feature_id &&
     ent1.interval === ent2.interval &&
     ent1.allowance_type === ent2.allowance_type &&
-    ent1.allowance === ent2.allowance
+    ent1.allowance === ent2.allowance &&
+    ent1.carry_from_previous === ent2.carry_from_previous
   );
 };
 
@@ -148,18 +149,26 @@ export const validateEntitlement = ({
 export const validateRemovedEnts = ({
   removedEnts,
   prices,
+  isCustom,
 }: {
   removedEnts: Entitlement[];
   prices: Price[];
+  isCustom: boolean;
 }) => {
   for (const ent of removedEnts) {
     const relatedPrice = getEntRelatedPrice(ent, prices);
+
     if (relatedPrice) {
-      throw new RecaseError({
-        code: ErrCode.InvalidEntitlement,
-        message: `Cannot remove entitlement with usage-based price (${ent.feature_id})`,
-        statusCode: 400,
-      });
+      // If (isCustom, means it was either removed or updated, need to refresh stripe price...)
+      if (isCustom) {
+        relatedPrice.id = undefined;
+      } else {
+        throw new RecaseError({
+          code: ErrCode.InvalidEntitlement,
+          message: `Cannot remove entitlement with usage-based price (${ent.feature_id})`,
+          statusCode: 400,
+        });
+      }
     }
   }
 };
@@ -257,7 +266,6 @@ export const handleNewEntitlements = async ({
   const removedEnts: Entitlement[] = curEnts.filter(
     (ent) => !newEnts.some((e: Entitlement) => e.id === ent.id)
   );
-  validateRemovedEnts({ removedEnts, prices });
 
   const createdEnts: Entitlement[] = [];
   const updatedEnts: Entitlement[] = [];
@@ -285,6 +293,7 @@ export const handleNewEntitlements = async ({
     let curEnt = idToEnt[newEnt.id!];
 
     // 2a. If custom, create new entitlement and remove old one
+
     if (curEnt && !entsAreSame(curEnt, newEnt) && isCustom) {
       createdEnts.push(
         initEntitlement({
@@ -305,6 +314,7 @@ export const handleNewEntitlements = async ({
   }
 
   validateUpdatedEnts({ updatedEnts, prices });
+  validateRemovedEnts({ removedEnts, prices, isCustom });
 
   // 1. Create new entitlements
   await EntitlementService.insert({ sb, data: createdEnts });
@@ -312,7 +322,6 @@ export const handleNewEntitlements = async ({
   // 2. Update existing entitlements and delete removed ones
   if (!isCustom) {
     await EntitlementService.upsert({ sb, data: updatedEnts });
-
     await EntitlementService.deleteByIds({
       sb,
       entitlementIds: removedEnts.map((e) => e.id!),

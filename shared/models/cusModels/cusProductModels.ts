@@ -7,6 +7,7 @@ import { CustomerEntitlementSchema } from "./cusEntModels/cusEntitlementModels.j
 import { EntitlementSchema } from "../productModels/entitlementModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
 import { CustomerSchema } from "./cusModels.js";
+import { FreeTrialSchema } from "../productModels/freeTrialModels.js";
 
 export const FeatureOptionsSchema = z.object({
   internal_feature_id: z.string().optional(),

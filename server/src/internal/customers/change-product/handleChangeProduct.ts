@@ -173,11 +173,13 @@ export const handleChangeProduct = async ({
   res,
   attachParams,
   curCusProduct,
+  isCustom,
 }: {
   req: any;
   res: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
+  isCustom: boolean;
 }) => {
   // Get subscription
   const curProduct = curCusProduct.product;
@@ -203,14 +205,16 @@ export const handleChangeProduct = async ({
   });
 
   let curPrices = getPricesForCusProduct({
-    cusProduct: attachParams.curCusProduct!,
+    cusProduct: curCusProduct!,
   });
   let newPrices = attachParams.prices;
 
-  const isUpgrade = isProductUpgrade({
-    prices1: curPrices,
-    prices2: newPrices,
-  });
+  const isUpgrade =
+    isCustom ||
+    isProductUpgrade({
+      prices1: curPrices,
+      prices2: newPrices,
+    });
 
   if (!isUpgrade) {
     await handleDowngrade({

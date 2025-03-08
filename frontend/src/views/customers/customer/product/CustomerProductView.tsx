@@ -129,6 +129,7 @@ export default function CustomerProductView({
       options?: OptionValue[];
       entitlements?: typeof baseProduct.entitlements;
       prices?: typeof baseProduct.prices;
+      free_trial?: typeof baseProduct.free_trial;
     }
   ) => {
     if (!customerProduct) {
@@ -139,8 +140,6 @@ export default function CustomerProductView({
         options: [],
       };
     }
-    // console.log("baseProduct", baseProduct);
-    // console.log("customerProduct", customerProduct);
 
     return {
       ...baseProduct,
@@ -151,6 +150,9 @@ export default function CustomerProductView({
       }),
       ...(customerProduct.prices && {
         prices: customerProduct.prices,
+      }),
+      ...(customerProduct.free_trial && {
+        free_trial: customerProduct.free_trial,
       }),
     };
   };
@@ -300,7 +302,7 @@ export default function CustomerProductView({
         buttonText: "Update Product",
         tooltipText: `You're editing the live product ${product.name} and updating it to a custom version for ${customer.name}`,
 
-        disabled: true, //TODO: remove this
+        disabled: false, //TODO: remove this
       };
     }
     if (hasChanges) {

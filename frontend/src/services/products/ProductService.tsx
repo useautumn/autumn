@@ -35,4 +35,8 @@ export class ProductService {
       ...data,
     });
   }
+
+  static async copyProduct(axiosInstance: AxiosInstance, productId: string) {
+    await axiosInstance.post(`/v1/products/${productId}/copy`);
+  }
 }

@@ -7,7 +7,6 @@ import {
   Price,
   UsagePriceConfig,
   FeatureOptions,
-  Entitlement,
   Product,
   AllowanceType,
   EntitlementWithFeature,
@@ -28,16 +27,18 @@ import {
   getProductForPrice,
   priceIsOneOffAndTiered,
 } from "@/internal/prices/priceUtils.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
+
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { nullOrUndefined } from "@/utils/genUtils.js";
-import { Decimal } from "decimal.js";
+
 import {
   createStripeFixedCyclePrice,
   createStripeInAdvancePrice,
   createStripeInArrearPrice,
 } from "./createStripePrice.js";
+
+import { getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";
 
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
@@ -74,6 +75,7 @@ export const priceToStripeItem = ({
   org,
   options,
   isCheckout = false,
+  existingUsage,
 }: {
   price: Price;
   relatedEnt: EntitlementWithFeature;
@@ -81,6 +83,7 @@ export const priceToStripeItem = ({
   org: Organization;
   options: FeatureOptions | undefined | null;
   isCheckout: boolean;
+  existingUsage: number;
 }) => {
   // TODO: Implement this
   const billingType = price.billing_type;
@@ -212,8 +215,7 @@ export const priceToStripeItem = ({
     };
   } else if (billingType == BillingType.InArrearProrated) {
     const config = price.config as UsagePriceConfig;
-    // For now, let quantity be 0...
-    let quantity = 0;
+    let quantity = existingUsage || 0;
     if (quantity == 0 && isCheckout) {
       // Get product id...
       lineItem = {
@@ -222,7 +224,7 @@ export const priceToStripeItem = ({
     } else {
       lineItem = {
         price: config.stripe_price_id,
-        quantity: quantity,
+        quantity,
       };
     }
 
@@ -255,7 +257,8 @@ export const getStripeSubItems = async ({
   attachParams: AttachParams;
   isCheckout?: boolean;
 }) => {
-  const { products, prices, entitlements, optionsList, org } = attachParams;
+  const { products, prices, entitlements, optionsList, org, cusProducts } =
+    attachParams;
 
   const checkoutRelevantPrices = getCheckoutRelevantPrices(prices);
   checkoutRelevantPrices.sort((a, b) => {
@@ -295,12 +298,16 @@ export const getStripeSubItems = async ({
     let subItems: any[] = [];
     let itemMetas: any[] = [];
 
-    let usage_features = [];
+    let usage_features: any[] = [];
 
     for (const price of prices) {
       const priceEnt = getPriceEntitlement(price, entitlements);
       const options = getEntOptions(optionsList, priceEnt);
       const billingType = getBillingType(price.config!);
+      const existingUsage = getExistingUsageFromCusProducts({
+        entitlement: priceEnt,
+        cusProducts: attachParams.cusProducts,
+      });
 
       if (
         billingType == BillingType.UsageInArrear ||
@@ -322,6 +329,7 @@ export const getStripeSubItems = async ({
         options,
         isCheckout,
         relatedEnt: priceEnt,
+        existingUsage,
       });
 
       if (!stripeItem) {
@@ -384,6 +392,47 @@ const getProductIdFromPrice = async ({
   }
 };
 
+export const pricesToInvoiceItems = async ({
+  sb,
+  stripeCli,
+  attachParams,
+  stripeInvoiceId,
+}: {
+  sb: SupabaseClient;
+  stripeCli: Stripe;
+  attachParams: AttachParams;
+  stripeInvoiceId: string;
+}) => {
+  const { prices, optionsList, entitlements, products, customer } =
+    attachParams;
+  for (const price of prices) {
+    // Calculate amount
+    const options = getPriceOptions(price, optionsList);
+    const entitlement = getPriceEntitlement(price, entitlements);
+    const { amountPerUnit, quantity } = getPriceAmount(price, options!);
+
+    let allowanceStr = "";
+    if (entitlement) {
+      allowanceStr =
+        entitlement.allowance_type == AllowanceType.Unlimited
+          ? "Unlimited"
+          : entitlement.allowance_type == AllowanceType.None
+          ? "None"
+          : `${entitlement.allowance}`;
+      allowanceStr = `x ${allowanceStr} (${entitlement.feature.name})`;
+    }
+
+    let product = getProductForPrice(price, products)!;
+
+    await stripeCli.invoiceItems.create({
+      customer: customer.processor.id,
+      amount: amountPerUnit * quantity * 100,
+      invoice: stripeInvoiceId,
+      description: `Invoice for ${product.name} -- ${quantity}${allowanceStr}`,
+    });
+  }
+};
+
 export const createStripePriceIFNotExist = async ({
   sb,
   stripeCli,
@@ -410,14 +459,27 @@ export const createStripePriceIFNotExist = async ({
       );
 
       if (!stripePrice.active) {
-        throw new Error("inactive price");
+        config.stripe_price_id = undefined;
+        config.stripe_meter_id = undefined;
+      }
+
+      if (config.stripe_product_id) {
+        const stripeProduct = await stripeCli.products.retrieve(
+          config.stripe_product_id as string
+        );
+
+        if (!stripeProduct.active) {
+          config.stripe_product_id = null;
+        }
       }
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log("Stripe price not found / inactive");
+    console.log("Error:", error.message);
     config.stripe_price_id = undefined;
     config.stripe_meter_id = undefined;
   }
+
   if (billingType == BillingType.FixedCycle) {
     if (!config.stripe_price_id) {
       console.log("Creating stripe fixed cycle price");
@@ -492,46 +554,5 @@ export const createStripePriceIFNotExist = async ({
         org,
       });
     }
-  }
-};
-
-export const pricesToInvoiceItems = async ({
-  sb,
-  stripeCli,
-  attachParams,
-  stripeInvoiceId,
-}: {
-  sb: SupabaseClient;
-  stripeCli: Stripe;
-  attachParams: AttachParams;
-  stripeInvoiceId: string;
-}) => {
-  const { prices, optionsList, entitlements, products, customer } =
-    attachParams;
-  for (const price of prices) {
-    // Calculate amount
-    const options = getPriceOptions(price, optionsList);
-    const entitlement = getPriceEntitlement(price, entitlements);
-    const { amountPerUnit, quantity } = getPriceAmount(price, options!);
-
-    let allowanceStr = "";
-    if (entitlement) {
-      allowanceStr =
-        entitlement.allowance_type == AllowanceType.Unlimited
-          ? "Unlimited"
-          : entitlement.allowance_type == AllowanceType.None
-          ? "None"
-          : `${entitlement.allowance}`;
-      allowanceStr = `x ${allowanceStr} (${entitlement.feature.name})`;
-    }
-
-    let product = getProductForPrice(price, products)!;
-
-    await stripeCli.invoiceItems.create({
-      customer: customer.processor.id,
-      amount: amountPerUnit * quantity * 100,
-      invoice: stripeInvoiceId,
-      description: `Invoice for ${product.name} -- ${quantity}${allowanceStr}`,
-    });
   }
 };

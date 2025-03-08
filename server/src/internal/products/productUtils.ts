@@ -2,12 +2,17 @@ import {
   AppEnv,
   BillingInterval,
   BillingType,
+  Entitlement,
+  EntitlementSchema,
   EntitlementWithFeature,
+  ErrCode,
   Feature,
   Organization,
   Price,
+  PriceSchema,
   PriceType,
   ProcessorType,
+  ProductSchema,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
@@ -25,6 +30,10 @@ import {
 } from "../customers/products/AttachParams.js";
 import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
 import { Decimal } from "decimal.js";
+import { generateId } from "@/utils/genUtils.js";
+import { PriceService } from "../prices/PriceService.js";
+import { EntitlementService } from "./entitlements/EntitlementService.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const isProductUpgrade = ({
   prices1,
@@ -33,18 +42,21 @@ export const isProductUpgrade = ({
   prices1: Price[];
   prices2: Price[];
 }) => {
-  // if (product1.is_default) {
-  //   return true;
-  // } else if (product2.is_default) {
-  //   return false;
-  // }
-
-  // 1. If biling interval is same:
+  if (
+    prices1.every(
+      (p) => getBillingType(p.config!) === BillingType.UsageInArrear
+    ) &&
+    prices2.every(
+      (p) => getBillingType(p.config!) === BillingType.UsageInArrear
+    )
+  ) {
+    return true;
+  }
 
   let billingInterval1 = getBillingInterval(prices1);
   let billingInterval2 = getBillingInterval(prices2);
 
-  // 1. Get total price for each product
+  // 2. Get total price for each product
   const getTotalPrice = (prices: Price[]) => {
     // Get each product's price prorated to a year
     let totalPrice = new Decimal(0);
@@ -65,9 +77,11 @@ export const isProductUpgrade = ({
     return totalPrice.toNumber();
   };
 
+  // 3. Compare prices
   if (billingInterval1 == billingInterval2) {
     return getTotalPrice(prices1) < getTotalPrice(prices2);
   } else {
+    // If billing interval is different, compare the billing intervals
     return compareBillingIntervals(billingInterval1, billingInterval2) < 0;
   }
 };
@@ -165,7 +179,12 @@ export const checkStripeProductExists = async ({
     createNew = true;
   } else {
     try {
-      await stripeCli.products.retrieve(product.processor!.id);
+      let stripeProduct = await stripeCli.products.retrieve(
+        product.processor!.id
+      );
+      if (!stripeProduct.active) {
+        createNew = true;
+      }
     } catch (error) {
       createNew = true;
     }
@@ -206,4 +225,83 @@ export const attachToInsertParams = (
     prices: getPricesForProduct(product, attachParams.prices),
     entitlements: getEntitlementsForProduct(product, attachParams.entitlements),
   } as InsertCusProductParams;
+};
+
+// COPY PRODUCT
+export const copyProduct = async ({
+  sb,
+  product,
+  toOrgId,
+  toEnv,
+  features,
+}: {
+  sb: SupabaseClient;
+  product: FullProduct;
+  toOrgId: string;
+  toEnv: AppEnv;
+  features: Feature[];
+}) => {
+  const newProduct = {
+    ...product,
+    name: `${product.name}`,
+    id: `${product.id}`,
+    internal_id: generateId("prod"),
+    org_id: toOrgId,
+    env: toEnv,
+    processor: null,
+  };
+
+  const newPrices = product.prices.map((price) => {
+    let copiedPrice = structuredClone(price);
+
+    delete copiedPrice.config!.stripe_price_id;
+    delete (copiedPrice.config! as UsagePriceConfig).stripe_meter_id;
+    delete (copiedPrice.config! as UsagePriceConfig).stripe_product_id;
+
+    return PriceSchema.parse({
+      ...copiedPrice,
+      id: generateId("pr"),
+      org_id: toOrgId,
+      internal_product_id: newProduct.internal_id,
+      env: toEnv,
+    });
+  });
+
+  const newEntitlements = product.entitlements.map(
+    (entitlement: Entitlement) => {
+      let feature = features.find((f) => f.id === entitlement.feature_id);
+      if (!feature) {
+        throw new RecaseError({
+          message: `Feature ${entitlement.feature_id} not found`,
+          code: ErrCode.FeatureNotFound,
+          statusCode: 404,
+        });
+      }
+
+      return EntitlementSchema.parse({
+        ...entitlement,
+        id: generateId("ent"),
+        org_id: toOrgId,
+        internal_product_id: newProduct.internal_id,
+        internal_feature_id: feature.internal_id,
+      });
+    }
+  );
+
+  await ProductService.create({
+    sb,
+    product: ProductSchema.parse(newProduct),
+  });
+
+  await Promise.all([
+    PriceService.insert({
+      sb,
+      data: newPrices,
+    }),
+
+    EntitlementService.insert({
+      sb,
+      data: newEntitlements,
+    }),
+  ]);
 };
