@@ -1,5 +1,6 @@
 import {
   AppEnv,
+  CusProductStatus,
   Customer,
   CustomerData,
   Entitlement,
@@ -7,6 +8,7 @@ import {
   Feature,
   FeatureOptions,
   FreeTrial,
+  FullCusProduct,
   Price,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -29,6 +31,8 @@ import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
 import { createNewCustomer } from "@/internal/api/customers/cusUtils.js";
 import { CusService } from "../CusService.js";
+import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
+import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 
 const getOrCreateCustomer = async ({
   sb,
@@ -284,6 +288,15 @@ export const getFullCusProductData = async ({
       env,
     });
 
+  // Handle existing cus product...
+  const cusProducts = await CusService.getFullCusProducts({
+    sb,
+    internalCustomerId: customer.internal_id,
+    withProduct: true,
+    withPrices: true,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+  });
+
   let newOptionsList: FeatureOptions[] = [];
 
   for (const options of optionsListInput) {
@@ -330,6 +343,7 @@ export const getFullCusProductData = async ({
         .map((p) => getEntsWithFeature(p.entitlements, features))
         .flat() as EntitlementWithFeature[],
       freeTrial,
+      cusProducts,
     };
   }
 
@@ -341,12 +355,28 @@ export const getFullCusProductData = async ({
     });
   }
 
+  // Get cur main product
   const product = products[0];
+
+  const { curMainProduct } = await getExistingCusProducts({
+    product,
+    cusProducts,
+  });
+
+  let curPrices: Price[] = product!.prices;
+  let curEnts: Entitlement[] = product!.entitlements;
+  if (curMainProduct?.product.id === product.id) {
+    curPrices = getPricesForCusProduct({
+      cusProduct: curMainProduct as FullCusProduct,
+    });
+
+    curEnts = curMainProduct!.customer_entitlements.map((e) => e.entitlement);
+  }
 
   const entitlements = await handleNewEntitlements({
     sb,
     newEnts: entsInput,
-    curEnts: product!.entitlements,
+    curEnts,
     internalProductId: product!.internal_id,
     orgId,
     isCustom,
@@ -360,10 +390,11 @@ export const getFullCusProductData = async ({
   }));
 
   // 1. Get prices
+
   const prices = await handleNewPrices({
     sb,
     newPrices: pricesInput,
-    curPrices: product!.prices,
+    curPrices,
     internalProductId: product!.internal_id,
     isCustom,
     features,
@@ -397,6 +428,7 @@ export const getFullCusProductData = async ({
     prices: prices as Price[],
     entitlements: entitlementsWithFeature as EntitlementWithFeature[],
     freeTrial: uniqueFreeTrial,
+    cusProducts,
   };
 };
 

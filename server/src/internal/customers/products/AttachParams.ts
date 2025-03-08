@@ -47,4 +47,5 @@ export type InsertCusProductParams = {
 
   // OTHERS
   curCusProduct?: FullCusProduct | undefined;
+  cusProducts?: FullCusProduct[];
 };

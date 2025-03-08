@@ -1,11 +1,13 @@
 import {
   Customer,
+  EntitlementWithFeature,
   ErrCode,
   Feature,
   FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
+  Price,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { AttachParams } from "../products/AttachParams.js";
@@ -26,6 +28,8 @@ import {
   cancelFutureProductSchedule,
   getFilteredScheduleItems,
 } from "../change-product/scheduleUtils.js";
+import { handleUpgrade } from "../change-product/handleUpgrade.js";
+import { fullCusProductToProduct } from "../products/cusProductUtils.js";
 
 const getOptionsToUpdate = (oldOptionsList: any[], newOptionsList: any[]) => {
   let differentOptionsExist = false;
@@ -162,11 +166,56 @@ const updateFeatureQuantity = async ({
   });
 };
 
+const hasPricesChanged = ({
+  oldPrices,
+  newPrices,
+}: {
+  oldPrices: Price[];
+  newPrices: Price[];
+}) => {
+  for (const price of oldPrices) {
+    if (!newPrices.some((p) => p.id === price.id)) {
+      return true;
+    }
+  }
+
+  for (const price of newPrices) {
+    if (!oldPrices.some((p) => p.id === price.id)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const hasEntitlementsChanged = ({
+  oldEntitlements,
+  newEntitlements,
+}: {
+  oldEntitlements: EntitlementWithFeature[];
+  newEntitlements: EntitlementWithFeature[];
+}) => {
+  for (const entitlement of oldEntitlements) {
+    if (!newEntitlements.some((e) => e.id === entitlement.id)) {
+      return true;
+    }
+  }
+
+  for (const entitlement of newEntitlements) {
+    if (!oldEntitlements.some((e) => e.id === entitlement.id)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 export const handleSameMainProduct = async ({
   sb,
   curScheduledProduct,
   curMainProduct,
   attachParams,
+  isCustom,
   req,
   res,
 }: {
@@ -174,6 +223,7 @@ export const handleSameMainProduct = async ({
   curScheduledProduct: any;
   curMainProduct: FullCusProduct;
   attachParams: AttachParams;
+  isCustom?: boolean;
   req: any;
   res: any;
 }) => {
@@ -186,6 +236,41 @@ export const handleSameMainProduct = async ({
     curMainProduct.options,
     newOptionsList
   );
+
+  // If is custom, and there's at least one different price / entitlement, allow update to current main product...
+  if (isCustom) {
+    let pricesChanged = hasPricesChanged({
+      oldPrices: curMainProduct.customer_prices.map((p) => p.price),
+      newPrices: attachParams.prices,
+    });
+
+    let entitlementsChanged = hasEntitlementsChanged({
+      oldEntitlements: curMainProduct.customer_entitlements.map(
+        (e) => e.entitlement
+      ),
+      newEntitlements: attachParams.entitlements,
+    });
+
+    if (pricesChanged || entitlementsChanged) {
+      logger.info(`SCENARIO 0: UPDATE SAME PRODUCT`);
+      logger.info(
+        `Prices changed: ${pricesChanged}, Entitlements changed: ${entitlementsChanged}`
+      );
+
+      await handleUpgrade({
+        req,
+        res,
+        attachParams,
+        curCusProduct: curMainProduct,
+        curFullProduct: fullCusProductToProduct(curMainProduct),
+        hasPricesChanged: pricesChanged,
+      });
+      return {
+        done: true,
+        curCusProduct: curMainProduct,
+      };
+    }
+  }
 
   if (optionsToUpdate.length === 0 && !curScheduledProduct) {
     // Update options

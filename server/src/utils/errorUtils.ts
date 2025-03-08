@@ -161,5 +161,6 @@ export const handleRequestError = ({
     console.log("Failed to log error / warning");
     console.log(`Request: ${req.originalUrl}`);
     console.log(`Body: ${req.body}`);
+    console.log(`Log Error: ${error}`);
   }
 };

@@ -29,8 +29,9 @@ import {
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import { envToPath, navigateTo } from "@/utils/genUtils";
+
 import { useRouter } from "next/navigation";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const EntitlementConfig = ({
   isUpdate = false,
@@ -53,10 +54,13 @@ export const EntitlementConfig = ({
   );
 
   const [fields, setFields] = useState({
+    carry_from_previous: entitlement?.carry_from_previous || false,
     allowance_type: entitlement?.allowance_type || AllowanceType.Fixed,
     allowance: entitlement?.allowance || "",
     interval: entitlement?.interval || EntInterval.Month,
   });
+
+  console.log("Entitlement", entitlement);
 
   useEffect(() => {
     if (selectedFeature) {
@@ -187,6 +191,23 @@ export const EntitlementConfig = ({
           </Tabs>
         </div>
       )}
+
+      {selectedFeature &&
+        selectedFeature?.type != FeatureType.Boolean &&
+        fields.allowance_type == AllowanceType.Fixed && (
+          <div className="flex items-center gap-2 ml-1 text-sm">
+            <Checkbox
+              checked={fields.carry_from_previous}
+              onCheckedChange={(checked) =>
+                setFields({
+                  ...fields,
+                  carry_from_previous: Boolean(checked),
+                })
+              }
+            />
+            <p>Carry from previous period</p>
+          </div>
+        )}
     </div>
   );
 };

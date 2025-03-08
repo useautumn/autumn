@@ -3,9 +3,9 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import {
   AllowanceType,
   AppEnv,
-  CreditSchemaItem,
   CusEntWithEntitlement,
   CusProduct,
+  CusProductStatus,
   Customer,
   EntInterval,
   Entitlement,
@@ -13,6 +13,7 @@ import {
   Feature,
   FeatureOptions,
   FeatureType,
+  FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
@@ -21,40 +22,13 @@ import {
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
-import { Decimal } from "decimal.js";
+import {
+  notNullOrUndefined,
+  nullish,
+  nullOrUndefined,
+} from "@/utils/genUtils.js";
+
 import { getGroupbalanceFromParams } from "./groupByUtils.js";
-
-// export const getFeatureBalance = async ({
-//   pg,
-//   customerId,
-//   featureId,
-//   orgId,
-// }: {
-//   pg: Client;
-//   customerId: string;
-//   featureId: string;
-//   orgId: string;
-// }) => {
-//   const { rows } = await pg.query(
-//     `
-//     select sum(balance) from customer_entitlements ce  JOIN
-//     customer_products cp on ce.customer_product_id = cp.id
-
-//     where org_id = $1
-//     and customer_id = $2
-//     and feature_id = $3
-//     and cp.status = 'active'
-//   `,
-//     [orgId, customerId, featureId]
-//   );
-
-//   if (rows.length === 0) {
-//     return null;
-//   }
-
-//   return parseFloat(rows[0].sum);
-// };
 
 export const getBalanceForFeature = async ({
   sb,
@@ -608,4 +582,42 @@ export const getMinCusEntBalance = ({
   }
 
   return Math.min(...balances);
+};
+
+// GET EXISTING USAGE
+export const getExistingUsageFromCusProducts = ({
+  entitlement,
+  cusProducts,
+}: {
+  entitlement: EntitlementWithFeature;
+  cusProducts?: FullCusProduct[];
+}) => {
+  if (!entitlement || entitlement.feature.type === FeatureType.Boolean) {
+    return 0;
+  }
+
+  let existingUsage = 0;
+
+  // NOTE: Assuming that feature entitlements are unique to each main product...
+  let existingCusEnt = cusProducts
+    ?.filter(
+      (cp) => cp.status === CusProductStatus.Active && !cp.product.is_add_on
+    )
+    .flatMap((cp) => cp.customer_entitlements)
+    .find((ce) => ce.internal_feature_id === entitlement.internal_feature_id);
+
+  if (!existingCusEnt || !entitlement.carry_from_previous) {
+    return existingUsage;
+  }
+
+  if (
+    nullish(existingCusEnt.balance) ||
+    existingCusEnt.entitlement.allowance_type === AllowanceType.Unlimited
+  ) {
+    return existingUsage;
+  }
+
+  // // Calculate existing usage
+  let existingAllowance = existingCusEnt.entitlement.allowance!;
+  return existingAllowance - existingCusEnt.balance!;
 };

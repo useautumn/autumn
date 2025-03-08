@@ -151,8 +151,17 @@ const initPrice = ({
 }): Price => {
   const priceSchema = CreatePriceSchema.parse(price);
 
+  // TO RESET STRIPE PRICES
+  const newConfig = {
+    ...priceSchema.config,
+    stripe_meter_id: null,
+    stripe_price_id: null,
+    stripe_placeholder_price_id: null,
+  };
+
   return {
     ...priceSchema,
+    config: newConfig,
     id: generateId("pr"),
     org_id: orgId,
     internal_product_id: internalProductId,
@@ -234,7 +243,7 @@ export const handleNewPrices = async ({
     roundPriceAmounts(newPrice);
 
     // 1. Handle new price
-    if (!("id" in newPrice)) {
+    if (!newPrice.id) {
       createdPrices.push(
         initPrice({
           price: newPrice as CreatePrice,

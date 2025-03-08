@@ -1,5 +1,9 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faEllipsisVertical, faTrash } from "@fortawesome/pro-solid-svg-icons";
+import {
+  faClone,
+  faEllipsisVertical,
+  faTrash,
+} from "@fortawesome/pro-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { cn } from "@nextui-org/theme";
 import {
@@ -12,7 +16,7 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 
-import { Product } from "@autumn/shared";
+import { AppEnv, Product } from "@autumn/shared";
 import { ProductService } from "@/services/products/ProductService";
 import { useProductsContext } from "./ProductsContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -29,7 +33,7 @@ export const ProductRowToolbar = ({
   const axiosInstance = useAxiosInstance({ env });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-
+  const [copyLoading, setCopyLoading] = useState(false);
   const handleDelete = async () => {
     setDeleteLoading(true);
     try {
@@ -42,6 +46,19 @@ export const ProductRowToolbar = ({
     setDeleteLoading(false);
     setDeleteOpen(false);
   };
+
+  const handleCopy = async () => {
+    setCopyLoading(true);
+    try {
+      await ProductService.copyProduct(axiosInstance, product.id);
+      toast.success("Successfully copied product");
+    } catch (error) {
+      console.log("Error copying product", error);
+      toast.error(getBackendErr(error, "Failed to copy product"));
+    }
+    setCopyLoading(false);
+  };
+
   return (
     <DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
       <DropdownMenuTrigger asChild>
@@ -56,7 +73,7 @@ export const ProductRowToolbar = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
         <DropdownMenuItem
-          className="flex items-center"
+          className="flex items-center text-xs"
           onClick={async (e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -72,6 +89,25 @@ export const ProductRowToolbar = ({
             )}
           </div>
         </DropdownMenuItem>
+        {env == AppEnv.Sandbox && (
+          <DropdownMenuItem
+            className="flex items-center text-xs"
+            onClick={async (e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              await handleCopy();
+            }}
+          >
+            <div className="flex items-center justify-between w-full gap-2">
+              Copy to live
+              {copyLoading ? (
+                <SmallSpinner />
+              ) : (
+                <FontAwesomeIcon icon={faClone} size="sm" />
+              )}
+            </div>
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

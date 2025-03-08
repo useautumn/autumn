@@ -282,7 +282,7 @@ export const handleDowngrade = async ({
     disableFreeTrial: true,
   });
 
-  res.status(200).send({ success: true });
+  res.status(200).json({ success: true });
 };
 
 // await removePreviousScheduledProducts({
