@@ -3,6 +3,8 @@ import { CusProductStatus, Organization, ProcessorType } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
+import { createStripeCli } from "../utils.js";
+import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 
 export const handleSubCreated = async ({
   sb,
@@ -28,6 +30,11 @@ export const handleSubCreated = async ({
       return;
     }
 
+    console.log(
+      "Handling subscription.created for scheduled cus products:",
+      cusProds.length
+    );
+
     let batchUpdate = [];
     for (const cusProd of cusProds) {
       let subIds = cusProd.subscription_ids
@@ -43,16 +50,25 @@ export const handleSubCreated = async ({
             // status: CusProductStatus.Active,
           })
           .eq("id", cusProd.id);
+
+        // Fetch latest invoice?
+        const stripeCli = createStripeCli({ org, env });
+        const invoice = await stripeCli.invoices.retrieve(
+          subscription.latest_invoice as string
+        );
+        await InvoiceService.createInvoiceFromStripe({
+          sb,
+          stripeInvoice: invoice,
+          internalCustomerId: cusProd.internal_customer_id,
+          productIds: [cusProd.product_id],
+          internalProductIds: [cusProd.internal_product_id],
+          org,
+        });
       };
 
       batchUpdate.push(updateCusProd());
     }
 
     await Promise.all(batchUpdate);
-
-    console.log(
-      "Handled subscription.created for scheduled cus products:",
-      cusProds.length
-    );
   }
 };

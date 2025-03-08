@@ -281,7 +281,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
   let lockKey;
   try {
-    lockKey = await handleAttachRaceCondition({ req });
+    lockKey = await handleAttachRaceCondition({ req, res });
 
     z.array(FeatureOptionsSchema).parse(optionsListInput);
 
@@ -409,9 +409,5 @@ attachRouter.post("/attach", async (req: any, res) => {
     });
   } catch (error: any) {
     handleRequestError({ req, res, error, action: "attach product" });
-  } finally {
-    if (lockKey) {
-      await clearLock({ lockKey, logger });
-    }
   }
 });

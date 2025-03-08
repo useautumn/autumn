@@ -386,7 +386,7 @@ export const handleUpgrade = async ({
   // 2. TO FIX: If current product is a trial, just start a new period (with new subscription_ids)
   if (curCusProduct.trial_ends_at && curCusProduct.trial_ends_at > Date.now()) {
     logger.info(
-      "NOTE: Current product is a trial, cancel and start new subscription"
+      "Current product is a TRIAL, cancelling and starting new subscription"
     );
 
     await handleAddProduct({
@@ -407,6 +407,7 @@ export const handleUpgrade = async ({
         });
       }
     }
+    return;
   }
 
   const disableFreeTrial = false;
