@@ -31,17 +31,20 @@ export const sendUsage = async ({
   customerId,
   featureId,
   value,
+  userId,
 }: {
   axiosInstance: AxiosInstance;
   customerId: string;
   featureId: string;
   value: number;
+  userId?: string;
 }) => {
   const { data } = await axiosInstance.post("/events", {
     customer_id: customerId,
     event_name: featureId,
     properties: {
       value: value,
+      user_id: userId,
     },
   });
 

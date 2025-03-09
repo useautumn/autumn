@@ -89,7 +89,7 @@ export const ProductRowToolbar = ({
             )}
           </div>
         </DropdownMenuItem>
-        {env == AppEnv.Sandbox && (
+        {/* {env == AppEnv.Sandbox && (
           <DropdownMenuItem
             className="flex items-center text-xs"
             onClick={async (e) => {
@@ -107,7 +107,7 @@ export const ProductRowToolbar = ({
               )}
             </div>
           </DropdownMenuItem>
-        )}
+        )} */}
       </DropdownMenuContent>
     </DropdownMenu>
   );
