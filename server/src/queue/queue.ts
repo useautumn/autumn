@@ -87,7 +87,7 @@ const initWorker = ({
           await runUpdateUsageTask({ payload: job.data, logger: logtail });
         }
       } catch (error) {
-        console.error("Error updating balance:", error);
+        console.error("Error processing job:", error);
       } finally {
         await releaseLock({ customerId, useBackup });
       }
