@@ -352,7 +352,7 @@ productApiRouter.post("/:productId/copy", async (req: any, res) => {
       }
 
       if (!liveFeature) {
-        let newFeature = await FeatureService.insert({
+        let res = await FeatureService.insert({
           sb,
           data: initNewFeature({
             data: CreateFeatureSchema.parse(sandboxFeature),
@@ -361,7 +361,7 @@ productApiRouter.post("/:productId/copy", async (req: any, res) => {
           }),
         });
 
-        liveFeatures.push(newFeature);
+        liveFeatures.push(res![0]);
       }
     }
 

@@ -35,12 +35,14 @@ import { CustomerProductList } from "./CustomerProductList";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { ManageEntitlements } from "./entitlements/ManageEntitlements";
 import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsList";
-import { navigateTo } from "@/utils/genUtils";
+import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
 import { CustomerEventsList } from "./product/CustomerEventsList";
 import { useState } from "react";
 import Link from "next/link";
 import { faStripe, faStripeS } from "@fortawesome/free-brands-svg-icons";
 import { getStripeCusLink } from "@/utils/linkUtils";
+import { Button } from "@/components/ui/button";
+import ErrorScreen from "@/views/general/ErrorScreen";
 
 export default function CustomerView({
   customer_id,
@@ -69,13 +71,28 @@ export default function CustomerView({
     env,
   });
 
-  if (error) {
-    router.push("/customers");
-  }
-
   const [showExpired, setShowExpired] = useState(false);
 
   if (isLoading || eventsLoading) return <LoadingScreen />;
+
+  // if (error) {
+  //   router.push("/customers");
+  //   return;
+  // }
+
+  if (!data) {
+    return (
+      <ErrorScreen>
+        <div className="text-t2 text-sm">Customer not found</div>
+        <Link
+          className="text-t3 text-xs hover:underline"
+          href={getRedirectUrl("/customers", env)}
+        >
+          Return
+        </Link>
+      </ErrorScreen>
+    );
+  }
 
   const { customer, products, invoices } = data;
   const { events } = eventsData;

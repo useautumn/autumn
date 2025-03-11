@@ -10,6 +10,7 @@ import {
   Product,
   AllowanceType,
   EntitlementWithFeature,
+  AppEnv,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -36,9 +37,15 @@ import {
   createStripeFixedCyclePrice,
   createStripeInAdvancePrice,
   createStripeInArrearPrice,
+  createStripeOneOffTieredProduct,
 } from "./createStripePrice.js";
 
 import { getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";
+import {
+  priceToInArrearProrated,
+  priceToUsageInAdvance,
+} from "./priceToStripeItem.js";
+import { PriceService } from "@/internal/prices/PriceService.js";
 
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {
@@ -155,46 +162,12 @@ export const priceToStripeItem = ({
       quantity: 1,
     };
   } else if (billingType == BillingType.UsageInAdvance) {
-    const config = price.config as UsagePriceConfig;
-    let quantity = options?.quantity;
-
-    // 1. If quantity is 0 and is checkout, skip over line item
-    if (options?.quantity === 0 && isCheckout) {
-      console.log(`Quantity for ${config.feature_id} is 0`);
-      return null;
-    }
-
-    // 2. If quantity is null or undefined and is checkout, default to 1
-    else if (nullOrUndefined(quantity) && isCheckout) {
-      quantity = 1;
-    }
-
-    const adjustableQuantity = isCheckout
-      ? {
-          enabled: true,
-          maximum: 999999,
-          minimum: relatedEnt.allowance,
-        }
-      : undefined;
-
-    if (!config.stripe_price_id) {
-      throw new RecaseError({
-        code: ErrCode.PriceNotFound,
-        message: `Price ${price.id} has no Stripe price id`,
-        statusCode: 400,
-      });
-    }
-
-    lineItem = {
-      price: config.stripe_price_id,
-      quantity: quantity,
-      adjustable_quantity: adjustableQuantity,
-    };
-    // lineItemMeta = {
-    //   internal_feature_id: config.internal_feature_id,
-    //   feature_id: config.feature_id,
-    //   price_id: price.id,
-    // };
+    lineItem = priceToUsageInAdvance({
+      price,
+      options,
+      isCheckout,
+      relatedEnt,
+    });
   } else if (billingType == BillingType.UsageInArrear) {
     // TODO: Implement this
     const config = price.config as UsagePriceConfig;
@@ -212,33 +185,11 @@ export const priceToStripeItem = ({
       price: priceId,
     };
   } else if (billingType == BillingType.InArrearProrated) {
-    const config = price.config as UsagePriceConfig;
-    let quantity = existingUsage || 0;
-    if (quantity == 0 && isCheckout) {
-      // Get product id...
-      lineItem = {
-        price: config.stripe_placeholder_price_id,
-      };
-    } else {
-      lineItem = {
-        price: config.stripe_price_id,
-        quantity,
-      };
-    }
-
-    // OLD
-    // TODO: Implement this
-    // if (isCheckout) {
-    //   let config = price.config as UsagePriceConfig;
-    //   lineItem = {
-    //     price: config.stripe_price_id!,
-    //   };
-    // } else {
-    //   return null;
-    // }
-    // lineItem = {
-    //   price: price.config!.stripe_price_id!,
-    // };
+    lineItem = priceToInArrearProrated({
+      price,
+      isCheckout,
+      existingUsage,
+    });
   }
 
   return {
@@ -448,6 +399,8 @@ export const createStripePriceIFNotExist = async ({
   org: Organization;
   logger: any;
 }) => {
+  // Fetch latest price data...
+
   const billingType = getBillingType(price.config!);
 
   let config = price.config! as UsagePriceConfig;
@@ -507,13 +460,12 @@ export const createStripePriceIFNotExist = async ({
         logger.info(
           "Creating stripe product for in advance price, one off & tiered"
         );
-        await createStripeInAdvancePrice({
+        await createStripeOneOffTieredProduct({
           sb,
           stripeCli,
           price,
           entitlements,
           product,
-          org,
         });
       }
     }

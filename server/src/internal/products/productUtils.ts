@@ -61,11 +61,11 @@ export const isProductUpgrade = ({
     // Get each product's price prorated to a year
     let totalPrice = new Decimal(0);
     for (const price of prices) {
-      let interval = price.config?.interval;
+      // let interval = price.config?.interval;
 
-      if (!interval || interval === BillingInterval.OneOff) {
-        continue;
-      }
+      // if (!interval || interval === BillingInterval.OneOff) {
+      //   continue;
+      // }
 
       if ("usage_tiers" in price.config!) {
         // Just get total price for first tier
@@ -256,9 +256,26 @@ export const copyProduct = async ({
   const newPrices = product.prices.map((price) => {
     let copiedPrice = structuredClone(price);
 
+    let config = copiedPrice.config as UsagePriceConfig;
+    if (config.type === PriceType.Usage) {
+      let feature = features.find((f) => f.id === config.feature_id);
+      if (!feature) {
+        throw new RecaseError({
+          message: `Feature ${config.feature_id} not found`,
+          code: ErrCode.FeatureNotFound,
+          statusCode: 404,
+        });
+      }
+
+      (copiedPrice.config as UsagePriceConfig).internal_feature_id =
+        feature.internal_id!;
+    }
+
     delete copiedPrice.config!.stripe_price_id;
     delete (copiedPrice.config! as UsagePriceConfig).stripe_meter_id;
     delete (copiedPrice.config! as UsagePriceConfig).stripe_product_id;
+    delete (copiedPrice.config! as UsagePriceConfig)
+      .stripe_placeholder_price_id;
 
     return PriceSchema.parse({
       ...copiedPrice,
