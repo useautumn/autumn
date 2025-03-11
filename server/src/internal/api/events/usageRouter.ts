@@ -113,9 +113,9 @@ export const handleUsageEvent = async ({
   let { customer_id, customer_data, properties, feature_id, value } = req.body;
   if (!customer_id || !feature_id) {
     throw new RecaseError({
-      message: 'customer_id and feature_id are required',
-      code: ErrCode.InvalidInput,
-      statusCode: StatusCodes.BAD_REQUEST
+      message: "customer_id and feature_id are required",
+      code: ErrCode.InvalidInputs,
+      statusCode: StatusCodes.BAD_REQUEST,
     });
   }
   properties = properties || {};
