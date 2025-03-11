@@ -141,7 +141,12 @@ function CreditSystemConfig({
                         {features
                           ?.filter(
                             (feature: Feature) =>
-                              feature.type === FeatureType.Metered
+                              feature.type === FeatureType.Metered &&
+                              !creditSystemConfig.schema.some(
+                                (schemaItem) =>
+                                  feature.id != item.metered_feature_id &&
+                                  schemaItem.metered_feature_id === feature.id
+                              )
                           )
                           .map((feature: Feature) => (
                             <SelectItem key={feature.id} value={feature.id!}>
@@ -151,14 +156,7 @@ function CreditSystemConfig({
                       </SelectContent>
                     </Select>
                   </div>
-                  {/* <Input
-                  className="col-span-3"
-                  type="number"
-                  value={item.feature_amount}
-                  onChange={(e) =>
-                    handleSchemaChange(index, "feature_amount", e.target.value)
-                  }
-                /> */}
+
                   <div className="flex w-full gap-2">
                     <Input
                       className="w-full"
@@ -190,7 +188,17 @@ function CreditSystemConfig({
           </div>
         </div>
 
-        <Button variant="secondary" className="w-fit" onClick={addSchemaItem}>
+        <Button
+          variant="secondary"
+          className="w-fit"
+          onClick={addSchemaItem}
+          disabled={
+            creditSystemConfig.schema.length ==
+            features.filter(
+              (feature: Feature) => feature.type === FeatureType.Metered
+            ).length
+          }
+        >
           Add
         </Button>
       </div>

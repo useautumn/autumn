@@ -68,6 +68,20 @@ const validateCreditSystem = (config: CreditSystemConfig) => {
     });
   }
 
+  // Check if multiple of the same feature
+  const meteredFeatureIds = schema.map(
+    (schemaItem) => schemaItem.metered_feature_id
+  );
+  console.log("Metered feature ids:", meteredFeatureIds);
+  const uniqueMeteredFeatureIds = Array.from(new Set(meteredFeatureIds));
+  if (meteredFeatureIds.length !== uniqueMeteredFeatureIds.length) {
+    throw new RecaseError({
+      message: `Credit system contains multiple of the same metered_feature_id`,
+      code: ErrCode.InvalidFeature,
+      statusCode: 400,
+    });
+  }
+
   let newConfig = { ...config };
   for (let i = 0; i < newConfig.schema.length; i++) {
     newConfig.schema[i].feature_amount = 1;
