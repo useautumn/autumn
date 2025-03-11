@@ -16,10 +16,12 @@ import {
   PriceType,
   Price,
   FullProduct,
+  BillingType,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { addDays } from "date-fns";
 import { EntitlementService } from "./EntitlementService.js";
+import { getBillingType } from "@/internal/prices/priceUtils.js";
 
 export const entIntervalToTrialDuration = (interval: EntInterval) => {
   switch (interval) {
@@ -142,6 +144,26 @@ export const validateEntitlement = ({
         message: `Unlimited allowance is not allowed for usage-based prices (${parsedEnt.feature_id})`,
         statusCode: 400,
       });
+    }
+
+    let config = relatedPrice.config as UsagePriceConfig;
+    let billingType = getBillingType(config);
+
+    if (billingType == BillingType.UsageInAdvance) {
+      if (parsedEnt.allowance! == 0) {
+        return;
+      }
+
+      let billingUnits = config.billing_units || 1;
+      let isMultipleOfBillingUnits = parsedEnt.allowance! % billingUnits === 0;
+
+      if (parsedEnt.allowance! < billingUnits || !isMultipleOfBillingUnits) {
+        throw new RecaseError({
+          code: ErrCode.InvalidEntitlement,
+          message: `Allowance for ${parsedEnt.feature_id} must be ≥ billing units and a multiple of billing units`,
+          statusCode: 400,
+        });
+      }
     }
   }
 };

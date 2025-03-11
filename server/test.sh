@@ -13,6 +13,7 @@ elif [ "$1" == "advanced-parallel" ]; then
     'tests/advanced/**/*.ts' --ignore 'tests/advanced/11_arrear_prorated.ts' \
     --ignore 'tests/00_setup.ts' \
     --ignore 'tests/alex/**/*.ts'
+    # 'tests/advanced/11_arrear_prorated2.ts' 'tests/advanced/11_arrear_prorated3.ts'\
     # --ignore 'tests/advanced/11_arrear_prorated2.ts' \
 
 elif [ "$1" == "alex-parallel" ]; then
@@ -47,5 +48,3 @@ fi
 
 
 # All advanced parallel
-# 'tests/advanced/09_advanced_usage1.ts' 'tests/advanced/09_advanced_usage2.ts' 'tests/advanced/10_multi_interval1.ts' 'tests/advanced/10_multi_interval2.ts' \
-#     'tests/advanced/11_arrear_prorated.ts' 'tests/advanced/11_arrear_prorated2.ts' 'tests/advanced/12_group_by.ts' \
