@@ -10,28 +10,14 @@ import { ErrorMessages } from "@/errors/errMessages.js";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../../customers/CusService.js";
-
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { EventService } from "../events/EventService.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
-import {
-  createNewCustomer,
-  getCusEntsInFeatures,
-  getCustomerDetails,
-} from "./cusUtils.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { createNewCustomer, getCustomerDetails } from "./cusUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { getCusBalancesByEntitlement } from "@/internal/customers/entitlements/cusEntUtils.js";
 import {
-  getCusBalancesByEntitlement,
-  getCusBalancesByProduct,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
-import {
-  cancelCusProductSubscriptions,
-  expireAndActivate,
   fullCusProductToCusEnts,
   fullCusProductToCusPrices,
-  uncancelCurrentProduct,
 } from "@/internal/customers/products/cusProductUtils.js";
 import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
@@ -75,6 +61,7 @@ cusRouter.get("", async (req: any, res: any) => {
 });
 
 cusRouter.post("", async (req: any, res: any) => {
+  const logger = req.logtail;
   try {
     const data = req.body;
 
@@ -121,6 +108,19 @@ cusRouter.post("", async (req: any, res: any) => {
       success: true,
     });
   } catch (error: any) {
+    if (
+      error instanceof RecaseError &&
+      error.code === ErrCode.DuplicateCustomerId
+    ) {
+      logger.warn(
+        `POST /customers: ${error.message} (org: ${req.minOrg.slug})`
+      );
+      res.status(error.statusCode).json({
+        message: error.message,
+        code: error.code,
+      });
+      return;
+    }
     handleRequestError({ req, error, res, action: "create customer" });
   }
 });
@@ -190,11 +190,14 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
     });
 
     if (!customer) {
-      throw new RecaseError({
+      req.logtail.warn(
+        `GET /customers/${customerId}: not found | Org: ${req.minOrg.slug}`
+      );
+      res.status(StatusCodes.NOT_FOUND).json({
         message: `Customer ${customerId} not found`,
         code: ErrCode.CustomerNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
       });
+      return;
     }
 
     const { main, addOns, balances, invoices } = await getCustomerDetails({

@@ -17,6 +17,7 @@ import { faDollarCircle } from "@fortawesome/pro-duotone-svg-icons";
 import { cn } from "@/lib/utils";
 import { CreditSystemsTable } from "../credits/CreditSystemsTable";
 import CreateCreditSystem from "../credits/CreateCreditSystem";
+import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 
 function FeaturesView({ env }: { env: AppEnv }) {
   const [showCredits, setShowCredits] = useState(false);
@@ -81,21 +82,14 @@ function FeaturesView({ env }: { env: AppEnv }) {
           <p className="text-sm text-t2">
             Define the features of your application you want to charge for.
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className={cn(
-              "text-t3 w-fit",
-              showCredits && "bg-zinc-200 text-t2 hover:bg-zinc-200"
-            )}
+          <ToggleDisplayButton
+            show={showCredits}
             disabled={creditSystems.length > 0}
-            onClick={() =>
-              setShowCredits(creditSystems.length > 0 ? true : !showCredits)
-            }
+            onClick={() => setShowCredits(!showCredits)}
           >
             <FontAwesomeIcon icon={faDollarCircle} className="mr-2" />
             Credit Systems
-          </Button>
+          </ToggleDisplayButton>
         </div>
       </div>
 
