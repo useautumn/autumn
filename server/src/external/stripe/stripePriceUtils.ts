@@ -132,14 +132,12 @@ export const priceToStripeItem = ({
     const config = price.config as UsagePriceConfig;
     let quantity = options?.quantity!;
     let overage = quantity * config.billing_units! - relatedEnt.allowance!;
-    // console.log("Overage:", overage);
-    // console.log("Quantity:", quantity);
-    // console.log("Allowance:", relatedEnt.allowance);
+
     if (overage <= 0) {
       return null;
     }
+
     const amount = getPriceForOverage(price, overage);
-    // let perUnitAmount = new Decimal(amount).div(overage).toNumber();
     if (!config.stripe_product_id) {
       console.log(
         `WARNING: One off & tiered in advance price has no stripe product id: ${price.id}, ${relatedEnt.feature.name}`
