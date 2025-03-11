@@ -111,6 +111,13 @@ export const handleUsageEvent = async ({
   setUsage?: boolean;
 }) => {
   let { customer_id, customer_data, properties, feature_id, value } = req.body;
+  if (!customer_id || !feature_id) {
+    throw new RecaseError({
+      message: 'customer_id and feature_id are required',
+      code: ErrCode.InvalidInput,
+      statusCode: StatusCodes.BAD_REQUEST
+    });
+  }
   properties = properties || {};
 
   const { customer, org, feature, creditSystems } = await getCusFeatureAndOrg({
