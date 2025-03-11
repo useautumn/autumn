@@ -179,6 +179,7 @@ export const handleExistingProduct = async ({
   }
 
   // Case 4: Add-on product is same -- remove scheduled and update quantity
+
   if (curSameProduct && product.is_add_on) {
     return await handleSameAddOnProduct({
       sb,
