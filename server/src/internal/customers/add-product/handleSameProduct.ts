@@ -355,10 +355,12 @@ export const handleSameAddOnProduct = async ({
   const { optionsList: newOptionsList, prices, products } = attachParams;
 
   let product = products[0];
+
   if (pricesOnlyOneOff(prices)) {
+    attachParams.curCusProduct = undefined;
     return {
       done: false,
-      curCusProduct: curMainProduct,
+      curCusProduct: null,
     };
   }
 
