@@ -36,6 +36,7 @@ import { CustomerEntitlementService } from "../entitlements/CusEntitlementServic
 import { CusProductService } from "../products/CusProductService.js";
 import { attachParamsToInvoice } from "../invoices/invoiceUtils.js";
 import { updateScheduledSubWithNewItems } from "./scheduleUtils.js";
+import { Decimal } from "decimal.js";
 
 // UPGRADE FUNCTIONS
 const handleStripeSubUpdate = async ({
@@ -210,7 +211,9 @@ const billForRemainingUsages = async ({
     }
 
     // Amount to bill?
-    let usage = relatedCusEnt?.entitlement.allowance! - relatedCusEnt?.balance!;
+    let usage = new Decimal(relatedCusEnt?.entitlement.allowance!)
+      .minus(relatedCusEnt?.balance!)
+      .toNumber();
     let overage = -relatedCusEnt?.balance!;
 
     if (getBillingType(config) === BillingType.UsageInArrear) {
