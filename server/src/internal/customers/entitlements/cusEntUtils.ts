@@ -591,10 +591,9 @@ export const getTotalNegativeBalance = (cusEnt: FullCustomerEntitlement) => {
     return starting;
   }
 
-  starting = starting - cusEnt.balance!;
   for (const group in cusEnt.balances) {
     if (cusEnt.balances[group].balance < 0) {
-      starting = starting - cusEnt.balances[group].balance;
+      starting = starting + cusEnt.balances[group].balance;
     }
   }
   return starting;

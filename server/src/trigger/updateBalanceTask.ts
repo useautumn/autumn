@@ -523,7 +523,7 @@ export const runUpdateBalanceTask = async ({
 
       await handleBelowThresholdInvoicing({
         sb,
-        internalCustomerId: payload.internalCustomerId,
+        internalCustomerId: customer.internal_id,
         belowThresholdPrice,
       });
     } else {
