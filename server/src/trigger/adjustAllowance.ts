@@ -293,6 +293,7 @@ export const adjustAllowance = async ({
 
   // Update sub item
   let config = cusPrice.price.config as UsagePriceConfig;
+
   let subItem = sub.items.data.find(
     (item) => item.price.id === config.stripe_price_id
   );
@@ -302,11 +303,14 @@ export const adjustAllowance = async ({
     return;
   }
 
-  const quantity = newUsage + cusEnt.entitlement.allowance!;
+  let quantity = newUsage + cusEnt.entitlement.allowance!;
 
   if (quantity < 0) {
-    logger.error("❗️ Error: can't adjust allowance, quantity is negative");
-    return;
+    quantity = 0;
+    logger.warn("❗️ Warning: quantity is negative, setting to 0");
+    logger.warn(
+      `❗️ Allowance: ${cusEnt.entitlement.allowance}, New Balance: ${newBalance}`
+    );
   }
 
   try {

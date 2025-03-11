@@ -17,7 +17,6 @@ import { billingIntervalToStripe } from "./stripePriceUtils.js";
 import {
   getBillingType,
   getPriceEntitlement,
-  priceIsOneOffAndTiered,
 } from "@/internal/prices/priceUtils.js";
 
 export const createStripeMeteredPrice = async ({
@@ -97,6 +96,7 @@ export const createStripeMeteredPrice = async ({
     ...productData,
     ...priceAmountData,
     currency: org.default_currency,
+    nickname: `Autumn Price (${price.name}) [Placeholder]`,
     recurring: {
       ...(billingIntervalToStripe(price.config!.interval!) as any),
       meter: meter!.id,
@@ -131,6 +131,7 @@ export const createStripeFixedCyclePrice = async ({
     recurring: {
       ...(billingIntervalToStripe(config.interval!) as any),
     },
+    nickname: `Autumn Price (${price.name})`,
   });
 
   config.stripe_price_id = stripePrice.id;
@@ -222,13 +223,7 @@ export const createStripeInAdvancePrice = async ({
     };
   }
 
-  if (priceIsOneOffAndTiered(price, relatedEnt)) {
-    let stripeProduct = await stripeCli.products.create({
-      name: productName,
-    });
-
-    config.stripe_product_id = stripeProduct.id;
-  } else if (price.config!.interval == BillingInterval.OneOff) {
+  if (price.config!.interval == BillingInterval.OneOff) {
     const amount = config.usage_tiers[0].amount;
     stripePrice = await stripeCli.prices.create({
       ...productData,
@@ -238,8 +233,8 @@ export const createStripeInAdvancePrice = async ({
     config.stripe_price_id = stripePrice.id;
     return;
   } else {
-    let priceData = {};
     let tiers = inAdvanceToStripeTiers(price, relatedEnt);
+
     let priceAmountData = {};
     if (tiers.length == 1) {
       priceAmountData = {
@@ -260,6 +255,7 @@ export const createStripeInAdvancePrice = async ({
       recurring: {
         ...(recurringData as any),
       },
+      nickname: `Autumn Price (${price.name})`,
     });
 
     config.stripe_price_id = stripePrice.id;
@@ -289,8 +285,39 @@ export const createStripeInAdvancePrice = async ({
   });
 };
 
-// IN ARREAR
+export const createStripeOneOffTieredProduct = async ({
+  sb,
+  stripeCli,
+  price,
+  entitlements,
+  product,
+}: {
+  sb: SupabaseClient;
+  stripeCli: Stripe;
+  price: Price;
+  entitlements: EntitlementWithFeature[];
+  product: Product;
+}) => {
+  let config = price.config as UsagePriceConfig;
+  let relatedEnt = getPriceEntitlement(price, entitlements);
+  let productName = `${product.name} - ${
+    config.billing_units == 1 ? "" : `${config.billing_units} `
+  }${relatedEnt.feature.name}`;
 
+  let stripeProduct = await stripeCli.products.create({
+    name: productName,
+  });
+
+  config.stripe_product_id = stripeProduct.id;
+
+  await PriceService.update({
+    sb,
+    priceId: price.id!,
+    update: { config },
+  });
+};
+
+// IN ARREAR
 export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
   let usageConfig = structuredClone(price.config) as UsagePriceConfig;
   const tiers: any[] = [];
@@ -323,6 +350,7 @@ export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
 
   return tiers;
 };
+
 export const createStripeInArrearPrice = async ({
   sb,
   stripeCli,
@@ -406,6 +434,7 @@ export const createStripeInArrearPrice = async ({
       meter: meter!.id,
       usage_type: "metered",
     },
+    nickname: `Autumn Price (${price.name})`,
   });
 
   config.stripe_price_id = stripePrice.id;

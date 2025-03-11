@@ -14,6 +14,7 @@ export const FeatureOptionsSchema = z.object({
   feature_id: z.string(),
   threshold: z.number().optional().nullable(),
   quantity: z.number().optional().nullable(),
+  adjustable_quantity: z.boolean().nullish(),
 });
 
 export enum CollectionMethod {

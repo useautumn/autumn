@@ -1,7 +1,4 @@
-import {
-  formatUnixToDateTime,
-  formatUnixToDateTimeString,
-} from "@/utils/formatUtils/formatDateUtils";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { Product } from "@autumn/shared";
 import React from "react";
 import { useRouter } from "next/navigation";

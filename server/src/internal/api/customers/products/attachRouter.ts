@@ -8,6 +8,7 @@ import {
   FeatureOptionsSchema,
   FullCusProduct,
   Price,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 import {
@@ -44,6 +45,7 @@ import {
   clearLock,
   handleAttachRaceCondition,
 } from "@/external/redis/redisUtils.js";
+import { Decimal } from "decimal.js";
 
 export const attachRouter = Router();
 
@@ -105,13 +107,17 @@ export const checkAddProductErrors = async ({
       }
 
       // 2. Quantity must be >= feature allowance
+      let minQuantity = new Decimal(priceEnt.allowance!)
+        .div((price.config! as UsagePriceConfig).billing_units || 1)
+        .toNumber();
+
       if (
         notNullOrUndefined(options?.quantity) &&
         priceEnt.allowance &&
-        options!.quantity! < priceEnt.allowance
+        options!.quantity! < minQuantity
       ) {
         throw new RecaseError({
-          message: `Quantity must be greater than or equal to allowance (${priceEnt.allowance})`,
+          message: `Quantity must be greater than or equal to ${minQuantity}`,
           code: ErrCode.InvalidOptions,
           statusCode: 400,
         });
@@ -124,6 +130,24 @@ export const checkAddProductErrors = async ({
           code: ErrCode.InvalidOptions,
           statusCode: 400,
         });
+      }
+
+      if (prices.length === 1) {
+        // 1. Check allowance
+        let allowance = priceEnt.allowance;
+        let minQuantity = new Decimal(allowance!)
+          .div((price.config! as UsagePriceConfig).billing_units || 1)
+          .toNumber();
+
+        if (priceIsOneOffAndTiered(price, priceEnt)) {
+          if (options?.quantity! <= minQuantity) {
+            throw new RecaseError({
+              message: `Quantity must be greater than ${minQuantity}`,
+              code: ErrCode.InvalidOptions,
+              statusCode: 400,
+            });
+          }
+        }
       }
     } else if (billingType === BillingType.UsageBelowThreshold) {
       let priceEnt = getPriceEntitlement(price, entitlements);

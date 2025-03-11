@@ -7,8 +7,6 @@ import {
   AppEnv,
   BillingType,
   CusProductStatus,
-  Entitlement,
-  EntitlementWithFeature,
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";
