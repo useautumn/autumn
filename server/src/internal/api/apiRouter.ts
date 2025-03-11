@@ -25,6 +25,7 @@ apiRouter.use((req: any, res: any, next: any) => {
       method: req.method,
       url: req.originalUrl,
       body: req.body,
+      env: req.env,
     };
   });
 

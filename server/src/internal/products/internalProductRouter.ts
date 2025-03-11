@@ -19,18 +19,11 @@ productRouter.get("/data", async (req: any, res) => {
       sb,
       orgId: req.orgId,
     });
-
-    const products = await ProductService.getProducts(sb, req.orgId, req.env);
-    const features = await FeatureService.getFeatures({
-      sb,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    const org = await OrgService.getFullOrg({
-      sb,
-      orgId: req.orgId,
-    });
+    const [products, features, org] = await Promise.all([
+      ProductService.getProducts(sb, req.orgId, req.env),
+      FeatureService.getFromReq(req),
+      OrgService.getFromReq(req),
+    ]);
 
     res.status(200).json({
       products,
@@ -41,6 +34,7 @@ productRouter.get("/data", async (req: any, res) => {
         test_pkey: org.test_pkey,
         live_pkey: org.live_pkey,
       },
+      coupons: [],
     });
   } catch (error) {
     console.error("Failed to get products", error);
