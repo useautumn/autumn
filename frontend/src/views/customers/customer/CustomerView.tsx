@@ -43,6 +43,9 @@ import { faStripe, faStripeS } from "@fortawesome/free-brands-svg-icons";
 import { getStripeCusLink } from "@/utils/linkUtils";
 import { Button } from "@/components/ui/button";
 import ErrorScreen from "@/views/general/ErrorScreen";
+import { InvoicesTable } from "./InvoicesTable";
+import { CustomerDetails } from "./CustomerDetails";
+import AddCoupon from "./add-coupon/AddCouponDialogContent";
 
 export default function CustomerView({
   customer_id,
@@ -61,19 +64,11 @@ export default function CustomerView({
     url: `/customers/${customer_id}/data`,
     env,
   });
-
-  const {
-    data: eventsData,
-    isLoading: eventsLoading,
-    error: eventsError,
-  } = useAxiosSWR({
-    url: `/v1/customers/${customer_id}/events`,
-    env,
-  });
+  const [addCouponOpen, setAddCouponOpen] = useState(false);
 
   const [showExpired, setShowExpired] = useState(false);
 
-  if (isLoading || eventsLoading) return <LoadingScreen />;
+  if (isLoading) return <LoadingScreen />;
 
   // if (error) {
   //   router.push("/customers");
@@ -94,11 +89,21 @@ export default function CustomerView({
     );
   }
 
-  const { customer, products, invoices } = data;
-  const { events } = eventsData;
+  const { customer, products, invoices, coupons, events, discount } = data;
 
   return (
-    <CustomerContext.Provider value={{ customer, products, env, cusMutate }}>
+    <CustomerContext.Provider
+      value={{
+        customer,
+        products,
+        invoices,
+        coupons,
+        discount,
+        env,
+        cusMutate,
+        setAddCouponOpen,
+      }}
+    >
       <CustomToaster />
       <div className="flex flex-col gap-1">
         <Breadcrumb>
@@ -185,62 +190,7 @@ export default function CustomerView({
           {invoices.length === 0 ? (
             <p className="text-t3 text-sm italic">No invoices found</p>
           ) : (
-            <Table className="p-2">
-              <TableHeader>
-                <TableRow className="bg-white">
-                  <TableHead className="">Products</TableHead>
-                  <TableHead className="">Total</TableHead>
-                  <TableHead className="">Status</TableHead>
-                  <TableHead className="min-w-0 w-28">Created At</TableHead>
-                  <TableHead className="min-w-0 w-6"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoices.map((invoice) => (
-                  <TableRow
-                    key={invoice.id}
-                    onClick={() => {
-                      // navigateTo(invoice.hosted_invoice_url, router, env);
-                      window.open(invoice.hosted_invoice_url, "_blank");
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <TableCell>
-                      {invoice.product_ids
-                        .map((p: string) => {
-                          return products.find((product) => product.id === p)
-                            ?.name;
-                        })
-                        .join(", ")}
-                    </TableCell>
-                    {/* <TableCell>
-                      <a
-                        href={invoice.hosted_invoice_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-lime-500"
-                      >
-                        View Invoice
-                        <FontAwesomeIcon icon={faSquareUpRight} />
-                      </a>
-                    </TableCell> */}
-                    <TableCell>
-                      {invoice.total.toFixed(2)}{" "}
-                      {invoice.currency.toUpperCase()}
-                    </TableCell>
-                    <TableCell>{invoice.status}</TableCell>
-                    <TableCell>
-                      {formatUnixToDateTime(invoice.created_at).date}
-                      <span className="text-t3">
-                        {" "}
-                        {formatUnixToDateTime(invoice.created_at).time}{" "}
-                      </span>
-                    </TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <InvoicesTable />
           )}
 
           <p className="text-t2 font-medium text-md">Events</p>
@@ -252,61 +202,7 @@ export default function CustomerView({
         </div>
         {/* customer details */}
         <div className="flex flex-col gap-4 text-t2 text-sm w-1/3 max-w-[400px] h-fit">
-          <h2 className="text-t2 font-medium text-md">Customer Details</h2>
-
-          <div className="grid grid-cols-[auto_1fr] gap-y-3 gap-x-4 w-full items-center rounded-md px-4 break-all">
-            <p className="text-t3 text-xs font-medium">Name</p>
-            <div className="flex gap-2">
-              {/* <p>{customer.name}</p> */}
-              <p>{customer.name}</p>
-            </div>
-
-            <p className="text-t3 text-xs font-medium">ID</p>
-            <p className="flex items-center gap-1 font-mono ">
-              {customer.id} <CopyButton text={customer.id} />
-            </p>
-
-            <p className="text-t3 text-xs font-medium">Email</p>
-            {customer.email ? (
-              <p className="border border-blue-500 text-blue-500 px-2 py-0.5 w-fit">
-                {customer.email}
-              </p>
-            ) : (
-              <p className="text-t3 text-xs font-medium">N/A</p>
-            )}
-
-            <p className="text-t3 text-xs font-medium">Fingerprint</p>
-            <p>{customer.fingerprint}</p>
-
-            <p className="text-t3 text-xs font-medium">Products</p>
-            <p>
-              {customer.products
-                .map(
-                  (p) => products.find((prod) => prod.id === p.product_id)?.name
-                )
-                .join(", ")}
-            </p>
-
-            {customer.processor?.id && (
-              <Link
-                className="!cursor-pointer hover:underline"
-                href={getStripeCusLink(customer.processor?.id, env)}
-                target="_blank"
-              >
-                <div className="flex justify-center items-center w-fit gap-2">
-                  <FontAwesomeIcon
-                    icon={faStripe}
-                    className="text-[#675DFF] h-6"
-                  />
-                  <FontAwesomeIcon
-                    icon={faArrowUpRightFromSquare}
-                    className="text-[#675DFF]"
-                    size="xs"
-                  />
-                </div>
-              </Link>
-            )}
-          </div>
+          <CustomerDetails />
         </div>
       </div>
     </CustomerContext.Provider>

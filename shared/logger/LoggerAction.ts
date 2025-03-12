@@ -3,4 +3,7 @@ export enum LoggerAction {
 
   // Stripe Webhook
   StripeWebhookInvoiceCreated = "stripe_webhook_invoice_created",
+
+  // Invoice
+  InsertStripeInvoice = "insert_stripe_invoice",
 }

@@ -1,4 +1,9 @@
-import { Customer, ErrCode, InvoiceStatus } from "@autumn/shared";
+import {
+  Customer,
+  ErrCode,
+  InvoiceDiscount,
+  InvoiceStatus,
+} from "@autumn/shared";
 
 import { AppEnv } from "@autumn/shared";
 
@@ -10,6 +15,19 @@ import RecaseError, { isPaymentDeclined } from "@/utils/errorUtils.js";
 import { isStripeCardDeclined } from "./stripeCardUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+
+export const getStripeExpandedInvoice = async ({
+  stripeCli,
+  stripeInvoiceId,
+}: {
+  stripeCli: Stripe;
+  stripeInvoiceId: string;
+}) => {
+  const invoice = await stripeCli.invoices.retrieve(stripeInvoiceId, {
+    expand: ["discounts", "discounts.coupon"],
+  });
+  return invoice;
+};
 
 export const payForInvoice = async ({
   fullOrg,
@@ -102,4 +120,55 @@ export const updateInvoiceIfExists = async ({
   }
 
   return false;
+};
+
+export const getInvoiceDiscounts = ({
+  expandedInvoice,
+  logger,
+}: {
+  expandedInvoice: Stripe.Invoice;
+  logger: any;
+}) => {
+  try {
+    if (!expandedInvoice.discounts || expandedInvoice.discounts.length === 0) {
+      return [];
+    }
+
+    if (typeof expandedInvoice.discounts[0] == "string") {
+      logger.warn("Getting invoice discounts failed, discounts not expanded");
+      logger.warn(expandedInvoice.discounts);
+      return [];
+    }
+
+    let totalDiscountAmounts = expandedInvoice.total_discount_amounts;
+
+    let autumnDiscounts = expandedInvoice.discounts.map((discount: any) => {
+      console.log("Discount", discount);
+      const amountOff = discount.coupon.amount_off;
+      const amountUsed = totalDiscountAmounts?.find(
+        (item) => item.discount === discount.id
+      )?.amount;
+
+      let autumnDiscount: InvoiceDiscount = {
+        stripe_coupon_id: discount.coupon?.id,
+        coupon_name: discount.coupon.name,
+        amount_off: amountOff / 100,
+        amount_used: (amountUsed || 0) / 100,
+      };
+
+      return autumnDiscount;
+    });
+
+    return autumnDiscounts;
+  } catch (error) {
+    logger.error(`Error getting invoice discounts`);
+    logger.error(error);
+    throw error;
+  }
+};
+
+export const getInvoiceExpansion = () => {
+  return {
+    expand: ["discounts", "discounts.coupon"],
+  };
 };

@@ -23,7 +23,11 @@ import {
   getPriceEntitlement,
 } from "@/internal/prices/priceUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
+import {
+  getInvoiceExpansion,
+  getStripeExpandedInvoice,
+  payForInvoice,
+} from "@/external/stripe/stripeInvoiceUtils.js";
 
 dotenv.config();
 
@@ -45,6 +49,7 @@ const createBelowThresholdInvoice = async ({
   const invoice = await stripeCli.invoices.create({
     customer: customer.processor.id,
     auto_advance: true,
+    ...getInvoiceExpansion(),
   });
 
   // 2. Create invoice item
@@ -121,9 +126,14 @@ const handleInvoicePaymentFailure = async ({
   await stripeCli.invoices.voidInvoice(finalizedInvoice.id);
   console.log("   a. Stripe invoice voided");
 
+  const expandedInvoice = await getStripeExpandedInvoice({
+    stripeCli,
+    stripeInvoiceId: finalizedInvoice.id,
+  });
+
   await InvoiceService.createInvoiceFromStripe({
     sb,
-    stripeInvoice: finalizedInvoice,
+    stripeInvoice: expandedInvoice,
     internalCustomerId: fullCusProduct.internal_customer_id,
     productIds: [fullCusProduct.product.id],
     internalProductIds: [fullCusProduct.internal_product_id],

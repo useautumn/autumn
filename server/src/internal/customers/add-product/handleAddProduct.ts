@@ -22,7 +22,11 @@ import {
   InvoiceStatus,
 } from "@autumn/shared";
 import { InvoiceService } from "../invoices/InvoiceService.js";
-import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
+import {
+  getInvoiceExpansion,
+  getStripeExpandedInvoice,
+  payForInvoice,
+} from "@/external/stripe/stripeInvoiceUtils.js";
 import { createStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
 import { handleCreateCheckout } from "./handleCreateCheckout.js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
@@ -109,7 +113,10 @@ const handleBillNowPrices = async ({
 
   for (const invoiceId of invoiceIds) {
     try {
-      const invoice = await stripeCli.invoices.retrieve(invoiceId);
+      const invoice = await getStripeExpandedInvoice({
+        stripeCli,
+        stripeInvoiceId: invoiceId,
+      });
 
       await InvoiceService.createInvoiceFromStripe({
         sb,
@@ -184,7 +191,8 @@ const handleOneOffPrices = async ({
   }
 
   const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
-    stripeInvoice.id
+    stripeInvoice.id,
+    getInvoiceExpansion()
   );
 
   console.log("   2. Paying invoice");

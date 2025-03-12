@@ -14,7 +14,10 @@ import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { differenceInHours, format, subDays } from "date-fns";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
-import { updateInvoiceIfExists } from "../stripeInvoiceUtils.js";
+import {
+  getStripeExpandedInvoice,
+  updateInvoiceIfExists,
+} from "../stripeInvoiceUtils.js";
 
 export const handleInvoiceFinalized = async ({
   sb,
@@ -29,8 +32,13 @@ export const handleInvoiceFinalized = async ({
   env: AppEnv;
   event: Stripe.Event;
 }) => {
-  // Get stripe subscriptions
   if (invoice.subscription) {
+    const stripeCli = createStripeCli({ org, env });
+    const expandedInvoice = await getStripeExpandedInvoice({
+      stripeCli,
+      stripeInvoiceId: invoice.id,
+    });
+
     const activeProducts = await CusProductService.getByStripeSubId({
       sb,
       stripeSubId: invoice.subscription as string,
@@ -61,7 +69,7 @@ export const handleInvoiceFinalized = async ({
     // Create invoice if not exists...?
     await InvoiceService.createInvoiceFromStripe({
       sb,
-      stripeInvoice: invoice,
+      stripeInvoice: expandedInvoice,
       internalCustomerId: activeProduct.internal_customer_id,
       productIds: [activeProduct.product.id],
       internalProductIds: [activeProduct.internal_product_id],
