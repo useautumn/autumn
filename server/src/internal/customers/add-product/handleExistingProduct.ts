@@ -1,6 +1,7 @@
 import RecaseError from "@/utils/errorUtils.js";
 
 import {
+  BillingInterval,
   CusProductStatus,
   EntitlementWithFeature,
   FullCusProduct,
@@ -12,6 +13,7 @@ import { ErrCode } from "@/errors/errCodes.js";
 import {
   getPricesForProduct,
   isFreeProduct,
+  isOneOff,
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -32,11 +34,20 @@ export const getExistingCusProducts = async ({
   product: Product;
   cusProducts: FullCusProduct[];
 }) => {
+  if (!cusProducts || cusProducts.length === 0) {
+    return {
+      curMainProduct: null,
+      curSameProduct: null,
+      curScheduledProduct: null,
+    };
+  }
+
   let curMainProduct = cusProducts.find(
     (cp: any) =>
       cp.product.group === product.group &&
       !cp.product.is_add_on &&
-      cp.status === CusProductStatus.Active
+      cp.status === CusProductStatus.Active &&
+      !isOneOff(cp.customer_prices.map((cp: any) => cp.price))
   );
 
   const curSameProduct = cusProducts!.find(
@@ -59,6 +70,17 @@ const handleExistingMultipleProducts = async ({
   attachParams: AttachParams;
 }) => {
   let { products } = attachParams;
+
+  // If all one time products, return ok
+  if (
+    products.every((p) =>
+      p.prices.every(
+        (price) => price.config?.interval === BillingInterval.OneOff
+      )
+    )
+  ) {
+    return { curCusProduct: null, done: true };
+  }
 
   for (const product of products) {
     let { curMainProduct, curSameProduct, curScheduledProduct }: any =
@@ -143,6 +165,10 @@ export const handleExistingProduct = async ({
       cusProducts: cusProducts || [],
     });
 
+  if (isOneOff(product.prices)) {
+    return { curCusProduct: null, done: false };
+  }
+
   logger.info(
     `Checking existing product | curMain: ${chalk.yellow(
       curMainProduct?.product.name || "None"
@@ -222,7 +248,8 @@ export const handleExistingProduct = async ({
     }
   }
 
-  // If main product is free, or attached product is an add-on, treat as if adding new product
+  // If main product is free, or one time product, or  add-on, treat as if adding new product
+
   if (
     (curMainProduct &&
       isFreeProduct(
