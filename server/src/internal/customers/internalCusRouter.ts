@@ -131,6 +131,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       coupons,
       events,
       discount,
+      org,
     });
   } catch (error) {
     handleRequestError({ req, error, res, action: "get customer data" });
