@@ -5,7 +5,8 @@
     "frontend",
     "server",
     "shared",
-    "tests"
+    "tests",
+    "frontend2"
   ],
   "type": "module",
   "scripts": {
