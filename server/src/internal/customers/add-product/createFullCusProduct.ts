@@ -33,7 +33,7 @@ import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlement
 import { CusService } from "../CusService.js";
 import { getExistingCusProducts } from "./handleExistingProduct.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
-import { searchCusProducts } from "tests/utils/genUtils.js";
+import { searchCusProducts } from "@/internal/customers/products/cusProductUtils.js";
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
