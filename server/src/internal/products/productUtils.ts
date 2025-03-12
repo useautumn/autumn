@@ -7,6 +7,7 @@ import {
   EntitlementWithFeature,
   ErrCode,
   Feature,
+  FixedPriceConfig,
   Organization,
   Price,
   PriceSchema,
@@ -323,4 +324,19 @@ export const copyProduct = async ({
       data: newEntitlements,
     }),
   ]);
+};
+
+export const isOneOff = (prices: Price[]) => {
+  return (
+    prices.every((p) => p.config?.interval === BillingInterval.OneOff) &&
+    prices.some((p) => {
+      if (p.config?.type === PriceType.Usage) {
+        let config = p.config as UsagePriceConfig;
+        return config.usage_tiers.some((t) => t.amount > 0);
+      } else {
+        let config = p.config as FixedPriceConfig;
+        return config.amount > 0;
+      }
+    })
+  );
 };
