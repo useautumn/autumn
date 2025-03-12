@@ -98,4 +98,7 @@ export const ErrCode = {
 
   // Pay for invoice
   PayInvoiceFailed: "pay_invoice_failed",
+
+  // COUPONS
+  PromoCodeAlreadyExistsInStripe: "promo_code_already_exists_in_stripe",
 };

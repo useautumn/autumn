@@ -4,6 +4,14 @@ import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, InvoiceStatus, Organization } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
+import { createStripeCli } from "../utils.js";
+import { CouponService } from "@/internal/coupons/CouponService.js";
+import { Decimal } from "decimal.js";
+import { generateId } from "@/utils/genUtils.js";
+import {
+  getInvoiceDiscounts,
+  getStripeExpandedInvoice,
+} from "../stripeInvoiceUtils.js";
 
 const handleOneOffInvoicePaid = async ({
   sb,
@@ -35,6 +43,7 @@ const handleOneOffInvoicePaid = async ({
 
   console.log(`Updated one off invoice status to ${stripeInvoice.status}`);
 };
+
 export const handleInvoicePaid = async ({
   req,
   sb,
@@ -50,6 +59,30 @@ export const handleInvoicePaid = async ({
   env: AppEnv;
   event: Stripe.Event;
 }) => {
+  // 1. Get total invoice discounts
+
+  // Fetch expanded invoice
+  const stripeCli = createStripeCli({ org, env });
+  const expandedInvoice = await getStripeExpandedInvoice({
+    stripeCli,
+    stripeInvoiceId: invoice.id,
+  });
+
+  const discountAmounts = getInvoiceDiscounts({
+    expandedInvoice,
+    logger: req.logger,
+  });
+
+  console.log("Discount amounts", discountAmounts);
+
+  await handleInvoicePaidDiscount({
+    sb,
+    expandedInvoice,
+    org,
+    env,
+    logger: req.logger,
+  });
+
   if (invoice.subscription) {
     // Get customer product
     const activeCusProducts = await CusProductService.getByStripeSubId({
@@ -101,29 +134,109 @@ export const handleInvoicePaid = async ({
 
     await InvoiceService.createInvoiceFromStripe({
       sb,
-      stripeInvoice: invoice,
+      stripeInvoice: expandedInvoice,
       internalCustomerId: activeCusProducts[0].internal_customer_id,
       productIds: activeCusProducts.map((p) => p.product_id),
       internalProductIds: activeCusProducts.map((p) => p.internal_product_id),
       org: org,
     });
-    // const batchUpdate = [];
-    // for (const cusProduct of activeCusProducts) {
-    //   // Create invoice
-
-    //   batchUpdate.push(
-
-    //   );
-    // }
-
-    // await Promise.all(batchUpdate);
   } else {
     await handleOneOffInvoicePaid({
       sb,
-      stripeInvoice: invoice,
+      stripeInvoice: expandedInvoice,
       event,
     });
   }
 
   // Else, handle one-off invoice
+};
+
+const handleInvoicePaidDiscount = async ({
+  sb,
+  expandedInvoice,
+  org,
+  env,
+  logger,
+}: {
+  sb: SupabaseClient;
+  expandedInvoice: Stripe.Invoice;
+  org: Organization;
+  env: AppEnv;
+  logger: any;
+}) => {
+  // Handle coupon
+  const stripeCli = createStripeCli({ org, env });
+  if (expandedInvoice.discounts.length === 0) {
+    return;
+  }
+
+  try {
+    const totalDiscountAmounts = expandedInvoice.total_discount_amounts;
+
+    // Log coupon information for debugging
+    for (const discount of expandedInvoice.discounts) {
+      if (typeof discount === "string") {
+        continue;
+      }
+
+      const curCoupon = discount.coupon;
+      if (!curCoupon) {
+        continue;
+      }
+      console.log("Cur coupon:", curCoupon);
+      const rollSuffixIndex = curCoupon.id.indexOf("_roll_");
+      const couponId =
+        rollSuffixIndex !== -1
+          ? curCoupon.id.substring(0, rollSuffixIndex)
+          : curCoupon.id;
+
+      // 1. Fetch coupon from Autumn
+      const autumnCoupon = await CouponService.getByInternalId({
+        sb,
+        internalId: couponId,
+        orgId: org.id,
+        env,
+      });
+
+      if (!autumnCoupon) {
+        continue;
+      }
+
+      console.log("Found autumn coupon", autumnCoupon);
+
+      // 1. New amount:
+      const curAmount = discount.coupon.amount_off;
+      const amountUsed = totalDiscountAmounts?.find(
+        (item) => item.discount === discount.id
+      )?.amount;
+
+      const newAmount = new Decimal(curAmount!).sub(amountUsed!).toNumber();
+
+      // if (amountUsed == 0) {
+      //   console.log("No discount used, skipping");
+      //   continue;
+      // }
+
+      console.log(`Updating coupon amount from ${curAmount} to ${newAmount}`);
+
+      // Create new coupon with that amount off
+      const newCoupon = await stripeCli.coupons.create({
+        id: `${couponId}_${generateId("roll")}`,
+        name: discount.coupon.name as string,
+        amount_off: newAmount,
+        currency: expandedInvoice.currency,
+        duration: "once",
+        applies_to: curCoupon.applies_to,
+      });
+
+      await stripeCli.customers.update(expandedInvoice.customer as string, {
+        coupon: newCoupon.id,
+      });
+
+      await stripeCli.coupons.del(newCoupon.id);
+    }
+  } catch (error) {
+    logger.error("invoice.paid: error updating coupon");
+    logger.error(error);
+  }
 };

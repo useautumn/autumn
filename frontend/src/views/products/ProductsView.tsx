@@ -16,6 +16,8 @@ import { ProductsTable } from "./ProductsTable";
 import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTicketSimple } from "@fortawesome/pro-duotone-svg-icons";
+import { CouponsTable } from "./coupons/CouponsTable";
+import CreateCoupon from "./coupons/CreateCoupon";
 
 function ProductsView({ env }: { env: AppEnv }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -30,7 +32,11 @@ function ProductsView({ env }: { env: AppEnv }) {
     if (data?.products.length > 0 && !selectedProduct) {
       setSelectedProduct(data.products[0]);
     }
-  }, [data, selectedProduct]);
+
+    if (data?.coupons.length > 0) {
+      setShowCoupons(true);
+    }
+  }, [data]);
 
   if (isLoading) return <LoadingScreen />;
   // const { products, features, creditSystems, stripeProducts } = data;
@@ -56,8 +62,8 @@ function ProductsView({ env }: { env: AppEnv }) {
         </div>
         <ToggleDisplayButton
           show={showCoupons}
-          disabled={false}
-          onClick={() => setShowCoupons(!showCoupons)}
+          disabled={data?.coupons.length > 0}
+          onClick={() => setShowCoupons((prev) => !prev)}
         >
           <FontAwesomeIcon icon={faTicketSimple} className="mr-2" />
           Coupons
@@ -65,9 +71,21 @@ function ProductsView({ env }: { env: AppEnv }) {
       </div>
 
       <ProductsTable products={data?.products} />
-      <div>
-        <CreateProduct />
-      </div>
+      <CreateProduct />
+      {showCoupons && (
+        <div className="flex flex-col gap-4 h-fit mt-6">
+          <div>
+            <h2 className="text-lg font-medium">Coupons</h2>
+            <p className="text-sm text-t2">
+              Create a coupon to give users credits or a discount on one or more
+              products.{" "}
+              {/* <span className="text-t3">(eg, 10% off all products).</span> */}
+            </p>
+          </div>
+          <CouponsTable />
+          <CreateCoupon />
+        </div>
+      )}
     </ProductsContext.Provider>
   );
 }

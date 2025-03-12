@@ -22,6 +22,10 @@ import {
 } from "@/external/stripe/stripePriceUtils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import {
+  getInvoiceExpansion,
+  getStripeExpandedInvoice,
+} from "@/external/stripe/stripeInvoiceUtils.js";
 
 export const removeCurrentProduct = async ({
   sb,
@@ -97,7 +101,10 @@ export const invoiceOnlyOneOff = async ({
   });
 
   // 3. Finalize invoice
-  const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(invoice.id);
+  const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
+    invoice.id,
+    getInvoiceExpansion()
+  );
 
   // 4. Create invoice from stripe
   await InvoiceService.createInvoiceFromStripe({
@@ -195,9 +202,10 @@ export const handleInvoiceOnly = async ({
       stripeSub.latest_invoice as string
     );
 
-    const stripeInvoice = await stripeCli.invoices.retrieve(
-      stripeSub.latest_invoice as string
-    );
+    const stripeInvoice = await getStripeExpandedInvoice({
+      stripeCli,
+      stripeInvoiceId: stripeSub.latest_invoice as string,
+    });
 
     if (!firstInvoice) {
       firstInvoice = stripeInvoice;

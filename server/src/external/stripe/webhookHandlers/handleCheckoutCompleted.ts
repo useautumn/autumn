@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Stripe } from "stripe";
+import stripe, { Stripe } from "stripe";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
@@ -24,6 +24,10 @@ import {
   attachToInsertParams,
   getPricesForProduct,
 } from "@/internal/products/productUtils.js";
+import { CouponService } from "@/internal/coupons/CouponService.js";
+import { CouponType, getCouponType } from "@/internal/coupons/couponUtils.js";
+import { Decimal } from "decimal.js";
+import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -90,6 +94,70 @@ export const itemMetasToOptions = async ({
   }
 };
 
+const handleCheckoutCoupon = async ({
+  checkoutSession,
+  stripeCli,
+  sb,
+  attachParams,
+}: {
+  checkoutSession: Stripe.Checkout.Session;
+  stripeCli: Stripe;
+  sb: SupabaseClient;
+  attachParams: AttachParams;
+}) => {
+  const expandedSession = await stripeCli.checkout.sessions.retrieve(
+    checkoutSession.id,
+    {
+      expand: ["total_details", "total_details.breakdown"],
+    }
+  );
+  let discounts = expandedSession.total_details?.breakdown?.discounts;
+  for (const { amount: amountUsed, discount } of discounts || []) {
+    // 1. Get coupon from DB
+    const coupon = await CouponService.getByInternalId({
+      sb,
+      internalId: discount.coupon.id,
+      orgId: attachParams.org.id,
+      env: attachParams.customer.env,
+    });
+
+    let couponType = getCouponType(coupon);
+
+    if (
+      couponType != CouponType.AddBillingCredits &&
+      couponType != CouponType.AddInvoiceBalance
+    ) {
+      continue;
+    }
+
+    const remainderCredits = new Decimal(discount.coupon.amount_off!)
+      .minus(amountUsed)
+      .toNumber();
+
+    console.log("Remainder credits:", remainderCredits);
+    if (remainderCredits <= 0) {
+      continue;
+    }
+
+    // 1. If apply to all and roll over
+
+    console.log("Coupon type:", couponType);
+    if (couponType == CouponType.AddInvoiceBalance) {
+      // 1. Add invoice balance
+      await stripeCli.customers.createBalanceTransaction(
+        attachParams.customer.processor.id,
+        {
+          amount: -remainderCredits,
+          currency: "usd",
+        }
+      );
+      console.log(
+        `   ✅ checkout.completed: added invoice balance from coupon: ${remainderCredits}`
+      );
+    }
+  }
+};
+
 export const handleCheckoutSessionCompleted = async ({
   sb,
   org,
@@ -119,7 +187,11 @@ export const handleCheckoutSessionCompleted = async ({
     return;
   }
 
+  // GET COUPON
+
   const stripeCli = createStripeCli({ org, env });
+
+  // return;
   await itemMetasToOptions({
     checkoutSession,
     attachParams,
@@ -223,7 +295,10 @@ export const handleCheckoutSessionCompleted = async ({
   console.log("   Invoices: ", invoiceIds);
   for (const invoiceId of invoiceIds) {
     try {
-      const invoice = await stripeCli.invoices.retrieve(invoiceId);
+      const invoice = await getStripeExpandedInvoice({
+        stripeCli,
+        stripeInvoiceId: invoiceId,
+      });
 
       await InvoiceService.createInvoiceFromStripe({
         sb,

@@ -1,8 +1,16 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Invoice, InvoiceStatus, Organization } from "@autumn/shared";
+import {
+  Invoice,
+  InvoiceStatus,
+  LoggerAction,
+  Organization,
+} from "@autumn/shared";
 import Stripe from "stripe";
 import { generateId } from "@/utils/genUtils.js";
 import { Autumn } from "@/external/autumn/autumnCli.js";
+import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils.js";
+import { logger } from "@trigger.dev/sdk/v3";
+import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 
 export const processInvoice = (invoice: Invoice) => {
   return {
@@ -53,24 +61,19 @@ export class InvoiceService {
     }
   }
 
-  // static async getInvoices({
-  //   sb,
-  //   internalCustomerId,
-  // }: {
-  //   sb: SupabaseClient;
-  //   internalCustomerId: string;
-  // }) {
-  //   const { data, error } = await sb
-  //     .from("invoices")
-  //     .select("*")
-  //     .eq("internal_customer_id", internalCustomerId)
-  //     .order("created_at", { ascending: false }).limit(10);
+  static async getById({ sb, id }: { sb: SupabaseClient; id: string }) {
+    const { data, error } = await sb
+      .from("invoices")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-  //   if (error) {
-  //     throw error;
-  //   }
-  //   return data;
-  // }
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
 
   static async getInvoiceByStripeId({
     sb,
@@ -113,6 +116,13 @@ export class InvoiceService {
     org: Organization;
     sendRevenueEvent?: boolean;
   }) {
+    let logger = createLogtailWithContext({
+      org_slug: org.slug,
+      stripe_invoice: stripeInvoice,
+      action: LoggerAction.InsertStripeInvoice,
+      internal_customer_id: internalCustomerId,
+    });
+
     const invoice: Invoice = {
       id: generateId("inv"),
       internal_customer_id: internalCustomerId,
@@ -125,6 +135,10 @@ export class InvoiceService {
       // Stripe stuff
       total: stripeInvoice.total / 100,
       currency: stripeInvoice.currency,
+      discounts: getInvoiceDiscounts({
+        expandedInvoice: stripeInvoice,
+        logger: logger,
+      }),
     };
 
     const { error } = await sb.from("invoices").insert(invoice);

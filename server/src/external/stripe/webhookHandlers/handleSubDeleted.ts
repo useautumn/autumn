@@ -24,7 +24,10 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-import { payForInvoice } from "../stripeInvoiceUtils.js";
+import {
+  getStripeExpandedInvoice,
+  payForInvoice,
+} from "../stripeInvoiceUtils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { differenceInSeconds } from "date-fns";
 import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
@@ -160,7 +163,11 @@ const billForRemainingUsages = async ({
 
   let curProduct = fullCusProduct.product;
 
-  const finalInvoice = await stripeCli.invoices.retrieve(invoice.id);
+  const finalInvoice = await getStripeExpandedInvoice({
+    stripeCli,
+    stripeInvoiceId: invoice.id,
+  });
+
   await InvoiceService.createInvoiceFromStripe({
     sb,
     stripeInvoice: finalInvoice,

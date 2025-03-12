@@ -8,6 +8,7 @@ import { BillingType } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { getBillingType } from "../prices/priceUtils.js";
 import { OrgService } from "../orgs/OrgService.js";
+import { CouponService } from "../coupons/CouponService.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -19,10 +20,11 @@ productRouter.get("/data", async (req: any, res) => {
       sb,
       orgId: req.orgId,
     });
-    const [products, features, org] = await Promise.all([
-      ProductService.getProducts(sb, req.orgId, req.env),
+    const [products, features, org, coupons] = await Promise.all([
+      ProductService.getFullProducts({ sb, orgId: req.orgId, env: req.env }),
       FeatureService.getFromReq(req),
       OrgService.getFromReq(req),
+      CouponService.getAll({ sb, orgId: req.orgId, env: req.env }),
     ]);
 
     res.status(200).json({
@@ -34,7 +36,7 @@ productRouter.get("/data", async (req: any, res) => {
         test_pkey: org.test_pkey,
         live_pkey: org.live_pkey,
       },
-      coupons: [],
+      coupons,
     });
   } catch (error) {
     console.error("Failed to get products", error);
