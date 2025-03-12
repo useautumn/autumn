@@ -2,7 +2,6 @@ import { CusProductService } from "@/internal/customers/products/CusProductServi
 import { AppEnv, CusProductStatus, Organization } from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
-import { timeout } from "tests/utils/genUtils.js";
 
 const handleSubPastDue = async ({
   sb,
