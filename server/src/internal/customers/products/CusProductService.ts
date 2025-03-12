@@ -1,5 +1,6 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
@@ -146,17 +147,23 @@ export class CusProductService {
       .eq("product.group", productGroup)
       .eq("product.is_add_on", false)
       .neq("status", CusProductStatus.Expired)
-      .neq("status", CusProductStatus.Scheduled)
-      .single();
+      .neq("status", CusProductStatus.Scheduled);
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
       throw error;
     }
 
-    return data;
+    // let withoutOneOff = data.filter(
+    //   (cp) => !isOneOff(cp.customer_prices.map((cp: any) => cp.price))
+    // );
+    let withoutOneOff = data.find(
+      (cp) =>
+        cp.product.group === productGroup &&
+        !cp.product.is_add_on &&
+        !isOneOff(cp.customer_prices.map((cp: any) => cp.price))
+    );
+
+    return withoutOneOff || null;
   }
 
   static async getByCusAndProductId({
