@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   AppEnv,
+  BillingInterval,
   FrontendOrganization,
   FrontendProduct,
   FullCusProduct,
@@ -194,6 +195,9 @@ export default function CustomerProductView({
   }
 
   if (isLoading) return <LoadingScreen />;
+  const oneTimePurchase = product?.prices.every(
+    (price) => price.config?.interval == BillingInterval.OneOff
+  );
 
   const { customer } = data;
 
@@ -203,7 +207,7 @@ export default function CustomerProductView({
 
   const handleCreateProduct = async (useInvoiceLatest?: boolean) => {
     try {
-      if (!product.isActive) {
+      if (oneTimePurchase || !product.isActive) {
         const { data } = await ProductService.getRequiredOptions(
           axiosInstance,
           {
@@ -234,7 +238,7 @@ export default function CustomerProductView({
         prices: product.prices,
         entitlements: product.entitlements,
         free_trial: product.free_trial,
-        options: product.isActive ? options : requiredOptions,
+        options: requiredOptions ? requiredOptions : options,
         is_custom: true,
         invoice_only:
           useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,
@@ -273,13 +277,16 @@ export default function CustomerProductView({
   };
 
   const getProductActionState = () => {
+    if (oneTimePurchase) {
+      return {
+        buttonText: "Purchase Product",
+        tooltipText: "Purchase this product for the customer",
+        disabled: false,
+      };
+    }
+
     // Case 1: Product is active, no changes, and is not an add-on
-    if (
-      product.isActive &&
-      !hasOptionsChanges &&
-      !hasChanges &&
-      !product.is_add_on
-    ) {
+    if (product.isActive && !hasOptionsChanges && !hasChanges) {
       return {
         buttonText: "Update Product",
         tooltipText: "No changes have been made to update",
@@ -388,7 +395,11 @@ export default function CustomerProductView({
       </div>
 
       {options.length > 0 && (
-        <ProductOptions options={options} setOptions={setOptions} />
+        <ProductOptions
+          options={options}
+          setOptions={setOptions}
+          oneTimePurchase={oneTimePurchase || false}
+        />
       )}
       <div className="flex justify-end gap-2">
         {/* <ProductOptionsButton /> */}
