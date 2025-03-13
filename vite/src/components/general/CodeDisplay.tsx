@@ -1,7 +1,8 @@
 import { common, createStarryNight } from "@wooorm/starry-night";
 import { toHtml } from "hast-util-to-html";
-import { Root } from "hast-util-to-html/lib/types";
 import React from "react";
+// @ts-expect-error - This is a global stylesheet
+import { Root } from "hast-util-to-html/lib/types";
 
 // @ts-expect-error - This is a global stylesheet
 import "@wooorm/starry-night/style/dark";
