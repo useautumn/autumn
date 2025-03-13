@@ -6,4 +6,5 @@ export enum LoggerAction {
 
   // Invoice
   InsertStripeInvoice = "insert_stripe_invoice",
+  CreateFullCusProduct = "create_full_cus_product",
 }

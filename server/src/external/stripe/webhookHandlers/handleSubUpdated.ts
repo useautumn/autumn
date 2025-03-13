@@ -89,6 +89,10 @@ export const handleSubscriptionUpdated = async ({
     try {
       await stripeCli.subscriptions.cancel(subscription.id);
     } catch (error: any) {
+      // Try twice... for test...
+      try {
+        await stripeCli.subscriptions.cancel(subscription.id);
+      } catch (error) {}
       console.error("subscription.updated: error cancelling:", error.message);
     }
 

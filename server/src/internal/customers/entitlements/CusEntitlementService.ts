@@ -1,5 +1,9 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { CustomerEntitlement, ErrCode } from "@autumn/shared";
+import {
+  CustomerEntitlement,
+  ErrCode,
+  FullCustomerEntitlement,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
@@ -340,18 +344,13 @@ export class CustomerEntitlementService {
     env: string;
     withCusProduct?: boolean;
   }) {
-    const selectQuery = [
-      "*",
-      withCusProduct ? "customer_product:customer_products!inner(*)" : "",
-      `entitlement:entitlements!inner(*, feature:features!inner(*))`,
-      `customer:customers!inner(*)`,
-    ]
-      .filter(Boolean)
-      .join(", ");
+    let selectQuery = `*, entitlement:entitlements!inner(*, feature:features!inner(*)), customer:customers!inner(*)${
+      withCusProduct ? ", customer_product:customer_products!inner(*)" : ""
+    }`;
 
     const { data, error } = await sb
       .from("customer_entitlements")
-      .select(selectQuery)
+      .select(selectQuery as "*") // hack to kill generic string error
       .eq("id", id)
       .eq("customer.org_id", orgId)
       .eq("customer.env", env)
@@ -368,7 +367,7 @@ export class CustomerEntitlementService {
       throw error;
     }
 
-    return data;
+    return data as FullCustomerEntitlement;
   }
 
   static async getByCusProductId({

@@ -7,6 +7,8 @@ db/
 start.sh
 supabase.sh
 
+
+
 **/certificates/
 **/node_modules/
 **/dist/

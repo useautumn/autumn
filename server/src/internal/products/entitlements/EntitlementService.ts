@@ -163,7 +163,7 @@ export class EntitlementService {
   }) {
     const { data, error } = await sb
       .from("entitlements")
-      .select(`*${withProduct ? ", product:products!inner(*)" : ""}`)
+      .select(`*${withProduct ? ", product:products!inner(*)" : ""}` as "*")
       .eq("internal_feature_id", internalFeatureId);
 
     if (error) {

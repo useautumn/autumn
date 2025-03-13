@@ -391,3 +391,22 @@ export const fullCusProductToProduct = (cusProduct: FullCusProduct) => {
     entitlements: cusProduct.customer_entitlements.map((ce) => ce.entitlement),
   };
 };
+
+export const searchCusProducts = ({
+  productId,
+  cusProducts,
+  status,
+}: {
+  productId: string;
+  cusProducts: FullCusProduct[];
+  status?: CusProductStatus;
+}) => {
+  if (!cusProducts) {
+    return undefined;
+  }
+  return cusProducts.find(
+    (cusProduct: FullCusProduct) =>
+      cusProduct.product.id === productId &&
+      (status ? cusProduct.status === status : true)
+  );
+};
