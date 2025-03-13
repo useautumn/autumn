@@ -17,7 +17,7 @@
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
   /* background-color: #242424; */
-  background-color: #fafafa;
+  background-color: #fafaf9;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -47,7 +47,7 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.4rem;
+  --radius: 0.3rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.141 0.005 285.823);
   --sidebar-primary: oklch(0.21 0.006 285.885);
@@ -220,6 +220,17 @@ button:focus-visible {
   --font-weight-medium: 550;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+
+  --color-yellow-50: #fefce8;
+  --color-yellow-100: #fdedd3;
+  --color-yellow-200: #fbdba7;
+  --color-yellow-300: #f9c97c;
+  --color-yellow-400: #f7b750;
+  --color-yellow-500: #f5a524;
+  --color-yellow-600: #c4841d;
+  --color-yellow-700: #936316;
+  --color-yellow-800: #62420e;
+  --color-yellow-900: #312107;
 }
 
 /* 

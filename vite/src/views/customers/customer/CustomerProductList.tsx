@@ -34,6 +34,7 @@ import { Link } from "react-router";
 import { getStripeSubLink } from "@/utils/linkUtils";
 import React from "react";
 import { cn } from "@/lib/utils";
+import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 
 export const CustomerProductList = ({
   customer,
@@ -148,7 +149,7 @@ export const CustomerProductList = ({
                     {formatUnixToDateTime(cusProduct.created_at).time}
                   </span>
                 </TableCell>
-                <TableCell className="flex justify-center items-center">
+                <TableCell>
                   <EditCustomerProductToolbar cusProduct={cusProduct} />
                 </TableCell>
               </TableRow>
@@ -170,15 +171,7 @@ const EditCustomerProductToolbar = ({
   return (
     <DropdownMenu open={dialogOpen} onOpenChange={setDialogOpen}>
       <DropdownMenuTrigger asChild>
-        <Button
-          isIcon
-          variant="ghost"
-          className={cn(
-            "rounded-md hover:translate-x-0.5 transition-all duration-100 !bg-transparent !cursor-pointer"
-          )}
-        >
-          <FontAwesomeIcon icon={faEllipsisVertical} size="sm" />
-        </Button>
+        <ToolbarButton />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
         {/* Update status */}

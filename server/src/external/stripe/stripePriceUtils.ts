@@ -10,7 +10,6 @@ import {
   Product,
   AllowanceType,
   EntitlementWithFeature,
-  AppEnv,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -31,7 +30,6 @@ import {
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
-import { nullOrUndefined } from "@/utils/genUtils.js";
 
 import {
   createStripeFixedCyclePrice,
@@ -45,7 +43,6 @@ import {
   priceToInArrearProrated,
   priceToUsageInAdvance,
 } from "./priceToStripeItem.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
 
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {

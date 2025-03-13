@@ -68,13 +68,6 @@ export const handleInvoicePaid = async ({
     stripeInvoiceId: invoice.id,
   });
 
-  const discountAmounts = getInvoiceDiscounts({
-    expandedInvoice,
-    logger: req.logger,
-  });
-
-  console.log("Discount amounts", discountAmounts);
-
   await handleInvoicePaidDiscount({
     sb,
     expandedInvoice,
@@ -183,7 +176,7 @@ const handleInvoicePaidDiscount = async ({
       if (!curCoupon) {
         continue;
       }
-      console.log("Cur coupon:", curCoupon);
+      // console.log("Cur coupon:", curCoupon);
       const rollSuffixIndex = curCoupon.id.indexOf("_roll_");
       const couponId =
         rollSuffixIndex !== -1
@@ -202,7 +195,7 @@ const handleInvoicePaidDiscount = async ({
         continue;
       }
 
-      console.log("Found autumn coupon", autumnCoupon);
+      // console.log("Found autumn coupon", autumnCoupon);
 
       // 1. New amount:
       const curAmount = discount.coupon.amount_off;

@@ -5,14 +5,16 @@ export const initCoupon = ({
   coupon,
   orgId,
   env,
+  id,
 }: {
   coupon: CreateCoupon;
   orgId: string;
   env: string;
+  id?: string;
 }) => {
   return {
     ...coupon,
-    internal_id: generateId("coup"),
+    internal_id: id || generateId("coup"),
     created_at: Date.now(),
     org_id: orgId,
     env,
@@ -33,4 +35,13 @@ export const getCouponType = (coupon: Coupon) => {
     return CouponType.AddBillingCredits;
   }
   return CouponType.Standard;
+};
+
+export const getOriginalCouponId = (couponId: string) => {
+  if (!couponId) return null;
+  const index = couponId.indexOf("_roll_");
+  if (index !== -1) {
+    return couponId.substring(0, index);
+  }
+  return couponId;
 };

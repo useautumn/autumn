@@ -29,6 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
   customer_products: z.array(
@@ -42,8 +43,7 @@ export const CustomersTable = ({
 }: {
   customers: CustomerWithProducts[];
 }) => {
-  const { env } = useCustomersContext();
-  const navigate = useNavigate();
+  const env = useEnv();
 
   // console.log("customers", customers);
   const getCusProductsInfo = (customer: CustomerWithProducts) => {
@@ -146,10 +146,10 @@ export const CustomersTable = ({
       <TableHeader>
         <TableRow className="w-full">
           <TableHead className="w-full grid grid-cols-16 items-center">
-            <div className="col-span-4">Customer</div>
-            <div className="col-span-4">Email</div>
+            <div className="col-span-3">Customer</div>
             <div className="col-span-4">ID</div>
-            <div className="col-span-2">Products</div>
+            <div className="col-span-3">Email</div>
+            <div className="col-span-4">Products</div>
             <div className="col-span-2">Created At</div>
           </TableHead>
           {/* <TableHead>Customer ID</TableHead>
@@ -168,15 +168,17 @@ export const CustomersTable = ({
             //   navigate(getRedirectUrl(`/customers/${customer.id}`, env));
             // }}
           >
-            <TableCell>
+            <TableCell className="!p-0">
               <Link
                 to={getRedirectUrl(`/customers/${customer.id}`, env)}
-                className="grid grid-cols-16 items-center"
+                className="grid grid-cols-16 items-center h-full px-2 py-1"
               >
-                <CustomTableCell colSpan={4}>{customer.name}</CustomTableCell>
-                <CustomTableCell colSpan={4}>{customer.email}</CustomTableCell>
-                <CustomTableCell colSpan={4}>{customer.id}</CustomTableCell>
-                <CustomTableCell colSpan={2}>
+                <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>
+                <CustomTableCell className="font-mono" colSpan={4}>
+                  {customer.id}
+                </CustomTableCell>
+                <CustomTableCell colSpan={3}>{customer.email}</CustomTableCell>
+                <CustomTableCell colSpan={4}>
                   {getCusProductsInfo(customer)}
                 </CustomTableCell>
                 <CustomTableCell colSpan={2}>

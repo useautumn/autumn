@@ -45,14 +45,10 @@ export class EntitlementService {
     }
   }
 
-  static async getFullEntitlements(
-    sb: SupabaseClient,
-    entitlementIds: string[]
-  ) {
+  static async getFullEntitlements(sb: SupabaseClient) {
     const { data, error } = await sb
       .from("entitlements")
-      .select("*, feature:features(*)")
-      .in("id", entitlementIds);
+      .select("*, feature:features(*)");
 
     if (error) {
       throw error;

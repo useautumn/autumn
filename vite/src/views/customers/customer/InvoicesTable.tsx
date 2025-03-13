@@ -26,11 +26,11 @@ export const InvoicesTable = () => {
     }
   };
 
-  // const getTotalDiscountAmount = (invoice: Invoice) => {
-  //   return invoice.discounts.reduce((acc: number, discount: any) => {
-  //     return acc + discount.amount_used;
-  //   }, 0);
-  // };
+  const getTotalDiscountAmount = (invoice: Invoice) => {
+    return invoice.discounts.reduce((acc: number, discount: any) => {
+      return acc + discount.amount_used;
+    }, 0);
+  };
 
   return (
     <Table className="p-2">
@@ -64,7 +64,7 @@ export const InvoicesTable = () => {
                 .join(", ")}
             </TableCell>
 
-            {/* <TableCell>
+            <TableCell>
               {invoice.total.toFixed(2)} {invoice.currency.toUpperCase()}
               {getTotalDiscountAmount(invoice) > 0 && (
                 <span className="text-t3">
@@ -72,7 +72,7 @@ export const InvoicesTable = () => {
                   (-{getTotalDiscountAmount(invoice).toFixed(2)})
                 </span>
               )}
-            </TableCell> */}
+            </TableCell>
             <TableCell>{invoice.status}</TableCell>
             <TableCell>
               {formatUnixToDateTime(invoice.created_at).date}

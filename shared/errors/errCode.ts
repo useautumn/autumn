@@ -30,6 +30,7 @@ export const ErrCode = {
   StripeKeyNotFound: "stripe_key_not_found",
 
   // Stripe
+  StripeError: "stripe_error",
   StripeKeyInvalid: "stripe_key_invalid",
   StripeConfigNotFound: "stripe_config_not_found",
   StripeDeleteCustomerFailed: "stripe_delete_customer_failed",

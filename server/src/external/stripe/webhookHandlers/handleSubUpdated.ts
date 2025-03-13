@@ -19,11 +19,13 @@ export const handleSubscriptionUpdated = async ({
   org,
   subscription,
   env,
+  logger,
 }: {
   sb: any;
   org: Organization;
   env: AppEnv;
   subscription: any;
+  logger: any;
 }) => {
   let subStatusMap: {
     [key: string]: CusProductStatus;
@@ -88,21 +90,15 @@ export const handleSubscriptionUpdated = async ({
     console.log("subscription.updated: past due, cancelling:", subscription.id);
     try {
       await stripeCli.subscriptions.cancel(subscription.id);
-    } catch (error: any) {
-      // Try twice... for test...
-      try {
-        await stripeCli.subscriptions.cancel(subscription.id);
-      } catch (error) {}
-      console.error("subscription.updated: error cancelling:", error.message);
-    }
-
-    // Void latest invoice
-    try {
       await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
-    } catch (error) {
-      console.error(
-        "subscription.updated: error voiding latest invoice:",
-        error
+    } catch (error: any) {
+      logger.error(
+        `subscription.updated: error cancelling / voiding: ${error.message}`,
+        {
+          subscriptionId: subscription.id,
+          stripeSubId: subscription.id,
+          error: error.message,
+        }
       );
     }
   }

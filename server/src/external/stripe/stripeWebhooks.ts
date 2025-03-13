@@ -1,5 +1,5 @@
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { Organization } from "@autumn/shared";
+import { LoggerAction, Organization } from "@autumn/shared";
 import express from "express";
 import stripe from "stripe";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
@@ -14,6 +14,10 @@ import chalk from "chalk";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
 import { format } from "date-fns";
+import {
+  createLogtail,
+  createLogtailWithContext,
+} from "../logtail/logtailUtils.js";
 
 export const stripeWebhookRouter = express.Router();
 
@@ -49,6 +53,15 @@ stripeWebhookRouter.post(
       return;
     }
 
+    const logger = createLogtailWithContext({
+      action: LoggerAction.StripeWebhook,
+      event_type: event.type,
+      data: event.data,
+      org_id: orgId,
+      org_slug: org.slug,
+      env,
+    });
+
     console.log(
       `${chalk.gray(format(new Date(), "dd MMM HH:mm:ss"))} ${chalk.yellow(
         "Stripe Webhook: "
@@ -75,6 +88,7 @@ stripeWebhookRouter.post(
             org,
             subscription,
             env,
+            logger,
           });
           break;
 

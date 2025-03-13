@@ -22,7 +22,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             className={cn(
               `flex w-full rounded-md border border-input bg-white text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50
               
-              h-8 transition-colors duration-100 shadow-sm
+              h-8 transition-colors duration-100 shadow-sm overflow-hidden
               `,
               isFocused &&
                 `transition-colors duration-100 focus-visible:outline-none focus-visible:ring-0
@@ -36,7 +36,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               className={cn(
                 `flex h-full w-full bg-white py-2 text-sm file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground shadow-none outline-none border-none focus-visible:outline-none focus-visible:border-none focus-visible:shadow-none
                 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none
-
+                
                 p-2
                 `,
                 className

@@ -32,11 +32,12 @@ export const CustomerToolbar = ({
   customer: Customer;
 }) => {
   const navigate = useNavigate();
-  const { env, addCouponOpen, setAddCouponOpen } = useCustomerContext();
+  const { env } = useCustomerContext();
 
   const axiosInstance = useAxiosInstance({ env });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [addCouponOpen, setAddCouponOpen] = useState(false);
 
   const handleDelete = async () => {
     setDeleteLoading(true);
@@ -54,10 +55,7 @@ export const CustomerToolbar = ({
     <React.Fragment>
       <Dialog open={addCouponOpen} onOpenChange={setAddCouponOpen}>
         <DialogTrigger asChild></DialogTrigger>
-        {/* <AddCouponDialogContent
-          open={addCouponOpen}
-          setOpen={setAddCouponOpen}
-        /> */}
+        <AddCouponDialogContent setOpen={setAddCouponOpen} />
         <DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
           <DropdownMenuTrigger asChild>
             <Button
