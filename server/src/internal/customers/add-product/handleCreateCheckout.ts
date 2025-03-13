@@ -23,11 +23,6 @@ export const handleCreateCheckout = async ({
   attachParams: AttachParams;
 }) => {
   const logger = req.logtail;
-  logger.info(
-    `Creating checkout for customer ${
-      attachParams.customer.id
-    }, products ${attachParams.products.map((p) => p.name)}`
-  );
 
   const { customer, org, freeTrial, successUrl } = attachParams;
 
@@ -88,6 +83,8 @@ export const handleCreateCheckout = async ({
         }
       : undefined,
   });
+
+  logger.info(`✅ Successfully created checkout for customer ${customer.id}`);
 
   res.status(200).json({
     checkout_url: checkout.url,
