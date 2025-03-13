@@ -1,3 +1,4 @@
+import { notNullish } from "@/utils/genUtils.js";
 import { Feature, Event, FeatureType } from "@autumn/shared";
 
 import { AggregateType } from "@autumn/shared";
@@ -9,24 +10,26 @@ export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
   let config = meteredFeature.config;
   let aggregate = config.aggregate;
 
-  if (meteredFeature.type == FeatureType.CreditSystem) {
-    return event.value || event.properties.value || DEFAULT_VALUE;
-  }
-
   if (aggregate.type == AggregateType.Count) {
     return 1;
   }
 
-  if (aggregate.type == AggregateType.Sum) {
-    let property = aggregate.property;
-    let value = event.value || event.properties[property] || DEFAULT_VALUE;
+  let value = notNullish(event.value)
+    ? event.value
+    : notNullish(event.properties.value)
+    ? event.properties.value
+    : DEFAULT_VALUE;
 
-    let floatVal = parseFloat(value);
-    if (isNaN(floatVal)) {
-      return 0;
-    }
+  let floatVal = parseFloat(value);
+  if (isNaN(floatVal)) {
+    return 0;
+  }
 
-    return floatVal;
+  if (
+    meteredFeature.type == FeatureType.CreditSystem ||
+    aggregate.type == AggregateType.Sum
+  ) {
+    return value;
   }
 
   return 0;
