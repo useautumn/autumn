@@ -36,7 +36,7 @@ export const CreateCouponSchema = CouponSchema.omit({
   org_id: true,
   env: true,
   created_at: true,
-}).extend({});
+});
 
 export type Coupon = z.infer<typeof CouponSchema>;
 export type CreateCoupon = z.infer<typeof CreateCouponSchema>;

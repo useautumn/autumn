@@ -21,7 +21,7 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
   const { env, onboarding } = useProductsContext();
   const navigate = useNavigate();
   return (
-    <Table>
+    <Table className="!max-h-[450px] overflow-y-auto">
       <TableHeader className="rounded-full">
         <TableRow>
           <TableHead className="w-full">
@@ -57,7 +57,9 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
               <TableCell className="font-medium">
                 <div className="grid grid-cols-10">
                   <CustomTableCell colSpan={2}>{product.name}</CustomTableCell>
-                  <CustomTableCell colSpan={2}>{product.id}</CustomTableCell>
+                  <CustomTableCell className="font-mono" colSpan={2}>
+                    {product.id}
+                  </CustomTableCell>
                   <CustomTableCell colSpan={2}>
                     {product.is_default ? (
                       <Badge variant="outline">Default</Badge>

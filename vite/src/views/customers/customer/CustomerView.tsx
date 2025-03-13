@@ -125,7 +125,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
           <CustomerToolbar customer={customer} />
         </div>
       </div>
-      <div className="flex justify-between gap-4">
+      <div className="flex justify-between gap-4 !pb-[50px]">
         {/* main content */}
         <div className="flex flex-col gap-4 text-t2 text-sm w-2/3">
           <p className="text-t2 font-medium text-md">Products</p>

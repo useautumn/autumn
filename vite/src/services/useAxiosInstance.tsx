@@ -2,14 +2,17 @@ import axios from "axios";
 import { endpoint } from "@/utils/constants";
 import { useAuth } from "@clerk/clerk-react";
 import { AppEnv } from "@autumn/shared";
+import { useEnv } from "@/utils/envUtils";
 
 export function useAxiosInstance({
   env,
   isAuth = true,
 }: {
-  env: AppEnv;
+  env?: AppEnv;
   isAuth?: boolean;
 }) {
+  const trueEnv = useEnv();
+
   const axiosInstance = axios.create({
     baseURL: endpoint,
   });
@@ -25,7 +28,7 @@ export function useAxiosInstance({
 
         if (token) {
           config.headers["Authorization"] = `Bearer ${token}`;
-          config.headers["app_env"] = env;
+          config.headers["app_env"] = trueEnv;
         }
 
         return config;

@@ -35,9 +35,8 @@ export const createStripeMeteredPrice = async ({
   org: Organization;
 }) => {
   const config = price.config as UsagePriceConfig;
-  const feature = entitlements.find(
-    (e) => e.internal_feature_id === config.internal_feature_id
-  )!.feature;
+  const ent = getPriceEntitlement(price, entitlements);
+  const feature = ent.feature;
 
   let meter;
   try {
@@ -59,15 +58,10 @@ export const createStripeMeteredPrice = async ({
     }
   }
 
-  const tiers = priceToStripeTiers(
-    price,
-    entitlements.find((e) => e.internal_feature_id === feature!.internal_id)!
-  );
-
-  let relatedEnt = getPriceEntitlement(price, entitlements);
+  const tiers = priceToStripeTiers(price, ent);
 
   let priceAmountData = {};
-  if (relatedEnt.allowance == 0 && tiers.length == 1) {
+  if (ent.allowance == 0 && tiers.length == 1) {
     priceAmountData = {
       unit_amount_decimal: tiers[0].unit_amount_decimal,
     };
@@ -230,6 +224,7 @@ export const createStripeInAdvancePrice = async ({
       unit_amount_decimal: (amount * 100).toString(),
       currency: org.default_currency,
     });
+    config.stripe_product_id = stripePrice.product as string;
     config.stripe_price_id = stripePrice.id;
     return;
   } else {
@@ -396,7 +391,7 @@ export const createStripeInArrearPrice = async ({
 
   const tiers = priceToStripeTiers(
     price,
-    entitlements.find((e) => e.internal_feature_id === feature!.internal_id)!
+    getPriceEntitlement(price, entitlements)
   );
 
   let priceAmountData = {};

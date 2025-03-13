@@ -1,4 +1,4 @@
-import { AxiosInstance } from "axios";
+import axios, { AxiosInstance } from "axios";
 import { Customer } from "@autumn/shared";
 
 export class CusService {
@@ -46,6 +46,20 @@ export class CusService {
     return await axios.post(
       `/v1/customers/customer_products/${customer_product_id}`,
       data
+    );
+  }
+
+  static async addCouponToCustomer({
+    axios,
+    customer_id,
+    coupon_id,
+  }: {
+    axios: AxiosInstance;
+    customer_id: string;
+    coupon_id: string;
+  }) {
+    return await axios.post(
+      `/v1/customers/${customer_id}/coupons/${coupon_id}`
     );
   }
 }

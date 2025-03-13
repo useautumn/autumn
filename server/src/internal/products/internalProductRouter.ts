@@ -8,6 +8,7 @@ import { BillingType } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { getBillingType } from "../prices/priceUtils.js";
 import { OrgService } from "../orgs/OrgService.js";
+import { CouponService } from "../coupons/CouponService.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -19,18 +20,12 @@ productRouter.get("/data", async (req: any, res) => {
       sb,
       orgId: req.orgId,
     });
-
-    const products = await ProductService.getProducts(sb, req.orgId, req.env);
-    const features = await FeatureService.getFeatures({
-      sb,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    const org = await OrgService.getFullOrg({
-      sb,
-      orgId: req.orgId,
-    });
+    const [products, features, org, coupons] = await Promise.all([
+      ProductService.getFullProducts({ sb, orgId: req.orgId, env: req.env }),
+      FeatureService.getFromReq(req),
+      OrgService.getFromReq(req),
+      CouponService.getAll({ sb, orgId: req.orgId, env: req.env }),
+    ]);
 
     res.status(200).json({
       products,
@@ -40,7 +35,9 @@ productRouter.get("/data", async (req: any, res) => {
         name: org.name,
         test_pkey: org.test_pkey,
         live_pkey: org.live_pkey,
+        default_currency: org.default_currency,
       },
+      coupons,
     });
   } catch (error) {
     console.error("Failed to get products", error);
@@ -73,7 +70,21 @@ productRouter.get("/:productId/data", async (req: any, res) => {
       env,
     });
 
-    res.status(200).send({ product, entitlements, prices, features });
+    const org = await OrgService.getFromReq(req);
+
+    res.status(200).send({
+      product,
+      entitlements,
+      prices,
+      features,
+      org: {
+        id: org.id,
+        name: org.name,
+        test_pkey: org.test_pkey,
+        live_pkey: org.live_pkey,
+        default_currency: org.default_currency,
+      },
+    });
   } catch (error) {
     console.error("Failed to get products", error);
     res.status(500).send(error);

@@ -85,7 +85,7 @@ const MainContent = () => {
   const env = useEnv();
 
   return (
-    <div className="w-full h-screen overflow-hidden">
+    <div className="w-full h-screen flex flex-col overflow-hidden">
       {env === AppEnv.Sandbox && (
         <div className="w-full h-10 bg-primary/80 text-white text-sm flex items-center justify-center">
           <p className="font-medium">You&apos;re in sandbox mode.</p>

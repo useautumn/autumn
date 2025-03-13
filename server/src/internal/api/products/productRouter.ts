@@ -28,7 +28,12 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { initNewFeature } from "../features/featureApiRouter.js";
-import { copyProduct } from "@/internal/products/productUtils.js";
+import {
+  checkStripeProductExists,
+  copyProduct,
+} from "@/internal/products/productUtils.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 
 export const productApiRouter = Router();
 
@@ -377,5 +382,69 @@ productApiRouter.post("/:productId/copy", async (req: any, res) => {
     res.status(200).send({ message: "Product copied" });
   } catch (error) {
     handleRequestError({ req, error, res, action: "Copy product" });
+  }
+});
+
+productApiRouter.post("/all/init_stripe", async (req: any, res) => {
+  try {
+    const { sb, orgId, env, logtail: logger } = req;
+
+    const [fullProducts, org] = await Promise.all([
+      ProductService.getFullProducts({
+        sb,
+        orgId,
+        env,
+      }),
+      OrgService.getFromReq(req),
+    ]);
+
+    const stripeCli = createStripeCli({
+      org,
+      env,
+    });
+
+    const batchProductInit = [];
+    for (const product of fullProducts) {
+      batchProductInit.push(
+        checkStripeProductExists({
+          sb,
+          org,
+          env,
+          product,
+          logger,
+        })
+      );
+    }
+
+    await Promise.all(batchProductInit);
+
+    const entitlements = fullProducts.flatMap((p) => p.entitlements);
+    const prices = fullProducts.flatMap((p) => p.prices);
+
+    const batchSize = 5;
+    for (let i = 0; i < prices.length; i += batchSize) {
+      const batch = prices.slice(i, i + batchSize);
+      const batchPriceUpdate = [];
+      for (const price of batch) {
+        batchPriceUpdate.push(
+          createStripePriceIFNotExist({
+            sb,
+            org,
+            stripeCli: stripeCli,
+            price,
+            entitlements,
+            product: fullProducts.find(
+              (p) => p.internal_id == price.internal_product_id
+            )!,
+            logger,
+          })
+        );
+      }
+
+      await Promise.all(batchPriceUpdate);
+      res.status(200).send({ message: "Stripe products initialized" });
+    }
+  } catch (error) {
+    handleRequestError({ req, error, res, action: "Init stripe products" });
   }
 });
