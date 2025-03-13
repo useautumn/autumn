@@ -33,7 +33,7 @@ export const MainSidebar = () => {
         className={cn(
           `h-full bg-zinc-100 py-4 flex flex-col justify-between transition-all duration-150`,
           state == "expanded"
-            ? "min-w-[220px] max-w-[220px]"
+            ? "min-w-[200px] max-w-[200px]"
             : "min-w-[50px] max-w-[50px]"
         )}
       >

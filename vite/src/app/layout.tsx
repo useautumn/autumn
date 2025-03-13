@@ -6,21 +6,35 @@ import LoadingScreen from "@/views/general/LoadingScreen";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { AppEnv } from "@autumn/shared";
 import {
-  OrganizationList,
   RedirectToSignIn,
   useOrganizationList,
   useUser,
 } from "@clerk/clerk-react";
 import { useOrganization } from "@clerk/clerk-react";
-
+import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
-
+import posthog from "posthog-js";
 export function MainLayout() {
   const { isLoaded: isUserLoaded, user } = useUser();
   const { organization: org } = useOrganization();
   const { setActive } = useOrganizationList();
   const env = useEnv();
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    // Identify user
+    if (user) {
+      let email = user.primaryEmailAddress?.emailAddress;
+      if (!email) {
+        email = user.emailAddresses[0].emailAddress;
+      }
+      posthog.identify(email, {
+        email,
+        name: user.fullName,
+        id: user.id,
+      });
+    }
+  }, [user]);
 
   // 1. If not loaded, show loading screen
   if (!isUserLoaded) {
