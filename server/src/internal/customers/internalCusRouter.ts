@@ -91,7 +91,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
     const invoices = await InvoiceService.getByInternalCustomerId({
       sb,
-      internalCustomerId: customer_id,
+      internalCustomerId: customer.internal_id,
       limit: 10,
     });
 
@@ -123,6 +123,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
         console.log("error", error);
       }
     }
+
     res.status(200).send({
       customer,
       products,

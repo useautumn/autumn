@@ -53,7 +53,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
         ) : (
           <DropdownMenuTrigger>{envText.slice(0, 1)}</DropdownMenuTrigger>
         )}
-        <DropdownMenuContent side="top" className="w-[200px]">
+        <DropdownMenuContent side="top" align="start" className="w-[180px]">
           <DropdownMenuItem
             className="flex justify-between items-center"
             onClick={() => {

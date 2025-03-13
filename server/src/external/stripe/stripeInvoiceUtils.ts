@@ -143,7 +143,6 @@ export const getInvoiceDiscounts = ({
     let totalDiscountAmounts = expandedInvoice.total_discount_amounts;
 
     let autumnDiscounts = expandedInvoice.discounts.map((discount: any) => {
-      console.log("Discount", discount);
       const amountOff = discount.coupon.amount_off;
       const amountUsed = totalDiscountAmounts?.find(
         (item) => item.discount === discount.id

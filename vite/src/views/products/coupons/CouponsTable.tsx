@@ -11,12 +11,12 @@ import { useProductsContext } from "../ProductsContext";
 import { CouponRowToolbar } from "./CouponRowToolbar";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { Coupon, CouponDurationType, DiscountType } from "@autumn/shared";
-
+import UpdateCoupon from "./UpdateCoupon";
+import { useState } from "react";
 export const CouponsTable = () => {
   const { coupons, org } = useProductsContext();
-  // const [selectedCreditSystem, setSelectedCreditSystem] =
-  //   useState<Feature | null>(null);
-  // const [open, setOpen] = useState(false);
+  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const [open, setOpen] = useState(false);
 
   // const handleRowClick = (id: string) => {
   //   const creditSystem = creditSystems.find(
@@ -31,12 +31,12 @@ export const CouponsTable = () => {
 
   return (
     <>
-      {/* <UpdateCreditSystem
-          open={open}
-          setOpen={setOpen}
-          selectedCreditSystem={selectedCreditSystem!}
-          setSelectedCreditSystem={setSelectedCreditSystem}
-        /> */}
+      <UpdateCoupon
+        open={open}
+        setOpen={setOpen}
+        selectedCoupon={selectedCoupon}
+        setSelectedCoupon={setSelectedCoupon}
+      />
       <Table>
         <TableHeader className="rounded-full">
           <TableRow>
@@ -51,7 +51,14 @@ export const CouponsTable = () => {
         </TableHeader>
         <TableBody>
           {coupons.map((coupon: Coupon) => (
-            <TableRow key={coupon.internal_id} className="cursor-pointer">
+            <TableRow
+              key={coupon.internal_id}
+              className="cursor-pointer"
+              onClick={() => {
+                setSelectedCoupon(coupon);
+                setOpen(true);
+              }}
+            >
               <TableCell className="font-medium">{coupon.name}</TableCell>
               <TableCell className="font-mono">
                 {coupon.promo_codes

@@ -91,4 +91,33 @@ export class CouponService {
     }
     return data;
   }
+
+  static async update({
+    sb,
+    internalId,
+    env,
+    orgId,
+    update,
+  }: {
+    sb: SupabaseClient;
+    internalId: string;
+    env: AppEnv;
+    orgId: string;
+    update: Partial<Coupon>;
+  }) {
+    const { data, error } = await sb
+      .from("coupons")
+      .update(update)
+      .eq("internal_id", internalId)
+      .eq("env", env)
+      .eq("org_id", orgId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
 }

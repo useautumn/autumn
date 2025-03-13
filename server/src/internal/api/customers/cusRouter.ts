@@ -23,6 +23,7 @@ import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
+import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 
 export const cusRouter = Router();
 
@@ -350,3 +351,5 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
 });
 
 // Invoice
+
+cusRouter.post("/:customer_id/coupons/:coupon_id", handleAddCouponToCus);

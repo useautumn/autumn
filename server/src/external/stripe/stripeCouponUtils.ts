@@ -11,6 +11,7 @@ import {
   Product,
   UsagePriceConfig,
 } from "@autumn/shared";
+import { logger } from "@trigger.dev/sdk/v3";
 import { Stripe } from "stripe";
 
 const couponToStripeDuration = (coupon: Coupon) => {
@@ -75,6 +76,15 @@ export const createStripeCoupon = async ({
       return price.product.processor?.id;
     } else {
       const config = price.config as UsagePriceConfig;
+      if (!config.stripe_product_id) {
+        logger.warn("No stripe product id for price", { price });
+        logger.warn("Config", { config });
+        throw new RecaseError({
+          message: `No stripe product id for price ${price.id}`,
+          code: ErrCode.InternalError,
+        });
+      }
+
       return config.stripe_product_id;
     }
   });
@@ -90,6 +100,7 @@ export const createStripeCoupon = async ({
       });
     } catch (error) {}
   }
+
   const stripeCoupon = await stripeCli.coupons.create({
     id: coupon.internal_id,
     ...(couponToStripeDuration(coupon) as any),

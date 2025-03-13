@@ -65,7 +65,7 @@ export const ProductRowToolbar = ({
       <DropdownMenuTrigger asChild>
         <ToolbarButton />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="text-t2">
+      <DropdownMenuContent className="text-t2" align="end">
         <DropdownMenuItem
           className="flex items-center text-xs"
           onClick={async (e) => {

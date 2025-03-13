@@ -55,6 +55,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
           )}
           <DropdownMenuContent
             side="top"
+            align="start"
             className="w-[--radix-popper-anchor-width]"
           >
             <DropdownMenuItem

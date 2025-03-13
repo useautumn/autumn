@@ -21,6 +21,7 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import ErrorScreen from "@/views/general/ErrorScreen";
 
 function ProductView({ env }: { env: AppEnv }) {
   const { product_id } = useParams();
@@ -90,7 +91,11 @@ function ProductView({ env }: { env: AppEnv }) {
   if (isLoading) return <LoadingScreen />;
 
   if (!product) {
-    return <div>Product not found</div>;
+    return (
+      <ErrorScreen returnUrl="/products">
+        Product {product_id} not found
+      </ErrorScreen>
+    );
   }
 
   const handleCreateProduct = async () => {

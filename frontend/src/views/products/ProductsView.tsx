@@ -39,7 +39,7 @@ function ProductsView({ env }: { env: AppEnv }) {
   }, [data]);
 
   if (isLoading) return <LoadingScreen />;
-  // const { products, features, creditSystems, stripeProducts } = data;
+  const { products, features, creditSystems, stripeProducts } = data;
 
   return (
     <ProductsContext.Provider
@@ -79,7 +79,7 @@ function ProductsView({ env }: { env: AppEnv }) {
             <p className="text-sm text-t2">
               Create a coupon to give users credits or a discount on one or more
               products.{" "}
-              {/* <span className="text-t3">(eg, 10% off all products).</span> */}
+              <span className="text-t3">(eg, 10% off all products).</span>
             </p>
           </div>
           <CouponsTable />

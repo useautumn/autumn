@@ -1,8 +1,5 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
-import {
-  getBillNowPrices,
-  pricesOnlyOneOff,
-} from "@/internal/prices/priceUtils.js";
+import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
 import { createFullCusProduct } from "./createFullCusProduct.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import {
@@ -188,7 +185,7 @@ export const handleInvoiceOnly = async ({
       subscriptionId: stripeSubs[0].id,
       subscriptionIds: stripeSubs.map((s) => s.id),
       lastInvoiceId: stripeSubs[0].latest_invoice as string,
-      // collectionMethod: CollectionMethod.SendInvoice,
+
       collectionMethod: CollectionMethod.ChargeAutomatically,
     });
   }
