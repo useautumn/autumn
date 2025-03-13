@@ -5,12 +5,18 @@
     "frontend",
     "server",
     "shared",
-    "tests"
+    "tests",
+    "vite"
   ],
+
   "type": "module",
   "scripts": {
     "frontend:build": "npm run build -w shared && npm run build -w frontend",
     "frontend:start": "npm run start -w frontend",
+
+    "vite:build": "npm run build -w shared && npm run build -w vite",
+    "vite:start": "npm run start -w vite",
+    
     "server:build": "npm run build -w shared && npm run prod:build -w server",
     "server:start": "npm run prod:start -w server",
     "server:cron": "npm run cron:start -w server",

@@ -4,10 +4,7 @@ db/
 start.sh
 supabase.sh
 
-vite-lfg
-lfg
-vite-lfg/
-lfg/
+
 
 **/certificates/
 **/node_modules/
