@@ -5,6 +5,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 
 export const handleSubCreated = async ({
   sb,
@@ -53,9 +54,11 @@ export const handleSubCreated = async ({
 
         // Fetch latest invoice?
         const stripeCli = createStripeCli({ org, env });
-        const invoice = await stripeCli.invoices.retrieve(
-          subscription.latest_invoice as string
-        );
+        const invoice = await getStripeExpandedInvoice({
+          stripeCli,
+          stripeInvoiceId: subscription.latest_invoice as string,
+        });
+
         await InvoiceService.createInvoiceFromStripe({
           sb,
           stripeInvoice: invoice,

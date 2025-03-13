@@ -3,6 +3,7 @@ import { AttachParams } from "../products/AttachParams.js";
 import { InvoiceService } from "./InvoiceService.js";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 
 export const attachParamsToInvoice = async ({
   sb,
@@ -21,7 +22,10 @@ export const attachParamsToInvoice = async ({
       env: attachParams.customer.env,
     });
 
-    stripeInvoice = await stripeCli.invoices.retrieve(invoiceId);
+    stripeInvoice = await getStripeExpandedInvoice({
+      stripeCli,
+      stripeInvoiceId: invoiceId,
+    });
   }
 
   await InvoiceService.createInvoiceFromStripe({

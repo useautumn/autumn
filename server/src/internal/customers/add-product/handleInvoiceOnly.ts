@@ -1,8 +1,5 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
-import {
-  getBillNowPrices,
-  pricesOnlyOneOff,
-} from "@/internal/prices/priceUtils.js";
+import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
 import { createFullCusProduct } from "./createFullCusProduct.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import {
@@ -22,6 +19,10 @@ import {
 } from "@/external/stripe/stripePriceUtils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import {
+  getInvoiceExpansion,
+  getStripeExpandedInvoice,
+} from "@/external/stripe/stripeInvoiceUtils.js";
 
 export const removeCurrentProduct = async ({
   sb,
@@ -97,7 +98,10 @@ export const invoiceOnlyOneOff = async ({
   });
 
   // 3. Finalize invoice
-  const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(invoice.id);
+  const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
+    invoice.id,
+    getInvoiceExpansion()
+  );
 
   // 4. Create invoice from stripe
   await InvoiceService.createInvoiceFromStripe({
@@ -181,7 +185,7 @@ export const handleInvoiceOnly = async ({
       subscriptionId: stripeSubs[0].id,
       subscriptionIds: stripeSubs.map((s) => s.id),
       lastInvoiceId: stripeSubs[0].latest_invoice as string,
-      // collectionMethod: CollectionMethod.SendInvoice,
+
       collectionMethod: CollectionMethod.ChargeAutomatically,
     });
   }
@@ -195,9 +199,10 @@ export const handleInvoiceOnly = async ({
       stripeSub.latest_invoice as string
     );
 
-    const stripeInvoice = await stripeCli.invoices.retrieve(
-      stripeSub.latest_invoice as string
-    );
+    const stripeInvoice = await getStripeExpandedInvoice({
+      stripeCli,
+      stripeInvoiceId: stripeSub.latest_invoice as string,
+    });
 
     if (!firstInvoice) {
       firstInvoice = stripeInvoice;

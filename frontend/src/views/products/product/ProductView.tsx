@@ -16,6 +16,7 @@ import { toast } from "react-hot-toast";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { AddProductButton } from "@/views/customers/customer/add-product/AddProductButton";
+import ErrorScreen from "@/views/general/ErrorScreen";
 
 function ProductView({
   product_id,
@@ -90,7 +91,7 @@ function ProductView({
   if (isLoading) return <LoadingScreen />;
 
   if (!product) {
-    return <div>Product not found</div>;
+    return <ErrorScreen>Product {product_id} not found</ErrorScreen>;
   }
 
   const handleCreateProduct = async () => {

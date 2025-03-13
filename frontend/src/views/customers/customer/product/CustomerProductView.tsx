@@ -245,7 +245,7 @@ export default function CustomerProductView({
       });
 
       await mutate();
-      toast.success(data.message);
+      toast.success(data.message || "Successfully attached product");
 
       if (data.checkout_url) {
         setUrl({

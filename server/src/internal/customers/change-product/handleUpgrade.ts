@@ -1,4 +1,8 @@
-import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
+import {
+  getInvoiceExpansion,
+  getStripeExpandedInvoice,
+  payForInvoice,
+} from "@/external/stripe/stripeInvoiceUtils.js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import {
   getStripeSchedules,
@@ -220,7 +224,7 @@ const billForRemainingUsages = async ({
       itemsToInvoice.push({
         overage,
         usage,
-        featureId: relatedCusEnt?.entitlement.feature.id,
+        feature: relatedCusEnt?.entitlement.feature,
         price: cp.price,
         relatedCusEnt,
       });
@@ -248,20 +252,27 @@ const billForRemainingUsages = async ({
     const amount = getPriceForOverage(item.price, item.overage);
 
     logger.info(
-      `   feature: ${item.featureId}, overage: ${item.overage}, amount: ${amount}`
+      `   feature: ${item.feature.id}, overage: ${item.overage}, amount: ${amount}`
     );
 
     await stripeCli.invoiceItems.create({
       customer: customer.processor.id,
-      amount: Math.round(amount * 100),
+      // amount: Math.round(amount * 100),
       invoice: invoice.id,
       currency: org.default_currency,
       description: `${curCusProduct.product.name} - ${
-        item.featureId
+        item.feature.name
       } x ${Math.round(item.overage)}`,
+      price_data: {
+        product: (item.price.config! as UsagePriceConfig).stripe_product_id!,
+        unit_amount: Math.round(amount * 100),
+        currency: org.default_currency,
+      },
+      // quantity: item.overage,
     });
 
     // Set cus ent to 0
+    // SHOULD BE UNCOMMENTED.
     await CustomerEntitlementService.update({
       sb,
       id: item.relatedCusEnt!.id,
@@ -272,7 +283,11 @@ const billForRemainingUsages = async ({
   }
 
   // Finalize and pay invoice
-  const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(invoice.id);
+  const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
+    invoice.id,
+    getInvoiceExpansion()
+  );
+
   const { paid, error } = await payForInvoice({
     fullOrg: org,
     env: customer.env,
@@ -480,7 +495,11 @@ export const handleUpgrade = async ({
   const batchInsertInvoice = [];
   for (const invoiceId of invoiceIds) {
     batchInsertInvoice.push(async () => {
-      const stripeInvoice = await stripeCli.invoices.retrieve(invoiceId);
+      const stripeInvoice = await getStripeExpandedInvoice({
+        stripeCli,
+        stripeInvoiceId: invoiceId,
+      });
+
       await InvoiceService.createInvoiceFromStripe({
         sb: req.sb,
         stripeInvoice,

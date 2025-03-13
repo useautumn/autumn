@@ -1,4 +1,4 @@
-import { CreateCoupon } from "@autumn/shared";
+import { Coupon, CreateCoupon } from "@autumn/shared";
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AxiosInstance } from "axios";
@@ -22,5 +22,17 @@ export class CouponService {
     internalId: string;
   }) {
     await axiosInstance.delete(`/v1/coupons/${internalId}`);
+  }
+
+  static async updateCoupon({
+    axiosInstance,
+    internalId,
+    data,
+  }: {
+    axiosInstance: AxiosInstance;
+    internalId: string;
+    data: Coupon;
+  }) {
+    await axiosInstance.post(`/v1/coupons/${internalId}`, data);
   }
 }

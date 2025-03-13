@@ -6,7 +6,12 @@ import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 import { SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { CouponDurationType, CreateCoupon, DiscountType } from "@autumn/shared";
+import {
+  Coupon,
+  CouponDurationType,
+  CreateCoupon,
+  DiscountType,
+} from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import {
   Popover,
@@ -24,15 +29,16 @@ import {
 import { Check, ChevronsUpDown, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { faXmark } from "@fortawesome/pro-regular-svg-icons";
+import { faCheck, faXmark } from "@fortawesome/pro-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const CouponConfig = ({
   coupon,
   setCoupon,
 }: {
-  coupon: CreateCoupon;
-  setCoupon: (coupon: CreateCoupon) => void;
+  coupon: Coupon;
+  setCoupon: (coupon: Coupon) => void;
 }) => {
   const { org } = useProductsContext();
   return (
@@ -166,8 +172,8 @@ const ProductPriceSelector = ({
   coupon,
   setCoupon,
 }: {
-  coupon: CreateCoupon;
-  setCoupon: (coupon: CreateCoupon) => void;
+  coupon: Coupon;
+  setCoupon: (coupon: Coupon) => void;
 }) => {
   const { products, features } = useProductsContext();
   const [open, setOpen] = useState(false);
@@ -198,7 +204,7 @@ const ProductPriceSelector = ({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover modal open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -236,52 +242,63 @@ const ProductPriceSelector = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 absolute right-2" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0">
+      <PopoverContent className="w-[400px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search prices..." className="h-9" />
-          <CommandList>
-            <CommandEmpty>No prices found.</CommandEmpty>
-            <CommandGroup>
-              <CommandItem>
-                <Checkbox
-                  id="apply-to-all"
-                  checked={coupon.apply_to_all}
-                  onCheckedChange={(checked) =>
-                    setCoupon({ ...coupon, apply_to_all: checked === true })
-                  }
-                />
-                Apply to all products
-              </CommandItem>
-            </CommandGroup>
-            {!coupon.apply_to_all &&
-              products.map((product: any) => (
-                <CommandGroup key={product.id} heading={product.name}>
-                  {product.prices?.map((price: any) => (
-                    <CommandItem
-                      key={price.id}
-                      value={price.id}
-                      onSelect={() => handlePriceToggle(price.id)}
-                    >
-                      <div className="flex items-center">
-                        <Checkbox
-                          id={`price-${price.id}`}
-                          checked={coupon.price_ids.includes(price.id)}
-                          className="mr-2 border-zinc-400"
-                        />
-                        {price.name}
-                      </div>
-                      <Check
-                        className={cn(
-                          "ml-auto",
-                          coupon.price_ids.includes(price.id)
-                            ? "opacity-100"
-                            : "opacity-0"
+          <CommandList className="max-h-[300px] overflow-y-auto">
+            <ScrollArea>
+              <CommandEmpty>No prices found.</CommandEmpty>
+              <CommandGroup>
+                <CommandItem
+                  onSelect={() => {
+                    setCoupon({
+                      ...coupon,
+                      apply_to_all: !coupon.apply_to_all,
+                    });
+                  }}
+                  className="cursor-pointer"
+                >
+                  {/* <Checkbox
+                    id="apply-to-all"
+                    checked={coupon.apply_to_all}
+                    onCheckedChange={(checked) =>
+                      setCoupon({ ...coupon, apply_to_all: checked === true })
+                    }
+                    className="text-white"
+                  /> */}
+                  <p>Apply to all products</p>
+                  {coupon.apply_to_all && (
+                    <FontAwesomeIcon
+                      icon={faCheck}
+                      className="ml-auto"
+                      size="sm"
+                    />
+                  )}
+                </CommandItem>
+              </CommandGroup>
+              {!coupon.apply_to_all &&
+                products.map((product: any) => (
+                  <CommandGroup key={product.id} heading={product.name}>
+                    {product.prices?.map((price: any) => (
+                      <CommandItem
+                        key={price.id}
+                        value={price.id}
+                        onSelect={() => handlePriceToggle(price.id)}
+                        className="cursor-pointer"
+                      >
+                        <div className="flex items-center">{price.name}</div>
+                        {coupon.price_ids.includes(price.id) && (
+                          <FontAwesomeIcon
+                            icon={faCheck}
+                            className="ml-auto"
+                            size="sm"
+                          />
                         )}
-                      />
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              ))}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                ))}
+            </ScrollArea>
           </CommandList>
         </Command>
       </PopoverContent>

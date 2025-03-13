@@ -12,7 +12,7 @@ export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonProps>(
         isIcon
         variant="ghost"
         className={cn(
-          "rounded-md !h-4 !w-6 px-0 hover:translate-x-0.5 transition-all duration-100 !bg-transparent !cursor-pointer",
+          "rounded-md !h-full !w-6 hover:translate-x-0.5 transition-all duration-100 !bg-transparent !cursor-pointer",
           props?.className
         )}
         {...props}

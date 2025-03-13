@@ -11,6 +11,8 @@ import { entitledRouter } from "./entitled/entitledRouter.js";
 import { attachRouter } from "./customers/products/attachRouter.js";
 import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { usageRouter } from "./events/usageRouter.js";
+import couponRouter from "./coupons/couponRouter.js";
+import { invoiceRouter } from "./customers/invoiceRouter.js";
 
 const apiRouter = Router();
 
@@ -25,6 +27,7 @@ apiRouter.use((req: any, res: any, next: any) => {
       method: req.method,
       url: req.originalUrl,
       body: req.body,
+      env: req.env,
     };
   });
 
@@ -40,7 +43,9 @@ apiRouter.get("/auth", (req: any, res) => {
 });
 
 apiRouter.use("/customers", cusRouter);
+apiRouter.use("/invoices", invoiceRouter);
 apiRouter.use("/products", productApiRouter);
+apiRouter.use("/coupons", couponRouter);
 apiRouter.use("/features", featureApiRouter);
 
 apiRouter.use("/entitlements", entitlementApiRouter);

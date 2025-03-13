@@ -90,7 +90,7 @@ export class PriceService {
   }) {
     const { data, error } = await sb
       .from("prices")
-      .select("*")
+      .select("*, product:products!inner(*)")
       .in("id", priceIds);
 
     if (error) {

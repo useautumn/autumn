@@ -30,6 +30,7 @@ export const ErrCode = {
   StripeKeyNotFound: "stripe_key_not_found",
 
   // Stripe
+  StripeError: "stripe_error",
   StripeKeyInvalid: "stripe_key_invalid",
   StripeConfigNotFound: "stripe_config_not_found",
   StripeDeleteCustomerFailed: "stripe_delete_customer_failed",
@@ -98,4 +99,7 @@ export const ErrCode = {
 
   // Pay for invoice
   PayInvoiceFailed: "pay_invoice_failed",
+
+  // COUPONS
+  PromoCodeAlreadyExistsInStripe: "promo_code_already_exists_in_stripe",
 };
