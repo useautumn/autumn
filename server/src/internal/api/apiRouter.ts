@@ -13,23 +13,34 @@ import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { usageRouter } from "./events/usageRouter.js";
 import couponRouter from "./coupons/couponRouter.js";
 import { invoiceRouter } from "./customers/invoiceRouter.js";
+import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 
 const apiRouter = Router();
 
 apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
 apiRouter.use((req: any, res: any, next: any) => {
+  const logtailContext: any = {
+    org_id: req.minOrg?.id,
+    org_slug: req.minOrg?.slug,
+    method: req.method,
+    url: req.originalUrl,
+    body: req.body,
+    env: req.env,
+  };
   req.logtail.use((log: any) => {
     return {
       ...log,
-      org_id: req.minOrg?.id,
-      org_slug: req.minOrg?.slug,
-      method: req.method,
-      url: req.originalUrl,
-      body: req.body,
-      env: req.env,
+      ...logtailContext,
     };
   });
+  // try {
+
+  // } catch (error) {
+  //   console.error("Failed to add context to logtail in API middleware");
+  //   console.error(error);
+  //   req.logtail = createLogtailWithContext(logtailContext);
+  // }
 
   next();
 });

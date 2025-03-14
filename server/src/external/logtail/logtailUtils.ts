@@ -1,11 +1,11 @@
 import { initLogger } from "@/errors/logger.js";
 import { Logtail } from "@logtail/node";
 
+const pinoLogger = initLogger();
+
 export const createLogtail = () => {
-  const pinoLogger = initLogger();
   const logtail = new Logtail(process.env.LOGTAIL_SOURCE_TOKEN!, {
     endpoint: process.env.LOGTAIL_INGESTING_HOST!,
-    // sendLogsToConsoleOutput: true,
   });
 
   // Create a custom logger that logs to both Logtail and console
@@ -30,6 +30,7 @@ export const createLogtail = () => {
       logtail.use(fn);
     },
     getLogtail: () => logtail,
+    flush: () => logtail.flush(),
   };
 
   return logger;

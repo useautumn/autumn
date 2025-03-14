@@ -91,7 +91,7 @@ function CreateCoupon() {
           creditSystem={creditSystem}
           setCreditSystem={setCreditSystem}
         /> */}
-        <CouponConfig coupon={coupon} setCoupon={setCoupon} />
+        <CouponConfig coupon={coupon as any} setCoupon={setCoupon} />
         <DialogFooter>
           <Button
             onClick={handleCreate}
