@@ -22,7 +22,7 @@ export const CustomerEventsList = ({ events }: { events: any }) => {
         open={!!selectedEvent}
         onOpenChange={() => setSelectedEvent(null)}
       >
-        <DialogContent className="w-fit max-w-3xl p-4">
+        <DialogContent className="w-fit !max-w-3xl p-4">
           <DialogTitle>Event Details</DialogTitle>
           <pre className="bg-stone-800 text-white p-4 rounded-md w-full">
             {JSON.stringify(selectedEvent, null, 2)}
