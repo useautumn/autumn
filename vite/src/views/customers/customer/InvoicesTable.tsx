@@ -49,7 +49,12 @@ export const InvoicesTable = () => {
             key={invoice.id}
             onClick={async () => {
               const latestInvoice = await getInvoice(invoice.id);
-              if (latestInvoice) {
+              if (!latestInvoice.hosted_invoice_url) {
+                toast.error("Invoice has no hosted URL");
+                return;
+              }
+
+              if (latestInvoice && latestInvoice.hosted_invoice_url) {
                 window.open(latestInvoice.hosted_invoice_url, "_blank");
               }
             }}

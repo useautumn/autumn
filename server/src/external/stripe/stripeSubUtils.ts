@@ -25,6 +25,7 @@ export const createStripeSubscription = async ({
   freeTrial,
   metadata = {},
   prices,
+  errorIfIncomplete = true,
 }: {
   stripeCli: Stripe;
   customer: Customer;
@@ -33,6 +34,7 @@ export const createStripeSubscription = async ({
   org: Organization;
   metadata?: any;
   prices: Price[];
+  errorIfIncomplete?: boolean;
 }) => {
   // 1. Get payment method
   let paymentMethod;
@@ -58,6 +60,13 @@ export const createStripeSubscription = async ({
     });
   }
 
+  let paymentMethodData = {};
+  if (paymentMethod) {
+    paymentMethodData = {
+      default_payment_method: paymentMethod as string,
+    };
+  }
+
   let subItems = items.filter(
     (i: any, index: number) =>
       prices[index].config!.interval !== BillingInterval.OneOff
@@ -69,11 +78,11 @@ export const createStripeSubscription = async ({
 
   try {
     const subscription = await stripeCli.subscriptions.create({
+      ...paymentMethodData,
       customer: customer.processor.id,
-      default_payment_method: paymentMethod as string,
       items: subItems as any,
       trial_end: freeTrialToStripeTimestamp(freeTrial),
-      payment_behavior: "error_if_incomplete",
+      payment_behavior: errorIfIncomplete ? "error_if_incomplete" : undefined,
       metadata,
       add_invoice_items: invoiceItems,
     });

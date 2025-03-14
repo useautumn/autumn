@@ -258,6 +258,7 @@ export const handleAddProduct = async ({
 }: {
   req: any;
   res: any;
+
   attachParams: AttachParams;
 }) => {
   const logger = req.logtail;

@@ -1,17 +1,13 @@
+import Stripe from "stripe";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, InvoiceStatus, Organization } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { CouponService } from "@/internal/coupons/CouponService.js";
 import { Decimal } from "decimal.js";
 import { generateId } from "@/utils/genUtils.js";
-import {
-  getInvoiceDiscounts,
-  getStripeExpandedInvoice,
-} from "../stripeInvoiceUtils.js";
+import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 
 const handleOneOffInvoicePaid = async ({
   sb,
@@ -77,6 +73,28 @@ export const handleInvoicePaid = async ({
   });
 
   if (invoice.subscription) {
+    // Switch to auto-charge?
+
+    // // 1. Get payment intent
+    // const paymentIntent = await stripeCli.paymentIntents.retrieve(
+    //   invoice.payment_intent as string
+    // );
+
+    // // 2. Get payment method
+    // const paymentMethod = await stripeCli.paymentMethods.retrieve(
+    //   paymentIntent.payment_method as string
+    // );
+
+    // console.log("Payment method:", paymentMethod);
+
+    // // Attach payment method to customer
+    // let paymentMethodId = paymentMethod.id;
+    // await stripeCli.paymentMethods.attach(paymentMethodId, {
+    //   customer: invoice.customer as string,
+    // });
+
+    // return;
+
     // Get customer product
     const activeCusProducts = await CusProductService.getByStripeSubId({
       sb,

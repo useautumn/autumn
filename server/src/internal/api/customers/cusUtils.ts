@@ -4,6 +4,7 @@ import {
   CusProductStatus,
   Customer,
   CustomerSchema,
+  ErrCode,
   FullCusProduct,
   Organization,
   ProductSchema,
@@ -34,6 +35,9 @@ import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js"
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { initGroupBalancesFromGetCus } from "@/internal/customers/entitlements/groupByUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
+import { handleAddDefaultPaid } from "@/internal/customers/add-product/handleAddDefaultPaid.js";
 
 export const createNewCustomer = async ({
   sb,
@@ -41,12 +45,14 @@ export const createNewCustomer = async ({
   env,
   customer,
   nextResetAt,
+  logger,
 }: {
   sb: SupabaseClient;
   orgId: string;
   env: AppEnv;
   customer: CreateCustomer;
   nextResetAt?: number;
+  logger: any;
 }) => {
   console.log("Creating new customer");
   console.log("Org ID:", orgId);
@@ -70,19 +76,6 @@ export const createNewCustomer = async ({
     env,
   };
 
-  // let stripeCustomer: Stripe.Customer | undefined;
-  // if (org.stripe_connected) {
-  //   stripeCustomer = await createStripeCustomer({
-  //     org,
-  //     env,
-  //     customer: customerData,
-  //   });
-  //   customerData.processor = {
-  //     type: ProcessorType.Stripe,
-  //     id: stripeCustomer?.id,
-  //   };
-  // }
-
   const newCustomer = await CusService.createCustomer({
     sb,
     customer: customerData,
@@ -96,20 +89,40 @@ export const createNewCustomer = async ({
   });
 
   for (const product of defaultProds) {
-    await createFullCusProduct({
-      sb,
-      attachParams: {
-        org,
-        customer: newCustomer,
-        product,
-        prices: product.prices,
-        entitlements: product.entitlements,
-        freeTrial: null, // TODO: Free trial not supported on default product yet
-        optionsList: [],
-        cusProducts: [],
-      },
-      nextResetAt,
-    });
+    // Handle prices
+    let prices = product.prices;
+    if (prices) {
+      // 1. Try handle add product...?
+      await handleAddDefaultPaid({
+        sb,
+        attachParams: {
+          org,
+          customer: newCustomer,
+          prices: product.prices,
+          entitlements: product.entitlements,
+          freeTrial: null,
+          optionsList: [],
+          cusProducts: [],
+          products: [product],
+        },
+        logger,
+      });
+    } else {
+      await createFullCusProduct({
+        sb,
+        attachParams: {
+          org,
+          customer: newCustomer,
+          product,
+          prices: product.prices,
+          entitlements: product.entitlements,
+          freeTrial: null, // TODO: Free trial not supported on default product yet
+          optionsList: [],
+          cusProducts: [],
+        },
+        nextResetAt,
+      });
+    }
   }
 
   return newCustomer;

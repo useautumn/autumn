@@ -11,14 +11,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import React, { useState } from "react";
-import { useCustomersContext } from "./CustomersContext";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { PlusIcon } from "lucide-react";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { toast } from "sonner";
+import { useEnv } from "@/utils/envUtils";
 function CreateCustomer() {
-  const { env } = useCustomersContext();
+  const env = useEnv();
   const navigate = useNavigate();
   const axiosInstance = useAxiosInstance({ env });
   const [fields, setFields] = useState<{ [key: string]: string }>({

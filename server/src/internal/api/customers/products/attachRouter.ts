@@ -46,6 +46,7 @@ import {
   handleAttachRaceCondition,
 } from "@/external/redis/redisUtils.js";
 import { Decimal } from "decimal.js";
+import { handleAddDefaultPaid } from "@/internal/customers/add-product/handleAddDefaultPaid.js";
 
 export const attachRouter = Router();
 
@@ -326,6 +327,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       freeTrialInput: free_trial,
       isCustom,
       productIds: product_ids,
+      logger,
     });
 
     attachParams.successUrl = successUrl;
@@ -353,6 +355,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     // -------------------- ERROR CHECKING --------------------
 
     // 1. Check for normal errors (eg. options, different recurring intervals)
+
     await checkAddProductErrors({
       attachParams,
       useCheckout,
@@ -376,6 +379,14 @@ attachRouter.post("/attach", async (req: any, res) => {
     if (done) return;
 
     // // -------------------- ATTACH PRODUCT --------------------
+
+    // TESTING: SHOULD REMOVE
+    await handleAddDefaultPaid({
+      sb,
+      attachParams,
+      logger,
+    });
+    throw new Error("Test");
 
     // SCENARIO 1: Free product, no existing product
     const newProductsFree = isFreeProduct(attachParams.prices);
