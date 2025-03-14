@@ -21,7 +21,7 @@ export function useAxiosInstance({
 
   if (isAuth) {
     axiosInstance.interceptors.request.use(
-      async (config) => {
+      async (config: any) => {
         const token = await getToken({
           template: "custom_template",
         });
@@ -33,7 +33,7 @@ export function useAxiosInstance({
 
         return config;
       },
-      (error) => {
+      (error: any) => {
         return Promise.reject(error);
       }
     );
