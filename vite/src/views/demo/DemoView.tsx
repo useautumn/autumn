@@ -1,20 +1,13 @@
 "use client";
 
-import axios from "axios";
 import { toast } from "sonner";
-import SmallSpinner from "@/components/general/SmallSpinner";
 import { useState, useEffect } from "react";
-import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
-import { LoaderCircle } from "lucide-react";
 import { AutumnProvider, PricingPage } from "@useautumn/react";
 import { useDemoSWR } from "@/services/useAxiosSwr";
 import CustomerBalances from "./CustomerBalances";
-import { Input } from "@/components/ui/input";
 import { APIPlayground } from "./APIPlayground";
-import Image from "next/image";
 import { checkAccess, createAxiosInstance, sendUsage } from "./autumnBackend";
-import DemoSidebar from "./DemoSidebar";
 
 const endpoint = process.env.NEXT_PUBLIC_BACKEND_URL;
 const customerId = "ayush";
