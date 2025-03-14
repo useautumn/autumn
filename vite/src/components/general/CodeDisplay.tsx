@@ -1,8 +1,6 @@
 import { common, createStarryNight } from "@wooorm/starry-night";
 import { toHtml } from "hast-util-to-html";
 import React from "react";
-// @ts-expect-error - This is a global stylesheet
-import { Root } from "hast-util-to-html/lib/types";
 
 // @ts-expect-error - This is a global stylesheet
 import "@wooorm/starry-night/style/dark";
@@ -32,7 +30,7 @@ export const CodeDisplay: React.FC<CodeDisplayProps> = ({ code, language }) => {
 
       if (scope) {
         const tree = starryNight.highlight(code, scope);
-        const html = toHtml(tree as Root);
+        const html = toHtml(tree as any);
         // Wrap the HTML in a div with inline styles
         const styledHtml = `<div style="white-space: pre; display: inline-block; width: 10px;">${html}</div>`;
         setHighlightedCode(styledHtml);

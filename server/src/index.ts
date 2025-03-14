@@ -32,6 +32,7 @@ const init = async () => {
   await QueueManager.getInstance(); // initialize the queue manager
   await initWorkers();
   const supabaseClient = createSupabaseClient();
+  const logtail = createLogtail();
 
   app.use((req: any, res, next) => {
     req.sb = supabaseClient;
@@ -39,6 +40,11 @@ const init = async () => {
     req.logger = logger;
 
     req.logtail = createLogtail();
+    // req.logtail = logtail;
+
+    res.on("finish", () => {
+      req.logtail.flush();
+    });
 
     next();
   });
