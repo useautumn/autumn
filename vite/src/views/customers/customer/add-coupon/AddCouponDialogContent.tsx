@@ -83,11 +83,17 @@ const AddCouponDialogContent = ({
           <SelectContent>
             {/* If empty */}
 
-            {coupons.map((coupon: Coupon) => (
-              <SelectItem key={coupon.internal_id} value={coupon.internal_id}>
-                {coupon.name}
+            {coupons && coupons.length > 0 ? (
+              coupons.map((coupon: Coupon) => (
+                <SelectItem key={coupon.internal_id} value={coupon.internal_id}>
+                  {coupon.name}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="none" disabled>
+                No coupons found
               </SelectItem>
-            ))}
+            )}
           </SelectContent>
         </Select>
       </div>
