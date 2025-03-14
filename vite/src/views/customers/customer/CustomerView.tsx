@@ -44,14 +44,14 @@ export default function CustomerView({ env }: { env: AppEnv }) {
     env,
   });
 
-  const {
-    data: eventsData,
-    isLoading: eventsLoading,
-    error: eventsError,
-  } = useAxiosSWR({
-    url: `/v1/customers/${customer_id}/events`,
-    env,
-  });
+  // const {
+  //   data: eventsData,
+  //   isLoading: eventsLoading,
+  //   error: eventsError,
+  // } = useAxiosSWR({
+  //   url: `/v1/customers/${customer_id}/events`,
+  //   env,
+  // });
 
   const [addCouponOpen, setAddCouponOpen] = useState(false);
 
@@ -78,8 +78,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
     );
   }
 
-  const { customer, products, invoices, coupons, discount } = data;
-  const { events } = eventsData;
+  const { customer, products, invoices, coupons, discount, events } = data;
 
   return (
     <CustomerContext.Provider

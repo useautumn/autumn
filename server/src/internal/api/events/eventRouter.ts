@@ -30,6 +30,7 @@ const getEventAndCustomer = async ({
   customer_id,
   customer_data,
   event_data,
+  logger,
 }: {
   sb: SupabaseClient;
   orgId: string;
@@ -37,6 +38,7 @@ const getEventAndCustomer = async ({
   customer_id: string;
   customer_data: any;
   event_data: any;
+  logger: any;
 }) => {
   let customer: Customer;
 
@@ -59,6 +61,7 @@ const getEventAndCustomer = async ({
         email: customer_data?.email,
         fingerprint: customer_data?.fingerprint,
       },
+      logger,
     });
   }
 
@@ -153,6 +156,7 @@ export const handleEventSent = async ({
     customer_id,
     customer_data,
     event_data,
+    logger: req.logtail,
   });
 
   const affectedFeatures = await getAffectedFeatures({

@@ -259,35 +259,6 @@ productApiRouter.post("/:productId", async (req: any, res) => {
 
     res.status(200).send({ message: "Product updated" });
     return;
-
-    // // 3. Validate prices and entitlements
-    // const { newPrices, newEntitlements } = validatePricesAndEnts({
-    //   prices,
-    //   entitlements,
-    //   orgId,
-    //   internalProductId: fullProduct.internal_id,
-    //   curPrices: fullProduct.prices,
-    //   curEnts: fullProduct.entitlements,
-    // });
-
-    // // 4. Upsert prices and entitlements
-    // await PriceService.upsert({ sb, data: newPrices });
-    // await EntitlementService.upsert({ sb, data: newEntitlements });
-
-    // // 5. Delete old prices and entitlements
-    // await PriceService.deleteIfNotIn({
-    //   sb,
-    //   internalProductId: fullProduct.internal_id,
-    //   priceIds: newPrices.map((p) => p.id!),
-    // });
-
-    // await EntitlementService.deleteIfNotIn({
-    //   sb,
-    //   internalProductId: fullProduct.internal_id,
-    //   entitlementIds: newEntitlements.map((e) => e.id!),
-    // });
-
-    // res.status(200).send({ message: "Product updated" });
   } catch (error) {
     handleRequestError({ req, error, res, action: "Update product" });
   }

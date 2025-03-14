@@ -315,17 +315,20 @@ export const handleNewPrices = async ({
   }
 
   // If product is default, can't have any paid prices
-  if (
-    product.is_default &&
-    !isCustom &&
-    !isFreeProduct([...createdPrices, ...updatedPrices])
-  ) {
-    throw new RecaseError({
-      message: "Default product cannot have paid prices",
-      code: ErrCode.InvalidProduct,
-      statusCode: 400,
-    });
-  }
+  // if (product.is_default && !isCustom) {
+  //   if (
+  //     !createdPrices.every((p) => {
+  //       let billingType = getBillingType(p.config!);
+  //       return billingType == BillingType.UsageInArrear;
+  //     })
+  //   ) {
+  //     throw new RecaseError({
+  //       message: "Default product cannot have start of period prices",
+  //       code: ErrCode.InvalidProduct,
+  //       statusCode: 400,
+  //     });
+  //   }
+  // }
 
   await PriceService.insert({ sb, data: createdPrices });
 

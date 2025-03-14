@@ -90,6 +90,7 @@ cusRouter.post("", async (req: any, res: any) => {
       orgId: req.orgId,
       env: req.env,
       customer: data,
+      logger,
     });
 
     const { main, addOns, balances, invoices } = await getCustomerDetails({
@@ -165,6 +166,7 @@ cusRouter.put("", async (req: any, res: any) => {
           fingerprint,
         },
         nextResetAt: reset_at,
+        logger: req.logtail,
       });
     }
 

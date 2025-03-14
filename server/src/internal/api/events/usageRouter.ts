@@ -66,6 +66,7 @@ const getCusFeatureAndOrg = async ({
         email: customerData?.email,
         fingerprint: customerData?.fingerprint,
       },
+      logger: req.logtail,
     });
   }
 
