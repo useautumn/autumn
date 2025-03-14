@@ -13,13 +13,16 @@ import {
 import { useOrganization } from "@clerk/clerk-react";
 import { useEffect } from "react";
 import { Navigate, Outlet, useLocation } from "react-router";
-import posthog from "posthog-js";
+
+import { usePostHog } from "posthog-js/react";
+
 export function MainLayout() {
   const { isLoaded: isUserLoaded, user } = useUser();
   const { organization: org } = useOrganization();
   const { setActive } = useOrganizationList();
   const env = useEnv();
   const { pathname } = useLocation();
+  const posthog = usePostHog();
 
   useEffect(() => {
     // Identify user
@@ -28,13 +31,14 @@ export function MainLayout() {
       if (!email) {
         email = user.emailAddresses[0].emailAddress;
       }
-      posthog.identify(email, {
+
+      posthog?.identify(email, {
         email,
         name: user.fullName,
         id: user.id,
       });
     }
-  }, [user]);
+  }, [user, posthog]);
 
   // 1. If not loaded, show loading screen
   if (!isUserLoaded) {
