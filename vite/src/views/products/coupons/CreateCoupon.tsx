@@ -19,6 +19,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
 import { PlusIcon } from "lucide-react";
 import {
+  Coupon,
   CouponDurationType,
   CreateCoupon as CreateCouponType,
   DiscountType,
