@@ -35,11 +35,15 @@ export const CreateFeature = () => {
 
   useEffect(() => {
     if (open) {
-      setFeature(defaultFeature);
-      setEventNameInput("");
-      setEventNameChanged(false);
+      setFeatureToDefault();
     }
   }, [open]);
+
+  const setFeatureToDefault = () => {
+    setFeature(defaultFeature);
+    setEventNameInput("");
+    setEventNameChanged(false);
+  };
 
   const updateConfig = () => {
     const config: any = structuredClone(feature.config);
@@ -88,6 +92,9 @@ export const CreateFeature = () => {
           startIcon={<PlusIcon size={15} />}
           variant="dashed"
           className="w-full"
+          onClick={() => {
+            setFeatureToDefault();
+          }}
         >
           Create Feature
         </Button>
