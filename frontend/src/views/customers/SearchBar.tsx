@@ -52,7 +52,7 @@ export function SearchBar({
         className="outline-none w-full bg-transparent"
         placeholder="Search..."
       ></input>
-      {/* {loading && <SmallSpinner />} */}
+      {loading && <SmallSpinner />}
     </div>
     // <Input
     //   type="text"
