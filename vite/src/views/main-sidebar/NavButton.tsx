@@ -7,6 +7,7 @@ import { Link } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 import { useSidebarContext } from "./SidebarContext";
+import posthog from "posthog-js";
 
 export const NavButton = ({
   value,
