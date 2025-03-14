@@ -1,7 +1,6 @@
 import { InvoiceItem, AppEnv, CusProduct } from "@autumn/shared";
 
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Organization } from "node_modules/@clerk/express/dist/index.js";
 
 export class InvoiceItemService {
   static async getLatestInvoiceItem({

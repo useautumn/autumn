@@ -19,6 +19,7 @@
     
     "server:build": "npm run build -w shared && npm run prod:build -w server",
     "server:start": "npm run prod:start -w server",
-    "server:cron": "npm run cron:start -w server"
+    "server:cron": "npm run cron:start -w server",
+    "dev": "concurrently \"cd server && npm run dev\" \"cd frontend && npm run dev\" \"redis-server\""
   }
 }
