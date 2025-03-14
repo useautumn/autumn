@@ -42,7 +42,12 @@ export function MainLayout() {
 
   // 1. If not loaded, show loading screen
   if (!isUserLoaded) {
-    return <LoadingScreen />;
+    return (
+      <div className="w-screen h-screen flex bg-stone-50">
+        <MainSidebar />
+        <LoadingScreen />
+      </div>
+    );
   }
 
   // 2. If no user, redirect to sign in
