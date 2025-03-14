@@ -385,7 +385,7 @@ export default function CustomerProductView({
                 navigateTo(`/customers/${customer_id}`, router, env)
               }
             >
-              {customer.name}
+              {customer.name ? customer.name : customer.id}
             </BreadcrumbLink>
             <BreadcrumbSeparator />
             <BreadcrumbItem>{product.name}</BreadcrumbItem>

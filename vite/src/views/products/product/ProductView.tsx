@@ -11,7 +11,7 @@ import { CustomToaster } from "@/components/general/CustomToaster";
 import { ManageProduct } from "./ManageProduct";
 
 import { AppEnv, FrontendProduct, FrontendOrganization } from "@autumn/shared";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { AddProductButton } from "@/views/customers/customer/add-product/AddProductButton";
