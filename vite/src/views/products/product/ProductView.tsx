@@ -7,10 +7,9 @@ import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { ProductContext } from "./ProductContext";
 import { useNavigate, useParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { CustomToaster } from "@/components/general/CustomToaster";
 import { ManageProduct } from "./ManageProduct";
 
-import { AppEnv, FrontendProduct, FrontendOrganization } from "@autumn/shared";
+import { AppEnv, FrontendProduct, UpdateProductSchema } from "@autumn/shared";
 import { toast } from "sonner";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
@@ -101,6 +100,7 @@ function ProductView({ env }: { env: AppEnv }) {
   const handleCreateProduct = async () => {
     try {
       await ProductService.updateProduct(axiosInstance, product.id, {
+        ...UpdateProductSchema.parse(product),
         prices: product.prices,
         entitlements: product.entitlements,
         free_trial: product.free_trial,

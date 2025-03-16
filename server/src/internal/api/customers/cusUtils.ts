@@ -1,10 +1,13 @@
 import {
+  BillingInterval,
   CreateCustomerSchema,
   CusProductSchema,
   CusProductStatus,
   Customer,
   CustomerSchema,
+  ErrCode,
   FullCusProduct,
+  FullProduct,
   Organization,
   ProductSchema,
 } from "@autumn/shared";
@@ -34,6 +37,58 @@ import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js"
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { initGroupBalancesFromGetCus } from "@/internal/customers/entitlements/groupByUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
+import { handleAddDefaultPaid } from "@/internal/customers/add-product/handleAddDefaultPaid.js";
+import {
+  initProductInStripe,
+  isFreeProduct,
+} from "@/internal/products/productUtils.js";
+import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { startOfMonth } from "date-fns";
+import { TZDate } from "@date-fns/tz";
+import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
+
+const initStripeCusAndProducts = async ({
+  sb,
+  org,
+  env,
+  customer,
+  products,
+  logger,
+}: {
+  sb: SupabaseClient;
+  org: Organization;
+  env: AppEnv;
+  customer: Customer;
+  products: FullProduct[];
+  logger: any;
+}) => {
+  const batchInit = [
+    createStripeCusIfNotExists({
+      sb,
+      org,
+      env,
+      customer,
+      logger,
+    }),
+  ];
+
+  for (const product of products) {
+    batchInit.push(
+      initProductInStripe({
+        sb,
+        org,
+        env,
+        logger,
+        product,
+      })
+    );
+  }
+
+  await Promise.all(batchInit);
+};
 
 export const createNewCustomer = async ({
   sb,
@@ -41,12 +96,14 @@ export const createNewCustomer = async ({
   env,
   customer,
   nextResetAt,
+  logger,
 }: {
   sb: SupabaseClient;
   orgId: string;
   env: AppEnv;
   customer: CreateCustomer;
   nextResetAt?: number;
+  logger: any;
 }) => {
   console.log("Creating new customer");
   console.log("Org ID:", orgId);
@@ -70,24 +127,6 @@ export const createNewCustomer = async ({
     env,
   };
 
-  // let stripeCustomer: Stripe.Customer | undefined;
-  // if (org.stripe_connected) {
-  //   stripeCustomer = await createStripeCustomer({
-  //     org,
-  //     env,
-  //     customer: customerData,
-  //   });
-  //   customerData.processor = {
-  //     type: ProcessorType.Stripe,
-  //     id: stripeCustomer?.id,
-  //   };
-  // }
-
-  const newCustomer = await CusService.createCustomer({
-    sb,
-    customer: customerData,
-  });
-
   // Attach default product to customer
   const defaultProds = await ProductService.getFullDefaultProducts({
     sb,
@@ -95,7 +134,61 @@ export const createNewCustomer = async ({
     env,
   });
 
-  for (const product of defaultProds) {
+  const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
+  const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
+
+  // Check if stripeCli exists
+  if (nonFreeProds.length > 0) {
+    createStripeCli({
+      org,
+      env,
+    });
+
+    if (!customerData?.email) {
+      throw new RecaseError({
+        code: ErrCode.InvalidRequest,
+        message:
+          "Customer email is required to attach default product with prices",
+      });
+    }
+  }
+
+  const newCustomer = await CusService.createCustomer({
+    sb,
+    customer: customerData,
+  });
+
+  if (nonFreeProds.length > 0) {
+    await initStripeCusAndProducts({
+      sb,
+      org,
+      env,
+      customer: newCustomer,
+      products: nonFreeProds,
+      logger,
+    });
+
+    await handleAddProduct({
+      req: {
+        sb,
+        logtail: logger,
+      },
+      res: {},
+      attachParams: {
+        org,
+        customer: newCustomer,
+        products: nonFreeProds,
+        prices: nonFreeProds.flatMap((p) => p.prices),
+        entitlements: nonFreeProds.flatMap((p) => p.entitlements),
+        freeTrial: null,
+        optionsList: [],
+        cusProducts: [],
+        invoiceOnly: true,
+      },
+      fromRequest: false,
+    });
+  }
+  for (const product of freeProds) {
     await createFullCusProduct({
       sb,
       attachParams: {
@@ -109,6 +202,9 @@ export const createNewCustomer = async ({
         cusProducts: [],
       },
       nextResetAt,
+      anchorToUnix: org.config.anchor_start_of_month
+        ? getNextStartOfMonthUnix(BillingInterval.Month)
+        : undefined,
     });
   }
 

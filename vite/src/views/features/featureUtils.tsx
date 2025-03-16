@@ -4,7 +4,7 @@ import {
   FeatureType,
   MeteredConfig,
 } from "@autumn/shared";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 export const validateFeature = (feature: Feature) => {
   if (feature.type === FeatureType.Metered) {

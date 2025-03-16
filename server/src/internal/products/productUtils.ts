@@ -35,6 +35,7 @@ import { generateId } from "@/utils/genUtils.js";
 import { PriceService } from "../prices/PriceService.js";
 import { EntitlementService } from "./entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
 
 export const isProductUpgrade = ({
   prices1,
@@ -339,4 +340,48 @@ export const isOneOff = (prices: Price[]) => {
       }
     })
   );
+};
+
+export const initProductInStripe = async ({
+  sb,
+  org,
+  env,
+  logger,
+  product,
+}: {
+  sb: SupabaseClient;
+  org: Organization;
+  env: AppEnv;
+  logger: any;
+  product: FullProduct;
+}) => {
+  // 1.
+  await checkStripeProductExists({
+    sb,
+    org,
+    env,
+    product,
+    logger,
+  });
+
+  const batchPriceUpdate = [];
+  const stripeCli = await createStripeCli({
+    org,
+    env,
+  });
+  for (const price of product.prices) {
+    batchPriceUpdate.push(
+      createStripePriceIFNotExist({
+        sb,
+        org,
+        stripeCli,
+        price,
+        entitlements: product.entitlements,
+        product: product,
+        logger,
+      })
+    );
+  }
+
+  await Promise.all(batchPriceUpdate);
 };

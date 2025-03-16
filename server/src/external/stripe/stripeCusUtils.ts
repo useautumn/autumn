@@ -2,7 +2,7 @@ import { AppEnv, Customer, Organization, ProcessorType } from "@autumn/shared";
 import stripe, { Stripe } from "stripe";
 import { createStripeCli } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
+import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -114,10 +114,12 @@ export const getCusPaymentMethod = async ({
   org,
   env,
   stripeId,
+  errorIfNone = false,
 }: {
   org: Organization;
   env: AppEnv;
   stripeId: string;
+  errorIfNone?: boolean;
 }) => {
   const stripeCli = createStripeCli({ org, env });
 
@@ -138,6 +140,13 @@ export const getCusPaymentMethod = async ({
     paymentMethods.sort((a, b) => b.created - a.created);
 
     if (res.data.length === 0) {
+      if (errorIfNone) {
+        throw new RecaseError({
+          code: ErrCode.StripeGetPaymentMethodFailed,
+          message: `No payment method found for customer ${stripeId}`,
+          statusCode: 500,
+        });
+      }
       return null;
     }
 

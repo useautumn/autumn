@@ -261,14 +261,14 @@ export const handleExistingProduct = async ({
     attachParams.curCusProduct = undefined;
   }
 
-  if (curMainProduct && invoiceOnly) {
-    // return { curCusProduct: curMainProduct, done: true };
-    throw new RecaseError({
-      message: `Please contact hey@useautumn.com to enable upgrading / downgrading through invoice`,
-      code: ErrCode.CustomerAlreadyHasProduct,
-      statusCode: 400,
-    });
-  }
+  // if (curMainProduct && invoiceOnly) {
+  //   // return { curCusProduct: curMainProduct, done: true };
+  //   throw new RecaseError({
+  //     message: `Please contact hey@useautumn.com to enable upgrading / downgrading through invoice`,
+  //     code: ErrCode.CustomerAlreadyHasProduct,
+  //     statusCode: 400,
+  //   });
+  // }
 
   return { curCusProduct: curMainProduct || null, done: false };
 };

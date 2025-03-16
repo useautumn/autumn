@@ -2,30 +2,22 @@ import {
   DialogTrigger,
   DialogTitle,
   DialogHeader,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { DialogContent } from "@/components/ui/dialog";
 import { Dialog } from "@/components/ui/dialog";
 import { FullCustomerEntitlement } from "@autumn/shared";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useCustomerContext } from "../CustomerContext";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 import { Button } from "@/components/ui/button";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
+
 import { DateInputUnix } from "@/components/general/DateInputUnix";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CusService } from "@/services/customers/CusService";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
 
 function UpdateCusEntitlement({

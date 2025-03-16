@@ -12,7 +12,11 @@ import {
   creditSystemContainsFeature,
   getCreditSystemsFromFeature,
 } from "@/internal/features/creditSystemUtils.js";
-import { notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
+import {
+  notNullish,
+  notNullOrUndefined,
+  nullOrUndefined,
+} from "@/utils/genUtils.js";
 
 export const getGroupbalanceFromParams = ({
   params,
@@ -349,7 +353,10 @@ export const getResetBalancesUpdate = ({
   allowance?: number;
 }) => {
   let update = {};
-  let newBalance = allowance || cusEnt.entitlement.allowance || 0;
+  let newBalance = notNullish(allowance)
+    ? allowance!
+    : cusEnt.entitlement.allowance || 0;
+
   if (cusEnt.balances) {
     let newBalances = { ...cusEnt.balances };
     for (const groupVal in newBalances) {

@@ -44,6 +44,15 @@ export default function CustomerView({ env }: { env: AppEnv }) {
     env,
   });
 
+  // const {
+  //   data: eventsData,
+  //   isLoading: eventsLoading,
+  //   error: eventsError,
+  // } = useAxiosSWR({
+  //   url: `/v1/customers/${customer_id}/events`,
+  //   env,
+  // });
+
   const [addCouponOpen, setAddCouponOpen] = useState(false);
 
   const [showExpired, setShowExpired] = useState(false);

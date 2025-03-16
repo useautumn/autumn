@@ -2,14 +2,15 @@ import { Duration, EntInterval } from "@autumn/shared";
 
 import { Entitlement } from "@autumn/shared";
 import { add } from "date-fns";
+import { UTCDate } from "@date-fns/utc";
 
 // 1. Get next entitlement reset
 export const getNextEntitlementReset = (
-  prevReset: Date | null,
+  prevReset: UTCDate | null,
   interval: EntInterval
 ) => {
   if (!prevReset) {
-    prevReset = new Date();
+    prevReset = new UTCDate();
   }
 
   switch (interval) {
@@ -35,7 +36,7 @@ export const getNextEntitlementReset = (
 };
 
 export const getNextResetAt = (
-  curReset: Date | null,
+  curReset: UTCDate | null,
   interval: EntInterval
 ) => {
   while (true) {

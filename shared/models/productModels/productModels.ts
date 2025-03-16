@@ -38,6 +38,13 @@ export const CreateProductSchema = ProductSchema.omit({
   // Need name, is_add_on, is_default
 });
 
+export const UpdateProductSchema = z.object({
+  name: z.string().optional(),
+  is_add_on: z.boolean().optional(),
+  is_default: z.boolean().optional(),
+  group: z.string().optional(),
+});
+
 export const FrontendProductSchema = ProductSchema.omit({
   org_id: true,
   created_at: true,
@@ -82,3 +89,5 @@ export type FrontendProduct = z.infer<typeof FrontendProductSchema>;
 export type FullProduct = z.infer<typeof FullProductSchema>;
 export type CreateProduct = z.infer<typeof CreateProductSchema>;
 export type PublicProduct = z.infer<typeof PublicProductSchema>;
+
+export type UpdateProduct = z.infer<typeof UpdateProductSchema>;
