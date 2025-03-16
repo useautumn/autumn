@@ -7,7 +7,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useProductContext } from "../ProductContext";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 export default function UpdateEntitlement({
   open,

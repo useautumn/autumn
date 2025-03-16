@@ -65,7 +65,7 @@ export const CustomerProductList = ({
             <TableHead className="">Status</TableHead>
             <TableHead className="min-w-0 w-28">Created At</TableHead>
 
-            <TableHead className="min-w-0 w-6"></TableHead>
+            <TableHead className="min-w-0 w-8"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -149,7 +149,7 @@ export const CustomerProductList = ({
                     {formatUnixToDateTime(cusProduct.created_at).time}
                   </span>
                 </TableCell>
-                <TableCell>
+                <TableCell className="flex items-center justify-center">
                   <EditCustomerProductToolbar cusProduct={cusProduct} />
                 </TableCell>
               </TableRow>
@@ -171,7 +171,7 @@ const EditCustomerProductToolbar = ({
   return (
     <DropdownMenu open={dialogOpen} onOpenChange={setDialogOpen}>
       <DropdownMenuTrigger asChild>
-        <ToolbarButton />
+        <ToolbarButton className="!w-4 !h-6 !rounded-md" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
         {/* Update status */}

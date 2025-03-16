@@ -384,6 +384,7 @@ const getCusEntsAndFeatures = async ({
           email: customer_data?.email,
           fingerprint: customer_data?.fingerprint,
         },
+        logger: req.logtail,
       });
     }
 

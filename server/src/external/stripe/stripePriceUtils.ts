@@ -355,7 +355,11 @@ export const pricesToInvoiceItems = async ({
     // Calculate amount
     const options = getPriceOptions(price, optionsList);
     const entitlement = getPriceEntitlement(price, entitlements);
-    const { amountPerUnit, quantity } = getPriceAmount(price, options!);
+    const amount = getPriceAmount({
+      price,
+      options,
+      relatedEnt: entitlement,
+    });
 
     let allowanceStr = "";
     if (entitlement) {
@@ -372,9 +376,9 @@ export const pricesToInvoiceItems = async ({
 
     await stripeCli.invoiceItems.create({
       customer: customer.processor.id,
-      amount: amountPerUnit * quantity * 100,
+      amount: amount * 100,
       invoice: stripeInvoiceId,
-      description: `Invoice for ${product.name} -- ${quantity}${allowanceStr}`,
+      description: `${product.name}${allowanceStr}`,
     });
   }
 };

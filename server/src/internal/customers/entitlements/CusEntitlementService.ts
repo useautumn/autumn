@@ -296,14 +296,20 @@ export class CustomerEntitlementService {
     return data;
   }
 
-  static async getActiveResetPassed({ sb }: { sb: SupabaseClient }) {
+  static async getActiveResetPassed({
+    sb,
+    customDateUnix,
+  }: {
+    sb: SupabaseClient;
+    customDateUnix?: number;
+  }) {
     const { data, error } = await sb
       .from("customer_entitlements")
       .select(
         "*, customer_product:customer_products!inner(*), entitlement:entitlements(*)"
       )
       .eq("customer_product.status", "active")
-      .lt("next_reset_at", Date.now());
+      .lt("next_reset_at", customDateUnix ? customDateUnix : Date.now());
 
     if (error) {
       throw error;

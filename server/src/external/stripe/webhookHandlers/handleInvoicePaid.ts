@@ -1,25 +1,33 @@
+import Stripe from "stripe";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, InvoiceStatus, Organization } from "@autumn/shared";
+import {
+  AppEnv,
+  FullCusProduct,
+  InvoiceStatus,
+  Organization,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { CouponService } from "@/internal/coupons/CouponService.js";
 import { Decimal } from "decimal.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import {
   getInvoiceDiscounts,
   getStripeExpandedInvoice,
+  updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
+import { getStripeSubs } from "../stripeSubUtils.js";
 
 const handleOneOffInvoicePaid = async ({
   sb,
   stripeInvoice,
+  logger,
 }: {
   sb: SupabaseClient;
   stripeInvoice: Stripe.Invoice;
   event: Stripe.Event;
+  logger: any;
 }) => {
   // Search for invoice
   const invoice = await InvoiceService.getInvoiceByStripeId({
@@ -29,6 +37,7 @@ const handleOneOffInvoicePaid = async ({
 
   if (!invoice) {
     console.log(`Invoice not found`);
+    return;
   }
 
   // Update invoice status
@@ -38,10 +47,87 @@ const handleOneOffInvoicePaid = async ({
     updates: {
       status: stripeInvoice.status as InvoiceStatus,
       hosted_invoice_url: stripeInvoice.hosted_invoice_url,
+      discounts: getInvoiceDiscounts({
+        expandedInvoice: stripeInvoice,
+        logger,
+      }),
     },
   });
 
   console.log(`Updated one off invoice status to ${stripeInvoice.status}`);
+};
+
+const convertToChargeAutomatically = async ({
+  sb,
+  org,
+  env,
+  invoice,
+  activeCusProducts,
+  logger,
+}: {
+  sb: SupabaseClient;
+  org: Organization;
+  env: AppEnv;
+  invoice: Stripe.Invoice;
+  activeCusProducts: FullCusProduct[];
+  logger: any;
+}) => {
+  const stripeCli = createStripeCli({ org, env });
+
+  const subs = await getStripeSubs({
+    stripeCli,
+    subIds: activeCusProducts.flatMap((p) => p.subscription_ids || []),
+  });
+
+  if (
+    subs.every((s) => s.collection_method === "charge_automatically") ||
+    nullish(invoice.payment_intent)
+  ) {
+    return;
+  }
+
+  // Try to attach payment method to subscription
+  try {
+    logger.info(`Converting to charge automatically`);
+    // 1. Get payment intent
+    const paymentIntent = await stripeCli.paymentIntents.retrieve(
+      invoice.payment_intent as string
+    );
+
+    // 2. Get payment method
+    const paymentMethod = await stripeCli.paymentMethods.retrieve(
+      paymentIntent.payment_method as string
+    );
+
+    await stripeCli.paymentMethods.attach(paymentMethod.id, {
+      customer: invoice.customer as string,
+    });
+
+    const batchUpdateSubs = [];
+    const updateSub = async (sub: Stripe.Subscription) => {
+      try {
+        await stripeCli.subscriptions.update(sub.id, {
+          collection_method: "charge_automatically",
+          default_payment_method: paymentMethod.id,
+        });
+      } catch (error) {
+        logger.warn(
+          `Convert to charge automatically: error updating subscription ${sub.id}`
+        );
+        logger.warn(error);
+      }
+    };
+
+    for (const sub of subs) {
+      batchUpdateSubs.push(updateSub(sub));
+    }
+
+    await Promise.all(batchUpdateSubs);
+
+    logger.info("Convert to charge automatically successful!");
+  } catch (error) {
+    logger.warn(`Convert to charge automatically failed: ${error}`);
+  }
 };
 
 export const handleInvoicePaid = async ({
@@ -59,6 +145,7 @@ export const handleInvoicePaid = async ({
   env: AppEnv;
   event: Stripe.Event;
 }) => {
+  const logger = req.logtail;
   // 1. Get total invoice discounts
 
   // Fetch expanded invoice
@@ -73,7 +160,7 @@ export const handleInvoicePaid = async ({
     expandedInvoice,
     org,
     env,
-    logger: req.logger,
+    logger,
   });
 
   if (invoice.subscription) {
@@ -103,27 +190,25 @@ export const handleInvoicePaid = async ({
       return;
     }
 
-    console.log(`Invoice paid handled ${org.slug} ${invoice.id}`);
-
-    let existingInvoice = await InvoiceService.getInvoiceByStripeId({
-      sb,
-      stripeInvoiceId: invoice.id,
-    });
-
-    if (existingInvoice) {
-      console.log(`Invoice already exists`);
-      await InvoiceService.updateByStripeId({
+    if (org.config.convert_to_charge_automatically) {
+      await convertToChargeAutomatically({
         sb,
-        stripeInvoiceId: invoice.id,
-        updates: {
-          status: invoice.status as InvoiceStatus,
-        },
+        org,
+        env,
+        invoice,
+        activeCusProducts,
+        logger,
       });
-      console.log(`Updated invoice status to ${invoice.status}`);
-      return;
     }
 
-    // console.log("Handling invoice.paid:", invoice.id);
+    let updated = await updateInvoiceIfExists({
+      sb,
+      invoice,
+    });
+
+    if (updated) {
+      return;
+    }
 
     await InvoiceService.createInvoiceFromStripe({
       sb,
@@ -138,6 +223,7 @@ export const handleInvoicePaid = async ({
       sb,
       stripeInvoice: expandedInvoice,
       event,
+      logger: req.logger,
     });
   }
 

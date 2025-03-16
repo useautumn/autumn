@@ -34,11 +34,13 @@ export const payForInvoice = async ({
   env,
   customer,
   invoice,
+  logger,
 }: {
   fullOrg: Organization;
   env: AppEnv;
   customer: Customer;
   invoice: Stripe.Invoice;
+  logger: any;
 }) => {
   const stripeCli = createStripeCli({ org: fullOrg, env: env as AppEnv });
 
@@ -49,7 +51,7 @@ export const payForInvoice = async ({
   });
 
   if (!paymentMethod) {
-    console.log("   ❌ No payment method found");
+    logger.warn("   ❌ No payment method found");
     return {
       paid: false,
       error: new RecaseError({
@@ -69,8 +71,8 @@ export const payForInvoice = async ({
       error: null,
     };
   } catch (error: any) {
-    console.log(
-      "   ❌ Stripe error: Failed to pay invoice: " + error?.message || error
+    logger.error(
+      `   ❌ Stripe error: Failed to pay invoice: ${error?.message || error}`
     );
 
     if (isStripeCardDeclined(error)) {
@@ -101,6 +103,7 @@ export const updateInvoiceIfExists = async ({
   sb: SupabaseClient;
   invoice: Stripe.Invoice;
 }) => {
+  // TODO: Can optimize this function...
   const existingInvoice = await InvoiceService.getInvoiceByStripeId({
     sb,
     stripeInvoiceId: invoice.id,
@@ -115,7 +118,7 @@ export const updateInvoiceIfExists = async ({
         hosted_invoice_url: invoice.hosted_invoice_url,
       },
     });
-    console.log(`Updated invoice status to ${invoice.status}`);
+    console.log(`Updated invoice ${invoice.id} status: (${invoice.status})`);
     return true;
   }
 

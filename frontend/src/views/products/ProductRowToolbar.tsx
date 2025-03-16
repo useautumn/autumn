@@ -34,6 +34,7 @@ export const ProductRowToolbar = ({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
+
   const handleDelete = async () => {
     setDeleteLoading(true);
     try {

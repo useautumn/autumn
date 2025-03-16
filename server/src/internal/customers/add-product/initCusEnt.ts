@@ -18,6 +18,12 @@ import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
+import {
+  getAlignedIntervalUnix,
+  subtractFromUnixTillAligned,
+} from "@/internal/prices/billingIntervalUtils.js";
+import { format } from "date-fns";
+import { UTCDate } from "@date-fns/utc";
 
 const initCusEntBalance = ({
   entitlement,
@@ -67,12 +73,14 @@ const initCusEntNextResetAt = ({
   keepResetIntervals,
   existingCusEnt,
   freeTrial,
+  anchorToUnix,
 }: {
   entitlement: EntitlementWithFeature;
   nextResetAt?: number;
   keepResetIntervals?: boolean;
   existingCusEnt?: FullCustomerEntitlement;
   freeTrial: FreeTrial | null;
+  anchorToUnix?: number;
 }) => {
   // 1. If entitlement is boolean, or unlimited, or lifetime, then next reset at is null
   if (
@@ -101,14 +109,35 @@ const initCusEntNextResetAt = ({
     applyTrialToEntitlement(entitlement, freeTrial) &&
     trialEndTimestamp
   ) {
-    nextResetAtCalculated = new Date(trialEndTimestamp! * 1000);
+    nextResetAtCalculated = new UTCDate(trialEndTimestamp! * 1000);
   }
 
   let resetInterval = entitlement.interval as EntInterval;
+
   nextResetAtCalculated = getNextEntitlementReset(
     nextResetAtCalculated,
     resetInterval
   ).getTime();
+
+  // console.log(
+  //   "ANCHOR TO UNIX",
+  //   anchorToUnix
+  //     ? format(new Date(anchorToUnix), "dd MMM yyyy HH:mm:ss")
+  //     : "undefined"
+  // );
+
+  // If anchorToUnix, align next reset at to anchorToUnix...
+  if (anchorToUnix && nextResetAtCalculated) {
+    nextResetAtCalculated = subtractFromUnixTillAligned({
+      targetUnix: anchorToUnix,
+      originalUnix: nextResetAtCalculated,
+    });
+  }
+
+  // console.log(
+  //   "NEXT RESET AT",
+  //   format(new Date(nextResetAtCalculated), "dd MMM yyyy HH:mm:ss")
+  // );
 
   return nextResetAtCalculated;
 };
@@ -123,6 +152,7 @@ export const initCusEntitlement = ({
   relatedPrice,
   existingCusEnt,
   keepResetIntervals = false,
+  anchorToUnix,
 }: {
   entitlement: EntitlementWithFeature;
   customer: Customer;
@@ -133,6 +163,7 @@ export const initCusEntitlement = ({
   relatedPrice?: Price;
   existingCusEnt?: FullCustomerEntitlement;
   keepResetIntervals?: boolean;
+  anchorToUnix?: number;
 }) => {
   // const resetBalance = getResetBalance({
   //   entitlement,
@@ -153,6 +184,7 @@ export const initCusEntitlement = ({
     keepResetIntervals,
     existingCusEnt,
     freeTrial,
+    anchorToUnix,
   });
 
   // 3. Define expires at (TODO next time...)

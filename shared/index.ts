@@ -36,6 +36,7 @@ export * from "./models/cusModels/invoiceModels/invoiceModels.js";
 export * from "./models/cusModels/invoiceModels/invoiceItemModels.js";
 // Org Models
 export * from "./models/orgModels.js";
+export * from "./models/orgModels/orgConfigModels.js";
 
 // Error Codes
 export * from "./errors/errCode.js";

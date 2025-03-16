@@ -46,6 +46,7 @@ import {
   handleAttachRaceCondition,
 } from "@/external/redis/redisUtils.js";
 import { Decimal } from "decimal.js";
+import { handleAddDefaultPaid } from "@/internal/customers/add-product/handleAddDefaultPaid.js";
 
 export const attachRouter = Router();
 
@@ -283,6 +284,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     force_checkout,
     invoice_only,
     success_url,
+    billing_cycle_anchor,
   } = req.body;
 
   const { orgId, env } = req;
@@ -294,6 +296,8 @@ attachRouter.post("/attach", async (req: any, res) => {
   const optionsListInput: FeatureOptions[] = options || [];
   const invoiceOnly = invoice_only || false;
   const successUrl = success_url || undefined;
+
+  // Validate billing anchor
 
   // PUBLIC STUFF
   let forceCheckout = req.isPublic || force_checkout || false;
@@ -326,9 +330,12 @@ attachRouter.post("/attach", async (req: any, res) => {
       freeTrialInput: free_trial,
       isCustom,
       productIds: product_ids,
+      logger,
     });
 
     attachParams.successUrl = successUrl;
+    attachParams.invoiceOnly = invoiceOnly;
+    attachParams.billingAnchor = billing_cycle_anchor;
 
     logger.info(
       `Customer: ${chalk.yellow(
@@ -345,14 +352,21 @@ attachRouter.post("/attach", async (req: any, res) => {
     logger.info(
       `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(
         forceCheckout
-      )}, Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
-        isCustom
       )}`
+    );
+    logger.info(
+      `Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
+        isCustom
+      )}, Invoice Only: ${chalk.yellow(invoiceOnly)}`,
+      {
+        details: { hasPm, forceCheckout, useCheckout, isCustom, invoiceOnly },
+      }
     );
 
     // -------------------- ERROR CHECKING --------------------
 
     // 1. Check for normal errors (eg. options, different recurring intervals)
+
     await checkAddProductErrors({
       attachParams,
       useCheckout,
@@ -391,18 +405,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       return;
     }
 
-    // SCENARIO 2: Invoice only
-    if (invoiceOnly) {
-      await handleInvoiceOnly({
-        req,
-        res,
-        attachParams,
-        curCusProduct,
-      });
-      return;
-    }
-
-    if (useCheckout) {
+    if (useCheckout && !invoiceOnly) {
       logger.info("SCENARIO 2: USING CHECKOUT");
       await handleCreateCheckout({
         sb,

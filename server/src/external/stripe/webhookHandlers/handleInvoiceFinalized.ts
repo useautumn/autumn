@@ -46,16 +46,10 @@ export const handleInvoiceFinalized = async ({
       env,
       inStatuses: [CusProductStatus.Active],
     });
-
-    if (activeProducts.length != 1) {
-      console.log(
-        "Invalid number of active products for invoice.finalized: ",
-        activeProducts.length
-      );
+    if (activeProducts.length === 0) {
+      console.log("invoice.finalized: No active products found");
       return;
     }
-
-    const activeProduct = activeProducts[0];
 
     const updated = await updateInvoiceIfExists({
       sb,
@@ -70,9 +64,9 @@ export const handleInvoiceFinalized = async ({
     await InvoiceService.createInvoiceFromStripe({
       sb,
       stripeInvoice: expandedInvoice,
-      internalCustomerId: activeProduct.internal_customer_id,
-      productIds: [activeProduct.product.id],
-      internalProductIds: [activeProduct.internal_product_id],
+      internalCustomerId: activeProducts[0].internal_customer_id,
+      productIds: activeProducts.map((p) => p.product.id),
+      internalProductIds: activeProducts.map((p) => p.internal_product_id),
       status: invoice.status as InvoiceStatus,
       org,
     });

@@ -264,11 +264,10 @@ export const createFullCusProduct = async ({
   subscriptionStatus,
   canceledAt = null,
   createdAt = null,
-  collectionMethod = CollectionMethod.ChargeAutomatically,
   subscriptionIds = [],
   subscriptionScheduleIds = [],
-
   keepResetIntervals = false,
+  anchorToUnix,
 }: {
   sb: SupabaseClient;
   attachParams: InsertCusProductParams;
@@ -283,10 +282,10 @@ export const createFullCusProduct = async ({
   subscriptionStatus?: CusProductStatus;
   canceledAt?: number | null;
   createdAt?: number | null;
-  collectionMethod?: CollectionMethod;
   subscriptionIds?: string[];
   subscriptionScheduleIds?: string[];
   keepResetIntervals?: boolean;
+  anchorToUnix?: number;
 }) => {
   const logger = createLogtailWithContext({
     action: LoggerAction.CreateFullCusProduct,
@@ -355,7 +354,6 @@ export const createFullCusProduct = async ({
     );
 
     // Update existing entitlement if one off
-
     const cusEnt: any = initCusEntitlement({
       entitlement,
       customer,
@@ -366,6 +364,7 @@ export const createFullCusProduct = async ({
       relatedPrice,
       existingCusEnt,
       keepResetIntervals,
+      anchorToUnix,
     });
 
     cusEnts.push(cusEnt);
@@ -397,7 +396,9 @@ export const createFullCusProduct = async ({
     subscriptionStatus,
     canceledAt,
     createdAt,
-    collectionMethod,
+    collectionMethod: attachParams.invoiceOnly
+      ? CollectionMethod.SendInvoice
+      : CollectionMethod.ChargeAutomatically,
     subscriptionIds,
     subscriptionScheduleIds,
   });

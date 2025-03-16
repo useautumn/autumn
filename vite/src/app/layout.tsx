@@ -45,7 +45,14 @@ export function MainLayout() {
     return (
       <div className="w-screen h-screen flex bg-stone-50">
         <MainSidebar />
-        <LoadingScreen />
+        <div className="w-full h-screen flex flex-col overflow-hidden">
+          {env === AppEnv.Sandbox && (
+            <div className="w-full h-10 bg-primary/80 text-white text-sm flex items-center justify-center">
+              <p className="font-medium">You&apos;re in sandbox mode.</p>
+            </div>
+          )}
+          <LoadingScreen />
+        </div>
       </div>
     );
   }
