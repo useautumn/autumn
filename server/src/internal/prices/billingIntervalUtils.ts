@@ -1,5 +1,4 @@
-import { BillingInterval } from "@shared/models/productModels/fixedPriceModels.js";
-import { TZDate } from "@date-fns/tz";
+import { BillingInterval } from "@autumn/shared";
 import {
   addMonths,
   addYears,
