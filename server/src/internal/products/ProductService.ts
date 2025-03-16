@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, ErrCode, Product } from "@autumn/shared";
+import { AppEnv, ErrCode, Price, Product } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
@@ -44,7 +44,10 @@ export class ProductService {
       )
       .eq("org_id", orgId)
       .eq("env", env)
-      .eq("is_default", true);
+      .eq("is_default", true)
+      .eq("prices.is_custom", false)
+      .eq("entitlements.is_custom", false)
+      .eq("free_trial.is_custom", false);
 
     if (error) {
       throw error;
