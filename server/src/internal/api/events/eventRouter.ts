@@ -3,7 +3,6 @@ import {
   AppEnv,
   CreateEventSchema,
   Customer,
-  ErrCode,
   Event,
   Feature,
 } from "@autumn/shared";
@@ -18,7 +17,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { QueueManager } from "@/queue/QueueManager.js";
 import { subDays } from "date-fns";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { handleUsageEvent } from "./usageRouter.js";
 
 export const eventsRouter = Router();
@@ -50,6 +48,7 @@ const getEventAndCustomer = async ({
     env: env,
   });
 
+  // Handle race condition?
   if (!customer) {
     customer = await createNewCustomer({
       sb: sb,

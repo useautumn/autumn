@@ -4,7 +4,7 @@ import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
 import CreateAPIKey from "./CreateAPIKey";
 import { AppEnv } from "@autumn/shared";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "sonner";
 import { DevContext } from "./DevContext";
 import { APIKeyTable } from "./APIKeyTable";
 import CopyButton from "@/components/general/CopyButton";

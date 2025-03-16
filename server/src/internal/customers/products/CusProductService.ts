@@ -18,6 +18,21 @@ const ACTIVE_STATUSES = [
 ];
 
 export class CusProductService {
+  static async getByIdForReset({ sb, id }: { sb: SupabaseClient; id: string }) {
+    const { data, error } = await sb
+      .from("customer_products")
+      .select(
+        "*, customer:customers!inner(*), product:products!inner(*, org:organizations!inner(*))"
+      )
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
   static async getByIdStrict({
     sb,
     id,

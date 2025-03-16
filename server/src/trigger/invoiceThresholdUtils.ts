@@ -162,10 +162,12 @@ const invoiceCustomer = async ({
   sb,
   fullCusProduct,
   fullCusPrice,
+  logger,
 }: {
   sb: SupabaseClient;
   fullCusProduct: FullCusProduct;
   fullCusPrice: FullCustomerPrice;
+  logger: any;
 }) => {
   const price = fullCusPrice.price;
   const config = price.config as UsagePriceConfig;
@@ -209,6 +211,7 @@ const invoiceCustomer = async ({
     env: customer.env as AppEnv,
     customer,
     invoice: finalizedInvoice,
+    logger,
   });
 
   if (!paid) {
@@ -328,10 +331,12 @@ const checkBalanceBelowThreshold = async ({
 export const handleBelowThresholdInvoicing = async ({
   sb,
   belowThresholdPrice,
+  logger,
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
   belowThresholdPrice: FullCustomerPrice;
+  logger: any;
 }) => {
   // 2. Get full customer product
   const fullCusProduct = await CusProductService.getFullCusProduct({
@@ -365,6 +370,7 @@ export const handleBelowThresholdInvoicing = async ({
     sb,
     fullCusProduct,
     fullCusPrice: belowThresholdPrice,
+    logger,
   });
 };
 

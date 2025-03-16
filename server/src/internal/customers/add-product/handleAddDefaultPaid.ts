@@ -1,7 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "../products/AttachParams.js";
-import { createStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
-import { BillingInterval, ErrCode } from "@autumn/shared";
+import { BillingInterval } from "@autumn/shared";
 import Stripe from "stripe";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";

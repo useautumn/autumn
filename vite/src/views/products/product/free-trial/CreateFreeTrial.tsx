@@ -13,7 +13,7 @@ import { useProductContext } from "../ProductContext";
 
 // import { FrontendFreeTrial } from "@autumn/shared";
 import { FreeTrialConfig } from "./FreeTrialConfig";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 
 export const CreateFreeTrial = () => {
   const [open, setOpen] = useState(false);

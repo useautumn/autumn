@@ -331,6 +331,7 @@ export const runUpdateUsageTask = async ({
         sb,
         internalCustomerId: customer.internal_id,
         belowThresholdPrice,
+        logger,
       });
     } else {
       console.log("   ✅ No below threshold price found");

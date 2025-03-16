@@ -3,7 +3,6 @@ import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
   attachToInsertParams,
-  getPricesForProduct,
   isFreeProduct,
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
@@ -211,6 +210,7 @@ export const handleChangeProduct = async ({
 
   const isUpgrade =
     isCustom ||
+    attachParams.invoiceOnly ||
     isProductUpgrade({
       prices1: curPrices,
       prices2: newPrices,

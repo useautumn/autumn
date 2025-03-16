@@ -124,6 +124,13 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       }
     }
 
+    // PROCESSING
+    // 1. Invoice product ids sorted
+    for (const invoice of invoices) {
+      invoice.product_ids = invoice.product_ids.sort();
+      invoice.internal_product_ids = invoice.internal_product_ids.sort();
+    }
+
     res.status(200).send({
       customer,
       products,

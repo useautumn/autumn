@@ -1,11 +1,7 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import {
-  faClone,
-  faEllipsisVertical,
-  faTrash,
-} from "@fortawesome/pro-solid-svg-icons";
+import { faClone, faPencil, faTrash } from "@fortawesome/pro-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { cn } from "@/lib/utils";
+
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,7 +10,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 
 import { AppEnv, Product } from "@autumn/shared";
 import { ProductService } from "@/services/products/ProductService";
@@ -22,6 +17,13 @@ import { useProductsContext } from "./ProductsContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { UpdateProductDialog } from "./UpdateProduct";
 
 export const ProductRowToolbar = ({
   className,
@@ -35,6 +37,10 @@ export const ProductRowToolbar = ({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [copyLoading, setCopyLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const [selectedProduct, setSelectedProduct] = useState(product);
+
   const handleDelete = async () => {
     setDeleteLoading(true);
     try {
@@ -61,48 +67,72 @@ export const ProductRowToolbar = ({
   };
 
   return (
-    <DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
-      <DropdownMenuTrigger asChild>
-        <ToolbarButton />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="text-t2" align="end">
-        <DropdownMenuItem
-          className="flex items-center text-xs"
-          onClick={async (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            await handleDelete();
-          }}
-        >
-          <div className="flex items-center justify-between w-full gap-2">
-            Delete
-            {deleteLoading ? (
-              <SmallSpinner />
-            ) : (
-              <FontAwesomeIcon icon={faTrash} size="sm" />
-            )}
-          </div>
-        </DropdownMenuItem>
-        {env == AppEnv.Sandbox && (
+    <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+      <UpdateProductDialog
+        selectedProduct={product}
+        setSelectedProduct={setSelectedProduct}
+        setModalOpen={setModalOpen}
+        setDropdownOpen={setDeleteOpen}
+      />
+      <DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DropdownMenuTrigger asChild>
+          <ToolbarButton />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="text-t2" align="end">
+          <DialogTrigger asChild>
+            <DropdownMenuItem
+              className="flex items-center text-xs"
+              onClick={async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setSelectedProduct(product);
+                setModalOpen(true);
+              }}
+            >
+              <div className="flex items-center justify-between w-full gap-2">
+                Edit
+                <FontAwesomeIcon icon={faPencil} size="sm" />
+              </div>
+            </DropdownMenuItem>
+          </DialogTrigger>
           <DropdownMenuItem
             className="flex items-center text-xs"
             onClick={async (e) => {
               e.stopPropagation();
               e.preventDefault();
-              await handleCopy();
+              await handleDelete();
             }}
           >
             <div className="flex items-center justify-between w-full gap-2">
-              Copy to live
-              {copyLoading ? (
+              Delete
+              {deleteLoading ? (
                 <SmallSpinner />
               ) : (
-                <FontAwesomeIcon icon={faClone} size="sm" />
+                <FontAwesomeIcon icon={faTrash} size="sm" />
               )}
             </div>
           </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          {env == AppEnv.Sandbox && (
+            <DropdownMenuItem
+              className="flex items-center text-xs"
+              onClick={async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                await handleCopy();
+              }}
+            >
+              <div className="flex items-center justify-between w-full gap-2">
+                Copy to live
+                {copyLoading ? (
+                  <SmallSpinner />
+                ) : (
+                  <FontAwesomeIcon icon={faClone} size="sm" />
+                )}
+              </div>
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </Dialog>
   );
 };

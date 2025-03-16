@@ -13,7 +13,7 @@ import {
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripeCli } from "../utils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
-import { createStripeSubscription } from "../stripeSubUtils.js";
+
 import {
   getBillingType,
   getPriceEntitlement,
@@ -28,6 +28,8 @@ import { CouponService } from "@/internal/coupons/CouponService.js";
 import { CouponType, getCouponType } from "@/internal/coupons/couponUtils.js";
 import { Decimal } from "decimal.js";
 import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
+import { createStripeSub } from "../stripeSubUtils/createStripeSub.js";
+import { getAlignedIntervalUnix } from "@/internal/prices/billingIntervalUtils.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -204,6 +206,7 @@ export const handleCheckoutSessionCompleted = async ({
   );
 
   // Get product by stripe subscription ID
+  let checkoutSub;
   if (checkoutSession.subscription) {
     const activeCusProducts = await CusProductService.getByStripeSubId({
       sb,
@@ -224,6 +227,8 @@ export const handleCheckoutSessionCompleted = async ({
     const subscription = await stripeCli.subscriptions.retrieve(
       checkoutSession.subscription as string
     );
+
+    checkoutSub = subscription;
 
     for (const item of subscription.items.data) {
       let stripePriceId = item.price.id;
@@ -254,16 +259,30 @@ export const handleCheckoutSessionCompleted = async ({
   let invoiceIds: string[] = [checkoutSession.invoice as string];
 
   if (remainingSets && remainingSets.length > 0) {
+    const firstSetStart = checkoutSub?.current_period_end;
+    if (!firstSetStart) {
+      console.error(
+        `checkout.completed: first set start not found for subscription: ${checkoutSession.subscription}`
+      );
+      return;
+    }
+
     for (const itemSet of remainingSets) {
       const stripeCli = createStripeCli({ org, env });
-      const subscription = await createStripeSubscription({
+
+      // Handle billing cycle anchor...
+      const billingCycleAnchorUnix = getAlignedIntervalUnix(
+        firstSetStart * 1000,
+        itemSet.interval
+      );
+
+      const subscription = await createStripeSub({
         stripeCli,
         customer: attachParams.customer,
         org,
-        items: itemSet.items,
+        itemSet,
         freeTrial: attachParams.freeTrial, // add free trial to subscription...
-        metadata: itemSet.subMeta,
-        prices: itemSet.prices,
+        billingCycleAnchorUnix,
       });
 
       otherSubscriptions.push(subscription.id);
@@ -288,6 +307,11 @@ export const handleCheckoutSessionCompleted = async ({
         ? (checkoutSession.subscription as string)
         : undefined,
       subscriptionIds: !isOneOff ? otherSubscriptions : undefined,
+      anchorToUnix: !isOneOff
+        ? checkoutSub?.current_period_end
+          ? checkoutSub.current_period_end * 1000
+          : undefined
+        : undefined,
     });
   }
 

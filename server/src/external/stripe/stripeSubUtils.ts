@@ -1,204 +1,6 @@
-import {
-  BillingInterval,
-  CusProduct,
-  CusProductStatus,
-  ErrCode,
-  Feature,
-  FreeTrial,
-  FullCusProduct,
-  Price,
-} from "@autumn/shared";
-
-import { Customer, Organization } from "@autumn/shared";
 import Stripe from "stripe";
-import { getCusPaymentMethod } from "./stripeCusUtils.js";
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { isStripeCardDeclined } from "./stripeCardUtils.js";
+import { CusProductStatus, Feature, FullCusProduct } from "@autumn/shared";
 import { differenceInSeconds } from "date-fns";
-
-export const createStripeSubscription = async ({
-  stripeCli,
-  customer,
-  org,
-  items,
-  freeTrial,
-  metadata = {},
-  prices,
-  errorIfIncomplete = true,
-}: {
-  stripeCli: Stripe;
-  customer: Customer;
-  items: any;
-  freeTrial: FreeTrial | null;
-  org: Organization;
-  metadata?: any;
-  prices: Price[];
-  errorIfIncomplete?: boolean;
-}) => {
-  // 1. Get payment method
-  let paymentMethod;
-  try {
-    paymentMethod = await getCusPaymentMethod({
-      org,
-      env: customer.env,
-      stripeId: customer.processor.id,
-    });
-  } catch (error) {
-    throw new RecaseError({
-      code: ErrCode.StripeGetPaymentMethodFailed,
-      message: `Failed to get payment method for customer ${customer.id}`,
-      statusCode: 500,
-    });
-  }
-
-  if (!paymentMethod) {
-    throw new RecaseError({
-      code: ErrCode.StripeGetPaymentMethodFailed,
-      message: `No payment method found for customer ${customer.id}`,
-      statusCode: 500,
-    });
-  }
-
-  let paymentMethodData = {};
-  if (paymentMethod) {
-    paymentMethodData = {
-      default_payment_method: paymentMethod as string,
-    };
-  }
-
-  let subItems = items.filter(
-    (i: any, index: number) =>
-      prices[index].config!.interval !== BillingInterval.OneOff
-  );
-  let invoiceItems = items.filter(
-    (i: any, index: number) =>
-      prices[index].config!.interval === BillingInterval.OneOff
-  );
-
-  try {
-    const subscription = await stripeCli.subscriptions.create({
-      ...paymentMethodData,
-      customer: customer.processor.id,
-      items: subItems as any,
-      trial_end: freeTrialToStripeTimestamp(freeTrial),
-      payment_behavior: errorIfIncomplete ? "error_if_incomplete" : undefined,
-      metadata,
-      add_invoice_items: invoiceItems,
-    });
-    return subscription;
-  } catch (error: any) {
-    // console.log("Error creating stripe subscription", error?.message || error);
-    console.log("Warning: Failed to create stripe subscription");
-    console.log("Error code:", error.code);
-    console.log("Message:", error.message);
-    console.log("Decline code:", error.decline_code);
-
-    throw new RecaseError({
-      // code: ErrCode.StripeCardDeclined,
-      code: ErrCode.CreateStripeSubscriptionFailed,
-      message: `Stripe subscription failed (${error.code}): ${error.message}`,
-      statusCode: 500,
-    });
-
-    // if (isStripeCardDeclined(error)) {
-
-    // }
-
-    // console.log("Error creating stripe subscription", error?.message || error);
-    // console.log("Error code:", error.code);
-
-    // throw new RecaseError({
-    //   code: ErrCode.CreateStripeSubscriptionFailed,
-    //   message: "Failed to create stripe subscription",
-    //   statusCode: 500,
-    // });
-  }
-};
-
-export const updateStripeSubscription = async ({
-  org,
-  customer,
-  stripeCli,
-  subscriptionId,
-  items,
-  trialEnd,
-  prices,
-}: {
-  org: Organization;
-  customer: Customer;
-  stripeCli: Stripe;
-  subscriptionId: string;
-  items: any;
-  prices: Price[];
-  trialEnd?: number;
-}) => {
-  let paymentMethod;
-  try {
-    paymentMethod = await getCusPaymentMethod({
-      org,
-      env: customer.env,
-      stripeId: customer.processor.id,
-    });
-  } catch (error) {
-    throw new RecaseError({
-      code: ErrCode.StripeGetPaymentMethodFailed,
-      message: `Failed to get payment method for customer ${customer.id}`,
-      statusCode: 500,
-    });
-  }
-
-  if (!paymentMethod) {
-    throw new RecaseError({
-      code: ErrCode.StripeGetPaymentMethodFailed,
-      message: `No payment method found for customer ${customer.id}`,
-      statusCode: 500,
-    });
-  }
-
-  let subItems = items.filter(
-    (i: any, index: number) =>
-      i.deleted || prices[index].config!.interval !== BillingInterval.OneOff
-  );
-  let invoiceItems = items.filter((i: any, index: number) => {
-    if (index < prices.length) {
-      return prices[index].config!.interval === BillingInterval.OneOff;
-    }
-
-    return false;
-  });
-
-  try {
-    const sub = await stripeCli.subscriptions.update(subscriptionId, {
-      items: subItems,
-      proration_behavior: "always_invoice",
-      trial_end: trialEnd,
-      payment_behavior: "error_if_incomplete",
-      default_payment_method: paymentMethod as string,
-      add_invoice_items: invoiceItems,
-    });
-
-    const subUpdate = await stripeCli.subscriptions.retrieve(subscriptionId);
-
-    return subUpdate;
-  } catch (error: any) {
-    console.log("Error updating stripe subscription.", error.message);
-
-    if (isStripeCardDeclined(error)) {
-      throw new RecaseError({
-        code: ErrCode.StripeCardDeclined,
-        message: `Card was declined, Stripe decline code: ${error.decline_code}, Code: ${error.code}`,
-        statusCode: 500,
-      });
-    }
-
-    throw new RecaseError({
-      code: ErrCode.StripeUpdateSubscriptionFailed,
-      message: "Failed to update stripe subscription",
-      statusCode: 500,
-    });
-  }
-};
 
 export const getStripeSubs = async ({
   stripeCli,
@@ -210,8 +12,7 @@ export const getStripeSubs = async ({
   const batchGet = [];
   const getStripeSub = async (subId: string) => {
     try {
-      const sub = await stripeCli.subscriptions.retrieve(subId);
-      return sub;
+      return await stripeCli.subscriptions.retrieve(subId);
     } catch (error: any) {
       console.log("Error getting stripe subscription.", error.message);
       return null;
@@ -221,9 +22,15 @@ export const getStripeSubs = async ({
   for (const subId of subIds) {
     batchGet.push(getStripeSub(subId));
   }
-  const subs = await Promise.all(batchGet);
+  let subs = await Promise.all(batchGet);
+  subs = subs.filter((sub) => sub !== null);
 
-  return subs.filter((sub) => sub !== null);
+  // Sort by current_period_end (latest first)
+  subs.sort((a: any, b: any) => {
+    return b.current_period_end - a.current_period_end;
+  });
+
+  return subs as Stripe.Subscription[];
 };
 
 export const stripeToAutumnSubStatus = (stripeSubStatus: string) => {

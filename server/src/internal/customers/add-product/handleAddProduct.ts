@@ -27,25 +27,33 @@ import {
   getStripeExpandedInvoice,
   payForInvoice,
 } from "@/external/stripe/stripeInvoiceUtils.js";
-import { createStripeSubscription } from "@/external/stripe/stripeSubUtils.js";
+
 import { handleCreateCheckout } from "./handleCreateCheckout.js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import Stripe from "stripe";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSub.js";
+import {
+  getAlignedIntervalUnix,
+  getNextStartOfMonthUnix,
+} from "@/internal/prices/billingIntervalUtils.js";
+import { format } from "date-fns";
 
 const handleBillNowPrices = async ({
   sb,
   attachParams,
   res,
   req,
+  fromRequest = true,
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
   res: any;
   req: any;
+  fromRequest?: boolean;
 }) => {
   const logger = req.logtail;
-  const { org, customer, products, freeTrial } = attachParams;
+  const { org, customer, products, freeTrial, invoiceOnly } = attachParams;
 
   const stripeCli = createStripeCli({ org, env: customer.env });
 
@@ -56,6 +64,7 @@ const handleBillNowPrices = async ({
   let subscriptions: Stripe.Subscription[] = [];
   let invoiceIds: string[] = [];
 
+  let invoices: Stripe.Invoice[] = [];
   for (const itemSet of itemSets) {
     if (itemSet.interval === BillingInterval.OneOff) {
       continue;
@@ -63,16 +72,31 @@ const handleBillNowPrices = async ({
 
     const { items } = itemSet;
 
+    let subscription;
     try {
       // Should create 2 subscriptions
-      let subscription = await createStripeSubscription({
+
+      let billingCycleAnchorUnix;
+      if (org.config.anchor_start_of_month) {
+        billingCycleAnchorUnix = getNextStartOfMonthUnix(itemSet.interval);
+      }
+
+      if (attachParams.billingAnchor) {
+        // Add interval to now
+        billingCycleAnchorUnix = getAlignedIntervalUnix(
+          attachParams.billingAnchor,
+          itemSet.interval
+        );
+      }
+
+      subscription = await createStripeSub({
         stripeCli,
         customer,
         org,
-        items,
         freeTrial,
-        metadata: itemSet.subMeta,
-        prices: itemSet.prices,
+        invoiceOnly,
+        itemSet,
+        billingCycleAnchorUnix,
       });
 
       subscriptions.push(subscription);
@@ -80,6 +104,7 @@ const handleBillNowPrices = async ({
     } catch (error: any) {
       if (
         error instanceof RecaseError &&
+        !invoiceOnly &&
         (error.code === ErrCode.StripeCardDeclined ||
           error.code === ErrCode.CreateStripeSubscriptionFailed)
       ) {
@@ -106,37 +131,55 @@ const handleBillNowPrices = async ({
         subscriptionIds: subscriptions.map((s) => s.id),
         subscriptionId:
           subscriptions.length > 0 ? subscriptions[0].id : undefined,
+        anchorToUnix:
+          subscriptions.length > 0
+            ? subscriptions[0].current_period_end * 1000
+            : undefined,
       })
     );
   }
   await Promise.all(batchInsert);
 
+  // Do this async...
+  const insertInvoice = async (invoiceId: string) => {
+    const invoice = await getStripeExpandedInvoice({
+      stripeCli,
+      stripeInvoiceId: invoiceId,
+    });
+
+    await InvoiceService.createInvoiceFromStripe({
+      sb,
+      stripeInvoice: invoice,
+      internalCustomerId: customer.internal_id,
+      productIds: products.map((p) => p.id),
+      internalProductIds: products.map((p) => p.internal_id),
+      org,
+    });
+  };
+
+  const batchInsertInvoice = [];
   for (const invoiceId of invoiceIds) {
     try {
-      const invoice = await getStripeExpandedInvoice({
-        stripeCli,
-        stripeInvoiceId: invoiceId,
-      });
-
-      await InvoiceService.createInvoiceFromStripe({
-        sb,
-        stripeInvoice: invoice,
-        internalCustomerId: customer.internal_id,
-        productIds: products.map((p) => p.id),
-        internalProductIds: products.map((p) => p.internal_id),
-        org,
-      });
+      // Handle async
+      batchInsertInvoice.push(insertInvoice(invoiceId));
     } catch (error) {
       logger.error("handleBillNowPrices: error retrieving invoice", error);
     }
   }
+  await Promise.all(batchInsertInvoice);
 
-  res.status(200).send({
-    success: true,
-    message: `Successfully created subscriptions and attached ${products
-      .map((p) => p.name)
-      .join(", ")} to ${customer.name}`,
-  });
+  if (fromRequest) {
+    res.status(200).send({
+      success: true,
+      message: `Successfully created subscriptions and attached ${products
+        .map((p) => p.name)
+        .join(", ")} to ${customer.name}`,
+      invoice_url:
+        invoiceOnly && invoices?.[0]?.hosted_invoice_url
+          ? invoices[0].hosted_invoice_url
+          : undefined,
+    });
+  }
 };
 
 const handleOneOffPrices = async ({
@@ -144,22 +187,34 @@ const handleOneOffPrices = async ({
   sb,
   attachParams,
   res,
+  fromRequest = true,
 }: {
   req: any;
   sb: SupabaseClient;
   attachParams: AttachParams;
   res: any;
+  fromRequest?: boolean;
 }) => {
-  const { org, customer, products, prices, optionsList, entitlements } =
-    attachParams;
+  const logger = req.logtail;
+  logger.info("Scenario 4A: One-off prices");
+
+  const {
+    org,
+    customer,
+    products,
+    prices,
+    optionsList,
+    entitlements,
+    invoiceOnly,
+  } = attachParams;
 
   // 1. Create invoice
   const stripeCli = createStripeCli({ org, env: customer.env });
 
-  console.log("   1. Creating invoice");
+  logger.info("   1. Creating invoice");
   const stripeInvoice = await stripeCli.invoices.create({
     customer: customer.processor.id,
-    auto_advance: true,
+    // auto_advance: true,
   });
 
   // 2. Create invoice items
@@ -195,30 +250,33 @@ const handleOneOffPrices = async ({
     getInvoiceExpansion()
   );
 
-  console.log("   2. Paying invoice");
-  const { paid, error } = await payForInvoice({
-    fullOrg: org,
-    env: customer.env,
-    customer: customer,
-    invoice: stripeInvoice,
-  });
+  if (!attachParams.invoiceOnly) {
+    logger.info("   2. Paying invoice");
+    const { paid, error } = await payForInvoice({
+      fullOrg: org,
+      env: customer.env,
+      customer: customer,
+      invoice: stripeInvoice,
+      logger,
+    });
 
-  if (!paid) {
-    if (error!.code === ErrCode.StripeCardDeclined) {
-      await stripeCli.invoices.voidInvoice(stripeInvoice.id);
-      await handleCreateCheckout({
-        sb,
-        req,
-        res,
-        attachParams,
-      });
-    } else {
-      throw error;
+    if (!paid && fromRequest) {
+      if (error!.code === ErrCode.StripeCardDeclined) {
+        await stripeCli.invoices.voidInvoice(stripeInvoice.id);
+        await handleCreateCheckout({
+          sb,
+          req,
+          res,
+          attachParams,
+        });
+      } else {
+        throw error;
+      }
     }
   }
 
   // Insert full customer product
-  console.log("   3. Creating full customer product");
+  logger.info("   3. Creating full customer product");
   const batchInsert = [];
   for (const product of products) {
     batchInsert.push(
@@ -231,35 +289,45 @@ const handleOneOffPrices = async ({
   }
   await Promise.all(batchInsert);
 
-  console.log("   4. Creating invoice from stripe");
+  logger.info("   4. Creating invoice from stripe");
   await InvoiceService.createInvoiceFromStripe({
     sb,
     stripeInvoice: finalizedInvoice,
     internalCustomerId: customer.internal_id,
     productIds: products.map((p) => p.id),
     internalProductIds: products.map((p) => p.internal_id),
-    status: InvoiceStatus.Paid,
     org: org,
   });
 
-  console.log("   ✅ Successfully attached product");
-  res.status(200).json({
-    success: true,
-    message: `Successfully purchased ${products
-      .map((p) => p.name)
-      .join(", ")} and attached to ${customer.name}`,
-  });
+  logger.info("   ✅ Successfully attached product");
+
+  if (fromRequest) {
+    res.status(200).json({
+      success: true,
+      message: `Successfully purchased ${products
+        .map((p) => p.name)
+        .join(", ")} and attached to ${customer.name}`,
+      invoice_url:
+        invoiceOnly && finalizedInvoice?.hosted_invoice_url
+          ? finalizedInvoice.hosted_invoice_url
+          : undefined,
+    });
+  }
 };
 
 export const handleAddProduct = async ({
   req,
   res,
   attachParams,
+  fromRequest = true,
 }: {
-  req: any;
+  req: {
+    sb: SupabaseClient;
+    logtail: any;
+  };
   res: any;
-
   attachParams: AttachParams;
+  fromRequest?: boolean;
 }) => {
   const logger = req.logtail;
   const { customer, products, prices } = attachParams;
@@ -282,12 +350,12 @@ export const handleAddProduct = async ({
 
   // 1. Handle one-off payment products
   if (pricesOnlyOneOff(prices)) {
-    console.log("Handling one-off payment products");
     await handleOneOffPrices({
       sb: req.sb,
       req,
-      attachParams,
       res,
+      attachParams,
+      fromRequest,
     });
 
     return;
@@ -299,9 +367,10 @@ export const handleAddProduct = async ({
   if (billNowPrices.length > 0) {
     await handleBillNowPrices({
       sb: req.sb,
-      req,
       attachParams,
+      req,
       res,
+      fromRequest,
     });
 
     return;

@@ -10,30 +10,37 @@ export const attachParamsToInvoice = async ({
   attachParams,
   invoiceId,
   stripeInvoice,
+  logger,
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
   invoiceId: string;
   stripeInvoice?: Stripe.Invoice;
+  logger: any;
 }) => {
-  if (!stripeInvoice) {
-    let stripeCli = createStripeCli({
+  try {
+    if (!stripeInvoice) {
+      let stripeCli = createStripeCli({
+        org: attachParams.org,
+        env: attachParams.customer.env,
+      });
+
+      stripeInvoice = await getStripeExpandedInvoice({
+        stripeCli,
+        stripeInvoiceId: invoiceId,
+      });
+    }
+
+    await InvoiceService.createInvoiceFromStripe({
+      sb,
+      stripeInvoice,
+      internalCustomerId: attachParams.customer.internal_id,
       org: attachParams.org,
-      env: attachParams.customer.env,
+      productIds: attachParams.products.map((p) => p.id),
+      internalProductIds: attachParams.products.map((p) => p.internal_id),
     });
-
-    stripeInvoice = await getStripeExpandedInvoice({
-      stripeCli,
-      stripeInvoiceId: invoiceId,
-    });
+  } catch (error) {
+    logger.warn("Failed to insert invoice from attach params");
+    logger.warn(error);
   }
-
-  await InvoiceService.createInvoiceFromStripe({
-    sb,
-    stripeInvoice,
-    internalCustomerId: attachParams.customer.internal_id,
-    org: attachParams.org,
-    productIds: attachParams.products.map((p) => p.id),
-    internalProductIds: attachParams.products.map((p) => p.internal_id),
-  });
 };

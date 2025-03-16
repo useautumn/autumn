@@ -48,7 +48,13 @@ export const CustomerDetails = () => {
       >
         {/* <div className="flex flex-col gap-1"> */}
         <p className="text-t3 text-xs font-medium">Name</p>
-        <p>{customer.name}</p>
+        <p>
+          {customer.name ? (
+            customer.name
+          ) : (
+            <span className="text-t3 text-xs font-medium">N/A</span>
+          )}
+        </p>
         {/* </div> */}
 
         <p className="text-t3 text-xs font-medium">ID</p>
