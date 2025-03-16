@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { FeatureType } from "@autumn/shared";
 import { useFeaturesContext } from "./FeaturesContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

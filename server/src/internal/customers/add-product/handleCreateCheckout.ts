@@ -10,6 +10,13 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
+import {
+  addBillingIntervalUnix,
+  getNextStartOfMonthUnix,
+  subtractBillingIntervalUnix,
+  subtractFromUnixTillAligned,
+} from "@/internal/prices/billingIntervalUtils.js";
+import { format } from "date-fns";
 
 export const handleCreateCheckout = async ({
   sb,
@@ -57,12 +64,23 @@ export const handleCreateCheckout = async ({
     itemMetas,
   });
 
+  let billingCycleAnchorUnixSeconds = org.config.anchor_start_of_month
+    ? Math.floor(getNextStartOfMonthUnix(itemSets[0].interval) / 1000)
+    : undefined;
+
+  if (attachParams.billingAnchor) {
+    billingCycleAnchorUnixSeconds = Math.floor(
+      attachParams.billingAnchor / 1000
+    );
+  }
+
   const subscriptionData = isRecurring
     ? {
         trial_end: freeTrial
           ? freeTrialToStripeTimestamp(freeTrial)
           : undefined,
         metadata: subMeta,
+        billing_cycle_anchor: billingCycleAnchorUnixSeconds,
       }
     : undefined;
 
@@ -91,3 +109,31 @@ export const handleCreateCheckout = async ({
   });
   return;
 };
+
+// OLD BILLING CYCLE ANCHOR LOGIC
+// const nextBillingDateUnix = addBillingIntervalUnix(
+//   Date.now(),
+//   itemSets[0].interval
+// );
+// console.log(
+//   "Next billing date",
+//   format(new Date(nextBillingDateUnix), "dd MMM yyyy HH:mm:ss")
+// );
+// console.log(
+//   "Target unix",
+//   format(new Date(attachParams.billingAnchor), "dd MMM yyyy HH:mm:ss")
+// );
+
+// billingCycleAnchorUnixSeconds = subtractFromUnixTillAligned({
+//   targetUnix: attachParams.billingAnchor,
+//   originalUnix: nextBillingDateUnix,
+// });
+
+// console.log(
+//   "Billing cycle anchor",
+//   format(new Date(billingCycleAnchorUnixSeconds), "dd MMM yyyy HH:mm:ss")
+// );
+
+// billingCycleAnchorUnixSeconds = Math.floor(
+//   billingCycleAnchorUnixSeconds / 1000
+// );

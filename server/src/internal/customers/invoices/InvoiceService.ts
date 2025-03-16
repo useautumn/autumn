@@ -116,6 +116,10 @@ export class InvoiceService {
     org: Organization;
     sendRevenueEvent?: boolean;
   }) {
+    // Convert product ids to unique product ids
+    const uniqueProductIds = [...new Set(productIds)];
+    const uniqueInternalProductIds = [...new Set(internalProductIds)];
+
     let logger = createLogtailWithContext({
       org_slug: org.slug,
       stripe_invoice: stripeInvoice,
@@ -126,12 +130,12 @@ export class InvoiceService {
     const invoice: Invoice = {
       id: generateId("inv"),
       internal_customer_id: internalCustomerId,
-      product_ids: productIds,
+      product_ids: uniqueProductIds,
       created_at: stripeInvoice.created * 1000,
       stripe_id: stripeInvoice.id,
       hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
       status: status || (stripeInvoice.status as InvoiceStatus | null),
-      internal_product_ids: internalProductIds,
+      internal_product_ids: uniqueInternalProductIds,
       // Stripe stuff
       total: stripeInvoice.total / 100,
       currency: stripeInvoice.currency,

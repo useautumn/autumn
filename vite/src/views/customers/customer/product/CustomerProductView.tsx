@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { FrontendProduct, FullCusProduct } from "@autumn/shared";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  AppEnv,
+  BillingInterval,
+  FrontendOrganization,
+  FrontendProduct,
+  FullCusProduct,
+} from "@autumn/shared";
 
 import {
   BreadcrumbItem,
@@ -13,8 +19,9 @@ import {
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 
 import LoadingScreen from "@/views/general/LoadingScreen";
-import { useSearchParams } from "react-router";
+
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { CustomToaster } from "@/components/general/CustomToaster";
 import { ManageProduct } from "@/views/products/product/ManageProduct";
 import { ProductContext } from "@/views/products/product/ProductContext";
 
@@ -26,7 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import {
   getBackendErr,
   getBackendErrObj,
@@ -44,7 +51,6 @@ import { ProductOptions } from "./ProductOptions";
 
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useEnv } from "@/utils/envUtils";
-import { ProductActionState } from "@/utils/models";
 
 interface OptionValue {
   feature_id: string;
@@ -52,14 +58,19 @@ interface OptionValue {
   quantity?: number;
 }
 
-export default function CustomerProductView() {
-  const navigate = useNavigate();
-  const env = useEnv();
-  const { customer_id, product_id }: any = useParams();
-  const [searchParams] = useSearchParams();
-  const cusProductId = searchParams.get("id");
+export enum ProductActionState {
+  NoChanges = "no_changes",
+  UpdateOptionsOnly = "update_options_only",
+  CreateCustomVersion = "create_custom_version",
+  EnableProduct = "enable_product",
+}
 
+export default function CustomerProductView() {
+  const { customer_id, product_id } = useParams();
+  const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
+  const navigation = useNavigate();
+  const [searchParams] = useSearchParams();
   const [product, setProduct] = useState<FrontendProduct | null>(null);
   const [options, setOptions] = useState<OptionValue[]>([]);
 
@@ -79,11 +90,13 @@ export default function CustomerProductView() {
   const [hasChanges, setHasChanges] = useState(false);
   const [hasOptionsChanges, setHasOptionsChanges] = useState(false);
 
+  const cusProductId = searchParams.get("id");
+  // Get product from customer data and check if it is active
   useEffect(() => {
     if (!data?.products || !data?.customer) return;
 
     const foundProduct = data.products.find((p: any) => p.id === product_id);
-    // console.log("Found Product: ", foundProduct);
+
     if (!foundProduct) return;
 
     const customerProduct = data.customer.products.find(
@@ -173,8 +186,15 @@ export default function CustomerProductView() {
   }
 
   if (isLoading) return <LoadingScreen />;
+  const oneTimePurchase = product?.prices.every(
+    (price) => price.config?.interval == BillingInterval.OneOff
+  );
 
-  const { customer, org } = data;
+  const { customer } = data;
+
+  if (!customer_id || !product_id) {
+    return <div>Customer or product not found</div>;
+  }
 
   if (!product) {
     return <div>Product not found</div>;
@@ -182,7 +202,7 @@ export default function CustomerProductView() {
 
   const handleCreateProduct = async (useInvoiceLatest?: boolean) => {
     try {
-      if (!product.isActive) {
+      if (oneTimePurchase || !product.isActive) {
         const { data } = await ProductService.getRequiredOptions(
           axiosInstance,
           {
@@ -213,14 +233,14 @@ export default function CustomerProductView() {
         prices: product.prices,
         entitlements: product.entitlements,
         free_trial: product.free_trial,
-        options: product.isActive ? options : requiredOptions,
+        options: requiredOptions ? requiredOptions : options,
         is_custom: true,
         invoice_only:
           useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,
       });
 
       await mutate();
-      toast.success(data.message);
+      toast.success(data.message || "Successfully attached product");
 
       if (data.checkout_url) {
         setUrl({
@@ -246,7 +266,7 @@ export default function CustomerProductView() {
         const redirectUrl = getRedirectUrl(`/customers/${customer_id}`, env);
         navigateTo(
           `/integrations/stripe?redirect=${redirectUrl}`,
-          navigate,
+          navigation,
           env
         );
       } else {
@@ -256,13 +276,16 @@ export default function CustomerProductView() {
   };
 
   const getProductActionState = () => {
+    if (oneTimePurchase) {
+      return {
+        buttonText: "Purchase Product",
+        tooltipText: "Purchase this product for the customer",
+        disabled: false,
+      };
+    }
+
     // Case 1: Product is active, no changes, and is not an add-on
-    if (
-      product.isActive &&
-      !hasOptionsChanges &&
-      !hasChanges &&
-      !product.is_add_on
-    ) {
+    if (product.isActive && !hasOptionsChanges && !hasChanges) {
       return {
         buttonText: "Update Product",
         tooltipText: "No changes have been made to update",
@@ -314,10 +337,10 @@ export default function CustomerProductView() {
         setProduct,
         selectedEntitlementAllowance,
         setSelectedEntitlementAllowance,
-
-        org,
       }}
     >
+      <CustomToaster />
+
       <RequiredOptionsModal
         requiredOptions={requiredOptions}
         createProduct={createProduct}
@@ -346,7 +369,7 @@ export default function CustomerProductView() {
             <BreadcrumbItem>
               <BreadcrumbLink
                 className="cursor-pointer"
-                onClick={() => navigateTo("/customers", navigate, env)}
+                onClick={() => navigateTo("/customers", navigation, env)}
               >
                 Customers
               </BreadcrumbLink>
@@ -355,10 +378,10 @@ export default function CustomerProductView() {
             <BreadcrumbLink
               className="cursor-pointer"
               onClick={() =>
-                navigateTo(`/customers/${customer_id}`, navigate, env)
+                navigateTo(`/customers/${customer_id}`, navigation, env)
               }
             >
-              {customer.name}
+              {customer.name ? customer.name : customer.id}
             </BreadcrumbLink>
             <BreadcrumbSeparator />
             <BreadcrumbItem>{product.name}</BreadcrumbItem>
@@ -368,7 +391,11 @@ export default function CustomerProductView() {
       </div>
 
       {options.length > 0 && (
-        <ProductOptions options={options} setOptions={setOptions} />
+        <ProductOptions
+          options={options}
+          setOptions={setOptions}
+          oneTimePurchase={oneTimePurchase || false}
+        />
       )}
       <div className="flex justify-end gap-2">
         {/* <ProductOptionsButton /> */}

@@ -284,6 +284,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     force_checkout,
     invoice_only,
     success_url,
+    billing_cycle_anchor,
   } = req.body;
 
   const { orgId, env } = req;
@@ -295,6 +296,8 @@ attachRouter.post("/attach", async (req: any, res) => {
   const optionsListInput: FeatureOptions[] = options || [];
   const invoiceOnly = invoice_only || false;
   const successUrl = success_url || undefined;
+
+  // Validate billing anchor
 
   // PUBLIC STUFF
   let forceCheckout = req.isPublic || force_checkout || false;
@@ -331,6 +334,8 @@ attachRouter.post("/attach", async (req: any, res) => {
     });
 
     attachParams.successUrl = successUrl;
+    attachParams.invoiceOnly = invoiceOnly;
+    attachParams.billingAnchor = billing_cycle_anchor;
 
     logger.info(
       `Customer: ${chalk.yellow(
@@ -347,9 +352,15 @@ attachRouter.post("/attach", async (req: any, res) => {
     logger.info(
       `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(
         forceCheckout
-      )}, Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
-        isCustom
       )}`
+    );
+    logger.info(
+      `Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
+        isCustom
+      )}, Invoice Only: ${chalk.yellow(invoiceOnly)}`,
+      {
+        details: { hasPm, forceCheckout, useCheckout, isCustom, invoiceOnly },
+      }
     );
 
     // -------------------- ERROR CHECKING --------------------
@@ -380,14 +391,6 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // // -------------------- ATTACH PRODUCT --------------------
 
-    // TESTING: SHOULD REMOVE
-    await handleAddDefaultPaid({
-      sb,
-      attachParams,
-      logger,
-    });
-    throw new Error("Test");
-
     // SCENARIO 1: Free product, no existing product
     const newProductsFree = isFreeProduct(attachParams.prices);
     const allAddOns = attachParams.products.every((p) => p.is_add_on);
@@ -402,18 +405,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       return;
     }
 
-    // SCENARIO 2: Invoice only
-    if (invoiceOnly) {
-      await handleInvoiceOnly({
-        req,
-        res,
-        attachParams,
-        curCusProduct,
-      });
-      return;
-    }
-
-    if (useCheckout) {
+    if (useCheckout && !invoiceOnly) {
       logger.info("SCENARIO 2: USING CHECKOUT");
       await handleCreateCheckout({
         sb,

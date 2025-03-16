@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, ErrCode, Organization } from "@autumn/shared";
+import { AppEnv, ErrCode, Organization, OrgConfigSchema } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { initDefaultConfig } from "./orgUtils.js";
 
@@ -72,9 +72,9 @@ export class OrgService {
       });
     }
 
-    const config = initDefaultConfig();
+    let config = data.config || {};
 
-    return { ...data, config };
+    return { ...data, config: OrgConfigSchema.parse(config) };
   }
 
   static async getBySlug({ sb, slug }: { sb: SupabaseClient; slug: string }) {

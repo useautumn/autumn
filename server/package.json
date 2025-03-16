@@ -31,6 +31,8 @@
     "@anthropic-ai/sdk": "^0.32.1",
     "@autumn/shared": "*",
     "@clerk/express": "^1.3.22",
+    "@date-fns/tz": "^1.2.0",
+    "@date-fns/utc": "^2.1.0",
     "@logtail/node": "^0.5.2",
     "@mendable/firecrawl-js": "^1.17.0",
     "@slack/events-api": "^3.0.1",

@@ -93,7 +93,7 @@ export const invoiceOnlyOneOff = async ({
   await createFullCusProduct({
     sb,
     attachParams,
-    collectionMethod: CollectionMethod.SendInvoice,
+
     lastInvoiceId: invoice.id,
   });
 
@@ -185,8 +185,6 @@ export const handleInvoiceOnly = async ({
       subscriptionId: stripeSubs[0].id,
       subscriptionIds: stripeSubs.map((s) => s.id),
       lastInvoiceId: stripeSubs[0].latest_invoice as string,
-
-      collectionMethod: CollectionMethod.ChargeAutomatically,
     });
   }
 

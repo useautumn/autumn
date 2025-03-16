@@ -18,7 +18,12 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
-import { differenceInMinutes, format, subDays } from "date-fns";
+import {
+  differenceInMinutes,
+  differenceInSeconds,
+  format,
+  subDays,
+} from "date-fns";
 import { getStripeSubs, getUsageBasedSub } from "../stripeSubUtils.js";
 import {
   getBillingType,
@@ -291,6 +296,12 @@ export const sendUsageAndReset = async ({
     });
 
     if (!usageBasedSub || usageBasedSub.id != invoice.subscription) {
+      continue;
+    }
+
+    // If trial just ended, skip
+    if (usageBasedSub.trial_end == usageBasedSub.current_period_start) {
+      logger.info(`Trial just ended, skipping usage invoice.created`);
       continue;
     }
 

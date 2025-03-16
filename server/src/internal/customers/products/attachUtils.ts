@@ -34,7 +34,7 @@ import { CusService } from "../CusService.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 
-const getOrCreateCustomer = async ({
+const getOrCreateCustomerAndProducts = async ({
   sb,
   customerId,
   customerData,
@@ -71,7 +71,16 @@ const getOrCreateCustomer = async ({
     });
   }
 
-  return customer;
+  // Handle existing cus product...
+  const cusProducts = await CusService.getFullCusProducts({
+    sb,
+    internalCustomerId: customer.internal_id,
+    withProduct: true,
+    withPrices: true,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+  });
+
+  return { customer, cusProducts };
 };
 
 const getProducts = async ({
@@ -229,8 +238,8 @@ export const getCustomerProductsFeaturesAndOrg = async ({
     }
   };
 
-  const [customer, products, org, features] = await Promise.all([
-    getOrCreateCustomer({
+  const [cusRes, products, org, features] = await Promise.all([
+    getOrCreateCustomerAndProducts({
       sb,
       customerId,
       customerData,
@@ -243,7 +252,7 @@ export const getCustomerProductsFeaturesAndOrg = async ({
     getFeatures(),
   ]);
 
-  return { customer, products, org, features };
+  return { ...cusRes, products, org, features };
 };
 
 const getEntsWithFeature = (ents: Entitlement[], features: Feature[]) => {
@@ -285,7 +294,7 @@ export const getFullCusProductData = async ({
   logger: any;
 }) => {
   // 1. Get customer, product, org & features
-  const { customer, products, org, features } =
+  const { customer, products, org, features, cusProducts } =
     await getCustomerProductsFeaturesAndOrg({
       sb,
       customerId,
@@ -296,15 +305,6 @@ export const getFullCusProductData = async ({
       env,
       logger,
     });
-
-  // Handle existing cus product...
-  const cusProducts = await CusService.getFullCusProducts({
-    sb,
-    internalCustomerId: customer.internal_id,
-    withProduct: true,
-    withPrices: true,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-  });
 
   let newOptionsList: FeatureOptions[] = [];
 

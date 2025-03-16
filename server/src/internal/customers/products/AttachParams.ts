@@ -28,6 +28,10 @@ export type AttachParams = {
 
   curCusProduct?: FullCusProduct | undefined;
   curScheduledProduct?: FullCusProduct | undefined | null;
+
+  // CONFIGS
+  invoiceOnly?: boolean | undefined;
+  billingAnchor?: number | undefined;
 };
 
 export type InsertCusProductParams = {
@@ -48,4 +52,7 @@ export type InsertCusProductParams = {
   // OTHERS
   curCusProduct?: FullCusProduct | undefined;
   cusProducts?: FullCusProduct[];
+
+  // CONFIGS
+  invoiceOnly?: boolean | undefined;
 };

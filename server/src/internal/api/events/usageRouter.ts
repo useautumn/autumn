@@ -10,7 +10,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { StatusCodes } from "http-status-codes";
 import { QueueManager } from "@/queue/QueueManager.js";
-import { z } from "zod";
+
 import { JobName } from "@/queue/JobName.js";
 export const eventsRouter = Router();
 export const usageRouter = Router();

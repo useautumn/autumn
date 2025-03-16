@@ -61,6 +61,7 @@ export const handleSubscriptionUpdated = async ({
       canceled_at: subscription.canceled_at
         ? subscription.canceled_at * 1000
         : null,
+      collection_method: subscription.collection_method,
     },
   });
 
@@ -75,13 +76,11 @@ export const handleSubscriptionUpdated = async ({
     );
   }
 
+  // console.log("Cancel on past due:", org.config.cancel_on_past_due);
+  // throw new Error("test");
+
   // Cancel subscription immediately
-  if (
-    subscription.status === "past_due" &&
-    org.id != "org_2tTviFjeMRFkGkBt8pTdqRHzyFW" &&
-    org.id != "org_2tDI2UpEHtlXDGQmgZIzcaMh08s" &&
-    org.id != "org_2s4vfEyYVgFZDlOwcMHjsHR0eef"
-  ) {
+  if (subscription.status === "past_due" && org.config.cancel_on_past_due) {
     const stripeCli = createStripeCli({
       org,
       env,

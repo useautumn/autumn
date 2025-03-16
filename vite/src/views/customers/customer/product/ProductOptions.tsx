@@ -3,9 +3,11 @@ import { Input } from "@/components/ui/input";
 export const ProductOptions = ({
   options,
   setOptions,
+  oneTimePurchase,
 }: {
   options: any[];
   setOptions: (options: any[]) => void;
+  oneTimePurchase: boolean;
 }) => {
   return (
     <div className="">
@@ -58,6 +60,7 @@ export const ProductOptions = ({
                     setOptions(newOptions);
                   }}
                   className="w-24 h-8"
+                  disabled={oneTimePurchase}
                 />
               </div>
             )}

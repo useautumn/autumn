@@ -113,9 +113,11 @@ export default function CustomerView({ env }: { env: AppEnv }) {
         <div className="flex items-center justify-between">
           <div className="flex gap-2 max-w-2/3 w-2/3">
             <h2 className="flex text-lg text-t1 font-medium gap-2 w-full justify-start">
-              <span className="min-w-0 max-w-[50%] truncate">
-                {customer.name}
-              </span>
+              {customer.name && (
+                <span className="min-w-0 max-w-[50%] truncate">
+                  {customer.name}
+                </span>
+              )}
               <span className="min-w-0 max-w-[50%] truncate font-mono text-t3">
                 {customer.id}
               </span>

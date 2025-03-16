@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OrgConfigSchema } from "./orgModels/orgConfigModels.js";
 
 export const MinOrgSchema = z.object({
   id: z.string(),
@@ -33,11 +34,7 @@ export const OrganizationSchema = z.object({
     live_app_id: z.string(),
   }),
 
-  config: z
-    .object({
-      free_trial_paid_to_paid: z.boolean().default(false),
-    })
-    .nullish(),
+  config: OrgConfigSchema,
 });
 
 export const FrontendOrganizationSchema = z.object({
