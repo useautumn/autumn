@@ -71,3 +71,30 @@ export const calculateMetered1Price = ({
 
   return totalPrice;
 };
+
+export const stripeToAutumnInterval = ({
+  interval,
+  intervalCount,
+}: {
+  interval: string;
+  intervalCount: number;
+}) => {
+  if (interval === "month" && intervalCount === 1) {
+    return BillingInterval.Month;
+  }
+
+  if (interval === "month" && intervalCount === 3) {
+    return BillingInterval.Quarter;
+  }
+
+  if (interval === "month" && intervalCount === 6) {
+    return BillingInterval.SemiAnnual;
+  }
+
+  if (
+    (interval === "month" && intervalCount === 12) ||
+    (interval === "year" && intervalCount === 1)
+  ) {
+    return BillingInterval.Year;
+  }
+};

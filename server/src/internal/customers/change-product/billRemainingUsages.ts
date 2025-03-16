@@ -1,7 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Stripe } from "stripe";
 import { AttachParams } from "../products/AttachParams.js";
-import { FullCusProduct } from "@shared/models/cusModels/cusProductModels.js";
+import { FullCusProduct } from "@autumn/shared";
 import {
   BillingInterval,
   BillingType,
@@ -18,10 +18,9 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { getInvoiceExpansion } from "@/external/stripe/stripeInvoiceUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { StatusCodes } from "http-status-codes";
+
 import { InvoiceService } from "../invoices/InvoiceService.js";
-import { stripeToAutumnInterval } from "tests/utils/stripeUtils.js";
+import { stripeToAutumnInterval } from "@/external/stripe/utils.js";
 import { getResetBalancesUpdate } from "../entitlements/groupByUtils.js";
 
 // Add usage to end of cycle
