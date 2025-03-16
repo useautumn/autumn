@@ -56,6 +56,7 @@ export const updateStripeSubscription = async ({
     (i: any, index: number) =>
       i.deleted || prices[index].config!.interval !== BillingInterval.OneOff
   );
+
   let subInvoiceItems = items.filter((i: any, index: number) => {
     if (index < prices.length) {
       return prices[index].config!.interval === BillingInterval.OneOff;

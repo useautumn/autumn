@@ -204,7 +204,6 @@ export const handleInvoicePaid = async ({
     let updated = await updateInvoiceIfExists({
       sb,
       invoice,
-      logger,
     });
 
     if (updated) {

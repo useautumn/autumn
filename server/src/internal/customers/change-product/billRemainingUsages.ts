@@ -153,7 +153,7 @@ const invoiceForUsageImmediately = async ({
   // });
   let invoice: Stripe.Invoice;
   let newInvoice = false;
-  if (attachParams.invoiceOnly) {
+  if (attachParams.invoiceOnly && newSubs.length > 0) {
     invoice = await stripeCli.invoices.retrieve(
       newSubs[0].latest_invoice as string
     );
@@ -221,30 +221,28 @@ const invoiceForUsageImmediately = async ({
   let curProduct = curCusProduct.product;
 
   if (newInvoice) {
-    try {
-      await InvoiceService.createInvoiceFromStripe({
-        sb,
-        stripeInvoice: finalizedInvoice,
-        internalCustomerId: customer.internal_id,
-        org: org,
-        productIds: [curProduct.id],
-        internalProductIds: [curProduct.internal_id],
-      });
-      const { paid, error } = await payForInvoice({
-        fullOrg: org,
-        env: customer.env,
-        customer,
-        invoice,
-        logger,
-      });
+    await InvoiceService.createInvoiceFromStripe({
+      sb,
+      stripeInvoice: finalizedInvoice,
+      internalCustomerId: customer.internal_id,
+      org: org,
+      productIds: [curProduct.id],
+      internalProductIds: [curProduct.internal_id],
+    });
+    const { paid, error } = await payForInvoice({
+      fullOrg: org,
+      env: customer.env,
+      customer,
+      invoice,
+      logger,
+    });
 
-      if (!paid) {
-        logger.warn("Failed to pay invoice for remaining usages", {
-          stripeInvoice: newInvoice,
-          paymentError: error,
-        });
-      }
-    } catch (error) {}
+    if (!paid) {
+      logger.warn("Failed to pay invoice for remaining usages", {
+        stripeInvoice: newInvoice,
+        paymentError: error,
+      });
+    }
   } else {
     // Update invoice
     await InvoiceService.updateByStripeId({

@@ -72,7 +72,7 @@ export const payForInvoice = async ({
     };
   } catch (error: any) {
     logger.error(
-      "   ❌ Stripe error: Failed to pay invoice: " + error?.message || error
+      `   ❌ Stripe error: Failed to pay invoice: ${error?.message || error}`
     );
 
     if (isStripeCardDeclined(error)) {
@@ -99,11 +99,9 @@ export const payForInvoice = async ({
 export const updateInvoiceIfExists = async ({
   sb,
   invoice,
-  logger,
 }: {
   sb: SupabaseClient;
   invoice: Stripe.Invoice;
-  logger: any;
 }) => {
   // TODO: Can optimize this function...
   const existingInvoice = await InvoiceService.getInvoiceByStripeId({
