@@ -78,7 +78,7 @@ export const createStripeSub = async ({
         : undefined,
     });
 
-    if (invoiceOnly) {
+    if (invoiceOnly && subscription.latest_invoice) {
       await stripeCli.invoices.finalizeInvoice(
         subscription.latest_invoice as string
       );

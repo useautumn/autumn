@@ -23,6 +23,7 @@ import {
   subtractFromUnixTillAligned,
 } from "@/internal/prices/billingIntervalUtils.js";
 import { format } from "date-fns";
+import { UTCDate } from "@date-fns/utc";
 
 const initCusEntBalance = ({
   entitlement,
@@ -108,7 +109,7 @@ const initCusEntNextResetAt = ({
     applyTrialToEntitlement(entitlement, freeTrial) &&
     trialEndTimestamp
   ) {
-    nextResetAtCalculated = new Date(trialEndTimestamp! * 1000);
+    nextResetAtCalculated = new UTCDate(trialEndTimestamp! * 1000);
   }
 
   let resetInterval = entitlement.interval as EntInterval;

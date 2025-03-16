@@ -64,7 +64,6 @@ const handleBillNowPrices = async ({
   let subscriptions: Stripe.Subscription[] = [];
   let invoiceIds: string[] = [];
 
-  let invoices: Stripe.Invoice[] = [];
   for (const itemSet of itemSets) {
     if (itemSet.interval === BillingInterval.OneOff) {
       continue;
@@ -155,6 +154,8 @@ const handleBillNowPrices = async ({
       internalProductIds: products.map((p) => p.internal_id),
       org,
     });
+
+    return invoice;
   };
 
   const batchInsertInvoice = [];
@@ -166,7 +167,7 @@ const handleBillNowPrices = async ({
       logger.error("handleBillNowPrices: error retrieving invoice", error);
     }
   }
-  await Promise.all(batchInsertInvoice);
+  const invoices = await Promise.all(batchInsertInvoice);
 
   if (fromRequest) {
     res.status(200).send({
@@ -214,7 +215,6 @@ const handleOneOffPrices = async ({
   logger.info("   1. Creating invoice");
   const stripeInvoice = await stripeCli.invoices.create({
     customer: customer.processor.id,
-    // auto_advance: true,
   });
 
   // 2. Create invoice items
@@ -222,26 +222,24 @@ const handleOneOffPrices = async ({
     // Calculate amount
     const options = getPriceOptions(price, optionsList);
     const entitlement = getPriceEntitlement(price, entitlements);
-    const { amountPerUnit, quantity } = getPriceAmount(price, options!);
+    const amount = getPriceAmount({
+      price,
+      options,
+      relatedEnt: entitlement,
+    });
 
     let allowanceStr = "";
     if (entitlement) {
-      allowanceStr =
-        entitlement.allowance_type == AllowanceType.Unlimited
-          ? "Unlimited"
-          : entitlement.allowance_type == AllowanceType.None
-          ? "None"
-          : `${entitlement.allowance}`;
-      allowanceStr = `x ${allowanceStr} (${entitlement.feature.name})`;
+      allowanceStr = ` - ${entitlement.feature.name}`;
     }
 
     let product = getProductForPrice(price, products);
 
     await stripeCli.invoiceItems.create({
       customer: customer.processor.id,
-      amount: amountPerUnit * quantity * 100,
+      amount: amount * 100,
       invoice: stripeInvoice.id,
-      description: `Invoice for ${product?.name} -- ${quantity}${allowanceStr}`,
+      description: `${product?.name}${allowanceStr}`,
     });
   }
 
@@ -261,17 +259,16 @@ const handleOneOffPrices = async ({
     });
 
     if (!paid && fromRequest) {
-      if (error!.code === ErrCode.StripeCardDeclined) {
-        await stripeCli.invoices.voidInvoice(stripeInvoice.id);
-        await handleCreateCheckout({
-          sb,
-          req,
-          res,
-          attachParams,
-        });
-      } else {
-        throw error;
-      }
+      await stripeCli.invoices.voidInvoice(stripeInvoice.id);
+      await handleCreateCheckout({
+        sb,
+        req,
+        res,
+        attachParams,
+      });
+      return;
+    } else if (!paid) {
+      throw error;
     }
   }
 

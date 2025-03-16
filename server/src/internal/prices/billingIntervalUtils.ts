@@ -91,6 +91,8 @@ export const getAlignedIntervalUnix = (
   let nextCycleAnchorUnix = nextCycleAnchor;
   const naturalBillingDate = addBillingIntervalUnix(Date.now(), interval);
 
+  const maxIterations = 10000;
+  let iterations = 0;
   while (true) {
     const subtractedUnix = subtractBillingIntervalUnix(
       nextCycleAnchorUnix,
@@ -102,6 +104,11 @@ export const getAlignedIntervalUnix = (
     }
 
     nextCycleAnchorUnix = subtractedUnix;
+
+    iterations++;
+    if (iterations > maxIterations) {
+      throw new Error("Max iterations reached");
+    }
   }
 
   let billingCycleAnchorUnix: number | undefined = nextCycleAnchorUnix;

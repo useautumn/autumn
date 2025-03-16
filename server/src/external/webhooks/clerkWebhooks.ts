@@ -282,6 +282,7 @@ const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
           sandbox_app_id: sandboxApp.id,
           live_app_id: liveApp.id,
         },
+        config: {} as any,
       },
     });
 

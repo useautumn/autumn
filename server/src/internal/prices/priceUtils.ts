@@ -270,27 +270,31 @@ export const getUsageTier = (price: Price, quantity: number) => {
   return usageConfig.usage_tiers[0];
 };
 
-export const getPriceAmount = (price: Price, options: FeatureOptions) => {
+export const getPriceAmount = ({
+  price,
+  options,
+  relatedEnt,
+}: {
+  price: Price;
+  options?: FeatureOptions;
+  relatedEnt?: EntitlementWithFeature;
+}) => {
   if (price.billing_type == BillingType.OneOff) {
     let config = price.config as FixedPriceConfig;
-    return {
-      amountPerUnit: Number(config.amount.toFixed(2)),
-      quantity: 1,
-    };
+    return Number(config.amount.toFixed(2));
   } else if (price.billing_type == BillingType.UsageInAdvance) {
-    let quantity = options.quantity!;
-    let usageTier = getUsageTier(price, quantity);
+    let quantity = options?.quantity!;
+    let config = price.config as UsagePriceConfig;
 
-    return {
-      amountPerUnit: Number(usageTier.amount.toFixed(2)),
-      quantity: quantity,
-    };
+    // 1. Allowance
+    let allowance = relatedEnt?.allowance;
+
+    let overage = quantity * config.billing_units! - allowance!;
+
+    return getPriceForOverage(price, overage);
   }
 
-  return {
-    amountPerUnit: -1,
-    quantity: -1,
-  };
+  return 0;
 };
 
 export const getPriceForOverage = (price: Price, overage: number) => {
