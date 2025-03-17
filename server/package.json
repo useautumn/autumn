@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "nodemon --no-deprecation --exec tsx src/index.ts --ignore scripts --ignore tests",
     "start": "tsx src/index.ts",
-    "workers:dev": "tsx watch src/workers.ts",
+    "workers": "tsx watch src/workers.ts",
     "workers:start": "node --no-deprecation dist/src/workers.js",
     
     "build": "tsc -b",

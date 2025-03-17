@@ -30,7 +30,7 @@ const init = async () => {
   await pgClient.connect();
 
   await QueueManager.getInstance(); // initialize the queue manager
-  await initWorkers();
+  // await initWorkers();
   const supabaseClient = createSupabaseClient();
 
   app.use((req: any, res, next) => {
