@@ -3,6 +3,7 @@ import {
   addMonths,
   addYears,
   differenceInSeconds,
+  format,
   getDate,
   getHours,
   getMinutes,
@@ -73,13 +74,10 @@ export const getNextStartOfMonthUnix = (interval: BillingInterval) => {
 
   // Subtract till it hits first
   const date = new UTCDate(nextBillingCycle);
-  // const date = new Date(nextBillingCycle);
   const firstDayOfMonth = startOfMonth(date);
+  const twelveOClock = setHours(firstDayOfMonth, 12);
 
-  // Format first day of month in UTC
-  // console.log(format(firstDayOfMonth, "yyyy-MM-dd HH:mm:ss zzz"));
-
-  return firstDayOfMonth.getTime();
+  return twelveOClock.getTime();
 };
 
 export const getAlignedIntervalUnix = (
