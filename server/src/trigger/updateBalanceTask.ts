@@ -480,13 +480,13 @@ export const updateCustomerBalance = async ({
 export const runUpdateBalanceTask = async ({
   payload,
   logger,
+  sb,
 }: {
   payload: any;
   logger: any;
+  sb: SupabaseClient;
 }) => {
   try {
-    const sb = createSupabaseClient();
-
     // 1. Update customer balance
     const { customer, features, event, org, env } = payload;
 

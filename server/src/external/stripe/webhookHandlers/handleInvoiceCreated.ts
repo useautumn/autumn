@@ -228,6 +228,7 @@ const handleUsageInArrear = async ({
     cusEnt: relatedCusEnt,
     allowance: ent.interval == EntInterval.Lifetime ? 0 : ent.allowance!,
   });
+
   await CustomerEntitlementService.update({
     sb,
     id: relatedCusEnt.id,

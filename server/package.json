@@ -7,11 +7,14 @@
   "scripts": {
     "dev": "nodemon --no-deprecation --exec tsx src/index.ts --ignore scripts --ignore tests",
     "start": "tsx src/index.ts",
-    "queue:dev": "tsx watch src/queue.ts",
+    "workers:dev": "tsx watch src/workers.ts",
+    "workers:start": "node --no-deprecation dist/src/workers.js",
+    
     "build": "tsc -b",
     "prod": "tsc -b && tsc-alias && node dist/src/index.js",
     "prod:build": "tsc -b && tsc-alias",
     "prod:start": "node dist/src/index.js",
+
     "cron": "tsx src/cron.ts",
     "cron:start": "node --no-deprecation dist/src/cron.js",
     "clean": "tsx src/clean.ts",
