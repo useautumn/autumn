@@ -54,6 +54,7 @@ const getOrCreateCustomerAndProducts = async ({
     id: customerId,
     orgId,
     env,
+    logger,
   });
 
   if (!customer) {
@@ -78,6 +79,7 @@ const getOrCreateCustomerAndProducts = async ({
     withProduct: true,
     withPrices: true,
     inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+    logger,
   });
 
   return { customer, cusProducts };

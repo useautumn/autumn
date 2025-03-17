@@ -12,11 +12,13 @@ export const deleteCusById = async ({
   minOrg,
   customerId,
   env,
+  logger,
 }: {
   sb: SupabaseClient;
   minOrg: MinOrg;
   customerId: string;
   env: AppEnv;
+  logger: any;
 }) => {
   console.log(
     `${chalk.yellow("deleteCusById")}: ${customerId}, ${minOrg.id}, ${env}`
@@ -32,6 +34,7 @@ export const deleteCusById = async ({
     id: customerId,
     orgId,
     env,
+    logger,
   });
 
   if (!customer) {

@@ -7,7 +7,7 @@ import {
   ProductSchema,
 } from "@autumn/shared";
 
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 
 import {
   Table,
@@ -18,7 +18,6 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { getRedirectUrl } from "@/utils/genUtils";
-import { useCustomersContext } from "./CustomersContext";
 import { Badge } from "@/components/ui/badge";
 import { unixHasPassed } from "@/utils/dateUtils";
 import { z } from "zod";
@@ -170,7 +169,14 @@ export const CustomersTable = ({
           >
             <TableCell className="!p-0">
               <Link
-                to={getRedirectUrl(`/customers/${customer.id}`, env)}
+                to={getRedirectUrl(
+                  `/customers/${
+                    customer.id === null
+                      ? `null?email=${customer.email}`
+                      : customer.id
+                  }`,
+                  env
+                )}
                 className="grid grid-cols-16 items-center h-full px-2 py-1"
               >
                 <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>

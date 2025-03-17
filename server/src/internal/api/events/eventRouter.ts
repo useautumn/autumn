@@ -46,6 +46,7 @@ const getEventAndCustomer = async ({
     id: customer_id,
     orgId: orgId,
     env: env,
+    logger,
   });
 
   // Handle race condition?

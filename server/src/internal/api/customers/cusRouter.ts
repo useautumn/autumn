@@ -1,11 +1,13 @@
 import {
+  AppEnv,
+  CreateCustomer,
   CreateCustomerSchema,
   CusProductStatus,
   Customer,
   CustomerResponseSchema,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
+import { ErrCode } from "@autumn/shared";
 import { ErrorMessages } from "@/errors/errMessages.js";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
@@ -24,6 +26,10 @@ import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
+import { z } from "zod";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
+import { handleCreateCustomer } from "./handlers/handleCreateCustomer.js";
 
 export const cusRouter = Router();
 
@@ -61,71 +67,7 @@ cusRouter.get("", async (req: any, res: any) => {
   }
 });
 
-cusRouter.post("", async (req: any, res: any) => {
-  const logger = req.logtail;
-  try {
-    const data = req.body;
-
-    // 1. Validate data
-    CreateCustomerSchema.parse(data);
-
-    // 2. Check if customer ID already exists
-    const existingCustomer = await CusService.getById({
-      sb: req.sb,
-      id: data.id,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    if (existingCustomer) {
-      throw new RecaseError({
-        message: `Customer ${existingCustomer.id} already exists`,
-        code: ErrCode.DuplicateCustomerId,
-        statusCode: StatusCodes.CONFLICT,
-      });
-    }
-
-    const createdCustomer = await createNewCustomer({
-      sb: req.sb,
-      orgId: req.orgId,
-      env: req.env,
-      customer: data,
-      logger,
-    });
-
-    const { main, addOns, balances, invoices } = await getCustomerDetails({
-      customer: createdCustomer,
-      sb: req.sb,
-      orgId: req.orgId,
-      env: req.env,
-      params: req.query,
-    });
-
-    res.status(200).json({
-      customer: CustomerResponseSchema.parse(createdCustomer),
-      products: main,
-      add_ons: addOns,
-      entitlements: balances,
-      invoices,
-      success: true,
-    });
-  } catch (error: any) {
-    if (
-      error instanceof RecaseError &&
-      error.code === ErrCode.DuplicateCustomerId
-    ) {
-      logger.warn(
-        `POST /customers: ${error.message} (org: ${req.minOrg.slug})`
-      );
-      res.status(error.statusCode).json({
-        message: error.message,
-        code: error.code,
-      });
-      return;
-    }
-    handleRequestError({ req, error, res, action: "create customer" });
-  }
-});
+cusRouter.post("", handleCreateCustomer);
 
 cusRouter.put("", async (req: any, res: any) => {
   try {
@@ -139,7 +81,7 @@ cusRouter.put("", async (req: any, res: any) => {
       });
     }
 
-    let existing = await CusService.getByIdOrEmail({
+    let existingCustomers = await CusService.getByIdOrEmail({
       sb: req.sb,
       id,
       email,
@@ -147,8 +89,17 @@ cusRouter.put("", async (req: any, res: any) => {
       env: req.env,
     });
 
+    if (existingCustomers.length > 1) {
+      throw new RecaseError({
+        message: "Multiple customers found",
+        code: ErrCode.MultipleCustomersFound,
+        statusCode: StatusCodes.CONFLICT,
+      });
+    }
+
     let newCustomer: Customer;
-    if (existing) {
+    if (existingCustomers.length == 1) {
+      const existing = existingCustomers[0];
       newCustomer = await CusService.update({
         sb: req.sb,
         internalCusId: existing.internal_id,
@@ -173,7 +124,7 @@ cusRouter.put("", async (req: any, res: any) => {
     res.status(200).json({
       customer: CustomerResponseSchema.parse(newCustomer),
       success: true,
-      action: existing ? "update" : "create",
+      action: existingCustomers.length == 1 ? "update" : "create",
     });
   } catch (error) {
     handleRequestError({ req, error, res, action: "update customer" });
@@ -184,13 +135,51 @@ cusRouter.put("", async (req: any, res: any) => {
 
 cusRouter.get("/:customer_id", async (req: any, res: any) => {
   try {
-    const customerId = req.params.customer_id;
-    const customer = await CusService.getById({
-      sb: req.sb,
-      id: customerId,
-      orgId: req.orgId,
-      env: req.env,
-    });
+    let email = req.query.email;
+    if (email && email.includes("%40")) {
+      email = email.replace("%40", "@");
+    }
+
+    let customerId = req.params.customer_id;
+
+    console.log("email", email);
+
+    if (!email && !customerId) {
+      throw new RecaseError({
+        message: "Customer ID or email is required",
+        code: ErrCode.InvalidCustomer,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    let customer: Customer;
+    if (email) {
+      console.log("Searching for customer by email", email);
+      const customers = await CusService.getByEmail({
+        sb: req.sb,
+        email,
+        orgId: req.orgId,
+        env: req.env,
+      });
+
+      if (customers.length !== 1) {
+        throw new RecaseError({
+          message: `Customer with email ${email} not found`,
+          code: ErrCode.CustomerNotFound,
+          statusCode: StatusCodes.NOT_FOUND,
+        });
+      }
+
+      customer = customers[0];
+    } else {
+      customer = await CusService.getById({
+        sb: req.sb,
+        id: customerId,
+        orgId: req.orgId,
+        env: req.env,
+        logger: req.logtail,
+      });
+    }
 
     if (!customer) {
       req.logtail.warn(
@@ -209,6 +198,7 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       orgId: req.orgId,
       env: req.env,
       params: req.query,
+      logger: req.logtail,
     });
 
     res.status(200).json({
@@ -230,6 +220,7 @@ cusRouter.delete("/:customer_id", async (req: any, res: any) => {
       minOrg: req.minOrg,
       customerId: req.params.customer_id,
       env: req.env,
+      logger: req.logtail,
     });
 
     res.status(200).json(data);
@@ -281,6 +272,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
       id: customerId,
       orgId: req.orgId,
       env: req.env,
+      logger: req.logtail,
     });
 
     if (!customer) {
@@ -325,12 +317,14 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
     id: customerId,
     orgId: req.orgId,
     env: req.env,
+    logger: req.logtail,
   });
 
   const fullCusProducts = await CusService.getFullCusProducts({
     sb: req.sb,
     internalCustomerId: customer.internal_id,
     withPrices: true,
+    logger: req.logtail,
   });
 
   const cusEntsWithCusProduct = fullCusProductToCusEnts(fullCusProducts);

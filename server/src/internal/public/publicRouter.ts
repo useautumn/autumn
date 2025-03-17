@@ -91,6 +91,7 @@ publicRouter.get("/customers/:customer_id", async (req: any, res: any) => {
       id: customerId,
       orgId: req.org.id,
       env: req.env,
+      logger: req.logtail,
     });
 
     if (!customer) {

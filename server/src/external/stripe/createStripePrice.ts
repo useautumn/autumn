@@ -366,6 +366,7 @@ export const createStripeInArrearPrice = async ({
   entitlements: EntitlementWithFeature[];
 }) => {
   let config = price.config as UsagePriceConfig;
+
   // 1. Create meter
   const feature = entitlements.find(
     (e) => e.internal_feature_id === config.internal_feature_id

@@ -36,6 +36,7 @@ function CreateCustomer() {
     try {
       await CusService.createCustomer(axiosInstance, {
         ...fields,
+        id: fields.id ? fields.id : null,
         fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
       });
       toast.success("Customer created successfully");

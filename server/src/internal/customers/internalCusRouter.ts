@@ -9,6 +9,7 @@ import { CouponService } from "../coupons/CouponService.js";
 import { EventService } from "../api/events/EventService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "../orgs/OrgService.js";
+import { getCustomerByIdOrEmail } from "../api/customers/cusUtils.js";
 
 export const cusRouter = Router();
 
@@ -75,13 +76,17 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
           orgId: orgId,
           limit: 10,
         }),
-        CusService.getFullCustomer({
+        getCustomerByIdOrEmail({
           sb,
+          id: req.params.customer_id,
+          email: req.query.email,
           orgId,
           env,
-          customerId: customer_id,
+          logger: req.logtail,
+          isFull: true,
         }),
       ]);
+
     if (!customer) {
       throw new RecaseError({
         message: "Customer not found",
@@ -95,7 +100,8 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       limit: 10,
     });
 
-    for (const product of customer.products) {
+    let fullCustomer = customer as any;
+    for (const product of fullCustomer.products) {
       product.entitlements = product.customer_entitlements.map(
         (cusEnt: FullCustomerEntitlement) => {
           return cusEnt.entitlement;
@@ -132,7 +138,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     }
 
     res.status(200).send({
-      customer,
+      customer: fullCustomer,
       products,
       invoices,
       features,
