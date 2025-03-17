@@ -15,14 +15,14 @@ import { logger } from "@trigger.dev/sdk/v3";
 import { Stripe } from "stripe";
 
 const couponToStripeDuration = (coupon: Coupon) => {
-  // if (
-  //   coupon.duration_type === CouponDurationType.OneOff &&
-  //   coupon.should_rollover
-  // ) {
-  //   return {
-  //     duration: "forever",
-  //   };
-  // }
+  if (
+    coupon.duration_type === CouponDurationType.OneOff &&
+    coupon.should_rollover
+  ) {
+    return {
+      duration: "forever",
+    };
+  }
 
   switch (coupon.duration_type) {
     case CouponDurationType.Forever:
