@@ -4,6 +4,8 @@ import { QueueManager } from "./QueueManager.js";
 import { createLogtail } from "@/external/logtail/logtailUtils.js";
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import { JobName } from "./JobName.js";
+import { createSupabaseClient } from "@/external/supabaseUtils.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 const NUM_WORKERS = 5;
 
@@ -60,17 +62,17 @@ const initWorker = ({
   queue,
   useBackup,
   logtail,
+  sb,
 }: {
   id: number;
   queue: Queue;
   useBackup: boolean;
   logtail: any;
+  sb: SupabaseClient;
 }) => {
   let worker = new Worker(
     "autumn",
     async (job: Job) => {
-      // console.log("JOB ID:", job.id, `(${useBackup ? "BACKUP" : "MAIN"})`);
-      // console.log("EVENT ID:", job.data.event.id);
       const { customerId } = job.data;
 
       while (!(await acquireLock({ customerId, timeout: 10000, useBackup }))) {
@@ -82,9 +84,13 @@ const initWorker = ({
 
       try {
         if (job.name === JobName.UpdateBalance) {
-          await runUpdateBalanceTask({ payload: job.data, logger: logtail });
+          await runUpdateBalanceTask({
+            payload: job.data,
+            logger: logtail,
+            sb,
+          });
         } else if (job.name === JobName.UpdateUsage) {
-          await runUpdateUsageTask({ payload: job.data, logger: logtail });
+          await runUpdateUsageTask({ payload: job.data, logger: logtail, sb });
         }
       } catch (error) {
         console.error("Error processing job:", error);
@@ -134,13 +140,14 @@ export const initWorkers = async () => {
   const mainQueue = await QueueManager.getQueue({ useBackup: false });
   const backupQueue = await QueueManager.getQueue({ useBackup: true });
   const logtail = createLogtail();
+  const sb = createSupabaseClient();
 
   for (let i = 0; i < NUM_WORKERS; i++) {
     workers.push(
-      initWorker({ id: i, queue: mainQueue, useBackup: false, logtail })
+      initWorker({ id: i, queue: mainQueue, useBackup: false, logtail, sb })
     );
     workers.push(
-      initWorker({ id: i, queue: backupQueue, useBackup: true, logtail })
+      initWorker({ id: i, queue: backupQueue, useBackup: true, logtail, sb })
     );
   }
 

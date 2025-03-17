@@ -32,7 +32,6 @@ const init = async () => {
   await QueueManager.getInstance(); // initialize the queue manager
   await initWorkers();
   const supabaseClient = createSupabaseClient();
-  const logtail = createLogtail();
 
   app.use((req: any, res, next) => {
     req.sb = supabaseClient;
@@ -40,7 +39,6 @@ const init = async () => {
     req.logger = logger;
 
     req.logtail = createLogtail();
-    // req.logtail = logtail;
 
     res.on("finish", () => {
       req.logtail.flush();
@@ -81,23 +79,6 @@ const init = async () => {
   });
 
   app.use(express.json());
-
-  // // JSON error handler
-  // app.use((err: any, req: any, res: any, next: any) => {
-  //   // you can error out to stderr still, or not; your choice
-  //   // console.error(err);
-  //   console.log(`JSON error handler: ${err.message}`);
-
-  //   // body-parser will set this to 400 if the json is in error
-  //   if (err.status === 400)
-  //     return res.status(err.status).json({
-  //       message: "Invalid JSON payload",
-  //       code: "INVALID_JSON",
-  //     });
-
-  //   return next(err); // if it's not a 400, let the default error handling do it.
-  // });
-
   app.use(mainRouter);
   app.use("/public", publicRouter);
   app.use("/v1", apiRouter);
