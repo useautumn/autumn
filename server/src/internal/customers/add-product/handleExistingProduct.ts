@@ -79,7 +79,7 @@ const handleExistingMultipleProducts = async ({
       )
     )
   ) {
-    return { curCusProduct: null, done: true };
+    return { curCusProduct: null, done: false };
   }
 
   for (const product of products) {

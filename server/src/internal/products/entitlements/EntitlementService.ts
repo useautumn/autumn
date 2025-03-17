@@ -45,10 +45,20 @@ export class EntitlementService {
     }
   }
 
-  static async getFullEntitlements(sb: SupabaseClient) {
+  static async getFullEntitlements({
+    sb,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    orgId: string;
+    env: string;
+  }) {
     const { data, error } = await sb
       .from("entitlements")
-      .select("*, feature:features(*)");
+      .select("*, feature:features!inner(*)")
+      .eq("feature.org_id", orgId)
+      .eq("feature.env", env);
 
     if (error) {
       throw error;

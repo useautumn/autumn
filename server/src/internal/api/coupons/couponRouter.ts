@@ -36,7 +36,11 @@ couponRouter.post("", async (req: any, res: any) => {
         sb: req.sb,
         priceIds: newCoupon.price_ids,
       }),
-      EntitlementService.getFullEntitlements(req.sb),
+      EntitlementService.getFullEntitlements({
+        sb: req.sb,
+        orgId,
+        env,
+      }),
     ]);
 
     if (!newCoupon.apply_to_all) {
