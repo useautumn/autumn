@@ -12,6 +12,8 @@ import { Client } from "pg";
 import { CusProductService } from "./products/CusProductService.js";
 import { flipProductResults } from "../api/customers/cusUtils.js";
 import { format } from "date-fns";
+import { sbWithRetry } from "@/external/supabaseUtils.js";
+import { logger } from "@trigger.dev/sdk/v3";
 
 export class CusService {
   static async getById({
@@ -19,18 +21,25 @@ export class CusService {
     id,
     orgId,
     env,
+    logger,
   }: {
     sb: SupabaseClient;
     id: string;
     orgId: string;
     env: AppEnv;
+    logger: any;
   }) {
-    const { data, error } = await sb
-      .from("customers")
-      .select()
-      .eq("id", id)
-      .eq("org_id", orgId)
-      .eq("env", env);
+    const { data, error } = await sbWithRetry({
+      query: async () =>
+        sb
+          .from("customers")
+          .select()
+          .eq("id", id)
+          .eq("org_id", orgId)
+          .eq("env", env),
+      retries: 3,
+      logger,
+    });
 
     if (error) {
       throw new RecaseError({
@@ -73,17 +82,7 @@ export class CusService {
       });
     }
 
-    if (data.length === 0) {
-      return null;
-    } else if (data.length > 2) {
-      throw new RecaseError({
-        code: ErrCode.InternalError,
-        message: "Multiple customers found with the same email",
-        statusCode: StatusCodes.BAD_REQUEST,
-      });
-    }
-
-    return data[0];
+    return data;
   }
 
   static async getByIdOrEmail({
@@ -94,8 +93,8 @@ export class CusService {
     env,
   }: {
     sb: SupabaseClient;
-    id: string;
-    email: string;
+    id: string | null;
+    email?: string;
     orgId: string;
     env: AppEnv;
   }) {
@@ -104,13 +103,12 @@ export class CusService {
       .select()
       .or(`id.eq.${id},email.eq.${email}`)
       .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
+      .eq("env", env);
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
+      // if (error.code === "PGRST116") {
+      //   return null;
+      // }
       throw error;
     }
 
@@ -537,6 +535,7 @@ export class CusService {
     withProduct = false,
     inStatuses,
     productGroup,
+    logger,
   }: {
     sb: SupabaseClient;
     internalCustomerId: string;
@@ -544,6 +543,7 @@ export class CusService {
     withPrices?: boolean;
     inStatuses?: CusProductStatus[];
     productGroup?: string;
+    logger?: any;
   }) {
     const selectQuery = [
       "*",
@@ -577,7 +577,10 @@ export class CusService {
     // TODO: Limit 100 cus products? (for one time add ons...)
     // SORT by created_at?
 
-    const { data, error } = await query;
+    const { data, error } = await sbWithRetry({
+      query: async () => await query,
+      logger,
+    });
 
     if (error) {
       console.log("CusService.getFullCusProducts failed", error);

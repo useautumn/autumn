@@ -1,3 +1,4 @@
+import { sbWithRetry } from "@/external/supabaseUtils.js";
 import { ApiKey, AppEnv } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
@@ -33,12 +34,25 @@ export class ApiKeyService {
     return count;
   }
 
-  static async getByHashedKey(sb: SupabaseClient, hashedKey: string) {
-    const { data, error } = await sb
-      .from("api_keys")
-      .select("*")
-      .eq("hashed_key", hashedKey)
-      .single();
+  static async getByHashedKey({
+    sb,
+    hashedKey,
+    logger,
+  }: {
+    sb: SupabaseClient;
+    hashedKey: string;
+    logger: any;
+  }) {
+    const { data, error } = await sbWithRetry({
+      query: async () => {
+        return await sb
+          .from("api_keys")
+          .select("*")
+          .eq("hashed_key", hashedKey)
+          .single();
+      },
+      logger: logger,
+    });
 
     if (error) {
       if (error.code === "PGRST116") {

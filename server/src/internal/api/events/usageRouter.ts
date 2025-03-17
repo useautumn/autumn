@@ -33,6 +33,7 @@ const getCusFeatureAndOrg = async ({
       id: customerId,
       orgId: req.orgId,
       env: req.env,
+      logger: req.logtail,
     }),
     FeatureService.getWithCreditSystems({
       sb: req.sb,

@@ -23,7 +23,6 @@ import { createFullCusProduct } from "@/internal/customers/add-product/createFul
 
 import { generateId } from "@/utils/genUtils.js";
 import { z } from "zod";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
   fullCusProductToCusEnts,
   fullCusProductToCusPrices,
@@ -36,19 +35,88 @@ import {
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { initGroupBalancesFromGetCus } from "@/internal/customers/entitlements/groupByUtils.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
-import { handleAddDefaultPaid } from "@/internal/customers/add-product/handleAddDefaultPaid.js";
 import {
   initProductInStripe,
   isFreeProduct,
 } from "@/internal/products/productUtils.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { startOfMonth } from "date-fns";
-import { TZDate } from "@date-fns/tz";
+
 import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
+import { StatusCodes } from "http-status-codes";
+
+export const getCustomerByIdOrEmail = async ({
+  sb,
+  id,
+  email,
+  orgId,
+  env,
+  isFull = false,
+  logger,
+}: {
+  sb: SupabaseClient;
+  id: string;
+  email: string;
+  orgId: string;
+  env: AppEnv;
+  isFull?: boolean;
+  logger: any;
+}) => {
+  if (email && email.includes("%40")) {
+    email = email.replace("%40", "@");
+  }
+
+  if (!email && !id) {
+    throw new RecaseError({
+      message: "Customer ID or email is required",
+      code: ErrCode.InvalidCustomer,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
+  let customer: Customer;
+  if (email) {
+    console.log("Searching for customer by email", email);
+    const customers = await CusService.getByEmail({
+      sb,
+      email,
+      orgId,
+      env,
+    });
+
+    if (customers.length !== 1) {
+      throw new RecaseError({
+        message: `Customer with email ${email} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    if (isFull) {
+      customer = await CusService.getFullCustomer({
+        sb,
+        orgId,
+        env,
+        customerId: customers[0].id,
+      });
+    } else {
+      customer = customers[0];
+    }
+  } else {
+    customer = isFull
+      ? await CusService.getFullCustomer({
+          sb,
+          orgId,
+          env,
+          customerId: id,
+        })
+      : await CusService.getById({ sb, id, orgId, env, logger });
+  }
+
+  return customer;
+};
 
 const initStripeCusAndProducts = async ({
   sb,
@@ -120,7 +188,6 @@ export const createNewCustomer = async ({
     ...parsedCustomer,
     name: parsedCustomer.name || "",
     email: parsedCustomer.email || "",
-
     internal_id: generateId("cus"),
     org_id: orgId,
     created_at: Date.now(),
@@ -159,6 +226,9 @@ export const createNewCustomer = async ({
   });
 
   if (nonFreeProds.length > 0) {
+    // Create
+    // <id>@invoices.useautumn.com
+
     await initStripeCusAndProducts({
       sb,
       org,
@@ -314,12 +384,14 @@ export const getCustomerDetails = async ({
   orgId,
   env,
   params = {},
+  logger,
 }: {
   customer: Customer;
   sb: SupabaseClient;
   orgId: string;
   env: AppEnv;
   params?: any;
+  logger: any;
 }) => {
   // 1. Get full customer products & processed invoices
   const [fullCusProducts, processedInvoices] = await Promise.all([
@@ -333,6 +405,7 @@ export const getCustomerDetails = async ({
         CusProductStatus.PastDue,
         CusProductStatus.Scheduled,
       ],
+      logger,
     }),
     getCusInvoices({
       sb,
@@ -373,18 +446,21 @@ export const getCusEntsInFeatures = async ({
   internalFeatureIds,
   inStatuses = [CusProductStatus.Active],
   withPrices = false,
+  logger,
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
   internalFeatureIds: string[];
   inStatuses?: CusProductStatus[];
   withPrices?: boolean;
+  logger: any;
 }) => {
   const fullCusProducts = await CusService.getFullCusProducts({
     sb,
     internalCustomerId,
     inStatuses: inStatuses,
     withPrices: withPrices,
+    logger,
   });
 
   const cusEntsWithCusProduct = fullCusProductToCusEnts(
