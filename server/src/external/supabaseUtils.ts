@@ -31,7 +31,8 @@ export const sbWithRetry = async ({
 
     let gatewayError =
       error && typeof error === "string" && error.includes("gateway error");
-    let cloudflareError = error && error.message.includes(`Bad Gateway`);
+    let cloudflareError =
+      error && error.message && error.message.includes(`Bad Gateway`);
 
     let shouldRetry = (gatewayError || cloudflareError) && i < retries - 1;
 
