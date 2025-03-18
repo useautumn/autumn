@@ -189,6 +189,10 @@ export const priceToStripeItem = ({
     });
   }
 
+  if (!lineItem) {
+    return null;
+  }
+
   return {
     lineItem,
     lineItemMeta,
@@ -309,6 +313,9 @@ export const getStripeSubItems = async ({
     ];
     return order.indexOf(a.interval) - order.indexOf(b.interval);
   });
+
+  // console.log("Prices:", prices);
+  // console.log("Item sets", itemSets[0].items);
 
   return itemSets;
 };

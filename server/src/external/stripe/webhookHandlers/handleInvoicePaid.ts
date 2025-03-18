@@ -301,10 +301,10 @@ const handleInvoicePaidDiscount = async ({
 
       const newAmount = new Decimal(curAmount!).sub(amountUsed!).toNumber();
 
-      // if (amountUsed == 0) {
-      //   console.log("No discount used, skipping");
-      //   continue;
-      // }
+      if (newAmount <= 0) {
+        console.log("Credits used up, no need to create new coupon");
+        continue;
+      }
 
       console.log(`Updating coupon amount from ${curAmount} to ${newAmount}`);
 
