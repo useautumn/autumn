@@ -70,14 +70,15 @@ export const CustomerProductList = ({
         </TableHeader>
         <TableBody>
           {sortedProducts.map((cusProduct: CusProduct) => {
-            console.log(cusProduct);
             return (
               <TableRow
                 key={cusProduct.id}
                 className="cursor-pointer"
                 onClick={() => {
                   navigateTo(
-                    `/customers/${customer.id}/${cusProduct.product_id}?id=${cusProduct.id}`,
+                    `/customers/${customer.id || customer.internal_id}/${
+                      cusProduct.product_id
+                    }?id=${cusProduct.id}`,
                     navigate,
                     env
                   );

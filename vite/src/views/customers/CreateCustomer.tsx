@@ -34,13 +34,20 @@ function CreateCustomer() {
     setIsLoading(true);
 
     try {
-      await CusService.createCustomer(axiosInstance, {
+      const { data } = await CusService.createCustomer(axiosInstance, {
         ...fields,
         id: fields.id ? fields.id : null,
         fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
       });
+
+      if (data.customer) {
+        navigateTo(
+          `/customers/${data.customer.id || data.customer.internal_id}`,
+          navigate,
+          env
+        );
+      }
       toast.success("Customer created successfully");
-      navigateTo(`/customers/${fields.id}`, navigate, env);
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to create customer"));
     }

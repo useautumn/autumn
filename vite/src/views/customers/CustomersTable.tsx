@@ -170,11 +170,7 @@ export const CustomersTable = ({
             <TableCell className="!p-0">
               <Link
                 to={getRedirectUrl(
-                  `/customers/${
-                    customer.id === null
-                      ? `null?email=${customer.email}`
-                      : customer.id
-                  }`,
+                  `/customers/${customer.id || customer.internal_id}`,
                   env
                 )}
                 className="grid grid-cols-16 items-center h-full px-2 py-1"

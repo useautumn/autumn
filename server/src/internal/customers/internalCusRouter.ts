@@ -9,7 +9,6 @@ import { CouponService } from "../coupons/CouponService.js";
 import { EventService } from "../api/events/EventService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "../orgs/OrgService.js";
-import { getCustomerByIdOrEmail } from "../api/customers/cusUtils.js";
 
 export const cusRouter = Router();
 
@@ -53,7 +52,6 @@ cusRouter.post("/search", async (req: any, res: any) => {
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
   const { sb, org, env } = req;
   const { customer_id } = req.params;
-
   const orgId = req.orgId;
 
   try {
@@ -76,13 +74,11 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
           orgId: orgId,
           limit: 10,
         }),
-        getCustomerByIdOrEmail({
+        CusService.getByIdOrInternalId({
           sb,
-          id: req.params.customer_id,
-          email: req.query.email,
           orgId,
           env,
-          logger: req.logtail,
+          idOrInternalId: customer_id,
           isFull: true,
         }),
       ]);

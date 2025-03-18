@@ -29,7 +29,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
-import { createNewCustomer } from "@/internal/api/customers/cusUtils.js";
+import { createNewCustomer } from "@/internal/api/customers/handlers/handleCreateCustomer.js";
 import { CusService } from "../CusService.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
@@ -49,12 +49,12 @@ const getOrCreateCustomerAndProducts = async ({
   env: AppEnv;
   logger: any;
 }) => {
-  let customer = await CusService.getById({
+  let customer = await CusService.getByIdOrInternalId({
     sb,
-    id: customerId,
+    idOrInternalId: customerId,
     orgId,
     env,
-    logger,
+    // isFull: true,
   });
 
   if (!customer) {
