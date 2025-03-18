@@ -14,7 +14,7 @@ import {
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
-import { createNewCustomer } from "../customers/cusUtils.js";
+import { createNewCustomer } from "../customers/handlers/handleCreateCustomer.js";
 import { handleEventSent } from "../events/eventRouter.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -371,6 +371,7 @@ const getCusEntsAndFeatures = async ({
       id: customer_id,
       orgId: req.orgId,
       env: req.env,
+      logger: req.logtail,
     });
 
     if (!customer) {

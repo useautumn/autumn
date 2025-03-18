@@ -58,7 +58,11 @@ function AddProduct() {
       return;
     }
 
-    navigateTo(`/customers/${customer.id}/${productId}`, navigate, env);
+    navigateTo(
+      `/customers/${customer.id || customer.internal_id}/${productId}`,
+      navigate,
+      env
+    );
   };
 
   return (

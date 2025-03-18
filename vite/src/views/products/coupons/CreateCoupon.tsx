@@ -68,7 +68,7 @@ function CreateCoupon() {
       await mutate();
       setOpen(false);
     } catch (error) {
-      toast.error(getBackendErr(error, "Failed to create credit system"));
+      toast.error(getBackendErr(error, "Failed to create coupon"));
     }
     setIsLoading(false);
   };

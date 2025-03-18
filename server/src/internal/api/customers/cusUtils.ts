@@ -16,14 +16,12 @@ import { CreateCustomer } from "@autumn/shared";
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AppEnv } from "@autumn/shared";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 
-import { generateId } from "@/utils/genUtils.js";
 import { z } from "zod";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
   fullCusProductToCusEnts,
   fullCusProductToCusPrices,
@@ -36,179 +34,29 @@ import {
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { initGroupBalancesFromGetCus } from "@/internal/customers/entitlements/groupByUtils.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
-import { handleAddDefaultPaid } from "@/internal/customers/add-product/handleAddDefaultPaid.js";
-import {
-  initProductInStripe,
-  isFreeProduct,
-} from "@/internal/products/productUtils.js";
-import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { startOfMonth } from "date-fns";
-import { TZDate } from "@date-fns/tz";
-import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
 
-const initStripeCusAndProducts = async ({
+export const getCusByIdOrInternalId = async ({
   sb,
-  org,
-  env,
-  customer,
-  products,
-  logger,
-}: {
-  sb: SupabaseClient;
-  org: Organization;
-  env: AppEnv;
-  customer: Customer;
-  products: FullProduct[];
-  logger: any;
-}) => {
-  const batchInit = [
-    createStripeCusIfNotExists({
-      sb,
-      org,
-      env,
-      customer,
-      logger,
-    }),
-  ];
-
-  for (const product of products) {
-    batchInit.push(
-      initProductInStripe({
-        sb,
-        org,
-        env,
-        logger,
-        product,
-      })
-    );
-  }
-
-  await Promise.all(batchInit);
-};
-
-export const createNewCustomer = async ({
-  sb,
+  idOrInternalId,
   orgId,
   env,
-  customer,
-  nextResetAt,
-  logger,
+  isFull = false,
 }: {
   sb: SupabaseClient;
+  idOrInternalId: string;
   orgId: string;
   env: AppEnv;
-  customer: CreateCustomer;
-  nextResetAt?: number;
-  logger: any;
+  isFull?: boolean;
 }) => {
-  console.log("Creating new customer");
-  console.log("Org ID:", orgId);
-  console.log("Customer data:", customer);
-
-  const org = await OrgService.getFullOrg({
-    sb,
-    orgId,
-  });
-
-  const parsedCustomer = CreateCustomerSchema.parse(customer);
-
-  const customerData: Customer = {
-    ...parsedCustomer,
-    name: parsedCustomer.name || "",
-    email: parsedCustomer.email || "",
-
-    internal_id: generateId("cus"),
-    org_id: orgId,
-    created_at: Date.now(),
-    env,
-  };
-
-  // Attach default product to customer
-  const defaultProds = await ProductService.getFullDefaultProducts({
+  const customer = await CusService.getByIdOrInternalId({
     sb,
     orgId,
     env,
+    idOrInternalId,
+    isFull,
   });
 
-  const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
-  const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
-
-  // Check if stripeCli exists
-  if (nonFreeProds.length > 0) {
-    createStripeCli({
-      org,
-      env,
-    });
-
-    if (!customerData?.email) {
-      throw new RecaseError({
-        code: ErrCode.InvalidRequest,
-        message:
-          "Customer email is required to attach default product with prices",
-      });
-    }
-  }
-
-  const newCustomer = await CusService.createCustomer({
-    sb,
-    customer: customerData,
-  });
-
-  if (nonFreeProds.length > 0) {
-    await initStripeCusAndProducts({
-      sb,
-      org,
-      env,
-      customer: newCustomer,
-      products: nonFreeProds,
-      logger,
-    });
-
-    await handleAddProduct({
-      req: {
-        sb,
-        logtail: logger,
-      },
-      res: {},
-      attachParams: {
-        org,
-        customer: newCustomer,
-        products: nonFreeProds,
-        prices: nonFreeProds.flatMap((p) => p.prices),
-        entitlements: nonFreeProds.flatMap((p) => p.entitlements),
-        freeTrial: null,
-        optionsList: [],
-        cusProducts: [],
-        invoiceOnly: true,
-      },
-      fromRequest: false,
-    });
-  }
-  for (const product of freeProds) {
-    await createFullCusProduct({
-      sb,
-      attachParams: {
-        org,
-        customer: newCustomer,
-        product,
-        prices: product.prices,
-        entitlements: product.entitlements,
-        freeTrial: null, // TODO: Free trial not supported on default product yet
-        optionsList: [],
-        cusProducts: [],
-      },
-      nextResetAt,
-      anchorToUnix: org.config.anchor_start_of_month
-        ? getNextStartOfMonthUnix(BillingInterval.Month)
-        : undefined,
-    });
-  }
-
-  return newCustomer;
+  return customer;
 };
 
 export const attachDefaultProducts = async ({
@@ -314,12 +162,14 @@ export const getCustomerDetails = async ({
   orgId,
   env,
   params = {},
+  logger,
 }: {
   customer: Customer;
   sb: SupabaseClient;
   orgId: string;
   env: AppEnv;
   params?: any;
+  logger: any;
 }) => {
   // 1. Get full customer products & processed invoices
   const [fullCusProducts, processedInvoices] = await Promise.all([
@@ -333,6 +183,7 @@ export const getCustomerDetails = async ({
         CusProductStatus.PastDue,
         CusProductStatus.Scheduled,
       ],
+      logger,
     }),
     getCusInvoices({
       sb,
@@ -373,18 +224,21 @@ export const getCusEntsInFeatures = async ({
   internalFeatureIds,
   inStatuses = [CusProductStatus.Active],
   withPrices = false,
+  logger,
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
   internalFeatureIds: string[];
   inStatuses?: CusProductStatus[];
   withPrices?: boolean;
+  logger: any;
 }) => {
   const fullCusProducts = await CusService.getFullCusProducts({
     sb,
     internalCustomerId,
     inStatuses: inStatuses,
     withPrices: withPrices,
+    logger,
   });
 
   const cusEntsWithCusProduct = fullCusProductToCusEnts(

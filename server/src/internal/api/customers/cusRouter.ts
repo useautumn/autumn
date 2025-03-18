@@ -1,18 +1,20 @@
 import {
+  AppEnv,
+  CreateCustomer,
   CreateCustomerSchema,
   CusProductStatus,
   Customer,
   CustomerResponseSchema,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
+import { ErrCode } from "@autumn/shared";
 import { ErrorMessages } from "@/errors/errMessages.js";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../../customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { EventService } from "../events/EventService.js";
-import { createNewCustomer, getCustomerDetails } from "./cusUtils.js";
+import { getCustomerDetails } from "./cusUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getCusBalancesByEntitlement } from "@/internal/customers/entitlements/cusEntUtils.js";
 import {
@@ -25,9 +27,11 @@ import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 
+import { handleCreateCustomer } from "./handlers/handleCreateCustomer.js";
+
 export const cusRouter = Router();
 
-cusRouter.post("/:search", async (req: any, res: any) => {
+cusRouter.post("/all/search", async (req: any, res: any) => {
   try {
     const { search, page_size = 50, page = 1, last_item, filters } = req.body;
 
@@ -61,77 +65,84 @@ cusRouter.get("", async (req: any, res: any) => {
   }
 });
 
-cusRouter.post("", async (req: any, res: any) => {
-  const logger = req.logtail;
+cusRouter.post("", handleCreateCustomer);
+
+// cusRouter.put("", async (req: any, res: any) => {
+//   try {
+//     const { id, name, email, fingerprint, reset_at } = req.body;
+
+//     if (!id && !email) {
+//       throw new RecaseError({
+//         message: "Customer ID or email is required",
+//         code: ErrCode.InvalidCustomer,
+//         statusCode: StatusCodes.BAD_REQUEST,
+//       });
+//     }
+
+//     let existingCustomers = await CusService.getByIdOrEmail({
+//       sb: req.sb,
+//       id,
+//       email,
+//       orgId: req.orgId,
+//       env: req.env,
+//     });
+
+//     if (existingCustomers.length > 1) {
+//       throw new RecaseError({
+//         message: "Multiple customers found",
+//         code: ErrCode.MultipleCustomersFound,
+//         statusCode: StatusCodes.CONFLICT,
+//       });
+//     }
+
+//     let newCustomer: Customer;
+//     if (existingCustomers.length == 1) {
+//       const existing = existingCustomers[0];
+//       newCustomer = await CusService.update({
+//         sb: req.sb,
+//         internalCusId: existing.internal_id,
+//         update: { id, name, email, fingerprint },
+//       });
+//     } else {
+//       newCustomer = await createNewCustomer({
+//         sb: req.sb,
+//         orgId: req.orgId,
+//         env: req.env,
+//         customer: {
+//           id,
+//           name: name || "",
+//           email: email || "",
+//           fingerprint,
+//         },
+//         nextResetAt: reset_at,
+//         logger: req.logtail,
+//       });
+//     }
+
+//     res.status(200).json({
+//       customer: CustomerResponseSchema.parse(newCustomer),
+//       success: true,
+//       action: existingCustomers.length == 1 ? "update" : "create",
+//     });
+//   } catch (error) {
+//     handleRequestError({ req, error, res, action: "update customer" });
+//   }
+// });
+
+// BY CUSTOMER ID
+
+cusRouter.get("/:customer_id", async (req: any, res: any) => {
   try {
-    const data = req.body;
-
-    // 1. Validate data
-    CreateCustomerSchema.parse(data);
-
-    // 2. Check if customer ID already exists
-    const existingCustomer = await CusService.getById({
-      sb: req.sb,
-      id: data.id,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    if (existingCustomer) {
-      throw new RecaseError({
-        message: `Customer ${existingCustomer.id} already exists`,
-        code: ErrCode.DuplicateCustomerId,
-        statusCode: StatusCodes.CONFLICT,
-      });
+    let email = req.query.email;
+    if (email && email.includes("%40")) {
+      email = email.replace("%40", "@");
     }
 
-    const createdCustomer = await createNewCustomer({
-      sb: req.sb,
-      orgId: req.orgId,
-      env: req.env,
-      customer: data,
-      logger,
-    });
+    let customerId = req.params.customer_id;
 
-    const { main, addOns, balances, invoices } = await getCustomerDetails({
-      customer: createdCustomer,
-      sb: req.sb,
-      orgId: req.orgId,
-      env: req.env,
-      params: req.query,
-    });
+    console.log("email", email);
 
-    res.status(200).json({
-      customer: CustomerResponseSchema.parse(createdCustomer),
-      products: main,
-      add_ons: addOns,
-      entitlements: balances,
-      invoices,
-      success: true,
-    });
-  } catch (error: any) {
-    if (
-      error instanceof RecaseError &&
-      error.code === ErrCode.DuplicateCustomerId
-    ) {
-      logger.warn(
-        `POST /customers: ${error.message} (org: ${req.minOrg.slug})`
-      );
-      res.status(error.statusCode).json({
-        message: error.message,
-        code: error.code,
-      });
-      return;
-    }
-    handleRequestError({ req, error, res, action: "create customer" });
-  }
-});
-
-cusRouter.put("", async (req: any, res: any) => {
-  try {
-    const { id, name, email, fingerprint, reset_at } = req.body;
-
-    if (!id && !email) {
+    if (!email && !customerId) {
       throw new RecaseError({
         message: "Customer ID or email is required",
         code: ErrCode.InvalidCustomer,
@@ -139,58 +150,34 @@ cusRouter.put("", async (req: any, res: any) => {
       });
     }
 
-    let existing = await CusService.getByIdOrEmail({
-      sb: req.sb,
-      id,
-      email,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    let newCustomer: Customer;
-    if (existing) {
-      newCustomer = await CusService.update({
+    let customer: Customer;
+    if (email) {
+      console.log("Searching for customer by email", email);
+      const customers = await CusService.getByEmail({
         sb: req.sb,
-        internalCusId: existing.internal_id,
-        update: { id, name, email, fingerprint },
-      });
-    } else {
-      newCustomer = await createNewCustomer({
-        sb: req.sb,
+        email,
         orgId: req.orgId,
         env: req.env,
-        customer: {
-          id,
-          name: name || "",
-          email: email || "",
-          fingerprint,
-        },
-        nextResetAt: reset_at,
+      });
+
+      if (customers.length !== 1) {
+        throw new RecaseError({
+          message: `Customer with email ${email} not found`,
+          code: ErrCode.CustomerNotFound,
+          statusCode: StatusCodes.NOT_FOUND,
+        });
+      }
+
+      customer = customers[0];
+    } else {
+      customer = await CusService.getById({
+        sb: req.sb,
+        id: customerId,
+        orgId: req.orgId,
+        env: req.env,
         logger: req.logtail,
       });
     }
-
-    res.status(200).json({
-      customer: CustomerResponseSchema.parse(newCustomer),
-      success: true,
-      action: existing ? "update" : "create",
-    });
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "update customer" });
-  }
-});
-
-// BY CUSTOMER ID
-
-cusRouter.get("/:customer_id", async (req: any, res: any) => {
-  try {
-    const customerId = req.params.customer_id;
-    const customer = await CusService.getById({
-      sb: req.sb,
-      id: customerId,
-      orgId: req.orgId,
-      env: req.env,
-    });
 
     if (!customer) {
       req.logtail.warn(
@@ -209,6 +196,7 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       orgId: req.orgId,
       env: req.env,
       params: req.query,
+      logger: req.logtail,
     });
 
     res.status(200).json({
@@ -230,6 +218,7 @@ cusRouter.delete("/:customer_id", async (req: any, res: any) => {
       minOrg: req.minOrg,
       customerId: req.params.customer_id,
       env: req.env,
+      logger: req.logtail,
     });
 
     res.status(200).json(data);
@@ -260,6 +249,71 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
   }
 });
 
+cusRouter.post("/:customer_id", async (req: any, res: any) => {
+  try {
+    const customerId = req.params.customer_id;
+    const [originalCustomer, org] = await Promise.all([
+      CusService.getByIdOrInternalId({
+        sb: req.sb,
+        idOrInternalId: customerId,
+        orgId: req.orgId,
+        env: req.env,
+      }),
+      OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId }),
+    ]);
+
+    if (!originalCustomer) {
+      throw new RecaseError({
+        message: `Update customer: Customer ${customerId} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    let newCusData = CreateCustomerSchema.parse(req.body);
+
+    // 1. Check if customer ID is being changed
+    if (originalCustomer.id !== null && originalCustomer.id !== newCusData.id) {
+      throw new RecaseError({
+        message: `Update customer: Customer ID cannot be changed`,
+        code: ErrCode.InvalidCustomer,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    // 2. Check if customer email is being changed
+    let stripeUpdate = {
+      email:
+        originalCustomer.email !== newCusData.email
+          ? newCusData.email
+          : undefined,
+      name:
+        originalCustomer.name !== newCusData.name ? newCusData.name : undefined,
+    };
+
+    if (
+      Object.keys(stripeUpdate).length > 0 &&
+      originalCustomer.processor?.id
+    ) {
+      const stripeCli = createStripeCli({ org, env: req.env });
+      await stripeCli.customers.update(
+        originalCustomer.processor.id,
+        stripeUpdate as any
+      );
+    }
+
+    const updatedCustomer = await CusService.update({
+      sb: req.sb,
+      internalCusId: originalCustomer.internal_id,
+      update: newCusData,
+    });
+
+    res.status(200).json({ customer: updatedCustomer });
+  } catch (error) {
+    handleRequestError({ req, error, res, action: "update customer" });
+  }
+});
+
 // Update customer entitlement directly
 cusRouter.post(
   "/customer_entitlements/:customer_entitlement_id",
@@ -281,6 +335,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
       id: customerId,
       orgId: req.orgId,
       env: req.env,
+      logger: req.logtail,
     });
 
     if (!customer) {
@@ -325,12 +380,14 @@ cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
     id: customerId,
     orgId: req.orgId,
     env: req.env,
+    logger: req.logtail,
   });
 
   const fullCusProducts = await CusService.getFullCusProducts({
     sb: req.sb,
     internalCustomerId: customer.internal_id,
     withPrices: true,
+    logger: req.logtail,
   });
 
   const cusEntsWithCusProduct = fullCusProductToCusEnts(fullCusProducts);

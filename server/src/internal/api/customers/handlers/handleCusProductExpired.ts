@@ -38,6 +38,7 @@ export const handleCusProductExpired = async (req: any, res: any) => {
       internalCustomerId: cusProduct.customer.internal_id,
       withPrices: true,
       withProduct: true,
+      logger: req.logtail,
     });
 
     logger.info("--------------------------------");

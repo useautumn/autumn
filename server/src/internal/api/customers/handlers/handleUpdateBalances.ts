@@ -37,6 +37,7 @@ const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
       id: customerId,
       orgId: req.orgId,
       env: req.env,
+      logger: req.logtail,
     }),
     FeatureService.getFromReq(req),
     OrgService.getFullOrg({
@@ -93,6 +94,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       internalFeatureIds: featuresToUpdate.map((f) => f.internal_id),
       inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
       withPrices: true,
+      logger: req.logtail,
     });
 
     // Initialize balances

@@ -179,6 +179,7 @@ export const updateUsage = async ({
   value,
   properties,
   setUsage,
+  logger,
 }: {
   sb: SupabaseClient;
   customer: Customer;
@@ -188,6 +189,7 @@ export const updateUsage = async ({
   value: number;
   properties: any;
   setUsage: boolean;
+  logger: any;
 }) => {
   const startTime = performance.now();
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
@@ -196,6 +198,7 @@ export const updateUsage = async ({
     internalFeatureIds: features.map((f) => f.internal_id!),
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     withPrices: true,
+    logger,
   });
   const endTime = performance.now();
 
@@ -310,6 +313,7 @@ export const runUpdateUsageTask = async ({
       org,
       env,
       setUsage: set_usage,
+      logger,
     });
 
     if (!cusEnts || cusEnts.length === 0) {

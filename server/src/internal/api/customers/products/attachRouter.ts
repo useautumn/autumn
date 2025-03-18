@@ -47,6 +47,7 @@ import {
 } from "@/external/redis/redisUtils.js";
 import { Decimal } from "decimal.js";
 import { handleAddDefaultPaid } from "@/internal/customers/add-product/handleAddDefaultPaid.js";
+import { CusService } from "@/internal/customers/CusService.js";
 
 export const attachRouter = Router();
 
@@ -209,6 +210,18 @@ export const checkStripeConnections = async ({
       message: "Please connect to Stripe to add products",
       code: ErrCode.StripeConfigNotFound,
       statusCode: 400,
+    });
+  }
+
+  // 2. If invoice only and no email, save email
+  if (attachParams.invoiceOnly && !customer.email) {
+    customer.email = `${customer.id}@invoices.useautumn.com`;
+    await CusService.update({
+      sb: req.sb,
+      internalCusId: customer.internal_id,
+      update: {
+        email: customer.email,
+      },
     });
   }
 

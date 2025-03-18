@@ -16,11 +16,13 @@ const getCusOrgAndCusPrice = async ({
   cusEnt,
   orgId,
   env,
+  logger,
 }: {
   sb: SupabaseClient;
   cusEnt: FullCustomerEntitlement;
   orgId: string;
   env: AppEnv;
+  logger: any;
 }) => {
   const [cusPrice, customer, org] = await Promise.all([
     CusPriceService.getRelatedToCusEnt({
@@ -32,6 +34,7 @@ const getCusOrgAndCusPrice = async ({
       id: cusEnt.customer_id,
       orgId: orgId,
       env: env,
+      logger,
     }),
     OrgService.getFullOrg({
       sb: sb,
@@ -101,6 +104,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       cusEnt,
       orgId: req.orgId,
       env: req.env,
+      logger: req.logtail,
     });
 
     if (!cusPrice) {
