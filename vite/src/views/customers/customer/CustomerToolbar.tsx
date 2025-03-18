@@ -1,5 +1,5 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faTrash } from "@fortawesome/pro-solid-svg-icons";
+import { faPen, faTrash } from "@fortawesome/pro-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import {
@@ -23,6 +23,7 @@ import React from "react";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import AddCouponDialogContent from "./add-coupon/AddCouponDialogContent";
 import { cn } from "@/lib/utils";
+import UpdateCustomerDialog from "./UpdateCustomerDialog";
 
 export const CustomerToolbar = ({
   className,
@@ -37,12 +38,18 @@ export const CustomerToolbar = ({
   const axiosInstance = useAxiosInstance({ env });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [addCouponOpen, setAddCouponOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"add-coupon" | "edit">(
+    "add-coupon"
+  );
 
   const handleDelete = async () => {
     setDeleteLoading(true);
     try {
-      await CusService.deleteCustomer(axiosInstance, customer.id);
+      await CusService.deleteCustomer(
+        axiosInstance,
+        customer.id || customer.internal_id
+      );
       navigateTo("/customers", navigate, env);
     } catch (error) {
       toast.error("Failed to delete customer");
@@ -53,9 +60,18 @@ export const CustomerToolbar = ({
 
   return (
     <React.Fragment>
-      <Dialog open={addCouponOpen} onOpenChange={setAddCouponOpen}>
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogTrigger asChild></DialogTrigger>
-        <AddCouponDialogContent setOpen={setAddCouponOpen} />
+        {modalOpen && modalType === "add-coupon" ? (
+          <AddCouponDialogContent setOpen={setModalOpen} />
+        ) : (
+          <UpdateCustomerDialog
+            selectedCustomer={customer}
+            open={modalOpen}
+            setOpen={setModalOpen}
+          />
+        )}
+
         <DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
           <DropdownMenuTrigger asChild>
             <Button
@@ -71,12 +87,24 @@ export const CustomerToolbar = ({
             <DialogTrigger className="w-full">
               <DropdownMenuItem
                 onClick={(e) => {
-                  setAddCouponOpen(true);
+                  setModalType("add-coupon");
+                  setModalOpen(true);
                 }}
               >
                 <div className="flex text-sm items-center justify-between w-full gap-2">
                   <p className="text-t2">Add Coupon</p>
                   <FontAwesomeIcon icon={faTicket} size="sm" />
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  setModalType("edit");
+                  setModalOpen(true);
+                }}
+              >
+                <div className="flex text-sm items-center justify-between w-full gap-2">
+                  <p className="text-t2">Update</p>
+                  <FontAwesomeIcon icon={faPen} size="sm" />
                 </div>
               </DropdownMenuItem>
             </DialogTrigger>

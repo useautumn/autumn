@@ -31,8 +31,6 @@ import { CustomerDetails } from "./CustomerDetails";
 
 export default function CustomerView({ env }: { env: AppEnv }) {
   const { customer_id } = useParams();
-  const [searchParams] = useSearchParams();
-  const email = searchParams.get("email");
 
   const navigate = useNavigate();
 
@@ -42,18 +40,9 @@ export default function CustomerView({ env }: { env: AppEnv }) {
     error,
     mutate: cusMutate,
   } = useAxiosSWR({
-    url: `/customers/${customer_id}/data${email ? `?email=${email}` : ""}`,
+    url: `/customers/${customer_id}/data`,
     env,
   });
-
-  // const {
-  //   data: eventsData,
-  //   isLoading: eventsLoading,
-  //   error: eventsError,
-  // } = useAxiosSWR({
-  //   url: `/v1/customers/${customer_id}/events`,
-  //   env,
-  // });
 
   const [addCouponOpen, setAddCouponOpen] = useState(false);
 

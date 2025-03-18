@@ -87,32 +87,114 @@ export class CusService {
 
   static async getByIdOrEmail({
     sb,
-    id,
-    email,
+    idOrEmail,
     orgId,
     env,
+    isFull = false,
   }: {
     sb: SupabaseClient;
-    id: string | null;
-    email?: string;
+    idOrEmail: string;
     orgId: string;
     env: AppEnv;
+    isFull?: boolean;
   }) {
+    let query = "*";
+    if (isFull) {
+      query = `*, 
+      products:customer_products(
+        *, product:products(*), 
+        customer_prices:customer_prices(
+          *, price:prices(*)
+        ),
+        customer_entitlements:customer_entitlements(
+          *, entitlement:entitlements(*, feature:features(*))
+        ),
+        free_trial:free_trials(*)
+      ), 
+      
+      entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
+      prices:customer_prices(*, price:prices(*))`;
+    }
+
     const { data, error } = await sb
       .from("customers")
-      .select()
-      .or(`id.eq.${id},email.eq.${email}`)
+      .select(query as "*")
+      .or(`id.eq.${idOrEmail},email.eq.${idOrEmail}`)
       .eq("org_id", orgId)
       .eq("env", env);
 
     if (error) {
-      // if (error.code === "PGRST116") {
-      //   return null;
-      // }
       throw error;
     }
 
-    return data;
+    if (data.length === 0) {
+      return null;
+    } else if (data.length > 1) {
+      throw new RecaseError({
+        code: ErrCode.DuplicateCustomerId,
+        message: `Multiple customers found for ${idOrEmail}`,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    return data[0];
+  }
+
+  static async getByIdOrInternalId({
+    sb,
+    idOrInternalId,
+    orgId,
+    env,
+    isFull = false,
+  }: {
+    sb: SupabaseClient;
+    idOrInternalId: string;
+    orgId: string;
+    env: AppEnv;
+    isFull?: boolean;
+  }) {
+    let query = "*";
+    if (isFull) {
+      query = `*, 
+        products:customer_products(
+          *, product:products(*), 
+          customer_prices:customer_prices(
+            *, price:prices(*)
+          ),
+          customer_entitlements:customer_entitlements(
+            *, entitlement:entitlements(*, feature:features(*))
+          ),
+          free_trial:free_trials(*)
+        ), 
+        
+        entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
+        prices:customer_prices(*, price:prices(*))`;
+    }
+
+    const { data, error } = await sb
+      .from("customers")
+      .select(query as "*")
+      .or(`id.eq.${idOrInternalId},internal_id.eq.${idOrInternalId}`)
+      .eq("org_id", orgId)
+      .eq("env", env);
+
+    if (error) {
+      throw error;
+    }
+
+    if (data.length === 0) {
+      return null;
+    } else if (data.length > 1) {
+      // 1. Return where id is equal to idOrInternalId
+      const customer = data.find((c) => c.id === idOrInternalId);
+      if (customer) {
+        return customer;
+      } else {
+        return data[0];
+      }
+    }
+
+    return data[0];
   }
 
   static async getByInternalId({
@@ -140,34 +222,42 @@ export class CusService {
     env,
     orgId,
     customerId,
+    internalCustomerId,
   }: {
     sb: SupabaseClient;
     orgId: string;
     env: AppEnv;
-    customerId: string;
+    customerId?: string;
+    internalCustomerId?: string;
   }) {
-    const { data, error } = await sb
+    let query = sb
       .from("customers")
       .select(
         `*, 
-        products:customer_products(
-          *, product:products(*), 
-          customer_prices:customer_prices(
-            *, price:prices(*)
-          ),
-          customer_entitlements:customer_entitlements(
-            *, entitlement:entitlements(*, feature:features(*))
-          ),
-          free_trial:free_trials(*)
-        ), 
-        
-        entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
-        prices:customer_prices(*, price:prices(*))`
+      products:customer_products(
+        *, product:products(*), 
+        customer_prices:customer_prices(
+          *, price:prices(*)
+        ),
+        customer_entitlements:customer_entitlements(
+          *, entitlement:entitlements(*, feature:features(*))
+        ),
+        free_trial:free_trials(*)
+      ), 
+      
+      entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
+      prices:customer_prices(*, price:prices(*))`
       )
       .eq("env", env)
-      .eq("org_id", orgId)
-      .eq("id", customerId)
-      .single();
+      .eq("org_id", orgId);
+
+    if (customerId) {
+      query.eq("id", customerId);
+    } else if (internalCustomerId) {
+      query.eq("internal_id", internalCustomerId);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
       if (error.code === "PGRST116") {
@@ -517,6 +607,29 @@ export class CusService {
       .from("customers")
       .delete()
       .eq("id", customerId)
+      .eq("org_id", orgId)
+      .eq("env", env);
+
+    if (error) {
+      throw error;
+    }
+  }
+
+  static async deleteByInternalId({
+    sb,
+    internalId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    internalId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { error } = await sb
+      .from("customers")
+      .delete()
+      .eq("internal_id", internalId)
       .eq("org_id", orgId)
       .eq("env", env);
 

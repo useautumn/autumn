@@ -29,12 +29,11 @@ export const deleteCusById = async ({
     orgId,
   });
 
-  const customer = await CusService.getById({
+  const customer = await CusService.getByIdOrInternalId({
     sb,
-    id: customerId,
+    idOrInternalId: customerId,
     orgId,
     env,
-    logger,
   });
 
   if (!customer) {
@@ -63,15 +62,15 @@ export const deleteCusById = async ({
     );
   }
 
-  await CusService.deleteCustomerStrict({
+  await CusService.deleteByInternalId({
     sb: sb,
-    customerId,
+    internalId: customer.internal_id,
     orgId,
     env: env,
   });
 
   return {
     success: true,
-    customer_id: customerId,
+    customer,
   };
 };

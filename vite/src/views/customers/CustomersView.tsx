@@ -41,7 +41,7 @@ function CustomersView({ env }: { env: AppEnv }) {
   });
 
   const { data, isLoading, error, mutate } = useAxiosPostSWR({
-    url: `/v1/customers/search`,
+    url: `/v1/customers/all/search`,
     env,
     data: {
       page: pagination.page,

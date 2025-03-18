@@ -5,7 +5,7 @@ import { generateId, nullish } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { createNewCustomer } from "../customers/cusUtils.js";
+import { createNewCustomer } from "../customers/handlers/handleCreateCustomer.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { StatusCodes } from "http-status-codes";
@@ -89,6 +89,14 @@ const createAndInsertEvent = async ({
   set_usage?: boolean;
   properties: any;
 }) => {
+  if (!customer.id) {
+    throw new RecaseError({
+      message: "Customer ID is required",
+      code: ErrCode.InvalidInputs,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
   const newEvent: Event = {
     id: generateId("evt"),
     org_id: req.orgId,

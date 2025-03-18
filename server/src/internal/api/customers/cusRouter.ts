@@ -14,7 +14,7 @@ import { StatusCodes } from "http-status-codes";
 import { CusService } from "../../customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { EventService } from "../events/EventService.js";
-import { createNewCustomer, getCustomerDetails } from "./cusUtils.js";
+import { getCustomerDetails } from "./cusUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getCusBalancesByEntitlement } from "@/internal/customers/entitlements/cusEntUtils.js";
 import {
@@ -26,14 +26,12 @@ import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
-import { z } from "zod";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
+
 import { handleCreateCustomer } from "./handlers/handleCreateCustomer.js";
 
 export const cusRouter = Router();
 
-cusRouter.post("/:search", async (req: any, res: any) => {
+cusRouter.post("/all/search", async (req: any, res: any) => {
   try {
     const { search, page_size = 50, page = 1, last_item, filters } = req.body;
 
@@ -69,67 +67,67 @@ cusRouter.get("", async (req: any, res: any) => {
 
 cusRouter.post("", handleCreateCustomer);
 
-cusRouter.put("", async (req: any, res: any) => {
-  try {
-    const { id, name, email, fingerprint, reset_at } = req.body;
+// cusRouter.put("", async (req: any, res: any) => {
+//   try {
+//     const { id, name, email, fingerprint, reset_at } = req.body;
 
-    if (!id && !email) {
-      throw new RecaseError({
-        message: "Customer ID or email is required",
-        code: ErrCode.InvalidCustomer,
-        statusCode: StatusCodes.BAD_REQUEST,
-      });
-    }
+//     if (!id && !email) {
+//       throw new RecaseError({
+//         message: "Customer ID or email is required",
+//         code: ErrCode.InvalidCustomer,
+//         statusCode: StatusCodes.BAD_REQUEST,
+//       });
+//     }
 
-    let existingCustomers = await CusService.getByIdOrEmail({
-      sb: req.sb,
-      id,
-      email,
-      orgId: req.orgId,
-      env: req.env,
-    });
+//     let existingCustomers = await CusService.getByIdOrEmail({
+//       sb: req.sb,
+//       id,
+//       email,
+//       orgId: req.orgId,
+//       env: req.env,
+//     });
 
-    if (existingCustomers.length > 1) {
-      throw new RecaseError({
-        message: "Multiple customers found",
-        code: ErrCode.MultipleCustomersFound,
-        statusCode: StatusCodes.CONFLICT,
-      });
-    }
+//     if (existingCustomers.length > 1) {
+//       throw new RecaseError({
+//         message: "Multiple customers found",
+//         code: ErrCode.MultipleCustomersFound,
+//         statusCode: StatusCodes.CONFLICT,
+//       });
+//     }
 
-    let newCustomer: Customer;
-    if (existingCustomers.length == 1) {
-      const existing = existingCustomers[0];
-      newCustomer = await CusService.update({
-        sb: req.sb,
-        internalCusId: existing.internal_id,
-        update: { id, name, email, fingerprint },
-      });
-    } else {
-      newCustomer = await createNewCustomer({
-        sb: req.sb,
-        orgId: req.orgId,
-        env: req.env,
-        customer: {
-          id,
-          name: name || "",
-          email: email || "",
-          fingerprint,
-        },
-        nextResetAt: reset_at,
-        logger: req.logtail,
-      });
-    }
+//     let newCustomer: Customer;
+//     if (existingCustomers.length == 1) {
+//       const existing = existingCustomers[0];
+//       newCustomer = await CusService.update({
+//         sb: req.sb,
+//         internalCusId: existing.internal_id,
+//         update: { id, name, email, fingerprint },
+//       });
+//     } else {
+//       newCustomer = await createNewCustomer({
+//         sb: req.sb,
+//         orgId: req.orgId,
+//         env: req.env,
+//         customer: {
+//           id,
+//           name: name || "",
+//           email: email || "",
+//           fingerprint,
+//         },
+//         nextResetAt: reset_at,
+//         logger: req.logtail,
+//       });
+//     }
 
-    res.status(200).json({
-      customer: CustomerResponseSchema.parse(newCustomer),
-      success: true,
-      action: existingCustomers.length == 1 ? "update" : "create",
-    });
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "update customer" });
-  }
-});
+//     res.status(200).json({
+//       customer: CustomerResponseSchema.parse(newCustomer),
+//       success: true,
+//       action: existingCustomers.length == 1 ? "update" : "create",
+//     });
+//   } catch (error) {
+//     handleRequestError({ req, error, res, action: "update customer" });
+//   }
+// });
 
 // BY CUSTOMER ID
 
@@ -248,6 +246,71 @@ cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
     res.status(200).json({ events });
   } catch (error) {
     handleRequestError({ req, error, res, action: "get customer events" });
+  }
+});
+
+cusRouter.post("/:customer_id", async (req: any, res: any) => {
+  try {
+    const customerId = req.params.customer_id;
+    const [originalCustomer, org] = await Promise.all([
+      CusService.getByIdOrInternalId({
+        sb: req.sb,
+        idOrInternalId: customerId,
+        orgId: req.orgId,
+        env: req.env,
+      }),
+      OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId }),
+    ]);
+
+    if (!originalCustomer) {
+      throw new RecaseError({
+        message: `Update customer: Customer ${customerId} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    let newCusData = CreateCustomerSchema.parse(req.body);
+
+    // 1. Check if customer ID is being changed
+    if (originalCustomer.id !== null && originalCustomer.id !== newCusData.id) {
+      throw new RecaseError({
+        message: `Update customer: Customer ID cannot be changed`,
+        code: ErrCode.InvalidCustomer,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    // 2. Check if customer email is being changed
+    let stripeUpdate = {
+      email:
+        originalCustomer.email !== newCusData.email
+          ? newCusData.email
+          : undefined,
+      name:
+        originalCustomer.name !== newCusData.name ? newCusData.name : undefined,
+    };
+
+    if (
+      Object.keys(stripeUpdate).length > 0 &&
+      originalCustomer.processor?.id
+    ) {
+      const stripeCli = createStripeCli({ org, env: req.env });
+      await stripeCli.customers.update(
+        originalCustomer.processor.id,
+        stripeUpdate as any
+      );
+    }
+
+    const updatedCustomer = await CusService.update({
+      sb: req.sb,
+      internalCusId: originalCustomer.internal_id,
+      update: newCusData,
+    });
+
+    res.status(200).json({ customer: updatedCustomer });
+  } catch (error) {
+    handleRequestError({ req, error, res, action: "update customer" });
   }
 });
 

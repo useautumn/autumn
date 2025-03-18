@@ -16,12 +16,11 @@ import { CreateCustomer } from "@autumn/shared";
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AppEnv } from "@autumn/shared";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 
-import { generateId } from "@/utils/genUtils.js";
 import { z } from "zod";
 import {
   fullCusProductToCusEnts,
@@ -35,250 +34,29 @@ import {
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { initGroupBalancesFromGetCus } from "@/internal/customers/entitlements/groupByUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
-import {
-  initProductInStripe,
-  isFreeProduct,
-} from "@/internal/products/productUtils.js";
-import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 
-import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
-import { StatusCodes } from "http-status-codes";
-
-export const getCustomerByIdOrEmail = async ({
+export const getCusByIdOrInternalId = async ({
   sb,
-  id,
-  email,
+  idOrInternalId,
   orgId,
   env,
   isFull = false,
-  logger,
 }: {
   sb: SupabaseClient;
-  id: string;
-  email: string;
+  idOrInternalId: string;
   orgId: string;
   env: AppEnv;
   isFull?: boolean;
-  logger: any;
 }) => {
-  if (email && email.includes("%40")) {
-    email = email.replace("%40", "@");
-  }
-
-  if (!email && !id) {
-    throw new RecaseError({
-      message: "Customer ID or email is required",
-      code: ErrCode.InvalidCustomer,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-  }
-
-  let customer: Customer;
-  if (email) {
-    console.log("Searching for customer by email", email);
-    const customers = await CusService.getByEmail({
-      sb,
-      email,
-      orgId,
-      env,
-    });
-
-    if (customers.length !== 1) {
-      throw new RecaseError({
-        message: `Customer with email ${email} not found`,
-        code: ErrCode.CustomerNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    if (isFull) {
-      customer = await CusService.getFullCustomer({
-        sb,
-        orgId,
-        env,
-        customerId: customers[0].id,
-      });
-    } else {
-      customer = customers[0];
-    }
-  } else {
-    customer = isFull
-      ? await CusService.getFullCustomer({
-          sb,
-          orgId,
-          env,
-          customerId: id,
-        })
-      : await CusService.getById({ sb, id, orgId, env, logger });
-  }
+  const customer = await CusService.getByIdOrInternalId({
+    sb,
+    orgId,
+    env,
+    idOrInternalId,
+    isFull,
+  });
 
   return customer;
-};
-
-const initStripeCusAndProducts = async ({
-  sb,
-  org,
-  env,
-  customer,
-  products,
-  logger,
-}: {
-  sb: SupabaseClient;
-  org: Organization;
-  env: AppEnv;
-  customer: Customer;
-  products: FullProduct[];
-  logger: any;
-}) => {
-  const batchInit = [
-    createStripeCusIfNotExists({
-      sb,
-      org,
-      env,
-      customer,
-      logger,
-    }),
-  ];
-
-  for (const product of products) {
-    batchInit.push(
-      initProductInStripe({
-        sb,
-        org,
-        env,
-        logger,
-        product,
-      })
-    );
-  }
-
-  await Promise.all(batchInit);
-};
-
-export const createNewCustomer = async ({
-  sb,
-  orgId,
-  env,
-  customer,
-  nextResetAt,
-  logger,
-}: {
-  sb: SupabaseClient;
-  orgId: string;
-  env: AppEnv;
-  customer: CreateCustomer;
-  nextResetAt?: number;
-  logger: any;
-}) => {
-  console.log("Creating new customer");
-  console.log("Org ID:", orgId);
-  console.log("Customer data:", customer);
-
-  const org = await OrgService.getFullOrg({
-    sb,
-    orgId,
-  });
-
-  const parsedCustomer = CreateCustomerSchema.parse(customer);
-
-  const customerData: Customer = {
-    ...parsedCustomer,
-    name: parsedCustomer.name || "",
-    email: parsedCustomer.email || "",
-    internal_id: generateId("cus"),
-    org_id: orgId,
-    created_at: Date.now(),
-    env,
-  };
-
-  // Attach default product to customer
-  const defaultProds = await ProductService.getFullDefaultProducts({
-    sb,
-    orgId,
-    env,
-  });
-
-  const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
-  const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
-
-  // Check if stripeCli exists
-  if (nonFreeProds.length > 0) {
-    createStripeCli({
-      org,
-      env,
-    });
-
-    if (!customerData?.email) {
-      throw new RecaseError({
-        code: ErrCode.InvalidRequest,
-        message:
-          "Customer email is required to attach default product with prices",
-      });
-    }
-  }
-
-  const newCustomer = await CusService.createCustomer({
-    sb,
-    customer: customerData,
-  });
-
-  if (nonFreeProds.length > 0) {
-    // Create
-    // <id>@invoices.useautumn.com
-
-    await initStripeCusAndProducts({
-      sb,
-      org,
-      env,
-      customer: newCustomer,
-      products: nonFreeProds,
-      logger,
-    });
-
-    await handleAddProduct({
-      req: {
-        sb,
-        logtail: logger,
-      },
-      res: {},
-      attachParams: {
-        org,
-        customer: newCustomer,
-        products: nonFreeProds,
-        prices: nonFreeProds.flatMap((p) => p.prices),
-        entitlements: nonFreeProds.flatMap((p) => p.entitlements),
-        freeTrial: null,
-        optionsList: [],
-        cusProducts: [],
-        invoiceOnly: true,
-      },
-      fromRequest: false,
-    });
-  }
-  for (const product of freeProds) {
-    await createFullCusProduct({
-      sb,
-      attachParams: {
-        org,
-        customer: newCustomer,
-        product,
-        prices: product.prices,
-        entitlements: product.entitlements,
-        freeTrial: null, // TODO: Free trial not supported on default product yet
-        optionsList: [],
-        cusProducts: [],
-      },
-      nextResetAt,
-      anchorToUnix: org.config.anchor_start_of_month
-        ? getNextStartOfMonthUnix(BillingInterval.Month)
-        : undefined,
-    });
-  }
-
-  return newCustomer;
 };
 
 export const attachDefaultProducts = async ({

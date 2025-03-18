@@ -29,11 +29,19 @@ export const sbWithRetry = async ({
   for (let i = 0; i < retries; i++) {
     let { data, error } = await query();
 
-    let shouldRetry =
-      error && error.code === `internal_error` && i < retries - 1;
+    let gatewayError =
+      error && typeof error === "string" && error.includes("gateway error");
+    let cloudflareError = error && error.message.includes(`Bad Gateway`);
+
+    let shouldRetry = (gatewayError || cloudflareError) && i < retries - 1;
 
     if (shouldRetry) {
-      logger.warn(`Attempt ${i + 1}: Supabase internal error, retrying...`);
+      logger.warn(
+        `Attempt ${i + 1}: Supabase internal error (${
+          gatewayError ? "gateway error" : "cloudflare error"
+        }), retrying...`
+      );
+
       logger.warn("Error", { error });
 
       await new Promise((resolve) => setTimeout(resolve, 400));
