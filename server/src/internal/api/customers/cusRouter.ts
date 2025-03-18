@@ -133,51 +133,52 @@ cusRouter.post("", handleCreateCustomer);
 
 cusRouter.get("/:customer_id", async (req: any, res: any) => {
   try {
-    let email = req.query.email;
-    if (email && email.includes("%40")) {
-      email = email.replace("%40", "@");
-    }
+    // let email = req.query.email;
+    // if (email && email.includes("%40")) {
+    //   email = email.replace("%40", "@");
+    // }
 
+    // let customerId = req.params.customer_id;
+
+    // console.log("email", email);
+
+    // if (!email && !customerId) {
+    //   throw new RecaseError({
+    //     message: "Customer ID or email is required",
+    //     code: ErrCode.InvalidCustomer,
+    //     statusCode: StatusCodes.BAD_REQUEST,
+    //   });
+    // }
+
+    // let customer: Customer;
+    // if (email) {
+    //   console.log("Searching for customer by email", email);
+    //   const customers = await CusService.getByEmail({
+    //     sb: req.sb,
+    //     email,
+    //     orgId: req.orgId,
+    //     env: req.env,
+    //   });
+
+    //   if (customers.length !== 1) {
+    //     throw new RecaseError({
+    //       message: `Customer with email ${email} not found`,
+    //       code: ErrCode.CustomerNotFound,
+    //       statusCode: StatusCodes.NOT_FOUND,
+    //     });
+    //   }
+
+    //   customer = customers[0];
+    // } else {
+    // }
     let customerId = req.params.customer_id;
-
-    console.log("email", email);
-
-    if (!email && !customerId) {
-      throw new RecaseError({
-        message: "Customer ID or email is required",
-        code: ErrCode.InvalidCustomer,
-        statusCode: StatusCodes.BAD_REQUEST,
-      });
-    }
-
-    let customer: Customer;
-    if (email) {
-      console.log("Searching for customer by email", email);
-      const customers = await CusService.getByEmail({
-        sb: req.sb,
-        email,
-        orgId: req.orgId,
-        env: req.env,
-      });
-
-      if (customers.length !== 1) {
-        throw new RecaseError({
-          message: `Customer with email ${email} not found`,
-          code: ErrCode.CustomerNotFound,
-          statusCode: StatusCodes.NOT_FOUND,
-        });
-      }
-
-      customer = customers[0];
-    } else {
-      customer = await CusService.getById({
-        sb: req.sb,
-        id: customerId,
-        orgId: req.orgId,
-        env: req.env,
-        logger: req.logtail,
-      });
-    }
+    let customer = await CusService.getById({
+      sb: req.sb,
+      id: customerId,
+      orgId: req.orgId,
+      env: req.env,
+      logger: req.logtail,
+    });
 
     if (!customer) {
       req.logtail.warn(
@@ -307,6 +308,8 @@ cusRouter.post("/:customer_id", async (req: any, res: any) => {
       internalCusId: originalCustomer.internal_id,
       update: newCusData,
     });
+
+    // Don't allow duplicate customer ID...
 
     res.status(200).json({ customer: updatedCustomer });
   } catch (error) {
