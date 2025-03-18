@@ -58,6 +58,7 @@ const getOrCreateCustomerAndProducts = async ({
   });
 
   if (!customer) {
+    logger.info(`no customer found, creating new`, { customerData });
     customer = await createNewCustomer({
       sb,
       orgId,
@@ -283,7 +284,7 @@ export const getFullCusProductData = async ({
 }: {
   sb: SupabaseClient;
   customerId: string;
-  customerData: Customer;
+  customerData?: Customer;
   productId?: string;
   productIds?: string[];
   orgId: string;
