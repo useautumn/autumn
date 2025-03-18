@@ -18,6 +18,7 @@ export const handleAddCouponToCus = async (req: any, res: any) => {
         id: customer_id,
         orgId: req.orgId,
         env: req.env,
+        logger,
       }),
 
       CouponService.getByInternalId({
