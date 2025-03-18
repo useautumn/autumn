@@ -196,7 +196,7 @@ export const adjustAllowanceOld = async ({
     let newInvoiceItem: InvoiceItem = {
       id: generateId("inv_item"),
       customer_price_id: cusPrice.id,
-      customer_id: customer.id,
+      customer_id: customer.internal_id,
       created_at: now,
       updated_at: now,
       period_start: sub.current_period_start * 1000,

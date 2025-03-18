@@ -139,7 +139,7 @@ const handleInArrearProrated = async ({
       id: generateId("inv_item"),
       customer_price_id: cusPrice.id,
       added_to_stripe: false,
-      customer_id: customer.id,
+      customer_id: customer.internal_id,
       created_at: Date.now(),
       updated_at: Date.now(),
       currency: org.default_currency,
