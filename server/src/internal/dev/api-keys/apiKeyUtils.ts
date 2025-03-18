@@ -66,12 +66,18 @@ export const createKey = async ({
 export const verifyKey = async ({
   sb,
   key,
+  logger,
 }: {
   sb: SupabaseClient;
   key: string;
+  logger: any;
 }) => {
   const hashedKey = hashApiKey(key);
-  const apiKey = await ApiKeyService.getByHashedKey(sb, hashedKey);
+  const apiKey = await ApiKeyService.getByHashedKey({
+    sb,
+    hashedKey,
+    logger,
+  });
 
   if (!apiKey) {
     return {

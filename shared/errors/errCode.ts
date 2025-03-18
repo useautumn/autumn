@@ -28,6 +28,7 @@ export const ErrCode = {
   InternalError: "internal_error",
   DuplicateCustomerId: "duplicate_customer_id",
   StripeKeyNotFound: "stripe_key_not_found",
+  DuplicateCustomerEmail: "duplicate_customer_email",
 
   // Stripe
   StripeError: "stripe_error",
@@ -63,6 +64,7 @@ export const ErrCode = {
   CustomerHasNoBaseProduct: "customer_has_no_base_product",
   AttachProductToCustomerFailed: "attach_product_to_customer_failed",
   CustomerEntitlementNotFound: "customer_entitlement_not_found",
+  MultipleCustomersFound: "multiple_customers_found",
 
   // Product
   InvalidProduct: "invalid_product",

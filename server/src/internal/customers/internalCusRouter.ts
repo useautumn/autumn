@@ -52,7 +52,6 @@ cusRouter.post("/search", async (req: any, res: any) => {
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
   const { sb, org, env } = req;
   const { customer_id } = req.params;
-
   const orgId = req.orgId;
 
   try {
@@ -75,13 +74,15 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
           orgId: orgId,
           limit: 10,
         }),
-        CusService.getFullCustomer({
+        CusService.getByIdOrInternalId({
           sb,
           orgId,
           env,
-          customerId: customer_id,
+          idOrInternalId: customer_id,
+          isFull: true,
         }),
       ]);
+
     if (!customer) {
       throw new RecaseError({
         message: "Customer not found",
@@ -95,7 +96,8 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       limit: 10,
     });
 
-    for (const product of customer.products) {
+    let fullCustomer = customer as any;
+    for (const product of fullCustomer.products) {
       product.entitlements = product.customer_entitlements.map(
         (cusEnt: FullCustomerEntitlement) => {
           return cusEnt.entitlement;
@@ -132,7 +134,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     }
 
     res.status(200).send({
-      customer,
+      customer: fullCustomer,
       products,
       invoices,
       features,

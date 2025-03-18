@@ -377,6 +377,7 @@ export const updateCustomerBalance = async ({
   features,
   org,
   env,
+  logger,
 }: {
   sb: SupabaseClient;
   customer: Customer;
@@ -384,6 +385,7 @@ export const updateCustomerBalance = async ({
   features: Feature[];
   org: Organization;
   env: AppEnv;
+  logger: any;
 }) => {
   const startTime = performance.now();
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
@@ -392,6 +394,7 @@ export const updateCustomerBalance = async ({
     internalFeatureIds: features.map((f) => f.internal_id!),
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     withPrices: true,
+    logger,
   });
 
   const endTime = performance.now();
@@ -502,6 +505,7 @@ export const runUpdateBalanceTask = async ({
       event,
       org,
       env,
+      logger,
     });
 
     if (!cusEnts || cusEnts.length === 0) {

@@ -11,10 +11,9 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { CustomerContext } from "./CustomerContext";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { CustomerToolbar } from "./CustomerToolbar";
 import { Switch } from "@/components/ui/switch";
-import { CustomToaster } from "@/components/general/CustomToaster";
 import AddProduct from "./add-product/NewProductDropdown";
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -34,6 +33,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
   const { customer_id } = useParams();
 
   const navigate = useNavigate();
+
   const {
     data,
     isLoading,
@@ -43,15 +43,6 @@ export default function CustomerView({ env }: { env: AppEnv }) {
     url: `/customers/${customer_id}/data`,
     env,
   });
-
-  // const {
-  //   data: eventsData,
-  //   isLoading: eventsLoading,
-  //   error: eventsError,
-  // } = useAxiosSWR({
-  //   url: `/v1/customers/${customer_id}/events`,
-  //   env,
-  // });
 
   const [addCouponOpen, setAddCouponOpen] = useState(false);
 

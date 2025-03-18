@@ -12,6 +12,8 @@ import { Client } from "pg";
 import { CusProductService } from "./products/CusProductService.js";
 import { flipProductResults } from "../api/customers/cusUtils.js";
 import { format } from "date-fns";
+import { sbWithRetry } from "@/external/supabaseUtils.js";
+import { logger } from "@trigger.dev/sdk/v3";
 
 export class CusService {
   static async getById({
@@ -19,18 +21,25 @@ export class CusService {
     id,
     orgId,
     env,
+    logger,
   }: {
     sb: SupabaseClient;
     id: string;
     orgId: string;
     env: AppEnv;
+    logger: any;
   }) {
-    const { data, error } = await sb
-      .from("customers")
-      .select()
-      .eq("id", id)
-      .eq("org_id", orgId)
-      .eq("env", env);
+    const { data, error } = await sbWithRetry({
+      query: async () =>
+        sb
+          .from("customers")
+          .select()
+          .eq("id", id)
+          .eq("org_id", orgId)
+          .eq("env", env),
+      retries: 3,
+      logger,
+    });
 
     if (error) {
       throw new RecaseError({
@@ -73,12 +82,57 @@ export class CusService {
       });
     }
 
+    return data;
+  }
+
+  static async getByIdOrEmail({
+    sb,
+    idOrEmail,
+    orgId,
+    env,
+    isFull = false,
+  }: {
+    sb: SupabaseClient;
+    idOrEmail: string;
+    orgId: string;
+    env: AppEnv;
+    isFull?: boolean;
+  }) {
+    let query = "*";
+    if (isFull) {
+      query = `*, 
+      products:customer_products(
+        *, product:products(*), 
+        customer_prices:customer_prices(
+          *, price:prices(*)
+        ),
+        customer_entitlements:customer_entitlements(
+          *, entitlement:entitlements(*, feature:features(*))
+        ),
+        free_trial:free_trials(*)
+      ), 
+      
+      entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
+      prices:customer_prices(*, price:prices(*))`;
+    }
+
+    const { data, error } = await sb
+      .from("customers")
+      .select(query as "*")
+      .or(`id.eq.${idOrEmail},email.eq.${idOrEmail}`)
+      .eq("org_id", orgId)
+      .eq("env", env);
+
+    if (error) {
+      throw error;
+    }
+
     if (data.length === 0) {
       return null;
-    } else if (data.length > 2) {
+    } else if (data.length > 1) {
       throw new RecaseError({
-        code: ErrCode.InternalError,
-        message: "Multiple customers found with the same email",
+        code: ErrCode.DuplicateCustomerId,
+        message: `Multiple customers found for ${idOrEmail}`,
         statusCode: StatusCodes.BAD_REQUEST,
       });
     }
@@ -86,35 +140,61 @@ export class CusService {
     return data[0];
   }
 
-  static async getByIdOrEmail({
+  static async getByIdOrInternalId({
     sb,
-    id,
-    email,
+    idOrInternalId,
     orgId,
     env,
+    isFull = false,
   }: {
     sb: SupabaseClient;
-    id: string;
-    email: string;
+    idOrInternalId: string;
     orgId: string;
     env: AppEnv;
+    isFull?: boolean;
   }) {
+    let query = "*";
+    if (isFull) {
+      query = `*, 
+        products:customer_products(
+          *, product:products(*), 
+          customer_prices:customer_prices(
+            *, price:prices(*)
+          ),
+          customer_entitlements:customer_entitlements(
+            *, entitlement:entitlements(*, feature:features(*))
+          ),
+          free_trial:free_trials(*)
+        ), 
+        
+        entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
+        prices:customer_prices(*, price:prices(*))`;
+    }
+
     const { data, error } = await sb
       .from("customers")
-      .select()
-      .or(`id.eq.${id},email.eq.${email}`)
+      .select(query as "*")
+      .or(`id.eq.${idOrInternalId},internal_id.eq.${idOrInternalId}`)
       .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
+      .eq("env", env);
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
       throw error;
     }
 
-    return data;
+    if (data.length === 0) {
+      return null;
+    } else if (data.length > 1) {
+      // 1. Return where id is equal to idOrInternalId
+      const customer = data.find((c) => c.id === idOrInternalId);
+      if (customer) {
+        return customer;
+      } else {
+        return data[0];
+      }
+    }
+
+    return data[0];
   }
 
   static async getByInternalId({
@@ -142,34 +222,42 @@ export class CusService {
     env,
     orgId,
     customerId,
+    internalCustomerId,
   }: {
     sb: SupabaseClient;
     orgId: string;
     env: AppEnv;
-    customerId: string;
+    customerId?: string;
+    internalCustomerId?: string;
   }) {
-    const { data, error } = await sb
+    let query = sb
       .from("customers")
       .select(
         `*, 
-        products:customer_products(
-          *, product:products(*), 
-          customer_prices:customer_prices(
-            *, price:prices(*)
-          ),
-          customer_entitlements:customer_entitlements(
-            *, entitlement:entitlements(*, feature:features(*))
-          ),
-          free_trial:free_trials(*)
-        ), 
-        
-        entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
-        prices:customer_prices(*, price:prices(*))`
+      products:customer_products(
+        *, product:products(*), 
+        customer_prices:customer_prices(
+          *, price:prices(*)
+        ),
+        customer_entitlements:customer_entitlements(
+          *, entitlement:entitlements(*, feature:features(*))
+        ),
+        free_trial:free_trials(*)
+      ), 
+      
+      entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
+      prices:customer_prices(*, price:prices(*))`
       )
       .eq("env", env)
-      .eq("org_id", orgId)
-      .eq("id", customerId)
-      .single();
+      .eq("org_id", orgId);
+
+    if (customerId) {
+      query.eq("id", customerId);
+    } else if (internalCustomerId) {
+      query.eq("internal_id", internalCustomerId);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
       if (error.code === "PGRST116") {
@@ -527,6 +615,29 @@ export class CusService {
     }
   }
 
+  static async deleteByInternalId({
+    sb,
+    internalId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    internalId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { error } = await sb
+      .from("customers")
+      .delete()
+      .eq("internal_id", internalId)
+      .eq("org_id", orgId)
+      .eq("env", env);
+
+    if (error) {
+      throw error;
+    }
+  }
+
   // ENTITLEMENTS
 
   // Get active products
@@ -537,6 +648,7 @@ export class CusService {
     withProduct = false,
     inStatuses,
     productGroup,
+    logger,
   }: {
     sb: SupabaseClient;
     internalCustomerId: string;
@@ -544,6 +656,7 @@ export class CusService {
     withPrices?: boolean;
     inStatuses?: CusProductStatus[];
     productGroup?: string;
+    logger?: any;
   }) {
     const selectQuery = [
       "*",
@@ -577,7 +690,10 @@ export class CusService {
     // TODO: Limit 100 cus products? (for one time add ons...)
     // SORT by created_at?
 
-    const { data, error } = await query;
+    const { data, error } = await sbWithRetry({
+      query: async () => await query,
+      logger,
+    });
 
     if (error) {
       console.log("CusService.getFullCusProducts failed", error);

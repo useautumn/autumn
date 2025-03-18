@@ -3,6 +3,7 @@ import {
   AppEnv,
   CreateEventSchema,
   Customer,
+  ErrCode,
   Event,
   Feature,
 } from "@autumn/shared";
@@ -12,12 +13,13 @@ import { generateId } from "@/utils/genUtils.js";
 import { EventService } from "./EventService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { Client } from "pg";
-import { createNewCustomer } from "../customers/cusUtils.js";
+import { createNewCustomer } from "../customers/handlers/handleCreateCustomer.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { QueueManager } from "@/queue/QueueManager.js";
 import { subDays } from "date-fns";
 import { handleUsageEvent } from "./usageRouter.js";
+import { StatusCodes } from "http-status-codes";
 
 export const eventsRouter = Router();
 
@@ -38,6 +40,14 @@ const getEventAndCustomer = async ({
   event_data: any;
   logger: any;
 }) => {
+  if (!customer_id) {
+    throw new RecaseError({
+      message: "Customer ID is required",
+      code: ErrCode.InvalidInputs,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
   let customer: Customer;
 
   // 2. Check if customer ID is valid
@@ -46,6 +56,7 @@ const getEventAndCustomer = async ({
     id: customer_id,
     orgId: orgId,
     env: env,
+    logger,
   });
 
   // Handle race condition?

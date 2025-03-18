@@ -42,6 +42,7 @@ export const ErrCode = {
   CustomerHasNoBaseProduct: "customer_has_no_base_product",
   AttachProductToCustomerFailed: "attach_product_to_customer_failed",
   MultipleProductsFound: "multiple_products_found",
+  MultipleCustomersFound: "multiple_customers_found",
 
   // Product
   InvalidProduct: "invalid_product",

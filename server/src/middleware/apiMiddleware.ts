@@ -32,7 +32,11 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 
   // Try verify via Autumn
   try {
-    const { valid, data } = await verifyKey({ sb: req.sb, key: apiKey });
+    const { valid, data } = await verifyKey({
+      sb: req.sb,
+      key: apiKey,
+      logger: req.logtail,
+    });
 
     if (valid && data) {
       req.orgId = data.org_id;
