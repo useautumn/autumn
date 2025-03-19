@@ -10,8 +10,8 @@ export enum FreeTrialDuration {
 export const FreeTrialSchema = z.object({
   id: z.string(),
   created_at: z.number(),
-  duration: z.nativeEnum(FreeTrialDuration),
   internal_product_id: z.string(),
+  duration: z.nativeEnum(FreeTrialDuration),
   is_custom: z.boolean(),
 
   length: z.number(),

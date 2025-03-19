@@ -46,7 +46,7 @@ export const FeatureRowToolbar = ({
   return (
     <DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
       <DropdownMenuTrigger asChild>
-        <ToolbarButton />
+        <ToolbarButton className="!h-5 !w-5" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
         <DropdownMenuItem

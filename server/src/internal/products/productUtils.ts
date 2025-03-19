@@ -36,6 +36,7 @@ import { PriceService } from "../prices/PriceService.js";
 import { EntitlementService } from "./entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
+import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 
 export const isProductUpgrade = ({
   prices1,
@@ -236,6 +237,8 @@ export const copyProduct = async ({
   sb,
   product,
   toOrgId,
+  toId,
+  toName,
   toEnv,
   features,
 }: {
@@ -243,22 +246,33 @@ export const copyProduct = async ({
   product: FullProduct;
   toOrgId: string;
   toEnv: AppEnv;
+  toId: string;
+  toName: string;
   features: Feature[];
 }) => {
   const newProduct = {
     ...product,
-    name: `${product.name}`,
-    id: `${product.id}`,
+    name: toName,
+    id: toId,
     internal_id: generateId("prod"),
     org_id: toOrgId,
     env: toEnv,
     processor: null,
   };
 
-  const newPrices = product.prices.map((price) => {
-    let copiedPrice = structuredClone(price);
+  let newPrices: Price[] = [];
+  for (const price of product.prices) {
+    // 1. Copy price
+    let newPrice = structuredClone(price);
 
-    let config = copiedPrice.config as UsagePriceConfig;
+    let config = newPrice.config as UsagePriceConfig;
+
+    // Clear Stripe IDs
+    config.stripe_meter_id = undefined;
+    config.stripe_product_id = undefined;
+    config.stripe_placeholder_price_id = undefined;
+    config.stripe_price_id = undefined;
+
     if (config.type === PriceType.Usage) {
       let feature = features.find((f) => f.id === config.feature_id);
       if (!feature) {
@@ -269,45 +283,44 @@ export const copyProduct = async ({
         });
       }
 
-      (copiedPrice.config as UsagePriceConfig).internal_feature_id =
-        feature.internal_id!;
+      config.internal_feature_id = feature.internal_id!;
+      config.feature_id = feature.id;
     }
 
-    delete copiedPrice.config!.stripe_price_id;
-    delete (copiedPrice.config! as UsagePriceConfig).stripe_meter_id;
-    delete (copiedPrice.config! as UsagePriceConfig).stripe_product_id;
-    delete (copiedPrice.config! as UsagePriceConfig)
-      .stripe_placeholder_price_id;
+    newPrices.push(
+      PriceSchema.parse({
+        ...newPrice,
+        id: generateId("pr"),
+        created_at: Date.now(),
+        org_id: toOrgId,
+        internal_product_id: newProduct.internal_id,
+        config: config,
+      })
+    );
+  }
 
-    return PriceSchema.parse({
-      ...copiedPrice,
-      id: generateId("pr"),
-      org_id: toOrgId,
-      internal_product_id: newProduct.internal_id,
-      env: toEnv,
-    });
-  });
+  const newEntitlements: Entitlement[] = [];
+  for (const entitlement of product.entitlements) {
+    let feature = features.find((f) => f.id === entitlement.feature_id);
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${entitlement.feature_id} not found`,
+        code: ErrCode.FeatureNotFound,
+        statusCode: 404,
+      });
+    }
 
-  const newEntitlements = product.entitlements.map(
-    (entitlement: Entitlement) => {
-      let feature = features.find((f) => f.id === entitlement.feature_id);
-      if (!feature) {
-        throw new RecaseError({
-          message: `Feature ${entitlement.feature_id} not found`,
-          code: ErrCode.FeatureNotFound,
-          statusCode: 404,
-        });
-      }
-
-      return EntitlementSchema.parse({
+    newEntitlements.push(
+      EntitlementSchema.parse({
         ...entitlement,
         id: generateId("ent"),
         org_id: toOrgId,
+        created_at: Date.now(),
         internal_product_id: newProduct.internal_id,
         internal_feature_id: feature.internal_id,
-      });
-    }
-  );
+      })
+    );
+  }
 
   await ProductService.create({
     sb,
@@ -325,6 +338,17 @@ export const copyProduct = async ({
       data: newEntitlements,
     }),
   ]);
+  if (product.free_trial) {
+    await FreeTrialService.insert({
+      sb,
+      data: {
+        ...product.free_trial,
+        id: generateId("ft"),
+        created_at: Date.now(),
+        internal_product_id: newProduct.internal_id,
+      },
+    });
+  }
 };
 
 export const isOneOff = (prices: Price[]) => {

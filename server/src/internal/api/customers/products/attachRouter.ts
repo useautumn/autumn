@@ -38,15 +38,12 @@ import chalk from "chalk";
 import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import { handleInvoiceOnly } from "@/internal/customers/add-product/handleInvoiceOnly.js";
+
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 
-import {
-  clearLock,
-  handleAttachRaceCondition,
-} from "@/external/redis/redisUtils.js";
+import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import { Decimal } from "decimal.js";
-import { handleAddDefaultPaid } from "@/internal/customers/add-product/handleAddDefaultPaid.js";
+
 import { CusService } from "@/internal/customers/CusService.js";
 
 export const attachRouter = Router();
@@ -203,6 +200,7 @@ export const checkStripeConnections = async ({
   attachParams: AttachParams;
 }) => {
   const { org, customer, products, prices, entitlements } = attachParams;
+  const logger = req.logtail;
   const env = customer.env;
 
   if (!org.stripe_connected) {
@@ -233,7 +231,7 @@ export const checkStripeConnections = async ({
       org,
       env,
       customer,
-      logger: req.logger,
+      logger,
     }),
   ];
   for (const product of products) {
@@ -243,7 +241,7 @@ export const checkStripeConnections = async ({
         org,
         env,
         product,
-        logger: req.logger,
+        logger,
       })
     );
   }
@@ -260,11 +258,12 @@ export const checkStripeConnections = async ({
         entitlements,
         product: product!,
         org,
-        logger: req.logger,
+        logger,
       })
     );
   }
   await Promise.all(batchPriceUpdates);
+  // throw new Error("test");
 };
 
 export const customerHasPm = async ({
@@ -353,6 +352,8 @@ attachRouter.post("/attach", async (req: any, res) => {
     logger.info(
       `Customer: ${chalk.yellow(
         `${attachParams.customer.id} (${attachParams.customer.name})`
+      )}, Products: ${chalk.yellow(
+        attachParams.products.map((p) => p.id).join(", ")
       )}`
     );
 
