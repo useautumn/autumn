@@ -36,7 +36,11 @@ export class ProductService {
     });
   }
 
-  static async copyProduct(axiosInstance: AxiosInstance, productId: string) {
-    await axiosInstance.post(`/v1/products/${productId}/copy`);
+  static async copyProduct(
+    axiosInstance: AxiosInstance,
+    productId: string,
+    data: any
+  ) {
+    await axiosInstance.post(`/v1/products/${productId}/copy`, data);
   }
 }
