@@ -435,10 +435,11 @@ export const createStripePriceIFNotExist = async ({
       }
     }
   } catch (error: any) {
-    logger.info("Stripe price not found / inactive");
-    logger.info("Error:", error.message);
+    logger.info("Stripe price not found / inactive, creating new");
     config.stripe_price_id = undefined;
     config.stripe_meter_id = undefined;
+    // If no stripe price, no stripe product too
+    config.stripe_product_id = undefined;
   }
 
   if (billingType == BillingType.FixedCycle) {

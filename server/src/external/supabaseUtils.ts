@@ -33,8 +33,11 @@ export const sbWithRetry = async ({
       error && typeof error === "string" && error.includes("gateway error");
     let cloudflareError =
       error && error.message && error.message.includes(`Bad Gateway`);
+    let typeError =
+      error && error.message && error.message == "TypeError: fetch failed";
 
-    let shouldRetry = (gatewayError || cloudflareError) && i < retries - 1;
+    let shouldRetry =
+      (gatewayError || cloudflareError || typeError) && i < retries - 1;
 
     if (shouldRetry) {
       logger.warn(
