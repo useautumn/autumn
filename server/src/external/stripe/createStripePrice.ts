@@ -194,9 +194,6 @@ export const createStripeInAdvancePrice = async ({
     recurringData = billingIntervalToStripe(price.config!.interval!);
   }
 
-  console.log("In advance price");
-  console.log(price);
-
   const relatedEnt = getPriceEntitlement(price, entitlements);
 
   const config = price.config as UsagePriceConfig;

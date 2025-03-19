@@ -100,7 +100,11 @@ couponRouter.delete("/:id", async (req: any, res: any) => {
       env,
     });
 
-    await stripeCli.coupons.del(id);
+    try {
+      await stripeCli.coupons.del(id);
+    } catch (error: any) {
+      console.log(`Failed to delete coupon from stripe: ${error.message}`);
+    }
 
     await CouponService.deleteStrict({
       sb: req.sb,

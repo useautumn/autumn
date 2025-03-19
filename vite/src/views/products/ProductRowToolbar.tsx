@@ -17,16 +17,11 @@ import { useProductsContext } from "./ProductsContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { UpdateProductDialog } from "./UpdateProduct";
+import { CopyDialog } from "./CopyDialog";
 
 export const ProductRowToolbar = ({
-  className,
   product,
 }: {
   className?: string;
@@ -40,6 +35,7 @@ export const ProductRowToolbar = ({
   const [modalOpen, setModalOpen] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState(product);
+  const [dialogType, setDialogType] = useState<"update" | "copy">("update");
 
   const handleDelete = async () => {
     setDeleteLoading(true);
@@ -54,26 +50,18 @@ export const ProductRowToolbar = ({
     setDeleteOpen(false);
   };
 
-  const handleCopy = async () => {
-    setCopyLoading(true);
-    try {
-      await ProductService.copyProduct(axiosInstance, product.id);
-      toast.success("Successfully copied product");
-    } catch (error) {
-      console.log("Error copying product", error);
-      toast.error(getBackendErr(error, "Failed to copy product"));
-    }
-    setCopyLoading(false);
-  };
-
   return (
     <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-      <UpdateProductDialog
-        selectedProduct={product}
-        setSelectedProduct={setSelectedProduct}
-        setModalOpen={setModalOpen}
-        setDropdownOpen={setDeleteOpen}
-      />
+      {dialogType == "update" ? (
+        <UpdateProductDialog
+          selectedProduct={product}
+          setSelectedProduct={setSelectedProduct}
+          setModalOpen={setModalOpen}
+          setDropdownOpen={setDeleteOpen}
+        />
+      ) : (
+        <CopyDialog product={selectedProduct} setModalOpen={setModalOpen} />
+      )}
       <DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DropdownMenuTrigger asChild>
           <ToolbarButton />
@@ -86,6 +74,29 @@ export const ProductRowToolbar = ({
                 e.stopPropagation();
                 e.preventDefault();
                 setSelectedProduct(product);
+                setDialogType("copy");
+                setModalOpen(true);
+                // await handleCopy();
+              }}
+            >
+              <div className="flex items-center justify-between w-full gap-2">
+                Copy
+                {copyLoading ? (
+                  <SmallSpinner />
+                ) : (
+                  <FontAwesomeIcon icon={faClone} size="sm" />
+                )}
+              </div>
+            </DropdownMenuItem>
+          </DialogTrigger>
+          <DialogTrigger asChild>
+            <DropdownMenuItem
+              className="flex items-center text-xs"
+              onClick={async (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setSelectedProduct(product);
+                setDialogType("update");
                 setModalOpen(true);
               }}
             >
@@ -112,25 +123,10 @@ export const ProductRowToolbar = ({
               )}
             </div>
           </DropdownMenuItem>
-          {env == AppEnv.Sandbox && (
-            <DropdownMenuItem
-              className="flex items-center text-xs"
-              onClick={async (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                await handleCopy();
-              }}
-            >
-              <div className="flex items-center justify-between w-full gap-2">
-                Copy to live
-                {copyLoading ? (
-                  <SmallSpinner />
-                ) : (
-                  <FontAwesomeIcon icon={faClone} size="sm" />
-                )}
-              </div>
-            </DropdownMenuItem>
-          )}
+
+          {/* {env == AppEnv.Sandbox && (
+            
+          )} */}
         </DropdownMenuContent>
       </DropdownMenu>
     </Dialog>

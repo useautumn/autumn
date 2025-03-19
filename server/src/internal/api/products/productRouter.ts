@@ -6,7 +6,6 @@ import {
   CreateFeatureSchema,
   CreateProductSchema,
   Organization,
-  ProcessorType,
   Product,
   UpdateProduct,
   UpdateProductSchema,
@@ -20,10 +19,7 @@ import RecaseError, {
 import { ErrCode } from "@/errors/errCodes.js";
 
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import {
-  createStripeProduct,
-  deleteStripeProduct,
-} from "@/external/stripe/stripeProductUtils.js";
+import { deleteStripeProduct } from "@/external/stripe/stripeProductUtils.js";
 
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -337,29 +333,38 @@ productApiRouter.post("/:productId", async (req: any, res) => {
 });
 
 productApiRouter.post("/:productId/copy", async (req: any, res) => {
-  const { productId } = req.params;
+  const { productId: fromProductId } = req.params;
   const sb = req.sb;
   const orgId = req.orgId;
-  const env = req.env;
+  const fromEnv = req.env;
+  const { env: toEnv, id: toId, name: toName } = req.body;
+
+  if (!toEnv || !toId || !toName) {
+    throw new RecaseError({
+      message: "env, id, and name are required",
+      code: ErrCode.InvalidRequest,
+      statusCode: 400,
+    });
+  }
+
+  if (fromEnv == toEnv && fromProductId == toId) {
+    throw new RecaseError({
+      message: "Product ID already exists",
+      code: ErrCode.InvalidRequest,
+      statusCode: 400,
+    });
+  }
 
   try {
-    if (env == AppEnv.Live) {
-      throw new RecaseError({
-        message: "Can only copy product from sandbox to live",
-        code: ErrCode.InvalidRequest,
-        statusCode: 400,
-      });
-    }
-
     // 1. Check if product exists in live already...
-    const existingLiveProd = await ProductService.getProductStrict({
+    const toProduct = await ProductService.getProductStrict({
       sb,
-      productId,
+      productId: toId,
       orgId,
-      env: AppEnv.Live,
+      env: toEnv,
     });
 
-    if (existingLiveProd) {
+    if (toProduct) {
       throw new RecaseError({
         message: "Product already exists in live... can't copy again",
         code: ErrCode.ProductAlreadyExists,
@@ -368,58 +373,65 @@ productApiRouter.post("/:productId/copy", async (req: any, res) => {
     }
 
     // 1. Get sandbox product
-    const sandboxProduct = await ProductService.getFullProductStrict({
-      sb,
-      productId,
-      orgId,
-      env,
-    });
+    const [fromFullProduct, sandboxFeatures, liveFeatures] = await Promise.all([
+      ProductService.getFullProductStrict({
+        sb,
+        productId: fromProductId,
+        orgId,
+        env: fromEnv,
+      }),
+      FeatureService.getFeatures({
+        sb,
+        orgId,
+        env: fromEnv,
+      }),
+      FeatureService.getFeatures({
+        sb,
+        orgId,
+        env: toEnv,
+      }),
+    ]);
 
-    let sandboxFeatures = await FeatureService.getFeatures({
-      sb,
-      orgId,
-      env,
-    });
+    let fromFeatures =
+      fromEnv == AppEnv.Sandbox ? sandboxFeatures : liveFeatures;
+    let toFeatures = toEnv == AppEnv.Sandbox ? sandboxFeatures : liveFeatures;
 
-    let liveFeatures = await FeatureService.getFeatures({
-      sb,
-      orgId,
-      env: AppEnv.Live,
-    });
+    if (fromEnv != toEnv) {
+      for (const fromFeature of fromFeatures) {
+        const toFeature = toFeatures.find((f) => f.id == fromFeature.id);
 
-    // 1. Copy features
-    for (const sandboxFeature of sandboxFeatures) {
-      const liveFeature = liveFeatures.find((f) => f.id == sandboxFeature.id);
+        if (toFeature && fromFeature.type !== toFeature.type) {
+          throw new RecaseError({
+            message: `Feature ${fromFeature.name} exists in live, but has a different config. Please match them then try again.`,
+            code: ErrCode.InvalidRequest,
+            statusCode: 400,
+          });
+        }
 
-      if (liveFeature && sandboxFeature.type !== liveFeature.type) {
-        throw new RecaseError({
-          message: `Feature ${sandboxFeature.name} exists in live, but has a different config. Please match them then try again.`,
-          code: ErrCode.InvalidRequest,
-          statusCode: 400,
-        });
-      }
+        if (!toFeature) {
+          let res = await FeatureService.insert({
+            sb,
+            data: initNewFeature({
+              data: CreateFeatureSchema.parse(fromFeature),
+              orgId,
+              env: toEnv,
+            }),
+          });
 
-      if (!liveFeature) {
-        let res = await FeatureService.insert({
-          sb,
-          data: initNewFeature({
-            data: CreateFeatureSchema.parse(sandboxFeature),
-            orgId,
-            env: AppEnv.Live,
-          }),
-        });
-
-        liveFeatures.push(res![0]);
+          toFeatures.push(res![0]);
+        }
       }
     }
 
-    // 2. Copy product
+    // // 2. Copy product
     await copyProduct({
       sb,
-      product: sandboxProduct,
+      product: fromFullProduct,
       toOrgId: orgId,
-      toEnv: AppEnv.Live,
-      features: liveFeatures,
+      toId,
+      toName,
+      toEnv: toEnv,
+      features: toFeatures,
     });
     // 2. Get product from sandbox
     res.status(200).send({ message: "Product copied" });
@@ -446,9 +458,11 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
       env,
     });
 
-    const batchProductInit = [];
-    for (const product of fullProducts) {
-      batchProductInit.push(
+    const batchProductInit: Promise<any>[] = [];
+    const productBatchSize = 10;
+    for (let i = 0; i < fullProducts.length; i += productBatchSize) {
+      const batch = fullProducts.slice(i, i + productBatchSize);
+      const batchPromises = batch.map((product) =>
         checkStripeProductExists({
           sb,
           org,
@@ -457,9 +471,8 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
           logger,
         })
       );
+      await Promise.all(batchPromises);
     }
-
-    await Promise.all(batchProductInit);
 
     const entitlements = fullProducts.flatMap((p) => p.entitlements);
     const prices = fullProducts.flatMap((p) => p.prices);
