@@ -1,11 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
-import { logger } from "@trigger.dev/sdk/v3";
+import fetchRetry from "fetch-retry";
+
+// Wrap the global fetch with fetch-retry
+const fetchWithRetry = fetchRetry(fetch);
 
 export const createSupabaseClient = () => {
   try {
     return createClient(
       process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
+      process.env.SUPABASE_SERVICE_KEY!,
+      {
+        global: {
+          fetch: fetchWithRetry,
+        },
+      }
     );
   } catch (error) {
     console.error("Error creating Supabase client:", error);
@@ -25,6 +33,9 @@ export const sbWithRetry = async ({
   if (!logger) {
     logger = console;
   }
+
+  // Trying out fetch-retry
+  return await query();
 
   for (let i = 0; i < retries; i++) {
     let { data, error } = await query();

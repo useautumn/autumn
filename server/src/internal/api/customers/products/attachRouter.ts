@@ -419,7 +419,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       return;
     }
 
-    if (useCheckout && !invoiceOnly) {
+    if (useCheckout && !newProductsFree && !invoiceOnly) {
       logger.info("SCENARIO 2: USING CHECKOUT");
       await handleCreateCheckout({
         sb,
