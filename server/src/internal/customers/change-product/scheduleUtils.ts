@@ -268,15 +268,6 @@ export const cancelFutureProductSchedule = async ({
     logger.info("Handling case if curScheduledProduct is free");
     // 1. Look at main product
     let curMainSubIds = curMainProduct.subscription_ids;
-    // console.log("Cur main sub ids:", curMainSubIds);
-    // console.log(
-    //   "Cus products:",
-    //   cusProducts.map((cusProduct) => ({
-    //     name: cusProduct?.product.name,
-    //     subIds: cusProduct?.subscription_ids,
-    //     scheduledIds: cusProduct?.scheduled_ids,
-    //   }))
-    // );
 
     // 2. Check if there are other products with same subscription and scheduled ids
     let otherCusProductsWithSameSub: FullCusProduct[] = [];
@@ -340,6 +331,17 @@ export const cancelFutureProductSchedule = async ({
         logger.info(
           `✅ Added old items for product ${fullCurProduct.name} to schedule: ${schedule.id}`
         );
+      }
+    } else {
+      // TODO: Check if this is correct
+      logger.info(
+        "No other cus products with same sub, uncanceling current main product"
+      );
+
+      if (curMainSubIds && curMainSubIds.length > 0) {
+        await stripeCli.subscriptions.update(curMainSubIds[0], {
+          cancel_at: null,
+        });
       }
     }
   }
