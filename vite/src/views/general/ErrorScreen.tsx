@@ -3,8 +3,6 @@ import { useEnv } from "@/utils/envUtils";
 import { Link } from "react-router";
 import React from "react";
 import { getRedirectUrl } from "@/utils/genUtils";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowLeft } from "@fortawesome/pro-regular-svg-icons";
 
 function ErrorScreen({
   children,

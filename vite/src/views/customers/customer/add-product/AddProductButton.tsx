@@ -5,11 +5,6 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faFileInvoiceDollar,
-  faUpload,
-} from "@fortawesome/pro-duotone-svg-icons";
 import { useState } from "react";
 
 import {
@@ -18,8 +13,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { faCartShopping } from "@fortawesome/pro-duotone-svg-icons/faCartShopping";
 import { ProductActionState } from "@/utils/models";
+import { File, ShoppingCart, Upload } from "lucide-react";
 
 export const AddProductButton = ({
   setUseInvoice,
@@ -74,7 +69,7 @@ export const AddProductButton = ({
         className="w-fit gap-2"
         isLoading={loading}
         disabled={actionState.disabled}
-        startIcon={<FontAwesomeIcon icon={faUpload} />}
+        startIcon={<Upload size={12} />}
       >
         {actionState.buttonText}
       </Button>
@@ -91,7 +86,7 @@ export const AddProductButton = ({
                 onClick={() => setOpen(true)}
                 variant="gradientPrimary"
                 className="w-fit gap-2"
-                startIcon={<FontAwesomeIcon icon={faUpload} />}
+                startIcon={<Upload size={12} />}
                 disabled={actionState.disabled}
               >
                 {actionState.buttonText}
@@ -108,11 +103,8 @@ export const AddProductButton = ({
           className="h-8 flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
-            <FontAwesomeIcon
-              icon={faCartShopping}
-              size="xs"
-              className="!h-3 w-3"
-            />
+            <ShoppingCart size={12} className="text-t3" />
+
             <p className="text-xs text-t2">Checkout</p>
           </div>
         </DropdownMenuItem>
@@ -122,11 +114,7 @@ export const AddProductButton = ({
           className="h-8 flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
-            <FontAwesomeIcon
-              icon={faFileInvoiceDollar}
-              size="xs"
-              className="!h-3 w-3"
-            />
+            <File size={12} className="text-t3" />
             <p className="text-xs text-t2">Invoice</p>
           </div>
         </DropdownMenuItem>
@@ -134,18 +122,3 @@ export const AddProductButton = ({
     </DropdownMenu>
   );
 };
-
-{
-  /* <div>
-            <Button
-              onClick={handleClick}
-              variant="gradientPrimary"
-              className="w-fit gap-2"
-              startIcon={<FontAwesomeIcon icon={faUpload} />}
-              isLoading={createLoading}
-              disabled={actionState.disabled}
-            >
-              {actionState.buttonText}
-            </Button>
-          </div> */
-}

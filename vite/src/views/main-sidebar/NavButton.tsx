@@ -1,13 +1,10 @@
 import { useTab } from "@/hooks/useTab";
 import { cn } from "@/lib/utils";
 import { getRedirectUrl } from "@/utils/genUtils";
-
 import { AppEnv } from "@autumn/shared";
 import { Link } from "react-router";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 import { useSidebarContext } from "./SidebarContext";
-import posthog from "posthog-js";
 
 export const NavButton = ({
   value,
@@ -51,7 +48,7 @@ export const NavButton = ({
           isHovered && "translate-x-[-1px]"
         )}
       >
-        <FontAwesomeIcon icon={icon} size="sm" />
+        {icon}
       </div>
       {state == "expanded" && <span className=" font-semibold">{title}</span>}
     </Link>

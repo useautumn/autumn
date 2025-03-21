@@ -6,14 +6,7 @@ import {
 } from "@clerk/clerk-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCheck,
-  faChevronLeft,
-  faChevronRight,
-  faCopy,
-} from "@fortawesome/pro-regular-svg-icons";
-import CopyButton from "@/components/general/CopyButton";
+
 import { EnvDropdown } from "./EnvDropdown";
 
 import { useEnv } from "@/utils/envUtils";
@@ -24,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Check, ChevronLeft, ChevronRight, Copy } from "lucide-react";
 
 export const SidebarTop = () => {
   const { isLoaded, user } = useUser();
@@ -108,9 +102,11 @@ export const SidebarTop = () => {
           variant="ghost"
           className="p-0 w-5 h-5 text-t3 m-0"
         >
-          <FontAwesomeIcon
-            icon={state == "expanded" ? faChevronLeft : faChevronRight}
-          />
+          {state == "expanded" ? (
+            <ChevronLeft size={14} />
+          ) : (
+            <ChevronRight size={14} />
+          )}
         </Button>
       </div>
       <EnvDropdown env={env} />
@@ -141,14 +137,14 @@ const CopyText = ({ text }: { text: string }) => {
         {text}
       </p>
       {(isCopied || isHover) && (
-        <FontAwesomeIcon
-          icon={isCopied ? faCheck : faCopy}
-          size="xs"
+        <div
           onClick={() => {
             navigator.clipboard.writeText(text);
             setIsCopied(true);
           }}
-        />
+        >
+          {isCopied ? <Check size={10} /> : <Copy size={10} />}
+        </div>
       )}
     </div>
   );

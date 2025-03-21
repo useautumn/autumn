@@ -9,17 +9,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import {
-  faBarsFilter,
-  faCheck,
-  faXmark,
-} from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCustomersContext } from "./CustomersContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
+import { Check, ListFilter, X } from "lucide-react";
 
 function FilterButton() {
-  const { filters, setFilters, products } = useCustomersContext();
+  const { setFilters } = useCustomersContext();
 
   return (
     <DropdownMenu>
@@ -41,7 +36,7 @@ function FilterButton() {
             onClick={() => setFilters({})}
             className="cursor-pointer"
           >
-            <FontAwesomeIcon icon={faXmark} className="mr-2 text-t3" />
+            <X size={14} className="text-t3" />
             Clear
           </DropdownMenuItem>
         </DropdownMenuGroup>
@@ -76,9 +71,7 @@ export const FilterStatus = () => {
             className="flex items-center justify-between cursor-pointer text-sm"
           >
             {keyToTitle(status)}
-            {isActive && (
-              <FontAwesomeIcon size="sm" icon={faCheck} className="text-t3" />
-            )}
+            {isActive && <Check size={13} className="text-t3" />}
           </DropdownMenuItem>
         );
       })}
@@ -108,9 +101,7 @@ export const ProductStatus = () => {
             className="flex items-center justify-between cursor-pointer"
           >
             {product.name}
-            {isActive && (
-              <FontAwesomeIcon size="sm" icon={faCheck} className="text-t3" />
-            )}
+            {isActive && <Check size={13} className="text-t3" />}
           </DropdownMenuItem>
         );
       })}
@@ -122,34 +113,9 @@ export const RenderFilterTrigger = ({ setOpen }: any) => {
   return (
     <DropdownMenuTrigger asChild>
       <Button variant="outline" className="text-t3">
-        <FontAwesomeIcon icon={faBarsFilter} className="mr-2 text-t3" />
+        <ListFilter size={13} className="mr-2 text-t3" />
         Filter
       </Button>
     </DropdownMenuTrigger>
   );
 };
-
-// export const FilterField = ({ field, type, options }: any) => {
-//   // TODO: Create function to get field name
-//   const { filter, setFilter } = useCustomersContext();
-
-//   if (type == "select") {
-//     return (
-//       <DropdownMenuSub>
-//         <DropdownMenuSubTrigger>{field}</DropdownMenuSubTrigger>
-//         <DropdownMenuPortal>
-//           <DropdownMenuSubContent>
-//             {options.map((option: any) => (
-//               <DropdownMenuItem
-//                 key={option}
-//                 onClick={() => setFilter({ [field]: option })}
-//               >
-//                 {keyToTitle(option)}
-//               </DropdownMenuItem>
-//             ))}
-//           </DropdownMenuSubContent>
-//         </DropdownMenuPortal>
-//       </DropdownMenuSub>
-//     );
-//   }
-// };

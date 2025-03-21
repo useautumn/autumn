@@ -1,6 +1,4 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faTrash } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -13,12 +11,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
 import { Product } from "@autumn/shared";
-import { faCog } from "@fortawesome/pro-duotone-svg-icons";
+
 import { ProductService } from "@/services/products/ProductService";
 import { useNavigate } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductContext } from "./ProductContext";
 import { navigateTo } from "@/utils/genUtils";
+import { Delete, Settings } from "lucide-react";
 
 export const EditProductToolbar = ({
   className,
@@ -54,7 +53,7 @@ export const EditProductToolbar = ({
           dim={6}
           className={cn("rounded-full", className)}
         >
-          <FontAwesomeIcon icon={faCog} size="lg" />
+          <Settings size={14} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
@@ -68,11 +67,7 @@ export const EditProductToolbar = ({
         >
           <div className="flex items-center justify-between w-full gap-2">
             Delete
-            {deleteLoading ? (
-              <SmallSpinner />
-            ) : (
-              <FontAwesomeIcon icon={faTrash} size="sm" />
-            )}
+            {deleteLoading ? <SmallSpinner /> : <Delete size={12} />}
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>

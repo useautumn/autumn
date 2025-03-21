@@ -2,12 +2,9 @@ import { useCustomerContext } from "./CustomerContext";
 import { getStripeCusLink } from "@/utils/linkUtils";
 import { Product } from "@autumn/shared";
 import { faStripe } from "@fortawesome/free-brands-svg-icons";
-import {
-  faArrowUpRightFromSquare,
-  faCheck,
-  faCopy,
-} from "@fortawesome/pro-duotone-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { ArrowUpRightFromSquare, Check } from "lucide-react";
+import { Copy } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 
@@ -74,14 +71,15 @@ export const CustomerDetails = () => {
             {customer.id}
           </p>
           {(idCopied || idHover) && (
-            <FontAwesomeIcon
-              icon={idCopied ? faCheck : faCopy}
-              size="xs"
+            <div
+              className="flex items-center justify-center"
               onClick={() => {
                 navigator.clipboard.writeText(customer.id);
                 setIdCopied(true);
               }}
-            />
+            >
+              {idCopied ? <Check size={13} /> : <Copy size={13} />}
+            </div>
           )}
         </div>
 
@@ -127,14 +125,9 @@ export const CustomerDetails = () => {
             <div className="flex justify-center items-center w-fit gap-2">
               <FontAwesomeIcon
                 icon={faStripe}
-                className="text-[#675DFF]"
-                size="lg"
+                className="!h-5 text-[#675DFF]"
               />
-              <FontAwesomeIcon
-                icon={faArrowUpRightFromSquare}
-                className="text-[#675DFF]"
-                size="xs"
-              />
+              <ArrowUpRightFromSquare size={10} className="text-[#675DFF]" />
             </div>
           </Link>
         )}

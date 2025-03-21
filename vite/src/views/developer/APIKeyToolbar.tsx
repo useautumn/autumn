@@ -1,7 +1,5 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faEllipsisVertical, faTrash } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { cn } from "@/lib/utils";
+
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -10,20 +8,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+
 import { useDevContext } from "./DevContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { DevService } from "@/services/DevService";
 import { ApiKey } from "@autumn/shared";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
+import { Delete } from "lucide-react";
 
-export const APIKeyToolbar = ({
-  className,
-  apiKey,
-}: {
-  className?: string;
-  apiKey: ApiKey;
-}) => {
+export const APIKeyToolbar = ({ apiKey }: { apiKey: ApiKey }) => {
   const { mutate, env } = useDevContext();
   const axiosInstance = useAxiosInstance({ env });
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -56,11 +49,7 @@ export const APIKeyToolbar = ({
         >
           <div className="flex items-center justify-between w-full gap-2">
             Delete
-            {deleteLoading ? (
-              <SmallSpinner />
-            ) : (
-              <FontAwesomeIcon icon={faTrash} size="sm" />
-            )}
+            {deleteLoading ? <SmallSpinner /> : <Delete size={12} />}
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>
