@@ -9,10 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { Button } from "@/components/ui/button";
-import { Plus, X } from "lucide-react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faXmark } from "@fortawesome/pro-solid-svg-icons";
+
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { useProductContext } from "../ProductContext";
 

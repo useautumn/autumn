@@ -1,6 +1,5 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { faClone, faPencil, faTrash } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import {
   DropdownMenu,
@@ -11,7 +10,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AppEnv, Product } from "@autumn/shared";
+import { Product } from "@autumn/shared";
 import { ProductService } from "@/services/products/ProductService";
 import { useProductsContext } from "./ProductsContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -20,6 +19,7 @@ import { ToolbarButton } from "@/components/general/table-components/ToolbarButt
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { UpdateProductDialog } from "./UpdateProduct";
 import { CopyDialog } from "./CopyDialog";
+import { Copy, Delete, Pen } from "lucide-react";
 
 export const ProductRowToolbar = ({
   product,
@@ -84,7 +84,7 @@ export const ProductRowToolbar = ({
                 {copyLoading ? (
                   <SmallSpinner />
                 ) : (
-                  <FontAwesomeIcon icon={faClone} size="sm" />
+                  <Copy size={12} className="text-t3" />
                 )}
               </div>
             </DropdownMenuItem>
@@ -102,7 +102,7 @@ export const ProductRowToolbar = ({
             >
               <div className="flex items-center justify-between w-full gap-2">
                 Edit
-                <FontAwesomeIcon icon={faPencil} size="sm" />
+                <Pen size={12} className="text-t3" />
               </div>
             </DropdownMenuItem>
           </DialogTrigger>
@@ -119,7 +119,7 @@ export const ProductRowToolbar = ({
               {deleteLoading ? (
                 <SmallSpinner />
               ) : (
-                <FontAwesomeIcon icon={faTrash} size="sm" />
+                <Delete size={12} className="text-t3" />
               )}
             </div>
           </DropdownMenuItem>

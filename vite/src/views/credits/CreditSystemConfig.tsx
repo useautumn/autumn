@@ -1,13 +1,7 @@
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
-import {
-  CreditSchemaItem,
-  CreditSystem,
-  Feature,
-  FeatureType,
-} from "@autumn/shared";
+import { CreditSchemaItem, Feature, FeatureType } from "@autumn/shared";
 import { faXmark } from "@fortawesome/pro-duotone-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import {
   Select,
@@ -21,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useFeaturesContext } from "../features/FeaturesContext";
+import { X } from "lucide-react";
 
 function CreditSystemConfig({
   creditSystem,
@@ -180,10 +175,10 @@ function CreditSystemConfig({
                         variant="ghost"
                         onClick={() => removeSchemaItem(index)}
                         isIcon
-                        dim={6}
+                        dim={5}
                         className="text-t3"
                       >
-                        <FontAwesomeIcon icon={faXmark} />
+                        <X size={14} />
                       </Button>
                     </div>
                   </div>

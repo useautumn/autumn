@@ -8,11 +8,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faComments, faCopy } from "@fortawesome/pro-duotone-svg-icons";
+
+import { faCopy } from "@fortawesome/pro-duotone-svg-icons";
 import { toast } from "sonner";
 import { NavButton } from "./NavButton";
 import { useEnv } from "@/utils/envUtils";
+import { Copy, MessageCircle } from "lucide-react";
+import CopyButton from "@/components/general/CopyButton";
 
 export function SidebarContact() {
   const email = "hey@useautumn.com";
@@ -31,7 +33,7 @@ export function SidebarContact() {
           <NavButton
             env={env}
             value="chat"
-            icon={faComments}
+            icon={<MessageCircle size={14} />}
             title="Chat with us"
           />
         </div>
@@ -45,18 +47,15 @@ export function SidebarContact() {
           onClick={() => (window.location.href = `mailto:${email}`)}
           className="cursor-pointer"
         >
-          <span>{email}</span>
-          <FontAwesomeIcon
-            icon={faCopy}
-            className="ml-2 cursor-pointer hover:text-primary"
-            onClick={handleCopy}
-          />
+          <div className="flex items-center justify-between w-full">
+            <span>{email}</span>
+            <Copy size={12} />
+          </div>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => window.open("https://cal.com/ayrod", "_blank")}
           className="cursor-pointer"
         >
-          {/* <FontAwesomeIcon icon={faCalendar} className="mr-2" /> */}
           Book a call
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-progress h-[30px] flex justify-between">

@@ -1,6 +1,4 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faPen, faTrash } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import {
   DropdownMenu,
@@ -16,7 +14,7 @@ import { Customer } from "@autumn/shared";
 import { useCustomerContext } from "./CustomerContext";
 import { CusService } from "@/services/customers/CusService";
 import { useNavigate } from "react-router";
-import { faCog, faTicket } from "@fortawesome/pro-duotone-svg-icons";
+
 import { navigateTo } from "@/utils/genUtils";
 
 import React from "react";
@@ -24,6 +22,15 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import AddCouponDialogContent from "./add-coupon/AddCouponDialogContent";
 import { cn } from "@/lib/utils";
 import UpdateCustomerDialog from "./UpdateCustomerDialog";
+import {
+  Delete,
+  Pen,
+  Pencil,
+  Settings,
+  Settings2,
+  Ticket,
+  Trash,
+} from "lucide-react";
 
 export const CustomerToolbar = ({
   className,
@@ -80,7 +87,7 @@ export const CustomerToolbar = ({
               dim={6}
               className={cn("rounded-full", className)}
             >
-              <FontAwesomeIcon icon={faCog} size="lg" />
+              <Settings size={14} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="text-t2 w-[150px]" align="end">
@@ -93,7 +100,7 @@ export const CustomerToolbar = ({
               >
                 <div className="flex text-sm items-center justify-between w-full gap-2">
                   <p className="text-t2">Add Coupon</p>
-                  <FontAwesomeIcon icon={faTicket} size="sm" />
+                  <Ticket size={12} className="text-t3" />
                 </div>
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -104,7 +111,7 @@ export const CustomerToolbar = ({
               >
                 <div className="flex text-sm items-center justify-between w-full gap-2">
                   <p className="text-t2">Update</p>
-                  <FontAwesomeIcon icon={faPen} size="sm" />
+                  <Settings2 size={12} className="text-t3" />
                 </div>
               </DropdownMenuItem>
             </DialogTrigger>
@@ -118,11 +125,7 @@ export const CustomerToolbar = ({
             >
               <div className="flex items-center justify-between w-full gap-2">
                 Delete
-                {deleteLoading ? (
-                  <SmallSpinner />
-                ) : (
-                  <FontAwesomeIcon icon={faTrash} size="sm" />
-                )}
+                {deleteLoading ? <SmallSpinner /> : <Delete size={12} />}
               </div>
             </DropdownMenuItem>
           </DropdownMenuContent>

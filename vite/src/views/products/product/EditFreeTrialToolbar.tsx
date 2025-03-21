@@ -1,6 +1,5 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faEllipsisVertical, faTrash } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -15,6 +14,7 @@ import { Product } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductContext } from "./ProductContext";
+import { Delete, EllipsisVertical } from "lucide-react";
 
 export const EditFreeTrialToolbar = ({
   className,
@@ -42,7 +42,7 @@ export const EditFreeTrialToolbar = ({
           dim={6}
           className={cn("rounded-full", className)}
         >
-          <FontAwesomeIcon icon={faEllipsisVertical} />
+          <EllipsisVertical size={12} className="text-t3" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
@@ -59,7 +59,7 @@ export const EditFreeTrialToolbar = ({
             {deleteLoading ? (
               <SmallSpinner />
             ) : (
-              <FontAwesomeIcon icon={faTrash} size="sm" />
+              <Delete size={12} className="text-t3" />
             )}
           </div>
         </DropdownMenuItem>

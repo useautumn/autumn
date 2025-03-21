@@ -1,13 +1,13 @@
 "use client";
 
 import { UserButton, useUser } from "@clerk/clerk-react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBook, faCircleNodes } from "@fortawesome/pro-duotone-svg-icons";
+
 import { NavButton } from "./NavButton";
 import { useEnv } from "@/utils/envUtils";
 import { SidebarContact } from "./SidebarContact";
 import { useSidebarContext } from "./SidebarContext";
 import { cn } from "@/lib/utils";
+import { Blocks, Book } from "lucide-react";
 
 export default function SidebarBottom() {
   const env = useEnv();
@@ -20,20 +20,19 @@ export default function SidebarBottom() {
       <div className="px-4">
         <NavButton
           value="integrations/stripe"
-          icon={faCircleNodes}
+          icon={<Blocks size={14} />}
           title="Connect to Stripe"
           env={env}
         />
         <NavButton
           value="docs"
-          icon={faBook}
+          icon={<Book size={14} />}
           title="Documentation"
           env={env}
           href="https://docs.useautumn.com"
         />
         <SidebarContact />
       </div>
-      {/* <SidebarContact /> */}
 
       <div
         className={cn(

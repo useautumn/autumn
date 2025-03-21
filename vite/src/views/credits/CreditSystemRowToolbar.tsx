@@ -1,6 +1,4 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faTrash } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,6 +14,7 @@ import { FeatureService } from "@/services/FeatureService";
 import { getBackendErr } from "@/utils/genUtils";
 import { useFeaturesContext } from "../features/FeaturesContext";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
+import { Delete } from "lucide-react";
 
 export const CreditSystemRowToolbar = ({
   creditSystem,
@@ -59,7 +58,7 @@ export const CreditSystemRowToolbar = ({
             {deleteLoading ? (
               <SmallSpinner />
             ) : (
-              <FontAwesomeIcon icon={faTrash} size="sm" />
+              <Delete size={14} className="text-t3" />
             )}
           </div>
         </DropdownMenuItem>

@@ -9,11 +9,11 @@ import {
 
 import { AppEnv } from "@autumn/shared";
 import { envToPath } from "@/utils/genUtils";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faChevronDown } from "@fortawesome/pro-regular-svg-icons";
+
 import { useLocation } from "react-router";
 import { useSidebarContext } from "./SidebarContext";
 import { cn } from "@/lib/utils";
+import { Check, ChevronDown } from "lucide-react";
 
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
   const location = useLocation();
@@ -44,7 +44,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
             {state == "expanded" ? (
               <div className="flex items-center justify-between w-full gap-1">
                 <p className="text-sm">{envText}</p>
-                <FontAwesomeIcon icon={faChevronDown} className="ml-auto" />
+                <ChevronDown className="ml-auto" size={14} />
               </div>
             ) : (
               <p className="text-sm">{envText.slice(0, 1)}</p>
@@ -62,7 +62,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
           >
             <span>Sandbox</span>
             {env === AppEnv.Sandbox && (
-              <FontAwesomeIcon icon={faCheck} className="text-t3" />
+              <Check size={12} className="!h-4 text-t3" />
             )}
           </DropdownMenuItem>
 
@@ -74,7 +74,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
           >
             <span>Production</span>
             {env === AppEnv.Live && (
-              <FontAwesomeIcon icon={faCheck} className="text-t3" />
+              <Check size={12} className="!h-4 text-t3" />
             )}
           </DropdownMenuItem>
         </DropdownMenuContent>

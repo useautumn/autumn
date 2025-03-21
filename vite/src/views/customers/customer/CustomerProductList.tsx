@@ -20,9 +20,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEllipsisVertical } from "@fortawesome/pro-regular-svg-icons";
-import { faArrowUpRightFromSquare } from "@fortawesome/pro-duotone-svg-icons";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -35,6 +32,7 @@ import { getStripeSubLink } from "@/utils/linkUtils";
 import React from "react";
 import { cn } from "@/lib/utils";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
+import { ArrowUpRightFromSquare } from "lucide-react";
 
 export const CustomerProductList = ({
   customer,
@@ -129,10 +127,9 @@ export const CustomerProductList = ({
                                 }}
                               >
                                 <div className="flex justify-center items-center w-fit px-2 gap-2 h-6">
-                                  <FontAwesomeIcon
-                                    icon={faArrowUpRightFromSquare}
+                                  <ArrowUpRightFromSquare
+                                    size={12}
                                     className="text-[#665CFF]"
-                                    size="xs"
                                   />
                                 </div>
                               </Link>
