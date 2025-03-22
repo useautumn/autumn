@@ -4,7 +4,7 @@ import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
 import CreateAPIKey from "./CreateAPIKey";
 import { AppEnv } from "@autumn/shared";
-import { Toaster } from "sonner";
+
 import { DevContext } from "./DevContext";
 import { APIKeyTable } from "./APIKeyTable";
 import CopyButton from "@/components/general/CopyButton";
@@ -24,13 +24,6 @@ export default function DevScreen({ env }: { env: AppEnv }) {
 
   return (
     <DevContext.Provider value={{ env, mutate, ...data }}>
-      <Toaster
-        position="bottom-center"
-        toastOptions={{
-          duration: 2000,
-          style: { fontSize: "14px" },
-        }}
-      />
       <h1 className="text-xl font-medium">Developer</h1>
       <div>
         <h2 className="text-lg font-medium">Secret API Keys</h2>
@@ -69,20 +62,6 @@ export default function DevScreen({ env }: { env: AppEnv }) {
           )}
         </div>
       </div>
-
-      {/* <div className="mt-4">
-        <h1 className="text-lg font-medium mb-4">Webhooks</h1>
-        <div className="h-fit w-full -translate-x-6">
-          <AppPortal
-            url={data?.svix_dashboard_url}
-            style={{
-              width: "105%",
-              height: "100%",
-            }}
-            fullSize={true}
-          />
-        </div>
-      </div> */}
     </DevContext.Provider>
   );
 }

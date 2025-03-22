@@ -11,6 +11,23 @@ import {
 
 import { AppEnv } from "@autumn/shared";
 import Stripe from "stripe";
+import { createSupabaseClient } from "../supabaseUtils.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+
+export const orgIdToStripeCli = async ({
+  orgId,
+  env,
+}: {
+  orgId: string;
+  env: AppEnv;
+}) => {
+  const sb = createSupabaseClient();
+  const org = await OrgService.getFullOrg({
+    sb,
+    orgId,
+  });
+  return createStripeCli({ org, env });
+};
 
 export const createStripeCli = ({
   org,
@@ -31,7 +48,6 @@ export const createStripeCli = ({
       : org.stripe_config.live_api_key;
 
   let decrypted = decryptData(encrypted);
-
   return new Stripe(decrypted);
 };
 

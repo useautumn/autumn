@@ -1,8 +1,7 @@
 import { Button, ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEllipsisVertical } from "@fortawesome/pro-regular-svg-icons";
 import { forwardRef } from "react";
+import { EllipsisVertical } from "lucide-react";
 
 export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonProps>(
   (props, ref) => {
@@ -17,7 +16,7 @@ export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        <FontAwesomeIcon icon={faEllipsisVertical} size="sm" className="w-3" />
+        <EllipsisVertical size={12} />
       </Button>
     );
   }

@@ -1,6 +1,5 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faEllipsisVertical, faTrash } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,6 +15,7 @@ import { PriceService } from "@/services/products/PriceService";
 import { useNavigate } from "react-router";
 import { useProductContext } from "../ProductContext";
 import { cn } from "@/lib/utils";
+import { Delete, EllipsisVertical } from "lucide-react";
 
 export const PriceToolbar = ({
   className,
@@ -54,7 +54,7 @@ export const PriceToolbar = ({
           dim={6}
           className={cn("rounded-full", className)}
         >
-          <FontAwesomeIcon icon={faEllipsisVertical} size="sm" />
+          <EllipsisVertical size={12} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
@@ -71,7 +71,7 @@ export const PriceToolbar = ({
             {deleteLoading ? (
               <SmallSpinner />
             ) : (
-              <FontAwesomeIcon icon={faTrash} size="sm" />
+              <Delete size={12} className="text-t3" />
             )}
           </div>
         </DropdownMenuItem>

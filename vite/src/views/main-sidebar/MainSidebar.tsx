@@ -1,14 +1,3 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faCode,
-  faFileLines,
-  faFlag,
-  faTag,
-  faToggleOff,
-  faUser,
-  faUsers,
-} from "@fortawesome/pro-duotone-svg-icons";
-
 import { NavButton } from "./NavButton";
 import { SidebarTop } from "./SidebarTop";
 
@@ -18,6 +7,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { SidebarContext } from "./SidebarContext";
 import { useHotkeys } from "react-hotkeys-hook";
+import { Code, Flag, Tag, User } from "lucide-react";
 
 export const MainSidebar = () => {
   const env = useEnv();
@@ -42,23 +32,28 @@ export const MainSidebar = () => {
           <div className="flex flex-col mt-4 px-4">
             <NavButton
               value="features"
-              icon={faFlag}
+              icon={<Flag size={15} />}
               title="Features"
               env={env}
             />
             <NavButton
               value="products"
-              icon={faTag}
+              icon={<Tag size={14} />}
               title="Products"
               env={env}
             />
             <NavButton
               value="customers"
-              icon={faUser}
+              icon={<User size={20} />}
               title="Customers"
               env={env}
             />
-            <NavButton value="dev" icon={faCode} title="Developer" env={env} />
+            <NavButton
+              value="dev"
+              icon={<Code size={15} />}
+              title="Developer"
+              env={env}
+            />
           </div>
         </div>
         {/* Sidebar bottom */}

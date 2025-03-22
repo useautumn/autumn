@@ -26,7 +26,7 @@ import CreateProduct from "../products/CreateProduct";
 import CreateAPIKey from "../developer/CreateAPIKey";
 import { DevContext } from "../developer/DevContext";
 import { CodeDisplay } from "@/components/general/CodeDisplay";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 import {
   faBuilding,
   faExternalLinkAlt,
@@ -34,8 +34,12 @@ import {
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CopyPublishableKey } from "../developer/DevView";
 import { useEnv } from "@/utils/envUtils";
-import LoadingScreen from "../general/LoadingScreen";
-import { navigateTo } from "@/utils/genUtils";
+import {
+  ArrowUpRight,
+  ArrowUpRightFromSquare,
+  Book,
+  Building,
+} from "lucide-react";
 
 function OnboardingView() {
   const env = useEnv();
@@ -178,9 +182,7 @@ function OnboardingView() {
                 onClick={handleCreateOrg}
                 isLoading={loading}
                 variant="gradientPrimary"
-                startIcon={
-                  <FontAwesomeIcon icon={faBuilding} className="mr-2" />
-                }
+                startIcon={<Building size={12} />}
               >
                 Create Organization
               </Button>
@@ -229,9 +231,9 @@ function OnboardingView() {
                       rel="noopener noreferrer"
                     >
                       Stripe Test Key
-                      <FontAwesomeIcon
-                        className="ml-1 h-2.5 w-2.5"
-                        icon={faExternalLinkAlt}
+                      <ArrowUpRightFromSquare
+                        size={12}
+                        className="inline ml-1"
                       />
                     </a>{" "}
                   </span>
@@ -462,10 +464,7 @@ window.location.href = checkoutUrl;
                     rel="noopener noreferrer"
                   >
                     Documentation
-                    <FontAwesomeIcon
-                      className="ml-1 h-2.5 w-2.5"
-                      icon={faExternalLinkAlt}
-                    />
+                    <Book size={12} className="inline ml-1" />
                   </a>{" "}
                   to learn more about what you can do with Autumn.
                 </p>

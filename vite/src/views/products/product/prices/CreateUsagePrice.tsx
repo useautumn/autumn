@@ -21,12 +21,11 @@ import { useEffect } from "react";
 import { keyToTitleFirstCaps } from "@/utils/formatUtils/formatTextUtils";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { faXmark } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useProductContext } from "../ProductContext";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { getBillingUnits } from "@/utils/product/priceUtils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { X } from "lucide-react";
 
 function CreateUsagePrice({
   config,
@@ -327,7 +326,7 @@ function CreateUsagePrice({
                 onClick={() => handleRemoveTier(index)}
                 dim={6}
               >
-                <FontAwesomeIcon icon={faXmark} />
+                <X size={12} className="text-t3" />
               </Button>
             )}
           </div>
