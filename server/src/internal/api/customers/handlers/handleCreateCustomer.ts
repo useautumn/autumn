@@ -10,6 +10,7 @@ import {
   CustomerResponseSchema,
   ErrCode,
   FullProduct,
+  MinOrg,
   Organization,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -74,6 +75,7 @@ export const createNewCustomer = async ({
   env,
   customer,
   nextResetAt,
+  processor,
   logger,
 }: {
   sb: SupabaseClient;
@@ -81,6 +83,7 @@ export const createNewCustomer = async ({
   env: AppEnv;
   customer: CreateCustomer;
   nextResetAt?: number;
+  processor?: any;
   logger: any;
 }) => {
   console.log("Creating new customer");
@@ -117,6 +120,7 @@ export const createNewCustomer = async ({
     org_id: orgId,
     created_at: Date.now(),
     env,
+    processor,
   };
 
   // Check if stripeCli exists
@@ -239,25 +243,36 @@ const handleIdIsNull = async ({
   return createdCustomer;
 };
 
-const handleCreateCustomerWithId = async ({
-  req,
+// CAN ALSO USE DURING MIGRATION...
+export const handleCreateCustomerWithId = async ({
+  sb,
+  orgId,
+  orgSlug,
+  env,
+  logger,
   newCus,
+  processor,
 }: {
-  req: any;
+  sb: SupabaseClient;
+  orgId: string;
+  orgSlug: string;
+  env: AppEnv;
+  logger: any;
   newCus: CreateCustomer;
+  processor?: any;
 }) => {
   // 1. Get by ID
   let existingCustomer = await CusService.getById({
-    sb: req.sb,
+    sb,
     id: newCus.id!,
-    orgId: req.orgId,
-    env: req.env,
-    logger: req.logtail,
+    orgId,
+    env,
+    logger,
   });
 
   if (existingCustomer) {
     console.log(
-      `POST /customers, existing customer found: ${existingCustomer.id} (org: ${req.minOrg.slug})`
+      `POST /customers, existing customer found: ${existingCustomer.id} (org: ${orgSlug})`
     );
 
     //
@@ -267,19 +282,19 @@ const handleCreateCustomerWithId = async ({
   // 2. Check if email exists
   if (notNullish(newCus.email) && newCus.email !== "") {
     let cusWithEmail = await CusService.getByEmail({
-      sb: req.sb,
+      sb,
       email: newCus.email!,
-      orgId: req.orgId,
-      env: req.env,
+      orgId,
+      env,
     });
 
     if (cusWithEmail.length === 1 && cusWithEmail[0].id === null) {
       console.log(
-        `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${req.minOrg.slug})`
+        `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${orgSlug})`
       );
 
       let updatedCustomer = await CusService.update({
-        sb: req.sb,
+        sb,
         internalCusId: cusWithEmail[0].internal_id,
         update: {
           id: newCus.id!,
@@ -294,11 +309,12 @@ const handleCreateCustomerWithId = async ({
 
   // 2. Handle email step...
   return await createNewCustomer({
-    sb: req.sb,
-    orgId: req.orgId,
-    env: req.env,
+    sb,
+    orgId,
+    env,
     customer: newCus,
-    logger: req.logtail,
+    logger,
+    processor,
   });
 };
 
@@ -314,7 +330,14 @@ export const handleCreateCustomer = async (req: any, res: any) => {
     if (newCus.id === null) {
       createdCustomer = await handleIdIsNull({ req, newCus });
     } else {
-      createdCustomer = await handleCreateCustomerWithId({ req, newCus });
+      createdCustomer = await handleCreateCustomerWithId({
+        sb: req.sb,
+        orgId: req.orgId,
+        orgSlug: req.minOrg.slug,
+        env: req.env,
+        logger,
+        newCus,
+      });
     }
 
     const { main, addOns, balances, invoices } = await getCustomerDetails({

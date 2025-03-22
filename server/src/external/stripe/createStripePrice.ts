@@ -9,6 +9,7 @@ import {
   UsagePriceConfig,
   Entitlement,
   BillingType,
+  Feature,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Decimal } from "decimal.js";
@@ -347,6 +348,52 @@ export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
   return tiers;
 };
 
+export const getStripeMeter = async ({
+  product,
+  feature,
+  stripeCli,
+  price,
+  logger,
+}: {
+  product: Product;
+  feature: Feature;
+  stripeCli: Stripe;
+  price: Price;
+  logger: any;
+}) => {
+  let config = price.config as UsagePriceConfig;
+
+  let createNew = false;
+  if (!config.stripe_meter_id) {
+    createNew = true;
+  } else {
+    try {
+      let stripeMeter = await stripeCli.billing.meters.retrieve(
+        config.stripe_meter_id!
+      );
+      if (stripeMeter.status != "active") {
+        createNew = true;
+      } else {
+        logger.info(
+          `✅ Found existing meter for ${product.name} - ${feature!.name}`
+        );
+        return stripeMeter;
+      }
+    } catch (error) {
+      createNew = true;
+    }
+  }
+
+  let meter = await stripeCli.billing.meters.create({
+    display_name: `${product.name} - ${feature!.name}`,
+    event_name: price.id!,
+    default_aggregation: {
+      formula: "sum",
+    },
+  });
+  return meter;
+};
+
 export const createStripeInArrearPrice = async ({
   sb,
   stripeCli,
@@ -354,6 +401,7 @@ export const createStripeInArrearPrice = async ({
   price,
   entitlements,
   org,
+  logger,
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
@@ -361,6 +409,7 @@ export const createStripeInArrearPrice = async ({
   price: Price;
   org: Organization;
   entitlements: EntitlementWithFeature[];
+  logger: any;
 }) => {
   let config = price.config as UsagePriceConfig;
 
@@ -371,25 +420,15 @@ export const createStripeInArrearPrice = async ({
 
   // 1. Get meter by event_name
 
-  let meter;
-  try {
-    meter = await stripeCli.billing.meters.create({
-      display_name: `${product.name} - ${feature!.name}`,
-      event_name: price.id!,
-      default_aggregation: {
-        formula: "sum",
-      },
-    });
-  } catch (error: any) {
-    const meters = await stripeCli.billing.meters.list({
-      limit: 100,
-      status: "active",
-    });
-    meter = meters.data.find((m) => m.event_name == price.id!);
-    if (!meter) {
-      throw error;
-    }
-  }
+  let meter = await getStripeMeter({
+    product,
+    feature,
+    stripeCli,
+    price,
+    logger,
+  });
+
+  config.stripe_meter_id = meter.id;
 
   const tiers = priceToStripeTiers(
     price,

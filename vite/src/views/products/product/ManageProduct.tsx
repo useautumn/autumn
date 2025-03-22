@@ -7,6 +7,7 @@ import { CreatePrice } from "./prices/CreatePrice";
 import { Badge } from "@/components/ui/badge";
 import { CreateFreeTrial } from "./free-trial/CreateFreeTrial";
 import { EditFreeTrialToolbar } from "./EditFreeTrialToolbar";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export const ManageProduct = ({
   product,
@@ -19,7 +20,9 @@ export const ManageProduct = ({
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-medium">{product.name}</h2>
+          <AdminHover texts={[product.internal_id!]}>
+            <h2 className="text-lg font-medium">{product.name}</h2>
+          </AdminHover>
           <div className="flex items-center gap-2">
             {product.is_add_on && (
               <Badge variant="outline" className="bg-white">
@@ -99,9 +102,7 @@ export const ManageProduct = ({
                   <p className="text-xs text-t2 bg-stone-50 font-medium p-1 w-32 text-center">
                     Card Required
                   </p>
-                  <p className="text-sm text-t2">
-                    Yes
-                  </p>
+                  <p className="text-sm text-t2">Yes</p>
                 </div>
               </div>
               <EditFreeTrialToolbar product={product} />
