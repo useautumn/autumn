@@ -158,7 +158,7 @@ export class ProductService {
         `*,
         entitlements (
           *,
-          feature:features (id, name, type)
+          feature:features (*)
         ),
         prices(*),
         free_trial:free_trials(*)

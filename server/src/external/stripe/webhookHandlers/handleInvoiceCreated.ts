@@ -179,10 +179,18 @@ const handleUsageInArrear = async ({
 }) => {
   let allowance = relatedCusEnt.entitlement.allowance!;
   let minBalance = getMinCusEntBalance({ cusEnt: relatedCusEnt });
+  let config = price.config as UsagePriceConfig;
 
   // If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
   if (relatedCusEnt.balance! > 0 && !relatedCusEnt.next_reset_at) {
     logger.info("Balance > 0 and next_reset_at is null, skipping");
+    return;
+  }
+
+  if (!config.stripe_meter_id) {
+    logger.warn(
+      `Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`
+    );
     return;
   }
 
@@ -198,8 +206,14 @@ const handleUsageInArrear = async ({
     subDays(new Date(invoice.created * 1000), 1).getTime() / 1000
   );
 
+  // 1. Get stripe meter
+  const stripeMeter = await stripeCli.billing.meters.retrieve(
+    config.stripe_meter_id!
+  );
+
   await stripeCli.billing.meterEvents.create({
-    event_name: price.id!,
+    // event_name: price.id!,
+    event_name: stripeMeter.event_name,
     payload: {
       stripe_customer_id: customer.processor.id,
       value: roundedQuantity.toString(),
@@ -209,7 +223,7 @@ const handleUsageInArrear = async ({
 
   let feature = relatedCusEnt.entitlement.feature;
   logger.info(
-    `✅ Submitted meter event for customer ${customer.id}, feature: ${feature.id}`
+    `✅ Submitted meter event for customer ${customer.id}, feature: ${feature.id}, stripe event: ${stripeMeter.event_name}`
   );
   logger.info(
     `Allowance: ${allowance}, Min Balance: ${minBalance}, Quantity: ${totalQuantity}, Rounded: ${roundedQuantity}`

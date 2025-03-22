@@ -501,6 +501,7 @@ export const createStripePriceIFNotExist = async ({
         entitlements,
         product,
         org,
+        logger,
       });
     }
   } else if (billingType == BillingType.InArrearProrated) {

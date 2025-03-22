@@ -1,5 +1,5 @@
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { Price } from "@autumn/shared";
+import { Price, UsagePriceConfig } from "@autumn/shared";
 import React, { useState } from "react";
 
 import {
@@ -14,6 +14,7 @@ import { PricingTypeBadge } from "./PricingTypeBadge";
 import UpdatePricing from "./UpdatePricing";
 import { useProductContext } from "../ProductContext";
 import { getBillingUnits } from "@/utils/product/priceUtils";
+import { AdminHover } from "@/components/general/AdminHover";
 
 // import UpdatePricing from "./UpdatePricing";
 
@@ -112,7 +113,18 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
               className="cursor-pointer"
               onClick={() => handleRowClick(price, index)}
             >
-              <TableCell>{price.name}</TableCell>
+              <TableCell>
+                <AdminHover
+                  texts={[
+                    price.id!,
+                    (price.config as UsagePriceConfig).internal_feature_id,
+                    (price.config as UsagePriceConfig).stripe_meter_id,
+                    (price.config as UsagePriceConfig).stripe_price_id,
+                  ]}
+                >
+                  {price.name}
+                </AdminHover>
+              </TableCell>
               <TableCell>
                 <PricingTypeBadge type={price.config?.type || ""} />
               </TableCell>

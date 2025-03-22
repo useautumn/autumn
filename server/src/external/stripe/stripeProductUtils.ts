@@ -36,7 +36,12 @@ export const deleteStripeProduct = async (
 ) => {
   const stripe = createStripeCli({ org, env });
 
-  if (!product.processor || !product.processor.id) {
+  if (
+    !product.processor ||
+    !product.processor.id ||
+    product.env === AppEnv.Live
+  ) {
+    // Don't delete live products
     return;
   }
 

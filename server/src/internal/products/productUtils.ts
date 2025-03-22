@@ -409,3 +409,13 @@ export const initProductInStripe = async ({
 
   await Promise.all(batchPriceUpdate);
 };
+
+export const searchProductsByStripeId = async ({
+  products,
+  stripeId,
+}: {
+  products: FullProduct[];
+  stripeId: string;
+}) => {
+  return products.find((p) => p.processor?.id === stripeId);
+};
