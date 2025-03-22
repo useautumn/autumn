@@ -11,7 +11,7 @@ import { useCustomerContext } from "../CustomerContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { AddProductContext } from "./CreateCheckoutContext";
 import { Input } from "@/components/ui/input";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
 import { faSearch } from "@fortawesome/pro-solid-svg-icons";
 import { useNavigate } from "react-router";
 import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { OrgService } from "@/services/OrgService";
 import { Product } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
+import { Search } from "lucide-react";
 
 function AddProduct() {
   const { products, customer, env, org } = useCustomerContext();
@@ -76,7 +77,7 @@ function AddProduct() {
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] p-0">
             <div className="flex items-center border-b px-2">
-              <FontAwesomeIcon icon={faSearch} className="h-3 w-3 text-t3" />
+              <Search size={12} className="text-t3" />
               <Input
                 type="search"
                 placeholder="Search products"

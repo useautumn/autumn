@@ -1,12 +1,17 @@
-import { faCircleDollar } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useProductContext } from "@/views/products/product/ProductContext";
+import { DollarSign } from "lucide-react";
 
 export const ProductOptionsButton = () => {
   const { product } = useProductContext();
-//   console.log(product);
+  //   console.log(product);
 
   return (
     <Dialog>
@@ -14,7 +19,7 @@ export const ProductOptionsButton = () => {
         <Button
           variant="gradientSecondary"
           className="w-fit gap-2"
-          startIcon={<FontAwesomeIcon icon={faCircleDollar} />}
+          startIcon={<DollarSign size={12} />}
         >
           Configure Product Options
         </Button>

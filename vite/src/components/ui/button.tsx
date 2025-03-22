@@ -82,7 +82,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
         className={cn(
           buttonVariants({ variant, size, className }),
-          isIcon && `w-${dim} h-${dim}`
+          isIcon && `w-${dim} h-${dim} p-0`
         )}
         ref={ref}
         onClick={(e) => {

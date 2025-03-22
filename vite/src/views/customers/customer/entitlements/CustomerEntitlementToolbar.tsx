@@ -1,6 +1,5 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { faEllipsisVertical, faTrash } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 import {
   DropdownMenu,
@@ -14,6 +13,8 @@ import { Button } from "@/components/ui/button";
 
 import { Entitlement } from "@autumn/shared";
 import { cn } from "@/lib/utils";
+import { EllipsisVertical } from "lucide-react";
+import { Delete } from "lucide-react";
 
 export const CustomerEntitlementToolbar = ({
   className,
@@ -47,7 +48,7 @@ export const CustomerEntitlementToolbar = ({
           dim={6}
           className={cn("rounded-full", className)}
         >
-          <FontAwesomeIcon icon={faEllipsisVertical} size="sm" />
+          <EllipsisVertical size={12} />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
@@ -61,11 +62,7 @@ export const CustomerEntitlementToolbar = ({
         >
           <div className="flex items-center justify-between w-full gap-2">
             Delete
-            {deleteLoading ? (
-              <SmallSpinner />
-            ) : (
-              <FontAwesomeIcon icon={faTrash} size="sm" />
-            )}
+            {deleteLoading ? <SmallSpinner /> : <Delete size={12} />}
           </div>
         </DropdownMenuItem>
       </DropdownMenuContent>

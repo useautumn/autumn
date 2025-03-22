@@ -1,7 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCoin } from "@fortawesome/pro-duotone-svg-icons";
+import { Wallet } from "lucide-react";
 
 interface StepProps {
   title: string;
@@ -19,7 +18,7 @@ function Step({ title, children, className, description }: StepProps) {
       )}
     >
       <div className="absolute -left-[17px] -top-1 flex items-center justify-center w-8 h-8 rounded-full bg-stone-50">
-        <FontAwesomeIcon icon={faCoin} className="text-zinc-500 w-5 h-5" />
+        <Wallet size={16} className="text-t3" />
       </div>
       <div className="flex flex-col gap-1">
         <h1 className="text-t1 text-lg font-medium">{title}</h1>

@@ -9,16 +9,11 @@ import { AppEnv } from "@autumn/shared";
 import LoadingScreen from "../general/LoadingScreen";
 import { FeaturesTable } from "./FeaturesTable";
 
-import { CustomToaster } from "@/components/general/CustomToaster";
-import { Button } from "@/components/ui/button";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-
-import { faDollarCircle } from "@fortawesome/pro-duotone-svg-icons";
-import { cn } from "@/lib/utils";
 import { CreditSystemsTable } from "../credits/CreditSystemsTable";
 import CreateCreditSystem from "../credits/CreateCreditSystem";
 import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import ErrorScreen from "../general/ErrorScreen";
+import { Banknote, DollarSign } from "lucide-react";
 
 function FeaturesView({ env }: { env: AppEnv }) {
   const [showCredits, setShowCredits] = useState(false);
@@ -74,7 +69,7 @@ function FeaturesView({ env }: { env: AppEnv }) {
             disabled={creditSystems.length > 0}
             onClick={() => setShowCredits(!showCredits)}
           >
-            <FontAwesomeIcon icon={faDollarCircle} className="mr-2" />
+            <Banknote size={14} />
             Credit Systems
           </ToggleDisplayButton>
         </div>

@@ -1,8 +1,7 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faMagnifyingGlass } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { debounce } from "lodash";
 import { useMemo, useRef, useState } from "react";
+import { Search } from "lucide-react";
 
 export function SearchBar({
   query,
@@ -42,11 +41,7 @@ export function SearchBar({
       className="rounded-sm border-1 shadow-sm py-1 h-8 px-2 text-sm 
     flex items-center w-full bg-white"
     >
-      <FontAwesomeIcon
-        icon={faMagnifyingGlass}
-        className="text-t3 mr-2"
-        size="sm"
-      />
+      <Search size={13} className="text-t3 mr-2" />
       <input
         onChange={handleChange}
         className="outline-none w-full bg-transparent"
@@ -54,21 +49,5 @@ export function SearchBar({
       ></input>
       {loading && <SmallSpinner />}
     </div>
-    // <Input
-    //   type="text"
-    //   placeholder="Search customers..."
-    //   value={query}
-    //   onChange={handleChange}
-    //   // autoFocus
-    //   className="pr-8 max-w-md"
-    //   ref={inputRef}
-    //   endContent={
-    //     loading && (
-    //       <div className="absolute right-2 top-2">
-    //         <Loader2 className="h-5 w-5 animate-spin text-primary" />
-    //       </div>
-    //     )
-    //   }
-    // />
   );
 }

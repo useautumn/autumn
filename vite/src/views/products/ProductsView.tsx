@@ -11,8 +11,8 @@ import { ProductsTable } from "./ProductsTable";
 import { CouponsTable } from "./coupons/CouponsTable";
 import CreateCoupon from "./coupons/CreateCoupon";
 import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
-import { faTicketSimple } from "@fortawesome/pro-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+
+import { Ticket } from "lucide-react";
 
 function ProductsView({ env }: { env: AppEnv }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -57,7 +57,7 @@ function ProductsView({ env }: { env: AppEnv }) {
           disabled={data?.coupons.length > 0}
           onClick={() => setShowCoupons((prev) => !prev)}
         >
-          <FontAwesomeIcon icon={faTicketSimple} className="mr-2" />
+          <Ticket size={12} className="mr-2" />
           Coupons
         </ToggleDisplayButton>
       </div>

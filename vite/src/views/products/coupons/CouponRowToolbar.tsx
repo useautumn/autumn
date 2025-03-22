@@ -1,7 +1,5 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faEllipsisVertical, faTrash } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { cn } from "@/lib/utils";
+
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -10,7 +8,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { Coupon } from "@autumn/shared";
@@ -18,6 +15,7 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useProductsContext } from "../ProductsContext";
 import { CouponService } from "@/services/products/CouponService";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
+import { Delete } from "lucide-react";
 
 export const CouponRowToolbar = ({
   className,
@@ -66,7 +64,7 @@ export const CouponRowToolbar = ({
             {deleteLoading ? (
               <SmallSpinner />
             ) : (
-              <FontAwesomeIcon icon={faTrash} size="sm" />
+              <Delete size={12} className="text-t3" />
             )}
           </div>
         </DropdownMenuItem>

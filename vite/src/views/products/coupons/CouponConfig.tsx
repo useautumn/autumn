@@ -26,11 +26,9 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Trash2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Check, ChevronsUpDown, Trash2, X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { faCheck, faXmark } from "@fortawesome/pro-regular-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export const CouponConfig = ({
@@ -233,7 +231,7 @@ const ProductPriceSelector = ({
                     }}
                     className="bg-transparent hover:bg-transparent p-0 w-5 h-5"
                   >
-                    <FontAwesomeIcon icon={faXmark} size="sm" />
+                    <X size={12} className="text-t3" />
                   </Button>
                 </div>
               ))}
@@ -258,44 +256,34 @@ const ProductPriceSelector = ({
                   }}
                   className="cursor-pointer"
                 >
-                  {/* <Checkbox
-                    id="apply-to-all"
-                    checked={coupon.apply_to_all}
-                    onCheckedChange={(checked) =>
-                      setCoupon({ ...coupon, apply_to_all: checked === true })
-                    }
-                    className="text-white"
-                  /> */}
                   <p>Apply to all products</p>
                   {coupon.apply_to_all && (
-                    <FontAwesomeIcon
-                      icon={faCheck}
-                      className="ml-auto"
-                      size="sm"
-                    />
+                    <Check size={12} className="text-t3" />
                   )}
                 </CommandItem>
               </CommandGroup>
               {!coupon.apply_to_all &&
                 products.map((product: any) => (
                   <CommandGroup key={product.id} heading={product.name}>
-                    {product.prices?.map((price: any) => (
-                      <CommandItem
-                        key={price.id}
-                        value={price.id}
-                        onSelect={() => handlePriceToggle(price.id)}
-                        className="cursor-pointer"
-                      >
-                        <div className="flex items-center">{price.name}</div>
-                        {coupon.price_ids.includes(price.id) && (
-                          <FontAwesomeIcon
-                            icon={faCheck}
-                            className="ml-auto"
-                            size="sm"
-                          />
-                        )}
+                    {product.prices.length > 0 ? (
+                      product.prices?.map((price: any) => (
+                        <CommandItem
+                          key={price.id}
+                          value={price.id}
+                          onSelect={() => handlePriceToggle(price.id)}
+                          className="cursor-pointer"
+                        >
+                          <div className="flex items-center">{price.name}</div>
+                          {coupon.price_ids.includes(price.id) && (
+                            <Check size={12} className="text-t3" />
+                          )}
+                        </CommandItem>
+                      ))
+                    ) : (
+                      <CommandItem disabled>
+                        <p className="text-sm text-t3">No prices available</p>
                       </CommandItem>
-                    ))}
+                    )}
                   </CommandGroup>
                 ))}
             </ScrollArea>
