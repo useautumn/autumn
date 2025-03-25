@@ -78,11 +78,11 @@ export const createStripeSub = async ({
         : undefined,
     });
 
-    if (invoiceOnly && subscription.latest_invoice) {
-      await stripeCli.invoices.finalizeInvoice(
-        subscription.latest_invoice as string
-      );
-    }
+    // if (invoiceOnly && subscription.latest_invoice) {
+    //   await stripeCli.invoices.finalizeInvoice(
+    //     subscription.latest_invoice as string
+    //   );
+    // }
     return subscription;
   } catch (error: any) {
     // console.log("Error creating stripe subscription", error?.message || error);

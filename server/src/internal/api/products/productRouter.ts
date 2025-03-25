@@ -373,7 +373,7 @@ productApiRouter.post("/:productId/copy", async (req: any, res) => {
     }
 
     // 1. Get sandbox product
-    const [fromFullProduct, sandboxFeatures, liveFeatures] = await Promise.all([
+    const [fromFullProduct, fromFeatures, toFeatures] = await Promise.all([
       ProductService.getFullProductStrict({
         sb,
         productId: fromProductId,
@@ -392,17 +392,13 @@ productApiRouter.post("/:productId/copy", async (req: any, res) => {
       }),
     ]);
 
-    let fromFeatures =
-      fromEnv == AppEnv.Sandbox ? sandboxFeatures : liveFeatures;
-    let toFeatures = toEnv == AppEnv.Sandbox ? sandboxFeatures : liveFeatures;
-
     if (fromEnv != toEnv) {
       for (const fromFeature of fromFeatures) {
         const toFeature = toFeatures.find((f) => f.id == fromFeature.id);
 
         if (toFeature && fromFeature.type !== toFeature.type) {
           throw new RecaseError({
-            message: `Feature ${fromFeature.name} exists in live, but has a different config. Please match them then try again.`,
+            message: `Feature ${fromFeature.name} exists in ${toEnv}, but has a different config. Please match them then try again.`,
             code: ErrCode.InvalidRequest,
             statusCode: 400,
           });
@@ -433,6 +429,7 @@ productApiRouter.post("/:productId/copy", async (req: any, res) => {
       toEnv: toEnv,
       features: toFeatures,
     });
+
     // 2. Get product from sandbox
     res.status(200).send({ message: "Product copied" });
   } catch (error) {
@@ -459,7 +456,7 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
     });
 
     const batchProductInit: Promise<any>[] = [];
-    const productBatchSize = 10;
+    const productBatchSize = 5;
     for (let i = 0; i < fullProducts.length; i += productBatchSize) {
       const batch = fullProducts.slice(i, i + productBatchSize);
       const batchPromises = batch.map((product) =>
@@ -477,7 +474,7 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
     const entitlements = fullProducts.flatMap((p) => p.entitlements);
     const prices = fullProducts.flatMap((p) => p.prices);
 
-    const batchSize = 5;
+    const batchSize = 3;
     for (let i = 0; i < prices.length; i += batchSize) {
       const batch = prices.slice(i, i + batchSize);
       const batchPriceUpdate = [];
@@ -498,8 +495,8 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
       }
 
       await Promise.all(batchPriceUpdate);
-      res.status(200).send({ message: "Stripe products initialized" });
     }
+    res.status(200).send({ message: "Stripe products initialized" });
   } catch (error) {
     handleRequestError({ req, error, res, action: "Init stripe products" });
   }

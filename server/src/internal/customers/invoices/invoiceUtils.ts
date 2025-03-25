@@ -31,14 +31,31 @@ export const attachParamsToInvoice = async ({
       });
     }
 
-    await InvoiceService.createInvoiceFromStripe({
+    // Create or update
+    let invoice = await InvoiceService.getInvoiceByStripeId({
       sb,
-      stripeInvoice,
-      internalCustomerId: attachParams.customer.internal_id,
-      org: attachParams.org,
-      productIds: attachParams.products.map((p) => p.id),
-      internalProductIds: attachParams.products.map((p) => p.internal_id),
+      stripeInvoiceId: invoiceId,
     });
+
+    if (invoice) {
+      await InvoiceService.updateByStripeId({
+        sb,
+        stripeInvoiceId: invoiceId,
+        updates: {
+          product_ids: attachParams.products.map((p) => p.id),
+          internal_product_ids: attachParams.products.map((p) => p.internal_id),
+        },
+      });
+    } else {
+      await InvoiceService.createInvoiceFromStripe({
+        sb,
+        stripeInvoice,
+        internalCustomerId: attachParams.customer.internal_id,
+        org: attachParams.org,
+        productIds: attachParams.products.map((p) => p.id),
+        internalProductIds: attachParams.products.map((p) => p.internal_id),
+      });
+    }
   } catch (error) {
     logger.warn("Failed to insert invoice from attach params");
     logger.warn(error);

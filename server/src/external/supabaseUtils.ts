@@ -35,7 +35,7 @@ export const sbWithRetry = async ({
   }
 
   // Trying out fetch-retry
-  return await query();
+  // return await query();
 
   for (let i = 0; i < retries; i++) {
     let { data, error } = await query();

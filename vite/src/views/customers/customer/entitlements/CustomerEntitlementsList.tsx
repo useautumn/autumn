@@ -21,6 +21,7 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import UpdateCusEntitlement from "./UpdateCusEntitlement";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export const CustomerEntitlementsList = ({
   featureType,
@@ -124,7 +125,11 @@ export const CustomerEntitlementsList = ({
                 onClick={() => handleSelectCusEntitlement(cusEnt)}
                 className="cursor-pointer"
               >
-                <TableCell>{entitlement.feature.name}</TableCell>
+                <TableCell>
+                  <AdminHover texts={[cusEnt.id, entitlement.id]}>
+                    {entitlement.feature.name}
+                  </AdminHover>
+                </TableCell>
                 <TableCell>
                   {allowanceType == AllowanceType.Unlimited
                     ? "Unlimited"

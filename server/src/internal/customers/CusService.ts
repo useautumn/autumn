@@ -71,7 +71,9 @@ export class CusService {
     const { data, error } = await sb
       .from("customers")
       .select()
-      .eq("email", email);
+      .eq("email", email)
+      .eq("org_id", orgId)
+      .eq("env", env);
 
     if (error) {
       throw new RecaseError({

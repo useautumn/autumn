@@ -17,6 +17,8 @@ supabase.sh
 **/.DS_Store
 **/.env*
 tests/
+!server/tests
+
 # **/.npmrc
 
 **/test.nnb

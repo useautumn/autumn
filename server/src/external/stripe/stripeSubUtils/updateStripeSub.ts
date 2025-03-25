@@ -29,27 +29,18 @@ export const updateStripeSubscription = async ({
   trialEnd?: number;
   invoiceOnly: boolean;
 }) => {
-  let paymentMethod;
-  try {
-    paymentMethod = await getCusPaymentMethod({
-      org,
-      env: customer.env,
-      stripeId: customer.processor.id,
-    });
-  } catch (error) {
-    throw new RecaseError({
-      code: ErrCode.StripeGetPaymentMethodFailed,
-      message: `Failed to get payment method for customer ${customer.id}`,
-      statusCode: 500,
-    });
-  }
+  let paymentMethod = await getCusPaymentMethod({
+    org,
+    env: customer.env,
+    stripeId: customer.processor.id,
+    errorIfNone: !invoiceOnly, // throw error if no payment method and invoiceOnly is false
+  });
 
-  if (!paymentMethod) {
-    throw new RecaseError({
-      code: ErrCode.StripeGetPaymentMethodFailed,
-      message: `No payment method found for customer ${customer.id}`,
-      statusCode: 500,
-    });
+  let paymentMethodData = {};
+  if (paymentMethod) {
+    paymentMethodData = {
+      default_payment_method: paymentMethod as string,
+    };
   }
 
   let subItems = items.filter(

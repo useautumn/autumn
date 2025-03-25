@@ -86,9 +86,9 @@ export const createNewCustomer = async ({
   processor?: any;
   logger: any;
 }) => {
-  console.log("Creating new customer");
-  console.log("Org ID:", orgId);
-  console.log("Customer data:", customer);
+  logger.info(`Creating new customer: ${customer.id}`);
+  logger.info(`Org ID: ${orgId}`);
+  logger.info(`Customer data: ${JSON.stringify(customer)}`);
 
   const [org, defaultProds] = await Promise.all([
     OrgService.getFullOrg({
@@ -201,11 +201,19 @@ export const createNewCustomer = async ({
 };
 
 const handleIdIsNull = async ({
-  req,
+  sb,
+  orgId,
+  env,
   newCus,
+  logger,
+  processor,
 }: {
-  req: any;
+  sb: SupabaseClient;
+  orgId: string;
+  env: AppEnv;
   newCus: CreateCustomer;
+  logger: any;
+  processor?: any;
 }) => {
   // 1. ID is null
   if (!newCus.email) {
@@ -217,14 +225,24 @@ const handleIdIsNull = async ({
   }
 
   // 2. Check if email already exists
+
   let existingCustomers = await CusService.getByEmail({
-    sb: req.sb,
+    sb,
     email: newCus.email,
-    orgId: req.orgId,
-    env: req.env,
+    orgId,
+    env,
   });
 
   if (existingCustomers.length > 0) {
+    for (const existingCustomer of existingCustomers) {
+      if (existingCustomer.id === null) {
+        logger.info(
+          `Create customer by email: ${newCus.email} already exists, skipping...`
+        );
+        return existingCustomer;
+      }
+    }
+
     throw new RecaseError({
       message: `Email ${newCus.email} already exists`,
       code: ErrCode.DuplicateCustomerId,
@@ -233,11 +251,12 @@ const handleIdIsNull = async ({
   }
 
   const createdCustomer = await createNewCustomer({
-    sb: req.sb,
-    orgId: req.orgId,
-    env: req.env,
+    sb,
+    orgId,
+    env,
     customer: newCus,
-    logger: req.logtail,
+    logger,
+    processor,
   });
 
   return createdCustomer;
@@ -271,7 +290,7 @@ export const handleCreateCustomerWithId = async ({
   });
 
   if (existingCustomer) {
-    console.log(
+    logger.info(
       `POST /customers, existing customer found: ${existingCustomer.id} (org: ${orgSlug})`
     );
 
@@ -289,7 +308,7 @@ export const handleCreateCustomerWithId = async ({
     });
 
     if (cusWithEmail.length === 1 && cusWithEmail[0].id === null) {
-      console.log(
+      logger.info(
         `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${orgSlug})`
       );
 
@@ -318,45 +337,76 @@ export const handleCreateCustomerWithId = async ({
   });
 };
 
-export const handleCreateCustomer = async (req: any, res: any) => {
+export const handleCreateCustomer = async ({
+  cusData,
+  sb,
+  orgId,
+  orgSlug,
+  env,
+  logger,
+  params = {},
+  processor,
+}: {
+  cusData: CreateCustomer;
+  sb: SupabaseClient;
+  orgId: string;
+  orgSlug: string;
+  env: AppEnv;
+  logger: any;
+  params?: any;
+  processor?: any;
+}) => {
+  const newCus = CreateCustomerSchema.parse(cusData);
+
+  // 1. If no ID and email is not NULL
+  let createdCustomer;
+  if (newCus.id === null) {
+    createdCustomer = await handleIdIsNull({
+      sb,
+      orgId,
+      env,
+      newCus,
+      logger,
+      processor,
+    });
+  } else {
+    createdCustomer = await handleCreateCustomerWithId({
+      sb,
+      orgId,
+      orgSlug,
+      env,
+      logger,
+      newCus,
+      processor,
+    });
+  }
+
+  return await getCustomerDetails({
+    customer: createdCustomer,
+    sb,
+    orgId,
+    env,
+    params,
+    logger,
+  });
+};
+
+export const handlePostCustomerRequest = async (req: any, res: any) => {
   const logger = req.logtail;
   try {
     const data = req.body;
 
-    const newCus = CreateCustomerSchema.parse(data);
-
-    // 1. If no ID and email is not NULL
-    let createdCustomer;
-    if (newCus.id === null) {
-      createdCustomer = await handleIdIsNull({ req, newCus });
-    } else {
-      createdCustomer = await handleCreateCustomerWithId({
-        sb: req.sb,
-        orgId: req.orgId,
-        orgSlug: req.minOrg.slug,
-        env: req.env,
-        logger,
-        newCus,
-      });
-    }
-
-    const { main, addOns, balances, invoices } = await getCustomerDetails({
-      customer: createdCustomer,
+    const result = await handleCreateCustomer({
+      cusData: data,
       sb: req.sb,
       orgId: req.orgId,
+      orgSlug: req.minOrg.slug,
       env: req.env,
-      params: req.query,
       logger,
+      params: req.query,
     });
 
-    res.status(200).json({
-      customer: CustomerResponseSchema.parse(createdCustomer),
-      products: main,
-      add_ons: addOns,
-      entitlements: balances,
-      invoices,
-      success: true,
-    });
+    res.status(200).json(result);
   } catch (error: any) {
     if (
       error instanceof RecaseError &&
