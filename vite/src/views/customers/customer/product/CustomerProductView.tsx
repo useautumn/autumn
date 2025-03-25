@@ -51,6 +51,7 @@ import { ProductOptions } from "./ProductOptions";
 
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useEnv } from "@/utils/envUtils";
+import { getStripeInvoiceLink } from "@/utils/linkUtils";
 
 interface OptionValue {
   feature_id: string;
@@ -250,12 +251,13 @@ export default function CustomerProductView() {
         setCheckoutDialogOpen(true);
       }
 
-      if (data.invoice_url) {
-        setUrl({
-          type: "invoice",
-          value: data.invoice_url,
-        });
-        setCheckoutDialogOpen(true);
+      if (data.invoice) {
+        window.open(getStripeInvoiceLink(data.invoice), "_blank");
+        // setUrl({
+        //   type: "invoice",
+        //   value: ,
+        // });
+        // setCheckoutDialogOpen(true);
       }
     } catch (error) {
       console.log("Error creating product: ", error);

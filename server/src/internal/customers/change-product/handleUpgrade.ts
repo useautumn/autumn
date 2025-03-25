@@ -127,6 +127,7 @@ const handleStripeSubUpdate = async ({
     }
   }
 
+  // what's happening here...
   await attachParamsToInvoice({
     sb,
     attachParams,
@@ -138,22 +139,10 @@ const handleStripeSubUpdate = async ({
   let newSubIds = [];
   newSubIds.push(firstSub.id);
   const newItemSets = itemSets.slice(1);
-
   let invoiceIds = [];
 
   // CREATE NEW SUBSCRIPTIONS
   for (const itemSet of newItemSets) {
-    // stripeCli.subscriptions.create({
-    //   customer: attachParams.customer.processor.id,
-    //   items: itemSet.items,
-    //   metadata: itemSet.subMeta,
-    //   ...((attachParams.invoiceOnly && {
-    //     collection_method: "send_invoice",
-    //     days_until_due: 30,
-    //   }) as any),
-    // });
-    // Line up with first sub
-
     // 1. Next billing date for first sub
     const nextCycleAnchor = firstSub.current_period_end * 1000;
     let nextCycleAnchorUnix = nextCycleAnchor;

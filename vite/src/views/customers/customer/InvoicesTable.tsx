@@ -10,15 +10,18 @@ import {
 import { useCustomerContext } from "./CustomerContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { navigateTo } from "@/utils/genUtils";
-import { Invoice, Product } from "@autumn/shared";
+import { AppEnv, Invoice, Product } from "@autumn/shared";
 import { toast } from "sonner";
+import { getStripeInvoiceLink } from "@/utils/linkUtils";
 
 export const InvoicesTable = () => {
   const { env, invoices, products } = useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
-  const getInvoice = async (invoiceId: string) => {
+  const getStripeInvoice = async (stripeInvoiceId: string) => {
     try {
-      const { data } = await axiosInstance.get(`/v1/invoices/${invoiceId}`);
+      const { data } = await axiosInstance.get(
+        `/v1/invoices/${stripeInvoiceId}/stripe`
+      );
       return data;
     } catch (error) {
       toast.error("Failed to get invoice URL");
@@ -48,14 +51,16 @@ export const InvoicesTable = () => {
           <TableRow
             key={invoice.id}
             onClick={async () => {
-              const latestInvoice = await getInvoice(invoice.id);
-              if (!latestInvoice.hosted_invoice_url) {
-                toast.error("Invoice has no hosted URL");
+              const stripeInvoice = await getStripeInvoice(invoice.stripe_id);
+              if (!stripeInvoice.hosted_invoice_url) {
+                // toast.error("Invoice has no hosted URL");
+                let livemode = stripeInvoice.livemode;
+                window.open(getStripeInvoiceLink(stripeInvoice), "_blank");
                 return;
               }
 
-              if (latestInvoice && latestInvoice.hosted_invoice_url) {
-                window.open(latestInvoice.hosted_invoice_url, "_blank");
+              if (stripeInvoice && stripeInvoice.hosted_invoice_url) {
+                window.open(stripeInvoice.hosted_invoice_url, "_blank");
               }
             }}
             className="cursor-pointer"

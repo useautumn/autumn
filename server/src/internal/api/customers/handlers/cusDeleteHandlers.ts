@@ -44,23 +44,23 @@ export const deleteCusById = async ({
     });
   }
 
-  try {
-    // Only delete stripe customer in sandbox
-    if (customer.processor?.id && env === AppEnv.Sandbox) {
-      await deleteStripeCustomer({
-        org: fullOrg,
-        env: env,
-        stripeId: customer.processor.id,
-      });
-    }
-  } catch (error: any) {
-    console.log(
-      `Couldn't delete ${chalk.yellow("stripe customer")} ${
-        customer.processor.id
-      }`,
-      error?.message || error
-    );
-  }
+  // try {
+  //   // Only delete stripe customer in sandbox
+  //   if (customer.processor?.id && env === AppEnv.Sandbox) {
+  //     await deleteStripeCustomer({
+  //       org: fullOrg,
+  //       env: env,
+  //       stripeId: customer.processor.id,
+  //     });
+  //   }
+  // } catch (error: any) {
+  //   console.log(
+  //     `Couldn't delete ${chalk.yellow("stripe customer")} ${
+  //       customer.processor.id
+  //     }`,
+  //     error?.message || error
+  //   );
+  // }
 
   await CusService.deleteByInternalId({
     sb: sb,

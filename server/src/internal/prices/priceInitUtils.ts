@@ -15,6 +15,7 @@ import {
   EntitlementWithFeature,
   ErrCode,
   Feature,
+  FixedPriceConfig,
   FixedPriceConfigSchema,
   Organization,
   Price,
@@ -32,6 +33,32 @@ import {
 import { PriceService } from "./PriceService.js";
 import { CusProductService } from "../customers/products/CusProductService.js";
 import { isFreeProduct } from "../products/productUtils.js";
+
+export const constructPrice = ({
+  name,
+  config,
+  orgId,
+  internalProductId,
+  isCustom = false,
+}: {
+  name: string;
+  config: UsagePriceConfig | FixedPriceConfig;
+  orgId: string;
+  internalProductId: string;
+  isCustom: boolean;
+}) => {
+  return {
+    id: generateId("pr"),
+    org_id: orgId,
+    internal_product_id: internalProductId,
+    created_at: Date.now(),
+    billing_type: getBillingType(config),
+    is_custom: isCustom,
+
+    name,
+    config,
+  };
+};
 
 // GET PRICES
 const validatePrice = (

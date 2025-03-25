@@ -11,3 +11,9 @@ export const getStripeSubLink = (subscriptionId: string, env: AppEnv) => {
     env == AppEnv.Live ? "" : "/test"
   }/subscriptions/${subscriptionId}`;
 };
+
+export const getStripeInvoiceLink = (stripeInvoice: any) => {
+  return `https://dashboard.stripe.com${
+    stripeInvoice.livemode ? "" : "/test"
+  }/invoices/${stripeInvoice.id}`;
+};

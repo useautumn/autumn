@@ -1,18 +1,22 @@
+import { createStripeCli } from "@/external/stripe/utils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { Router } from "express";
 
 export const invoiceRouter = Router();
 
-invoiceRouter.get("/:invoice_id", async (req: any, res: any) => {
+invoiceRouter.get("/:stripe_invoice_id/stripe", async (req: any, res: any) => {
   try {
-    const invoiceId = req.params.invoice_id;
-    const invoice = await InvoiceService.getById({
-      sb: req.sb,
-      id: invoiceId,
-    });
+    const org = await OrgService.getFromReq(req);
 
-    res.status(200).json(invoice);
+    const stripeCli = createStripeCli({ org, env: req.env });
+
+    const stripeInvoice = await stripeCli.invoices.retrieve(
+      req.params.stripe_invoice_id
+    );
+
+    res.status(200).json(stripeInvoice);
   } catch (error) {
     handleRequestError({ req, error, res, action: "Get invoice" });
   }

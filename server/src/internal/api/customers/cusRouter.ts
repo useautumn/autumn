@@ -27,7 +27,7 @@ import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 
-import { handleCreateCustomer } from "./handlers/handleCreateCustomer.js";
+import { handlePostCustomerRequest } from "./handlers/handleCreateCustomer.js";
 
 export const cusRouter = Router();
 
@@ -65,7 +65,7 @@ cusRouter.get("", async (req: any, res: any) => {
   }
 });
 
-cusRouter.post("", handleCreateCustomer);
+cusRouter.post("", handlePostCustomerRequest);
 
 // cusRouter.put("", async (req: any, res: any) => {
 //   try {

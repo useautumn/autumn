@@ -10,6 +10,7 @@ import {
   Product,
   AllowanceType,
   EntitlementWithFeature,
+  Feature,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -43,6 +44,14 @@ import {
   priceToInArrearProrated,
   priceToUsageInAdvance,
 } from "./priceToStripeItem.js";
+
+export const createSubMeta = ({ features }: { features: Feature[] }) => {
+  const usageFeatures = features.map((f) => ({
+    internal_id: f.internal_id,
+    id: f.id,
+  }));
+  return { usage_features: JSON.stringify(usageFeatures) };
+};
 
 export const billingIntervalToStripe = (interval: BillingInterval) => {
   switch (interval) {

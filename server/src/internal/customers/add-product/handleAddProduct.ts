@@ -175,10 +175,11 @@ const handleBillNowPrices = async ({
       message: `Successfully created subscriptions and attached ${products
         .map((p) => p.name)
         .join(", ")} to ${customer.name}`,
-      invoice_url:
-        invoiceOnly && invoices?.[0]?.hosted_invoice_url
-          ? invoices[0].hosted_invoice_url
-          : undefined,
+      // invoice_url: invoiceOnly &&
+      invoice: invoiceOnly ? invoices?.[0] : undefined,
+      // invoiceOnly && invoices?.[0]?.hosted_invoice_url
+      //   ? invoices[0].hosted_invoice_url
+      //   : undefined,
     });
   }
 };
@@ -243,12 +244,12 @@ const handleOneOffPrices = async ({
     });
   }
 
-  const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
-    stripeInvoice.id,
-    getInvoiceExpansion()
-  );
-
   if (!attachParams.invoiceOnly) {
+    const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
+      stripeInvoice.id,
+      getInvoiceExpansion()
+    );
+
     logger.info("   2. Paying invoice");
     const { paid, error } = await payForInvoice({
       fullOrg: org,
@@ -280,7 +281,7 @@ const handleOneOffPrices = async ({
       createFullCusProduct({
         sb,
         attachParams: attachToInsertParams(attachParams, product),
-        lastInvoiceId: finalizedInvoice.id,
+        lastInvoiceId: stripeInvoice.id,
       })
     );
   }
@@ -289,7 +290,7 @@ const handleOneOffPrices = async ({
   logger.info("   4. Creating invoice from stripe");
   await InvoiceService.createInvoiceFromStripe({
     sb,
-    stripeInvoice: finalizedInvoice,
+    stripeInvoice: stripeInvoice,
     internalCustomerId: customer.internal_id,
     productIds: products.map((p) => p.id),
     internalProductIds: products.map((p) => p.internal_id),
@@ -304,10 +305,11 @@ const handleOneOffPrices = async ({
       message: `Successfully purchased ${products
         .map((p) => p.name)
         .join(", ")} and attached to ${customer.name}`,
-      invoice_url:
-        invoiceOnly && finalizedInvoice?.hosted_invoice_url
-          ? finalizedInvoice.hosted_invoice_url
-          : undefined,
+      invoice: invoiceOnly ? stripeInvoice : undefined,
+      // invoice_url:
+      //   invoiceOnly && finalizedInvoice?.hosted_invoice_url
+      //     ? finalizedInvoice.hosted_invoice_url
+      //     : undefined,
     });
   }
 };
