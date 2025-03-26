@@ -23,6 +23,7 @@ import {
 import UpdateEntitlement from "./UpdateEntitlement";
 import { useProductContext } from "../ProductContext";
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { AdminHover } from "@/components/general/AdminHover";
 export const ProductEntitlementTable = ({
   entitlements,
 }: {
@@ -84,7 +85,11 @@ export const ProductEntitlementTable = ({
                 className="cursor-pointer"
                 onClick={() => handleRowClick(entitlement)}
               >
-                <TableCell>{feature?.name}</TableCell>
+                <TableCell>
+                  <AdminHover texts={[entitlement.id]}>
+                    {feature?.name}
+                  </AdminHover>
+                </TableCell>
                 <TableCell className="font-mono">{feature?.id}</TableCell>
                 <TableCell>
                   <FeatureTypeBadge type={feature?.type} />
