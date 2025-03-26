@@ -25,6 +25,15 @@ export const EntitlementSchema = z.object({
   interval: z.nativeEnum(EntInterval).optional().nullable(),
 
   carry_from_previous: z.boolean().default(false).optional(),
+
+  // linked_to: z
+  //   .array(
+  //     z.object({
+  //       feature_id: z.string(),
+  //       feature_type: z.nativeEnum(FeatureType),
+  //     })
+  //   )
+  //   .nullish(),
 });
 
 export const CreateEntitlementSchema = z.object({
