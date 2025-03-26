@@ -13,7 +13,12 @@ import { FeatureOptions } from "@autumn/shared";
 
 import { EntitlementWithFeature } from "@autumn/shared";
 import { getResetBalance } from "../entitlements/cusEntUtils.js";
-import { generateId, nullish } from "@/utils/genUtils.js";
+import {
+  generateId,
+  notNullish,
+  notNullOrUndefined,
+  nullish,
+} from "@/utils/genUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -24,7 +29,8 @@ import {
 } from "@/internal/prices/billingIntervalUtils.js";
 import { format } from "date-fns";
 import { UTCDate } from "@date-fns/utc";
-
+import { getOriginalFeature } from "../entitlements/linkedGroupUtils.js";
+import { groupByExists } from "../entitlements/groupByUtils.js";
 const initCusEntBalance = ({
   entitlement,
   options,
@@ -37,7 +43,10 @@ const initCusEntBalance = ({
   existingCusEnt?: FullCustomerEntitlement;
 }) => {
   if (entitlement.feature.type === FeatureType.Boolean) {
-    return null;
+    return {
+      newBalance: null,
+      newBalances: null,
+    };
   }
 
   const resetBalance = getResetBalance({
@@ -46,8 +55,13 @@ const initCusEntBalance = ({
     relatedPrice,
   });
 
+  const feature = entitlement.feature;
+
   if (!existingCusEnt || !entitlement.carry_from_previous) {
-    return resetBalance;
+    return {
+      newBalance: groupByExists(feature) ? 0 : resetBalance,
+      newBalances: groupByExists(feature) ? {} : null,
+    };
   }
 
   let existingAllowanceType = existingCusEnt.entitlement.allowance_type;
@@ -55,16 +69,37 @@ const initCusEntBalance = ({
     nullish(existingCusEnt.balance) ||
     existingAllowanceType === AllowanceType.Unlimited
   ) {
-    return resetBalance;
+    return {
+      newBalance: groupByExists(feature) ? 0 : resetBalance,
+      newBalances: groupByExists(feature) ? {} : null,
+    };
   }
 
   // Calculate existing usage
+
   let existingAllowance = existingCusEnt.entitlement.allowance!;
   let existingUsage = existingAllowance - existingCusEnt.balance!;
-
   let newBalance = resetBalance! - existingUsage;
 
-  return newBalance;
+  let newBalances: any = null;
+  if (groupByExists(feature)) {
+    newBalance = 0;
+
+    let balances = existingCusEnt.balances || {};
+    newBalances = {};
+    for (const key in balances) {
+      if (balances[key] && !balances[key].deleted) {
+        let existingUsage = existingAllowance - balances[key].balance;
+        newBalances[key] = {
+          balance: resetBalance! - existingUsage,
+          adjustment: 0,
+          deleted: false,
+        };
+      }
+    }
+  }
+
+  return { newBalance, newBalances };
 };
 
 const initCusEntNextResetAt = ({
@@ -165,13 +200,7 @@ export const initCusEntitlement = ({
   keepResetIntervals?: boolean;
   anchorToUnix?: number;
 }) => {
-  // const resetBalance = getResetBalance({
-  //   entitlement,
-  //   options,
-  //   relatedPrice,
-  // });
-
-  let balance = initCusEntBalance({
+  let { newBalance, newBalances } = initCusEntBalance({
     entitlement,
     options,
     relatedPrice,
@@ -201,6 +230,9 @@ export const initCusEntitlement = ({
 
   // Calculate balance...
 
+  let feature = entitlement.feature;
+  let groupByExists = notNullish(feature.config.group_by);
+
   return {
     id: generateId("cus_ent"),
     internal_customer_id: customer.internal_id,
@@ -217,7 +249,9 @@ export const initCusEntitlement = ({
     unlimited: isBooleanFeature
       ? null
       : entitlement.allowance_type === AllowanceType.Unlimited,
-    balance: isBooleanFeature ? null : balance,
+    // balance: isBooleanFeature ? null : groupByExists ? 0 : balance,
+    balance: newBalance,
+    balances: newBalances,
     usage_allowed: usageAllowed,
     next_reset_at: nextResetAtValue,
   };

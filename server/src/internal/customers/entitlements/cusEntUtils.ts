@@ -23,6 +23,7 @@ import {
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import {
+  notNullish,
   notNullOrUndefined,
   nullish,
   nullOrUndefined,
@@ -30,6 +31,8 @@ import {
 
 import { getGroupbalanceFromParams } from "./groupByUtils.js";
 import { Decimal } from "decimal.js";
+import { getLinkedCusEnt } from "./linkedGroupUtils.js";
+import { getLinkedFeature } from "./linkedGroupUtils.js";
 
 export const getBalanceForFeature = async ({
   sb,
@@ -251,10 +254,13 @@ export const getCusBalancesByEntitlement = async ({
       groupVal,
       balance: groupBalance,
       adjustment: groupAdjustment,
+      total: groupTotal,
+      used: groupUsed,
     } = getGroupbalanceFromParams({
       params: groupVals,
       feature,
       cusEnt,
+      cusEnts: cusEntsWithCusProduct,
     });
 
     // 2. Initialize data
@@ -267,7 +273,7 @@ export const getCusBalancesByEntitlement = async ({
         balance: isBoolean ? undefined : unlimited ? null : 0,
         total: isBoolean || unlimited ? undefined : 0,
         adjustment: isBoolean || unlimited ? undefined : 0,
-        used: isBoolean ? undefined : unlimited ? null : 0,
+        used: groupUsed ? groupUsed : undefined,
       };
     }
 
@@ -277,21 +283,22 @@ export const getCusBalancesByEntitlement = async ({
 
     data[key].balance += groupBalance || 0;
     data[key].adjustment += groupAdjustment || 0;
-    data[key].total += getResetBalance({
-      entitlement: ent,
-      options: getEntOptions(cusProduct.options, ent),
-      relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
-    });
+    data[key].total +=
+      groupTotal ||
+      getResetBalance({
+        entitlement: ent,
+        options: getEntOptions(cusProduct.options, ent),
+        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+      });
   }
 
   const balances = Object.values(data);
 
   for (const balance of balances) {
-    if (
-      notNullOrUndefined(balance.total) &&
-      notNullOrUndefined(balance.balance)
-    ) {
-      balance.used = balance.total + balance.adjustment - balance.balance;
+    if (notNullish(balance.total) && notNullish(balance.balance)) {
+      if (nullish(balance.used)) {
+        balance.used = balance.total + balance.adjustment - balance.balance;
+      }
       delete balance.total;
       delete balance.adjustment;
     }
@@ -514,25 +521,50 @@ export const getUnlimitedAndUsageAllowed = ({
 
 export const getFeatureBalance = ({
   cusEnts,
-  internalFeatureId,
-  group,
+  feature,
+  features,
+  groupVal,
 }: {
   cusEnts: FullCustomerEntitlement[] | CusEntWithEntitlement[];
-  internalFeatureId: string;
-  group?: any;
+  feature: Feature;
+  features: Feature[];
+  groupVal?: any;
 }) => {
   let balance = 0;
+
   for (const ent of cusEnts) {
-    if (ent.internal_feature_id === internalFeatureId) {
+    if (ent.internal_feature_id === feature.internal_id) {
       if (ent.entitlement.allowance_type === AllowanceType.Unlimited) {
         return null;
       }
 
-      if (notNullOrUndefined(group)) {
-        balance += ent.balances?.[group]?.balance || 0;
-      } else {
-        balance += ent.balance || 0;
+      if (notNullish(groupVal)) {
+        balance += ent.balances?.[groupVal]?.balance || 0;
+        break;
       }
+
+      balance += ent.balance || 0;
+      if (ent.balances) {
+        for (const group in ent.balances) {
+          balance += ent.balances[group].balance;
+        }
+      }
+
+      // // Check if linked cus ent exists
+      // const linkedFeature = getLinkedFeature({
+      //   originalFeature: feature,
+      //   features: cusEntsToFeatures(cusEnts as FullCustomerEntitlement[]),
+      // });
+
+      // if (linkedFeature) {
+      //   const linkedCusEnt = getLinkedCusEnt({
+      //     linkedFeature: linkedFeature!,
+      //     cusEnts: cusEnts as FullCustomerEntitlement[],
+      //   });
+
+      //   const usage = Object.values(linkedCusEnt?.balances || {}).length;
+      //   return -usage;
+      // }
     }
   }
 
@@ -635,4 +667,14 @@ export const getExistingUsageFromCusProducts = ({
   // // Calculate existing usage
   let existingAllowance = existingCusEnt.entitlement.allowance!;
   return existingAllowance - existingCusEnt.balance!;
+};
+
+export const cusEntsToFeatures = (cusEnts: FullCustomerEntitlement[]) => {
+  let idToFeature: Record<string, Feature> = {};
+
+  for (const cusEnt of cusEnts) {
+    idToFeature[cusEnt.entitlement.feature.id] = cusEnt.entitlement.feature;
+  }
+
+  return Object.values(idToFeature);
 };

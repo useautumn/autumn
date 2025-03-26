@@ -1,4 +1,3 @@
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { handleBelowThresholdInvoicing } from "./invoiceThresholdUtils.js";
 import { getBelowThresholdPrice } from "./invoiceThresholdUtils.js";
 
@@ -26,6 +25,8 @@ import {
 import {
   getGroupBalanceFromProperties,
   getGroupBalanceUpdate,
+  getGroupValFromProperties,
+  groupByExists,
   initGroupBalancesForEvent,
 } from "@/internal/customers/entitlements/groupByUtils.js";
 import { notNullish, nullish, nullOrUndefined } from "@/utils/genUtils.js";
@@ -34,6 +35,15 @@ import {
   featureToCreditSystem,
 } from "@/internal/features/creditSystemUtils.js";
 import { getTotalNegativeBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import {
+  featureContainsEvent,
+  isRelevantFeature,
+} from "@/internal/features/featureUtils.js";
+import {
+  getLinkedCusEnt,
+  getOriginalFeature,
+} from "@/internal/customers/entitlements/linkedGroupUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
 
@@ -57,11 +67,18 @@ const getFeatureDeductions = ({
   event: Event;
   features: Feature[];
 }) => {
-  const meteredFeatures = features.filter(
+  const relevantFeatures = features.filter(
+    (feature) =>
+      featureContainsEvent({ feature, eventName: event.event_name }) ||
+      feature.type === FeatureType.CreditSystem
+  );
+
+  const meteredFeatures = relevantFeatures.filter(
     (feature) => feature.type === FeatureType.Metered
   );
+
   const featureDeductions = [];
-  for (const feature of features) {
+  for (const feature of relevantFeatures) {
     let deduction;
     if (feature.type === FeatureType.Metered) {
       deduction = getMeteredDeduction(feature, event);
@@ -164,6 +181,51 @@ export const logBalanceUpdate = ({
   );
 };
 
+const performDeduction = ({
+  cusEntBalance,
+  toDeduct,
+}: {
+  cusEntBalance: Decimal;
+  toDeduct: number;
+}) => {
+  let newBalance, deducted;
+  if (cusEntBalance.lte(0) && toDeduct > 0) {
+    // Don't deduct if balance is negative and toDeduct is positive, if not, just add to balance
+    return {
+      newBalance: cusEntBalance.toNumber(),
+      deducted: 0,
+      leftover: toDeduct,
+    };
+  }
+
+  // If toDeduct is negative, add to balance and set toDeduct to 0
+  if (toDeduct < 0) {
+    newBalance = cusEntBalance.minus(toDeduct).toNumber();
+    deducted = toDeduct;
+    toDeduct = 0;
+  }
+
+  // If cusEnt has less balance to deduct than 0, deduct the balance and set balance to 0
+  else if (cusEntBalance.minus(toDeduct).lt(0)) {
+    toDeduct = new Decimal(toDeduct).minus(cusEntBalance).toNumber(); // toDeduct = toDeduct - cusEntBalance
+    deducted = cusEntBalance.toNumber(); // deducted = cusEntBalance
+    newBalance = 0; // newBalance = 0
+  }
+
+  // Else, deduct the balance and set toDeduct to 0
+  else {
+    newBalance = cusEntBalance.minus(toDeduct).toNumber();
+    deducted = toDeduct;
+    toDeduct = 0;
+  }
+
+  return {
+    newBalance,
+    deducted,
+    leftover: toDeduct,
+  };
+};
+
 export const deductAllowanceFromCusEnt = async ({
   toDeduct,
   deductParams,
@@ -171,6 +233,7 @@ export const deductAllowanceFromCusEnt = async ({
   features,
   featureDeductions,
   willDeductCredits = false,
+  replacedCount,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
@@ -178,6 +241,7 @@ export const deductAllowanceFromCusEnt = async ({
   features: Feature[];
   featureDeductions: any;
   willDeductCredits?: boolean;
+  replacedCount: number;
 }) => {
   const { sb, feature, env, org, cusPrices, customer, properties } =
     deductParams;
@@ -185,8 +249,6 @@ export const deductAllowanceFromCusEnt = async ({
   if (toDeduct == 0) {
     return 0;
   }
-
-  let newBalance, deducted;
 
   let cusEntBalance;
   let { groupVal, balance } = getGroupBalanceFromProperties({
@@ -203,14 +265,41 @@ export const deductAllowanceFromCusEnt = async ({
     return toDeduct;
   }
 
-  cusEntBalance = new Decimal(balance!);
+  // HANDLE CASE IF GROUP BY EXISTS, BUT NO GROUP VAL
+  if (!groupVal && groupByExists(feature)) {
+    // TODO: POLISH THIS UP
+    let deductCursor = toDeduct;
+    let balances = cusEnt.balances || {};
 
+    for (const key in balances) {
+      let { newBalance, deducted, leftover } = performDeduction({
+        cusEntBalance: new Decimal(balances[key].balance),
+        toDeduct: deductCursor,
+      });
+
+      deductCursor = leftover;
+      balances[key].balance = newBalance;
+
+      if (deductCursor == 0) {
+        break;
+      }
+    }
+
+    await CustomerEntitlementService.update({
+      sb,
+      id: cusEnt.id,
+      updates: { balances },
+    });
+
+    return deductCursor;
+  }
+
+  let newBalance, deducted;
+  cusEntBalance = new Decimal(balance!);
   if (cusEntBalance.lte(0) && toDeduct > 0) {
-    // Don't deduct if balance is negative and toDeduct is positive, if not, just add to balance
     return toDeduct;
   }
 
-  // If toDeduct is negative, add to balance and set toDeduct to 0
   if (toDeduct < 0) {
     newBalance = cusEntBalance.minus(toDeduct).toNumber();
     deducted = toDeduct;
@@ -258,6 +347,7 @@ export const deductAllowanceFromCusEnt = async ({
     originalBalance: originalGrpBalance,
     newBalance: newGrpBalance,
     deduction: deducted,
+    replacedCount,
   });
 
   if (groupVal) {
@@ -300,10 +390,12 @@ export const deductFromUsageBasedCusEnt = async ({
   toDeduct,
   deductParams,
   cusEnts,
+  replacedCount,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
   cusEnts: FullCustomerEntitlement[];
+  replacedCount: number;
 }) => {
   const { sb, feature, env, org, cusPrices, customer, properties } =
     deductParams;
@@ -366,6 +458,7 @@ export const deductFromUsageBasedCusEnt = async ({
     originalBalance: originalGrpBalance,
     newBalance: newGrpBalance,
     deduction: toDeduct,
+    replacedCount,
   });
 };
 
@@ -399,27 +492,23 @@ export const updateCustomerBalance = async ({
 
   const endTime = performance.now();
 
-  // 1. Get deductions for each feature
-  const featureDeductions = getFeatureDeductions({
-    cusEnts,
-    event,
-    features,
+  const relevantFeatures = features.filter((feature) =>
+    isRelevantFeature({ feature, eventName: event.event_name })
+  );
+  const linkedFeatures = features.filter((feature) => {
+    return !isRelevantFeature({ feature, eventName: event.event_name });
   });
 
-  logBalanceUpdate({
-    timeTaken: (endTime - startTime).toFixed(2),
-    customer,
-    features,
-    cusEnts,
-    featureDeductions,
-    properties: event.properties,
-    org,
-  });
+  const relevantCusEnts = cusEnts.filter((cusEnt) =>
+    relevantFeatures.some(
+      (feature) => cusEnt.entitlement.internal_feature_id == feature.internal_id
+    )
+  );
 
   // 2. Handle group_by initialization
   await initGroupBalancesForEvent({
     sb,
-    features,
+    features: relevantFeatures,
     cusEnts,
     properties: event.properties,
   });
@@ -430,11 +519,133 @@ export const updateCustomerBalance = async ({
     return;
   }
 
+  // Create error for linked feature
+  let replacedCount = 0;
+  for (const linkedFeature of linkedFeatures) {
+    const linkedCusEnt = getLinkedCusEnt({
+      linkedFeature,
+      cusEnts,
+    });
+
+    const groupVal = getGroupValFromProperties({
+      properties: event.add_groups || event.remove_groups,
+      feature: linkedFeature,
+    });
+
+    // console.log("Group val:", groupVal);
+    // console.log("Linked feature:", linkedFeature);
+
+    if (!groupVal) {
+      continue;
+    }
+
+    let isAdding = notNullish(event.add_groups);
+    event.value = isAdding ? groupVal.length : -groupVal.length;
+    const allowance = linkedCusEnt?.entitlement.allowance;
+
+    if (isAdding) {
+      let curBalances = linkedCusEnt?.balances || {};
+
+      for (const group of groupVal) {
+        // Check if group already exists & is not deleted
+        if (curBalances[group] && !curBalances[group].deleted) {
+          logger.warn(
+            `   - Group ${group} already exists & is not deleted, skipping`
+          );
+          replacedCount++;
+          event.value! -= 1;
+          continue;
+        }
+
+        if (curBalances[group] && curBalances[group].deleted) {
+          curBalances[group].deleted = false;
+          console.log(`   - Undeleting group ${group}`);
+          // replacedCount++;
+          event.value! -= 1;
+          continue;
+        }
+
+        // Check if there's any deleted balance to activate
+        let replaced = false;
+        for (const id in curBalances) {
+          let balance = curBalances[id];
+          if (balance.deleted) {
+            curBalances[group] = {
+              ...balance,
+              deleted: false,
+            };
+
+            delete curBalances[id];
+            // replacedCount++;
+            event.value = (event.value || 1) - 1;
+            break;
+          }
+        }
+
+        if (!replaced) {
+          curBalances[group] = {
+            balance: allowance!,
+            adjustment: 0,
+          };
+        }
+      }
+
+      await CustomerEntitlementService.update({
+        sb,
+        id: linkedCusEnt!.id,
+        updates: { balances: curBalances },
+      });
+    } else {
+      const curBalances = linkedCusEnt?.balances || {};
+      event.value = 0;
+      for (const group of groupVal) {
+        if (curBalances[group]) {
+          curBalances[group].deleted = true;
+          replacedCount++;
+        } else {
+          logger.warn(
+            `   - Group ${group} not found for linked feature ${linkedFeature.id}, can't delete`
+          );
+          throw new RecaseError({
+            message: `Group ${group} not found for linked feature ${linkedFeature.id}, can't delete`,
+            code: "GROUP_NOT_FOUND",
+            data: {
+              group,
+              linkedFeature,
+            },
+          });
+        }
+      }
+
+      await CustomerEntitlementService.update({
+        sb,
+        id: linkedCusEnt!.id,
+        updates: { balances: curBalances },
+      });
+    }
+  }
+
   // 4. Perform deductions and update customer balance
+  const featureDeductions = getFeatureDeductions({
+    cusEnts: relevantCusEnts,
+    event,
+    features: relevantFeatures,
+  });
+
+  logBalanceUpdate({
+    timeTaken: (endTime - startTime).toFixed(2),
+    customer,
+    features: relevantFeatures,
+    cusEnts: relevantCusEnts,
+    featureDeductions,
+    properties: event.properties,
+    org,
+  });
+
   for (const obj of featureDeductions) {
     let { feature, deduction: toDeduct } = obj;
 
-    for (const cusEnt of cusEnts) {
+    for (const cusEnt of relevantCusEnts) {
       if (cusEnt.entitlement.internal_feature_id != feature.internal_id) {
         continue;
       }
@@ -452,6 +663,7 @@ export const updateCustomerBalance = async ({
           customer,
           properties: event.properties,
         },
+        replacedCount,
         featureDeductions,
         willDeductCredits: true,
       });
@@ -463,7 +675,8 @@ export const updateCustomerBalance = async ({
 
     await deductFromUsageBasedCusEnt({
       toDeduct,
-      cusEnts,
+      cusEnts: relevantCusEnts,
+      replacedCount,
       deductParams: {
         sb,
         feature,
@@ -550,3 +763,67 @@ export const runUpdateBalanceTask = async ({
     }
   }
 };
+
+// Handle linked features?
+
+// // CREATE
+// for (const linkedFeature of linkedFeatures) {
+//   const originalFeature = features.find(
+//     (f) => linkedFeature.config.group_by?.linked_feature_id == f.id
+//   );
+
+//   const linkedCusEnt = cusEnts.find(
+//     (cusEnt) =>
+//       cusEnt.entitlement.internal_feature_id == linkedFeature.internal_id
+//   );
+
+//   const entitlement = linkedCusEnt?.entitlement;
+//   const groupVal = getGroupValFromProperties({
+//     properties: event.properties,
+//     feature: linkedFeature,
+//   });
+
+//   if (!linkedCusEnt || !groupVal || nullish(entitlement?.allowance)) {
+//     continue;
+//   }
+
+//   // If value is positive
+//   let value = getMeteredDeduction(originalFeature!, event);
+
+//   if (value > 0) {
+//     if (!linkedCusEnt.balances) {
+//       linkedCusEnt.balances = {};
+//     }
+
+//     await CustomerEntitlementService.update({
+//       sb,
+//       id: linkedCusEnt.id,
+//       updates: getGroupBalanceUpdate({
+//         groupVal,
+//         cusEnt: linkedCusEnt,
+//         newBalance: entitlement?.allowance!,
+//       }),
+//     });
+//   } else if (value < 0) {
+//     // Deduct from linked feature
+
+//     // Schedule removal of group val
+//     logger.info(
+//       `   - Scheduling removal of group ${groupVal} for linked feature ${linkedFeature.id}`
+//     );
+
+//     await CustomerEntitlementService.update({
+//       sb,
+//       id: linkedCusEnt.id,
+//       updates: {
+//         balances: {
+//           ...linkedCusEnt.balances,
+//           [groupVal]: {
+//             ...linkedCusEnt.balances![groupVal]!,
+//             deleted: true,
+//           },
+//         },
+//       },
+//     });
+//   }
+// }

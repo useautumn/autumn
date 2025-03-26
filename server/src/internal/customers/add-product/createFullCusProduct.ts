@@ -51,7 +51,6 @@ export const initCusPrice = ({
     internal_customer_id: customer.internal_id,
     customer_product_id: cusProductId,
     created_at: Date.now(),
-
     price_id: price.id || null,
   };
 

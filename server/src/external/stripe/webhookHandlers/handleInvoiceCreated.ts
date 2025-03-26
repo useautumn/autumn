@@ -42,6 +42,10 @@ import {
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/entitlements/groupByUtils.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
+import {
+  getLinkedCusEnt,
+  getLinkedFromCusEnt,
+} from "@/internal/customers/entitlements/linkedGroupUtils.js";
 
 const handleInArrearProrated = async ({
   sb,
@@ -72,90 +76,56 @@ const handleInArrearProrated = async ({
     return;
   }
 
-  let invoiceItem = await InvoiceItemService.getNotAddedToStripe({
-    sb,
-    cusPriceId: cusPrice.id,
+  // Check if linkedFrom cus ent
+  const linkedFromCusEnt = getLinkedFromCusEnt({
+    linkedToFeature: cusEnt.entitlement.feature,
+    cusEnts,
   });
 
-  if (invoiceItem) {
-    await createStripeInvoiceItem({
-      stripeCli: createStripeCli({ org, env }),
-      customer: customer,
-      invoiceItem: invoiceItem,
-      feature: cusEnt.entitlement.feature,
-      invoiceId: invoice.id,
-    });
-    console.log("   ✅ Added last invoice item to Stripe");
-
-    await InvoiceItemService.update({
-      sb,
-      invoiceItemId: invoiceItem.id,
-      updates: {
-        added_to_stripe: true,
-      },
-    });
-
-    console.log("   ✅ Set `added_to_stripe` to true for invoice item");
+  if (!linkedFromCusEnt) {
+    return;
   }
 
-  // Reset?
-  if (cusEnt.next_reset_at) {
-    let resetBalancesUpdate = getResetBalancesUpdate({ cusEnt });
-    await CustomerEntitlementService.update({
+  console.log(
+    `Linked from cus ent found, linked from: ${linkedFromCusEnt.entitlement.feature.id}, linked to: ${cusEnt.entitlement.feature.id}`
+  );
+
+  let removed = 0;
+  let newBalances = structuredClone(linkedFromCusEnt?.balances)!;
+
+  for (const id in linkedFromCusEnt?.balances) {
+    let balanceObj = linkedFromCusEnt.balances[id];
+    if (balanceObj.deleted) {
+      console.log("Deleting balance:", id);
+      delete newBalances[id];
+      removed++;
+    }
+  }
+
+  if (removed == 0) {
+    console.log("No balances to remove");
+  }
+
+  let batchUpdate = [
+    CustomerEntitlementService.update({
+      sb,
+      id: linkedFromCusEnt.id,
+      updates: {
+        balances: newBalances,
+      },
+    }),
+    CustomerEntitlementService.update({
       sb,
       id: cusEnt.id,
       updates: {
-        ...resetBalancesUpdate,
-        next_reset_at: getNextEntitlementReset(
-          null,
-          cusEnt.entitlement.interval as EntInterval
-        ).getTime(),
+        balance: cusEnt.balance! + removed,
       },
-    });
+    }),
+  ];
 
-    console.log("   ✅ Reset next_reset_at");
-  } else {
-    // Create invoice for new usage?
-    let allowance = cusEnt.entitlement.allowance!;
-    // let balance = cusEnt.balance!;
-    let minBalance = getMinCusEntBalance({ cusEnt });
+  await Promise.all(batchUpdate);
 
-    let amount = getPriceForOverage(cusPrice.price, -minBalance);
-    let quantity = allowance - minBalance;
-    let billingUnits =
-      (cusPrice.price.config as UsagePriceConfig).billing_units || 1;
-    quantity = Math.ceil(quantity / billingUnits!) * billingUnits!; // round up to nearest billing unit
-
-    if (minBalance >= 0) {
-      console.log("   ✅ Balance >= 0, no need to create Autumn invoice item");
-      return;
-    }
-
-    console.log("   🔍 Min balance: ", minBalance);
-    console.log("   🔍 Allowance: ", allowance);
-    console.log("   🔍 Quantity: ", quantity);
-
-    let newInvoiceItem: InvoiceItem = {
-      id: generateId("inv_item"),
-      customer_price_id: cusPrice.id,
-      added_to_stripe: false,
-      customer_id: customer.internal_id,
-      created_at: Date.now(),
-      updated_at: Date.now(),
-      currency: org.default_currency,
-      period_start: usageSub.current_period_start * 1000,
-      period_end: usageSub.current_period_end * 1000,
-      proration_start: usageSub.current_period_start * 1000,
-      proration_end: usageSub.current_period_end * 1000,
-      quantity: quantity,
-      amount: amount,
-    };
-    await InvoiceItemService.insert({
-      sb,
-      data: newInvoiceItem,
-    });
-    console.log("   ✅ Created new Autumn invoice item");
-  }
+  console.log("Updated balances");
 };
 
 const handleUsageInArrear = async ({
@@ -290,7 +260,10 @@ export const sendUsageAndReset = async ({
     const price = cusPrice.price;
     let billingType = getBillingType(price.config);
 
-    if (billingType !== BillingType.UsageInArrear) {
+    if (
+      billingType !== BillingType.UsageInArrear &&
+      billingType !== BillingType.InArrearProrated
+    ) {
       continue;
     }
 
@@ -335,6 +308,17 @@ export const sendUsageAndReset = async ({
         price,
         usageSub: usageBasedSub,
         logger,
+      });
+    } else if (billingType == BillingType.InArrearProrated) {
+      await handleInArrearProrated({
+        sb,
+        cusEnts,
+        cusPrice,
+        customer,
+        org,
+        env,
+        invoice,
+        usageSub: usageBasedSub,
       });
     }
     // For regular end of period billing

@@ -32,6 +32,7 @@ export const CustomerEntitlementSchema = z.object({
       z.object({
         balance: z.number(),
         adjustment: z.number(),
+        deleted: z.boolean().nullish(),
       })
     )
     .nullish(),

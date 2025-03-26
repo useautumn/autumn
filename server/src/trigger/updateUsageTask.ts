@@ -74,7 +74,8 @@ const getFeatureDeductions = ({
 
       let totalBalance = getFeatureBalance({
         cusEnts,
-        internalFeatureId: feature.internal_id!,
+        feature,
+        groupVal: null,
       })!;
 
       deduction = new Decimal(totalBalance).sub(targetBalance).toNumber();
@@ -259,6 +260,7 @@ export const updateUsage = async ({
         },
         featureDeductions,
         willDeductCredits: true,
+        replacedCount: 0,
       });
     }
 
@@ -278,6 +280,7 @@ export const updateUsage = async ({
         customer,
         properties,
       },
+      replacedCount: 0,
     });
   }
 

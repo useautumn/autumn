@@ -20,6 +20,7 @@ import { useFeaturesContext } from "./FeaturesContext";
 import { Badge } from "@/components/ui/badge";
 import UpdateFeature from "./UpdateFeature";
 import { FeatureTypeBadge } from "./FeatureTypeBadge";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export const FeaturesTable = () => {
   const { env, features, onboarding } = useFeaturesContext();
@@ -72,7 +73,11 @@ export const FeaturesTable = () => {
                 className="cursor-pointer"
                 onClick={() => handleRowClick(feature.id)}
               >
-                <TableCell>{feature.name}</TableCell>
+                <TableCell>
+                  <AdminHover texts={[feature.internal_id]}>
+                    <span>{feature.name}</span>
+                  </AdminHover>
+                </TableCell>
                 <TableCell className="font-mono">{feature.id}</TableCell>
                 <TableCell>
                   <FeatureTypeBadge type={feature.type} />

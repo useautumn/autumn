@@ -135,7 +135,13 @@ export const CustomerEntitlementsList = ({
                     ? "Unlimited"
                     : allowanceType == AllowanceType.None
                     ? "None"
-                    : cusEnt.balance}
+                    : (cusEnt.balance || 0) +
+                      (cusEnt.balances
+                        ? Object.values(cusEnt.balances).reduce(
+                            (acc, curr) => acc + curr.balance,
+                            0
+                          )
+                        : 0)}
                 </TableCell>
                 <TableCell className="max-w-[150px] truncate">
                   {getProductName(cusEnt)} &nbsp;

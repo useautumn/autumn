@@ -50,10 +50,15 @@ export const featureToCreditSystem = ({
 }) => {
   const schema: CreditSchemaItem[] = creditSystem.config.schema;
 
+  console.log(
+    `Getting credit amount, featureID: ${featureId}, creditSystem: ${creditSystem.id}`
+  );
+
   for (const schemaItem of schema) {
     if (schemaItem.metered_feature_id === featureId) {
       let creditAmount = schemaItem.credit_amount;
       let featureAmount = schemaItem.feature_amount;
+
       return new Decimal(creditAmount)
         .div(featureAmount)
         .mul(amount)

@@ -24,6 +24,7 @@ export const AggregateSchema = z.object({
 
 export const GroupBySchema = z.object({
   property: z.string(),
+  linked_feature_id: z.string().nullable(),
 });
 
 export const MeteredConfigSchema = z.object({

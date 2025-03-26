@@ -15,6 +15,10 @@ export const EventSchema = z.object({
   internal_customer_id: z.string(),
   value: z.number().nullish(),
   set_usage: z.boolean().nullish(),
+
+  // Add / remove (seats...?)
+  add_groups: z.any(),
+  remove_groups: z.any(),
 });
 
 export const CreateEventSchema = z.object({
@@ -25,6 +29,9 @@ export const CreateEventSchema = z.object({
   idempotency_key: z.string().nullish(),
   value: z.number().nullish(),
   set_usage: z.boolean().nullish(),
+
+  add_groups: z.any(),
+  remove_groups: z.any(),
 });
 
 export type Event = z.infer<typeof EventSchema>;

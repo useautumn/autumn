@@ -6,9 +6,10 @@ import {
   ErrCode,
   Event,
   Feature,
+  FeatureType,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -20,6 +21,8 @@ import { QueueManager } from "@/queue/QueueManager.js";
 import { subDays } from "date-fns";
 import { handleUsageEvent } from "./usageRouter.js";
 import { StatusCodes } from "http-status-codes";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 
 export const eventsRouter = Router();
 
@@ -79,6 +82,17 @@ const getEventAndCustomer = async ({
 
   const parsedEvent = CreateEventSchema.parse(event_data);
 
+  if (
+    notNullish(parsedEvent.add_groups) &&
+    notNullish(parsedEvent.remove_groups)
+  ) {
+    throw new RecaseError({
+      message: "Add and remove groups cannot both be present",
+      code: ErrCode.InvalidInputs,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
   let eventTimestamp = Date.now();
   if (parsedEvent.timestamp) {
     let thirtyDaysAgo = subDays(new Date(), 30).getTime();
@@ -104,16 +118,19 @@ const getEventAndCustomer = async ({
 
 const getAffectedFeatures = async ({
   pg,
+  sb,
   event,
   orgId,
   env,
 }: {
+  // pg: Client;
+  sb: SupabaseClient;
   pg: Client;
   event: Event;
   orgId: string;
   env: AppEnv;
 }) => {
-  const { rows }: { rows: Feature[] } = await pg.query(`
+  let query = `
     with features_with_event as (
       select * from features
       where org_id = '${orgId}'
@@ -124,15 +141,61 @@ const getAffectedFeatures = async ({
     select * from features WHERE
     org_id = '${orgId}'
     and env = '${env}'
-    and EXISTS (
-      SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
-      schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
+    and (
+      EXISTS (
+        SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
+        schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
+      )
+      OR config->'group_by'->>'linked_feature_id' IN (SELECT id FROM features_with_event)
     )
     UNION all
     select * from features_with_event
-  `);
+  `;
 
+  const { rows }: { rows: Feature[] } = await pg.query(query);
   return rows;
+
+  // const features = await FeatureService.getFeatures({
+  //   sb,
+  //   orgId,
+  //   env,
+  // });
+
+  // // 1. Feature
+  // const featuresWithEvent = features.filter((feature) => {
+  //   return feature.config.filters.some((filter: any) => {
+  //     return filter.value.includes(event.event_name);
+  //   });
+  // });
+
+  // // 2. Group by
+  // const linkedFeatures = features.filter((feature) => {
+  //   return (
+  //     feature.config.group_by &&
+  //     featuresWithEvent.some(
+  //       (f) => f.id === feature.config.group_by.linked_feature_id
+  //     )
+  //   );
+  // });
+
+  // console.log("linkedFeatures", linkedFeatures);
+
+  // const creditSystems = features.filter(
+  //   (feature) =>
+  //     feature.type === FeatureType.CreditSystem &&
+  //     featuresWithEvent.some((f) =>
+  //       creditSystemContainsFeature({
+  //         creditSystem: feature,
+  //         meteredFeatureId: f.id,
+  //       })
+  //     )
+  // );
+
+  // return {
+  //   features: [...featuresWithEvent, ...linkedFeatures, ...creditSystems],
+  // };
+
+  // return rows;
 };
 
 export const handleEventSent = async ({
@@ -170,7 +233,8 @@ export const handleEventSent = async ({
   });
 
   const affectedFeatures = await getAffectedFeatures({
-    pg: pg,
+    sb,
+    pg,
     event,
     orgId,
     env,

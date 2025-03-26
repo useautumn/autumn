@@ -10,6 +10,14 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { Button } from "@/components/ui/button";
 import { useHotkeys } from "react-hotkeys-hook";
+import {
+  Select,
+  SelectValue,
+  SelectTrigger,
+  SelectItem,
+  SelectContent,
+} from "@/components/ui/select";
+import { useFeaturesContext } from "../FeaturesContext";
 
 export function FeatureConfig({
   feature,
@@ -28,6 +36,7 @@ export function FeatureConfig({
   eventNameChanged: boolean;
   setEventNameChanged: any;
 }) {
+  const { features } = useFeaturesContext();
   const [fields, setFields] = useState(
     feature.name
       ? {
@@ -150,21 +159,51 @@ export function FeatureConfig({
 
           <div>
             {groupByExists ? (
-              <div>
-                <FieldLabel>Group By</FieldLabel>
-                <Input
-                  placeholder="eg. app_id"
-                  value={meteredConfig.group_by?.property || ""}
-                  onChange={(e) =>
-                    setMeteredConfig({
-                      ...meteredConfig,
-                      group_by: {
-                        ...meteredConfig.group_by,
-                        property: e.target.value,
-                      },
-                    })
-                  }
-                />
+              <div className="flex gap-2">
+                <div className="w-full">
+                  <FieldLabel>Group By</FieldLabel>
+                  <Input
+                    placeholder="eg. app_id"
+                    value={meteredConfig.group_by?.property || ""}
+                    onChange={(e) =>
+                      setMeteredConfig({
+                        ...meteredConfig,
+                        group_by: {
+                          ...meteredConfig.group_by,
+                          property: e.target.value,
+                          linked_feature_id:
+                            meteredConfig.group_by?.linked_feature_id || null,
+                        },
+                      })
+                    }
+                  />
+                </div>
+                <div className="w-full">
+                  <FieldLabel>Link to</FieldLabel>
+                  <Select
+                    value={meteredConfig.group_by?.linked_feature_id || ""}
+                    onValueChange={(value) =>
+                      setMeteredConfig({
+                        ...meteredConfig,
+                        group_by: {
+                          property: meteredConfig.group_by?.property || "",
+                          linked_feature_id: value || null,
+                        },
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a feature" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {features.map((feature: any) => (
+                        <SelectItem key={feature.id} value={feature.id}>
+                          {feature.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             ) : (
               <Button
@@ -176,6 +215,7 @@ export function FeatureConfig({
                     ...meteredConfig,
                     group_by: {
                       property: "",
+                      linked_feature_id: null,
                     },
                   });
                   setGroupByExists(true);
@@ -185,52 +225,6 @@ export function FeatureConfig({
               </Button>
             )}
           </div>
-
-          {/* <div>
-            <FieldLabel>Aggregate</FieldLabel>
-            <Select
-              value={meteredConfig.aggregate.type}
-              onValueChange={(value) => setAggregate("type", value)}
-              defaultValue="count"
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.values(AggregateType).map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type.toUpperCase()}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {meteredConfig.aggregate.type == AggregateType.Sum && (
-            <div>
-              <FieldLabel>Sum Property</FieldLabel>
-              <Input
-                placeholder="eg. value"
-                value={meteredConfig.aggregate.property || ""}
-                onChange={(e) => setAggregate("property", e.target.value)}
-              />
-            </div>
-          )}
-
-          
-
-          {/* <div>
-            <FieldLabel>Group By Property</FieldLabel>
-            <Input
-              placeholder="eg. app_id"
-              value={meteredConfig.group_by || ""}
-              onChange={(e) =>
-                setMeteredConfig({
-                  ...meteredConfig,
-                  group_by: e.target.value,
-                })
-              }
-            />
-          </div> */}
         </>
       )}
     </div>

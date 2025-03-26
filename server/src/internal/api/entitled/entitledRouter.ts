@@ -9,6 +9,7 @@ import {
   Customer,
   Feature,
   FeatureType,
+  FullCustomerEntitlement,
 } from "@autumn/shared";
 
 import { Router } from "express";
@@ -20,175 +21,29 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   cusEntsContainFeature,
+  cusEntsToFeatures,
   getFeatureBalance,
   getUnlimitedAndUsageAllowed,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import { notNullOrUndefined } from "@/utils/genUtils.js";
 import { initGroupBalances } from "@/internal/customers/entitlements/groupByUtils.js";
+import {
+  getLinkedCusEnt,
+  getLinkedFeature,
+  isLinkFrom,
+} from "@/internal/customers/entitlements/linkedGroupUtils.js";
+import {
+  getBooleanEntitledResult,
+  getMeteredEntitledResult,
+} from "./entitledUtils.js";
 
 type CusWithEnts = Customer & {
   customer_products: CusProduct[];
   customer_entitlements: CusEntWithEntitlement[];
 };
 
-const EntitledSchema = z.object({
-  customer_id: z.string(),
-  feature_id: z.string(),
-  required_quantity: z.number(),
-});
-
 export const entitledRouter = Router();
-
-const getRequiredAndActualBalance = ({
-  cusEnts,
-  feature,
-  originalFeatureId,
-  required,
-  group,
-}: {
-  cusEnts: CusEntWithEntitlement[];
-  feature: Feature;
-  originalFeatureId: string;
-  required: number;
-  group: any;
-}) => {
-  let requiredBalance = required;
-  if (
-    feature.type === FeatureType.CreditSystem &&
-    feature.id !== originalFeatureId
-  ) {
-    requiredBalance = featureToCreditSystem({
-      featureId: originalFeatureId,
-      creditSystem: feature,
-      amount: required,
-    });
-  }
-
-  const actualBalance = getFeatureBalance({
-    cusEnts,
-    internalFeatureId: feature.internal_id!,
-    group,
-  });
-
-  return {
-    required: requiredBalance,
-    actual: actualBalance,
-    group,
-  };
-};
-
-const getMeteredEntitledResult = ({
-  originalFeature,
-  creditSystems,
-  cusEnts,
-  quantity,
-  group,
-}: {
-  originalFeature: Feature;
-  creditSystems: Feature[];
-  cusEnts: CusEntWithEntitlement[];
-  quantity: number;
-  group: any;
-}) => {
-  // If no entitlements -> return false
-  if (!cusEnts || cusEnts.length === 0) {
-    return {
-      allowed: false,
-      balances: [],
-    };
-  }
-
-  let allowed = true;
-  const balances = [];
-
-  for (const feature of [originalFeature, ...creditSystems]) {
-    // 1. Skip if feature not among cusEnt
-    if (!cusEntsContainFeature({ cusEnts, feature })) {
-      continue;
-    }
-
-    // 2. Handle unlimited / usage allowed features
-    let { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
-      cusEnts,
-      internalFeatureId: feature.internal_id!,
-    });
-
-    if (unlimited || usageAllowed) {
-      balances.push({
-        feature_id: feature.id,
-        unlimited,
-        usage_allowed: usageAllowed,
-        required: null,
-        balance: unlimited
-          ? null
-          : getFeatureBalance({
-              cusEnts,
-              internalFeatureId: feature.internal_id!,
-              group,
-            }),
-      });
-      continue;
-    }
-
-    // 3. Get required and actual balance
-    const { required, actual } = getRequiredAndActualBalance({
-      cusEnts,
-      feature,
-      originalFeatureId: originalFeature.id,
-      required: quantity,
-      group,
-    });
-
-    let newBalance: any = {
-      feature_id: feature.id,
-      required,
-      balance: actual,
-    };
-
-    // feature.config.group_by will always be defined
-    // TODO: Rework this...
-    if (group) {
-      let groupField = feature.config?.group_by?.property;
-      newBalance[groupField] = group;
-    }
-
-    balances.push(newBalance);
-
-    allowed = allowed && actual! >= required;
-  }
-
-  return {
-    allowed,
-    balances,
-  };
-};
-
-// Helper functions
-const getBooleanEntitledResult = ({
-  cusEnts,
-  res,
-  feature,
-}: {
-  cusEnts: CusEntWithEntitlement[];
-  res: any;
-  feature: Feature;
-}) => {
-  const allowed = cusEnts.some(
-    (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
-  );
-  return res.status(200).send({
-    allowed,
-    balances: allowed
-      ? [
-          {
-            feature_id: feature.id,
-            balance: null,
-          },
-        ]
-      : [],
-  });
-};
 
 // Main functions
 const getFeaturesAndCreditSystems2 = async ({
@@ -221,7 +76,7 @@ const getFeaturesAndCreditSystems2 = async ({
     );
   });
 
-  return { feature, creditSystems };
+  return { feature, creditSystems, allFeatures: features };
 };
 
 const getCusEntsActiveInFeatureIds = ({
@@ -353,7 +208,7 @@ const getCusEntsAndFeatures = async ({
   });
 
   // 2. Get active customer entitlements for features
-  const { feature, creditSystems }: any = res2;
+  const { feature, creditSystems, allFeatures }: any = res2;
 
   if (!feature) {
     throw new RecaseError({
@@ -400,11 +255,20 @@ const getCusEntsAndFeatures = async ({
   } else {
     cusEnts = getCusEntsActiveInFeatureIds({
       cusWithEnts: res1 as CusWithEnts,
-      features: [feature, ...creditSystems],
+      features: [
+        feature,
+        ...creditSystems,
+        ...allFeatures.filter((f: any) =>
+          isLinkFrom({
+            fromFeature: f,
+            toFeature: feature,
+          })
+        ),
+      ],
     });
   }
 
-  return { cusEnts, feature, creditSystems };
+  return { cusEnts, feature, creditSystems, allFeatures };
 };
 
 entitledRouter.post("", async (req: any, res: any) => {
@@ -423,10 +287,11 @@ entitledRouter.post("", async (req: any, res: any) => {
 
   try {
     // 1. Get cusEnts & features
-    const { cusEnts, feature, creditSystems } = await getCusEntsAndFeatures({
-      sb,
-      req,
-    });
+    const { cusEnts, feature, creditSystems, allFeatures } =
+      await getCusEntsAndFeatures({
+        sb,
+        req,
+      });
 
     logEntitled({ req, customer_id, cusEnts: cusEnts! });
 
@@ -458,6 +323,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     }
 
     const { allowed, balances } = getMeteredEntitledResult({
+      allFeatures: allFeatures!,
       originalFeature: feature,
       creditSystems,
       cusEnts: cusEnts!,

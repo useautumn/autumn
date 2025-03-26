@@ -15,40 +15,91 @@ import {
 import {
   notNullish,
   notNullOrUndefined,
+  nullish,
   nullOrUndefined,
 } from "@/utils/genUtils.js";
+import { getMeteredDeduction } from "@/trigger/deductUtils.js";
+import {
+  getLinkedCusEnt,
+  getLinkedFeature,
+  getOriginalCusEnt,
+  getOriginalFeature,
+} from "./linkedGroupUtils.js";
+import { cusEntsToFeatures } from "./cusEntUtils.js";
 
 export const getGroupbalanceFromParams = ({
   params,
   feature,
   cusEnt,
+  cusEnts,
 }: {
   params: any;
   feature: Feature;
-  cusEnt: CusEntWithEntitlement;
+  cusEnt: FullCustomerEntitlement;
+  cusEnts: FullCustomerEntitlement[];
 }) => {
   if (!feature.config?.group_by) {
+    // Check if linked to another feature
+    const linkedFeature = getLinkedFeature({
+      originalFeature: feature,
+      features: cusEnts.map((cusEnt) => cusEnt.entitlement.feature),
+    });
+
+    const linkedCusEnt = getLinkedCusEnt({
+      linkedFeature: linkedFeature!,
+      cusEnts: cusEnts,
+    });
+
+    let balance = cusEnt.balance;
+    let entitlement = cusEnt.entitlement;
+    let usage = undefined;
+    if (linkedCusEnt) {
+      balance =
+        entitlement.allowance! -
+        Object.keys(linkedCusEnt.balances || {}).length;
+
+      usage = Object.values(linkedCusEnt.balances || {}).reduce(
+        (acc, curr) => (curr.deleted ? acc : acc + 1),
+        0
+      );
+    }
+
     return {
       groupField: null,
       groupVal: null,
-      balance: cusEnt.balance,
+      balance: balance,
       adjustment: cusEnt.adjustment,
+      used: usage,
     };
   }
 
   let groupField = feature.config?.group_by?.property;
-  if (nullOrUndefined(params[groupField])) {
+  if (nullish(params[groupField])) {
+    // GROUP FIELD NOT PRESENT, RETURN ALL
+
+    // Check if linked feature is present
+    // let linkedFeature = cusEnt.entitlement.feature
+    const curFeature = cusEnt.entitlement.feature;
+
     return {
       groupField: null,
       groupVal: null,
-      balance: cusEnt.balance,
+      total:
+        Object.values(cusEnt.balances || {}).length *
+        (cusEnt.entitlement.allowance || 0),
+      balance: Object.values(cusEnt.balances || {}).reduce(
+        (acc, curr) => acc + curr.balance,
+        0
+      ),
       adjustment: cusEnt.adjustment,
+      used: undefined,
     };
   }
 
   let groupVal = params[groupField];
   let balance = cusEnt.balances?.[groupVal]?.balance;
   let adjustment = cusEnt.balances?.[groupVal]?.adjustment;
+
   if (nullOrUndefined(balance)) {
     return { groupField, groupVal, balance: null, adjustment: null };
   }
@@ -67,7 +118,7 @@ export const getGroupValFromProperties = ({
     return null;
   }
 
-  return properties[feature.config.group_by.property];
+  return properties?.[feature.config.group_by.property];
 };
 
 export const getGroupBalanceFromProperties = ({
@@ -129,6 +180,7 @@ export const getGroupBalanceUpdate = ({
         [groupVal]: {
           balance: newBalance,
           adjustment,
+          deleted: false,
         },
       },
     };
@@ -371,4 +423,8 @@ export const getResetBalancesUpdate = ({
     balance: newBalance,
     adjustment: 0,
   };
+};
+
+export const groupByExists = (feature: Feature) => {
+  return notNullish(feature.config?.group_by);
 };
