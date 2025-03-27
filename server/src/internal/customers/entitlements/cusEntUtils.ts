@@ -10,6 +10,7 @@ import {
   EntInterval,
   Entitlement,
   EntitlementWithFeature,
+  Entity,
   Feature,
   FeatureOptions,
   FeatureType,
@@ -23,13 +24,19 @@ import {
 import { getEntOptions } from "@/internal/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import {
+  notNullish,
   notNullOrUndefined,
   nullish,
   nullOrUndefined,
 } from "@/utils/genUtils.js";
 
 import { getGroupbalanceFromParams } from "./groupByUtils.js";
-import { Decimal } from "decimal.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
+import {
+  getEntityBalance,
+  getSummedEntityBalances,
+} from "./entBalanceUtils.js";
 
 export const getBalanceForFeature = async ({
   sb,
@@ -220,15 +227,89 @@ type CusEntsWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
 };
 
+export const getCusEntMasterBalance = ({
+  cusEnt,
+  entities,
+}: {
+  cusEnt: FullCustomerEntitlement;
+  entities: Entity[];
+}) => {
+  let ent = cusEnt.entitlement;
+  let feature = ent.feature;
+
+  if (notNullish(ent.entity_feature_id)) {
+    let totalBalance = Object.values(cusEnt.entities || {}).reduce(
+      (acc, curr) => {
+        return acc + curr.balance;
+      },
+      0
+    );
+
+    let totalAdjustment = Object.values(cusEnt.entities || {}).reduce(
+      (acc, curr) => {
+        return acc + curr.adjustment;
+      },
+      0
+    );
+
+    return {
+      balance: totalBalance,
+      adjustment: totalAdjustment,
+      count: Object.values(cusEnt.entities || {}).length,
+    };
+  }
+
+  // Get unused count
+
+  let unusedCount =
+    entities &&
+    entities.filter(
+      (entity) =>
+        entity.internal_feature_id == feature.internal_id && entity.deleted
+    ).length;
+
+  return {
+    balance: cusEnt.balance,
+    adjustment: cusEnt.adjustment,
+    count: 1,
+    unused: unusedCount,
+  };
+};
+
+export const getCusEntBalance = ({
+  cusEnt,
+  entityId,
+}: {
+  cusEnt: FullCustomerEntitlement;
+  entityId?: string | null;
+}) => {
+  let entitlement = cusEnt.entitlement;
+
+  if (notNullish(entitlement.entity_feature_id)) {
+    if (nullish(entityId)) {
+      return getSummedEntityBalances({
+        cusEnt,
+      });
+    }
+
+    return getEntityBalance({
+      cusEnt,
+      entityId: entityId!,
+    });
+  }
+
+  return cusEnt.balance;
+};
+
 // IMPORTANT FUNCTION
 export const getCusBalancesByEntitlement = async ({
   cusEntsWithCusProduct,
   cusPrices,
-  groupVals,
+  entities,
 }: {
   cusEntsWithCusProduct: CusEntsWithCusProduct[];
   cusPrices: FullCustomerPrice[];
-  groupVals: any;
+  entities: Entity[];
 }) => {
   const data: Record<string, any> = {};
 
@@ -245,22 +326,9 @@ export const getCusBalancesByEntitlement = async ({
       internalFeatureId: feature.internal_id!,
     });
 
-    // 2. Handle groupVal
-    const {
-      groupField,
-      groupVal,
-      balance: groupBalance,
-      adjustment: groupAdjustment,
-    } = getGroupbalanceFromParams({
-      params: groupVals,
-      feature,
-      cusEnt,
-    });
-
     // 2. Initialize data
     if (!data[key]) {
       data[key] = {
-        [groupField]: groupVal ? groupVal : undefined,
         feature_id: feature.id,
         interval: ent.interval,
         unlimited: isBoolean ? undefined : unlimited,
@@ -268,6 +336,7 @@ export const getCusBalancesByEntitlement = async ({
         total: isBoolean || unlimited ? undefined : 0,
         adjustment: isBoolean || unlimited ? undefined : 0,
         used: isBoolean ? undefined : unlimited ? null : 0,
+        unused: 0,
       };
     }
 
@@ -275,13 +344,21 @@ export const getCusBalancesByEntitlement = async ({
       continue;
     }
 
-    data[key].balance += groupBalance || 0;
-    data[key].adjustment += groupAdjustment || 0;
-    data[key].total += getResetBalance({
-      entitlement: ent,
-      options: getEntOptions(cusProduct.options, ent),
-      relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+    let { balance, adjustment, count, unused } = getCusEntMasterBalance({
+      cusEnt,
+      entities,
     });
+
+    data[key].balance += balance || 0;
+    data[key].adjustment += adjustment || 0;
+    data[key].total +=
+      (getResetBalance({
+        entitlement: ent,
+        options: getEntOptions(cusProduct.options, ent),
+        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+      }) || 0) * count;
+
+    data[key].unused += unused || 0;
   }
 
   const balances = Object.values(data);
@@ -291,10 +368,16 @@ export const getCusBalancesByEntitlement = async ({
       notNullOrUndefined(balance.total) &&
       notNullOrUndefined(balance.balance)
     ) {
-      balance.used = balance.total + balance.adjustment - balance.balance;
+      balance.used =
+        balance.total +
+        balance.adjustment -
+        balance.balance -
+        (balance.unused || 0);
+
       delete balance.total;
       delete balance.adjustment;
     }
+    delete balance.unused;
   }
 
   balances.sort((a, b) => {
@@ -515,25 +598,46 @@ export const getUnlimitedAndUsageAllowed = ({
 export const getFeatureBalance = ({
   cusEnts,
   internalFeatureId,
-  group,
+  entityId,
 }: {
-  cusEnts: FullCustomerEntitlement[] | CusEntWithEntitlement[];
+  cusEnts: FullCustomerEntitlement[];
   internalFeatureId: string;
-  group?: any;
+  entityId?: string;
 }) => {
   let balance = 0;
-  for (const ent of cusEnts) {
-    if (ent.internal_feature_id === internalFeatureId) {
-      if (ent.entitlement.allowance_type === AllowanceType.Unlimited) {
-        return null;
-      }
+  for (const cusEnt of cusEnts) {
+    if (cusEnt.internal_feature_id !== internalFeatureId) {
+      continue;
+    }
 
-      if (notNullOrUndefined(group)) {
-        balance += ent.balances?.[group]?.balance || 0;
+    if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
+      return null;
+    }
+
+    // 1. If feature entity exists...
+    let cusEntBalance = cusEnt.balance!;
+
+    // If entity feature id exists, then it is grouped...
+    let entityFeatureId = cusEnt.entitlement.entity_feature_id;
+    console.log("Cus ent entities:", cusEnt.entities);
+
+    if (notNullish(entityFeatureId)) {
+      if (notNullish(entityId)) {
+        let entityBalance = getEntityBalance({
+          cusEnt,
+          entityId: entityId!,
+        });
+        cusEntBalance = entityBalance!;
       } else {
-        balance += ent.balance || 0;
+        cusEntBalance = getSummedEntityBalances({
+          cusEnt,
+        });
       }
     }
+
+    balance += cusEntBalance;
+
+    // 2. If no entityId provided, use main balance
   }
 
   return balance;
@@ -551,52 +655,29 @@ export const cusEntsContainFeature = ({
   );
 };
 
-export const getMinCusEntBalance = ({
+export const getTotalNegativeBalance = ({
   cusEnt,
-  newBalance,
-  groupVal,
+  balance,
+  entities,
 }: {
-  cusEnt: FullCustomerEntitlement | CusEntWithEntitlement;
-  newBalance?: number;
-  groupVal?: any;
+  cusEnt: FullCustomerEntitlement;
+  balance: number;
+  entities: Record<string, { balance: number; adjustment: number }>;
 }) => {
-  // If no balances object exists, return newBalance or cusEnt.balance
-  if (!cusEnt.balances) {
-    return notNullOrUndefined(newBalance) ? newBalance! : cusEnt.balance!;
+  let entityFeatureId = cusEnt.entitlement.entity_feature_id;
+
+  if (nullish(entityFeatureId)) {
+    return balance;
   }
 
-  let balances = [];
-
-  for (const group in cusEnt.balances) {
-    if (group === groupVal && notNullOrUndefined(newBalance)) {
-      balances.push(newBalance!);
-    } else {
-      balances.push(cusEnt.balances[group].balance);
+  let totalNegative = 0;
+  for (const group in entities) {
+    if (entities[group].balance < 0) {
+      totalNegative += entities[group].balance;
     }
   }
 
-  // Always add the main balance
-  if (!groupVal && notNullOrUndefined(newBalance)) {
-    balances.push(newBalance!);
-  } else {
-    balances.push(cusEnt.balance!);
-  }
-
-  return Math.min(...balances);
-};
-
-export const getTotalNegativeBalance = (cusEnt: FullCustomerEntitlement) => {
-  let starting = cusEnt.balance! < 0 ? cusEnt.balance! : 0;
-  if (!cusEnt.balances) {
-    return starting;
-  }
-
-  for (const group in cusEnt.balances) {
-    if (cusEnt.balances[group].balance < 0) {
-      starting = starting + cusEnt.balances[group].balance;
-    }
-  }
-  return starting;
+  return totalNegative;
 };
 
 // GET EXISTING USAGE

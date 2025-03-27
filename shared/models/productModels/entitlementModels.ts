@@ -25,6 +25,7 @@ export const EntitlementSchema = z.object({
   interval: z.nativeEnum(EntInterval).optional().nullable(),
 
   carry_from_previous: z.boolean().default(false).optional(),
+  entity_feature_id: z.string().nullish(),
 
   // linked_to: z
   //   .array(

@@ -24,7 +24,7 @@ export class CustomerEntitlementService {
       .select(
         `*, 
         customer_products:customer_products!inner(*), 
-        customer_entitlements:customer_entitlements(*, entitlement:entitlements(*))`
+        customer_entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*)))`
       )
       .eq("id", customerId)
       .eq("org_id", orgId)
@@ -393,5 +393,24 @@ export class CustomerEntitlementService {
     }
 
     return data;
+  }
+
+  static async incrementBalance({
+    sb,
+    id,
+    amount,
+  }: {
+    sb: SupabaseClient;
+    id: string;
+    amount: number;
+  }) {
+    const { error } = await sb
+      .from("customer_entitlements")
+      .update({ balance: 1 })
+      .eq("id", id);
+
+    if (error) {
+      throw error;
+    }
   }
 }

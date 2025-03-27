@@ -9,6 +9,7 @@ import {
   Customer,
   Feature,
   FeatureType,
+  FullCustomerEntitlement,
 } from "@autumn/shared";
 
 import { Router } from "express";
@@ -45,13 +46,13 @@ const getRequiredAndActualBalance = ({
   feature,
   originalFeatureId,
   required,
-  group,
+  entityId,
 }: {
-  cusEnts: CusEntWithEntitlement[];
+  cusEnts: FullCustomerEntitlement[];
   feature: Feature;
   originalFeatureId: string;
   required: number;
-  group: any;
+  entityId: string;
 }) => {
   let requiredBalance = required;
   if (
@@ -68,13 +69,13 @@ const getRequiredAndActualBalance = ({
   const actualBalance = getFeatureBalance({
     cusEnts,
     internalFeatureId: feature.internal_id!,
-    group,
+    entityId,
   });
 
   return {
     required: requiredBalance,
     actual: actualBalance,
-    group,
+    entityId,
   };
 };
 
@@ -83,13 +84,13 @@ const getMeteredEntitledResult = ({
   creditSystems,
   cusEnts,
   quantity,
-  group,
+  entityId,
 }: {
   originalFeature: Feature;
   creditSystems: Feature[];
-  cusEnts: CusEntWithEntitlement[];
+  cusEnts: FullCustomerEntitlement[];
   quantity: number;
-  group: any;
+  entityId: string;
 }) => {
   // If no entitlements -> return false
   if (!cusEnts || cusEnts.length === 0) {
@@ -125,7 +126,7 @@ const getMeteredEntitledResult = ({
           : getFeatureBalance({
               cusEnts,
               internalFeatureId: feature.internal_id!,
-              group,
+              entityId,
             }),
       });
       continue;
@@ -137,7 +138,7 @@ const getMeteredEntitledResult = ({
       feature,
       originalFeatureId: originalFeature.id,
       required: quantity,
-      group,
+      entityId,
     });
 
     let newBalance: any = {
@@ -148,9 +149,8 @@ const getMeteredEntitledResult = ({
 
     // feature.config.group_by will always be defined
     // TODO: Rework this...
-    if (group) {
-      let groupField = feature.config?.group_by?.property;
-      newBalance[groupField] = group;
+    if (entityId) {
+      newBalance.entity_id = entityId;
     }
 
     balances.push(newBalance);
@@ -414,7 +414,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     required_quantity,
     customer_data,
     event_data,
-    group,
+    entity_id,
   } = req.body;
 
   const quantity = required_quantity ? parseInt(required_quantity) : 1;
@@ -439,30 +439,30 @@ entitledRouter.post("", async (req: any, res: any) => {
       });
     }
 
-    // 3. If group is provided, but feature does not have group_by, throw error
-    if (notNullOrUndefined(group) && !feature.config?.group_by) {
-      throw new RecaseError({
-        message: `Feature ${feature.id} does not support group_by`,
-        code: ErrCode.FeatureNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
+    // // 3. If group is provided, but feature does not have group_by, throw error
+    // if (notNullOrUndefined(group) && !feature.config?.group_by) {
+    //   throw new RecaseError({
+    //     message: `Feature ${feature.id} does not support group_by`,
+    //     code: ErrCode.FeatureNotFound,
+    //     statusCode: StatusCodes.NOT_FOUND,
+    //   });
+    // }
 
-    if (notNullOrUndefined(group)) {
-      await initGroupBalances({
-        sb,
-        cusEnts: cusEnts!,
-        groupValue: group,
-        feature,
-      });
-    }
+    // if (notNullOrUndefined(group)) {
+    //   await initGroupBalances({
+    //     sb,
+    //     cusEnts: cusEnts!,
+    //     groupValue: group,
+    //     feature,
+    //   });
+    // }
 
     const { allowed, balances } = getMeteredEntitledResult({
       originalFeature: feature,
       creditSystems,
       cusEnts: cusEnts!,
       quantity,
-      group,
+      entityId: entity_id,
     });
 
     if (allowed && event_data && !req.isPublic) {

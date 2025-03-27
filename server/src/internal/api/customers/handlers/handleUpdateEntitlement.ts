@@ -10,6 +10,8 @@ import { CusPriceService } from "@/internal/customers/prices/CusPriceService.js"
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { getCusEntMasterBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
 
 const getCusOrgAndCusPrice = async ({
   sb,
@@ -77,8 +79,6 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       withCusProduct: true,
     });
 
-    // Get related cus price
-
     if (balance < 0 && !cusEnt.usage_allowed) {
       throw new RecaseError({
         message: "Entitlement does not allow usage",
@@ -87,16 +87,44 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       });
     }
 
-    const deducted = new Decimal(cusEnt.balance!).minus(balance).toNumber();
-    const adjustment = new Decimal(cusEnt.adjustment!)
-      .minus(deducted)
-      .toNumber();
+    if (cusEnt.unlimited) {
+      throw new RecaseError({
+        message: "Entitlement is unlimited",
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    let { balance: masterBalance } = getCusEntMasterBalance({
+      cusEnt,
+      entities: cusEnt.customer_product.entities,
+    });
+
+    const deducted = new Decimal(masterBalance!).minus(balance).toNumber();
+
+    // const adjustment = new Decimal(cusEnt.adjustment!)
+    //   .minus(deducted)
+    //   .toNumber();
+
+    let { newBalance, newEntities, newAdjustment } = performDeductionOnCusEnt({
+      cusEnt,
+      toDeduct: deducted,
+      addAdjustment: true,
+    });
+
     let originalBalance = cusEnt.balance;
+
+    // Perform deduction.
 
     await CustomerEntitlementService.update({
       sb: req.sb,
       id: customer_entitlement_id,
-      updates: { balance, next_reset_at, adjustment },
+      updates: {
+        balance: newBalance,
+        next_reset_at,
+        entities: newEntities,
+        adjustment: newAdjustment,
+      },
     });
 
     const { cusPrice, customer, org } = await getCusOrgAndCusPrice({

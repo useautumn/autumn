@@ -374,3 +374,7 @@ export const searchCusProducts = ({
       (status ? cusProduct.status === status : true)
   );
 };
+
+export const isTrialing = (cusProduct: FullCusProduct) => {
+  return cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
+};

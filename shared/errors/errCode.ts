@@ -104,4 +104,8 @@ export const ErrCode = {
 
   // COUPONS
   PromoCodeAlreadyExistsInStripe: "promo_code_already_exists_in_stripe",
+
+  // Entity
+  EntityNotFound: "entity_not_found",
+  EntityAlreadyDeleted: "entity_already_deleted",
 };

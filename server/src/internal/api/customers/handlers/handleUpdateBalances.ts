@@ -13,19 +13,11 @@ import {
 } from "@/trigger/updateBalanceTask.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
+import { initGroupBalancesFromUpdateBalances } from "@/internal/customers/entitlements/groupByUtils.js";
+
 import {
-  getGroupBalanceFromProperties,
-  initGroupBalancesFromUpdateBalances,
-} from "@/internal/customers/entitlements/groupByUtils.js";
-import {
-  notNullish,
-  notNullOrUndefined,
-  nullish,
-  nullOrUndefined,
-} from "@/utils/genUtils.js";
-import {
+  getCusEntBalance,
   getUnlimitedAndUsageAllowed,
-  updateCusEntInStripe,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 
@@ -166,24 +158,31 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       delete properties.balance;
 
       for (const cusEnt of cusEnts) {
-        if (cusEnt.internal_feature_id === feature.internal_id) {
-          // curBalance = curBalance.add(new Decimal(cusEnt.balance!));
-          const { groupVal, balance } = getGroupBalanceFromProperties({
-            properties,
-            feature,
-            cusEnt,
-            features: featuresToUpdate,
-          });
-
-          if (notNullish(groupVal) && nullish(balance)) {
-            logger.info(
-              `   - No balance found for group by value: ${groupVal}, for customer: ${customer.id}, skipping`
-            );
-            continue;
-          }
-
-          curBalance = curBalance.add(new Decimal(balance!));
+        if (cusEnt.internal_feature_id !== feature.internal_id) {
+          continue;
         }
+
+        let cusEntBalance = getCusEntBalance({
+          cusEnt,
+          entityId: balance.entity_id,
+        });
+
+        // curBalance = curBalance.add(new Decimal(cusEnt.balance!));
+        // const { groupVal, balance } = getGroupBalanceFromProperties({
+        //   properties,
+        //   feature,
+        //   cusEnt,
+        //   features: featuresToUpdate,
+        // });
+
+        // if (notNullish(groupVal) && nullish(balance)) {
+        //   logger.info(
+        //     `   - No balance found for group by value: ${groupVal}, for customer: ${customer.id}, skipping`
+        //   );
+        //   continue;
+        // }
+
+        curBalance = curBalance.add(new Decimal(cusEntBalance!));
       }
 
       let toDeduct = curBalance.sub(newBalance).toNumber();
