@@ -19,6 +19,7 @@ export const CreateEntitlement = () => {
 
   const handleCreateEntitlement = async () => {
     const newEntitlement = CreateEntitlementSchema.parse(entitlement);
+    console.log("New entitlement", newEntitlement);
 
     setProduct({
       ...product,
@@ -40,14 +41,16 @@ export const CreateEntitlement = () => {
           Create Entitlement
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[500px]">
+      <DialogContent className="">
         <DialogHeader>
           <DialogTitle>Create Entitlement</DialogTitle>
         </DialogHeader>
-        <EntitlementConfig
-          entitlement={entitlement}
-          setEntitlement={setEntitlement}
-        />
+        <div className="flex w-full overflow-hidden">
+          <EntitlementConfig
+            entitlement={entitlement}
+            setEntitlement={setEntitlement}
+          />
+        </div>
 
         <DialogFooter>
           <Button onClick={handleCreateEntitlement} variant="gradientPrimary">

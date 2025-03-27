@@ -80,7 +80,8 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
     ent1.interval === ent2.interval &&
     ent1.allowance_type === ent2.allowance_type &&
     ent1.allowance === ent2.allowance &&
-    ent1.carry_from_previous === ent2.carry_from_previous
+    ent1.carry_from_previous === ent2.carry_from_previous &&
+    ent1.entity_feature_id === ent2.entity_feature_id
   );
 };
 

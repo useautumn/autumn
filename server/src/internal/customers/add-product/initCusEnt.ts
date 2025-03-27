@@ -71,8 +71,6 @@ const initCusEntBalance = ({
 
   let newBalance = resetBalance! - existingUsage;
 
-  // Bring over entities...
-
   if (
     entitlement.entity_feature_id ==
     existingCusEnt.entitlement.entity_feature_id

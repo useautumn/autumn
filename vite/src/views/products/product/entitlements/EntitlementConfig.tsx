@@ -59,7 +59,9 @@ export const EntitlementConfig = ({
   const [originalEntitlement, _] = useState<Entitlement | null>(
     entitlement || null
   );
-  const [showPerEntity, setShowPerEntity] = useState(false);
+  const [showPerEntity, setShowPerEntity] = useState(
+    entitlement?.entity_feature_id ? true : false
+  );
   const [showPopover, setShowPopover] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(
     getFeature(entitlement?.internal_feature_id, features) || null
@@ -70,6 +72,7 @@ export const EntitlementConfig = ({
     allowance_type: entitlement?.allowance_type || AllowanceType.Fixed,
     allowance: entitlement?.allowance || "",
     interval: entitlement?.interval || EntInterval.Month,
+    entity_feature_id: entitlement?.entity_feature_id || "",
   });
 
   useEffect(() => {
@@ -79,6 +82,10 @@ export const EntitlementConfig = ({
         feature_id: selectedFeature.id,
         feature: selectedFeature,
         ...fields,
+        entity_feature_id:
+          fields.entity_feature_id && showPerEntity
+            ? fields.entity_feature_id
+            : null,
         allowance: fields.allowance ? Number(fields.allowance) : 0,
       });
 
@@ -91,10 +98,16 @@ export const EntitlementConfig = ({
     } else {
       setEntitlement(null);
     }
-  }, [selectedFeature, fields, originalEntitlement, setEntitlement]);
+  }, [
+    selectedFeature,
+    fields,
+    originalEntitlement,
+    setEntitlement,
+    showPerEntity,
+  ]);
 
   return (
-    <div className="">
+    <div className="w-full overflow-hidden">
       <FieldLabel>Entitlement </FieldLabel>
       <Select
         value={selectedFeature?.internal_id}
@@ -243,7 +256,7 @@ export const EntitlementConfig = ({
                   />
                 </div>
                 {showPerEntity && (
-                  <div className="flex flex-col w-full">
+                  <div className="flex flex-col w-full overflow-hidden">
                     <FieldLabel className="flex items-center gap-2">
                       Entity
                       <Tooltip delayDuration={400}>
@@ -256,14 +269,18 @@ export const EntitlementConfig = ({
                         </TooltipContent>
                       </Tooltip>
                     </FieldLabel>
-                    <Select>
+                    <Select
+                      value={fields.entity_feature_id}
+                      onValueChange={(value) =>
+                        setFields({ ...fields, entity_feature_id: value })
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select feature" />
                       </SelectTrigger>
                       <SelectContent>
                         {features
                           .filter((feature: Feature) => {
-                            // Filter out boolean features and the currently selected feature
                             if (feature.type === FeatureType.Boolean) {
                               return false;
                             }
@@ -278,11 +295,13 @@ export const EntitlementConfig = ({
                           .map((feature: Feature) => (
                             <SelectItem
                               key={feature.internal_id}
-                              value={feature.internal_id!}
+                              value={feature.id}
                             >
                               <div className="flex gap-2 items-center">
-                                {feature.name}
-                                <FeatureTypeBadge type={feature.type} />
+                                per {feature.name}
+                                <span className="font-mono text-t3">
+                                  {feature.id}
+                                </span>
                               </div>
                             </SelectItem>
                           ))}
@@ -313,7 +332,7 @@ export const EntitlementConfig = ({
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select duration" />
+                      <SelectValue placeholder="Select reset" />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.values(EntInterval).map((interval) => (
