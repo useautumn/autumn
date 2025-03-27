@@ -144,17 +144,13 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
     // For each cus ent, show full entitlement?
     for (const cusEnt of fullCustomer.entitlements) {
-      let entitlement = cusEnt.entitlement;
+      // let entitlement = cusEnt.entitlement;
 
       // Show used, limit, etc.
       let { balance, unused } = getCusEntMasterBalance({
         cusEnt,
         entities,
       });
-
-      console.log(
-        `Feature: ${entitlement.feature.id}, balance: ${balance}, unused: ${unused}`
-      );
 
       cusEnt.balance = balance;
       cusEnt.unused = unused;
