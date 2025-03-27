@@ -5,6 +5,12 @@ import {
 } from "../../productModels/entitlementModels.js";
 import { FeatureSchema } from "../../featureModels/featureModels.js";
 
+export const EntityBalanceSchema = z.object({
+  id: z.string(),
+  balance: z.number(),
+  adjustment: z.number(),
+});
+export type EntityBalance = z.infer<typeof EntityBalanceSchema>;
 export const CustomerEntitlementSchema = z.object({
   // Foreign keys
   id: z.string(),
@@ -26,15 +32,7 @@ export const CustomerEntitlementSchema = z.object({
   adjustment: z.number().nullish().default(0),
 
   // Group by fields
-  balances: z
-    .record(
-      z.string(),
-      z.object({
-        balance: z.number(),
-        adjustment: z.number(),
-      })
-    )
-    .nullish(),
+  entities: z.record(z.string(), EntityBalanceSchema).nullish(),
 });
 
 export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({

@@ -23,6 +23,7 @@ import {
 import UpdateEntitlement from "./UpdateEntitlement";
 import { useProductContext } from "../ProductContext";
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { AdminHover } from "@/components/general/AdminHover";
 export const ProductEntitlementTable = ({
   entitlements,
 }: {
@@ -48,6 +49,17 @@ export const ProductEntitlementTable = ({
 
     if (entitlement.allowance_type != AllowanceType.Fixed) {
       return entitlement.allowance_type;
+    }
+
+    if (entitlement.entity_feature_id) {
+      if (entitlement.interval === "lifetime") {
+        return `${entitlement.allowance} / ${entitlement.entity_feature_id}`;
+      }
+      return `${entitlement.allowance} / ${entitlement.entity_feature_id} / ${entitlement.interval}`;
+    }
+
+    if (entitlement.interval === "lifetime") {
+      return entitlement.allowance;
     }
 
     return `${entitlement.allowance} / ${entitlement.interval}`;
@@ -84,7 +96,11 @@ export const ProductEntitlementTable = ({
                 className="cursor-pointer"
                 onClick={() => handleRowClick(entitlement)}
               >
-                <TableCell>{feature?.name}</TableCell>
+                <TableCell>
+                  <AdminHover texts={[entitlement.id]}>
+                    {feature?.name}
+                  </AdminHover>
+                </TableCell>
                 <TableCell className="font-mono">{feature?.id}</TableCell>
                 <TableCell>
                   <FeatureTypeBadge type={feature?.type} />

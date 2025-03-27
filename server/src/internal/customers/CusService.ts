@@ -704,6 +704,32 @@ export class CusService {
 
     return data as any;
   }
+
+  // Get in IDs
+  static async getInIds({
+    sb,
+    cusIds,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    cusIds: string[];
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("customers")
+      .select("*")
+      .in("id", cusIds)
+      .eq("org_id", orgId)
+      .eq("env", env);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
 }
 
 // const query = sb

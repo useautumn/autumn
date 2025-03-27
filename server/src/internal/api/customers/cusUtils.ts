@@ -7,6 +7,7 @@ import {
   CustomerSchema,
   ErrCode,
   FullCusProduct,
+  FullCustomerEntitlement,
   FullProduct,
   Organization,
   ProductSchema,
@@ -34,6 +35,11 @@ import {
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { initGroupBalancesFromGetCus } from "@/internal/customers/entitlements/groupByUtils.js";
+import { EntityService } from "../entities/EntityService.js";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { BREAK_API_VERSION } from "@/utils/constants.js";
 
 export const getCusByIdOrInternalId = async ({
   sb,
@@ -138,12 +144,20 @@ const getCusInvoices = async ({
   return processedInvoices;
 };
 
-const processFullCusProducts = (fullCusProducts: any) => {
+const processFullCusProducts = ({
+  fullCusProducts,
+  subs,
+  org,
+}: {
+  fullCusProducts: any;
+  subs: any;
+  org: Organization;
+}) => {
   // Process full cus products
   let main = [];
   let addOns = [];
   for (const cusProduct of fullCusProducts) {
-    let processed = processFullCusProduct(cusProduct);
+    let processed = processFullCusProduct({ cusProduct, subs, org });
 
     let isAddOn = cusProduct.product.is_add_on;
     if (isAddOn) {
@@ -172,42 +186,69 @@ export const getCustomerDetails = async ({
   logger: any;
 }) => {
   // 1. Get full customer products & processed invoices
-  const [fullCusProducts, processedInvoices] = await Promise.all([
-    CusService.getFullCusProducts({
-      sb,
-      internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
-      inStatuses: [
-        CusProductStatus.Active,
-        CusProductStatus.PastDue,
-        CusProductStatus.Scheduled,
-      ],
-      logger,
-    }),
-    getCusInvoices({
-      sb,
-      internalCustomerId: customer.internal_id,
-      limit: 20,
-    }),
-  ]);
+  const [fullCusProducts, processedInvoices, entities, org] = await Promise.all(
+    [
+      CusService.getFullCusProducts({
+        sb,
+        internalCustomerId: customer.internal_id,
+        withProduct: true,
+        withPrices: true,
+        inStatuses: [
+          CusProductStatus.Active,
+          CusProductStatus.PastDue,
+          CusProductStatus.Scheduled,
+        ],
+        logger,
+      }),
+      getCusInvoices({
+        sb,
+        internalCustomerId: customer.internal_id,
+        limit: 20,
+      }),
+      EntityService.getByInternalCustomerId({
+        sb,
+        internalCustomerId: customer.internal_id,
+        logger,
+      }),
+      OrgService.getFullOrg({
+        sb,
+        orgId,
+      }),
+    ]
+  );
+
+  let stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
+  let subs;
+  let subIds = fullCusProducts.flatMap(
+    (cp: FullCusProduct) => cp.subscription_ids
+  );
+
+  if (org.config.api_version >= BREAK_API_VERSION) {
+    subs = await getStripeSubs({
+      stripeCli,
+      subIds,
+    });
+  }
 
   // 2. Initialize group by balances
   let cusEnts = fullCusProductToCusEnts(fullCusProducts) as any;
-  await initGroupBalancesFromGetCus({
-    sb,
-    cusEnts,
-    params,
-  });
 
-  // Get entitlements
+  // 3. Get entitlements
   const balances = await getCusBalancesByEntitlement({
     cusEntsWithCusProduct: cusEnts,
     cusPrices: fullCusProductToCusPrices(fullCusProducts),
-    groupVals: params,
+    entities,
   });
 
-  const { main, addOns } = processFullCusProducts(fullCusProducts);
+  const { main, addOns } = processFullCusProducts({
+    fullCusProducts,
+    subs,
+    org,
+  });
 
   return {
     customer,
@@ -224,13 +265,15 @@ export const getCusEntsInFeatures = async ({
   internalFeatureIds,
   inStatuses = [CusProductStatus.Active],
   withPrices = false,
+  withProduct = false,
   logger,
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
-  internalFeatureIds: string[];
+  internalFeatureIds?: string[];
   inStatuses?: CusProductStatus[];
   withPrices?: boolean;
+  withProduct?: boolean;
   logger: any;
 }) => {
   const fullCusProducts = await CusService.getFullCusProducts({
@@ -238,6 +281,7 @@ export const getCusEntsInFeatures = async ({
     internalCustomerId,
     inStatuses: inStatuses,
     withPrices: withPrices,
+    withProduct: withProduct,
     logger,
   });
 
@@ -250,9 +294,14 @@ export const getCusEntsInFeatures = async ({
     return { cusEnts: [] };
   }
 
-  const cusEnts = cusEntsWithCusProduct.filter((cusEnt) =>
-    internalFeatureIds.includes(cusEnt.internal_feature_id)
-  );
+  let cusEnts: FullCustomerEntitlement[] = [];
+  if (internalFeatureIds) {
+    cusEnts = cusEntsWithCusProduct.filter((cusEnt) =>
+      internalFeatureIds.includes(cusEnt.internal_feature_id)
+    );
+  } else {
+    cusEnts = cusEntsWithCusProduct;
+  }
 
   sortCusEntsForDeduction(cusEnts);
 

@@ -13,31 +13,23 @@ import {
 } from "@/trigger/updateBalanceTask.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
+import { initGroupBalancesFromUpdateBalances } from "@/internal/customers/entitlements/groupByUtils.js";
+
 import {
-  getGroupBalanceFromProperties,
-  initGroupBalancesFromUpdateBalances,
-} from "@/internal/customers/entitlements/groupByUtils.js";
-import {
-  notNullish,
-  notNullOrUndefined,
-  nullish,
-  nullOrUndefined,
-} from "@/utils/genUtils.js";
-import {
+  getCusEntBalance,
   getUnlimitedAndUsageAllowed,
-  updateCusEntInStripe,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
   // 1. Get customer
   const [customer, features, org] = await Promise.all([
-    CusService.getById({
+    CusService.getByIdOrInternalId({
       sb: req.sb,
-      id: customerId,
+      idOrInternalId: customerId,
       orgId: req.orgId,
       env: req.env,
-      logger: req.logtail,
     }),
     FeatureService.getFromReq(req),
     OrgService.getFullOrg({
@@ -97,13 +89,13 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       logger: req.logtail,
     });
 
-    // Initialize balances
-    await initGroupBalancesFromUpdateBalances({
-      sb: req.sb,
-      cusEnts,
-      features: featuresToUpdate,
-      updates: balances,
-    });
+    // // Initialize balances
+    // await initGroupBalancesFromUpdateBalances({
+    //   sb: req.sb,
+    //   cusEnts,
+    //   features: featuresToUpdate,
+    //   updates: balances,
+    // });
 
     logger.info("--------------------------------");
     logger.info(
@@ -166,24 +158,38 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       delete properties.balance;
 
       for (const cusEnt of cusEnts) {
-        if (cusEnt.internal_feature_id === feature.internal_id) {
-          // curBalance = curBalance.add(new Decimal(cusEnt.balance!));
-          const { groupVal, balance } = getGroupBalanceFromProperties({
-            properties,
-            feature,
-            cusEnt,
-            features: featuresToUpdate,
-          });
-
-          if (notNullish(groupVal) && nullish(balance)) {
-            logger.info(
-              `   - No balance found for group by value: ${groupVal}, for customer: ${customer.id}, skipping`
-            );
-            continue;
-          }
-
-          curBalance = curBalance.add(new Decimal(balance!));
+        if (cusEnt.internal_feature_id !== feature.internal_id) {
+          continue;
         }
+
+        if (
+          notNullish(balance.interval) &&
+          balance.interval !== cusEnt.entitlement.interval
+        ) {
+          continue;
+        }
+
+        let cusEntBalance = getCusEntBalance({
+          cusEnt,
+          entityId: balance.entity_id,
+        });
+
+        // curBalance = curBalance.add(new Decimal(cusEnt.balance!));
+        // const { groupVal, balance } = getGroupBalanceFromProperties({
+        //   properties,
+        //   feature,
+        //   cusEnt,
+        //   features: featuresToUpdate,
+        // });
+
+        // if (notNullish(groupVal) && nullish(balance)) {
+        //   logger.info(
+        //     `   - No balance found for group by value: ${groupVal}, for customer: ${customer.id}, skipping`
+        //   );
+        //   continue;
+        // }
+
+        curBalance = curBalance.add(new Decimal(cusEntBalance!));
       }
 
       let toDeduct = curBalance.sub(newBalance).toNumber();
@@ -196,6 +202,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
         feature,
         toDeduct,
         properties,
+        interval: balance.interval,
       });
     }
 
@@ -204,14 +211,20 @@ export const handleUpdateBalances = async (req: any, res: any) => {
     for (const featureDeduction of featureDeductions) {
       // 1. Deduct from allowance
       const performDeduction = async () => {
-        let { toDeduct, feature, properties } = featureDeduction;
+        let { toDeduct, feature, properties, interval } = featureDeduction;
 
         // Handle unlimited
         if (featureDeduction.unlimited) {
           // Get one active cusEnt and set unlimited to true
-          const cusEnt = cusEnts.find(
-            (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
-          );
+          const cusEnt = notNullish(interval)
+            ? cusEnts.find(
+                (cusEnt) =>
+                  cusEnt.internal_feature_id === feature.internal_id &&
+                  cusEnt.entitlement.interval === interval
+              )
+            : cusEnts.find(
+                (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
+              );
 
           if (!cusEnt) {
             logger.warn(

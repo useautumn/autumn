@@ -9,6 +9,7 @@ export enum Duration {
 }
 
 export enum EntInterval {
+  Lifetime = "lifetime",
   Minute = "minute",
   Hour = "hour",
   Day = "day",
@@ -16,8 +17,7 @@ export enum EntInterval {
   Month = "month",
   Quarter = "quarter",
   SemiAnnual = "semi_annual",
-  Year = "year",
-  Lifetime = "lifetime",
+  Year = "year"
 }
 
 export enum AppEnv {

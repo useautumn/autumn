@@ -423,5 +423,15 @@ export const createFullCusProduct = async ({
   //   }),
   // });
 
-  return cusProd;
+  return {
+    ...cusProd,
+    customer_entitlements: cusEnts.map((ce) => ({
+      ...ce,
+      entitlement: entitlements.find((e) => e.id === ce.entitlement_id),
+    })),
+    customer_prices: cusPrices.map((cp) => ({
+      ...cp,
+      price: prices.find((p) => p.id === cp.price_id),
+    })),
+  };
 };

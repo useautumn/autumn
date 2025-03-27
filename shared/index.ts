@@ -42,3 +42,6 @@ export * from "./models/orgModels/orgConfigModels.js";
 export * from "./errors/errCode.js";
 export * from "./errors/internalErrCode.js";
 export * from "./logger/LoggerAction.js";
+
+// Entity Models
+export * from "./models/cusModels/entityModels/entityModels.js";

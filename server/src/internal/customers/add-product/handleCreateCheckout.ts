@@ -93,6 +93,7 @@ export const handleCreateCheckout = async ({
     success_url: successUrl || org.stripe_config!.success_url,
     metadata: {
       autumn_metadata_id: metaId,
+      ...(attachParams.metadata ? attachParams.metadata : {}),
     },
     allow_promotion_codes: true,
     invoice_creation: !isRecurring

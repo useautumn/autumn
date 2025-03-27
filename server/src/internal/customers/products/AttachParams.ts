@@ -32,6 +32,7 @@ export type AttachParams = {
   // CONFIGS
   invoiceOnly?: boolean | undefined;
   billingAnchor?: number | undefined;
+  metadata?: Record<string, string> | undefined;
 };
 
 export type InsertCusProductParams = {

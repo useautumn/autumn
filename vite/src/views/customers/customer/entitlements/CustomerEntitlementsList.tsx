@@ -22,6 +22,7 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import UpdateCusEntitlement from "./UpdateCusEntitlement";
 import { AdminHover } from "@/components/general/AdminHover";
+import React from "react";
 
 export const CustomerEntitlementsList = ({
   featureType,
@@ -116,45 +117,55 @@ export const CustomerEntitlementsList = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedEntitlements.map((cusEnt: FullCustomerEntitlement) => {
-            const entitlement = cusEnt.entitlement;
-            const allowanceType = entitlement.allowance_type;
-            return (
-              <TableRow
-                key={cusEnt.id}
-                onClick={() => handleSelectCusEntitlement(cusEnt)}
-                className="cursor-pointer"
-              >
-                <TableCell>
-                  <AdminHover texts={[cusEnt.id, entitlement.id]}>
-                    {entitlement.feature.name}
-                  </AdminHover>
-                </TableCell>
-                <TableCell>
-                  {allowanceType == AllowanceType.Unlimited
-                    ? "Unlimited"
-                    : allowanceType == AllowanceType.None
-                    ? "None"
-                    : cusEnt.balance}
-                </TableCell>
-                <TableCell className="max-w-[150px] truncate">
-                  {getProductName(cusEnt)} &nbsp;
-                  {customer.products.find(
-                    (p: any) => p.id === cusEnt.customer_product_id
-                  )?.status === "expired" && (
-                    <Badge variant="status" className="bg-red-500">
-                      expired
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <span>{formatUnixToDateTime(cusEnt.next_reset_at).date}</span>{" "}
-                  <span className="text-t3">
-                    {formatUnixToDateTime(cusEnt.next_reset_at).time}
-                  </span>
-                </TableCell>
-                <TableCell></TableCell>
-                {/* <TableCell>
+          {sortedEntitlements.map(
+            (cusEnt: FullCustomerEntitlement & { unused: number }) => {
+              const entitlement = cusEnt.entitlement;
+              const allowanceType = entitlement.allowance_type;
+              return (
+                <TableRow
+                  key={cusEnt.id}
+                  onClick={() => handleSelectCusEntitlement(cusEnt)}
+                  className="cursor-pointer"
+                >
+                  <TableCell>
+                    <AdminHover texts={[cusEnt.id, entitlement.id]}>
+                      {entitlement.feature.name}
+                    </AdminHover>
+                  </TableCell>
+                  <TableCell>
+                    {allowanceType == AllowanceType.Unlimited ? (
+                      "Unlimited"
+                    ) : allowanceType == AllowanceType.None ? (
+                      "None"
+                    ) : (
+                      <React.Fragment>
+                        {cusEnt.balance}
+                        <span className="text-t3">
+                          {cusEnt.unused ? ` (${cusEnt.unused} free)` : ""}
+                        </span>
+                      </React.Fragment>
+                    )}
+                  </TableCell>
+                  <TableCell className="max-w-[150px] truncate">
+                    {getProductName(cusEnt)} &nbsp;
+                    {customer.products.find(
+                      (p: any) => p.id === cusEnt.customer_product_id
+                    )?.status === "expired" && (
+                      <Badge variant="status" className="bg-red-500">
+                        expired
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span>
+                      {formatUnixToDateTime(cusEnt.next_reset_at).date}
+                    </span>{" "}
+                    <span className="text-t3">
+                      {formatUnixToDateTime(cusEnt.next_reset_at).time}
+                    </span>
+                  </TableCell>
+                  <TableCell></TableCell>
+                  {/* <TableCell>
                   <StatusBadge
                     status={
                       customer.products.find(
@@ -163,9 +174,10 @@ export const CustomerEntitlementsList = ({
                     }
                   />
                 </TableCell> */}
-              </TableRow>
-            );
-          })}
+                </TableRow>
+              );
+            }
+          )}
         </TableBody>
       </Table>
     </div>
