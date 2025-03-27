@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { Button } from "@/components/ui/button";
 import { useHotkeys } from "react-hotkeys-hook";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function FeatureConfig({
   feature,
@@ -57,13 +58,14 @@ export function FeatureConfig({
         }
   );
 
-  const [groupByExists, setGroupByExists] = useState(
-    feature.config.group_by ? true : false
-  );
+  // const [groupByExists, setGroupByExists] = useState(
+  //   feature.config.group_by ? true : false
+  // );
+  const [showEventName, setShowEventName] = useState(false);
 
   const [idChanged, setIdChanged] = useState(!!feature.id);
   const [featureType, setFeatureType] = useState<string>(
-    feature.type ? feature.type : FeatureType.Boolean
+    feature.type ? feature.type : FeatureType.Metered
   );
 
   useEffect(() => {
@@ -74,14 +76,15 @@ export function FeatureConfig({
       type: featureType,
       config: meteredConfig,
     });
+
   }, [featureType, meteredConfig, fields]);
 
-  const setAggregate = (key: string, value: string) => {
-    setMeteredConfig({
-      ...meteredConfig,
-      aggregate: { ...meteredConfig.aggregate, [key]: value },
-    });
-  };
+  // const setAggregate = (key: string, value: string) => {
+  //   setMeteredConfig({
+  //     ...meteredConfig,
+  //     aggregate: { ...meteredConfig.aggregate, [key]: value },
+  //   });
+  // };
 
   return (
     <div className="flex flex-col gap-4">
@@ -92,8 +95,8 @@ export function FeatureConfig({
         onValueChange={setFeatureType}
       >
         <TabsList>
-          <TabsTrigger value={FeatureType.Boolean}>Boolean</TabsTrigger>
           <TabsTrigger value={FeatureType.Metered}>Metered</TabsTrigger>
+          <TabsTrigger value={FeatureType.Boolean}>Boolean</TabsTrigger>
         </TabsList>
       </Tabs>
       <div className="flex gap-2 w-full">
@@ -132,7 +135,7 @@ export function FeatureConfig({
       {/* Filter */}
       {featureType === FeatureType.Metered && (
         <>
-          <div className="">
+          <div className={showEventName ? "" : "hidden"}>
             <FieldLabel>Event Name</FieldLabel>
 
             {/* <div className="flex gap-1 mb-2 text-sm bor">
@@ -147,8 +150,27 @@ export function FeatureConfig({
               setEventNameChanged={setEventNameChanged}
             />
           </div>
-
           <div>
+            <Tooltip delayDuration={400}>
+              <TooltipTrigger asChild>
+                <Button
+                  className="h-7 border rounded-none text-t3 text-xs"
+                  variant="outline"
+                  startIcon={<PlusIcon size={12} />}
+                  onClick={() => {
+                    setShowEventName(!showEventName);
+                  }}
+                >
+                <span className="font-mono ">event_name</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent sideOffset={5} side="right">
+                <p>Link feature to a separate event</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* <div>
             {groupByExists ? (
               <div>
                 <FieldLabel>Group By</FieldLabel>
@@ -184,7 +206,7 @@ export function FeatureConfig({
                 Group By
               </Button>
             )}
-          </div>
+          </div> */}
 
           {/* <div>
             <FieldLabel>Aggregate</FieldLabel>

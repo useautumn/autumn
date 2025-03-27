@@ -51,6 +51,10 @@ export const ProductEntitlementTable = ({
       return entitlement.allowance_type;
     }
 
+    if (entitlement.interval === "lifetime") {
+      return entitlement.allowance;
+    }
+
     return `${entitlement.allowance} / ${entitlement.interval}`;
   };
 
