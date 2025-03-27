@@ -140,17 +140,17 @@ const updateFeatureQuantity = async ({
       let updates: any = {
         balance: new Decimal(cusEnt?.balance || 0).plus(difference).toNumber(),
       };
-      if (cusEnt.balances) {
-        updates.balances = { ...cusEnt.balances };
-        for (const [key, value] of Object.entries(cusEnt.balances)) {
-          updates.balances[key] = {
-            ...cusEnt.balances[key],
-            balance: new Decimal(value.balance || 0)
-              .plus(difference)
-              .toNumber(),
-          };
-        }
-      }
+      // if (cusEnt.balances) {
+      //   updates.balances = { ...cusEnt.balances };
+      //   for (const [key, value] of Object.entries(cusEnt.balances)) {
+      //     updates.balances[key] = {
+      //       ...cusEnt.balances[key],
+      //       balance: new Decimal(value.balance || 0)
+      //         .plus(difference)
+      //         .toNumber(),
+      //     };
+      //   }
+      // }
       await CustomerEntitlementService.update({
         sb,
         id: cusEnt.id,

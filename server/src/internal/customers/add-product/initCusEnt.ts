@@ -3,6 +3,7 @@ import {
   BillingType,
   Customer,
   EntInterval,
+  EntityBalance,
   FeatureType,
   FreeTrial,
   FullCustomerEntitlement,
@@ -13,7 +14,7 @@ import { FeatureOptions } from "@autumn/shared";
 
 import { EntitlementWithFeature } from "@autumn/shared";
 import { getResetBalance } from "../entitlements/cusEntUtils.js";
-import { generateId, nullish } from "@/utils/genUtils.js";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -37,7 +38,7 @@ const initCusEntBalance = ({
   existingCusEnt?: FullCustomerEntitlement;
 }) => {
   if (entitlement.feature.type === FeatureType.Boolean) {
-    return null;
+    return { newBalance: null, newEntities: null };
   }
 
   const resetBalance = getResetBalance({
@@ -46,8 +47,14 @@ const initCusEntBalance = ({
     relatedPrice,
   });
 
+  let newEntities: Record<string, EntityBalance> | null = notNullish(
+    entitlement.entity_feature_id
+  )
+    ? {}
+    : null;
+
   if (!existingCusEnt || !entitlement.carry_from_previous) {
-    return resetBalance;
+    return { newBalance: resetBalance, newEntities };
   }
 
   let existingAllowanceType = existingCusEnt.entitlement.allowance_type;
@@ -55,7 +62,7 @@ const initCusEntBalance = ({
     nullish(existingCusEnt.balance) ||
     existingAllowanceType === AllowanceType.Unlimited
   ) {
-    return resetBalance;
+    return { newBalance: resetBalance, newEntities };
   }
 
   // Calculate existing usage
@@ -64,7 +71,27 @@ const initCusEntBalance = ({
 
   let newBalance = resetBalance! - existingUsage;
 
-  return newBalance;
+  if (
+    entitlement.entity_feature_id ==
+    existingCusEnt.entitlement.entity_feature_id
+  ) {
+    newEntities = {};
+
+    for (const entityId in existingCusEnt.entities) {
+      let existingBalance = existingCusEnt.entities[entityId].balance;
+      let existingUsage = existingAllowance - existingBalance;
+
+      let newBalance = resetBalance! - existingUsage;
+
+      newEntities[entityId] = {
+        id: entityId,
+        balance: newBalance,
+        adjustment: 0,
+      };
+    }
+  }
+
+  return { newBalance, newEntities };
 };
 
 const initCusEntNextResetAt = ({
@@ -171,7 +198,7 @@ export const initCusEntitlement = ({
   //   relatedPrice,
   // });
 
-  let balance = initCusEntBalance({
+  let { newBalance, newEntities } = initCusEntBalance({
     entitlement,
     options,
     relatedPrice,
@@ -217,7 +244,8 @@ export const initCusEntitlement = ({
     unlimited: isBooleanFeature
       ? null
       : entitlement.allowance_type === AllowanceType.Unlimited,
-    balance: isBooleanFeature ? null : balance,
+    balance: newBalance,
+    entities: newEntities,
     usage_allowed: usageAllowed,
     next_reset_at: nextResetAtValue,
   };

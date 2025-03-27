@@ -1,5 +1,10 @@
-import { notNullish } from "@/utils/genUtils.js";
-import { Feature, Event, FeatureType } from "@autumn/shared";
+import { notNullish, nullish } from "@/utils/genUtils.js";
+import {
+  Feature,
+  Event,
+  FeatureType,
+  FullCustomerEntitlement,
+} from "@autumn/shared";
 
 import { AggregateType } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -70,4 +75,49 @@ export const getCreditSystemDeduction = ({
   }
 
   return creditsUpdate;
+};
+
+// Deduct allowance
+export const performDeduction = ({
+  cusEntBalance,
+  toDeduct,
+  allowNegativeBalance = false,
+}: {
+  cusEntBalance: Decimal;
+  toDeduct: number;
+  allowNegativeBalance?: boolean;
+}) => {
+  // Either deduct from balance or entity balance
+
+  if (allowNegativeBalance) {
+    let newBalance = cusEntBalance.minus(toDeduct).toNumber();
+    let deducted = toDeduct;
+    let toDeduct_ = 0;
+    return { newBalance, deducted, toDeduct: toDeduct_ };
+  }
+
+  if (cusEntBalance.lte(0) && toDeduct > 0) {
+    return { newBalance: cusEntBalance.toNumber(), deducted: 0, toDeduct };
+  }
+
+  // If toDeduct is negative, add to balance and set toDeduct to 0
+  let newBalance, deducted;
+  if (toDeduct < 0) {
+    newBalance = cusEntBalance.minus(toDeduct).toNumber();
+    deducted = toDeduct;
+    toDeduct = 0;
+  }
+
+  // If cusEnt has less balance to deduct than 0, deduct the balance and set balance to 0
+  else if (cusEntBalance.minus(toDeduct).lt(0)) {
+    toDeduct = new Decimal(toDeduct).minus(cusEntBalance).toNumber(); // toDeduct = toDeduct - cusEntBalance
+    deducted = cusEntBalance.toNumber(); // deducted = cusEntBalance
+    newBalance = 0; // newBalance = 0
+  } else {
+    newBalance = cusEntBalance.minus(toDeduct).toNumber();
+    deducted = toDeduct;
+    toDeduct = 0;
+  }
+
+  return { newBalance, deducted, toDeduct };
 };

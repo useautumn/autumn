@@ -28,10 +28,21 @@ import {
 } from "@autumn/shared";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
+import { EllipsisVertical, InfoIcon, PlusIcon } from "lucide-react";
 
 import { useNavigate } from "react-router";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export const EntitlementConfig = ({
   isUpdate = false,
@@ -48,7 +59,10 @@ export const EntitlementConfig = ({
   const [originalEntitlement, _] = useState<Entitlement | null>(
     entitlement || null
   );
-
+  const [showPerEntity, setShowPerEntity] = useState(
+    entitlement?.entity_feature_id ? true : false
+  );
+  const [showPopover, setShowPopover] = useState(false);
   const [selectedFeature, setSelectedFeature] = useState<Feature | null>(
     getFeature(entitlement?.internal_feature_id, features) || null
   );
@@ -58,9 +72,8 @@ export const EntitlementConfig = ({
     allowance_type: entitlement?.allowance_type || AllowanceType.Fixed,
     allowance: entitlement?.allowance || "",
     interval: entitlement?.interval || EntInterval.Month,
+    entity_feature_id: entitlement?.entity_feature_id || "",
   });
-
-  console.log("Entitlement", entitlement);
 
   useEffect(() => {
     if (selectedFeature) {
@@ -69,6 +82,10 @@ export const EntitlementConfig = ({
         feature_id: selectedFeature.id,
         feature: selectedFeature,
         ...fields,
+        entity_feature_id:
+          fields.entity_feature_id && showPerEntity
+            ? fields.entity_feature_id
+            : null,
         allowance: fields.allowance ? Number(fields.allowance) : 0,
       });
 
@@ -81,10 +98,16 @@ export const EntitlementConfig = ({
     } else {
       setEntitlement(null);
     }
-  }, [selectedFeature, fields, originalEntitlement, setEntitlement]);
+  }, [
+    selectedFeature,
+    fields,
+    originalEntitlement,
+    setEntitlement,
+    showPerEntity,
+  ]);
 
   return (
-    <div className="">
+    <div className="w-full overflow-hidden">
       <FieldLabel>Entitlement </FieldLabel>
       <Select
         value={selectedFeature?.internal_id}
@@ -134,10 +157,9 @@ export const EntitlementConfig = ({
 
       {selectedFeature && selectedFeature?.type != FeatureType.Boolean && (
         <div className="flex flex-col mt-4 text-sm">
-          <FieldLabel>Allowance</FieldLabel>
           <Tabs
             defaultValue="fixed"
-            className="mb-4"
+            className=""
             value={fields.allowance_type}
             onValueChange={(value) =>
               setFields({
@@ -146,68 +168,196 @@ export const EntitlementConfig = ({
               })
             }
           >
-            <TabsList>
-              <TabsTrigger value="fixed">Fixed</TabsTrigger>
-              <TabsTrigger value="unlimited">Unlimited</TabsTrigger>
-              {/* <TabsTrigger value="none">None</TabsTrigger> */}
-            </TabsList>
+            <div className="flex justify-between items-center">
+              <TabsList>
+                <TabsTrigger value="fixed">Fixed</TabsTrigger>
+                <TabsTrigger value="unlimited">Unlimited</TabsTrigger>
+              </TabsList>
+              <div className="flex gap-1">
+                <Popover open={showPopover} onOpenChange={setShowPopover}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      className="h-7 p-2 border rounded-none text-t3 text-xs"
+                      variant="outline"
+                    >
+                      <EllipsisVertical size={12} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-48 p-2 flex flex-col text-xs"
+                    align="end"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="secondary"
+                        className="text-xs text-t3 shadow-none border-none"
+                        onClick={() => {
+                          setFields({
+                            ...fields,
+                            carry_from_previous: !fields.carry_from_previous,
+                          });
+                        }}
+                      >
+                        <Checkbox
+                          className="border-t3 mr-1"
+                          checked={fields.carry_from_previous}
+                          onCheckedChange={(checked) =>
+                            setFields({
+                              ...fields,
+                              carry_from_previous: Boolean(checked),
+                            })
+                          }
+                        />
+                        Keep usage on upgrade
+                      </Button>
+                    </div>
+                    <Button
+                      className="h-7 shadow-none text-t3 text-xs justify-start border-none"
+                      variant="outline"
+                      startIcon={<PlusIcon size={14} className="ml-0.5 mr-1" />}
+                      onClick={() => {
+                        setShowPerEntity(!showPerEntity);
+                        // hide the popover
+                        setShowPopover(false);
+                      }}
+                    >
+                      {showPerEntity ? "Remove Entity" : "Per Entity"}
+                    </Button>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
             <TabsContent value="fixed">
-              <div className="flex gap-2 items-center mt-4">
-                <Input
-                  placeholder="eg. 100"
-                  className="w-30"
-                  value={fields.allowance}
-                  type="number"
-                  onChange={(e) =>
-                    setFields({
-                      ...fields,
-                      allowance: e.target.value,
-                    })
-                  }
-                />
-                <p className="text-t3 min-w-fit">per</p>
-                <Select
-                  value={fields.interval}
-                  onValueChange={(value) =>
-                    setFields({
-                      ...fields,
-                      interval: value as EntInterval,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(EntInterval).map((interval) => (
-                      <SelectItem key={interval} value={interval}>
-                        {interval}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-2 items-center">
+                <div className="flex flex-col">
+                  <FieldLabel className="flex items-center gap-2">
+                    Allowance
+                    <Tooltip delayDuration={400}>
+                      <TooltipTrigger asChild>
+                        <InfoIcon className="w-3 h-3 text-t3/50" />
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={5} side="top">
+                        How much usage of this feature is included as part of
+                        this plan
+                      </TooltipContent>
+                    </Tooltip>
+                  </FieldLabel>
+                  <Input
+                    placeholder="eg. 100"
+                    className="w-30"
+                    value={fields.allowance}
+                    type="number"
+                    onChange={(e) =>
+                      setFields({
+                        ...fields,
+                        allowance: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                {showPerEntity && (
+                  <div className="flex flex-col w-full overflow-hidden">
+                    <FieldLabel className="flex items-center gap-2">
+                      Entity
+                      <Tooltip delayDuration={400}>
+                        <TooltipTrigger asChild>
+                          <InfoIcon className="w-3 h-3 text-t3/50" />
+                        </TooltipTrigger>
+                        <TooltipContent sideOffset={5} side="top">
+                          An entity (eg, a user) within the customer to assign
+                          this entitlement to
+                        </TooltipContent>
+                      </Tooltip>
+                    </FieldLabel>
+                    <Select
+                      value={fields.entity_feature_id}
+                      onValueChange={(value) =>
+                        setFields({ ...fields, entity_feature_id: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select feature" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {features
+                          .filter((feature: Feature) => {
+                            if (feature.type === FeatureType.Boolean) {
+                              return false;
+                            }
+                            if (
+                              selectedFeature?.internal_id ===
+                              feature.internal_id
+                            ) {
+                              return false;
+                            }
+                            return true;
+                          })
+                          .map((feature: Feature) => (
+                            <SelectItem
+                              key={feature.internal_id}
+                              value={feature.id}
+                            >
+                              <div className="flex gap-2 items-center">
+                                per {feature.name}
+                                <span className="font-mono text-t3">
+                                  {feature.id}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="flex flex-col w-full">
+                  <FieldLabel className="flex items-center gap-2">
+                    Reset
+                    <Tooltip delayDuration={400}>
+                      <TooltipTrigger asChild>
+                        <InfoIcon className="w-3 h-3 text-t3/50" />
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={5} side="top">
+                        Frequency at which this entitlement should be reset back
+                        to the allowance value
+                      </TooltipContent>
+                    </Tooltip>
+                  </FieldLabel>
+                  <Select
+                    value={fields.interval}
+                    onValueChange={(value) =>
+                      setFields({
+                        ...fields,
+                        interval: value as EntInterval,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select reset" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.values(EntInterval).map((interval) => (
+                        <SelectItem key={interval} value={interval}>
+                          {interval === "semi_annual"
+                            ? "per half year"
+                            : interval === "lifetime"
+                            ? "never"
+                            : `per ${interval}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
         </div>
       )}
 
-      {selectedFeature &&
+      {/* {selectedFeature &&
         selectedFeature?.type != FeatureType.Boolean &&
         fields.allowance_type == AllowanceType.Fixed && (
-          <div className="flex items-center gap-2 ml-1 text-sm">
-            <Checkbox
-              checked={fields.carry_from_previous}
-              onCheckedChange={(checked) =>
-                setFields({
-                  ...fields,
-                  carry_from_previous: Boolean(checked),
-                })
-              }
-            />
-            <p>Carry from previous period</p>
-          </div>
-        )}
+          <div className="flex items-center gap-4 text-sm"></div>
+        )} */}
     </div>
   );
 };

@@ -44,6 +44,7 @@ const getFeatureDeductions = ({
   let meteredFeature = features.find((f) => f.type === FeatureType.Metered)!;
   const featureDeductions = [];
   for (const feature of features) {
+    let newValue = value;
     let unlimitedExists = cusEnts.some(
       (cusEnt) =>
         cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
@@ -55,7 +56,7 @@ const getFeatureDeductions = ({
     }
 
     if (feature.type === FeatureType.CreditSystem) {
-      value = featureToCreditSystem({
+      newValue = featureToCreditSystem({
         featureId: meteredFeature.id,
         creditSystem: feature,
         amount: value,
@@ -63,7 +64,7 @@ const getFeatureDeductions = ({
     }
 
     // If it's set
-    let deduction = value;
+    let deduction = newValue;
 
     if (shouldSet) {
       let totalAllowance = cusEnts.reduce((acc, curr) => {
@@ -144,17 +145,15 @@ const logUsageUpdate = ({
     "   - CusEnts:",
     cusEnts.map((cusEnt: any) => {
       let balanceStr = cusEnt.balance;
-      let { groupVal, balance } = getGroupBalanceFromProperties({
-        properties,
-        cusEnt,
-        features,
-      });
+      // let { groupVal, balance } = getGroupBalanceFromProperties({
+      //   properties,
+      //   cusEnt,
+      //   features,
+      // });
 
       try {
         if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
           balanceStr = "Unlimited";
-        } else if (groupVal) {
-          balanceStr = `${balance} [${groupVal}]`;
         }
       } catch (error) {
         balanceStr = "failed_to_get_balance";

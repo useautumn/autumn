@@ -23,6 +23,9 @@ import {
   subIsPrematurelyCanceled,
 } from "@/external/stripe/stripeSubUtils.js";
 import { sortCusEntsForDeduction } from "../entitlements/cusEntUtils.js";
+import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { BREAK_API_VERSION } from "@/utils/constants.js";
 
 // 1. Delete future product
 export const uncancelCurrentProduct = async ({
@@ -303,8 +306,17 @@ export const fullCusProductToCusPrices = (
   return cusPrices;
 };
 
-export const processFullCusProduct = (cusProduct: FullCusProduct) => {
+export const processFullCusProduct = ({
+  cusProduct,
+  subs,
+  org,
+}: {
+  cusProduct: FullCusProduct;
+  org: Organization;
+  subs?: Stripe.Subscription[];
+}) => {
   // Process prices
+
   const prices = cusProduct.customer_prices.map((cp) => {
     let price = cp.price;
 
@@ -318,17 +330,72 @@ export const processFullCusProduct = (cusProduct: FullCusProduct) => {
       let config = price.config as UsagePriceConfig;
       let priceOptions = getPriceOptions(price, cusProduct.options);
       let usageTier = getUsageTier(price, priceOptions?.quantity!);
+      let cusEnt = getRelatedCusEnt({
+        cusPrice: cp,
+        cusEnts: cusProduct.customer_entitlements,
+      });
 
-      return {
-        amount: usageTier.amount,
-        interval: config.interval,
-        quantity: priceOptions?.quantity,
-      };
+      let ent = cusEnt?.entitlement;
+
+      let singleTier = ent?.allowance == 0 && config.usage_tiers.length == 1;
+
+      if (singleTier) {
+        return {
+          amount: usageTier.amount,
+          interval: config.interval,
+          quantity: priceOptions?.quantity,
+        };
+      } else {
+        // Add allowance to tiers
+        let allowance = ent?.allowance;
+        let tiers;
+
+        if (notNullish(allowance) && allowance! > 0) {
+          tiers = [
+            {
+              to: allowance,
+              amount: 0,
+            },
+            ...config.usage_tiers.map((tier) => ({
+              to: tier.to == -1 ? -1 : tier.to + allowance!,
+              amount: tier.amount,
+            })),
+          ];
+        } else {
+          tiers = config.usage_tiers.map((tier) => ({
+            to: tier.to == -1 ? -1 : tier.to + allowance!,
+            amount: tier.amount,
+          }));
+        }
+
+        return {
+          tiers: tiers,
+          name: price.name,
+          quantity: priceOptions?.quantity,
+        };
+      }
     }
   });
   const trialing =
     cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
-  return {
+
+  const subIds = cusProduct.subscription_ids;
+  let stripeSubData = {};
+
+  if (
+    subIds &&
+    subIds.length > 0 &&
+    org.config.api_version >= BREAK_API_VERSION
+  ) {
+    let baseSub = subs?.find((s) => s.id == subIds[0]);
+    stripeSubData = {
+      current_period_end: baseSub?.current_period_end
+        ? baseSub.current_period_end * 1000
+        : null,
+    };
+  }
+
+  let cusProductResponse = {
     id: cusProduct.product.id,
     name: cusProduct.product.name,
     group: cusProduct.product.group,
@@ -342,9 +409,13 @@ export const processFullCusProduct = (cusProduct: FullCusProduct) => {
     subscription_ids: cusProduct.subscription_ids || [],
     prices: prices,
     starts_at: cusProduct.starts_at,
+
+    ...stripeSubData,
     // prices: cusProduct.customer_prices,
     // entitlements: cusProduct.customer_entitlements,
   };
+
+  return cusProductResponse;
 };
 
 // GET CUSTOMER PRODUCT & ORG IN PARALLEL
@@ -373,4 +444,8 @@ export const searchCusProducts = ({
       cusProduct.product.id === productId &&
       (status ? cusProduct.status === status : true)
   );
+};
+
+export const isTrialing = (cusProduct: FullCusProduct) => {
+  return cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
 };

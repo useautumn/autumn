@@ -1,4 +1,8 @@
-import { FullCustomerEntitlement } from "@autumn/shared";
+import {
+  FullCusProduct,
+  FullCustomerEntitlement,
+  Product,
+} from "@autumn/shared";
 import {
   AppEnv,
   BillingType,
@@ -27,6 +31,9 @@ import { generateId } from "@/utils/genUtils.js";
 import { createStripeInvoiceItem } from "@/internal/customers/invoices/invoiceItemUtils.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { LoggerAction } from "@autumn/shared";
+import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
+import { isTrialing } from "@/internal/customers/products/cusProductUtils.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
@@ -43,6 +50,7 @@ export const adjustAllowanceOld = async ({
   originalBalance,
   newBalance,
   deduction,
+  replacedCount,
 }: {
   sb: SupabaseClient;
   env: AppEnv;
@@ -54,6 +62,7 @@ export const adjustAllowanceOld = async ({
   originalBalance: number;
   newBalance: number;
   deduction: number;
+  replacedCount?: number;
 }) => {
   // Get customer entitlement
   const logger = createLogtailWithContext({
@@ -230,6 +239,8 @@ export const adjustAllowance = async ({
   originalBalance,
   newBalance,
   deduction,
+  product,
+  replacedCount,
 }: {
   sb: SupabaseClient;
   env: AppEnv;
@@ -241,6 +252,8 @@ export const adjustAllowance = async ({
   originalBalance: number;
   newBalance: number;
   deduction: number;
+  product?: Product;
+  replacedCount?: number;
 }) => {
   // Get customer entitlement
 
@@ -258,6 +271,7 @@ export const adjustAllowance = async ({
   let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
   let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
   let cusProduct = cusEnt.customer_product;
+
   if (!cusPrice || billingType !== BillingType.InArrearProrated) {
     return;
   }
@@ -270,7 +284,11 @@ export const adjustAllowance = async ({
     `   - Customer: ${customer.name} (${customer.id}), Org: ${org.slug}`
   );
   logger.info(`   - Allowance: ${cusEnt.entitlement.allowance!}`);
-  logger.info(`   - Balance: ${originalBalance} -> ${newBalance}`);
+  logger.info(
+    `   - Balance: ${originalBalance} -> ${newBalance}${
+      replacedCount ? ` (replaced ${replacedCount})` : ""
+    }`
+  );
 
   if (!cusProduct) {
     logger.error(
@@ -305,6 +323,77 @@ export const adjustAllowance = async ({
 
   let quantity = newUsage + cusEnt.entitlement.allowance!;
 
+  let prorationBehaviour = "create_prorations";
+
+  // If prorate unused is false, then remove end of cycle
+  if (!org.config.prorate_unused) {
+    prorationBehaviour = "none";
+
+    const downgrade = quantity < (subItem.quantity || 0);
+
+    if (!downgrade && !isTrialing(cusProduct as FullCusProduct)) {
+      let entitlement = cusEnt.entitlement;
+      let newUsage = entitlement.allowance! - newBalance;
+      let oldUsage = entitlement.allowance! - originalBalance;
+      newUsage = newUsage - (replacedCount || 0);
+
+      let newAmount = getPriceForOverage(cusPrice.price, newUsage);
+      let oldAmount = getPriceForOverage(cusPrice.price, oldUsage);
+
+      const stripeAmount = new Decimal(newAmount)
+        .sub(oldAmount)
+        .mul(100)
+        .round()
+        .toNumber();
+
+      logger.info(`   - Stripe amount: ${stripeAmount}`);
+
+      if (stripeAmount > 0) {
+        const invoice = await stripeCli.invoices.create({
+          customer: customer.processor.id,
+          auto_advance: false,
+          subscription: sub.id,
+        });
+
+        if (!product) {
+          product = await ProductService.getByInternalId({
+            sb,
+            internalId: cusProduct.internal_product_id,
+            orgId: org.id,
+            env,
+          });
+        }
+
+        await stripeCli.invoiceItems.create({
+          customer: customer.processor.id,
+          invoice: invoice.id,
+          quantity: 1,
+          description: `${product!.name} - ${
+            affectedFeature.name
+          } x ${Math.round(newUsage - oldUsage)}`,
+
+          price_data: {
+            product: config.stripe_product_id!,
+            unit_amount: stripeAmount,
+            currency: org.default_currency,
+          },
+        });
+
+        const { paid, error } = await payForInvoice({
+          fullOrg: org,
+          env,
+          customer,
+          invoice,
+          logger,
+        });
+
+        if (!paid) {
+          logger.warn("❗️ Failed to pay for invoice!");
+        }
+      }
+    }
+  }
+
   if (quantity < 0) {
     quantity = 0;
     logger.warn("❗️ Warning: quantity is negative, setting to 0");
@@ -316,7 +405,7 @@ export const adjustAllowance = async ({
   try {
     await stripeCli.subscriptionItems.update(subItem.id, {
       quantity: quantity,
-      proration_behavior: "create_prorations",
+      proration_behavior: prorationBehaviour as any,
     });
     logger.info(`   ✅ Adjusted sub item ${subItem.id} to ${quantity}`);
   } catch (error: any) {
