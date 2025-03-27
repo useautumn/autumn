@@ -27,33 +27,30 @@ export const getGroupbalanceFromParams = ({
   feature: Feature;
   cusEnt: CusEntWithEntitlement;
 }) => {
-  if (!feature.config?.group_by) {
-    return {
-      groupField: null,
-      groupVal: null,
-      balance: cusEnt.balance,
-      adjustment: cusEnt.adjustment,
-    };
-  }
-
-  let groupField = feature.config?.group_by?.property;
-  if (nullOrUndefined(params[groupField])) {
-    return {
-      groupField: null,
-      groupVal: null,
-      balance: cusEnt.balance,
-      adjustment: cusEnt.adjustment,
-    };
-  }
-
-  let groupVal = params[groupField];
-  let balance = cusEnt.balances?.[groupVal]?.balance;
-  let adjustment = cusEnt.balances?.[groupVal]?.adjustment;
-  if (nullOrUndefined(balance)) {
-    return { groupField, groupVal, balance: null, adjustment: null };
-  }
-
-  return { groupField, groupVal, balance, adjustment };
+  // if (!feature.config?.group_by) {
+  //   return {
+  //     groupField: null,
+  //     groupVal: null,
+  //     balance: cusEnt.balance,
+  //     adjustment: cusEnt.adjustment,
+  //   };
+  // }
+  // let groupField = feature.config?.group_by?.property;
+  // if (nullOrUndefined(params[groupField])) {
+  //   return {
+  //     groupField: null,
+  //     groupVal: null,
+  //     balance: cusEnt.balance,
+  //     adjustment: cusEnt.adjustment,
+  //   };
+  // }
+  // let groupVal = params[groupField];
+  // let balance = cusEnt.balances?.[groupVal]?.balance;
+  // let adjustment = cusEnt.balances?.[groupVal]?.adjustment;
+  // if (nullOrUndefined(balance)) {
+  //   return { groupField, groupVal, balance: null, adjustment: null };
+  // }
+  // return { groupField, groupVal, balance, adjustment };
 };
 // 1. Event contains group_by value
 export const getGroupValFromProperties = ({
@@ -81,89 +78,85 @@ export const getGroupBalanceFromProperties = ({
   features?: Feature[];
   cusEnt: CusEntWithEntitlement;
 }) => {
-  if (features && !feature) {
-    feature = features.find(
-      (f) => f.internal_id == cusEnt.entitlement.internal_feature_id
-    )!;
-  }
-
-  // TODO: Add support for credit systems?
-  let groupVal = getGroupValFromProperties({ properties, feature: feature! });
-
-  if (nullOrUndefined(groupVal)) {
-    return {
-      groupVal: null,
-      balance: cusEnt.balance,
-    };
-  }
-
-  let balance = cusEnt.balances?.[groupVal]?.balance;
-
-  if (nullOrUndefined(balance)) {
-    return {
-      groupVal,
-      balance: null,
-    };
-  }
-
-  return {
-    groupVal,
-    balance,
-  };
+  // if (features && !feature) {
+  //   feature = features.find(
+  //     (f) => f.internal_id == cusEnt.entitlement.internal_feature_id
+  //   )!;
+  // }
+  // // TODO: Add support for credit systems?
+  // let groupVal = getGroupValFromProperties({ properties, feature: feature! });
+  // if (nullOrUndefined(groupVal)) {
+  //   return {
+  //     groupVal: null,
+  //     balance: cusEnt.balance,
+  //   };
+  // }
+  // let balance = cusEnt.balances?.[groupVal]?.balance;
+  // if (nullOrUndefined(balance)) {
+  //   return {
+  //     groupVal,
+  //     balance: null,
+  //   };
+  // }
+  // return {
+  //   groupVal,
+  //   balance,
+  // };
 };
 
 export const getGroupBalanceUpdate = ({
-  groupVal,
+  // entityId,
   cusEnt,
-  newBalance,
+  newEntities,
 }: {
-  groupVal: any;
+  // entityId: any;
   cusEnt: CusEntWithEntitlement;
-  newBalance: number;
+  newEntities: Record<string, { balance: number; adjustment: number }>;
 }) => {
-  if (groupVal) {
-    let adjustment = cusEnt.balances?.[groupVal]?.adjustment || 0;
-    return {
-      balances: {
-        ...cusEnt.balances,
-        [groupVal]: {
-          balance: newBalance,
-          adjustment,
-        },
-      },
-    };
-  }
-
-  return {
-    balance: newBalance,
-  };
+  // if (newEntities) {
+  //   let adjustment = cusEnt.entities?.[entityId]?.adjustment || 0;
+  //   return {
+  //     entities: {
+  //       ...cusEnt.entities,
+  //       [entityId]: {
+  //         balance: newBalance,
+  //         adjustment,
+  //       },
+  //     },
+  //   };
+  // }
+  // return {
+  //   balance: newBalance,
+  // };
 };
 
 // INIT UTILS
 const initCusEntGroupBalance = async ({
   sb,
   cusEnt,
-  groupValue,
+  entityId,
 }: {
   sb: SupabaseClient;
   cusEnt: CusEntWithEntitlement;
-  groupValue: any;
+  entityId: any;
 }) => {
-  let balances = cusEnt.balances;
+  let entities = cusEnt.entities;
   let shouldUpdate = false;
 
-  if (!balances) {
-    balances = {};
+  if (!entities) {
+    entities = {};
     shouldUpdate = true;
   }
 
-  const balance = balances[groupValue];
+  const entity = entities[entityId];
 
-  if (!balance) {
-    balances[groupValue] = {
+  if (!entity) {
+    entities[entityId] = {
+      id: entityId,
       balance: cusEnt.entitlement.allowance || 0,
       adjustment: 0,
     };
+
     shouldUpdate = true;
   }
 
@@ -171,16 +164,16 @@ const initCusEntGroupBalance = async ({
     await CustomerEntitlementService.update({
       sb,
       id: cusEnt.id,
-      updates: { balances },
+      updates: { entities },
     });
 
     console.log(
-      `   - Initialized ${cusEnt.feature_id} balance for group ${groupValue}`
+      `   - Initialized ${cusEnt.feature_id} balance for entity ${entityId}`
     );
-    return balances;
+    return entities;
   }
 
-  return balances;
+  return entities;
 };
 
 export const initGroupBalances = async ({
@@ -194,20 +187,18 @@ export const initGroupBalances = async ({
   cusEnts: CusEntWithEntitlement[];
   groupValue: any;
 }) => {
-  let groupField = feature.config?.group_by?.property;
-  if (!groupField) {
-    return;
-  }
-
-  let batchInit = [];
-  for (const cusEnt of cusEnts) {
-    batchInit.push(initCusEntGroupBalance({ sb, cusEnt, groupValue }));
-  }
-
-  const results = await Promise.all(batchInit);
-  for (let i = 0; i < results.length; i++) {
-    cusEnts[i].balances = results[i];
-  }
+  // let groupField = feature.config?.group_by?.property;
+  // if (!groupField) {
+  //   return;
+  // }
+  // let batchInit = [];
+  // for (const cusEnt of cusEnts) {
+  //   batchInit.push(initCusEntGroupBalance({ sb, cusEnt, groupValue }));
+  // }
+  // const results = await Promise.all(batchInit);
+  // for (let i = 0; i < results.length; i++) {
+  //   cusEnts[i].entities = results[i];
+  // }
 };
 
 export const initGroupBalancesForEvent = async ({
@@ -357,18 +348,18 @@ export const getResetBalancesUpdate = ({
     ? allowance!
     : cusEnt.entitlement.allowance || 0;
 
-  if (cusEnt.balances) {
-    let newBalances = { ...cusEnt.balances };
-    for (const groupVal in newBalances) {
-      newBalances[groupVal].balance = newBalance;
-      newBalances[groupVal].adjustment = 0;
+  let entitlement = cusEnt.entitlement;
+
+  if (notNullish(entitlement.entity_feature_id)) {
+    let newEntities = { ...cusEnt.entities };
+    for (const entityId in newEntities) {
+      newEntities[entityId].balance = newBalance;
+      newEntities[entityId].adjustment = 0;
     }
-    update = { balances: newBalances };
+    update = { entities: newEntities };
+  } else {
+    update = { balance: newBalance };
   }
 
-  return {
-    ...update,
-    balance: newBalance,
-    adjustment: 0,
-  };
+  return update;
 };
