@@ -45,6 +45,14 @@ export const isProductUpgrade = ({
   prices1: Price[];
   prices2: Price[];
 }) => {
+  if (isFreeProduct(prices1) && !isFreeProduct(prices2)) {
+    return true;
+  }
+
+  if (!isFreeProduct(prices1) && isFreeProduct(prices2)) {
+    return false;
+  }
+
   if (
     prices1.every(
       (p) => getBillingType(p.config!) === BillingType.UsageInArrear

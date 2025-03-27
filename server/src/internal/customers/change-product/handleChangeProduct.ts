@@ -209,7 +209,6 @@ export const handleChangeProduct = async ({
   let newPrices = attachParams.prices;
 
   const isUpgrade =
-    isCustom ||
     attachParams.invoiceOnly ||
     isProductUpgrade({
       prices1: curPrices,

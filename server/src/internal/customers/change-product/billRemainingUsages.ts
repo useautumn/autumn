@@ -146,10 +146,11 @@ const invoiceForUsageImmediately = async ({
     env: customer.env,
   });
 
-  // const invoice = await stripeCli.invoices.create({
-  //   customer: customer.processor.id,
-  //   auto_advance: true,
-  // });
+  let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
+  if (invoiceItems.length === 0) {
+    return;
+  }
+
   let invoice: Stripe.Invoice;
   let newInvoice = false;
   if (attachParams.invoiceOnly && newSubs.length > 0) {
@@ -165,17 +166,12 @@ const invoiceForUsageImmediately = async ({
       });
     }
   } else {
+    console.log("Creating new invoice");
     newInvoice = true;
     invoice = await stripeCli.invoices.create({
       customer: customer.processor.id,
       auto_advance: true,
     });
-  }
-
-  // 2. Add items to invoice
-  let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
-  if (invoiceItems.length === 0) {
-    return;
   }
 
   for (const item of invoiceItems) {
@@ -322,7 +318,7 @@ export const billForRemainingUsages = async ({
       !relatedCusEnt ||
       !relatedCusEnt.usage_allowed ||
       !relatedCusEnt.balance ||
-      relatedCusEnt?.balance > 0
+      relatedCusEnt.balance > 0
     ) {
       continue;
     }
