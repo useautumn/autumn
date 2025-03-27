@@ -18,8 +18,14 @@ import { getBackendErr } from "@/utils/genUtils";
 import { validateFeature } from "./featureUtils";
 
 const defaultFeature = {
-  type: FeatureType.Boolean,
-  config: {},
+  type: FeatureType.Metered,
+  config: {filters: [
+    {
+      property: "",
+      operator: "",
+      value: [],
+    },
+  ]},
   name: "",
   id: "",
 };
@@ -40,7 +46,20 @@ export const CreateFeature = () => {
   }, [open]);
 
   const setFeatureToDefault = () => {
-    setFeature(defaultFeature);
+    setFeature({
+        type: FeatureType.Metered,
+        config: {
+            filters: [
+                {
+                    property: "",
+                    operator: "",
+                    value: [],
+                }
+            ]
+        },
+        name: "",
+        id: "",
+    });
     setEventNameInput("");
     setEventNameChanged(false);
   };
