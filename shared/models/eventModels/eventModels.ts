@@ -15,6 +15,7 @@ export const EventSchema = z.object({
   internal_customer_id: z.string(),
   value: z.number().nullish(),
   set_usage: z.boolean().nullish(),
+  entity_id: z.string().nullish(),
 });
 
 export const CreateEventSchema = z.object({
@@ -25,6 +26,7 @@ export const CreateEventSchema = z.object({
   idempotency_key: z.string().nullish(),
   value: z.number().nullish(),
   set_usage: z.boolean().nullish(),
+  entity_id: z.string().nullish(),
 });
 
 export type Event = z.infer<typeof EventSchema>;

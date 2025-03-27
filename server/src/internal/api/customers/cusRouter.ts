@@ -133,44 +133,6 @@ cusRouter.post("", handlePostCustomerRequest);
 
 cusRouter.get("/:customer_id", async (req: any, res: any) => {
   try {
-    // let email = req.query.email;
-    // if (email && email.includes("%40")) {
-    //   email = email.replace("%40", "@");
-    // }
-
-    // let customerId = req.params.customer_id;
-
-    // console.log("email", email);
-
-    // if (!email && !customerId) {
-    //   throw new RecaseError({
-    //     message: "Customer ID or email is required",
-    //     code: ErrCode.InvalidCustomer,
-    //     statusCode: StatusCodes.BAD_REQUEST,
-    //   });
-    // }
-
-    // let customer: Customer;
-    // if (email) {
-    //   console.log("Searching for customer by email", email);
-    //   const customers = await CusService.getByEmail({
-    //     sb: req.sb,
-    //     email,
-    //     orgId: req.orgId,
-    //     env: req.env,
-    //   });
-
-    //   if (customers.length !== 1) {
-    //     throw new RecaseError({
-    //       message: `Customer with email ${email} not found`,
-    //       code: ErrCode.CustomerNotFound,
-    //       statusCode: StatusCodes.NOT_FOUND,
-    //     });
-    //   }
-
-    //   customer = customers[0];
-    // } else {
-    // }
     let customerId = req.params.customer_id;
     let customer = await CusService.getById({
       sb: req.sb,
@@ -196,7 +158,7 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       sb: req.sb,
       orgId: req.orgId,
       env: req.env,
-      params: req.query,
+      // params: req.query,
       logger: req.logtail,
     });
 
@@ -374,43 +336,43 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 });
 
 // Entitlements
-cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
-  const customerId = req.params.customer_id;
+// cusRouter.get("/:customer_id/entitlements", async (req: any, res: any) => {
+//   const customerId = req.params.customer_id;
 
-  let balances: any[] = [];
-  const customer = await CusService.getById({
-    sb: req.sb,
-    id: customerId,
-    orgId: req.orgId,
-    env: req.env,
-    logger: req.logtail,
-  });
+//   let balances: any[] = [];
+//   const customer = await CusService.getById({
+//     sb: req.sb,
+//     id: customerId,
+//     orgId: req.orgId,
+//     env: req.env,
+//     logger: req.logtail,
+//   });
 
-  const fullCusProducts = await CusService.getFullCusProducts({
-    sb: req.sb,
-    internalCustomerId: customer.internal_id,
-    withPrices: true,
-    logger: req.logtail,
-  });
+//   const fullCusProducts = await CusService.getFullCusProducts({
+//     sb: req.sb,
+//     internalCustomerId: customer.internal_id,
+//     withPrices: true,
+//     logger: req.logtail,
+//   });
 
-  const cusEntsWithCusProduct = fullCusProductToCusEnts(fullCusProducts);
-  const cusPrices = fullCusProductToCusPrices(fullCusProducts);
+//   const cusEntsWithCusProduct = fullCusProductToCusEnts(fullCusProducts);
+//   const cusPrices = fullCusProductToCusPrices(fullCusProducts);
 
-  balances = await getCusBalancesByEntitlement({
-    cusEntsWithCusProduct: cusEntsWithCusProduct as any,
-    cusPrices,
-    groupVals: req.query,
-  });
+//   balances = await getCusBalancesByEntitlement({
+//     cusEntsWithCusProduct: cusEntsWithCusProduct as any,
+//     cusPrices,
+//     entities,
+//   });
 
-  for (const balance of balances) {
-    if (balance.total && balance.balance) {
-      balance.used = balance.total - balance.balance;
-      delete balance.total;
-    }
-  }
+//   for (const balance of balances) {
+//     if (balance.total && balance.balance) {
+//       balance.used = balance.total - balance.balance;
+//       delete balance.total;
+//     }
+//   }
 
-  res.status(200).json(balances);
-});
+//   res.status(200).json(balances);
+// });
 
 // Invoice
 

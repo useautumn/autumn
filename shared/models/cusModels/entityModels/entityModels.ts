@@ -8,6 +8,9 @@ export const EntitySchema = z.object({
   internal_customer_id: z.string(),
   env: z.string(),
   name: z.string(),
+  deleted: z.boolean(),
+  feature_id: z.string(),
+  internal_feature_id: z.string(),
 });
 
 export const CreateEntitySchema = z.object({
@@ -16,3 +19,6 @@ export const CreateEntitySchema = z.object({
   customer_id: z.string(), // Customer ID of entity
   feature_id: z.string(), // Feature ID of entity
 });
+
+export type Entity = z.infer<typeof EntitySchema>;
+export type CreateEntity = z.infer<typeof CreateEntitySchema>;
