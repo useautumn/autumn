@@ -460,7 +460,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     const { allowed, balances } = getMeteredEntitledResult({
       originalFeature: feature,
       creditSystems,
-      cusEnts: cusEnts!,
+      cusEnts: cusEnts! as FullCustomerEntitlement[],
       quantity,
       entityId: entity_id,
     });

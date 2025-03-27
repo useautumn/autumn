@@ -28,6 +28,30 @@ export class ProductService {
     return data;
   }
 
+  static async getByInternalId({
+    sb,
+    internalId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    internalId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("products")
+      .select("*")
+      .eq("internal_id", internalId)
+      .eq("org_id", orgId)
+      .eq("env", env)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+    return data;
+  }
   static async getFullDefaultProducts({
     sb,
     orgId,
