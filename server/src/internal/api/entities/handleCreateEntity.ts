@@ -126,7 +126,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
     // Create entity!
 
     const { sb, env, orgId, logtail: logger } = req;
-    const { customer_id, feature_id, entities: inputEntities } = req.body;
+    const { customer_id, feature_id, entity: inputEntities } = req.body;
 
     let [customer, features, org] = await Promise.all([
       CusService.getById({ sb, id: customer_id, orgId, env, logger }),
@@ -216,16 +216,16 @@ export const handleCreateEntity = async (req: any, res: any) => {
       }
 
       // Get linked features
-      let linkedFeatures = features.filter((f: any) =>
-        ["credits"].includes(f.id)
+      let linkedCusEnts = cusEnts.filter(
+        (e: any) => e.entitlement.entity_feature_id === feature.id
       );
 
       // For each linked feature, create customer entitlement for entity...
-      for (const linkedFeature of linkedFeatures) {
-        let linkedCusEnt = getLinkedCusEnt({
-          linkedFeature,
-          cusEnts,
-        });
+      for (const linkedCusEnt of linkedCusEnts) {
+        // let linkedCusEnt = getLinkedCusEnt({
+        //   linkedFeature,
+        //   cusEnts,
+        // });
 
         // console.log("linkedCusEnt", linkedCusEnt?.entitlement.feature.id);
         let allowance = linkedCusEnt?.entitlement.allowance;

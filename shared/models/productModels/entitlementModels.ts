@@ -44,6 +44,7 @@ export const CreateEntitlementSchema = z.object({
   allowance: z.number().nullish(),
   interval: z.nativeEnum(EntInterval).nullish(),
   carry_from_previous: z.boolean().default(false),
+  entity_feature_id: z.string().nullish(),
 });
 
 export const PublicEntitlementSchema = z.object({

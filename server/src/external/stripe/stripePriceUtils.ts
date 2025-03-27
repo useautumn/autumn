@@ -268,6 +268,9 @@ export const getStripeSubItems = async ({
         cusProducts: attachParams.cusProducts,
       });
 
+      console.log("Existing usage", existingUsage);
+      console.log("Feature:", priceEnt.feature.name);
+
       if (
         billingType == BillingType.UsageInArrear ||
         billingType == BillingType.InArrearProrated ||

@@ -75,7 +75,7 @@ export default function UpdateEntitlement({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
+      <DialogContent className="">
         <DialogTitle>Update Entitlement</DialogTitle>
         <EntitlementConfig
           entitlement={selectedEntitlement}
