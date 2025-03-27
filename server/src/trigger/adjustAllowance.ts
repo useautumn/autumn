@@ -33,6 +33,7 @@ import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { LoggerAction } from "@autumn/shared";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { isTrialing } from "@/internal/customers/products/cusProductUtils.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
@@ -353,6 +354,15 @@ export const adjustAllowance = async ({
           auto_advance: false,
           subscription: sub.id,
         });
+
+        if (!product) {
+          product = await ProductService.getByInternalId({
+            sb,
+            internalId: cusProduct.internal_product_id,
+            orgId: org.id,
+            env,
+          });
+        }
 
         await stripeCli.invoiceItems.create({
           customer: customer.processor.id,

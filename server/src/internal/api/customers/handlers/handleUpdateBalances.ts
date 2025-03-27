@@ -20,16 +20,16 @@ import {
   getUnlimitedAndUsageAllowed,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
   // 1. Get customer
   const [customer, features, org] = await Promise.all([
-    CusService.getById({
+    CusService.getByIdOrInternalId({
       sb: req.sb,
-      id: customerId,
+      idOrInternalId: customerId,
       orgId: req.orgId,
       env: req.env,
-      logger: req.logtail,
     }),
     FeatureService.getFromReq(req),
     OrgService.getFullOrg({
@@ -89,13 +89,13 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       logger: req.logtail,
     });
 
-    // Initialize balances
-    await initGroupBalancesFromUpdateBalances({
-      sb: req.sb,
-      cusEnts,
-      features: featuresToUpdate,
-      updates: balances,
-    });
+    // // Initialize balances
+    // await initGroupBalancesFromUpdateBalances({
+    //   sb: req.sb,
+    //   cusEnts,
+    //   features: featuresToUpdate,
+    //   updates: balances,
+    // });
 
     logger.info("--------------------------------");
     logger.info(
@@ -162,6 +162,13 @@ export const handleUpdateBalances = async (req: any, res: any) => {
           continue;
         }
 
+        if (
+          notNullish(balance.interval) &&
+          balance.interval !== cusEnt.entitlement.interval
+        ) {
+          continue;
+        }
+
         let cusEntBalance = getCusEntBalance({
           cusEnt,
           entityId: balance.entity_id,
@@ -195,6 +202,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
         feature,
         toDeduct,
         properties,
+        interval: balance.interval,
       });
     }
 
@@ -203,14 +211,20 @@ export const handleUpdateBalances = async (req: any, res: any) => {
     for (const featureDeduction of featureDeductions) {
       // 1. Deduct from allowance
       const performDeduction = async () => {
-        let { toDeduct, feature, properties } = featureDeduction;
+        let { toDeduct, feature, properties, interval } = featureDeduction;
 
         // Handle unlimited
         if (featureDeduction.unlimited) {
           // Get one active cusEnt and set unlimited to true
-          const cusEnt = cusEnts.find(
-            (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
-          );
+          const cusEnt = notNullish(interval)
+            ? cusEnts.find(
+                (cusEnt) =>
+                  cusEnt.internal_feature_id === feature.internal_id &&
+                  cusEnt.entitlement.interval === interval
+              )
+            : cusEnts.find(
+                (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
+              );
 
           if (!cusEnt) {
             logger.warn(

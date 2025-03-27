@@ -6,7 +6,7 @@ export class CusService {
     return await axios.post("/v1/customers", data);
   }
 
-  static async deleteCustomer(axios: AxiosInstance, customer_id: string) {
+  static async deleteCustomer(axios: AxiosInstance, customer_id: any) {
     await axios.delete(`/v1/customers/${customer_id}`);
   }
 
