@@ -9,6 +9,8 @@ import { CouponService } from "../coupons/CouponService.js";
 import { EventService } from "../api/events/EventService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "../orgs/OrgService.js";
+import { EntityService } from "../api/entities/EntityService.js";
+import { getCusEntMasterBalance } from "./entitlements/cusEntUtils.js";
 
 export const cusRouter = Router();
 
@@ -90,11 +92,18 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       });
     }
 
-    const invoices = await InvoiceService.getByInternalCustomerId({
-      sb,
-      internalCustomerId: customer.internal_id,
-      limit: 10,
-    });
+    const [invoices, entities] = await Promise.all([
+      InvoiceService.getByInternalCustomerId({
+        sb,
+        internalCustomerId: customer.internal_id,
+        limit: 10,
+      }),
+      EntityService.getByInternalCustomerId({
+        sb,
+        internalCustomerId: customer.internal_id,
+        logger: req.logger,
+      }),
+    ]);
 
     let fullCustomer = customer as any;
     for (const product of fullCustomer.products) {
@@ -131,6 +140,24 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     for (const invoice of invoices) {
       invoice.product_ids = invoice.product_ids.sort();
       invoice.internal_product_ids = invoice.internal_product_ids.sort();
+    }
+
+    // For each cus ent, show full entitlement?
+    for (const cusEnt of fullCustomer.entitlements) {
+      let entitlement = cusEnt.entitlement;
+
+      // Show used, limit, etc.
+      let { balance, unused } = getCusEntMasterBalance({
+        cusEnt,
+        entities,
+      });
+
+      console.log(
+        `Feature: ${entitlement.feature.id}, balance: ${balance}, unused: ${unused}`
+      );
+
+      cusEnt.balance = balance;
+      cusEnt.unused = unused;
     }
 
     res.status(200).send({

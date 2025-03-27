@@ -22,6 +22,7 @@ import { adjustAllowance } from "./adjustAllowance.js";
 import {
   getMeteredDeduction,
   getCreditSystemDeduction,
+  performDeduction,
 } from "./deductUtils.js";
 import {
   getGroupBalanceFromProperties,
@@ -33,7 +34,11 @@ import {
   creditSystemContainsFeature,
   featureToCreditSystem,
 } from "@/internal/features/creditSystemUtils.js";
-import { getTotalNegativeBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import {
+  getCusEntMasterBalance,
+  getTotalNegativeBalance,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
+import { entityFeatureIdExists } from "@/internal/api/entities/entityUtils.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
 
@@ -118,6 +123,7 @@ export const logBalanceUpdate = ({
   cusEnts,
   featureDeductions,
   properties,
+  entityId,
   org,
 }: {
   timeTaken: string;
@@ -126,6 +132,7 @@ export const logBalanceUpdate = ({
   cusEnts: FullCustomerEntitlement[];
   featureDeductions: any;
   properties: any;
+  entityId?: string | null;
   org: Organization;
 }) => {
   console.log(`   - getCusEntsInFeatures: ${timeTaken}ms`);
@@ -139,17 +146,26 @@ export const logBalanceUpdate = ({
     "   - CusEnts:",
     cusEnts.map((cusEnt: any) => {
       let balanceStr = cusEnt.balance;
-      let { groupVal, balance } = getGroupBalanceFromProperties({
-        properties,
-        cusEnt,
-        features,
-      });
 
+      if (notNullish(cusEnt.entitlement.entity_feature_id)) {
+        console.log(
+          `   - Entity feature ID found for feature: ${cusEnt.feature_id}`
+        );
+
+        if (notNullish(entityId)) {
+          balanceStr = `${cusEnt.entities?.[entityId!]?.balance} [${entityId}]`;
+        } else {
+          balanceStr = `${
+            getCusEntMasterBalance({
+              cusEnt,
+              entities: cusEnt.customer_product?.entities,
+            }).balance
+          } [Master]`;
+        }
+      }
       try {
         if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
           balanceStr = "Unlimited";
-        } else if (groupVal) {
-          balanceStr = `${balance} [${groupVal}]`;
         }
       } catch (error) {
         balanceStr = "failed_to_get_balance";
@@ -164,6 +180,112 @@ export const logBalanceUpdate = ({
   );
 };
 
+export const performDeductionOnCusEnt = ({
+  cusEnt,
+  toDeduct,
+  entityId,
+  allowNegativeBalance = false,
+  addAdjustment = false,
+}: {
+  cusEnt: FullCustomerEntitlement;
+  toDeduct: number;
+  entityId?: string | null;
+  allowNegativeBalance?: boolean;
+  addAdjustment?: boolean;
+}) => {
+  let newEntities = structuredClone(cusEnt.entities);
+  let newBalance = structuredClone(cusEnt.balance);
+  let newAdjustment = structuredClone(cusEnt.adjustment);
+  let deducted = 0;
+
+  if (entityFeatureIdExists({ cusEnt })) {
+    if (nullish(entityId)) {
+      // 1. If no entity ID, deduct from all
+      newEntities = structuredClone(cusEnt.entities);
+      if (!newEntities) {
+        newEntities = {};
+      }
+      let toDeductCursor = toDeduct;
+      for (const entityId in cusEnt.entities) {
+        if (toDeductCursor == 0) {
+          break;
+        }
+
+        let entityBalance = cusEnt.entities[entityId].balance;
+        let {
+          newBalance: newEntityBalance,
+          deducted: newDeducted,
+          toDeduct: newToDeduct,
+        } = performDeduction({
+          cusEntBalance: new Decimal(entityBalance),
+          toDeduct: toDeductCursor,
+          allowNegativeBalance,
+        });
+
+        newEntities[entityId].balance = newEntityBalance!;
+
+        if (addAdjustment) {
+          let adjustment = newEntities![entityId!]!.adjustment || 0;
+          newEntities![entityId!]!.adjustment = adjustment - newDeducted!;
+        }
+
+        toDeductCursor = newToDeduct!;
+        deducted += newDeducted!;
+      }
+
+      toDeduct = toDeductCursor;
+    } else {
+      // 2. If entity ID, deduct from that entity
+      let currentEntityBalance = cusEnt.entities?.[entityId!]?.balance;
+
+      let {
+        newBalance: newEntityBalance,
+        deducted: newDeducted,
+        toDeduct: newToDeduct,
+      } = performDeduction({
+        cusEntBalance: new Decimal(currentEntityBalance!),
+        toDeduct,
+        allowNegativeBalance,
+      });
+
+      newEntities![entityId!]!.balance = newEntityBalance!;
+
+      if (addAdjustment) {
+        let adjustment = newEntities![entityId!]!.adjustment || 0;
+        newEntities![entityId!]!.adjustment = adjustment - newDeducted!;
+      }
+
+      toDeduct = newToDeduct!;
+      deducted += newDeducted!;
+    }
+  } else {
+    let {
+      newBalance: newBalance_,
+      deducted: deducted_,
+      toDeduct: newToDeduct_,
+    } = performDeduction({
+      cusEntBalance: new Decimal(cusEnt.balance!),
+      toDeduct,
+      allowNegativeBalance,
+    });
+
+    // console.log("Deducting:", toDeduct);
+    // console.log("Old balance", cusEnt.balance);
+    // console.log("New balance", newBalance_);
+    // console.log("Allowed negative balance", allowNegativeBalance);
+
+    newBalance = newBalance_;
+    deducted = deducted_;
+    toDeduct = newToDeduct_;
+
+    if (addAdjustment) {
+      let adjustment = cusEnt.adjustment || 0;
+      newAdjustment = adjustment - deducted!;
+    }
+  }
+  return { newBalance, newEntities, deducted, toDeduct, newAdjustment };
+};
+
 export const deductAllowanceFromCusEnt = async ({
   toDeduct,
   deductParams,
@@ -171,6 +293,7 @@ export const deductAllowanceFromCusEnt = async ({
   features,
   featureDeductions,
   willDeductCredits = false,
+  entityId,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
@@ -178,6 +301,7 @@ export const deductAllowanceFromCusEnt = async ({
   features: Feature[];
   featureDeductions: any;
   willDeductCredits?: boolean;
+  entityId?: string | null;
 }) => {
   const { sb, feature, env, org, cusPrices, customer, properties } =
     deductParams;
@@ -186,65 +310,49 @@ export const deductAllowanceFromCusEnt = async ({
     return 0;
   }
 
-  let newBalance, deducted;
+  // Either deduct from balance or entity balance
 
-  let cusEntBalance;
-  let { groupVal, balance } = getGroupBalanceFromProperties({
-    properties,
-    feature,
+  // let newBalance = structuredClone(cusEnt.balance);
+  // let newEntities = structuredClone(cusEnt.entities);
+  // let deducted = 0;
+
+  // console.log("entityId", entityId);
+
+  let {
+    newBalance,
+    newEntities,
+    deducted,
+    toDeduct: newToDeduct,
+  } = performDeductionOnCusEnt({
     cusEnt,
-    features,
+    toDeduct,
+    entityId,
+    allowNegativeBalance: false,
   });
 
-  if (notNullish(groupVal) && nullish(balance)) {
-    console.log(
-      `   - No balance found for group by value: ${groupVal}, for customer: ${customer.id}, skipping`
-    );
-    return toDeduct;
-  }
+  let originalGrpBalance = getTotalNegativeBalance({
+    cusEnt,
+    balance: cusEnt.balance!,
+    entities: cusEnt.entities!,
+  });
 
-  cusEntBalance = new Decimal(balance!);
-
-  if (cusEntBalance.lte(0) && toDeduct > 0) {
-    // Don't deduct if balance is negative and toDeduct is positive, if not, just add to balance
-    return toDeduct;
-  }
-
-  // If toDeduct is negative, add to balance and set toDeduct to 0
-  if (toDeduct < 0) {
-    newBalance = cusEntBalance.minus(toDeduct).toNumber();
-    deducted = toDeduct;
-    toDeduct = 0;
-  }
-
-  // If cusEnt has less balance to deduct than 0, deduct the balance and set balance to 0
-  else if (cusEntBalance.minus(toDeduct).lt(0)) {
-    toDeduct = new Decimal(toDeduct).minus(cusEntBalance).toNumber(); // toDeduct = toDeduct - cusEntBalance
-    deducted = cusEntBalance.toNumber(); // deducted = cusEntBalance
-    newBalance = 0; // newBalance = 0
-  }
-
-  // Else, deduct the balance and set toDeduct to 0
-  else {
-    newBalance = cusEntBalance.minus(toDeduct).toNumber();
-    deducted = toDeduct;
-    toDeduct = 0;
-  }
-
-  const totalNegativeBalance = getTotalNegativeBalance(cusEnt);
-  const originalGrpBalance = Math.max(totalNegativeBalance, balance!);
-  const newGrpBalance = new Decimal(originalGrpBalance)
-    .minus(deducted)
-    .toNumber();
+  let newGrpBalance = getTotalNegativeBalance({
+    cusEnt,
+    balance: newBalance!,
+    entities: newEntities!,
+  });
+  // console.log("Saving:", {
+  //   balance: newBalance,
+  //   entities: newEntities,
+  // });
 
   await CustomerEntitlementService.update({
     sb,
     id: cusEnt.id,
-    updates: getGroupBalanceUpdate({
-      groupVal,
-      cusEnt,
-      newBalance,
-    }),
+    updates: {
+      balance: newBalance,
+      entities: newEntities,
+    },
   });
 
   await adjustAllowance({
@@ -259,12 +367,6 @@ export const deductAllowanceFromCusEnt = async ({
     newBalance: newGrpBalance,
     deduction: deducted,
   });
-
-  if (groupVal) {
-    cusEnt.balances![groupVal].balance = newBalance;
-  } else {
-    cusEnt.balance = newBalance;
-  }
 
   // Deduct credit amounts too
   if (feature.type === FeatureType.Metered && willDeductCredits) {
@@ -293,17 +395,21 @@ export const deductAllowanceFromCusEnt = async ({
     }
   }
 
-  return toDeduct;
+  cusEnt.balance = newBalance;
+  cusEnt.entities = newEntities;
+  return newToDeduct;
 };
 
 export const deductFromUsageBasedCusEnt = async ({
   toDeduct,
   deductParams,
   cusEnts,
+  entityId,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
   cusEnts: FullCustomerEntitlement[];
+  entityId?: string | null;
 }) => {
   const { sb, feature, env, org, cusPrices, customer, properties } =
     deductParams;
@@ -322,38 +428,61 @@ export const deductFromUsageBasedCusEnt = async ({
     return;
   }
 
-  // Group by value
-  let { groupVal, balance } = getGroupBalanceFromProperties({
-    properties,
-    feature,
+  // // Group by value
+  // let { groupVal, balance } = getGroupBalanceFromProperties({
+  //   properties,
+  //   feature,
+  //   cusEnt: usageBasedEnt,
+  // });
+
+  // if (groupVal && nullOrUndefined(balance)) {
+  //   console.log(
+  //     `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no group balance found`
+  //   );
+  //   return;
+  // }
+
+  // let usageBasedEntBalance = new Decimal(balance!);
+  // let newBalance = usageBasedEntBalance.minus(toDeduct).toNumber();
+  // console.log("DEDUCTING USAGE-BASED ENTITLEMENT");
+  // console.log("OLD BALANCE", usageBasedEnt.balance);
+  // console.log("TO DEDUCT", toDeduct);
+  let { newBalance, newEntities, deducted } = performDeductionOnCusEnt({
     cusEnt: usageBasedEnt,
+    toDeduct,
+    entityId,
+    allowNegativeBalance: true,
   });
 
-  if (groupVal && nullOrUndefined(balance)) {
-    console.log(
-      `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no group balance found`
-    );
-    return;
-  }
+  // console.log("NEW BALANCE", newBalance);
+  // console.log("DEDUCTED", deducted);
 
-  let usageBasedEntBalance = new Decimal(balance!);
-  let newBalance = usageBasedEntBalance.minus(toDeduct).toNumber();
+  let oldGrpBalance = getTotalNegativeBalance({
+    cusEnt: usageBasedEnt,
+    balance: usageBasedEnt.balance!,
+    entities: usageBasedEnt.entities!,
+  });
+
+  let newGrpBalance = getTotalNegativeBalance({
+    cusEnt: usageBasedEnt,
+    balance: newBalance!,
+    entities: newEntities!,
+  });
 
   await CustomerEntitlementService.update({
     sb,
     id: usageBasedEnt.id,
-    updates: getGroupBalanceUpdate({
-      groupVal,
-      cusEnt: usageBasedEnt,
-      newBalance,
-    }),
+    updates: {
+      balance: newBalance,
+      entities: newEntities,
+    },
   });
 
-  const totalNegativeBalance = getTotalNegativeBalance(usageBasedEnt);
-  const originalGrpBalance = Math.max(totalNegativeBalance, balance!);
-  const newGrpBalance = new Decimal(originalGrpBalance)
-    .minus(toDeduct)
-    .toNumber();
+  // const totalNegativeBalance = getTotalNegativeBalance(usageBasedEnt);
+  // const originalGrpBalance = Math.max(totalNegativeBalance, balance!);
+  // const newGrpBalance = new Decimal(originalGrpBalance)
+  //   .minus(toDeduct)
+  //   .toNumber();
 
   await adjustAllowance({
     sb,
@@ -363,7 +492,7 @@ export const deductFromUsageBasedCusEnt = async ({
     cusEnt: usageBasedEnt as any,
     cusPrices: cusPrices as any,
     customer,
-    originalBalance: originalGrpBalance,
+    originalBalance: oldGrpBalance,
     newBalance: newGrpBalance,
     deduction: toDeduct,
   });
@@ -414,15 +543,16 @@ export const updateCustomerBalance = async ({
     featureDeductions,
     properties: event.properties,
     org,
+    entityId: event.entity_id,
   });
 
-  // 2. Handle group_by initialization
-  await initGroupBalancesForEvent({
-    sb,
-    features,
-    cusEnts,
-    properties: event.properties,
-  });
+  // // 2. Handle group_by initialization
+  // await initGroupBalancesForEvent({
+  //   sb,
+  //   features,
+  //   cusEnts,
+  //   properties: event.properties,
+  // });
 
   // 3. Return if no customer entitlements or features found
   if (cusEnts.length === 0 || features.length === 0) {
@@ -454,6 +584,7 @@ export const updateCustomerBalance = async ({
         },
         featureDeductions,
         willDeductCredits: true,
+        entityId: event.entity_id,
       });
     }
 
@@ -473,6 +604,7 @@ export const updateCustomerBalance = async ({
         customer,
         properties: event.properties,
       },
+      entityId: event.entity_id,
     });
   }
 

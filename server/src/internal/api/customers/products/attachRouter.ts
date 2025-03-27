@@ -297,6 +297,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     invoice_only,
     success_url,
     billing_cycle_anchor,
+    metadata,
   } = req.body;
 
   const { orgId, env } = req;
@@ -348,7 +349,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     attachParams.successUrl = successUrl;
     attachParams.invoiceOnly = invoiceOnly;
     attachParams.billingAnchor = billing_cycle_anchor;
-
+    attachParams.metadata = metadata;
     logger.info(
       `Customer: ${chalk.yellow(
         `${attachParams.customer.id} (${attachParams.customer.name})`

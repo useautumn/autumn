@@ -7,6 +7,7 @@ import {
   CustomerSchema,
   ErrCode,
   FullCusProduct,
+  FullCustomerEntitlement,
   FullProduct,
   Organization,
   ProductSchema,
@@ -34,6 +35,7 @@ import {
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { initGroupBalancesFromGetCus } from "@/internal/customers/entitlements/groupByUtils.js";
+import { EntityService } from "../entities/EntityService.js";
 
 export const getCusByIdOrInternalId = async ({
   sb,
@@ -172,7 +174,7 @@ export const getCustomerDetails = async ({
   logger: any;
 }) => {
   // 1. Get full customer products & processed invoices
-  const [fullCusProducts, processedInvoices] = await Promise.all([
+  const [fullCusProducts, processedInvoices, entities] = await Promise.all([
     CusService.getFullCusProducts({
       sb,
       internalCustomerId: customer.internal_id,
@@ -190,21 +192,21 @@ export const getCustomerDetails = async ({
       internalCustomerId: customer.internal_id,
       limit: 20,
     }),
+    EntityService.getByInternalCustomerId({
+      sb,
+      internalCustomerId: customer.internal_id,
+      logger,
+    }),
   ]);
 
   // 2. Initialize group by balances
   let cusEnts = fullCusProductToCusEnts(fullCusProducts) as any;
-  await initGroupBalancesFromGetCus({
-    sb,
-    cusEnts,
-    params,
-  });
 
-  // Get entitlements
+  // 3. Get entitlements
   const balances = await getCusBalancesByEntitlement({
     cusEntsWithCusProduct: cusEnts,
     cusPrices: fullCusProductToCusPrices(fullCusProducts),
-    groupVals: params,
+    entities,
   });
 
   const { main, addOns } = processFullCusProducts(fullCusProducts);
@@ -224,13 +226,15 @@ export const getCusEntsInFeatures = async ({
   internalFeatureIds,
   inStatuses = [CusProductStatus.Active],
   withPrices = false,
+  withProduct = false,
   logger,
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
-  internalFeatureIds: string[];
+  internalFeatureIds?: string[];
   inStatuses?: CusProductStatus[];
   withPrices?: boolean;
+  withProduct?: boolean;
   logger: any;
 }) => {
   const fullCusProducts = await CusService.getFullCusProducts({
@@ -238,6 +242,7 @@ export const getCusEntsInFeatures = async ({
     internalCustomerId,
     inStatuses: inStatuses,
     withPrices: withPrices,
+    withProduct: withProduct,
     logger,
   });
 
@@ -250,9 +255,14 @@ export const getCusEntsInFeatures = async ({
     return { cusEnts: [] };
   }
 
-  const cusEnts = cusEntsWithCusProduct.filter((cusEnt) =>
-    internalFeatureIds.includes(cusEnt.internal_feature_id)
-  );
+  let cusEnts: FullCustomerEntitlement[] = [];
+  if (internalFeatureIds) {
+    cusEnts = cusEntsWithCusProduct.filter((cusEnt) =>
+      internalFeatureIds.includes(cusEnt.internal_feature_id)
+    );
+  } else {
+    cusEnts = cusEntsWithCusProduct;
+  }
 
   sortCusEntsForDeduction(cusEnts);
 

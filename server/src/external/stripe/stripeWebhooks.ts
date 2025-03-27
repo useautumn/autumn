@@ -133,6 +133,7 @@ stripeWebhookRouter.post(
             invoice: createdInvoice,
             env,
             event,
+            pg: request.pg,
           });
           break;
 
