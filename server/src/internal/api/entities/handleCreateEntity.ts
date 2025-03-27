@@ -129,7 +129,12 @@ export const handleCreateEntity = async (req: any, res: any) => {
     const { customer_id, feature_id, entity: inputEntities } = req.body;
 
     let [customer, features, org] = await Promise.all([
-      CusService.getById({ sb, id: customer_id, orgId, env, logger }),
+      CusService.getByIdOrInternalId({
+        sb,
+        idOrInternalId: customer_id,
+        orgId,
+        env,
+      }),
       FeatureService.getFromReq(req),
       OrgService.getFromReq(req),
     ]);
