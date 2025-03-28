@@ -21,7 +21,7 @@ export const CreateCustomerSchema = z.object({
   id: z
     .string()
     .regex(/^[^\s]+$/)
-    .nullable(), // id is not allowed whitespace characters
+    .nullish(), // id is not allowed whitespace characters
   name: z.string().nullish(),
   email: z.string().nullish(),
   fingerprint: z.string().nullish(),
