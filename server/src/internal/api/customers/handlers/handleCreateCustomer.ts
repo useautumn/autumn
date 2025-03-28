@@ -109,6 +109,7 @@ export const createNewCustomer = async ({
 
   const customerData: Customer = {
     ...parsedCustomer,
+    id: parsedCustomer.id || null,
     name: parsedCustomer.name || "",
     email:
       parsedCustomer.email ||

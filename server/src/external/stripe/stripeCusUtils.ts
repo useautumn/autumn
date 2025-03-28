@@ -78,7 +78,7 @@ export const createStripeCustomer = async ({
       name: customer.name || undefined,
       email: customer.email || undefined,
       metadata: {
-        autumn_id: customer.id,
+        autumn_id: customer.id || null,
         autumn_internal_id: customer.internal_id,
       },
       test_clock: testClockId,
