@@ -31,12 +31,9 @@ const getCusOrgAndCusPrice = async ({
       sb: sb,
       cusEnt,
     }),
-    CusService.getById({
+    CusService.getByInternalId({
       sb: sb,
-      id: cusEnt.customer_id,
-      orgId: orgId,
-      env: env,
-      logger,
+      internalId: cusEnt.internal_customer_id,
     }),
     OrgService.getFullOrg({
       sb: sb,
@@ -110,6 +107,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       cusEnt,
       toDeduct: deducted,
       addAdjustment: true,
+      allowNegativeBalance: cusEnt.usage_allowed,
     });
 
     let originalBalance = cusEnt.balance;

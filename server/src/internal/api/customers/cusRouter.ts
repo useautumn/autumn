@@ -28,6 +28,7 @@ import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 
 import { handlePostCustomerRequest } from "./handlers/handleCreateCustomer.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const cusRouter = Router();
 
@@ -233,15 +234,27 @@ cusRouter.post("/:customer_id", async (req: any, res: any) => {
       });
     }
 
-    let newCusData = CreateCustomerSchema.parse(req.body);
+    let newCusData: any = CreateCustomerSchema.parse(req.body);
 
-    // 1. Check if customer ID is being changed
-    if (originalCustomer.id !== null && originalCustomer.id !== newCusData.id) {
-      throw new RecaseError({
-        message: `Update customer: Customer ID cannot be changed`,
-        code: ErrCode.InvalidCustomer,
-        statusCode: StatusCodes.BAD_REQUEST,
+    if (notNullish(newCusData.id) && originalCustomer.id !== newCusData.id) {
+      // Fetch for existing customer
+      const existingCustomer = await CusService.getById({
+        sb: req.sb,
+        id: newCusData.id,
+        orgId: req.orgId,
+        env: req.env,
+        logger: req.logtail,
       });
+
+      if (existingCustomer) {
+        throw new RecaseError({
+          message: `Update customer: Customer ${newCusData.id} already exists, can't change to this ID`,
+          code: ErrCode.DuplicateCustomerId,
+          statusCode: StatusCodes.CONFLICT,
+        });
+      }
+    } else {
+      delete newCusData.id;
     }
 
     // 2. Check if customer email is being changed
@@ -270,8 +283,6 @@ cusRouter.post("/:customer_id", async (req: any, res: any) => {
       internalCusId: originalCustomer.internal_id,
       update: newCusData,
     });
-
-    // Don't allow duplicate customer ID...
 
     res.status(200).json({ customer: updatedCustomer });
   } catch (error) {
