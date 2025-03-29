@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Product } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useProductContext } from "./ProductContext";
+import { useProductContext } from "../ProductContext";
 import { Delete, EllipsisVertical } from "lucide-react";
 
 export const EditFreeTrialToolbar = ({
