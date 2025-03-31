@@ -19,6 +19,7 @@ import { AppEnv } from "@autumn/shared";
 import { createSupabaseClient } from "./external/supabaseUtils.js";
 import { createLogtail } from "./external/logtail/logtailUtils.js";
 import { format } from "date-fns";
+import { handleRequestError } from "./utils/errorUtils.js";
 
 const init = async () => {
   const app = express();
@@ -91,3 +92,14 @@ const init = async () => {
 };
 
 init();
+
+process.on("unhandledRejection", (reason, promise) => {
+  try {
+    const logtail = createLogtail();
+    logtail.error("❗️❗️❗️ UNHANDLED REJECTION");
+    logtail.error(reason);
+    logtail.flush();
+  } catch (error) {
+    console.log("Unhandled rejection", error);
+  }
+});

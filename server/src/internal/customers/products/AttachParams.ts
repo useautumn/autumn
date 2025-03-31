@@ -1,6 +1,7 @@
 import {
   Customer,
   EntitlementWithFeature,
+  Entity,
   FeatureOptions,
   FreeTrial,
   FullCusProduct,
@@ -33,6 +34,8 @@ export type AttachParams = {
   invoiceOnly?: boolean | undefined;
   billingAnchor?: number | undefined;
   metadata?: Record<string, string> | undefined;
+
+  entities: Entity[];
 };
 
 export type InsertCusProductParams = {

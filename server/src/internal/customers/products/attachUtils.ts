@@ -33,6 +33,7 @@ import { createNewCustomer } from "@/internal/api/customers/handlers/handleCreat
 import { CusService } from "../CusService.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
+import { EntityService } from "@/internal/api/entities/EntityService.js";
 
 const getOrCreateCustomerAndProducts = async ({
   sb,
@@ -308,6 +309,13 @@ export const getFullCusProductData = async ({
       env,
       logger,
     });
+  
+  const entities = await EntityService.get({
+    sb,
+    internalCustomerId: customer.internal_id,
+    orgId,
+    env,
+  });
 
   let newOptionsList: FeatureOptions[] = [];
 
@@ -356,6 +364,7 @@ export const getFullCusProductData = async ({
         .flat() as EntitlementWithFeature[],
       freeTrial,
       cusProducts,
+      entities,
     };
   }
 
@@ -441,5 +450,6 @@ export const getFullCusProductData = async ({
     entitlements: entitlementsWithFeature as EntitlementWithFeature[],
     freeTrial: uniqueFreeTrial,
     cusProducts,
+    entities,
   };
 };

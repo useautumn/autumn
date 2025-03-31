@@ -29,6 +29,7 @@ import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 
 import { handlePostCustomerRequest } from "./handlers/handleCreateCustomer.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { entityRouter } from "../entities/entityRouter.js";
 
 export const cusRouter = Router();
 
@@ -388,3 +389,5 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 // Invoice
 
 cusRouter.post("/:customer_id/coupons/:coupon_id", handleAddCouponToCus);
+
+cusRouter.use("/:customer_id/entities", entityRouter);
