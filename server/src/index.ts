@@ -93,13 +93,13 @@ const init = async () => {
 
 init();
 
-process.on("unhandledRejection", (reason, promise) => {
-  try {
-    const logtail = createLogtail();
-    logtail.error("❗️❗️❗️ UNHANDLED REJECTION");
-    logtail.error(reason);
-    logtail.flush();
-  } catch (error) {
-    console.log("Unhandled rejection", error);
-  }
-});
+// process.on("unhandledRejection", (reason, promise) => {
+//   try {
+//     const logtail = createLogtail();
+//     logtail.error("❗️❗️❗️ UNHANDLED REJECTION");
+//     logtail.error(reason);
+//     logtail.flush();
+//   } catch (error) {
+//     console.log("Unhandled rejection", error);
+//   }
+// });
