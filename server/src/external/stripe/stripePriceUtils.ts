@@ -11,6 +11,7 @@ import {
   AllowanceType,
   EntitlementWithFeature,
   Feature,
+  FullCustomerEntitlement,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -39,7 +40,7 @@ import {
   createStripeOneOffTieredProduct,
 } from "./createStripePrice.js";
 
-import { getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getCusEntMasterBalance, getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";
 import {
   priceToInArrearProrated,
   priceToUsageInAdvance,
@@ -266,7 +267,10 @@ export const getStripeSubItems = async ({
       const existingUsage = getExistingUsageFromCusProducts({
         entitlement: priceEnt,
         cusProducts: attachParams.cusProducts,
+        entities: attachParams.entities,
       });
+
+
 
       if (
         billingType == BillingType.UsageInArrear ||

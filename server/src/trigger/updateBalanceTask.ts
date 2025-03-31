@@ -186,12 +186,14 @@ export const performDeductionOnCusEnt = ({
   entityId,
   allowNegativeBalance = false,
   addAdjustment = false,
+  setZeroAdjustment = false,
 }: {
   cusEnt: FullCustomerEntitlement;
   toDeduct: number;
   entityId?: string | null;
   allowNegativeBalance?: boolean;
   addAdjustment?: boolean;
+  setZeroAdjustment?: boolean;
 }) => {
   let newEntities = structuredClone(cusEnt.entities);
   let newBalance = structuredClone(cusEnt.balance);
@@ -229,6 +231,10 @@ export const performDeductionOnCusEnt = ({
           newEntities![entityId!]!.adjustment = adjustment - newDeducted!;
         }
 
+        if (setZeroAdjustment) {
+          newEntities![entityId!]!.adjustment = 0;
+        }
+
         toDeductCursor = newToDeduct!;
         deducted += newDeducted!;
       }
@@ -253,6 +259,10 @@ export const performDeductionOnCusEnt = ({
       if (addAdjustment) {
         let adjustment = newEntities![entityId!]!.adjustment || 0;
         newEntities![entityId!]!.adjustment = adjustment - newDeducted!;
+      }
+
+      if (setZeroAdjustment) {
+        newEntities![entityId!]!.adjustment = 0;
       }
 
       toDeduct = newToDeduct!;
@@ -294,6 +304,7 @@ export const deductAllowanceFromCusEnt = async ({
   featureDeductions,
   willDeductCredits = false,
   entityId,
+  setZeroAdjustment = false,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
@@ -302,6 +313,7 @@ export const deductAllowanceFromCusEnt = async ({
   featureDeductions: any;
   willDeductCredits?: boolean;
   entityId?: string | null;
+  setZeroAdjustment?: boolean;
 }) => {
   const { sb, feature, env, org, cusPrices, customer, properties } =
     deductParams;
@@ -328,6 +340,7 @@ export const deductAllowanceFromCusEnt = async ({
     toDeduct,
     entityId,
     allowNegativeBalance: false,
+    setZeroAdjustment,
   });
 
   let originalGrpBalance = getTotalNegativeBalance({
@@ -346,13 +359,17 @@ export const deductAllowanceFromCusEnt = async ({
   //   entities: newEntities,
   // });
 
+  let updates: any = {
+    balance: newBalance,
+    entities: newEntities,
+  }
+  if (setZeroAdjustment) {
+    updates.adjustment = 0;
+  }
   await CustomerEntitlementService.update({
     sb,
     id: cusEnt.id,
-    updates: {
-      balance: newBalance,
-      entities: newEntities,
-    },
+    updates,
   });
 
   await adjustAllowance({
@@ -405,11 +422,13 @@ export const deductFromUsageBasedCusEnt = async ({
   deductParams,
   cusEnts,
   entityId,
+  setZeroAdjustment = false,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
   cusEnts: FullCustomerEntitlement[];
   entityId?: string | null;
+  setZeroAdjustment?: boolean;
 }) => {
   const { sb, feature, env, org, cusPrices, customer, properties } =
     deductParams;
@@ -452,6 +471,7 @@ export const deductFromUsageBasedCusEnt = async ({
     toDeduct,
     entityId,
     allowNegativeBalance: true,
+    setZeroAdjustment,
   });
 
   // console.log("NEW BALANCE", newBalance);
@@ -469,13 +489,18 @@ export const deductFromUsageBasedCusEnt = async ({
     entities: newEntities!,
   });
 
+  let updates: any = {
+    balance: newBalance,
+    entities: newEntities,
+  }
+  if (setZeroAdjustment) {
+    updates.adjustment = 0;
+  }
+
   await CustomerEntitlementService.update({
     sb,
     id: usageBasedEnt.id,
-    updates: {
-      balance: newBalance,
-      entities: newEntities,
-    },
+    updates
   });
 
   // const totalNegativeBalance = getTotalNegativeBalance(usageBasedEnt);

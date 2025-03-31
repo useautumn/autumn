@@ -100,7 +100,7 @@ export const ErrCode = {
   GetCusPriceFailed: "get_cus_price_failed",
 
   // Pay for invoice
-  PayInvoiceFailed: "pay_invoice_failed",
+  PayInvoiceFailed: "invoice_payment_failed",
 
   // COUPONS
   PromoCodeAlreadyExistsInStripe: "promo_code_already_exists_in_stripe",

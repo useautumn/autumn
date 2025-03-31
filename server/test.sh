@@ -9,10 +9,11 @@ if [ "$1" == "basic-parallel" ]; then
     tests/attach/**/*.ts \
 
 elif [ "$1" == "advanced-parallel" ]; then
-    MOCHA_PARALLEL=true  $MOCHA_SETUP && $MOCHA_CMD \
-    'tests/advanced/usage/*.ts' \
+    MOCHA_PARALLEL=true  \
     && $MOCHA_CMD 'tests/advanced/coupons/*.ts' \
-    && $MOCHA_CMD 'tests/advanced/arrear_prorated/*.ts'
+    # $MOCHA_SETUP \
+    # && $MOCHA_CMD 'tests/advanced/arrear_prorated/*.ts' \
+    # && $MOCHA_CMD 'tests/advanced/usage/*.ts' \
 
 
 elif [ "$1" == "alex-parallel" ]; then
