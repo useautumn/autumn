@@ -279,10 +279,11 @@ export const getPriceAmount = ({
   options?: FeatureOptions;
   relatedEnt?: EntitlementWithFeature;
 }) => {
-  if (price.billing_type == BillingType.OneOff) {
+  let billingType = getBillingType(price.config!);
+  if (billingType == BillingType.OneOff) {
     let config = price.config as FixedPriceConfig;
     return Number(config.amount.toFixed(2));
-  } else if (price.billing_type == BillingType.UsageInAdvance) {
+  } else if (billingType == BillingType.UsageInAdvance) {
     let quantity = options?.quantity!;
     let config = price.config as UsagePriceConfig;
 

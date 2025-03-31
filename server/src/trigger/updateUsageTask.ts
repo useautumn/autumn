@@ -220,13 +220,13 @@ export const updateUsage = async ({
     setUsage,
   });
 
-  // 2. Handle group_by initialization
-  await initGroupBalancesForEvent({
-    sb,
-    features,
-    cusEnts,
-    properties,
-  });
+  // // 2. Handle group_by initialization
+  // await initGroupBalancesForEvent({
+  //   sb,
+  //   features,
+  //   cusEnts,
+  //   properties,
+  // });
 
   // 3. Return if no customer entitlements or features found
   if (cusEnts.length === 0 || features.length === 0) {
@@ -258,6 +258,7 @@ export const updateUsage = async ({
         },
         featureDeductions,
         willDeductCredits: true,
+        setZeroAdjustment: true,
       });
     }
 
@@ -277,6 +278,7 @@ export const updateUsage = async ({
         customer,
         properties,
       },
+      setZeroAdjustment: true,
     });
   }
 

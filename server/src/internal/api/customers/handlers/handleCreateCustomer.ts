@@ -174,6 +174,7 @@ export const createNewCustomer = async ({
         optionsList: [],
         cusProducts: [],
         invoiceOnly: true,
+        entities: [],
       },
       fromRequest: false,
     });

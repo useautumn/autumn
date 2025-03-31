@@ -351,12 +351,14 @@ export const getCusBalancesByEntitlement = async ({
 
     data[key].balance += balance || 0;
     data[key].adjustment += adjustment || 0;
-    data[key].total +=
-      (getResetBalance({
-        entitlement: ent,
-        options: getEntOptions(cusProduct.options, ent),
-        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
-      }) || 0) * count;
+    let total = (getResetBalance({
+      entitlement: ent,
+      options: getEntOptions(cusProduct.options, ent),
+      relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+    }) || 0) * count;
+
+    data[key].total += total;
+      
 
     data[key].unused += unused || 0;
   }
@@ -684,9 +686,11 @@ export const getTotalNegativeBalance = ({
 export const getExistingUsageFromCusProducts = ({
   entitlement,
   cusProducts,
+  entities,
 }: {
   entitlement: EntitlementWithFeature;
   cusProducts?: FullCusProduct[];
+  entities: Entity[];
 }) => {
   if (!entitlement || entitlement.feature.type === FeatureType.Boolean) {
     return 0;
@@ -715,5 +719,16 @@ export const getExistingUsageFromCusProducts = ({
 
   // // Calculate existing usage
   let existingAllowance = existingCusEnt.entitlement.allowance!;
-  return existingAllowance - existingCusEnt.balance!;
+
+
+  let { balance, adjustment, count, unused } = getCusEntMasterBalance({
+    cusEnt: existingCusEnt as any,
+    entities: entities,
+  });
+  existingUsage = existingAllowance - balance!;
+  if (unused && unused > 0) {
+    existingUsage -= unused;
+  }
+
+  return existingUsage;
 };
