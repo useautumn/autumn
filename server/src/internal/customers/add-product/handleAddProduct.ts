@@ -214,8 +214,9 @@ const handleOneOffPrices = async ({
   const stripeCli = createStripeCli({ org, env: customer.env });
 
   logger.info("   1. Creating invoice");
-  const stripeInvoice = await stripeCli.invoices.create({
+  let stripeInvoice = await stripeCli.invoices.create({
     customer: customer.processor.id,
+    auto_advance: false,
   });
 
   // 2. Create invoice items
@@ -245,7 +246,7 @@ const handleOneOffPrices = async ({
   }
 
   if (!attachParams.invoiceOnly) {
-    const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
+    stripeInvoice = await stripeCli.invoices.finalizeInvoice(
       stripeInvoice.id,
       getInvoiceExpansion()
     );
@@ -259,17 +260,18 @@ const handleOneOffPrices = async ({
       logger,
     });
 
-    if (!paid && fromRequest) {
+    if (!paid) {
       await stripeCli.invoices.voidInvoice(stripeInvoice.id);
-      await handleCreateCheckout({
-        sb,
-        req,
-        res,
-        attachParams,
-      });
-      return;
-    } else if (!paid) {
-      throw error;
+      if (fromRequest && org.config.checkout_on_failed_payment) {
+        await handleCreateCheckout({
+          sb,
+          req,
+          res,
+          attachParams,
+        });
+      } else {
+        throw error;
+      }
     }
   }
 

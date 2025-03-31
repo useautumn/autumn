@@ -6,6 +6,7 @@ import {
   CusProductStatus,
   EntitlementWithFeature,
   FeatureOptions,
+  FeatureType,
   FullCustomerEntitlement,
   Organization,
   Price,
@@ -148,8 +149,46 @@ export const updateOneTimeCusProduct = async ({
           (newOptionsList[newOptionIndex].quantity || 0) +
           (curOptions.quantity || 0),
       };
+    } 
+  }
+
+
+  // Handle adding quantity to base entitlements if cus product purchased multiple times.
+  for (const entitlement of attachParams.entitlements) {
+    const relatedPrice = getEntRelatedPrice(entitlement, attachParams.prices);
+    const feature = entitlement.feature;
+
+    if (relatedPrice || feature.type == FeatureType.Boolean || entitlement.allowance_type === AllowanceType.Unlimited) {
+      continue;
+    }
+
+    const newOptionIndex = newOptionsList.findIndex(
+      (o) => o.internal_feature_id === entitlement.internal_feature_id
+    );
+
+    if (newOptionIndex === -1) {
+      // Get existing option
+      const existingOption = existingCusProduct.options.find(
+        (o) => o.internal_feature_id === entitlement.internal_feature_id
+      );
+
+      if (existingOption) {
+        newOptionsList.push({
+          feature_id: entitlement.feature.id,
+          quantity: (existingOption?.quantity || 0) + 1,
+          internal_feature_id: entitlement.internal_feature_id,
+        });
+      } else {
+        newOptionsList.push({
+          feature_id: entitlement.feature.id,
+          quantity: 2,
+          internal_feature_id: entitlement.internal_feature_id,
+        });
+      }
     }
   }
+
+
 
   await CusProductService.update({
     sb,

@@ -8,6 +8,7 @@ export const OrgConfigSchema = z.object({
   prorate_unused: z.boolean().default(true),
 
   api_version: z.number().default(0.2),
+  checkout_on_failed_payment: z.boolean().default(true),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;

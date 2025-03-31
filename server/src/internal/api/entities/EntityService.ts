@@ -5,11 +5,13 @@ export class EntityService {
   static async getById({
     sb,
     entityId,
+    internalCustomerId,
     orgId,
     env,
   }: {
     sb: SupabaseClient;
     entityId: string;
+    internalCustomerId?: string;
     orgId: string;
     env: string;
   }) {
@@ -17,6 +19,7 @@ export class EntityService {
       .from("entities")
       .select("*")
       .eq("id", entityId)
+      .eq("internal_customer_id", internalCustomerId)
       .eq("org_id", orgId)
       .eq("env", env)
       .single();
@@ -38,26 +41,31 @@ export class EntityService {
     return data;
   }
 
-  static async getInIds({
+  static async get({
     sb,
-    ids,
     orgId,
     internalFeatureId,
+    internalCustomerId,
     env,
   }: {
     sb: SupabaseClient;
-    ids: string[];
     orgId: string;
     env: string;
     internalFeatureId?: string;
+    internalCustomerId?: string;
   }) {
-    const { data, error } = await sb
+    let query = sb
       .from("entities")
       .select("*")
-      .in("id", ids)
       .eq("org_id", orgId)
       .eq("env", env)
-      .eq("internal_feature_id", internalFeatureId);
+      .eq("internal_customer_id", internalCustomerId);
+
+    if (internalFeatureId) {
+      query = query.eq("internal_feature_id", internalFeatureId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw error;

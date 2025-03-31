@@ -157,6 +157,7 @@ export const cancelFutureProductSchedule = async ({
       entitlements: fullCurProduct.entitlements,
       freeTrial: null,
       optionsList: [],
+      entities: [],
     },
   });
 

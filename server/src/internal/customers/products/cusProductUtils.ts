@@ -317,6 +317,7 @@ export const processFullCusProduct = ({
 }) => {
   // Process prices
 
+
   const prices = cusProduct.customer_prices.map((cp) => {
     let price = cp.price;
 
@@ -376,6 +377,8 @@ export const processFullCusProduct = ({
       }
     }
   });
+
+
   const trialing =
     cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
 
@@ -391,6 +394,9 @@ export const processFullCusProduct = ({
     stripeSubData = {
       current_period_end: baseSub?.current_period_end
         ? baseSub.current_period_end * 1000
+        : null,
+      current_period_start: baseSub?.current_period_start
+        ? baseSub.current_period_start * 1000
         : null,
     };
   }
