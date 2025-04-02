@@ -12,12 +12,16 @@ export const initCoupon = ({
   env: string;
   id?: string;
 }) => {
+  let promoCodes = coupon.promo_codes.filter((promoCode) => {
+    return promoCode.code.length > 0;
+  });
   return {
     ...coupon,
     internal_id: id || generateId("coup"),
     created_at: Date.now(),
     org_id: orgId,
     env,
+    promo_codes: promoCodes,
   };
 };
 

@@ -101,6 +101,9 @@ export const handleCreateCheckout = async ({
           enabled: true,
         }
       : undefined,
+    saved_payment_method_options: {
+      payment_method_save: "enabled",
+    },
   });
 
   logger.info(`✅ Successfully created checkout for customer ${customer.id}`);

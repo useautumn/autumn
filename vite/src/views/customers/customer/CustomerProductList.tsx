@@ -30,9 +30,9 @@ import { toast } from "sonner";
 import { Link } from "react-router";
 import { getStripeSubLink } from "@/utils/linkUtils";
 import React from "react";
-import { cn } from "@/lib/utils";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import { ArrowUpRightFromSquare } from "lucide-react";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export const CustomerProductList = ({
   customer,
@@ -83,10 +83,20 @@ export const CustomerProductList = ({
                 }}
               >
                 <TableCell>
-                  {
-                    products.find((p: any) => p.id === cusProduct.product_id)
-                      ?.name
-                  }
+                  <AdminHover texts={[
+                    {
+                      key: "Cus Product ID",
+                      value: cusProduct.id,
+                    },
+                    {
+                      key: "Stripe Subscription ID (1)",
+                      value: cusProduct.subscription_ids?.[0] || "N/A",
+                    },
+                  ]}>
+                    {
+                      products.find((p: any) => p.id === cusProduct.product_id)?.name
+                    }
+                  </AdminHover>
                 </TableCell>
                 <TableCell className="overflow-hidden text-ellipsis">
                   {cusProduct.product_id}

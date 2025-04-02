@@ -15,7 +15,7 @@ import { Check, ListFilter, X } from "lucide-react";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
-
+  
   return (
     <DropdownMenu>
       <RenderFilterTrigger />

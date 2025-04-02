@@ -6,7 +6,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { getLinkedCusEnt } from "./entityUtils.js";
 import { EntityService } from "./EntityService.js";
-import { AppEnv, CusProductStatus, Customer, Entity, FullCusProduct, FullCustomerEntitlement, FullCustomerPrice, Product } from "@autumn/shared";
+import { AppEnv, CusProductStatus, Customer, Entity, ErrCode, FullCusProduct, FullCustomerEntitlement, FullCustomerPrice, Product } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { getActiveCusProductStatuses } from "@/utils/constants.js";
@@ -15,7 +15,7 @@ import {Decimal} from "decimal.js";
 import { getPriceForOverage } from "@/internal/prices/priceUtils.js";
 import { Logger } from "@slack/web-api";
 import Stripe from "stripe";
-import { getCusEntMasterBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getCusEntMasterBalance, getUnlimitedAndUsageAllowed } from "@/internal/customers/entitlements/cusEntUtils.js";
 
 export const constructEntity = ({
   inputEntity,
@@ -104,30 +104,26 @@ export const getEntityToAction = ({
       createCount++;
     }
   }
-  logger.info("Entity to action:");
-  logger.info(entityToAction);
 
-  // 2. CHECK THAT PRODUCTS HAVE ENOUGH BALANCE
-  for (const cusProduct of cusProducts) {
-    let cusEnts = cusProduct.customer_entitlements;
-    let product = cusProduct.product;
-    let cusEnt = cusEnts.find(
-      (e: any) => e.entitlement.feature.id === feature.id
-    );
 
-    if (!cusEnt || cusEnt.usage_allowed) {
-      continue;
-    }
+  let cusEnts = cusProducts.flatMap((p: any) => p.customer_entitlements);
+  let { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
+    cusEnts,
+    internalFeatureId: feature.internal_id,
+  });
 
-    if (cusEnt.balance < createCount) {
-      throw new RecaseError({
-        message: `Product: ${product.name}, Feature: ${feature.name}, insufficient balance`,
-        code: "INSUFFICIENT_BALANCE",
-        data: {
-          cusEnt,
-        },
-      });
-    }
+  if (unlimited || usageAllowed) {
+    return entityToAction;
+  }
+
+  let balance = cusEnts.filter((ce: any) => ce.entitlement.feature.internal_id === feature.internal_id).reduce((acc: number, ce: any) => acc + ce.balance, 0);
+
+
+  if (balance < createCount) {
+    throw new RecaseError({
+      message: `You don't have enough ${feature.name}`,
+      code: ErrCode.InsufficientBalance,
+    });
   }
 
   return entityToAction;
@@ -227,6 +223,17 @@ export const getEntityToAction = ({
 //   }
 // };
 
+export const logEntityToAction = ({
+  entityToAction,
+  logger,
+}: {
+  entityToAction: any;
+  logger: any;
+}) => {
+  for (const id in entityToAction) {
+    logger.info(`${id} - ${entityToAction[id].action}${entityToAction[id].replace ? ` (replace ${entityToAction[id].replace.id})` : ""}`);
+  }
+}
 export const handleCreateEntity = async (req: any, res: any) => {
   try {
     // Create entity!
@@ -245,6 +252,13 @@ export const handleCreateEntity = async (req: any, res: any) => {
       OrgService.getFromReq(req),
     ]);
 
+    if (!customer) {
+      throw new RecaseError({
+        message: `Customer ${customer_id} not found`,
+        code: ErrCode.CustomerNotFound,
+      });
+    }
+
     let inputEntities: any[] = [];
     if (Array.isArray(req.body)) {
       inputEntities = req.body;
@@ -252,16 +266,24 @@ export const handleCreateEntity = async (req: any, res: any) => {
       inputEntities = [req.body];
     }
 
+
     let featureIds = [...new Set(inputEntities.map((e: any) => e.feature_id))];
     if (featureIds.length > 1) {
       throw new RecaseError({
         message: "Multiple features not supported",
-        code: "MULTIPLE_FEATURES_NOT_SUPPORTED",
+        code: ErrCode.InvalidInputs,
       });
     }
 
     let feature_id = featureIds[0];
     let feature = features.find((f: any) => f.id === feature_id);
+
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${feature_id} not found`,
+        code: ErrCode.FeatureNotFound,
+      });
+    }
 
     let cusProducts = await CusService.getFullCusProducts({
       sb,
@@ -282,9 +304,9 @@ export const handleCreateEntity = async (req: any, res: any) => {
     });
 
 
-    console.log("existingEntities", existingEntities.map((e: any) => `${e.id} - ${e.name}, deleted: ${e.deleted}`));
+    logger.info("Existing entities:");
+    logger.info(existingEntities.map((e: any) => `${e.id} - ${e.name}, deleted: ${e.deleted}`))
     
-
     for (const entity of existingEntities) {
       if (inputEntities.some((e: any) => e.id === entity.id) && !entity.deleted) {
         throw new RecaseError({
@@ -298,7 +320,6 @@ export const handleCreateEntity = async (req: any, res: any) => {
     }
     
 
-
     const entityToAction = getEntityToAction({
       inputEntities,
       existingEntities,
@@ -307,7 +328,11 @@ export const handleCreateEntity = async (req: any, res: any) => {
       cusProducts,
     });
 
-
+    logger.info("Entity to action:");
+    logEntityToAction({
+      entityToAction,
+      logger,
+    });
     
     // 3. CREATE LINKED CUSTOMER ENTITLEMENTS
     for (const cusProduct of cusProducts) {
@@ -348,6 +373,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
       // console.log("newBalance", newBalance);
       // console.log("Replaced count", replacedCount);
       // throw new Error("test");
+
 
       await adjustAllowance({
         sb,

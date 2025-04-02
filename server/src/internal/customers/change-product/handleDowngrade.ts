@@ -20,6 +20,7 @@ import {
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { differenceInDays } from "date-fns";
+import { cancelScheduledProductIfExists } from "./changeProductUtils.js";
 
 const scheduleStripeSubscription = async ({
   attachParams,
@@ -98,16 +99,18 @@ export const handleDowngrade = async ({
 }) => {
   const logger = req.logtail;
   let product = attachParams.products[0];
-  logger.info(
-    `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
-  );
-
-  // Make use of stripe subscription schedules to handle the downgrade
-  logger.info("1. Cancelling current subscription (at period end)");
   const stripeCli = createStripeCli({
     org: attachParams.org,
     env: attachParams.customer.env,
   });
+  logger.info(
+    `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
+  );
+  
+
+  // Make use of stripe subscription schedules to handle the downgrade
+  logger.info("1. Cancelling current subscription (at period end)");
+
 
   const curSubscriptions = await getStripeSubs({
     stripeCli,
@@ -144,6 +147,7 @@ export const handleDowngrade = async ({
     }
   }
 
+  
   // 3. Schedule new subscription IF new product is not free...
   logger.info("2. Schedule new subscription");
 
@@ -225,6 +229,8 @@ export const handleDowngrade = async ({
       }
     }
   }
+
+
 
   // Remove scheduled ids from curCusProduct
   await CusProductService.update({

@@ -9,6 +9,7 @@ import {
   attachProducts,
   coupons,
   oneTimeProducts,
+  entityProducts,
 } from "./global.js";
 
 const ORG_SLUG = "unit-test-org";
@@ -29,6 +30,7 @@ describe("Initialize org for tests", () => {
         ...advanceProducts,
         ...attachProducts,
         ...oneTimeProducts,
+        ...entityProducts,
       } as any,
       coupons: { ...coupons } as any,
     });

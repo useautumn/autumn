@@ -59,4 +59,5 @@ export type InsertCusProductParams = {
 
   // CONFIGS
   invoiceOnly?: boolean | undefined;
+  entities: Entity[];
 };

@@ -20,6 +20,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { handleDowngrade } from "./handleDowngrade.js";
 import { getPricesForCusProduct } from "./scheduleUtils.js";
+import { cancelScheduledProductIfExists } from "./changeProductUtils.js";
 
 const scheduleStripeSubscription = async ({
   attachParams,
@@ -193,6 +194,23 @@ export const handleChangeProduct = async ({
       statusCode: StatusCodes.NOT_IMPLEMENTED,
     });
   }
+
+  const stripeCli = createStripeCli({
+    org: attachParams.org,
+    env: attachParams.customer.env,
+  });
+
+  const logger = req.logtail;
+
+  // 0. Cancel any scheduled products
+  await cancelScheduledProductIfExists({
+    req,
+    org: attachParams.org,
+    stripeCli,
+    attachParams,
+    curFullProduct: curCusProduct.product as any,
+    logger,
+  });
 
   let product = products[0];
 

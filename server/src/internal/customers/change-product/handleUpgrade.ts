@@ -14,6 +14,7 @@ import {
   ErrCode,
   FullProduct,
   CusProductStatus,
+  Organization,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
@@ -24,7 +25,7 @@ import { InvoiceService } from "../invoices/InvoiceService.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { CusProductService } from "../products/CusProductService.js";
 import { attachParamsToInvoice } from "../invoices/invoiceUtils.js";
-import { updateScheduledSubWithNewItems } from "./scheduleUtils.js";
+import { cancelFutureProductSchedule, updateScheduledSubWithNewItems } from "./scheduleUtils.js";
 import { billForRemainingUsages } from "./billRemainingUsages.js";
 import { updateStripeSubscription } from "@/external/stripe/stripeSubUtils/updateStripeSub.js";
 import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSub.js";
@@ -35,6 +36,7 @@ import {
 } from "@/internal/prices/billingIntervalUtils.js";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import { differenceInSeconds, subSeconds } from "date-fns";
+import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 
 // UPGRADE FUNCTIONS
 const handleStripeSubUpdate = async ({
@@ -240,6 +242,46 @@ const handleOnlyEntsChanged = async ({
   });
 };
 
+const cancelScheduledProductIfExists = async ({
+  req,
+  org,
+  stripeCli,
+  attachParams,
+  curFullProduct,
+  logger,
+}: {
+  req: any;
+  org: Organization;
+  stripeCli: Stripe;
+  attachParams: AttachParams;
+  curFullProduct: FullProduct;
+  logger: any;
+}) => {
+  let { curScheduledProduct } = await getExistingCusProducts({
+    product: curFullProduct,
+    cusProducts: attachParams.cusProducts!,
+  });
+
+  if (curScheduledProduct) {
+    logger.info(`0. Cancelling future scheduled product: ${curScheduledProduct.product.name}`);
+     // 1. Cancel future product schedule
+     await cancelFutureProductSchedule({
+      sb: req.sb,
+      org,
+      cusProducts: attachParams.cusProducts!,
+      product: curScheduledProduct.product as any,
+      stripeCli,
+      logger,
+    });
+
+    // 2. Delete scheduled product
+    await CusProductService.delete({
+      sb: req.sb,
+      cusProductId: curScheduledProduct.id,
+    });
+  }
+}
+
 export const handleUpgrade = async ({
   req,
   res,
@@ -308,7 +350,8 @@ export const handleUpgrade = async ({
 
   const disableFreeTrial = false;
 
-  logger.info("2. Updating current subscription to new product");
+
+  logger.info("1. Updating current subscription to new product");
   let { subUpdate, newSubIds, invoiceIds, remainingExistingSubIds, newSubs } =
     await handleStripeSubUpdate({
       sb: req.sb,
@@ -320,9 +363,8 @@ export const handleUpgrade = async ({
       logger,
     });
 
-  // 2. Billing for remaining usages
-  // 1. Bill for remaining usages
-  logger.info("1. Bill for remaining usages");
+
+  logger.info("2. Bill for remaining usages");
   await billForRemainingUsages({
     sb: req.sb,
     attachParams,

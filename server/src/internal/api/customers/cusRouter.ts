@@ -69,67 +69,6 @@ cusRouter.get("", async (req: any, res: any) => {
 
 cusRouter.post("", handlePostCustomerRequest);
 
-// cusRouter.put("", async (req: any, res: any) => {
-//   try {
-//     const { id, name, email, fingerprint, reset_at } = req.body;
-
-//     if (!id && !email) {
-//       throw new RecaseError({
-//         message: "Customer ID or email is required",
-//         code: ErrCode.InvalidCustomer,
-//         statusCode: StatusCodes.BAD_REQUEST,
-//       });
-//     }
-
-//     let existingCustomers = await CusService.getByIdOrEmail({
-//       sb: req.sb,
-//       id,
-//       email,
-//       orgId: req.orgId,
-//       env: req.env,
-//     });
-
-//     if (existingCustomers.length > 1) {
-//       throw new RecaseError({
-//         message: "Multiple customers found",
-//         code: ErrCode.MultipleCustomersFound,
-//         statusCode: StatusCodes.CONFLICT,
-//       });
-//     }
-
-//     let newCustomer: Customer;
-//     if (existingCustomers.length == 1) {
-//       const existing = existingCustomers[0];
-//       newCustomer = await CusService.update({
-//         sb: req.sb,
-//         internalCusId: existing.internal_id,
-//         update: { id, name, email, fingerprint },
-//       });
-//     } else {
-//       newCustomer = await createNewCustomer({
-//         sb: req.sb,
-//         orgId: req.orgId,
-//         env: req.env,
-//         customer: {
-//           id,
-//           name: name || "",
-//           email: email || "",
-//           fingerprint,
-//         },
-//         nextResetAt: reset_at,
-//         logger: req.logtail,
-//       });
-//     }
-
-//     res.status(200).json({
-//       customer: CustomerResponseSchema.parse(newCustomer),
-//       success: true,
-//       action: existingCustomers.length == 1 ? "update" : "create",
-//     });
-//   } catch (error) {
-//     handleRequestError({ req, error, res, action: "update customer" });
-//   }
-// });
 
 // BY CUSTOMER ID
 
@@ -391,3 +330,67 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 cusRouter.post("/:customer_id/coupons/:coupon_id", handleAddCouponToCus);
 
 cusRouter.use("/:customer_id/entities", entityRouter);
+
+
+
+// cusRouter.put("", async (req: any, res: any) => {
+//   try {
+//     const { id, name, email, fingerprint, reset_at } = req.body;
+
+//     if (!id && !email) {
+//       throw new RecaseError({
+//         message: "Customer ID or email is required",
+//         code: ErrCode.InvalidCustomer,
+//         statusCode: StatusCodes.BAD_REQUEST,
+//       });
+//     }
+
+//     let existingCustomers = await CusService.getByIdOrEmail({
+//       sb: req.sb,
+//       id,
+//       email,
+//       orgId: req.orgId,
+//       env: req.env,
+//     });
+
+//     if (existingCustomers.length > 1) {
+//       throw new RecaseError({
+//         message: "Multiple customers found",
+//         code: ErrCode.MultipleCustomersFound,
+//         statusCode: StatusCodes.CONFLICT,
+//       });
+//     }
+
+//     let newCustomer: Customer;
+//     if (existingCustomers.length == 1) {
+//       const existing = existingCustomers[0];
+//       newCustomer = await CusService.update({
+//         sb: req.sb,
+//         internalCusId: existing.internal_id,
+//         update: { id, name, email, fingerprint },
+//       });
+//     } else {
+//       newCustomer = await createNewCustomer({
+//         sb: req.sb,
+//         orgId: req.orgId,
+//         env: req.env,
+//         customer: {
+//           id,
+//           name: name || "",
+//           email: email || "",
+//           fingerprint,
+//         },
+//         nextResetAt: reset_at,
+//         logger: req.logtail,
+//       });
+//     }
+
+//     res.status(200).json({
+//       customer: CustomerResponseSchema.parse(newCustomer),
+//       success: true,
+//       action: existingCustomers.length == 1 ? "update" : "create",
+//     });
+//   } catch (error) {
+//     handleRequestError({ req, error, res, action: "update customer" });
+//   }
+// });

@@ -74,10 +74,6 @@ export const updateStripeSubscription = async ({
       payment_behavior: "error_if_incomplete",
     });
 
-    // if (invoiceOnly) {
-    //   await stripeCli.invoices.finalizeInvoice(sub.latest_invoice as string);
-    // }
-
     return sub;
   } catch (error: any) {
     console.log("Error updating stripe subscription.", error.message);

@@ -6,7 +6,11 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleCustomerRaceCondition } from "@/external/redis/redisUtils.js";
-import { getCusEntMasterBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getCusEntMasterBalance, getRelatedCusPrice } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
+import { removeEntityFromCusEnt } from "./entityUtils.js";
+import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
+import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 
 export const handleDeleteEntity = async (req: any, res: any) => {
   try {
@@ -80,11 +84,11 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 
     const org = await OrgService.getFromReq(req);
 
+    let cusPriceExists = false;
+
     for (const cusProduct of cusProducts) {
       let cusEnts = cusProduct.customer_entitlements;
       let product = cusProduct.product;
-
-      
 
       let cusEnt = cusEnts.find(
         (e: any) =>
@@ -95,7 +99,13 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         continue;
       }
 
-      let {unused} = getCusEntMasterBalance({
+      let relatedCusPrice = getRelatedCusPrice(cusEnt, cusProduct.customer_prices);
+
+      if (relatedCusPrice) {
+        cusPriceExists = true;
+      }
+
+      let { unused } = getCusEntMasterBalance({
         cusEnt,
         entities: existingEntities,
       });
@@ -117,13 +127,45 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       });
     }
 
-    await EntityService.update({
-      sb,
-      internalId: entity.internal_id,
-      update: {
-        deleted: true,
-      },
-    });
+    if (!cusPriceExists) {
+      // Completely remove entity
+      let cusEnts = fullCusProductToCusEnts(cusProducts);
+
+      for (const cusEnt of cusEnts) {
+        await removeEntityFromCusEnt({
+          sb,
+          cusEnt,
+          entity,
+          logger,
+        });
+      }
+
+      // Perform deduction on cus ent
+      let updateCusEnt = cusEnts.find((e: any) => e.entitlement.feature.id === entity.feature_id);
+      if (updateCusEnt) {
+        await CustomerEntitlementService.incrementBalance({
+          pg: req.pg,
+          id: updateCusEnt.id,
+          amount: 1,
+        });
+      }
+      
+      await EntityService.deleteInInternalIds({
+        sb,
+        internalIds: [entity.internal_id],
+        orgId: req.orgId,
+        env: req.env,
+      });
+      
+    } else {
+      await EntityService.update({
+        sb,
+        internalId: entity.internal_id,
+        update: {
+          deleted: true,
+        },
+      });
+    }
 
     logger.info(` ✅ Finished deleting entity ${entity_id}`);
 
