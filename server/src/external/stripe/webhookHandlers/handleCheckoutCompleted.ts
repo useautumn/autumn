@@ -205,6 +205,7 @@ export const handleCheckoutSessionCompleted = async ({
     checkoutSession.metadata?.autumn_metadata_id
   );
 
+
   // Get product by stripe subscription ID
   let checkoutSub;
   if (checkoutSession.subscription) {

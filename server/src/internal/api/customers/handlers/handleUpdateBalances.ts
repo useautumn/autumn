@@ -169,7 +169,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
           continue;
         }
 
-        let cusEntBalance = getCusEntBalance({
+        let {balance: cusEntBalance} = getCusEntBalance({
           cusEnt,
           entityId: balance.entity_id,
         });

@@ -16,10 +16,8 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { getPriceAmount } from "../../prices/priceUtils.js";
 import {
-  AllowanceType,
   BillingInterval,
   ErrCode,
-  InvoiceStatus,
 } from "@autumn/shared";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import {

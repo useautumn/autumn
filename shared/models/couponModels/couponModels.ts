@@ -13,7 +13,7 @@ export enum DiscountType {
 
 const CouponSchema = z.object({
   internal_id: z.string(),
-  name: z.string(),
+  name: z.string().nullish(),
   price_ids: z.array(z.string()),
   promo_codes: z.array(z.record(z.string(), z.string())),
 

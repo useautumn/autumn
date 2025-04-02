@@ -143,6 +143,17 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     }
 
     // For each cus ent, show full entitlement?
+    // Order full customer entitlements by created_at descending, then id
+    fullCustomer.entitlements = fullCustomer.entitlements.sort((a: any, b: any) => {
+      // Sort by cusProduct created_at
+      const productA = fullCustomer.products.find((p: any) => p.id === a.customer_product_id);
+      const productB = fullCustomer.products.find((p: any) => p.id === b.customer_product_id);
+
+      // new Date(productB.created_at).getTime() - new Date(productA.created_at).getTime() || productA.id.localeCompare(productB.id) || 
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || b.id.localeCompare(a.id);
+      
+    });
+
     for (const cusEnt of fullCustomer.entitlements) {
       // let entitlement = cusEnt.entitlement;
 
@@ -165,6 +176,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       events,
       discount,
       org,
+      entities,
     });
   } catch (error) {
     handleRequestError({ req, error, res, action: "get customer data" });
