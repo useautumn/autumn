@@ -213,6 +213,7 @@ export const expireOrDeleteCusProduct = async ({
       cusProducts: cusProducts as FullCusProduct[],
     });
 
+    
     if (curMainProduct) {
       await CusProductService.update({
         sb,
@@ -318,6 +319,7 @@ export const createFullCusProduct = async ({
   } catch (error) {}
 
   if (!isOneOff(prices) && !product.is_add_on) {
+    
     await expireOrDeleteCusProduct({
       sb,
       startsAt,

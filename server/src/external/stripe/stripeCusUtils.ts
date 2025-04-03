@@ -127,7 +127,7 @@ export const getCusPaymentMethod = async ({
     stripeId
   )) as Stripe.Customer;
 
-  let paymentMethodId = stripeCustomer.invoice_settings.default_payment_method;
+  let paymentMethodId = stripeCustomer.invoice_settings?.default_payment_method;
 
   if (!paymentMethodId) {
     let res = await stripeCli.paymentMethods.list({

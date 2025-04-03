@@ -155,7 +155,7 @@ const initPrice = ({
   internalProductId,
   isCustom = false,
 }: {
-  price: CreatePrice;
+  price: Price;
   orgId: string;
   internalProductId: string;
   isCustom: boolean;
@@ -164,15 +164,15 @@ const initPrice = ({
 
   // TO RESET STRIPE PRICES
   const newConfig = {
-    ...priceSchema.config,
-    stripe_meter_id: null,
+    ...price.config, 
+    // stripe_meter_id: null,
     stripe_price_id: null,
     stripe_placeholder_price_id: null,
   };
 
   return {
     ...priceSchema,
-    config: newConfig,
+    config: newConfig as any,
     id: generateId("pr"),
     org_id: orgId,
     internal_product_id: internalProductId,
@@ -273,7 +273,8 @@ export const handleNewPrices = async ({
     if (curPrice && !pricesAreSame(curPrice, newPrice) && isCustom) {
       createdPrices.push(
         initPrice({
-          price: CreatePriceSchema.parse(newPrice),
+          // price: CreatePriceSchema.parse(newPrice),
+          price: newPrice,
           orgId,
           internalProductId,
           isCustom,
@@ -316,13 +317,13 @@ export const handleNewPrices = async ({
       internalProductId
     );
 
-    if (cusProducts.length > 0) {
-      throw new RecaseError({
-        message: "Cannot update prices for product with customers",
-        code: ErrCode.ProductHasCustomers,
-        statusCode: 400,
-      });
-    }
+    // if (cusProducts.length > 0) {
+    //   throw new RecaseError({
+    //     message: "Cannot update prices for product with customers",
+    //     code: ErrCode.ProductHasCustomers,
+    //     statusCode: 400,
+    //   });
+    // }
   }
 
   // If product is default, can't have any paid prices
