@@ -39,6 +39,7 @@ export const CreateProductSchema = ProductSchema.omit({
 });
 
 export const UpdateProductSchema = z.object({
+  id: z.string().nullable(),
   name: z.string().optional(),
   is_add_on: z.boolean().optional(),
   is_default: z.boolean().optional(),
