@@ -9,6 +9,25 @@ import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
 
 export class CustomerEntitlementService {
+  static async getByFeature({
+    sb,
+    internalFeatureId,
+  }: {
+    sb: SupabaseClient;
+    internalFeatureId: string;
+  }) {
+    const { data, error } = await sb
+      .from("customer_entitlements")
+      .select("*, entitlement:entitlements!inner(*, feature:features!inner(*))")
+      .eq("entitlement.feature.internal_id", internalFeatureId)
+      .limit(10);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
   static async getCustomerAndEnts({
     sb,
     customerId,

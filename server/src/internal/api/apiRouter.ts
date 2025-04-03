@@ -13,7 +13,6 @@ import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { usageRouter } from "./events/usageRouter.js";
 import couponRouter from "./coupons/couponRouter.js";
 import { invoiceRouter } from "./customers/invoiceRouter.js";
-import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { entityRouter } from "./entities/entityRouter.js";
 
 const apiRouter = Router();

@@ -75,6 +75,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
           env,
           orgId: orgId,
           limit: 10,
+          fields: ["id", "event_name", "value", "timestamp", "idempotency_key", "properties", "set_usage", "entity_id"],
         }),
         CusService.getByIdOrInternalId({
           sb,
