@@ -34,6 +34,7 @@ import {
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { handleUpdateProduct } from "./handleUpdateProduct.js";
 
 export const productApiRouter = Router();
 
@@ -132,17 +133,23 @@ productApiRouter.delete("/:productId", async (req: any, res) => {
   const env = req.env;
 
   try {
-    const org = await OrgService.getFullOrg({
-      sb,
-      orgId,
-    });
+    const [org, product] = await Promise.all([
+      OrgService.getFullOrg({
+        sb,
+        orgId,
+      }),
+      ProductService.getProductStrict({
+        sb,
+        productId,
+        orgId,
+        env,
+      }),
+    ]);
 
-    const product = await ProductService.getProductStrict({
+    let cusProducts = await CusProductService.getByProductId(
       sb,
-      productId,
-      orgId,
-      env,
-    });
+      product.internal_id
+    )
 
     if (!product) {
       throw new RecaseError({
@@ -152,22 +159,10 @@ productApiRouter.delete("/:productId", async (req: any, res) => {
       });
     }
 
-    // Delete stripe product
-    try {
-      await deleteStripeProduct(org, env, product);
-    } catch (error: any) {
-      console.log(
-        "Failed to delete stripe product (moving on)",
-        error?.message
-      );
-    }
+    let cusProductExists = cusProducts.length > 0;
 
-    // Check if there are any customers with this product
-    const cusProducts = await CusProductService.getByProductId(
-      sb,
-      product.internal_id
-    );
-    if (cusProducts.length > 0) {
+
+    if (cusProductExists) {
       throw new RecaseError({
         message: "Cannot delete product with customers",
         code: ErrCode.ProductHasCustomers,
@@ -191,146 +186,7 @@ productApiRouter.delete("/:productId", async (req: any, res) => {
   return;
 });
 
-const handleUpdateProduct = async ({
-  newProduct,
-  curProduct,
-  org,
-  sb,
-}: {
-  curProduct: Product;
-  newProduct: UpdateProduct;
-  org: Organization;
-  sb: SupabaseClient;
-}) => {
-  // 1. Check if they're same
-  const productsAreSame = (prod1: Product, prod2: UpdateProduct) => {
-    if (notNullish(prod2.name) && prod1.name != prod2.name) {
-      return false;
-    }
-
-    if (notNullish(prod2.group) && prod1.group != prod2.group) {
-      return false;
-    }
-
-    if (notNullish(prod2.is_add_on) && prod1.is_add_on != prod2.is_add_on) {
-      return false;
-    }
-
-    if (notNullish(prod2.is_default) && prod1.is_default != prod2.is_default) {
-      return false;
-    }
-
-    return true;
-  };
-
-  if (productsAreSame(curProduct, newProduct)) {
-    return;
-  }
-
-  // console.log("Updating product: ", newProduct);
-  console.log(`Updating product ${curProduct.id} (org: ${org.slug})`);
-
-  // 2. Update product
-  await ProductService.update({
-    sb,
-    internalId: curProduct.internal_id,
-    update: {
-      name: newProduct.name,
-      group: newProduct.group,
-      is_add_on: newProduct.is_add_on,
-      is_default: newProduct.is_default,
-    },
-  });
-
-  curProduct.name = newProduct.name || curProduct.name;
-  curProduct.group = newProduct.group || curProduct.group;
-  curProduct.is_add_on = newProduct.is_add_on || curProduct.is_add_on;
-  curProduct.is_default = newProduct.is_default || curProduct.is_default;
-};
-
-productApiRouter.post("/:productId", async (req: any, res) => {
-  const { productId } = req.params;
-  const sb = req.sb;
-  const orgId = req.orgId;
-  const env = req.env;
-
-  const { prices, entitlements, free_trial } = req.body;
-
-  try {
-    const [features, org, fullProduct] = await Promise.all([
-      FeatureService.getFromReq(req),
-      OrgService.getFullOrg({
-        sb,
-        orgId,
-      }),
-      ProductService.getFullProductStrict({
-        sb,
-        productId,
-        orgId,
-        env,
-      }),
-    ]);
-
-    if (!fullProduct) {
-      throw new RecaseError({
-        message: "Product not found",
-        code: ErrCode.ProductNotFound,
-        statusCode: 404,
-      });
-    }
-
-    await handleUpdateProduct({
-      sb,
-      curProduct: fullProduct,
-      newProduct: UpdateProductSchema.parse(req.body),
-      org,
-    });
-
-    if (free_trial !== undefined) {
-      await handleNewFreeTrial({
-        sb,
-        curFreeTrial: fullProduct.free_trial,
-        newFreeTrial: free_trial,
-        internalProductId: fullProduct.internal_id,
-        isCustom: false,
-      });
-    }
-
-    // 1. Handle changing of entitlements
-    if (notNullish(entitlements)) {
-      await handleNewEntitlements({
-        sb,
-        newEnts: entitlements,
-        curEnts: fullProduct.entitlements,
-        features,
-        orgId,
-        internalProductId: fullProduct.internal_id,
-        isCustom: false,
-        prices,
-      });
-    }
-
-    if (notNullish(prices)) {
-      await handleNewPrices({
-        sb,
-        newPrices: prices,
-        curPrices: fullProduct.prices,
-        entitlements,
-        internalProductId: fullProduct.internal_id,
-        isCustom: false,
-        features,
-        product: fullProduct,
-        env,
-        org,
-      });
-    }
-
-    res.status(200).send({ message: "Product updated" });
-    return;
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "Update product" });
-  }
-});
+productApiRouter.post("/:productId", handleUpdateProduct);
 
 productApiRouter.post("/:productId/copy", async (req: any, res) => {
   const { productId: fromProductId } = req.params;

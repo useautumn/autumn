@@ -42,7 +42,7 @@ export const ProductConfig = ({
               setProduct({ ...product, id: e.target.value });
               setIdChanged(true);
             }}
-            disabled={isUpdate}
+            // disabled={isUpdate}
           />
         </div>
       </div>

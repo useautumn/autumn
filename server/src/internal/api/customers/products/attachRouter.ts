@@ -290,6 +290,7 @@ export const customerHasPm = async ({
   return notNullOrUndefined(paymentMethod) ? true : false;
 };
 
+
 attachRouter.post("/attach", async (req: any, res) => {
   
   try {
