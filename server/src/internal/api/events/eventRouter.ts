@@ -20,6 +20,7 @@ import { QueueManager } from "@/queue/QueueManager.js";
 import { subDays } from "date-fns";
 import { handleUsageEvent } from "./usageRouter.js";
 import { StatusCodes } from "http-status-codes";
+import { getOrCreateCustomer } from "../customers/cusUtils.js";
 
 export const eventsRouter = Router();
 
@@ -51,32 +52,16 @@ const getEventAndCustomer = async ({
   let customer: Customer;
 
   // 2. Check if customer ID is valid
-  customer = await CusService.getById({
-    sb: sb,
-    id: customer_id,
-    orgId: orgId,
-    env: env,
+  customer = await getOrCreateCustomer({
+    sb,
+    orgId,
+    env,
+    customerId: customer_id,
+    customerData: customer_data,
     logger,
   });
 
-  // Handle race condition?
-  if (!customer) {
-    customer = await createNewCustomer({
-      sb: sb,
-      orgId: orgId,
-      env: env,
-      customer: {
-        id: customer_id,
-        name: customer_data?.name,
-        email: customer_data?.email,
-        fingerprint: customer_data?.fingerprint,
-      },
-      logger,
-    });
-  }
-
   // 3. Insert event
-
   const parsedEvent = CreateEventSchema.parse(event_data);
 
   let eventTimestamp = Date.now();
@@ -146,12 +131,14 @@ export const handleEventSent = async ({
   customer_data: any;
   event_data: any;
 }) => {
+
   if (event_data.feature_id) {
     return handleUsageEvent({
       req,
     });
   }
 
+  
   const { sb, pg, orgId, env } = req;
 
   const org = await OrgService.getFullOrg({
@@ -217,6 +204,7 @@ eventsRouter.post("", async (req: any, res: any) => {
   const env = req.env;
 
   try {
+    
     await handleEventSent({
       req,
       customer_id: body.customer_id,

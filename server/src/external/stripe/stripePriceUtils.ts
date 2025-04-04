@@ -45,6 +45,7 @@ import {
   priceToInArrearProrated,
   priceToUsageInAdvance,
 } from "./priceToStripeItem.js";
+import { entitlementLinkedToEntity, entityMatchesFeature } from "@/internal/api/entities/entityUtils.js";
 
 export const createSubMeta = ({ features }: { features: Feature[] }) => {
   const usageFeatures = features.map((f) => ({
@@ -264,13 +265,11 @@ export const getStripeSubItems = async ({
       const priceEnt = getPriceEntitlement(price, entitlements);
       const options = getEntOptions(optionsList, priceEnt);
       const billingType = getBillingType(price.config!);
-      const existingUsage = getExistingUsageFromCusProducts({
+      let existingUsage = getExistingUsageFromCusProducts({
         entitlement: priceEnt,
         cusProducts: attachParams.cusProducts,
         entities: attachParams.entities,
       });
-
-
 
       if (
         billingType == BillingType.UsageInArrear ||

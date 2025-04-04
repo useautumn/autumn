@@ -57,9 +57,9 @@ orgRouter.post("/stripe", async (req: any, res) => {
     try {
       await checkKeyValid(testApiKey);
       await checkKeyValid(liveApiKey);
-    } catch (error) {
+    } catch (error: any) {
       throw new RecaseError({
-        message: "Invalid Stripe API keys",
+        message: error.message || "Invalid Stripe API keys",
         code: ErrCode.StripeKeyInvalid,
         statusCode: 500,
         data: error,

@@ -39,6 +39,7 @@ export class InvoiceService {
       .select("*")
       .eq("internal_customer_id", internalCustomerId)
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
       .limit(limit);
 
     if (error) {

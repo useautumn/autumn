@@ -553,7 +553,6 @@ export const advanceProducts = {
   }),
 };
 
-// New
 export const attachProducts = {
   // 1. pro1Starter
   starterGroup1: initProduct({
@@ -716,6 +715,58 @@ export const attachProducts = {
     ],
     freeTrial: null,
   }),
+};
+
+// Entity products
+export const entityProducts = {
+  entityFree: initProduct({
+    id: "entityFree",
+    entitlements: {
+      seats: initEntitlement({
+        feature: features.seats,
+        allowance: 1,
+        interval: EntInterval.Lifetime,
+      }),
+    },
+    prices: [],
+    freeTrial: null,
+  }),
+
+  entityPro: initProduct({
+    id: "entityPro",
+    entitlements: {
+      seats: initEntitlement({
+        feature: features.seats,
+        allowance: 0,
+        interval: EntInterval.Lifetime,
+        carryFromPrevious: true,
+      }),
+      metered1: initEntitlement({
+        feature: features.metered1,
+        allowance: 500,
+        interval: EntInterval.Month,
+        entityFeatureId: features.seats.id,
+        carryFromPrevious: true,
+      }),
+    },
+    prices: [
+      // initPrice({
+      //   type: "monthly",
+      //   amount: 10,
+      // }),
+      initPrice({
+        type: "in_arrear_prorated",
+        billingInterval: BillingInterval.Month,
+        feature: features.seats,
+        amount: 100,
+        oneTier: true,
+        billingUnits: 1,
+        // Carry over usage
+      })
+    ],
+    freeTrial: null,
+  }),
+  
 };
 
 export const coupons = {

@@ -191,6 +191,7 @@ export const createNewCustomer = async ({
         freeTrial: null, // TODO: Free trial not supported on default product yet
         optionsList: [],
         cusProducts: [],
+        entities: [],
       },
       nextResetAt,
       anchorToUnix: org.config.anchor_start_of_month

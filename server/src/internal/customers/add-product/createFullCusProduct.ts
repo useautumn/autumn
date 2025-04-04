@@ -365,6 +365,7 @@ export const createFullCusProduct = async ({
       existingCusEnt,
       keepResetIntervals,
       anchorToUnix,
+      entities: attachParams.entities || [],
     });
 
     cusEnts.push(cusEnt);

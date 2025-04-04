@@ -4,6 +4,7 @@ import {
   CusProductSchema,
   CusProductStatus,
   Customer,
+  CustomerData,
   CustomerSchema,
   ErrCode,
   FullCusProduct,
@@ -40,6 +41,95 @@ import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
+import { createNewCustomer } from "./handlers/handleCreateCustomer.js";
+import { format } from "date-fns";
+
+export const updateCustomerDetails = async ({
+  sb,
+  customer,
+  customerData,
+  logger,
+}: {
+  sb: SupabaseClient;
+  customer: Customer;
+  customerData?: CustomerData;
+  logger: any;
+}) => {
+  let updates: any = {};
+  if (!customer.name && customerData?.name) {
+    updates.name = customerData.name;
+  }
+  if (!customer.email && customerData?.email) {
+    updates.email = customerData.email;
+  }
+  
+  if (Object.keys(updates).length > 0) {
+    logger.info(`Updating customer details`, { updates });
+    customer = await CusService.update({
+      sb,
+      internalCusId: customer.internal_id,
+      update: updates,
+    });
+  }
+
+  return customer;
+}
+
+
+export const getOrCreateCustomer = async ({
+  sb,
+  orgId,
+  env,
+  customerId,
+  customerData,
+  logger,
+  skipGet = false,
+}: {
+  sb: SupabaseClient;
+  orgId: string;
+  env: AppEnv;
+  customerId: string;
+  customerData?: CustomerData;
+  logger: any;
+  skipGet?: boolean;
+}) => {
+  let customer;
+  
+  if (!skipGet) {
+    customer = await CusService.getByIdOrInternalId({
+      sb,
+      idOrInternalId: customerId,
+      orgId,
+      env,
+      // isFull: true,
+    });
+  }
+
+  if (!customer) {
+    logger.info(`no customer found, creating new`, { customerData });
+    customer = await createNewCustomer({
+      sb,
+      orgId,
+      env,
+      customer: {
+        id: customerId,
+        name: customerData?.name || "",
+        email: customerData?.email || "",
+        fingerprint: customerData?.fingerprint,
+      },
+      logger,
+    });
+  } 
+
+  customer = await updateCustomerDetails({
+    sb,
+    customer,
+    customerData,
+    logger,
+  });
+
+  return customer;
+};
 
 export const getCusByIdOrInternalId = async ({
   sb,
@@ -97,6 +187,7 @@ export const attachDefaultProducts = async ({
         entitlements: product.entitlements,
         freeTrial: null, // TODO: Free trial not supported on default product yet
         optionsList: [],
+        entities: [],
       },
       nextResetAt,
     });
@@ -242,6 +333,7 @@ export const getCustomerDetails = async ({
     cusEntsWithCusProduct: cusEnts,
     cusPrices: fullCusProductToCusPrices(fullCusProducts),
     entities,
+    org,
   });
 
   const { main, addOns } = processFullCusProducts({
@@ -259,6 +351,7 @@ export const getCustomerDetails = async ({
   };
 };
 
+// IMPORTANT FUNCTION
 export const getCusEntsInFeatures = async ({
   sb,
   internalCustomerId,
@@ -267,6 +360,7 @@ export const getCusEntsInFeatures = async ({
   withPrices = false,
   withProduct = false,
   logger,
+  reverseOrder = false,
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
@@ -275,6 +369,7 @@ export const getCusEntsInFeatures = async ({
   withPrices?: boolean;
   withProduct?: boolean;
   logger: any;
+  reverseOrder?: boolean;
 }) => {
   const fullCusProducts = await CusService.getFullCusProducts({
     sb,
@@ -303,7 +398,8 @@ export const getCusEntsInFeatures = async ({
     cusEnts = cusEntsWithCusProduct;
   }
 
-  sortCusEntsForDeduction(cusEnts);
+  sortCusEntsForDeduction(cusEnts, reverseOrder);
+  
 
   if (!withPrices) {
     return { cusEnts, cusPrices: undefined };

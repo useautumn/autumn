@@ -11,7 +11,7 @@ export const getEntityBalance = ({
   entityId: string;
 }) => {
   let entityBalance = cusEnt.entities?.[entityId!]?.balance;
-
+  let adjustment = cusEnt.entities?.[entityId!]?.adjustment || 0;
   if (nullish(entityBalance)) {
     throw new RecaseError({
       message: `Entity balance not found for entityId: ${entityId}`,
@@ -20,7 +20,10 @@ export const getEntityBalance = ({
     });
   }
 
-  return entityBalance;
+  return {
+    balance: entityBalance,
+    adjustment,
+  };
 };
 
 export const getSummedEntityBalances = ({
@@ -29,11 +32,21 @@ export const getSummedEntityBalances = ({
   cusEnt: FullCustomerEntitlement;
 }) => {
   if (nullish(cusEnt.entities)) {
-    return 0;
+    return {
+      balance: 0,
+      adjustment: 0,
+    };
   }
 
-  return Object.values(cusEnt.entities!).reduce(
-    (acc, curr) => acc + curr.balance,
-    0
-  );
+  return {
+    balance: Object.values(cusEnt.entities!).reduce(
+      (acc, curr) => acc + curr.balance,
+      0
+    ),
+    adjustment: Object.values(cusEnt.entities!).reduce(
+      (acc, curr) => acc + curr.adjustment,
+      0
+    ),
+  };
 };
+

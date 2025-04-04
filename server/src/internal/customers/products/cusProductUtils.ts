@@ -177,6 +177,7 @@ export const activateDefaultProduct = async ({
       entitlements: defaultProd.entitlements,
       freeTrial: defaultProd.free_trial,
       optionsList: [],
+      entities: [],
     },
   });
 
@@ -264,7 +265,7 @@ export const activateFutureProduct = async ({
   }
 };
 
-// OTHERS
+// GET CUS ENTS FROM CUS PRODUCTS
 export const fullCusProductToCusEnts = (
   cusProducts: FullCusProduct[],
   inStatuses: CusProductStatus[] = [CusProductStatus.Active]

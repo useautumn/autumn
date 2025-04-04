@@ -34,6 +34,7 @@ import { CusService } from "../CusService.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import { getOrCreateCustomer } from "@/internal/api/customers/cusUtils.js";
 
 const getOrCreateCustomerAndProducts = async ({
   sb,
@@ -50,29 +51,37 @@ const getOrCreateCustomerAndProducts = async ({
   env: AppEnv;
   logger: any;
 }) => {
-  let customer = await CusService.getByIdOrInternalId({
+  const customer = await getOrCreateCustomer({
     sb,
-    idOrInternalId: customerId,
     orgId,
     env,
-    // isFull: true,
+    customerId,
+    customerData,
+    logger,
   });
+  // let customer = await CusService.getByIdOrInternalId({
+  //   sb,
+  //   idOrInternalId: customerId,
+  //   orgId,
+  //   env,
+  //   // isFull: true,
+  // });
 
-  if (!customer) {
-    logger.info(`no customer found, creating new`, { customerData });
-    customer = await createNewCustomer({
-      sb,
-      orgId,
-      env,
-      customer: {
-        id: customerId,
-        name: customerData?.name || "",
-        email: customerData?.email || "",
-        fingerprint: customerData?.fingerprint,
-      },
-      logger,
-    });
-  }
+  // if (!customer) {
+  //   logger.info(`no customer found, creating new`, { customerData });
+  //   customer = await createNewCustomer({
+  //     sb,
+  //     orgId,
+  //     env,
+  //     customer: {
+  //       id: customerId,
+  //       name: customerData?.name || "",
+  //       email: customerData?.email || "",
+  //       fingerprint: customerData?.fingerprint,
+  //     },
+  //     logger,
+  //   });
+  // }
 
   // Handle existing cus product...
   const cusProducts = await CusService.getFullCusProducts({
