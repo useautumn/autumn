@@ -35,22 +35,22 @@ export const NavButton = ({
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
         `cursor-pointer text-t2 font-medium transition-all duration-100 
-        text-black text-sm flex h-9 items-center text-t2 hover:text-primary`,
-        isActive && "font-bold text-primary hover:text-primary/80",
+        text-black text-sm flex h-9 items-center text-t1 hover:text-primary`,
+        isActive && "font-semibold text-primary hover:text-primary/80",
         className
       )}
       target={href ? "_blank" : undefined}
     >
       <div
         className={cn(
-          "flex justify-center w-4 h-4 items-center bg-zinc-100 rounded-sm transition-all duration-100",
+          "flex justify-center w-4 h-4 items-center rounded-sm transition-all duration-100",
           state == "expanded" && "mr-2",
           isHovered && "translate-x-[-1px]"
         )}
       >
         {icon}
       </div>
-      {state == "expanded" && <span className=" font-semibold">{title}</span>}
+      {state == "expanded" && <span className="">{title}</span>}
     </Link>
   );
 };

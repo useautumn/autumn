@@ -37,7 +37,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
         {expanded ? (
           <DropdownMenuTrigger
             className={cn(
-              "ring-0 focus:ring-0 border bg-white text-t2 rounded-sm w-full flex items-center p-2 h-8",
+              "ring-0 focus:ring-0 bg-white text-t2 rounded-sm w-full flex items-center bg-transparent pl-2 h-8",
               state != "expanded" && "!w-6 !h-6 p-0 items-center justify-center"
             )}
           >
