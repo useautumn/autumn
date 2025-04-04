@@ -162,12 +162,12 @@ featureApiRouter.post("", async (req: any, res) => {
       ...parsedFeature,
     };
 
-    await FeatureService.insert({
+    let insertedFeature = await FeatureService.insert({
       sb: req.sb,
       data: feature,
     });
 
-    res.status(200).json({ message: "Feature created" });
+    res.status(200).json(insertedFeature);
   } catch (error) {
     handleRequestError({ req, error, res, action: "Create feature" });
   }

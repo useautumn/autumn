@@ -3,6 +3,7 @@ import {
   BillingInterval,
   BillWhen,
   EntitlementWithFeature,
+  PriceType,
 } from "@autumn/shared";
 
 import { FixedPriceConfig, Price, UsagePriceConfig } from "@autumn/shared";
@@ -54,4 +55,31 @@ export const getBillingUnits = (
   if (entitlement.allowance_type == AllowanceType.None) return "n";
 
   return `${entitlement.allowance} `;
+};
+
+export const getDefaultPriceConfig = (type: PriceType) => {
+  if (type === PriceType.Fixed) {
+    return {
+      type: PriceType.Fixed,
+      amount: "",
+      interval: BillingInterval.Month,
+    };
+  }
+
+  return {
+    type: PriceType.Usage,
+    internal_feature_id: "",
+    feature_id: "",
+    bill_when: BillWhen.EndOfPeriod,
+    interval: BillingInterval.Month,
+    billing_units: 1,
+    usage_tiers: [
+      {
+        from: 0,
+        to: -1,
+        amount: 0.0,
+      },
+    ],
+    should_prorate: false,
+  };
 };

@@ -138,7 +138,8 @@ export class FeatureService {
     let { data: insertedData, error } = await sb
       .from("features")
       .insert(data)
-      .select();
+      .select()
+      .single();
 
     if (error) {
       if (error.code === "23505") {

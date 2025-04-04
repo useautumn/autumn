@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { FeaturesContext } from "./FeaturesContext";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { Feature, FeatureType } from "@autumn/shared";
-import { CreateFeature } from "./CreateFeature";
+import { CreateFeature, CreateFeatureDialog } from "./CreateFeature";
 import { AppEnv } from "@autumn/shared";
 import LoadingScreen from "../general/LoadingScreen";
 import { FeaturesTable } from "./FeaturesTable";
@@ -76,7 +76,7 @@ function FeaturesView({ env }: { env: AppEnv }) {
       </div>
 
       <FeaturesTable />
-      <CreateFeature />
+      <CreateFeatureDialog />
 
       {showCredits && (
         <div className="flex flex-col gap-4 h-fit mt-6">

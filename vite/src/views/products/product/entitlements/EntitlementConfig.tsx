@@ -11,10 +11,12 @@ import {
 
 import {
   AppEnv,
+  BillingInterval,
   CreateEntitlementSchema,
   Entitlement,
   Feature,
   FeatureType,
+  PriceType,
 } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -28,7 +30,7 @@ import {
 } from "@autumn/shared";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { Button } from "@/components/ui/button";
-import { EllipsisVertical, InfoIcon, PlusIcon } from "lucide-react";
+import { EllipsisVertical, InfoIcon, MinusIcon, PlusIcon } from "lucide-react";
 
 import { useNavigate } from "react-router";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -43,15 +45,28 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { CreateFeature } from "@/views/features/CreateFeature";
+import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
+import CreateUsagePrice from "../prices/CreateUsagePrice";
+import TieredPrice from "./TieredPrice";
+import { getDefaultPriceConfig } from "@/utils/product/priceUtils";
+import MoreMenuButton from "./MoreMenuButton";
+import { SelectCycle } from "./SelectCycle";
 
 export const EntitlementConfig = ({
   isUpdate = false,
   entitlement,
   setEntitlement,
+  setShowFeatureCreate,
+  selectedFeature,
+  setSelectedFeature,
 }: {
   isUpdate?: boolean;
   entitlement: EntitlementWithFeature | Entitlement | null;
   setEntitlement: (entitlement: EntitlementWithFeature | null) => void;
+  setShowFeatureCreate: (show: boolean) => void;
+  selectedFeature: Feature | null;
+  setSelectedFeature: (feature: Feature | null) => void;
 }) => {
   const { features, product, env } = useProductContext();
   const navigate = useNavigate();
@@ -62,10 +77,15 @@ export const EntitlementConfig = ({
   const [showPerEntity, setShowPerEntity] = useState(
     entitlement?.entity_feature_id ? true : false
   );
-  const [showPopover, setShowPopover] = useState(false);
-  const [selectedFeature, setSelectedFeature] = useState<Feature | null>(
-    getFeature(entitlement?.internal_feature_id, features) || null
+  const [showPrice, setShowPrice] = useState(false); // for the add price button
+  const [showCycle, setShowCycle] = useState(false); // for the add cycle button
+  const [priceConfig, setPriceConfig] = useState<any>(
+    getDefaultPriceConfig(PriceType.Usage) // default price config
   );
+
+  // const [selectedFeature, setSelectedFeature] = useState<Feature | null>(
+  //   getFeature(entitlement?.internal_feature_id, features) || null
+  // );
 
   const [fields, setFields] = useState({
     carry_from_previous: entitlement?.carry_from_previous || false,
@@ -96,10 +116,12 @@ export const EntitlementConfig = ({
         feature: selectedFeature,
       });
     } else {
+      console.log("setting entitlement to null");
       setEntitlement(null);
     }
   }, [
     selectedFeature,
+    priceConfig,
     fields,
     originalEntitlement,
     setEntitlement,
@@ -108,7 +130,6 @@ export const EntitlementConfig = ({
 
   return (
     <div className="w-full overflow-hidden">
-      <FieldLabel>Entitlement </FieldLabel>
       <Select
         value={selectedFeature?.internal_id}
         onValueChange={(value) =>
@@ -123,13 +144,13 @@ export const EntitlementConfig = ({
           {features
             .filter((feature: Feature) => {
               if (selectedFeature?.internal_id == feature.internal_id) {
-                return true;
+                return true; // show the selected feature in the dropdown
               }
               const existingEnt = product.entitlements.find(
                 (ent: Entitlement) =>
                   ent.internal_feature_id === feature.internal_id
               );
-              return !existingEnt;
+              return !existingEnt; // show features that are not already in the product
             })
             .map((feature: Feature) => (
               <SelectItem
@@ -144,9 +165,9 @@ export const EntitlementConfig = ({
             ))}
           <Button
             className="flex w-full text-xs font-medium bg-white shadow-none text-primary hover:bg-stone-200"
-            onClick={() => {
-              window.location.href =
-                env === AppEnv.Sandbox ? "/sandbox/features" : "/features";
+            onClick={(e) => {
+              e.preventDefault();
+              setShowFeatureCreate(true);
             }}
           >
             <PlusIcon className="w-3 h-3 mr-2" />
@@ -168,185 +189,191 @@ export const EntitlementConfig = ({
               })
             }
           >
-            <div className="flex justify-between items-center">
+            {/* <div className="flex justify-between items-center">
               <TabsList>
                 <TabsTrigger value="fixed">Fixed</TabsTrigger>
                 <TabsTrigger value="unlimited">Unlimited</TabsTrigger>
               </TabsList>
-              <div className="flex gap-1">
-                <Popover open={showPopover} onOpenChange={setShowPopover}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      className="h-7 p-2 border rounded-none text-t3 text-xs"
-                      variant="outline"
-                    >
-                      <EllipsisVertical size={12} />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-48 p-2 flex flex-col text-xs"
-                    align="end"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="secondary"
-                        className="text-xs text-t3 shadow-none border-none"
-                        onClick={() => {
-                          setFields({
-                            ...fields,
-                            carry_from_previous: !fields.carry_from_previous,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          className="border-t3 mr-1"
-                          checked={fields.carry_from_previous}
-                          onCheckedChange={(checked) =>
-                            setFields({
-                              ...fields,
-                              carry_from_previous: Boolean(checked),
-                            })
-                          }
-                        />
-                        Keep usage on upgrade
-                      </Button>
-                    </div>
-                    <Button
-                      className="h-7 shadow-none text-t3 text-xs justify-start border-none"
-                      variant="outline"
-                      startIcon={<PlusIcon size={14} className="ml-0.5 mr-1" />}
-                      onClick={() => {
-                        setShowPerEntity(!showPerEntity);
-                        // hide the popover
-                        setShowPopover(false);
-                      }}
-                    >
-                      {showPerEntity ? "Remove Entity" : "Per Entity"}
-                    </Button>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <TabsContent value="fixed">
-              <div className="flex gap-2 items-center">
-                <div className="flex flex-col">
-                  <FieldLabel className="flex items-center gap-2">
-                    Allowance
-                    <Tooltip delayDuration={400}>
-                      <TooltipTrigger asChild>
-                        <InfoIcon className="w-3 h-3 text-t3/50" />
-                      </TooltipTrigger>
-                      <TooltipContent sideOffset={5} side="top">
-                        How much usage of this feature is included as part of
-                        this plan
-                      </TooltipContent>
-                    </Tooltip>
-                  </FieldLabel>
+            </div> */}
+            <TabsContent value="fixed" className="flex flex-col gap-4">
+              <div className="flex flex-col ">
+                <FieldLabel className="flex items-center gap-2">
+                  {showPrice ? "Pricing" : "Included Usage"}
+                  <Tooltip delayDuration={400}>
+                    <TooltipTrigger asChild>
+                      <InfoIcon className="w-3 h-3 text-t3/50" />
+                    </TooltipTrigger>
+                    <TooltipContent sideOffset={5} side="top">
+                      How much usage of this feature is included as part of this
+                      plan
+                    </TooltipContent>
+                  </Tooltip>
+                </FieldLabel>
+                {showPrice ? (
+                  <TieredPrice
+                    selectedFeature={selectedFeature}
+                    config={priceConfig}
+                    setShowPrice={setShowPrice}
+                    setConfig={setPriceConfig}
+                  />
+                ) : (
                   <Input
                     placeholder="eg. 100"
-                    className="w-30"
-                    value={fields.allowance}
+                    className=""
+                    value={
+                      priceConfig.usage_tiers[0].to > 0
+                        ? priceConfig.usage_tiers[0].to
+                        : ""
+                    }
                     type="number"
-                    onChange={(e) =>
-                      setFields({
-                        ...fields,
-                        allowance: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                {showPerEntity && (
-                  <div className="flex flex-col w-full overflow-hidden">
-                    <FieldLabel className="flex items-center gap-2">
-                      Entity
-                      <Tooltip delayDuration={400}>
-                        <TooltipTrigger asChild>
-                          <InfoIcon className="w-3 h-3 text-t3/50" />
-                        </TooltipTrigger>
-                        <TooltipContent sideOffset={5} side="top">
-                          An entity (eg, a user) within the customer to assign
-                          this entitlement to
-                        </TooltipContent>
-                      </Tooltip>
-                    </FieldLabel>
-                    <Select
-                      value={fields.entity_feature_id}
-                      onValueChange={(value) =>
-                        setFields({ ...fields, entity_feature_id: value })
+                    onChange={(e) => {
+                      if (Number(e.target.value) > 0) {
+                        setPriceConfig({
+                          ...priceConfig,
+                          usage_tiers: [
+                            {
+                              from: 0,
+                              to: e.target.value,
+                              amount: 0.0,
+                            },
+                            {
+                              from: e.target.value,
+                              to: -1,
+                              amount: 0.0,
+                            },
+                          ],
+                        });
+                      } else {
+                        setPriceConfig({
+                          ...priceConfig,
+                          usage_tiers: [
+                            {
+                              from: 0,
+                              to: e.target.value,
+                              amount: 0.0,
+                            },
+                          ],
+                        });
                       }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select feature" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {features
-                          .filter((feature: Feature) => {
-                            if (feature.type === FeatureType.Boolean) {
-                              return false;
-                            }
-                            if (
-                              selectedFeature?.internal_id ===
-                              feature.internal_id
-                            ) {
-                              return false;
-                            }
-                            return true;
-                          })
-                          .map((feature: Feature) => (
-                            <SelectItem
-                              key={feature.internal_id}
-                              value={feature.id}
-                            >
-                              <div className="flex gap-2 items-center">
-                                per {feature.name}
-                                <span className="font-mono text-t3">
-                                  {feature.id}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                    }}
+                  />
                 )}
-                <div className="flex flex-col w-full">
-                  <FieldLabel className="flex items-center gap-2">
-                    Reset
-                    <Tooltip delayDuration={400}>
-                      <TooltipTrigger asChild>
-                        <InfoIcon className="w-3 h-3 text-t3/50" />
-                      </TooltipTrigger>
-                      <TooltipContent sideOffset={5} side="top">
-                        Frequency at which this entitlement should be reset back
-                        to the allowance value
-                      </TooltipContent>
-                    </Tooltip>
-                  </FieldLabel>
-                  <Select
-                    value={fields.interval}
-                    onValueChange={(value) =>
-                      setFields({
-                        ...fields,
-                        interval: value as EntInterval,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select reset" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.values(EntInterval).map((interval) => (
-                        <SelectItem key={interval} value={interval}>
-                          {interval === "semi_annual"
-                            ? "per half year"
-                            : interval === "lifetime"
-                            ? "never"
-                            : `per ${interval}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              </div>
+              {(showPerEntity || showCycle) && (
+                <div className="flex gap-2 transition-all duration-200 ease-in-out animate-in fade-in fade-out">
+                  {showPerEntity && (
+                    <div className="flex flex-col w-full overflow-hidden">
+                      <FieldLabel className="flex items-center gap-2">
+                        Entity
+                        <Tooltip delayDuration={400}>
+                          <TooltipTrigger asChild>
+                            <InfoIcon className="w-3 h-3 text-t3/50" />
+                          </TooltipTrigger>
+                          <TooltipContent sideOffset={5} side="top">
+                            An entity (eg, a user) within the customer to assign
+                            this entitlement to
+                          </TooltipContent>
+                        </Tooltip>
+                      </FieldLabel>
+                      <Select
+                        value={fields.entity_feature_id}
+                        onValueChange={(value) =>
+                          setFields({ ...fields, entity_feature_id: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select feature" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {features
+                            .filter((feature: Feature) => {
+                              if (feature.type === FeatureType.Boolean) {
+                                return false;
+                              }
+                              if (
+                                selectedFeature?.internal_id ===
+                                feature.internal_id
+                              ) {
+                                return false;
+                              }
+                              return true;
+                            })
+                            .map((feature: Feature) => (
+                              <SelectItem
+                                key={feature.internal_id}
+                                value={feature.id}
+                              >
+                                <div className="flex gap-2 items-center">
+                                  per {feature.name}
+                                  <span className="font-mono text-t3">
+                                    {feature.id}
+                                  </span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {showCycle && (
+                    <div className="flex flex-col w-full">
+                      <FieldLabel className="flex items-center gap-2">
+                        {showPrice ? "Billing Cycle" : "Reset Cycle"}
+                        <Tooltip delayDuration={400}>
+                          <TooltipTrigger asChild>
+                            <InfoIcon className="w-3 h-3 text-t3/50" />
+                          </TooltipTrigger>
+                          <TooltipContent sideOffset={5} side="top">
+                            Frequency at which this feature is reset
+                          </TooltipContent>
+                        </Tooltip>
+                      </FieldLabel>
+                      <SelectCycle
+                        showPrice={showPrice}
+                        priceConfig={priceConfig}
+                        setPriceConfig={setPriceConfig}
+                        fields={fields}
+                        setFields={setFields}
+                        setShowCycle={setShowCycle}
+                      />
+                    </div>
+                  )}
                 </div>
+              )}
+              <div className="flex gap-2 w-full justify-end">
+                <ToggleDisplayButton
+                  label="Add Cycle"
+                  show={showCycle}
+                  onClick={() => setShowCycle(!showCycle)}
+                >
+                  {showCycle ? (
+                    <MinusIcon size={14} className="mr-1" />
+                  ) : (
+                    <PlusIcon size={14} className="mr-1" />
+                  )}
+                  {showCycle ? "Remove Cycle" : "Add Cycle"}
+                </ToggleDisplayButton>
+                <ToggleDisplayButton
+                  label="Add Price"
+                  show={showPrice}
+                  onClick={() => {
+                    setShowPrice(!showPrice);
+                    !showCycle && !showPrice && setShowCycle(true);
+                  }}
+                >
+                  {showPrice ? (
+                    <MinusIcon size={14} className="mr-1" />
+                  ) : (
+                    <PlusIcon size={14} className="mr-1" />
+                  )}
+                  {showPrice ? "Remove Price" : "Add Price"}
+                </ToggleDisplayButton>
+                <MoreMenuButton
+                  fields={fields}
+                  setFields={setFields}
+                  showPerEntity={showPerEntity}
+                  setShowPerEntity={setShowPerEntity}
+                />
               </div>
             </TabsContent>
           </Tabs>

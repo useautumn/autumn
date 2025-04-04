@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { useProductContext } from "../ProductContext";
 import { toast } from "sonner";
+import { getFeature } from "@/utils/product/entitlementUtils";
 
 export default function UpdateEntitlement({
   open,
@@ -20,7 +21,7 @@ export default function UpdateEntitlement({
   selectedEntitlement: any;
   setSelectedEntitlement: (entitlement: any) => void;
 }) {
-  const { setProduct, product } = useProductContext();
+  const { setProduct, product, features } = useProductContext();
 
   const handleDeleteEntitlement = () => {
     const relatedPrice = product.prices.find((price: any) => {
@@ -76,11 +77,17 @@ export default function UpdateEntitlement({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="">
-        <DialogTitle>Update Entitlement</DialogTitle>
+        <DialogTitle>Update Feature</DialogTitle>
         <EntitlementConfig
           entitlement={selectedEntitlement}
           setEntitlement={setSelectedEntitlement}
           isUpdate={true}
+          setShowFeatureCreate={() => {}}
+          selectedFeature={getFeature(
+            selectedEntitlement?.internal_feature_id,
+            features
+          )}
+          setSelectedFeature={() => {}}
         />
 
         <DialogFooter>
@@ -88,7 +95,7 @@ export default function UpdateEntitlement({
             Delete
           </Button>
           <Button onClick={handleUpdateEntitlement} variant="gradientPrimary">
-            Update Entitlement
+            Update Feature
           </Button>
         </DialogFooter>
       </DialogContent>

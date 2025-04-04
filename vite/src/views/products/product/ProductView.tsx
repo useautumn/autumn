@@ -21,6 +21,8 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import ErrorScreen from "@/views/general/ErrorScreen";
+import ProductSidebar from "./ProductSidebar";
+import { FeaturesContext } from "@/views/features/FeaturesContext";
 
 function ProductView({ env }: { env: AppEnv }) {
   const { product_id } = useParams();
@@ -35,8 +37,6 @@ function ProductView({ env }: { env: AppEnv }) {
     url: `/products/${product_id}/data`,
     env,
   });
-
-  console.log(data);
 
   //this is to make sure pricing for unlimited entitlements can't be applied
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
@@ -119,42 +119,55 @@ function ProductView({ env }: { env: AppEnv }) {
   };
 
   return (
-    <ProductContext.Provider
+    <FeaturesContext.Provider
       value={{
-        ...data,
-        mutate,
         env,
-        product,
-        setProduct,
-        selectedEntitlementAllowance,
-        setSelectedEntitlementAllowance,
+        mutate,
       }}
     >
-      <div className="flex flex-col gap-0.5">
-        <Breadcrumb className="text-t3">
-          <BreadcrumbList className="text-t3 text-xs">
-            <BreadcrumbItem
-              onClick={() => navigateTo("/products", navigate, env)}
-              className="cursor-pointer"
-            >
-              Products
-            </BreadcrumbItem>
-
-            <BreadcrumbSeparator />
-            <BreadcrumbItem className="cursor-pointer">
-              {product.name ? product.name : product.id}
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        <ManageProduct product={product} />
-      </div>
-      <div className="flex justify-end gap-2">
-        <AddProductButton
-          handleCreateProduct={handleCreateProduct}
-          actionState={actionState}
-        />
-      </div>
-    </ProductContext.Provider>
+      <ProductContext.Provider
+        value={{
+          ...data,
+          mutate,
+          env,
+          product,
+          setProduct,
+          selectedEntitlementAllowance,
+          setSelectedEntitlementAllowance,
+        }}
+      >
+        <div className="flex flex-col gap-0.5">
+          <Breadcrumb className="text-t3">
+            <BreadcrumbList className="text-t3 text-xs">
+              <BreadcrumbItem
+                onClick={() => navigateTo("/products", navigate, env)}
+                className="cursor-pointer"
+              >
+                Products
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem className="cursor-pointer">
+                {product.name ? product.name : product.id}
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="flex gap-8">
+            <div className="flex-1 w-full min-w-sm">
+              <ManageProduct product={product} />
+            </div>
+            <div className="max-w-[300px] w-1/3 shrink-1">
+              <ProductSidebar />
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
+          <AddProductButton
+            handleCreateProduct={handleCreateProduct}
+            actionState={actionState}
+          />
+        </div>
+      </ProductContext.Provider>
+    </FeaturesContext.Provider>
   );
 }
 

@@ -48,7 +48,6 @@ export const ManageProduct = ({
             )}
           </div>
         </div>
-
         <div className="flex items-center gap-2">
           {customerData && (
             <Badge className="flex items-center gap-1 w-fit text-xs text-lime-600 bg-lime-50 border border-lime-200">
@@ -73,9 +72,8 @@ export const ManageProduct = ({
           )}
         </div>
       </div>
-
       <div className="flex flex-col gap-4">
-        <p className="text-md text-t2 font-medium">Entitlements</p>
+        <p className="text-md text-t2 font-medium">Features</p>
         {product.entitlements.length > 0 && (
           <ProductEntitlementTable entitlements={product.entitlements} />
         )}

@@ -47,7 +47,7 @@ export function MainLayout() {
         <MainSidebar />
         <div className="w-full h-screen flex flex-col overflow-hidden">
           {env === AppEnv.Sandbox && (
-            <div className="w-full h-10 bg-primary/80 text-white text-sm flex items-center justify-center">
+            <div className="w-full h-10 bg-primary text-white text-sm flex items-center justify-center">
               <p className="font-medium">You&apos;re in sandbox mode.</p>
             </div>
           )}
@@ -76,7 +76,17 @@ export function MainLayout() {
   // 3. If user, but no org, redirect to onboarding
 
   return (
-    <main className="w-screen h-screen flex">
+    <main
+      className="w-screen h-screen flex"
+      style={{
+        backgroundImage: "url('/metal.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "top left",
+        backgroundRepeat: "no-repeat",
+        backgroundColor: "rgba(255, 255, 255, 0)",
+        backgroundBlendMode: "overlay",
+      }}
+    >
       <Toaster
         position="top-center"
         className="flex justify-center"
@@ -103,13 +113,13 @@ const MainContent = () => {
   return (
     <div className="w-full h-screen flex flex-col overflow-hidden">
       {env === AppEnv.Sandbox && (
-        <div className="w-full h-10 bg-primary/80 text-white text-sm flex items-center justify-center">
+        <div className="w-full h-10 bg-primary text-white text-sm flex items-center justify-center">
           <p className="font-medium">You&apos;re in sandbox mode.</p>
         </div>
       )}
       <div
         className={cn(
-          "w-full h-full overflow-auto bg-stone-50 p-6 flex justify-center"
+          "w-full h-full overflow-auto p-6 flex justify-center bg-stone-50"
         )}
       >
         <div className="hidden md:flex w-full h-full max-w-[1048px] flex-col gap-4">
