@@ -337,15 +337,13 @@ export class CusService {
       );
     }
 
-    query.order("created_at", {
-      foreignTable: customerPrefix.slice(0, -1),
-      ascending: false,
-    });
+    if (customerPrefix) {
+      query.order(`customer(created_at)`, { ascending: false });
+    } else {
+      query.order("created_at", { ascending: false })
+           .order("internal_id", { ascending: true, collate: "C" });
+    }
 
-    query.order("internal_id", {
-      foreignTable: customerPrefix.slice(0, -1),
-      ascending: true,
-    });
     query.limit(pageSize);
   };
 
@@ -373,13 +371,15 @@ export class CusService {
     const query = sb
       .from("customer_products")
       .select(
-        "*, customer:customers!inner(*), product:products!inner(id, name)",
+        `*, 
+        customer:customers!inner(*), product:products!inner(id, name)`,
         {
           count: "exact",
         }
       )
       .eq("customer.org_id", orgId)
-      .eq("customer.env", env);
+      .eq("customer.env", env)
+      .in("status", [CusProductStatus.Active, CusProductStatus.PastDue]);
 
     if (filters.product_id) {
       query.eq("product.id", filters.product_id);

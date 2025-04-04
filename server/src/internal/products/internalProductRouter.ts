@@ -64,6 +64,16 @@ productRouter.get("/:productId/data", async (req: any, res) => {
     let entitlements = product.entitlements;
     let prices = product.prices;
 
+    // Sort entitlements by created_at descending, then id
+    entitlements = entitlements.sort((a: any, b: any) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || b.id.localeCompare(a.id);
+    });
+
+    // Sort prices by created_at descending, then id
+    prices = prices.sort((a: any, b: any) => {
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || b.id.localeCompare(a.id);
+    });
+
     const features = await FeatureService.getFeatures({
       sb,
       orgId,

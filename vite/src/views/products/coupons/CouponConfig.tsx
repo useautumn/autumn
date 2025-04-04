@@ -45,7 +45,7 @@ export const CouponConfig = ({
         <div className="w-6/12">
           <FieldLabel description="Will be shown on receipt">Name</FieldLabel>
           <Input
-            value={coupon.name}
+            value={coupon.name || ""}
             onChange={(e) => setCoupon({ ...coupon, name: e.target.value })}
           />
         </div>
@@ -54,7 +54,7 @@ export const CouponConfig = ({
             Promotional Code
           </FieldLabel>
           <Input
-            value={coupon.promo_codes[0].code}
+            value={coupon.promo_codes.length > 0 ? coupon.promo_codes[0].code : ""}
             onChange={(e) =>
               setCoupon({
                 ...coupon,

@@ -41,14 +41,13 @@ export default function SidebarBottom() {
         )}
       >
         <div className="relative w-7 h-7">
-          <UserButton
-            appearance={{ elements: { rootBox: "absolute bottom-0" } }}
-          />
+          <UserButton />
         </div>
         {expanded && (
-          <div className="text-xs">
+          <div className="text-xs flex flex-col gap-1 overflow-hidden">
             <p className="text-t2">{user?.firstName}</p>
-            <p className="text-t3">{user?.primaryEmailAddress?.emailAddress}</p>
+            <p className="text-t3 overflow-hidden text-ellipsis 
+            whitespace-nowrap">{user?.primaryEmailAddress?.emailAddress}</p>
           </div>
         )}
       </div>

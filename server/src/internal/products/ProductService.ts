@@ -192,7 +192,10 @@ export class ProductService {
       .eq("env", env)
       .eq("prices.is_custom", false)
       .eq("entitlements.is_custom", false)
-      .eq("free_trial.is_custom", false);
+      .eq("free_trial.is_custom", false)
+      .order("created_at", {
+        ascending: false
+      }).order("id");
 
     if (inIds) {
       query.in("id", inIds);

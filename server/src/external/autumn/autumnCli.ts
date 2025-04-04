@@ -1,13 +1,35 @@
-import { ErrCode } from "@/errors/errCodes.js";
+import { ErrCode } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
+import chalk from "chalk";
+
+export default class AutumnError extends Error {
+  message: string;
+  code: string;
+
+  constructor({
+    message,
+    code,
+  }: {
+    message: string;
+    code: string;
+  }) {
+    super(message);
+    this.message = message;
+    this.code = code;
+  }
+
+  toString(): string {
+    return `${this.message} (code: ${this.code})`;
+  }
+}
 
 export class Autumn {
   private apiKey: string;
   public headers: Record<string, string>;
   public baseUrl: string;
 
-  constructor() {
-    this.apiKey = process.env.AUTUMN_API_KEY || "";
+  constructor(apiKey?: string) {
+    this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
     this.headers = {
       Authorization: `Bearer ${this.apiKey}`,
       "Content-Type": "application/json",
@@ -31,21 +53,47 @@ export class Autumn {
     });
 
     if (response.status != 200) {
+      let error: any;
       try {
-        const error = await response.json();
+        error = await response.json();
 
-        throw new RecaseError({
-          message: "Failed to call Autumn API",
-          code: ErrCode.InternalError,
-          data: error,
-        });
       } catch (error) {
-        throw new RecaseError({
-          message: "Failed to call Autumn API",
+        throw new AutumnError({
+          message: "Failed to parse Autumn API error response",
           code: ErrCode.InternalError,
-          data: error,
         });
       }
+      
+      throw new AutumnError({
+        message: error.message,
+        code: error.code,
+      });
+    }
+
+    return response.json();
+  }
+
+  async delete(path: string) {
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      method: "DELETE",
+      headers: this.headers,
+    });
+
+    if (response.status != 200) {
+      let error: any;
+      try {
+        error = await response.json();
+      } catch (error) {
+        throw new AutumnError({
+          message: "Failed to parse Autumn API error response",
+          code: ErrCode.InternalError,
+        });
+      }
+
+      throw new AutumnError({
+        message: error.message,
+        code: error.code,
+      });
     }
 
     return response.json();
@@ -133,5 +181,48 @@ export class Autumn {
     });
 
     return data;
+  }
+
+  customers = {
+    get: async (customerId: string) => {
+      const data = await this.get(`/customers/${customerId}`);
+      return data;
+    }
+  }
+
+  entities = {
+    create: async (
+      customerId: string,
+      entity: {
+        id: string;
+        name: string;
+        featureId: string;
+      } | {
+        id: string;
+        name: string;
+        featureId: string;
+      }[]
+    ) => {
+      let entities = Array.isArray(entity) ? entity : [entity];
+      const data = await this.post(`/customers/${customerId}/entities`, entities.map((e: any) => {
+        return {
+          id: e.id,
+          name: e.name,
+          feature_id: e.featureId,
+        }
+      }));
+
+      return data;
+    },
+    
+    list: async (customerId: string) => {
+      const data = await this.get(`/customers/${customerId}/entities`);
+      return data;
+    },
+
+    delete: async (customerId: string, entityId: string) => {
+      const data = await this.delete(`/customers/${customerId}/entities/${entityId}`);
+      return data;
+    }
   }
 }

@@ -84,6 +84,7 @@ export const ErrCode = {
   InvalidEntitlement: "invalid_entitlement",
   CreateEntitlementFailed: "create_entitlement_failed",
   DeleteEntitlementFailed: "delete_entitlement_failed",
+  InsufficientBalance: "insufficient_balance",
 
   // Invoice
   CreateInvoiceFailed: "create_invoice_failed",
@@ -108,4 +109,6 @@ export const ErrCode = {
   // Entity
   EntityNotFound: "entity_not_found",
   EntityAlreadyDeleted: "entity_already_deleted",
+
+
 };

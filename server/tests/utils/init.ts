@@ -99,11 +99,15 @@ export const initEntitlement = ({
   allowance,
   interval = EntInterval.Month,
   allowanceType = AllowanceType.Fixed,
+  entityFeatureId,
+  carryFromPrevious = false,
 }: {
   feature: Feature;
   allowance?: number;
   interval?: EntInterval;
   allowanceType?: AllowanceType;
+  entityFeatureId?: string;
+  carryFromPrevious?: boolean;
 }) => {
   if (feature.type == FeatureType.Boolean) {
     return {
@@ -121,6 +125,8 @@ export const initEntitlement = ({
     allowance_type: allowanceType,
     allowance: isUnlimitedOrNone ? null : allowance,
     interval: isUnlimitedOrNone ? null : interval,
+    entity_feature_id: entityFeatureId,
+    carry_from_previous: carryFromPrevious,
   };
 };
 

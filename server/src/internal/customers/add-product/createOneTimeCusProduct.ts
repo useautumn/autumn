@@ -124,6 +124,7 @@ export const updateOneTimeCusProduct = async ({
         relatedPrice,
         existingCusEnt: undefined,
         keepResetIntervals: false,
+        entities: attachParams.entities || [],
       });
 
       await CustomerEntitlementService.createMany({

@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
+import { Client } from "pg";
 
 export class CustomerEntitlementService {
   static async getCustomerAndEnts({
@@ -396,21 +397,26 @@ export class CustomerEntitlementService {
   }
 
   static async incrementBalance({
-    sb,
+    pg,
     id,
     amount,
   }: {
-    sb: SupabaseClient;
+    pg: Client;
     id: string;
     amount: number;
   }) {
-    const { error } = await sb
-      .from("customer_entitlements")
-      .update({ balance: 1 })
-      .eq("id", id);
-
-    if (error) {
-      throw error;
+    try {
+      const result = await pg.query(
+        `UPDATE customer_entitlements SET balance = balance + $1 WHERE id = $2`,
+        [amount, id]
+      );
+    } catch (error) {
+      throw new RecaseError({
+        message: "Failed to increase balance for customer entitlement",
+        code: ErrCode.InternalError,
+        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+        data: error,
+      });
     }
   }
 }

@@ -11,7 +11,6 @@ import {
 import { expect } from "chai";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { creditSystems } from "tests/global.js";
-import { searchCusProducts } from "./genUtils.js";
 import { Decimal } from "decimal.js";
 
 export const checkProductIsScheduled = ({

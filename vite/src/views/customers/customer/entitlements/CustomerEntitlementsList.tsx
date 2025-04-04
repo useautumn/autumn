@@ -31,7 +31,7 @@ export const CustomerEntitlementsList = ({
   featureType: FeatureType;
   showExpired: boolean;
 }) => {
-  const { products, customer } = useCustomerContext();
+  const { products, customer, entities } = useCustomerContext();
   const [selectedCusEntitlement, setSelectedCusEntitlement] =
     useState<FullCustomerEntitlement | null>(null);
 
@@ -67,32 +67,63 @@ export const CustomerEntitlementsList = ({
     return product?.name;
   };
 
-  const sortedEntitlements = filteredEntitlements.sort((a: any, b: any) => {
-    const statusA = customer.products.find(
-      (cp: any) => cp.id === a.customer_product_id
-    )?.status;
+  // const sortedEntitlements = filteredEntitlements.sort((a: any, b: any) => {
+  //   const statusA = customer.products.find(
+  //     (cp: any) => cp.id === a.customer_product_id
+  //   )?.status;
 
-    const statusB = customer.products.find(
-      (cp: any) => cp.id === b.customer_product_id
-    )?.status;
+  //   const statusB = customer.products.find(
+  //     (cp: any) => cp.id === b.customer_product_id
+  //   )?.status;
 
-    if (statusA !== statusB) {
-      return compareStatus(statusA, statusB);
-    }
+  //   if (statusA !== statusB) {
+  //     return compareStatus(statusA, statusB);
+  //   }
 
-    const productA = customer.products.find(
-      (cp: any) => cp.id === a.customer_product_id
-    );
+  //   const productA = customer.products.find(
+  //     (cp: any) => cp.id === a.customer_product_id
+  //   );
 
-    const productB = customer.products.find(
-      (cp: any) => cp.id === b.customer_product_id
-    );
+  //   const productB = customer.products.find(
+  //     (cp: any) => cp.id === b.customer_product_id
+  //   );
 
-    return productA.product.name.localeCompare(productB.product.name);
-  });
+  //   return productA.product.name.localeCompare(productB.product.name);
+  // });
 
+  const sortedEntitlements = filteredEntitlements
+  
   const handleSelectCusEntitlement = (cusEnt: FullCustomerEntitlement) => {
     setSelectedCusEntitlement(cusEnt);
+  };
+
+  const getAdminHoverTexts = (cusEnt: FullCustomerEntitlement) => {
+    let entitlement = cusEnt.entitlement;
+    let featureEntities = entities.filter((e: any) => e.feature_id === entitlement.feature.id);
+    
+    let hoverTexts = [{
+      key: "Cus Ent ID",
+      value: cusEnt.id,
+    }]
+
+    if (featureEntities.length > 0) {
+      hoverTexts.push({
+        key: "Entities",
+        value: featureEntities.map((e: any) => `${e.id} (${e.name})${e.deleted ? " Deleted": ""}`).join("\n"),
+      })
+    } else if (cusEnt.entities && Object.keys(cusEnt.entities).length > 0) {
+      let mappedEntities = Object.keys(cusEnt.entities).map((e: any) => {
+        let entity = entities.find((ee: any) => ee.id === e);
+        let balance = cusEnt.entities![e].balance;
+        return `${entity.id} (${entity.name}): ${balance}`;
+      }).join("\n");
+      hoverTexts.push({
+        key: "Entities",
+        value: mappedEntities,
+      })
+    }
+
+    return hoverTexts;
   };
 
   return (
@@ -128,7 +159,7 @@ export const CustomerEntitlementsList = ({
                   className="cursor-pointer"
                 >
                   <TableCell>
-                    <AdminHover texts={[cusEnt.id, entitlement.id]}>
+                    <AdminHover texts={getAdminHoverTexts(cusEnt)}>
                       {entitlement.feature.name}
                     </AdminHover>
                   </TableCell>
@@ -165,15 +196,6 @@ export const CustomerEntitlementsList = ({
                     </span>
                   </TableCell>
                   <TableCell></TableCell>
-                  {/* <TableCell>
-                  <StatusBadge
-                    status={
-                      customer.products.find(
-                        (p: any) => p.id === cusEnt.customer_product_id
-                      )?.status
-                    }
-                  />
-                </TableCell> */}
                 </TableRow>
               );
             }

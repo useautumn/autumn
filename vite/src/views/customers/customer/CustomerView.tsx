@@ -28,6 +28,7 @@ import { useState } from "react";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import { InvoicesTable } from "./InvoicesTable";
 import { CustomerDetails } from "./CustomerDetails";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export default function CustomerView({ env }: { env: AppEnv }) {
   const { customer_id } = useParams();
@@ -74,6 +75,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
   return (
     <CustomerContext.Provider
       value={{
+        ...data,
         customer,
         products,
         invoices,
@@ -106,7 +108,19 @@ export default function CustomerView({ env }: { env: AppEnv }) {
             <h2 className="flex text-lg text-t1 font-medium gap-2 w-full justify-start">
               {customer.name && (
                 <span className="min-w-0 max-w-[50%] truncate">
-                  {customer.name}
+                  <AdminHover texts={[
+                      {
+                        key: "Internal ID",
+                        value: customer.internal_id,
+                      },
+                      {
+                        key: "Stripe ID",
+                        value: customer.processor?.id,
+                      },
+                    ]}
+                  >
+                    <span className="text-t1 font-medium">{customer.name}</span>
+                  </AdminHover>
                 </span>
               )}
               <span className="min-w-0 max-w-[50%] truncate font-mono text-t3">

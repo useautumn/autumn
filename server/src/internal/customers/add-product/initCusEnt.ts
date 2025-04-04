@@ -3,6 +3,7 @@ import {
   BillingType,
   Customer,
   EntInterval,
+  Entity,
   EntityBalance,
   FeatureType,
   FreeTrial,
@@ -25,17 +26,62 @@ import {
 } from "@/internal/prices/billingIntervalUtils.js";
 import { format } from "date-fns";
 import { UTCDate } from "@date-fns/utc";
+import { entitlementLinkedToEntity, isLinkedToEntity } from "@/internal/api/entities/entityUtils.js";
+
+export const initCusEntEntities = ({
+  entitlement,
+  entities,
+  existingCusEnt,
+  resetBalance,
+}: {
+  entitlement: EntitlementWithFeature;
+  entities: Entity[];
+  existingCusEnt?: FullCustomerEntitlement;
+  resetBalance?: number | null;
+}) => {
+
+  let newEntities: Record<string, EntityBalance> | null = notNullish(
+    entitlement.entity_feature_id
+  )
+    ? {}
+    : null;
+
+  for (const entity of entities) {
+    
+    if (!entitlementLinkedToEntity({ entitlement, entity })) {
+      continue;
+    }
+
+    if (existingCusEnt && existingCusEnt.entities && existingCusEnt.entities[entity.id]) {
+      continue;
+    }
+
+    if (!newEntities) {
+      newEntities = {};
+    }
+
+    newEntities[entity.id] = {
+      id: entity.id,
+      balance: resetBalance || 0,
+      adjustment: 0,
+    };
+  }
+
+  return newEntities;
+}
 
 const initCusEntBalance = ({
   entitlement,
   options,
   relatedPrice,
   existingCusEnt,
+  entities,
 }: {
   entitlement: EntitlementWithFeature;
   options?: FeatureOptions;
   relatedPrice?: Price;
   existingCusEnt?: FullCustomerEntitlement;
+  entities: Entity[];
 }) => {
   if (entitlement.feature.type === FeatureType.Boolean) {
     return { newBalance: null, newEntities: null };
@@ -47,13 +93,15 @@ const initCusEntBalance = ({
     relatedPrice,
   });
 
-  let newEntities: Record<string, EntityBalance> | null = notNullish(
-    entitlement.entity_feature_id
-  )
-    ? {}
-    : null;
+  let newEntities: Record<string, EntityBalance> | null = initCusEntEntities({
+    entitlement,
+    entities,
+    existingCusEnt,
+    resetBalance,
+  });
 
   if (!existingCusEnt || !entitlement.carry_from_previous) {
+    
     return { newBalance: resetBalance, newEntities };
   }
 
@@ -68,14 +116,18 @@ const initCusEntBalance = ({
   // Calculate existing usage
   let existingAllowance = existingCusEnt.entitlement.allowance!;
   let existingUsage = existingAllowance - existingCusEnt.balance!;
-
   let newBalance = resetBalance! - existingUsage;
+
+  // console.log("FEATURE ID", entitlement.entity_feature_id);
+  // console.log("EXISTING USAGE:", existingUsage);
 
   if (
     entitlement.entity_feature_id ==
     existingCusEnt.entitlement.entity_feature_id
   ) {
-    newEntities = {};
+    if (!newEntities) {
+      newEntities = {};
+    }
 
     for (const entityId in existingCusEnt.entities) {
       let existingBalance = existingCusEnt.entities[entityId].balance;
@@ -90,6 +142,7 @@ const initCusEntBalance = ({
       };
     }
   }
+  
 
   return { newBalance, newEntities };
 };
@@ -180,6 +233,7 @@ export const initCusEntitlement = ({
   existingCusEnt,
   keepResetIntervals = false,
   anchorToUnix,
+  entities,
 }: {
   entitlement: EntitlementWithFeature;
   customer: Customer;
@@ -191,6 +245,7 @@ export const initCusEntitlement = ({
   existingCusEnt?: FullCustomerEntitlement;
   keepResetIntervals?: boolean;
   anchorToUnix?: number;
+  entities: Entity[];
 }) => {
   // const resetBalance = getResetBalance({
   //   entitlement,
@@ -203,6 +258,7 @@ export const initCusEntitlement = ({
     options,
     relatedPrice,
     existingCusEnt,
+    entities,
   });
 
   let nextResetAtValue = initCusEntNextResetAt({

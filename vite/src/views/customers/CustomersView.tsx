@@ -52,23 +52,13 @@ function CustomersView({ env }: { env: AppEnv }) {
     },
   });
 
+  // Single useEffect to handle all data fetching
   useEffect(() => {
-    const fetchData = async () => {
-      setPaginationLoading(true);
-      await mutate();
+    setPaginationLoading(true);
+    mutate().finally(() => {
       setPaginationLoading(false);
-    };
-    fetchData();
-  }, [pagination, filters, mutate]);
-
-  // useEffect(() => {
-  //   const updateFilters = async () => {
-  //     setCurrentPage(1);
-  //     await mutate();
-  //     setLastItem(null);
-  //   };
-  //   updateFilters();
-  // }, [filters]);
+    });
+  }, [pagination, filters, searchQuery]); // Added searchQuery as a dependency
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
@@ -103,6 +93,14 @@ function CustomersView({ env }: { env: AppEnv }) {
     });
   };
 
+  const handleFilterChange = (newFilters: any) => {
+    setPagination({
+      page: 1,
+      lastItemStack: [],
+    });
+    setFilters(newFilters);
+  };
+
   return (
     <CustomersContext.Provider
       value={{
@@ -110,7 +108,7 @@ function CustomersView({ env }: { env: AppEnv }) {
         env,
         mutate,
         filters,
-        setFilters,
+        setFilters: handleFilterChange, // Use the new handler
         products: productsData?.products,
       }}
     >
@@ -127,7 +125,6 @@ function CustomersView({ env }: { env: AppEnv }) {
                   page: page,
                   lastItemStack: [],
                 });
-                mutate();
               }}
               mutate={mutate}
             />
