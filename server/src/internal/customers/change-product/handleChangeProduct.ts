@@ -214,7 +214,7 @@ export const handleChangeProduct = async ({
 
   let product = products[0];
 
-  const curFullProduct = await ProductService.getFullProductStrict({
+  const curFullProduct = await ProductService.getFullProduct({
     sb: req.sb,
     productId: curProduct.id,
     orgId: org.id,

@@ -29,12 +29,14 @@ import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { initNewFeature } from "../features/featureApiRouter.js";
 import {
   checkStripeProductExists,
+  constructProduct,
   copyProduct,
 } from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { handleUpdateProduct } from "./handleUpdateProduct.js";
+import { handleDeleteProduct } from "./handleDeleteProduct.js";
 
 export const productApiRouter = Router();
 
@@ -49,7 +51,7 @@ productApiRouter.get("", async (req: any, res) => {
 
 productApiRouter.post("", async (req: any, res) => {
   try {
-    const { product } = req.body;
+    const { product: productData } = req.body;
     let sb = req.sb;
 
     const org = await OrgService.getFullOrg({
@@ -57,53 +59,28 @@ productApiRouter.post("", async (req: any, res) => {
       orgId: req.orgId,
     });
 
-    let newProduct: Product;
-
     // 1. Check ir product already exists
     const existingProduct = await ProductService.getProductStrict({
       sb,
-      productId: product.id,
+      productId: productData.id,
       orgId: org.id,
       env: req.env,
     });
 
     if (existingProduct) {
       throw new RecaseError({
-        message: `Product ${product.id} already exists`,
+        message: `Product ${productData.id} already exists`,
         code: ErrCode.ProductAlreadyExists,
         statusCode: 400,
       });
     }
 
-    try {
-      const productSchema = CreateProductSchema.parse(product);
-
-      newProduct = {
-        ...productSchema,
-        internal_id: generateId("prod"),
-        id: product.id,
-        org_id: org.id,
-        created_at: Date.now(),
-        env: req.env,
-      };
-    } catch (error: any) {
-      console.log("Error creating product: ", error);
-      throw new RecaseError({
-        message: "Invalid product. " + formatZodError(error),
-        code: ErrCode.InvalidProduct,
-        statusCode: 400,
-        data: formatZodError(error),
-      });
-    }
-
-    // 1. Create Stripe product if needed
-    // if (org.stripe_connected) {
-    //   const stripeProduct = await createStripeProduct(org, req.env, newProduct);
-    //   newProduct.processor = {
-    //     id: stripeProduct.id,
-    //     type: ProcessorType.Stripe,
-    //   };
-    // }
+    let newProduct = constructProduct({
+      productData: CreateProductSchema.parse(productData),
+      orgId: org.id,
+      env: req.env,
+      processor: null,
+    });
 
     await ProductService.create({ sb, product: newProduct });
 
@@ -126,65 +103,7 @@ productApiRouter.post("", async (req: any, res) => {
   }
 });
 
-productApiRouter.delete("/:productId", async (req: any, res) => {
-  const { productId } = req.params;
-  const sb = req.sb;
-  const orgId = req.orgId;
-  const env = req.env;
-
-  try {
-    const [org, product] = await Promise.all([
-      OrgService.getFullOrg({
-        sb,
-        orgId,
-      }),
-      ProductService.getProductStrict({
-        sb,
-        productId,
-        orgId,
-        env,
-      }),
-    ]);
-
-    let cusProducts = await CusProductService.getByProductId(
-      sb,
-      product.internal_id
-    )
-
-    if (!product) {
-      throw new RecaseError({
-        message: `Product ${productId} not found`,
-        code: ErrCode.ProductNotFound,
-        statusCode: 404,
-      });
-    }
-
-    let cusProductExists = cusProducts.length > 0;
-
-
-    if (cusProductExists) {
-      throw new RecaseError({
-        message: "Cannot delete product with customers",
-        code: ErrCode.ProductHasCustomers,
-        statusCode: 400,
-      });
-    }
-
-    // 2. Delete prices, entitlements, and product
-    await ProductService.deleteProduct({
-      sb,
-      productId,
-      orgId,
-      env,
-    });
-
-    res.status(200).send({ message: "Product deleted" });
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "Delete product" });
-  }
-
-  return;
-});
+productApiRouter.delete("/:productId", handleDeleteProduct);
 
 productApiRouter.post("/:productId", handleUpdateProduct);
 
@@ -230,7 +149,7 @@ productApiRouter.post("/:productId/copy", async (req: any, res) => {
 
     // 1. Get sandbox product
     const [fromFullProduct, fromFeatures, toFeatures] = await Promise.all([
-      ProductService.getFullProductStrict({
+      ProductService.getFullProduct({
         sb,
         productId: fromProductId,
         orgId,

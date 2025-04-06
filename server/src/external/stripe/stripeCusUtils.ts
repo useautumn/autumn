@@ -249,3 +249,39 @@ export const attachFailedPaymentMethod = async ({
     customer: customer.processor?.id,
   });
 };
+
+export const deleteAllStripeCustomers = async ({
+  org,
+  env,
+}: {
+  org: Organization;
+  env: AppEnv;
+}) => {
+  const stripeCli = createStripeCli({ org, env });
+
+  const stripeCustomers = await stripeCli.customers.list({
+    limit: 100,
+  });
+
+  if (stripeCustomers.data.length === 0) {
+    return;
+  }
+
+  let firstCustomer = stripeCustomers.data[0];
+  if (firstCustomer.livemode) {
+    throw new RecaseError({
+      message: "Cannot delete livemode customers",
+      code: ErrCode.StripeDeleteCustomerFailed,
+      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+    });
+  }
+
+  let batchSize = 10;
+  for (let i = 0; i < stripeCustomers.data.length; i += batchSize) {
+    let batch = stripeCustomers.data.slice(i, i + batchSize);
+    await Promise.all(batch.map((c) => stripeCli.customers.del(c.id)));
+    console.log(
+      `Deleted ${i + batch.length}/${stripeCustomers.data.length} customers`
+    );
+  }
+};

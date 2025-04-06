@@ -96,6 +96,7 @@ export const ErrCode = {
 
   // Cus Product
   NoActiveCusProducts: "no_active_cus_products",
+  GetCusProductsFailed: "get_cus_products_failed",
 
   // Cus Price
   GetCusPriceFailed: "get_cus_price_failed",
@@ -109,6 +110,4 @@ export const ErrCode = {
   // Entity
   EntityNotFound: "entity_not_found",
   EntityAlreadyDeleted: "entity_already_deleted",
-
-
 };

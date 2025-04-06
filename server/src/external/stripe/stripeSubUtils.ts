@@ -1,6 +1,12 @@
 import Stripe from "stripe";
-import { CusProductStatus, Feature, FullCusProduct } from "@autumn/shared";
+import {
+  CusProductStatus,
+  Feature,
+  FullCusProduct,
+  Organization,
+} from "@autumn/shared";
 import { differenceInSeconds } from "date-fns";
+import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 
 export const getStripeSubs = async ({
   stripeCli,
@@ -175,4 +181,26 @@ export const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
     differenceInSeconds(sub.current_period_end * 1000, sub.cancel_at! * 1000) >
     20
   );
+};
+
+export const getStripeProrationBehavior = ({
+  org,
+  prorationBehavior,
+}: {
+  org: Organization;
+  prorationBehavior?: ProrationBehavior;
+}) => {
+  let behaviourMap = {
+    [ProrationBehavior.Immediately]: "always_invoice",
+    [ProrationBehavior.NextBilling]: "create_prorations",
+    [ProrationBehavior.None]: "none",
+  };
+
+  if (prorationBehavior) {
+    return behaviourMap[prorationBehavior];
+  }
+
+  return org.config.bill_upgrade_immediately
+    ? behaviourMap[ProrationBehavior.Immediately]
+    : behaviourMap[ProrationBehavior.NextBilling];
 };

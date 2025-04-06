@@ -86,6 +86,8 @@ export const getBillingInterval = (prices: Price[]) => {
 };
 
 export const pricesOnlyOneOff = (prices: Price[]) => {
+  if (prices.length == 0) return false;
+
   return prices.every((price) => {
     let interval = price.config?.interval;
 
