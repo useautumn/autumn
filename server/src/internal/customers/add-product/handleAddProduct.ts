@@ -322,6 +322,7 @@ export const handleAddProduct = async ({
   attachParams,
   fromRequest = true,
   carryExistingUsages = false,
+  keepResetIntervals = false,
 }: {
   req: {
     sb: SupabaseClient;
@@ -331,6 +332,7 @@ export const handleAddProduct = async ({
   attachParams: AttachParams;
   fromRequest?: boolean;
   carryExistingUsages?: boolean;
+  keepResetIntervals?: boolean;
 }) => {
   const logger = req.logtail;
   const { customer, products, prices } = attachParams;
@@ -392,6 +394,7 @@ export const handleAddProduct = async ({
         subscriptionId: undefined,
         billLaterOnly: true,
         carryExistingUsages,
+        keepResetIntervals,
       })
     );
   }

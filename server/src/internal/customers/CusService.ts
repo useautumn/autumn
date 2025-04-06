@@ -342,7 +342,7 @@ export class CusService {
     } else {
       query
         .order("created_at", { ascending: false })
-        .order("internal_id", { ascending: true, collate: "C" });
+        .order("internal_id", { ascending: true });
     }
 
     query.limit(pageSize);
@@ -501,6 +501,7 @@ export class CusService {
     if (error) {
       throw error;
     }
+
     const totalCount = count && count + pageSize * (pageNumber - 1);
     return { data, count: totalCount };
   }
