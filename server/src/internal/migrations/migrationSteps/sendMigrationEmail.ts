@@ -28,6 +28,8 @@ export const sendMigrationEmail = async ({
     to: "johnyeocx@gmail.com",
     subject: `Migration Job Finished -- ${migrationJob.id}`,
     body: `
+
+ORG: ${org.id}, ${org.slug}
 Step: Get migration customers
 
 1. Total customers: ${getCustomersStep?.total_customers}

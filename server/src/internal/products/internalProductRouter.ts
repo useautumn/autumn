@@ -230,34 +230,6 @@ productRouter.get("/:productId/count", async (req: any, res) => {
   }
 });
 
-// Individual Product routes
-productRouter.get("/:productId", async (req: any, res) => {
-  const { productId } = req.params;
-  try {
-    const Product = await ProductService.getProductStrict({
-      sb: req.sb,
-      productId,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    const entitlements = await ProductService.getEntitlementsByProductId({
-      sb: req.sb,
-      productId,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    const prices = await PriceService.getPricesByProductId(req.sb, productId);
-
-    res.status(200).send({ Product, entitlements, prices });
-  } catch (error) {
-    console.log("Failed to get Product", error);
-    res.status(404).send("Product not found");
-    return;
-  }
-});
-
 productRouter.use(entitlementRouter);
 
 productRouter.post("/product_options", async (req: any, res: any) => {
@@ -296,3 +268,31 @@ productRouter.post("/product_options", async (req: any, res: any) => {
 
   res.status(200).send({ options: Object.values(featureToOptions) });
 });
+
+// // Individual Product routes
+// productRouter.get("/:productId", async (req: any, res) => {
+//   const { productId } = req.params;
+//   try {
+//     const Product = await ProductService.getProductStrict({
+//       sb: req.sb,
+//       productId,
+//       orgId: req.orgId,
+//       env: req.env,
+//     });
+
+//     const entitlements = await ProductService.getEntitlementsByProductId({
+//       sb: req.sb,
+//       productId,
+//       orgId: req.orgId,
+//       env: req.env,
+//     });
+
+//     const prices = await PriceService.getPricesByProductId(req.sb, productId);
+
+//     res.status(200).send({ Product, entitlements, prices });
+//   } catch (error) {
+//     console.log("Failed to get Product", error);
+//     res.status(404).send("Product not found");
+//     return;
+//   }
+// });

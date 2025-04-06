@@ -345,6 +345,7 @@ export const handleUpgrade = async ({
       attachParams,
       fromRequest: fromReq,
       carryExistingUsages,
+      keepResetIntervals: newVersion, // keep reset intervals if upgrading version (migrations)
     });
 
     for (const subId of curCusProduct.subscription_ids!) {
