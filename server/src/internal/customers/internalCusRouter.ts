@@ -274,6 +274,10 @@ cusRouter.get(
           orgId,
           env,
           productId: product_id,
+          version:
+            version && Number.isInteger(parseInt(version))
+              ? parseInt(version)
+              : undefined,
         });
       }
 
