@@ -8,38 +8,37 @@ import { FeatureSchema } from "../featureModels/featureModels.js";
 import { FreeTrialSchema } from "./freeTrialModels.js";
 
 export const ProductSchema = z.object({
-  internal_id: z.string(),
   id: z.string(),
+  name: z.string(),
+  is_add_on: z.boolean(),
+  is_default: z.boolean(),
+  version: z.number(),
+  group: z.string(),
+
+  env: z.string(),
+  internal_id: z.string(),
   org_id: z.string(),
   created_at: z.number(),
-  env: z.string(),
-  group: z.string(),
 
   processor: z
     .object({
       type: z.string(),
       id: z.string(),
     })
-    .optional()
-    .nullable(),
+    .nullish(),
+});
 
+export const CreateProductSchema = z.object({
+  id: z.string(),
   name: z.string(),
   is_add_on: z.boolean(),
   is_default: z.boolean(),
-});
-
-export const CreateProductSchema = ProductSchema.omit({
-  internal_id: true,
-  org_id: true,
-  created_at: true,
-  env: true,
-  processor: true,
-
-  // Need name, is_add_on, is_default
+  version: z.number().default(1),
+  group: z.string(),
 });
 
 export const UpdateProductSchema = z.object({
-  id: z.string().nullable(),
+  id: z.string().nullish(),
   name: z.string().optional(),
   is_add_on: z.boolean().optional(),
   is_default: z.boolean().optional(),

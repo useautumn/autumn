@@ -289,7 +289,7 @@ export const getCusEntBalance = ({
 }) => {
   let entitlement = cusEnt.entitlement;
   let balance, adjustment;
-  
+
   if (notNullish(entitlement.entity_feature_id)) {
     if (nullish(entityId)) {
       return getSummedEntityBalances({
@@ -350,7 +350,8 @@ export const getCusBalancesByEntitlement = async ({
       };
 
       if (org.config.api_version >= BREAK_API_VERSION) {
-        data[key].next_reset_at = isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
+        data[key].next_reset_at =
+          isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
         data[key].allowance = isBoolean || unlimited ? undefined : 0;
       }
     }
@@ -366,24 +367,24 @@ export const getCusBalancesByEntitlement = async ({
 
     data[key].balance += balance || 0;
     data[key].adjustment += adjustment || 0;
-    let total = (getResetBalance({
-      entitlement: ent,
-      options: getEntOptions(cusProduct.options, ent),
-      relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
-    }) || 0) * count;
+    let total =
+      (getResetBalance({
+        entitlement: ent,
+        options: getEntOptions(cusProduct.options, ent),
+        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+      }) || 0) * count;
 
     data[key].total += total;
     data[key].unused += unused || 0;
-    
 
     if (org.config.api_version >= BREAK_API_VERSION) {
       if (
-          !data[key].next_reset_at ||
-          cusEnt.next_reset_at && cusEnt.next_reset_at < data[key].next_reset_at
-        ) {
+        !data[key].next_reset_at ||
+        (cusEnt.next_reset_at && cusEnt.next_reset_at < data[key].next_reset_at)
+      ) {
         data[key].next_reset_at = cusEnt.next_reset_at;
       }
-      
+
       data[key].allowance += getResetBalance({
         entitlement: ent,
         options: getEntOptions(cusProduct.options, ent),
@@ -393,7 +394,6 @@ export const getCusBalancesByEntitlement = async ({
   }
 
   const balances = Object.values(data);
-  
 
   for (const balance of balances) {
     if (
@@ -419,7 +419,10 @@ export const getCusBalancesByEntitlement = async ({
   return balances;
 };
 
-export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[], reverseOrder: boolean = false) => {
+export const sortCusEntsForDeduction = (
+  cusEnts: FullCustomerEntitlement[],
+  reverseOrder: boolean = false
+) => {
   let intervalOrder: Record<EntInterval, number> = {
     [EntInterval.Minute]: 0, // 1 minute
     [EntInterval.Hour]: 1, // 1 hour
@@ -431,7 +434,6 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[], reve
     [EntInterval.SemiAnnual]: 7, // 6 months
     [EntInterval.Lifetime]: 8, // 1 time
   };
-
 
   cusEnts.sort((a, b) => {
     const aEnt = a.entitlement;
@@ -476,7 +478,7 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[], reve
     ) {
       return 1;
     }
-    
+
     let nextResetFirst = reverseOrder ? 1 : -1;
     // If one has a next_reset_at, it should go first
     if (a.next_reset_at && !b.next_reset_at) {
@@ -498,7 +500,7 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[], reve
     }
 
     // 3. Sort by interval
-    
+
     if (aEnt.interval && bEnt.interval) {
       if (reverseOrder) {
         return intervalOrder[bEnt.interval] - intervalOrder[aEnt.interval];
@@ -724,10 +726,12 @@ export const getExistingUsageFromCusProducts = ({
   entitlement,
   cusProducts,
   entities,
+  carryExistingUsages = false,
 }: {
   entitlement: EntitlementWithFeature;
   cusProducts?: FullCusProduct[];
   entities: Entity[];
+  carryExistingUsages?: boolean;
 }) => {
   if (!entitlement || entitlement.feature.type === FeatureType.Boolean) {
     return 0;
@@ -743,7 +747,10 @@ export const getExistingUsageFromCusProducts = ({
     .flatMap((cp) => cp.customer_entitlements)
     .find((ce) => ce.internal_feature_id === entitlement.internal_feature_id);
 
-  if (!existingCusEnt || !entitlement.carry_from_previous) {
+  if (
+    !existingCusEnt ||
+    (!entitlement.carry_from_previous && !carryExistingUsages)
+  ) {
     return existingUsage;
   }
 
@@ -754,15 +761,32 @@ export const getExistingUsageFromCusProducts = ({
     return existingUsage;
   }
 
-  // // Calculate existing usage
-  let existingAllowance = existingCusEnt.entitlement.allowance!;
+  // Calculate existing usage
 
+  // Get options
+  let cusProduct = cusProducts?.find(
+    (cp) => cp.id === existingCusEnt.customer_product_id
+  );
+  let options = getEntOptions(
+    cusProduct?.options || [],
+    existingCusEnt.entitlement
+  );
+  let price = getRelatedCusPrice(
+    existingCusEnt,
+    cusProduct?.customer_prices || []
+  );
+  let existingAllowance = getResetBalance({
+    entitlement: existingCusEnt.entitlement,
+    options: options,
+    relatedPrice: price?.price,
+  });
 
   let { balance, adjustment, count, unused } = getCusEntMasterBalance({
     cusEnt: existingCusEnt as any,
     entities: entities,
   });
-  existingUsage = existingAllowance - balance!;
+
+  existingUsage = existingAllowance! - balance!;
   if (unused && unused > 0) {
     existingUsage -= unused;
   }

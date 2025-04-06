@@ -3,12 +3,17 @@ import { FeatureService } from "../features/FeatureService.js";
 import { entitlementRouter } from "./entitlementRouter.js";
 import { PriceService } from "../prices/PriceService.js";
 import { ProductService } from "./ProductService.js";
-import { EntitlementWithFeature } from "@autumn/shared";
+import { CusProductStatus, EntitlementWithFeature } from "@autumn/shared";
 import { BillingType } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { getBillingType } from "../prices/priceUtils.js";
 import { OrgService } from "../orgs/OrgService.js";
 import { CouponService } from "../coupons/CouponService.js";
+import { getProductVersionCounts } from "./productUtils.js";
+import { getLatestProducts } from "./productUtils.js";
+import { CusProductService } from "../customers/products/CusProductService.js";
+import { CusProdReadService } from "../customers/products/CusProdReadService.js";
+import { MigrationService } from "../migrations/MigrationService.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -20,15 +25,22 @@ productRouter.get("/data", async (req: any, res) => {
       sb,
       orgId: req.orgId,
     });
+
     const [products, features, org, coupons] = await Promise.all([
-      ProductService.getFullProducts({ sb, orgId: req.orgId, env: req.env }),
+      ProductService.getFullProducts({
+        sb,
+        orgId: req.orgId,
+        env: req.env,
+        returnAll: true,
+      }),
       FeatureService.getFromReq(req),
       OrgService.getFromReq(req),
       CouponService.getAll({ sb, orgId: req.orgId, env: req.env }),
     ]);
 
     res.status(200).json({
-      products,
+      products: getLatestProducts(products),
+      versionCounts: getProductVersionCounts(products),
       features,
       org: {
         id: org.id,
@@ -45,42 +57,99 @@ productRouter.get("/data", async (req: any, res) => {
   }
 });
 
+productRouter.get("/counts", async (req: any, res) => {
+  try {
+    let { sb, orgId, env } = req;
+    let products = await ProductService.getFullProducts({
+      sb,
+      orgId: req.orgId,
+      env: req.env,
+      returnAll: true,
+    });
+
+    let counts = await Promise.all(
+      products.map(async (product) => {
+        return CusProdReadService.getCounts({
+          sb,
+          internalProductId: product.internal_id,
+        });
+      })
+    );
+
+    // let result: { [key: string]: any } = {};
+
+    // for (let i = 0; i < products.length; i++) {
+    //   result[products[i].internal_id] = counts[i];
+    // }
+    // Group by ID
+    let result: { [key: string]: any } = {};
+    for (let i = 0; i < products.length; i++) {
+      if (!result[products[i].id]) {
+        result[products[i].id] = counts[i];
+      } else {
+        for (let key in counts[i]) {
+          let countVal = counts[i][key as keyof (typeof counts)[number]] || 0;
+          result[products[i].id][key] += countVal;
+        }
+      }
+    }
+    console.log(result);
+
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Failed to get product counts", error);
+    res.status(500).send(error);
+  }
+});
+
 // Get stripe products
 
 productRouter.get("/:productId/data", async (req: any, res) => {
-  const { productId } = req.params;
-  const sb = req.sb;
-  const orgId = req.orgId;
-  const env = req.env;
-
   try {
-    const product = await ProductService.getFullProductStrict({
-      sb,
-      productId,
-      orgId,
-      env,
-    });
+    const { productId } = req.params;
+    const { version } = req.query;
+    const sb = req.sb;
+    const orgId = req.orgId;
+    const env = req.env;
+
+    const [product, features, org, numVersions, existingMigrations] =
+      await Promise.all([
+        ProductService.getFullProduct({
+          sb,
+          productId,
+          orgId,
+          env,
+          version: version ? parseInt(version) : undefined,
+        }),
+        FeatureService.getFeatures({
+          sb,
+          orgId,
+          env,
+        }),
+        OrgService.getFromReq(req),
+        ProductService.getProductVersionCount({
+          sb,
+          productId,
+          orgId,
+          env,
+        }),
+        MigrationService.getExistingJobs({
+          sb,
+          orgId,
+          env,
+        }),
+      ]);
 
     let entitlements = product.entitlements;
     let prices = product.prices;
 
-    // Sort entitlements by created_at descending, then id
     entitlements = entitlements.sort((a: any, b: any) => {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || b.id.localeCompare(a.id);
+      return b.feature.id.localeCompare(a.feature.id);
     });
 
-    // Sort prices by created_at descending, then id
     prices = prices.sort((a: any, b: any) => {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || b.id.localeCompare(a.id);
+      return b.name.localeCompare(a.name);
     });
-
-    const features = await FeatureService.getFeatures({
-      sb,
-      orgId,
-      env,
-    });
-
-    const org = await OrgService.getFromReq(req);
 
     res.status(200).send({
       product,
@@ -94,9 +163,69 @@ productRouter.get("/:productId/data", async (req: any, res) => {
         live_pkey: org.live_pkey,
         default_currency: org.default_currency,
       },
+      numVersions,
+      existingMigrations,
     });
   } catch (error) {
     console.error("Failed to get products", error);
+    res.status(500).send(error);
+  }
+});
+
+productRouter.get("/:productId/count", async (req: any, res) => {
+  try {
+    const { productId } = req.params;
+    const { version } = req.query;
+
+    const product = await ProductService.getProductStrict({
+      sb: req.sb,
+      productId,
+      orgId: req.orgId,
+      env: req.env,
+      version: version ? parseInt(version) : undefined,
+    });
+
+    // Get counts from postgres
+    const counts = await CusProdReadService.getCounts({
+      sb: req.sb,
+      internalProductId: product.internal_id,
+    });
+
+    res.status(200).send(counts);
+
+    // const [activeCount, canceledCount, customCount, trialingCount] =
+    //   await Promise.all([
+    //     CusProdReadService.getCountByInternalProductId({
+    //       sb: req.sb,
+    //       orgId: req.orgId,
+    //       env: req.env,
+    //       internalProductId: product.internal_id,
+    //       inStatuses: [CusProductStatus.Active],
+    //     }),
+    //     CusProdReadService.getCanceledCountByInternalProductId({
+    //       sb: req.sb,
+    //       orgId: req.orgId,
+    //       env: req.env,
+    //       internalProductId: product.internal_id,
+    //     }),
+    //     CusProdReadService.getCustomCountByInternalProductId({
+    //       sb: req.sb,
+    //       internalProductId: product.internal_id,
+    //     }),
+    //     CusProdReadService.getTrialingCount({
+    //       sb: req.sb,
+    //       internalProductId: product.internal_id,
+    //     }),
+    //   ]);
+
+    // res.status(200).send({
+    //   active: activeCount,
+    //   canceled: canceledCount,
+    //   custom: customCount,
+    //   trialing: trialingCount,
+    // });
+  } catch (error) {
+    console.error("Failed to get product counts", error);
     res.status(500).send(error);
   }
 });

@@ -6,6 +6,7 @@ import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import { JobName } from "./JobName.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 
 const NUM_WORKERS = 5;
 
@@ -73,6 +74,15 @@ const initWorker = ({
   let worker = new Worker(
     "autumn",
     async (job: Job) => {
+      if (job.name == JobName.Migration) {
+        await runMigrationTask({
+          payload: job.data,
+          logger: logtail,
+          sb,
+        });
+        return;
+      }
+
       const { customerId } = job.data;
 
       while (!(await acquireLock({ customerId, timeout: 10000, useBackup }))) {

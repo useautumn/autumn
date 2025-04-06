@@ -16,7 +16,7 @@ import { ProductService } from "@/services/products/ProductService";
 import { useNavigate } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useProductContext } from "./ProductContext";
-import { navigateTo } from "@/utils/genUtils";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { Delete, Settings } from "lucide-react";
 
 export const EditProductToolbar = ({
@@ -26,7 +26,7 @@ export const EditProductToolbar = ({
   className?: string;
   product: Product;
 }) => {
-  const { mutate, env } = useProductContext();
+  const { mutate, env, numVersions, version } = useProductContext();
   const axiosInstance = useAxiosInstance({ env });
 
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -35,11 +35,29 @@ export const EditProductToolbar = ({
 
   const handleDelete = async () => {
     try {
+      if (version && version < numVersions) {
+        toast.error("Can't delete earlier version of a product");
+        return;
+      }
+
       setDeleteLoading(true);
       await ProductService.deleteProduct(axiosInstance, product.id);
-      navigateTo("/products", navigate, env);
+
+      if (numVersions > 1) {
+        navigateTo(
+          `/products/${product.id}?version=${numVersions - 1}`,
+          navigate,
+          env
+        );
+        toast.success(
+          `${product.name} (version ${numVersions}) deleted successfully`
+        );
+      } else {
+        navigateTo(`/products`, navigate, env);
+        toast.success(`${product.name} deleted successfully`);
+      }
     } catch (error) {
-      toast.error("Failed to delete product");
+      toast.error(getBackendErr(error, "Failed to delete product"));
     } finally {
       setDeleteLoading(false);
     }
@@ -56,9 +74,10 @@ export const EditProductToolbar = ({
           <Settings size={14} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="text-t2">
+      <DropdownMenuContent className="text-t2" align="end">
         <DropdownMenuItem
-          className="flex items-center bg-red-500 text-white"
+          // className="flex items-center bg-red-500 text-white"
+          className="flex items-center text-red-500 hover:!bg-red-500 hover:!text-white text-xs"
           onClick={async (e) => {
             e.stopPropagation();
             e.preventDefault();
@@ -66,7 +85,7 @@ export const EditProductToolbar = ({
           }}
         >
           <div className="flex items-center justify-between w-full gap-2">
-            Delete
+            {numVersions > 1 ? "Delete version" : "Delete"}
             {deleteLoading ? <SmallSpinner /> : <Delete size={12} />}
           </div>
         </DropdownMenuItem>

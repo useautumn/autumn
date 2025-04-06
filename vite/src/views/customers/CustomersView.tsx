@@ -52,6 +52,8 @@ function CustomersView({ env }: { env: AppEnv }) {
     },
   });
 
+  
+
   // Single useEffect to handle all data fetching
   useEffect(() => {
     setPaginationLoading(true);
@@ -110,6 +112,7 @@ function CustomersView({ env }: { env: AppEnv }) {
         filters,
         setFilters: handleFilterChange, // Use the new handler
         products: productsData?.products,
+        versionCounts: productsData?.versionCounts,
       }}
     >
       <div className="flex flex-col gap-4 h-fit relative">

@@ -1,4 +1,9 @@
-import { ErrCode, Organization, UpdateProductSchema } from "@autumn/shared";
+import {
+  ErrCode,
+  FullProduct,
+  Organization,
+  UpdateProductSchema,
+} from "@autumn/shared";
 import { UpdateProduct } from "@autumn/shared";
 import { Product } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -11,6 +16,8 @@ import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUti
 import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { handleVersionProduct } from "./handleVersionProduct.js";
+import { productsAreDifferent } from "@/internal/products/productUtils.js";
 
 export const handleUpdateProductDetails = async ({
   newProduct,
@@ -28,7 +35,12 @@ export const handleUpdateProductDetails = async ({
   // 1. Check if they're same
   // console.log("New product: ", newProduct);
   // throw new Error("test");
-  
+
+  let customersOnAllVersions = await CusProductService.getByProductId(
+    sb,
+    curProduct.id
+  );
+
   const productsAreSame = (prod1: Product, prod2: UpdateProduct) => {
     if (notNullish(prod2.id) && prod1.id != prod2.id) {
       return false;
@@ -57,14 +69,13 @@ export const handleUpdateProductDetails = async ({
     return;
   }
 
-  if (newProduct.id !== curProduct.id && cusProductExists) {
+  if (newProduct.id !== curProduct.id && customersOnAllVersions.length > 0) {
     throw new RecaseError({
       message: "Cannot change product ID because it has existing customers",
       code: ErrCode.ProductHasCustomers,
       statusCode: 400,
     });
   }
-
 
   console.log(`Updating product ${curProduct.id} (org: ${org.slug})`);
 
@@ -102,20 +113,13 @@ export const handleUpdateProduct = async (req: any, res: any) => {
         sb,
         orgId,
       }),
-      ProductService.getFullProductStrict({
+      ProductService.getFullProduct({
         sb,
         productId,
         orgId,
         env,
       }),
     ]);
-
-    const cusProducts = await CusProductService.getByProductId(
-      sb,
-      fullProduct.internal_id
-    );
-
-    let cusProductExists = cusProducts.length > 0;
 
     if (!fullProduct) {
       throw new RecaseError({
@@ -125,6 +129,14 @@ export const handleUpdateProduct = async (req: any, res: any) => {
       });
     }
 
+    const cusProductsCurVersion =
+      await CusProductService.getByInternalProductId(
+        sb,
+        fullProduct.internal_id
+      );
+
+    let cusProductExists = cusProductsCurVersion.length > 0;
+
     await handleUpdateProductDetails({
       sb,
       curProduct: fullProduct,
@@ -132,6 +144,34 @@ export const handleUpdateProduct = async (req: any, res: any) => {
       org,
       cusProductExists,
     });
+
+    let productHasChanged = productsAreDifferent({
+      product1: fullProduct,
+      product2: {
+        ...fullProduct,
+        prices: notNullish(prices) ? prices : fullProduct.prices,
+        entitlements: notNullish(entitlements)
+          ? entitlements
+          : fullProduct.entitlements,
+        free_trial:
+          free_trial !== undefined ? free_trial : fullProduct.free_trial,
+      },
+    });
+
+    if (cusProductExists && productHasChanged) {
+      await handleVersionProduct({
+        req,
+        res,
+        sb,
+        latestProduct: fullProduct,
+        org,
+        env,
+        prices,
+        entitlements,
+        freeTrial: free_trial,
+      });
+      return;
+    }
 
     if (free_trial !== undefined) {
       await handleNewFreeTrial({
@@ -177,5 +217,4 @@ export const handleUpdateProduct = async (req: any, res: any) => {
   } catch (error) {
     handleRequestError({ req, error, res, action: "Update product" });
   }
-}
-
+};

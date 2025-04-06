@@ -55,3 +55,10 @@ export const getBillingUnits = (
 
   return `${entitlement.allowance} `;
 };
+
+export const pricesOnlyOneOff = (prices: Price[]) => {
+  if (prices.length == 0) return false;
+  return prices.every((price) => {
+    return price.config?.interval == BillingInterval.OneOff;
+  });
+};

@@ -15,10 +15,7 @@ import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { getPriceAmount } from "../../prices/priceUtils.js";
-import {
-  BillingInterval,
-  ErrCode,
-} from "@autumn/shared";
+import { BillingInterval, ErrCode } from "@autumn/shared";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import {
   getInvoiceExpansion,
@@ -43,12 +40,14 @@ const handleBillNowPrices = async ({
   res,
   req,
   fromRequest = true,
+  carryExistingUsages = false,
 }: {
   sb: SupabaseClient;
   attachParams: AttachParams;
   res: any;
   req: any;
   fromRequest?: boolean;
+  carryExistingUsages?: boolean;
 }) => {
   const logger = req.logtail;
   const { org, customer, products, freeTrial, invoiceOnly } = attachParams;
@@ -57,6 +56,7 @@ const handleBillNowPrices = async ({
 
   let itemSets = await getStripeSubItems({
     attachParams,
+    carryExistingUsages,
   });
 
   let subscriptions: Stripe.Subscription[] = [];
@@ -100,10 +100,11 @@ const handleBillNowPrices = async ({
       invoiceIds.push(subscription.latest_invoice as string);
     } catch (error: any) {
       if (
-        error instanceof RecaseError &&
-        !invoiceOnly &&
-        (error.code === ErrCode.StripeCardDeclined ||
-          error.code === ErrCode.CreateStripeSubscriptionFailed)
+        (error instanceof RecaseError &&
+          !invoiceOnly &&
+          (error.code === ErrCode.StripeCardDeclined ||
+            error.code === ErrCode.CreateStripeSubscriptionFailed)) ||
+        error.code === ErrCode.StripeGetPaymentMethodFailed
       ) {
         await handleCreateCheckout({
           sb,
@@ -132,6 +133,7 @@ const handleBillNowPrices = async ({
           subscriptions.length > 0
             ? subscriptions[0].current_period_end * 1000
             : undefined,
+        carryExistingUsages,
       })
     );
   }
@@ -319,6 +321,7 @@ export const handleAddProduct = async ({
   res,
   attachParams,
   fromRequest = true,
+  carryExistingUsages = false,
 }: {
   req: {
     sb: SupabaseClient;
@@ -327,6 +330,7 @@ export const handleAddProduct = async ({
   res: any;
   attachParams: AttachParams;
   fromRequest?: boolean;
+  carryExistingUsages?: boolean;
 }) => {
   const logger = req.logtail;
   const { customer, products, prices } = attachParams;
@@ -370,16 +374,16 @@ export const handleAddProduct = async ({
       req,
       res,
       fromRequest,
+      carryExistingUsages,
     });
 
     return;
   }
 
-  logger.info("Creating bill later prices");
-
-  const billLaterPrices = getBillLaterPrices(prices);
+  logger.info("Inserting free product in handleAddProduct");
 
   const batchInsert = [];
+
   for (const product of products) {
     batchInsert.push(
       createFullCusProduct({
@@ -387,6 +391,7 @@ export const handleAddProduct = async ({
         attachParams: attachToInsertParams(attachParams, product),
         subscriptionId: undefined,
         billLaterOnly: true,
+        carryExistingUsages,
       })
     );
   }
@@ -394,5 +399,7 @@ export const handleAddProduct = async ({
 
   logger.info("Successfully created full cus product");
 
-  res.status(200).json({ success: true });
+  if (fromRequest) {
+    res.status(200).json({ success: true });
+  }
 };

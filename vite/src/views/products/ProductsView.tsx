@@ -23,6 +23,12 @@ function ProductsView({ env }: { env: AppEnv }) {
     withAuth: true,
   });
 
+  const { data: allCounts, mutate: mutateCounts } = useAxiosSWR({
+    url: `/products/counts`,
+    env: env,
+    withAuth: true,
+  });
+
   useEffect(() => {
     if (data?.products.length > 0 && !selectedProduct) {
       setSelectedProduct(data.products[0]);
@@ -43,6 +49,8 @@ function ProductsView({ env }: { env: AppEnv }) {
         selectedProduct,
         setSelectedProduct,
         mutate,
+        allCounts,
+        mutateCounts,
       }}
     >
       <div className="flex justify-between items-center">

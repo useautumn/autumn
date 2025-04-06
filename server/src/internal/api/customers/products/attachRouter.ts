@@ -33,7 +33,11 @@ import {
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
-import { notNullish, notNullOrUndefined, nullOrUndefined } from "@/utils/genUtils.js";
+import {
+  notNullish,
+  notNullOrUndefined,
+  nullOrUndefined,
+} from "@/utils/genUtils.js";
 import chalk from "chalk";
 import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
@@ -290,15 +294,13 @@ export const customerHasPm = async ({
   return notNullOrUndefined(paymentMethod) ? true : false;
 };
 
-
 attachRouter.post("/attach", async (req: any, res) => {
-  
   try {
     const {
       customer_id,
       product_id,
       customer_data,
-  
+
       is_custom,
       prices,
       entitlements,
@@ -310,31 +312,29 @@ attachRouter.post("/attach", async (req: any, res) => {
       success_url,
       billing_cycle_anchor,
       metadata,
+      version,
     } = req.body;
-  
+
     const { orgId, env } = req;
     const logger = req.logtail;
-  
+
     const sb = req.sb;
     const pricesInput: PricesInput = prices || [];
     const entsInput: Entitlement[] = entitlements || [];
     const optionsListInput: FeatureOptions[] = options || [];
     const invoiceOnly = invoice_only || false;
     const successUrl = success_url || undefined;
-  
-    // Validate billing anchor
-  
+
     // PUBLIC STUFF
     let forceCheckout = req.isPublic || force_checkout || false;
     let isCustom = is_custom || false;
     if (req.isPublic) {
       isCustom = false;
     }
-  
+
     logger.info("--------------------------------");
     let publicStr = req.isPublic ? "(Public) " : "";
     logger.info(`${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
-  
 
     await handleAttachRaceCondition({ req, res });
 
@@ -355,12 +355,14 @@ attachRouter.post("/attach", async (req: any, res) => {
       isCustom,
       productIds: product_ids,
       logger,
+      version,
     });
 
     attachParams.successUrl = successUrl;
     attachParams.invoiceOnly = invoiceOnly;
     attachParams.billingAnchor = billing_cycle_anchor;
     attachParams.metadata = metadata;
+    attachParams.isCustom = isCustom || false;
     logger.info(
       `Customer: ${chalk.yellow(
         `${attachParams.customer.id} (${attachParams.customer.name})`
@@ -445,7 +447,6 @@ attachRouter.post("/attach", async (req: any, res) => {
     // SCENARIO 4: Switching product
     if (curCusProduct) {
       logger.info("SCENARIO 3: SWITCHING PRODUCT");
-
       await handleChangeProduct({
         req,
         res,
