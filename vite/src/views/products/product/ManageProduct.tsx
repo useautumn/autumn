@@ -310,7 +310,7 @@ const CountAndMigrate = () => {
           <TooltipTrigger asChild>
             <div className="h-7 px-3 bg-zinc-50 hover:bg-zinc-50 border border-zinc-200 rounded-full inline-flex items-center cursor-pointer">
               <span className="text-sm font-medium text-zinc-500">
-                {activeCount} active users
+                {activeCount} active
               </span>
             </div>
           </TooltipTrigger>
