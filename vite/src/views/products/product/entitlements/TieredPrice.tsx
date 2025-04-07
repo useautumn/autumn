@@ -59,7 +59,7 @@ export default function TieredPrice({
     setConfig({ ...config, usage_tiers: newUsageTiers });
   };
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 max-h-64 overflow-scroll">
       {config.usage_tiers.map((tier: any, index: number) => (
         <div key={index} className="flex gap-1 w-full items-center">
           <div className="w-full gap-2 flex items-center">

@@ -86,7 +86,7 @@ export const EntitlementConfig = ({
     priceConfig.usage_tiers[0].amount > 0 || priceConfig.usage_tiers.length > 1
   ); // for the add price button
   const [showCycle, setShowCycle] = useState(
-    entitlement && entitlement?.interval != EntInterval.Lifetime ? true : false
+    entitlement && entitlement?.interval == EntInterval.Lifetime ? false : true
   ); // for the add cycle button
   // const [priceConfig, setPriceConfig] = useState<any>(
   //   getDefaultPriceConfig(PriceType.Usage) // default price config
@@ -258,32 +258,30 @@ export const EntitlementConfig = ({
               className="flex flex-col gap-4"
             >
               <div className="flex gap-2 w-full justify-end">
-                {!showCycle && (
-                  <ToggleDisplayButton
-                    label="Add Cycle"
-                    show={showCycle}
-                    disabled={fields.allowance_type == AllowanceType.Unlimited}
-                    onClick={() => setShowCycle(!showCycle)}
-                  >
-                    {showCycle ? (
-                      <MinusIcon size={14} className="mr-1" />
-                    ) : (
-                      <PlusIcon size={14} className="mr-1" />
-                    )}
-                    Usage Reset
-                  </ToggleDisplayButton>
-                )}
-                {!showPrice && (
-                  <ToggleDisplayButton
-                    label="Add Price"
-                    show={showPrice}
-                    disabled={fields.allowance_type == AllowanceType.Unlimited}
-                    onClick={() => {
-                      setShowPrice(!showPrice);
-                      if (
-                        priceConfig.usage_tiers.length == 1 // if there's only 1 usage tier and it has a Number "to" value, add another usage tier
-                        //  && typeof priceConfig.usage_tiers[0].to === "number"
-                      ) {
+                <ToggleDisplayButton
+                  label="Add Cycle"
+                  show={showCycle}
+                  disabled={fields.allowance_type == AllowanceType.Unlimited}
+                  onClick={() => setShowCycle(!showCycle)}
+                >
+                  {showCycle ? (
+                    <MinusIcon size={14} className="mr-1" />
+                  ) : (
+                    <PlusIcon size={14} className="mr-1" />
+                  )}
+                  Usage Reset
+                </ToggleDisplayButton>
+                <ToggleDisplayButton
+                  label="Add Price"
+                  show={showPrice}
+                  disabled={fields.allowance_type == AllowanceType.Unlimited}
+                  onClick={() => {
+                    if (
+                      priceConfig.usage_tiers.length == 1 // if there's only 1 usage tier and it has a Number "to" value, add another usage tier
+                      //  && typeof priceConfig.usage_tiers[0].to === "number"
+                    ) {
+                      if (!showPrice) {
+                        //function for adding price
                         setPriceConfig({
                           ...priceConfig,
                           usage_tiers: [
@@ -292,8 +290,7 @@ export const EntitlementConfig = ({
                               to: priceConfig.usage_tiers[0].to || -1,
                               amount: priceConfig.usage_tiers[0].amount || 0,
                             },
-                            ...(typeof priceConfig.usage_tiers[0].to ===
-                              "number" && priceConfig.usage_tiers[0].to > 0
+                            ...(Number(priceConfig.usage_tiers[0].to) > 0 // if the first usage tier has a Number "to" value, add another usage tier
                               ? [
                                   {
                                     from: priceConfig.usage_tiers[0].to,
@@ -304,17 +301,33 @@ export const EntitlementConfig = ({
                               : []),
                           ],
                         });
+                      } else {
+                        //function for removing price
+                        setPriceConfig({
+                          ...priceConfig,
+                          usage_tiers: [
+                            {
+                              from: 0,
+                              to:
+                                priceConfig.usage_tiers[0].to > 0
+                                  ? priceConfig.usage_tiers[0].to
+                                  : "",
+                              amount: 0,
+                            },
+                          ],
+                        });
                       }
-                    }}
-                  >
-                    {showPrice ? (
-                      <MinusIcon size={14} className="mr-1" />
-                    ) : (
-                      <PlusIcon size={14} className="mr-1" />
-                    )}
-                    {showPrice ? "Remove Price" : "Add Price"}
-                  </ToggleDisplayButton>
-                )}
+                    }
+                    setShowPrice(!showPrice);
+                  }}
+                >
+                  {showPrice ? (
+                    <MinusIcon size={14} className="mr-1" />
+                  ) : (
+                    <PlusIcon size={14} className="mr-1" />
+                  )}
+                  {showPrice ? "Remove Price" : "Add Price"}
+                </ToggleDisplayButton>
                 <MoreMenuButton
                   fields={fields}
                   setFields={setFields}
