@@ -35,9 +35,31 @@ export const SelectCycle = ({
 }) => {
   return (
     <div className="flex flex-col w-full">
-      <FieldLabel className="flex justify-between items-center">
+      <FieldLabel className="flex justify-between items-center max-h-4">
         <div className="flex items-center gap-2">
-          {showPrice ? "Billing Cycle" : "Usage Reset Cycle"}
+          {showPrice && !showCycle && "Billing Cycle"}
+          {!showPrice && showCycle && "Usage Reset Cycle"}
+          {showPrice && showCycle && (
+            <div className="flex items-center gap-2 w-fit shrink-0">
+              <div className="flex text-t3 text-t3 items-center gap-1 overflow-y-auto">
+                Billing
+                <div className="flex items-center gap-1 bg-zinc-200 border rounded-sm pl-1 h-4.5">
+                  <span className="">and reset</span>
+                  <Button
+                    isIcon
+                    size="sm"
+                    variant="ghost"
+                    className="w-fit text-t3 h-2 max-h-5 max-w-5.5"
+                    onClick={() => setShowCycle(false)}
+                    dim={4}
+                  >
+                    <X size={12} />
+                  </Button>
+                </div>
+                Cycle
+              </div>
+            </div>
+          )}
           <Tooltip delayDuration={400}>
             <TooltipTrigger asChild>
               <InfoIcon className="w-3 h-3 text-t3/50" />
@@ -77,23 +99,6 @@ export const SelectCycle = ({
                 ))}
               </SelectContent>
             </Select>
-            {showPrice && showCycle && (
-              <div className="flex items-center gap-2 w-fit shrink-0">
-                <div className="flex text-t2 rounded-sm text-t3 h-8 items-center pl-2 gap-2">
-                  <span className="text-xs">+ usage reset</span>
-                  <Button
-                    isIcon
-                    size="sm"
-                    variant="ghost"
-                    className="w-fit text-t3 h-2 max-h-5 max-w-5.5 mr-1"
-                    onClick={() => setShowCycle(false)}
-                    dim={6}
-                  >
-                    <X size={12} />
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
 
           <UsageResetTooltip
@@ -176,7 +181,7 @@ const UsageResetTooltip = ({
     return (
       <div className="text-t3 text-xs">
         Number of <span className="font-mono">{selectedFeature.id}</span> used
-        will reset to 0 every{" "}
+        will reset every{" "}
         {fields.interval == EntInterval.SemiAnnual
           ? "6 months"
           : fields.interval}
@@ -189,7 +194,7 @@ const UsageResetTooltip = ({
     return (
       <div className="text-t3 text-xs">
         Number of <span className="font-mono">{selectedFeature.id}</span> used
-        will reset to 0 every billing cycle.
+        will reset every billing cycle.
       </div>
     );
   } else {
