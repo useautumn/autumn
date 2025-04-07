@@ -111,16 +111,18 @@ export default function UpdateEntitlement({
           setSelectedFeature={() => {}}
           priceConfig={priceConfig}
           setPriceConfig={setPriceConfig}
+          handleUpdateEntitlement={handleUpdateEntitlement}
+          handleDeleteEntitlement={handleDeleteEntitlement}
         />
 
-        <DialogFooter>
-          <Button variant="destructive" onClick={handleDeleteEntitlement}>
-            Delete
-          </Button>
+        {/* <DialogFooter className="w-full flex sm:justify-end mt-4">
           <Button onClick={handleUpdateEntitlement} variant="gradientPrimary">
             Update Feature
           </Button>
-        </DialogFooter>
+          <Button variant="destructive" onClick={handleDeleteEntitlement}>
+            Delete
+          </Button>
+        </DialogFooter> */}
       </DialogContent>
     </Dialog>
   );
