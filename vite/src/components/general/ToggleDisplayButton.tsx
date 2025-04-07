@@ -7,6 +7,7 @@ export const ToggleDisplayButton = ({
   disabled,
   onClick,
   children,
+  className,
 }: any) => {
   return (
     <Button
@@ -14,7 +15,8 @@ export const ToggleDisplayButton = ({
       size="sm"
       className={cn(
         "text-t3 w-fit",
-        show && "bg-zinc-200 text-t2 hover:bg-zinc-200"
+        show && "bg-zinc-200 text-t2 hover:bg-zinc-200",
+        className
       )}
       disabled={disabled}
       onClick={onClick}

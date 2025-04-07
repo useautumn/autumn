@@ -9,17 +9,24 @@ import {
 import { useProductContext } from "../ProductContext";
 import { toast } from "sonner";
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { useEffect, useState } from "react";
+import { getDefaultPriceConfig } from "@/utils/product/priceUtils";
+import { PriceType } from "@autumn/shared";
 
 export default function UpdateEntitlement({
   open,
   setOpen,
   selectedEntitlement,
   setSelectedEntitlement,
+  priceConfig,
+  setPriceConfig,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
   selectedEntitlement: any;
   setSelectedEntitlement: (entitlement: any) => void;
+  priceConfig: any;
+  setPriceConfig: (priceConfig: any) => void;
 }) {
   const { setProduct, product, features } = useProductContext();
 
@@ -70,7 +77,21 @@ export default function UpdateEntitlement({
       return entitlement;
     });
 
-    setProduct({ ...product, entitlements: updatedEntitlements });
+    const updatedPrices = product.prices.map((price: any) => {
+      if (
+        price.config.internal_feature_id ===
+        selectedEntitlement.internal_feature_id
+      ) {
+        return { name: price.name, config: priceConfig };
+      }
+      return price;
+    });
+
+    setProduct({
+      ...product,
+      entitlements: updatedEntitlements,
+      prices: updatedPrices,
+    });
     setOpen(false);
   };
 
@@ -88,6 +109,8 @@ export default function UpdateEntitlement({
             features
           )}
           setSelectedFeature={() => {}}
+          priceConfig={priceConfig}
+          setPriceConfig={setPriceConfig}
         />
 
         <DialogFooter>

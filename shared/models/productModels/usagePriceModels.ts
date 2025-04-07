@@ -15,9 +15,9 @@ export enum BillWhen {
 }
 
 export const UsageTier = z.object({
-  from: z.number().min(0),
-  to: z.number().min(-1),
-  amount: z.number().min(0),
+  from: z.number(),
+  to: z.union([z.number(), z.literal(""), z.literal("unlimited")]),
+  amount: z.number(),
 });
 
 export const UsagePriceConfigSchema = z.object({

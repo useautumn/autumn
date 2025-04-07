@@ -21,7 +21,7 @@ export const EntitlementSchema = z.object({
   internal_feature_id: z.string().optional(),
   feature_id: z.string().optional(),
   allowance_type: z.nativeEnum(AllowanceType).optional().nullable(),
-  allowance: z.number().optional().nullable(),
+  allowance: z.union([z.number(), z.literal("unlimited")]).nullish(),
   interval: z.nativeEnum(EntInterval).optional().nullable(),
 
   carry_from_previous: z.boolean().default(false).optional(),
@@ -41,7 +41,7 @@ export const CreateEntitlementSchema = z.object({
   internal_feature_id: z.string(),
   feature_id: z.string(),
   allowance_type: z.nativeEnum(AllowanceType).nullish(),
-  allowance: z.number().nullish(),
+  allowance: z.union([z.number(), z.literal("unlimited")]).nullish(),
   interval: z.nativeEnum(EntInterval).nullish(),
   carry_from_previous: z.boolean().default(false),
   entity_feature_id: z.string().nullish(),
