@@ -38,12 +38,12 @@ export const SelectCycle = ({
       <FieldLabel className="flex justify-between items-center max-h-4">
         <div className="flex items-center gap-2">
           {showPrice && !showCycle && "Billing Cycle"}
-          {!showPrice && showCycle && "Usage Reset Cycle"}
+          {!showPrice && showCycle && "Usage Reset"}
           {showPrice && showCycle && (
             <div className="flex items-center gap-2 w-fit shrink-0">
-              <div className="flex text-t3 text-t3 items-center gap-1 overflow-y-auto">
+              <div className="flex text-t3 text-t3 items-center gap-0 overflow-y-auto">
                 Billing
-                <div className="flex items-center gap-1 bg-zinc-200 border rounded-sm pl-1 h-4.5">
+                <div className="flex items-center gap-0 rounded-sm pl-1 h-4.5">
                   <span className="">and reset</span>
                   <Button
                     isIcon
@@ -55,6 +55,7 @@ export const SelectCycle = ({
                   >
                     <X size={12} />
                   </Button>
+                  &nbsp;
                 </div>
                 Cycle
               </div>
@@ -100,14 +101,6 @@ export const SelectCycle = ({
               </SelectContent>
             </Select>
           </div>
-
-          <UsageResetTooltip
-            showCycle={showCycle}
-            selectedFeature={selectedFeature}
-            showPrice={showPrice}
-            priceConfig={priceConfig}
-            fields={fields}
-          />
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -147,20 +140,13 @@ export const SelectCycle = ({
               <X size={12} className="text-t3" />
             </Button>
           </div>
-          <UsageResetTooltip
-            showCycle={showCycle}
-            selectedFeature={selectedFeature}
-            showPrice={showPrice}
-            priceConfig={priceConfig}
-            fields={fields}
-          />
         </div>
       )}
     </div>
   );
 };
 
-const UsageResetTooltip = ({
+export const UsageResetTooltip = ({
   showCycle,
   selectedFeature,
   showPrice,
@@ -177,7 +163,16 @@ const UsageResetTooltip = ({
     return null;
   }
 
-  if (!showPrice) {
+  if (showPrice && priceConfig.interval == BillingInterval.OneOff) {
+    return (
+      <div className="text-t3 text-xs">
+        Number of <span className="font-mono">{selectedFeature.id}</span> used
+        will not reset.
+      </div>
+    );
+  }
+
+  if (!showPrice && showCycle) {
     return (
       <div className="text-t3 text-xs">
         Number of <span className="font-mono">{selectedFeature.id}</span> used
@@ -189,19 +184,35 @@ const UsageResetTooltip = ({
       </div>
     );
   }
+  if (!showPrice && !showCycle) {
+    return (
+      <div className="text-t3 text-xs">
+        Number of <span className="font-mono">{selectedFeature.id}</span> being
+        used will not reset.
+      </div>
+    );
+  }
 
   if (showCycle) {
     return (
       <div className="text-t3 text-xs">
         Number of <span className="font-mono">{selectedFeature.id}</span> used
-        will reset every billing cycle.
+        will be billed for and reset every{" "}
+        {priceConfig.interval == EntInterval.SemiAnnual
+          ? "6 months"
+          : priceConfig.interval}
+        .
       </div>
     );
   } else {
     return (
       <div className="text-t3 text-xs">
         Number of <span className="font-mono">{selectedFeature.id}</span> being
-        used will carry over each billing cycle.
+        used will carry over every{" "}
+        {priceConfig.interval == EntInterval.SemiAnnual
+          ? "6 months"
+          : priceConfig.interval}
+        .
       </div>
     );
   }

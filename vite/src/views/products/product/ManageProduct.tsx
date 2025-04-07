@@ -79,13 +79,13 @@ export const ManageProduct = ({
         )}
         <CreateEntitlement />
       </div>
-      <div className="flex flex-col gap-4">
+      {/* <div className="flex flex-col gap-4">
         <p className="text-md text-t2 font-medium">Pricing</p>
         {product.prices.length > 0 && (
           <ProductPricingTable prices={product.prices} />
         )}
         <CreatePrice />
-      </div>
+      </div> */}
       {showFreeTrial && (
         <div className="flex flex-col gap-4">
           <p className="text-md text-t2 font-medium">Free Trial</p>

@@ -54,7 +54,7 @@ export default function ProductSidebar() {
           >
             <div className="w-fit">
               <AccordionTrigger className="data-[state=closed]:hover:bg-white data-[state=closed]:hover:border-zinc-200 border border-transparent text-t2 p-2">
-                <span>Features Included</span>
+                <span>Included Features</span>
               </AccordionTrigger>
             </div>
             <AccordionContent>
@@ -80,7 +80,7 @@ export default function ProductSidebar() {
           >
             <div className="w-fit">
               <AccordionTrigger className="data-[state=closed]:hover:bg-white data-[state=closed]:hover:border-zinc-200 border border-transparent text-t2 p-2">
-                <span>Pricing</span>
+                <span>Prices </span>
               </AccordionTrigger>
             </div>
             <AccordionContent>

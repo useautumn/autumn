@@ -93,7 +93,7 @@ export const CreateEntitlement = () => {
       <DialogContent
         className={cn(
           "translate-y-[0%] top-[20%] sm:max-w-xl",
-          selectedFeature && "sm:max-w-2xl"
+          selectedFeature && "sm:max-w-3xl"
         )}
       >
         <DialogHeader>
