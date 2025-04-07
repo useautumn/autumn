@@ -6,6 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Feature } from "@autumn/shared";
 import { EllipsisVertical, MinusIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 
@@ -14,11 +15,13 @@ export default function MoreMenuButton({
   setFields,
   showPerEntity,
   setShowPerEntity,
+  selectedFeature,
 }: {
   fields: any;
   setFields: (fields: any) => void;
   showPerEntity: boolean;
   setShowPerEntity: (showPerEntity: boolean) => void;
+  selectedFeature: Feature | null;
 }) {
   const [showPopover, setShowPopover] = useState(false);
 
@@ -28,10 +31,12 @@ export default function MoreMenuButton({
         <Button
           variant="outline"
           size="sm"
-          className="text-t3 text-xs"
+          className="text-t3 text-xs bg-transparent border-none shadow-none justify-start"
           onClick={() => setShowPopover(!showPopover)}
+          // disabled={!selectedFeature}
         >
-          <EllipsisVertical size={12} />
+          <EllipsisVertical size={14} className="mr-1" />
+          More
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-48 p-2 flex flex-col text-xs" align="end">

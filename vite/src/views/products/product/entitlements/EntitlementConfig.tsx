@@ -62,6 +62,9 @@ export const EntitlementConfig = ({
   setSelectedFeature,
   priceConfig,
   setPriceConfig,
+  handleCreateEntitlement,
+  handleUpdateEntitlement,
+  handleDeleteEntitlement,
 }: {
   isUpdate?: boolean;
   entitlement: EntitlementWithFeature | Entitlement | null;
@@ -71,6 +74,9 @@ export const EntitlementConfig = ({
   setSelectedFeature: (feature: Feature | null) => void;
   priceConfig: any;
   setPriceConfig: (priceConfig: any) => void;
+  handleCreateEntitlement?: () => void;
+  handleUpdateEntitlement?: () => void;
+  handleDeleteEntitlement?: () => void;
 }) => {
   const { features, product, env } = useProductContext();
   const navigate = useNavigate();
@@ -183,330 +189,382 @@ export const EntitlementConfig = ({
   ]);
 
   return (
-    <div className="w-full overflow-hidden">
-      <Select
-        value={selectedFeature?.internal_id}
-        onValueChange={(value) => {
-          setSelectedFeature(getFeature(value, features));
-          setPriceConfig({
-            ...priceConfig,
-            internal_feature_id: value,
-          });
-        }}
-        disabled={isUpdate}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select a feature" />
-        </SelectTrigger>
-        <SelectContent>
-          {features
-            .filter((feature: Feature) => {
-              if (selectedFeature?.internal_id == feature.internal_id) {
-                return true; // show the selected feature in the dropdown
-              }
-              const existingEnt = product.entitlements.find(
-                (ent: Entitlement) =>
-                  ent.internal_feature_id === feature.internal_id
-              );
-              return !existingEnt; // show features that are not already in the product
-            })
-            .map((feature: Feature) => (
-              <SelectItem
-                key={feature.internal_id}
-                value={feature.internal_id!}
-              >
-                <div className="flex gap-2 items-center">
-                  {feature.name}
-                  <FeatureTypeBadge type={feature.type} />
-                </div>
-              </SelectItem>
-            ))}
-          <Button
-            className="flex w-full text-xs font-medium bg-white shadow-none text-primary hover:bg-stone-200"
-            onClick={(e) => {
-              e.preventDefault();
-              setShowFeatureCreate(true);
-            }}
-          >
-            <PlusIcon className="w-3 h-3 mr-2" />
-            Create new feature
-          </Button>
-        </SelectContent>
-      </Select>
-
-      {selectedFeature && selectedFeature?.type != FeatureType.Boolean && (
-        <div className="flex flex-col mt-4 text-sm">
-          <Tabs
-            defaultValue="fixed"
-            className=""
-            value={fields.allowance_type}
-            // onValueChange={(value) =>
-            //   setFields({
-            //     ...fields,
-            //     allowance_type: value as AllowanceType,
-            //   })
-            // }
-          >
-            {/* <div className="flex justify-between items-center">
-              <TabsList>
-                <TabsTrigger value="fixed">Fixed</TabsTrigger>
-                <TabsTrigger value="unlimited">Unlimited</TabsTrigger>
-              </TabsList>
-            </div> */}
-            <TabsContent
-              value={fields.allowance_type}
-              className="flex flex-col gap-4"
+    <div className="w-full flex overflow-hidden gap-4">
+      <div className="flex flex-col gap-2 w-full">
+        <Select
+          value={selectedFeature?.internal_id}
+          onValueChange={(value) => {
+            setSelectedFeature(getFeature(value, features));
+            setPriceConfig({
+              ...priceConfig,
+              internal_feature_id: value,
+            });
+          }}
+          disabled={isUpdate}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select a feature" />
+          </SelectTrigger>
+          <SelectContent>
+            {features
+              .filter((feature: Feature) => {
+                if (selectedFeature?.internal_id == feature.internal_id) {
+                  return true; // show the selected feature in the dropdown
+                }
+                const existingEnt = product.entitlements.find(
+                  (ent: Entitlement) =>
+                    ent.internal_feature_id === feature.internal_id
+                );
+                return !existingEnt; // show features that are not already in the product
+              })
+              .map((feature: Feature) => (
+                <SelectItem
+                  key={feature.internal_id}
+                  value={feature.internal_id!}
+                >
+                  <div className="flex gap-2 items-center">
+                    {feature.name}
+                    <FeatureTypeBadge type={feature.type} />
+                  </div>
+                </SelectItem>
+              ))}
+            <Button
+              className="flex w-full text-xs font-medium bg-white shadow-none text-primary hover:bg-stone-200"
+              onClick={(e) => {
+                e.preventDefault();
+                setShowFeatureCreate(true);
+              }}
             >
-              <div className="flex gap-2 w-full justify-end">
-                <ToggleDisplayButton
-                  label="Add Cycle"
-                  show={showCycle}
-                  disabled={fields.allowance_type == AllowanceType.Unlimited}
-                  onClick={() => setShowCycle(!showCycle)}
-                >
-                  {showCycle ? (
-                    <MinusIcon size={14} className="mr-1" />
-                  ) : (
-                    <PlusIcon size={14} className="mr-1" />
-                  )}
-                  Usage Reset
-                </ToggleDisplayButton>
-                <ToggleDisplayButton
-                  label="Add Price"
-                  show={showPrice}
-                  disabled={fields.allowance_type == AllowanceType.Unlimited}
-                  onClick={() => {
-                    if (
-                      priceConfig.usage_tiers.length == 1 // if there's only 1 usage tier and it has a Number "to" value, add another usage tier
-                      //  && typeof priceConfig.usage_tiers[0].to === "number"
-                    ) {
-                      if (!showPrice) {
-                        //function for adding price
-                        setPriceConfig({
-                          ...priceConfig,
-                          usage_tiers: [
-                            {
-                              from: 0,
-                              to: priceConfig.usage_tiers[0].to || -1,
-                              amount: priceConfig.usage_tiers[0].amount || 0,
-                            },
-                            ...(Number(priceConfig.usage_tiers[0].to) > 0 // if the first usage tier has a Number "to" value, add another usage tier
-                              ? [
-                                  {
-                                    from: priceConfig.usage_tiers[0].to,
-                                    to: -1,
-                                    amount: 0,
-                                  },
-                                ]
-                              : []),
-                          ],
-                        });
-                      } else {
-                        //function for removing price
-                        setPriceConfig({
-                          ...priceConfig,
-                          usage_tiers: [
-                            {
-                              from: 0,
-                              to:
-                                priceConfig.usage_tiers[0].to > 0
-                                  ? priceConfig.usage_tiers[0].to
-                                  : "",
-                              amount: 0,
-                            },
-                          ],
-                        });
-                      }
-                    }
-                    setShowPrice(!showPrice);
-                  }}
-                >
+              <PlusIcon className="w-3 h-3 mr-2" />
+              Create new feature
+            </Button>
+          </SelectContent>
+        </Select>
+        {selectedFeature && selectedFeature?.type != FeatureType.Boolean && (
+          <div className="flex flex-col text-sm">
+            <Tabs
+              defaultValue="fixed"
+              className=""
+              value={fields.allowance_type}
+              // onValueChange={(value) =>
+              //   setFields({
+              //     ...fields,
+              //     allowance_type: value as AllowanceType,
+              //   })
+              // }
+            >
+              {/* <div className="flex justify-between items-center">
+                <TabsList>
+                  <TabsTrigger value="fixed">Fixed</TabsTrigger>
+                  <TabsTrigger value="unlimited">Unlimited</TabsTrigger>
+                </TabsList>
+              </div> */}
+              <TabsContent
+                value={fields.allowance_type}
+                className="flex flex-col gap-4"
+              >
+                <div className="flex flex-col ">
+                  <FieldLabel className="flex items-center gap-2">
+                    {showPrice ? "Pricing" : "Included Usage"}
+                    <Tooltip delayDuration={400}>
+                      <TooltipTrigger asChild>
+                        <InfoIcon className="w-3 h-3 text-t3/50" />
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={5} side="top">
+                        How much usage of this feature is included as part of
+                        this plan
+                      </TooltipContent>
+                    </Tooltip>
+                  </FieldLabel>
                   {showPrice ? (
-                    <MinusIcon size={14} className="mr-1" />
-                  ) : (
-                    <PlusIcon size={14} className="mr-1" />
-                  )}
-                  {showPrice ? "Remove Price" : "Add Price"}
-                </ToggleDisplayButton>
-                <MoreMenuButton
-                  fields={fields}
-                  setFields={setFields}
-                  showPerEntity={showPerEntity}
-                  setShowPerEntity={setShowPerEntity}
-                />
-              </div>
-              <div className="flex flex-col ">
-                <FieldLabel className="flex items-center gap-2">
-                  {showPrice ? "Pricing" : "Included Usage"}
-                  <Tooltip delayDuration={400}>
-                    <TooltipTrigger asChild>
-                      <InfoIcon className="w-3 h-3 text-t3/50" />
-                    </TooltipTrigger>
-                    <TooltipContent sideOffset={5} side="top">
-                      How much usage of this feature is included as part of this
-                      plan
-                    </TooltipContent>
-                  </Tooltip>
-                </FieldLabel>
-                {showPrice ? (
-                  <TieredPrice
-                    selectedFeature={selectedFeature}
-                    config={priceConfig}
-                    setShowPrice={setShowPrice}
-                    setConfig={setPriceConfig}
-                  />
-                ) : (
-                  <div className="flex w-full h-fit gap-2">
-                    <Input
-                      placeholder="eg. 100"
-                      className=""
-                      disabled={
-                        fields.allowance_type == AllowanceType.Unlimited
-                      }
-                      value={priceConfig.usage_tiers[0].to}
-                      type={
-                        fields.allowance_type === AllowanceType.Unlimited
-                          ? "text"
-                          : "number"
-                      }
-                      onChange={(e) => {
-                        if (Number(e.target.value)) {
-                          setPriceConfig({
-                            ...priceConfig,
-                            usage_tiers: [
-                              {
-                                from: 0,
-                                to: Number(e.target.value),
-                                amount: 0,
-                              },
-                            ],
-                          });
-                        } else {
-                          setPriceConfig({
-                            ...priceConfig,
-                            usage_tiers: [
-                              {
-                                from: 0,
-                                to: e.target.value,
-                                amount: 0,
-                              },
-                            ],
-                          });
-                        }
-                      }}
+                    <TieredPrice
+                      selectedFeature={selectedFeature}
+                      config={priceConfig}
+                      setShowPrice={setShowPrice}
+                      setConfig={setPriceConfig}
                     />
-                    <ToggleDisplayButton
-                      label="Unlimited"
-                      show={fields.allowance_type == AllowanceType.Unlimited}
-                      className="h-8"
-                      onClick={() => {
-                        fields.allowance_type == AllowanceType.Unlimited
-                          ? (setFields({
-                              ...fields,
-                              allowance_type: AllowanceType.Fixed,
-                            }),
-                            setPriceConfig({
-                              ...priceConfig,
-                              usage_tiers: [{ from: 0, to: "", amount: 0.0 }],
-                            }))
-                          : (setFields({
-                              ...fields,
-                              allowance_type: AllowanceType.Unlimited,
-                            }),
+                  ) : (
+                    <div className="flex w-full h-fit gap-2">
+                      <Input
+                        placeholder="eg. 100"
+                        className=""
+                        disabled={
+                          fields.allowance_type == AllowanceType.Unlimited
+                        }
+                        value={priceConfig.usage_tiers[0].to}
+                        type={
+                          fields.allowance_type === AllowanceType.Unlimited
+                            ? "text"
+                            : "number"
+                        }
+                        onChange={(e) => {
+                          if (Number(e.target.value)) {
                             setPriceConfig({
                               ...priceConfig,
                               usage_tiers: [
-                                { from: 0, to: "unlimited", amount: 0.0 },
+                                {
+                                  from: 0,
+                                  to: Number(e.target.value),
+                                  amount: 0,
+                                },
                               ],
-                            }),
-                            setShowCycle(false));
-                      }}
-                    >
-                      ♾️
-                    </ToggleDisplayButton>
-                  </div>
-                )}
-              </div>
-              {(showPerEntity || showCycle || showPrice) && (
-                <div className="flex gap-2 transition-all duration-200 ease-in-out animate-in fade-in fade-out">
-                  {showPerEntity && (
-                    <div className="flex flex-col w-full overflow-hidden">
-                      <FieldLabel className="flex items-center gap-2">
-                        Entity
-                        <Tooltip delayDuration={400}>
-                          <TooltipTrigger asChild>
-                            <InfoIcon className="w-3 h-3 text-t3/50" />
-                          </TooltipTrigger>
-                          <TooltipContent sideOffset={5} side="top">
-                            An entity (eg, a user) within the customer to assign
-                            this entitlement to
-                          </TooltipContent>
-                        </Tooltip>
-                      </FieldLabel>
-                      <Select
-                        value={fields.entity_feature_id}
-                        onValueChange={(value) =>
-                          setFields({ ...fields, entity_feature_id: value })
-                        }
+                            });
+                          } else {
+                            setPriceConfig({
+                              ...priceConfig,
+                              usage_tiers: [
+                                {
+                                  from: 0,
+                                  to: e.target.value,
+                                  amount: 0,
+                                },
+                              ],
+                            });
+                          }
+                        }}
+                      />
+                      <ToggleDisplayButton
+                        label="Unlimited"
+                        show={fields.allowance_type == AllowanceType.Unlimited}
+                        className="h-8"
+                        onClick={() => {
+                          fields.allowance_type == AllowanceType.Unlimited
+                            ? (setFields({
+                                ...fields,
+                                allowance_type: AllowanceType.Fixed,
+                              }),
+                              setPriceConfig({
+                                ...priceConfig,
+                                usage_tiers: [{ from: 0, to: "", amount: 0.0 }],
+                              }))
+                            : (setFields({
+                                ...fields,
+                                allowance_type: AllowanceType.Unlimited,
+                              }),
+                              setPriceConfig({
+                                ...priceConfig,
+                                usage_tiers: [
+                                  { from: 0, to: "unlimited", amount: 0.0 },
+                                ],
+                              }),
+                              setShowCycle(false));
+                        }}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select feature" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {features
-                            .filter((feature: Feature) => {
-                              if (feature.type === FeatureType.Boolean) {
-                                return false;
-                              }
-                              if (
-                                selectedFeature?.internal_id ===
-                                feature.internal_id
-                              ) {
-                                return false;
-                              }
-                              return true;
-                            })
-                            .map((feature: Feature) => (
-                              <SelectItem
-                                key={feature.internal_id}
-                                value={feature.id}
-                              >
-                                <div className="flex gap-2 items-center">
-                                  per {feature.name}
-                                  <span className="font-mono text-t3">
-                                    {feature.id}
-                                  </span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
+                        ♾️
+                      </ToggleDisplayButton>
                     </div>
                   )}
-                  {(showCycle || showPrice) && (
-                    <SelectCycle
-                      showPrice={showPrice}
-                      priceConfig={priceConfig}
-                      setPriceConfig={setPriceConfig}
-                      fields={fields}
-                      setFields={setFields}
-                      setShowCycle={setShowCycle}
-                      showCycle={showCycle}
-                      selectedFeature={selectedFeature}
-                    />
-                  )}
                 </div>
+                {(showPerEntity || showCycle || showPrice) && (
+                  <div className="flex gap-2 transition-all duration-200 ease-in-out animate-in fade-in fade-out">
+                    {showPerEntity && (
+                      <div className="flex flex-col w-full overflow-hidden">
+                        <FieldLabel className="flex items-center gap-2">
+                          Entity
+                          <Tooltip delayDuration={400}>
+                            <TooltipTrigger asChild>
+                              <InfoIcon className="w-3 h-3 text-t3/50" />
+                            </TooltipTrigger>
+                            <TooltipContent sideOffset={5} side="top">
+                              An entity (eg, a user) within the customer to
+                              assign this entitlement to
+                            </TooltipContent>
+                          </Tooltip>
+                        </FieldLabel>
+                        <Select
+                          value={fields.entity_feature_id}
+                          onValueChange={(value) =>
+                            setFields({ ...fields, entity_feature_id: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select feature" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {features
+                              .filter((feature: Feature) => {
+                                if (feature.type === FeatureType.Boolean) {
+                                  return false;
+                                }
+                                if (
+                                  selectedFeature?.internal_id ===
+                                  feature.internal_id
+                                ) {
+                                  return false;
+                                }
+                                return true;
+                              })
+                              .map((feature: Feature) => (
+                                <SelectItem
+                                  key={feature.internal_id}
+                                  value={feature.id}
+                                >
+                                  <div className="flex gap-2 items-center">
+                                    per {feature.name}
+                                    <span className="font-mono text-t3">
+                                      {feature.id}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {(showCycle || showPrice) && (
+                      <SelectCycle
+                        showPrice={showPrice}
+                        priceConfig={priceConfig}
+                        setPriceConfig={setPriceConfig}
+                        fields={fields}
+                        setFields={setFields}
+                        setShowCycle={setShowCycle}
+                        showCycle={showCycle}
+                        selectedFeature={selectedFeature}
+                      />
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
+      </div>
+      {selectedFeature && (
+        <>
+          <div className="border-l ml-4"></div>
+          <div className="flex flex-col w-fit justify-between gap-16 animate-in slide-in-from-right-1/2 duration-300 fade-out">
+            <div className="flex flex-col gap-2 w-32">
+              <ToggleDisplayButton
+                label="Add Price"
+                show={showPrice}
+                disabled={
+                  fields.allowance_type == AllowanceType.Unlimited
+                  // ||
+                  // !selectedFeature
+                }
+                className="w-full justify-start"
+                onClick={() => {
+                  if (
+                    priceConfig.usage_tiers.length == 1 // if there's only 1 usage tier and it has a Number "to" value, add another usage tier
+                    //  && typeof priceConfig.usage_tiers[0].to === "number"
+                  ) {
+                    if (!showPrice) {
+                      //function for adding price
+                      setPriceConfig({
+                        ...priceConfig,
+                        usage_tiers: [
+                          {
+                            from: 0,
+                            to: priceConfig.usage_tiers[0].to || -1,
+                            amount: priceConfig.usage_tiers[0].amount || 0,
+                          },
+                          ...(Number(priceConfig.usage_tiers[0].to) > 0 // if the first usage tier has a Number "to" value, add another usage tier
+                            ? [
+                                {
+                                  from: priceConfig.usage_tiers[0].to,
+                                  to: -1,
+                                  amount: 0,
+                                },
+                              ]
+                            : []),
+                        ],
+                      });
+                    } else {
+                      //function for removing price
+                      setPriceConfig({
+                        ...priceConfig,
+                        usage_tiers: [
+                          {
+                            from: 0,
+                            to:
+                              priceConfig.usage_tiers[0].to > 0
+                                ? priceConfig.usage_tiers[0].to
+                                : "",
+                            amount: 0,
+                          },
+                        ],
+                      });
+                    }
+                  }
+                  setShowPrice(!showPrice);
+                }}
+              >
+                {showPrice ? (
+                  <MinusIcon size={14} className="mr-1" />
+                ) : (
+                  <PlusIcon size={14} className="mr-1" />
+                )}
+                {showPrice ? "Remove Price" : "Add Price"}
+              </ToggleDisplayButton>
+              <ToggleDisplayButton
+                label="Add Cycle"
+                show={showCycle}
+                disabled={
+                  fields.allowance_type == AllowanceType.Unlimited
+                  // ||
+                  // !selectedFeature
+                }
+                className="w-full justify-start"
+                onClick={() => setShowCycle(!showCycle)}
+              >
+                {showCycle ? (
+                  <MinusIcon size={14} className="mr-1" />
+                ) : (
+                  <PlusIcon size={14} className="mr-1" />
+                )}
+                Usage Reset
+              </ToggleDisplayButton>
+              <MoreMenuButton
+                fields={fields}
+                setFields={setFields}
+                showPerEntity={showPerEntity}
+                setShowPerEntity={setShowPerEntity}
+                selectedFeature={selectedFeature}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              {handleDeleteEntitlement && (
+                <Button
+                  variant="destructive"
+                  // disabled={!selectedFeature}
+                  className="w-full rounded-sm"
+                  size="sm"
+                  onClick={() => {
+                    handleDeleteEntitlement();
+                  }}
+                >
+                  Delete
+                </Button>
               )}
-            </TabsContent>
-          </Tabs>
-        </div>
+              {handleUpdateEntitlement && (
+                <Button
+                  variant="gradientPrimary"
+                  // disabled={!selectedFeature}
+                  className="w-full"
+                  onClick={() => {
+                    handleUpdateEntitlement();
+                  }}
+                >
+                  Update Feature
+                </Button>
+              )}
+              {handleCreateEntitlement && (
+                <Button
+                  variant="gradientPrimary"
+                  disabled={!selectedFeature}
+                  className="w-full"
+                  onClick={() => {
+                    handleCreateEntitlement();
+                  }}
+                >
+                  Add to Product
+                </Button>
+              )}
+            </div>
+          </div>
+        </>
       )}
-
-      {/* {selectedFeature &&
-        selectedFeature?.type != FeatureType.Boolean &&
-        fields.allowance_type == AllowanceType.Fixed && (
-          <div className="flex items-center gap-4 text-sm"></div>
-        )} */}
     </div>
   );
 };

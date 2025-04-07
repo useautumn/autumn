@@ -23,6 +23,7 @@ import { FeaturesContext } from "@/views/features/FeaturesContext";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { getDefaultPriceConfig } from "@/utils/product/priceUtils";
 import { validateConfig } from "../prices/PricingConfig";
+import { cn } from "@/lib/utils";
 
 export const CreateEntitlement = () => {
   const [open, setOpen] = useState(false);
@@ -89,7 +90,12 @@ export const CreateEntitlement = () => {
           Add Feature
         </Button>
       </DialogTrigger>
-      <DialogContent className="translate-y-[0%] top-[20%]">
+      <DialogContent
+        className={cn(
+          "translate-y-[0%] top-[20%] sm:max-w-xl",
+          selectedFeature && "sm:max-w-2xl"
+        )}
+      >
         <DialogHeader>
           <div className="flex flex-col">
             {showFeatureCreate && (
@@ -125,15 +131,16 @@ export const CreateEntitlement = () => {
                 setSelectedFeature={setSelectedFeature}
                 setPriceConfig={setPriceConfig}
                 priceConfig={priceConfig}
+                handleCreateEntitlement={handleCreateEntitlement}
               />
-              <DialogFooter>
+              {/* <DialogFooter className="w-full flex sm:justify-end mt-4">
                 <Button
                   onClick={handleCreateEntitlement}
                   variant="gradientPrimary"
                 >
                   Add to Product
                 </Button>
-              </DialogFooter>
+              </DialogFooter> */}
             </div>
           )}
         </div>
