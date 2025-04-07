@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { compareStatus, getBackendErr, navigateTo } from "@/utils/genUtils";
-import { CusProduct, CusProductStatus } from "@autumn/shared";
+import { CusProduct, CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { useCustomerContext } from "./CustomerContext";
 
@@ -42,7 +42,7 @@ export const CustomerProductList = ({
   products: any;
 }) => {
   const navigate = useNavigate();
-  const { env } = useCustomerContext();
+  const { env, versionCounts } = useCustomerContext();
 
   const sortedProducts = customer.products.sort((a: any, b: any) => {
     if (a.status !== b.status) {
@@ -67,7 +67,7 @@ export const CustomerProductList = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedProducts.map((cusProduct: CusProduct) => {
+          {sortedProducts.map((cusProduct: FullCusProduct) => {
             return (
               <TableRow
                 key={cusProduct.id}
@@ -83,19 +83,29 @@ export const CustomerProductList = ({
                 }}
               >
                 <TableCell>
-                  <AdminHover texts={[
-                    {
-                      key: "Cus Product ID",
-                      value: cusProduct.id,
-                    },
-                    {
-                      key: "Stripe Subscription ID (1)",
-                      value: cusProduct.subscription_ids?.[0] || "N/A",
-                    },
-                  ]}>
-                    {
-                      products.find((p: any) => p.id === cusProduct.product_id)?.name
-                    }
+                  <AdminHover
+                    texts={[
+                      {
+                        key: "Cus Product ID",
+                        value: cusProduct.id,
+                      },
+                      {
+                        key: "Stripe Subscription ID (1)",
+                        value: cusProduct.subscription_ids?.[0] || "N/A",
+                      },
+                    ]}
+                  >
+                    <div className="flex items-center gap-2">
+                      <p>{cusProduct.product.name}</p>
+                      {versionCounts[cusProduct.product.id] > 1 && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-stone-50 text-t3 px-2 py-0 ml-2 font-mono"
+                        >
+                          v{cusProduct.product.version}
+                        </Badge>
+                      )}
+                    </div>
                   </AdminHover>
                 </TableCell>
                 <TableCell className="overflow-hidden text-ellipsis">

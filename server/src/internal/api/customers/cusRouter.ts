@@ -131,27 +131,7 @@ cusRouter.delete("/:customer_id", async (req: any, res: any) => {
   }
 });
 
-cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
-  const customerId = req.params.customer_id;
-  try {
-    const events = await EventService.getByCustomerId({
-      sb: req.sb,
-      customerId,
-      orgId: req.orgId,
-      env: req.env,
-    });
 
-    for (const event of events) {
-      if (!event.value) {
-        delete event.value;
-      }
-    }
-
-    res.status(200).json({ events });
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "get customer events" });
-  }
-});
 
 cusRouter.post("/:customer_id", async (req: any, res: any) => {
   try {

@@ -30,7 +30,7 @@ export const checkScheduleContainsProducts = async ({
 
   let priceCount = 0;
   for (const productId of productIds) {
-    let product = await ProductService.getFullProductStrict({
+    let product = await ProductService.getFullProduct({
       productId: productId,
       sb: sb,
       orgId: org.id,
@@ -68,7 +68,7 @@ export const checkSubscriptionContainsProducts = async ({
 
   let totalPriceCount = 0;
   for (const productId of productIds) {
-    let product = await ProductService.getFullProductStrict({
+    let product = await ProductService.getFullProduct({
       productId: productId,
       sb: sb,
       orgId: org.id,

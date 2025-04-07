@@ -13,8 +13,8 @@ import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { usageRouter } from "./events/usageRouter.js";
 import couponRouter from "./coupons/couponRouter.js";
 import { invoiceRouter } from "./customers/invoiceRouter.js";
-import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { entityRouter } from "./entities/entityRouter.js";
+import { migrationRouter } from "./migrations/migrationRouter.js";
 
 const apiRouter = Router();
 
@@ -66,5 +66,7 @@ apiRouter.use("/prices", priceRouter);
 apiRouter.use("/entitled", entitledRouter);
 apiRouter.use("/usage", usageRouter);
 apiRouter.use("/entities", entityRouter);
+apiRouter.use("/migrations", migrationRouter);
+
 
 export { apiRouter };

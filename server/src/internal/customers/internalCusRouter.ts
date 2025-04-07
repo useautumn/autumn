@@ -3,7 +3,11 @@ import { CusService } from "./CusService.js";
 import { ProductService } from "../products/ProductService.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
 import { FeatureService } from "../features/FeatureService.js";
-import { FullCustomerEntitlement, FullCustomerPrice } from "@autumn/shared";
+import {
+  CusProductStatus,
+  FullCustomerEntitlement,
+  FullCustomerPrice,
+} from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { CouponService } from "../coupons/CouponService.js";
 import { EventService } from "../api/events/EventService.js";
@@ -11,6 +15,9 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "../orgs/OrgService.js";
 import { EntityService } from "../api/entities/EntityService.js";
 import { getCusEntMasterBalance } from "./entitlements/cusEntUtils.js";
+import { getLatestProducts } from "../products/productUtils.js";
+import { getProductVersionCounts } from "../products/productUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const cusRouter = Router();
 
@@ -68,13 +75,23 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
           env,
         }),
 
-        ProductService.getFullProducts({ sb, orgId, env }),
+        ProductService.getFullProducts({ sb, orgId, env, returnAll: true }),
         EventService.getByCustomerId({
           sb,
           customerId: customer_id,
           env,
           orgId: orgId,
           limit: 10,
+          fields: [
+            "id",
+            "event_name",
+            "value",
+            "timestamp",
+            "idempotency_key",
+            "properties",
+            "set_usage",
+            "entity_id",
+          ],
         }),
         CusService.getByIdOrInternalId({
           sb,
@@ -144,15 +161,23 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
     // For each cus ent, show full entitlement?
     // Order full customer entitlements by created_at descending, then id
-    fullCustomer.entitlements = fullCustomer.entitlements.sort((a: any, b: any) => {
-      // Sort by cusProduct created_at
-      const productA = fullCustomer.products.find((p: any) => p.id === a.customer_product_id);
-      const productB = fullCustomer.products.find((p: any) => p.id === b.customer_product_id);
+    fullCustomer.entitlements = fullCustomer.entitlements.sort(
+      (a: any, b: any) => {
+        // Sort by cusProduct created_at
+        const productA = fullCustomer.products.find(
+          (p: any) => p.id === a.customer_product_id
+        );
+        const productB = fullCustomer.products.find(
+          (p: any) => p.id === b.customer_product_id
+        );
 
-      // new Date(productB.created_at).getTime() - new Date(productA.created_at).getTime() || productA.id.localeCompare(productB.id) || 
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime() || b.id.localeCompare(a.id);
-      
-    });
+        // new Date(productB.created_at).getTime() - new Date(productA.created_at).getTime() || productA.id.localeCompare(productB.id) ||
+        return (
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime() ||
+          b.id.localeCompare(a.id)
+        );
+      }
+    );
 
     for (const cusEnt of fullCustomer.entitlements) {
       // let entitlement = cusEnt.entitlement;
@@ -169,7 +194,8 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
     res.status(200).send({
       customer: fullCustomer,
-      products,
+      products: getLatestProducts(products),
+      versionCounts: getProductVersionCounts(products),
       invoices,
       features,
       coupons,
@@ -182,3 +208,91 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     handleRequestError({ req, error, res, action: "get customer data" });
   }
 });
+
+cusRouter.get(
+  "/:customer_id/product/:product_id",
+  async (req: any, res: any) => {
+    const { sb, org, env } = req;
+    const { customer_id, product_id } = req.params;
+    const version = req.query.version;
+    const orgId = req.orgId;
+
+    try {
+      const customer = await CusService.getByIdOrInternalId({
+        sb,
+        orgId,
+        env,
+        idOrInternalId: customer_id,
+        isFull: true,
+      });
+
+      const features = await FeatureService.getFeatures({
+        sb,
+        orgId,
+        env,
+      });
+
+      if (!customer) {
+        throw new RecaseError({
+          message: "Customer not found",
+          code: "CUSTOMER_NOT_FOUND",
+        });
+      }
+
+      let cusProduct;
+
+      if (notNullish(version)) {
+        cusProduct = customer.products.find(
+          (p: any) =>
+            p.product.id === product_id &&
+            p.status === CusProductStatus.Active &&
+            p.product.version === parseInt(version)
+        );
+      } else {
+        cusProduct = customer.products.find(
+          (p: any) =>
+            p.product.id === product_id && p.status === CusProductStatus.Active
+        );
+      }
+
+      let product;
+
+      if (cusProduct) {
+        product = {
+          ...cusProduct.product,
+          entitlements: cusProduct.customer_entitlements.map(
+            (ent: any) => ent.entitlement
+          ),
+          prices: cusProduct.customer_prices.map((price: any) => price.price),
+          free_trial: cusProduct.free_trial,
+          options: cusProduct.options,
+          isActive: cusProduct.status === CusProductStatus.Active,
+        };
+      } else {
+        product = await ProductService.getFullProduct({
+          sb,
+          orgId,
+          env,
+          productId: product_id,
+          version:
+            version && Number.isInteger(parseInt(version))
+              ? parseInt(version)
+              : undefined,
+        });
+      }
+
+      let numVersions = await ProductService.getProductVersionCount({
+        sb,
+        orgId,
+        env,
+        productId: product_id,
+      });
+
+      // console.log("Product", product);
+
+      res.status(200).send({ customer, product, features, numVersions });
+    } catch (error) {
+      handleRequestError({ req, error, res, action: "get customer product" });
+    }
+  }
+);

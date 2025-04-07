@@ -20,7 +20,7 @@ export const CustomerSchema = z.object({
 export const CreateCustomerSchema = z.object({
   id: z
     .string()
-    .regex(/^[^\s]+$/)
+    .regex(/^[a-zA-Z0-9_@-]+$/) // Allow alphanumeric characters, underscores, hyphens, and @
     .nullish(), // id is not allowed whitespace characters
   name: z.string().nullish(),
   email: z.string().nullish(),

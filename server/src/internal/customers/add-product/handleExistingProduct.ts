@@ -192,7 +192,7 @@ export const handleExistingProduct = async ({
   }
 
   // Case 3: Main product is same -- remove scheduled and update quantity
-  if (curMainProduct?.product.internal_id === product.internal_id) {
+  if (curMainProduct?.product.id === product.id) {
     return await handleSameMainProduct({
       sb,
       curMainProduct,

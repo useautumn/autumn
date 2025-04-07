@@ -167,7 +167,11 @@ export const handleNewFreeTrial = async ({
   internalProductId: string;
   isCustom: boolean;
 }) => {
+  
+  // If new free trial is null
   if (!newFreeTrial) {
+
+    // Delete if not custom and current free trial exists
     if (!isCustom && curFreeTrial) {
       await FreeTrialService.delete({
         sb,
