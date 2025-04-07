@@ -199,7 +199,7 @@ publicRouter.get(
   "/products/:product_id/options",
   async (req: any, res: any) => {
     try {
-      const product = await ProductService.getFullProductStrict({
+      const product = await ProductService.getFullProduct({
         sb: req.sb,
         productId: req.params.product_id,
         orgId: req.org.id,

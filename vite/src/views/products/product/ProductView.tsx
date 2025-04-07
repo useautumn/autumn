@@ -5,7 +5,7 @@ import LoadingScreen from "@/views/general/LoadingScreen";
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { ProductContext } from "./ProductContext";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { ManageProduct } from "./ManageProduct";
 
@@ -30,13 +30,20 @@ function ProductView({ env }: { env: AppEnv }) {
 
   const [product, setProduct] = useState<FrontendProduct | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  // const [version, setVersion] = useState<number | null>(null);
+  // Get version from url query params
+  const [searchParams] = useSearchParams();
+  const version = searchParams.get("version");
 
   const { data, isLoading, mutate } = useAxiosSWR({
-    url: `/products/${product_id}/data`,
+    url: `/products/${product_id}/data?version=${version}`,
     env,
   });
 
-  console.log(data);
+  const { data: counts, mutate: mutateCount } = useAxiosSWR({
+    url: `/products/${product_id}/count?version=${version}`,
+    env,
+  });
 
   //this is to make sure pricing for unlimited entitlements can't be applied
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
@@ -113,6 +120,7 @@ function ProductView({ env }: { env: AppEnv }) {
       }
 
       await mutate();
+      await mutateCount();
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to update product"));
     }
@@ -128,6 +136,9 @@ function ProductView({ env }: { env: AppEnv }) {
         setProduct,
         selectedEntitlementAllowance,
         setSelectedEntitlementAllowance,
+        counts,
+        version,
+        mutateCount,
       }}
     >
       <div className="flex flex-col gap-0.5">
@@ -146,7 +157,10 @@ function ProductView({ env }: { env: AppEnv }) {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <ManageProduct product={product} />
+        <ManageProduct
+          product={product}
+          version={version ? parseInt(version) : undefined}
+        />
       </div>
       <div className="flex justify-end gap-2">
         <AddProductButton

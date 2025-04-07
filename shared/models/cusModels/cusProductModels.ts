@@ -87,6 +87,7 @@ export const FullCusProductSchema = CusProductSchema.extend({
       price: PriceSchema,
     })
   ),
+
   customer_entitlements: z.array(
     CustomerEntitlementSchema.extend({
       entitlement: EntitlementSchema.extend({
@@ -94,8 +95,11 @@ export const FullCusProductSchema = CusProductSchema.extend({
       }),
     })
   ),
+
   customer: CustomerSchema,
   product: ProductSchema,
+  free_trial: FreeTrialSchema.nullish(),
+  is_custom: z.boolean().default(false),
 });
 
 export type FullCusProduct = z.infer<typeof FullCusProductSchema>;

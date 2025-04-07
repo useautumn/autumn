@@ -28,7 +28,10 @@ import {
   cancelFutureProductSchedule,
   getFilteredScheduleItems,
 } from "../change-product/scheduleUtils.js";
-import { handleUpgrade } from "../change-product/handleUpgrade.js";
+import {
+  handleUpgrade,
+  ProrationBehavior,
+} from "../change-product/handleUpgrade.js";
 import { fullCusProductToProduct } from "../products/cusProductUtils.js";
 
 const getOptionsToUpdate = (oldOptionsList: any[], newOptionsList: any[]) => {
@@ -237,7 +240,27 @@ export const handleSameMainProduct = async ({
     newOptionsList
   );
 
+  // If new version
+  let isNewVersion = curMainProduct.product.version !== product.version;
+  if (isNewVersion) {
+    logger.info(`SCENARIO 1: UPDATE SAME PRODUCT (NEW VERSION)`);
+    await handleUpgrade({
+      req,
+      res,
+      attachParams,
+      curCusProduct: curMainProduct,
+      curFullProduct: fullCusProductToProduct(curMainProduct),
+      newVersion: true,
+      carryExistingUsages: true,
+      prorationBehavior: ProrationBehavior.None,
+    });
+    return {
+      done: true,
+      curCusProduct: curMainProduct,
+    };
+  }
   // If is custom, and there's at least one different price / entitlement, allow update to current main product...
+
   if (isCustom) {
     let pricesChanged = hasPricesChanged({
       oldPrices: curMainProduct.customer_prices.map((p) => p.price),
@@ -251,12 +274,15 @@ export const handleSameMainProduct = async ({
       newEntitlements: attachParams.entitlements,
     });
 
+    let isNewVersion = curMainProduct.product.version !== product.version;
+
     if (pricesChanged || entitlementsChanged) {
       logger.info(`SCENARIO 0: UPDATE SAME PRODUCT`);
       logger.info(
         `Prices changed: ${pricesChanged}, Entitlements changed: ${entitlementsChanged}`
       );
 
+      attachParams.isCustom = true;
       await handleUpgrade({
         req,
         res,
@@ -264,6 +290,7 @@ export const handleSameMainProduct = async ({
         curCusProduct: curMainProduct,
         curFullProduct: fullCusProductToProduct(curMainProduct),
         hasPricesChanged: pricesChanged,
+        carryExistingUsages: true,
       });
       return {
         done: true,

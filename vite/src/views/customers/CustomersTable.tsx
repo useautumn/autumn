@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
+import { useCustomersContext } from "./CustomersContext";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
   customer_products: z.array(
@@ -43,6 +44,7 @@ export const CustomersTable = ({
   customers: CustomerWithProducts[];
 }) => {
   const env = useEnv();
+  const { versionCounts } = useCustomersContext();
 
   // console.log("customers", customers);
   const getCusProductsInfo = (customer: CustomerWithProducts) => {
@@ -66,10 +68,29 @@ export const CustomersTable = ({
       const name = cusProduct.product.name;
       const status = cusProduct.status;
 
+      const versionCount = versionCounts[cusProduct.product.id];
+      const version = cusProduct.product.version;
+
+      let prodName = (
+        <>
+          {name}
+          {versionCount > 1 && (
+            <>
+              <Badge
+                variant="outline"
+                className="text-xs bg-stone-50 text-t3 px-2 ml-2 font-mono py-0"
+              >
+                v{version}
+              </Badge>
+            </>
+          )}
+        </>
+      );
+
       if (status === CusProductStatus.PastDue) {
         return (
           <>
-            <span>{name}</span>{" "}
+            <span>{prodName}</span>{" "}
             <Badge variant="status" className="bg-red-500">
               Past Due
             </Badge>
@@ -79,7 +100,7 @@ export const CustomersTable = ({
         if (cusProduct.canceled_at) {
           return (
             <>
-              <span>{name}</span>{" "}
+              <span>{prodName}</span>{" "}
               <Badge variant="status" className="bg-yellow-500">
                 Canceled
               </Badge>
@@ -91,7 +112,7 @@ export const CustomersTable = ({
         ) {
           return (
             <>
-              <span>{name}</span>{" "}
+              <span>{prodName}</span>{" "}
               <Badge variant="status" className="bg-lime-500">
                 Trial
               </Badge>
@@ -100,7 +121,7 @@ export const CustomersTable = ({
         } else {
           return (
             <>
-              <span>{name}</span>
+              <span>{prodName}</span>
             </>
           );
         }

@@ -185,7 +185,7 @@ const invoiceForUsageImmediately = async ({
     );
 
     // TO TEST
-    let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!)
+    let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
 
     let invoiceItem = {
       customer: customer.processor.id,
@@ -350,7 +350,7 @@ export const billForRemainingUsages = async ({
     });
   }
 
-  console.log("BILL UPGRADE IMMEDIATELY", org.config?.bill_upgrade_immediately);
+  // console.log("BILL UPGRADE IMMEDIATELY", org.config?.bill_upgrade_immediately);
 
   if (org.config?.bill_upgrade_immediately) {
     await invoiceForUsageImmediately({

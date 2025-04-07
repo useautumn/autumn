@@ -9,6 +9,8 @@ import {
 import Stripe from "stripe";
 import { isStripeCardDeclined } from "../stripeCardUtils.js";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
+import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
+import { getStripeProrationBehavior } from "../stripeSubUtils.js";
 
 export const updateStripeSubscription = async ({
   org,
@@ -19,6 +21,8 @@ export const updateStripeSubscription = async ({
   trialEnd,
   prices,
   invoiceOnly,
+  prorationBehavior,
+  logger,
 }: {
   org: Organization;
   customer: Customer;
@@ -28,6 +32,8 @@ export const updateStripeSubscription = async ({
   prices: Price[];
   trialEnd?: number;
   invoiceOnly: boolean;
+  prorationBehavior?: ProrationBehavior;
+  logger: any;
 }) => {
   let paymentMethod = await getCusPaymentMethod({
     org,
@@ -56,14 +62,15 @@ export const updateStripeSubscription = async ({
     return false;
   });
 
-  let prorationBehaviour = org.config.bill_upgrade_immediately
-    ? "always_invoice"
-    : "create_prorations";
+  let stripeProration = getStripeProrationBehavior({
+    org,
+    prorationBehavior,
+  });
 
   try {
     const sub = await stripeCli.subscriptions.update(subscriptionId, {
       items: subItems,
-      proration_behavior: prorationBehaviour,
+      proration_behavior: stripeProration,
       trial_end: trialEnd,
       default_payment_method: paymentMethod as string,
       add_invoice_items: subInvoiceItems,
@@ -74,6 +81,7 @@ export const updateStripeSubscription = async ({
       payment_behavior: "error_if_incomplete",
     });
 
+    // logger.info(`Updated stripe subscription ${subscriptionId}`);
     return sub;
   } catch (error: any) {
     console.log("Error updating stripe subscription.", error.message);
