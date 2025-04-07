@@ -115,6 +115,11 @@ export const validateUsageConfig = (usageConfig: any) => {
     return null;
   }
 
+  if (config.usage_tiers.slice(0, -1).some((tier: any) => tier.to < 0)) {
+    toast.error("There can be no negative values in your pricing tiers");
+    return null;
+  }
+
   if (bill_when === BillWhen.BelowThreshold) {
   } else if (bill_when === BillWhen.StartOfPeriod) {
     if (!interval) {

@@ -76,7 +76,7 @@ export const getDefaultPriceConfig = (type: PriceType) => {
     usage_tiers: [
       {
         from: 0,
-        to: -1,
+        to: "",
         amount: 0.0,
       },
     ],

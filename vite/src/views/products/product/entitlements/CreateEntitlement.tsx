@@ -10,15 +10,26 @@ import { PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useProductContext } from "../ProductContext";
 import { EntitlementConfig } from "./EntitlementConfig";
-import { CreateEntitlementSchema, Entitlement, Feature } from "@autumn/shared";
+import {
+  CreateEntitlementSchema,
+  CreatePriceSchema,
+  Entitlement,
+  Feature,
+  PriceType,
+} from "@autumn/shared";
 import { CreateFeature } from "@/views/features/CreateFeature";
 import { FeatureConfig } from "@/views/features/metered-features/FeatureConfig";
 import { FeaturesContext } from "@/views/features/FeaturesContext";
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { getDefaultPriceConfig } from "@/utils/product/priceUtils";
+import { validateConfig } from "../prices/PricingConfig";
 
 export const CreateEntitlement = () => {
   const [open, setOpen] = useState(false);
   const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
+  const [priceConfig, setPriceConfig] = useState<any>(
+    getDefaultPriceConfig(PriceType.Usage) // default price config
+  );
   const { features, product, setProduct } = useProductContext();
 
   // console.log("Entitlement", entitlement);
@@ -31,15 +42,35 @@ export const CreateEntitlement = () => {
 
   const handleCreateEntitlement = async () => {
     const newEntitlement = CreateEntitlementSchema.parse(entitlement);
-    console.log("New entitlement", newEntitlement);
+    // console.log("New entitlement", newEntitlement);
+
+    const newPrice = CreatePriceSchema.parse({
+      name: "price",
+      config: {
+        ...priceConfig,
+        internal_feature_id: selectedFeature?.internal_id,
+        feature_id: selectedFeature?.id,
+      },
+    });
+
+    console.log("saving newPrice", newPrice);
+
+    const config = validateConfig(newPrice, product.prices);
+
+    if (!config) {
+      console.log("invalid price config");
+      return;
+    }
 
     setProduct({
       ...product,
       entitlements: [...product.entitlements, newEntitlement],
+      prices: [...product.prices, newPrice],
     });
 
     setOpen(false);
     setEntitlement(null);
+    setPriceConfig(getDefaultPriceConfig(PriceType.Usage));
   };
 
   return (
@@ -52,6 +83,7 @@ export const CreateEntitlement = () => {
           onClick={() => {
             setSelectedFeature(null);
             setEntitlement(null);
+            setPriceConfig(getDefaultPriceConfig(PriceType.Usage));
           }}
         >
           Add Feature
@@ -91,6 +123,8 @@ export const CreateEntitlement = () => {
                 setShowFeatureCreate={setShowFeatureCreate}
                 selectedFeature={selectedFeature}
                 setSelectedFeature={setSelectedFeature}
+                setPriceConfig={setPriceConfig}
+                priceConfig={priceConfig}
               />
               <DialogFooter>
                 <Button

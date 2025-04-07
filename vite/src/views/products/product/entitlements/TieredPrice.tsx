@@ -19,7 +19,7 @@ export default function TieredPrice({
 }) {
   const [editBillingUnits, setEditBillingUnits] = useState(false);
 
-  const setUsageTier = (index: number, key: string, value: string) => {
+  const setUsageTier = (index: number, key: string, value: string | number) => {
     const newUsageTiers = [...config.usage_tiers];
     newUsageTiers[index] = { ...newUsageTiers[index], [key]: value };
     if (key === "to" && newUsageTiers[index + 1]) {
@@ -47,7 +47,11 @@ export default function TieredPrice({
     const newUsageTiers = [...config.usage_tiers];
 
     if (newUsageTiers.length == 1) {
-      setShowPrice(false); // If there is only one tier, then set back to allowance input
+      setShowPrice(false);
+      setConfig({
+        ...config,
+        usage_tiers: [{ from: 0, to: "", amount: 0.0 }],
+      }); // If there is only one tier, then set back to allowance input
       return;
     }
     newUsageTiers.splice(index, 1);
@@ -65,7 +69,7 @@ export default function TieredPrice({
                   <UsageTierInput
                     value={tier.from || 0}
                     onChange={(e) =>
-                      setUsageTier(index, "from", e.target.value)
+                      setUsageTier(index, "from", Number(e.target.value))
                     }
                     type="from"
                     config={config}
@@ -82,7 +86,7 @@ export default function TieredPrice({
                   <UsageTierInput
                     value={tier.to}
                     onChange={(e) => {
-                      setUsageTier(index, "to", e.target.value);
+                      setUsageTier(index, "to", Number(e.target.value));
                     }}
                     type="to"
                     config={config}
@@ -96,7 +100,7 @@ export default function TieredPrice({
                 <UsageTierInput
                   value={tier.amount}
                   onChange={(e) =>
-                    setUsageTier(index, "amount", e.target.value)
+                    setUsageTier(index, "amount", Number(e.target.value))
                   }
                   type="amount"
                   config={config}
@@ -156,11 +160,11 @@ export default function TieredPrice({
             isIcon
             size="sm"
             variant="ghost"
-            className="w-fit text-t3"
+            className="w-fit text-t3 mr-1"
             onClick={() => handleRemoveTier(index)}
             dim={6}
           >
-            <Minus size={12} className="text-t3" />
+            <X size={12} className="text-t3" />
           </Button>
         </div>
       ))}
