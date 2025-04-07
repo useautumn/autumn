@@ -31,20 +31,7 @@ export default function UpdateEntitlement({
   const { setProduct, product, features } = useProductContext();
 
   const handleDeleteEntitlement = () => {
-    const relatedPrice = product.prices.find((price: any) => {
-      return (
-        price.config.internal_feature_id ===
-        selectedEntitlement.internal_feature_id
-      );
-    });
-
-    if (relatedPrice) {
-      toast.error(
-        `Cannot remove entitlement used by price "${relatedPrice.name}"`
-      );
-      return;
-    }
-
+    // Remove the entitlement
     const updatedEntitlements = product.entitlements.filter(
       (entitlement: any) => {
         return (
@@ -54,10 +41,18 @@ export default function UpdateEntitlement({
       }
     );
 
-    console.log("Updated entitlements: ", updatedEntitlements);
+    // Remove any prices associated with this entitlement
+    const updatedPrices = product.prices.filter((price: any) => {
+      return (
+        price.config.internal_feature_id !==
+        selectedEntitlement.internal_feature_id
+      );
+    });
+
     setProduct({
       ...product,
       entitlements: updatedEntitlements,
+      prices: updatedPrices,
     });
 
     setOpen(false);
@@ -97,7 +92,7 @@ export default function UpdateEntitlement({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="">
+      <DialogContent className="sm:max-w-3xl">
         <DialogTitle>Update Feature</DialogTitle>
         <EntitlementConfig
           entitlement={selectedEntitlement}

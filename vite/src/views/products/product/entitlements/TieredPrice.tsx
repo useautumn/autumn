@@ -23,7 +23,7 @@ export default function TieredPrice({
     const newUsageTiers = [...config.usage_tiers];
     newUsageTiers[index] = { ...newUsageTiers[index], [key]: value };
     if (key === "to" && newUsageTiers[index + 1]) {
-      newUsageTiers[index + 1].from = value;
+      newUsageTiers[index + 1].from = value; // set value of next tier from to the value of the current tier to
     }
     setConfig({ ...config, usage_tiers: newUsageTiers });
   };
@@ -131,7 +131,7 @@ export default function TieredPrice({
                     size="sm"
                     variant="ghost"
                     disabled={index > 0}
-                    className="w-fit text-t3"
+                    className="w-fit text-t3 max-w-24 overflow-hidden justify-start"
                     onClick={() => setEditBillingUnits(true)}
                   >
                     {config.billing_units == 1
