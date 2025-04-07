@@ -1,4 +1,3 @@
-import { SupabaseClient } from "@supabase/supabase-js";
 import { CusProductService } from "../products/CusProductService.js";
 import Stripe from "stripe";
 import { AttachParams } from "../products/AttachParams.js";
@@ -20,7 +19,7 @@ import {
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { differenceInDays } from "date-fns";
-import { cancelScheduledProductIfExists } from "./changeProductUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 const scheduleStripeSubscription = async ({
   attachParams,
@@ -106,11 +105,9 @@ export const handleDowngrade = async ({
   logger.info(
     `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
   );
-  
 
   // Make use of stripe subscription schedules to handle the downgrade
   logger.info("1. Cancelling current subscription (at period end)");
-
 
   const curSubscriptions = await getStripeSubs({
     stripeCli,
@@ -136,6 +133,10 @@ export const handleDowngrade = async ({
       otherSub: sub,
     };
 
+    if (notNullish(sub.schedule)) {
+      await stripeCli.subscriptionSchedules.release(sub.schedule as string);
+    }
+
     if (differenceInDays(latestEndDate, curEndDate) > 10) {
       await stripeCli.subscriptions.update(sub.id, {
         cancel_at: latestPeriodEnd,
@@ -147,7 +148,6 @@ export const handleDowngrade = async ({
     }
   }
 
-  
   // 3. Schedule new subscription IF new product is not free...
   logger.info("2. Schedule new subscription");
 
@@ -229,8 +229,6 @@ export const handleDowngrade = async ({
       }
     }
   }
-
-
 
   // Remove scheduled ids from curCusProduct
   await CusProductService.update({

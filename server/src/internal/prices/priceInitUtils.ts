@@ -253,7 +253,6 @@ export const handleNewPrices = async ({
 
   const createdPrices: Price[] = [];
   const updatedPrices: Price[] = [];
-  console.log("newPrices", newPrices);
 
   for (let newPrice of newPrices) {
     // Validate price

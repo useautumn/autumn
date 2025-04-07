@@ -130,7 +130,23 @@ const handleStripeSubUpdate = async ({
     });
 
     for (const scheduleObj of schedules) {
-      const { interval } = scheduleObj;
+      const { interval, schedule } = scheduleObj;
+
+      // If schedule has passed, skip this step.
+      let phase = schedule.phases.length > 0 ? schedule.phases[0] : null;
+      let now = Date.now();
+      if (schedule.test_clock) {
+        let testClock = await stripeCli.testHelpers.testClocks.retrieve(
+          schedule.test_clock as string
+        );
+        now = testClock.frozen_time * 1000;
+      }
+
+      if (phase && phase.start_date * 1000 < now) {
+        logger.info("Note: Schedule has passed, skipping");
+        continue;
+      }
+
       // Get corresponding item set
       const itemSet = itemSets.find((itemSet) => itemSet.interval === interval);
       if (!itemSet) {
