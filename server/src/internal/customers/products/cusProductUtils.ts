@@ -175,7 +175,7 @@ export const activateDefaultProduct = async ({
       product: defaultProd,
       prices: defaultProd.prices,
       entitlements: defaultProd.entitlements,
-      freeTrial: defaultProd.free_trial,
+      freeTrial: defaultProd.free_trial || null,
       optionsList: [],
       entities: [],
     },
@@ -318,7 +318,6 @@ export const processFullCusProduct = ({
 }) => {
   // Process prices
 
-
   const prices = cusProduct.customer_prices.map((cp) => {
     let price = cp.price;
 
@@ -378,7 +377,6 @@ export const processFullCusProduct = ({
       }
     }
   });
-
 
   const trialing =
     cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
