@@ -20,6 +20,7 @@ export default function UpdateEntitlement({
   setSelectedEntitlement,
   priceConfig,
   setPriceConfig,
+  selectedIndex,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -27,6 +28,7 @@ export default function UpdateEntitlement({
   setSelectedEntitlement: (entitlement: any) => void;
   priceConfig: any;
   setPriceConfig: (priceConfig: any) => void;
+  selectedIndex?: number | null;
 }) {
   const { setProduct, product, features } = useProductContext();
 
@@ -62,7 +64,7 @@ export default function UpdateEntitlement({
     const updatedEntitlements = product.entitlements.map((entitlement: any) => {
       if (
         entitlement.internal_feature_id ===
-        selectedEntitlement.internal_feature_id
+        selectedEntitlement?.internal_feature_id
       ) {
         return {
           ...entitlement,
@@ -72,8 +74,12 @@ export default function UpdateEntitlement({
       return entitlement;
     });
 
-    const updatedPrices = product.prices.map((price: any) => {
-      if (
+    const updatedPrices = product.prices.map((price: any, index: number) => {
+      if (priceConfig.type == PriceType.Fixed) {
+        if (index === selectedIndex) {
+          return { name: price.name, config: priceConfig };
+        }
+      } else if (
         price.config.internal_feature_id ===
         selectedEntitlement.internal_feature_id
       ) {

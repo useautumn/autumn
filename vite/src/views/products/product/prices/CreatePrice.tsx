@@ -60,7 +60,7 @@ export const CreatePrice = () => {
       </DialogTrigger>
       <DialogContent>
         <DialogTitle>Create Price</DialogTitle>
-        <PricingConfig price={price} setPrice={setPrice} />
+        <PricingConfig priceConfig={price} setPriceConfig={setPrice} />
         <DialogFooter>
           <Button
             onClick={handleCreatePrice}
