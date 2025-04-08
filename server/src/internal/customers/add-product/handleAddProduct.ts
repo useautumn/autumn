@@ -1,4 +1,5 @@
 import {
+  getBillingType,
   getBillLaterPrices,
   getBillNowPrices,
   getPriceEntitlement,
@@ -15,7 +16,7 @@ import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { AttachParams } from "../products/AttachParams.js";
 import { getPriceAmount } from "../../prices/priceUtils.js";
-import { BillingInterval, ErrCode } from "@autumn/shared";
+import { BillingInterval, BillingType, ErrCode } from "@autumn/shared";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import {
   getInvoiceExpansion,
@@ -32,7 +33,6 @@ import {
   getAlignedIntervalUnix,
   getNextStartOfMonthUnix,
 } from "@/internal/prices/billingIntervalUtils.js";
-import { format } from "date-fns";
 
 const handleBillNowPrices = async ({
   sb,
@@ -87,6 +87,7 @@ const handleBillNowPrices = async ({
       }
 
       subscription = await createStripeSub({
+        sb,
         stripeCli,
         customer,
         org,
@@ -217,6 +218,7 @@ const handleOneOffPrices = async ({
   let stripeInvoice = await stripeCli.invoices.create({
     customer: customer.processor.id,
     auto_advance: false,
+    currency: org.default_currency,
   });
 
   // 2. Create invoice items
@@ -237,11 +239,25 @@ const handleOneOffPrices = async ({
 
     let product = getProductForPrice(price, products);
 
+    let amountData = {};
+    let billingType = getBillingType(price.config!);
+
+    if (billingType == BillingType.OneOff) {
+      amountData = {
+        price: price.config?.stripe_price_id,
+      };
+    } else {
+      amountData = {
+        amount: amount * 100,
+        currency: org.default_currency,
+      };
+    }
+
     await stripeCli.invoiceItems.create({
       customer: customer.processor.id,
-      amount: amount * 100,
       invoice: stripeInvoice.id,
       description: `${product?.name}${allowanceStr}`,
+      ...amountData,
     });
   }
 

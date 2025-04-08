@@ -108,16 +108,17 @@ const handleStripeSubUpdate = async ({
   // 3. Update current subscription
   let newSubs = [];
   const subUpdate: Stripe.Subscription = await updateStripeSubscription({
+    sb,
     stripeCli,
     subscriptionId: firstSub.id,
-    items: firstItemSet.items,
     trialEnd,
     org: attachParams.org,
     customer: attachParams.customer,
-    prices: firstItemSet.prices,
     invoiceOnly: attachParams.invoiceOnly || false,
     prorationBehavior,
     logger,
+
+    itemSet: firstItemSet,
   });
 
   newSubs.push(subUpdate);
@@ -158,6 +159,8 @@ const handleStripeSubUpdate = async ({
         newItems: itemSet.items,
         stripeCli,
         cusProducts: [curCusProduct, attachParams.curScheduledProduct],
+        itemSet,
+        sb,
       });
     }
   }
@@ -210,6 +213,7 @@ const handleStripeSubUpdate = async ({
     }
 
     const newSub = await createStripeSub({
+      sb,
       stripeCli,
       customer: attachParams.customer,
       org: attachParams.org,

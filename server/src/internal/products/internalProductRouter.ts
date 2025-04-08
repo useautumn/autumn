@@ -93,7 +93,6 @@ productRouter.get("/counts", async (req: any, res) => {
         }
       }
     }
-    console.log(result);
 
     res.status(200).send(result);
   } catch (error) {

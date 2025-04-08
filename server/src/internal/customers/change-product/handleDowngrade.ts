@@ -19,17 +19,22 @@ import {
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { differenceInDays } from "date-fns";
-import { notNullish } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 const scheduleStripeSubscription = async ({
+  sb,
   attachParams,
   stripeCli,
   itemSet,
   endOfBillingPeriod,
 }: {
+  sb: SupabaseClient;
   attachParams: AttachParams;
   stripeCli: Stripe;
-  itemSet: any;
+  itemSet: ItemSet;
   endOfBillingPeriod: number;
 }) => {
   const { org, customer } = attachParams;
@@ -60,10 +65,21 @@ const scheduleStripeSubscription = async ({
       {
         items: subItems,
         default_payment_method: paymentMethod as string,
-        metadata: itemSet.subMeta,
+        // metadata: itemSet.subMeta,
         add_invoice_items: oneOffItems,
       },
     ],
+  });
+
+  await SubService.createSub({
+    sb: sb,
+    sub: {
+      id: generateId("sub"),
+      stripe_id: null,
+      stripe_schedule_id: newSubscriptionSchedule.id,
+      created_at: Date.now(),
+      usage_features: itemSet.usageFeatures,
+    },
   });
 
   return newSubscriptionSchedule.id;
@@ -183,6 +199,8 @@ export const handleDowngrade = async ({
         newItems: itemSet.items,
         stripeCli,
         cusProducts: [curCusProduct, attachParams.curScheduledProduct],
+        itemSet: itemSet,
+        sb: req.sb,
       });
       scheduledIds.push(scheduleObj.schedule.id);
     } else {
@@ -211,6 +229,7 @@ export const handleDowngrade = async ({
         stripeCli,
         itemSet,
         endOfBillingPeriod: latestPeriodEnd,
+        sb: req.sb,
       });
       scheduledIds.push(scheduleId);
 
