@@ -21,6 +21,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import ErrorScreen from "@/views/general/ErrorScreen";
+import ConfirmNewVersionDialog from "./ConfirmNewVersionDialog";
 
 function ProductView({ env }: { env: AppEnv }) {
   const { product_id } = useParams();
@@ -33,6 +34,7 @@ function ProductView({ env }: { env: AppEnv }) {
   // const [version, setVersion] = useState<number | null>(null);
   // Get version from url query params
   const [searchParams] = useSearchParams();
+  const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
   const version = searchParams.get("version");
 
   const { data, isLoading, mutate } = useAxiosSWR({
@@ -104,7 +106,7 @@ function ProductView({ env }: { env: AppEnv }) {
     );
   }
 
-  const handleCreateProduct = async () => {
+  const createProduct = async () => {
     try {
       await ProductService.updateProduct(axiosInstance, product.id, {
         ...UpdateProductSchema.parse(product),
@@ -126,6 +128,20 @@ function ProductView({ env }: { env: AppEnv }) {
     }
   };
 
+  const createProductClicked = async () => {
+    if (counts?.all > 0) {
+      setShowNewVersionDialog(true);
+      return;
+    }
+
+    if (version && version < data?.numVersions) {
+      toast.error("You can only update the latest version of a product");
+      return;
+    }
+
+    await createProduct();
+  };
+
   return (
     <ProductContext.Provider
       value={{
@@ -141,7 +157,14 @@ function ProductView({ env }: { env: AppEnv }) {
         mutateCount,
       }}
     >
+      <ConfirmNewVersionDialog
+        open={showNewVersionDialog}
+        setOpen={setShowNewVersionDialog}
+        createProduct={createProduct}
+      />
+
       <div className="flex flex-col gap-0.5">
+        {/* Confirm version modal */}
         <Breadcrumb className="text-t3">
           <BreadcrumbList className="text-t3 text-xs">
             <BreadcrumbItem
@@ -164,7 +187,7 @@ function ProductView({ env }: { env: AppEnv }) {
       </div>
       <div className="flex justify-end gap-2">
         <AddProductButton
-          handleCreateProduct={handleCreateProduct}
+          handleCreateProduct={createProductClicked}
           actionState={actionState}
         />
       </div>

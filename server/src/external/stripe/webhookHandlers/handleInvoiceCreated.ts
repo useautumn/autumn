@@ -77,7 +77,9 @@ const handleInArrearProrated = async ({
   }
 
   let feature = cusEnt.entitlement.feature;
-  logger.info(`Handling invoice.created for in arrear prorated, feature: ${feature.id}`);
+  logger.info(
+    `Handling invoice.created for in arrear prorated, feature: ${feature.id}`
+  );
 
   let deletedEntities = await EntityService.getByInternalCustomerId({
     sb,
@@ -119,7 +121,6 @@ const handleInArrearProrated = async ({
         delete newEntities[entityId];
       }
     }
-
 
     await CustomerEntitlementService.update({
       sb,
@@ -336,6 +337,7 @@ export const sendUsageAndReset = async ({
     }
 
     let usageBasedSub = await getUsageBasedSub({
+      sb: sb,
       stripeCli,
       subIds: activeProduct.subscription_ids || [],
       feature: relatedCusEnt.entitlement.feature,
@@ -428,7 +430,7 @@ export const handleInvoiceCreated = async ({
   });
 
   // Get stripe subscriptions
-  
+
   if (invoice.subscription) {
     const activeProducts = await CusProductService.getByStripeSubId({
       sb,
@@ -451,8 +453,6 @@ export const handleInvoiceCreated = async ({
     });
 
     for (const activeProduct of activeProducts) {
-      
-
       await sendUsageAndReset({
         sb,
         activeProduct,

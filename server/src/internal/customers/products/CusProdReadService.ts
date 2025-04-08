@@ -24,6 +24,7 @@ export class CusProdReadService {
       canceled: result.f2,
       custom: result.f3,
       trialing: result.f4,
+      all: result.f5,
     };
   };
   // Get count of active cus products by product id

@@ -6,6 +6,8 @@ import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { generateId } from "@/utils/genUtils.js";
 
 export const handleSubCreated = async ({
   sb,
@@ -29,6 +31,43 @@ export const handleSubCreated = async ({
     if (!cusProds || cusProds.length === 0) {
       console.log("No cus prod found for scheduled id", subscription.schedule);
       return;
+    }
+
+    // Update autumn sub
+    let autumnSub = await SubService.getFromScheduleId({
+      sb,
+      scheduleId: subscription.schedule as string,
+    });
+
+    if (autumnSub) {
+      await SubService.updateFromScheduleId({
+        sb,
+        scheduleId: subscription.schedule as string,
+        updates: {
+          stripe_id: subscription.id,
+        },
+      });
+    } else {
+      let subUsageFeatures = [];
+      try {
+        subUsageFeatures = JSON.parse(subscription.metadata?.usage_features);
+        subUsageFeatures = subUsageFeatures.map(
+          (feature: any) => feature.internal_id
+        );
+      } catch (error) {
+        console.log("Error parsing usage features", error);
+      }
+
+      await SubService.createSub({
+        sb,
+        sub: {
+          id: generateId("sub"),
+          created_at: Date.now(),
+          stripe_id: subscription.id,
+          stripe_schedule_id: subscription.schedule as string,
+          usage_features: subUsageFeatures,
+        },
+      });
     }
 
     console.log(
