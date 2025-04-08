@@ -11,10 +11,15 @@ import {
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { generateId } from "@/utils/genUtils.js";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
 
 // Get payment method
 
 export const createStripeSub = async ({
+  sb,
   stripeCli,
   customer,
   org,
@@ -23,6 +28,7 @@ export const createStripeSub = async ({
   billingCycleAnchorUnix,
   itemSet,
 }: {
+  sb: SupabaseClient;
   stripeCli: Stripe;
   customer: Customer;
   freeTrial: FreeTrial | null;
@@ -30,12 +36,7 @@ export const createStripeSub = async ({
   invoiceOnly?: boolean;
   billingCycleAnchorUnix?: number;
 
-  itemSet: {
-    items: any;
-    subMeta: any;
-    prices: Price[];
-    interval: BillingInterval;
-  };
+  itemSet: ItemSet;
 }) => {
   let paymentMethod = await getCusPaymentMethod({
     org,
@@ -51,7 +52,7 @@ export const createStripeSub = async ({
     };
   }
 
-  const { items, prices, interval, subMeta } = itemSet;
+  const { items, prices, interval, subMeta, usageFeatures } = itemSet;
   let subItems = items.filter(
     (i: any, index: number) =>
       prices[index].config!.interval !== BillingInterval.OneOff
@@ -69,13 +70,27 @@ export const createStripeSub = async ({
       trial_end: freeTrialToStripeTimestamp(freeTrial),
       payment_behavior: "error_if_incomplete",
       add_invoice_items: invoiceItems,
-      metadata: subMeta || {},
       collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
+      // metadata: subMeta || {},
       days_until_due: invoiceOnly ? 30 : undefined,
 
       billing_cycle_anchor: billingCycleAnchorUnix
         ? Math.floor(billingCycleAnchorUnix / 1000)
         : undefined,
+    });
+
+    // Store
+    await SubService.createSub({
+      sb,
+      sub: {
+        id: generateId("sub"),
+        stripe_id: subscription.id,
+        stripe_schedule_id: subscription.schedule as string,
+        created_at: subscription.created * 1000,
+        usage_features: usageFeatures,
+        org_id: org.id,
+        env: customer.env,
+      },
     });
 
     // if (invoiceOnly && subscription.latest_invoice) {

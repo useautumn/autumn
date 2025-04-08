@@ -80,6 +80,7 @@ const updateFeatureQuantity = async ({
   for (const options of optionsToUpdate) {
     const { new: newOptions, old: oldOptions } = options;
     const subToUpdate = await getUsageBasedSub({
+      sb: sb,
       stripeCli: stripeCli,
       subIds: curCusProduct.subscription_ids || [],
       feature: {
@@ -324,6 +325,7 @@ export const handleSameMainProduct = async ({
       cusProducts: attachParams.cusProducts!,
       product: product,
       logger,
+      env: customer.env,
     });
 
     // Delete scheduled product

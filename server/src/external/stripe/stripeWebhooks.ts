@@ -99,6 +99,7 @@ stripeWebhookRouter.post(
             subscription: deletedSubscription,
             org,
             env,
+            logger,
           });
           break;
 
@@ -154,6 +155,7 @@ stripeWebhookRouter.post(
             org,
             env,
             schedule: canceledSchedule,
+            logger,
           });
           break;
       }

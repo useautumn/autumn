@@ -22,151 +22,151 @@ import { handleDowngrade } from "./handleDowngrade.js";
 import { getPricesForCusProduct } from "./scheduleUtils.js";
 import { cancelScheduledProductIfExists } from "./changeProductUtils.js";
 
-const scheduleStripeSubscription = async ({
-  attachParams,
-  stripeCli,
-  itemSet,
-  endOfBillingPeriod,
-}: {
-  attachParams: AttachParams;
-  stripeCli: Stripe;
-  itemSet: any;
-  endOfBillingPeriod: number;
-}) => {
-  const { org, customer } = attachParams;
-  const { items, prices, subMeta } = itemSet;
-  const paymentMethod = await getCusPaymentMethod({
-    org,
-    env: customer.env,
-    stripeId: customer.processor.id,
-  });
+// const scheduleStripeSubscription = async ({
+//   attachParams,
+//   stripeCli,
+//   itemSet,
+//   endOfBillingPeriod,
+// }: {
+//   attachParams: AttachParams;
+//   stripeCli: Stripe;
+//   itemSet: any;
+//   endOfBillingPeriod: number;
+// }) => {
+//   const { org, customer } = attachParams;
+//   const { items, prices, subMeta } = itemSet;
+//   const paymentMethod = await getCusPaymentMethod({
+//     org,
+//     env: customer.env,
+//     stripeId: customer.processor.id,
+//   });
 
-  let subItems = items.filter(
-    (item: any, index: number) =>
-      prices[index].config!.interval !== BillingInterval.OneOff
-  );
-  let oneOffItems = items.filter(
-    (item: any, index: number) =>
-      prices[index].config!.interval === BillingInterval.OneOff
-  );
+//   let subItems = items.filter(
+//     (item: any, index: number) =>
+//       prices[index].config!.interval !== BillingInterval.OneOff
+//   );
+//   let oneOffItems = items.filter(
+//     (item: any, index: number) =>
+//       prices[index].config!.interval === BillingInterval.OneOff
+//   );
 
-  const newSubscriptionSchedule = await stripeCli.subscriptionSchedules.create({
-    customer: customer.processor.id,
-    start_date: endOfBillingPeriod,
-    phases: [
-      {
-        items: subItems,
-        default_payment_method: paymentMethod as string,
-        metadata: itemSet.subMeta,
-        add_invoice_items: oneOffItems,
-      },
-    ],
-  });
+//   const newSubscriptionSchedule = await stripeCli.subscriptionSchedules.create({
+//     customer: customer.processor.id,
+//     start_date: endOfBillingPeriod,
+//     phases: [
+//       {
+//         items: subItems,
+//         default_payment_method: paymentMethod as string,
+//         metadata: itemSet.subMeta,
+//         add_invoice_items: oneOffItems,
+//       },
+//     ],
+//   });
 
-  return newSubscriptionSchedule.id;
-};
+//   return newSubscriptionSchedule.id;
+// };
 
-const handleDowngradeOld = async ({
-  req,
-  res,
-  attachParams,
-  curCusProduct,
-}: {
-  req: any;
-  res: any;
-  attachParams: AttachParams;
-  curCusProduct: FullCusProduct;
-}) => {
-  let product = attachParams.products[0];
+// const handleDowngradeOld = async ({
+//   req,
+//   res,
+//   attachParams,
+//   curCusProduct,
+// }: {
+//   req: any;
+//   res: any;
+//   attachParams: AttachParams;
+//   curCusProduct: FullCusProduct;
+// }) => {
+//   let product = attachParams.products[0];
 
-  console.log(
-    `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
-  );
+//   console.log(
+//     `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
+//   );
 
-  // 1. Cancel current subscription
-  console.log("1. Cancelling current subscription (at period end)");
+//   // 1. Cancel current subscription
+//   console.log("1. Cancelling current subscription (at period end)");
 
-  const stripeCli = createStripeCli({
-    org: attachParams.org,
-    env: attachParams.customer.env,
-  });
-  const { customer } = attachParams;
+//   const stripeCli = createStripeCli({
+//     org: attachParams.org,
+//     env: attachParams.customer.env,
+//   });
+//   const { customer } = attachParams;
 
-  // 2. Fetch current subscriptions
-  const curSubscriptions = await getStripeSubs({
-    stripeCli,
-    subIds: curCusProduct.subscription_ids!,
-  });
+//   // 2. Fetch current subscriptions
+//   const curSubscriptions = await getStripeSubs({
+//     stripeCli,
+//     subIds: curCusProduct.subscription_ids!,
+//   });
 
-  let latestPeriodEnd = 0;
-  for (const subscription of curSubscriptions) {
-    if (subscription.current_period_end > latestPeriodEnd) {
-      latestPeriodEnd = subscription.current_period_end;
-    }
-  }
+//   let latestPeriodEnd = 0;
+//   for (const subscription of curSubscriptions) {
+//     if (subscription.current_period_end > latestPeriodEnd) {
+//       latestPeriodEnd = subscription.current_period_end;
+//     }
+//   }
 
-  for (const curSub of curSubscriptions) {
-    // either schedule removal or cancel at period end
+//   for (const curSub of curSubscriptions) {
+//     // either schedule removal or cancel at period end
 
-    let periodEnd = curSub.current_period_end;
-    let latestEndDate = new Date(latestPeriodEnd * 1000);
-    let curEndDate = new Date(periodEnd * 1000);
+//     let periodEnd = curSub.current_period_end;
+//     let latestEndDate = new Date(latestPeriodEnd * 1000);
+//     let curEndDate = new Date(periodEnd * 1000);
 
-    if (differenceInDays(latestEndDate, curEndDate) > 10) {
-      await stripeCli.subscriptions.update(curSub.id, {
-        cancel_at: latestPeriodEnd,
-      });
-    } else {
-      await stripeCli.subscriptions.update(curSub.id, {
-        cancel_at_period_end: true,
-      });
-      console.log(`Cancelled subscription ${curSub.id} at period end`);
-    }
-  }
+//     if (differenceInDays(latestEndDate, curEndDate) > 10) {
+//       await stripeCli.subscriptions.update(curSub.id, {
+//         cancel_at: latestPeriodEnd,
+//       });
+//     } else {
+//       await stripeCli.subscriptions.update(curSub.id, {
+//         cancel_at_period_end: true,
+//       });
+//       console.log(`Cancelled subscription ${curSub.id} at period end`);
+//     }
+//   }
 
-  // 3. Schedule new subscription IF new product is not free...
-  console.log("2. Scheduling new subscriptions");
-  let subscriptionScheduleIds: any[] = [];
-  if (!isFreeProduct(attachParams.prices)) {
-    // await removePreviousScheduledProducts({
-    //   sb: req.sb,
-    //   stripeCli,
-    //   attachParams,
-    // });
+//   // 3. Schedule new subscription IF new product is not free...
+//   console.log("2. Scheduling new subscriptions");
+//   let subscriptionScheduleIds: any[] = [];
+//   if (!isFreeProduct(attachParams.prices)) {
+//     // await removePreviousScheduledProducts({
+//     //   sb: req.sb,
+//     //   stripeCli,
+//     //   attachParams,
+//     // });
 
-    // Schedule all the new subscriptions to start at period end
-    const itemSets = await getStripeSubItems({
-      attachParams,
-    });
+//     // Schedule all the new subscriptions to start at period end
+//     const itemSets = await getStripeSubItems({
+//       attachParams,
+//     });
 
-    for (const itemSet of itemSets) {
-      let scheduleId = await scheduleStripeSubscription({
-        attachParams,
-        stripeCli,
-        itemSet,
-        endOfBillingPeriod: latestPeriodEnd,
-      });
-      subscriptionScheduleIds.push(scheduleId);
-    }
-  }
+//     for (const itemSet of itemSets) {
+//       let scheduleId = await scheduleStripeSubscription({
+//         attachParams,
+//         stripeCli,
+//         itemSet,
+//         endOfBillingPeriod: latestPeriodEnd,
+//       });
+//       subscriptionScheduleIds.push(scheduleId);
+//     }
+//   }
 
-  // 2. Insert new full cus product with starts_at later than current billing period
-  console.log("3. Inserting new full cus product (starts at period end)");
-  await createFullCusProduct({
-    sb: req.sb,
-    attachParams: attachToInsertParams(attachParams, product),
-    subscriptionId: undefined,
-    startsAt: latestPeriodEnd * 1000,
-    subscriptionScheduleIds: subscriptionScheduleIds,
-    nextResetAt: latestPeriodEnd * 1000,
-    disableFreeTrial: true,
-  });
+//   // 2. Insert new full cus product with starts_at later than current billing period
+//   console.log("3. Inserting new full cus product (starts at period end)");
+//   await createFullCusProduct({
+//     sb: req.sb,
+//     attachParams: attachToInsertParams(attachParams, product),
+//     subscriptionId: undefined,
+//     startsAt: latestPeriodEnd * 1000,
+//     subscriptionScheduleIds: subscriptionScheduleIds,
+//     nextResetAt: latestPeriodEnd * 1000,
+//     disableFreeTrial: true,
+//   });
 
-  res.status(200).json({
-    success: true,
-    message: `Successfully scheduled downgrade to ${product.name} for customer ${attachParams.customer.name}`,
-  });
-};
+//   res.status(200).json({
+//     success: true,
+//     message: `Successfully scheduled downgrade to ${product.name} for customer ${attachParams.customer.name}`,
+//   });
+// };
 
 export const handleChangeProduct = async ({
   req,

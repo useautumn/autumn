@@ -42,6 +42,8 @@ export const migrateCustomers = async ({
   logger: any;
   customers: Customer[];
 }) => {
+  // console.log(`Migrating ${customers.length} customers`);
+  // return;
   await MigrationService.updateJob({
     sb,
     migrationJobId: migrationJob.id,

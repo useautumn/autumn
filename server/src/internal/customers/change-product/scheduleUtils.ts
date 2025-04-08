@@ -18,6 +18,8 @@ import { AttachParams } from "../products/AttachParams.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
 
 export const getPricesForCusProduct = ({
   cusProduct,
@@ -50,15 +52,23 @@ export const getFilteredScheduleItems = ({
 };
 
 export const updateScheduledSubWithNewItems = async ({
+  sb,
   scheduleObj,
   newItems,
   cusProducts,
   stripeCli,
+  itemSet,
+  org,
+  env,
 }: {
+  sb: SupabaseClient;
   scheduleObj: any;
   newItems: any[];
   cusProducts: (FullCusProduct | null | undefined)[];
   stripeCli: Stripe;
+  itemSet: ItemSet | null;
+  org: Organization;
+  env: AppEnv;
 }) => {
   const { schedule, interval } = scheduleObj;
 
@@ -86,6 +96,17 @@ export const updateScheduledSubWithNewItems = async ({
       },
     ],
   });
+
+  // Update sub schedule ID
+  if (itemSet) {
+    await SubService.addUsageFeatures({
+      sb,
+      scheduleId: scheduleObj.schedule.id,
+      usageFeatures: itemSet.usageFeatures,
+      orgId: org.id,
+      env: env,
+    });
+  }
 };
 
 export const getScheduleIdsFromCusProducts = ({
@@ -112,6 +133,7 @@ export const cancelFutureProductSchedule = async ({
   includeOldItems = true,
   logger,
   inIntervals,
+  env,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -121,6 +143,7 @@ export const cancelFutureProductSchedule = async ({
   includeOldItems?: boolean;
   logger: any;
   inIntervals?: string[];
+  env: AppEnv;
 }) => {
   // 1. Get main and scheduled products
   const { curMainProduct, curScheduledProduct } = await getExistingCusProducts({
@@ -207,6 +230,10 @@ export const cancelFutureProductSchedule = async ({
         newItems: includeOldItems ? oldItemSet?.items || [] : [],
         cusProducts: [curMainProduct, curScheduledProduct],
         stripeCli: stripeCli,
+        itemSet: null,
+        sb: sb,
+        org: org,
+        env: env,
       });
 
       // Put back schedule id into curMainProduct
@@ -316,6 +343,10 @@ export const cancelFutureProductSchedule = async ({
           newItems: oldItemSet?.items || [],
           cusProducts: [],
           stripeCli: stripeCli,
+          itemSet: null,
+          sb: sb,
+          org: org,
+          env: env,
         });
 
         // Put back schedule id into curMainProduct

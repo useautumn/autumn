@@ -5,17 +5,20 @@ import Stripe from "stripe";
 import { CusProductStatus, Organization } from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { createStripeCli } from "../utils.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
 
 export const handleSubscriptionScheduleCanceled = async ({
   sb,
   schedule,
   env,
   org,
+  logger,
 }: {
   sb: SupabaseClient;
   schedule: Stripe.SubscriptionSchedule;
   org: Organization;
   env: AppEnv;
+  logger: any;
 }) => {
   const cusProductsOnSchedule = await CusProductService.getByScheduleId({
     sb,
@@ -72,6 +75,26 @@ export const handleSubscriptionScheduleCanceled = async ({
         },
       });
     }
+  }
+
+  // Delete from subscriptions
+  try {
+    let autumnSub = await SubService.getFromScheduleId({
+      sb,
+      scheduleId: schedule.id,
+    });
+
+    if (autumnSub && !autumnSub.stripe_id) {
+      await SubService.deleteFromScheduleId({
+        sb,
+        scheduleId: schedule.id,
+      });
+    }
+  } catch (error) {
+    logger.error(
+      `handleSubScheduleCanceled: failed to delete from subscriptions table`,
+      error
+    );
   }
 
   // if (cusProduct) {

@@ -30,6 +30,8 @@ import { Decimal } from "decimal.js";
 import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 import { createStripeSub } from "../stripeSubUtils/createStripeSub.js";
 import { getAlignedIntervalUnix } from "@/internal/prices/billingIntervalUtils.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { generateId } from "@/utils/genUtils.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -92,70 +94,6 @@ export const itemMetasToOptions = async ({
       });
     } else {
       attachParams.optionsList[index].quantity = quantity;
-    }
-  }
-};
-
-const handleCheckoutCoupon = async ({
-  checkoutSession,
-  stripeCli,
-  sb,
-  attachParams,
-}: {
-  checkoutSession: Stripe.Checkout.Session;
-  stripeCli: Stripe;
-  sb: SupabaseClient;
-  attachParams: AttachParams;
-}) => {
-  const expandedSession = await stripeCli.checkout.sessions.retrieve(
-    checkoutSession.id,
-    {
-      expand: ["total_details", "total_details.breakdown"],
-    }
-  );
-  let discounts = expandedSession.total_details?.breakdown?.discounts;
-  for (const { amount: amountUsed, discount } of discounts || []) {
-    // 1. Get coupon from DB
-    const coupon = await RewardService.getByInternalId({
-      sb,
-      internalId: discount.coupon.id,
-      orgId: attachParams.org.id,
-      env: attachParams.customer.env,
-    });
-
-    let couponType = getCouponType(coupon);
-
-    if (
-      couponType != CouponType.AddBillingCredits &&
-      couponType != CouponType.AddInvoiceBalance
-    ) {
-      continue;
-    }
-
-    const remainderCredits = new Decimal(discount.coupon.amount_off!)
-      .minus(amountUsed)
-      .toNumber();
-
-    console.log("Remainder credits:", remainderCredits);
-    if (remainderCredits <= 0) {
-      continue;
-    }
-
-    // 1. If apply to all and roll over
-
-    console.log("Coupon type:", couponType);
-    if (couponType == CouponType.AddInvoiceBalance) {
-      // 1. Add invoice balance
-      await stripeCli.customers.createBalanceTransaction(
-        attachParams.customer.processor.id,
-        {
-          amount: -remainderCredits,
-          currency: "usd",
-        }
-      );
-      console.log(
-        `   ✅ checkout.completed: added invoice balance from coupon: ${remainderCredits}`
-      );
     }
   }
 };
@@ -230,6 +168,20 @@ export const handleCheckoutSessionCompleted = async ({
 
     checkoutSub = subscription;
 
+    // 1. Insert sub into db
+    await SubService.createSub({
+      sb,
+      sub: {
+        id: generateId("sub"),
+        created_at: Date.now(),
+        stripe_id: checkoutSession.subscription as string,
+        stripe_schedule_id: null,
+        usage_features: attachParams.itemSets?.[0]?.usageFeatures || [],
+        org_id: org.id,
+        env: attachParams.customer.env,
+      },
+    });
+
     for (const item of subscription.items.data) {
       let stripePriceId = item.price.id;
       let autumnPrice = attachParams.prices.find(
@@ -277,6 +229,7 @@ export const handleCheckoutSessionCompleted = async ({
       );
 
       const subscription = await createStripeSub({
+        sb,
         stripeCli,
         customer: attachParams.customer,
         org,
