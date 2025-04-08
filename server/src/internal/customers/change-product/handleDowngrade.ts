@@ -203,6 +203,8 @@ export const handleDowngrade = async ({
         cusProducts: [curCusProduct, attachParams.curScheduledProduct],
         itemSet: itemSet,
         sb: req.sb,
+        org: attachParams.org,
+        env: attachParams.customer.env,
       });
       scheduledIds.push(scheduleObj.schedule.id);
     } else {
@@ -280,6 +282,7 @@ export const handleDowngrade = async ({
       includeOldItems: false,
       logger: req.logtail,
       inIntervals: intervalsToRemove,
+      env: attachParams.customer.env,
     });
   }
 
