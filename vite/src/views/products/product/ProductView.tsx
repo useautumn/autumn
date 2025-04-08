@@ -129,13 +129,18 @@ function ProductView({ env }: { env: AppEnv }) {
   };
 
   const createProductClicked = async () => {
-    if (counts?.all > 0) {
-      setShowNewVersionDialog(true);
+    if (!counts) {
+      toast.error("Something went wrong, please try again...");
       return;
     }
 
     if (version && version < data?.numVersions) {
       toast.error("You can only update the latest version of a product");
+      return;
+    }
+
+    if (counts?.all > 0) {
+      setShowNewVersionDialog(true);
       return;
     }
 
