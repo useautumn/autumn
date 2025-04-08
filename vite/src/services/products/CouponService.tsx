@@ -11,7 +11,7 @@ export class CouponService {
     axiosInstance: AxiosInstance;
     data: CreateCoupon;
   }) {
-    await axiosInstance.post("/v1/coupons", data);
+    await axiosInstance.post("/v1/rewards", data);
   }
 
   static async deleteCoupon({
@@ -21,7 +21,7 @@ export class CouponService {
     axiosInstance: AxiosInstance;
     internalId: string;
   }) {
-    await axiosInstance.delete(`/v1/coupons/${internalId}`);
+    await axiosInstance.delete(`/v1/rewards/${internalId}`);
   }
 
   static async updateCoupon({
@@ -33,6 +33,6 @@ export class CouponService {
     internalId: string;
     data: Coupon;
   }) {
-    await axiosInstance.post(`/v1/coupons/${internalId}`, data);
+    await axiosInstance.post(`/v1/rewards/${internalId}`, data);
   }
 }

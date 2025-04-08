@@ -10,7 +10,7 @@ import {
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createStripeCli } from "../utils.js";
-import { CouponService } from "@/internal/coupons/CouponService.js";
+import { RewardService } from "@/internal/rewards/RewardService.js";
 import { Decimal } from "decimal.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import {
@@ -271,7 +271,7 @@ const handleInvoicePaidDiscount = async ({
           : curCoupon.id;
 
       // 1. Fetch coupon from Autumn
-      const autumnCoupon = await CouponService.getByInternalId({
+      const autumnCoupon = await RewardService.getByInternalId({
         sb,
         internalId: couponId,
         orgId: org.id,

@@ -1,10 +1,9 @@
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { CouponService } from "@/internal/coupons/CouponService.js";
+import { RewardService } from "@/internal/rewards/RewardService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { ErrCode } from "@autumn/shared";
 
 export const handleAddCouponToCus = async (req: any, res: any) => {
   try {
@@ -21,7 +20,7 @@ export const handleAddCouponToCus = async (req: any, res: any) => {
         logger,
       }),
 
-      CouponService.getByInternalId({
+      RewardService.getByInternalId({
         sb: req.sb,
         internalId: coupon_id,
         orgId: req.orgId,

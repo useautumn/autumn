@@ -2,7 +2,7 @@ import { generateId } from "@/utils/genUtils.js";
 import { AppEnv, Coupon } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
-export class CouponService {
+export class RewardService {
   static async insert({
     sb,
     data,
@@ -11,7 +11,7 @@ export class CouponService {
     data: Coupon | Coupon[];
   }) {
     const { data: insertedData, error } = await sb
-      .from("coupons")
+      .from("rewards")
       .insert(data)
       .select();
 
@@ -31,7 +31,7 @@ export class CouponService {
     env: AppEnv;
   }) {
     const { data, error } = await sb
-      .from("coupons")
+      .from("rewards")
       .select()
       .eq("org_id", orgId)
       .eq("env", env);
@@ -54,7 +54,7 @@ export class CouponService {
     orgId: string;
   }) {
     const { error } = await sb
-      .from("coupons")
+      .from("rewards")
       .delete()
       .eq("internal_id", internalId)
       .eq("env", env)
@@ -76,7 +76,7 @@ export class CouponService {
     env: AppEnv;
   }) {
     const { data, error } = await sb
-      .from("coupons")
+      .from("rewards")
       .select()
       .eq("internal_id", internalId)
       .eq("org_id", orgId)
@@ -106,7 +106,7 @@ export class CouponService {
     update: Partial<Coupon>;
   }) {
     const { data, error } = await sb
-      .from("coupons")
+      .from("rewards")
       .update(update)
       .eq("internal_id", internalId)
       .eq("env", env)
