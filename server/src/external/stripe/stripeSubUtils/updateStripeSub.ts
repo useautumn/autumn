@@ -11,29 +11,32 @@ import { isStripeCardDeclined } from "../stripeCardUtils.js";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
 import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { getStripeProrationBehavior } from "../stripeSubUtils.js";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
 
 export const updateStripeSubscription = async ({
+  sb,
   org,
   customer,
   stripeCli,
   subscriptionId,
-  items,
   trialEnd,
-  prices,
   invoiceOnly,
   prorationBehavior,
   logger,
+  itemSet,
 }: {
+  sb: SupabaseClient;
   org: Organization;
   customer: Customer;
   stripeCli: Stripe;
   subscriptionId: string;
-  items: any;
-  prices: Price[];
   trialEnd?: number;
   invoiceOnly: boolean;
   prorationBehavior?: ProrationBehavior;
   logger: any;
+  itemSet: ItemSet;
 }) => {
   let paymentMethod = await getCusPaymentMethod({
     org,
@@ -49,6 +52,7 @@ export const updateStripeSubscription = async ({
     };
   }
 
+  let { items, prices, subMeta } = itemSet;
   let subItems = items.filter(
     (i: any, index: number) =>
       i.deleted || prices[index].config!.interval !== BillingInterval.OneOff
@@ -81,7 +85,15 @@ export const updateStripeSubscription = async ({
       payment_behavior: "error_if_incomplete",
     });
 
-    // logger.info(`Updated stripe subscription ${subscriptionId}`);
+    // Upsert sub
+    await SubService.addUsageFeatures({
+      sb,
+      stripeId: subscriptionId,
+      usageFeatures: itemSet.usageFeatures,
+      orgId: org.id,
+      env: customer.env,
+    });
+
     return sub;
   } catch (error: any) {
     console.log("Error updating stripe subscription.", error.message);
