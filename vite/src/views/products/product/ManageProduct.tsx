@@ -73,10 +73,9 @@ export const ManageProduct = ({
         </div>
       </div>
       <div className="flex flex-col gap-4">
-        <p className="text-md text-t2 font-medium">Features</p>
-        {product.entitlements.length > 0 && (
-          <ProductEntitlementTable entitlements={product.entitlements} />
-        )}
+        {/* <p className="text-md text-t2 font-medium">Features</p> */}
+
+        <ProductEntitlementTable entitlements={product.entitlements} />
         <CreateEntitlement />
       </div>
       {/* <div className="flex flex-col gap-4">

@@ -96,7 +96,7 @@ export default function TieredPrice({
               </div>
             )}
             <div className="flex w-full gap-2 text-sm items-center">
-              <div className="w-full">
+              <div className="flex w-full">
                 <UsageTierInput
                   value={tier.amount}
                   onChange={(e) =>
@@ -116,31 +116,38 @@ export default function TieredPrice({
                     <Input
                       autoFocus
                       value={config.billing_units}
+                      className="pr-14 !text-xs"
                       onChange={(e) =>
-                        setConfig({ ...config, billing_units: e.target.value })
+                        setConfig({
+                          ...config,
+                          billing_units: Number(e.target.value),
+                        })
                       }
                     />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px]">
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px] whitespace-nowrap truncate overflow-hidden max-w-12">
                       {selectedFeature.name}
                     </span>
                   </div>
                 </>
               ) : (
-                <div className="flex w-fit">
+                <div className="flex w-full">
                   <Button
                     size="sm"
                     variant="ghost"
                     disabled={index > 0}
-                    className="w-fit text-t3 max-w-24 overflow-hidden justify-start"
+                    className="w-fit text-t3 w-30 overflow-hidden hover:bg-transparent justify-start"
                     onClick={() => setEditBillingUnits(true)}
                   >
-                    {config.billing_units == 1
-                      ? `per ${selectedFeature.name}`
-                      : `per ${config.billing_units} ${selectedFeature.name}`}
-                    <Pencil
-                      size={12}
-                      className={cn("text-t3", index > 0 && "text-transparent")}
-                    />
+                    <span
+                      className={cn(
+                        "truncate",
+                        index == 0 && "border-b border-dotted border-t3"
+                      )}
+                    >
+                      {config.billing_units == 1
+                        ? `per ${selectedFeature.name}`
+                        : `per ${config.billing_units} ${selectedFeature.name}`}
+                    </span>
                   </Button>
                 </div>
               )}

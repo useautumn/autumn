@@ -151,7 +151,7 @@ function ProductView({ env }: { env: AppEnv }) {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <div className="flex gap-8">
+          <div className="flex">
             <div className="flex-1 w-full min-w-sm">
               <ManageProduct product={product} />
             </div>

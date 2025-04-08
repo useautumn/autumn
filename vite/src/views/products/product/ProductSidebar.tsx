@@ -41,7 +41,7 @@ export default function ProductSidebar() {
   };
 
   return (
-    <div className="flex flex-col gap-4 border-l border-stone-300 h-full">
+    <div className="flex flex-col gap-4 h-full ml-2">
       <Accordion
         type="multiple"
         defaultValue={["pricing"]}

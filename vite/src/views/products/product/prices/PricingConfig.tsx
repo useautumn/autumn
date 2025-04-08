@@ -147,11 +147,7 @@ export const validateUsageConfig = (usageConfig: any) => {
   // Check individual tier validity
   for (let i = 0; i < config.usage_tiers.length; i++) {
     const tier = config.usage_tiers[i];
-    if (
-      invalidNumber(tier.from) ||
-      invalidNumber(tier.to) ||
-      invalidNumber(tier.amount)
-    ) {
+    if (invalidNumber(tier.from) || invalidNumber(tier.amount)) {
       toast.error("Please fill out all tier fields");
       return null;
     }
