@@ -177,6 +177,8 @@ export const handleCheckoutSessionCompleted = async ({
         stripe_id: checkoutSession.subscription as string,
         stripe_schedule_id: null,
         usage_features: attachParams.itemSets?.[0]?.usageFeatures || [],
+        org_id: org.id,
+        env: attachParams.customer.env,
       },
     });
 

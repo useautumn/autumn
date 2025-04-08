@@ -88,6 +88,8 @@ export const createStripeSub = async ({
         stripe_schedule_id: subscription.schedule as string,
         created_at: subscription.created * 1000,
         usage_features: usageFeatures,
+        org_id: org.id,
+        env: customer.env,
       },
     });
 
