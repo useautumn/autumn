@@ -31,6 +31,7 @@ function ProductView({ env }: { env: AppEnv }) {
   const initialProductRef = useRef<FrontendProduct | null>(null);
 
   const [product, setProduct] = useState<FrontendProduct | null>(null);
+  const [showFreeTrial, setShowFreeTrial] = useState(!!product?.free_trial);
   const [hasChanges, setHasChanges] = useState(false);
 
   const { data, isLoading, mutate } = useAxiosSWR({
@@ -153,10 +154,17 @@ function ProductView({ env }: { env: AppEnv }) {
           </Breadcrumb>
           <div className="flex">
             <div className="flex-1 w-full min-w-sm">
-              <ManageProduct product={product} />
+              <ManageProduct
+                product={product}
+                showFreeTrial={showFreeTrial}
+                setShowFreeTrial={setShowFreeTrial}
+              />
             </div>
             <div className="max-w-[300px] w-1/3 shrink-1">
-              <ProductSidebar />
+              <ProductSidebar
+                showFreeTrial={showFreeTrial}
+                setShowFreeTrial={setShowFreeTrial}
+              />
             </div>
           </div>
         </div>

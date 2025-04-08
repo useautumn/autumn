@@ -29,6 +29,7 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { getDefaultPriceConfig } from "@/utils/product/priceUtils";
 import { Badge } from "@/components/ui/badge";
 import { CircleDollarSign } from "lucide-react";
+import { CreateEntitlement } from "./CreateEntitlement";
 export const ProductEntitlementTable = ({
   entitlements,
 }: {
@@ -81,7 +82,7 @@ export const ProductEntitlementTable = ({
 
     if (entitlement.entity_feature_id) {
       if (entitlement.interval === "lifetime") {
-        return `${entitlement.allowance} per ${entitlement.entity_feature_id}`;
+        return `${entitlement.allowance} ${feature?.name} per ${entitlement.entity_feature_id}`;
       }
       return (
         <div className="flex items-center gap-1 whitespace-nowrap">
@@ -98,18 +99,20 @@ export const ProductEntitlementTable = ({
       return (
         <div className="flex items-center gap-1 whitespace-nowrap">
           <span className="">
-            {entitlement.allowance} {feature?.name}
+            {Number(entitlement.allowance) > 0 ? entitlement.allowance : ""}{" "}
+            {feature?.name}
           </span>
         </div>
       );
     }
 
     return (
-      <div className="flex items-center gap-1 whitespace-nowrap">
-        <span className="">
-          {entitlement.allowance} {feature?.name}
+      <div className="flex items-center gap-1 whitespace-nowrap truncate">
+        <span className="shrink-0 max-w-32 truncate">
+          {Number(entitlement.allowance) > 0 ? entitlement.allowance : ""}{" "}
+          {feature?.name}
         </span>
-        <span className="text-t3">per {entitlement.interval}</span>
+        <span className="text-t3">per {entitlement.interval} </span>
       </div>
     );
   };
@@ -125,9 +128,12 @@ export const ProductEntitlementTable = ({
         setPriceConfig={setPriceConfig}
       />
       <div className="flex flex-col text-sm border bg-white rounded-sm">
-        <h2 className="text-sm text-t2 font-medium bg-stone-100 px-4 py-2.5">
-          Features
-        </h2>
+        <div className="flex items-center justify-between bg-stone-100 pl-4 h-10">
+          <h2 className="text-sm text-t2 font-medium">Features</h2>
+          <div className="flex w-fit border-l border-b h-full items-center">
+            <CreateEntitlement buttonType={"feature"} />
+          </div>
+        </div>
         <div className="flex flex-col">
           {entitlements.map((entitlement: EntitlementWithFeature) => {
             const feature = getFeature(
@@ -146,10 +152,10 @@ export const ProductEntitlementTable = ({
             return (
               <div
                 key={entitlement.id}
-                className="flex grid grid-cols-10 px-4 text-t2 h-10 items-center hover:bg-zinc-50"
+                className="flex grid grid-cols-10 gap-4 px-4 text-t2 h-10 items-center hover:bg-zinc-50"
                 onClick={() => handleRowClick(entitlement)}
               >
-                <span className="font-mono text-t3 col-span-2">
+                <span className="font-mono text-t3 col-span-2 overflow-hidden whitespace-nowrap">
                   {feature?.id}
                 </span>
                 <span className="col-span-5">
@@ -165,7 +171,7 @@ export const ProductEntitlementTable = ({
                     </Badge>
                   )}
                 </span>
-                <span className="flex text-xs text-t3 items-center col-span-1">
+                <span className="flex text-xs text-t3 items-center col-span-1 whitespace-nowrap">
                   {entitlement.created_at
                     ? formatUnixToDateTime(entitlement.created_at).date
                     : formatUnixToDateTime(Math.floor(Date.now())).date}

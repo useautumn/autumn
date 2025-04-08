@@ -14,11 +14,15 @@ import { Gift } from "lucide-react";
 export const ManageProduct = ({
   product,
   customerData,
+  showFreeTrial,
+  setShowFreeTrial,
 }: {
   product: any;
   customerData?: any;
+  showFreeTrial: boolean;
+  setShowFreeTrial: (showFreeTrial: boolean) => void;
 }) => {
-  const [showFreeTrial, setShowFreeTrial] = useState(product.free_trial);
+  // const [showFreeTrial, setShowFreeTrial] = useState(product.free_trial);
 
   return (
     <div className="flex flex-col gap-4">
@@ -59,14 +63,6 @@ export const ManageProduct = ({
               </span>
             </Badge>
           )}
-          <ToggleDisplayButton
-            show={showFreeTrial}
-            onClick={() => setShowFreeTrial(!showFreeTrial)}
-            disabled={product.free_trial}
-          >
-            <Gift size={14} />
-            Free trial
-          </ToggleDisplayButton>
           {!customerData && (
             <EditProductToolbar product={product} className="text-t2" />
           )}
@@ -76,15 +72,15 @@ export const ManageProduct = ({
         {/* <p className="text-md text-t2 font-medium">Features</p> */}
 
         <ProductEntitlementTable entitlements={product.entitlements} />
-        <CreateEntitlement />
       </div>
-      {/* <div className="flex flex-col gap-4">
-        <p className="text-md text-t2 font-medium">Pricing</p>
+      <div className="flex flex-col gap-4">
+        {/* <p className="text-md text-t2 font-medium">Pricing</p> */}
         {product.prices.length > 0 && (
           <ProductPricingTable prices={product.prices} />
         )}
-        <CreatePrice />
-      </div> */}
+        {/* <CreateEntitlement /> */}
+        {/* <CreatePrice /> */}
+      </div>
       {showFreeTrial && (
         <div className="flex flex-col gap-4">
           <p className="text-md text-t2 font-medium">Free Trial</p>

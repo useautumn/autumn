@@ -6,8 +6,16 @@ import {
 } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
 import { useProductContext } from "./ProductContext";
+import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
+import { Gift } from "lucide-react";
 
-export default function ProductSidebar() {
+export default function ProductSidebar({
+  showFreeTrial,
+  setShowFreeTrial,
+}: {
+  showFreeTrial: boolean;
+  setShowFreeTrial: (showFreeTrial: boolean) => void;
+}) {
   const { product, org } = useProductContext();
 
   const getPriceDisplay = (price: any) => {
@@ -42,9 +50,17 @@ export default function ProductSidebar() {
 
   return (
     <div className="flex flex-col gap-4 h-full ml-2">
+      <ToggleDisplayButton
+        show={showFreeTrial}
+        onClick={() => setShowFreeTrial(!showFreeTrial)}
+        disabled={product.free_trial}
+      >
+        <Gift size={14} />
+        Free trial
+      </ToggleDisplayButton>
       <Accordion
         type="multiple"
-        defaultValue={["pricing"]}
+        defaultValue={[""]}
         className="w-full flex flex-col gap-4"
       >
         <div className="pl-4">
@@ -74,7 +90,7 @@ export default function ProductSidebar() {
         </div>
 
         <div className="pl-4">
-          <AccordionItem
+          {/* <AccordionItem
             value="pricing"
             className="data-[state=open]:bg-white data-[state=open]:border-zinc-200 border border-transparent transition-all duration-100 ease-out origin-top"
           >
@@ -106,7 +122,7 @@ export default function ProductSidebar() {
                 )}
               </div>
             </AccordionContent>
-          </AccordionItem>
+          </AccordionItem> */}
         </div>
       </Accordion>
     </div>

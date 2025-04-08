@@ -25,7 +25,11 @@ import { getDefaultPriceConfig } from "@/utils/product/priceUtils";
 import { validateConfig } from "../prices/PricingConfig";
 import { cn } from "@/lib/utils";
 
-export const CreateEntitlement = () => {
+export const CreateEntitlement = ({
+  buttonType,
+}: {
+  buttonType: "feature" | "price";
+}) => {
   const [open, setOpen] = useState(false);
   const [entitlement, setEntitlement] = useState<Entitlement | null>(null);
   const [priceConfig, setPriceConfig] = useState<any>(
@@ -42,20 +46,25 @@ export const CreateEntitlement = () => {
   const [showFeatureCreate, setShowFeatureCreate] = useState(false);
 
   const handleCreateEntitlement = async () => {
-    const newEntitlement = CreateEntitlementSchema.parse(entitlement);
+    const newEntitlement = entitlement
+      ? CreateEntitlementSchema.parse(entitlement)
+      : null; //as it might just be a fixed price with no entitlement
+
     // console.log("New entitlement", newEntitlement);
-    console.log("old priceConfig", priceConfig);
+    // console.log("old priceConfig", priceConfig);
 
     const newPrice = CreatePriceSchema.parse({
       name: "price",
       config: {
         ...priceConfig,
-        internal_feature_id: selectedFeature?.internal_id,
-        feature_id: selectedFeature?.id,
+        ...(priceConfig.type === PriceType.Usage && {
+          internal_feature_id: selectedFeature?.internal_id,
+          feature_id: selectedFeature?.id,
+        }),
       },
     });
 
-    console.log("saving newPrice", newPrice);
+    // console.log("saving newPrice", newPrice);
 
     const config = validateConfig(newPrice, product.prices);
 
@@ -66,7 +75,9 @@ export const CreateEntitlement = () => {
 
     setProduct({
       ...product,
-      entitlements: [...product.entitlements, newEntitlement],
+      entitlements: newEntitlement
+        ? [...product.entitlements, newEntitlement]
+        : product.entitlements,
       prices: [...product.prices, newPrice],
     });
 
@@ -80,22 +91,22 @@ export const CreateEntitlement = () => {
       <DialogTrigger asChild>
         <Button
           startIcon={<PlusIcon size={15} />}
-          variant="dashed"
-          className="w-full"
+          variant={buttonType ? "ghost" : "dashed"}
+          className={cn(
+            "w-full",
+            buttonType && "!w-24 text-primary h-full justify-start"
+          )}
           onClick={() => {
             setSelectedFeature(null);
             setEntitlement(null);
             setPriceConfig(getDefaultPriceConfig(PriceType.Usage));
           }}
         >
-          Add Feature
+          {buttonType === "feature" ? "Feature" : "Price"}
         </Button>
       </DialogTrigger>
       <DialogContent
-        className={cn(
-          "translate-y-[0%] top-[20%] sm:max-w-xl",
-          selectedFeature && "sm:max-w-3xl"
-        )}
+        className={cn("translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit")}
       >
         <DialogHeader>
           <div className="flex flex-col">
@@ -111,7 +122,7 @@ export const CreateEntitlement = () => {
             <DialogTitle>Add Feature</DialogTitle>
           </div>
         </DialogHeader>
-        <div className="flex w-full overflow-hidden">
+        <div className="flex overflow-hidden w-fit">
           {showFeatureCreate ? (
             <div className="w-full">
               <CreateFeature
@@ -123,7 +134,7 @@ export const CreateEntitlement = () => {
               />
             </div>
           ) : (
-            <div className="w-full flex flex-col gap-4">
+            <div className="flex flex-col gap-4 w-fit">
               <EntitlementConfig
                 entitlement={entitlement}
                 setEntitlement={setEntitlement}

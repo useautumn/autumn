@@ -1,5 +1,5 @@
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { Price, UsagePriceConfig } from "@autumn/shared";
+import { Price, PriceType, UsagePriceConfig } from "@autumn/shared";
 import React, { useState } from "react";
 
 import {
@@ -13,13 +13,22 @@ import {
 import { PricingTypeBadge } from "./PricingTypeBadge";
 import UpdatePricing from "./UpdatePricing";
 import { useProductContext } from "../ProductContext";
-import { getBillingUnits } from "@/utils/product/priceUtils";
+import {
+  getBillingUnits,
+  getDefaultPriceConfig,
+} from "@/utils/product/priceUtils";
 import { AdminHover } from "@/components/general/AdminHover";
+import { CreateEntitlement } from "../entitlements/CreateEntitlement";
+import UpdateEntitlement from "../entitlements/UpdateEntitlement";
 
 // import UpdatePricing from "./UpdatePricing";
 
 export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
   const { org, product } = useProductContext();
+
+  const [priceConfig, setPriceConfig] = useState<any>(
+    getDefaultPriceConfig(PriceType.Usage) // default price config
+  );
 
   const formatAmount = (config: any, type: string) => {
     const currency = org?.default_currency || "USD";
@@ -80,40 +89,59 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const handleRowClick = (price: Price, index: number) => {
-    setSelectedPrice(price);
+    console.log("price", price);
+
+    //if price type is fixed, set the price config to the price config
+    if (price.config?.type === PriceType.Fixed) {
+      setPriceConfig(price.config);
+      setSelectedPrice(null);
+      // setSelectedIndex(index);
+      setOpen(true);
+      return;
+    }
+    const entitlementPrice = product.entitlements.find((entitlement: any) => {
+      return (
+        price.config?.type === PriceType.Usage &&
+        entitlement.internal_feature_id ===
+          (price.config as UsagePriceConfig).internal_feature_id
+      );
+    });
+
+    if (entitlementPrice) {
+      setSelectedPrice(entitlementPrice); //set the entielement to the found entitlement that matches the price internal ID
+    }
+    setPriceConfig(price.config);
+
     setSelectedIndex(index);
     setOpen(true);
   };
 
   return (
     <>
-      <UpdatePricing
+      <UpdateEntitlement
         open={open}
         setOpen={setOpen}
-        selectedPrice={selectedPrice}
-        setSelectedPrice={setSelectedPrice}
-        selectedIndex={selectedIndex || 0}
+        selectedEntitlement={selectedPrice}
+        setSelectedEntitlement={setSelectedPrice}
+        priceConfig={priceConfig}
+        setPriceConfig={setPriceConfig}
+        selectedIndex={selectedIndex}
       />
-
-      <Table>
-        <TableHeader className="rounded-full">
-          <TableRow>
-            <TableHead className="">Name</TableHead>
-            <TableHead className="">Type</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead className="for-consistency-w-entitlements"> </TableHead>
-            <TableHead>Created At</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+      <div className="flex flex-col text-sm border bg-white rounded-sm">
+        <div className="flex items-center justify-between bg-stone-100 pl-4 h-10">
+          <h2 className="text-sm text-t2 font-medium">Pricing</h2>
+          <div className="flex w-fit border-l border-b h-full items-center">
+            <CreateEntitlement buttonType={"price"} />
+          </div>
+        </div>
+        <div className="flex flex-col">
           {prices.map((price, index: number) => (
-            <TableRow
-              // key={`${price.id}-${price.created_at}`}
+            <div
               key={index}
-              className="cursor-pointer"
+              className="flex grid grid-cols-10 px-4 text-t2 h-10 items-center hover:bg-zinc-50 cursor-pointer"
               onClick={() => handleRowClick(price, index)}
             >
-              <TableCell>
+              <span className="font-mono text-t3 col-span-2">
                 <AdminHover
                   texts={[
                     price.id!,
@@ -124,24 +152,20 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
                 >
                   {price.name}
                 </AdminHover>
-              </TableCell>
-              <TableCell>
-                <PricingTypeBadge type={price.config?.type || ""} />
-              </TableCell>
-              <TableCell>
+              </span>
+              <span className="col-span-5">
                 {formatAmount(price.config, price.config?.type || "")}
-              </TableCell>
-              <TableCell> </TableCell>
-              <TableCell className="min-w-20 w-24">
-                <span>{formatUnixToDateTime(price.created_at).date}</span>{" "}
-                <span className="text-t3">
-                  {formatUnixToDateTime(price.created_at).time}
-                </span>
-              </TableCell>
-            </TableRow>
+              </span>
+              <span className="col-span-2">
+                <PricingTypeBadge type={price.config?.type || ""} />
+              </span>
+              <span className="flex text-xs text-t3 items-center col-span-1">
+                {formatUnixToDateTime(price.created_at).date}{" "}
+              </span>
+            </div>
           ))}
-        </TableBody>
-      </Table>
+        </div>
+      </div>
     </>
   );
 };
