@@ -26,15 +26,18 @@ export const cancelScheduledProductIfExists = async ({
   });
 
   if (curScheduledProduct) {
-    logger.info(`Change product: cancelling future scheduled product: ${curScheduledProduct.product.name}`);
-     // 1. Cancel future product schedule
-     await cancelFutureProductSchedule({
+    logger.info(
+      `Change product: cancelling future scheduled product: ${curScheduledProduct.product.name}`
+    );
+    // 1. Cancel future product schedule
+    await cancelFutureProductSchedule({
       sb: req.sb,
       org,
       cusProducts: attachParams.cusProducts!,
       product: curScheduledProduct.product as any,
       stripeCli,
       logger,
+      env: attachParams.customer.env,
     });
 
     // 2. Delete scheduled product
@@ -45,4 +48,4 @@ export const cancelScheduledProductIfExists = async ({
   }
 
   attachParams.curScheduledProduct = null;
-}
+};

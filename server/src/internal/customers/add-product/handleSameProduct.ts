@@ -325,6 +325,7 @@ export const handleSameMainProduct = async ({
       cusProducts: attachParams.cusProducts!,
       product: product,
       logger,
+      env: customer.env,
     });
 
     // Delete scheduled product

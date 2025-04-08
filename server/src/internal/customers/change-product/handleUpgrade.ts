@@ -161,6 +161,8 @@ const handleStripeSubUpdate = async ({
         cusProducts: [curCusProduct, attachParams.curScheduledProduct],
         itemSet,
         sb,
+        org: attachParams.org,
+        env: attachParams.customer.env,
       });
     }
   }
