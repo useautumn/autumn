@@ -66,6 +66,8 @@ export const handleSubCreated = async ({
           stripe_id: subscription.id,
           stripe_schedule_id: subscription.schedule as string,
           usage_features: subUsageFeatures,
+          org_id: org.id,
+          env: env,
         },
       });
     }

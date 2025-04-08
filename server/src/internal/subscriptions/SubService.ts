@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Subscription } from "@autumn/shared";
+import { AppEnv, Subscription } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 
 export class SubService {
@@ -28,11 +28,15 @@ export class SubService {
     stripeId,
     scheduleId,
     usageFeatures,
+    orgId,
+    env,
   }: {
     sb: SupabaseClient;
     stripeId?: string;
     scheduleId?: string;
     usageFeatures: string[];
+    orgId: string;
+    env: AppEnv;
   }) {
     if (!stripeId && !scheduleId) {
       throw new Error("Either stripeId or scheduleId must be provided");
@@ -62,6 +66,8 @@ export class SubService {
           stripe_id: stripeId || null,
           stripe_schedule_id: scheduleId || null,
           usage_features: usageFeatures,
+          org_id: orgId,
+          env,
         },
       });
     }
@@ -129,6 +135,44 @@ export class SubService {
     }
 
     return data[0];
+  }
+
+  static async deleteFromStripeId({
+    sb,
+    stripeId,
+  }: {
+    sb: SupabaseClient;
+    stripeId: string;
+  }) {
+    let { error } = await sb
+      .from("subscriptions")
+      .delete()
+      .eq("stripe_id", stripeId);
+
+    if (error) {
+      throw error;
+    }
+
+    return;
+  }
+
+  static async deleteFromScheduleId({
+    sb,
+    scheduleId,
+  }: {
+    sb: SupabaseClient;
+    scheduleId: string;
+  }) {
+    let { error } = await sb
+      .from("subscriptions")
+      .delete()
+      .eq("stripe_schedule_id", scheduleId);
+
+    if (error) {
+      throw error;
+    }
+
+    return;
   }
 
   static async updateFromScheduleId({

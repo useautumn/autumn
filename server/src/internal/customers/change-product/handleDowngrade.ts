@@ -79,6 +79,8 @@ const scheduleStripeSubscription = async ({
       stripe_schedule_id: newSubscriptionSchedule.id,
       created_at: Date.now(),
       usage_features: itemSet.usageFeatures,
+      org_id: org.id,
+      env: customer.env,
     },
   });
 

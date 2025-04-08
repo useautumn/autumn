@@ -90,6 +90,8 @@ export const updateStripeSubscription = async ({
       sb,
       stripeId: subscriptionId,
       usageFeatures: itemSet.usageFeatures,
+      orgId: org.id,
+      env: customer.env,
     });
 
     return sub;

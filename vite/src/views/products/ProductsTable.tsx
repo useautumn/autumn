@@ -89,7 +89,11 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
                           {allCounts &&
                             allCounts[product.id] &&
                             Object.keys(allCounts[product.id]).map((key) => {
-                              if (key === "active" || key == "custom")
+                              if (
+                                key === "active" ||
+                                key == "custom" ||
+                                key == "all"
+                              )
                                 return null;
                               return (
                                 <div key={key}>
