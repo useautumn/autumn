@@ -3,15 +3,17 @@ import { CouponDurationType, CreateCouponSchema } from "@autumn/shared";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { initCoupon } from "@/internal/coupons/couponUtils.js";
+
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils.js";
-import { CouponService } from "@/internal/coupons/CouponService.js";
+import { RewardService } from "@/internal/rewards/RewardService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
-const couponRouter = express.Router();
+import { initCoupon } from "@/internal/rewards/rewardUtils.js";
 
-couponRouter.post("", async (req: any, res: any) => {
+const rewardRouter = express.Router();
+
+rewardRouter.post("", async (req: any, res: any) => {
   try {
     const { orgId, env } = req;
     const couponBody = req.body;
@@ -73,7 +75,7 @@ couponRouter.post("", async (req: any, res: any) => {
     });
 
     console.log("✅ Coupon successfully created in Stripe");
-    const insertedCoupon = await CouponService.insert({
+    const insertedCoupon = await RewardService.insert({
       sb: req.sb,
       data: newCoupon,
     });
@@ -90,7 +92,7 @@ couponRouter.post("", async (req: any, res: any) => {
   }
 });
 
-couponRouter.delete("/:id", async (req: any, res: any) => {
+rewardRouter.delete("/:id", async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const { orgId, env } = req;
@@ -106,7 +108,7 @@ couponRouter.delete("/:id", async (req: any, res: any) => {
       console.log(`Failed to delete coupon from stripe: ${error.message}`);
     }
 
-    await CouponService.deleteStrict({
+    await RewardService.deleteStrict({
       sb: req.sb,
       internalId: id,
       env,
@@ -127,7 +129,7 @@ couponRouter.delete("/:id", async (req: any, res: any) => {
   }
 });
 
-couponRouter.post("/:id", async (req: any, res: any) => {
+rewardRouter.post("/:id", async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const { orgId, env } = req;
@@ -157,7 +159,7 @@ couponRouter.post("/:id", async (req: any, res: any) => {
     });
 
     // 3. Update coupon in db
-    const updatedCoupon = await CouponService.update({
+    const updatedCoupon = await RewardService.update({
       sb: req.sb,
       internalId: id,
       env,
@@ -176,4 +178,4 @@ couponRouter.post("/:id", async (req: any, res: any) => {
   }
 });
 
-export default couponRouter;
+export default rewardRouter;

@@ -8,7 +8,7 @@ import { BillingType } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { getBillingType } from "../prices/priceUtils.js";
 import { OrgService } from "../orgs/OrgService.js";
-import { CouponService } from "../coupons/CouponService.js";
+import { RewardService } from "../rewards/RewardService.js";
 import { getProductVersionCounts } from "./productUtils.js";
 import { getLatestProducts } from "./productUtils.js";
 import { CusProductService } from "../customers/products/CusProductService.js";
@@ -35,7 +35,7 @@ productRouter.get("/data", async (req: any, res) => {
       }),
       FeatureService.getFromReq(req),
       OrgService.getFromReq(req),
-      CouponService.getAll({ sb, orgId: req.orgId, env: req.env }),
+      RewardService.getAll({ sb, orgId: req.orgId, env: req.env }),
     ]);
 
     res.status(200).json({
@@ -93,7 +93,6 @@ productRouter.get("/counts", async (req: any, res) => {
         }
       }
     }
-    console.log(result);
 
     res.status(200).send(result);
   } catch (error) {

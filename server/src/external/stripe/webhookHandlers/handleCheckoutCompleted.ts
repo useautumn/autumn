@@ -24,8 +24,8 @@ import {
   attachToInsertParams,
   getPricesForProduct,
 } from "@/internal/products/productUtils.js";
-import { CouponService } from "@/internal/coupons/CouponService.js";
-import { CouponType, getCouponType } from "@/internal/coupons/couponUtils.js";
+import { RewardService } from "@/internal/rewards/RewardService.js";
+import { CouponType, getCouponType } from "@/internal/rewards/rewardUtils.js";
 import { Decimal } from "decimal.js";
 import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 import { createStripeSub } from "../stripeSubUtils/createStripeSub.js";
@@ -116,7 +116,7 @@ const handleCheckoutCoupon = async ({
   let discounts = expandedSession.total_details?.breakdown?.discounts;
   for (const { amount: amountUsed, discount } of discounts || []) {
     // 1. Get coupon from DB
-    const coupon = await CouponService.getByInternalId({
+    const coupon = await RewardService.getByInternalId({
       sb,
       internalId: discount.coupon.id,
       orgId: attachParams.org.id,
@@ -204,7 +204,6 @@ export const handleCheckoutSessionCompleted = async ({
     "Handling checkout.completed: autumn metadata:",
     checkoutSession.metadata?.autumn_metadata_id
   );
-
 
   // Get product by stripe subscription ID
   let checkoutSub;
