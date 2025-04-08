@@ -44,6 +44,7 @@ export const CreateEntitlement = () => {
   const handleCreateEntitlement = async () => {
     const newEntitlement = CreateEntitlementSchema.parse(entitlement);
     // console.log("New entitlement", newEntitlement);
+    console.log("old priceConfig", priceConfig);
 
     const newPrice = CreatePriceSchema.parse({
       name: "price",
