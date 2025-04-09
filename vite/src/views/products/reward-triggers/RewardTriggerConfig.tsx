@@ -35,7 +35,7 @@ export const RewardTriggerConfig = ({
   rewardTrigger: RewardTrigger;
   setRewardTrigger: (rewardTrigger: RewardTrigger) => void;
 }) => {
-  let { coupons } = useProductsContext();
+  let { rewards } = useProductsContext();
 
   return (
     <div className="flex flex-col gap-4">
@@ -61,9 +61,9 @@ export const RewardTriggerConfig = ({
               <SelectValue placeholder="Select a coupon" />
             </SelectTrigger>
             <SelectContent>
-              {coupons.map((coupon: Reward) => (
-                <SelectItem key={coupon.name} value={coupon.internal_id}>
-                  {coupon.name}
+              {rewards.map((reward: Reward) => (
+                <SelectItem key={reward.name} value={reward.internal_id}>
+                  {reward.name}
                 </SelectItem>
               ))}
             </SelectContent>

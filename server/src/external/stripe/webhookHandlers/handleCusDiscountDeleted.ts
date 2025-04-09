@@ -95,13 +95,13 @@ export async function handleCusDiscountDeleted({
     stripeId: discount.customer,
   });
 
-  if (customer.env !== env || customer.org_id !== org.id) {
-    logger.info(`discount.deleted: env or org mismatch, skipping`);
+  if (!customer) {
+    logger.warn(`discount.deleted: customer ${discount.customer} not found`);
     return;
   }
 
-  if (!customer) {
-    logger.warn(`discount.deleted: customer ${discount.customer} not found`);
+  if (customer.env !== env || customer.org_id !== org.id) {
+    logger.info(`discount.deleted: env or org mismatch, skipping`);
     return;
   }
 
