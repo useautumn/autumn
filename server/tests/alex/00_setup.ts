@@ -18,7 +18,8 @@ describe("Initialize org for tests", () => {
       env: DEFAULT_ENV,
       features: { ...alexFeatures } as any,
       products: { ...alexProducts },
-      coupons: {},
+      rewards: {},
+      rewardTriggers: {},
     });
 
     console.log("--------------------------------");

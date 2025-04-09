@@ -15,7 +15,7 @@ import React from "react";
 
 import { RewardTriggersTable } from "./reward-triggers/RewardTriggersTable";
 import CreateRewardTriggerModal from "./reward-triggers/CreateRewardTriger";
-import { RewardsTable } from "./rewards/RewardsTAble";
+import { RewardsTable } from "./rewards/RewardsTable";
 import CreateReward from "./rewards/CreateReward";
 
 function ProductsView({ env }: { env: AppEnv }) {
