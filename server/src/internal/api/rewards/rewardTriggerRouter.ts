@@ -26,6 +26,9 @@ rewardTriggerRouter.post("", (req, res) =>
         }
       );
 
+      console.log("✅ Successfully created reward trigger");
+      console.log(createdRewardTrigger);
+
       return res.status(200).json(createdRewardTrigger);
     },
   })

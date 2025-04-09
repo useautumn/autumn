@@ -1,5 +1,5 @@
 import express from "express";
-import { CouponDurationType, CreateCouponSchema } from "@autumn/shared";
+import { CreateRewardSchema } from "@autumn/shared";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -18,7 +18,7 @@ rewardRouter.post("", async (req: any, res: any) => {
     const { orgId, env } = req;
     const couponBody = req.body;
 
-    const couponData = CreateCouponSchema.parse(couponBody);
+    const couponData = CreateRewardSchema.parse(couponBody);
     const org = await OrgService.getFromReq(req);
     const newCoupon = initCoupon({
       coupon: couponData,
@@ -74,12 +74,12 @@ rewardRouter.post("", async (req: any, res: any) => {
       prices,
     });
 
-    console.log("✅ Coupon successfully created in Stripe");
+    console.log("✅ Reward successfully created in Stripe");
     const insertedCoupon = await RewardService.insert({
       sb: req.sb,
       data: newCoupon,
     });
-    console.log("✅ Coupon successfully inserted into db");
+    console.log("✅ Reward successfully inserted into db");
 
     res.status(200).json(insertedCoupon);
   } catch (error) {
@@ -117,7 +117,7 @@ rewardRouter.delete("/:id", async (req: any, res: any) => {
 
     res.status(200).json({
       success: true,
-      message: "Coupon deleted successfully",
+      message: "Reward deleted successfully",
     });
   } catch (error) {
     handleRequestError({
@@ -135,7 +135,7 @@ rewardRouter.post("/:id", async (req: any, res: any) => {
     const { orgId, env } = req;
     const couponBody = req.body;
 
-    console.log("Coupon body", couponBody);
+    console.log("Reward body", couponBody);
     const org = await OrgService.getFromReq(req);
     const stripeCli = createStripeCli({
       org,

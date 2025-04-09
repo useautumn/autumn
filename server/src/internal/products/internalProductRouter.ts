@@ -52,7 +52,8 @@ productRouter.get("/data", async (req: any, res) => {
         live_pkey: org.live_pkey,
         default_currency: org.default_currency,
       },
-      coupons,
+      // coupons,
+      rewards: coupons,
       rewardTriggers,
     });
   } catch (error) {

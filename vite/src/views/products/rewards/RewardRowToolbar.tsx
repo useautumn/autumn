@@ -10,20 +10,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { Coupon } from "@autumn/shared";
+import { Reward } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductsContext } from "../ProductsContext";
-import { CouponService } from "@/services/products/CouponService";
+import { RewardService } from "@/services/products/RewardService";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import { Delete } from "lucide-react";
 
-export const CouponRowToolbar = ({
-  className,
-  coupon,
-}: {
-  className?: string;
-  coupon: Coupon;
-}) => {
+export const RewardRowToolbar = ({ reward }: { reward: Reward }) => {
   const { env, mutate } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env });
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -33,9 +27,9 @@ export const CouponRowToolbar = ({
     setDeleteLoading(true);
 
     try {
-      await CouponService.deleteCoupon({
+      await RewardService.deleteReward({
         axiosInstance,
-        internalId: coupon.internal_id,
+        internalId: reward.internal_id,
       });
       await mutate();
     } catch (error) {

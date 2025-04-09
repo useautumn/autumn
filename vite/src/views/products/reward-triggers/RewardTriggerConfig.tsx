@@ -7,7 +7,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { RewardTrigger, Coupon, RewardTriggerEvent } from "@autumn/shared";
+import { RewardTrigger, Reward, RewardTriggerEvent } from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useState } from "react";
@@ -50,7 +50,7 @@ export const RewardTriggerConfig = ({
           />
         </div>
         <div className="w-6/12">
-          <FieldLabel>Coupon</FieldLabel>
+          <FieldLabel>Reward</FieldLabel>
           <Select
             value={rewardTrigger.internal_reward_id}
             onValueChange={(value) =>
@@ -61,7 +61,7 @@ export const RewardTriggerConfig = ({
               <SelectValue placeholder="Select a coupon" />
             </SelectTrigger>
             <SelectContent>
-              {coupons.map((coupon: Coupon) => (
+              {coupons.map((coupon: Reward) => (
                 <SelectItem key={coupon.name} value={coupon.internal_id}>
                   {coupon.name}
                 </SelectItem>

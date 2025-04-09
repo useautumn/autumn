@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import stripe, { Stripe } from "stripe";
+import { Stripe } from "stripe";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
@@ -24,9 +24,6 @@ import {
   attachToInsertParams,
   getPricesForProduct,
 } from "@/internal/products/productUtils.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
-import { CouponType, getCouponType } from "@/internal/rewards/rewardUtils.js";
-import { Decimal } from "decimal.js";
 import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 import { createStripeSub } from "../stripeSubUtils/createStripeSub.js";
 import { getAlignedIntervalUnix } from "@/internal/prices/billingIntervalUtils.js";

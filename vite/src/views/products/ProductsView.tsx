@@ -8,19 +8,19 @@ import { ProductsContext } from "./ProductsContext";
 import { AppEnv } from "@autumn/shared";
 import CreateProduct from "./CreateProduct";
 import { ProductsTable } from "./ProductsTable";
-import { CouponsTable } from "./coupons/CouponsTable";
-import CreateCoupon from "./coupons/CreateCoupon";
 import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 
 import { Ticket } from "lucide-react";
 import React from "react";
-import CreateRewardTrigger from "./reward-triggers/CreateRewardTriger";
+
 import { RewardTriggersTable } from "./reward-triggers/RewardTriggersTable";
 import CreateRewardTriggerModal from "./reward-triggers/CreateRewardTriger";
+import { RewardsTable } from "./rewards/RewardsTAble";
+import CreateReward from "./rewards/CreateReward";
 
 function ProductsView({ env }: { env: AppEnv }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showCoupons, setShowCoupons] = useState(false);
+  const [showRewards, setShowRewards] = useState(false);
   const { data, isLoading, mutate } = useAxiosSWR({
     url: `/products/data`,
     env: env,
@@ -38,8 +38,8 @@ function ProductsView({ env }: { env: AppEnv }) {
       setSelectedProduct(data.products[0]);
     }
 
-    if (data?.coupons.length > 0) {
-      setShowCoupons(true);
+    if (data?.rewards.length > 0) {
+      setShowRewards(true);
     }
   }, [data]);
 
@@ -65,9 +65,9 @@ function ProductsView({ env }: { env: AppEnv }) {
           </p>
         </div>
         <ToggleDisplayButton
-          show={showCoupons}
-          disabled={data?.coupons.length > 0}
-          onClick={() => setShowCoupons((prev) => !prev)}
+          show={showRewards}
+          disabled={data?.rewards.length > 0}
+          onClick={() => setShowRewards((prev) => !prev)}
         >
           <Ticket size={12} className="mr-2" />
           Coupons
@@ -75,7 +75,7 @@ function ProductsView({ env }: { env: AppEnv }) {
       </div>
       <ProductsTable products={data?.products} />
       <CreateProduct />
-      {showCoupons && (
+      {showRewards && (
         <React.Fragment>
           <div className="flex flex-col gap-4 h-fit mt-6">
             <div>
@@ -86,8 +86,8 @@ function ProductsView({ env }: { env: AppEnv }) {
                 {/* <span className="text-t3">(eg, 10% off all products).</span> */}
               </p>
             </div>
-            <CouponsTable />
-            <CreateCoupon />
+            <RewardsTable />
+            <CreateReward />
           </div>
           <div className="flex flex-col gap-4 h-fit mt-6">
             <div>

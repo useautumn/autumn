@@ -1,4 +1,4 @@
-import { CreateCoupon } from "@autumn/shared";
+import { CreateReward } from "@autumn/shared";
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AxiosInstance } from "axios";
@@ -9,7 +9,7 @@ export class CouponService {
     data,
   }: {
     axiosInstance: AxiosInstance;
-    data: CreateCoupon;
+    data: CreateReward;
   }) {
     await axiosInstance.post("/v1/coupons", data);
   }

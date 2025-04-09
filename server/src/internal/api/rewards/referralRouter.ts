@@ -191,3 +191,27 @@ referralRouter.post("/redeem", (req, res) =>
     },
   })
 );
+
+export const redemptionRouter = express.Router();
+
+redemptionRouter.get("/:redemptionId", (req, res) =>
+  routeHandler({
+    req,
+    res,
+    action: "get redemption by id",
+    handler: async (req: any, res: any) => {
+      const { orgId, env, logtail: logger } = req;
+      const { redemptionId } = req.params;
+
+      let redemption = await RewardRedemptionService.getById({
+        sb: req.sb,
+        id: redemptionId,
+      });
+
+      // logger.info("Returning redemption");
+      // logger.info(redemption);
+
+      res.status(200).json(redemption);
+    },
+  })
+);
