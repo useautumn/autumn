@@ -13,7 +13,7 @@ export * from "./models/productModels/usagePriceModels.js";
 export * from "./models/productModels/fixedPriceModels.js";
 export * from "./models/productModels/freeTrialModels.js";
 export * from "./models/rewardModels/rewardModels.js";
-export * from "./models/rewardModels/rewardTriggerModels.js";
+export * from "./models/rewardModels/rewardProgramModels.js";
 export * from "./models/rewardModels/referralModels/referralModels.js";
 export * from "./models/subModels/subModels.js";
 

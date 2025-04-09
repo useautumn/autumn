@@ -7,7 +7,7 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { RewardTrigger, Reward, RewardTriggerEvent } from "@autumn/shared";
+import { Reward, RewardProgram, RewardTriggerEvent } from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useState } from "react";
@@ -28,12 +28,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 
-export const RewardTriggerConfig = ({
-  rewardTrigger,
-  setRewardTrigger,
+export const RewardProgramConfig = ({
+  rewardProgram,
+  setRewardProgram,
 }: {
-  rewardTrigger: RewardTrigger;
-  setRewardTrigger: (rewardTrigger: RewardTrigger) => void;
+  rewardProgram: RewardProgram;
+  setRewardProgram: (rewardProgram: RewardProgram) => void;
 }) => {
   let { rewards } = useProductsContext();
 
@@ -41,20 +41,20 @@ export const RewardTriggerConfig = ({
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <div className="w-6/12">
-          <FieldLabel>ID</FieldLabel>
+          <FieldLabel>Program ID</FieldLabel>
           <Input
-            value={rewardTrigger.id || ""}
+            value={rewardProgram.id || ""}
             onChange={(e) =>
-              setRewardTrigger({ ...rewardTrigger, id: e.target.value })
+              setRewardProgram({ ...rewardProgram, id: e.target.value })
             }
           />
         </div>
         <div className="w-6/12">
-          <FieldLabel>Reward</FieldLabel>
+          <FieldLabel>Coupon</FieldLabel>
           <Select
-            value={rewardTrigger.internal_reward_id}
+            value={rewardProgram.internal_reward_id}
             onValueChange={(value) =>
-              setRewardTrigger({ ...rewardTrigger, internal_reward_id: value })
+              setRewardProgram({ ...rewardProgram, internal_reward_id: value })
             }
           >
             <SelectTrigger>
@@ -74,11 +74,11 @@ export const RewardTriggerConfig = ({
         <div className="w-6/12">
           <FieldLabel>Redeem On</FieldLabel>
           <Select
-            defaultValue={RewardTriggerEvent.Immediately}
-            value={rewardTrigger.when}
+            defaultValue={RewardTriggerEvent.CustomerCreation}
+            value={rewardProgram.when}
             onValueChange={(value) =>
-              setRewardTrigger({
-                ...rewardTrigger,
+              setRewardProgram({
+                ...rewardProgram,
                 when: value as RewardTriggerEvent,
               })
             }
@@ -99,10 +99,10 @@ export const RewardTriggerConfig = ({
           <FieldLabel>Max Redemptions</FieldLabel>
           <Input
             type="number"
-            value={rewardTrigger.max_redemptions}
+            value={rewardProgram.max_redemptions}
             onChange={(e) =>
-              setRewardTrigger({
-                ...rewardTrigger,
+              setRewardProgram({
+                ...rewardProgram,
                 max_redemptions: parseInt(e.target.value),
               })
             }
@@ -110,12 +110,12 @@ export const RewardTriggerConfig = ({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        {rewardTrigger.when === RewardTriggerEvent.Checkout && (
+        {rewardProgram.when === RewardTriggerEvent.Checkout && (
           <div className="w-full">
             <FieldLabel>Products</FieldLabel>
             <ProductSelector
-              rewardTrigger={rewardTrigger}
-              setRewardTrigger={setRewardTrigger}
+              rewardProgram={rewardProgram}
+              setRewardProgram={setRewardProgram}
             />
           </div>
         )}
@@ -125,25 +125,25 @@ export const RewardTriggerConfig = ({
 };
 
 const ProductSelector = ({
-  rewardTrigger,
-  setRewardTrigger,
+  rewardProgram,
+  setRewardProgram,
 }: {
-  rewardTrigger: RewardTrigger;
-  setRewardTrigger: (rewardTrigger: RewardTrigger) => void;
+  rewardProgram: RewardProgram;
+  setRewardProgram: (rewardProgram: RewardProgram) => void;
 }) => {
   const { products } = useProductsContext();
   const [open, setOpen] = useState(false);
 
   // Handle selection/deselection of a product
   const handleProductToggle = (productId: string) => {
-    let newProductIds = [...(rewardTrigger.product_ids || [])];
+    let newProductIds = [...(rewardProgram.product_ids || [])];
     if (newProductIds.includes(productId)) {
       newProductIds = newProductIds.filter((id) => id !== productId);
     } else {
       newProductIds = [...newProductIds, productId];
     }
-    setRewardTrigger({
-      ...rewardTrigger,
+    setRewardProgram({
+      ...rewardProgram,
       product_ids: newProductIds,
     });
   };
@@ -166,11 +166,11 @@ const ProductSelector = ({
           aria-expanded={open}
           className="w-full justify-between min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50"
         >
-          {rewardTrigger.product_ids?.length === 0 ? (
+          {rewardProgram.product_ids?.length === 0 ? (
             "Select Products"
           ) : (
             <>
-              {rewardTrigger.product_ids?.map((productId) => (
+              {rewardProgram.product_ids?.map((productId: string) => (
                 <div
                   key={productId}
                   className="py-0 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit"
@@ -209,7 +209,7 @@ const ProductSelector = ({
                     className="cursor-pointer"
                   >
                     <div className="flex items-center">{product.name}</div>
-                    {rewardTrigger.product_ids?.includes(product.id) && (
+                    {rewardProgram.product_ids?.includes(product.id) && (
                       <Check size={12} className="text-t3" />
                     )}
                   </CommandItem>

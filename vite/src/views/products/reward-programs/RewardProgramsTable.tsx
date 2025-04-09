@@ -10,7 +10,7 @@ import {
   Reward,
   CouponDurationType,
   DiscountType,
-  RewardTrigger,
+  RewardProgram,
   RewardTriggerEvent,
 } from "@autumn/shared";
 
@@ -18,25 +18,13 @@ import { TableBody } from "@/components/ui/table";
 
 import { Table, TableHead, TableRow, TableHeader } from "@/components/ui/table";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { RewardTriggerRowToolbar } from "./RewardTriggerRowToolbar";
+import { RewardProgramRowToolbar } from "./RewardProgramRowToolbar";
 
-export const RewardTriggersTable = () => {
-  const { rewardTriggers } = useProductsContext();
-  const [selectedRewardTrigger, setSelectedRewardTrigger] =
-    useState<RewardTrigger | null>(null);
+export const RewardProgramsTable = () => {
+  const { rewardPrograms } = useProductsContext();
+  const [selectedRewardProgram, setSelectedRewardProgram] =
+    useState<RewardProgram | null>(null);
   const [open, setOpen] = useState(false);
-
-  // let rewardTriggers: RewardTrigger[] = [];
-  // const handleRowClick = (id: string) => {
-  //   const creditSystem = creditSystems.find(
-  //     (creditSystem: Feature) => creditSystem.id === id
-  //   );
-  //   console.log(creditSystem);
-  //   if (!creditSystem) return;
-
-  //   setSelectedCreditSystem(creditSystem);
-  //   setOpen(true);
-  // };
 
   return (
     <>
@@ -59,47 +47,47 @@ export const RewardTriggersTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rewardTriggers.map((rewardTrigger: RewardTrigger) => {
+          {rewardPrograms.map((rewardProgram: RewardProgram) => {
             return (
               <TableRow
-                key={rewardTrigger.id}
+                key={rewardProgram.id}
                 className="cursor-pointer"
                 onClick={() => {
-                  setSelectedRewardTrigger(rewardTrigger);
+                  setSelectedRewardProgram(rewardProgram);
                   setOpen(true);
                 }}
               >
                 <TableCell className="font-medium font-mono">
-                  {rewardTrigger.id}
+                  {rewardProgram.id}
                 </TableCell>
                 <TableCell className="font-mono">
-                  {rewardTrigger.when}
+                  {rewardProgram.when}
                 </TableCell>
                 <TableCell className="min-w-32">
                   <div className="flex items-center gap-1">
                     <p className="text-t3">
-                      {rewardTrigger.unlimited_redemptions
+                      {rewardProgram.unlimited_redemptions
                         ? "Unlimited"
-                        : rewardTrigger.max_redemptions}
+                        : rewardProgram.max_redemptions}
                     </p>
                   </div>
                 </TableCell>
                 <TableCell className="">
-                  {rewardTrigger.when == RewardTriggerEvent.Immediately
+                  {rewardProgram.when == RewardTriggerEvent.CustomerCreation
                     ? "Sign Up"
-                    : rewardTrigger.when == RewardTriggerEvent.Checkout
+                    : rewardProgram.when == RewardTriggerEvent.Checkout
                     ? "Checkout"
-                    : keyToTitle(rewardTrigger.when)}
+                    : keyToTitle(rewardProgram.when)}
                 </TableCell>
                 <TableCell className="">
-                  {formatUnixToDateTime(rewardTrigger.created_at).date}
+                  {formatUnixToDateTime(rewardProgram.created_at).date}
                   <span className="text-t3">
                     {" "}
-                    {formatUnixToDateTime(rewardTrigger.created_at).time}{" "}
+                    {formatUnixToDateTime(rewardProgram.created_at).time}{" "}
                   </span>
                 </TableCell>
                 <TableCell className="">
-                  <RewardTriggerRowToolbar rewardTrigger={rewardTrigger} />
+                  <RewardProgramRowToolbar rewardProgram={rewardProgram} />
                 </TableCell>
               </TableRow>
             );

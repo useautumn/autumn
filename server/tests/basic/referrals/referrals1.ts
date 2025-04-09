@@ -21,6 +21,7 @@ describe(`${chalk.yellowBright(
   "referrals1: Testing referrals (on checkout)"
 )}`, () => {
   let mainCustomerId = "main-referral-1";
+  let alternateCustomerId = "alternate-referral-1";
   let redeemers = ["referral1-r1", "referral1-r2", "referral1-r3"];
   let autumn: Autumn;
   let stripeCli: Stripe;
@@ -41,6 +42,7 @@ describe(`${chalk.yellowBright(
         sb: this.sb,
         org: this.org,
         env: this.env,
+        fingerprint: "main-referral-1",
       });
     testClockId = testClockId1;
     mainCustomer = customer;
@@ -63,6 +65,19 @@ describe(`${chalk.yellowBright(
       );
     }
 
+    batchCreate.push(
+      initCustomer({
+        customer_data: {
+          id: alternateCustomerId,
+          name: "Alternate Referral 1",
+          email: "alternate-referral-1@example.com",
+          fingerprint: "main-referral-1",
+        },
+        sb: this.sb,
+        org: this.org,
+        env: this.env,
+      })
+    );
     await Promise.all(batchCreate);
   });
 
@@ -81,6 +96,32 @@ describe(`${chalk.yellowBright(
     });
 
     assert.equal(referralCode2.code, referralCode.code);
+  });
+
+  it("should fail if same customer tries to redeem code again", async function () {
+    try {
+      await autumn.referrals.redeem({
+        customerId: mainCustomerId,
+        code: referralCode.code,
+      });
+      assert.fail("Own customer should not be able to redeem code");
+    } catch (error) {
+      assert.instanceOf(error, AutumnError);
+      assert.equal(error.code, ErrCode.CustomerCannotRedeemOwnCode);
+    }
+
+    try {
+      await autumn.referrals.redeem({
+        customerId: alternateCustomerId,
+        code: referralCode.code,
+      });
+      assert.fail(
+        "Own customer (same fingerprint) should not be able to redeem code"
+      );
+    } catch (error) {
+      assert.instanceOf(error, AutumnError);
+      assert.equal(error.code, ErrCode.CustomerCannotRedeemOwnCode);
+    }
   });
 
   it("should create redemption for each redeemer and fail if redeemed again", async function () {

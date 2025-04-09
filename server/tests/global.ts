@@ -19,7 +19,7 @@ import {
   initFreeTrial,
   initPrice,
   initProduct,
-  initRewardTrigger,
+  initRewardProgram,
 } from "./utils/init.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -797,16 +797,16 @@ export const rewards = {
 };
 
 export const referralPrograms = {
-  onCheckout: initRewardTrigger({
+  onCheckout: initRewardProgram({
     id: "onCheckout",
     internalRewardId: rewards.monthOff.id,
     when: RewardTriggerEvent.Checkout,
     productIds: [products.pro.id, products.proWithTrial.id],
   }),
-  immediate: initRewardTrigger({
+  immediate: initRewardProgram({
     id: "immediate",
     internalRewardId: rewards.monthOff.id,
-    when: RewardTriggerEvent.Immediately,
+    when: RewardTriggerEvent.CustomerCreation,
     // productIds: [products.pro.id, products.proWithTrial.id],
   }),
 };

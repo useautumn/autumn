@@ -1,23 +1,23 @@
 import { generateId } from "@/utils/genUtils.js";
-import { CreateRewardTrigger, RewardTrigger } from "@autumn/shared";
+import { CreateRewardProgram, RewardProgram } from "@autumn/shared";
 
-export const constructRewardTrigger = ({
-  rewardTriggerData,
+export const constructRewardProgram = ({
+  rewardProgramData,
   orgId,
   env,
 }: {
-  rewardTriggerData: CreateRewardTrigger;
+  rewardProgramData: CreateRewardProgram;
   orgId: string;
   env: string;
 }) => {
-  let rewardTrigger: RewardTrigger = {
-    ...rewardTriggerData,
-    internal_id: generateId("rt"),
+  let rewardProgram: RewardProgram = {
+    ...rewardProgramData,
+    internal_id: generateId("rs"),
     unlimited_redemptions: false,
     created_at: Date.now(),
     org_id: orgId,
     env,
   };
 
-  return rewardTrigger;
+  return rewardProgram;
 };

@@ -1,11 +1,5 @@
-import {
-  AppEnv,
-  ReferralCode,
-  Reward,
-  RewardRedemption,
-  RewardTrigger,
-} from "@autumn/shared";
-import { RewardTriggerService } from "./RewardTriggerService.js";
+import { AppEnv, ReferralCode, Reward, RewardRedemption } from "@autumn/shared";
+
 import { CusService } from "../customers/CusService.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";

@@ -19,18 +19,18 @@ export class RewardRedemptionService {
   static async getByCustomer({
     sb,
     internalCustomerId,
-    internalRewardTriggerId,
     triggered,
     withReferralCode = false,
-    withRewardTrigger,
+    withRewardProgram = false,
+    internalRewardProgramId,
     triggerWhen,
   }: {
     sb: any;
     internalCustomerId: string;
     triggered?: boolean;
     withReferralCode?: boolean;
-    withRewardTrigger?: boolean;
-    internalRewardTriggerId?: string;
+    withRewardProgram?: boolean;
+    internalRewardProgramId?: string;
     triggerWhen?: RewardTriggerEvent;
   }) {
     let query = sb
@@ -39,8 +39,8 @@ export class RewardRedemptionService {
         `
       *
       ${
-        withRewardTrigger
-          ? ", reward_trigger:reward_triggers!inner(*, reward:rewards!inner(*))"
+        withRewardProgram
+          ? ", reward_program:reward_programs!inner(*, reward:rewards!inner(*))"
           : ""
       }
       ${withReferralCode ? ", referral_code:referral_codes!inner(*)" : ""}
@@ -48,17 +48,13 @@ export class RewardRedemptionService {
       )
       .eq("internal_customer_id", internalCustomerId);
 
-    if (notNullish(internalRewardTriggerId)) {
-      query = query.eq("internal_reward_trigger_id", internalRewardTriggerId);
+    if (notNullish(internalRewardProgramId)) {
+      query = query.eq("internal_reward_program_id", internalRewardProgramId);
     }
 
     if (notNullish(triggered)) {
       query = query.eq("triggered", triggered);
     }
-
-    // if (notNullish(triggerWhen)) {
-    //   query = query.eq("reward_trigger.when", triggerWhen);
-    // }
 
     const { data, error } = await query;
 
@@ -152,7 +148,7 @@ export class RewardRedemptionService {
     const { data, error } = await sb
       .from("reward_redemptions")
       .select(
-        "*, referral_code:referral_codes!inner(*), reward_trigger:reward_triggers!inner(*, reward:rewards!inner(*))"
+        "*, referral_code:referral_codes!inner(*), reward_program:reward_programs!inner(*, reward:rewards!inner(*))"
       )
       .eq("referral_code.internal_customer_id", internalCustomerId)
       .eq("triggered", true)

@@ -1,13 +1,14 @@
 import z from "zod";
-import { Reward } from "../rewardModels/rewardModels.js";
+import { Reward } from "./rewardModels.js";
 
 export enum RewardTriggerEvent {
   // SignUp = "sign_up",
-  Immediately = "immediately",
+  // Immediately = "immediately",
+  CustomerCreation = "customer_creation",
   Checkout = "checkout",
 }
 
-export const RewardTrigger = z.object({
+export const RewardProgram = z.object({
   internal_id: z.string(),
   id: z.string(),
 
@@ -25,7 +26,7 @@ export const RewardTrigger = z.object({
   created_at: z.number(),
 });
 
-export const CreateRewardTrigger = z.object({
+export const CreateRewardProgram = z.object({
   id: z.string(),
   when: z.nativeEnum(RewardTriggerEvent),
   product_ids: z.array(z.string()).optional(),
@@ -34,9 +35,9 @@ export const CreateRewardTrigger = z.object({
   max_redemptions: z.number().optional(),
 });
 
-export type RewardTrigger = z.infer<typeof RewardTrigger>;
-export type CreateRewardTrigger = z.infer<typeof CreateRewardTrigger>;
+export type RewardProgram = z.infer<typeof RewardProgram>;
+export type CreateRewardProgram = z.infer<typeof CreateRewardProgram>;
 
-export type FullRewardTrigger = RewardTrigger & {
+export type FullRewardProgram = RewardProgram & {
   reward: Reward;
 };

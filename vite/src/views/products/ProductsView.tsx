@@ -13,10 +13,10 @@ import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import { Ticket } from "lucide-react";
 import React from "react";
 
-import { RewardTriggersTable } from "./reward-triggers/RewardTriggersTable";
-import CreateRewardTriggerModal from "./reward-triggers/CreateRewardTrigger";
 import { RewardsTable } from "./rewards/RewardsTable";
 import CreateReward from "./rewards/CreateReward";
+import CreateRewardProgramModal from "./reward-programs/CreateRewardProgram";
+import { RewardProgramsTable } from "./reward-programs/RewardProgramsTable";
 
 function ProductsView({ env }: { env: AppEnv }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -91,11 +91,11 @@ function ProductsView({ env }: { env: AppEnv }) {
           </div>
           <div className="flex flex-col gap-4 h-fit mt-6">
             <div>
-              <h2 className="text-lg font-medium">Referrals</h2>
+              <h2 className="text-lg font-medium">Referral Programs</h2>
               <p className="text-sm text-t2">Create a referral program. </p>
             </div>
-            <RewardTriggersTable />
-            <CreateRewardTriggerModal />
+            <RewardProgramsTable />
+            <CreateRewardProgramModal />
           </div>
         </React.Fragment>
       )}

@@ -363,9 +363,9 @@ export const initReward = ({
   };
 };
 
-export const initRewardTrigger = ({
+export const initRewardProgram = ({
   id,
-  when = RewardTriggerEvent.Immediately,
+  when = RewardTriggerEvent.CustomerCreation,
   productIds = [],
   internalRewardId,
   maxRedemptions = 2,
