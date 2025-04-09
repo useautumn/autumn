@@ -1,5 +1,5 @@
 import { generateId } from "@/utils/genUtils.js";
-import { Coupon, CreateCoupon } from "@autumn/shared";
+import { Reward, CreateReward } from "@autumn/shared";
 
 export const initCoupon = ({
   coupon,
@@ -7,7 +7,7 @@ export const initCoupon = ({
   env,
   id,
 }: {
-  coupon: CreateCoupon;
+  coupon: CreateReward;
   orgId: string;
   env: string;
   id?: string;
@@ -31,7 +31,7 @@ export enum CouponType {
   Standard = "standard",
 }
 
-export const getCouponType = (coupon: Coupon) => {
+export const getCouponType = (coupon: Reward) => {
   if (!coupon) return null;
   if (coupon.apply_to_all && coupon.should_rollover) {
     return CouponType.AddInvoiceBalance;

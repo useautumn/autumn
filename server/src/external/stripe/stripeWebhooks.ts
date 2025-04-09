@@ -18,6 +18,7 @@ import {
   createLogtail,
   createLogtailWithContext,
 } from "../logtail/logtailUtils.js";
+import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 
 export const stripeWebhookRouter = express.Router();
 
@@ -157,6 +158,18 @@ stripeWebhookRouter.post(
             schedule: canceledSchedule,
             logger,
           });
+          break;
+
+        case "customer.discount.deleted":
+          await handleCusDiscountDeleted({
+            sb: request.sb,
+            org,
+            discount: event.data.object,
+            env,
+            logger,
+            res: response,
+          });
+          return;
           break;
       }
     } catch (error) {

@@ -2,7 +2,7 @@ import { SelectContent } from "@/components/ui/select";
 import { SelectValue } from "@/components/ui/select";
 import { SelectTrigger } from "@/components/ui/select";
 import { DialogFooter } from "@/components/ui/dialog";
-import { Coupon } from "@autumn/shared";
+import { Reward } from "@autumn/shared";
 import { Select, SelectItem } from "@/components/ui/select";
 import {
   Dialog,
@@ -22,28 +22,28 @@ const AddCouponDialogContent = ({
   setOpen: (open: boolean) => void;
 }) => {
   const { coupons } = useCustomerContext();
-  const [couponSelected, setCouponSelected] = useState<Coupon | null>(null);
+  const [couponSelected, setCouponSelected] = useState<Reward | null>(null);
 
   const handleAddClicked = async () => {};
 
   return (
     <DialogContent>
-      <DialogTitle>Add Coupon</DialogTitle>
+      <DialogTitle>Add Reward</DialogTitle>
       <div>
         <Select
           value={couponSelected?.internal_id}
           onValueChange={(value) => {
-            const coupon = coupons.find((c: Coupon) => c.internal_id === value);
+            const coupon = coupons.find((c: Reward) => c.internal_id === value);
             if (coupon) {
               setCouponSelected(coupon);
             }
           }}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select Coupon" />
+            <SelectValue placeholder="Select Reward" />
           </SelectTrigger>
           <SelectContent>
-            {coupons.map((coupon: Coupon) => (
+            {coupons.map((coupon: Reward) => (
               <SelectItem key={coupon.internal_id} value={coupon.internal_id}>
                 {coupon.name}
               </SelectItem>
@@ -53,7 +53,7 @@ const AddCouponDialogContent = ({
       </div>
       <DialogFooter>
         <Button variant="gradientPrimary" onClick={() => handleAddClicked()}>
-          Add Coupon
+          Add Reward
         </Button>
       </DialogFooter>
     </DialogContent>

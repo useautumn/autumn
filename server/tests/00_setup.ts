@@ -7,9 +7,10 @@ import {
   creditSystems,
   advanceProducts,
   attachProducts,
-  coupons,
+  rewards,
   oneTimeProducts,
   entityProducts,
+  referralPrograms,
 } from "./global.js";
 
 const ORG_SLUG = "unit-test-org";
@@ -32,7 +33,8 @@ describe("Initialize org for tests", () => {
         ...oneTimeProducts,
         ...entityProducts,
       } as any,
-      coupons: { ...coupons } as any,
+      rewards: { ...rewards } as any,
+      rewardTriggers: { ...referralPrograms } as any,
     });
 
     console.log("--------------------------------");

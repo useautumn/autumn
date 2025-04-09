@@ -1,30 +1,24 @@
 import {
-  AllowanceType,
   CusProductStatus,
   Price,
   ProcessorType,
-  EntInterval,
   CustomerEntitlement,
   CusProduct,
   FeatureOptions,
   FreeTrial,
-  BillingType,
   CollectionMethod,
-  Organization,
-  AppEnv,
   FullCusProduct,
-  FullCustomerEntitlement,
   LoggerAction,
 } from "@autumn/shared";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
-import { getNextEntitlementReset } from "@/utils/timeUtils.js";
-import { Customer, FeatureType } from "@autumn/shared";
-import { EntitlementWithFeature, FullProduct } from "@autumn/shared";
+import { generateId, notNullish } from "@/utils/genUtils.js";
+
+import { Customer } from "@autumn/shared";
+import { FullProduct } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
-import { getBillingType, getEntOptions } from "@/internal/prices/priceUtils.js";
+import { getEntOptions } from "@/internal/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
 import { InsertCusProductParams } from "../products/AttachParams.js";
@@ -37,6 +31,8 @@ import { searchCusProducts } from "@/internal/customers/products/cusProductUtils
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
 export const initCusPrice = ({
   price,
   customer,
@@ -417,6 +413,16 @@ export const createFullCusProduct = async ({
     cusProd,
     cusEnts,
     cusPrices,
+  });
+
+  await addTaskToQueue({
+    jobName: JobName.TriggerCheckoutReward,
+    payload: {
+      customer,
+      product,
+      org,
+      env: customer.env,
+    },
   });
 
   // // Send webhook

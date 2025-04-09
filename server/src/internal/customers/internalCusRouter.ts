@@ -9,7 +9,7 @@ import {
   FullCustomerPrice,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { CouponService } from "../coupons/CouponService.js";
+import { RewardService } from "../rewards/RewardService.js";
 import { EventService } from "../api/events/EventService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "../orgs/OrgService.js";
@@ -69,7 +69,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       await Promise.all([
         OrgService.getFromReq(req),
         FeatureService.getFromReq(req),
-        CouponService.getAll({
+        RewardService.getAll({
           sb,
           orgId: orgId,
           env,

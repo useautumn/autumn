@@ -11,10 +11,12 @@ import { entitledRouter } from "./entitled/entitledRouter.js";
 import { attachRouter } from "./customers/products/attachRouter.js";
 import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { usageRouter } from "./events/usageRouter.js";
-import couponRouter from "./coupons/couponRouter.js";
 import { invoiceRouter } from "./customers/invoiceRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
 import { migrationRouter } from "./migrations/migrationRouter.js";
+import rewardRouter from "./rewards/rewardRouter.js";
+import { rewardTriggerRouter } from "./rewards/rewardTriggerRouter.js";
+import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 
 const apiRouter = Router();
 
@@ -57,7 +59,7 @@ apiRouter.get("/auth", (req: any, res) => {
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/invoices", invoiceRouter);
 apiRouter.use("/products", productApiRouter);
-apiRouter.use("/coupons", couponRouter);
+apiRouter.use("/rewards", rewardRouter);
 apiRouter.use("/features", featureApiRouter);
 
 apiRouter.use("/entitlements", entitlementApiRouter);
@@ -68,5 +70,9 @@ apiRouter.use("/usage", usageRouter);
 apiRouter.use("/entities", entityRouter);
 apiRouter.use("/migrations", migrationRouter);
 
+// REWARDS
+apiRouter.use("/reward-triggers", rewardTriggerRouter);
+apiRouter.use("/referrals", referralRouter);
+apiRouter.use("/redemptions", redemptionRouter);
 
 export { apiRouter };

@@ -8,12 +8,13 @@ import { BillingType } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { getBillingType } from "../prices/priceUtils.js";
 import { OrgService } from "../orgs/OrgService.js";
-import { CouponService } from "../coupons/CouponService.js";
+import { RewardService } from "../rewards/RewardService.js";
 import { getProductVersionCounts } from "./productUtils.js";
 import { getLatestProducts } from "./productUtils.js";
 import { CusProductService } from "../customers/products/CusProductService.js";
 import { CusProdReadService } from "../customers/products/CusProdReadService.js";
 import { MigrationService } from "../migrations/MigrationService.js";
+import { RewardTriggerService } from "../rewards/RewardTriggerService.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -26,17 +27,19 @@ productRouter.get("/data", async (req: any, res) => {
       orgId: req.orgId,
     });
 
-    const [products, features, org, coupons] = await Promise.all([
-      ProductService.getFullProducts({
-        sb,
-        orgId: req.orgId,
-        env: req.env,
-        returnAll: true,
-      }),
-      FeatureService.getFromReq(req),
-      OrgService.getFromReq(req),
-      CouponService.getAll({ sb, orgId: req.orgId, env: req.env }),
-    ]);
+    const [products, features, org, coupons, rewardTriggers] =
+      await Promise.all([
+        ProductService.getFullProducts({
+          sb,
+          orgId: req.orgId,
+          env: req.env,
+          returnAll: true,
+        }),
+        FeatureService.getFromReq(req),
+        OrgService.getFromReq(req),
+        RewardService.getAll({ sb, orgId: req.orgId, env: req.env }),
+        RewardTriggerService.getAll({ sb, orgId: req.orgId, env: req.env }),
+      ]);
 
     res.status(200).json({
       products: getLatestProducts(products),
@@ -49,7 +52,9 @@ productRouter.get("/data", async (req: any, res) => {
         live_pkey: org.live_pkey,
         default_currency: org.default_currency,
       },
-      coupons,
+      // coupons,
+      rewards: coupons,
+      rewardTriggers,
     });
   } catch (error) {
     console.error("Failed to get products", error);

@@ -1,7 +1,5 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faEllipsisVertical, faTrash } from "@fortawesome/pro-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { cn } from "@nextui-org/theme";
+
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -9,23 +7,17 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
-import toast from "react-hot-toast";
-import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { Reward, Feature } from "@autumn/shared";
-import { FeatureService } from "@/services/FeatureService";
+import { Reward } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductsContext } from "../ProductsContext";
-import { CouponService } from "@/services/products/CouponService";
+import { RewardService } from "@/services/products/RewardService";
+import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
+import { Delete } from "lucide-react";
 
-export const CouponRowToolbar = ({
-  className,
-  coupon,
-}: {
-  className?: string;
-  coupon: Reward;
-}) => {
+export const RewardRowToolbar = ({ reward }: { reward: Reward }) => {
   const { env, mutate } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env });
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -35,9 +27,9 @@ export const CouponRowToolbar = ({
     setDeleteLoading(true);
 
     try {
-      await CouponService.deleteCoupon({
+      await RewardService.deleteReward({
         axiosInstance,
-        internalId: coupon.internal_id,
+        internalId: reward.internal_id,
       });
       await mutate();
     } catch (error) {
@@ -50,14 +42,7 @@ export const CouponRowToolbar = ({
   return (
     <DropdownMenu open={deleteOpen} onOpenChange={setDeleteOpen}>
       <DropdownMenuTrigger asChild>
-        <Button
-          isIcon
-          variant="ghost"
-          dim={6}
-          className={cn("rounded-full", className)}
-        >
-          <FontAwesomeIcon icon={faEllipsisVertical} size="sm" />
-        </Button>
+        <ToolbarButton />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
         <DropdownMenuItem
@@ -73,7 +58,7 @@ export const CouponRowToolbar = ({
             {deleteLoading ? (
               <SmallSpinner />
             ) : (
-              <FontAwesomeIcon icon={faTrash} size="sm" />
+              <Delete size={12} className="text-t3" />
             )}
           </div>
         </DropdownMenuItem>

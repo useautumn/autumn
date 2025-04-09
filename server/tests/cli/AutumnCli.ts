@@ -1,7 +1,7 @@
 import { el } from "date-fns/locale";
 import { getAxiosInstance } from "../utils/setup.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, CreateCoupon } from "@autumn/shared";
+import { AppEnv, CreateReward } from "@autumn/shared";
 const handleAxiosError = (error: any) => {
   if (error.response.data) {
     // console.log(error.response.data);
@@ -212,7 +212,7 @@ export class AutumnCli {
     return data;
   }
 
-  static async createCoupon(coupon: CreateCoupon) {
+  static async createCoupon(coupon: CreateReward) {
     const axiosInstance = getAxiosInstance();
     const { data } = await axiosInstance.post(`/v1/coupons`, coupon);
     return data;
