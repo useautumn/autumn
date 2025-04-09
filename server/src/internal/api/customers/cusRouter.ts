@@ -69,7 +69,6 @@ cusRouter.get("", async (req: any, res: any) => {
 
 cusRouter.post("", handlePostCustomerRequest);
 
-
 // BY CUSTOMER ID
 
 cusRouter.get("/:customer_id", async (req: any, res: any) => {
@@ -94,7 +93,7 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       return;
     }
 
-    const { main, addOns, balances, invoices } = await getCustomerDetails({
+    const cusData = await getCustomerDetails({
       customer,
       sb: req.sb,
       orgId: req.orgId,
@@ -103,13 +102,7 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       logger: req.logtail,
     });
 
-    res.status(200).json({
-      customer: CustomerResponseSchema.parse(customer),
-      products: main,
-      add_ons: addOns,
-      entitlements: balances,
-      invoices,
-    });
+    res.status(200).json(cusData);
   } catch (error) {
     handleRequestError({ req, error, res, action: "get customer" });
   }
@@ -130,8 +123,6 @@ cusRouter.delete("/:customer_id", async (req: any, res: any) => {
     handleRequestError({ req, error, res, action: "delete customer" });
   }
 });
-
-
 
 cusRouter.post("/:customer_id", async (req: any, res: any) => {
   try {
@@ -310,8 +301,6 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 cusRouter.post("/:customer_id/coupons/:coupon_id", handleAddCouponToCus);
 
 cusRouter.use("/:customer_id/entities", entityRouter);
-
-
 
 // cusRouter.put("", async (req: any, res: any) => {
 //   try {

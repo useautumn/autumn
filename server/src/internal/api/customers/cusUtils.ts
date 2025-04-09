@@ -5,6 +5,7 @@ import {
   CusProductStatus,
   Customer,
   CustomerData,
+  CustomerResponseSchema,
   CustomerSchema,
   ErrCode,
   FullCusProduct,
@@ -62,7 +63,7 @@ export const updateCustomerDetails = async ({
   if (!customer.email && customerData?.email) {
     updates.email = customerData.email;
   }
-  
+
   if (Object.keys(updates).length > 0) {
     logger.info(`Updating customer details`, { updates });
     customer = await CusService.update({
@@ -73,8 +74,7 @@ export const updateCustomerDetails = async ({
   }
 
   return customer;
-}
-
+};
 
 export const getOrCreateCustomer = async ({
   sb,
@@ -94,7 +94,7 @@ export const getOrCreateCustomer = async ({
   skipGet?: boolean;
 }) => {
   let customer;
-  
+
   if (!skipGet) {
     customer = await CusService.getByIdOrInternalId({
       sb,
@@ -119,7 +119,7 @@ export const getOrCreateCustomer = async ({
       },
       logger,
     });
-  } 
+  }
 
   customer = await updateCustomerDetails({
     sb,
@@ -343,10 +343,10 @@ export const getCustomerDetails = async ({
   });
 
   return {
-    customer,
-    main,
-    addOns,
-    balances,
+    customer: CustomerResponseSchema.parse(customer),
+    products: main,
+    add_ons: addOns,
+    entitlements: balances,
     invoices: processedInvoices,
   };
 };
@@ -399,7 +399,6 @@ export const getCusEntsInFeatures = async ({
   }
 
   sortCusEntsForDeduction(cusEnts, reverseOrder);
-  
 
   if (!withPrices) {
     return { cusEnts, cusPrices: undefined };
