@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
+import ConfirmMigrateDialog from "./ConfirmMigrateDialog";
 
 export const ManageProduct = ({
   product,
@@ -197,8 +198,9 @@ const CountAndMigrate = () => {
   let env = useEnv();
   let axiosInstance = useAxiosInstance({ env });
   let [loading, setLoading] = useState(false);
+  let [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
 
-  const onMigrateClicked = async () => {
+  const migrateCustomers = async () => {
     setLoading(true);
     try {
       let { data } = await axiosInstance.post("/v1/migrations", {
@@ -214,6 +216,10 @@ const CountAndMigrate = () => {
       toast.error(getBackendErr(error, "Something went wrong with migration"));
     }
     setLoading(false);
+  };
+
+  const onMigrateClicked = () => {
+    setConfirmMigrateOpen(true);
   };
 
   useEffect(() => {
@@ -305,6 +311,11 @@ const CountAndMigrate = () => {
 
   return (
     <div className="flex items-center gap-3">
+      <ConfirmMigrateDialog
+        open={confirmMigrateOpen}
+        setOpen={setConfirmMigrateOpen}
+        startMigration={migrateCustomers}
+      />
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

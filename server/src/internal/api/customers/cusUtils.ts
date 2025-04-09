@@ -342,6 +342,13 @@ export const getCustomerDetails = async ({
     org,
   });
 
+  // return {
+  //   customer,
+  //   main,
+  //   addOns,
+  //   balances,
+  //   invoices: processedInvoices,
+  // };
   return {
     customer: CustomerResponseSchema.parse(customer),
     products: main,

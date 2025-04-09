@@ -11,7 +11,7 @@ export enum DiscountType {
   Fixed = "fixed",
 }
 
-const CouponSchema = z.object({
+const RewardSchema = z.object({
   internal_id: z.string(),
   name: z.string().nullish(),
   price_ids: z.array(z.string()),
@@ -31,12 +31,12 @@ const CouponSchema = z.object({
   created_at: z.number(),
 });
 
-export const CreateCouponSchema = CouponSchema.omit({
+export const CreateRewardSchema = RewardSchema.omit({
   internal_id: true,
   org_id: true,
   env: true,
   created_at: true,
 });
 
-export type Coupon = z.infer<typeof CouponSchema>;
-export type CreateCoupon = z.infer<typeof CreateCouponSchema>;
+export type CreateReward = z.infer<typeof CreateRewardSchema>;
+export type Reward = z.infer<typeof RewardSchema>;

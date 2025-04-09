@@ -99,7 +99,7 @@ export const CustomerToolbar = ({
                 }}
               >
                 <div className="flex text-sm items-center justify-between w-full gap-2">
-                  <p className="text-t2">Add Coupon</p>
+                  <p className="text-t2">Add Reward</p>
                   <Ticket size={12} className="text-t3" />
                 </div>
               </DropdownMenuItem>

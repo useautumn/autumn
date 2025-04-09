@@ -281,14 +281,17 @@ export class CusService {
     const { data, error } = await sb
       .from("customers")
       .select()
-      .eq("processor->>id", stripeId)
-      .single();
+      .eq("processor->>id", stripeId);
 
     if (error) {
       throw error;
     }
 
-    return data;
+    if (data.length === 0) {
+      return null;
+    }
+
+    return data[0];
   }
 
   //search customers

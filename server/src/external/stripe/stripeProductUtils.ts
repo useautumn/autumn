@@ -66,13 +66,35 @@ export const deactivateStripeMeters = async ({
 }) => {
   const stripeCli = createStripeCli({ org, env });
 
-  const stripeMeters = await stripeCli.billing.meters.list({
-    limit: 100,
-    status: "active",
-  });
+  let allStripeMeters = [];
+  let hasMore = true;
+  let startingAfter;
 
-  for (const meter of stripeMeters.data) {
-    await stripeCli.billing.meters.deactivate(meter.id);
+  while (hasMore) {
+    const response: any = await stripeCli.billing.meters.list({
+      limit: 100,
+      status: "active",
+      starting_after: startingAfter,
+    });
+
+    allStripeMeters.push(...response.data);
+    hasMore = response.has_more;
+
+    if (hasMore && response.data.length > 0) {
+      startingAfter = response.data[response.data.length - 1].id;
+    }
+  }
+
+  const batchSize = 10;
+  for (let i = 0; i < allStripeMeters.length; i += batchSize) {
+    const batch = allStripeMeters.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map((meter) => stripeCli.billing.meters.deactivate(meter.id))
+    );
+    console.log(
+      `Deactivated ${i + batch.length}/${allStripeMeters.length} meters`
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 };
 

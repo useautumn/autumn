@@ -1,7 +1,3 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { SelectContent } from "@/components/ui/select";
-import { SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,18 +15,18 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
 import { PlusIcon } from "lucide-react";
 import {
-  Coupon,
+  Reward,
   CouponDurationType,
-  CreateCoupon as CreateCouponType,
+  CreateReward as CreateRewardType,
   DiscountType,
 } from "@autumn/shared";
+
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductsContext } from "../ProductsContext";
+import { RewardService } from "@/services/products/RewardService";
+import { RewardConfig } from "./RewardConfig";
 
-import { CouponConfig } from "./CouponConfig";
-import { CouponService } from "@/services/products/CouponService";
-
-const defaultCoupon: CreateCouponType = {
+const defaultReward: CreateRewardType = {
   name: "",
   promo_codes: [{ code: "" }],
   price_ids: [],
@@ -42,27 +38,27 @@ const defaultCoupon: CreateCouponType = {
   apply_to_all: true,
 };
 
-function CreateCoupon() {
+function CreateReward() {
   const { mutate, env } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env: env });
 
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const [coupon, setCoupon] = useState(defaultCoupon);
+  const [reward, setReward] = useState(defaultReward);
 
   useEffect(() => {
     if (open) {
-      setCoupon(defaultCoupon);
+      setReward(defaultReward);
     }
   }, [open]);
 
   const handleCreate = async () => {
     setIsLoading(true);
     try {
-      await CouponService.createCoupon({
+      await RewardService.createReward({
         axiosInstance,
-        data: coupon,
+        data: reward,
       });
 
       await mutate();
@@ -81,18 +77,18 @@ function CreateCoupon() {
           className="w-full"
           startIcon={<PlusIcon size={15} />}
         >
-          Create Coupon
+          Create Reward
         </Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Coupon</DialogTitle>
+          <DialogTitle>Create Reward</DialogTitle>
         </DialogHeader>
         {/* <CreditSystemConfig
           creditSystem={creditSystem}
           setCreditSystem={setCreditSystem}
         /> */}
-        <CouponConfig coupon={coupon as any} setCoupon={setCoupon} />
+        <RewardConfig reward={reward as any} setReward={setReward} />
         <DialogFooter>
           <Button
             onClick={handleCreate}
@@ -107,4 +103,4 @@ function CreateCoupon() {
   );
 }
 
-export default CreateCoupon;
+export default CreateReward;

@@ -110,4 +110,10 @@ export const ErrCode = {
   // Entity
   EntityNotFound: "entity_not_found",
   EntityAlreadyDeleted: "entity_already_deleted",
+
+  // Referral codes
+  ReferralCodeMaxRedemptionsReached: "referral_code_max_redemptions_reached",
+  ReferralNotFound: "referral_not_found",
+  CustomerAlreadyRedeemedReferralCode:
+    "customer_already_redeemed_referral_code",
 };

@@ -9,27 +9,27 @@ import { Button } from "@/components/ui/button";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
-import { Coupon } from "@autumn/shared";
+import { Reward } from "@autumn/shared";
 import { useEnv } from "@/utils/envUtils";
 import { useProductsContext } from "../ProductsContext";
-import { CouponConfig } from "./CouponConfig";
-import { CouponService } from "@/services/products/CouponService";
+import { RewardConfig } from "./RewardConfig";
+import { RewardService } from "@/services/products/RewardService";
 import { getBackendErr } from "@/utils/genUtils";
 import { WarningBox } from "@/components/general/modal-components/WarningBox";
 
-function UpdateCoupon({
+function UpdateReward({
   open,
   setOpen,
-  selectedCoupon,
-  setSelectedCoupon,
+  selectedReward,
+  setSelectedReward,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  selectedCoupon: Coupon | null;
-  setSelectedCoupon: (coupon: Coupon) => void;
+  selectedReward: Reward | null;
+  setSelectedReward: (reward: Reward) => void;
 }) {
   const [updateLoading, setUpdateLoading] = useState(false);
-  const { coupons, mutate } = useProductsContext();
+  const { rewards, mutate } = useProductsContext();
 
   const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
@@ -37,12 +37,12 @@ function UpdateCoupon({
   const handleUpdate = async () => {
     setUpdateLoading(true);
     try {
-      await CouponService.updateCoupon({
+      await RewardService.updateReward({
         axiosInstance,
-        internalId: selectedCoupon!.internal_id,
-        data: selectedCoupon!,
+        internalId: selectedReward!.internal_id,
+        data: selectedReward!,
       });
-      toast.success("Coupon updated successfully");
+      toast.success("Reward updated successfully");
       await mutate();
       setOpen(false);
     } catch (error) {
@@ -54,13 +54,13 @@ function UpdateCoupon({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
-        <DialogTitle>Update Coupon</DialogTitle>
+        <DialogTitle>Update Reward</DialogTitle>
         <WarningBox>
           Existing customers with this coupon will not be affected
         </WarningBox>
 
-        {selectedCoupon && (
-          <CouponConfig coupon={selectedCoupon} setCoupon={setSelectedCoupon} />
+        {selectedReward && (
+          <RewardConfig reward={selectedReward} setReward={setSelectedReward} />
         )}
 
         <DialogFooter>
@@ -77,4 +77,4 @@ function UpdateCoupon({
   );
 }
 
-export default UpdateCoupon;
+export default UpdateReward;

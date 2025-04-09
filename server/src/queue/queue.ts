@@ -7,6 +7,7 @@ import { JobName } from "./JobName.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
+import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 
 const NUM_WORKERS = 5;
 
@@ -80,6 +81,16 @@ const initWorker = ({
           logger: logtail,
           sb,
         });
+        return;
+      }
+
+      if (job.name == JobName.TriggerCheckoutReward) {
+        await runTriggerCheckoutReward({
+          payload: job.data,
+          sb,
+          logger: logtail,
+        });
+
         return;
       }
 

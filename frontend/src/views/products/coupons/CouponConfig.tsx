@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import {
   CouponDurationType,
-  CreateCoupon,
+  CreateReward,
   DiscountType,
   Feature,
 } from "@autumn/shared";
@@ -37,8 +37,8 @@ export const CouponConfig = ({
   coupon,
   setCoupon,
 }: {
-  coupon: CreateCoupon;
-  setCoupon: (coupon: CreateCoupon) => void;
+  coupon: CreateReward;
+  setCoupon: (coupon: CreateReward) => void;
 }) => {
   const { org } = useProductsContext();
   return (
@@ -172,8 +172,8 @@ const ProductPriceSelector = ({
   coupon,
   setCoupon,
 }: {
-  coupon: CreateCoupon;
-  setCoupon: (coupon: CreateCoupon) => void;
+  coupon: CreateReward;
+  setCoupon: (coupon: CreateReward) => void;
 }) => {
   const { products, features } = useProductsContext();
   const [open, setOpen] = useState(false);
