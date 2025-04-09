@@ -111,5 +111,5 @@ export const handleVersionProduct = async ({
     version: newVersion,
   });
 
-  res.status(200).send(newFullProduct);
+  res.status(200).json(newFullProduct);
 };
