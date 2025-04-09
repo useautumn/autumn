@@ -14,7 +14,7 @@ import { Ticket } from "lucide-react";
 import React from "react";
 
 import { RewardTriggersTable } from "./reward-triggers/RewardTriggersTable";
-import CreateRewardTriggerModal from "./reward-triggers/CreateRewardTriger";
+import CreateRewardTriggerModal from "./reward-triggers/CreateRewardTrigger";
 import { RewardsTable } from "./rewards/RewardsTable";
 import CreateReward from "./rewards/CreateReward";
 
