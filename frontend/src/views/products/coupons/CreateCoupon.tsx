@@ -20,7 +20,7 @@ import toast from "react-hot-toast";
 import { PlusIcon } from "lucide-react";
 import {
   CouponDurationType,
-  CreateCoupon as CreateCouponType,
+  CreateReward as CreateCouponType,
   DiscountType,
 } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
@@ -41,7 +41,7 @@ const defaultCoupon: CreateCouponType = {
   apply_to_all: true,
 };
 
-function CreateCoupon() {
+function CreateReward() {
   const { mutate, env } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env: env });
 
@@ -80,12 +80,12 @@ function CreateCoupon() {
           className="w-full"
           startIcon={<PlusIcon size={15} />}
         >
-          Create Coupon
+          Create Reward
         </Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Coupon</DialogTitle>
+          <DialogTitle>Create Reward</DialogTitle>
         </DialogHeader>
         {/* <CreditSystemConfig
           creditSystem={creditSystem}
@@ -106,4 +106,4 @@ function CreateCoupon() {
   );
 }
 
-export default CreateCoupon;
+export default CreateReward;

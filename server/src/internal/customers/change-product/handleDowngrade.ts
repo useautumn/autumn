@@ -1,4 +1,3 @@
-import { SupabaseClient } from "@supabase/supabase-js";
 import { CusProductService } from "../products/CusProductService.js";
 import Stripe from "stripe";
 import { AttachParams } from "../products/AttachParams.js";
@@ -20,16 +19,22 @@ import {
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { differenceInDays } from "date-fns";
+import { generateId, notNullish } from "@/utils/genUtils.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 const scheduleStripeSubscription = async ({
+  sb,
   attachParams,
   stripeCli,
   itemSet,
   endOfBillingPeriod,
 }: {
+  sb: SupabaseClient;
   attachParams: AttachParams;
   stripeCli: Stripe;
-  itemSet: any;
+  itemSet: ItemSet;
   endOfBillingPeriod: number;
 }) => {
   const { org, customer } = attachParams;
@@ -60,10 +65,23 @@ const scheduleStripeSubscription = async ({
       {
         items: subItems,
         default_payment_method: paymentMethod as string,
-        metadata: itemSet.subMeta,
+        // metadata: itemSet.subMeta,
         add_invoice_items: oneOffItems,
       },
     ],
+  });
+
+  await SubService.createSub({
+    sb: sb,
+    sub: {
+      id: generateId("sub"),
+      stripe_id: null,
+      stripe_schedule_id: newSubscriptionSchedule.id,
+      created_at: Date.now(),
+      usage_features: itemSet.usageFeatures,
+      org_id: org.id,
+      env: customer.env,
+    },
   });
 
   return newSubscriptionSchedule.id;
@@ -98,16 +116,16 @@ export const handleDowngrade = async ({
 }) => {
   const logger = req.logtail;
   let product = attachParams.products[0];
+  const stripeCli = createStripeCli({
+    org: attachParams.org,
+    env: attachParams.customer.env,
+  });
   logger.info(
     `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
   );
 
   // Make use of stripe subscription schedules to handle the downgrade
   logger.info("1. Cancelling current subscription (at period end)");
-  const stripeCli = createStripeCli({
-    org: attachParams.org,
-    env: attachParams.customer.env,
-  });
 
   const curSubscriptions = await getStripeSubs({
     stripeCli,
@@ -132,6 +150,10 @@ export const handleDowngrade = async ({
       otherSubItems,
       otherSub: sub,
     };
+
+    if (notNullish(sub.schedule)) {
+      await stripeCli.subscriptionSchedules.release(sub.schedule as string);
+    }
 
     if (differenceInDays(latestEndDate, curEndDate) > 10) {
       await stripeCli.subscriptions.update(sub.id, {
@@ -179,6 +201,10 @@ export const handleDowngrade = async ({
         newItems: itemSet.items,
         stripeCli,
         cusProducts: [curCusProduct, attachParams.curScheduledProduct],
+        itemSet: itemSet,
+        sb: req.sb,
+        org: attachParams.org,
+        env: attachParams.customer.env,
       });
       scheduledIds.push(scheduleObj.schedule.id);
     } else {
@@ -207,6 +233,7 @@ export const handleDowngrade = async ({
         stripeCli,
         itemSet,
         endOfBillingPeriod: latestPeriodEnd,
+        sb: req.sb,
       });
       scheduledIds.push(scheduleId);
 
@@ -255,6 +282,7 @@ export const handleDowngrade = async ({
       includeOldItems: false,
       logger: req.logtail,
       inIntervals: intervalsToRemove,
+      env: attachParams.customer.env,
     });
   }
 

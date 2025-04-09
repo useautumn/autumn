@@ -1,6 +1,14 @@
 import Stripe from "stripe";
-import { CusProductStatus, Feature, FullCusProduct } from "@autumn/shared";
+import {
+  CusProductStatus,
+  Feature,
+  FullCusProduct,
+  Organization,
+} from "@autumn/shared";
 import { differenceInSeconds } from "date-fns";
+import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getStripeSubs = async ({
   stripeCli,
@@ -65,11 +73,13 @@ export const deleteScheduledIds = async ({
 
 // Get in advance sub
 export const getUsageBasedSub = async ({
+  sb,
   stripeCli,
   subIds,
   feature,
   stripeSubs,
 }: {
+  sb: SupabaseClient;
   stripeCli: Stripe;
   subIds: string[];
   feature: Feature;
@@ -85,8 +95,27 @@ export const getUsageBasedSub = async ({
     });
   }
 
+  let finalSubIds = subs.map((sub) => sub.id);
+
+  let autumnSubs = await SubService.getInStripeIds({
+    sb,
+    ids: finalSubIds,
+  });
+
   for (const stripeSub of subs) {
     let usageFeatures: string[] | null = null;
+
+    // 1. Check if there's autumn sub
+    let autumnSub = autumnSubs?.find((sub) => sub.stripe_id == stripeSub.id);
+    if (autumnSub) {
+      let containsFeature = autumnSub.usage_features.includes(
+        feature.internal_id
+      );
+      if (containsFeature) {
+        console.log("Found autumn sub for feature:", feature.id);
+        return stripeSub;
+      }
+    }
 
     try {
       usageFeatures = JSON.parse(stripeSub.metadata.usage_features);
@@ -175,4 +204,26 @@ export const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
     differenceInSeconds(sub.current_period_end * 1000, sub.cancel_at! * 1000) >
     20
   );
+};
+
+export const getStripeProrationBehavior = ({
+  org,
+  prorationBehavior,
+}: {
+  org: Organization;
+  prorationBehavior?: ProrationBehavior;
+}) => {
+  let behaviourMap = {
+    [ProrationBehavior.Immediately]: "always_invoice",
+    [ProrationBehavior.NextBilling]: "create_prorations",
+    [ProrationBehavior.None]: "none",
+  };
+
+  if (prorationBehavior) {
+    return behaviourMap[prorationBehavior];
+  }
+
+  return org.config.bill_upgrade_immediately
+    ? behaviourMap[ProrationBehavior.Immediately]
+    : behaviourMap[ProrationBehavior.NextBilling];
 };

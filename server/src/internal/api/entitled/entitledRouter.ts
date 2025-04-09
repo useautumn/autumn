@@ -10,6 +10,7 @@ import {
   Feature,
   FeatureType,
   FullCustomerEntitlement,
+  Organization,
 } from "@autumn/shared";
 
 import { Router } from "express";
@@ -25,8 +26,11 @@ import {
   getUnlimitedAndUsageAllowed,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import { notNullOrUndefined } from "@/utils/genUtils.js";
-import { initGroupBalances } from "@/internal/customers/entitlements/groupByUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { BREAK_API_VERSION } from "@/utils/constants.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { getMinNextResetAtCusEnt } from "@/internal/customers/entitlements/cusEntHelpers.js";
+import { getOrCreateCustomer, updateCustomerDetails } from "../customers/cusUtils.js";
 
 type CusWithEnts = Customer & {
   customer_products: CusProduct[];
@@ -64,6 +68,7 @@ const getRequiredAndActualBalance = ({
       creditSystem: feature,
       amount: required,
     });
+
   }
 
   const actualBalance = getFeatureBalance({
@@ -85,12 +90,14 @@ const getMeteredEntitledResult = ({
   cusEnts,
   quantity,
   entityId,
+  org,
 }: {
   originalFeature: Feature;
   creditSystems: Feature[];
   cusEnts: FullCustomerEntitlement[];
   quantity: number;
   entityId: string;
+  org: Organization;
 }) => {
   // If no entitlements -> return false
   if (!cusEnts || cusEnts.length === 0) {
@@ -103,7 +110,9 @@ const getMeteredEntitledResult = ({
   let allowed = true;
   const balances = [];
 
+
   for (const feature of [originalFeature, ...creditSystems]) {
+
     // 1. Skip if feature not among cusEnt
     if (!cusEntsContainFeature({ cusEnts, feature })) {
       continue;
@@ -129,6 +138,17 @@ const getMeteredEntitledResult = ({
               entityId,
             }),
       });
+
+      // if (org.config.api_version >= BREAK_API_VERSION) {
+      //   balances[balances.length - 1].next_reset_at = getMinNextResetAtCusEnt({
+      //     cusEnts,
+      //     feature,
+      //   });
+      //   balances[balances.length - 1].allowance = getTotalAllowanceFromCusEnts({
+      //     cusEnts,
+      //     feature,
+      //   });
+      // }
       continue;
     }
 
@@ -146,6 +166,25 @@ const getMeteredEntitledResult = ({
       required,
       balance: actual,
     };
+
+    if (org.config.api_version >= BREAK_API_VERSION) {
+      // newBalance.next_reset_at = getMinNextResetAtCusEnt({
+      //   cusEnts,
+      //   feature,
+      // });
+      // newBalance.allowance = getTotalAllowanceFromCusEnts({
+      //   cusEnts,
+      //   feature,
+      // });
+      // newBalance.used = getTotalUsedFromCusEnts({
+      //   cusEnts,
+      //   feature,
+      //   entityId,
+      // });
+      // newBalance.required = required;
+      // newBalance.usage_allowed = false;
+      // newBalance.unlimited = false;
+    }
 
     // feature.config.group_by will always be defined
     // TODO: Rework this...
@@ -341,9 +380,13 @@ const getCusEntsAndFeatures = async ({
       timings.features = Date.now() - startParallel;
       return result;
     }),
+    OrgService.getFullOrg({
+      sb,
+      orgId,
+    })
   ];
 
-  const [res1, res2] = await Promise.all(batchQuery);
+  const [res1, res2, org] = await Promise.all(batchQuery);
   const totalTime = Date.now() - startParallel;
 
   console.log("Query timings:", {
@@ -366,28 +409,14 @@ const getCusEntsAndFeatures = async ({
   let cusEnts: CusEntWithEntitlement[] | null = null;
   if (!res1) {
     // Check if customer exists
-    let customer = await CusService.getById({
-      sb: req.sb,
-      id: customer_id,
-      orgId: req.orgId,
-      env: req.env,
+    const customer = await getOrCreateCustomer({
+      sb,
+      orgId,
+      env,
+      customerId: customer_id,
+      customerData: customer_data,
       logger: req.logtail,
     });
-
-    if (!customer) {
-      customer = await createNewCustomer({
-        sb: req.sb,
-        orgId: req.orgId,
-        env: req.env,
-        customer: {
-          id: customer_id,
-          name: customer_data?.name,
-          email: customer_data?.email,
-          fingerprint: customer_data?.fingerprint,
-        },
-        logger: req.logtail,
-      });
-    }
 
     cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
       sb,
@@ -398,32 +427,40 @@ const getCusEntsAndFeatures = async ({
       ],
     });
   } else {
+    await updateCustomerDetails({
+      sb,
+      customer: res1,
+      customerData: customer_data,
+      logger: req.logtail,
+    });
+
     cusEnts = getCusEntsActiveInFeatureIds({
       cusWithEnts: res1 as CusWithEnts,
       features: [feature, ...creditSystems],
     });
   }
 
-  return { cusEnts, feature, creditSystems };
+  return { cusEnts, feature, creditSystems, org };
 };
 
 entitledRouter.post("", async (req: any, res: any) => {
-  let {
-    customer_id,
-    feature_id,
-    required_quantity,
-    customer_data,
-    event_data,
-    entity_id,
-  } = req.body;
-
-  const quantity = required_quantity ? parseInt(required_quantity) : 1;
-
-  const { orgId, env, sb } = req;
 
   try {
+    let {
+      customer_id,
+      feature_id,
+      required_quantity,
+      customer_data,
+      event_data,
+      entity_id,
+    } = req.body;
+  
+    const quantity = required_quantity ? parseInt(required_quantity) : 1;
+  
+    const { orgId, env, sb } = req;
+
     // 1. Get cusEnts & features
-    const { cusEnts, feature, creditSystems } = await getCusEntsAndFeatures({
+    const { cusEnts, feature, creditSystems, org } = await getCusEntsAndFeatures({
       sb,
       req,
     });
@@ -439,40 +476,24 @@ entitledRouter.post("", async (req: any, res: any) => {
       });
     }
 
-    // // 3. If group is provided, but feature does not have group_by, throw error
-    // if (notNullOrUndefined(group) && !feature.config?.group_by) {
-    //   throw new RecaseError({
-    //     message: `Feature ${feature.id} does not support group_by`,
-    //     code: ErrCode.FeatureNotFound,
-    //     statusCode: StatusCodes.NOT_FOUND,
-    //   });
-    // }
-
-    // if (notNullOrUndefined(group)) {
-    //   await initGroupBalances({
-    //     sb,
-    //     cusEnts: cusEnts!,
-    //     groupValue: group,
-    //     feature,
-    //   });
-    // }
-
     const { allowed, balances } = getMeteredEntitledResult({
       originalFeature: feature,
       creditSystems,
       cusEnts: cusEnts! as FullCustomerEntitlement[],
       quantity,
       entityId: entity_id,
+      org,
     });
 
-    if (allowed && event_data && !req.isPublic) {
-      handleEventSent({
+
+    if (allowed && notNullish(event_data) && req.isPublic !== true) {
+      await handleEventSent({
         req,
         customer_id: customer_id,
         customer_data: customer_data,
         event_data: {
           customer_id: customer_id,
-
+          feature_id: feature_id,
           ...event_data,
         },
       });

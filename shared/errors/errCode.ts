@@ -84,6 +84,7 @@ export const ErrCode = {
   InvalidEntitlement: "invalid_entitlement",
   CreateEntitlementFailed: "create_entitlement_failed",
   DeleteEntitlementFailed: "delete_entitlement_failed",
+  InsufficientBalance: "insufficient_balance",
 
   // Invoice
   CreateInvoiceFailed: "create_invoice_failed",
@@ -95,6 +96,7 @@ export const ErrCode = {
 
   // Cus Product
   NoActiveCusProducts: "no_active_cus_products",
+  GetCusProductsFailed: "get_cus_products_failed",
 
   // Cus Price
   GetCusPriceFailed: "get_cus_price_failed",
@@ -108,4 +110,11 @@ export const ErrCode = {
   // Entity
   EntityNotFound: "entity_not_found",
   EntityAlreadyDeleted: "entity_already_deleted",
+
+  // Referral codes
+  ReferralCodeMaxRedemptionsReached: "referral_code_max_redemptions_reached",
+  ReferralNotFound: "referral_not_found",
+  CustomerAlreadyRedeemedReferralCode:
+    "customer_already_redeemed_referral_code",
+  CustomerCannotRedeemOwnCode: "customer_cannot_redeem_own_code",
 };

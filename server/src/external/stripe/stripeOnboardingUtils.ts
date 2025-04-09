@@ -3,9 +3,12 @@ import Stripe from "stripe";
 
 export const checkKeyValid = async (apiKey: string) => {
   const stripe = new Stripe(apiKey);
-  const account = await stripe.accounts.retrieve();
+
+  // Call customers.list
+  const customers = await stripe.customers.list();
+  // const account = await stripe.accounts.retrieve();
   // console.log("Account", account);
-  return account;
+  // return account;
 };
 
 export const createWebhookEndpoint = async (
@@ -27,6 +30,7 @@ export const createWebhookEndpoint = async (
       "invoice.created",
       "invoice.finalized",
       "subscription_schedule.canceled",
+      "customer.discount.deleted",
     ],
   });
 

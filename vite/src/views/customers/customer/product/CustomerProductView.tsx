@@ -52,6 +52,7 @@ import { ProductOptions } from "./ProductOptions";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
+import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
 
 interface OptionValue {
   feature_id: string;
@@ -71,12 +72,16 @@ export default function CustomerProductView() {
   const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
   const navigation = useNavigate();
-  const [searchParams] = useSearchParams();
   const [product, setProduct] = useState<FrontendProduct | null>(null);
   const [options, setOptions] = useState<OptionValue[]>([]);
 
+  const [searchParams] = useSearchParams();
+  let version = searchParams.get("version");
+
   const { data, isLoading, mutate, error } = useAxiosSWR({
-    url: `/customers/${customer_id}/data`,
+    url: `/customers/${customer_id}/product/${product_id}${
+      version ? `?version=${version}` : ""
+    }`,
     env,
   });
 
@@ -91,27 +96,27 @@ export default function CustomerProductView() {
   const [hasChanges, setHasChanges] = useState(false);
   const [hasOptionsChanges, setHasOptionsChanges] = useState(false);
 
-  const cusProductId = searchParams.get("id");
+  // const cusProductId = searchParams.get("id");
+  useEffect(() => {
+    if (data?.product) {
+      setProduct(data.product);
+      initialProductRef.current = data.product;
+    }
+  }, [data]);
+
   // Get product from customer data and check if it is active
   useEffect(() => {
-    if (!data?.products || !data?.customer) return;
+    if (!data?.product || !data?.customer) return;
 
-    const foundProduct = data.products.find((p: any) => p.id === product_id);
+    let product = data.product;
+    initialProductRef.current = product;
 
-    if (!foundProduct) return;
-
-    const customerProduct = data.customer.products.find(
-      (p: FullCusProduct) => p.id === cusProductId
-    );
-
-    console.log("customerProduct", customerProduct);
-
-    const enrichedProduct = enrichProduct(foundProduct, customerProduct);
-    // console.log("enrichedProduct", enrichedProduct);
-
-    setOptions(enrichedProduct.options);
-    setProduct(enrichedProduct);
-    initialProductRef.current = enrichedProduct;
+    if (product.options) {
+      setOptions(product.options);
+    } else {
+      setOptions([]);
+    }
+    setProduct(product);
   }, [data, product_id]);
 
   // Pure function to handle product enrichment
@@ -123,6 +128,7 @@ export default function CustomerProductView() {
       entitlements?: typeof baseProduct.entitlements;
       prices?: typeof baseProduct.prices;
       free_trial?: typeof baseProduct.free_trial;
+      version?: number;
     }
   ) => {
     if (!customerProduct) {
@@ -138,19 +144,27 @@ export default function CustomerProductView() {
       ...baseProduct,
       isActive: customerProduct.status === "active",
       options: customerProduct.options ?? [],
-      ...(customerProduct.entitlements && {
-        entitlements: customerProduct.entitlements,
-      }),
-      ...(customerProduct.prices && {
-        prices: customerProduct.prices,
-      }),
-      ...(customerProduct.free_trial && {
-        free_trial: customerProduct.free_trial,
-      }),
+      entitlements: customerProduct.entitlements || baseProduct.entitlements,
+      prices: customerProduct.prices || baseProduct.prices,
+      free_trial: customerProduct.free_trial || baseProduct.free_trial,
+      version: customerProduct.version || baseProduct.version,
+      // // ...(customerProduct.entitlements && {
+      // //   entitlements: customerProduct.entitlements,
+      // // }),
+      // ...(customerProduct.prices && {
+      //   prices: customerProduct.prices,
+      // }),
+      // ...(customerProduct.free_trial && {
+      //   free_trial: customerProduct.free_trial,
+      // }),
+      // ...(customerProduct.version && {
+      //   version: customerProduct.version,
+      // }),
     };
   };
 
   //check if the user has made changes to the product state
+
   useEffect(() => {
     if (!initialProductRef.current || !product) {
       setHasChanges(false);
@@ -161,10 +175,12 @@ export default function CustomerProductView() {
       JSON.stringify({
         prices: product.prices,
         entitlements: product.entitlements,
+        free_trial: product.free_trial,
       }) !==
       JSON.stringify({
         prices: initialProductRef.current.prices,
         entitlements: initialProductRef.current.entitlements,
+        free_trial: initialProductRef.current.free_trial,
       });
 
     const hasOptionsChanged =
@@ -187,9 +203,7 @@ export default function CustomerProductView() {
   }
 
   if (isLoading) return <LoadingScreen />;
-  const oneTimePurchase = product?.prices.every(
-    (price) => price.config?.interval == BillingInterval.OneOff
-  );
+  const oneTimePurchase = pricesOnlyOneOff(product?.prices || []);
 
   const { customer } = data;
 
@@ -229,15 +243,21 @@ export default function CustomerProductView() {
 
   const createProduct = async (useInvoiceLatest?: boolean) => {
     try {
+      let isCustom = hasChanges;
+
       const { data } = await CusService.addProduct(axiosInstance, customer_id, {
         product_id,
         prices: product.prices,
         entitlements: product.entitlements,
         free_trial: product.free_trial,
         options: requiredOptions ? requiredOptions : options,
-        is_custom: true,
+        is_custom: isCustom,
         invoice_only:
           useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,
+        version:
+          version && Number.isInteger(parseInt(version))
+            ? parseInt(version)
+            : product.version,
       });
 
       await mutate();
@@ -396,6 +416,7 @@ export default function CustomerProductView() {
               customerData={data}
               showFreeTrial={false}
               setShowFreeTrial={() => {}}
+              version={version ? parseInt(version) : product.version}
             />
           )}
         </div>
@@ -414,6 +435,22 @@ export default function CustomerProductView() {
             setUseInvoice={setUseInvoice}
           />
         </div>
+      </div>
+
+      {options.length > 0 && (
+        <ProductOptions
+          options={options}
+          setOptions={setOptions}
+          oneTimePurchase={oneTimePurchase || false}
+        />
+      )}
+      <div className="flex justify-end gap-2">
+        {/* <ProductOptionsButton /> */}
+        <AddProductButton
+          handleCreateProduct={handleCreateProduct}
+          actionState={actionState}
+          setUseInvoice={setUseInvoice}
+        />
       </div>
     </ProductContext.Provider>
   );

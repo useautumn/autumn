@@ -83,3 +83,10 @@ export const getDefaultPriceConfig = (type: PriceType) => {
     should_prorate: false,
   };
 };
+
+export const pricesOnlyOneOff = (prices: Price[]) => {
+  if (prices.length == 0) return false;
+  return prices.every((price) => {
+    return price.config?.interval == BillingInterval.OneOff;
+  });
+};

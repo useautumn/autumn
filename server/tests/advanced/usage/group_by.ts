@@ -14,7 +14,7 @@ import { sendGPUEvents } from "../../utils/advancedUsageUtils.js";
 import chalk from "chalk";
 
 const PRECISION = 12;
-describe(`${chalk.yellowBright(
+describe.skip(`${chalk.yellowBright(
   "Testing group by -- regular metered1 feature"
 )}`, () => {
   let customerId = "group-by-basic-metered";

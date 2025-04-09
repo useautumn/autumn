@@ -10,13 +10,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
-import {
-  addBillingIntervalUnix,
-  getNextStartOfMonthUnix,
-  subtractBillingIntervalUnix,
-  subtractFromUnixTillAligned,
-} from "@/internal/prices/billingIntervalUtils.js";
-import { format } from "date-fns";
+import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
 
 export const handleCreateCheckout = async ({
   sb,
@@ -79,7 +73,7 @@ export const handleCreateCheckout = async ({
         trial_end: freeTrial
           ? freeTrialToStripeTimestamp(freeTrial)
           : undefined,
-        metadata: subMeta,
+        // metadata: subMeta,
         billing_cycle_anchor: billingCycleAnchorUnixSeconds,
       }
     : undefined;
@@ -101,6 +95,10 @@ export const handleCreateCheckout = async ({
           enabled: true,
         }
       : undefined,
+
+    saved_payment_method_options: {
+      payment_method_save: "enabled",
+    },
   });
 
   logger.info(`✅ Successfully created checkout for customer ${customer.id}`);

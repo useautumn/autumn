@@ -64,23 +64,22 @@ const handleInArrearProrated = async ({
     return;
   }
 
-  // console.log(
-  //   "Usage sub end:",
-  //   formatUnixToDateTime(usageSub.current_period_end * 1000)
-  // );
-  // // Skip if not at end of billing cycle
-  const minutesUntilEnd = differenceInMinutes(
-    new Date(usageSub.current_period_end * 1000),
-    new Date()
-  );
+  // console.log("Invoice period start:\t", formatUnixToDateTime(invoice.period_start * 1000));
+  // console.log("Invoice period end:\t", formatUnixToDateTime(invoice.period_end * 1000));
+  // console.log("Sub period start:\t", formatUnixToDateTime(usageSub.current_period_start * 1000));
+  // console.log("Sub period end:\t", formatUnixToDateTime(usageSub.current_period_end * 1000));
 
-  if (minutesUntilEnd > 60) {
-    logger.info("Not at end of billing cycle, skipping...");
+  // Check if invoice is for new subscription period by comparing billing period
+  const isNewPeriod = invoice.period_start !== usageSub.current_period_start;
+  if (!isNewPeriod) {
+    logger.info("Invoice is not for new subscription period, skipping...");
     return;
   }
 
   let feature = cusEnt.entitlement.feature;
-  console.log("In arrear prorated feature:", feature);
+  logger.info(
+    `Handling invoice.created for in arrear prorated, feature: ${feature.id}`
+  );
 
   let deletedEntities = await EntityService.getByInternalCustomerId({
     sb,
@@ -110,7 +109,7 @@ const handleInArrearProrated = async ({
     // isLinked
     let isLinked = cusEnt.entitlement.entity_feature_id == feature.id;
 
-    console.log(`Linked cus ent: ${cusEnt.feature_id}, isLinked: ${isLinked}`);
+    logger.info(`Linked cus ent: ${cusEnt.feature_id}, isLinked: ${isLinked}`);
     if (!isLinked) {
       continue;
     }
@@ -118,7 +117,7 @@ const handleInArrearProrated = async ({
     // Delete cus ent ids
     let newEntities = structuredClone(cusEnt.entities!);
     for (const entityId in newEntities) {
-      if (entityId in newEntities) {
+      if (deletedEntities.some((e) => e.id == entityId)) {
         delete newEntities[entityId];
       }
     }
@@ -150,8 +149,9 @@ const handleInArrearProrated = async ({
 
   // Increase balance
   if (notNullish(cusEnt.balance)) {
+    logger.info(`Incrementing balance for cus ent: ${cusEnt.id}`);
     await pg.query(
-      `UPDATE customer_entitlements SET balance = balance + ${deletedEntities.length} WHERE id = ${cusEnt.id}`
+      `UPDATE customer_entitlements SET balance = balance + ${deletedEntities.length} WHERE id = '${cusEnt.id}'`
     );
   }
 };
@@ -165,6 +165,7 @@ const handleUsageInArrear = async ({
   price,
   usageSub,
   logger,
+  activeProduct,
 }: {
   sb: SupabaseClient;
   invoice: Stripe.Invoice;
@@ -174,7 +175,31 @@ const handleUsageInArrear = async ({
   price: Price;
   usageSub: Stripe.Subscription;
   logger: any;
+  activeProduct: FullCusProduct;
 }) => {
+  let invoiceCreatedRecently = invoiceCusProductCreatedDifference({
+    invoice,
+    cusProduct: activeProduct,
+    minutes: 10,
+  });
+
+  let invoiceFromUpgrade = invoice.billing_reason == "subscription_update";
+
+  if (invoiceCreatedRecently) {
+    logger.info("Invoice created recently, skipping");
+    return;
+  }
+
+  if (invoiceFromUpgrade) {
+    logger.info("Invoice is from upgrade, skipping");
+    return;
+  }
+
+  // For cancel at period end: invoice period start = sub period start (cur cycle), invoice period end = sub period end (a month later...)
+  // For cancel immediately: invoice period start = sub period start (cur cycle), invoice period end cancel immediately date
+  // For regular billing: invoice period end = sub period start (next cycle)
+  // For upgrade, bill_immediately: invoice period start = sub period start (cur cycle), invoice period end cancel immediately date
+
   let allowance = relatedCusEnt.entitlement.allowance!;
 
   let config = price.config as UsagePriceConfig;
@@ -312,6 +337,7 @@ export const sendUsageAndReset = async ({
     }
 
     let usageBasedSub = await getUsageBasedSub({
+      sb: sb,
       stripeCli,
       subIds: activeProduct.subscription_ids || [],
       feature: relatedCusEnt.entitlement.feature,
@@ -342,6 +368,7 @@ export const sendUsageAndReset = async ({
         price,
         usageSub: usageBasedSub,
         logger,
+        activeProduct,
       });
     }
 
@@ -403,6 +430,7 @@ export const handleInvoiceCreated = async ({
   });
 
   // Get stripe subscriptions
+
   if (invoice.subscription) {
     const activeProducts = await CusProductService.getByStripeSubId({
       sb,
@@ -425,16 +453,6 @@ export const handleInvoiceCreated = async ({
     });
 
     for (const activeProduct of activeProducts) {
-      let invoiceCreatedRecently = invoiceCusProductCreatedDifference({
-        invoice,
-        cusProduct: activeProduct,
-        minutes: 10,
-      });
-
-      if (invoiceCreatedRecently) {
-        continue; // Skip this product but process others
-      }
-
       await sendUsageAndReset({
         sb,
         activeProduct,

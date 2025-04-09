@@ -11,10 +11,9 @@ import {
 } from "@autumn/shared";
 
 export type AttachParams = {
+  org: Organization;
   customer: Customer;
   products: FullProduct[];
-
-  org: Organization;
 
   prices: Price[];
   entitlements: EntitlementWithFeature[];
@@ -36,6 +35,8 @@ export type AttachParams = {
   metadata?: Record<string, string> | undefined;
 
   entities: Entity[];
+
+  isCustom?: boolean;
 };
 
 export type InsertCusProductParams = {
@@ -59,4 +60,6 @@ export type InsertCusProductParams = {
 
   // CONFIGS
   invoiceOnly?: boolean | undefined;
+  entities: Entity[];
+  isCustom?: boolean;
 };

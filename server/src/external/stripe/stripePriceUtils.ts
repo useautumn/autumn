@@ -40,11 +40,19 @@ import {
   createStripeOneOffTieredProduct,
 } from "./createStripePrice.js";
 
-import { getCusEntMasterBalance, getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";
+import {
+  getCusEntMasterBalance,
+  getExistingUsageFromCusProducts,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
 import {
   priceToInArrearProrated,
   priceToUsageInAdvance,
 } from "./priceToStripeItem.js";
+import {
+  entitlementLinkedToEntity,
+  entityMatchesFeature,
+} from "@/internal/api/entities/entityUtils.js";
+import { getExistingCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 
 export const createSubMeta = ({ features }: { features: Feature[] }) => {
   const usageFeatures = features.map((f) => ({
@@ -113,18 +121,23 @@ export const priceToStripeItem = ({
 
   let lineItemMeta = null;
   let lineItem = null;
-  if (billingType == BillingType.OneOff) {
-    const config = price.config as FixedPriceConfig;
+  // if (billingType == BillingType.OneOff) {
+  //   const config = price.config as FixedPriceConfig;
 
-    lineItem = {
-      quantity: 1,
-      price_data: {
-        product: stripeProductId,
-        unit_amount: Math.round(config.amount * 100),
-        currency: org.default_currency,
-      },
-    };
-  } else if (billingType == BillingType.FixedCycle) {
+  //   lineItem = {
+  //     quantity: 1,
+  //     price_data: {
+  //       product: stripeProductId,
+  //       unit_amount: Math.round(config.amount * 100),
+  //       currency: org.default_currency,
+  //     },
+  //   };
+  // } else
+
+  if (
+    billingType == BillingType.FixedCycle ||
+    billingType == BillingType.OneOff
+  ) {
     const config = price.config as FixedPriceConfig;
     lineItem = {
       price: config.stripe_price_id,
@@ -213,9 +226,11 @@ export const priceToStripeItem = ({
 export const getStripeSubItems = async ({
   attachParams,
   isCheckout = false,
+  carryExistingUsages = false,
 }: {
   attachParams: AttachParams;
   isCheckout?: boolean;
+  carryExistingUsages?: boolean;
 }) => {
   const { products, prices, entitlements, optionsList, org, cusProducts } =
     attachParams;
@@ -264,13 +279,12 @@ export const getStripeSubItems = async ({
       const priceEnt = getPriceEntitlement(price, entitlements);
       const options = getEntOptions(optionsList, priceEnt);
       const billingType = getBillingType(price.config!);
-      const existingUsage = getExistingUsageFromCusProducts({
+      let existingUsage = getExistingUsageFromCusProducts({
         entitlement: priceEnt,
         cusProducts: attachParams.cusProducts,
         entities: attachParams.entities,
+        carryExistingUsages,
       });
-
-
 
       if (
         billingType == BillingType.UsageInArrear ||
@@ -312,6 +326,7 @@ export const getStripeSubItems = async ({
       subMeta: {
         usage_features: JSON.stringify(usage_features),
       },
+      usageFeatures: usage_features.map((f) => f.internal_id) || [],
       prices,
     });
   }
@@ -428,19 +443,30 @@ export const createStripePriceIFNotExist = async ({
 
   try {
     if (config.stripe_price_id) {
+      // Check stripe price and product
       const stripePrice = await stripeCli.prices.retrieve(
         config.stripe_price_id
       );
 
-      if (!stripePrice.active) {
+      const stripePriceProduct = await stripeCli.products.retrieve(
+        stripePrice.product as string
+      );
+
+      if (!stripePrice.active || !stripePriceProduct.active) {
         config.stripe_price_id = undefined;
         config.stripe_meter_id = undefined;
       }
 
+      // Check stripe product
       if (config.stripe_product_id) {
-        const stripeProduct = await stripeCli.products.retrieve(
-          config.stripe_product_id as string
-        );
+        let stripeProduct;
+        if (stripePriceProduct.id != config.stripe_product_id) {
+          stripeProduct = stripePriceProduct;
+        } else {
+          stripeProduct = await stripeCli.products.retrieve(
+            config.stripe_product_id as string
+          );
+        }
 
         if (!stripeProduct.active) {
           config.stripe_product_id = null;
@@ -451,11 +477,13 @@ export const createStripePriceIFNotExist = async ({
     logger.info("Stripe price not found / inactive, creating new");
     config.stripe_price_id = undefined;
     config.stripe_meter_id = undefined;
-    // If no stripe price, no stripe product too
     config.stripe_product_id = undefined;
   }
 
-  if (billingType == BillingType.FixedCycle) {
+  if (
+    billingType == BillingType.FixedCycle ||
+    billingType == BillingType.OneOff
+  ) {
     if (!config.stripe_price_id) {
       logger.info("Creating stripe fixed cycle price");
       await createStripeFixedCyclePrice({

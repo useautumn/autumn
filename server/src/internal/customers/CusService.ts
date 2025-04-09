@@ -281,14 +281,17 @@ export class CusService {
     const { data, error } = await sb
       .from("customers")
       .select()
-      .eq("processor->>id", stripeId)
-      .single();
+      .eq("processor->>id", stripeId);
 
     if (error) {
       throw error;
     }
 
-    return data;
+    if (data.length === 0) {
+      return null;
+    }
+
+    return data[0];
   }
 
   //search customers
@@ -337,15 +340,14 @@ export class CusService {
       );
     }
 
-    query.order("created_at", {
-      foreignTable: customerPrefix.slice(0, -1),
-      ascending: false,
-    });
+    if (customerPrefix) {
+      query.order(`customer(created_at)`, { ascending: false });
+    } else {
+      query
+        .order("created_at", { ascending: false })
+        .order("internal_id", { ascending: true });
+    }
 
-    query.order("internal_id", {
-      foreignTable: customerPrefix.slice(0, -1),
-      ascending: true,
-    });
     query.limit(pageSize);
   };
 
@@ -373,13 +375,15 @@ export class CusService {
     const query = sb
       .from("customer_products")
       .select(
-        "*, customer:customers!inner(*), product:products!inner(id, name)",
+        `*, 
+        customer:customers!inner(*), product:products!inner(id, name)`,
         {
           count: "exact",
         }
       )
       .eq("customer.org_id", orgId)
-      .eq("customer.env", env);
+      .eq("customer.env", env)
+      .in("status", [CusProductStatus.Active, CusProductStatus.PastDue]);
 
     if (filters.product_id) {
       query.eq("product.id", filters.product_id);
@@ -500,6 +504,7 @@ export class CusService {
     if (error) {
       throw error;
     }
+
     const totalCount = count && count + pageSize * (pageNumber - 1);
     return { data, count: totalCount };
   }
@@ -671,6 +676,7 @@ export class CusService {
             feature:features!inner(*)
           )
       )`,
+      `free_trial:free_trials(*)`,
     ]
       .filter(Boolean)
       .join(", ");
@@ -702,6 +708,15 @@ export class CusService {
       throw error;
     }
 
+    // for (const cusProduct of data) {
+    //   // console.log("Free trial", cusProduct.free_trial);
+    //   // let freeTrial = cusProduct.free_trial;
+    //   // if (freeTrial && freeTrial.length > 0) {
+    //   //   cusProduct.free_trial = freeTrial[0];
+    //   // } else {
+    //   //   cusProduct.free_trial = null;
+    //   // }
+    // }
     return data as any;
   }
 

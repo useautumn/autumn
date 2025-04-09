@@ -542,6 +542,7 @@ export const updateCustomerBalance = async ({
   logger: any;
 }) => {
   const startTime = performance.now();
+  console.log("REVERSE DEDUCTION ORDER", org.config.reverse_deduction_order);
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
     sb,
     internalCustomerId: customer.internal_id,
@@ -549,6 +550,7 @@ export const updateCustomerBalance = async ({
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     withPrices: true,
     logger,
+    reverseOrder: org.config.reverse_deduction_order,
   });
 
   const endTime = performance.now();

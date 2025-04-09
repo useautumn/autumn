@@ -5,17 +5,21 @@ import {
   AllowanceType,
   AppEnv,
   BillingInterval,
+  CouponDurationType,
+  DiscountType,
   EntInterval,
   Feature,
+  RewardTriggerEvent,
 } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import {
-  initCoupon,
+  initReward,
   initEntitlement,
   initFeature,
   initFreeTrial,
   initPrice,
   initProduct,
+  initRewardProgram,
 } from "./utils/init.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -553,7 +557,6 @@ export const advanceProducts = {
   }),
 };
 
-// New
 export const attachProducts = {
   // 1. pro1Starter
   starterGroup1: initProduct({
@@ -718,19 +721,93 @@ export const attachProducts = {
   }),
 };
 
-export const coupons = {
-  rolloverAll: initCoupon({
+// Entity products
+export const entityProducts = {
+  entityFree: initProduct({
+    id: "entityFree",
+    entitlements: {
+      seats: initEntitlement({
+        feature: features.seats,
+        allowance: 1,
+        interval: EntInterval.Lifetime,
+      }),
+    },
+    prices: [],
+    freeTrial: null,
+  }),
+
+  entityPro: initProduct({
+    id: "entityPro",
+    entitlements: {
+      seats: initEntitlement({
+        feature: features.seats,
+        allowance: 0,
+        interval: EntInterval.Lifetime,
+        carryFromPrevious: true,
+      }),
+      metered1: initEntitlement({
+        feature: features.metered1,
+        allowance: 500,
+        interval: EntInterval.Month,
+        entityFeatureId: features.seats.id,
+        carryFromPrevious: true,
+      }),
+    },
+    prices: [
+      // initPrice({
+      //   type: "monthly",
+      //   amount: 10,
+      // }),
+      initPrice({
+        type: "in_arrear_prorated",
+        billingInterval: BillingInterval.Month,
+        feature: features.seats,
+        amount: 100,
+        oneTier: true,
+        billingUnits: 1,
+        // Carry over usage
+      }),
+    ],
+    freeTrial: null,
+  }),
+};
+
+export const rewards = {
+  rolloverAll: initReward({
     id: "rolloverAll",
     discountValue: 1000,
     rollover: true,
     applyToAll: true,
   }),
-  rolloverUsage: initCoupon({
+  rolloverUsage: initReward({
     id: "rolloverUsage",
     discountValue: 1000,
     rollover: true,
     onlyUsagePrices: true,
     productIds: [products.proWithOverage.id],
+  }),
+  monthOff: initReward({
+    id: "monthOff",
+    discountType: DiscountType.Percentage,
+    discountValue: 100,
+    applyToAll: true,
+    durationType: CouponDurationType.Months,
+    durationValue: 1,
+  }),
+};
+
+export const referralPrograms = {
+  onCheckout: initRewardProgram({
+    id: "onCheckout",
+    internalRewardId: rewards.monthOff.id,
+    when: RewardTriggerEvent.Checkout,
+    productIds: [products.pro.id, products.proWithTrial.id],
+  }),
+  immediate: initRewardProgram({
+    id: "immediate",
+    internalRewardId: rewards.monthOff.id,
+    when: RewardTriggerEvent.CustomerCreation,
+    // productIds: [products.pro.id, products.proWithTrial.id],
   }),
 };
 

@@ -7,7 +7,10 @@ import {
 import { createStripeCli } from "@/external/stripe/utils.js";
 
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import {
+  attachToInsertParams,
+  isFreeProduct,
+} from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   FullCusProduct,
@@ -15,6 +18,7 @@ import {
   FullProduct,
   CusProductStatus,
 } from "@autumn/shared";
+
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
@@ -33,8 +37,14 @@ import {
   addBillingIntervalUnix,
   subtractBillingIntervalUnix,
 } from "@/internal/prices/billingIntervalUtils.js";
-import { formatUnixToDateTime } from "@/utils/genUtils.js";
-import { differenceInSeconds, subSeconds } from "date-fns";
+
+import { differenceInSeconds } from "date-fns";
+
+export enum ProrationBehavior {
+  Immediately = "immediately",
+  NextBilling = "next_billing",
+  None = "none",
+}
 
 // UPGRADE FUNCTIONS
 const handleStripeSubUpdate = async ({
@@ -45,6 +55,8 @@ const handleStripeSubUpdate = async ({
   disableFreeTrial,
   stripeSubs,
   logger,
+  carryExistingUsages = false,
+  prorationBehavior = ProrationBehavior.Immediately,
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
@@ -53,13 +65,17 @@ const handleStripeSubUpdate = async ({
   disableFreeTrial?: boolean;
   stripeSubs: Stripe.Subscription[];
   logger: any;
+  carryExistingUsages?: boolean;
+  prorationBehavior?: ProrationBehavior;
 }) => {
   // HANLDE UPGRADE
 
   // 1. Get item sets
   const itemSets = await getStripeSubItems({
     attachParams,
+    carryExistingUsages,
   });
+
   const firstSub = stripeSubs[0];
   const firstItemSet = itemSets[0];
   let curPrices = curCusProduct.customer_prices.map((cp) => cp.price);
@@ -92,15 +108,19 @@ const handleStripeSubUpdate = async ({
   // 3. Update current subscription
   let newSubs = [];
   const subUpdate: Stripe.Subscription = await updateStripeSubscription({
+    sb,
     stripeCli,
     subscriptionId: firstSub.id,
-    items: firstItemSet.items,
     trialEnd,
     org: attachParams.org,
     customer: attachParams.customer,
-    prices: firstItemSet.prices,
     invoiceOnly: attachParams.invoiceOnly || false,
+    prorationBehavior,
+    logger,
+
+    itemSet: firstItemSet,
   });
+
   newSubs.push(subUpdate);
 
   // 4. If scheduled_ids exist, need to update schedule too (BRUH)!
@@ -111,7 +131,23 @@ const handleStripeSubUpdate = async ({
     });
 
     for (const scheduleObj of schedules) {
-      const { interval } = scheduleObj;
+      const { interval, schedule } = scheduleObj;
+
+      // If schedule has passed, skip this step.
+      let phase = schedule.phases.length > 0 ? schedule.phases[0] : null;
+      let now = Date.now();
+      if (schedule.test_clock) {
+        let testClock = await stripeCli.testHelpers.testClocks.retrieve(
+          schedule.test_clock as string
+        );
+        now = testClock.frozen_time * 1000;
+      }
+
+      if (phase && phase.start_date * 1000 < now) {
+        logger.info("Note: Schedule has passed, skipping");
+        continue;
+      }
+
       // Get corresponding item set
       const itemSet = itemSets.find((itemSet) => itemSet.interval === interval);
       if (!itemSet) {
@@ -123,6 +159,10 @@ const handleStripeSubUpdate = async ({
         newItems: itemSet.items,
         stripeCli,
         cusProducts: [curCusProduct, attachParams.curScheduledProduct],
+        itemSet,
+        sb,
+        org: attachParams.org,
+        env: attachParams.customer.env,
       });
     }
   }
@@ -175,6 +215,7 @@ const handleStripeSubUpdate = async ({
     }
 
     const newSub = await createStripeSub({
+      sb,
       stripeCli,
       customer: attachParams.customer,
       org: attachParams.org,
@@ -206,11 +247,13 @@ const handleOnlyEntsChanged = async ({
   res,
   attachParams,
   curCusProduct,
+  carryExistingUsages = false,
 }: {
   req: any;
   res: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
+  carryExistingUsages?: boolean;
 }) => {
   const logger = req.logtail;
   logger.info("Only entitlements changed, no need to update prices");
@@ -230,6 +273,7 @@ const handleOnlyEntsChanged = async ({
     subscriptionIds: curCusProduct.subscription_ids || [],
     disableFreeTrial: false,
     keepResetIntervals: true,
+    carryExistingUsages,
   });
 
   logger.info("✅ Successfully updated entitlements for product");
@@ -247,6 +291,10 @@ export const handleUpgrade = async ({
   curCusProduct,
   curFullProduct,
   hasPricesChanged = true,
+  fromReq = true,
+  carryExistingUsages = false,
+  prorationBehavior,
+  newVersion = false,
 }: {
   req: any;
   res: any;
@@ -254,10 +302,19 @@ export const handleUpgrade = async ({
   curCusProduct: FullCusProduct;
   curFullProduct: FullProduct;
   hasPricesChanged?: boolean;
+  fromReq?: boolean;
+  carryExistingUsages?: boolean;
+  prorationBehavior?: ProrationBehavior;
+  newVersion?: boolean;
 }) => {
   const logger = req.logtail;
   const { org, customer, products } = attachParams;
   let product = products[0];
+
+  let disableFreeTrial = false;
+  if (newVersion) {
+    disableFreeTrial = true;
+  }
 
   if (!hasPricesChanged) {
     await handleOnlyEntsChanged({
@@ -265,6 +322,7 @@ export const handleUpgrade = async ({
       res,
       attachParams,
       curCusProduct,
+      carryExistingUsages,
     });
     return;
   }
@@ -279,16 +337,37 @@ export const handleUpgrade = async ({
     subIds: curCusProduct.subscription_ids!,
   });
 
-  // 2. TO FIX: If current product is a trial, just start a new period (with new subscription_ids)
-  if (curCusProduct.trial_ends_at && curCusProduct.trial_ends_at > Date.now()) {
+  // 1. If current product has trial and new product has trial, cancel and start new subscription
+  let trialToTrial =
+    curCusProduct.trial_ends_at &&
+    curCusProduct.trial_ends_at > Date.now() &&
+    attachParams.freeTrial &&
+    !disableFreeTrial;
+
+  let trialToPaid =
+    curCusProduct.trial_ends_at &&
+    curCusProduct.trial_ends_at > Date.now() &&
+    !attachParams.freeTrial &&
+    !newVersion; // Only carry over trial if migrating from one version to another...
+
+  // 2. If upgrade is free to paid, or paid to free (migration / update)
+  let toFreeProduct = isFreeProduct(attachParams.prices);
+  let paidToFreeProduct =
+    isFreeProduct(curCusProduct.customer_prices.map((cp) => cp.price)) &&
+    !isFreeProduct(attachParams.prices);
+
+  if (trialToTrial || trialToPaid || toFreeProduct || paidToFreeProduct) {
     logger.info(
-      "Current product is a TRIAL, cancelling and starting new subscription"
+      "Upgrading from trial to trial, cancelling and starting new subscription"
     );
 
     await handleAddProduct({
       req,
       res,
       attachParams,
+      fromRequest: fromReq,
+      carryExistingUsages,
+      keepResetIntervals: newVersion, // keep reset intervals if upgrading version (migrations)
     });
 
     for (const subId of curCusProduct.subscription_ids!) {
@@ -306,9 +385,7 @@ export const handleUpgrade = async ({
     return;
   }
 
-  const disableFreeTrial = false;
-
-  logger.info("2. Updating current subscription to new product");
+  logger.info("1. Updating current subscription to new product");
   let { subUpdate, newSubIds, invoiceIds, remainingExistingSubIds, newSubs } =
     await handleStripeSubUpdate({
       sb: req.sb,
@@ -318,11 +395,11 @@ export const handleUpgrade = async ({
       disableFreeTrial,
       stripeSubs,
       logger,
+      carryExistingUsages,
+      prorationBehavior,
     });
 
-  // 2. Billing for remaining usages
-  // 1. Bill for remaining usages
-  logger.info("1. Bill for remaining usages");
+  logger.info("2. Bill for remaining usages");
   await billForRemainingUsages({
     sb: req.sb,
     attachParams,
@@ -359,15 +436,19 @@ export const handleUpgrade = async ({
 
   // Handle backend
   logger.info("3. Creating new full cus product");
+
   await createFullCusProduct({
     sb: req.sb,
     attachParams: attachToInsertParams(attachParams, products[0]),
     subscriptionIds: newSubIds,
+    keepResetIntervals: true,
+    disableFreeTrial,
+    carryExistingUsages,
+    carryOverTrial: true,
+
     // nextResetAt: subUpdate.current_period_end
     //   ? subUpdate.current_period_end * 1000
     //   : undefined,
-    keepResetIntervals: true,
-    disableFreeTrial,
   });
 
   // Create invoices
@@ -396,19 +477,10 @@ export const handleUpgrade = async ({
   await Promise.all(batchInsertInvoice);
   logger.info("✅ Done!");
 
-  res.status(200).json({
-    success: true,
-    message: `Successfully attached ${product.name} to ${customer.name} -- upgraded from ${curFullProduct.name}`,
-  });
+  if (fromReq) {
+    res.status(200).json({
+      success: true,
+      message: `Successfully attached ${product.name} to ${customer.name} -- upgraded from ${curFullProduct.name}`,
+    });
+  }
 };
-
-// // 1. If current product is free, retire old product (should already be handled?)
-// if (isFreeProduct(curFullProduct.prices)) {
-//   logger.info("NOTE: Current product is free, using add product flow");
-//   await handleAddProduct({
-//     req,
-//     res,
-//     attachParams,
-//   });
-//   return;
-// }

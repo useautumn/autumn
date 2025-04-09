@@ -37,6 +37,8 @@ import {
   getEntityBalance,
   getSummedEntityBalances,
 } from "./entBalanceUtils.js";
+import { entityMatchesFeature } from "@/internal/api/entities/entityUtils.js";
+import { BREAK_API_VERSION } from "@/utils/constants.js";
 
 export const getBalanceForFeature = async ({
   sb,
@@ -279,11 +281,14 @@ export const getCusEntMasterBalance = ({
 export const getCusEntBalance = ({
   cusEnt,
   entityId,
+  entities,
 }: {
   cusEnt: FullCustomerEntitlement;
   entityId?: string | null;
+  entities?: Entity[];
 }) => {
   let entitlement = cusEnt.entitlement;
+  let balance, adjustment;
 
   if (notNullish(entitlement.entity_feature_id)) {
     if (nullish(entityId)) {
@@ -298,7 +303,10 @@ export const getCusEntBalance = ({
     });
   }
 
-  return cusEnt.balance;
+  return {
+    balance: cusEnt.balance,
+    adjustment: cusEnt.adjustment,
+  };
 };
 
 // IMPORTANT FUNCTION
@@ -306,10 +314,12 @@ export const getCusBalancesByEntitlement = async ({
   cusEntsWithCusProduct,
   cusPrices,
   entities,
+  org,
 }: {
   cusEntsWithCusProduct: CusEntsWithCusProduct[];
   cusPrices: FullCustomerPrice[];
   entities: Entity[];
+  org: Organization;
 }) => {
   const data: Record<string, any> = {};
 
@@ -330,7 +340,7 @@ export const getCusBalancesByEntitlement = async ({
     if (!data[key]) {
       data[key] = {
         feature_id: feature.id,
-        interval: ent.interval,
+        interval: ent.interval || undefined,
         unlimited: isBoolean ? undefined : unlimited,
         balance: isBoolean ? undefined : unlimited ? null : 0,
         total: isBoolean || unlimited ? undefined : 0,
@@ -338,6 +348,12 @@ export const getCusBalancesByEntitlement = async ({
         used: isBoolean ? undefined : unlimited ? null : 0,
         unused: 0,
       };
+
+      if (org.config.api_version >= BREAK_API_VERSION) {
+        data[key].next_reset_at =
+          isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
+        data[key].allowance = isBoolean || unlimited ? undefined : 0;
+      }
     }
 
     if (isBoolean || unlimited) {
@@ -351,16 +367,30 @@ export const getCusBalancesByEntitlement = async ({
 
     data[key].balance += balance || 0;
     data[key].adjustment += adjustment || 0;
-    let total = (getResetBalance({
-      entitlement: ent,
-      options: getEntOptions(cusProduct.options, ent),
-      relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
-    }) || 0) * count;
+    let total =
+      (getResetBalance({
+        entitlement: ent,
+        options: getEntOptions(cusProduct.options, ent),
+        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+      }) || 0) * count;
 
     data[key].total += total;
-      
-
     data[key].unused += unused || 0;
+
+    if (org.config.api_version >= BREAK_API_VERSION) {
+      if (
+        !data[key].next_reset_at ||
+        (cusEnt.next_reset_at && cusEnt.next_reset_at < data[key].next_reset_at)
+      ) {
+        data[key].next_reset_at = cusEnt.next_reset_at;
+      }
+
+      data[key].allowance += getResetBalance({
+        entitlement: ent,
+        options: getEntOptions(cusProduct.options, ent),
+        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+      });
+    }
   }
 
   const balances = Object.values(data);
@@ -389,7 +419,10 @@ export const getCusBalancesByEntitlement = async ({
   return balances;
 };
 
-export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
+export const sortCusEntsForDeduction = (
+  cusEnts: FullCustomerEntitlement[],
+  reverseOrder: boolean = false
+) => {
   let intervalOrder: Record<EntInterval, number> = {
     [EntInterval.Minute]: 0, // 1 minute
     [EntInterval.Hour]: 1, // 1 hour
@@ -446,14 +479,15 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
       return 1;
     }
 
+    let nextResetFirst = reverseOrder ? 1 : -1;
     // If one has a next_reset_at, it should go first
     if (a.next_reset_at && !b.next_reset_at) {
-      return -1;
+      return nextResetFirst;
     }
 
     // If b has a next_reset_at, it should go first
     if (!a.next_reset_at && b.next_reset_at) {
-      return 1;
+      return nextResetFirst;
     }
 
     // If one has usage_allowed, it should go last
@@ -466,8 +500,13 @@ export const sortCusEntsForDeduction = (cusEnts: FullCustomerEntitlement[]) => {
     }
 
     // 3. Sort by interval
+
     if (aEnt.interval && bEnt.interval) {
-      return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
+      if (reverseOrder) {
+        return intervalOrder[bEnt.interval] - intervalOrder[aEnt.interval];
+      } else {
+        return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
+      }
     }
 
     // 4. Sort by created_at
@@ -621,19 +660,19 @@ export const getFeatureBalance = ({
 
     // If entity feature id exists, then it is grouped...
     let entityFeatureId = cusEnt.entitlement.entity_feature_id;
-    console.log("Cus ent entities:", cusEnt.entities);
 
     if (notNullish(entityFeatureId)) {
       if (notNullish(entityId)) {
-        let entityBalance = getEntityBalance({
+        let { balance: entityBalance } = getEntityBalance({
           cusEnt,
           entityId: entityId!,
         });
         cusEntBalance = entityBalance!;
       } else {
-        cusEntBalance = getSummedEntityBalances({
+        let summed = getSummedEntityBalances({
           cusEnt,
         });
+        cusEntBalance = summed.balance;
       }
     }
 
@@ -687,10 +726,12 @@ export const getExistingUsageFromCusProducts = ({
   entitlement,
   cusProducts,
   entities,
+  carryExistingUsages = false,
 }: {
   entitlement: EntitlementWithFeature;
   cusProducts?: FullCusProduct[];
   entities: Entity[];
+  carryExistingUsages?: boolean;
 }) => {
   if (!entitlement || entitlement.feature.type === FeatureType.Boolean) {
     return 0;
@@ -706,7 +747,10 @@ export const getExistingUsageFromCusProducts = ({
     .flatMap((cp) => cp.customer_entitlements)
     .find((ce) => ce.internal_feature_id === entitlement.internal_feature_id);
 
-  if (!existingCusEnt || !entitlement.carry_from_previous) {
+  if (
+    !existingCusEnt ||
+    (!entitlement.carry_from_previous && !carryExistingUsages)
+  ) {
     return existingUsage;
   }
 
@@ -717,18 +761,41 @@ export const getExistingUsageFromCusProducts = ({
     return existingUsage;
   }
 
-  // // Calculate existing usage
-  let existingAllowance = existingCusEnt.entitlement.allowance!;
+  // Calculate existing usage
 
+  // Get options
+  let cusProduct = cusProducts?.find(
+    (cp) => cp.id === existingCusEnt.customer_product_id
+  );
+  let options = getEntOptions(
+    cusProduct?.options || [],
+    existingCusEnt.entitlement
+  );
+  let price = getRelatedCusPrice(
+    existingCusEnt,
+    cusProduct?.customer_prices || []
+  );
+  let existingAllowance = getResetBalance({
+    entitlement: existingCusEnt.entitlement,
+    options: options,
+    relatedPrice: price?.price,
+  });
 
   let { balance, adjustment, count, unused } = getCusEntMasterBalance({
     cusEnt: existingCusEnt as any,
     entities: entities,
   });
-  existingUsage = existingAllowance - balance!;
+
+  existingUsage = existingAllowance! - balance!;
   if (unused && unused > 0) {
     existingUsage -= unused;
   }
+
+  // if (!existingUsage && entitlement.allowance_type == AllowanceType.Fixed) {
+  //   let filteredEntities = entities.filter((e) => entityMatchesFeature({feature: entitlement.feature, entity: e}));
+  //   let newExistingUsage = -(entitlement.allowance! - filteredEntities.length);
+  //   existingUsage = Math.max(newExistingUsage, 0);
+  // }
 
   return existingUsage;
 };
