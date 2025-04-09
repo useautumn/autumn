@@ -54,7 +54,9 @@ export const CouponConfig = ({
             Promotional Code
           </FieldLabel>
           <Input
-            value={coupon.promo_codes.length > 0 ? coupon.promo_codes[0].code : ""}
+            value={
+              coupon.promo_codes.length > 0 ? coupon.promo_codes[0].code : ""
+            }
             onChange={(e) =>
               setCoupon({
                 ...coupon,
@@ -293,11 +295,3 @@ const ProductPriceSelector = ({
     </Popover>
   );
 };
-
-//       productName: string;
-//       prices: { value: string; label: string }[];
-//     }
-//   ][]
-// ).map(([productId, productData]) => (
-
-// ))} */}
