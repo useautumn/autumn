@@ -16,7 +16,7 @@ export enum BillWhen {
 
 export const UsageTier = z.object({
   from: z.number(),
-  to: z.union([z.number(), z.literal(""), z.literal("unlimited")]),
+  to: z.number(),
   amount: z.number(),
 });
 
