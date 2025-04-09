@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useProductsContext } from "../ProductsContext";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { RewardTrigger } from "@autumn/shared";
+import { RewardProgram } from "@autumn/shared";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,10 +15,10 @@ import SmallSpinner from "@/components/general/SmallSpinner";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import { Delete } from "lucide-react";
 
-export const RewardTriggerRowToolbar = ({
-  rewardTrigger,
+export const RewardProgramRowToolbar = ({
+  rewardProgram,
 }: {
-  rewardTrigger: RewardTrigger;
+  rewardProgram: RewardProgram;
 }) => {
   const { env, mutate } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env });
@@ -29,7 +29,7 @@ export const RewardTriggerRowToolbar = ({
     setDeleteLoading(true);
 
     try {
-      await axiosInstance.delete(`/v1/reward-triggers/${rewardTrigger.id}`);
+      await axiosInstance.delete(`/v1/reward_programs/${rewardProgram.id}`);
 
       await mutate();
     } catch (error) {

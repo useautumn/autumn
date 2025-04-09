@@ -15,8 +15,9 @@ import { invoiceRouter } from "./customers/invoiceRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
 import { migrationRouter } from "./migrations/migrationRouter.js";
 import rewardRouter from "./rewards/rewardRouter.js";
-import { rewardTriggerRouter } from "./rewards/rewardTriggerRouter.js";
+
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
+import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
 
 const apiRouter = Router();
 
@@ -71,7 +72,7 @@ apiRouter.use("/entities", entityRouter);
 apiRouter.use("/migrations", migrationRouter);
 
 // REWARDS
-apiRouter.use("/reward-triggers", rewardTriggerRouter);
+apiRouter.use("/reward_programs", rewardProgramRouter);
 apiRouter.use("/referrals", referralRouter);
 apiRouter.use("/redemptions", redemptionRouter);
 

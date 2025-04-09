@@ -8,7 +8,7 @@ let ReferralCodeSchema = z.object({
 
   created_at: z.number(),
   internal_customer_id: z.string(),
-  internal_reward_trigger_id: z.string(),
+  internal_reward_program_id: z.string(),
 
   // ID of the referral code
   id: z.string(),
@@ -21,7 +21,7 @@ let RewardRedemptionSchema = z.object({
 
   // Customer who signed up / paid
   internal_customer_id: z.string(), // customer who redeemed the code...
-  internal_reward_trigger_id: z.string(), // reward trigger that was redeemed
+  internal_reward_program_id: z.string(), // reward scheme that was redeemed
 
   // Referral code used
   // code: z.string(),

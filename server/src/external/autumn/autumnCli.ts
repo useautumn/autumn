@@ -1,4 +1,4 @@
-import { CreateRewardTrigger, ErrCode } from "@autumn/shared";
+import { CreateRewardProgram, ErrCode } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import chalk from "chalk";
 
@@ -245,9 +245,9 @@ export class Autumn {
     },
   };
 
-  referralPrograms = {
-    create: async (referralProgram: CreateRewardTrigger) => {
-      const data = await this.post(`/reward-triggers`, referralProgram);
+  rewardPrograms = {
+    create: async (rewardProgram: CreateRewardProgram) => {
+      const data = await this.post(`/reward_programs`, rewardProgram);
       return data;
     },
   };
@@ -262,7 +262,7 @@ export class Autumn {
     }) => {
       const data = await this.post(`/referrals/code`, {
         customer_id: customerId,
-        referral_id: referralId,
+        program_id: referralId,
       });
       return data;
     },

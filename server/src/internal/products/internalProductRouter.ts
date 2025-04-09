@@ -11,10 +11,10 @@ import { OrgService } from "../orgs/OrgService.js";
 import { RewardService } from "../rewards/RewardService.js";
 import { getProductVersionCounts } from "./productUtils.js";
 import { getLatestProducts } from "./productUtils.js";
-import { CusProductService } from "../customers/products/CusProductService.js";
+
 import { CusProdReadService } from "../customers/products/CusProdReadService.js";
 import { MigrationService } from "../migrations/MigrationService.js";
-import { RewardTriggerService } from "../rewards/RewardTriggerService.js";
+import { RewardProgramService } from "../rewards/RewardProgramService.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -27,7 +27,7 @@ productRouter.get("/data", async (req: any, res) => {
       orgId: req.orgId,
     });
 
-    const [products, features, org, coupons, rewardTriggers] =
+    const [products, features, org, coupons, rewardPrograms] =
       await Promise.all([
         ProductService.getFullProducts({
           sb,
@@ -38,7 +38,7 @@ productRouter.get("/data", async (req: any, res) => {
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
         RewardService.getAll({ sb, orgId: req.orgId, env: req.env }),
-        RewardTriggerService.getAll({ sb, orgId: req.orgId, env: req.env }),
+        RewardProgramService.getAll({ sb, orgId: req.orgId, env: req.env }),
       ]);
 
     res.status(200).json({
@@ -54,7 +54,7 @@ productRouter.get("/data", async (req: any, res) => {
       },
       // coupons,
       rewards: coupons,
-      rewardTriggers,
+      rewardPrograms,
     });
   } catch (error) {
     console.error("Failed to get products", error);

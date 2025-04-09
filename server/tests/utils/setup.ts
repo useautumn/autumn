@@ -8,7 +8,7 @@ import {
   Price,
   PriceType,
   Reward,
-  RewardTrigger,
+  RewardProgram,
 } from "@autumn/shared";
 import axios from "axios";
 
@@ -223,7 +223,7 @@ export const setupOrg = async ({
   features: Record<string, Feature & { eventName: string }>;
   products: Record<string, FullProduct | any>;
   rewards: Record<string, any>;
-  rewardTriggers: Record<string, RewardTrigger>;
+  rewardTriggers: Record<string, RewardProgram>;
 }) => {
   const axiosInstance = getAxiosInstance();
   const sb = createSupabaseClient();
@@ -370,7 +370,7 @@ export const setupOrg = async ({
   let insertRewardTriggers = [];
   for (const rewardTrigger of Object.values(rewardTriggers)) {
     const createRewardTrigger = async () => {
-      await autumn.referralPrograms.create(rewardTrigger);
+      await autumn.rewardPrograms.create(rewardTrigger);
     };
     insertRewardTriggers.push(createRewardTrigger());
   }

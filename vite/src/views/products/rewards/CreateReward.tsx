@@ -77,12 +77,12 @@ function CreateReward() {
           className="w-full"
           startIcon={<PlusIcon size={15} />}
         >
-          Create Reward
+          Create Coupon
         </Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Reward</DialogTitle>
+          <DialogTitle>Create Coupon</DialogTitle>
         </DialogHeader>
         {/* <CreditSystemConfig
           creditSystem={creditSystem}

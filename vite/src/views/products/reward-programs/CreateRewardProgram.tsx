@@ -23,49 +23,48 @@ import {
   CouponDurationType,
   CreateReward as CreateCouponType,
   DiscountType,
-  RewardTrigger,
+  RewardProgram,
   RewardTriggerEvent,
 } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductsContext } from "../ProductsContext";
 
-import { RewardTriggerConfig } from "./RewardTriggerConfig";
-// import { ReferralProgramService } from "@/services/products/ReferralProgramService";
-import { CreateRewardTrigger } from "@autumn/shared";
+import { CreateRewardProgram } from "@autumn/shared";
+import { RewardProgramConfig } from "./RewardProgramConfig";
 
-const defaultRewardTrigger: CreateRewardTrigger = {
+const defaultRewardProgram: CreateRewardProgram = {
   id: "",
   // trigger: {
   //   type: RewardTriggerEvent.SignUp,
   //   product_ids: [],
   //   exclude_trial: false,
   // },
-  when: RewardTriggerEvent.Immediately,
+  when: RewardTriggerEvent.CustomerCreation,
   product_ids: [],
   exclude_trial: false,
   internal_reward_id: "",
   max_redemptions: 0,
 };
 
-function CreateRewardTriggerModal() {
+function CreateRewardProgramModal() {
   const { mutate, env } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env: env });
 
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const [rewardTrigger, setRewardTrigger] = useState(defaultRewardTrigger);
+  const [rewardProgram, setRewardProgram] = useState(defaultRewardProgram);
 
   useEffect(() => {
     if (open) {
-      setRewardTrigger(defaultRewardTrigger);
+      setRewardProgram(defaultRewardProgram);
     }
   }, [open]);
 
   const handleCreate = async () => {
     setIsLoading(true);
     try {
-      await axiosInstance.post("/v1/reward-triggers", rewardTrigger);
+      await axiosInstance.post("/v1/reward_programs", rewardProgram);
 
       await mutate();
       setOpen(false);
@@ -83,16 +82,16 @@ function CreateRewardTriggerModal() {
           className="w-full"
           startIcon={<PlusIcon size={15} />}
         >
-          Create Referral
+          Create Referral Program
         </Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Referral</DialogTitle>
+          <DialogTitle>Create Referral Program</DialogTitle>
         </DialogHeader>
-        <RewardTriggerConfig
-          rewardTrigger={rewardTrigger as any}
-          setRewardTrigger={setRewardTrigger}
+        <RewardProgramConfig
+          rewardProgram={rewardProgram as any}
+          setRewardProgram={setRewardProgram}
         />
         <DialogFooter>
           <Button
@@ -108,4 +107,4 @@ function CreateRewardTriggerModal() {
   );
 }
 
-export default CreateRewardTriggerModal;
+export default CreateRewardProgramModal;

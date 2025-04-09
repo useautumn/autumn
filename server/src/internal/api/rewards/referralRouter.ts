@@ -4,14 +4,15 @@ import {
   triggerRedemption,
 } from "@/internal/rewards/referralUtils.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
-import { RewardTriggerService } from "@/internal/rewards/RewardTriggerService.js";
+
 import RecaseError from "@/utils/errorUtils.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ErrCode, RewardTriggerEvent } from "@autumn/shared";
 import express from "express";
 import { ReferralCode, RewardRedemption } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 
 export const referralRouter = express.Router();
 
@@ -23,12 +24,11 @@ referralRouter.post("/code", (req, res) =>
     action: "get referral code",
     handler: async (req: any, res: any) => {
       const { orgId, env, logtail: logger } = req;
-      const { referral_id: rewardTriggerId, customer_id: customerId } =
-        req.body;
+      const { program_id: rewardProgramId, customer_id: customerId } = req.body;
 
-      let rewardTrigger = await RewardTriggerService.getById({
+      let rewardProgram = await RewardProgramService.getById({
         sb: req.sb,
-        id: rewardTriggerId,
+        id: rewardProgramId,
         orgId,
         env,
         errorIfNotFound: true,
@@ -51,38 +51,39 @@ referralRouter.post("/code", (req, res) =>
       }
 
       // Get referral code by customer and reward trigger
-      let existingReferralCode =
-        await RewardTriggerService.getCodeByCustomerAndRewardTrigger({
+      let referralCode =
+        await RewardProgramService.getCodeByCustomerAndRewardProgram({
           sb: req.sb,
           orgId,
           env,
           internalCustomerId: customer.internal_id,
-          internalRewardTriggerId: rewardTrigger.internal_id,
+          internalRewardProgramId: rewardProgram.internal_id,
         });
 
-      if (existingReferralCode) {
-        return res.status(200).json(existingReferralCode);
+      if (!referralCode) {
+        const code = generateReferralCode();
+
+        referralCode = {
+          code,
+          org_id: orgId,
+          env,
+          internal_customer_id: customer.internal_id,
+          internal_reward_program_id: rewardProgram.internal_id,
+          id: generateId("rc"),
+          created_at: Date.now(),
+        };
+
+        await RewardProgramService.createReferralCode({
+          sb: req.sb,
+          data: referralCode,
+        });
       }
 
-      // Get random 8 letter code
-      const code = generateReferralCode();
-
-      let referralCode: ReferralCode = {
-        code,
-        org_id: orgId,
-        env,
-        internal_customer_id: customer.internal_id,
-        internal_reward_trigger_id: rewardTrigger.internal_id,
-        id: generateId("rc"),
-        created_at: Date.now(),
-      };
-
-      await RewardTriggerService.createReferralCode({
-        sb: req.sb,
-        data: referralCode,
+      res.status(200).json({
+        code: referralCode.code,
+        customer_id: customer.id,
+        created_at: referralCode.created_at,
       });
-
-      res.status(200).json(referralCode);
     },
   })
 );
@@ -106,12 +107,12 @@ referralRouter.post("/redeem", (req, res) =>
           id: customerId,
           logger,
         }),
-        RewardTriggerService.getReferralCode({
+        RewardProgramService.getReferralCode({
           sb: req.sb,
           orgId,
           env,
           code,
-          withRewardTrigger: true,
+          withRewardProgram: true,
         }),
         OrgService.getFromReq(req),
       ]);
@@ -125,12 +126,12 @@ referralRouter.post("/redeem", (req, res) =>
       }
 
       // 2. Check that code has not reached max redemptions
-      let redemptionCount = await RewardTriggerService.getCodeRedemptionCount({
+      let redemptionCount = await RewardProgramService.getCodeRedemptionCount({
         sb: req.sb,
         referralCodeId: referralCode.id,
       });
 
-      if (redemptionCount >= referralCode.reward_trigger.max_redemptions) {
+      if (redemptionCount >= referralCode.reward_program.max_redemptions) {
         throw new RecaseError({
           message: "Referral code has reached max redemptions",
           statusCode: 400,
@@ -142,7 +143,7 @@ referralRouter.post("/redeem", (req, res) =>
       let existingRedemptions = await RewardRedemptionService.getByCustomer({
         sb: req.sb,
         internalCustomerId: customer.internal_id,
-        internalRewardTriggerId: referralCode.internal_reward_trigger_id,
+        internalRewardProgramId: referralCode.internal_reward_program_id,
       });
 
       if (existingRedemptions.length > 0) {
@@ -153,15 +154,34 @@ referralRouter.post("/redeem", (req, res) =>
         });
       }
 
+      // Don't let customer redeem their own code
+      let codeCustomer = await CusService.getByInternalId({
+        sb: req.sb,
+        internalId: referralCode.internal_customer_id,
+      });
+
+      if (
+        codeCustomer.id === customer.id ||
+        (notNullish(codeCustomer.fingerprint) &&
+          codeCustomer.fingerprint === customer.fingerprint)
+      ) {
+        throw new RecaseError({
+          message: "Customer cannot redeem their own code",
+          statusCode: 400,
+          code: ErrCode.CustomerCannotRedeemOwnCode,
+        });
+      }
+
       // 4. Insert redemption into db
       let redemption: RewardRedemption = {
         id: generateId("rr"),
         referral_code_id: referralCode.id,
         internal_customer_id: customer.internal_id, // redeemed by customer
-        internal_reward_trigger_id: referralCode.internal_reward_trigger_id,
+        internal_reward_program_id: referralCode.internal_reward_program_id,
         created_at: Date.now(),
         triggered:
-          referralCode.reward_trigger.when === RewardTriggerEvent.Immediately,
+          referralCode.reward_program.when ===
+          RewardTriggerEvent.CustomerCreation,
         applied: false,
         updated_at: Date.now(),
       };
@@ -172,22 +192,30 @@ referralRouter.post("/redeem", (req, res) =>
       });
 
       // 5. If reward trigger when is immediate:
-      let { reward_trigger } = referralCode;
+      let { reward_program } = referralCode;
 
-      if (referralCode.reward_trigger.when === RewardTriggerEvent.Immediately) {
+      if (
+        referralCode.reward_program.when === RewardTriggerEvent.CustomerCreation
+      ) {
         redemption = await triggerRedemption({
           sb: req.sb,
           referralCode,
           org,
           env,
           logger,
-          reward: reward_trigger.reward,
+          reward: reward_program.reward,
           redemption,
         });
       }
 
       // Add coupon to customer?
-      res.status(200).json(redemption);
+      res.status(200).json({
+        id: redemption.id,
+        customer_id: customer.id,
+        triggered: redemption?.applied,
+        applied: redemption?.applied,
+        reward_id: reward_program.reward.id,
+      });
     },
   })
 );

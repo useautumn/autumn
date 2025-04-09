@@ -1,11 +1,11 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, RewardTrigger } from "@autumn/shared";
+import { ErrCode, RewardProgram } from "@autumn/shared";
 import { ReferralCode } from "@shared/models/rewardModels/referralModels/referralModels.js";
 
-export class RewardTriggerService {
+export class RewardProgramService {
   static async get({ sb, internalId }: { sb: any; internalId: string }) {
     const { data, error } = await sb
-      .from("reward_triggers")
+      .from("reward_programs")
       .select("*, reward:rewards!inner(*)")
       .eq("internal_id", internalId);
 
@@ -30,7 +30,7 @@ export class RewardTriggerService {
     errorIfNotFound?: boolean;
   }) {
     const { data, error } = await sb
-      .from("reward_triggers")
+      .from("reward_programs")
       .select()
       .eq("id", id)
       .eq("org_id", orgId)
@@ -64,7 +64,7 @@ export class RewardTriggerService {
     env: string;
   }) {
     const { data, error } = await sb
-      .from("reward_triggers")
+      .from("reward_programs")
       .select()
       .eq("org_id", orgId)
       .eq("env", env);
@@ -76,16 +76,16 @@ export class RewardTriggerService {
     return data;
   }
 
-  static async createRewardTrigger({
+  static async create({
     sb,
     data,
   }: {
     sb: any;
 
-    data: RewardTrigger | RewardTrigger[];
+    data: RewardProgram | RewardProgram[];
   }) {
     const { data: insertedData, error } = await sb
-      .from("reward_triggers")
+      .from("reward_programs")
       .insert(data)
       .select()
       .single();
@@ -109,7 +109,7 @@ export class RewardTriggerService {
     env: string;
   }) {
     const { data, error } = await sb
-      .from("reward_triggers")
+      .from("reward_programs")
       .delete()
       .eq("id", id)
       .eq("org_id", orgId)
@@ -130,19 +130,19 @@ export class RewardTriggerService {
     orgId,
     env,
     code,
-    withRewardTrigger = false,
+    withRewardProgram = false,
   }: {
     sb: any;
     orgId: string;
     env: string;
     code: string;
-    withRewardTrigger?: boolean;
+    withRewardProgram?: boolean;
   }) {
     const { data, error } = await sb
       .from("referral_codes")
       .select(
-        withRewardTrigger
-          ? "*, reward_trigger:reward_triggers!inner(*, reward:rewards!inner(*))"
+        withRewardProgram
+          ? "*, reward_program:reward_programs!inner(*, reward:rewards!inner(*))"
           : "*"
       )
       .eq("code", code)
@@ -157,24 +157,24 @@ export class RewardTriggerService {
     return data;
   }
 
-  static async getCodeByCustomerAndRewardTrigger({
+  static async getCodeByCustomerAndRewardProgram({
     sb,
     orgId,
     env,
     internalCustomerId,
-    internalRewardTriggerId,
+    internalRewardProgramId,
   }: {
     sb: any;
     orgId: string;
     env: string;
     internalCustomerId: string;
-    internalRewardTriggerId: string;
+    internalRewardProgramId: string;
   }) {
     const { data, error } = await sb
       .from("referral_codes")
       .select("*")
       .eq("internal_customer_id", internalCustomerId)
-      .eq("internal_reward_trigger_id", internalRewardTriggerId)
+      .eq("internal_reward_program_id", internalRewardProgramId)
       .eq("org_id", orgId)
       .eq("env", env);
 
@@ -218,7 +218,7 @@ export class RewardTriggerService {
   }) {
     const { data, error, count } = await sb
       .from("reward_redemptions")
-      .select("*, reward_trigger:reward_triggers!inner(*)", { count: "exact" })
+      .select("*, reward_program:reward_programs!inner(*)", { count: "exact" })
       .eq("referral_code_id", referralCodeId)
       .eq("triggered", true);
 

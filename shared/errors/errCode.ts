@@ -116,4 +116,5 @@ export const ErrCode = {
   ReferralNotFound: "referral_not_found",
   CustomerAlreadyRedeemedReferralCode:
     "customer_already_redeemed_referral_code",
+  CustomerCannotRedeemOwnCode: "customer_cannot_redeem_own_code",
 };

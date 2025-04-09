@@ -43,7 +43,7 @@ export const handleDiscountCompleted = async ({
   }
 
   let redemption = redemptions[0];
-  let reward = redemption.reward_trigger.reward;
+  let reward = redemption.reward_program.reward;
 
   let stripeCus = (await stripeCli.customers.retrieve(
     stripeCusId
@@ -119,7 +119,7 @@ export async function handleCusDiscountDeleted({
   }
 
   let redemption = redemptions[0];
-  let reward = redemption.reward_trigger.reward;
+  let reward = redemption.reward_program.reward;
 
   // Apply redemption to customer
   let stripeCli = createStripeCli({
