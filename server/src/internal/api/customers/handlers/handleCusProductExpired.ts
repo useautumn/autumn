@@ -70,6 +70,7 @@ export const handleCusProductExpired = async (req: any, res: any) => {
         product: cusProduct.product,
         stripeCli,
         logger,
+        env: req.env,
       });
 
       // 2. Delete scheduled product

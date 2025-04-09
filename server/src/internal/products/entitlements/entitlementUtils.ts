@@ -207,13 +207,18 @@ export const validateUpdatedEnts = ({
     const relatedPrice = getEntRelatedPrice(ent, prices);
     if (relatedPrice) {
       let config = relatedPrice.config as UsagePriceConfig;
-      if (config.stripe_price_id) {
-        throw new RecaseError({
-          code: ErrCode.InvalidEntitlement,
-          message: `Stripe price already exists for ${ent.feature_id}`,
-          statusCode: 400,
-        });
-      }
+      relatedPrice.config = {
+        ...config,
+        stripe_price_id: null,
+        stripe_placeholder_price_id: null,
+      };
+      // if (config.stripe_price_id) {
+      //   throw new RecaseError({
+      //     code: ErrCode.InvalidEntitlement,
+      //     message: `Stripe price already exists for ${ent.feature_id}`,
+      //     statusCode: 400,
+      //   });
+      // }
     }
   }
 };
@@ -224,7 +229,11 @@ export const initEntitlement = ({
   orgId,
   isCustom = false,
   internalProductId,
+  curEnt,
+  prices,
 }: {
+  curEnt?: Entitlement;
+  prices: Price[];
   ent: CreateEntitlement;
   features: Feature[];
   orgId: string;
@@ -250,6 +259,13 @@ export const initEntitlement = ({
     newEnt.interval = null;
   }
 
+  if (curEnt && !entsAreSame(curEnt, newEnt)) {
+    let relatedPrice = getEntRelatedPrice(curEnt, prices);
+    if (relatedPrice) {
+      relatedPrice.id = undefined;
+    }
+  }
+
   return newEnt;
 };
 
@@ -262,6 +278,7 @@ export const handleNewEntitlements = async ({
   internalProductId,
   isCustom = false,
   prices,
+  newVersion = false,
 }: {
   sb: SupabaseClient;
   newEnts: Entitlement[] | CreateEntitlement[];
@@ -271,6 +288,7 @@ export const handleNewEntitlements = async ({
   orgId: string;
   isCustom: boolean;
   prices: Price[];
+  newVersion?: boolean;
 }) => {
   // Add internal_feature_id to newEnts
   for (const ent of newEnts) {
@@ -287,7 +305,7 @@ export const handleNewEntitlements = async ({
 
   // 1. Deleted entitlements: filter out entitlements that are not in newEnts
   const removedEnts: Entitlement[] = curEnts.filter(
-    (ent) => !newEnts.some((e: Entitlement) => e.id === ent.id)
+    (ent) => !newEnts.some((e) => e.id === ent.id)
   );
 
   const createdEnts: Entitlement[] = [];
@@ -295,11 +313,11 @@ export const handleNewEntitlements = async ({
 
   for (let newEnt of newEnts) {
     // Validate entitlement
-    const relatedPrice = getEntRelatedPrice(newEnt, prices);
+    const relatedPrice = getEntRelatedPrice(newEnt as Entitlement, prices);
     validateEntitlement({ ent: newEnt, features, relatedPrice });
 
     // 1. Handle new entitlement
-    if (!("id" in newEnt)) {
+    if (!newEnt.id) {
       createdEnts.push(
         initEntitlement({
           ent: newEnt as CreateEntitlement,
@@ -307,6 +325,8 @@ export const handleNewEntitlements = async ({
           orgId,
           internalProductId,
           isCustom,
+          prices,
+          curEnt: (newEnt.id && idToEnt[newEnt.id]) || undefined,
         })
       );
     }
@@ -316,8 +336,10 @@ export const handleNewEntitlements = async ({
     let curEnt = idToEnt[newEnt.id!];
 
     // 2a. If custom, create new entitlement and remove old one
-
-    if (curEnt && !entsAreSame(curEnt, newEnt) && isCustom) {
+    if (
+      (curEnt && !entsAreSame(curEnt, newEnt) && isCustom) ||
+      (curEnt && newVersion)
+    ) {
       createdEnts.push(
         initEntitlement({
           ent: CreateEntitlementSchema.parse(newEnt),
@@ -325,31 +347,33 @@ export const handleNewEntitlements = async ({
           orgId,
           internalProductId,
           isCustom,
+          prices,
+          curEnt,
         })
       );
       removedEnts.push(curEnt);
     }
 
     // 2b. If not customm, update existing entitlement
-    if (curEnt && !entsAreSame(curEnt, newEnt) && !isCustom) {
+    if (curEnt && !entsAreSame(curEnt, newEnt) && !isCustom && !newVersion) {
       updatedEnts.push(EntitlementSchema.parse(newEnt));
     }
   }
 
-  validateUpdatedEnts({ updatedEnts, prices });
-  validateRemovedEnts({ removedEnts, prices, isCustom });
+  // 1. Update existing entitlements and delete removed ones
+  if (!isCustom && !newVersion) {
+    validateUpdatedEnts({ updatedEnts, prices });
+    validateRemovedEnts({ removedEnts, prices, isCustom });
 
-  // 1. Create new entitlements
-  await EntitlementService.insert({ sb, data: createdEnts });
-
-  // 2. Update existing entitlements and delete removed ones
-  if (!isCustom) {
     await EntitlementService.upsert({ sb, data: updatedEnts });
     await EntitlementService.deleteByIds({
       sb,
       entitlementIds: removedEnts.map((e) => e.id!),
     });
   }
+
+  // 2. Create new entitlements
+  await EntitlementService.insert({ sb, data: createdEnts });
 
   if (isCustom) {
     return [

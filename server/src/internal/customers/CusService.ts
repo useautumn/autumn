@@ -281,14 +281,17 @@ export class CusService {
     const { data, error } = await sb
       .from("customers")
       .select()
-      .eq("processor->>id", stripeId)
-      .single();
+      .eq("processor->>id", stripeId);
 
     if (error) {
       throw error;
     }
 
-    return data;
+    if (data.length === 0) {
+      return null;
+    }
+
+    return data[0];
   }
 
   //search customers
@@ -340,8 +343,9 @@ export class CusService {
     if (customerPrefix) {
       query.order(`customer(created_at)`, { ascending: false });
     } else {
-      query.order("created_at", { ascending: false })
-           .order("internal_id", { ascending: true, collate: "C" });
+      query
+        .order("created_at", { ascending: false })
+        .order("internal_id", { ascending: true });
     }
 
     query.limit(pageSize);
@@ -500,6 +504,7 @@ export class CusService {
     if (error) {
       throw error;
     }
+
     const totalCount = count && count + pageSize * (pageNumber - 1);
     return { data, count: totalCount };
   }
@@ -671,6 +676,7 @@ export class CusService {
             feature:features!inner(*)
           )
       )`,
+      `free_trial:free_trials(*)`,
     ]
       .filter(Boolean)
       .join(", ");
@@ -702,6 +708,15 @@ export class CusService {
       throw error;
     }
 
+    // for (const cusProduct of data) {
+    //   // console.log("Free trial", cusProduct.free_trial);
+    //   // let freeTrial = cusProduct.free_trial;
+    //   // if (freeTrial && freeTrial.length > 0) {
+    //   //   cusProduct.free_trial = freeTrial[0];
+    //   // } else {
+    //   //   cusProduct.free_trial = null;
+    //   // }
+    // }
     return data as any;
   }
 

@@ -33,6 +33,7 @@ export class CusProductService {
 
     return data;
   }
+
   static async getByIdStrict({
     sb,
     id,
@@ -63,6 +64,7 @@ export class CusProductService {
 
     return data;
   }
+
   static async createCusProduct({
     sb,
     customerProduct,
@@ -206,11 +208,28 @@ export class CusProductService {
     return data;
   }
 
-  static async getByProductId(sb: SupabaseClient, internalProductId: string) {
+  static async getByInternalProductId(
+    sb: SupabaseClient,
+    internalProductId: string
+  ) {
     const { data, error } = await sb
       .from("customer_products")
       .select("*")
       .eq("internal_product_id", internalProductId)
+      .limit(1);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getByProductId(sb: SupabaseClient, productId: string) {
+    const { data, error } = await sb
+      .from("customer_products")
+      .select("*, product:products!inner(*)")
+      .eq("product.id", productId)
       .limit(1);
 
     if (error) {

@@ -38,6 +38,7 @@ export const EntitlementSchema = z.object({
 });
 
 export const CreateEntitlementSchema = z.object({
+  id: z.string().nullish(),
   internal_feature_id: z.string(),
   feature_id: z.string(),
   allowance_type: z.nativeEnum(AllowanceType).nullish(),

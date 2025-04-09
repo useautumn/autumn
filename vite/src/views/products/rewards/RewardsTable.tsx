@@ -8,14 +8,14 @@ import {
 } from "@/components/ui/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useProductsContext } from "../ProductsContext";
-import { CouponRowToolbar } from "./CouponRowToolbar";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { Coupon, CouponDurationType, DiscountType } from "@autumn/shared";
-import UpdateCoupon from "./UpdateCoupon";
+import { Reward, CouponDurationType, DiscountType } from "@autumn/shared";
+import UpdateReward from "./UpdateReward";
 import { useState } from "react";
-export const CouponsTable = () => {
-  const { coupons, org } = useProductsContext();
-  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+import { RewardRowToolbar } from "./RewardRowToolbar";
+export const RewardsTable = () => {
+  const { rewards, org } = useProductsContext();
+  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [open, setOpen] = useState(false);
 
   // const handleRowClick = (id: string) => {
@@ -31,11 +31,11 @@ export const CouponsTable = () => {
 
   return (
     <>
-      <UpdateCoupon
+      <UpdateReward
         open={open}
         setOpen={setOpen}
-        selectedCoupon={selectedCoupon}
-        setSelectedCoupon={setSelectedCoupon}
+        selectedReward={selectedReward}
+        setSelectedReward={setSelectedReward}
       />
       <Table>
         <TableHeader className="rounded-full">
@@ -50,48 +50,48 @@ export const CouponsTable = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {coupons.map((coupon: Coupon) => (
+          {rewards.map((reward: Reward) => (
             <TableRow
-              key={coupon.internal_id}
+              key={reward.internal_id}
               className="cursor-pointer"
               onClick={() => {
-                setSelectedCoupon(coupon);
+                setSelectedReward(reward);
                 setOpen(true);
               }}
             >
-              <TableCell className="font-medium">{coupon.name}</TableCell>
+              <TableCell className="font-medium">{reward.name}</TableCell>
               <TableCell className="font-mono">
-                {coupon.promo_codes
+                {reward.promo_codes
                   .map((promoCode) => promoCode.code)
                   .join(", ")}
               </TableCell>
               <TableCell className="min-w-32">
                 <div className="flex items-center gap-1">
-                  <p>{coupon.discount_value} </p>
+                  <p>{reward.discount_value} </p>
                   <p className="text-t3">
-                    {coupon.discount_type == DiscountType.Percentage
+                    {reward.discount_type == DiscountType.Percentage
                       ? "%"
                       : org?.default_currency || "USD"}
                   </p>
                 </div>
               </TableCell>
               <TableCell className="">
-                {coupon.duration_type == CouponDurationType.Months
-                  ? `${coupon.duration_value} months`
-                  : coupon.duration_type == CouponDurationType.OneOff &&
-                    coupon.should_rollover
+                {reward.duration_type == CouponDurationType.Months
+                  ? `${reward.duration_value} months`
+                  : reward.duration_type == CouponDurationType.OneOff &&
+                    reward.should_rollover
                   ? "One-off (rollover)"
-                  : keyToTitle(coupon.duration_type)}
+                  : keyToTitle(reward.duration_type)}
               </TableCell>
               <TableCell className="">
-                {formatUnixToDateTime(coupon.created_at).date}
+                {formatUnixToDateTime(reward.created_at).date}
                 <span className="text-t3">
                   {" "}
-                  {formatUnixToDateTime(coupon.created_at).time}{" "}
+                  {formatUnixToDateTime(reward.created_at).time}{" "}
                 </span>
               </TableCell>
               <TableCell className="">
-                <CouponRowToolbar coupon={coupon} />
+                <RewardRowToolbar reward={reward} />
               </TableCell>
             </TableRow>
           ))}

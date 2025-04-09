@@ -1,4 +1,4 @@
-import { ErrCode } from "@autumn/shared";
+import { CreateRewardProgram, ErrCode } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import chalk from "chalk";
 
@@ -6,13 +6,7 @@ export default class AutumnError extends Error {
   message: string;
   code: string;
 
-  constructor({
-    message,
-    code,
-  }: {
-    message: string;
-    code: string;
-  }) {
+  constructor({ message, code }: { message: string; code: string }) {
     super(message);
     this.message = message;
     this.code = code;
@@ -56,14 +50,13 @@ export class Autumn {
       let error: any;
       try {
         error = await response.json();
-
       } catch (error) {
         throw new AutumnError({
           message: "Failed to parse Autumn API error response",
           code: ErrCode.InternalError,
         });
       }
-      
+
       throw new AutumnError({
         message: error.message,
         code: error.code,
@@ -187,42 +180,115 @@ export class Autumn {
     get: async (customerId: string) => {
       const data = await this.get(`/customers/${customerId}`);
       return data;
-    }
-  }
+    },
+
+    create: async (customer: { id: string; email: string; name: string }) => {
+      const data = await this.post(`/customers`, customer);
+      return data;
+    },
+  };
 
   entities = {
     create: async (
       customerId: string,
-      entity: {
-        id: string;
-        name: string;
-        featureId: string;
-      } | {
-        id: string;
-        name: string;
-        featureId: string;
-      }[]
+      entity:
+        | {
+            id: string;
+            name: string;
+            featureId: string;
+          }
+        | {
+            id: string;
+            name: string;
+            featureId: string;
+          }[]
     ) => {
       let entities = Array.isArray(entity) ? entity : [entity];
-      const data = await this.post(`/customers/${customerId}/entities`, entities.map((e: any) => {
-        return {
-          id: e.id,
-          name: e.name,
-          feature_id: e.featureId,
-        }
-      }));
+      const data = await this.post(
+        `/customers/${customerId}/entities`,
+        entities.map((e: any) => {
+          return {
+            id: e.id,
+            name: e.name,
+            feature_id: e.featureId,
+          };
+        })
+      );
 
       return data;
     },
-    
+
     list: async (customerId: string) => {
       const data = await this.get(`/customers/${customerId}/entities`);
       return data;
     },
 
     delete: async (customerId: string, entityId: string) => {
-      const data = await this.delete(`/customers/${customerId}/entities/${entityId}`);
+      const data = await this.delete(
+        `/customers/${customerId}/entities/${entityId}`
+      );
       return data;
-    }
-  }
+    },
+  };
+
+  products = {
+    delete: async (productId: string) => {
+      const data = await this.delete(`/products/${productId}`);
+      return data;
+    },
+  };
+
+  rewards = {
+    create: async (reward: any) => {
+      const data = await this.post(`/rewards`, reward);
+      return data;
+    },
+  };
+
+  rewardPrograms = {
+    create: async (rewardProgram: CreateRewardProgram) => {
+      const data = await this.post(`/reward_programs`, rewardProgram);
+      return data;
+    },
+  };
+
+  referrals = {
+    createCode: async ({
+      customerId,
+      referralId,
+    }: {
+      customerId: string;
+      referralId: string;
+    }) => {
+      const data = await this.post(`/referrals/code`, {
+        customer_id: customerId,
+        program_id: referralId,
+      });
+      return data;
+    },
+    redeem: async ({
+      customerId,
+      code,
+    }: {
+      customerId: string;
+      code: string;
+    }) => {
+      const data = await this.post(`/referrals/redeem`, {
+        customer_id: customerId,
+        code,
+      });
+      return data;
+    },
+  };
+
+  redemptions = {
+    get: async ({ redemptionId }: { redemptionId: string }) => {
+      const data = await this.get(`/redemptions/${redemptionId}`);
+      return data;
+    },
+  };
+
+  initStripe = async () => {
+    await this.post(`/products/all/init_stripe`, {});
+  };
 }

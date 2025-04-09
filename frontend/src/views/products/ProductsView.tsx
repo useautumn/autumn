@@ -17,7 +17,7 @@ import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTicketSimple } from "@fortawesome/pro-duotone-svg-icons";
 import { CouponsTable } from "./coupons/CouponsTable";
-import CreateCoupon from "./coupons/CreateCoupon";
+import CreateReward from "./coupons/CreateReward";
 
 function ProductsView({ env }: { env: AppEnv }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -83,7 +83,7 @@ function ProductsView({ env }: { env: AppEnv }) {
             </p>
           </div>
           <CouponsTable />
-          <CreateCoupon />
+          <CreateReward />
         </div>
       )}
     </ProductsContext.Provider>

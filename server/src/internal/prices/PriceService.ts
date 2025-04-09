@@ -5,6 +5,24 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
 export class PriceService {
+  static async getByOrg({
+    sb,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    orgId: string;
+    env: string;
+  }) {
+    const { data, error } = await sb.from("prices").select("*, product:products!inner(*)").eq("product.org_id", orgId).eq("product.env", env);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async insert({
     sb,
     data,

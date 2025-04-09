@@ -1,28 +1,24 @@
-import SmallSpinner from "@/components/general/SmallSpinner";
-
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 import { useState } from "react";
-import { toast } from "sonner";
+import { useProductsContext } from "../ProductsContext";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { Coupon } from "@autumn/shared";
+import { RewardProgram } from "@autumn/shared";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getBackendErr } from "@/utils/genUtils";
-import { useProductsContext } from "../ProductsContext";
-import { CouponService } from "@/services/products/CouponService";
+import { toast } from "sonner";
+import SmallSpinner from "@/components/general/SmallSpinner";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import { Delete } from "lucide-react";
 
-export const CouponRowToolbar = ({
-  className,
-  coupon,
+export const RewardProgramRowToolbar = ({
+  rewardProgram,
 }: {
-  className?: string;
-  coupon: Coupon;
+  rewardProgram: RewardProgram;
 }) => {
   const { env, mutate } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env });
@@ -33,13 +29,11 @@ export const CouponRowToolbar = ({
     setDeleteLoading(true);
 
     try {
-      await CouponService.deleteCoupon({
-        axiosInstance,
-        internalId: coupon.internal_id,
-      });
+      await axiosInstance.delete(`/v1/reward_programs/${rewardProgram.id}`);
+
       await mutate();
     } catch (error) {
-      toast.error(getBackendErr(error, "Failed to delete coupon"));
+      toast.error(getBackendErr(error, "Failed to delete reward trigger"));
     }
 
     setDeleteLoading(false);

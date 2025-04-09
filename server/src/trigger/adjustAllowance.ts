@@ -32,7 +32,10 @@ import { generateId } from "@/utils/genUtils.js";
 import { createStripeInvoiceItem } from "@/internal/customers/invoices/invoiceItemUtils.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { LoggerAction } from "@autumn/shared";
-import { getInvoiceExpansion, payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
+import {
+  getInvoiceExpansion,
+  payForInvoice,
+} from "@/external/stripe/stripeInvoiceUtils.js";
 import { isTrialing } from "@/internal/customers/products/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
@@ -128,6 +131,7 @@ export const adjustAllowanceOld = async ({
 
   let stripeCli = createStripeCli({ org, env });
   let sub = await getUsageBasedSub({
+    sb: sb,
     stripeCli,
     subIds: cusProduct.subscription_ids!,
     feature: affectedFeature,
@@ -302,6 +306,7 @@ export const adjustAllowance = async ({
 
   let stripeCli = createStripeCli({ org, env });
   let sub = await getUsageBasedSub({
+    sb: sb,
     stripeCli,
     subIds: cusProduct.subscription_ids!,
     feature: affectedFeature,
@@ -324,8 +329,6 @@ export const adjustAllowance = async ({
     return;
   }
 
-  
-  
   let quantity = newUsage + cusEnt.entitlement.allowance!;
   let prorationBehaviour = "create_prorations";
 
@@ -337,7 +340,8 @@ export const adjustAllowance = async ({
     if (!downgrade && !isTrialing(cusProduct as FullCusProduct)) {
       let entitlement = cusEnt.entitlement;
       let newUsage = entitlement.allowance! - newBalance;
-      let oldUsage = entitlement.allowance! - originalBalance + (replacedCount || 0);
+      let oldUsage =
+        entitlement.allowance! - originalBalance + (replacedCount || 0);
 
       let newAmount = getPriceForOverage(cusPrice.price, newUsage);
       let oldAmount = getPriceForOverage(cusPrice.price, oldUsage);
@@ -380,7 +384,6 @@ export const adjustAllowance = async ({
             currency: org.default_currency,
           },
         });
-        
 
         const { paid, error } = await payForInvoice({
           fullOrg: org,
@@ -395,11 +398,11 @@ export const adjustAllowance = async ({
           throw new RecaseError({
             message: "Failed to pay for invoice",
             code: ErrCode.PayInvoiceFailed,
-          })
+          });
         }
-        
+
         const latestInvoice = await stripeCli.invoices.retrieve(invoice.id, {
-          ...getInvoiceExpansion()
+          ...getInvoiceExpansion(),
         });
 
         await InvoiceService.createInvoiceFromStripe({
@@ -415,10 +418,8 @@ export const adjustAllowance = async ({
           logger.warn("❗️ Failed to pay for invoice!");
         }
       }
-    } 
+    }
   }
-  
-
 
   if (quantity < 0) {
     quantity = 0;

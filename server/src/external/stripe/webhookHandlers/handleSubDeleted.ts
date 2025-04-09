@@ -4,43 +4,33 @@ import {
   activateFutureProduct,
   cancelCusProductSubscriptions,
 } from "@/internal/customers/products/cusProductUtils.js";
-import {
-  getBillingType,
-  getPriceForOverage,
-} from "@/internal/prices/priceUtils.js";
 
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
-  BillingType,
   CusProductStatus,
-  Customer,
   ErrCode,
   FullCusProduct,
   Organization,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
-import { createStripeCli } from "../utils.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-import {
-  getStripeExpandedInvoice,
-  payForInvoice,
-} from "../stripeInvoiceUtils.js";
-import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+
 import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
 
 export const handleSubscriptionDeleted = async ({
   sb,
   subscription,
   org,
   env,
+  logger,
 }: {
   sb: SupabaseClient;
   subscription: Stripe.Subscription;
   org: Organization;
   env: AppEnv;
+  logger: any;
 }) => {
   console.log("Handling subscription.deleted: ", subscription.id);
   const activeCusProducts = await CusProductService.getByStripeSubId({
@@ -64,6 +54,16 @@ export const handleSubscriptionDeleted = async ({
     }
 
     return;
+  }
+
+  // Delete from subscriptions
+  try {
+    await SubService.deleteFromStripeId({
+      sb,
+      stripeId: subscription.id,
+    });
+  } catch (error) {
+    logger.error("Error deleting from subscriptions table", error);
   }
 
   // Prematurely canceled if cancel_at_period_end is false or cancel_at is more than 20 seconds apart from current_period_end

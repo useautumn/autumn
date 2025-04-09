@@ -14,6 +14,7 @@ import {
   FreeTrial,
   Organization,
   PriceType,
+  RewardTriggerEvent,
 } from "@autumn/shared";
 import { getAxiosInstance } from "./setup.js";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -326,8 +327,8 @@ export const initCustomer = async ({
   }
 };
 
-// Init Coupon
-export const initCoupon = ({
+// Init Reward
+export const initReward = ({
   id,
   discountType = DiscountType.Fixed,
   discountValue,
@@ -359,5 +360,27 @@ export const initCoupon = ({
     apply_to_all: applyToAll,
     only_usage_prices: onlyUsagePrices,
     product_ids: productIds,
+  };
+};
+
+export const initRewardProgram = ({
+  id,
+  when = RewardTriggerEvent.CustomerCreation,
+  productIds = [],
+  internalRewardId,
+  maxRedemptions = 2,
+}: {
+  id: string;
+  productIds?: string[];
+  internalRewardId: string;
+  when?: RewardTriggerEvent;
+  maxRedemptions?: number;
+}): any => {
+  return {
+    id,
+    when,
+    product_ids: productIds,
+    internal_reward_id: internalRewardId,
+    max_redemptions: maxRedemptions,
   };
 };

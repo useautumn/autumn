@@ -1,30 +1,24 @@
 import {
-  AllowanceType,
   CusProductStatus,
   Price,
   ProcessorType,
-  EntInterval,
   CustomerEntitlement,
   CusProduct,
   FeatureOptions,
   FreeTrial,
-  BillingType,
   CollectionMethod,
-  Organization,
-  AppEnv,
   FullCusProduct,
-  FullCustomerEntitlement,
   LoggerAction,
 } from "@autumn/shared";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
-import { getNextEntitlementReset } from "@/utils/timeUtils.js";
-import { Customer, FeatureType } from "@autumn/shared";
-import { EntitlementWithFeature, FullProduct } from "@autumn/shared";
+import { generateId, notNullish } from "@/utils/genUtils.js";
+
+import { Customer } from "@autumn/shared";
+import { FullProduct } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
-import { getBillingType, getEntOptions } from "@/internal/prices/priceUtils.js";
+import { getEntOptions } from "@/internal/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
 import { InsertCusProductParams } from "../products/AttachParams.js";
@@ -37,6 +31,8 @@ import { searchCusProducts } from "@/internal/customers/products/cusProductUtils
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
 export const initCusPrice = ({
   price,
   customer,
@@ -75,6 +71,7 @@ export const initCusProduct = ({
   collectionMethod,
   subscriptionIds,
   subscriptionScheduleIds,
+  isCustom,
 }: {
   customer: Customer;
   product: FullProduct;
@@ -92,6 +89,7 @@ export const initCusProduct = ({
   collectionMethod?: CollectionMethod;
   subscriptionIds?: string[];
   subscriptionScheduleIds?: string[];
+  isCustom?: boolean;
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
 
@@ -129,6 +127,7 @@ export const initCusProduct = ({
     collection_method: collectionMethod || CollectionMethod.ChargeAutomatically,
     subscription_ids: subscriptionIds,
     scheduled_ids: subscriptionScheduleIds,
+    is_custom: isCustom || false,
   };
 };
 
@@ -231,14 +230,14 @@ export const getExistingCusProduct = async ({
   product,
   internalCustomerId,
 }: {
-  sb: SupabaseClient;
+  sb?: SupabaseClient;
   cusProducts?: FullCusProduct[];
   product: FullProduct;
   internalCustomerId: string;
 }) => {
   if (!cusProducts) {
     cusProducts = await CusService.getFullCusProducts({
-      sb,
+      sb: sb as SupabaseClient,
       internalCustomerId,
     });
   }
@@ -268,6 +267,8 @@ export const createFullCusProduct = async ({
   subscriptionScheduleIds = [],
   keepResetIntervals = false,
   anchorToUnix,
+  carryExistingUsages = false,
+  carryOverTrial = false,
 }: {
   sb: SupabaseClient;
   attachParams: InsertCusProductParams;
@@ -286,6 +287,8 @@ export const createFullCusProduct = async ({
   subscriptionScheduleIds?: string[];
   keepResetIntervals?: boolean;
   anchorToUnix?: number;
+  carryExistingUsages?: boolean;
+  carryOverTrial?: boolean;
 }) => {
   const logger = createLogtailWithContext({
     action: LoggerAction.CreateFullCusProduct,
@@ -294,15 +297,8 @@ export const createFullCusProduct = async ({
     attachParams,
   });
 
-  const {
-    customer,
-    product,
-    prices,
-    entitlements,
-    optionsList,
-    freeTrial,
-    org,
-  } = attachParams;
+  let { customer, product, prices, entitlements, optionsList, freeTrial, org } =
+    attachParams;
 
   // 1. If one off
 
@@ -366,6 +362,8 @@ export const createFullCusProduct = async ({
       keepResetIntervals,
       anchorToUnix,
       entities: attachParams.entities || [],
+      carryExistingUsages,
+      curCusProduct: curCusProduct as FullCusProduct,
     });
 
     cusEnts.push(cusEnt);
@@ -384,6 +382,11 @@ export const createFullCusProduct = async ({
   }
 
   // 3. create customer product
+  if (carryOverTrial && curCusProduct?.free_trial_id) {
+    freeTrial = curCusProduct.free_trial || null;
+    trialEndsAt = curCusProduct.trial_ends_at || null;
+  }
+
   const cusProd = initCusProduct({
     cusProdId,
     customer,
@@ -402,6 +405,7 @@ export const createFullCusProduct = async ({
       : CollectionMethod.ChargeAutomatically,
     subscriptionIds,
     subscriptionScheduleIds,
+    isCustom: attachParams.isCustom || false,
   });
 
   await insertFullCusProduct({
@@ -409,6 +413,16 @@ export const createFullCusProduct = async ({
     cusProd,
     cusEnts,
     cusPrices,
+  });
+
+  await addTaskToQueue({
+    jobName: JobName.TriggerCheckoutReward,
+    payload: {
+      customer,
+      product,
+      org,
+      env: customer.env,
+    },
   });
 
   // // Send webhook

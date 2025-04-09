@@ -3,17 +3,6 @@ import { AppEnv, CusProductStatus, Organization } from "@autumn/shared";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 
-const handleSubPastDue = async ({
-  sb,
-  subscription,
-}: {
-  sb: any;
-  subscription: any;
-}) => {
-  // 1. Expire cus products
-  // Cancel subscription entirely
-};
-
 export const handleSubscriptionUpdated = async ({
   sb,
   org,
