@@ -195,27 +195,21 @@ function ProductView({ env }: { env: AppEnv }) {
                   setShowFreeTrial={setShowFreeTrial}
                 />
               </div>
+
               <div className="max-w-[300px] w-1/3 shrink-1">
                 <ProductSidebar
                   showFreeTrial={showFreeTrial}
                   setShowFreeTrial={setShowFreeTrial}
                 />
+                <div className="flex justify-end gap-2">
+                  <AddProductButton
+                    handleCreateProduct={createProductClicked}
+                    actionState={actionState}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-
-        <ConfirmNewVersionDialog
-          open={showNewVersionDialog}
-          setOpen={setShowNewVersionDialog}
-          createProduct={createProduct}
-        />
-
-        <div className="flex justify-end gap-2">
-          <AddProductButton
-            handleCreateProduct={createProductClicked}
-            actionState={actionState}
-          />
         </div>
       </ProductContext.Provider>
     </FeaturesContext.Provider>

@@ -54,10 +54,10 @@ export const ManageProduct = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1 px-6 justify-center w-full">
+      <div className="flex items-center justify-between border grid grid-cols-10 gap-8 pl-6">
+        <div className="flex flex-col gap-1 px-6 justify-center w-full col-span-2 border">
           <AdminHover texts={[product.internal_id!]}>
-            <h2 className="text-lg font-medium text-start w-full">
+            <h2 className="text-lg font-medium text-start w-full whitespace-nowrap border border-blue-500">
               {product.name}
             </h2>
           </AdminHover>
@@ -82,7 +82,7 @@ export const ManageProduct = ({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 border border-red-500 col-span-8 ">
           {customerData && (
             <Badge className="flex items-center gap-1 w-fit text-xs text-lime-600 bg-lime-50 border border-lime-200 hover:bg-lime-100">
               <span className="">
@@ -93,14 +93,6 @@ export const ManageProduct = ({
               </span>
             </Badge>
           )}
-          <ToggleDisplayButton
-            show={showFreeTrial}
-            onClick={() => setShowFreeTrial(!showFreeTrial)}
-            disabled={product.free_trial}
-          >
-            <Gift size={14} />
-            Free trial
-          </ToggleDisplayButton>
 
           {!customerData && <CountAndMigrate />}
 
@@ -292,7 +284,7 @@ const CountAndMigrate = () => {
   let trialingCount = counts?.trialing;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 whitespace-nowrap">
       <ConfirmMigrateDialog
         open={confirmMigrateOpen}
         setOpen={setConfirmMigrateOpen}
