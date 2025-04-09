@@ -41,8 +41,6 @@ export const ProductEntitlementTable = ({
     getDefaultPriceConfig(PriceType.Usage) // default price config
   );
 
-  console.log("entitlements", entitlements);
-
   const [open, setOpen] = useState(false);
   const [selectedEntitlement, setSelectedEntitlement] =
     useState<Entitlement | null>(null);
@@ -57,8 +55,20 @@ export const ProductEntitlementTable = ({
     });
 
     if (entitlementPrice) {
-      console.log("entitlementPrice found", entitlementPrice);
       setPriceConfig(entitlementPrice.config);
+    } else {
+      setPriceConfig({
+        ...priceConfig,
+        internal_feature_id: entitlement?.internal_feature_id,
+        feature_id: entitlement?.feature_id,
+        usage_tiers: [
+          {
+            from: 0,
+            to: entitlement?.allowance,
+            amount: 0,
+          },
+        ],
+      });
     }
 
     setOpen(true);
@@ -127,11 +137,15 @@ export const ProductEntitlementTable = ({
         priceConfig={priceConfig}
         setPriceConfig={setPriceConfig}
       />
-      <div className="flex flex-col text-sm border bg-white rounded-sm">
-        <div className="flex items-center justify-between bg-stone-100 pl-4 h-10">
-          <h2 className="text-sm text-t2 font-medium">Features</h2>
-          <div className="flex w-fit border-l border-b h-full items-center">
-            <CreateEntitlement buttonType={"feature"} />
+      <div className="flex flex-col text-sm bg-white rounded-sm">
+        <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y border-r bg-stone-100 pl-6 h-10">
+          <h2 className="text-sm text-t2 font-medium col-span-2 flex justify-end">
+            Features
+          </h2>
+          <div className="flex w-full h-full items-center col-span-8 justify-end">
+            <div className="flex w-fit h-full items-center">
+              <CreateEntitlement buttonType={"feature"} />
+            </div>
           </div>
         </div>
         <div className="flex flex-col">
@@ -151,11 +165,11 @@ export const ProductEntitlementTable = ({
 
             return (
               <div
-                key={entitlement.id}
-                className="flex grid grid-cols-10 gap-4 px-4 text-t2 h-10 items-center hover:bg-zinc-50"
+                key={entitlement.internal_feature_id}
+                className="flex grid grid-cols-10 gap-8 px-6 text-t2 h-10 items-center hover:bg-zinc-50"
                 onClick={() => handleRowClick(entitlement)}
               >
-                <span className="font-mono text-t3 col-span-2 overflow-hidden whitespace-nowrap">
+                <span className="font-mono text-t3 col-span-2 overflow-hidden flex justify-end whitespace-nowrap">
                   {feature?.id}
                 </span>
                 <span className="col-span-5">

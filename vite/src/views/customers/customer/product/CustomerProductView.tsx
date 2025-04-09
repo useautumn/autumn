@@ -365,47 +365,55 @@ export default function CustomerProductView() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex flex-col gap-2">
-        <Breadcrumb className="text-t3">
-          <BreadcrumbList className="text-t3 text-xs">
-            <BreadcrumbItem>
+      <div className="p-6 flex flex-col gap-4 max-w-[1048px]">
+        <div className="flex flex-col gap-2">
+          <Breadcrumb className="text-t3">
+            <BreadcrumbList className="text-t3 text-xs">
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  className="cursor-pointer"
+                  onClick={() => navigateTo("/customers", navigation, env)}
+                >
+                  Customers
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
               <BreadcrumbLink
                 className="cursor-pointer"
-                onClick={() => navigateTo("/customers", navigation, env)}
+                onClick={() =>
+                  navigateTo(`/customers/${customer_id}`, navigation, env)
+                }
               >
-                Customers
+                {customer.name ? customer.name : customer.id}
               </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbLink
-              className="cursor-pointer"
-              onClick={() =>
-                navigateTo(`/customers/${customer_id}`, navigation, env)
-              }
-            >
-              {customer.name ? customer.name : customer.id}
-            </BreadcrumbLink>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>{product.name}</BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        {product && <ManageProduct product={product} customerData={data} />}
-      </div>
-
-      {options.length > 0 && (
-        <ProductOptions
-          options={options}
-          setOptions={setOptions}
-          oneTimePurchase={oneTimePurchase || false}
-        />
-      )}
-      <div className="flex justify-end gap-2">
-        {/* <ProductOptionsButton /> */}
-        <AddProductButton
-          handleCreateProduct={handleCreateProduct}
-          actionState={actionState}
-          setUseInvoice={setUseInvoice}
-        />
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>{product.name}</BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          {product && (
+            <ManageProduct
+              product={product}
+              customerData={data}
+              showFreeTrial={false}
+              setShowFreeTrial={() => {}}
+            />
+          )}
+        </div>
+        {options.length > 0 && (
+          <ProductOptions
+            options={options}
+            setOptions={setOptions}
+            oneTimePurchase={oneTimePurchase || false}
+          />
+        )}
+        <div className="flex justify-end gap-2">
+          {/* <ProductOptionsButton /> */}
+          <AddProductButton
+            handleCreateProduct={handleCreateProduct}
+            actionState={actionState}
+            setUseInvoice={setUseInvoice}
+          />
+        </div>
       </div>
     </ProductContext.Provider>
   );

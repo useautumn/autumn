@@ -27,9 +27,11 @@ export const ManageProduct = ({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 px-6 justify-center w-full">
           <AdminHover texts={[product.internal_id!]}>
-            <h2 className="text-lg font-medium">{product.name}</h2>
+            <h2 className="text-lg font-medium text-start w-full">
+              {product.name}
+            </h2>
           </AdminHover>
           <div className="flex items-center gap-2">
             {product.is_add_on && (
@@ -68,18 +70,17 @@ export const ManageProduct = ({
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-4">
-        {/* <p className="text-md text-t2 font-medium">Features</p> */}
-
-        <ProductEntitlementTable entitlements={product.entitlements} />
-      </div>
-      <div className="flex flex-col gap-4">
-        {/* <p className="text-md text-t2 font-medium">Pricing</p> */}
-        {product.prices.length > 0 && (
-          <ProductPricingTable prices={product.prices} />
-        )}
-        {/* <CreateEntitlement /> */}
-        {/* <CreatePrice /> */}
+      <div className="flex flex-col gap-16">
+        <div className="flex flex-col">
+          <ProductEntitlementTable entitlements={product.entitlements} />
+        </div>
+        <div className="flex flex-col">
+          {product.prices.length > 0 && (
+            <ProductPricingTable prices={product.prices} />
+          )}
+          {/* <CreateEntitlement /> */}
+          {/* <CreatePrice /> */}
+        </div>
       </div>
       {showFreeTrial && (
         <div className="flex flex-col gap-4">

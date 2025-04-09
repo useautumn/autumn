@@ -58,42 +58,42 @@ function FeaturesView({ env }: { env: AppEnv }) {
         creditSystems: creditSystems,
       }}
     >
-      <div>
-        <h1 className="text-t1 text-xl font-medium">Features</h1>
-        <div className="flex justify-between items-center">
-          <p className="text-sm text-t2">
-            Define the features of your application you want to charge for.
-          </p>
-          <ToggleDisplayButton
-            show={showCredits}
-            disabled={creditSystems.length > 0}
-            onClick={() => setShowCredits(!showCredits)}
-          >
-            <Banknote size={14} />
-            Credit Systems
-          </ToggleDisplayButton>
-        </div>
-      </div>
-
-      <FeaturesTable />
-      <CreateFeatureDialog />
-
-      {showCredits && (
-        <div className="flex flex-col gap-4 h-fit mt-6">
-          <div>
-            <h2 className="text-lg font-medium">Credits</h2>
+      <div className="p-6 flex flex-col gap-4 max-w-[1048px]">
+        <div>
+          <h1 className="text-t1 text-xl font-medium">Features</h1>
+          <div className="flex justify-between items-center">
             <p className="text-sm text-t2">
-              Create a credit-based system where features consume credits from a
-              shared balance{" "}
-              <span className="text-t3">
-                (eg, 1 AI chat message costs 3 credits).
-              </span>
+              Define the features of your application you want to charge for.
             </p>
+            <ToggleDisplayButton
+              show={showCredits}
+              disabled={creditSystems.length > 0}
+              onClick={() => setShowCredits(!showCredits)}
+            >
+              <Banknote size={14} />
+              Credit Systems
+            </ToggleDisplayButton>
           </div>
-          <CreditSystemsTable />
-          <CreateCreditSystem />
         </div>
-      )}
+        <FeaturesTable />
+        <CreateFeatureDialog />
+        {showCredits && (
+          <div className="flex flex-col gap-4 h-fit mt-6">
+            <div>
+              <h2 className="text-lg font-medium">Credits</h2>
+              <p className="text-sm text-t2">
+                Create a credit-based system where features consume credits from
+                a shared balance{" "}
+                <span className="text-t3">
+                  (eg, 1 AI chat message costs 3 credits).
+                </span>
+              </p>
+            </div>
+            <CreditSystemsTable />
+            <CreateCreditSystem />
+          </div>
+        )}
+      </div>
     </FeaturesContext.Provider>
   );
 }

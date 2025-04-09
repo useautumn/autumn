@@ -25,13 +25,12 @@ export const CreatePrice = () => {
       return;
     }
 
+    setLoading(true);
     const config = validateConfig(price, product.prices);
 
     if (!config) {
       return;
     }
-
-    setLoading(true);
 
     const newPrice = CreatePriceSchema.parse({
       name: price.name,

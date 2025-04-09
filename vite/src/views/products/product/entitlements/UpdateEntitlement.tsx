@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { useEffect, useState } from "react";
 import { getDefaultPriceConfig } from "@/utils/product/priceUtils";
-import { PriceType } from "@autumn/shared";
+import { CreatePriceSchema, PriceType } from "@autumn/shared";
 
 export default function UpdateEntitlement({
   open,
@@ -32,23 +32,29 @@ export default function UpdateEntitlement({
 }) {
   const { setProduct, product, features } = useProductContext();
 
+  // console.log("prices", product.prices);
+
   const handleDeleteEntitlement = () => {
     // Remove the entitlement
     const updatedEntitlements = product.entitlements.filter(
       (entitlement: any) => {
         return (
-          entitlement.internal_feature_id !==
-          selectedEntitlement.internal_feature_id
+          entitlement?.internal_feature_id !==
+          selectedEntitlement?.internal_feature_id
         );
       }
     );
 
     // Remove any prices associated with this entitlement
-    const updatedPrices = product.prices.filter((price: any) => {
-      return (
-        price.config.internal_feature_id !==
-        selectedEntitlement.internal_feature_id
-      );
+    const updatedPrices = product.prices.filter((price: any, index: number) => {
+      if (priceConfig.type == PriceType.Fixed) {
+        return index !== selectedIndex;
+      } else {
+        return (
+          price.config.internal_feature_id !==
+          selectedEntitlement.internal_feature_id
+        );
+      }
     });
 
     setProduct({
@@ -74,20 +80,51 @@ export default function UpdateEntitlement({
       return entitlement;
     });
 
-    const updatedPrices = product.prices.map((price: any, index: number) => {
-      if (priceConfig.type == PriceType.Fixed) {
+    let updatedPrices;
+    // Check if the priceConfig exists in the product.prices array
+    const priceExists = product.prices.some(
+      (price: any) =>
+        price.config.internal_feature_id === priceConfig.internal_feature_id
+    );
+
+    if (!priceExists) {
+      // If it doesn't exist, create a new price and add it to updatedPrices
+      // console.log("running the right code");
+      const newPrice = CreatePriceSchema.parse({
+        name: "price",
+        config: priceConfig,
+      });
+
+      updatedPrices = [...product.prices, newPrice];
+    } else if (priceConfig.type == PriceType.Fixed) {
+      // map through the product.prices and update the price with the matching selectedIndex
+      updatedPrices = product.prices.map((price: any, index: number) => {
+        console.log("index", index);
+        console.log("selectedIndex", selectedIndex);
         if (index === selectedIndex) {
           return { name: price.name, config: priceConfig };
         }
-      } else if (
-        price.config.internal_feature_id ===
-        selectedEntitlement.internal_feature_id
-      ) {
-        return { name: price.name, config: priceConfig };
-      }
-      return price;
-    });
+        return price;
+      });
+    } else if (priceConfig.usage_tiers.every((tier: any) => tier.amount == 0)) {
+      //delete the price
+      updatedPrices = product.prices.filter(
+        (price: any) =>
+          price.config.internal_feature_id !== priceConfig.internal_feature_id
+      );
+    } else {
+      updatedPrices = product.prices.map((price: any, index: number) => {
+        if (
+          price.config.internal_feature_id ===
+          selectedEntitlement.internal_feature_id
+        ) {
+          return { name: price.name, config: priceConfig };
+        }
+        return price;
+      });
+    }
 
+    console.log("updatedPrices", updatedPrices);
     setProduct({
       ...product,
       entitlements: updatedEntitlements,
