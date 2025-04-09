@@ -2,8 +2,6 @@ import { useProductsContext } from "../ProductsContext";
 
 import { useState } from "react";
 
-import { CouponRowToolbar } from "../coupons/CouponRowToolbar";
-
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 
 import { TableCell } from "@/components/ui/table";
