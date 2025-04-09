@@ -260,6 +260,7 @@ const handleInvoicePaidDiscount = async ({
       }
 
       const curCoupon = discount.coupon;
+
       if (!curCoupon) {
         continue;
       }
@@ -308,8 +309,6 @@ const handleInvoicePaidDiscount = async ({
 
       console.log(`Updating coupon amount from ${curAmount} to ${newAmount}`);
 
-      // Create new coupon with that amount off
-      // console.log("Cur coupon applies to", curCoupon);
       const newCoupon = await stripeCli.coupons.create({
         id: `${couponId}_${generateId("roll")}`,
         name: discount.coupon.name as string,

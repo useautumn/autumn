@@ -167,7 +167,9 @@ stripeWebhookRouter.post(
             discount: event.data.object,
             env,
             logger,
+            res: response,
           });
+          return;
           break;
       }
     } catch (error) {

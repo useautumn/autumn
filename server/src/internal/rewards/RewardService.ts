@@ -1,5 +1,5 @@
 import { generateId } from "@/utils/genUtils.js";
-import { AppEnv, Coupon } from "@autumn/shared";
+import { AppEnv, Reward } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export class RewardService {
@@ -8,7 +8,7 @@ export class RewardService {
     data,
   }: {
     sb: SupabaseClient;
-    data: Coupon | Coupon[];
+    data: Reward | Reward[];
   }) {
     const { data: insertedData, error } = await sb
       .from("rewards")
@@ -103,7 +103,7 @@ export class RewardService {
     internalId: string;
     env: AppEnv;
     orgId: string;
-    update: Partial<Coupon>;
+    update: Partial<Reward>;
   }) {
     const { data, error } = await sb
       .from("rewards")

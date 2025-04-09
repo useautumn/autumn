@@ -9,7 +9,7 @@ import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { TableCell } from "@/components/ui/table";
 
 import {
-  Coupon,
+  Reward,
   CouponDurationType,
   DiscountType,
   RewardTrigger,

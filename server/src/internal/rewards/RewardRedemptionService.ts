@@ -2,6 +2,20 @@ import { notNullish } from "@/utils/genUtils.js";
 import { RewardRedemption, RewardTriggerEvent } from "@autumn/shared";
 
 export class RewardRedemptionService {
+  static async getById({ sb, id }: { sb: any; id: string }) {
+    const { data, error } = await sb
+      .from("reward_redemptions")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async getByCustomer({
     sb,
     internalCustomerId,

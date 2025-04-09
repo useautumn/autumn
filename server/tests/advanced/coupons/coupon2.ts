@@ -1,13 +1,13 @@
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getOriginalCouponId } from "@/internal/coupons/couponUtils.js";
+import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
 import { getPriceForOverage } from "@/internal/prices/priceUtils.js";
 import { Customer } from "@autumn/shared";
 import { expect } from "chai";
 import chalk from "chalk";
 import Stripe from "stripe";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { coupons, features, products } from "tests/global.js";
+import { features, products, rewards } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
 import { getFixedPriceAmount, timeout } from "tests/utils/genUtils.js";
 import {
@@ -27,7 +27,7 @@ describe(
     let customer: Customer;
     let testClockId: string;
 
-    let couponAmount = coupons.rolloverAll.discount_value;
+    let couponAmount = rewards.rolloverUsage.discount_value;
 
     before(async function () {
       const { testClockId: testClockId1, customer: customer1 } =
@@ -61,7 +61,7 @@ describe(
       await completeCheckoutForm(
         res.checkout_url,
         undefined,
-        coupons.rolloverUsage.id
+        rewards.rolloverUsage.id
       );
 
       await timeout(10000);
@@ -85,7 +85,7 @@ describe(
 
       try {
         expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(
-          coupons.rolloverUsage.id
+          rewards.rolloverUsage.id
         );
 
         // Expect amount to be original amount - pro price
@@ -94,7 +94,7 @@ describe(
         logger.error("--------------------------------");
         logger.error(
           "Expected stripe cus to have coupon",
-          coupons.rolloverUsage
+          rewards.rolloverUsage
         );
         logger.error("Actual stripe cus discount", cusDiscount);
         throw error;
@@ -139,7 +139,7 @@ describe(
 
       try {
         expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(
-          coupons.rolloverUsage.id
+          rewards.rolloverUsage.id
         );
         expect(cusDiscount.coupon?.amount_off).to.equal(couponAmount * 100);
       } catch (error) {
@@ -147,7 +147,7 @@ describe(
         logger.error("coupon2, cycle 1 failed");
         logger.error(
           "Expected stripe cus to have coupon",
-          coupons.rolloverUsage
+          rewards.rolloverUsage
         );
         logger.error("Actual stripe cus discount", cusDiscount);
         throw error;

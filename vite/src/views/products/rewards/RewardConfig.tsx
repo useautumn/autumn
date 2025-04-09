@@ -4,14 +4,8 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 import { SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import {
-  Coupon,
-  CouponDurationType,
-  CreateCoupon,
-  DiscountType,
-} from "@autumn/shared";
+import { Reward, CouponDurationType, DiscountType } from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import {
   Popover,
@@ -31,12 +25,12 @@ import { Check, ChevronsUpDown, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-export const CouponConfig = ({
-  coupon,
-  setCoupon,
+export const RewardConfig = ({
+  reward,
+  setReward,
 }: {
-  coupon: Coupon;
-  setCoupon: (coupon: Coupon) => void;
+  reward: Reward;
+  setReward: (reward: Reward) => void;
 }) => {
   const { org } = useProductsContext();
   return (
@@ -45,8 +39,8 @@ export const CouponConfig = ({
         <div className="w-6/12">
           <FieldLabel description="Will be shown on receipt">Name</FieldLabel>
           <Input
-            value={coupon.name || ""}
-            onChange={(e) => setCoupon({ ...coupon, name: e.target.value })}
+            value={reward.name || ""}
+            onChange={(e) => setReward({ ...reward, name: e.target.value })}
           />
         </div>
         <div className="w-6/12">
@@ -55,11 +49,11 @@ export const CouponConfig = ({
           </FieldLabel>
           <Input
             value={
-              coupon.promo_codes.length > 0 ? coupon.promo_codes[0].code : ""
+              reward.promo_codes.length > 0 ? reward.promo_codes[0].code : ""
             }
             onChange={(e) =>
-              setCoupon({
-                ...coupon,
+              setReward({
+                ...reward,
                 promo_codes: [{ code: e.target.value }],
               })
             }
@@ -70,9 +64,9 @@ export const CouponConfig = ({
         <div className="w-6/12">
           <FieldLabel>Discount Type</FieldLabel>
           <Select
-            value={coupon.discount_type}
+            value={reward.discount_type}
             onValueChange={(value) =>
-              setCoupon({ ...coupon, discount_type: value as DiscountType })
+              setReward({ ...reward, discount_type: value as DiscountType })
             }
           >
             <SelectTrigger>
@@ -90,13 +84,13 @@ export const CouponConfig = ({
         <div className="w-6/12">
           <FieldLabel>Amount</FieldLabel>
           <Input
-            value={coupon.discount_value}
+            value={reward.discount_value}
             onChange={(e) =>
-              setCoupon({ ...coupon, discount_value: Number(e.target.value) })
+              setReward({ ...reward, discount_value: Number(e.target.value) })
             }
             endContent={
               <p className="text-t3">
-                {coupon.discount_type === DiscountType.Percentage
+                {reward.discount_type === DiscountType.Percentage
                   ? "%"
                   : org?.currency || "USD"}
               </p>
@@ -108,13 +102,13 @@ export const CouponConfig = ({
         <div className="w-6/12">
           <FieldLabel>Duration</FieldLabel>
           <div className="flex items-center gap-1">
-            {coupon.duration_type === CouponDurationType.Months && (
+            {reward.duration_type === CouponDurationType.Months && (
               <Input
                 className="w-[60px] no-spinner"
-                value={coupon.duration_value}
+                value={reward.duration_value}
                 onChange={(e) => {
-                  setCoupon({
-                    ...coupon,
+                  setReward({
+                    ...reward,
                     duration_value: Number(e.target.value),
                   });
                 }}
@@ -122,10 +116,10 @@ export const CouponConfig = ({
               />
             )}
             <Select
-              value={coupon.duration_type}
+              value={reward.duration_type}
               onValueChange={(value) =>
-                setCoupon({
-                  ...coupon,
+                setReward({
+                  ...reward,
                   duration_type: value as CouponDurationType,
                 })
               }
@@ -144,13 +138,13 @@ export const CouponConfig = ({
           </div>
         </div>
       </div>
-      {coupon.duration_type === CouponDurationType.OneOff && (
+      {reward.duration_type === CouponDurationType.OneOff && (
         <div className="w-full ml-1 flex items-center gap-2">
           <Checkbox
-            checked={coupon.should_rollover}
+            checked={reward.should_rollover}
             onCheckedChange={(checked) =>
-              setCoupon({
-                ...coupon,
+              setReward({
+                ...reward,
                 should_rollover: checked === true,
               })
             }
@@ -162,31 +156,31 @@ export const CouponConfig = ({
       <div className="mt-4">
         <p className="text-t2 mb-2">Products</p>
 
-        <ProductPriceSelector coupon={coupon} setCoupon={setCoupon} />
+        <ProductPriceSelector reward={reward} setReward={setReward} />
       </div>
     </div>
   );
 };
 
 const ProductPriceSelector = ({
-  coupon,
-  setCoupon,
+  reward,
+  setReward,
 }: {
-  coupon: Coupon;
-  setCoupon: (coupon: Coupon) => void;
+  reward: Reward;
+  setReward: (reward: Reward) => void;
 }) => {
   const { products, features } = useProductsContext();
   const [open, setOpen] = useState(false);
 
   // Handle selection/deselection of a price
   const handlePriceToggle = (priceId: string) => {
-    let newPriceIds = [...coupon.price_ids];
-    if (coupon.price_ids.includes(priceId)) {
-      newPriceIds = coupon.price_ids.filter((id) => id !== priceId);
+    let newPriceIds = [...reward.price_ids];
+    if (reward.price_ids.includes(priceId)) {
+      newPriceIds = reward.price_ids.filter((id) => id !== priceId);
     } else {
-      newPriceIds = [...coupon.price_ids, priceId];
+      newPriceIds = [...reward.price_ids, priceId];
     }
-    setCoupon({ ...coupon, price_ids: newPriceIds });
+    setReward({ ...reward, price_ids: newPriceIds });
   };
 
   if (!products || products.length === 0) {
@@ -212,13 +206,13 @@ const ProductPriceSelector = ({
           aria-expanded={open}
           className="w-full justify-between min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50"
         >
-          {coupon.apply_to_all ? (
+          {reward.apply_to_all ? (
             "All Products"
-          ) : coupon.price_ids.length == 0 ? (
+          ) : reward.price_ids.length == 0 ? (
             "Select Products"
           ) : (
             <>
-              {coupon.price_ids.map((priceId) => (
+              {reward.price_ids.map((priceId) => (
                 <div
                   key={priceId}
                   className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit"
@@ -251,20 +245,20 @@ const ProductPriceSelector = ({
               <CommandGroup>
                 <CommandItem
                   onSelect={() => {
-                    setCoupon({
-                      ...coupon,
-                      apply_to_all: !coupon.apply_to_all,
+                    setReward({
+                      ...reward,
+                      apply_to_all: !reward.apply_to_all,
                     });
                   }}
                   className="cursor-pointer"
                 >
                   <p>Apply to all products</p>
-                  {coupon.apply_to_all && (
+                  {reward.apply_to_all && (
                     <Check size={12} className="text-t3" />
                   )}
                 </CommandItem>
               </CommandGroup>
-              {!coupon.apply_to_all &&
+              {!reward.apply_to_all &&
                 products.map((product: any) => (
                   <CommandGroup key={product.id} heading={product.name}>
                     {product.prices.length > 0 ? (
@@ -276,7 +270,7 @@ const ProductPriceSelector = ({
                           className="cursor-pointer"
                         >
                           <div className="flex items-center">{price.name}</div>
-                          {coupon.price_ids.includes(price.id) && (
+                          {reward.price_ids.includes(price.id) && (
                             <Check size={12} className="text-t3" />
                           )}
                         </CommandItem>
