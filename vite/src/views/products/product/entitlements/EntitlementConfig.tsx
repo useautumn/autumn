@@ -72,6 +72,7 @@ export const EntitlementConfig = ({
   handleCreateEntitlement,
   handleUpdateEntitlement,
   handleDeleteEntitlement,
+  buttonType,
 }: {
   isUpdate?: boolean;
   entitlement: EntitlementWithFeature | Entitlement | null;
@@ -84,6 +85,7 @@ export const EntitlementConfig = ({
   handleCreateEntitlement?: () => void;
   handleUpdateEntitlement?: () => void;
   handleDeleteEntitlement?: () => void;
+  buttonType?: "feature" | "price";
 }) => {
   const { features, product, env } = useProductContext();
   const navigate = useNavigate();
@@ -99,13 +101,14 @@ export const EntitlementConfig = ({
     priceConfig.usage_tiers?.[0].amount > 0 ||
       priceConfig.usage_tiers?.length > 1 ||
       priceConfig.usage_tiers?.[0].to == -1 || // to prevent for a weird state with 0 price
-      priceConfig.type == PriceType.Fixed
+      priceConfig.type == PriceType.Fixed ||
+      buttonType == "price"
   ); // for the add price button
   const [showCycle, setShowCycle] = useState(
     entitlement && entitlement?.interval == EntInterval.Lifetime ? false : true
   );
   const [showFeature, setShowFeature] = useState(
-    priceConfig.type == PriceType.Fixed ? false : true
+    priceConfig.type == PriceType.Fixed || buttonType == "price" ? false : true
   );
 
   // for the add cycle button
@@ -125,44 +128,37 @@ export const EntitlementConfig = ({
     entity_feature_id: entitlement?.entity_feature_id || "",
   });
 
-  useEffect(() => {
-    //if showFeature is true, set selectedFeature to null
-    if (!showFeature) {
-      setSelectedFeature(null);
-      setPriceConfig(getDefaultPriceConfig(PriceType.Fixed));
-    }
+  // useEffect(() => {
+  //   //if showFeature is true, set selectedFeature to null
+  //   if (!showFeature) {
+  //     setSelectedFeature(null);
+  //     setPriceConfig(getDefaultPriceConfig(PriceType.Fixed));
+  //   }
 
-    if (showFeature) {
-      setPriceConfig(getDefaultPriceConfig(PriceType.Usage));
-    }
-  }, [showFeature]);
+  //   if (showFeature) {
+  //     setPriceConfig(getDefaultPriceConfig(PriceType.Usage));
+  //   }
+  // }, [showFeature]);
 
-  useEffect(() => {
-    if (originalEntitlement && Number(originalEntitlement.allowance) > 0) {
-      console.log("running this");
-      setPriceConfig({
-        ...priceConfig,
-        usage_tiers: [
-          {
-            from: 0,
-            to: originalEntitlement.allowance, // set the to value to the original entitlement allowance
-            amount: 0,
-          },
-          ...priceConfig.usage_tiers.slice(1),
-        ],
-      });
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (originalEntitlement && Number(originalEntitlement.allowance) > 0) {
+  //     setPriceConfig({
+  //       ...priceConfig,
+  //       usage_tiers: [
+  //         {
+  //           from: 0,
+  //           to: originalEntitlement.allowance, // set the to value to the original entitlement allowance
+  //           amount: 0,
+  //         },
+  //         ...priceConfig.usage_tiers.slice(1),
+  //       ],
+  //     });
+  //   }
+  // }, []);
 
   useEffect(() => {
     //translate pricing usage tiers into entitlement allowance config when saving new feature
     console.log(selectedFeature?.name, "priceConfig:", priceConfig);
-    console.log(
-      selectedFeature?.name,
-      "originalEntitlement:",
-      originalEntitlement
-    );
-    console.log(selectedFeature?.name, "fields:", fields);
 
     let newAllowance: number | "unlimited";
     if (fields.allowance_type == AllowanceType.Unlimited) {
@@ -365,7 +361,7 @@ export const EntitlementConfig = ({
                               disabled={
                                 fields.allowance_type == AllowanceType.Unlimited
                               }
-                              value={priceConfig.usage_tiers?.[0]?.to || 0}
+                              value={priceConfig.usage_tiers?.[0]?.to ?? ""}
                               type={
                                 fields.allowance_type ===
                                 AllowanceType.Unlimited
@@ -534,11 +530,19 @@ export const EntitlementConfig = ({
         <div className="flex flex-col w-fit justify-between gap-16">
           <div className="flex flex-col gap-2 w-32">
             <ToggleDisplayButton
-              label="Edit Feature"
+              label="Add Feature"
               className="w-full justify-start"
               show={showFeature}
               disabled={isUpdate}
-              onClick={() => setShowFeature(!showFeature)}
+              onClick={() => {
+                if (showFeature) {
+                  setSelectedFeature(null);
+                  setPriceConfig(getDefaultPriceConfig(PriceType.Fixed));
+                } else {
+                  setPriceConfig(getDefaultPriceConfig(PriceType.Usage));
+                }
+                setShowFeature(!showFeature);
+              }}
             >
               {showFeature ? (
                 <MinusIcon size={14} className="mr-1" />
@@ -600,6 +604,17 @@ export const EntitlementConfig = ({
                       ],
                     });
                   }
+                } else {
+                  setPriceConfig({
+                    ...priceConfig,
+                    usage_tiers: [
+                      {
+                        from: 0,
+                        to: priceConfig.usage_tiers[0].to, // if there are multiple usage tiers, remove price and set allowance to the first usage tier's "to" value
+                        amount: 0,
+                      },
+                    ],
+                  });
                 }
                 setShowPrice(!showPrice);
               }}

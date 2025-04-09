@@ -1,6 +1,6 @@
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { Price, PriceType, UsagePriceConfig } from "@autumn/shared";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import {
   Table,
@@ -20,11 +20,40 @@ import {
 import { AdminHover } from "@/components/general/AdminHover";
 import { CreateEntitlement } from "../entitlements/CreateEntitlement";
 import UpdateEntitlement from "../entitlements/UpdateEntitlement";
+import { getFeature } from "@/utils/product/entitlementUtils";
 
 // import UpdatePricing from "./UpdatePricing";
 
 export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
-  const { org, product } = useProductContext();
+  const { org, product, features } = useProductContext();
+
+  const [sortedPrices, setSortedPrices] = useState<
+    (Price & { originalIndex: number })[]
+  >([]);
+
+  useEffect(() => {
+    //original index allows us to keep track of which price should be deleted (SelectedIndex for fixed prices)
+    const sorted = prices
+      .map((price, index) => ({ ...price, originalIndex: index }))
+      .sort((a, b) => {
+        if (
+          a.config?.type === PriceType.Fixed &&
+          b.config?.type !== PriceType.Fixed
+        ) {
+          return -1;
+        }
+        if (
+          a.config?.type !== PriceType.Fixed &&
+          b.config?.type === PriceType.Fixed
+        ) {
+          return 1;
+        }
+        return 0;
+      });
+    setSortedPrices(sorted);
+  }, [prices]);
+
+  console.log("sortedPrices", sortedPrices);
 
   const [priceConfig, setPriceConfig] = useState<any>(
     getDefaultPriceConfig(PriceType.Usage) // default price config
@@ -41,8 +70,8 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
 
       return (
         <React.Fragment>
-          {formattedAmount}{" "}
-          <span className="text-t3">
+          <span className="">{formattedAmount} </span>
+          <span className="">
             {config.interval === "one_off"
               ? "one off"
               : `per ${config.interval}`}
@@ -76,14 +105,30 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
 
       // Single tier - just show the amount
       const amount = formatUsageAmount(config.usage_tiers[0].amount);
-      return (
-        <>
-          {amount} <span className="text-t3">per {numUnits} units</span>
-        </>
-      );
+      if (config.billing_units == 1) {
+        //get feature name from feature id
+        const foundFeature = getFeature(config.internal_feature_id, features);
+
+        return (
+          <>
+            {amount}{" "}
+            <span className="">
+              per {foundFeature ? foundFeature.name : config.feature_id}
+            </span>
+            <span className="text-t3">&nbsp;per {config.interval}</span>
+          </>
+        );
+      } else {
+        return (
+          <>
+            {amount} <span className="text-t3">per {numUnits} units</span>
+          </>
+        );
+      }
     }
     return "";
   };
+
   const [open, setOpen] = useState(false);
   const [selectedPrice, setSelectedPrice] = useState<Price | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -91,11 +136,13 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
   const handleRowClick = (price: Price, index: number) => {
     console.log("price", price);
 
+    //get the
+
     //if price type is fixed, set the price config to the price config
     if (price.config?.type === PriceType.Fixed) {
       setPriceConfig(price.config);
       setSelectedPrice(null);
-      // setSelectedIndex(index);
+      setSelectedIndex(index);
       setOpen(true);
       return;
     }
@@ -127,43 +174,61 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
         setPriceConfig={setPriceConfig}
         selectedIndex={selectedIndex}
       />
-      <div className="flex flex-col text-sm border bg-white rounded-sm">
-        <div className="flex items-center justify-between bg-stone-100 pl-4 h-10">
-          <h2 className="text-sm text-t2 font-medium">Pricing</h2>
-          <div className="flex w-fit border-l border-b h-full items-center">
-            <CreateEntitlement buttonType={"price"} />
+      <div className="flex flex-col text-sm bg-white rounded-sm">
+        <div className="flex items-center grid grid-cols-10 gap-8 justify-between bg-stone-100 border-y border-r pl-6 h-10">
+          <h2 className="text-sm text-t2 font-medium col-span-2 flex justify-end">
+            Pricing
+          </h2>
+          <div className="flex w-full h-full items-center col-span-8 justify-end">
+            <div className="flex w-fit h-full items-center">
+              <CreateEntitlement buttonType={"price"} />
+            </div>
           </div>
         </div>
         <div className="flex flex-col">
-          {prices.map((price, index: number) => (
-            <div
-              key={index}
-              className="flex grid grid-cols-10 px-4 text-t2 h-10 items-center hover:bg-zinc-50 cursor-pointer"
-              onClick={() => handleRowClick(price, index)}
-            >
-              <span className="font-mono text-t3 col-span-2">
-                <AdminHover
-                  texts={[
-                    price.id!,
-                    (price.config as UsagePriceConfig).internal_feature_id,
-                    (price.config as UsagePriceConfig).stripe_meter_id,
-                    (price.config as UsagePriceConfig).stripe_price_id,
-                  ]}
-                >
-                  {price.name}
-                </AdminHover>
-              </span>
-              <span className="col-span-5">
-                {formatAmount(price.config, price.config?.type || "")}
-              </span>
-              <span className="col-span-2">
-                <PricingTypeBadge type={price.config?.type || ""} />
-              </span>
-              <span className="flex text-xs text-t3 items-center col-span-1">
-                {formatUnixToDateTime(price.created_at).date}{" "}
-              </span>
-            </div>
-          ))}
+          {sortedPrices.map((price) => {
+            let rowPriceConfig = price.config;
+            if (price.config?.type === PriceType.Usage) {
+              rowPriceConfig = price.config as UsagePriceConfig;
+            }
+
+            return (
+              <div
+                key={price.originalIndex}
+                className="flex grid grid-cols-10 gap-8 px-6 text-t2 h-10 items-center hover:bg-zinc-50 cursor-pointer"
+                onClick={() => handleRowClick(price, price.originalIndex)}
+              >
+                <span className="font-mono text-t3 col-span-2 flex justify-end">
+                  <AdminHover
+                    texts={[
+                      price.id!,
+                      ...(price.config?.type === PriceType.Usage
+                        ? [
+                            (price.config as UsagePriceConfig)
+                              .internal_feature_id,
+                            (price.config as UsagePriceConfig).stripe_meter_id,
+                            (price.config as UsagePriceConfig).stripe_price_id,
+                          ]
+                        : []),
+                    ]}
+                  >
+                    {price.config?.type === PriceType.Usage
+                      ? (price.config as UsagePriceConfig).feature_id
+                      : ""}
+                  </AdminHover>
+                </span>
+                <span className="col-span-5">
+                  {formatAmount(price.config, price.config?.type || "")}
+                </span>
+                <span className="col-span-2">
+                  <PricingTypeBadge type={price.config?.type || ""} />
+                </span>
+                <span className="flex text-xs text-t3 items-center col-span-1 whitespace-nowrap">
+                  {formatUnixToDateTime(price.created_at).date}{" "}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </>

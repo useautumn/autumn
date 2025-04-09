@@ -66,8 +66,8 @@ export default function UpdatePricing({
           //   name: selectedPrice?.name,
           //   id: selectedPrice?.id,
           // }}
-          price={selectedPrice}
-          setPrice={setSelectedPrice}
+          priceConfig={selectedPrice}
+          setPriceConfig={setSelectedPrice}
           isUpdate={true}
         />
 

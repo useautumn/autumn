@@ -137,42 +137,44 @@ function ProductView({ env }: { env: AppEnv }) {
           setSelectedEntitlementAllowance,
         }}
       >
-        <div className="flex flex-col gap-0.5">
-          <Breadcrumb className="text-t3">
-            <BreadcrumbList className="text-t3 text-xs">
-              <BreadcrumbItem
-                onClick={() => navigateTo("/products", navigate, env)}
-                className="cursor-pointer"
-              >
-                Products
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem className="cursor-pointer">
-                {product.name ? product.name : product.id}
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="flex">
-            <div className="flex-1 w-full min-w-sm">
-              <ManageProduct
-                product={product}
-                showFreeTrial={showFreeTrial}
-                setShowFreeTrial={setShowFreeTrial}
-              />
-            </div>
-            <div className="max-w-[300px] w-1/3 shrink-1">
-              <ProductSidebar
-                showFreeTrial={showFreeTrial}
-                setShowFreeTrial={setShowFreeTrial}
-              />
+        <div className="w-full">
+          <div className="flex flex-col gap-0.5">
+            <Breadcrumb className="text-t3 p-6 flex justify-center">
+              <BreadcrumbList className="text-t3 text-xs w-full">
+                <BreadcrumbItem
+                  onClick={() => navigateTo("/products", navigate, env)}
+                  className="cursor-pointer"
+                >
+                  Products
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem className="cursor-pointer">
+                  {product.name ? product.name : product.id}
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+            <div className="flex">
+              <div className="flex-1 w-full min-w-sm">
+                <ManageProduct
+                  product={product}
+                  showFreeTrial={showFreeTrial}
+                  setShowFreeTrial={setShowFreeTrial}
+                />
+              </div>
+              <div className="max-w-[300px] w-1/3 shrink-1">
+                <ProductSidebar
+                  showFreeTrial={showFreeTrial}
+                  setShowFreeTrial={setShowFreeTrial}
+                />
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex justify-end gap-2">
-          <AddProductButton
-            handleCreateProduct={handleCreateProduct}
-            actionState={actionState}
-          />
+          <div className="flex justify-end gap-2">
+            <AddProductButton
+              handleCreateProduct={handleCreateProduct}
+              actionState={actionState}
+            />
+          </div>
         </div>
       </ProductContext.Provider>
     </FeaturesContext.Provider>

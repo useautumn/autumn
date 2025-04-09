@@ -114,9 +114,8 @@ function CustomersView({ env }: { env: AppEnv }) {
         products: productsData?.products,
       }}
     >
-      <div className="flex flex-col gap-4 h-fit relative">
+      <div className="flex flex-col gap-4 h-fit relative p-6 max-w-[1048px]">
         <h1 className="text-xl font-medium shrink-0">Customers</h1>
-
         <div className="flex justify-between w-full sticky top-0 z-10">
           <div className="relative w-full max-w-md flex items-center gap-2">
             <SearchBar
@@ -169,7 +168,6 @@ function CustomersView({ env }: { env: AppEnv }) {
             </div>
           )}
         </div>
-
         <div className="overflow-auto min-h-0">
           {data?.customers?.length > 0 ? (
             <div className="h-fit max-h-full">

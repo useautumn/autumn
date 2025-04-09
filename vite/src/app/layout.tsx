@@ -119,10 +119,10 @@ const MainContent = () => {
       )}
       <div
         className={cn(
-          "w-full h-full overflow-auto p-6 flex justify-center bg-stone-50"
+          "w-full h-full overflow-auto flex justify-center bg-stone-50"
         )}
       >
-        <div className="hidden md:flex w-full h-full max-w-[1048px] flex-col gap-4">
+        <div className="hidden md:flex w-full h-full justify-center">
           <Outlet />
         </div>
         <div className="md:hidden w-full h-full flex items-center justify-center">

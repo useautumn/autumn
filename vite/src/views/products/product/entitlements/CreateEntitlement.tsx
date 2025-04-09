@@ -53,7 +53,8 @@ export const CreateEntitlement = ({
     // console.log("New entitlement", newEntitlement);
     // console.log("old priceConfig", priceConfig);
 
-    const newPrice = CreatePriceSchema.parse({
+    let newPrice;
+    newPrice = CreatePriceSchema.parse({
       name: "price",
       config: {
         ...priceConfig,
@@ -64,8 +65,6 @@ export const CreateEntitlement = ({
       },
     });
 
-    // console.log("saving newPrice", newPrice);
-
     const config = validateConfig(newPrice, product.prices);
 
     if (!config) {
@@ -73,12 +72,21 @@ export const CreateEntitlement = ({
       return;
     }
 
+    if (
+      priceConfig.type === PriceType.Usage &&
+      priceConfig.usage_tiers.some((tier: any) => tier.amount === 0)
+    ) {
+      newPrice = null; // if there is no amount in the usage tiers, don't create a price
+    }
+
+    // console.log("saving newPrice", newPrice);
+
     setProduct({
       ...product,
       entitlements: newEntitlement
         ? [...product.entitlements, newEntitlement]
         : product.entitlements,
-      prices: [...product.prices, newPrice],
+      prices: newPrice ? [...product.prices, newPrice] : product.prices,
     });
 
     setOpen(false);
@@ -144,6 +152,7 @@ export const CreateEntitlement = ({
                 setPriceConfig={setPriceConfig}
                 priceConfig={priceConfig}
                 handleCreateEntitlement={handleCreateEntitlement}
+                buttonType={buttonType}
               />
               {/* <DialogFooter className="w-full flex sm:justify-end mt-4">
                 <Button
