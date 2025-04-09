@@ -207,7 +207,7 @@ export const EntitlementConfig = ({
         ...originalEnt,
         ...newEnt,
         feature: selectedFeature,
-      });
+      } as EntitlementWithFeature);
     } else {
       setEntitlement(null);
     }

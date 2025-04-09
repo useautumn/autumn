@@ -2,7 +2,7 @@ import { SelectContent } from "@/components/ui/select";
 import { SelectValue } from "@/components/ui/select";
 import { SelectTrigger } from "@/components/ui/select";
 import { DialogFooter } from "@/components/ui/dialog";
-import { Coupon } from "@autumn/shared";
+import { Reward } from "@autumn/shared";
 import { Select, SelectItem } from "@/components/ui/select";
 import { DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
@@ -22,7 +22,7 @@ const AddCouponDialogContent = ({
   setOpen: (open: boolean) => void;
 }) => {
   const { cusMutate, customer, coupons, discount } = useCustomerContext();
-  const [couponSelected, setCouponSelected] = useState<Coupon | null>(null);
+  const [couponSelected, setCouponSelected] = useState<Reward | null>(null);
   const [loading, setLoading] = useState(false);
   const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
@@ -38,7 +38,7 @@ const AddCouponDialogContent = ({
       setOpen(false);
       await cusMutate();
 
-      toast.success("Coupon added to customer");
+      toast.success("Reward added to customer");
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to create coupon"));
     } finally {
@@ -51,7 +51,7 @@ const AddCouponDialogContent = ({
   const getExistingCoupon = () => {
     if (discount) {
       return coupons.find(
-        (c: Coupon) => c.internal_id === getOriginalCouponId(discount.coupon.id)
+        (c: Reward) => c.internal_id === getOriginalCouponId(discount.coupon.id)
       );
     } else {
       return null;
@@ -60,10 +60,10 @@ const AddCouponDialogContent = ({
 
   return (
     <DialogContent>
-      <DialogTitle>Add Coupon</DialogTitle>
+      <DialogTitle>Add Reward</DialogTitle>
       {getExistingCoupon() && (
         <WarningBox>
-          Coupon {getExistingCoupon()?.name} already applied. Adding a new one
+          Reward {getExistingCoupon()?.name} already applied. Adding a new one
           will replace the existing one.
         </WarningBox>
       )}
@@ -71,20 +71,20 @@ const AddCouponDialogContent = ({
         <Select
           value={couponSelected?.internal_id}
           onValueChange={(value) => {
-            const coupon = coupons.find((c: Coupon) => c.internal_id === value);
+            const coupon = coupons.find((c: Reward) => c.internal_id === value);
             if (coupon) {
               setCouponSelected(coupon);
             }
           }}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select Coupon" />
+            <SelectValue placeholder="Select Reward" />
           </SelectTrigger>
           <SelectContent>
             {/* If empty */}
 
             {coupons && coupons.length > 0 ? (
-              coupons.map((coupon: Coupon) => (
+              coupons.map((coupon: Reward) => (
                 <SelectItem key={coupon.internal_id} value={coupon.internal_id}>
                   {coupon.name}
                 </SelectItem>
@@ -104,7 +104,7 @@ const AddCouponDialogContent = ({
           disabled={!couponSelected}
           isLoading={loading}
         >
-          Add Coupon
+          Add Reward
         </Button>
       </DialogFooter>
     </DialogContent>

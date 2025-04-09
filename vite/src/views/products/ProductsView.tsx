@@ -8,17 +8,27 @@ import { ProductsContext } from "./ProductsContext";
 import { AppEnv } from "@autumn/shared";
 import CreateProduct from "./CreateProduct";
 import { ProductsTable } from "./ProductsTable";
-import { CouponsTable } from "./coupons/CouponsTable";
-import CreateCoupon from "./coupons/CreateCoupon";
 import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 
 import { Ticket } from "lucide-react";
+import React from "react";
+
+import { RewardsTable } from "./rewards/RewardsTable";
+import CreateReward from "./rewards/CreateReward";
+import CreateRewardProgramModal from "./reward-programs/CreateRewardProgram";
+import { RewardProgramsTable } from "./reward-programs/RewardProgramsTable";
 
 function ProductsView({ env }: { env: AppEnv }) {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showCoupons, setShowCoupons] = useState(false);
+  const [showRewards, setShowRewards] = useState(false);
   const { data, isLoading, mutate } = useAxiosSWR({
     url: `/products/data`,
+    env: env,
+    withAuth: true,
+  });
+
+  const { data: allCounts, mutate: mutateCounts } = useAxiosSWR({
+    url: `/products/counts`,
     env: env,
     withAuth: true,
   });
@@ -28,8 +38,8 @@ function ProductsView({ env }: { env: AppEnv }) {
       setSelectedProduct(data.products[0]);
     }
 
-    if (data?.coupons.length > 0) {
-      setShowCoupons(true);
+    if (data?.rewards.length > 0) {
+      setShowRewards(true);
     }
   }, [data]);
 
@@ -43,28 +53,30 @@ function ProductsView({ env }: { env: AppEnv }) {
         selectedProduct,
         setSelectedProduct,
         mutate,
+        allCounts,
+        mutateCounts,
       }}
     >
-      <div className="p-6 flex flex-col gap-4 max-w-[1048px]">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-medium">Products</h1>
-            <p className="text-sm text-t2">
-              Create the products your users can purchase.
-            </p>
-          </div>
-          <ToggleDisplayButton
-            show={showCoupons}
-            disabled={data?.coupons.length > 0}
-            onClick={() => setShowCoupons((prev) => !prev)}
-          >
-            <Ticket size={12} className="mr-2" />
-            Coupons
-          </ToggleDisplayButton>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-xl font-medium">Products</h1>
+          <p className="text-sm text-t2">
+            Create the products your users can purchase.
+          </p>
         </div>
-        <ProductsTable products={data?.products} />
-        <CreateProduct />
-        {showCoupons && (
+        <ToggleDisplayButton
+          show={showRewards}
+          disabled={data?.rewards.length > 0}
+          onClick={() => setShowRewards((prev) => !prev)}
+        >
+          <Ticket size={12} className="mr-2" />
+          Coupons
+        </ToggleDisplayButton>
+      </div>
+      <ProductsTable products={data?.products} />
+      <CreateProduct />
+      {showRewards && (
+        <React.Fragment>
           <div className="flex flex-col gap-4 h-fit mt-6">
             <div>
               <h2 className="text-lg font-medium">Coupons</h2>
@@ -74,11 +86,19 @@ function ProductsView({ env }: { env: AppEnv }) {
                 {/* <span className="text-t3">(eg, 10% off all products).</span> */}
               </p>
             </div>
-            <CouponsTable />
-            <CreateCoupon />
+            <RewardsTable />
+            <CreateReward />
           </div>
-        )}
-      </div>
+          <div className="flex flex-col gap-4 h-fit mt-6">
+            <div>
+              <h2 className="text-lg font-medium">Referral Programs</h2>
+              <p className="text-sm text-t2">Create a referral program. </p>
+            </div>
+            <RewardProgramsTable />
+            <CreateRewardProgramModal />
+          </div>
+        </React.Fragment>
+      )}
     </ProductsContext.Provider>
   );
 }

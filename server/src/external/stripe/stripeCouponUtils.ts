@@ -1,6 +1,6 @@
 import RecaseError from "@/utils/errorUtils.js";
 import {
-  Coupon,
+  Reward,
   CouponDurationType,
   DiscountType,
   ErrCode,
@@ -14,7 +14,7 @@ import {
 import { logger } from "@trigger.dev/sdk/v3";
 import { Stripe } from "stripe";
 
-const couponToStripeDuration = (coupon: Coupon) => {
+const couponToStripeDuration = (coupon: Reward) => {
   if (
     coupon.duration_type === CouponDurationType.OneOff &&
     coupon.should_rollover
@@ -45,7 +45,7 @@ const couponToStripeValue = ({
   coupon,
   org,
 }: {
-  coupon: Coupon;
+  coupon: Reward;
   org: Organization;
 }) => {
   if (coupon.discount_type === DiscountType.Percentage) {
@@ -66,7 +66,7 @@ export const createStripeCoupon = async ({
   org,
   prices,
 }: {
-  coupon: Coupon;
+  coupon: Reward;
   stripeCli: Stripe;
   org: Organization;
   prices: (Price & { product: Product })[];
@@ -89,6 +89,7 @@ export const createStripeCoupon = async ({
     }
   });
 
+  console.log("Promo codes:", coupon.promo_codes);
   for (const promoCode of coupon.promo_codes) {
     try {
       const stripePromoCode = await stripeCli.promotionCodes.retrieve(

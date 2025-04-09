@@ -5,7 +5,7 @@ import LoadingScreen from "@/views/general/LoadingScreen";
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { ProductContext } from "./ProductContext";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { ManageProduct } from "./ManageProduct";
 
@@ -23,6 +23,7 @@ import {
 import ErrorScreen from "@/views/general/ErrorScreen";
 import ProductSidebar from "./ProductSidebar";
 import { FeaturesContext } from "@/views/features/FeaturesContext";
+import ConfirmNewVersionDialog from "./ConfirmNewVersionDialog";
 
 function ProductView({ env }: { env: AppEnv }) {
   const { product_id } = useParams();
@@ -33,9 +34,19 @@ function ProductView({ env }: { env: AppEnv }) {
   const [product, setProduct] = useState<FrontendProduct | null>(null);
   const [showFreeTrial, setShowFreeTrial] = useState(!!product?.free_trial);
   const [hasChanges, setHasChanges] = useState(false);
+  // const [version, setVersion] = useState<number | null>(null);
+  // Get version from url query params
+  const [searchParams] = useSearchParams();
+  const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
+  const version = searchParams.get("version");
 
   const { data, isLoading, mutate } = useAxiosSWR({
-    url: `/products/${product_id}/data`,
+    url: `/products/${product_id}/data?version=${version}`,
+    env,
+  });
+
+  const { data: counts, mutate: mutateCount } = useAxiosSWR({
+    url: `/products/${product_id}/count?version=${version}`,
     env,
   });
 
@@ -98,7 +109,7 @@ function ProductView({ env }: { env: AppEnv }) {
     );
   }
 
-  const handleCreateProduct = async () => {
+  const createProduct = async () => {
     try {
       await ProductService.updateProduct(axiosInstance, product.id, {
         ...UpdateProductSchema.parse(product),
@@ -114,9 +125,29 @@ function ProductView({ env }: { env: AppEnv }) {
       }
 
       await mutate();
+      await mutateCount();
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to update product"));
     }
+  };
+
+  const createProductClicked = async () => {
+    if (!counts) {
+      toast.error("Something went wrong, please try again...");
+      return;
+    }
+
+    if (version && version < data?.numVersions) {
+      toast.error("You can only update the latest version of a product");
+      return;
+    }
+
+    if (counts?.all > 0) {
+      setShowNewVersionDialog(true);
+      return;
+    }
+
+    await createProduct();
   };
 
   return (
@@ -135,6 +166,9 @@ function ProductView({ env }: { env: AppEnv }) {
           setProduct,
           selectedEntitlementAllowance,
           setSelectedEntitlementAllowance,
+          counts,
+          version,
+          mutateCount,
         }}
       >
         <div className="w-full">
@@ -169,12 +203,19 @@ function ProductView({ env }: { env: AppEnv }) {
               </div>
             </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <AddProductButton
-              handleCreateProduct={handleCreateProduct}
-              actionState={actionState}
-            />
-          </div>
+        </div>
+
+        <ConfirmNewVersionDialog
+          open={showNewVersionDialog}
+          setOpen={setShowNewVersionDialog}
+          createProduct={createProduct}
+        />
+
+        <div className="flex justify-end gap-2">
+          <AddProductButton
+            handleCreateProduct={createProductClicked}
+            actionState={actionState}
+          />
         </div>
       </ProductContext.Provider>
     </FeaturesContext.Provider>

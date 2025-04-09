@@ -46,12 +46,13 @@ export const CreateFeature = ({
   open: boolean;
 }) => {
   const { env, mutate, features } = useFeaturesContext();
+
   const axiosInstance = useAxiosInstance({ env });
 
   const [loading, setLoading] = useState(false);
   const [feature, setFeature] = useState(defaultFeature);
   const [eventNameInput, setEventNameInput] = useState("");
-  const [eventNameChanged, setEventNameChanged] = useState(false);
+  const [eventNameChanged, setEventNameChanged] = useState(true);
 
   useEffect(() => {
     if (open) {
@@ -74,8 +75,8 @@ export const CreateFeature = ({
       name: "",
       id: "",
     });
-    setEventNameInput("");
-    setEventNameChanged(false);
+    // setEventNameInput("");
+    // setEventNameChanged(false);
   };
 
   const updateConfig = () => {

@@ -201,15 +201,31 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
                 <span className="font-mono text-t3 col-span-2 flex justify-end">
                   <AdminHover
                     texts={[
-                      price.id!,
-                      ...(price.config?.type === PriceType.Usage
-                        ? [
-                            (price.config as UsagePriceConfig)
-                              .internal_feature_id,
-                            (price.config as UsagePriceConfig).stripe_meter_id,
-                            (price.config as UsagePriceConfig).stripe_price_id,
-                          ]
-                        : []),
+                      { key: "ID", value: price.id! },
+                      {
+                        key: "Internal Feature ID",
+                        value:
+                          (price.config as UsagePriceConfig)
+                            .internal_feature_id || "N/A",
+                      },
+                      {
+                        key: "Stripe Meter ID",
+                        value:
+                          (price.config as UsagePriceConfig).stripe_meter_id ||
+                          "N/A",
+                      },
+                      {
+                        key: "Stripe Price ID",
+                        value:
+                          (price.config as UsagePriceConfig).stripe_price_id ||
+                          "N/A",
+                      },
+                      {
+                        key: "Stripe Product ID",
+                        value:
+                          (price.config as UsagePriceConfig)
+                            .stripe_product_id || "N/A",
+                      },
                     ]}
                   >
                     {price.config?.type === PriceType.Usage

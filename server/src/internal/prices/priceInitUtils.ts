@@ -2,6 +2,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import {
   compareObjects,
   generateId,
+  notNullish,
   notNullOrUndefined,
 } from "@/utils/genUtils.js";
 import {
@@ -33,6 +34,7 @@ import {
 import { PriceService } from "./PriceService.js";
 import { CusProductService } from "../customers/products/CusProductService.js";
 import { isFreeProduct } from "../products/productUtils.js";
+import { pricesHaveSameFeature } from "./usagePriceUtils.js";
 
 export const constructPrice = ({
   name,
@@ -79,22 +81,6 @@ const validatePrice = (
     UsagePriceConfigSchema.parse(price.config);
 
     const config = price.config! as UsagePriceConfig;
-
-    // if (
-    //   (config.interval == BillingInterval.OneOff &&
-    //     config.usage_tiers.length > 1) ||
-    //   (config.interval == BillingInterval.OneOff &&
-    //     notNullOrUndefined(relatedEnt) &&
-    //     relatedEnt?.allowance &&
-    //     relatedEnt!.allowance > 0)
-    // ) {
-    //   throw new RecaseError({
-    //     message:
-    //       "One off start of period prices cannot have multiple tiers (including allowance)",
-    //     code: ErrCode.InvalidPriceConfig,
-    //     statusCode: 400,
-    //   });
-    // }
 
     if (config.usage_tiers.length == 0) {
       throw new RecaseError({
@@ -160,7 +146,12 @@ const pricesAreSame = (price1: Price, price2: Price) => {
       usageConfig1.usage_tiers.length === usageConfig2.usage_tiers.length &&
       usageConfig1.usage_tiers.every((tier, index) =>
         compareObjects(tier, usageConfig2.usage_tiers[index])
-      )
+      ) &&
+      usageConfig1.stripe_price_id == usageConfig2.stripe_price_id &&
+      usageConfig1.stripe_placeholder_price_id ==
+        usageConfig2.stripe_placeholder_price_id &&
+      usageConfig1.stripe_meter_id == usageConfig2.stripe_meter_id &&
+      usageConfig1.stripe_product_id == usageConfig2.stripe_product_id
     );
   }
 };
@@ -170,25 +161,31 @@ const initPrice = ({
   orgId,
   internalProductId,
   isCustom = false,
+  keepStripePrice = false,
 }: {
-  price: CreatePrice;
+  price: Price;
   orgId: string;
   internalProductId: string;
   isCustom: boolean;
+  keepStripePrice?: boolean;
 }): Price => {
   const priceSchema = CreatePriceSchema.parse(price);
 
+  let curConfig = price.config! as UsagePriceConfig;
+  let curStripePriceId = curConfig.stripe_price_id;
+  let curPlaceholderPriceId = curConfig.stripe_placeholder_price_id;
+
   // TO RESET STRIPE PRICES
   const newConfig = {
-    ...priceSchema.config,
-    stripe_meter_id: null,
-    stripe_price_id: null,
-    stripe_placeholder_price_id: null,
+    ...price.config,
+    // stripe_meter_id: null,
+    stripe_price_id: keepStripePrice ? curStripePriceId : null,
+    stripe_placeholder_price_id: keepStripePrice ? curPlaceholderPriceId : null,
   };
 
   return {
     ...priceSchema,
-    config: newConfig,
+    config: newConfig as any,
     id: generateId("pr"),
     org_id: orgId,
     internal_product_id: internalProductId,
@@ -209,6 +206,7 @@ export const handleNewPrices = async ({
   org,
   env,
   entitlements,
+  newVersion = false,
 }: {
   sb: SupabaseClient;
   newPrices: Price[];
@@ -220,11 +218,13 @@ export const handleNewPrices = async ({
   org: Organization;
   env: AppEnv;
   entitlements: Entitlement[];
+  newVersion?: boolean;
 }) => {
   if (!newPrices) {
     return;
   }
 
+  // Check if feature is valid
   for (const price of newPrices) {
     let config = price.config! as UsagePriceConfig;
     if (config.feature_id) {
@@ -241,7 +241,6 @@ export const handleNewPrices = async ({
   }
 
   const orgId = org.id;
-
   const idToPrice: { [key: string]: Price } = {};
   for (const price of curPrices) {
     idToPrice[price.id!] = price;
@@ -254,9 +253,6 @@ export const handleNewPrices = async ({
 
   const createdPrices: Price[] = [];
   const updatedPrices: Price[] = [];
-  let newInArrearPrices: Price[] = [];
-
-  let updatedOrRemovedPrices: Price[] = [];
 
   for (let newPrice of newPrices) {
     // Validate price
@@ -286,38 +282,36 @@ export const handleNewPrices = async ({
     let curPrice = idToPrice[newPrice.id!];
 
     // 2a. If custom, create new entitlement and remove old one
-    if (curPrice && !pricesAreSame(curPrice, newPrice) && isCustom) {
+    if (
+      (curPrice && !pricesAreSame(curPrice, newPrice) && isCustom) ||
+      (curPrice && newVersion)
+    ) {
       createdPrices.push(
         initPrice({
-          price: CreatePriceSchema.parse(newPrice),
+          // price: CreatePriceSchema.parse(newPrice),
+          price: newPrice,
           orgId,
           internalProductId,
           isCustom,
+          keepStripePrice: newVersion && pricesAreSame(curPrice, newPrice),
         })
       );
       removedPrices.push(curPrice);
     }
 
-    // 2b. If not customm, update existing entitlement
+    // 2b. Updating price
     if (curPrice && !pricesAreSame(curPrice, newPrice) && !isCustom) {
-      let curConfig = curPrice.config! as UsagePriceConfig;
-      if (curConfig.stripe_price_id) {
-        throw new RecaseError({
-          message: `Price "${curPrice.name}" is linked to Stripe and cannot be updated. Try deleting and creating new one.`,
-          code: ErrCode.InvalidPriceConfig,
-          statusCode: 400,
-        });
-      }
+      let newConfig = {
+        ...newPrice.config,
+        stripe_price_id: null,
+        stripe_placeholder_price_id: null,
+      };
 
       updatedPrices.push({
         ...newPrice,
         billing_type: getBillingType(newPrice.config!),
+        config: newConfig as any,
       });
-      if (getBillingType(newPrice.config!) == BillingType.UsageInArrear) {
-        newInArrearPrices.push(newPrice);
-      }
-
-      updatedOrRemovedPrices.push(curPrice);
     }
   }
 
@@ -325,21 +319,6 @@ export const handleNewPrices = async ({
     updatedPrices.length > 0 ||
     removedPrices.length > 0 ||
     createdPrices.length > 0;
-
-  if (!isCustom && hasUpdate) {
-    const cusProducts = await CusProductService.getByProductId(
-      sb,
-      internalProductId
-    );
-
-    if (cusProducts.length > 0) {
-      throw new RecaseError({
-        message: "Cannot update prices for product with customers",
-        code: ErrCode.ProductHasCustomers,
-        statusCode: 400,
-      });
-    }
-  }
 
   // If product is default, can't have any paid prices
   if (product.is_default && !isCustom) {
@@ -362,9 +341,9 @@ export const handleNewPrices = async ({
   // For created prices, create Stripe price if not already created
 
   // 2. Update existing entitlements and delete removed ones
-  if (!isCustom) {
-    await PriceService.upsert({ sb, data: updatedPrices });
 
+  if (!isCustom && !newVersion) {
+    await PriceService.upsert({ sb, data: updatedPrices });
     await PriceService.deleteByIds({
       sb,
       priceIds: removedPrices.map((p) => p.id!),

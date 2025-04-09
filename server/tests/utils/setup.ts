@@ -1,12 +1,14 @@
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import {
   AppEnv,
-  CreateCoupon,
+  CreateReward,
   Feature,
   FeatureType,
   FullProduct,
   Price,
   PriceType,
+  Reward,
+  RewardProgram,
 } from "@autumn/shared";
 import axios from "axios";
 
@@ -18,6 +20,8 @@ import {
 } from "./stripeUtils.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import Stripe from "stripe";
+import { Autumn } from "@/external/autumn/autumnCli.js";
+import { deactivateStripeMeters } from "@/external/stripe/stripeProductUtils.js";
 
 export const getAxiosInstance = (
   apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!
@@ -168,11 +172,15 @@ export const clearOrg = async ({
   await deleteAllStripeTestClocks({ stripeCli });
   console.log("   ✅ Deleted Stripe test clocks");
 
+  // Delete all stripe meters
+  await deactivateStripeMeters({ org, env });
+  console.log("   ✅ Deactivated Stripe meters");
+
   // Batch delete coupons
 
   const batchDeleteCoupons = [];
   const { data: coupons, error: couponError } = await sb
-    .from("coupons")
+    .from("rewards")
     .delete()
     .eq("org_id", orgId)
     .eq("env", env)
@@ -207,16 +215,19 @@ export const setupOrg = async ({
   env,
   features,
   products,
-  coupons,
+  rewards,
+  rewardTriggers,
 }: {
   orgId: string;
   env: AppEnv;
   features: Record<string, Feature & { eventName: string }>;
   products: Record<string, FullProduct | any>;
-  coupons: Record<string, any>;
+  rewards: Record<string, any>;
+  rewardTriggers: Record<string, RewardProgram>;
 }) => {
   const axiosInstance = getAxiosInstance();
   const sb = createSupabaseClient();
+  const autumn = new Autumn(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!);
 
   let insertFeatures = [];
   for (const feature of Object.values(features)) {
@@ -298,14 +309,14 @@ export const setupOrg = async ({
 
   // Insert coupons
   let insertCoupons = [];
-  for (const coupon of Object.values(coupons)) {
+  for (const reward of Object.values(rewards)) {
     const createCoupon = async () => {
       let priceIds = [];
 
-      if (coupon.only_usage_prices) {
+      if (reward.only_usage_prices) {
         let filteredProducts = allProducts.filter((product: FullProduct) => {
-          if (coupon.product_ids) {
-            return coupon.product_ids.includes(product.id);
+          if (reward.product_ids) {
+            return reward.product_ids.includes(product.id);
           } else return true;
         });
 
@@ -316,43 +327,55 @@ export const setupOrg = async ({
               return price.id;
             })
         );
-      } else if (coupon.product_ids) {
+      } else if (reward.product_ids) {
         priceIds = allProducts
           .filter((product: FullProduct) =>
-            coupon.product_ids.includes(product.id)
+            reward.product_ids.includes(product.id)
           )
           .flatMap((product: FullProduct) =>
             product.prices.map((price) => price.id)
           );
       }
 
-      const newCoupon: CreateCoupon & { id: string } = {
-        id: coupon.id,
-        name: coupon.name,
+      const newReward: CreateReward & { id: string } = {
+        id: reward.id,
+        name: reward.name,
         price_ids: priceIds,
         promo_codes: [
           {
-            code: coupon.id,
+            code: reward.id,
           },
         ],
-        discount_type: coupon.discount_type,
-        discount_value: coupon.discount_value,
-        duration_type: coupon.duration_type,
-        duration_value: coupon.duration_value,
-        should_rollover: coupon.should_rollover,
-        apply_to_all: coupon.apply_to_all,
+        discount_type: reward.discount_type,
+        discount_value: reward.discount_value,
+        duration_type: reward.duration_type,
+        duration_value: reward.duration_value,
+        should_rollover: reward.should_rollover,
+        apply_to_all: reward.apply_to_all,
       };
 
-      let couponRes = await AutumnCli.createCoupon(newCoupon);
+      let rewardRes = await autumn.rewards.create(newReward);
       return {
-        id: coupon.id,
-        couponRes,
+        id: reward.id,
+        rewardRes,
       };
     };
     insertCoupons.push(createCoupon());
   }
+
   await Promise.all(insertCoupons);
   console.log("✅ Inserted coupons");
+
+  // CREATE REWARD TRIGGERS
+  let insertRewardTriggers = [];
+  for (const rewardTrigger of Object.values(rewardTriggers)) {
+    const createRewardTrigger = async () => {
+      await autumn.rewardPrograms.create(rewardTrigger);
+    };
+    insertRewardTriggers.push(createRewardTrigger());
+  }
+  await Promise.all(insertRewardTriggers);
+  console.log("✅ Inserted reward triggers");
 
   // Initialize stripe products
   // How to check if mocha is in parallel mode?

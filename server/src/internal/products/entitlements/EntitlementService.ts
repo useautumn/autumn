@@ -4,6 +4,24 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes/build/cjs/status-codes.js";
 
 export class EntitlementService {
+  static async getByOrg({
+    sb,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    orgId: string;
+    env: string;
+  }) {
+    const { data, error } = await sb.from("entitlements").select("*, feature:features!inner(*)").eq("feature.org_id", orgId).eq("feature.env", env);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
   static async insert({
     sb,
     data,
@@ -178,4 +196,24 @@ export class EntitlementService {
 
     return data;
   }
+
+  static async update({
+    sb,
+    entitlementId,
+    updates,
+  }: {
+    sb: SupabaseClient;
+    entitlementId: string;
+    updates: Partial<Entitlement>;
+  }) {
+    const { data, error } = await sb.from("entitlements").update(updates).eq("id", entitlementId);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+  
+  
 }

@@ -29,7 +29,7 @@ export class FeatureService {
       .select("*")
       .eq("org_id", orgId)
       .eq("env", env)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false }).order("id");
 
     if (error) {
       throw error;

@@ -2,6 +2,7 @@ import {
   AppEnv,
   BillingInterval,
   BillingType,
+  CreateProduct,
   Entitlement,
   EntitlementSchema,
   EntitlementWithFeature,
@@ -13,6 +14,7 @@ import {
   PriceSchema,
   PriceType,
   ProcessorType,
+  Product,
   ProductSchema,
   UsagePriceConfig,
 } from "@autumn/shared";
@@ -21,6 +23,7 @@ import {
   compareBillingIntervals,
   getBillingInterval,
   getBillingType,
+  pricesAreSame,
 } from "@/internal/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { ProductService } from "./ProductService.js";
@@ -29,7 +32,10 @@ import {
   AttachParams,
   InsertCusProductParams,
 } from "../customers/products/AttachParams.js";
-import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
+import {
+  entsAreSame,
+  getEntitlementsForProduct,
+} from "./entitlements/entitlementUtils.js";
 import { Decimal } from "decimal.js";
 import { generateId } from "@/utils/genUtils.js";
 import { PriceService } from "../prices/PriceService.js";
@@ -37,6 +43,57 @@ import { EntitlementService } from "./entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
 import { FreeTrialService } from "./free-trials/FreeTrialService.js";
+import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
+
+export const getLatestProducts = (products: FullProduct[]) => {
+  const latestProducts = products.reduce((acc: any, product: any) => {
+    if (!acc[product.id]) {
+      acc[product.id] = product;
+    } else if (product.version > acc[product.id].version) {
+      acc[product.id] = product;
+    }
+    return acc;
+  }, {});
+
+  return Object.values(latestProducts) as FullProduct[];
+};
+
+export const getProductVersionCounts = (products: FullProduct[]) => {
+  const versionCounts = products.reduce((acc: any, product: any) => {
+    if (!acc[product.id]) {
+      acc[product.id] = 1;
+    } else {
+      acc[product.id]++;
+    }
+    return acc;
+  }, {});
+
+  return versionCounts;
+};
+
+// Construct product
+export const constructProduct = ({
+  productData,
+  orgId,
+  env,
+  processor,
+}: {
+  productData: CreateProduct;
+  orgId: string;
+  env: AppEnv;
+  processor?: any;
+}) => {
+  let newProduct: Product = {
+    ...productData,
+    org_id: orgId,
+    env,
+    processor,
+    internal_id: generateId("prod"),
+    created_at: Date.now(),
+  };
+
+  return newProduct;
+};
 
 export const isProductUpgrade = ({
   prices1,
@@ -426,4 +483,69 @@ export const searchProductsByStripeId = async ({
   stripeId: string;
 }) => {
   return products.find((p) => p.processor?.id === stripeId);
+};
+
+// PRODUCT CHANGES
+export const productsAreDifferent = ({
+  product1,
+  product2,
+}: {
+  product1: FullProduct;
+  product2: FullProduct;
+}) => {
+  // console.log("product1", product1);
+  // console.log("product2", product2);
+  for (const price of product1.prices) {
+    let newPrice = product2.prices.find((p) => p.id === price.id);
+    if (!newPrice) {
+      return true;
+    }
+
+    if (!pricesAreSame(price, newPrice)) {
+      return true;
+    }
+  }
+
+  for (const price of product2.prices) {
+    let newPrice = product1.prices.find((p) => p.id === price.id);
+    if (!newPrice) {
+      return true;
+    }
+
+    if (!pricesAreSame(price, newPrice)) {
+      return true;
+    }
+  }
+
+  for (const entitlement of product1.entitlements) {
+    let newEntitlement = product2.entitlements.find(
+      (e) => e.id === entitlement.id
+    );
+    if (!newEntitlement) {
+      return true;
+    }
+
+    if (!entsAreSame(entitlement, newEntitlement)) {
+      return true;
+    }
+  }
+
+  for (const entitlement of product2.entitlements) {
+    let newEntitlement = product1.entitlements.find(
+      (e) => e.id === entitlement.id
+    );
+    if (!newEntitlement) {
+      return true;
+    }
+
+    if (!entsAreSame(entitlement, newEntitlement)) {
+      return true;
+    }
+  }
+
+  if (!freeTrialsAreSame(product1.free_trial, product2.free_trial)) {
+    return true;
+  }
+
+  return false;
 };

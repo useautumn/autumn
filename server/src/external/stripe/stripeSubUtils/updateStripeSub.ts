@@ -9,25 +9,34 @@ import {
 import Stripe from "stripe";
 import { isStripeCardDeclined } from "../stripeCardUtils.js";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
+import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
+import { getStripeProrationBehavior } from "../stripeSubUtils.js";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
+import { ItemSet } from "@/utils/models/ItemSet.js";
 
 export const updateStripeSubscription = async ({
+  sb,
   org,
   customer,
   stripeCli,
   subscriptionId,
-  items,
   trialEnd,
-  prices,
   invoiceOnly,
+  prorationBehavior,
+  logger,
+  itemSet,
 }: {
+  sb: SupabaseClient;
   org: Organization;
   customer: Customer;
   stripeCli: Stripe;
   subscriptionId: string;
-  items: any;
-  prices: Price[];
   trialEnd?: number;
   invoiceOnly: boolean;
+  prorationBehavior?: ProrationBehavior;
+  logger: any;
+  itemSet: ItemSet;
 }) => {
   let paymentMethod = await getCusPaymentMethod({
     org,
@@ -43,6 +52,7 @@ export const updateStripeSubscription = async ({
     };
   }
 
+  let { items, prices, subMeta } = itemSet;
   let subItems = items.filter(
     (i: any, index: number) =>
       i.deleted || prices[index].config!.interval !== BillingInterval.OneOff
@@ -56,14 +66,15 @@ export const updateStripeSubscription = async ({
     return false;
   });
 
-  let prorationBehaviour = org.config.bill_upgrade_immediately
-    ? "always_invoice"
-    : "create_prorations";
+  let stripeProration = getStripeProrationBehavior({
+    org,
+    prorationBehavior,
+  });
 
   try {
     const sub = await stripeCli.subscriptions.update(subscriptionId, {
       items: subItems,
-      proration_behavior: prorationBehaviour,
+      proration_behavior: stripeProration,
       trial_end: trialEnd,
       default_payment_method: paymentMethod as string,
       add_invoice_items: subInvoiceItems,
@@ -74,9 +85,14 @@ export const updateStripeSubscription = async ({
       payment_behavior: "error_if_incomplete",
     });
 
-    // if (invoiceOnly) {
-    //   await stripeCli.invoices.finalizeInvoice(sub.latest_invoice as string);
-    // }
+    // Upsert sub
+    await SubService.addUsageFeatures({
+      sb,
+      stripeId: subscriptionId,
+      usageFeatures: itemSet.usageFeatures,
+      orgId: org.id,
+      env: customer.env,
+    });
 
     return sub;
   } catch (error: any) {

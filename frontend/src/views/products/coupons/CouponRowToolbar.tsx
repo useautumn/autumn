@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { Coupon, Feature } from "@autumn/shared";
+import { Reward, Feature } from "@autumn/shared";
 import { FeatureService } from "@/services/FeatureService";
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductsContext } from "../ProductsContext";
@@ -24,7 +24,7 @@ export const CouponRowToolbar = ({
   coupon,
 }: {
   className?: string;
-  coupon: Coupon;
+  coupon: Reward;
 }) => {
   const { env, mutate } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env });

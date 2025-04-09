@@ -8,7 +8,11 @@ export class ApiKeyService {
       .from("api_keys")
       .select("*")
       .eq("org_id", orgId)
-      .eq("env", env);
+      .eq("env", env)
+      .order("created_at", {
+        ascending: false
+      })
+      .order("id");
 
     if (error) {
       throw error;

@@ -146,6 +146,8 @@ const invoiceForUsageImmediately = async ({
     env: customer.env,
   });
 
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+
   let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
   if (invoiceItems.length === 0) {
     return;
@@ -176,10 +178,14 @@ const invoiceForUsageImmediately = async ({
 
   for (const item of invoiceItems) {
     const amount = getPriceForOverage(item.price, item.overage);
+    let config = item.price.config! as UsagePriceConfig;
 
     logger.info(
       `   feature: ${item.feature.id}, overage: ${item.overage}, amount: ${amount}`
     );
+
+    // TO TEST
+    let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
 
     let invoiceItem = {
       customer: customer.processor.id,
@@ -189,7 +195,7 @@ const invoiceForUsageImmediately = async ({
         item.feature.name
       } x ${Math.round(item.usage)}`,
       price_data: {
-        product: (item.price.config! as UsagePriceConfig).stripe_product_id!,
+        product: stripePrice.product as string,
         unit_amount: Math.round(amount * 100),
         currency: org.default_currency,
       },
@@ -344,7 +350,7 @@ export const billForRemainingUsages = async ({
     });
   }
 
-  console.log("BILL UPGRADE IMMEDIATELY", org.config?.bill_upgrade_immediately);
+  // console.log("BILL UPGRADE IMMEDIATELY", org.config?.bill_upgrade_immediately);
 
   if (org.config?.bill_upgrade_immediately) {
     await invoiceForUsageImmediately({

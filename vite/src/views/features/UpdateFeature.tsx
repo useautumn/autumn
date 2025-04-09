@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FeatureService } from "@/services/FeatureService";
 import { useFeaturesContext } from "./FeaturesContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -31,12 +31,20 @@ export default function UpdateFeature({
   const [eventNameInput, setEventNameInput] = useState("");
   const [eventNameChanged, setEventNameChanged] = useState(true);
 
+  const originalFeature = useRef(selectedFeature);
+
+  useEffect(() => {
+    if (open) {
+      originalFeature.current = selectedFeature;
+    }
+  }, [open]);
+  
   useEffect(() => {
     if (open) {
       setEventNameInput("");
       setEventNameChanged(true);
     }
-  }, [open]);
+  }, [open, selectedFeature]);
 
   const updateConfig = () => {
     const config: any = structuredClone(selectedFeature.config);
@@ -52,16 +60,21 @@ export default function UpdateFeature({
 
   const handleUpdateFeature = async () => {
     setUpdateLoading(true);
+    let originalId = originalFeature.current.id;
 
     try {
-      await FeatureService.updateFeature(axiosInstance, selectedFeature.id, {
+      await FeatureService.updateFeature(axiosInstance, originalId, {
         ...selectedFeature,
+        id: selectedFeature.id,
+        type: selectedFeature.type,
+        name: selectedFeature.name,
         config: updateConfig(),
       });
 
       await mutate();
       setOpen(false);
     } catch (error) {
+      console.log(error);
       toast.error(getBackendErr(error, "Failed to update feature"));
     }
     setUpdateLoading(false);

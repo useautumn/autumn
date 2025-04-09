@@ -52,23 +52,15 @@ function CustomersView({ env }: { env: AppEnv }) {
     },
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setPaginationLoading(true);
-      await mutate();
-      setPaginationLoading(false);
-    };
-    fetchData();
-  }, [pagination, filters, mutate]);
+  
 
-  // useEffect(() => {
-  //   const updateFilters = async () => {
-  //     setCurrentPage(1);
-  //     await mutate();
-  //     setLastItem(null);
-  //   };
-  //   updateFilters();
-  // }, [filters]);
+  // Single useEffect to handle all data fetching
+  useEffect(() => {
+    setPaginationLoading(true);
+    mutate().finally(() => {
+      setPaginationLoading(false);
+    });
+  }, [pagination, filters, searchQuery]); // Added searchQuery as a dependency
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
@@ -103,6 +95,14 @@ function CustomersView({ env }: { env: AppEnv }) {
     });
   };
 
+  const handleFilterChange = (newFilters: any) => {
+    setPagination({
+      page: 1,
+      lastItemStack: [],
+    });
+    setFilters(newFilters);
+  };
+
   return (
     <CustomersContext.Provider
       value={{
@@ -110,8 +110,9 @@ function CustomersView({ env }: { env: AppEnv }) {
         env,
         mutate,
         filters,
-        setFilters,
+        setFilters: handleFilterChange, // Use the new handler
         products: productsData?.products,
+        versionCounts: productsData?.versionCounts,
       }}
     >
       <div className="flex flex-col gap-4 h-fit relative p-6 max-w-[1048px]">
@@ -126,7 +127,6 @@ function CustomersView({ env }: { env: AppEnv }) {
                   page: page,
                   lastItemStack: [],
                 });
-                mutate();
               }}
               mutate={mutate}
             />

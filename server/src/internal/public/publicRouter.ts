@@ -81,7 +81,6 @@ const publicRouterMiddleware = async (req: any, res: any, next: any) => {
 publicRouter.use(publicRouterMiddleware);
 
 publicRouter.get("/customers/:customer_id", async (req: any, res: any) => {
-  
   try {
     const customerId = req.params.customer_id;
     console.log("Getting customer (public)", customerId);
@@ -103,7 +102,7 @@ publicRouter.get("/customers/:customer_id", async (req: any, res: any) => {
       });
     }
 
-    const { main, addOns, balances, invoices } = await getCustomerDetails({
+    const cusData = await getCustomerDetails({
       customer,
       sb: req.sb,
       orgId: req.org.id,
@@ -112,13 +111,7 @@ publicRouter.get("/customers/:customer_id", async (req: any, res: any) => {
       logger: req.logtail,
     });
 
-    res.status(200).json({
-      customer: CustomerResponseSchema.parse(customer),
-      products: main,
-      add_ons: addOns,
-      entitlements: balances,
-      invoices,
-    });
+    res.status(200).json(cusData);
   } catch (error) {
     handleRequestError({ req, error, res, action: "get customer" });
   }
@@ -130,63 +123,59 @@ publicRouter.get(
     try {
       const customerId = req.params.customerId;
 
-    const customer = await CusService.getById({
-      sb: req.sb,
-      id: customerId,
-      orgId: req.org.id,
-      env: req.env,
-      logger: req.logtail,
-    });
-
-    if (!customer) {
-      return res.status(404).json({
-        message: `Customer ${customerId} not found`,
-      });
-    }
-
-    const cusProducts = await CusService.getFullCusProducts({
-      sb: req.sb,
-      internalCustomerId: customer.internal_id,
-      inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-      withProduct: true,
-      withPrices: true,
-    });
-
-    
-
-    if (!cusProducts || cusProducts.length === 0) {
-      return res.status(200).json({
-        main: [],
-        add_ons: [],
-      });
-    }
-
-    let main = [];
-    let addOns = [];
-
-    for (const cusProduct of cusProducts) {
-      
-      let processed = processFullCusProduct({
-        cusProduct,
-        org: req.org,
-        subs: [],
+      const customer = await CusService.getById({
+        sb: req.sb,
+        id: customerId,
+        orgId: req.org.id,
+        env: req.env,
+        logger: req.logtail,
       });
 
-      if (processed.status == CusProductStatus.Trialing) {
-        processed.status = CusProductStatus.Active;
+      if (!customer) {
+        return res.status(404).json({
+          message: `Customer ${customerId} not found`,
+        });
       }
 
-      let isAddOn = cusProduct.product.is_add_on;
-      if (isAddOn) {
-        addOns.push(processed);
-      } else {
-        main.push(processed);
+      const cusProducts = await CusService.getFullCusProducts({
+        sb: req.sb,
+        internalCustomerId: customer.internal_id,
+        inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+        withProduct: true,
+        withPrices: true,
+      });
+
+      if (!cusProducts || cusProducts.length === 0) {
+        return res.status(200).json({
+          main: [],
+          add_ons: [],
+        });
       }
-    }
 
+      let main = [];
+      let addOns = [];
 
-    res.status(200).json({
-      main,
+      for (const cusProduct of cusProducts) {
+        let processed = processFullCusProduct({
+          cusProduct,
+          org: req.org,
+          subs: [],
+        });
+
+        if (processed.status == CusProductStatus.Trialing) {
+          processed.status = CusProductStatus.Active;
+        }
+
+        let isAddOn = cusProduct.product.is_add_on;
+        if (isAddOn) {
+          addOns.push(processed);
+        } else {
+          main.push(processed);
+        }
+      }
+
+      res.status(200).json({
+        main,
         add_ons: addOns,
       });
     } catch (error) {
@@ -199,23 +188,23 @@ publicRouter.get(
   "/products/:product_id/options",
   async (req: any, res: any) => {
     try {
-      const product = await ProductService.getFullProductStrict({
+      const product = await ProductService.getFullProduct({
         sb: req.sb,
         productId: req.params.product_id,
         orgId: req.org.id,
         env: req.env,
       });
-  
+
       const features = await FeatureService.getFeatures({
         sb: req.sb,
         orgId: req.org.id,
         env: req.env,
       });
-  
+
       const prices = product.prices;
-  
+
       const options = getOptionsFromPrices(prices, features);
-  
+
       res.status(200).json(options);
     } catch (error) {
       handleRequestError({ req, error, res, action: "get product options" });
