@@ -113,4 +113,7 @@ export const ErrCode = {
 
   // Referral codes
   ReferralCodeMaxRedemptionsReached: "referral_code_max_redemptions_reached",
+  ReferralNotFound: "referral_not_found",
+  CustomerAlreadyRedeemedReferralCode:
+    "customer_already_redeemed_referral_code",
 };

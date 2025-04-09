@@ -40,3 +40,4 @@ export const CreateCouponSchema = CouponSchema.omit({
 
 export type Coupon = z.infer<typeof CouponSchema>;
 export type CreateCoupon = z.infer<typeof CreateCouponSchema>;
+export type Reward = z.infer<typeof CouponSchema>;

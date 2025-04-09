@@ -1,32 +1,19 @@
-import {
-  AppEnv,
-  CreateCustomer,
-  CreateCustomerSchema,
-  CusProductStatus,
-  Customer,
-  CustomerResponseSchema,
-} from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+
+import { CreateCustomerSchema, CustomerResponseSchema } from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
 import { ErrorMessages } from "@/errors/errMessages.js";
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../../customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { EventService } from "../events/EventService.js";
 import { getCustomerDetails } from "./cusUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getCusBalancesByEntitlement } from "@/internal/customers/entitlements/cusEntUtils.js";
-import {
-  fullCusProductToCusEnts,
-  fullCusProductToCusPrices,
-} from "@/internal/customers/products/cusProductUtils.js";
 import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
-
 import { handlePostCustomerRequest } from "./handlers/handleCreateCustomer.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { entityRouter } from "../entities/entityRouter.js";
@@ -69,7 +56,6 @@ cusRouter.get("", async (req: any, res: any) => {
 
 cusRouter.post("", handlePostCustomerRequest);
 
-
 // BY CUSTOMER ID
 
 cusRouter.get("/:customer_id", async (req: any, res: any) => {
@@ -94,7 +80,8 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       return;
     }
 
-    const { main, addOns, balances, invoices } = await getCustomerDetails({
+    // const { main, addOns, balances, invoices } =
+    let cusData = await getCustomerDetails({
       customer,
       sb: req.sb,
       orgId: req.orgId,
@@ -103,13 +90,7 @@ cusRouter.get("/:customer_id", async (req: any, res: any) => {
       logger: req.logtail,
     });
 
-    res.status(200).json({
-      customer: CustomerResponseSchema.parse(customer),
-      products: main,
-      add_ons: addOns,
-      entitlements: balances,
-      invoices,
-    });
+    res.status(200).json(cusData);
   } catch (error) {
     handleRequestError({ req, error, res, action: "get customer" });
   }
@@ -130,8 +111,6 @@ cusRouter.delete("/:customer_id", async (req: any, res: any) => {
     handleRequestError({ req, error, res, action: "delete customer" });
   }
 });
-
-
 
 cusRouter.post("/:customer_id", async (req: any, res: any) => {
   try {
@@ -310,8 +289,6 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 cusRouter.post("/:customer_id/coupons/:coupon_id", handleAddCouponToCus);
 
 cusRouter.use("/:customer_id/entities", entityRouter);
-
-
 
 // cusRouter.put("", async (req: any, res: any) => {
 //   try {

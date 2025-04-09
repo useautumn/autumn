@@ -35,10 +35,14 @@ import { CreateRewardTrigger } from "@autumn/shared";
 
 const defaultRewardTrigger: CreateRewardTrigger = {
   id: "",
-  trigger: {
-    type: RewardTriggerEvent.SignUp,
-    product_id: "",
-  },
+  // trigger: {
+  //   type: RewardTriggerEvent.SignUp,
+  //   product_ids: [],
+  //   exclude_trial: false,
+  // },
+  when: RewardTriggerEvent.Immediately,
+  product_ids: [],
+  exclude_trial: false,
   internal_reward_id: "",
   max_redemptions: 0,
 };

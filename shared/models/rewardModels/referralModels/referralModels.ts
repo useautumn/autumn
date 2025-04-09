@@ -16,17 +16,22 @@ let ReferralCodeSchema = z.object({
 
 let RewardRedemptionSchema = z.object({
   id: z.string(),
-  internal_reward_trigger_id: z.string().nullish(),
   created_at: z.number(),
+  updated_at: z.number(),
 
   // Customer who signed up / paid
   internal_customer_id: z.string(), // customer who redeemed the code...
+  internal_reward_trigger_id: z.string(), // reward trigger that was redeemed
 
   // Referral code used
-  code: z.string(),
+  // code: z.string(),
+  referral_code_id: z.string(),
 
   // Whether the reward was triggered
   triggered: z.boolean(),
+
+  // Whether the (coupon) was applied
+  applied: z.boolean(),
 });
 
 export type ReferralCode = z.infer<typeof ReferralCodeSchema>;
