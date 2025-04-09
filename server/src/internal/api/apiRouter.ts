@@ -50,6 +50,10 @@ apiRouter.use((req: any, res: any, next: any) => {
 
   // Log response after it's sent
   res.on("finish", () => {
+    if (req.originalUrl.includes("/events")) {
+      return;
+    }
+
     try {
       req.logtailAll.info(
         `[${res.statusCode}] ${req.method} ${req.originalUrl}`,
