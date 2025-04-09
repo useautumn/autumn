@@ -46,7 +46,7 @@ productApiRouter.get("", async (req: any, res) => {
     orgId: req.orgId,
     env: req.env,
   });
-  res.status(200).send(products);
+  res.status(200).json(products);
 });
 
 productApiRouter.post("", async (req: any, res) => {
@@ -84,21 +84,21 @@ productApiRouter.post("", async (req: any, res) => {
 
     await ProductService.create({ sb, product: newProduct });
 
-    res.status(200).send({ product_id: newProduct.id });
+    res.status(200).json({ product_id: newProduct.id });
 
     return;
   } catch (error) {
     console.log("Failed to create product: ", error);
 
     if (error instanceof RecaseError) {
-      res.status(error.statusCode).send({
+      res.status(error.statusCode).json({
         message: error.message,
         code: error.code,
       });
       return;
     }
 
-    res.status(500).send(error);
+    res.status(500).json(error);
     return;
   }
 });
@@ -206,7 +206,7 @@ productApiRouter.post("/:productId/copy", async (req: any, res) => {
     });
 
     // 2. Get product from sandbox
-    res.status(200).send({ message: "Product copied" });
+    res.status(200).json({ message: "Product copied" });
   } catch (error) {
     handleRequestError({ req, error, res, action: "Copy product" });
   }
@@ -271,7 +271,7 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
 
       await Promise.all(batchPriceUpdate);
     }
-    res.status(200).send({ message: "Stripe products initialized" });
+    res.status(200).json({ message: "Stripe products initialized" });
   } catch (error) {
     handleRequestError({ req, error, res, action: "Init stripe products" });
   }

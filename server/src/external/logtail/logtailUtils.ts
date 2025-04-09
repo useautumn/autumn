@@ -48,5 +48,13 @@ export const createLogtailWithContext = (context: any) => {
   return logtail;
 };
 
+export const createLogtailAll = () => {
+  const logtail = new Logtail(process.env.LOGTAIL_ALL_SOURCE_TOKEN!, {
+    endpoint: process.env.LOGTAIL_ALL_INGESTING_HOST!,
+  });
+
+  return logtail;
+};
+
 // const logtail = createLogtailLogger();
 // export default logtail;

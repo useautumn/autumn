@@ -171,7 +171,7 @@ const handleBillNowPrices = async ({
   const invoices = await Promise.all(batchInsertInvoice);
 
   if (fromRequest) {
-    res.status(200).send({
+    res.status(200).json({
       success: true,
       message: `Successfully created subscriptions and attached ${products
         .map((p) => p.name)

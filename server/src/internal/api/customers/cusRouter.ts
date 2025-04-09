@@ -46,7 +46,7 @@ cusRouter.get("", async (req: any, res: any) => {
   try {
     const customers = await CusService.getCustomers(req.sb, req.orgId, req.env);
 
-    res.status(200).send({ customers });
+    res.status(200).json({ customers });
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
