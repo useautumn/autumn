@@ -43,3 +43,7 @@ export const notNullish = (value: any) => {
 export const formatUnixToDateTime = (unixDate: number) => {
   return format(new Date(unixDate), "yyyy MMM dd HH:mm:ss");
 };
+
+export const timeout = (ms: number) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};

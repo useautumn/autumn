@@ -61,7 +61,6 @@ export const navigateTo = (path: string, navigate: any, env: AppEnv) => {
 export const getRedirectUrl = (path: string, env: AppEnv) => {
   // Replace @ with %40
   path = path.replace("@", "%40");
-  console.log("path", path);
   if (env === AppEnv.Sandbox) {
     return `/sandbox${path}`;
   } else {

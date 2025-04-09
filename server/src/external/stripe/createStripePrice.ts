@@ -19,6 +19,7 @@ import {
   getBillingType,
   getPriceEntitlement,
 } from "@/internal/prices/priceUtils.js";
+import { config } from "dotenv";
 
 export const createStripeMeteredPrice = async ({
   sb,
@@ -348,6 +349,46 @@ export const priceToStripeTiers = (price: Price, entitlement: Entitlement) => {
   return tiers;
 };
 
+export const searchStripeMeter = async ({
+  stripeCli,
+  eventName,
+  meterId,
+  logger,
+}: {
+  stripeCli: Stripe;
+  eventName: string;
+  meterId?: string;
+  logger: any;
+}) => {
+  let allStripeMeters = [];
+  let hasMore = true;
+  let startingAfter;
+
+  const start = performance.now();
+  while (hasMore) {
+    const response: any = await stripeCli.billing.meters.list({
+      limit: 100,
+      status: "active",
+      starting_after: startingAfter,
+    });
+
+    allStripeMeters.push(...response.data);
+    hasMore = response.has_more;
+
+    if (hasMore && response.data.length > 0) {
+      startingAfter = response.data[response.data.length - 1].id;
+    }
+  }
+  const end = performance.now();
+  logger.info(`Stripe meter list took ${end - start}ms`);
+
+  let stripeMeter = allStripeMeters.find(
+    (m) => m.event_name == eventName || m.id == meterId
+  );
+
+  return stripeMeter;
+};
+
 export const getStripeMeter = async ({
   product,
   feature,
@@ -364,26 +405,25 @@ export const getStripeMeter = async ({
   let config = price.config as UsagePriceConfig;
 
   let createNew = false;
-  if (!config.stripe_meter_id) {
-    createNew = true;
-  } else {
-    try {
-      let stripeMeter = await stripeCli.billing.meters.retrieve(
-        config.stripe_meter_id!
-      );
-      if (stripeMeter.status != "active") {
-        createNew = true;
-      } else {
-        logger.info(
-          `✅ Found existing meter for ${product.name} - ${feature!.name}`
-        );
-        return stripeMeter;
-      }
-    } catch (error) {
-      createNew = true;
-    }
-  }
+  try {
+    let stripeMeter = await searchStripeMeter({
+      stripeCli,
+      eventName: price.id!,
+      meterId: config.stripe_meter_id!,
+      logger,
+    });
 
+    if (!stripeMeter) {
+      createNew = true;
+    } else {
+      logger.info(
+        `✅ Found existing meter for ${product.name} - ${feature!.name}`
+      );
+      return stripeMeter;
+    }
+  } catch (error) {
+    createNew = true;
+  }
   let meter = await stripeCli.billing.meters.create({
     display_name: `${product.name} - ${feature!.name}`,
     event_name: price.id!,
@@ -419,7 +459,6 @@ export const createStripeInArrearPrice = async ({
   )!.feature;
 
   // 1. Get meter by event_name
-
   let meter = await getStripeMeter({
     product,
     feature,

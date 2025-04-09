@@ -102,12 +102,14 @@ const getProducts = async ({
   productIds,
   orgId,
   env,
+  version,
 }: {
   sb: SupabaseClient;
   productId?: string;
   productIds?: string[];
   orgId: string;
   env: AppEnv;
+  version?: number;
 }) => {
   if (productId && productIds) {
     throw new RecaseError({
@@ -118,17 +120,26 @@ const getProducts = async ({
   }
 
   if (productId) {
-    const product = await ProductService.getFullProductStrict({
+    const product = await ProductService.getFullProduct({
       sb,
       productId,
       orgId,
       env,
+      version,
     });
 
     return [product];
   }
 
   if (productIds) {
+    if (notNullish(version)) {
+      throw new RecaseError({
+        message: "Cannot provide version when providing product ids",
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
     // Check for duplicates in productIds
     const uniqueProductIds = new Set(productIds);
     if (uniqueProductIds.size !== productIds.length) {
@@ -207,6 +218,7 @@ export const getCustomerProductsFeaturesAndOrg = async ({
   orgId,
   env,
   logger,
+  version,
 }: {
   sb: SupabaseClient;
   customerData?: CustomerData;
@@ -216,6 +228,7 @@ export const getCustomerProductsFeaturesAndOrg = async ({
   orgId: string;
   env: AppEnv;
   logger: any;
+  version?: number;
 }) => {
   const getOrg = async () => {
     let fullOrg;
@@ -260,7 +273,7 @@ export const getCustomerProductsFeaturesAndOrg = async ({
       env,
       logger,
     }),
-    getProducts({ sb, productId, productIds, orgId, env }),
+    getProducts({ sb, productId, productIds, orgId, env, version }),
     getOrg(),
     getFeatures(),
   ]);
@@ -291,6 +304,7 @@ export const getFullCusProductData = async ({
   freeTrialInput,
   isCustom = false,
   logger,
+  version,
 }: {
   sb: SupabaseClient;
   customerId: string;
@@ -305,6 +319,7 @@ export const getFullCusProductData = async ({
   freeTrialInput: FreeTrial | null;
   isCustom?: boolean;
   logger: any;
+  version?: number;
 }) => {
   // 1. Get customer, product, org & features
   const { customer, products, org, features, cusProducts } =
@@ -317,8 +332,9 @@ export const getFullCusProductData = async ({
       orgId,
       env,
       logger,
+      version,
     });
-  
+
   const entities = await EntityService.get({
     sb,
     internalCustomerId: customer.internal_id,

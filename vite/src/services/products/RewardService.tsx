@@ -1,38 +1,38 @@
-import { Coupon, CreateCoupon } from "@autumn/shared";
+import { Reward, CreateReward } from "@autumn/shared";
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AxiosInstance } from "axios";
 
-export class CouponService {
-  static async createCoupon({
+export class RewardService {
+  static async createReward({
     axiosInstance,
     data,
   }: {
     axiosInstance: AxiosInstance;
-    data: CreateCoupon;
+    data: CreateReward;
   }) {
-    await axiosInstance.post("/v1/coupons", data);
+    await axiosInstance.post("/v1/rewards", data);
   }
 
-  static async deleteCoupon({
+  static async deleteReward({
     axiosInstance,
     internalId,
   }: {
     axiosInstance: AxiosInstance;
     internalId: string;
   }) {
-    await axiosInstance.delete(`/v1/coupons/${internalId}`);
+    await axiosInstance.delete(`/v1/rewards/${internalId}`);
   }
 
-  static async updateCoupon({
+  static async updateReward({
     axiosInstance,
     internalId,
     data,
   }: {
     axiosInstance: AxiosInstance;
     internalId: string;
-    data: Coupon;
+    data: Reward;
   }) {
-    await axiosInstance.post(`/v1/coupons/${internalId}`, data);
+    await axiosInstance.post(`/v1/rewards/${internalId}`, data);
   }
 }

@@ -19,56 +19,57 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
 import { PlusIcon } from "lucide-react";
 import {
-  Coupon,
+  Reward,
   CouponDurationType,
-  CreateCoupon as CreateCouponType,
+  CreateReward as CreateCouponType,
   DiscountType,
+  RewardProgram,
+  RewardTriggerEvent,
 } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductsContext } from "../ProductsContext";
 
-import { CouponConfig } from "./CouponConfig";
-import { CouponService } from "@/services/products/CouponService";
+import { CreateRewardProgram } from "@autumn/shared";
+import { RewardProgramConfig } from "./RewardProgramConfig";
 
-const defaultCoupon: CreateCouponType = {
-  name: "",
-  promo_codes: [{ code: "" }],
-  price_ids: [],
-  discount_type: DiscountType.Fixed,
-  discount_value: 0,
-  duration_type: CouponDurationType.Months,
-  duration_value: 0,
-  should_rollover: true,
-  apply_to_all: true,
+const defaultRewardProgram: CreateRewardProgram = {
+  id: "",
+  // trigger: {
+  //   type: RewardTriggerEvent.SignUp,
+  //   product_ids: [],
+  //   exclude_trial: false,
+  // },
+  when: RewardTriggerEvent.CustomerCreation,
+  product_ids: [],
+  exclude_trial: false,
+  internal_reward_id: "",
+  max_redemptions: 0,
 };
 
-function CreateCoupon() {
+function CreateRewardProgramModal() {
   const { mutate, env } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env: env });
 
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
-  const [coupon, setCoupon] = useState(defaultCoupon);
+  const [rewardProgram, setRewardProgram] = useState(defaultRewardProgram);
 
   useEffect(() => {
     if (open) {
-      setCoupon(defaultCoupon);
+      setRewardProgram(defaultRewardProgram);
     }
   }, [open]);
 
   const handleCreate = async () => {
     setIsLoading(true);
     try {
-      await CouponService.createCoupon({
-        axiosInstance,
-        data: coupon,
-      });
+      await axiosInstance.post("/v1/reward_programs", rewardProgram);
 
       await mutate();
       setOpen(false);
     } catch (error) {
-      toast.error(getBackendErr(error, "Failed to create coupon"));
+      toast.error(getBackendErr(error, "Failed to create referral program"));
     }
     setIsLoading(false);
   };
@@ -81,18 +82,17 @@ function CreateCoupon() {
           className="w-full"
           startIcon={<PlusIcon size={15} />}
         >
-          Create Coupon
+          Create Referral Program
         </Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Coupon</DialogTitle>
+          <DialogTitle>Create Referral Program</DialogTitle>
         </DialogHeader>
-        {/* <CreditSystemConfig
-          creditSystem={creditSystem}
-          setCreditSystem={setCreditSystem}
-        /> */}
-        <CouponConfig coupon={coupon as any} setCoupon={setCoupon} />
+        <RewardProgramConfig
+          rewardProgram={rewardProgram as any}
+          setRewardProgram={setRewardProgram}
+        />
         <DialogFooter>
           <Button
             onClick={handleCreate}
@@ -107,4 +107,4 @@ function CreateCoupon() {
   );
 }
 
-export default CreateCoupon;
+export default CreateRewardProgramModal;

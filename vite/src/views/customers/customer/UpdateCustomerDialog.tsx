@@ -2,7 +2,7 @@ import { DialogFooter } from "@/components/ui/dialog";
 
 import { getOriginalCouponId } from "@/utils/product/couponUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { Coupon, CreateCustomer, Customer } from "@autumn/shared";
+import { Reward, CreateCustomer, Customer } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DialogTitle } from "@/components/ui/dialog";
@@ -29,7 +29,7 @@ const UpdateCustomerDialog = ({
   setOpen: (open: boolean) => void;
 }) => {
   const { cusMutate } = useCustomerContext();
-  const [couponSelected, setCouponSelected] = useState<Coupon | null>(null);
+  const [couponSelected, setCouponSelected] = useState<Reward | null>(null);
   const [customer, setCustomer] = useState<CreateCustomer>(selectedCustomer);
   const [loading, setLoading] = useState(false);
   const env = useEnv();

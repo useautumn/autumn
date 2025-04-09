@@ -2,6 +2,7 @@ import { AppEnv, Organization, Product } from "@autumn/shared";
 import { createStripeCli } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
+import { StatusCodes } from "http-status-codes";
 
 export const createStripeProduct = async (
   org: Organization,
@@ -53,5 +54,94 @@ export const deleteStripeProduct = async (
       code: ErrCode.DeleteStripeProductFailed,
       statusCode: 500,
     });
+  }
+};
+
+export const deactivateStripeMeters = async ({
+  org,
+  env,
+}: {
+  org: Organization;
+  env: AppEnv;
+}) => {
+  const stripeCli = createStripeCli({ org, env });
+
+  let allStripeMeters = [];
+  let hasMore = true;
+  let startingAfter;
+
+  while (hasMore) {
+    const response: any = await stripeCli.billing.meters.list({
+      limit: 100,
+      status: "active",
+      starting_after: startingAfter,
+    });
+
+    allStripeMeters.push(...response.data);
+    hasMore = response.has_more;
+
+    if (hasMore && response.data.length > 0) {
+      startingAfter = response.data[response.data.length - 1].id;
+    }
+  }
+
+  const batchSize = 10;
+  for (let i = 0; i < allStripeMeters.length; i += batchSize) {
+    const batch = allStripeMeters.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map((meter) => stripeCli.billing.meters.deactivate(meter.id))
+    );
+    console.log(
+      `Deactivated ${i + batch.length}/${allStripeMeters.length} meters`
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+};
+
+export const deleteAllStripeProducts = async ({
+  org,
+  env,
+}: {
+  org: Organization;
+  env: AppEnv;
+}) => {
+  const stripeCli = createStripeCli({ org, env });
+
+  const stripeProducts = await stripeCli.products.list({
+    limit: 100,
+    active: true,
+  });
+
+  if (stripeProducts.data.length === 0) {
+    return;
+  }
+
+  let firstProduct = stripeProducts.data[0];
+  if (firstProduct.livemode) {
+    throw new RecaseError({
+      message: "Cannot delete livemode products",
+      code: ErrCode.DeleteStripeProductFailed,
+      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+    });
+  }
+
+  let batchSize = 10;
+  for (let i = 0; i < stripeProducts.data.length; i += batchSize) {
+    let batch = stripeProducts.data.slice(i, i + batchSize);
+    await Promise.all(
+      batch.map(async (p) => {
+        try {
+          await stripeCli.products.del(p.id);
+        } catch (error) {
+          await stripeCli.products.update(p.id, {
+            active: false,
+          });
+        }
+      })
+    );
+    console.log(
+      `Deleted ${i + batch.length}/${stripeProducts.data.length} products`
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 };

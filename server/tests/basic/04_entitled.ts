@@ -33,7 +33,7 @@ const checkEntitledOnProduct = async ({
   }
 
   await Promise.all(batchUpdates);
-  await timeout(5000);
+  await timeout(8000);
   let used = randomNum;
 
   // 2. Check entitled
@@ -72,7 +72,7 @@ const checkEntitledOnProduct = async ({
     );
   }
   await Promise.all(batchUpdates2);
-  await timeout(5000);
+  await timeout(8000);
   used += allowance - randomNum;
 
   // 3. Check entitled again

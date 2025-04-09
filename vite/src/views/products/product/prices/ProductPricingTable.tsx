@@ -116,10 +116,31 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
               <TableCell>
                 <AdminHover
                   texts={[
-                    price.id!,
-                    (price.config as UsagePriceConfig).internal_feature_id,
-                    (price.config as UsagePriceConfig).stripe_meter_id,
-                    (price.config as UsagePriceConfig).stripe_price_id,
+                    { key: "ID", value: price.id! },
+                    {
+                      key: "Internal Feature ID",
+                      value:
+                        (price.config as UsagePriceConfig)
+                          .internal_feature_id || "N/A",
+                    },
+                    {
+                      key: "Stripe Meter ID",
+                      value:
+                        (price.config as UsagePriceConfig).stripe_meter_id ||
+                        "N/A",
+                    },
+                    {
+                      key: "Stripe Price ID",
+                      value:
+                        (price.config as UsagePriceConfig).stripe_price_id ||
+                        "N/A",
+                    },
+                    {
+                      key: "Stripe Product ID",
+                      value:
+                        (price.config as UsagePriceConfig).stripe_product_id ||
+                        "N/A",
+                    },
                   ]}
                 >
                   {price.name}
