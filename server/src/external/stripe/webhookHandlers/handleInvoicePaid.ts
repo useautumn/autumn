@@ -7,6 +7,8 @@ import {
   FullCusProduct,
   InvoiceStatus,
   Organization,
+  Reward,
+  RewardType,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createStripeCli } from "../utils.js";
@@ -272,7 +274,7 @@ const handleInvoicePaidDiscount = async ({
           : curCoupon.id;
 
       // 1. Fetch coupon from Autumn
-      const autumnCoupon = await RewardService.getByInternalId({
+      const autumnReward: Reward | null = await RewardService.getByInternalId({
         sb,
         internalId: couponId,
         orgId: org.id,
@@ -280,10 +282,12 @@ const handleInvoicePaidDiscount = async ({
       });
 
       if (
-        !autumnCoupon ||
+        !autumnReward ||
+        autumnReward.type !== RewardType.FixedDiscount ||
         !(
-          autumnCoupon.duration_type === CouponDurationType.OneOff &&
-          autumnCoupon.should_rollover
+          autumnReward.discount_config?.duration_type ===
+            CouponDurationType.OneOff &&
+          autumnReward.discount_config?.should_rollover
         )
       ) {
         continue;
@@ -295,7 +299,9 @@ const handleInvoicePaidDiscount = async ({
       });
 
       // 1. New amount:
-      const curAmount = discount.coupon.amount_off;
+      const autumnDiscountConfig = autumnReward.discount_config!;
+      const curAmount = autumnDiscountConfig.discount_value;
+
       const amountUsed = totalDiscountAmounts?.find(
         (item) => item.discount === discount.id
       )?.amount;

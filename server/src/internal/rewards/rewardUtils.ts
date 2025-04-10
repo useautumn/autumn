@@ -1,28 +1,55 @@
-import { generateId } from "@/utils/genUtils.js";
-import { Reward, CreateReward } from "@autumn/shared";
+import { generateId, nullish } from "@/utils/genUtils.js";
+import {
+  Reward,
+  CreateReward,
+  RewardType,
+  RewardCategory,
+} from "@autumn/shared";
 
-export const initCoupon = ({
-  coupon,
+export const constructReward = ({
+  reward,
   orgId,
   env,
-  id,
 }: {
-  coupon: CreateReward;
+  reward: CreateReward;
   orgId: string;
   env: string;
-  id?: string;
 }) => {
-  let promoCodes = coupon.promo_codes.filter((promoCode) => {
+  let promoCodes = reward.promo_codes.filter((promoCode) => {
     return promoCode.code.length > 0;
   });
-  return {
-    ...coupon,
-    internal_id: id || generateId("coup"),
+
+  let configData = {};
+  if (reward.type === RewardType.FreeProduct) {
+    configData = {
+      free_product_id: reward.free_product_id,
+      discount_config: null,
+    };
+  } else if (reward.type === RewardType.PercentageDiscount) {
+    configData = {
+      discount_config: reward.discount_config,
+      free_product_id: null,
+    };
+  }
+
+  let newReward = {
+    ...reward,
+    ...configData,
+    internal_id: generateId("rew"),
     created_at: Date.now(),
     org_id: orgId,
     env,
     promo_codes: promoCodes,
   };
+
+  return newReward as Reward;
+};
+
+export const getRewardCat = (reward: Reward) => {
+  if (reward.type === RewardType.FreeProduct) {
+    return RewardCategory.FreeProduct;
+  }
+  return RewardCategory.Discount;
 };
 
 export enum CouponType {
@@ -31,11 +58,17 @@ export enum CouponType {
   Standard = "standard",
 }
 
-export const getCouponType = (coupon: Reward) => {
-  if (!coupon) return null;
-  if (coupon.apply_to_all && coupon.should_rollover) {
+export const getCouponType = (reward: Reward) => {
+  if (!reward) return null;
+
+  let config = reward.discount_config;
+  if (nullish(config)) {
+    return null;
+  }
+
+  if (config!.apply_to_all && config!.should_rollover) {
     return CouponType.AddInvoiceBalance;
-  } else if (coupon.should_rollover) {
+  } else if (config!.should_rollover) {
     return CouponType.AddBillingCredits;
   }
   return CouponType.Standard;

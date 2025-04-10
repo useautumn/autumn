@@ -1,5 +1,5 @@
 import express from "express";
-import { CreateRewardSchema } from "@autumn/shared";
+import { CreateRewardSchema, RewardCategory, RewardType } from "@autumn/shared";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -9,75 +9,82 @@ import { RewardService } from "@/internal/rewards/RewardService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
-import { initCoupon } from "@/internal/rewards/rewardUtils.js";
+import {
+  constructReward,
+  getRewardCat,
+} from "@/internal/rewards/rewardUtils.js";
 
 const rewardRouter = express.Router();
 
 rewardRouter.post("", async (req: any, res: any) => {
   try {
     const { orgId, env } = req;
-    const couponBody = req.body;
+    const rewardBody = req.body;
+    const rewardData = CreateRewardSchema.parse(rewardBody);
 
-    const couponData = CreateRewardSchema.parse(couponBody);
     const org = await OrgService.getFromReq(req);
-    const newCoupon = initCoupon({
-      coupon: couponData,
+
+    const newReward = constructReward({
+      reward: rewardData,
       orgId,
       env,
-      id: couponBody.id,
     });
 
-    const stripeCli = createStripeCli({
-      org,
-      env,
-    });
-
-    // Get prices for coupon
-    const [prices, entitlements] = await Promise.all([
-      PriceService.getPricesFromIds({
-        sb: req.sb,
-        priceIds: newCoupon.price_ids,
-      }),
-      EntitlementService.getFullEntitlements({
-        sb: req.sb,
-        orgId,
+    if (getRewardCat(newReward) === RewardCategory.Discount) {
+      const stripeCli = createStripeCli({
+        org,
         env,
-      }),
-    ]);
+      });
 
-    if (!newCoupon.apply_to_all) {
-      // Create stripe prices if not exists
+      let discountConfig = newReward.discount_config;
+      // Get prices for coupon
+      const [prices, entitlements] = await Promise.all([
+        PriceService.getPricesFromIds({
+          sb: req.sb,
+          priceIds: discountConfig!.price_ids || [],
+        }),
+        EntitlementService.getFullEntitlements({
+          sb: req.sb,
+          orgId,
+          env,
+        }),
+      ]);
 
-      const batchSize = 5;
+      if (!discountConfig!.apply_to_all) {
+        // Create stripe prices if not exists
 
-      for (let i = 0; i < prices.length; i += batchSize) {
-        const batch = prices.slice(i, i + batchSize);
-        const batchPriceCreate = batch.map((price) =>
-          createStripePriceIFNotExist({
-            stripeCli,
-            price,
-            entitlements,
-            org,
-            logger: req.logger,
-            sb: req.sb,
-            product: price.product,
-          })
-        );
-        await Promise.all(batchPriceCreate);
+        const batchSize = 5;
+
+        for (let i = 0; i < prices.length; i += batchSize) {
+          const batch = prices.slice(i, i + batchSize);
+          const batchPriceCreate = batch.map((price) =>
+            createStripePriceIFNotExist({
+              stripeCli,
+              price,
+              entitlements,
+              org,
+              logger: req.logger,
+              sb: req.sb,
+              product: price.product,
+            })
+          );
+          await Promise.all(batchPriceCreate);
+        }
       }
+
+      await createStripeCoupon({
+        reward: newReward,
+        stripeCli,
+        org,
+        prices,
+      });
+
+      console.log("✅ Reward successfully created in Stripe");
     }
 
-    await createStripeCoupon({
-      coupon: newCoupon,
-      stripeCli,
-      org,
-      prices,
-    });
-
-    console.log("✅ Reward successfully created in Stripe");
     const insertedCoupon = await RewardService.insert({
       sb: req.sb,
-      data: newCoupon,
+      data: newReward,
     });
     console.log("✅ Reward successfully inserted into db");
 
@@ -152,7 +159,7 @@ rewardRouter.post("/:id", async (req: any, res: any) => {
 
     // 2. Create new coupon
     await createStripeCoupon({
-      coupon: couponBody,
+      reward: couponBody,
       stripeCli,
       org,
       prices,

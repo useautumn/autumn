@@ -15,6 +15,7 @@ import {
   Organization,
   PriceType,
   RewardTriggerEvent,
+  RewardType,
 } from "@autumn/shared";
 import { getAxiosInstance } from "./setup.js";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -330,7 +331,7 @@ export const initCustomer = async ({
 // Init Reward
 export const initReward = ({
   id,
-  discountType = DiscountType.Fixed,
+  type = RewardType.PercentageDiscount,
   discountValue,
   durationType = CouponDurationType.OneOff,
   durationValue = 0,
@@ -340,8 +341,8 @@ export const initReward = ({
   applyToAll = false,
 }: {
   id: string;
-  discountValue: number;
-  discountType?: DiscountType;
+  type?: RewardType;
+  discountValue?: number;
   durationType?: CouponDurationType;
   durationValue?: number;
   rollover?: boolean;
@@ -352,7 +353,7 @@ export const initReward = ({
   return {
     id,
     name: keyToTitle(id),
-    discount_type: discountType,
+    type,
     discount_value: discountValue,
     duration_type: durationType,
     duration_value: durationValue,
