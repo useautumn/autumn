@@ -340,18 +340,14 @@ export const setupOrg = async ({
       const newReward: CreateReward & { id: string } = {
         id: reward.id,
         name: reward.name,
-        price_ids: priceIds,
         promo_codes: [
           {
             code: reward.id,
           },
         ],
-        discount_type: reward.discount_type,
-        discount_value: reward.discount_value,
-        duration_type: reward.duration_type,
-        duration_value: reward.duration_value,
-        should_rollover: reward.should_rollover,
-        apply_to_all: reward.apply_to_all,
+        type: reward.type,
+        discount_config: reward.discount_config,
+        free_product_id: reward.free_product_id,
       };
 
       let rewardRes = await autumn.rewards.create(newReward);

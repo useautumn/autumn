@@ -9,7 +9,12 @@ import {
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useProductsContext } from "../ProductsContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { Reward, CouponDurationType, DiscountType } from "@autumn/shared";
+import {
+  Reward,
+  CouponDurationType,
+  DiscountType,
+  RewardType,
+} from "@autumn/shared";
 import UpdateReward from "./UpdateReward";
 import { useState } from "react";
 import { RewardRowToolbar } from "./RewardRowToolbar";
@@ -67,21 +72,26 @@ export const RewardsTable = () => {
               </TableCell>
               <TableCell className="min-w-32">
                 <div className="flex items-center gap-1">
-                  <p>{reward.discount_value} </p>
+                  <p>{reward.discount_config?.discount_value} </p>
                   <p className="text-t3">
-                    {reward.discount_type == DiscountType.Percentage
+                    {reward.type == RewardType.PercentageDiscount
                       ? "%"
                       : org?.default_currency || "USD"}
                   </p>
                 </div>
               </TableCell>
               <TableCell className="">
-                {reward.duration_type == CouponDurationType.Months
-                  ? `${reward.duration_value} months`
-                  : reward.duration_type == CouponDurationType.OneOff &&
-                    reward.should_rollover
+                {reward.discount_config?.duration_type ==
+                CouponDurationType.Months
+                  ? `${reward.discount_config?.duration_value} months`
+                  : reward.discount_config?.duration_type ==
+                      CouponDurationType.OneOff &&
+                    reward.discount_config?.should_rollover
                   ? "One-off (rollover)"
-                  : keyToTitle(reward.duration_type)}
+                  : reward.discount_config?.duration_type ==
+                    CouponDurationType.Forever
+                  ? "Forever"
+                  : "One-off"}
               </TableCell>
               <TableCell className="">
                 {formatUnixToDateTime(reward.created_at).date}
