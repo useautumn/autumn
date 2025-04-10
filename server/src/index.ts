@@ -17,7 +17,10 @@ import { initLogger } from "./errors/logger.js";
 import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
 import { createSupabaseClient } from "./external/supabaseUtils.js";
-import { createLogtail } from "./external/logtail/logtailUtils.js";
+import {
+  createLogtail,
+  createLogtailAll,
+} from "./external/logtail/logtailUtils.js";
 import { format } from "date-fns";
 import { handleRequestError } from "./utils/errorUtils.js";
 
@@ -40,6 +43,7 @@ const init = async () => {
     req.logger = logger;
 
     req.logtail = createLogtail();
+    req.logtailAll = createLogtailAll();
 
     res.on("finish", () => {
       req.logtail.flush();

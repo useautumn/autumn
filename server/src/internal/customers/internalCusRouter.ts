@@ -30,7 +30,7 @@ cusRouter.get("", async (req: any, res: any) => {
     page
   );
 
-  res.status(200).send({ customers, totalCount: count });
+  res.status(200).json({ customers, totalCount: count });
 });
 
 cusRouter.post("/search", async (req: any, res: any) => {
@@ -52,7 +52,7 @@ cusRouter.post("/search", async (req: any, res: any) => {
     });
 
     // console.log("customers", customers);
-    res.status(200).send({ customers, totalCount: count });
+    res.status(200).json({ customers, totalCount: count });
   } catch (error) {
     handleRequestError({ req, error, res, action: "search customers" });
   }
@@ -192,7 +192,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       cusEnt.unused = unused;
     }
 
-    res.status(200).send({
+    res.status(200).json({
       customer: fullCustomer,
       products: getLatestProducts(products),
       versionCounts: getProductVersionCounts(products),
@@ -290,7 +290,7 @@ cusRouter.get(
 
       // console.log("Product", product);
 
-      res.status(200).send({ customer, product, features, numVersions });
+      res.status(200).json({ customer, product, features, numVersions });
     } catch (error) {
       handleRequestError({ req, error, res, action: "get customer product" });
     }
