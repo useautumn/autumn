@@ -58,7 +58,7 @@ export const handleDeleteProduct = (req: any, res: any) =>
         env,
       });
 
-      res.status(200).send({ message: "Product deleted" });
+      res.status(200).json({ message: "Product deleted" });
       return;
     },
   });

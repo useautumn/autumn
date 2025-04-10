@@ -32,19 +32,45 @@ apiRouter.use((req: any, res: any, next: any) => {
     body: req.body,
     env: req.env,
   };
+
   req.logtail.use((log: any) => {
     return {
       ...log,
       ...logtailContext,
     };
   });
-  // try {
 
-  // } catch (error) {
-  //   console.error("Failed to add context to logtail in API middleware");
-  //   console.error(error);
-  //   req.logtail = createLogtailWithContext(logtailContext);
-  // }
+  // Store JSON response
+  let originalJson = res.json;
+
+  res.json = function (body: any) {
+    res.locals.responseBody = body;
+    return originalJson.call(this, body);
+  };
+
+  // Log response after it's sent
+  let skipUrls = ["/customers/all/search"];
+  res.on("finish", () => {
+    try {
+      if (skipUrls.includes(req.originalUrl)) {
+        return;
+      }
+      req.logtailAll.info(
+        `[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.minOrg?.slug})`,
+        {
+          req: {
+            ...logtailContext,
+          },
+          statusCode: res.statusCode,
+          res: res.locals.responseBody,
+        }
+      );
+      req.logtailAll.flush();
+    } catch (error) {
+      console.error("Failed to log response to logtailAll");
+      console.error(error);
+    }
+  });
 
   next();
 });

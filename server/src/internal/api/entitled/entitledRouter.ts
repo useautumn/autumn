@@ -30,7 +30,10 @@ import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { getMinNextResetAtCusEnt } from "@/internal/customers/entitlements/cusEntHelpers.js";
-import { getOrCreateCustomer, updateCustomerDetails } from "../customers/cusUtils.js";
+import {
+  getOrCreateCustomer,
+  updateCustomerDetails,
+} from "../customers/cusUtils.js";
 
 type CusWithEnts = Customer & {
   customer_products: CusProduct[];
@@ -68,7 +71,6 @@ const getRequiredAndActualBalance = ({
       creditSystem: feature,
       amount: required,
     });
-
   }
 
   const actualBalance = getFeatureBalance({
@@ -110,9 +112,7 @@ const getMeteredEntitledResult = ({
   let allowed = true;
   const balances = [];
 
-
   for (const feature of [originalFeature, ...creditSystems]) {
-
     // 1. Skip if feature not among cusEnt
     if (!cusEntsContainFeature({ cusEnts, feature })) {
       continue;
@@ -216,7 +216,7 @@ const getBooleanEntitledResult = ({
   const allowed = cusEnts.some(
     (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
   );
-  return res.status(200).send({
+  return res.status(200).json({
     allowed,
     balances: allowed
       ? [
@@ -383,7 +383,7 @@ const getCusEntsAndFeatures = async ({
     OrgService.getFullOrg({
       sb,
       orgId,
-    })
+    }),
   ];
 
   const [res1, res2, org] = await Promise.all(batchQuery);
@@ -444,7 +444,6 @@ const getCusEntsAndFeatures = async ({
 };
 
 entitledRouter.post("", async (req: any, res: any) => {
-
   try {
     let {
       customer_id,
@@ -454,16 +453,17 @@ entitledRouter.post("", async (req: any, res: any) => {
       event_data,
       entity_id,
     } = req.body;
-  
+
     const quantity = required_quantity ? parseInt(required_quantity) : 1;
-  
+
     const { orgId, env, sb } = req;
 
     // 1. Get cusEnts & features
-    const { cusEnts, feature, creditSystems, org } = await getCusEntsAndFeatures({
-      sb,
-      req,
-    });
+    const { cusEnts, feature, creditSystems, org } =
+      await getCusEntsAndFeatures({
+        sb,
+        req,
+      });
 
     logEntitled({ req, customer_id, cusEnts: cusEnts! });
 
@@ -485,7 +485,6 @@ entitledRouter.post("", async (req: any, res: any) => {
       org,
     });
 
-
     if (allowed && notNullish(event_data) && req.isPublic !== true) {
       await handleEventSent({
         req,
@@ -499,7 +498,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       });
     }
 
-    res.status(200).send({
+    res.status(200).json({
       allowed,
       balances,
     });
