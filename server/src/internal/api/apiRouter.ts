@@ -49,14 +49,14 @@ apiRouter.use((req: any, res: any, next: any) => {
   };
 
   // Log response after it's sent
+  let skipUrls = ["/customers/all/search"];
   res.on("finish", () => {
-    if (req.originalUrl.includes("/events")) {
-      return;
-    }
-
     try {
+      if (skipUrls.includes(req.originalUrl)) {
+        return;
+      }
       req.logtailAll.info(
-        `[${res.statusCode}] ${req.method} ${req.originalUrl}`,
+        `[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.minOrg?.slug})`,
         {
           req: {
             ...logtailContext,
