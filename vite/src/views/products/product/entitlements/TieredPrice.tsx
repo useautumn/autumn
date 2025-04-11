@@ -15,7 +15,7 @@ export default function TieredPrice({
   config: any;
   setConfig: (config: any) => void;
   setShowPrice: (showPrice: boolean) => void;
-  selectedFeature: any;
+  selectedFeature?: any;
 }) {
   const [editBillingUnits, setEditBillingUnits] = useState(false);
 
@@ -125,7 +125,7 @@ export default function TieredPrice({
                       }
                     />
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px] whitespace-nowrap truncate overflow-hidden max-w-12">
-                      {selectedFeature.name}
+                      {selectedFeature?.name ?? "units"}
                     </span>
                   </div>
                 </>
@@ -145,8 +145,10 @@ export default function TieredPrice({
                       )}
                     >
                       {config.billing_units == 1
-                        ? `per ${selectedFeature.name}`
-                        : `per ${config.billing_units} ${selectedFeature.name}`}
+                        ? `per ${selectedFeature?.name ?? "units"}`
+                        : `per ${config.billing_units} ${
+                            selectedFeature?.name ?? "units"
+                          }`}
                     </span>
                   </Button>
                 </div>

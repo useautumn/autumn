@@ -54,35 +54,37 @@ export const ManageProduct = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between border grid grid-cols-10 gap-8 pl-6">
-        <div className="flex flex-col gap-1 px-6 justify-center w-full col-span-2 border">
-          <AdminHover texts={[product.internal_id!]}>
-            <h2 className="text-lg font-medium text-start w-full whitespace-nowrap border border-blue-500">
-              {product.name}
-            </h2>
-          </AdminHover>
-          <div className="flex items-center gap-2">
-            {product.is_add_on && (
-              <Badge variant="outline" className="bg-white">
-                Add On
-              </Badge>
-            )}
-            {product.is_default && (
-              <Badge variant="outline" className="bg-white">
-                Default Product
-              </Badge>
-            )}
-            {product.group && (
-              <Badge variant="outline" className="bg-white">
-                Product Group:{" "}
-                <span className="font-semibold ml-1">
-                  {" " + product.group}
-                </span>
-              </Badge>
-            )}
+      <div className="flex items-center justify-between grid grid-cols-10 gap-8 pl-10">
+        <div className="col-span-2 flex">
+          <div className="flex flex-col gap-1 justify-center w-full whitespace-nowrap">
+            <AdminHover texts={[product.internal_id!]}>
+              <h2 className="text-lg font-medium w-fit whitespace-nowrap">
+                {product.name}
+              </h2>
+            </AdminHover>
+            {/* <div className="flex items-center gap-2">
+              {product.is_add_on && (
+                <Badge variant="outline" className="bg-white">
+                  Add On
+                </Badge>
+              )}
+              {product.is_default && (
+                <Badge variant="outline" className="bg-white">
+                  Default Product
+                </Badge>
+              )}
+              {product.group && (
+                <Badge variant="outline" className="bg-white">
+                  Product Group:{" "}
+                  <span className="font-semibold ml-1">
+                    {" " + product.group}
+                  </span>
+                </Badge>
+              )}
+            </div> */}
           </div>
         </div>
-        <div className="flex items-center gap-2 border border-red-500 col-span-8 ">
+        <div className="flex items-center gap-2 col-span-8 ">
           {customerData && (
             <Badge className="flex items-center gap-1 w-fit text-xs text-lime-600 bg-lime-50 border border-lime-200 hover:bg-lime-100">
               <span className="">
@@ -94,49 +96,42 @@ export const ManageProduct = ({
             </Badge>
           )}
 
-          {!customerData && <CountAndMigrate />}
+          {/* {!customerData && <CountAndMigrate />} */}
 
-          {/* {customerData && numVersions > 1 && (
-            <Badge className="flex items-center gap-1 w-fit text-xs text-lime-600 bg-lime-50 border border-lime-200 hover:bg-lime-100">
-              <span className="">Version {product.version}</span>
-            </Badge>
-          )} */}
-          {numVersions > 1 && (
-            <Select
-              value={version ? version.toString() : product.version.toString()}
-              onValueChange={async (value) => {
-                navigate(
-                  getRedirectUrl(
-                    `${
-                      customerData
-                        ? `/customers/${customerData.customer.id}`
-                        : "/products"
-                    }/${product.id}?version=${value}`,
-                    env
-                  )
-                );
-              }}
-            >
-              <SelectTrigger className="h-7 w-[140px] bg-white">
-                <SelectValue placeholder="Select version" />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: numVersions }, (_, i) => i + 1)
-                  .reverse()
-                  .map((version) => (
-                    <SelectItem key={version} value={version.toString()}>
-                      Version {version}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          )}
-          {!customerData && (
+          <Select
+            value={version ? version.toString() : product.version.toString()}
+            onValueChange={async (value) => {
+              navigate(
+                getRedirectUrl(
+                  `${
+                    customerData
+                      ? `/customers/${customerData.customer.id}`
+                      : "/products"
+                  }/${product.id}?version=${value}`,
+                  env
+                )
+              );
+            }}
+          >
+            <SelectTrigger className="h-7 w-[140px] bg-white">
+              <SelectValue placeholder="Select version" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: numVersions }, (_, i) => i + 1)
+                .reverse()
+                .map((version) => (
+                  <SelectItem key={version} value={version.toString()}>
+                    Version {version}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          {/* {!customerData && (
             <EditProductToolbar product={product} className="text-t2" />
-          )}
+          )} */}
         </div>
       </div>
-      <div className="flex flex-col gap-16">
+      <div className="flex flex-col gap-10">
         <div className="flex flex-col">
           <ProductEntitlementTable entitlements={product.entitlements} />
         </div>
@@ -148,12 +143,12 @@ export const ManageProduct = ({
           {/* <CreatePrice /> */}
         </div>
       </div>
-      {showFreeTrial && (
+      {/* {showFreeTrial && (
         <div className="flex flex-col gap-4">
           <p className="text-md text-t2 font-medium">Free Trial</p>
           <FreeTrialView product={product} />
         </div>
-      )}
+      )} */}
     </div>
   );
 };

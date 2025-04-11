@@ -53,8 +53,6 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
     setSortedPrices(sorted);
   }, [prices]);
 
-  console.log("sortedPrices", sortedPrices);
-
   const [priceConfig, setPriceConfig] = useState<any>(
     getDefaultPriceConfig(PriceType.Usage) // default price config
   );
@@ -134,8 +132,6 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const handleRowClick = (price: Price, index: number) => {
-    console.log("price", price);
-
     //get the
 
     //if price type is fixed, set the price config to the price config
@@ -174,9 +170,9 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
         setPriceConfig={setPriceConfig}
         selectedIndex={selectedIndex}
       />
-      <div className="flex flex-col text-sm bg-white rounded-sm">
-        <div className="flex items-center grid grid-cols-10 gap-8 justify-between bg-stone-100 border-y border-r pl-6 h-10">
-          <h2 className="text-sm text-t2 font-medium col-span-2 flex justify-end">
+      <div className="flex flex-col text-sm  rounded-sm">
+        <div className="flex items-center grid grid-cols-10 gap-8 justify-between bg-stone-100 border-y pl-10 h-10">
+          <h2 className="text-sm text-t2 font-medium col-span-2 flex">
             Pricing
           </h2>
           <div className="flex w-full h-full items-center col-span-8 justify-end">
@@ -195,10 +191,10 @@ export const ProductPricingTable = ({ prices }: { prices: Price[] }) => {
             return (
               <div
                 key={price.originalIndex}
-                className="flex grid grid-cols-10 gap-8 px-6 text-t2 h-10 items-center hover:bg-zinc-50 cursor-pointer"
+                className="flex grid grid-cols-10 gap-8 px-10 text-t2 h-10 items-center hover:bg-zinc-50 cursor-pointer"
                 onClick={() => handleRowClick(price, price.originalIndex)}
               >
-                <span className="font-mono text-t3 col-span-2 flex justify-end">
+                <span className="font-mono text-t3 col-span-2 flex">
                   <AdminHover
                     texts={[
                       { key: "ID", value: price.id! },

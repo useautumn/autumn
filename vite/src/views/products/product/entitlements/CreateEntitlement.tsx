@@ -15,6 +15,7 @@ import {
   CreatePriceSchema,
   Entitlement,
   Feature,
+  FeatureType,
   PriceType,
 } from "@autumn/shared";
 import { CreateFeature } from "@/views/features/CreateFeature";
@@ -52,6 +53,20 @@ export const CreateEntitlement = ({
 
     // console.log("New entitlement", newEntitlement);
     // console.log("old priceConfig", priceConfig);
+
+    if (selectedFeature?.type === FeatureType.Boolean) {
+      console.log("Boolean feature, no price needed");
+      setProduct({
+        ...product,
+        entitlements: newEntitlement
+          ? [...product.entitlements, newEntitlement]
+          : product.entitlements,
+      });
+      setOpen(false);
+      setEntitlement(null);
+      setPriceConfig(getDefaultPriceConfig(PriceType.Usage));
+      return;
+    }
 
     let newPrice;
     newPrice = CreatePriceSchema.parse({
