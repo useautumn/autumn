@@ -7,6 +7,7 @@ import {
   FrontendOrganization,
   FrontendProduct,
   FullCusProduct,
+  ProductV2,
 } from "@autumn/shared";
 
 import {
@@ -73,7 +74,7 @@ export default function CustomerProductView() {
   const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
   const navigation = useNavigate();
-  const [product, setProduct] = useState<FrontendProduct | null>(null);
+  const [product, setProduct] = useState<ProductV2 | null>(null);
   const [options, setOptions] = useState<OptionValue[]>([]);
 
   const [searchParams] = useSearchParams();
@@ -91,11 +92,11 @@ export default function CustomerProductView() {
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [requiredOptions, setRequiredOptions] = useState<OptionValue[]>([]);
   const [useInvoice, setUseInvoice] = useState(false);
-  const initialProductRef = useRef<FrontendProduct | null>(null);
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
     useState<"unlimited" | number>(0);
   const [hasChanges, setHasChanges] = useState(false);
   const [hasOptionsChanges, setHasOptionsChanges] = useState(false);
+  const initialProductRef = useRef<FrontendProduct | null>(null);
 
   // const cusProductId = searchParams.get("id");
   useEffect(() => {
@@ -110,7 +111,7 @@ export default function CustomerProductView() {
     if (!data?.product || !data?.customer) return;
 
     let product = data.product;
-    initialProductRef.current = product;
+    initialProductRef.current = structuredClone(product);
 
     if (product.options) {
       setOptions(product.options);
@@ -120,52 +121,6 @@ export default function CustomerProductView() {
     setProduct(product);
   }, [data, product_id]);
 
-  // Pure function to handle product enrichment
-  const enrichProduct = (
-    baseProduct: FrontendProduct,
-    customerProduct?: {
-      status?: string;
-      options?: OptionValue[];
-      entitlements?: typeof baseProduct.entitlements;
-      prices?: typeof baseProduct.prices;
-      free_trial?: typeof baseProduct.free_trial;
-      version?: number;
-    }
-  ) => {
-    if (!customerProduct) {
-      // console.log("baseProduct", baseProduct);
-      return {
-        ...baseProduct,
-        isActive: false,
-        options: [],
-      };
-    }
-
-    return {
-      ...baseProduct,
-      isActive: customerProduct.status === "active",
-      options: customerProduct.options ?? [],
-      entitlements: customerProduct.entitlements || baseProduct.entitlements,
-      prices: customerProduct.prices || baseProduct.prices,
-      free_trial: customerProduct.free_trial || baseProduct.free_trial,
-      version: customerProduct.version || baseProduct.version,
-      // // ...(customerProduct.entitlements && {
-      // //   entitlements: customerProduct.entitlements,
-      // // }),
-      // ...(customerProduct.prices && {
-      //   prices: customerProduct.prices,
-      // }),
-      // ...(customerProduct.free_trial && {
-      //   free_trial: customerProduct.free_trial,
-      // }),
-      // ...(customerProduct.version && {
-      //   version: customerProduct.version,
-      // }),
-    };
-  };
-
-  //check if the user has made changes to the product state
-
   useEffect(() => {
     if (!initialProductRef.current || !product) {
       setHasChanges(false);
@@ -174,13 +129,11 @@ export default function CustomerProductView() {
 
     const hasChanged =
       JSON.stringify({
-        prices: product.prices,
-        entitlements: product.entitlements,
+        items: product.items,
         free_trial: product.free_trial,
       }) !==
       JSON.stringify({
-        prices: initialProductRef.current.prices,
-        entitlements: initialProductRef.current.entitlements,
+        items: initialProductRef.current.items,
         free_trial: initialProductRef.current.free_trial,
       });
 
@@ -218,20 +171,20 @@ export default function CustomerProductView() {
 
   const handleCreateProduct = async (useInvoiceLatest?: boolean) => {
     try {
-      if (oneTimePurchase || !product.isActive) {
-        const { data } = await ProductService.getRequiredOptions(
-          axiosInstance,
-          {
-            prices: product.prices,
-            entitlements: product.entitlements,
-          }
-        );
+      // if (oneTimePurchase || !product.isActive) {
+      //   const { data } = await ProductService.getRequiredOptions(
+      //     axiosInstance,
+      //     {
+      //       prices: product.prices,
+      //       entitlements: product.entitlements,
+      //     }
+      //   );
 
-        if (data.options && data.options.length > 0) {
-          setRequiredOptions(data.options);
-          return;
-        }
-      }
+      //   if (data.options && data.options.length > 0) {
+      //     setRequiredOptions(data.options);
+      //     return;
+      //   }
+      // }
 
       // Continue with product creation if no required options
       await createProduct(
@@ -248,8 +201,9 @@ export default function CustomerProductView() {
 
       const { data } = await CusService.addProduct(axiosInstance, customer_id, {
         product_id,
-        prices: product.prices,
-        entitlements: product.entitlements,
+        // prices: product.prices,
+        // entitlements: product.entitlements,
+        items: product.items,
         free_trial: product.free_trial,
         options: requiredOptions ? requiredOptions : options,
         is_custom: isCustom,
@@ -274,11 +228,6 @@ export default function CustomerProductView() {
 
       if (data.invoice) {
         window.open(getStripeInvoiceLink(data.invoice), "_blank");
-        // setUrl({
-        //   type: "invoice",
-        //   value: ,
-        // });
-        // setCheckoutDialogOpen(true);
       }
     } catch (error) {
       console.log("Error creating product: ", error);
@@ -415,7 +364,6 @@ export default function CustomerProductView() {
             <div className="flex-1 w-full min-w-sm">
               {product && (
                 <ManageProduct
-                  product={product}
                   customerData={data}
                   showFreeTrial={false}
                   setShowFreeTrial={() => {}}

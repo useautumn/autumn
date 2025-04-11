@@ -1,5 +1,5 @@
 import { priceToStripeItem } from "@/external/stripe/stripePriceUtils.js";
-import { compareObjects } from "@/utils/genUtils.js";
+import { compareObjects, notNullish } from "@/utils/genUtils.js";
 import {
   BillWhen,
   BillingInterval,
@@ -142,14 +142,15 @@ export const haveDifferentRecurringIntervals = (prices: Price[]) => {
 
 // Get bill now vs bill later prices
 export const getCheckoutRelevantPrices = (prices: Price[]) => {
-  return prices.filter(
-    (price) =>
-      price.billing_type == BillingType.OneOff ||
-      price.billing_type == BillingType.FixedCycle ||
-      price.billing_type == BillingType.UsageInAdvance ||
-      price.billing_type == BillingType.UsageInArrear ||
-      price.billing_type == BillingType.InArrearProrated
-  );
+  return prices.filter((price) => {
+    let billingType = getBillingType(price.config!);
+
+    billingType == BillingType.OneOff ||
+      billingType == BillingType.FixedCycle ||
+      billingType == BillingType.UsageInAdvance ||
+      billingType == BillingType.UsageInArrear ||
+      billingType == BillingType.InArrearProrated;
+  });
 };
 
 export const getBillNowPrices = (prices: Price[]) => {
@@ -191,11 +192,18 @@ export const getPriceEntitlement = (
 ) => {
   let config = price.config as UsagePriceConfig;
 
-  const entitlement = entitlements.find(
-    (ent) =>
-      ent.internal_feature_id === config.internal_feature_id &&
-      ent.internal_product_id === price.internal_product_id
-  );
+  const entitlement = entitlements.find((ent) => {
+    let entIdMatch =
+      notNullish(price.entitlement_id) && price.entitlement_id == ent.id;
+
+    let featureIdMath =
+      notNullish(config.internal_feature_id) &&
+      config.internal_feature_id == ent.internal_feature_id;
+
+    let productIdMatch = ent.internal_product_id == price.internal_product_id;
+
+    return (entIdMatch || featureIdMath) && productIdMatch;
+  });
 
   return entitlement as EntitlementWithFeature;
 };

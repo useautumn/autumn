@@ -18,6 +18,10 @@ import { getCusEntMasterBalance } from "./entitlements/cusEntUtils.js";
 import { getLatestProducts } from "../products/productUtils.js";
 import { getProductVersionCounts } from "../products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import {
+  mapToProductItems,
+  mapToProductV2,
+} from "../products/productV2Utils.js";
 
 export const cusRouter = Router();
 
@@ -258,12 +262,15 @@ cusRouter.get(
       let product;
 
       if (cusProduct) {
+        let prices = cusProduct.customer_prices.map(
+          (price: any) => price.price
+        );
+        let entitlements = cusProduct.customer_entitlements.map(
+          (ent: any) => ent.entitlement
+        );
         product = {
           ...cusProduct.product,
-          entitlements: cusProduct.customer_entitlements.map(
-            (ent: any) => ent.entitlement
-          ),
-          prices: cusProduct.customer_prices.map((price: any) => price.price),
+          items: mapToProductItems({ prices, entitlements }),
           free_trial: cusProduct.free_trial,
           options: cusProduct.options,
           isActive: cusProduct.status === CusProductStatus.Active,
@@ -279,6 +286,8 @@ cusRouter.get(
               ? parseInt(version)
               : undefined,
         });
+
+        product = mapToProductV2(product);
       }
 
       let numVersions = await ProductService.getProductVersionCount({

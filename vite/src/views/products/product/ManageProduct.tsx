@@ -24,7 +24,12 @@ import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AppEnv, MigrationJob, MigrationJobStep } from "@autumn/shared";
+import {
+  AppEnv,
+  MigrationJob,
+  MigrationJobStep,
+  ProductV2,
+} from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import {
   Tooltip,
@@ -34,22 +39,23 @@ import {
 } from "@/components/ui/tooltip";
 import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
 import ConfirmMigrateDialog from "./ConfirmMigrateDialog";
+import { CreateProductItem } from "./product-item/CreateProductItem";
+import { ProductItemTable } from "./product-item/ProductItemTable";
 
 export const ManageProduct = ({
-  product,
   customerData,
   showFreeTrial,
   setShowFreeTrial,
   version,
 }: {
-  product: any;
   customerData?: any;
   showFreeTrial: boolean;
   setShowFreeTrial: (showFreeTrial: boolean) => void;
   version?: number;
 }) => {
   const env = useEnv();
-  let { numVersions, count } = useProductContext();
+  let { numVersions, count, product } = useProductContext();
+
   const navigate = useNavigate();
 
   return (
@@ -62,26 +68,6 @@ export const ManageProduct = ({
                 {product.name}
               </h2>
             </AdminHover>
-            {/* <div className="flex items-center gap-2">
-              {product.is_add_on && (
-                <Badge variant="outline" className="bg-white">
-                  Add On
-                </Badge>
-              )}
-              {product.is_default && (
-                <Badge variant="outline" className="bg-white">
-                  Default Product
-                </Badge>
-              )}
-              {product.group && (
-                <Badge variant="outline" className="bg-white">
-                  Product Group:{" "}
-                  <span className="font-semibold ml-1">
-                    {" " + product.group}
-                  </span>
-                </Badge>
-              )}
-            </div> */}
           </div>
         </div>
 
@@ -119,24 +105,25 @@ export const ManageProduct = ({
             <EditProductToolbar product={product} className="text-t2" />
           )} */}
       </div>
+
       <div className="flex flex-col gap-10">
-        <div className="flex flex-col">
+        <ProductItemTable />
+        {/* <div className="flex flex-col">
           <ProductEntitlementTable entitlements={product.entitlements} />
         </div>
         <div className="flex flex-col">
           {product.prices.length > 0 && (
             <ProductPricingTable prices={product.prices} />
           )}
-          {/* <CreateEntitlement /> */}
-          {/* <CreatePrice /> */}
-        </div>
+        </div> */}
       </div>
-      {/* {showFreeTrial && (
+
+      {showFreeTrial && (
         <div className="flex flex-col gap-4">
           <p className="text-md text-t2 font-medium">Free Trial</p>
           <FreeTrialView product={product} />
         </div>
-      )} */}
+      )}
     </div>
   );
 };

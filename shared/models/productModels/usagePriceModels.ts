@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BillingInterval } from "./fixedPriceModels.js";
+import { TierInfinite } from "./productItemModels.js";
 
 export enum BillWhen {
   // Deprecated
@@ -15,8 +16,8 @@ export enum BillWhen {
 }
 
 export const UsageTier = z.object({
-  from: z.number(),
-  to: z.number(),
+  // from: z.number(),
+  to: z.number().or(z.literal(TierInfinite)),
   amount: z.number(),
 });
 
