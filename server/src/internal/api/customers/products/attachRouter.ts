@@ -8,6 +8,7 @@ import {
   FeatureOptionsSchema,
   FullCusProduct,
   Price,
+  ProductItem,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -302,8 +303,9 @@ attachRouter.post("/attach", async (req: any, res) => {
       customer_data,
 
       is_custom,
-      prices,
-      entitlements,
+      // prices,
+      // entitlements,
+      items,
       free_trial,
       product_ids,
       options,
@@ -319,8 +321,9 @@ attachRouter.post("/attach", async (req: any, res) => {
     const logger = req.logtail;
 
     const sb = req.sb;
-    const pricesInput: PricesInput = prices || [];
-    const entsInput: Entitlement[] = entitlements || [];
+
+    let itemsInput: ProductItem[] = items || [];
+
     const optionsListInput: FeatureOptions[] = options || [];
     const invoiceOnly = invoice_only || false;
     const successUrl = success_url || undefined;
@@ -348,8 +351,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       customerData: customer_data,
       orgId,
       env,
-      pricesInput,
-      entsInput,
+      itemsInput,
       optionsListInput,
       freeTrialInput: free_trial,
       isCustom,

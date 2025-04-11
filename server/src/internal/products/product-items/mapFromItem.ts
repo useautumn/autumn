@@ -170,7 +170,7 @@ export const toFeatureAndPrice = ({
     name: "",
 
     config,
-    entitlement_id: item.entitlement_id,
+    entitlement_id: ent.id,
   };
 
   let priceOrEntDifferent =
@@ -211,6 +211,9 @@ export const itemToPriceAndEnt = ({
   let updatedPrice: Price | null = null;
   let updatedEnt: Entitlement | null = null;
 
+  let samePrice: Price | null = null;
+  let sameEnt: Entitlement | null = null;
+
   if (itemIsFixedPrice(item)) {
     let { price } = toPrice({
       item,
@@ -223,6 +226,8 @@ export const itemToPriceAndEnt = ({
       newPrice = price;
     } else if (!pricesAreSame(curPrice, price)) {
       updatedPrice = price;
+    } else {
+      samePrice = curPrice;
     }
   } else if (itemIsFree(item)) {
     let { ent } = toFeature({
@@ -249,18 +254,18 @@ export const itemToPriceAndEnt = ({
       curEnt,
     });
 
-    let entsSame = entsAreSame(curEnt!, ent);
-
     if (!curPrice) {
       newPrice = price;
-    } else if (!pricesAreSame(curPrice, price, false) || !entsSame) {
+    } else if (!pricesAreSame(curPrice, price, false)) {
       updatedPrice = price;
     }
 
-    if (!entsSame) {
+    if (!curEnt) {
+      newEnt = ent;
+    } else if (!entsAreSame(curEnt, ent)) {
       updatedEnt = ent;
     }
   }
 
-  return { newPrice, newEnt, updatedPrice, updatedEnt };
+  return { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt };
 };

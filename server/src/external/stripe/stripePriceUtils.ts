@@ -108,7 +108,7 @@ export const priceToStripeItem = ({
   existingUsage: number;
 }) => {
   // TODO: Implement this
-  const billingType = price.billing_type;
+  const billingType = getBillingType(price.config!);
   const stripeProductId = product.processor?.id;
 
   if (!stripeProductId) {
@@ -235,8 +235,7 @@ export const getStripeSubItems = async ({
   const { products, prices, entitlements, optionsList, org, cusProducts } =
     attachParams;
 
-  const checkoutRelevantPrices = getCheckoutRelevantPrices(prices);
-  checkoutRelevantPrices.sort((a, b) => {
+  prices.sort((a, b) => {
     // Put year prices first
     return -compareBillingIntervals(a.config!.interval!, b.config!.interval!);
   });
@@ -244,7 +243,7 @@ export const getStripeSubItems = async ({
   // First do interval to prices
   const intervalToPrices: Record<string, Price[]> = {};
 
-  for (const price of checkoutRelevantPrices) {
+  for (const price of prices) {
     if (!intervalToPrices[price.config!.interval!]) {
       intervalToPrices[price.config!.interval!] = [];
     }

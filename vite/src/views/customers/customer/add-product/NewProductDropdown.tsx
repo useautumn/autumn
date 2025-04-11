@@ -71,7 +71,10 @@ function AddProduct() {
       <div className="relative w-full">
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
-            <Button className="w-full" variant="dashed" size="sm">
+            <Button
+              className=" text-primary h-full justify-start p-0"
+              variant="ghost"
+            >
               Attach Product
             </Button>
           </DropdownMenuTrigger>

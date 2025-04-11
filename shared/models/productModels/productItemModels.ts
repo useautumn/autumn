@@ -49,9 +49,9 @@ export const ProductItemSchema = z.object({
 
   // Stored in backend
   created_at: z.number().nullish(),
-
   entitlement_id: z.string().nullish(),
   price_id: z.string().nullish(),
+  price_config: z.any().nullish(),
 });
 
 export type ProductItem = z.infer<typeof ProductItemSchema>;

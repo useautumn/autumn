@@ -13,9 +13,12 @@ import {
   formatAmount,
   getItemType,
   intervalIsNone,
+  itemIsFixedPrice,
+  itemIsFree,
 } from "@/utils/product/productItemUtils";
 import UpdateProductItem from "./UpdateProductItem";
 import { useState } from "react";
+import { AdminHover } from "@/components/general/AdminHover";
 export const ProductItemTable = () => {
   let { product, features, org } = useProductContext();
   let [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
@@ -101,6 +104,46 @@ export const ProductItemTable = () => {
     setOpen(true);
   };
 
+  const getAdminHoverTexts = (item: ProductItem) => {
+    if (itemIsFree(item)) {
+      return [
+        {
+          key: "Entitlement ID",
+          value: item.entitlement_id || "N/A",
+        },
+      ];
+    }
+
+    let texts = [
+      {
+        key: "Price ID",
+        value: item.price_id || "N/A",
+      },
+      {
+        key: "Stripe Price ID",
+        value: item.price_config?.stripe_price_id || "N/A",
+      },
+    ];
+
+    if (!itemIsFixedPrice(item)) {
+      texts = texts.concat([
+        {
+          key: "Entitlement ID",
+          value: item.entitlement_id || "N/A",
+        },
+        {
+          key: "Stripe Product ID",
+          value: item.price_config?.stripe_product_id || "N/A",
+        },
+        {
+          key: "Stripe Meter ID",
+          value: item.price_config?.stripe_meter_id || "N/A",
+        },
+      ]);
+    }
+
+    return texts;
+  };
   return (
     <>
       <UpdateProductItem
@@ -134,7 +177,9 @@ export const ProductItemTable = () => {
                 onClick={() => handleRowClick(item, index)}
               >
                 <span className="font-mono text-t3 col-span-2 overflow-hidden flex whitespace-nowrap">
-                  {feature?.name || "Fixed Price"}
+                  <AdminHover texts={getAdminHoverTexts(item)}>
+                    {feature?.name || "Fixed Price"}
+                  </AdminHover>
                 </span>
                 <span className="col-span-6">
                   {itemType === ProductItemType.Feature

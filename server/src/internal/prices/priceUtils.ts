@@ -142,14 +142,15 @@ export const haveDifferentRecurringIntervals = (prices: Price[]) => {
 
 // Get bill now vs bill later prices
 export const getCheckoutRelevantPrices = (prices: Price[]) => {
-  return prices.filter(
-    (price) =>
-      price.billing_type == BillingType.OneOff ||
-      price.billing_type == BillingType.FixedCycle ||
-      price.billing_type == BillingType.UsageInAdvance ||
-      price.billing_type == BillingType.UsageInArrear ||
-      price.billing_type == BillingType.InArrearProrated
-  );
+  return prices.filter((price) => {
+    let billingType = getBillingType(price.config!);
+
+    billingType == BillingType.OneOff ||
+      billingType == BillingType.FixedCycle ||
+      billingType == BillingType.UsageInAdvance ||
+      billingType == BillingType.UsageInArrear ||
+      billingType == BillingType.InArrearProrated;
+  });
 };
 
 export const getBillNowPrices = (prices: Price[]) => {
