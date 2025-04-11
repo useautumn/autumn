@@ -164,7 +164,7 @@ export const CustomersTable = ({
 
   return (
     <>
-      <Row type="header" className="grid-cols-17 ">
+      <Row type="header" className="grid-cols-17 -mb-1">
         <Item className="col-span-3">Name</Item>
         <Item className="col-span-3">ID</Item>
         <Item className="col-span-3">Email</Item>

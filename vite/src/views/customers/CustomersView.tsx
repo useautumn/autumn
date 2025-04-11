@@ -177,7 +177,7 @@ function CustomersView({ env }: { env: AppEnv }) {
               <CustomersTable customers={data.customers} />
             </div>
           ) : (
-            <div className="flex shadow-md rounded-md items-start pl-10 text-t3 text-sm w-full h-[150px]">
+            <div className="flex rounded-md items-start pl-10 text-t3 text-sm w-full h-[150px] pt-4">
               <span className="">No customers found... yet ;)</span>
             </div>
           )}

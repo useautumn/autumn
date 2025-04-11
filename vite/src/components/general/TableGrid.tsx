@@ -39,7 +39,7 @@ export const Item = ({
   return (
     <div
       className={cn(
-        "col-span-1 flex h-full w-full items-center gap-2",
+        "col-span-1 flex h-full w-full items-center gap-2 truncate",
         className
       )}
     >
