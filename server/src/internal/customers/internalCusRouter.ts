@@ -5,6 +5,7 @@ import { InvoiceService } from "./invoices/InvoiceService.js";
 import { FeatureService } from "../features/FeatureService.js";
 import {
   CusProductStatus,
+  ErrCode,
   FullCustomerEntitlement,
   FullCustomerPrice,
 } from "@autumn/shared";
@@ -18,6 +19,8 @@ import { getCusEntMasterBalance } from "./entitlements/cusEntUtils.js";
 import { getLatestProducts } from "../products/productUtils.js";
 import { getProductVersionCounts } from "../products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
+import { CusReadService } from "./CusReadService.js";
 
 export const cusRouter = Router();
 
@@ -65,6 +68,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
   try {
     // Get customer invoices
+
     const [org, features, coupons, products, events, customer] =
       await Promise.all([
         OrgService.getFromReq(req),
@@ -206,6 +210,69 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     });
   } catch (error) {
     handleRequestError({ req, error, res, action: "get customer data" });
+  }
+});
+
+cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
+  try {
+    const { sb, org, env } = req;
+    const { customer_id } = req.params;
+    const orgId = req.orgId;
+
+    let internalCustomer = await CusService.getByIdOrInternalId({
+      sb,
+      orgId,
+      env,
+      idOrInternalId: customer_id,
+      isFull: true,
+    });
+
+    // Get all redemptions for this customer
+    let [referred, redeemed] = await Promise.all([
+      RewardRedemptionService.getByReferrer({
+        sb,
+        internalCustomerId: internalCustomer.internal_id,
+        withCustomer: true,
+        limit: 100,
+      }),
+      RewardRedemptionService.getByCustomer({
+        sb,
+        internalCustomerId: internalCustomer.internal_id,
+        withReferralCode: true,
+        limit: 100,
+      }),
+    ]);
+
+    let redeemedCustomerIds = redeemed.map(
+      (redemption: any) => redemption.referral_code.internal_customer_id
+    );
+
+    let redeemedCustomers = await CusReadService.getInInternalIds({
+      sb,
+      internalIds: redeemedCustomerIds,
+    });
+
+    for (const redemption of redeemed) {
+      redemption.referral_code.customer = redeemedCustomers.find(
+        (customer: any) =>
+          customer.internal_id === redemption.referral_code.internal_customer_id
+      );
+    }
+
+    if (!internalCustomer) {
+      throw new RecaseError({
+        message: "Customer not found",
+        code: ErrCode.CustomerNotFound,
+      });
+    }
+
+    res.status(200).send({
+      referred,
+      redeemed,
+    });
+  } catch (error) {
+    console.error("Error getting customer referrals", error);
+    res.status(500).send({ error: "Error getting customer referrals" });
   }
 });
 

@@ -9,12 +9,18 @@ import {
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useProductsContext } from "../ProductsContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { Reward, CouponDurationType, DiscountType } from "@autumn/shared";
+import {
+  Reward,
+  CouponDurationType,
+  DiscountType,
+  RewardType,
+  Product,
+} from "@autumn/shared";
 import UpdateReward from "./UpdateReward";
 import { useState } from "react";
 import { RewardRowToolbar } from "./RewardRowToolbar";
 export const RewardsTable = () => {
-  const { rewards, org } = useProductsContext();
+  const { rewards, org, products } = useProductsContext();
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -42,8 +48,8 @@ export const RewardsTable = () => {
           <TableRow>
             <TableHead className="">Name</TableHead>
             <TableHead>Promo Codes</TableHead>
-            <TableHead>Discount</TableHead>
-            <TableHead>Duration</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Reward</TableHead>
 
             <TableHead className="min-w-0 w-28">Created At</TableHead>
             <TableHead className="min-w-0 w-10"></TableHead>
@@ -66,22 +72,41 @@ export const RewardsTable = () => {
                   .join(", ")}
               </TableCell>
               <TableCell className="min-w-32">
-                <div className="flex items-center gap-1">
-                  <p>{reward.discount_value} </p>
-                  <p className="text-t3">
-                    {reward.discount_type == DiscountType.Percentage
-                      ? "%"
-                      : org?.default_currency || "USD"}
-                  </p>
-                </div>
+                {keyToTitle(reward.type)}
               </TableCell>
               <TableCell className="">
-                {reward.duration_type == CouponDurationType.Months
-                  ? `${reward.duration_value} months`
-                  : reward.duration_type == CouponDurationType.OneOff &&
-                    reward.should_rollover
+                <div className="flex items-center gap-1">
+                  {reward.type == RewardType.FreeProduct ? (
+                    <p>
+                      {
+                        products.find(
+                          (product: Product) =>
+                            product.id === reward.free_product_id
+                        )?.name
+                      }
+                    </p>
+                  ) : (
+                    <>
+                      <p>{reward.discount_config?.discount_value} </p>
+                      <p className="text-t3">
+                        {reward.type == RewardType.PercentageDiscount
+                          ? "%"
+                          : org?.default_currency || "USD"}
+                      </p>
+                    </>
+                  )}
+                </div>
+                {/* {reward.discount_config?.duration_type ==
+                CouponDurationType.Months
+                  ? `${reward.discount_config?.duration_value} months`
+                  : reward.discount_config?.duration_type ==
+                      CouponDurationType.OneOff &&
+                    reward.discount_config?.should_rollover
                   ? "One-off (rollover)"
-                  : keyToTitle(reward.duration_type)}
+                  : reward.discount_config?.duration_type ==
+                    CouponDurationType.Forever
+                  ? "Forever"
+                  : "One-off"} */}
               </TableCell>
               <TableCell className="">
                 {formatUnixToDateTime(reward.created_at).date}

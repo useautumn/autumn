@@ -70,7 +70,7 @@ function ProductsView({ env }: { env: AppEnv }) {
           onClick={() => setShowRewards((prev) => !prev)}
         >
           <Ticket size={12} className="mr-2" />
-          Coupons
+          Rewards
         </ToggleDisplayButton>
       </div>
       <ProductsTable products={data?.products} />
@@ -79,9 +79,9 @@ function ProductsView({ env }: { env: AppEnv }) {
         <React.Fragment>
           <div className="flex flex-col gap-4 h-fit mt-6">
             <div>
-              <h2 className="text-lg font-medium">Coupons</h2>
+              <h2 className="text-lg font-medium">Rewards</h2>
               <p className="text-sm text-t2">
-                Create a coupon to give users credits or a discount on one or
+                Create a reward to give users a product or a discount on one or
                 more products.{" "}
                 {/* <span className="text-t3">(eg, 10% off all products).</span> */}
               </p>

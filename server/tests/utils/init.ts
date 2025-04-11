@@ -14,7 +14,9 @@ import {
   FreeTrial,
   Organization,
   PriceType,
+  RewardReceivedBy,
   RewardTriggerEvent,
+  RewardType,
 } from "@autumn/shared";
 import { getAxiosInstance } from "./setup.js";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -330,7 +332,7 @@ export const initCustomer = async ({
 // Init Reward
 export const initReward = ({
   id,
-  discountType = DiscountType.Fixed,
+  type = RewardType.PercentageDiscount,
   discountValue,
   durationType = CouponDurationType.OneOff,
   durationValue = 0,
@@ -338,29 +340,47 @@ export const initReward = ({
   onlyUsagePrices = false,
   productIds,
   applyToAll = false,
+  freeProductId,
 }: {
   id: string;
-  discountValue: number;
-  discountType?: DiscountType;
+  type?: RewardType;
+  discountValue?: number;
   durationType?: CouponDurationType;
   durationValue?: number;
   rollover?: boolean;
   onlyUsagePrices?: boolean;
   productIds?: string[];
   applyToAll?: boolean;
+  freeProductId?: string;
 }): any => {
-  return {
-    id,
-    name: keyToTitle(id),
-    discount_type: discountType,
-    discount_value: discountValue,
-    duration_type: durationType,
-    duration_value: durationValue,
-    should_rollover: rollover,
-    apply_to_all: applyToAll,
-    only_usage_prices: onlyUsagePrices,
-    product_ids: productIds,
-  };
+  if (
+    type == RewardType.PercentageDiscount ||
+    type == RewardType.FixedDiscount
+  ) {
+    return {
+      id,
+      name: keyToTitle(id),
+      type,
+
+      only_usage_prices: onlyUsagePrices,
+      product_ids: productIds,
+
+      discount_config: {
+        discount_value: discountValue,
+        duration_type: durationType,
+        duration_value: durationValue,
+        should_rollover: rollover,
+        apply_to_all: applyToAll,
+      },
+    };
+  } else if (type == RewardType.FreeProduct) {
+    return {
+      id,
+      name: keyToTitle(id),
+      type,
+      free_product_id: freeProductId,
+    };
+  }
 };
 
 export const initRewardProgram = ({
@@ -369,12 +389,14 @@ export const initRewardProgram = ({
   productIds = [],
   internalRewardId,
   maxRedemptions = 2,
+  receivedBy = RewardReceivedBy.Referrer,
 }: {
   id: string;
   productIds?: string[];
   internalRewardId: string;
   when?: RewardTriggerEvent;
   maxRedemptions?: number;
+  receivedBy?: RewardReceivedBy;
 }): any => {
   return {
     id,
@@ -382,5 +404,6 @@ export const initRewardProgram = ({
     product_ids: productIds,
     internal_reward_id: internalRewardId,
     max_redemptions: maxRedemptions,
+    received_by: receivedBy,
   };
 };

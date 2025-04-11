@@ -19,24 +19,14 @@ import {
   CouponDurationType,
   CreateReward as CreateRewardType,
   DiscountType,
+  RewardType,
 } from "@autumn/shared";
 
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductsContext } from "../ProductsContext";
 import { RewardService } from "@/services/products/RewardService";
 import { RewardConfig } from "./RewardConfig";
-
-const defaultReward: CreateRewardType = {
-  name: "",
-  promo_codes: [{ code: "" }],
-  price_ids: [],
-  discount_type: DiscountType.Fixed,
-  discount_value: 0,
-  duration_type: CouponDurationType.Months,
-  duration_value: 0,
-  should_rollover: true,
-  apply_to_all: true,
-};
+import { defaultReward } from "./defaultRewardModels";
 
 function CreateReward() {
   const { mutate, env } = useProductsContext();
@@ -77,18 +67,14 @@ function CreateReward() {
           className="w-full"
           startIcon={<PlusIcon size={15} />}
         >
-          Create Coupon
+          Create Reward
         </Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Coupon</DialogTitle>
+          <DialogTitle>Create Reward</DialogTitle>
         </DialogHeader>
-        {/* <CreditSystemConfig
-          creditSystem={creditSystem}
-          setCreditSystem={setCreditSystem}
-        /> */}
-        <RewardConfig reward={reward as any} setReward={setReward} />
+        <RewardConfig reward={reward as any} setReward={setReward as any} />
         <DialogFooter>
           <Button
             onClick={handleCreate}

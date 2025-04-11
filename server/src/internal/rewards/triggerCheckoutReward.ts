@@ -1,7 +1,8 @@
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
-import { RewardTriggerEvent } from "@autumn/shared";
-import { triggerRedemption } from "./referralUtils.js";
+import { RewardCategory, RewardTriggerEvent } from "@autumn/shared";
+import { triggerFreeProduct, triggerRedemption } from "./referralUtils.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
+import { getRewardCat } from "./rewardUtils.js";
 export const runTriggerCheckoutReward = async ({
   sb,
   payload,
@@ -63,15 +64,29 @@ export const runTriggerCheckoutReward = async ({
         return;
       }
 
-      await triggerRedemption({
-        sb,
-        referralCode,
-        org,
-        env,
-        logger,
-        reward,
-        redemption,
-      });
+      let rewardCat = getRewardCat(reward);
+      if (rewardCat === RewardCategory.FreeProduct) {
+        await triggerFreeProduct({
+          sb,
+          referralCode,
+          redeemer: customer,
+          rewardProgram: reward_program,
+          org,
+          env,
+          logger,
+          redemption,
+        });
+      } else {
+        await triggerRedemption({
+          sb,
+          referralCode,
+          org,
+          env,
+          logger,
+          reward,
+          redemption,
+        });
+      }
     }
   } catch (error) {
     logger.error("Failed to trigger checkout reward");

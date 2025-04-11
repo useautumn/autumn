@@ -26,7 +26,7 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 import { CusService } from "../CusService.js";
 import { getExistingCusProducts } from "./handleExistingProduct.js";
-import { isOneOff } from "@/internal/products/productUtils.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { searchCusProducts } from "@/internal/customers/products/cusProductUtils.js";
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
@@ -328,7 +328,10 @@ export const createFullCusProduct = async ({
     status: CusProductStatus.Active,
   });
 
-  if (isOneOff(prices) && notNullish(existingCusProduct)) {
+  if (
+    (isOneOff(prices) || (isFreeProduct(prices) && product.is_add_on)) &&
+    notNullish(existingCusProduct)
+  ) {
     await updateOneTimeCusProduct({
       sb,
       attachParams,

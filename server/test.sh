@@ -6,15 +6,16 @@ MOCHA_CMD="npx mocha --parallel --timeout 10000000 --ignore tests/00_setup.ts"
 if [ "$1" == "basic-parallel" ]; then
     MOCHA_PARALLEL=true $MOCHA_SETUP && $MOCHA_CMD  \
     tests/basic/*.ts \
+    tests/attach/**/*.ts \
     tests/basic/entities/*.ts \
-    tests/basic/referrals/*.ts \
-    # tests/attach/**/*.ts \
+    # tests/basic/referrals/*.ts \
 
 elif [ "$1" == "advanced-parallel" ]; then
     MOCHA_PARALLEL=true  \
     $MOCHA_SETUP \
-    && $MOCHA_CMD 'tests/advanced/usage/*.ts'\
+    && $MOCHA_CMD 'tests/advanced/coupons/*.ts'\
     # && $MOCHA_CMD 'tests/advanced/arrear_prorated/*.ts' 'tests/advanced/coupons/*.ts'\
+    # && $MOCHA_CMD 'tests/advanced/usage/*.ts'\
 
 
 elif [ "$1" == "alex-parallel" ]; then

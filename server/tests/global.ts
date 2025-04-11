@@ -9,7 +9,9 @@ import {
   DiscountType,
   EntInterval,
   Feature,
+  RewardReceivedBy,
   RewardTriggerEvent,
+  RewardType,
 } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import {
@@ -299,6 +301,20 @@ export const products = {
       }),
     ],
     freeTrial: null,
+  }),
+
+  freeAddOn: initProduct({
+    id: "freeAddOn",
+    entitlements: {
+      metered1: initEntitlement({
+        feature: features.metered1,
+        allowance: 100,
+        interval: EntInterval.Lifetime,
+      }),
+    },
+    prices: [],
+    freeTrial: null,
+    isAddOn: true,
   }),
 };
 
@@ -775,12 +791,14 @@ export const entityProducts = {
 export const rewards = {
   rolloverAll: initReward({
     id: "rolloverAll",
+    type: RewardType.FixedDiscount,
     discountValue: 1000,
     rollover: true,
     applyToAll: true,
   }),
   rolloverUsage: initReward({
     id: "rolloverUsage",
+    type: RewardType.FixedDiscount,
     discountValue: 1000,
     rollover: true,
     onlyUsagePrices: true,
@@ -788,11 +806,16 @@ export const rewards = {
   }),
   monthOff: initReward({
     id: "monthOff",
-    discountType: DiscountType.Percentage,
+    type: RewardType.PercentageDiscount,
     discountValue: 100,
     applyToAll: true,
     durationType: CouponDurationType.Months,
     durationValue: 1,
+  }),
+  freeProduct: initReward({
+    id: "freeProduct",
+    type: RewardType.FreeProduct,
+    freeProductId: products.freeAddOn.id,
   }),
 };
 
@@ -807,7 +830,13 @@ export const referralPrograms = {
     id: "immediate",
     internalRewardId: rewards.monthOff.id,
     when: RewardTriggerEvent.CustomerCreation,
-    // productIds: [products.pro.id, products.proWithTrial.id],
+  }),
+  freeProduct: initRewardProgram({
+    id: "freeProduct",
+    internalRewardId: rewards.freeProduct.id,
+    when: RewardTriggerEvent.Checkout,
+    receivedBy: RewardReceivedBy.All,
+    productIds: [products.pro.id, products.proWithTrial.id],
   }),
 };
 
