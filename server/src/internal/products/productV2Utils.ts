@@ -1,6 +1,8 @@
 import {
+  EntitlementWithFeature,
   FeatureType,
   FullProduct,
+  Price,
   ProductItem,
   ProductItemInterval,
   ProductV2,
@@ -8,6 +10,31 @@ import {
 import { getEntRelatedPrice } from "./entitlements/entitlementUtils.js";
 import { getPriceEntitlement } from "../prices/priceUtils.js";
 import { toProductItem } from "./product-items/mapToItem.js";
+
+export const mapToProductItems = ({
+  prices,
+  entitlements,
+}: {
+  prices: Price[];
+  entitlements: EntitlementWithFeature[];
+}): ProductItem[] => {
+  let items: ProductItem[] = [];
+
+  for (const ent of entitlements) {
+    let relatedPrice = getEntRelatedPrice(ent, prices);
+    items.push(toProductItem({ ent, price: relatedPrice }));
+  }
+
+  for (const price of prices) {
+    let relatedEnt = getPriceEntitlement(price, entitlements);
+
+    if (!relatedEnt) {
+      items.push(toProductItem({ price }));
+    }
+  }
+
+  return items;
+};
 
 export const mapToProductV2 = (product: FullProduct): ProductV2 => {
   let items: ProductItem[] = [];

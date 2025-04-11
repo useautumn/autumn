@@ -12,6 +12,7 @@ import { PriceService } from "@/internal/prices/PriceService.js";
 import { EntitlementService } from "../entitlements/EntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { pricesAreSame } from "@/internal/prices/priceUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 
 const isNewItem = (item: ProductItem) => {
   return !item.entitlement_id && !item.price_id;
@@ -34,8 +35,8 @@ const updateDbPricesAndEnts = async ({
   deletedPrices: Price[];
   deletedEnts: Entitlement[];
 }) => {
-  console.log("Deleting prices", deletedPrices);
-  console.log("Deleting ents", deletedEnts);
+  // console.log("Deleting prices", deletedPrices);
+  // console.log("Deleting ents", deletedEnts);
 
   // 1. Create new ents
   await Promise.all([
@@ -71,6 +72,81 @@ const updateDbPricesAndEnts = async ({
   });
 };
 
+const handleCustomProductItems = async ({
+  sb,
+  newPrices,
+  newEnts,
+  updatedPrices,
+  updatedEnts,
+  samePrices,
+  sameEnts,
+  features,
+}: {
+  sb: SupabaseClient;
+  newPrices: Price[];
+  newEnts: Entitlement[];
+  updatedPrices: Price[];
+  updatedEnts: Entitlement[];
+  samePrices: Price[];
+  sameEnts: Entitlement[];
+  features: Feature[];
+}) => {
+  // Each updated price is custom
+
+  // Each updated price is custom
+  updatedPrices = updatedPrices.map((price) => ({
+    ...price,
+    id: generateId("pr"),
+    is_custom: true,
+    created_at: Date.now(),
+  }));
+
+  updatedEnts = updatedEnts.map((ent) => ({
+    ...ent,
+    id: generateId("ent"),
+    is_custom: true,
+    created_at: Date.now(),
+  }));
+
+  newPrices = newPrices.map((price) => ({
+    ...price,
+    is_custom: true,
+    created_at: Date.now(),
+  }));
+
+  newEnts = newEnts.map((ent) => ({
+    ...ent,
+    is_custom: true,
+    created_at: Date.now(),
+  }));
+
+  newPrices = [...newPrices, ...updatedPrices];
+  newEnts = [...newEnts, ...updatedEnts];
+
+  await EntitlementService.insert({
+    sb,
+    data: newEnts,
+  });
+
+  await PriceService.insert({
+    sb,
+    data: newPrices,
+  });
+
+  await PriceService.upsert({
+    sb,
+    data: newPrices,
+  });
+
+  return {
+    prices: [...newPrices, ...samePrices],
+    entitlements: [...newEnts, ...sameEnts].map((ent) => ({
+      ...ent,
+      feature: features.find((f) => f.id == ent.feature_id),
+    })),
+  };
+};
+
 export const handleNewProductItems = async ({
   sb,
   curPrices,
@@ -79,6 +155,7 @@ export const handleNewProductItems = async ({
   features,
   product,
   logger,
+  isCustom,
 }: {
   sb: SupabaseClient;
   curPrices: Price[];
@@ -87,6 +164,7 @@ export const handleNewProductItems = async ({
   features: Feature[];
   product: Product;
   logger: any;
+  isCustom: boolean;
 }) => {
   let newPrices: Price[] = [];
   let newEnts: Entitlement[] = [];
@@ -101,28 +179,40 @@ export const handleNewProductItems = async ({
     (ent) => !newItems.some((item) => item.entitlement_id == ent.id)
   );
 
+  let samePrices: Price[] = [];
+  let sameEnts: Entitlement[] = [];
+
   for (const item of newItems) {
     let feature = features.find((f) => f.id == item.feature_id);
     let curEnt = curEnts.find((ent) => ent.id == item.entitlement_id);
     let curPrice = curPrices.find((price) => price.id == item.price_id);
 
     // 2. Update price and entitlement?
-    let { newPrice, newEnt, updatedPrice, updatedEnt } = itemToPriceAndEnt({
-      item,
-      orgId: product.org_id!,
-      internalProductId: product.internal_id!,
-      isCustom: false,
-      feature: feature,
-      curPrice,
-      curEnt,
-    });
+    let { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt } =
+      itemToPriceAndEnt({
+        item,
+        orgId: product.org_id!,
+        internalProductId: product.internal_id!,
+        isCustom: false,
+        feature: feature,
+        curPrice,
+        curEnt,
+      });
 
     if (newPrice) {
       newPrices.push(newPrice);
     }
 
+    if (samePrice) {
+      samePrices.push(samePrice);
+    }
+
     if (newEnt) {
       newEnts.push(newEnt);
+    }
+
+    if (sameEnt) {
+      sameEnts.push(sameEnt);
     }
 
     if (updatedPrice) {
@@ -134,6 +224,27 @@ export const handleNewProductItems = async ({
     }
   }
 
+  logger.info(
+    `Prices: new(${newPrices.length}), updated(${updatedPrices.length}), deleted(${deletedPrices.length})`
+  );
+
+  logger.info(
+    `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`
+  );
+
+  if (isCustom) {
+    return handleCustomProductItems({
+      sb,
+      newPrices,
+      newEnts,
+      updatedPrices,
+      updatedEnts,
+      samePrices,
+      sameEnts,
+      features,
+    });
+  }
+
   await updateDbPricesAndEnts({
     sb,
     newPrices,
@@ -143,14 +254,11 @@ export const handleNewProductItems = async ({
     deletedPrices,
     deletedEnts,
   });
-
-  logger.info(
-    `Prices: new(${newPrices.length}), updated(${updatedPrices.length}), deleted(${deletedPrices.length})`
-  );
-
-  logger.info(
-    `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`
-  );
-
-  return { newPrices, newEnts };
+  return {
+    prices: [...newPrices, ...updatedPrices],
+    entitlements: [...newEnts, ...updatedEnts].map((ent) => ({
+      ...ent,
+      feature: features.find((f) => f.id == ent.feature_id),
+    })),
+  };
 };

@@ -13,6 +13,7 @@ import { navigateTo } from "@/utils/genUtils";
 import { AppEnv, Invoice, Product } from "@autumn/shared";
 import { toast } from "sonner";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
+import { Row, Item } from "@/components/general/TableGrid";
 
 export const InvoicesTable = () => {
   const { env, invoices, products } = useCustomerContext();
@@ -36,65 +37,77 @@ export const InvoicesTable = () => {
   };
 
   return (
-    <Table className="p-2">
-      <TableHeader>
-        <TableRow className="bg-white">
-          <TableHead className="">Products</TableHead>
-          <TableHead className="">Total</TableHead>
-          <TableHead className="">Status</TableHead>
-          <TableHead className="min-w-0 w-28">Created At</TableHead>
-          <TableHead className="min-w-0 w-6"></TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {invoices.map((invoice: Invoice) => (
-          <TableRow
-            key={invoice.id}
-            onClick={async () => {
-              const stripeInvoice = await getStripeInvoice(invoice.stripe_id);
-              if (!stripeInvoice.hosted_invoice_url) {
-                // toast.error("Invoice has no hosted URL");
-                let livemode = stripeInvoice.livemode;
-                window.open(getStripeInvoiceLink(stripeInvoice), "_blank");
-                return;
-              }
+    <div>
+      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 h-10">
+        <h2 className="text-sm text-t2 font-medium col-span-2 flex">
+          Invoices
+        </h2>
+        <div className="flex w-full h-full items-center col-span-8 justify-end">
+          {/* Add any header controls here if needed */}
+        </div>
+      </div>
 
-              if (stripeInvoice && stripeInvoice.hosted_invoice_url) {
-                window.open(stripeInvoice.hosted_invoice_url, "_blank");
-              }
-            }}
-            className="cursor-pointer"
-          >
-            <TableCell>
-              {invoice.product_ids
-                .map((p: string) => {
-                  return products.find((product: Product) => product.id === p)
-                    ?.name;
-                })
-                .join(", ")}
-            </TableCell>
+      {invoices.length === 0 ? (
+        <div className="flex pl-10 items-center h-10">
+          <p className="text-t3 text-xs">No invoice history found</p>
+        </div>
+      ) : (
+        <>
+          <Row type="header" className="grid-cols-13">
+            <Item className="col-span-3">Products</Item>
+            <Item className="col-span-3">Total</Item>
+            <Item className="col-span-3">Status</Item>
+            <Item className="col-span-3">Created At</Item>
+            <Item className="col-span-1" />
+          </Row>
+        </>
+      )}
 
-            <TableCell>
-              {invoice.total.toFixed(2)} {invoice.currency.toUpperCase()}
-              {getTotalDiscountAmount(invoice) > 0 && (
-                <span className="text-t3">
-                  {" "}
-                  (-{getTotalDiscountAmount(invoice).toFixed(2)})
-                </span>
-              )}
-            </TableCell>
-            <TableCell>{invoice.status}</TableCell>
-            <TableCell>
-              {formatUnixToDateTime(invoice.created_at).date}
+      {invoices.map((invoice: Invoice) => (
+        <Row
+          key={invoice.id}
+          className="grid-cols-13"
+          onClick={async () => {
+            const stripeInvoice = await getStripeInvoice(invoice.stripe_id);
+            if (!stripeInvoice.hosted_invoice_url) {
+              let livemode = stripeInvoice.livemode;
+              window.open(getStripeInvoiceLink(stripeInvoice), "_blank");
+              return;
+            }
+
+            if (stripeInvoice && stripeInvoice.hosted_invoice_url) {
+              window.open(stripeInvoice.hosted_invoice_url, "_blank");
+            }
+          }}
+        >
+          <Item className="col-span-3">
+            {invoice.product_ids
+              .map((p: string) => {
+                return products.find((product: Product) => product.id === p)
+                  ?.name;
+              })
+              .join(", ")}
+          </Item>
+          <Item className="col-span-3">
+            {invoice.total.toFixed(2)} {invoice.currency.toUpperCase()}
+            {getTotalDiscountAmount(invoice) > 0 && (
               <span className="text-t3">
                 {" "}
-                {formatUnixToDateTime(invoice.created_at).time}{" "}
+                (-{getTotalDiscountAmount(invoice).toFixed(2)})
               </span>
-            </TableCell>
-            <TableCell></TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+            )}
+          </Item>
+          <Item className="col-span-3">{invoice.status}</Item>
+          <Item className="col-span-3 text-xs">
+            {formatUnixToDateTime(invoice.created_at).date}
+            <span className="text-t3 ">
+              {" "}
+              {formatUnixToDateTime(invoice.created_at).time}{" "}
+            </span>
+          </Item>
+          <Item className="col-span-1" />
+        </Row>
+      ))}
+    </div>
   );
 };

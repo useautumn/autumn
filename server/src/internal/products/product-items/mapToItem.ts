@@ -88,6 +88,8 @@ export const toFeaturePriceItem = ({
     created_at: ent.created_at,
     entitlement_id: ent.id,
     price_id: price.id,
+
+    price_config: price.config,
   };
 };
 
@@ -103,5 +105,7 @@ export const toPriceItem = ({ price }: { price: Price }) => {
 
     price_id: price.id,
     created_at: price.created_at,
+
+    price_config: price.config,
   };
 };

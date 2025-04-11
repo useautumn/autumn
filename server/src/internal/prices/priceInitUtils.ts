@@ -118,6 +118,17 @@ const validatePrice = (
   };
 };
 
+export const tiersAreSame = (tiers1: any[], tiers2: any[]) => {
+  if (tiers1.length !== tiers2.length) return false;
+  for (let i = 0; i < tiers1.length; i++) {
+    let tier1 = tiers1[i];
+    let tier2 = tiers2[i];
+    if (tier1.to !== tier2.to) return false;
+    if (tier1.amount !== tier2.amount) return false;
+  }
+  return true;
+};
+
 export const pricesAreSame = (
   price1: Price,
   price2: Price,
@@ -189,7 +200,7 @@ export const pricesAreSame = (
         message: `Feature ID different: ${usageConfig1.feature_id} !== ${usageConfig2.feature_id}`,
       },
       usage_tiers: {
-        condition: !compareObjects(
+        condition: !tiersAreSame(
           usageConfig1.usage_tiers,
           usageConfig2.usage_tiers
         ),

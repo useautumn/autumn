@@ -70,21 +70,10 @@ export const ManageProduct = ({
             </AdminHover>
           </div>
         </div>
-        <div className="flex items-center gap-2 col-span-8">
-          {customerData && (
-            <Badge className="flex items-center gap-1 w-fit text-xs text-lime-600 bg-lime-50 border border-lime-200 hover:bg-lime-100">
-              <span className="">
-                Managing <span className="font-bold">{product.name}</span> for
-              </span>
-              <span className="">
-                <span className="font-bold">{customerData.customer.name}</span>
-              </span>
-            </Badge>
-          )}
 
-          {/* {!customerData && <CountAndMigrate />} */}
+        {/* {!customerData && <CountAndMigrate />} */}
 
-          <Select
+        {/* <Select
             value={version ? version.toString() : product.version.toString()}
             onValueChange={async (value) => {
               navigate(
@@ -111,12 +100,10 @@ export const ManageProduct = ({
                   </SelectItem>
                 ))}
             </SelectContent>
-          </Select>
-
-          {!customerData && (
+          </Select> */}
+        {/* {!customerData && (
             <EditProductToolbar product={product} className="text-t2" />
-          )}
-        </div>
+          )} */}
       </div>
 
       <div className="flex flex-col gap-10">
