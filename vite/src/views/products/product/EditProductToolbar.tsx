@@ -10,7 +10,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-import { Product } from "@autumn/shared";
+import { ProductV2 } from "@autumn/shared";
 
 import { ProductService } from "@/services/products/ProductService";
 import { useNavigate } from "react-router";
@@ -24,7 +24,7 @@ export const EditProductToolbar = ({
   product,
 }: {
   className?: string;
-  product: Product;
+  product: ProductV2;
 }) => {
   const { mutate, env, numVersions, version } = useProductContext();
   const axiosInstance = useAxiosInstance({ env });

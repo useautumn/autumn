@@ -33,6 +33,7 @@ export const handleCreateCheckout = async ({
   });
 
   // Get stripeItems
+
   const itemSets = await getStripeSubItems({
     attachParams,
     isCheckout: true,

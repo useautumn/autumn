@@ -67,3 +67,11 @@ export const getRedirectUrl = (path: string, env: AppEnv) => {
     return path;
   }
 };
+
+export const notNullish = (value: any) => {
+  return value !== null && value !== undefined;
+};
+
+export const nullish = (value: any) => {
+  return value === null || value === undefined;
+};

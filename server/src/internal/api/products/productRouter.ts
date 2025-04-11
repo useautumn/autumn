@@ -1,31 +1,16 @@
 import { ProductService } from "@/internal/products/ProductService.js";
-import { generateId, notNullish } from "@/utils/genUtils.js";
+
 import { Router } from "express";
 import {
   AppEnv,
   CreateFeatureSchema,
   CreateProductSchema,
-  Organization,
-  Product,
-  UpdateProduct,
-  UpdateProductSchema,
 } from "@autumn/shared";
 
-import RecaseError, {
-  formatZodError,
-  handleRequestError,
-} from "@/utils/errorUtils.js";
-
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
-
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { deleteStripeProduct } from "@/external/stripe/stripeProductUtils.js";
-
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
-import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { initNewFeature } from "../features/featureApiRouter.js";
 import {
   checkStripeProductExists,
@@ -34,8 +19,11 @@ import {
 } from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { handleUpdateProduct } from "./handleUpdateProduct.js";
+
+import {
+  handleUpdateProduct,
+  handleUpdateProductV2,
+} from "./handleUpdateProduct.js";
 import { handleDeleteProduct } from "./handleDeleteProduct.js";
 
 export const productApiRouter = Router();
@@ -105,7 +93,7 @@ productApiRouter.post("", async (req: any, res) => {
 
 productApiRouter.delete("/:productId", handleDeleteProduct);
 
-productApiRouter.post("/:productId", handleUpdateProduct);
+productApiRouter.post("/:productId", handleUpdateProductV2);
 
 productApiRouter.post("/:productId/copy", async (req: any, res) => {
   const { productId: fromProductId } = req.params;
