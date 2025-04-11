@@ -28,6 +28,7 @@ rewardRouter.post("", async (req: any, res: any) => {
       reward: rewardData,
       orgId,
       env,
+      internalId: rewardBody.internal_id,
     });
 
     if (getRewardCat(newReward) === RewardCategory.Discount) {
@@ -136,13 +137,12 @@ rewardRouter.delete("/:id", async (req: any, res: any) => {
   }
 });
 
-rewardRouter.post("/:id", async (req: any, res: any) => {
+rewardRouter.post("/:internalId", async (req: any, res: any) => {
   try {
-    const { id } = req.params;
+    const { internalId } = req.params;
     const { orgId, env } = req;
-    const couponBody = req.body;
+    const rewardBody = req.body;
 
-    console.log("Reward body", couponBody);
     const org = await OrgService.getFromReq(req);
     const stripeCli = createStripeCli({
       org,
@@ -151,27 +151,29 @@ rewardRouter.post("/:id", async (req: any, res: any) => {
 
     const prices = await PriceService.getPricesFromIds({
       sb: req.sb,
-      priceIds: couponBody.price_ids,
+      priceIds: rewardBody.price_ids,
     });
 
     // 1. Delete old prices from stripe
-    await stripeCli.coupons.del(id);
+    await stripeCli.coupons.del(internalId);
 
-    // 2. Create new coupon
-    await createStripeCoupon({
-      reward: couponBody,
-      stripeCli,
-      org,
-      prices,
-    });
+    let rewardCat = getRewardCat(rewardBody);
+    if (rewardCat !== RewardCategory.Discount) {
+      await createStripeCoupon({
+        reward: rewardBody,
+        stripeCli,
+        org,
+        prices,
+      });
+    }
 
     // 3. Update coupon in db
     const updatedCoupon = await RewardService.update({
       sb: req.sb,
-      internalId: id,
+      internalId,
       env,
       orgId,
-      update: couponBody,
+      update: rewardBody,
     });
 
     res.status(200).json(updatedCoupon);

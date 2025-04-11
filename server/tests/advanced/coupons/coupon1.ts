@@ -5,7 +5,7 @@ import { getPriceForOverage } from "@/internal/prices/priceUtils.js";
 import { Customer } from "@autumn/shared";
 import { expect } from "chai";
 import chalk from "chalk";
-import { addDays, addHours, addMonths, format } from "date-fns";
+import { addHours, addMonths } from "date-fns";
 import Stripe from "stripe";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { features, products, rewards } from "tests/global.js";
@@ -29,7 +29,7 @@ describe(
     let customer: Customer;
     let testClockId: string;
 
-    let couponAmount = rewards.rolloverAll.discount_value;
+    let couponAmount = rewards.rolloverAll.discount_config.discount_value;
 
     before(async function () {
       const { testClockId: testClockId1, customer: customer1 } =

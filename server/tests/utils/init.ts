@@ -14,6 +14,7 @@ import {
   FreeTrial,
   Organization,
   PriceType,
+  RewardReceivedBy,
   RewardTriggerEvent,
   RewardType,
 } from "@autumn/shared";
@@ -339,6 +340,7 @@ export const initReward = ({
   onlyUsagePrices = false,
   productIds,
   applyToAll = false,
+  freeProductId,
 }: {
   id: string;
   type?: RewardType;
@@ -349,19 +351,36 @@ export const initReward = ({
   onlyUsagePrices?: boolean;
   productIds?: string[];
   applyToAll?: boolean;
+  freeProductId?: string;
 }): any => {
-  return {
-    id,
-    name: keyToTitle(id),
-    type,
-    discount_value: discountValue,
-    duration_type: durationType,
-    duration_value: durationValue,
-    should_rollover: rollover,
-    apply_to_all: applyToAll,
-    only_usage_prices: onlyUsagePrices,
-    product_ids: productIds,
-  };
+  if (
+    type == RewardType.PercentageDiscount ||
+    type == RewardType.FixedDiscount
+  ) {
+    return {
+      id,
+      name: keyToTitle(id),
+      type,
+
+      only_usage_prices: onlyUsagePrices,
+      product_ids: productIds,
+
+      discount_config: {
+        discount_value: discountValue,
+        duration_type: durationType,
+        duration_value: durationValue,
+        should_rollover: rollover,
+        apply_to_all: applyToAll,
+      },
+    };
+  } else if (type == RewardType.FreeProduct) {
+    return {
+      id,
+      name: keyToTitle(id),
+      type,
+      free_product_id: freeProductId,
+    };
+  }
 };
 
 export const initRewardProgram = ({
@@ -370,12 +389,14 @@ export const initRewardProgram = ({
   productIds = [],
   internalRewardId,
   maxRedemptions = 2,
+  receivedBy = RewardReceivedBy.Referrer,
 }: {
   id: string;
   productIds?: string[];
   internalRewardId: string;
   when?: RewardTriggerEvent;
   maxRedemptions?: number;
+  receivedBy?: RewardReceivedBy;
 }): any => {
   return {
     id,
@@ -383,5 +404,6 @@ export const initRewardProgram = ({
     product_ids: productIds,
     internal_reward_id: internalRewardId,
     max_redemptions: maxRedemptions,
+    received_by: receivedBy,
   };
 };

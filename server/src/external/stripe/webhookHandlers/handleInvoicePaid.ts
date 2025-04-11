@@ -298,9 +298,12 @@ const handleInvoicePaidDiscount = async ({
         expand: ["applies_to"],
       });
 
+      // console.log("Total discount amounts", totalDiscountAmounts);
+      // console.log("Autumn reward", autumnReward);
+
       // 1. New amount:
-      const autumnDiscountConfig = autumnReward.discount_config!;
-      const curAmount = autumnDiscountConfig.discount_value;
+      // const autumnDiscountConfig = autumnReward.discount_config!;
+      const curAmount = discount.coupon.amount_off;
 
       const amountUsed = totalDiscountAmounts?.find(
         (item) => item.discount === discount.id

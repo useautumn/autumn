@@ -28,7 +28,7 @@ const PromoCodeSchema = z.object({
   code: z.string(),
 });
 
-const DiscountConfigSchema = z.object({
+export const DiscountConfigSchema = z.object({
   discount_value: z.number(),
   duration_type: z.nativeEnum(CouponDurationType),
   duration_value: z.number(),

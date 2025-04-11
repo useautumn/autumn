@@ -1,20 +1,43 @@
+import RecaseError from "@/utils/errorUtils.js";
 import { generateId, nullish } from "@/utils/genUtils.js";
 import {
   Reward,
   CreateReward,
   RewardType,
   RewardCategory,
+  ErrCode,
+  DiscountConfigSchema,
 } from "@autumn/shared";
 
 export const constructReward = ({
+  internalId,
   reward,
   orgId,
   env,
 }: {
+  internalId?: string;
   reward: CreateReward;
   orgId: string;
   env: string;
 }) => {
+  if (!reward.id || !reward.name) {
+    throw new RecaseError({
+      message: "Reward ID and name are required",
+      code: ErrCode.InvalidReward,
+    });
+  }
+
+  if (reward.type === RewardType.FreeProduct && !reward.free_product_id) {
+    throw new RecaseError({
+      message: "Select a free product",
+      code: ErrCode.InvalidReward,
+    });
+  }
+
+  if (getRewardCat(reward as Reward) === RewardCategory.Discount) {
+    DiscountConfigSchema.parse(reward.discount_config);
+  }
+
   let promoCodes = reward.promo_codes.filter((promoCode) => {
     return promoCode.code.length > 0;
   });
@@ -35,7 +58,7 @@ export const constructReward = ({
   let newReward = {
     ...reward,
     ...configData,
-    internal_id: generateId("rew"),
+    internal_id: internalId || generateId("rew"),
     created_at: Date.now(),
     org_id: orgId,
     env,
