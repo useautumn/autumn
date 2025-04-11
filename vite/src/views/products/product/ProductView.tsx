@@ -8,7 +8,12 @@ import { ProductContext } from "./ProductContext";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { ManageProduct } from "./ManageProduct";
-import { AppEnv, FrontendProduct, UpdateProductSchema } from "@autumn/shared";
+import {
+  AppEnv,
+  FrontendProduct,
+  ProductV2,
+  UpdateProductSchema,
+} from "@autumn/shared";
 import { toast } from "sonner";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
@@ -32,8 +37,8 @@ function ProductView({ env }: { env: AppEnv }) {
   const axiosInstance = useAxiosInstance({ env });
   const initialProductRef = useRef<FrontendProduct | null>(null);
 
-  const [product, setProduct] = useState<FrontendProduct | null>(null);
-  const [showFreeTrial, setShowFreeTrial] = useState(!!product?.free_trial);
+  const [product, setProduct] = useState<ProductV2 | null>(null);
+  const [showFreeTrial, setShowFreeTrial] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
@@ -51,30 +56,37 @@ function ProductView({ env }: { env: AppEnv }) {
   //this is to make sure pricing for unlimited entitlements can't be applied
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
     useState<"unlimited" | number>(0);
+  const [originalProduct, setOriginalProduct] = useState<ProductV2 | null>(
+    null
+  );
 
   useEffect(() => {
     if (data?.product) {
       setProduct(data.product);
-
-      initialProductRef.current = data.product;
+      setOriginalProduct(structuredClone(data.product));
     }
+
     setShowFreeTrial(!!data?.product?.free_trial);
   }, [data]);
 
   useEffect(() => {
-    if (!initialProductRef.current || !product) {
+    if (!originalProduct || !product) {
       setHasChanges(false);
       return;
     }
 
+    console.log("Original product:", originalProduct.items);
+    console.log("Current product:", product.items);
+
     const hasChanged =
-      JSON.stringify(product) !== JSON.stringify(initialProductRef.current);
+      JSON.stringify(product) !== JSON.stringify(originalProduct);
     setHasChanges(hasChanged);
   }, [product]);
 
   const isNewProduct =
-    initialProductRef.current?.entitlements?.length === 0 &&
-    initialProductRef.current?.prices?.length === 0 &&
+    // initialProductRef.current?.entitlements?.length === 0 &&
+    // initialProductRef.current?.prices?.length === 0 &&
+    initialProductRef.current?.items?.length === 0 &&
     !initialProductRef.current?.free_trial;
 
   const actionState = {
@@ -103,8 +115,7 @@ function ProductView({ env }: { env: AppEnv }) {
     try {
       await ProductService.updateProduct(axiosInstance, product.id, {
         ...UpdateProductSchema.parse(product),
-        prices: product.prices,
-        entitlements: product.entitlements,
+        items: product.items,
         free_trial: product.free_trial,
       });
 
@@ -168,7 +179,7 @@ function ProductView({ env }: { env: AppEnv }) {
             <div className="flex">
               <div className="flex-1 w-full min-w-sm">
                 <ManageProduct
-                  product={product}
+                  // product={product}
                   showFreeTrial={showFreeTrial}
                   setShowFreeTrial={setShowFreeTrial}
                 />

@@ -15,6 +15,7 @@ import { getLatestProducts } from "./productUtils.js";
 import { CusProdReadService } from "../customers/products/CusProdReadService.js";
 import { MigrationService } from "../migrations/MigrationService.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
+import { mapToProductV2 } from "./productV2Utils.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -156,7 +157,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
     });
 
     res.status(200).send({
-      product,
+      product: mapToProductV2(product),
       entitlements,
       prices,
       features,

@@ -30,7 +30,7 @@ export const SelectItemFeature = () => {
           //   internal_feature_id: value,
           // });
         }}
-        // disabled={isUpdate}
+        disabled={isUpdate}
       >
         <SelectTrigger>
           <SelectValue placeholder="Select a feature" />

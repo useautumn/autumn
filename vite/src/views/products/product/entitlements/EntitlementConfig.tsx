@@ -111,6 +111,10 @@ export const EntitlementConfig = ({
     priceConfig.type == PriceType.Fixed || buttonType == "price" ? false : true
   );
 
+  const [showAllowance, setShowAllowance] = useState(
+    priceConfig.type == PriceType.Fixed || buttonType == "price" ? false : true
+  );
+
   // for the add cycle button
   // const [priceConfig, setPriceConfig] = useState<any>(
   //   getDefaultPriceConfig(PriceType.Usage) // default price config
@@ -160,20 +164,20 @@ export const EntitlementConfig = ({
     //translate pricing usage tiers into entitlement allowance config when saving new feature
     console.log(selectedFeature?.name, "priceConfig:", priceConfig);
 
-    let newAllowance: number | "unlimited";
-    if (fields.allowance_type == AllowanceType.Unlimited) {
-      newAllowance = "unlimited";
-    } else if (
-      priceConfig.usage_tiers?.[0].amount == 0 &&
-      priceConfig.usage_tiers?.[0].to > 0 // to prevent for a weird bug with 0 price
-    ) {
-      newAllowance = Number(priceConfig.usage_tiers?.[0].to);
-      if (isNaN(newAllowance)) {
-        newAllowance = 0;
-      }
-    } else {
-      newAllowance = 0;
-    }
+    // let newAllowance: number | "unlimited";
+    // if (fields.allowance_type == AllowanceType.Unlimited) {
+    //   newAllowance = "unlimited";
+    // } else if (
+    //   priceConfig.usage_tiers?.[0].amount == 0 &&
+    //   priceConfig.usage_tiers?.[0].to > 0 // to prevent for a weird bug with 0 price
+    // ) {
+    //   newAllowance = Number(priceConfig.usage_tiers?.[0].to);
+    //   if (isNaN(newAllowance)) {
+    //     newAllowance = 0;
+    //   }
+    // } else {
+    //   newAllowance = 0;
+    // }
 
     let newEntInterval;
     if (showPrice && showCycle) {
@@ -198,8 +202,8 @@ export const EntitlementConfig = ({
           fields.entity_feature_id && showPerEntity
             ? fields.entity_feature_id
             : null,
-        // allowance: fields.allowance ? Number(fields.allowance) : 0,
-        allowance: newAllowance,
+        allowance: Number(fields.allowance) ?? 0,
+        // allowance: newAllowance,
       });
 
       const originalEnt = originalEntitlement ? originalEntitlement : null;
@@ -318,9 +322,29 @@ export const EntitlementConfig = ({
 
               <div className="flex flex-col gap-2">
                 <div className="flex flex-col gap-6">
-                  <div className="flex flex-col">
+                  {!showAllowance && (
+                    <ToggleDisplayButton
+                      label="Allowance"
+                      show={showAllowance}
+                      onClick={() => setShowAllowance(!showAllowance)}
+                      className="text-sm animate-in fade-in fade-out duration-400"
+                    >
+                      {/* <PlusIcon className="w-4 h-4 text-t3" /> */}
+                      Included Usage
+                    </ToggleDisplayButton>
+                  )}
+                  {/* {showAllowance && ( */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300 ease-in-out opacity-0",
+                      showAllowance
+                        ? "flex flex-col opacity-100 max-w-screen duration-600"
+                        : "max-w-0 overflow-hidden"
+                    )}
+                  >
                     <FieldLabel className="flex items-center gap-2">
-                      {showPrice ? "Pricing" : "Included Usage"}
+                      {/* {showPrice ? "Pricing" : "Included Usage"} */}
+                      Included Usage
                       <Tooltip delayDuration={400}>
                         <TooltipTrigger asChild>
                           <InfoIcon className="w-3 h-3 text-t3/50" />
@@ -331,93 +355,75 @@ export const EntitlementConfig = ({
                         </TooltipContent>
                       </Tooltip>
                     </FieldLabel>
-                    {showPrice ? (
+                    <div className="flex w-full h-fit gap-2">
+                      <Input
+                        placeholder="eg. 100"
+                        className=""
+                        disabled={
+                          fields.allowance_type == AllowanceType.Unlimited
+                        }
+                        value={fields.allowance}
+                        type={
+                          fields.allowance_type === AllowanceType.Unlimited
+                            ? "text"
+                            : "number"
+                        }
+                        onChange={(e) => {
+                          setFields({
+                            ...fields,
+                            allowance: e.target.value,
+                          });
+                        }}
+                      />
+                      <ToggleDisplayButton
+                        label="Unlimited"
+                        show={fields.allowance_type == AllowanceType.Unlimited}
+                        className="h-8"
+                        onClick={() => {
+                          setShowPrice(false);
+                          fields.allowance_type == AllowanceType.Unlimited
+                            ? setFields({
+                                ...fields,
+                                allowance: "",
+                                allowance_type: AllowanceType.Fixed,
+                              })
+                            : (setFields({
+                                ...fields,
+                                allowance_type: AllowanceType.Unlimited,
+                                allowance: "unlimited",
+                              }),
+                              setShowCycle(false));
+                        }}
+                      >
+                        ♾️
+                      </ToggleDisplayButton>
+                      {showAllowance && (
+                        <Button
+                          isIcon
+                          size="sm"
+                          variant="ghost"
+                          className="w-fit text-t3"
+                          onClick={() => setShowAllowance(false)}
+                        >
+                          <X size={12} className="text-t3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {/* )} */}
+                  {showPrice && (
+                    <div className="flex flex-col">
+                      <FieldLabel className="flex items-center gap-2">
+                        Pricing
+                      </FieldLabel>
                       <TieredPrice
                         selectedFeature={selectedFeature && selectedFeature}
                         config={priceConfig}
                         setShowPrice={setShowPrice}
                         setConfig={setPriceConfig}
                       />
-                    ) : (
-                      <div className="flex w-full h-fit gap-2">
-                        <Input
-                          placeholder="eg. 100"
-                          className=""
-                          disabled={
-                            fields.allowance_type == AllowanceType.Unlimited
-                          }
-                          value={priceConfig.usage_tiers?.[0]?.to ?? ""}
-                          type={
-                            fields.allowance_type === AllowanceType.Unlimited
-                              ? "text"
-                              : "number"
-                          }
-                          onChange={(e) => {
-                            if (Number(e.target.value)) {
-                              setPriceConfig({
-                                ...priceConfig,
-                                usage_tiers: [
-                                  {
-                                    from: 0,
-                                    to: Number(e.target.value),
-                                    amount: 0,
-                                  },
-                                ],
-                              });
-                            } else {
-                              setPriceConfig({
-                                ...priceConfig,
-                                usage_tiers: [
-                                  {
-                                    from: 0,
-                                    to: e.target.value,
-                                    amount: 0,
-                                  },
-                                ],
-                              });
-                            }
-                          }}
-                        />
-                        <ToggleDisplayButton
-                          label="Unlimited"
-                          show={
-                            fields.allowance_type == AllowanceType.Unlimited
-                          }
-                          className="h-8"
-                          onClick={() => {
-                            fields.allowance_type == AllowanceType.Unlimited
-                              ? (setFields({
-                                  ...fields,
-                                  allowance_type: AllowanceType.Fixed,
-                                }),
-                                setPriceConfig({
-                                  ...priceConfig,
-                                  usage_tiers: [
-                                    { from: 0, to: "", amount: 0.0 },
-                                  ],
-                                }))
-                              : (setFields({
-                                  ...fields,
-                                  allowance_type: AllowanceType.Unlimited,
-                                }),
-                                setPriceConfig({
-                                  ...priceConfig,
-                                  usage_tiers: [
-                                    {
-                                      from: 0,
-                                      to: "unlimited",
-                                      amount: 0.0,
-                                    },
-                                  ],
-                                }),
-                                setShowCycle(false));
-                          }}
-                        >
-                          ♾️
-                        </ToggleDisplayButton>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                   {(showPerEntity || showCycle || showPrice) && (
                     <div className="flex gap-2 transition-all duration-200 ease-in-out animate-in fade-in fade-out">
                       {showPerEntity && (

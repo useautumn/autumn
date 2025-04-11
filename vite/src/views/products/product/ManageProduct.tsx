@@ -24,7 +24,12 @@ import { Button } from "@/components/ui/button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { AppEnv, MigrationJob, MigrationJobStep } from "@autumn/shared";
+import {
+  AppEnv,
+  MigrationJob,
+  MigrationJobStep,
+  ProductV2,
+} from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import {
   Tooltip,
@@ -35,22 +40,21 @@ import {
 import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
 import ConfirmMigrateDialog from "./ConfirmMigrateDialog";
 import { CreateProductItem } from "./product-item/CreateProductItem";
+import { ProductItemTable } from "./product-item/ProductItemTable";
 
 export const ManageProduct = ({
-  product,
   customerData,
   showFreeTrial,
   setShowFreeTrial,
   version,
 }: {
-  product: any;
   customerData?: any;
   showFreeTrial: boolean;
   setShowFreeTrial: (showFreeTrial: boolean) => void;
   version?: number;
 }) => {
   const env = useEnv();
-  let { numVersions, count } = useProductContext();
+  let { numVersions, count, product } = useProductContext();
 
   const navigate = useNavigate();
 
@@ -66,7 +70,7 @@ export const ManageProduct = ({
             </AdminHover>
           </div>
         </div>
-        <div className="flex items-center gap-2 col-span-8 ">
+        <div className="flex items-center gap-2 col-span-8">
           {customerData && (
             <Badge className="flex items-center gap-1 w-fit text-xs text-lime-600 bg-lime-50 border border-lime-200 hover:bg-lime-100">
               <span className="">
@@ -77,6 +81,8 @@ export const ManageProduct = ({
               </span>
             </Badge>
           )}
+
+          {/* {!customerData && <CountAndMigrate />} */}
 
           <Select
             value={version ? version.toString() : product.version.toString()}
@@ -106,30 +112,31 @@ export const ManageProduct = ({
                 ))}
             </SelectContent>
           </Select>
-          {/* {!customerData && (
+
+          {!customerData && (
             <EditProductToolbar product={product} className="text-t2" />
-          )} */}
+          )}
         </div>
       </div>
+
       <div className="flex flex-col gap-10">
-        <CreateProductItem />
-        <div className="flex flex-col">
+        <ProductItemTable />
+        {/* <div className="flex flex-col">
           <ProductEntitlementTable entitlements={product.entitlements} />
         </div>
         <div className="flex flex-col">
           {product.prices.length > 0 && (
             <ProductPricingTable prices={product.prices} />
           )}
-        </div>
+        </div> */}
       </div>
-      {/* <CreateEntitlement /> */}
-      {/* <CreatePrice /> */}
-      {/* {showFreeTrial && (
+
+      {showFreeTrial && (
         <div className="flex flex-col gap-4">
           <p className="text-md text-t2 font-medium">Free Trial</p>
           <FreeTrialView product={product} />
         </div>
-      )} */}
+      )}
     </div>
   );
 };

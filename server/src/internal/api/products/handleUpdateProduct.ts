@@ -1,9 +1,4 @@
-import {
-  ErrCode,
-  FullProduct,
-  Organization,
-  UpdateProductSchema,
-} from "@autumn/shared";
+import { ErrCode, Organization, UpdateProductSchema } from "@autumn/shared";
 import { UpdateProduct } from "@autumn/shared";
 import { Product } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -18,6 +13,8 @@ import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { handleVersionProduct } from "./handleVersionProduct.js";
 import { productsAreDifferent } from "@/internal/products/productUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 
 export const handleUpdateProductDetails = async ({
   newProduct,
@@ -218,3 +215,79 @@ export const handleUpdateProduct = async (req: any, res: any) => {
     handleRequestError({ req, error, res, action: "Update product" });
   }
 };
+
+// Update product v2
+export const handleUpdateProductV2 = async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "Update product",
+    handler: async () => {
+      const { productId } = req.params;
+      const { sb, orgId, env, logtail: logger } = req;
+
+      const [features, org, fullProduct] = await Promise.all([
+        FeatureService.getFromReq(req),
+        OrgService.getFullOrg({
+          sb,
+          orgId,
+        }),
+        ProductService.getFullProduct({
+          sb,
+          productId,
+          orgId,
+          env,
+        }),
+      ]);
+
+      if (!fullProduct) {
+        throw new RecaseError({
+          message: "Product not found",
+          code: ErrCode.ProductNotFound,
+          statusCode: 404,
+        });
+      }
+
+      // 1. Update product details
+      const cusProductsCurVersion =
+        await CusProductService.getByInternalProductId(
+          sb,
+          fullProduct.internal_id
+        );
+
+      let cusProductExists = cusProductsCurVersion.length > 0;
+
+      await handleUpdateProductDetails({
+        sb,
+        curProduct: fullProduct,
+        newProduct: UpdateProductSchema.parse(req.body),
+        org,
+        cusProductExists,
+      });
+
+      const { items, free_trial } = req.body;
+
+      await handleNewProductItems({
+        sb,
+        curPrices: fullProduct.prices,
+        curEnts: fullProduct.entitlements,
+        newItems: items,
+        features,
+        product: fullProduct,
+        logger,
+      });
+
+      if (free_trial !== undefined) {
+        await handleNewFreeTrial({
+          sb,
+          curFreeTrial: fullProduct.free_trial,
+          newFreeTrial: free_trial,
+          internalProductId: fullProduct.internal_id,
+          isCustom: false,
+        });
+      }
+
+      res.status(200).send({ message: "Product updated" });
+      return;
+    },
+  });
