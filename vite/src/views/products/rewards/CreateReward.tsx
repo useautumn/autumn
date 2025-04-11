@@ -67,12 +67,12 @@ function CreateReward() {
           className="w-full"
           startIcon={<PlusIcon size={15} />}
         >
-          Create Coupon
+          Create Reward
         </Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>
-          <DialogTitle>Create Coupon</DialogTitle>
+          <DialogTitle>Create Reward</DialogTitle>
         </DialogHeader>
         <RewardConfig reward={reward as any} setReward={setReward as any} />
         <DialogFooter>

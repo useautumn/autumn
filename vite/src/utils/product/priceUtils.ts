@@ -3,6 +3,7 @@ import {
   BillingInterval,
   BillWhen,
   EntitlementWithFeature,
+  Product,
 } from "@autumn/shared";
 
 import { FixedPriceConfig, Price, UsagePriceConfig } from "@autumn/shared";
@@ -58,6 +59,12 @@ export const getBillingUnits = (
 
 export const pricesOnlyOneOff = (prices: Price[]) => {
   if (prices.length == 0) return false;
+  return prices.every((price) => {
+    return price.config?.interval == BillingInterval.OneOff;
+  });
+};
+
+export const isFreeProduct = (prices: Price[]) => {
   return prices.every((price) => {
     return price.config?.interval == BillingInterval.OneOff;
   });

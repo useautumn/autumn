@@ -10,11 +10,13 @@ import {
   CouponDurationType,
   RewardType,
   Product,
+  FullProduct,
 } from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import { DiscountConfig } from "./DiscountConfig";
 import { notNullish } from "@/utils/genUtils";
 import { defaultDiscountConfig } from "./defaultRewardModels";
+import { isFreeProduct } from "@/utils/product/priceUtils";
 
 export const RewardConfig = ({
   reward,
@@ -103,23 +105,44 @@ export const RewardConfig = ({
       </div>
       {reward.type === RewardType.FreeProduct ? (
         <div>
-          <FieldLabel>Product</FieldLabel>
+          <FieldLabel description="Select a free add-on product to give away">
+            Product
+          </FieldLabel>
           <Select
             value={reward.free_product_id || undefined}
             onValueChange={(value) =>
               setReward({ ...reward, free_product_id: value })
             }
           >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a product" />
-            </SelectTrigger>
-            <SelectContent>
-              {products.map((product: Product) => (
-                <SelectItem key={product.id} value={product.id}>
-                  {product.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
+            {(() => {
+              const freeAddOns = products
+                .filter((product: FullProduct) => product.is_add_on)
+                .filter((product: FullProduct) =>
+                  isFreeProduct(product.prices)
+                );
+
+              let empty = freeAddOns.length === 0;
+              return (
+                <>
+                  <SelectTrigger disabled={empty}>
+                    <SelectValue
+                      placeholder={
+                        empty
+                          ? "Create a free add-on product first"
+                          : "Select a product"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {freeAddOns.map((product: Product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </>
+              );
+            })()}
           </Select>
         </div>
       ) : notNullish(reward.type) ? (

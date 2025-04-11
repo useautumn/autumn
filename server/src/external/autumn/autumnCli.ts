@@ -22,14 +22,14 @@ export class Autumn {
   public headers: Record<string, string>;
   public baseUrl: string;
 
-  constructor(apiKey?: string) {
+  constructor(apiKey?: string, baseUrl?: string) {
     this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
     this.headers = {
       Authorization: `Bearer ${this.apiKey}`,
       "Content-Type": "application/json",
     };
     // this.baseUrl = "https://api.useautumn.com/v1";
-    this.baseUrl = "http://localhost:8080/v1";
+    this.baseUrl = baseUrl || "http://localhost:8080/v1";
   }
 
   async get(path: string) {

@@ -91,36 +91,47 @@ export const CustomerEntitlementsList = ({
   //   return productA.product.name.localeCompare(productB.product.name);
   // });
 
-  const sortedEntitlements = filteredEntitlements
-  
+  const sortedEntitlements = filteredEntitlements;
+
   const handleSelectCusEntitlement = (cusEnt: FullCustomerEntitlement) => {
     setSelectedCusEntitlement(cusEnt);
   };
 
   const getAdminHoverTexts = (cusEnt: FullCustomerEntitlement) => {
     let entitlement = cusEnt.entitlement;
-    let featureEntities = entities.filter((e: any) => e.feature_id === entitlement.feature.id);
-    
-    let hoverTexts = [{
-      key: "Cus Ent ID",
-      value: cusEnt.id,
-    }]
+    let featureEntities = entities.filter(
+      (e: any) => e.feature_id === entitlement.feature.id
+    );
+
+    let hoverTexts = [
+      {
+        key: "Cus Ent ID",
+        value: cusEnt.id,
+      },
+    ];
 
     if (featureEntities.length > 0) {
       hoverTexts.push({
         key: "Entities",
-        value: featureEntities.map((e: any) => `${e.id} (${e.name})${e.deleted ? " Deleted": ""}`).join("\n"),
-      })
+        value: featureEntities
+          .map((e: any) => `${e.id} (${e.name})${e.deleted ? " Deleted" : ""}`)
+          .join("\n"),
+      });
     } else if (cusEnt.entities && Object.keys(cusEnt.entities).length > 0) {
-      let mappedEntities = Object.keys(cusEnt.entities).map((e: any) => {
-        let entity = entities.find((ee: any) => ee.id === e);
-        let balance = cusEnt.entities![e].balance;
-        return `${entity.id} (${entity.name}): ${balance}`;
-      }).join("\n");
+      let mappedEntities = Object.keys(cusEnt.entities)
+        .map((e: any) => {
+          let entity = entities.find((ee: any) => ee.id === e);
+          if (!entity) {
+            return `${e}: Deleted`;
+          }
+          let balance = cusEnt.entities![e].balance;
+          return `${entity.id} (${entity.name}): ${balance}`;
+        })
+        .join("\n");
       hoverTexts.push({
         key: "Entities",
         value: mappedEntities,
-      })
+      });
     }
 
     return hoverTexts;

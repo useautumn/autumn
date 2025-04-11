@@ -45,6 +45,16 @@ export default function CustomerView({ env }: { env: AppEnv }) {
     env,
   });
 
+  const {
+    data: referrals,
+    isLoading: referralsLoading,
+    error: referralsError,
+    mutate: referralsMutate,
+  } = useAxiosSWR({
+    url: `/customers/${customer_id}/referrals`,
+    env,
+  });
+
   const [addCouponOpen, setAddCouponOpen] = useState(false);
 
   const [showExpired, setShowExpired] = useState(false);
@@ -84,6 +94,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
         env,
         cusMutate,
         setAddCouponOpen,
+        referrals,
       }}
     >
       <div className="flex flex-col gap-1">
@@ -108,7 +119,8 @@ export default function CustomerView({ env }: { env: AppEnv }) {
             <h2 className="flex text-lg text-t1 font-medium gap-2 w-full justify-start">
               {customer.name && (
                 <span className="min-w-0 max-w-[50%] truncate">
-                  <AdminHover texts={[
+                  <AdminHover
+                    texts={[
                       {
                         key: "Internal ID",
                         value: customer.internal_id,

@@ -24,6 +24,7 @@ export class RewardRedemptionService {
     withRewardProgram = false,
     internalRewardProgramId,
     triggerWhen,
+    limit,
   }: {
     sb: any;
     internalCustomerId: string;
@@ -32,6 +33,7 @@ export class RewardRedemptionService {
     withRewardProgram?: boolean;
     internalRewardProgramId?: string;
     triggerWhen?: RewardTriggerEvent;
+    limit?: number;
   }) {
     let query = sb
       .from("reward_redemptions")
@@ -56,7 +58,40 @@ export class RewardRedemptionService {
       query = query.eq("triggered", triggered);
     }
 
+    if (notNullish(limit)) {
+      query = query.limit(limit);
+    }
+
     const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getByReferrer({
+    sb,
+    internalCustomerId,
+    withCustomer = false,
+    limit = 100,
+  }: {
+    sb: any;
+    internalCustomerId: string;
+    withCustomer?: boolean;
+    limit?: number;
+  }) {
+    const { data, error } = await sb
+      .from("reward_redemptions")
+      .select(
+        `
+      *, referral_code:referral_codes!inner(*)
+      ${withCustomer ? ", customer:customers!inner(*)" : ""}
+      `
+      )
+      .eq("referral_code.internal_customer_id", internalCustomerId)
+      .limit(limit);
 
     if (error) {
       throw error;
