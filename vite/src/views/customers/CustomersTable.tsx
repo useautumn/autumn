@@ -30,6 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useCustomersContext } from "./CustomersContext";
+import { Item, Row } from "@/components/general/TableGrid";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
   customer_products: z.array(
@@ -162,58 +163,46 @@ export const CustomersTable = ({
   };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow className="w-full">
-          <TableHead className="w-full grid grid-cols-16 items-center">
-            <div className="col-span-3">Customer</div>
-            <div className="col-span-4">ID</div>
-            <div className="col-span-3">Email</div>
-            <div className="col-span-4">Products</div>
-            <div className="col-span-2">Created At</div>
-          </TableHead>
-          {/* <TableHead>Customer ID</TableHead>
+    <>
+      <Row type="header" className="grid-cols-17 ">
+        <Item className="col-span-3">Name</Item>
+        <Item className="col-span-3">ID</Item>
+        <Item className="col-span-3">Email</Item>
+        <Item className="col-span-5">Products</Item>
+        <Item className="col-span-3">Created At</Item>
+      </Row>
+
+      {/* <TableHead>Customer ID</TableHead>
           <TableHead>Email</TableHead>
           <TableHead>Products</TableHead>
           <TableHead>Created At</TableHead> */}
-          {/* <TableHead className="w-20"></TableHead> */}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {customers.map((customer, index) => (
-          <TableRow
-            key={index}
-            className="cursor-pointer"
-            // onClick={() => {
-            //   navigate(getRedirectUrl(`/customers/${customer.id}`, env));
-            // }}
+      {/* <TableHead className="w-20"></TableHead> */}
+      {customers.map((customer, index) => (
+        <>
+          <Link
+            to={getRedirectUrl(
+              `/customers/${customer.id || customer.internal_id}`,
+              env
+            )}
+            className="grid grid-cols-17 gap-2 items-center px-10 w-full text-sm h-8 cursor-default hover:bg-primary/5 text-t2 whitespace-nowrap"
           >
-            <TableCell className="!p-0">
-              <Link
-                to={getRedirectUrl(
-                  `/customers/${customer.id || customer.internal_id}`,
-                  env
-                )}
-                className="grid grid-cols-16 items-center h-full px-2 py-1"
-              >
-                <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>
-                <CustomTableCell className="font-mono" colSpan={4}>
-                  {customer.id}
-                </CustomTableCell>
-                <CustomTableCell colSpan={3}>{customer.email}</CustomTableCell>
-                <CustomTableCell colSpan={4}>
-                  {getCusProductsInfo(customer)}
-                </CustomTableCell>
-                <CustomTableCell colSpan={2}>
-                  {formatUnixToDateTime(customer.created_at).date}
-                  <span className="text-t3">
-                    {" "}
-                    {formatUnixToDateTime(customer.created_at).time}{" "}
-                  </span>
-                </CustomTableCell>
-              </Link>
-            </TableCell>
-            {/* <TableCell className="font-mono">{customer.id} </TableCell>
+            <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>
+            <CustomTableCell className="font-mono" colSpan={3}>
+              {customer.id}
+            </CustomTableCell>
+            <CustomTableCell colSpan={3}>{customer.email}</CustomTableCell>
+            <CustomTableCell colSpan={5}>
+              {getCusProductsInfo(customer)}
+            </CustomTableCell>
+            <CustomTableCell colSpan={3} className="">
+              {formatUnixToDateTime(customer.created_at).date}
+              <span className="text-t3">
+                {" "}
+                {formatUnixToDateTime(customer.created_at).time}{" "}
+              </span>
+            </CustomTableCell>
+          </Link>
+          {/* <TableCell className="font-mono">{customer.id} </TableCell>
             <TableCell>{customer.email} </TableCell>
             <TableCell>{getCusProductsInfo(customer)}</TableCell>
             <TableCell className="min-w-20 w-24">
@@ -223,13 +212,12 @@ export const CustomersTable = ({
                 {formatUnixToDateTime(customer.created_at).time}{" "}
               </span>
             </TableCell> */}
-            {/* <TableCell className="w-20">
+          {/* <TableCell className="w-20">
               <ProductRowToolbar product={product} />
             </TableCell> */}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </>
+      ))}
+    </>
   );
 };
 

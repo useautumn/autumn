@@ -327,90 +327,85 @@ export const EntitlementConfig = ({
                       label="Allowance"
                       show={showAllowance}
                       onClick={() => setShowAllowance(!showAllowance)}
-                      className="text-sm animate-in fade-in fade-out duration-400"
+                      className={cn("text-sm")}
                     >
                       {/* <PlusIcon className="w-4 h-4 text-t3" /> */}
                       Included Usage
                     </ToggleDisplayButton>
                   )}
-                  {/* {showAllowance && ( */}
-                  <div
-                    className={cn(
-                      "transition-all duration-300 ease-in-out opacity-0",
-                      showAllowance
-                        ? "flex flex-col opacity-100 max-w-screen duration-600"
-                        : "max-w-0 overflow-hidden"
-                    )}
-                  >
-                    <FieldLabel className="flex items-center gap-2">
-                      {/* {showPrice ? "Pricing" : "Included Usage"} */}
-                      Included Usage
-                      <Tooltip delayDuration={400}>
-                        <TooltipTrigger asChild>
-                          <InfoIcon className="w-3 h-3 text-t3/50" />
-                        </TooltipTrigger>
-                        <TooltipContent sideOffset={5} side="top">
-                          How much usage of this feature is included as part of
-                          this plan
-                        </TooltipContent>
-                      </Tooltip>
-                    </FieldLabel>
-                    <div className="flex w-full h-fit gap-2">
-                      <Input
-                        placeholder="eg. 100"
-                        className=""
-                        disabled={
-                          fields.allowance_type == AllowanceType.Unlimited
-                        }
-                        value={fields.allowance}
-                        type={
-                          fields.allowance_type === AllowanceType.Unlimited
-                            ? "text"
-                            : "number"
-                        }
-                        onChange={(e) => {
-                          setFields({
-                            ...fields,
-                            allowance: e.target.value,
-                          });
-                        }}
-                      />
-                      <ToggleDisplayButton
-                        label="Unlimited"
-                        show={fields.allowance_type == AllowanceType.Unlimited}
-                        className="h-8"
-                        onClick={() => {
-                          setShowPrice(false);
-                          fields.allowance_type == AllowanceType.Unlimited
-                            ? setFields({
-                                ...fields,
-                                allowance: "",
-                                allowance_type: AllowanceType.Fixed,
-                              })
-                            : (setFields({
-                                ...fields,
-                                allowance_type: AllowanceType.Unlimited,
-                                allowance: "unlimited",
-                              }),
-                              setShowCycle(false));
-                        }}
-                      >
-                        ♾️
-                      </ToggleDisplayButton>
-                      {showAllowance && (
-                        <Button
-                          isIcon
-                          size="sm"
-                          variant="ghost"
-                          className="w-fit text-t3"
-                          onClick={() => setShowAllowance(false)}
+                  {showAllowance && (
+                    <div className="animate-in fade-in duration-400 transition-all">
+                      <FieldLabel className="flex items-center gap-2">
+                        {/* {showPrice ? "Pricing" : "Included Usage"} */}
+                        Included Usage
+                        <Tooltip delayDuration={400}>
+                          <TooltipTrigger asChild>
+                            <InfoIcon className="w-3 h-3 text-t3/50" />
+                          </TooltipTrigger>
+                          <TooltipContent sideOffset={5} side="top">
+                            How much usage of this feature is included as part
+                            of this plan
+                          </TooltipContent>
+                        </Tooltip>
+                      </FieldLabel>
+                      <div className="flex w-full h-fit gap-2">
+                        <Input
+                          placeholder="eg. 100"
+                          className=""
+                          disabled={
+                            fields.allowance_type == AllowanceType.Unlimited
+                          }
+                          value={fields.allowance}
+                          type={
+                            fields.allowance_type === AllowanceType.Unlimited
+                              ? "text"
+                              : "number"
+                          }
+                          onChange={(e) => {
+                            setFields({
+                              ...fields,
+                              allowance: e.target.value,
+                            });
+                          }}
+                        />
+                        <ToggleDisplayButton
+                          label="Unlimited"
+                          show={
+                            fields.allowance_type == AllowanceType.Unlimited
+                          }
+                          className="h-8"
+                          onClick={() => {
+                            setShowPrice(false);
+                            fields.allowance_type == AllowanceType.Unlimited
+                              ? setFields({
+                                  ...fields,
+                                  allowance: "",
+                                  allowance_type: AllowanceType.Fixed,
+                                })
+                              : (setFields({
+                                  ...fields,
+                                  allowance_type: AllowanceType.Unlimited,
+                                  allowance: "unlimited",
+                                }),
+                                setShowCycle(false));
+                          }}
                         >
-                          <X size={12} className="text-t3" />
-                        </Button>
-                      )}
+                          ♾️
+                        </ToggleDisplayButton>
+                        {showAllowance && (
+                          <Button
+                            isIcon
+                            size="sm"
+                            variant="ghost"
+                            className="w-fit text-t3"
+                            onClick={() => setShowAllowance(false)}
+                          >
+                            <X size={12} className="text-t3" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  {/* )} */}
+                  )}
                   {showPrice && (
                     <div className="flex flex-col">
                       <FieldLabel className="flex items-center gap-2">

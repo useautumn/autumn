@@ -53,6 +53,7 @@ import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
+import ProductSidebar from "@/views/products/product/ProductSidebar";
 
 interface OptionValue {
   feature_id: string;
@@ -385,10 +386,10 @@ export default function CustomerProductView() {
         </DialogContent>
       </Dialog>
 
-      <div className="p-6 flex flex-col gap-4 max-w-[1048px]">
-        <div className="flex flex-col gap-2">
-          <Breadcrumb className="text-t3">
-            <BreadcrumbList className="text-t3 text-xs">
+      <div className="flex w-full">
+        <div className="flex flex-col gap-4 w-full">
+          <Breadcrumb className="text-t3 pt-6 pl-10 flex justify-center">
+            <BreadcrumbList className="text-t3 text-xs w-full">
               <BreadcrumbItem>
                 <BreadcrumbLink
                   className="cursor-pointer"
@@ -410,47 +411,42 @@ export default function CustomerProductView() {
               <BreadcrumbItem>{product.name}</BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          {product && (
-            <ManageProduct
-              product={product}
-              customerData={data}
-              showFreeTrial={false}
-              setShowFreeTrial={() => {}}
-              version={version ? parseInt(version) : product.version}
-            />
-          )}
+          <div className="flex">
+            <div className="flex-1 w-full min-w-sm">
+              {product && (
+                <ManageProduct
+                  product={product}
+                  customerData={data}
+                  showFreeTrial={false}
+                  setShowFreeTrial={() => {}}
+                  version={version ? parseInt(version) : product.version}
+                />
+              )}
+              {options.length > 0 && (
+                <ProductOptions
+                  options={options}
+                  setOptions={setOptions}
+                  oneTimePurchase={oneTimePurchase || false}
+                />
+              )}
+              <div className="flex justify-end gap-2 p-4">
+                <AddProductButton
+                  handleCreateProduct={handleCreateProduct}
+                  actionState={actionState}
+                  setUseInvoice={setUseInvoice}
+                />
+              </div>
+            </div>
+          </div>
         </div>
-        {options.length > 0 && (
-          <ProductOptions
+        <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+          <ProductSidebar
+            customerData={data}
             options={options}
             setOptions={setOptions}
             oneTimePurchase={oneTimePurchase || false}
           />
-        )}
-        <div className="flex justify-end gap-2">
-          {/* <ProductOptionsButton /> */}
-          <AddProductButton
-            handleCreateProduct={handleCreateProduct}
-            actionState={actionState}
-            setUseInvoice={setUseInvoice}
-          />
         </div>
-      </div>
-
-      {options.length > 0 && (
-        <ProductOptions
-          options={options}
-          setOptions={setOptions}
-          oneTimePurchase={oneTimePurchase || false}
-        />
-      )}
-      <div className="flex justify-end gap-2">
-        {/* <ProductOptionsButton /> */}
-        <AddProductButton
-          handleCreateProduct={handleCreateProduct}
-          actionState={actionState}
-          setUseInvoice={setUseInvoice}
-        />
       </div>
     </ProductContext.Provider>
   );

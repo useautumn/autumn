@@ -15,8 +15,19 @@ import { CreateFreeTrial } from "./free-trial/CreateFreeTrial";
 import { FreeTrialView } from "./free-trial/FreeTrialView";
 import { ProductProps } from "./ProductProps";
 import { ProductVersions } from "./ProductVersions";
+import { Badge } from "@/components/ui/badge";
 
-export default function ProductSidebar() {
+export default function ProductSidebar({
+  customerData,
+  options,
+  setOptions,
+  oneTimePurchase,
+}: {
+  customerData?: any;
+  options?: any;
+  setOptions?: any;
+  oneTimePurchase?: boolean;
+}) {
   const { product, org, setProduct } = useProductContext();
   const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
 
@@ -29,6 +40,19 @@ export default function ProductSidebar() {
 
   return (
     <div className="flex-col gap-4 h-full border-l py-6">
+      <div className="flex items-center gap-2 justify-start px-4">
+        {customerData && (
+          <Badge className="flex items-center gap-1 rounded-sm shadow-none w-full text-xs text-t2 bg-stone-100 border hover:bg-stone-100 truncate">
+            <span className="">
+              Custom <span className="font-bold">{product.name}</span> version
+              for
+            </span>
+            <span className="truncate">
+              <span className="font-bold">{customerData.customer.name}</span>
+            </span>
+          </Badge>
+        )}
+      </div>
       {/* <ToggleDisplayButton
         show={showFreeTrial}
         onClick={() => setShowFreeTrial(!showFreeTrial)}
