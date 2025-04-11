@@ -26,15 +26,6 @@ export const EntitlementSchema = z.object({
 
   carry_from_previous: z.boolean().default(false).optional(),
   entity_feature_id: z.string().nullish(),
-
-  // linked_to: z
-  //   .array(
-  //     z.object({
-  //       feature_id: z.string(),
-  //       feature_type: z.nativeEnum(FeatureType),
-  //     })
-  //   )
-  //   .nullish(),
 });
 
 export const CreateEntitlementSchema = z.object({
