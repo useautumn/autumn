@@ -18,6 +18,7 @@ import rewardRouter from "./rewards/rewardRouter.js";
 
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
+import expireRouter from "./customers/products/expireRouter.js";
 
 const apiRouter = Router();
 
@@ -75,8 +76,6 @@ apiRouter.use((req: any, res: any, next: any) => {
   next();
 });
 
-apiRouter.use(attachRouter);
-
 apiRouter.get("/auth", (req: any, res) => {
   res.json({
     message: `Authenticated -- Hello ${req.minOrg?.slug}!`,
@@ -101,5 +100,9 @@ apiRouter.use("/migrations", migrationRouter);
 apiRouter.use("/reward_programs", rewardProgramRouter);
 apiRouter.use("/referrals", referralRouter);
 apiRouter.use("/redemptions", redemptionRouter);
+
+// Cus Product
+apiRouter.use(attachRouter);
+apiRouter.use("/expire", expireRouter);
 
 export { apiRouter };
