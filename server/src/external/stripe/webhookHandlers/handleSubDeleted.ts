@@ -9,8 +9,10 @@ import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
   CusProductStatus,
+  CustomerEntitlement,
   ErrCode,
   FullCusProduct,
+  FullCustomerEntitlement,
   Organization,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -18,6 +20,7 @@ import Stripe from "stripe";
 
 import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
+import { EntityService } from "@/internal/api/entities/EntityService.js";
 
 export const handleSubscriptionDeleted = async ({
   sb,
@@ -38,6 +41,7 @@ export const handleSubscriptionDeleted = async ({
     stripeSubId: subscription.id,
     orgId: org.id,
     env,
+    withCusEnts: true,
   });
 
   if (activeCusProducts.length === 0) {
@@ -91,8 +95,6 @@ export const handleSubscriptionDeleted = async ({
       return;
     }
 
-    // If there's scheduled_id, skip?
-    // Prematurely canceled
     if (
       cusProduct.scheduled_ids &&
       cusProduct.scheduled_ids.length > 0 &&
@@ -116,7 +118,7 @@ export const handleSubscriptionDeleted = async ({
       return;
     }
 
-    // 1. Expire current product -> Probably going to be a problem...?
+    // 1. Expire current product
     await CusProductService.update({
       sb,
       cusProductId: cusProduct.id,
@@ -125,6 +127,30 @@ export const handleSubscriptionDeleted = async ({
         ended_at: subscription.ended_at ? subscription.ended_at * 1000 : null,
       },
     });
+
+    try {
+      // 2. TODO: Clear entities
+      let internalFeatureIds = new Set(
+        cusProduct.customer_entitlements.map(
+          (ce: FullCustomerEntitlement) => ce.entitlement.internal_feature_id!
+        )
+      );
+
+      await EntityService.deleteByInternalFeatureId({
+        sb,
+        internalCustomerId: cusProduct.customer.internal_id,
+        internalFeatureIds: Array.from(internalFeatureIds),
+        orgId: org.id,
+        env,
+      });
+
+      logger.info(
+        `   ✅ deleted ${internalFeatureIds.size} entities for customer ${cusProduct.customer.id}`
+      );
+    } catch (error) {
+      logger.error("Failed to delete entities on sub deleted");
+      logger.error(error);
+    }
 
     if (cusProduct.product.is_add_on) {
       return;
