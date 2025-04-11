@@ -30,12 +30,12 @@ export const MainSidebar = () => {
         <div>
           <SidebarTop />
           <div className="flex flex-col mt-4 px-4">
-            <NavButton
+            {/* <NavButton
               value="features"
               icon={<Flag size={15} />}
               title="Features"
               env={env}
-            />
+            /> */}
             <NavButton
               value="products"
               icon={<Tag size={14} />}
