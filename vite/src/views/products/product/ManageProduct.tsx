@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/tooltip";
 import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
 import ConfirmMigrateDialog from "./ConfirmMigrateDialog";
+import { CreateProductItem } from "./product-item/CreateProductItem";
 
 export const ManageProduct = ({
   product,
@@ -50,6 +51,7 @@ export const ManageProduct = ({
 }) => {
   const env = useEnv();
   let { numVersions, count } = useProductContext();
+
   const navigate = useNavigate();
 
   return (
@@ -62,26 +64,6 @@ export const ManageProduct = ({
                 {product.name}
               </h2>
             </AdminHover>
-            {/* <div className="flex items-center gap-2">
-              {product.is_add_on && (
-                <Badge variant="outline" className="bg-white">
-                  Add On
-                </Badge>
-              )}
-              {product.is_default && (
-                <Badge variant="outline" className="bg-white">
-                  Default Product
-                </Badge>
-              )}
-              {product.group && (
-                <Badge variant="outline" className="bg-white">
-                  Product Group:{" "}
-                  <span className="font-semibold ml-1">
-                    {" " + product.group}
-                  </span>
-                </Badge>
-              )}
-            </div> */}
           </div>
         </div>
         <div className="flex items-center gap-2 col-span-8 ">
@@ -95,8 +77,6 @@ export const ManageProduct = ({
               </span>
             </Badge>
           )}
-
-          {/* {!customerData && <CountAndMigrate />} */}
 
           <Select
             value={version ? version.toString() : product.version.toString()}
@@ -132,6 +112,7 @@ export const ManageProduct = ({
         </div>
       </div>
       <div className="flex flex-col gap-10">
+        <CreateProductItem />
         <div className="flex flex-col">
           <ProductEntitlementTable entitlements={product.entitlements} />
         </div>
@@ -139,10 +120,10 @@ export const ManageProduct = ({
           {product.prices.length > 0 && (
             <ProductPricingTable prices={product.prices} />
           )}
-          {/* <CreateEntitlement /> */}
-          {/* <CreatePrice /> */}
         </div>
       </div>
+      {/* <CreateEntitlement /> */}
+      {/* <CreatePrice /> */}
       {/* {showFreeTrial && (
         <div className="flex flex-col gap-4">
           <p className="text-md text-t2 font-medium">Free Trial</p>
