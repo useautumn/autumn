@@ -98,7 +98,7 @@ export const ManageProduct = ({
 
           {/* {!customerData && <CountAndMigrate />} */}
 
-          <Select
+          {/* <Select
             value={version ? version.toString() : product.version.toString()}
             onValueChange={async (value) => {
               navigate(
@@ -125,7 +125,7 @@ export const ManageProduct = ({
                   </SelectItem>
                 ))}
             </SelectContent>
-          </Select>
+          </Select> */}
           {/* {!customerData && (
             <EditProductToolbar product={product} className="text-t2" />
           )} */}

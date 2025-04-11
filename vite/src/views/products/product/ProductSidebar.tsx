@@ -77,8 +77,8 @@ export default function ProductSidebar() {
               {product.free_trial ? (
                 <FreeTrialView product={product} />
               ) : (
-                <span className="text-t3 text-xs">
-                  No free trial set for this product.
+                <span className="text-t3">
+                  Add a free trial to this product.
                 </span>
               )}
             </div>
