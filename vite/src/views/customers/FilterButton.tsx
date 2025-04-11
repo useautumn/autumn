@@ -15,15 +15,15 @@ import { Check, ListFilter, X } from "lucide-react";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
-  
+
   return (
     <DropdownMenu>
       <RenderFilterTrigger />
 
       <DropdownMenuContent className="w-56" align="start">
         {/* Search filter properties */}
-        <DropdownMenuLabel>Filter</DropdownMenuLabel>
-        <DropdownMenuSeparator />
+        {/* <DropdownMenuLabel>Filter</DropdownMenuLabel> */}
+        {/* <DropdownMenuSeparator /> */}
         {/* 1. Status filter */}
 
         <FilterStatus />
@@ -112,7 +112,10 @@ export const ProductStatus = () => {
 export const RenderFilterTrigger = ({ setOpen }: any) => {
   return (
     <DropdownMenuTrigger asChild>
-      <Button variant="outline" className="text-t3">
+      <Button
+        variant="outline"
+        className="text-t3 bg-transparent border-none shadow-none"
+      >
         <ListFilter size={13} className="mr-2 text-t3" />
         Filter
       </Button>
