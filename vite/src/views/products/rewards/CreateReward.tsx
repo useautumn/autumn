@@ -73,8 +73,8 @@ function CreateReward() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          variant="dashed"
-          className="w-full"
+          variant="ghost"
+          className="w-fit text-primary p-0"
           startIcon={<PlusIcon size={15} />}
         >
           Create Coupon
