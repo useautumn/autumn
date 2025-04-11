@@ -170,7 +170,7 @@ export const ProductEntitlementTable = ({
             return (
               <div
                 key={entitlement.internal_feature_id}
-                className="flex grid grid-cols-10 gap-8 px-10 text-t2 h-10 items-center hover:bg-zinc-50"
+                className="flex grid grid-cols-10 gap-8 px-10 text-t2 h-10 items-center hover:bg-primary/3 "
                 onClick={() => handleRowClick(entitlement)}
               >
                 <span className="font-mono text-t3 col-span-2 overflow-hidden flex whitespace-nowrap">

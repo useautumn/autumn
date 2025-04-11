@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { FeatureSchema, FeatureType } from "../featureModels/featureModels.js";
+
+export const TierInfinite = "inf";
+export const UsageUnlimited = "unlimited";
 
 export enum ProductItemInterval {
   None = "none",
@@ -15,17 +19,23 @@ export enum ProductItemInterval {
   Year = "year",
 }
 
+export enum ProductItemType {
+  Feature = "feature",
+  FeaturePrice = "feature_price",
+  Price = "price",
+}
+
 export const PriceTierSchema = z.object({
-  to: z.number().or(z.string()),
+  to: z.number().or(z.literal(TierInfinite)),
   amount: z.number(),
 });
 
-export const CreateProductItemSchema = z.object({
+export const ProductItemSchema = z.object({
   // Feature stuff
-  feature_id: z.string(),
-  included_usage: z.union([z.number(), z.literal("unlimited")]), // can only be set if tiers are not provided
+  feature_id: z.string().nullish(),
+  included_usage: z.union([z.number(), z.literal(UsageUnlimited)]).nullish(),
 
-  interval: z.nativeEnum(ProductItemInterval),
+  interval: z.nativeEnum(ProductItemInterval).nullish(),
   reset_usage_on_interval: z.boolean().nullish(),
 
   // Price config
@@ -36,6 +46,12 @@ export const CreateProductItemSchema = z.object({
   // Others
   entity_feature_id: z.string().nullish(),
   carry_over_usage: z.boolean().nullish(),
+
+  // Stored in backend
+  created_at: z.number().nullish(),
+
+  entitlement_id: z.string().nullish(),
+  price_id: z.string().nullish(),
 });
 
-export type CreateProductItem = z.infer<typeof CreateProductItemSchema>;
+export type ProductItem = z.infer<typeof ProductItemSchema>;

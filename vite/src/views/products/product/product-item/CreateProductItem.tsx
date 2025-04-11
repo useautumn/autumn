@@ -12,37 +12,40 @@ import { useState } from "react";
 import { ProductItemConfig } from "./ProductItemConfig";
 import { ProductItemContext } from "./ProductItemContext";
 import { CreateFeature } from "@/views/features/CreateFeature";
-import {
-  Feature,
-  ProductItemInterval,
-  CreateProductItem as CreateProductItemType,
-} from "@autumn/shared";
+import { Feature, ProductItemInterval, ProductItem } from "@autumn/shared";
 import { useProductContext } from "../ProductContext";
 
-let defaultProductItem: CreateProductItemType = {
-  feature_id: "",
+let defaultProductItem: ProductItem = {
+  feature_id: null,
   included_usage: 0,
+
   interval: ProductItemInterval.Month,
   reset_usage_on_interval: false,
 
   // Price config
-  amount: 0,
-  tiers: [],
-  billing_units: 0,
+  amount: null,
+  tiers: null,
+  billing_units: 1,
 
   // Others
   entity_feature_id: null,
   carry_over_usage: false,
 };
 
-export const CreateProductItem = () => {
+export function CreateProductItem() {
   const [open, setOpen] = useState(false);
   const [showCreateFeature, setShowCreateFeature] = useState(false);
-  const [item, setItem] = useState<CreateProductItemType>(defaultProductItem);
-  const { features } = useProductContext();
+  const [item, setItem] = useState<ProductItem>(defaultProductItem);
+  const { features, product, setProduct } = useProductContext();
 
   const setSelectedFeature = (feature: Feature) => {
     setItem({ ...item, feature_id: feature.id! });
+  };
+
+  const handleCreateProductItem = () => {
+    // Add to product
+    setProduct({ ...product, items: [...product.items, item] });
+    setOpen(false);
   };
 
   return (
@@ -53,25 +56,17 @@ export const CreateProductItem = () => {
         showCreateFeature,
         setShowCreateFeature,
         isUpdate: false,
+        handleCreateProductItem,
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button
             startIcon={<PlusIcon size={15} />}
-            // variant={buttonType ? "ghost" : "dashed"}
-            className={cn(
-              "w-full"
-              // buttonType && "!w-24 text-primary h-full justify-start"
-            )}
-            onClick={() => {
-              // setSelectedFeature(null);
-              // setEntitlement(null);
-              // setPriceConfig(getDefaultPriceConfig(PriceType.Usage));
-            }}
-          >
-            Product Item
-          </Button>
+            variant="ghost"
+            className="w-full text-primary text-xs hover:text-primary/80"
+            onClick={() => setItem(defaultProductItem)}
+          ></Button>
         </DialogTrigger>
         <DialogContent
           className={cn("translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit")}
@@ -111,4 +106,4 @@ export const CreateProductItem = () => {
       </Dialog>
     </ProductItemContext.Provider>
   );
-};
+}

@@ -29,12 +29,12 @@ export const ProductProps = () => {
   return (
     <>
       <div className="flex justify-between gap-4 w-full ">
-        <div className="flex flex-col w-full gap-2">
+        <div className="flex flex-col w-full gap-4">
           <div className="flex items-center w-full justify-between h-4">
             <p className="text-xs text-t3 font-medium text-center">Customers</p>
             <Tooltip>
               <TooltipTrigger asChild>
-                <p className="text-xs text-t2 px-2">
+                <p className="text-sm text-t2 px-2">
                   {counts?.active ?? 0} active
                 </p>
               </TooltipTrigger>
@@ -65,11 +65,7 @@ export const ProductProps = () => {
             <p className="text-xs text-t3 font-medium text-center">Default</p>
             <Popover open={defaultOpen} onOpenChange={setDefaultOpen}>
               <PopoverTrigger asChild className="p-0 py-0.5 h-fit">
-                <Button
-                  variant="ghost"
-                  className="text-xs text-t2 px-2"
-                  size="sm"
-                >
+                <Button variant="ghost" className="text-t2 px-2">
                   {product.is_default ? (
                     <span className="text-lime-600">True</span>
                   ) : (
@@ -77,12 +73,11 @@ export const ProductProps = () => {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-16 p-1">
+              <PopoverContent className="w-16 p-1" align="end">
                 <div className="flex flex-col gap-1">
                   <Button
                     variant="ghost"
-                    className="text-xs text-t2 px-2 py-0"
-                    size="sm"
+                    className="text-t2 px-2 py-0"
                     onClick={() => {
                       setProduct({ ...product, is_default: true });
                       setDefaultOpen(false);
@@ -92,7 +87,7 @@ export const ProductProps = () => {
                   </Button>
                   <Button
                     variant="ghost"
-                    className="text-xs text-t2 px-2 py-0"
+                    className="text-t2 px-2 py-0"
                     onClick={() => {
                       setProduct({ ...product, is_default: false });
                       setDefaultOpen(false);
@@ -109,11 +104,7 @@ export const ProductProps = () => {
             <p className="text-xs text-t3 font-medium text-center">Add On</p>
             <Popover open={addOnOpen} onOpenChange={setAddOnOpen}>
               <PopoverTrigger asChild className="p-0 py-0.5 h-fit">
-                <Button
-                  variant="ghost"
-                  className="text-xs text-t2 px-2"
-                  size="sm"
-                >
+                <Button variant="ghost" className="text-t2 px-2">
                   {product.is_add_on ? (
                     <span className="text-lime-600">True</span>
                   ) : (
@@ -121,12 +112,11 @@ export const ProductProps = () => {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-16 p-1">
+              <PopoverContent className="w-16 p-1" align="end">
                 <div className="flex flex-col gap-1">
                   <Button
                     variant="ghost"
-                    className="text-xs text-t2 px-2 py-0"
-                    size="sm"
+                    className="text-t2 px-2 py-0"
                     onClick={() => {
                       setProduct({ ...product, is_add_on: true });
                       setAddOnOpen(false);
@@ -136,8 +126,7 @@ export const ProductProps = () => {
                   </Button>
                   <Button
                     variant="ghost"
-                    className="text-xs text-t2 px-2 py-0"
-                    size="sm"
+                    className="text-t2 px-2 py-0"
                     onClick={() => {
                       setProduct({ ...product, is_add_on: false });
                       setAddOnOpen(false);
@@ -154,16 +143,13 @@ export const ProductProps = () => {
             <p className="text-xs text-t3 font-medium text-center">Group</p>
             <Button
               variant="ghost"
-              className="text-xs text-t2 px-2 h-fit py-0.5"
-              size="sm"
+              className="text-t2 px-2 h-fit py-0.5"
               onClick={() => {
                 setTempGroup(product.group || "");
                 setGroupModalOpen(true);
               }}
             >
-              {product.group || (
-                <span className="text-t3 text-xs">No group</span>
-              )}
+              {product.group || <span className="text-t3">No group</span>}
             </Button>
           </div>
 

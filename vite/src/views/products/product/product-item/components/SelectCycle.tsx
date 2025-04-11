@@ -13,24 +13,19 @@ import { TooltipContent } from "@/components/ui/tooltip";
 import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip";
 import { BillingInterval, EntInterval } from "@autumn/shared";
 import { InfoIcon, X } from "lucide-react";
+import { useProductItemContext } from "../ProductItemContext";
 
 export const SelectCycle = ({
-  fields,
-  setFields,
   showPrice,
-  priceConfig,
-  setPriceConfig,
   setShowCycle,
   showCycle,
 }: {
-  fields: any;
-  setFields: (fields: any) => void;
   showPrice: boolean;
-  priceConfig: any;
-  setPriceConfig: (priceConfig: any) => void;
   setShowCycle: (showCycle: boolean) => void;
   showCycle: boolean;
 }) => {
+  let { item, setItem } = useProductItemContext();
+
   return (
     <div className="flex flex-col w-full">
       <FieldLabel className="flex justify-between items-center max-h-4">
@@ -73,11 +68,11 @@ export const SelectCycle = ({
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
             <Select
-              value={priceConfig.interval}
+              value={item.interval}
               defaultValue={BillingInterval.Month}
               onValueChange={(value) => {
-                setPriceConfig({
-                  ...priceConfig,
+                setItem({
+                  ...item,
                   interval: value as BillingInterval,
                 });
                 value == BillingInterval.OneOff && setShowCycle(false);
@@ -104,10 +99,10 @@ export const SelectCycle = ({
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
             <Select
-              value={fields.interval}
+              value={item.interval}
               onValueChange={(value) => {
-                setFields({
-                  ...fields,
+                setItem({
+                  ...item,
                   interval: value as EntInterval,
                 });
                 value == EntInterval.Lifetime && setShowCycle(false);

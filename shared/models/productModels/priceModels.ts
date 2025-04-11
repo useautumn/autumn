@@ -27,6 +27,7 @@ export const PriceSchema = z.object({
 
   name: z.string().optional(),
   config: FixedPriceConfigSchema.or(UsagePriceConfigSchema).optional(),
+  entitlement_id: z.string().nullish(),
 });
 
 export type Price = z.infer<typeof PriceSchema>;

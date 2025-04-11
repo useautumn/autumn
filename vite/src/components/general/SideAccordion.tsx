@@ -48,7 +48,7 @@ export function SideAccordion({
           )}
         </div>
         <AccordionContent className="pb-0">
-          <div className="flex flex-col gap-2 animate-in slide-in-from-top-1/2 duration-200 p-2 w-full">
+          <div className="flex flex-col gap-2 animate-in slide-in-from-top-1/2 duration-200 p-2 pr-0 w-full">
             {children}
           </div>
         </AccordionContent>

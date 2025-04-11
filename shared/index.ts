@@ -51,3 +51,4 @@ export * from "./models/rewardModels/rewardProgramModels.js";
 export * from "./models/rewardModels/referralModels/referralModels.js";
 export * from "./models/subModels/subModels.js";
 export * from "./models/productModels/productItemModels.js";
+export * from "./models/productModels/productV2Models.js";

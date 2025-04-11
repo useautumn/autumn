@@ -1,5 +1,5 @@
 import { priceToStripeItem } from "@/external/stripe/stripePriceUtils.js";
-import { compareObjects } from "@/utils/genUtils.js";
+import { compareObjects, notNullish } from "@/utils/genUtils.js";
 import {
   BillWhen,
   BillingInterval,
@@ -191,11 +191,18 @@ export const getPriceEntitlement = (
 ) => {
   let config = price.config as UsagePriceConfig;
 
-  const entitlement = entitlements.find(
-    (ent) =>
-      ent.internal_feature_id === config.internal_feature_id &&
-      ent.internal_product_id === price.internal_product_id
-  );
+  const entitlement = entitlements.find((ent) => {
+    let entIdMatch =
+      notNullish(price.entitlement_id) && price.entitlement_id == ent.id;
+
+    let featureIdMath =
+      notNullish(config.internal_feature_id) &&
+      config.internal_feature_id == ent.internal_feature_id;
+
+    let productIdMatch = ent.internal_product_id == price.internal_product_id;
+
+    return (entIdMatch || featureIdMath) && productIdMatch;
+  });
 
   return entitlement as EntitlementWithFeature;
 };
