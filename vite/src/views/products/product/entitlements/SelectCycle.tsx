@@ -22,7 +22,6 @@ export const SelectCycle = ({
   setPriceConfig,
   setShowCycle,
   showCycle,
-  selectedFeature,
 }: {
   fields: any;
   setFields: (fields: any) => void;
@@ -31,7 +30,6 @@ export const SelectCycle = ({
   setPriceConfig: (priceConfig: any) => void;
   setShowCycle: (showCycle: boolean) => void;
   showCycle: boolean;
-  selectedFeature: any;
 }) => {
   return (
     <div className="flex flex-col w-full">

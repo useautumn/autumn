@@ -33,6 +33,7 @@ function ProductView({ env }: { env: AppEnv }) {
 
   const [product, setProduct] = useState<FrontendProduct | null>(null);
   const [showFreeTrial, setShowFreeTrial] = useState(!!product?.free_trial);
+
   const [hasChanges, setHasChanges] = useState(false);
   // const [version, setVersion] = useState<number | null>(null);
   // Get version from url query params
@@ -60,6 +61,7 @@ function ProductView({ env }: { env: AppEnv }) {
 
       initialProductRef.current = data.product;
     }
+    setShowFreeTrial(!!data?.product?.free_trial);
   }, [data]);
 
   useEffect(() => {
@@ -69,16 +71,17 @@ function ProductView({ env }: { env: AppEnv }) {
     }
 
     const hasChanged =
-      JSON.stringify({
-        prices: product.prices,
-        entitlements: product.entitlements,
-        free_trial: product.free_trial,
-      }) !==
-      JSON.stringify({
-        prices: initialProductRef.current.prices,
-        entitlements: initialProductRef.current.entitlements,
-        free_trial: initialProductRef.current.free_trial,
-      });
+      // JSON.stringify({
+      //   prices: product.prices,
+      //   entitlements: product.entitlements,
+      //   free_trial: product.free_trial,
+      // }) !==
+      // JSON.stringify({
+      //   prices: initialProductRef.current.prices,
+      //   entitlements: initialProductRef.current.entitlements,
+      //   free_trial: initialProductRef.current.free_trial,
+      // });
+      JSON.stringify(product) !== JSON.stringify(initialProductRef.current);
     setHasChanges(hasChanged);
   }, [product]);
 
@@ -171,9 +174,9 @@ function ProductView({ env }: { env: AppEnv }) {
           mutateCount,
         }}
       >
-        <div className="w-full">
-          <div className="flex flex-col gap-0.5">
-            <Breadcrumb className="text-t3 p-6 flex justify-center">
+        <div className="flex w-full">
+          <div className="flex flex-col gap-4 w-full">
+            <Breadcrumb className="text-t3 pt-6 pl-10 flex justify-center">
               <BreadcrumbList className="text-t3 text-xs w-full">
                 <BreadcrumbItem
                   onClick={() => navigateTo("/products", navigate, env)}
@@ -195,20 +198,16 @@ function ProductView({ env }: { env: AppEnv }) {
                   setShowFreeTrial={setShowFreeTrial}
                 />
               </div>
-
-              <div className="max-w-[300px] w-1/3 shrink-1">
-                <ProductSidebar
-                  showFreeTrial={showFreeTrial}
-                  setShowFreeTrial={setShowFreeTrial}
-                />
-                <div className="flex justify-end gap-2">
-                  <AddProductButton
-                    handleCreateProduct={createProductClicked}
-                    actionState={actionState}
-                  />
-                </div>
-              </div>
             </div>
+            <div className="flex justify-end gap-2 p-4">
+              <AddProductButton
+                handleCreateProduct={createProductClicked}
+                actionState={actionState}
+              />
+            </div>
+          </div>
+          <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+            <ProductSidebar />
           </div>
         </div>
       </ProductContext.Provider>

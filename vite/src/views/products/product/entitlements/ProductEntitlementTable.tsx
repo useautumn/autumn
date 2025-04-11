@@ -79,7 +79,11 @@ export const ProductEntitlementTable = ({
     feature: Feature | null
   ) => {
     if (feature?.type === FeatureType.Boolean) {
-      return "";
+      return (
+        <div className="flex items-center gap-1 whitespace-nowrap">
+          <span className="">{feature?.name}</span>
+        </div>
+      );
     }
 
     if (entitlement.allowance_type != AllowanceType.Fixed) {
@@ -137,9 +141,9 @@ export const ProductEntitlementTable = ({
         priceConfig={priceConfig}
         setPriceConfig={setPriceConfig}
       />
-      <div className="flex flex-col text-sm bg-white rounded-sm">
-        <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y border-r bg-stone-100 pl-6 h-10">
-          <h2 className="text-sm text-t2 font-medium col-span-2 flex justify-end">
+      <div className="flex flex-col text-sm rounded-sm">
+        <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 h-10">
+          <h2 className="text-sm text-t2 font-medium col-span-2 flex">
             Features
           </h2>
           <div className="flex w-full h-full items-center col-span-8 justify-end">
@@ -166,10 +170,10 @@ export const ProductEntitlementTable = ({
             return (
               <div
                 key={entitlement.internal_feature_id}
-                className="flex grid grid-cols-10 gap-8 px-6 text-t2 h-10 items-center hover:bg-zinc-50"
+                className="flex grid grid-cols-10 gap-8 px-10 text-t2 h-10 items-center hover:bg-zinc-50"
                 onClick={() => handleRowClick(entitlement)}
               >
-                <span className="font-mono text-t3 col-span-2 overflow-hidden flex justify-end whitespace-nowrap">
+                <span className="font-mono text-t3 col-span-2 overflow-hidden flex whitespace-nowrap">
                   {feature?.id}
                 </span>
                 <span className="col-span-5">

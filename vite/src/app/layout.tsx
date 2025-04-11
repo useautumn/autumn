@@ -43,7 +43,7 @@ export function MainLayout() {
   // 1. If not loaded, show loading screen
   if (!isUserLoaded) {
     return (
-      <div className="w-screen h-screen flex bg-stone-50">
+      <div className="w-screen h-screen flex bg-stone-100">
         <MainSidebar />
         <div className="w-full h-screen flex flex-col overflow-hidden">
           {env === AppEnv.Sandbox && (
@@ -77,15 +77,15 @@ export function MainLayout() {
 
   return (
     <main
-      className="w-screen h-screen flex"
-      style={{
-        backgroundImage: "url('/metal.jpg')",
-        backgroundSize: "cover",
-        backgroundPosition: "top left",
-        backgroundRepeat: "no-repeat",
-        backgroundColor: "rgba(255, 255, 255, 0)",
-        backgroundBlendMode: "overlay",
-      }}
+      className="w-screen h-screen flex bg-stone-100"
+      // style={{
+      //   backgroundImage: "url('/metal.jpg')",
+      //   backgroundSize: "cover",
+      //   backgroundPosition: "top left",
+      //   backgroundRepeat: "no-repeat",
+      //   backgroundColor: "rgba(255, 255, 255, 0)",
+      //   backgroundBlendMode: "overlay",
+      // }}
     >
       <Toaster
         position="top-center"
@@ -111,29 +111,31 @@ const MainContent = () => {
   const env = useEnv();
 
   return (
-    <div className="w-full h-screen flex flex-col overflow-hidden">
-      {env === AppEnv.Sandbox && (
-        <div className="w-full h-10 bg-primary text-white text-sm flex items-center justify-center">
-          <p className="font-medium">You&apos;re in sandbox mode.</p>
-        </div>
-      )}
-      <div
-        className={cn(
-          "w-full h-full overflow-auto flex justify-center bg-stone-50"
+    <div className="w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3">
+      <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
+        {env === AppEnv.Sandbox && (
+          <div className="w-full h-10 bg-primary text-white text-sm flex items-center justify-center">
+            <p className="font-medium">You&apos;re in sandbox mode.</p>
+          </div>
         )}
-      >
-        <div className="hidden md:flex w-full h-full justify-center">
-          <Outlet />
-        </div>
-        <div className="md:hidden w-full h-full flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-sm text-center">
-            <h2 className="text-xl font-semibold mb-2">
-              Autumn is coming to mobile soon
-            </h2>
-            <p className="text-gray-600">
-              We&apos;re currently designed for larger screens. Come back on
-              your desktop?
-            </p>
+        <div
+          className={cn(
+            "w-full h-full overflow-auto flex justify-center bg-stone-50"
+          )}
+        >
+          <div className="hidden md:flex w-full h-full justify-center">
+            <Outlet />
+          </div>
+          <div className="md:hidden w-full h-full flex items-center justify-center">
+            <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+              <h2 className="text-xl font-semibold mb-2">
+                Autumn is coming to mobile soon
+              </h2>
+              <p className="text-gray-600">
+                We&apos;re currently designed for larger screens. Come back on
+                your desktop?
+              </p>
+            </div>
           </div>
         </div>
       </div>
