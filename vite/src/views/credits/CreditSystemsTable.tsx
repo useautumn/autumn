@@ -1,19 +1,10 @@
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { Feature } from "@autumn/shared";
 import { useState } from "react";
-
-import {
-  Table,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
 import { CreditSystemRowToolbar } from "./CreditSystemRowToolbar";
-
 import { useFeaturesContext } from "../features/FeaturesContext";
 import UpdateCreditSystem from "./UpdateCreditSystem";
+import { Item, Row } from "@/components/general/TableGrid";
 
 export const CreditSystemsTable = () => {
   const { creditSystems } = useFeaturesContext();
@@ -25,9 +16,7 @@ export const CreditSystemsTable = () => {
     const creditSystem = creditSystems.find(
       (creditSystem: Feature) => creditSystem.id === id
     );
-
     if (!creditSystem) return;
-
     setSelectedCreditSystem(creditSystem);
     setOpen(true);
   };
@@ -40,47 +29,52 @@ export const CreditSystemsTable = () => {
         selectedCreditSystem={selectedCreditSystem!}
         setSelectedCreditSystem={setSelectedCreditSystem}
       />
-      <Table>
-        <TableHeader className="rounded-full">
-          <TableRow>
-            <TableHead className="">Credits Name</TableHead>
-            <TableHead>Credits ID</TableHead>
-            <TableHead>Features</TableHead>
-            <TableHead className="min-w-0 w-28">Created At</TableHead>
-            <TableHead className="min-w-0 w-10"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {creditSystems.map((creditSystem: Feature) => (
-            <TableRow
-              key={creditSystem.id}
-              className="cursor-pointer"
-              onClick={() => handleRowClick(creditSystem.id)}
-            >
-              <TableCell className="font-medium">{creditSystem.name}</TableCell>
-              <TableCell className="font-mono text-t2">
-                {" "}
-                {creditSystem.id}{" "}
-              </TableCell>
-              <TableCell className="font-mono text-t2 w-full">
-                {creditSystem.config.schema
-                  .map((schema: any) => schema.metered_feature_id)
-                  .join(", ")}{" "}
-              </TableCell>
-              <TableCell className="">
-                {formatUnixToDateTime(creditSystem.created_at).date}
-                <span className="text-t3">
-                  {" "}
-                  {formatUnixToDateTime(creditSystem.created_at).time}{" "}
-                </span>
-              </TableCell>
-              <TableCell className="">
-                <CreditSystemRowToolbar creditSystem={creditSystem} />
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+
+      {creditSystems && creditSystems.length > 0 ? (
+        <Row type="header" className="grid-cols-18 -mb-1">
+          <Item className="col-span-4">Credits Name</Item>
+          <Item className="col-span-4">Credits ID</Item>
+          <Item className="col-span-7">Features</Item>
+          <Item className="col-span-2">Created At</Item>
+          <Item className="col-span-1"></Item>
+        </Row>
+      ) : (
+        <div className="flex justify-start items-center h-10 px-10 text-t3">
+          Create a credit system to manage usage across multiple features.
+        </div>
+      )}
+
+      {creditSystems.map((creditSystem: Feature) => (
+        <Row
+          key={creditSystem.id}
+          className="grid-cols-18 gap-2 items-center px-10 w-full text-sm h-8 cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap"
+          onClick={() => handleRowClick(creditSystem.id)}
+        >
+          <Item className="col-span-4">
+            <span className="truncate font-medium">{creditSystem.name}</span>
+          </Item>
+          <Item className="col-span-4">
+            <span className="truncate font-mono">{creditSystem.id}</span>
+          </Item>
+          <Item className="col-span-7">
+            <span className="truncate font-mono">
+              {creditSystem.config.schema
+                .map((schema: any) => schema.metered_feature_id)
+                .join(", ")}
+            </span>
+          </Item>
+          <Item className="col-span-2">
+            {formatUnixToDateTime(creditSystem.created_at).date}
+            <span className="text-t3">
+              {" "}
+              {formatUnixToDateTime(creditSystem.created_at).time}
+            </span>
+          </Item>
+          <Item className="col-span-1 items-center justify-end">
+            <CreditSystemRowToolbar creditSystem={creditSystem} />
+          </Item>
+        </Row>
+      ))}
     </>
   );
 };

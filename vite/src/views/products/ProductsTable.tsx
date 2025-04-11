@@ -22,15 +22,22 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
 
   return (
     <>
-      <Row type="header" className="grid-cols-18 -mb-1">
-        <Item className="col-span-3">Name</Item>
-        <Item className="col-span-3">Product ID</Item>
-        <Item className="col-span-3">Active</Item>
-        <Item className="col-span-3">Type</Item>
-        <Item className="col-span-3">{!onboarding ? "Group" : ""}</Item>
-        <Item className="col-span-2">{!onboarding ? "Created At" : ""}</Item>
-        <Item className="col-span-1"></Item>
-      </Row>
+      {products && products.length > 0 ? (
+        <Row type="header" className="grid-cols-18 -mb-1">
+          <Item className="col-span-3">Name</Item>
+          <Item className="col-span-3">Product ID</Item>
+          <Item className="col-span-3">Active</Item>
+          <Item className="col-span-3">Type</Item>
+          <Item className="col-span-3">{!onboarding ? "Group" : ""}</Item>
+          <Item className="col-span-2">{!onboarding ? "Created At" : ""}</Item>
+          <Item className="col-span-1"></Item>
+        </Row>
+      ) : (
+        <div className="flex justify-start items-center h-10 px-10 text-t3">
+          Products define the features your customers can access and how much
+          they cost. Create your first product to get started ☝️.
+        </div>
+      )}
 
       {products &&
         products.map((product) => (
