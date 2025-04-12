@@ -12,9 +12,13 @@ import { FreeTrialSchema } from "../productModels/freeTrialModels.js";
 export const FeatureOptionsSchema = z.object({
   internal_feature_id: z.string().optional(),
   feature_id: z.string(),
-  threshold: z.number().optional().nullable(),
-  quantity: z.number().optional().nullable(),
   adjustable_quantity: z.boolean().nullish(),
+
+  // Quantities
+  quantity: z.number().optional().nullable(), // same as prepaid
+  prepaid_quantity: z.number().nullish(),
+
+  usage_quantity: z.number().nullish(),
 });
 
 export enum CollectionMethod {
@@ -70,6 +74,8 @@ export const CusProductSchema = z.object({
       last_invoice_id: z.string().optional().nullable(),
     })
     .optional(),
+
+  quantity: z.number().default(1),
 });
 
 export type CusProduct = z.infer<typeof CusProductSchema>;

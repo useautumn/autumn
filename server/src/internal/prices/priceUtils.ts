@@ -1,4 +1,3 @@
-import { priceToStripeItem } from "@/external/stripe/stripePriceUtils.js";
 import { compareObjects, notNullish } from "@/utils/genUtils.js";
 import {
   BillWhen,
@@ -13,6 +12,7 @@ import {
   FeatureOptions,
   ErrCode,
   FullProduct,
+  TierInfinite,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -28,6 +28,7 @@ const BillingIntervalOrder = [
 ];
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
+  // 1. Fixed cycle / one off
   if (
     config.type == PriceType.Fixed &&
     config.interval == BillingInterval.OneOff
@@ -37,14 +38,14 @@ export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
     return BillingType.FixedCycle;
   }
 
+  // 2. Prepaid
+
   let usageConfig = config as UsagePriceConfig;
   if (
     usageConfig.bill_when == BillWhen.InAdvance ||
     usageConfig.bill_when == BillWhen.StartOfPeriod
   ) {
     return BillingType.UsageInAdvance;
-  } else if (usageConfig.bill_when == BillWhen.BelowThreshold) {
-    return BillingType.UsageBelowThreshold;
   } else if (usageConfig.bill_when == BillWhen.EndOfPeriod) {
     if (usageConfig.should_prorate) {
       return BillingType.InArrearProrated;
@@ -202,7 +203,7 @@ export const getPriceEntitlement = (
 
     let productIdMatch = ent.internal_product_id == price.internal_product_id;
 
-    return (entIdMatch || featureIdMath) && productIdMatch;
+    return entIdMatch && productIdMatch;
   });
 
   return entitlement as EntitlementWithFeature;
@@ -273,7 +274,7 @@ export const getUsageTier = (price: Price, quantity: number) => {
     }
 
     let tier = usageConfig.usage_tiers[i];
-    if (tier.from <= quantity && tier.to >= quantity) {
+    if (tier.to == TierInfinite || tier.to >= quantity) {
       return tier;
     }
   }
@@ -332,14 +333,16 @@ export const getPriceForOverage = (price: Price, overage: number) => {
     .mul(billingUnits)
     .toNumber();
 
+  let lastTo: number = 0;
   for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
     let tier = usageConfig.usage_tiers[i];
 
     let amountUsed = 0;
-    if (tier.to < 0) {
+    if (tier.to == TierInfinite) {
       amountUsed = remainingUsage;
     } else {
-      amountUsed = Math.min(remainingUsage, tier.to - tier.from);
+      amountUsed = Math.min(remainingUsage, tier.to - lastTo);
+      lastTo = tier.to;
     }
 
     // Divide amount by billing units
@@ -389,11 +392,11 @@ export const priceIsOneOffAndTiered = (
   }
 
   return (
-    (config.interval == BillingInterval.OneOff &&
-      config.usage_tiers.length > 0 &&
-      relatedEnt.allowance &&
-      relatedEnt.allowance > 0) ||
-    (config.interval == BillingInterval.OneOff && config.usage_tiers.length > 1)
+    // (config.interval == BillingInterval.OneOff &&
+    //   config.usage_tiers.length > 0 &&
+    //   relatedEnt.allowance &&
+    //   relatedEnt.allowance > 0) ||
+    config.interval == BillingInterval.OneOff && config.usage_tiers.length > 1
   );
 };
 

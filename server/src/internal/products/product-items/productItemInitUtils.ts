@@ -35,9 +35,6 @@ const updateDbPricesAndEnts = async ({
   deletedPrices: Price[];
   deletedEnts: Entitlement[];
 }) => {
-  // console.log("Deleting prices", deletedPrices);
-  // console.log("Deleting ents", deletedEnts);
-
   // 1. Create new ents
   await Promise.all([
     EntitlementService.insert({
@@ -91,56 +88,19 @@ const handleCustomProductItems = async ({
   sameEnts: Entitlement[];
   features: Feature[];
 }) => {
-  // Each updated price is custom
-
-  // Each updated price is custom
-  updatedPrices = updatedPrices.map((price) => ({
-    ...price,
-    id: generateId("pr"),
-    is_custom: true,
-    created_at: Date.now(),
-  }));
-
-  updatedEnts = updatedEnts.map((ent) => ({
-    ...ent,
-    id: generateId("ent"),
-    is_custom: true,
-    created_at: Date.now(),
-  }));
-
-  newPrices = newPrices.map((price) => ({
-    ...price,
-    is_custom: true,
-    created_at: Date.now(),
-  }));
-
-  newEnts = newEnts.map((ent) => ({
-    ...ent,
-    is_custom: true,
-    created_at: Date.now(),
-  }));
-
-  newPrices = [...newPrices, ...updatedPrices];
-  newEnts = [...newEnts, ...updatedEnts];
-
   await EntitlementService.insert({
     sb,
-    data: newEnts,
+    data: [...newEnts, ...updatedEnts],
   });
 
   await PriceService.insert({
     sb,
-    data: newPrices,
-  });
-
-  await PriceService.upsert({
-    sb,
-    data: newPrices,
+    data: [...newPrices, ...updatedPrices],
   });
 
   return {
-    prices: [...newPrices, ...samePrices],
-    entitlements: [...newEnts, ...sameEnts].map((ent) => ({
+    prices: [...newPrices, ...updatedPrices, ...samePrices],
+    entitlements: [...newEnts, ...updatedEnts, ...sameEnts].map((ent) => ({
       ...ent,
       feature: features.find((f) => f.id == ent.feature_id),
     })),
@@ -166,6 +126,13 @@ export const handleNewProductItems = async ({
   logger: any;
   isCustom: boolean;
 }) => {
+  if (!newItems) {
+    return {
+      prices: [],
+      entitlements: [],
+    };
+  }
+
   let newPrices: Price[] = [];
   let newEnts: Entitlement[] = [];
 
@@ -193,26 +160,18 @@ export const handleNewProductItems = async ({
         item,
         orgId: product.org_id!,
         internalProductId: product.internal_id!,
-        isCustom: false,
         feature: feature,
         curPrice,
         curEnt,
+        isCustom,
       });
 
     if (newPrice) {
       newPrices.push(newPrice);
     }
 
-    if (samePrice) {
-      samePrices.push(samePrice);
-    }
-
     if (newEnt) {
       newEnts.push(newEnt);
-    }
-
-    if (sameEnt) {
-      sameEnts.push(sameEnt);
     }
 
     if (updatedPrice) {
@@ -222,7 +181,25 @@ export const handleNewProductItems = async ({
     if (updatedEnt) {
       updatedEnts.push(updatedEnt);
     }
+
+    if (samePrice) {
+      samePrices.push(samePrice);
+    }
+
+    if (sameEnt) {
+      sameEnts.push(sameEnt);
+    }
   }
+
+  // console.log("newPrices", newPrices);
+  // console.log("updatedPrices", updatedPrices);
+  // console.log("deletedPrices", deletedPrices);
+  // console.log("samePrices", samePrices);
+
+  // console.log("newEnts", newEnts);
+  // console.log("updatedEnts", updatedEnts);
+  // console.log("deletedEnts", deletedEnts);
+  // console.log("sameEnts", sameEnts);
 
   logger.info(
     `Prices: new(${newPrices.length}), updated(${updatedPrices.length}), deleted(${deletedPrices.length})`
@@ -254,6 +231,7 @@ export const handleNewProductItems = async ({
     deletedPrices,
     deletedEnts,
   });
+
   return {
     prices: [...newPrices, ...updatedPrices],
     entitlements: [...newEnts, ...updatedEnts].map((ent) => ({

@@ -36,9 +36,12 @@ export const ProductItemSchema = z.object({
   included_usage: z.union([z.number(), z.literal(UsageUnlimited)]).nullish(),
 
   interval: z.nativeEnum(ProductItemInterval).nullish(),
+  reset_interval: z.nativeEnum(ProductItemInterval).nullish(),
   reset_usage_on_interval: z.boolean().nullish(),
 
   // Price config
+  type: z.enum(["prepaid", "pay_per_use"]).default("pay_per_use"),
+
   amount: z.number().nullish(),
   tiers: z.array(PriceTierSchema).nullish(),
   billing_units: z.number().nullish(), // amount per billing unit (eg. $9 / 250 units)

@@ -1,5 +1,6 @@
 import {
   AppEnv,
+  BillingType,
   CusProductStatus,
   Customer,
   CustomerData,
@@ -11,6 +12,7 @@ import {
   FullCusProduct,
   Price,
   ProductItem,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
@@ -19,7 +21,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { PricesInput } from "@autumn/shared";
-import { notNullish } from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 
 import {
@@ -28,15 +30,14 @@ import {
 } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 import { StatusCodes } from "http-status-codes";
-import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
-import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
-import { createNewCustomer } from "@/internal/api/customers/handlers/handleCreateCustomer.js";
 import { CusService } from "../CusService.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { getOrCreateCustomer } from "@/internal/api/customers/cusUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { Decimal } from "decimal.js";
 
 const getOrCreateCustomerAndProducts = async ({
   sb,
@@ -211,7 +212,7 @@ const getProducts = async ({
   return [];
 };
 
-export const getCustomerProductsFeaturesAndOrg = async ({
+const getCustomerProductsFeaturesAndOrg = async ({
   sb,
   customerId,
   customerData,
@@ -292,6 +293,63 @@ const getEntsWithFeature = (ents: Entitlement[], features: Feature[]) => {
   }));
 };
 
+const mapOptionsList = ({
+  optionsListInput,
+  features,
+  prices,
+}: {
+  optionsListInput: FeatureOptions[];
+  features: Feature[];
+  prices: Price[];
+}) => {
+  let newOptionsList: FeatureOptions[] = [];
+  for (const options of optionsListInput) {
+    const feature = features.find(
+      (feature) => feature.id === options.feature_id
+    );
+
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${options.feature_id} not found`,
+        code: ErrCode.FeatureNotFound,
+        statusCode: 400,
+      });
+    }
+
+    let quantity = options?.quantity;
+    if (!nullish(quantity)) {
+      const prepaidPrice = prices.find(
+        (p) => getBillingType(p.config!) == BillingType.UsageInAdvance
+      );
+
+      if (!prepaidPrice) {
+        throw new RecaseError({
+          message: `No prepaid price found for feature ${feature.id}`,
+          code: ErrCode.FeatureNotFound,
+          statusCode: 400,
+        });
+      }
+
+      let config = prepaidPrice.config as UsagePriceConfig;
+
+      let dividedQuantity = new Decimal(options.quantity!)
+        .div(config.billing_units || 1)
+        .ceil()
+        .toNumber();
+
+      quantity = dividedQuantity;
+    }
+
+    newOptionsList.push({
+      ...options,
+      internal_feature_id: feature.internal_id,
+      quantity,
+    });
+  }
+
+  return newOptionsList;
+};
+
 export const getFullCusProductData = async ({
   sb,
   customerId,
@@ -342,27 +400,6 @@ export const getFullCusProductData = async ({
     env,
   });
 
-  let newOptionsList: FeatureOptions[] = [];
-
-  for (const options of optionsListInput) {
-    const feature = features.find(
-      (feature) => feature.id === options.feature_id
-    );
-
-    if (!feature) {
-      throw new RecaseError({
-        message: `Feature ${options.feature_id} not found`,
-        code: ErrCode.FeatureNotFound,
-        statusCode: 400,
-      });
-    }
-
-    newOptionsList.push({
-      ...options,
-      internal_feature_id: feature.internal_id,
-    });
-  }
-
   if (!isCustom) {
     let freeTrial = null;
     let freeTrialProduct = products.find((p) => notNullish(p.free_trial));
@@ -380,7 +417,11 @@ export const getFullCusProductData = async ({
       products,
       org,
       features,
-      optionsList: newOptionsList,
+      optionsList: mapOptionsList({
+        optionsListInput,
+        features,
+        prices: products.map((p) => p.prices).flat() as Price[],
+      }),
       prices: products.map((p) => p.prices).flat() as Price[],
       entitlements: products
         .map((p) => getEntsWithFeature(p.entitlements, features))
@@ -454,7 +495,11 @@ export const getFullCusProductData = async ({
     products,
     org,
     features,
-    optionsList: newOptionsList,
+    optionsList: mapOptionsList({
+      optionsListInput,
+      features,
+      prices,
+    }),
     prices: prices as Price[],
     entitlements: entitlements as EntitlementWithFeature[],
     freeTrial: uniqueFreeTrial,

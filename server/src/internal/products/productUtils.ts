@@ -41,7 +41,7 @@ import { generateId } from "@/utils/genUtils.js";
 import { PriceService } from "../prices/PriceService.js";
 import { EntitlementService } from "./entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
 

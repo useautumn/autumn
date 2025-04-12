@@ -23,6 +23,7 @@ import {
 } from "@/utils/product/productItemUtils";
 import { ConfigWithFeature } from "./components/ConfigWithFeature";
 import FixedPriceConfig from "./components/ConfigFixedPrice";
+import MoreMenuButton from "./MoreMenuButton";
 
 export const ProductItemConfig = () => {
   // HOOKS
@@ -166,12 +167,16 @@ export const ProductItemConfig = () => {
                   //   // !selectedFeature
                   // }
                   className="w-full justify-start animate-in slide-in-from-right-1/2 duration-200 fade-out"
-                  onClick={() =>
+                  onClick={() => {
+                    setItem({
+                      ...item,
+                      reset_usage_on_interval: !item.reset_usage_on_interval,
+                    });
                     setShow({
                       ...show,
                       cycle: !show.cycle,
-                    })
-                  }
+                    });
+                  }}
                 >
                   {show.cycle ? (
                     <MinusIcon size={14} className="mr-1" />
@@ -180,13 +185,7 @@ export const ProductItemConfig = () => {
                   )}
                   Usage Reset
                 </ToggleDisplayButton>
-                {/* <MoreMenuButton
-                  fields={fields}
-                  setFields={setFields}
-                  showPerEntity={showPerEntity}
-                  setShowPerEntity={setShowPerEntity}
-                  selectedFeature={selectedFeature}
-                /> */}
+                <MoreMenuButton show={show} setShow={setShow} />
               </>
             )}
           </div>
