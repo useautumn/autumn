@@ -62,10 +62,10 @@ export default function TieredPrice({
 
   return (
     <div className="flex flex-col gap-1 max-h-64 overflow-auto">
-      {item.tiers.map((tier: any, index: number) => (
+      {item.tiers?.map((tier: any, index: number) => (
         <div key={index} className="flex gap-1 w-full items-center">
           <div className="w-full gap-2 flex items-center">
-            {item.tiers.length > 1 && ( // First tier is just a price and billing units. No from or to tiers.
+            {item.tiers?.length > 1 && ( // First tier is just a price and billing units. No from or to tiers.
               <div className="flex w-full items-center">
                 <div className="flex w-full text-sm">
                   <UsageTierInput

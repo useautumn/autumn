@@ -69,7 +69,9 @@ export function CreateProductItem() {
           ></Button>
         </DialogTrigger>
         <DialogContent
-          className={cn("translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit")}
+          className={cn(
+            "translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit overflow-visible"
+          )}
         >
           <DialogHeader>
             <div className="flex flex-col">
@@ -85,7 +87,7 @@ export function CreateProductItem() {
               <DialogTitle>Add Feature</DialogTitle>
             </div>
           </DialogHeader>
-          <div className="flex overflow-hidden w-fit">
+          <div className="flex overflow-visible w-fit">
             {showCreateFeature ? (
               <div className="w-full">
                 <CreateFeature

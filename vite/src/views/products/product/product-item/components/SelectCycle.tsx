@@ -19,18 +19,19 @@ export const SelectCycle = ({
   showPrice,
   setShowCycle,
   showCycle,
+  type,
 }: {
   showPrice: boolean;
   setShowCycle: (showCycle: boolean) => void;
   showCycle: boolean;
+  type: "price" | "reset";
 }) => {
   let { item, setItem } = useProductItemContext();
 
   return (
     <div className="flex flex-col w-full">
-      <FieldLabel className="flex justify-between items-center max-h-4">
-        <div className="flex items-center gap-2">
-          {showPrice && !showCycle && "Billing Cycle"}
+      <FieldLabel className="flex items-center gap-2">
+        {/* {showPrice && !showCycle && "Billing Cycle"}
           {!showPrice && showCycle && "Usage Reset"}
           {showPrice && showCycle && (
             <div className="flex items-center gap-2 w-fit shrink-0">
@@ -53,18 +54,18 @@ export const SelectCycle = ({
                 Cycle
               </div>
             </div>
-          )}
-          <Tooltip delayDuration={400}>
-            <TooltipTrigger asChild>
-              <InfoIcon className="w-3 h-3 text-t3/50" />
-            </TooltipTrigger>
-            <TooltipContent sideOffset={5} side="top">
-              Frequency at which this feature is reset
-            </TooltipContent>
-          </Tooltip>
-        </div>
+          )} */}
+        {type == "price" ? "Billing Interval" : "Reset Interval"}
+        <Tooltip delayDuration={400}>
+          <TooltipTrigger asChild>
+            <InfoIcon className="w-3 h-3 text-t3/50" />
+          </TooltipTrigger>
+          <TooltipContent sideOffset={5} side="top">
+            Frequency at which this feature is reset
+          </TooltipContent>
+        </Tooltip>
       </FieldLabel>
-      {showPrice ? (
+      {type == "price" ? (
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
             <Select
@@ -100,6 +101,7 @@ export const SelectCycle = ({
           <div className="flex gap-2 items-center">
             <Select
               value={item.interval}
+              disabled={showPrice}
               onValueChange={(value) => {
                 setItem({
                   ...item,

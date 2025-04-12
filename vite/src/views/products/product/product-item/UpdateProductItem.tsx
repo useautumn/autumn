@@ -66,7 +66,7 @@ export default function UpdateProductItem({
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="sm:max-w-3xl overflow-visible">
           <DialogTitle>Update Feature</DialogTitle>
           <ProductItemConfig />
         </DialogContent>
