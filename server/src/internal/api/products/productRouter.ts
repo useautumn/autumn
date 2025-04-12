@@ -17,7 +17,7 @@ import {
   constructProduct,
   copyProduct,
 } from "@/internal/products/productUtils.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 
 import {

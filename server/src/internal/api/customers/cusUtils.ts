@@ -1,21 +1,15 @@
 import {
-  BillingInterval,
-  CreateCustomerSchema,
   CusProductSchema,
   CusProductStatus,
   Customer,
   CustomerData,
   CustomerResponseSchema,
   CustomerSchema,
-  ErrCode,
   FullCusProduct,
   FullCustomerEntitlement,
-  FullProduct,
   Organization,
   ProductSchema,
 } from "@autumn/shared";
-
-import { CreateCustomer } from "@autumn/shared";
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AppEnv } from "@autumn/shared";
@@ -30,20 +24,16 @@ import {
   fullCusProductToCusPrices,
   processFullCusProduct,
 } from "@/internal/customers/products/cusProductUtils.js";
-import {
-  getCusBalancesByEntitlement,
-  sortCusEntsForDeduction,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
+import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getCusBalances } from "@/internal/customers/entitlements/getCusBalances.js";
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
-import { initGroupBalancesFromGetCus } from "@/internal/customers/entitlements/groupByUtils.js";
 import { EntityService } from "../entities/EntityService.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { createNewCustomer } from "./handlers/handleCreateCustomer.js";
-import { format } from "date-fns";
 
 export const updateCustomerDetails = async ({
   sb,
@@ -329,7 +319,7 @@ export const getCustomerDetails = async ({
   let cusEnts = fullCusProductToCusEnts(fullCusProducts) as any;
 
   // 3. Get entitlements
-  const balances = await getCusBalancesByEntitlement({
+  const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,
     cusPrices: fullCusProductToCusPrices(fullCusProducts),
     entities,
@@ -342,13 +332,6 @@ export const getCustomerDetails = async ({
     org,
   });
 
-  // return {
-  //   customer,
-  //   main,
-  //   addOns,
-  //   balances,
-  //   invoices: processedInvoices,
-  // };
   return {
     customer: CustomerResponseSchema.parse(customer),
     products: main,

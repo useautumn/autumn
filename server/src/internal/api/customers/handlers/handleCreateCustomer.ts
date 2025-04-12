@@ -7,10 +7,8 @@ import {
   CreateCustomer,
   CreateCustomerSchema,
   Customer,
-  CustomerResponseSchema,
   ErrCode,
   FullProduct,
-  MinOrg,
   Organization,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";

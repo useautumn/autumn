@@ -98,137 +98,6 @@ export const getBalanceForFeature = async ({
   return data;
 };
 
-export const getCusBalances = async ({
-  sb,
-  customerId,
-  orgId,
-  env,
-}: {
-  sb: SupabaseClient;
-  customerId: string;
-  orgId: string;
-  env: string;
-}) => {
-  const cusEnts = await CustomerEntitlementService.getActiveByCustomerId({
-    sb,
-    customerId,
-    orgId,
-    env,
-  });
-
-  const featureToData: Record<string, any> = {};
-  for (const ent of cusEnts) {
-    const feature = ent.entitlement.feature;
-    if (!featureToData[feature.id]) {
-      featureToData[feature.id] = {
-        feature_id: feature.id,
-        balance: feature.type == FeatureType.Boolean ? undefined : 0,
-        unlimited: false,
-      };
-    }
-
-    if (feature.type == FeatureType.Boolean) {
-      continue;
-    }
-
-    if (ent.allowance_type == AllowanceType.Unlimited) {
-      featureToData[feature.id].balance = null;
-      featureToData[feature.id].unlimited = true;
-    } else if (featureToData[feature.id].unlimited) {
-      continue;
-    } else {
-      if (ent.allowance_type == AllowanceType.None) {
-        featureToData[feature.id].balance += 0;
-      } else {
-        featureToData[feature.id].balance += ent.balance;
-      }
-    }
-  }
-
-  return Object.values(featureToData);
-};
-
-export const getCusBalancesByProduct = async ({
-  sb,
-  customerId,
-  orgId,
-  env,
-}: {
-  sb: SupabaseClient;
-  customerId: string;
-  orgId: string;
-  env: string;
-}) => {
-  const cusEnts = await CustomerEntitlementService.getActiveByCustomerId({
-    sb,
-    customerId,
-    orgId,
-    env,
-  });
-
-  const data: Record<string, any> = {};
-
-  for (const cusEnt of cusEnts) {
-    const cusProduct = cusEnt.customer_product;
-    const product = cusProduct.product;
-    const feature = cusEnt.entitlement.feature;
-    const entitlement: EntitlementWithFeature = cusEnt.entitlement;
-
-    const key = `${product.id}-${feature.id}`;
-
-    if (!data[key]) {
-      data[key] = {
-        product_id: product.id,
-        feature_id: feature.id,
-        balance: feature.type == FeatureType.Boolean ? undefined : 0,
-        total: feature.type == FeatureType.Boolean ? undefined : 0,
-        unlimited:
-          feature.type == FeatureType.Boolean
-            ? undefined
-            : cusEnt.allowance_type == AllowanceType.Unlimited,
-      };
-    }
-
-    if (feature.type == FeatureType.Boolean) {
-      continue;
-    }
-
-    if (cusEnt.allowance_type == AllowanceType.Unlimited) {
-      data[key].balance = null;
-      data[key].total = null;
-      data[key].unlimited = true;
-    } else if (data[key].unlimited) {
-      continue;
-    } else {
-      if (cusEnt.allowance_type == AllowanceType.None) {
-        data[key].balance += 0;
-      } else {
-        data[key].balance += cusEnt.balance;
-      }
-    }
-
-    const entOption = getEntOptions(cusProduct.options, entitlement);
-    const ent = cusEnt.entitlement;
-
-    if (ent.allowance_type == AllowanceType.Fixed) {
-      let quantity = entOption?.quantity || 1;
-      data[key].total += quantity * entitlement.allowance!;
-    }
-  }
-
-  const balances = Object.values(data);
-
-  balances.sort((a, b) => {
-    return a.product_id.localeCompare(b.product_id);
-  });
-
-  return balances;
-};
-
-type CusEntsWithCusProduct = FullCustomerEntitlement & {
-  customer_product: CusProduct;
-};
-
 export const getCusEntMasterBalance = ({
   cusEnt,
   entities,
@@ -307,116 +176,6 @@ export const getCusEntBalance = ({
     balance: cusEnt.balance,
     adjustment: cusEnt.adjustment,
   };
-};
-
-// IMPORTANT FUNCTION
-export const getCusBalancesByEntitlement = async ({
-  cusEntsWithCusProduct,
-  cusPrices,
-  entities,
-  org,
-}: {
-  cusEntsWithCusProduct: CusEntsWithCusProduct[];
-  cusPrices: FullCustomerPrice[];
-  entities: Entity[];
-  org: Organization;
-}) => {
-  const data: Record<string, any> = {};
-
-  for (const cusEnt of cusEntsWithCusProduct) {
-    const cusProduct = cusEnt.customer_product;
-    const feature = cusEnt.entitlement.feature;
-    const ent: EntitlementWithFeature = cusEnt.entitlement;
-    const key = `${ent.interval || "no-interval"}-${feature.id}`;
-
-    // 1. Handle boolean
-    let isBoolean = feature.type == FeatureType.Boolean;
-    const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
-      cusEnts: cusEntsWithCusProduct,
-      internalFeatureId: feature.internal_id!,
-    });
-
-    // 2. Initialize data
-    if (!data[key]) {
-      data[key] = {
-        feature_id: feature.id,
-        interval: ent.interval || undefined,
-        unlimited: isBoolean ? undefined : unlimited,
-        balance: isBoolean ? undefined : unlimited ? null : 0,
-        total: isBoolean || unlimited ? undefined : 0,
-        adjustment: isBoolean || unlimited ? undefined : 0,
-        used: isBoolean ? undefined : unlimited ? null : 0,
-        unused: 0,
-      };
-
-      if (org.config.api_version >= BREAK_API_VERSION) {
-        data[key].next_reset_at =
-          isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
-        data[key].allowance = isBoolean || unlimited ? undefined : 0;
-      }
-    }
-
-    if (isBoolean || unlimited) {
-      continue;
-    }
-
-    let { balance, adjustment, count, unused } = getCusEntMasterBalance({
-      cusEnt,
-      entities,
-    });
-
-    data[key].balance += balance || 0;
-    data[key].adjustment += adjustment || 0;
-    let total =
-      (getResetBalance({
-        entitlement: ent,
-        options: getEntOptions(cusProduct.options, ent),
-        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
-      }) || 0) * count;
-
-    data[key].total += total;
-    data[key].unused += unused || 0;
-
-    if (org.config.api_version >= BREAK_API_VERSION) {
-      if (
-        !data[key].next_reset_at ||
-        (cusEnt.next_reset_at && cusEnt.next_reset_at < data[key].next_reset_at)
-      ) {
-        data[key].next_reset_at = cusEnt.next_reset_at;
-      }
-
-      data[key].allowance += getResetBalance({
-        entitlement: ent,
-        options: getEntOptions(cusProduct.options, ent),
-        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
-      });
-    }
-  }
-
-  const balances = Object.values(data);
-
-  for (const balance of balances) {
-    if (
-      notNullOrUndefined(balance.total) &&
-      notNullOrUndefined(balance.balance)
-    ) {
-      balance.used =
-        balance.total +
-        balance.adjustment -
-        balance.balance -
-        (balance.unused || 0);
-
-      delete balance.total;
-      delete balance.adjustment;
-    }
-    delete balance.unused;
-  }
-
-  balances.sort((a, b) => {
-    return a.feature_id.localeCompare(b.feature_id);
-  });
-
-  return balances;
 };
 
 export const sortCusEntsForDeduction = (
@@ -520,14 +279,19 @@ export const getRelatedCusPrice = (
   cusPrices: FullCustomerPrice[]
 ) => {
   return cusPrices.find((cusPrice) => {
-    if (cusPrice.customer_product_id == cusEnt.customer_product_id) {
-      let config = cusPrice.price.config as UsagePriceConfig;
-      return (
-        config.internal_feature_id == cusEnt.entitlement.internal_feature_id
-      );
-    }
+    let productMatch =
+      cusPrice.customer_product_id == cusEnt.customer_product_id;
+    let entMatch = cusPrice.price.entitlement_id == cusEnt.entitlement.id;
 
-    return false;
+    return productMatch && entMatch;
+    // if (cusPrice.customer_product_id == cusEnt.customer_product_id) {
+    //   let config = cusPrice.price.config as UsagePriceConfig;
+    //   return (
+    //     config.internal_feature_id == cusEnt.entitlement.internal_feature_id
+    //   );
+    // }
+
+    // return false;
   });
 };
 
@@ -577,34 +341,29 @@ export const getResetBalance = ({
   entitlement,
   options,
   relatedPrice,
+  productQuantity,
 }: {
   entitlement: Entitlement;
   options: FeatureOptions | undefined | null;
   relatedPrice: Price | undefined | null;
+  productQuantity?: number;
 }) => {
-  if (!options || !relatedPrice) {
-    return entitlement.allowance;
+  // 1. No related price
+  if (!relatedPrice) {
+    return (entitlement.allowance || 0) * (productQuantity || 1);
   }
 
   let quantity = options?.quantity;
   let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
-
-  // if (!quantity || !billingUnits) {
-  if (nullOrUndefined(quantity) || nullOrUndefined(billingUnits)) {
+  if (nullish(quantity) || nullish(billingUnits)) {
     console.log("WARNING: Quantity or billing units not found");
     console.log("Entitlement:", entitlement.id, entitlement.feature_id);
     console.log("Options:", options);
-    console.log(
-      "Related price:",
-      relatedPrice.name,
-      relatedPrice.id,
-      relatedPrice.config
-    );
     return entitlement.allowance;
   }
 
   try {
-    return quantity! * billingUnits!;
+    return (entitlement.allowance || 0) + quantity! * billingUnits!;
   } catch (error) {
     console.log(
       "WARNING: Failed to return quantity * billing units, returning allowance..."

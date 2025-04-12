@@ -1,5 +1,6 @@
 import {
   AllowanceType,
+  BillWhen,
   EntInterval,
   EntitlementWithFeature,
   FeatureType,
@@ -83,6 +84,7 @@ export const toFeaturePriceItem = ({
 
     entity_feature_id: ent.entity_feature_id,
     carry_over_usage: ent.carry_from_previous,
+    type: config.bill_when == BillWhen.InAdvance ? "prepaid" : "usage",
 
     // Stored in backend
     created_at: ent.created_at,

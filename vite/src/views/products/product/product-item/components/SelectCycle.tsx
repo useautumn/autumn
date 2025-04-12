@@ -14,6 +14,7 @@ import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip";
 import { BillingInterval, EntInterval } from "@autumn/shared";
 import { InfoIcon, X } from "lucide-react";
 import { useProductItemContext } from "../ProductItemContext";
+import { intervalIsNone } from "@/utils/product/productItemUtils";
 
 export const SelectCycle = ({
   showPrice,
@@ -68,7 +69,11 @@ export const SelectCycle = ({
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
             <Select
-              value={item.interval}
+              value={
+                intervalIsNone(item.interval)
+                  ? BillingInterval.OneOff
+                  : item.interval
+              }
               defaultValue={BillingInterval.Month}
               onValueChange={(value) => {
                 setItem({
@@ -99,7 +104,11 @@ export const SelectCycle = ({
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
             <Select
-              value={item.interval}
+              value={
+                intervalIsNone(item.interval)
+                  ? BillingInterval.OneOff
+                  : item.interval
+              }
               onValueChange={(value) => {
                 setItem({
                   ...item,

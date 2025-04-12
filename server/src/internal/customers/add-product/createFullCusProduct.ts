@@ -128,6 +128,7 @@ export const initCusProduct = ({
     subscription_ids: subscriptionIds,
     scheduled_ids: subscriptionScheduleIds,
     is_custom: isCustom || false,
+    quantity: 1,
   };
 };
 
