@@ -100,7 +100,7 @@ export const ProductItemConfig = () => {
   return (
     <div
       className={cn(
-        "flex overflow-hidden w-lg transition-all ease-in-out duration-300", //modal animations
+        "flex w-lg transition-all ease-in-out duration-300", //modal animations
         !show.feature && !show.price && "w-xs",
         !show.feature && show.price && "w-sm",
         item.tiers?.length > 1 && "w-2xl"
@@ -116,9 +116,13 @@ export const ProductItemConfig = () => {
           <FixedPriceConfig />
         </div>
       ) : (
-        <ConfigWithFeature show={show} setShow={setShow} />
+        <ConfigWithFeature
+          show={show}
+          setShow={setShow}
+          handleAddPrice={handleAddPrice}
+        />
       )}
-      <div className="flex animate-in slide-in-from-right-1/2 duration-200 fade-out ml-8 max-w-48">
+      <div className="flex animate-in slide-in-from-right-1/2 duration-200 fade-out ml-8 max-w-48 hidden">
         <div className="border-l mr-3"></div>
         <div className="flex flex-col w-fit justify-between gap-10">
           <div className="flex flex-col gap-2 w-32">
@@ -156,7 +160,7 @@ export const ProductItemConfig = () => {
             </ToggleDisplayButton>
             {show.feature && selectedFeature?.type != FeatureType.Boolean && (
               <>
-                <ToggleDisplayButton
+                {/* <ToggleDisplayButton
                   label="Add Cycle"
                   show={show.cycle}
                   // disabled={
@@ -179,7 +183,7 @@ export const ProductItemConfig = () => {
                     <PlusIcon size={14} className="mr-1" />
                   )}
                   Usage Reset
-                </ToggleDisplayButton>
+                </ToggleDisplayButton> */}
                 {/* <MoreMenuButton
                   fields={fields}
                   setFields={setFields}
