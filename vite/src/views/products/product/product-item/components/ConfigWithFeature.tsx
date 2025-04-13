@@ -40,7 +40,7 @@ export const ConfigWithFeature = ({
   return (
     <div className="flex flex-col gap-6 text-sm w-full">
       {/* 1. Select or create feature */}
-      <SelectItemFeature />
+      <SelectItemFeature show={show} setShow={setShow} />
 
       <div className="flex flex-col text-sm">
         <div className="flex flex-col gap-2">

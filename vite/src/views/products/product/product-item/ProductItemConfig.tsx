@@ -106,26 +106,37 @@ export const ProductItemConfig = () => {
         item.tiers?.length > 1 && "w-2xl"
       )}
     >
-      {!show.feature && !show.price ? (
-        <div className="w-full text-sm py-2 justify-center rounded-md rounded-xl text-t3 ">
-          Add a feature, price, or both to{" "}
-          <span className="font-medium">{product.name}</span>
-        </div>
-      ) : !show.feature && show.price ? (
-        <div className="flex w-full">
-          <FixedPriceConfig />
-        </div>
-      ) : (
-        <ConfigWithFeature
-          show={show}
-          setShow={setShow}
-          handleAddPrice={handleAddPrice}
-        />
-      )}
-      <div className="flex animate-in slide-in-from-right-1/2 duration-200 fade-out ml-8 max-w-48 hidden">
+      {
+        // !show.feature && !show.price ? (
+        //   <div className="w-full text-sm py-2 justify-center rounded-md rounded-xl text-t3 ">
+        //     Add a feature, price, or both to{" "}
+        //     <span className="font-medium">{product.name}</span>
+        //   </div>
+        // ) :
+        !show.feature ? (
+          <div className="flex w-full">
+            <FixedPriceConfig />
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setShow({ ...show, feature: true });
+              }}
+            >
+              Add Feature
+            </Button>
+          </div>
+        ) : (
+          <ConfigWithFeature
+            show={show}
+            setShow={setShow}
+            handleAddPrice={handleAddPrice}
+          />
+        )
+      }
+      <div className="flex animate-in slide-in-from-right-1/2 duration-200 fade-out ml-8 max-w-48">
         <div className="border-l mr-3"></div>
         <div className="flex flex-col w-fit justify-between gap-10">
-          <div className="flex flex-col gap-2 w-32">
+          {/* <div className="flex flex-col gap-2 w-32">
             <ToggleDisplayButton
               label="Add Feature"
               className="w-full justify-start"
@@ -160,7 +171,7 @@ export const ProductItemConfig = () => {
             </ToggleDisplayButton>
             {show.feature && selectedFeature?.type != FeatureType.Boolean && (
               <>
-                {/* <ToggleDisplayButton
+                <ToggleDisplayButton
                   label="Add Cycle"
                   show={show.cycle}
                   // disabled={
@@ -183,17 +194,17 @@ export const ProductItemConfig = () => {
                     <PlusIcon size={14} className="mr-1" />
                   )}
                   Usage Reset
-                </ToggleDisplayButton> */}
-                {/* <MoreMenuButton
+                </ToggleDisplayButton>
+                <MoreMenuButton
                   fields={fields}
                   setFields={setFields}
                   showPerEntity={showPerEntity}
                   setShowPerEntity={setShowPerEntity}
                   selectedFeature={selectedFeature}
-                /> */}
+                />
               </>
             )}
-          </div>
+          </div> */}
           <div className="flex flex-col gap-2">
             {handleDeleteProductItem && (
               <Button
