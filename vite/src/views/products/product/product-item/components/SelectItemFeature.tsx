@@ -13,7 +13,13 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 
-export const SelectItemFeature = () => {
+export const SelectItemFeature = ({
+  show,
+  setShow,
+}: {
+  show: any;
+  setShow: any;
+}) => {
   const { features } = useProductContext();
   const { item, setItem, setShowCreateFeature, isUpdate } =
     useProductItemContext();
@@ -56,13 +62,16 @@ export const SelectItemFeature = () => {
           </Button>
         </SelectContent>
       </Select>
-      {item.feature_id && !isUpdate && (
+      {!isUpdate && (
         <Button
           isIcon
           size="sm"
           variant="ghost"
           className="w-fit text-t3"
-          onClick={() => setItem({ ...item, feature_id: null })}
+          onClick={() => {
+            setItem({ ...item, feature_id: null });
+            setShow({ ...show, feature: false });
+          }}
         >
           <X size={12} className="text-t3" />
         </Button>
