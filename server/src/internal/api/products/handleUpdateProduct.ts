@@ -215,7 +215,7 @@ export const handleUpdateProduct = async (req: any, res: any) => {
       });
     }
 
-    res.status(200).send({ message: "Product updated" });
+    res.status(200).json({ message: "Product updated" });
     return;
   } catch (error) {
     handleRequestError({ req, error, res, action: "Update product" });

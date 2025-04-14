@@ -45,6 +45,16 @@ export default function CustomerView({ env }: { env: AppEnv }) {
     env,
   });
 
+  const {
+    data: referrals,
+    isLoading: referralsLoading,
+    error: referralsError,
+    mutate: referralsMutate,
+  } = useAxiosSWR({
+    url: `/customers/${customer_id}/referrals`,
+    env,
+  });
+
   const [addCouponOpen, setAddCouponOpen] = useState(false);
 
   const [showExpired, setShowExpired] = useState(false);
@@ -84,6 +94,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
         env,
         cusMutate,
         setAddCouponOpen,
+        referrals,
       }}
     >
       <div className="flex w-full">

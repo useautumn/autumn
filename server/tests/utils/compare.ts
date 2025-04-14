@@ -180,10 +180,12 @@ export const compareProductEntitlements = ({
   customerId,
   product,
   features,
+  quantity = 1,
 }: {
   customerId: string;
   product: any;
   features: Record<string, Feature>;
+  quantity?: number;
 }) => {
   for (const entitlement of Object.values(
     product.entitlements
@@ -196,7 +198,7 @@ export const compareProductEntitlements = ({
       customerId,
       feature,
       entitlement,
-      expectedBalance: entitlement.allowance || 0,
+      expectedBalance: (entitlement.allowance || 0) * quantity,
     });
   }
 };

@@ -7,7 +7,12 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
-import { Reward, RewardProgram, RewardTriggerEvent } from "@autumn/shared";
+import {
+  Reward,
+  RewardProgram,
+  RewardTriggerEvent,
+  RewardReceivedBy,
+} from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useState } from "react";
@@ -50,7 +55,7 @@ export const RewardProgramConfig = ({
           />
         </div>
         <div className="w-6/12">
-          <FieldLabel>Coupon</FieldLabel>
+          <FieldLabel>Reward</FieldLabel>
           <Select
             value={rewardProgram.internal_reward_id}
             onValueChange={(value) =>
@@ -58,7 +63,7 @@ export const RewardProgramConfig = ({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select a coupon" />
+              <SelectValue placeholder="Select a reward" />
             </SelectTrigger>
             <SelectContent>
               {rewards.map((reward: Reward) => (
@@ -107,6 +112,33 @@ export const RewardProgramConfig = ({
               })
             }
           />
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className="w-full">
+          <FieldLabel>Received by</FieldLabel>
+          <Select
+            value={rewardProgram.received_by}
+            onValueChange={(value) =>
+              setRewardProgram({
+                ...rewardProgram,
+                received_by: value as RewardReceivedBy,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Who should receive the reward" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(RewardReceivedBy).map((receivedBy) => (
+                <SelectItem key={receivedBy} value={receivedBy}>
+                  {receivedBy === RewardReceivedBy.All
+                    ? "Referrer & Redeemer"
+                    : keyToTitle(receivedBy)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="flex items-center gap-2">

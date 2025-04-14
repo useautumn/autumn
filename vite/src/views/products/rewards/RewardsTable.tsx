@@ -9,7 +9,13 @@ import {
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useProductsContext } from "../ProductsContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { Reward, CouponDurationType, DiscountType } from "@autumn/shared";
+import {
+  Reward,
+  CouponDurationType,
+  DiscountType,
+  RewardType,
+  Product,
+} from "@autumn/shared";
 import UpdateReward from "./UpdateReward";
 import { useState } from "react";
 import { RewardRowToolbar } from "./RewardRowToolbar";
@@ -17,7 +23,7 @@ import { Item, Row } from "@/components/general/TableGrid";
 import { AdminHover } from "@/components/general/AdminHover";
 
 export const RewardsTable = () => {
-  const { rewards, org } = useProductsContext();
+  const { rewards, org, products } = useProductsContext();
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -44,8 +50,8 @@ export const RewardsTable = () => {
         <Row type="header" className="grid-cols-18 -mb-1">
           <Item className="col-span-4">Name</Item>
           <Item className="col-span-4">Promo Codes</Item>
-          <Item className="col-span-4">Discount</Item>
-          <Item className="col-span-3">Duration</Item>
+          <Item className="col-span-4">Type</Item>
+          <Item className="col-span-3">Reward</Item>
           <Item className="col-span-2">Created At</Item>
           <Item className="col-span-1"></Item>
         </Row>
@@ -77,23 +83,20 @@ export const RewardsTable = () => {
               {reward.promo_codes.map((promoCode) => promoCode.code).join(", ")}
             </span>
           </Item>
-          <Item className="col-span-4">
-            <div className="flex items-center gap-1">
-              <p>{reward.discount_value}</p>
-              <p className="text-t3">
-                {reward.discount_type == DiscountType.Percentage
-                  ? "%"
-                  : org?.default_currency || "USD"}
-              </p>
-            </div>
-          </Item>
+          <Item className="col-span-4">{keyToTitle(reward.type)}</Item>
           <Item className="col-span-3">
-            {reward.duration_type == CouponDurationType.Months
-              ? `${reward.duration_value} months`
-              : reward.duration_type == CouponDurationType.OneOff &&
-                reward.should_rollover
-              ? "One-off (rollover)"
-              : keyToTitle(reward.duration_type)}
+            {reward.type == RewardType.FreeProduct ? (
+              products.find((p: Product) => p.id == reward.free_product_id)
+                ?.name
+            ) : (
+              <span>
+                {reward.discount_config?.discount_value}
+                {reward.type == RewardType.PercentageDiscount
+                  ? "%"
+                  : org.default_currency || "USD"}{" "}
+                off
+              </span>
+            )}
           </Item>
           <Item className="col-span-2">
             {formatUnixToDateTime(reward.created_at).date}
