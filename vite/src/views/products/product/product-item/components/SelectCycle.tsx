@@ -14,22 +14,21 @@ import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip";
 import { BillingInterval, EntInterval } from "@autumn/shared";
 import { InfoIcon, X } from "lucide-react";
 import { useProductItemContext } from "../ProductItemContext";
+import { cn } from "@/lib/utils";
 
 export const SelectCycle = ({
-  showPrice,
-  setShowCycle,
-  showCycle,
+  show,
+  setShow,
   type,
 }: {
-  showPrice: boolean;
-  setShowCycle: (showCycle: boolean) => void;
-  showCycle: boolean;
+  show: any;
+  setShow: (show: any) => void;
   type: "price" | "reset";
 }) => {
   let { item, setItem } = useProductItemContext();
 
   return (
-    <div className="flex flex-col w-full">
+    <div className={cn("flex flex-col w-full ")}>
       <FieldLabel className="flex items-center gap-2">
         {/* {showPrice && !showCycle && "Billing Cycle"}
           {!showPrice && showCycle && "Usage Reset"}
@@ -69,14 +68,23 @@ export const SelectCycle = ({
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
             <Select
-              value={item.interval}
+              value={item.interval ?? BillingInterval.OneOff}
               defaultValue={BillingInterval.Month}
               onValueChange={(value) => {
                 setItem({
                   ...item,
-                  interval: value as BillingInterval,
+                  interval:
+                    value == BillingInterval.OneOff
+                      ? null
+                      : (value as BillingInterval),
+                  reset_usage_on_interval:
+                    value == BillingInterval.OneOff &&
+                    item.reset_usage_on_interval
+                      ? false
+                      : item.reset_usage_on_interval,
                 });
-                value == BillingInterval.OneOff && setShowCycle(false);
+                // value == BillingInterval.OneOff &&
+                //   setShow({ ...show, cycle: false });
               }}
             >
               <SelectTrigger>
@@ -100,32 +108,55 @@ export const SelectCycle = ({
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
             <Select
-              value={item.interval}
-              disabled={showPrice}
+              disabled={item.included_usage == "unlimited"}
+              value={
+                item.interval && item.reset_usage_on_interval
+                  ? item.interval
+                  : EntInterval.Lifetime
+              }
               onValueChange={(value) => {
                 setItem({
                   ...item,
-                  interval: value as EntInterval,
+                  interval:
+                    value == EntInterval.Lifetime
+                      ? show.price
+                        ? item.interval
+                        : null
+                      : (value as EntInterval),
+                  reset_usage_on_interval: value != EntInterval.Lifetime,
                 });
-                value == EntInterval.Lifetime && setShowCycle(false);
+                // value == EntInterval.Lifetime &&
+                //   setShow({ ...show, cycle: false });
               }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select reset" />
               </SelectTrigger>
-              <SelectContent>
-                {Object.values(EntInterval).map((interval) => (
-                  <SelectItem key={interval} value={interval}>
-                    {interval === "semi_annual"
-                      ? "per half year"
-                      : interval === "lifetime"
-                      ? "never"
-                      : `per ${interval}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              {!show.price ? (
+                <SelectContent>
+                  {Object.values(EntInterval).map((interval) => (
+                    <SelectItem key={interval} value={interval}>
+                      {interval === "semi_annual"
+                        ? "per half year"
+                        : interval === "lifetime"
+                        ? "no reset"
+                        : `per ${interval}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              ) : (
+                <SelectContent>
+                  <SelectItem value={EntInterval.Lifetime}>no reset</SelectItem>
+                  {item.interval && (
+                    <SelectItem value={item.interval}>
+                      with billing{" "}
+                      <span className="text-t3">(per {item.interval})</span>
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              )}
             </Select>
-            <Button
+            {/* <Button
               isIcon
               size="sm"
               variant="ghost"
@@ -133,7 +164,7 @@ export const SelectCycle = ({
               onClick={() => setShowCycle(false)}
             >
               <X size={12} className="text-t3" />
-            </Button>
+            </Button> */}
           </div>
         </div>
       )}

@@ -9,24 +9,20 @@ import {
 import { Feature } from "@autumn/shared";
 import { EllipsisVertical, MinusIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
+import { useProductItemContext } from "./ProductItemContext";
 
 export default function MoreMenuButton({
-  fields,
-  setFields,
-  showPerEntity,
-  setShowPerEntity,
-  selectedFeature,
+  show,
+  setShow,
 }: {
-  fields: any;
-  setFields: (fields: any) => void;
-  showPerEntity: boolean;
-  setShowPerEntity: (showPerEntity: boolean) => void;
-  selectedFeature: Feature | null;
+  show: any;
+  setShow: (show: any) => void;
 }) {
   const [showPopover, setShowPopover] = useState(false);
+  const { item, setItem } = useProductItemContext();
 
   return (
-    <Popover>
+    <Popover open={showPopover} onOpenChange={setShowPopover}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -35,8 +31,7 @@ export default function MoreMenuButton({
           onClick={() => setShowPopover(!showPopover)}
           // disabled={!selectedFeature}
         >
-          <EllipsisVertical size={14} className="mr-1" />
-          More
+          <EllipsisVertical size={14} className="" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-48 p-2 flex flex-col text-xs" align="end">
@@ -45,18 +40,18 @@ export default function MoreMenuButton({
             variant="secondary"
             className="text-xs text-t3 shadow-none border-none"
             onClick={() => {
-              setFields({
-                ...fields,
-                carry_from_previous: !fields.carry_from_previous,
+              setItem({
+                ...item,
+                carry_from_previous: !item.carry_from_previous,
               });
             }}
           >
             <Checkbox
               className="border-t3 mr-1"
-              checked={fields.carry_from_previous}
+              checked={item.carry_from_previous}
               onCheckedChange={(checked) =>
-                setFields({
-                  ...fields,
+                setItem({
+                  ...item,
                   carry_from_previous: Boolean(checked),
                 })
               }
@@ -68,19 +63,19 @@ export default function MoreMenuButton({
           className="h-7 shadow-none text-t3 text-xs justify-start border-none"
           variant="outline"
           startIcon={
-            showPerEntity ? (
+            show.perEntity ? (
               <MinusIcon size={14} className="ml-0.5 mr-1" />
             ) : (
               <PlusIcon size={14} className="ml-0.5 mr-1" />
             )
           }
           onClick={() => {
-            setShowPerEntity(!showPerEntity);
+            setShow({ ...show, perEntity: !show.perEntity });
             // hide the popover
             setShowPopover(false);
           }}
         >
-          {showPerEntity ? "Remove Per Entity" : "Add Per Entity"}
+          {show.perEntity ? "Remove Per Entity" : "Add Per Entity"}
         </Button>
       </PopoverContent>
     </Popover>

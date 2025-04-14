@@ -1,11 +1,11 @@
 import { Feature } from "@autumn/shared";
 
 export const getFeature = (
-  internalFeatureId: string | undefined,
+  featureId: string | undefined,
   features: Feature[]
 ) => {
   const foundFeature = features?.find(
-    (feature: Feature) => feature.internal_id === internalFeatureId
+    (feature: Feature) => feature.id === featureId
   );
   return foundFeature || null;
 };
