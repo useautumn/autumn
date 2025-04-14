@@ -17,10 +17,15 @@ import {
   itemIsFree,
 } from "@/utils/product/productItemUtils";
 import UpdateProductItem from "./UpdateProductItem";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
+import { getFeature } from "@/utils/product/entitlementUtils";
+import { Badge } from "@/components/ui/badge";
+import { DollarSign } from "lucide-react";
+import { Flag } from "lucide-react";
+import { cn } from "@/lib/utils";
 export const ProductItemTable = () => {
-  let { product, features, org } = useProductContext();
+  let { product, setProduct, features, org } = useProductContext();
   let [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
   let [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   let [open, setOpen] = useState(false);
@@ -29,19 +34,50 @@ export const ProductItemTable = () => {
     const feature = features.find((f: Feature) => f.id == item.feature_id);
 
     if (feature?.type === FeatureType.Boolean) {
-      return "";
+      return `${feature.name}`;
     }
 
     if (item.included_usage == UsageUnlimited) {
-      return "Unlimited";
+      return `Unlimited ${feature?.name}`;
     }
 
-    if (item.reset_usage_on_interval === false) {
-      return `${item.included_usage}`;
-    }
-
-    return `${item.included_usage} / ${item.interval}`;
+    return (
+      <div className="whitespace-nowrap flex">
+        {item.included_usage}&nbsp;
+        <span className="truncate">{feature?.name}</span> &nbsp;
+        {item.entity_feature_id && (
+          <span className="truncate">
+            per {getFeature(item.entity_feature_id, features)?.name} &nbsp;
+          </span>
+        )}
+        {item.reset_usage_on_interval && (
+          <span className="text-t3">per {item.interval}</span>
+        )}
+      </div>
+    );
   };
+
+  useEffect(() => {
+    if (!product?.items) return;
+
+    const sortedItems = [...product.items].sort((a, b) => {
+      const typeA = getItemType(a);
+      const typeB = getItemType(b);
+
+      const typeOrder = {
+        [ProductItemType.Feature]: 0,
+        [ProductItemType.FeaturePrice]: 1,
+        [ProductItemType.Price]: 2,
+      };
+
+      return typeOrder[typeA] - typeOrder[typeB];
+    });
+
+    setProduct({
+      ...product,
+      items: sortedItems,
+    });
+  }, [product?.items]);
 
   const getPaidFeatureString = (item: ProductItem) => {
     let amountStr = "";
@@ -153,8 +189,8 @@ export const ProductItemTable = () => {
       />
       <div className="flex flex-col text-sm rounded-sm">
         <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 h-10">
-          <h2 className="text-sm text-t2 font-medium col-span-2 flex">
-            Features
+          <h2 className="text-sm text-t2 font-medium col-span-2 flex whitespace-nowrap">
+            Product Items
           </h2>
           <div className="flex w-full h-full items-center col-span-8 justify-end">
             <div className="flex w-fit h-full items-center">
@@ -164,41 +200,52 @@ export const ProductItemTable = () => {
         </div>
         <div className="flex flex-col">
           {product.items.map((item: ProductItem, index: number) => {
-            let feature = features.find((feature: Feature) => {
-              return feature.id === item.feature_id;
-            });
-
             let itemType = getItemType(item);
 
             return (
               <div
                 key={index}
-                className="flex grid grid-cols-10 gap-8 px-10 text-t2 h-10 items-center hover:bg-primary/3 pr-4"
+                className="flex grid grid-cols-16 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3 pr-4"
                 onClick={() => handleRowClick(item, index)}
               >
                 <span className="font-mono text-t3 col-span-2 overflow-hidden flex whitespace-nowrap">
                   <AdminHover texts={getAdminHoverTexts(item)}>
-                    {feature?.name || "Fixed Price"}
+                    {item.feature_id || ""}
                   </AdminHover>
                 </span>
-                <span className="col-span-6">
+                <span className="col-span-8 whitespace-nowrap truncate">
                   {itemType === ProductItemType.Feature
                     ? getFreeFeatureString(item)
                     : itemType === ProductItemType.Price
                     ? getFixedPriceString(item)
                     : getPaidFeatureString(item)}
                 </span>
-                <span className="col-span-1">
-                  {/* {price && (
-                    <Badge
-                      variant={"outline"}
-                      className="items-center gap-1 py-1 px-2 text-t2"
-                    >
-                      <CircleDollarSign className="w-4 h-4 text-yellow-500" />
-                    </Badge>
-                  )} */}
+                <span className="col-span-4 flex gap-1 justify-end w-fit ">
+                  <Badge
+                    variant="blue"
+                    className={cn(
+                      "text-xs flex gap-1 items-center opacity-0",
+                      (itemType === ProductItemType.Feature ||
+                        itemType === ProductItemType.FeaturePrice) &&
+                        "opacity-100"
+                    )}
+                  >
+                    <Flag size={12} /> Feature
+                  </Badge>
+
+                  <Badge
+                    variant="yellow"
+                    className={cn(
+                      "text-xs flex gap-1 items-center opacity-0",
+                      (itemType === ProductItemType.Price ||
+                        itemType === ProductItemType.FeaturePrice) &&
+                        "opacity-100"
+                    )}
+                  >
+                    <DollarSign size={12} /> Price
+                  </Badge>
                 </span>
-                <span className="flex text-xs text-t3 items-center col-span-1 whitespace-nowrap justify-end">
+                <span className="flex text-xs text-t3 items-center col-span-2 whitespace-nowrap justify-end">
                   {item.created_at
                     ? formatUnixToDateTime(item.created_at).date
                     : formatUnixToDateTime(Math.floor(Date.now())).date}

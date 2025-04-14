@@ -23,7 +23,7 @@ import {
 } from "@/utils/product/productItemUtils";
 import { ConfigWithFeature } from "./components/ConfigWithFeature";
 import FixedPriceConfig from "./components/ConfigFixedPrice";
-import MoreMenuButton from "./MoreMenuButton";
+import { getFeature } from "@/utils/product/entitlementUtils";
 
 export const ProductItemConfig = () => {
   // HOOKS
@@ -45,28 +45,30 @@ export const ProductItemConfig = () => {
     (f: Feature) => f.id == item.feature_id
   );
 
+  console.log(item, "item");
+
   const handleAddPrice = () => {
-    console.log("Item", item);
-    if (itemIsFree(item)) {
-      console.log("Item is free");
-      setItem({
-        ...item,
-        tiers: [
-          {
-            to: TierInfinite,
-            amount: 0,
-          },
-        ],
-      });
-      setShow({ ...show, price: true });
-    } else {
-      setItem({
-        ...item,
-        amount: null,
-        tiers: null,
-      });
-      setShow({ ...show, price: false });
-    }
+    // console.log("handleAddPrice", itemIsFree(item));
+    // if (itemIsFree(item)) {
+
+    setItem({
+      ...item,
+      tiers: [
+        {
+          to: TierInfinite,
+          amount: item.amount ?? 0,
+        },
+      ],
+      interval: ProductItemInterval.Month,
+    });
+    setShow({ ...show, price: !show.price });
+    // } else {
+    //   setItem({
+    //     ...item,
+    //     tiers: null,
+    //   });
+    //   setShow({ ...show, price: true });
+    // }
   };
 
   const toggleShowFeature = () => {
@@ -102,32 +104,35 @@ export const ProductItemConfig = () => {
   return (
     <div
       className={cn(
-        "flex w-lg transition-all ease-in-out duration-300", //modal animations
-        !show.feature && !show.price && "w-xs",
-        !show.feature && show.price && "w-sm",
-        item.tiers?.length > 1 && "w-2xl"
+        "flex flex-col gap-6 w-lg transition-all ease-in-out duration-300", //modal animations
+        !show.feature && "w-xs",
+        // !show.feature && show.price && "w-sm",
+        show.price && show.feature && item.tiers?.length > 1 && "w-2xl"
       )}
     >
-      {!show.feature && !show.price ? (
-        <div className="w-full text-sm py-2 justify-center rounded-md rounded-xl text-t3 ">
-          Add a feature, price, or both to{" "}
-          <span className="font-medium">{product.name}</span>
-        </div>
-      ) : !show.feature && show.price ? (
-        <div className="flex w-full">
-          <FixedPriceConfig />
-        </div>
-      ) : (
-        <ConfigWithFeature
-          show={show}
-          setShow={setShow}
-          handleAddPrice={handleAddPrice}
-        />
-      )}
-      <div className="flex animate-in slide-in-from-right-1/2 duration-200 fade-out ml-8 max-w-48">
-        <div className="border-l mr-3"></div>
-        <div className="flex flex-col w-fit justify-between gap-10">
-          <div className="flex flex-col gap-2 w-32">
+      {
+        // !show.feature && !show.price ? (
+        //   <div className="w-full text-sm py-2 justify-center rounded-md rounded-xl text-t3 ">
+        //     Add a feature, price, or both to{" "}
+        //     <span className="font-medium">{product.name}</span>
+        //   </div>
+        // ) :
+        !show.feature ? (
+          <div className="flex w-full">
+            <FixedPriceConfig show={show} setShow={setShow} />
+          </div>
+        ) : (
+          <ConfigWithFeature
+            show={show}
+            setShow={setShow}
+            handleAddPrice={handleAddPrice}
+          />
+        )
+      }
+      <div className="flex animate-in slide-in-from-bottom-1/2 duration-200 fade-out w-full justify-end">
+        {/* <div className="border-l mr-3"></div> */}
+        <div className="flex flex-col justify-between gap-10 w-full">
+          {/* <div className="flex flex-col gap-2 w-32">
             <ToggleDisplayButton
               label="Add Feature"
               className="w-full justify-start"
@@ -195,22 +200,75 @@ export const ProductItemConfig = () => {
                   )}
                   Usage Reset
                 </ToggleDisplayButton>
-                <MoreMenuButton show={show} setShow={setShow} />
+                <MoreMenuButton
+                  fields={fields}
+                  setFields={setFields}
+                  showPerEntity={showPerEntity}
+                  setShowPerEntity={setShowPerEntity}
+                  selectedFeature={selectedFeature}
+                />
               </>
             )}
-          </div>
-          <div className="flex flex-col gap-2">
+          </div> */}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleAddPrice}
+              disabled={item.included_usage == "unlimited"}
+              className={cn(
+                "w-0 max-w-0 p-0 overflow-hidden transition-all duration-200 ease-in-out -mr-2",
+                !show.price &&
+                  show.feature &&
+                  getFeature(item.feature_id, features)?.type !=
+                    FeatureType.Boolean
+                  ? "w-64 max-w-64 mr-0 p-2"
+                  : "w-0 max-w-0 p-0 border-none"
+              )}
+            >
+              <PlusIcon size={14} className="mr-1" />
+              Add Price
+            </Button>
+            <Button
+              className={cn(
+                "w-0 max-w-0 p-0 overflow-hidden transition-all duration-200 ease-in-out -mr-2 ",
+                !show.feature && !isUpdate
+                  ? "w-64 max-w-64 mr-0 p-2"
+                  : "w-0 max-w-0 p-0 border-none"
+              )}
+              variant="outline"
+              onClick={() => {
+                setShow({
+                  ...show,
+                  feature: true,
+                  price: item.amount > 0 ? true : false,
+                });
+                setItem({
+                  ...item,
+                  tiers: item.amount
+                    ? [
+                        {
+                          to: TierInfinite,
+                          amount: item.amount ?? 0,
+                        },
+                      ]
+                    : null,
+                });
+              }}
+            >
+              <PlusIcon size={14} className="mr-1" />
+              Add Feature
+            </Button>
             {handleDeleteProductItem && (
               <Button
                 variant="destructive"
                 // disabled={!selectedFeature}
-                className="w-full rounded-sm"
-                size="sm"
+                className="w-64 max-w-64 rounded-sm "
+                // size="sm"
                 onClick={() => {
                   handleDeleteProductItem();
                 }}
               >
-                Delete
+                Delete Item
               </Button>
             )}
             {handleUpdateProductItem && (
@@ -222,7 +280,7 @@ export const ProductItemConfig = () => {
                   handleUpdateProductItem();
                 }}
               >
-                Update Feature
+                Update Item
               </Button>
             )}
             {handleCreateProductItem && (
