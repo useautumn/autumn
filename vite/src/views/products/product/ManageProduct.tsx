@@ -118,12 +118,12 @@ export const ManageProduct = ({
         </div> */}
       </div>
 
-      {showFreeTrial && (
+      {/* {showFreeTrial && (
         <div className="flex flex-col gap-4">
           <p className="text-md text-t2 font-medium">Free Trial</p>
           <FreeTrialView product={product} />
         </div>
-      )}
+      )} */}
     </div>
   );
 };

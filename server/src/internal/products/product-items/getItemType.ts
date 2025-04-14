@@ -10,6 +10,6 @@ export const isFeatureItem = (item: ProductItem) => {
   );
 };
 
-export const isFixedPriceItem = (item: ProductItem) => {
+export const isPriceItem = (item: ProductItem) => {
   return notNullish(item.amount) && nullish(item.feature_id);
 };
