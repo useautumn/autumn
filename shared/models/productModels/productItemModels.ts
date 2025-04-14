@@ -5,7 +5,7 @@ export const TierInfinite = "inf";
 export const Infinite = "inf";
 
 export enum ProductItemInterval {
-  None = "none",
+  // None = "none",
 
   // Reset interval
   Minute = "minute",

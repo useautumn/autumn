@@ -9,6 +9,10 @@ import {
   Infinite,
 } from "@autumn/shared";
 import { isFeatureItem } from "./getItemType.js";
+import {
+  billingToItemInterval,
+  entToItemInterval,
+} from "./itemIntervalUtils.js";
 
 export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
   // Compare tiers
@@ -40,16 +44,16 @@ export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
   );
 };
 
-export const intervalIsNone = (interval: string | undefined | null) => {
-  if (!interval) {
-    return true;
-  }
-  return (
-    interval == ProductItemInterval.None ||
-    interval == EntInterval.Lifetime ||
-    interval == BillingInterval.OneOff
-  );
-};
+// export const intervalIsNone = (interval: string | undefined | null) => {
+//   if (!interval) {
+//     return true;
+//   }
+//   return (
+//     interval == ProductItemInterval.None ||
+//     interval == EntInterval.Lifetime ||
+//     interval == BillingInterval.OneOff
+//   );
+// };
 
 export const itemIsFixedPrice = (item: ProductItem) => {
   return notNullish(item.amount) && nullish(item.feature_id);
@@ -62,9 +66,6 @@ export const isFeaturePriceItem = (item: ProductItem) => {
   );
 };
 
-//   return nullish(item.amount) && nullish(item.tiers);
-// };
-
 export const getItemType = (item: ProductItem) => {
   if (itemIsFixedPrice(item)) {
     return ProductItemType.Price;
@@ -73,29 +74,6 @@ export const getItemType = (item: ProductItem) => {
   }
 
   return ProductItemType.FeaturePrice;
-};
-
-export const itemToEntInterval = (item: any) => {
-  // if (!item.interval) {
-  //   return null;
-  // }
-
-  if (
-    item.interval == ProductItemInterval.None ||
-    item.interval == EntInterval.Lifetime
-  ) {
-    return EntInterval.Lifetime;
-  }
-
-  if (item.reset_usage_on_billing === false) {
-    return EntInterval.Lifetime;
-  }
-
-  if (isFeaturePriceItem(item) && notNullish(item.reset_interval)) {
-    return item.reset_interval as any;
-  }
-
-  return item.interval;
 };
 
 // FOR TESTS?
@@ -107,13 +85,13 @@ export const constructFeatureItem = ({
 }: {
   feature_id: string;
   included_usage?: number | typeof Infinite;
-  interval?: EntInterval;
+  interval: EntInterval;
   entitlement_id?: string;
 }) => {
   let item: ProductItem = {
     feature_id,
     included_usage,
-    interval: interval as any,
+    interval: entToItemInterval(interval),
     entitlement_id,
   };
 
@@ -141,7 +119,7 @@ export const constructFeaturePriceItem = ({
   amount,
   interval,
   behavior,
-  reset_usage_on_billing = false,
+  reset_usage_on_billing = true,
   billing_units = 1,
   carry_over_usage = true,
 }: {
@@ -160,7 +138,7 @@ export const constructFeaturePriceItem = ({
     feature_id,
     included_usage: included_usage as number,
     amount,
-    interval: interval as any,
+    interval: billingToItemInterval(interval),
     behavior,
     reset_usage_on_billing,
     billing_units,

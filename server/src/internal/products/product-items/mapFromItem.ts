@@ -20,25 +20,17 @@ import {
   TierInfinite,
   UsagePriceConfig,
 } from "@autumn/shared";
-import {
-  intervalIsNone,
-  itemIsFixedPrice,
-  itemToEntInterval,
-} from "./productItemUtils.js";
+import { itemIsFixedPrice } from "./productItemUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { pricesAreSame } from "@/internal/prices/priceInitUtils.js";
 import { entsAreSame } from "../entitlements/entitlementUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { isFeatureItem } from "./getItemType.js";
-
-const itemToBillingInterval = (interval: ProductItemInterval) => {
-  if (interval == ProductItemInterval.None) {
-    return BillingInterval.OneOff;
-  }
-
-  return interval;
-};
+import {
+  itemToBillingInterval,
+  itemToEntInterval,
+} from "./itemIntervalUtils.js";
 
 // ITEM TO PRICE AND ENTITLEMENT
 export const toPrice = ({
@@ -57,7 +49,7 @@ export const toPrice = ({
   let config: FixedPriceConfig = {
     type: PriceType.Fixed,
     amount: notNullish(item.amount) ? item.amount! : item.tiers![0].amount!,
-    interval: itemToBillingInterval(item.interval!) as BillingInterval,
+    interval: itemToBillingInterval(item) as BillingInterval,
   };
 
   let price: Price = {
@@ -204,7 +196,7 @@ export const toFeatureAndPrice = ({
           },
         ]
       : (item.tiers as any),
-    interval: itemToBillingInterval(item.interval!) as BillingInterval,
+    interval: itemToBillingInterval(item) as BillingInterval,
   };
 
   let price: Price = {

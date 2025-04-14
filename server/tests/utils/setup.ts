@@ -330,7 +330,7 @@ export const setupOrg = async ({
     console.log("MOCHA RUNNING IN SERIAL");
   }
 
-  return;
+  // return;
 
   // Fetch all products
   const allProducts = await AutumnCli.getProducts();
@@ -428,12 +428,12 @@ export const setupOrg = async ({
   console.log("✅ Inserted reward triggers");
 
   // Initialize stripe products
-  // How to check if mocha is in parallel mode?
-  if (process.env.MOCHA_PARALLEL) {
-    console.log("MOCHA RUNNING IN PARALLEL");
-    await AutumnCli.initStripeProducts();
-    console.log("✅ Initialized stripe products / prices");
-  } else {
-    console.log("MOCHA RUNNING IN SERIAL");
-  }
+  // // How to check if mocha is in parallel mode?
+  // if (process.env.MOCHA_PARALLEL) {
+  //   console.log("MOCHA RUNNING IN PARALLEL");
+  //   await AutumnCli.initStripeProducts();
+  //   console.log("✅ Initialized stripe products / prices");
+  // } else {
+  //   console.log("MOCHA RUNNING IN SERIAL");
+  // }
 };

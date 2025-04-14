@@ -6,12 +6,13 @@ import {
   TierInfinite,
   ProductItemSchema,
   Infinite,
+  ProductItemInterval,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { itemToEntInterval, isFeaturePriceItem } from "./productItemUtils.js";
+import { isFeaturePriceItem } from "./productItemUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-import { isFeatureItem } from "./getItemType.js";
-
+import { isFeatureItem, isPriceItem } from "./getItemType.js";
+import { itemToEntInterval } from "./itemIntervalUtils.js";
 const validateProductItem = ({ item }: { item: ProductItem }) => {
   item = ProductItemSchema.parse(item);
   // 1. Check if amount and tiers are not null
@@ -68,7 +69,8 @@ const validateProductItem = ({ item }: { item: ProductItem }) => {
   if (isFeaturePriceItem(item) || isFeatureItem(item)) {
     if (
       typeof item.included_usage !== "number" &&
-      item.included_usage !== Infinite
+      item.included_usage !== Infinite &&
+      notNullish(item.included_usage)
     ) {
       throw new RecaseError({
         message: `Included usage must be a number or '${Infinite}'`,
@@ -81,8 +83,22 @@ const validateProductItem = ({ item }: { item: ProductItem }) => {
       item.included_usage = 0;
     }
   }
-};
 
+  // 5. If it's a price, can't have day, minute or hour interval
+  if (isFeaturePriceItem(item) || isPriceItem(item)) {
+    if (
+      item.interval == ProductItemInterval.Day ||
+      item.interval == ProductItemInterval.Minute ||
+      item.interval == ProductItemInterval.Hour
+    ) {
+      throw new RecaseError({
+        message: `Price can't have day, minute or hour interval`,
+        code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+  }
+};
 export const validateProductItems = ({
   newItems,
 }: {

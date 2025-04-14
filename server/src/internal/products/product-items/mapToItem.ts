@@ -13,8 +13,12 @@ import {
   TierInfinite,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { intervalIsNone } from "./productItemUtils.js";
+
 import { nullish } from "@/utils/genUtils.js";
+import {
+  billingToItemInterval,
+  entToItemInterval,
+} from "./itemIntervalUtils.js";
 
 export const toProductItem = ({
   ent,
@@ -40,9 +44,7 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
     feature_id: ent.feature.id,
     included_usage:
       ent.allowance_type == AllowanceType.Unlimited ? Infinite : ent.allowance,
-    interval: intervalIsNone(ent.interval!)
-      ? ProductItemInterval.None
-      : ent.interval!,
+    interval: entToItemInterval(ent.interval!),
 
     entity_feature_id: ent.entity_feature_id,
     carry_over_usage: ent.carry_from_previous,
@@ -71,9 +73,7 @@ export const toFeaturePriceItem = ({
   return {
     feature_id: ent.feature.id,
     included_usage: ent.allowance,
-    interval: intervalIsNone(config.interval)
-      ? ProductItemInterval.None
-      : config.interval!,
+    interval: billingToItemInterval(config.interval!),
 
     reset_usage_on_billing: ent.interval !== EntInterval.Lifetime,
 
@@ -103,9 +103,7 @@ export const toPriceItem = ({ price }: { price: Price }) => {
   return {
     feature_id: null,
 
-    interval: intervalIsNone(config.interval)
-      ? ProductItemInterval.None
-      : config.interval!,
+    interval: billingToItemInterval(config.interval!),
     amount: config.amount,
 
     price_id: price.id,
