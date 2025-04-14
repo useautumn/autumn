@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   AppEnv,
   BillingInterval,
+  FeatureOptions,
   FrontendOrganization,
   FrontendProduct,
   FullCusProduct,
@@ -74,7 +75,13 @@ export default function CustomerProductView() {
   const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
   const navigation = useNavigate();
-  const [product, setProduct] = useState<ProductV2 | null>(null);
+
+  type FrontendProduct = ProductV2 & {
+    isActive: boolean;
+    options: FeatureOptions[];
+  };
+
+  const [product, setProduct] = useState<FrontendProduct | null>(null);
   const [options, setOptions] = useState<OptionValue[]>([]);
 
   const [searchParams] = useSearchParams();
@@ -157,7 +164,8 @@ export default function CustomerProductView() {
   }
 
   if (isLoading) return <LoadingScreen />;
-  const oneTimePurchase = pricesOnlyOneOff(product?.prices || []);
+  // const oneTimePurchase = pricesOnlyOneOff(product?.prices || []);
+  const oneTimePurchase = false;
 
   const { customer } = data;
 
@@ -171,20 +179,23 @@ export default function CustomerProductView() {
 
   const handleCreateProduct = async (useInvoiceLatest?: boolean) => {
     try {
-      // if (oneTimePurchase || !product.isActive) {
-      //   const { data } = await ProductService.getRequiredOptions(
-      //     axiosInstance,
-      //     {
-      //       prices: product.prices,
-      //       entitlements: product.entitlements,
-      //     }
-      //   );
+      // oneTimePurchase ||
+      // TODO: Check if product is one time purchase
+      if (!product.isActive) {
+        const { data } = await ProductService.getRequiredOptions(
+          axiosInstance,
+          {
+            // prices: product.items,
+            // entitlements: product.entitlements,
+            items: product.items,
+          }
+        );
 
-      //   if (data.options && data.options.length > 0) {
-      //     setRequiredOptions(data.options);
-      //     return;
-      //   }
-      // }
+        if (data.options && data.options.length > 0) {
+          setRequiredOptions(data.options);
+          return;
+        }
+      }
 
       // Continue with product creation if no required options
       await createProduct(
@@ -206,6 +217,7 @@ export default function CustomerProductView() {
         items: product.items,
         free_trial: product.free_trial,
         options: requiredOptions ? requiredOptions : options,
+
         is_custom: isCustom,
         invoice_only:
           useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,

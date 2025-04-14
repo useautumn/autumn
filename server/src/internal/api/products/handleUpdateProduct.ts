@@ -275,6 +275,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         features,
         product: fullProduct,
         logger,
+        isCustom: false,
       });
 
       if (free_trial !== undefined) {

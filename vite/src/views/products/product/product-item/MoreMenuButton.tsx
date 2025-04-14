@@ -1,4 +1,3 @@
-import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -6,7 +5,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Feature } from "@autumn/shared";
+
 import { EllipsisVertical, MinusIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useProductItemContext } from "./ProductItemContext";
@@ -38,7 +37,7 @@ export default function MoreMenuButton({
         <div className="flex items-center space-x-2">
           <Button
             variant="secondary"
-            className="text-xs text-t3 shadow-none border-none"
+            className="text-xs text-t3 shadow-none border-none w-full justify-start"
             onClick={() => {
               setItem({
                 ...item,

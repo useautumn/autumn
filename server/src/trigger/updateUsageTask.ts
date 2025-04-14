@@ -322,25 +322,25 @@ export const runUpdateUsageTask = async ({
     }
     console.log("   ✅ Customer balance updated");
 
-    // 2. Check if there's below threshold price
-    const belowThresholdPrice = await getBelowThresholdPrice({
-      sb,
-      internalCustomerId: customer.internal_id,
-      cusEnts,
-    });
+    // // 2. Check if there's below threshold price
+    // const belowThresholdPrice = await getBelowThresholdPrice({
+    //   sb,
+    //   internalCustomerId: customer.internal_id,
+    //   cusEnts,
+    // });
 
-    if (belowThresholdPrice) {
-      console.log("2. Below threshold price found");
+    // if (belowThresholdPrice) {
+    //   console.log("2. Below threshold price found");
 
-      await handleBelowThresholdInvoicing({
-        sb,
-        internalCustomerId: customer.internal_id,
-        belowThresholdPrice,
-        logger,
-      });
-    } else {
-      console.log("   ✅ No below threshold price found");
-    }
+    //   await handleBelowThresholdInvoicing({
+    //     sb,
+    //     internalCustomerId: customer.internal_id,
+    //     belowThresholdPrice,
+    //     logger,
+    //   });
+    // } else {
+    //   console.log("   ✅ No below threshold price found");
+    // }
   } catch (error) {
     if (logger) {
       logger.use((log: any) => {

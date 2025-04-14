@@ -124,8 +124,6 @@ export const handleCheckoutSessionCompleted = async ({
     return;
   }
 
-  // GET COUPON
-
   const stripeCli = createStripeCli({ org, env });
 
   // return;

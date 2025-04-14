@@ -18,9 +18,9 @@ export const getRelatedCusEnt = ({
   }
 
   const cusEnt = cusEnts.find(
-    (ent) =>
-      ent.customer_product_id == cusPrice.customer_product_id &&
-      ent.internal_feature_id == config.internal_feature_id
+    (ce) =>
+      ce.customer_product_id == cusPrice.customer_product_id &&
+      ce.entitlement.id == cusPrice.price.entitlement_id
   );
 
   return cusEnt;

@@ -347,14 +347,17 @@ export class CustomerEntitlementService {
     id: string;
     updates: Partial<CustomerEntitlement>;
   }) {
-    const { error } = await sb
+    const { data, error } = await sb
       .from("customer_entitlements")
       .update(updates)
-      .eq("id", id);
+      .eq("id", id)
+      .select();
 
     if (error) {
       throw error;
     }
+
+    return data;
   }
 
   static async getByIdStrict({

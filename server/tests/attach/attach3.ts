@@ -17,10 +17,15 @@ import { expect } from "chai";
 describe(`${chalk.yellowBright("attach3: Multi attach, all one off")}`, () => {
   let customerId = "attach3";
 
+  // let billingUnits =
+  //   oneTimeProducts.oneTimeMetered2.prices[0].config.billing_units;
+  // let quantity = 1000 * billingUnits;
+  let quantity = 1000;
+
   let options = [
     {
       feature_id: features.metered2.id,
-      quantity: 1000,
+      quantity,
     },
   ];
   before(async function () {
@@ -70,9 +75,15 @@ describe(`${chalk.yellowBright("attach3: Multi attach, all one off")}`, () => {
 
     const metered2Amount = metered2Tiers[0].amount;
 
+    let numBillingUnits = new Decimal(options[0].quantity).div(
+      oneTimeProducts.oneTimeMetered2.prices[0].config.billing_units
+    );
+
+    // console.log("Num billing units: ", numBillingUnits);
+
     expect(invoices[0].total).to.equal(
       new Decimal(metered2Amount)
-        .mul(options[0].quantity)
+        .mul(numBillingUnits)
         .add(metered1Amount)
         .toNumber()
     );

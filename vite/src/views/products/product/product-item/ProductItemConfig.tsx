@@ -199,12 +199,21 @@ export const ProductItemConfig = () => {
                   //   // !selectedFeature
                   // }
                   className="w-full justify-start animate-in slide-in-from-right-1/2 duration-200 fade-out"
-                  onClick={() =>
+                  onClick={() => {
+                    console.log("Toggling cycle");
+                    console.log(
+                      "Reset usage on interval",
+                      item.reset_usage_on_interval
+                    );
+                    setItem({
+                      ...item,
+                      reset_usage_on_interval: !item.reset_usage_on_interval,
+                    });
                     setShow({
                       ...show,
                       cycle: !show.cycle,
-                    })
-                  }
+                    });
+                  }}
                 >
                   {show.cycle ? (
                     <MinusIcon size={14} className="mr-1" />

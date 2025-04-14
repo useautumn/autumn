@@ -1,31 +1,22 @@
+import dotenv from "dotenv";
+dotenv.config();
 import {
-  AppEnv,
-  CusProductStatus,
   Customer,
-  FullCusProduct,
   FullProduct,
   MigrationJob,
   MigrationJobStep,
-  Organization,
-  Product,
 } from "@autumn/shared";
+
 import { SupabaseClient } from "@supabase/supabase-js";
 import { MigrationService } from "../MigrationService.js";
-import {
-  handleUpgrade,
-  ProrationBehavior,
-} from "@/internal/customers/change-product/handleUpgrade.js";
-import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
-import { EntityService } from "@/internal/api/entities/EntityService.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
+
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { constructMigrationError } from "../migrationUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import { migrateCustomer } from "./migrateCustomer.js";
 import { sendMigrationEmail } from "./sendMigrationEmail.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 
 export const migrateCustomers = async ({
   sb,

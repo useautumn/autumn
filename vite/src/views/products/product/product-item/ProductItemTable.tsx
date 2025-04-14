@@ -107,7 +107,7 @@ export const ProductItemTable = () => {
 
     let feature = features.find((f: Feature) => f.id == item.feature_id);
 
-    amountStr += ` per ${item.billing_units! > 1 ? item.billing_units : ""}${
+    amountStr += ` per ${item.billing_units! > 1 ? item.billing_units : ""} ${
       feature?.name
     }`;
 

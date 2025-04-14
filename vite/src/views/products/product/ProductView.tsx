@@ -133,6 +133,7 @@ function ProductView({ env }: { env: AppEnv }) {
   };
 
   const createProductClicked = async () => {
+    console.log("Creating product");
     if (!counts) {
       toast.error("Something went wrong, please try again...");
       return;

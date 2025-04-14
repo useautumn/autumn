@@ -17,7 +17,7 @@ import {
   constructProduct,
   copyProduct,
 } from "@/internal/products/productUtils.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 
 import {
@@ -25,6 +25,7 @@ import {
   handleUpdateProductV2,
 } from "./handleUpdateProduct.js";
 import { handleDeleteProduct } from "./handleDeleteProduct.js";
+import { handleGetProduct } from "./handleGetProduct.js";
 
 export const productApiRouter = Router();
 
@@ -39,7 +40,7 @@ productApiRouter.get("", async (req: any, res) => {
 
 productApiRouter.post("", async (req: any, res) => {
   try {
-    const { product: productData } = req.body;
+    const productData = CreateProductSchema.parse(req.body);
     let sb = req.sb;
 
     const org = await OrgService.getFullOrg({
@@ -91,9 +92,11 @@ productApiRouter.post("", async (req: any, res) => {
   }
 });
 
-productApiRouter.delete("/:productId", handleDeleteProduct);
+productApiRouter.get("/:productId", handleGetProduct);
 
 productApiRouter.post("/:productId", handleUpdateProductV2);
+
+productApiRouter.delete("/:productId", handleDeleteProduct);
 
 productApiRouter.post("/:productId/copy", async (req: any, res) => {
   const { productId: fromProductId } = req.params;
