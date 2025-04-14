@@ -11,8 +11,14 @@ import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUti
 import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { handleVersionProduct } from "./handleVersionProduct.js";
-import { productsAreDifferent } from "@/internal/products/productUtils.js";
+import {
+  handleVersionProduct,
+  handleVersionProductV2,
+} from "./handleVersionProduct.js";
+import {
+  productsAreDifferent,
+  productsAreDifferent2,
+} from "@/internal/products/productUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 
@@ -264,6 +270,25 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         org,
         cusProductExists,
       });
+
+      // 1. Map to product items
+      // Check if product items are different
+      // let productHasChanged = productsAreDifferent2(req.body, fullProduct);
+      // console.log("Product has changed: ", productHasChanged);
+
+      if (cusProductExists) {
+        await handleVersionProductV2({
+          req,
+          res,
+          sb,
+          latestProduct: fullProduct,
+          org,
+          env,
+          items: req.body.items,
+          freeTrial: req.body.free_trial,
+        });
+        return;
+      }
 
       const { items, free_trial } = req.body;
 

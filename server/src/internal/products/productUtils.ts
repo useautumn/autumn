@@ -16,6 +16,7 @@ import {
   ProcessorType,
   Product,
   ProductSchema,
+  ProductV2,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
@@ -44,6 +45,8 @@ import RecaseError from "@/utils/errorUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
+import { mapToProductItems } from "./productV2Utils.js";
+import { itemsAreSame } from "./product-items/productItemUtils.js";
 
 export const getLatestProducts = (products: FullProduct[]) => {
   const latestProducts = products.reduce((acc: any, product: any) => {
@@ -535,6 +538,41 @@ export const productsAreDifferent = ({
 
   if (!freeTrialsAreSame(product1.free_trial, product2.free_trial)) {
     return true;
+  }
+
+  return false;
+};
+
+export const productsAreDifferent2 = (
+  newProduct: ProductV2,
+  oldProduct: FullProduct
+) => {
+  let newProductItems = newProduct.items;
+  let oldProductItems = mapToProductItems({
+    prices: oldProduct.prices,
+    entitlements: oldProduct.entitlements,
+  });
+
+  if (newProductItems.length !== oldProductItems.length) {
+    return true;
+  }
+
+  for (const item of newProductItems) {
+    let oldItem = oldProductItems.find(
+      (i) =>
+        i.price_id == item.price_id || i.entitlement_id == item.entitlement_id
+    );
+
+    if (!oldItem) {
+      return true;
+    }
+
+    if (!itemsAreSame(item, oldItem)) {
+      console.log("Items are different");
+      console.log("Item 1: ", item);
+      console.log("Item 2: ", oldItem);
+      return true;
+    }
   }
 
   return false;

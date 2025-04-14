@@ -11,12 +11,9 @@ import {
 } from "@/components/ui/select";
 
 export const ProductVersions = () => {
-  const { product, numVersionsdef, customerData, version } =
-    useProductContext();
+  const { product, numVersions, customerData, version } = useProductContext();
   const navigate = useNavigate();
   const env = useEnv();
-
-  let numVersions = 3;
 
   return (
     <div className="flex justify-between gap-4 w-full text-xs">

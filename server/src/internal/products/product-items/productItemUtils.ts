@@ -8,6 +8,36 @@ import {
   ProductItemBehavior,
 } from "@autumn/shared";
 
+export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
+  // Compare tiers
+  const compareTiers = (tiers1: any, tiers2: any) => {
+    if (!tiers1 && !tiers2) {
+      return true;
+    }
+
+    if (!tiers1 || !tiers2) {
+      return false;
+    }
+
+    if (tiers1.length !== tiers2.length) {
+      return false;
+    }
+
+    return tiers1.every(
+      (tier: any, index: number) =>
+        tier.amount === tiers2[index].amount && tier.to === tiers2[index].to
+    );
+  };
+  return (
+    item1.feature_id == item2.feature_id &&
+    item1.included_usage == item2.included_usage &&
+    item1.interval == item2.interval &&
+    item1.reset_usage_on_interval === item2.reset_usage_on_interval &&
+    item1.amount == item2.amount &&
+    compareTiers(item1.tiers, item2.tiers)
+  );
+};
+
 export const intervalIsNone = (interval: string | undefined | null) => {
   if (!interval) {
     return true;

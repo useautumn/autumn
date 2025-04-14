@@ -35,7 +35,7 @@ export default function ConfirmNewVersionDialog({
     setIsLoading(true);
     await createProduct();
     setIsLoading(false);
-    setOpen(false);
+    // setOpen(false);
   };
 
   return (
@@ -48,8 +48,12 @@ export default function ConfirmNewVersionDialog({
           <DialogTitle>Create new version?</DialogTitle>
           <DialogDescription className="text-sm flex flex-col gap-4">
             <p>
-              Note: After creating a new version, it will be{" "}
-              <span className="font-bold">active immediately</span>.
+              After creating a new version, it will be{" "}
+              <span className="font-bold">
+                active immediately for new customers
+              </span>
+              .<br /> You can migrate existing customers to the new version
+              after.
             </p>
             <p>
               Type <code className="font-bold">{product.id}</code> to continue.

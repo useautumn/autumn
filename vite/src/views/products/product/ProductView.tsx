@@ -28,6 +28,7 @@ import ErrorScreen from "@/views/general/ErrorScreen";
 import ProductSidebar from "./ProductSidebar";
 import { FeaturesContext } from "@/views/features/FeaturesContext";
 import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
+import ConfirmNewVersionDialog from "./ConfirmNewVersionDialog";
 
 function ProductView({ env }: { env: AppEnv }) {
   const { product_id } = useParams();
@@ -133,7 +134,6 @@ function ProductView({ env }: { env: AppEnv }) {
   };
 
   const createProductClicked = async () => {
-    console.log("Creating product");
     if (!counts) {
       toast.error("Something went wrong, please try again...");
       return;
@@ -173,6 +173,11 @@ function ProductView({ env }: { env: AppEnv }) {
           mutateCount,
         }}
       >
+        <ConfirmNewVersionDialog
+          open={showNewVersionDialog}
+          setOpen={setShowNewVersionDialog}
+          createProduct={createProduct}
+        />
         <div className="flex w-full">
           <div className="flex flex-col gap-4 w-full">
             <ProductViewBreadcrumbs />
