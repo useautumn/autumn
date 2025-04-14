@@ -177,6 +177,7 @@ export const createNewCustomer = async ({
       fromRequest: false,
     });
   }
+
   for (const product of freeProds) {
     await createFullCusProduct({
       sb,

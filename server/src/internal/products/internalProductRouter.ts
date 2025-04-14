@@ -3,7 +3,11 @@ import { FeatureService } from "../features/FeatureService.js";
 import { entitlementRouter } from "./entitlementRouter.js";
 import { PriceService } from "../prices/PriceService.js";
 import { ProductService } from "./ProductService.js";
-import { CusProductStatus, EntitlementWithFeature } from "@autumn/shared";
+import {
+  CusProductStatus,
+  EntitlementWithFeature,
+  ProductItemBehavior,
+} from "@autumn/shared";
 import { BillingType } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { getBillingType } from "../prices/priceUtils.js";
@@ -16,6 +20,15 @@ import { CusProdReadService } from "../customers/products/CusProdReadService.js"
 import { MigrationService } from "../migrations/MigrationService.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { mapToProductV2 } from "./productV2Utils.js";
+import {
+  itemToPriceAndEnt,
+  toFeatureAndPrice,
+} from "./product-items/mapFromItem.js";
+import {
+  isFeaturePriceItem,
+  itemIsFixedPrice,
+} from "./product-items/productItemUtils.js";
+import { toFeaturePriceItem } from "./product-items/mapToItem.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -238,38 +251,58 @@ productRouter.get("/:productId/count", async (req: any, res) => {
 productRouter.use(entitlementRouter);
 
 productRouter.post("/product_options", async (req: any, res: any) => {
-  const { prices } = req.body;
+  const { items } = req.body;
 
   const features = await FeatureService.getFromReq(req);
   const featureToOptions: { [key: string]: FeatureOptions } = {};
 
-  for (const price of prices) {
-    // get billing tyoe
-    const billingType = getBillingType(price.config);
-    const feature = features.find(
-      (f) => f.internal_id === price.config.internal_feature_id
-    );
-
-    if (billingType === BillingType.UsageBelowThreshold) {
-      if (!featureToOptions[feature.id]) {
-        featureToOptions[feature.id] = {
-          feature_id: feature.id,
-          threshold: 0,
-        };
-      } else {
-        featureToOptions[feature.id].threshold = 0;
-      }
-    } else if (billingType === BillingType.UsageInAdvance) {
-      if (!featureToOptions[feature.id]) {
-        featureToOptions[feature.id] = {
-          feature_id: feature.id,
-          quantity: 0,
-        };
-      }
-
-      featureToOptions[feature.id].quantity = 0;
+  for (const item of items) {
+    if (
+      isFeaturePriceItem(item) &&
+      item.behavior == ProductItemBehavior.Prepaid
+    ) {
+      featureToOptions[item.feature_id] = {
+        feature_id: item.feature_id,
+        quantity: 0,
+      };
     }
+    // if (isFeaturePriceItem(item)) {
+    //   // console.log("Item: ", item);
+    //   let { price, ent } = toFeatureAndPrice({
+    //     item,
+    //     orgId: req.orgId,
+    //     internalFeatureId: item.feature_id,
+    //     internalProductId: "",
+    //     isCustom: false,
+    //   });
+
+    //   if (!price) {
+    //     continue;
+    //   }
+    //   let billingType = getBillingType(price.config!);
+    //   if (billingType === BillingType.UsageInAdvance) {
+
+    //   }
+    // }
   }
+  // for (const price of prices) {
+  //   // get billing tyoe
+  //   const billingType = getBillingType(price.config);
+  //   const feature = features.find(
+  //     (f) => f.internal_id === price.config.internal_feature_id
+  //   );
+
+  //   if (billingType === BillingType.UsageInAdvance) {
+  //     if (!featureToOptions[feature.id]) {
+  //       featureToOptions[feature.id] = {
+  //         feature_id: feature.id,
+  //         quantity: 0,
+  //       };
+  //     }
+
+  //     featureToOptions[feature.id].quantity = 0;
+  //   }
+  // }
 
   res.status(200).send({ options: Object.values(featureToOptions) });
 });

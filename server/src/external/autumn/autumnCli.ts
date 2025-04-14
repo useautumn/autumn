@@ -232,6 +232,29 @@ export class Autumn {
   };
 
   products = {
+    update: async (productId: string, product: any) => {
+      if (product.items && typeof product.items === "object") {
+        product.items = Object.values(product.items);
+      }
+      const data = await this.post(`/products/${productId}`, product);
+      return data;
+    },
+
+    get: async (
+      productId: string,
+      { v1Schema = false }: { v1Schema?: boolean } = {}
+    ) => {
+      const data = await this.get(
+        `/products/${productId}?${v1Schema ? "schemaVersion=1" : ""}`
+      );
+      return data;
+    },
+
+    create: async (product: any) => {
+      const data = await this.post(`/products`, product);
+      return data;
+    },
+
     delete: async (productId: string) => {
       const data = await this.delete(`/products/${productId}`);
       return data;
@@ -284,6 +307,25 @@ export class Autumn {
   redemptions = {
     get: async ({ redemptionId }: { redemptionId: string }) => {
       const data = await this.get(`/redemptions/${redemptionId}`);
+      return data;
+    },
+  };
+
+  events = {
+    send: async ({
+      customerId,
+      featureId,
+      value,
+    }: {
+      customerId: string;
+      featureId: string;
+      value: number;
+    }) => {
+      const data = await this.post(`/events`, {
+        customer_id: customerId,
+        feature_id: featureId,
+        value,
+      });
       return data;
     },
   };

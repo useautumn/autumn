@@ -40,9 +40,10 @@ function CreateProduct() {
   const handleCreateClicked = async () => {
     setLoading(true);
     try {
-      const productId = await ProductService.createProduct(axiosInstance, {
-        product: fields,
-      });
+      const productId = await ProductService.createProduct(
+        axiosInstance,
+        fields
+      );
 
       await mutate();
 

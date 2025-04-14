@@ -93,7 +93,6 @@ export const priceToStripeItem = ({
 
   // 4. USAGE IN ARREAR
   else if (billingType == BillingType.UsageInArrear) {
-    // TODO: Implement this
     const config = price.config as UsagePriceConfig;
     const priceId = config.stripe_price_id;
 

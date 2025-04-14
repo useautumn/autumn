@@ -6,7 +6,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Feature, ProductItem } from "@autumn/shared";
+import { Feature, ProductItem, ProductItemBehavior } from "@autumn/shared";
 import { EllipsisVertical, MinusIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useProductItemContext } from "./ProductItemContext";
@@ -41,21 +41,19 @@ export default function MoreMenuButton({
             variant="secondary"
             className="text-xs text-t3 shadow-none border-none w-full justify-start"
             onClick={() => {
+              console.log("Button");
               setItem({
                 ...item,
-                type: item.type == "prepaid" ? "pay_per_use" : "prepaid",
+                behavior:
+                  item.behavior == ProductItemBehavior.Prepaid
+                    ? ProductItemBehavior.PayPerUse
+                    : ProductItemBehavior.Prepaid,
               });
             }}
           >
             <Checkbox
               className="border-t3 mr-1"
-              checked={item?.type == "prepaid"}
-              onCheckedChange={(checked) =>
-                setItem({
-                  ...item,
-                  type: Boolean(checked) ? "prepaid" : "pay_per_use",
-                })
-              }
+              checked={item?.behavior == ProductItemBehavior.Prepaid}
             />
             Prepaid
           </Button>

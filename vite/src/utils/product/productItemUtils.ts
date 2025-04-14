@@ -13,7 +13,8 @@ export const itemIsFixedPrice = (item: ProductItem) => {
 };
 
 export const itemIsFree = (item: ProductItem) => {
-  return nullish(item.amount) && nullish(item.tiers);
+  // return nullish(item.amount) && nullish(item.tiers);
+  return nullish(item.tiers);
 };
 
 export const itemIsUnlimited = (item: ProductItem) => {
@@ -67,6 +68,8 @@ export const getShowParams = (item: ProductItem | null) => {
     feature: !itemIsFixedPrice(item),
     allowance: true,
     perEntity: notNullish(item.entity_feature_id),
-    cycle: item.interval !== ProductItemInterval.None,
+    cycle:
+      item.interval !== ProductItemInterval.None &&
+      item.reset_usage_on_interval !== false,
   };
 };

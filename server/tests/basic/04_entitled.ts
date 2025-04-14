@@ -105,9 +105,9 @@ describe(`${chalk.yellowBright(
   const customerId = "entitledCustomer";
 
   let curAllowance = 0;
-  let oneTimeQuantity = 2;
   const oneTimeBillingUnits =
     products.oneTimeAddOnMetered1.prices[0].config.billing_units!;
+  let oneTimeQuantity = 2 * oneTimeBillingUnits;
 
   before(async function () {
     await initCustomer({
@@ -162,13 +162,13 @@ describe(`${chalk.yellowBright(
   });
 
   it("should have correct entitlements (one time top up)", async function () {
-    const oneTimeAmt = oneTimeBillingUnits * oneTimeQuantity;
+    // const oneTimeAmt = oneTimeBillingUnits * oneTimeQuantity;
 
     await checkEntitledOnProduct({
       customerId: customerId,
       product: products.oneTimeAddOnMetered1,
       finish: true,
-      totalAllowance: curAllowance + oneTimeAmt,
+      totalAllowance: curAllowance + oneTimeQuantity,
     });
   });
 });

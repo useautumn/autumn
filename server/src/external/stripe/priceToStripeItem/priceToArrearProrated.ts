@@ -3,7 +3,6 @@ import { Price } from "@autumn/shared";
 
 export const priceToInArrearProrated = ({
   price,
-
   isCheckout,
   existingUsage,
 }: {
