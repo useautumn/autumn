@@ -113,7 +113,7 @@ export const toFeature = ({
         ? AllowanceType.Unlimited
         : AllowanceType.Fixed,
     interval:
-      item.reset_usage_on_interval === false
+      item.reset_usage_on_billing === false
         ? EntInterval.Lifetime
         : (itemToEntInterval(item) as EntInterval),
 
@@ -163,7 +163,7 @@ export const toFeatureAndPrice = ({
     allowance: (item.included_usage as number) || 0,
     allowance_type: AllowanceType.Fixed,
     interval:
-      item.reset_usage_on_interval === false
+      item.reset_usage_on_billing === false
         ? EntInterval.Lifetime
         : (itemToEntInterval(item) as EntInterval),
 

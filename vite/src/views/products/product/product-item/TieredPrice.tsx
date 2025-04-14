@@ -55,6 +55,7 @@ export default function TieredPrice({
       setItem({
         ...item,
         tiers: null,
+        interval: item.reset_usage_on_billing ? item.interval : null,
       });
       return;
     }
