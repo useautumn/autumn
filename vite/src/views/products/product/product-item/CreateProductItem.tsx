@@ -164,19 +164,25 @@ export const validateProductItem = (item: ProductItem, show: any) => {
   }
 
   //if show price and tiers0.amount is 0, error
-  if (item.tiers && item.tiers.length == 1 && item.tiers[0].amount === 0) {
-    toast.error("Please set a usage price greater than 0");
-    return null;
+  // if (item.tiers && item.tiers.length == 1 && item.tiers[0].amount == 0) {
+  //   toast.error("Please set a usage price");
+  //   return null;
+  // }
+
+  if ((item.included_usage as any) === "") {
+    item.included_usage = null;
   }
 
   // Usage/Feature item validation (when tiers are set)
   if (item.tiers) {
-    let previousTo = 0; // Track the previous tier's 'to' value
+    let previousTo = 0;
 
     for (let i = 0; i < item.tiers.length; i++) {
       const tier = item.tiers[i];
-      if (tier.to === "inf") {
-        break;
+
+      // Check if amount is actually a number
+      if (typeof tier.amount !== "number") {
+        tier.amount = parseFloat(tier.amount);
       }
 
       // Check if amount is valid
@@ -185,28 +191,32 @@ export const validateProductItem = (item: ProductItem, show: any) => {
         return null;
       }
 
-      // Check if 'to' is valid (except for the last tier which can be -1)
-      if (invalidNumber(tier.to)) {
+      // Check if amount is negative
+      if (tier.amount < 0) {
+        toast.error("Please set a positive usage price");
+        return null;
+      }
+
+      // Skip other validations if 'to' is "inf"
+      if (tier.to === "inf") {
+        continue;
+      }
+
+      tier.to = Number(tier.to);
+
+      // Check if 'to' is a number and valid
+      if (typeof tier.to !== "number" || invalidNumber(tier.to)) {
         toast.error("Please enter valid usage limits for all tiers");
         return null;
       }
 
       // Ensure tiers are in ascending order
-      const toValue =
-        typeof tier.to === "number" ? tier.to : parseFloat(tier.to);
-
-      const amountValue =
-        typeof tier.amount === "number" ? tier.amount : parseFloat(tier.amount);
-
-      if (toValue <= previousTo) {
+      if (tier.to <= previousTo) {
         toast.error("Tiers must be in ascending order");
         return null;
       }
 
-      previousTo = toValue;
-
-      item.tiers[i].to = toValue;
-      item.tiers[i].amount = amountValue;
+      previousTo = tier.to;
     }
   }
 

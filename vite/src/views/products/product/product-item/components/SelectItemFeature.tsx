@@ -69,7 +69,7 @@ export const SelectItemFeature = ({
           variant="ghost"
           className="w-fit text-t3"
           onClick={() => {
-            setItem({ ...item, feature_id: null, included_usage: 0 });
+            setItem({ ...item, feature_id: null, included_usage: null });
             setShow({ ...show, feature: false });
           }}
         >
