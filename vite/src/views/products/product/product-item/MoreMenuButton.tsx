@@ -1,4 +1,3 @@
-import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -6,7 +5,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Feature, ProductItem, ProductItemBehavior } from "@autumn/shared";
+
 import { EllipsisVertical, MinusIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useProductItemContext } from "./ProductItemContext";
@@ -22,7 +21,7 @@ export default function MoreMenuButton({
   const { item, setItem } = useProductItemContext();
 
   return (
-    <Popover>
+    <Popover open={showPopover} onOpenChange={setShowPopover}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -31,8 +30,7 @@ export default function MoreMenuButton({
           onClick={() => setShowPopover(!showPopover)}
           // disabled={!selectedFeature}
         >
-          <EllipsisVertical size={14} className="mr-1" />
-          More
+          <EllipsisVertical size={14} className="" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-48 p-2 flex flex-col text-xs" align="end">
@@ -41,41 +39,19 @@ export default function MoreMenuButton({
             variant="secondary"
             className="text-xs text-t3 shadow-none border-none w-full justify-start"
             onClick={() => {
-              console.log("Button");
               setItem({
                 ...item,
-                behavior:
-                  item.behavior == ProductItemBehavior.Prepaid
-                    ? ProductItemBehavior.PayPerUse
-                    : ProductItemBehavior.Prepaid,
+                carry_from_previous: !item.carry_from_previous,
               });
             }}
           >
             <Checkbox
               className="border-t3 mr-1"
-              checked={item?.behavior == ProductItemBehavior.Prepaid}
-            />
-            Prepaid
-          </Button>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="secondary"
-            className="text-xs text-t3 shadow-none border-none"
-            onClick={() => {
-              setItem({
-                ...item,
-                carry_over_usage: !item.carry_over_usage,
-              });
-            }}
-          >
-            <Checkbox
-              className="border-t3 mr-1"
-              checked={item?.carry_over_usage}
+              checked={item.carry_from_previous}
               onCheckedChange={(checked) =>
                 setItem({
                   ...item,
-                  carry_over_usage: Boolean(checked),
+                  carry_from_previous: Boolean(checked),
                 })
               }
             />
@@ -94,6 +70,7 @@ export default function MoreMenuButton({
           }
           onClick={() => {
             setShow({ ...show, perEntity: !show.perEntity });
+            // hide the popover
             setShowPopover(false);
           }}
         >

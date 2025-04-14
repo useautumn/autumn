@@ -20,10 +20,27 @@ let defaultProductItem: ProductItem = {
   included_usage: 0,
 
   interval: ProductItemInterval.Month,
-  reset_usage_on_interval: false,
+  reset_usage_on_interval: true,
 
   // Price config
   amount: null,
+  tiers: null,
+  billing_units: 1,
+
+  // Others
+  entity_feature_id: null,
+  carry_over_usage: false,
+};
+
+let defaultPriceItem: ProductItem = {
+  feature_id: null,
+  included_usage: null,
+
+  interval: ProductItemInterval.Month,
+  reset_usage_on_interval: true,
+
+  // Price config
+  amount: 0,
   tiers: null,
   billing_units: 1,
 
@@ -64,9 +81,21 @@ export function CreateProductItem() {
           <Button
             startIcon={<PlusIcon size={15} />}
             variant="ghost"
-            className="w-full text-primary text-xs hover:text-primary/80"
+            className="w-full text-primary hover:text-primary/80"
             onClick={() => setItem(defaultProductItem)}
-          ></Button>
+          >
+            Feature
+          </Button>
+        </DialogTrigger>
+        <DialogTrigger asChild>
+          <Button
+            startIcon={<PlusIcon size={15} />}
+            variant="ghost"
+            className="w-full text-primary hover:text-primary/80"
+            onClick={() => setItem(defaultPriceItem)}
+          >
+            Price
+          </Button>
         </DialogTrigger>
         <DialogContent
           className={cn(
@@ -84,7 +113,7 @@ export function CreateProductItem() {
                   ← Product
                 </Button>
               )}
-              <DialogTitle>Add Feature</DialogTitle>
+              <DialogTitle>Add Product Item</DialogTitle>
             </div>
           </DialogHeader>
           <div className="flex overflow-visible w-fit">

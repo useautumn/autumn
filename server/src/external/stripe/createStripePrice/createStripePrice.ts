@@ -100,6 +100,9 @@ export const createStripePriceIFNotExist = async ({
     stripeCli,
   });
 
+  price.config!.stripe_price_id = stripePrice?.id;
+  (price.config! as UsagePriceConfig).stripe_product_id = stripeProd?.id;
+
   let relatedEnt = getPriceEntitlement(price, entitlements);
   let isOneOffAndTiered = priceIsOneOffAndTiered(price, relatedEnt);
 

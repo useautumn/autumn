@@ -13,13 +13,19 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 
-export const SelectItemFeature = () => {
+export const SelectItemFeature = ({
+  show,
+  setShow,
+}: {
+  show: any;
+  setShow: any;
+}) => {
   const { features } = useProductContext();
   const { item, setItem, setShowCreateFeature, isUpdate } =
     useProductItemContext();
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 w-full">
       <Select
         value={item.feature_id || ""}
         onValueChange={(value) => {
@@ -32,14 +38,14 @@ export const SelectItemFeature = () => {
         }}
         disabled={isUpdate}
       >
-        <SelectTrigger>
+        <SelectTrigger className="overflow-hidden">
           <SelectValue placeholder="Select a feature" />
         </SelectTrigger>
         <SelectContent>
           {features.map((feature: Feature) => (
             <SelectItem key={feature.id} value={feature.id!}>
-              <div className="flex gap-2 items-center">
-                {feature.name}
+              <div className="flex gap-2 items-center max-w-sm">
+                <span className="truncate">{feature.name}</span>
                 <FeatureTypeBadge type={feature.type} />
               </div>
             </SelectItem>
@@ -56,13 +62,16 @@ export const SelectItemFeature = () => {
           </Button>
         </SelectContent>
       </Select>
-      {item.feature_id && !isUpdate && (
+      {!isUpdate && (
         <Button
           isIcon
           size="sm"
           variant="ghost"
           className="w-fit text-t3"
-          onClick={() => setItem({ ...item, feature_id: null })}
+          onClick={() => {
+            setItem({ ...item, feature_id: null, included_usage: 0 });
+            setShow({ ...show, feature: false });
+          }}
         >
           <X size={12} className="text-t3" />
         </Button>
