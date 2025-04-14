@@ -9,11 +9,23 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { SideAccordion } from "@/components/general/SideAccordion";
 import { Accordion } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export const CustomerDetails = () => {
   const { customer, products, env, discount } = useCustomerContext();
   const [idCopied, setIdCopied] = useState(false);
   const [idHover, setIdHover] = useState(false);
+  const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
+  const [tempFingerprint, setTempFingerprint] = useState(
+    customer.fingerprint || ""
+  );
 
   const getDiscountText = (discount: any) => {
     const coupon = discount.coupon;
@@ -47,14 +59,14 @@ export const CustomerDetails = () => {
         <div className="flex w-full border-b mt-[2px] p-4">
           <SideAccordion title="Details" value="details">
             <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between h-4">
                 <span className="text-t3 text-xs font-medium">Name</span>
                 <span>
                   {customer.name || <span className="text-t3">N/A</span>}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between h-4">
                 <span className="text-t3 text-xs font-medium">ID</span>
                 <div className="flex items-center gap-2">
                   <p
@@ -77,7 +89,7 @@ export const CustomerDetails = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between h-4">
                 <span className="text-t3 text-xs font-medium">Email</span>
                 {customer.email ? (
                   <span className="text-blue-500 underline">
@@ -88,16 +100,23 @@ export const CustomerDetails = () => {
                 )}
               </div>
 
-              {customer.fingerprint && (
-                <div className="flex items-center justify-between">
-                  <span className="text-t3 text-xs font-medium">
-                    Fingerprint
-                  </span>
-                  <span>{customer.fingerprint}</span>
-                </div>
-              )}
+              <div className="flex items-center justify-between h-4">
+                <span className="text-t3 text-xs font-medium">Fingerprint</span>
+                <Button
+                  variant="ghost"
+                  className="text-t2 px-2 h-fit py-0.5"
+                  onClick={() => {
+                    setTempFingerprint(customer.fingerprint || "");
+                    setFingerprintModalOpen(true);
+                  }}
+                >
+                  {customer.fingerprint || (
+                    <span className="text-t3">No fingerprint</span>
+                  )}
+                </Button>
+              </div>
 
-              <div className="flex items-center justify-between">
+              {/* <div className="flex items-center justify-between">
                 <span className="text-t3 text-xs font-medium">Products</span>
                 <span>
                   {customer.products
@@ -109,7 +128,7 @@ export const CustomerDetails = () => {
                     )
                     .join(", ")}
                 </span>
-              </div>
+              </div> */}
 
               {discount && (
                 <div className="flex items-center justify-between">
@@ -143,6 +162,40 @@ export const CustomerDetails = () => {
           </SideAccordion>
         </div>
       </Accordion>
+
+      <Dialog
+        open={fingerprintModalOpen}
+        onOpenChange={setFingerprintModalOpen}
+      >
+        <DialogContent className="sm:min-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Customer Fingerprint</DialogTitle>
+          </DialogHeader>
+          <div className="flex gap-4 py-4">
+            <Input
+              placeholder="Enter fingerprint"
+              value={tempFingerprint}
+              onChange={(e) => setTempFingerprint(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  // You'll need to implement the update function
+                  setFingerprintModalOpen(false);
+                }
+              }}
+            />
+            <div className="flex justify-end">
+              <Button
+                onClick={() => {
+                  // You'll need to implement the update function
+                  setFingerprintModalOpen(false);
+                }}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

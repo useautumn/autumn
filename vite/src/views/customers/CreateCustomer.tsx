@@ -89,10 +89,11 @@ function CreateCustomer() {
           <FieldLabel>Email</FieldLabel>
           <Input
             value={fields.email}
+            placeholder="optional"
             onChange={(e) => setFields({ ...fields, email: e.target.value })}
           />
         </div>
-        <div>
+        {/* <div>
           <FieldLabel>Fingerprint</FieldLabel>
           <Input
             value={fields.fingerprint}
@@ -100,7 +101,7 @@ function CreateCustomer() {
               setFields({ ...fields, fingerprint: e.target.value })
             }
           />
-        </div>
+        </div> */}
         <DialogFooter>
           <Button
             onClick={handleCreate}

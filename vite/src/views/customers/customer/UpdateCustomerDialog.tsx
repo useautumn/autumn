@@ -59,7 +59,7 @@ const UpdateCustomerDialog = ({
   };
 
   return (
-    <DialogContent className="!w-[400px]">
+    <DialogContent className="w-md">
       <DialogTitle>Update Customer</DialogTitle>
 
       <CustomerConfig
