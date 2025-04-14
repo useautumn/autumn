@@ -6,7 +6,9 @@ import {
   ProductItem,
   ProductItemType,
   ProductItemBehavior,
+  Infinite,
 } from "@autumn/shared";
+import { isFeatureItem } from "./getItemType.js";
 
 export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
   // Compare tiers
@@ -32,7 +34,7 @@ export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
     item1.feature_id == item2.feature_id &&
     item1.included_usage == item2.included_usage &&
     item1.interval == item2.interval &&
-    item1.reset_usage_on_interval === item2.reset_usage_on_interval &&
+    item1.reset_usage_on_billing === item2.reset_usage_on_billing &&
     item1.amount == item2.amount &&
     compareTiers(item1.tiers, item2.tiers)
   );
@@ -60,14 +62,13 @@ export const isFeaturePriceItem = (item: ProductItem) => {
   );
 };
 
-export const itemIsFree = (item: ProductItem) => {
-  return nullish(item.amount) && nullish(item.tiers);
-};
+//   return nullish(item.amount) && nullish(item.tiers);
+// };
 
 export const getItemType = (item: ProductItem) => {
   if (itemIsFixedPrice(item)) {
     return ProductItemType.Price;
-  } else if (itemIsFree(item)) {
+  } else if (isFeatureItem(item)) {
     return ProductItemType.Feature;
   }
 
@@ -105,7 +106,7 @@ export const constructFeatureItem = ({
   entitlement_id,
 }: {
   feature_id: string;
-  included_usage?: number | "unlimited";
+  included_usage?: number | typeof Infinite;
   interval?: EntInterval;
   entitlement_id?: string;
 }) => {

@@ -24,6 +24,7 @@ export const sendMigrationEmail = async ({
   let migrateStep =
     migrationJob.step_details[MigrationJobStep.MigrateCustomers];
 
+  console.log("Sending migration email");
   await sendTextEmail({
     to: "johnyeocx@gmail.com",
     subject: `Migration Job Finished -- ${migrationJob.id}`,

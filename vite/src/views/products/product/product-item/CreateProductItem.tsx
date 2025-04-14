@@ -160,22 +160,13 @@ export const validateProductItem = (item: ProductItem, show: any) => {
       toast.error("Please enter a valid price amount");
       return null;
     }
-    // item.amount = parseFloat(item.amount.toString());
+    item.amount = parseFloat(item.amount!.toString());
   }
 
   //if show price and tiers0.amount is 0, error
   if (item.tiers && item.tiers.length == 1 && item.tiers[0].amount === 0) {
     toast.error("Please set a usage price greater than 0");
     return null;
-  }
-
-  if (item.included_usage !== null) {
-    let usageNumber = Number(item.included_usage);
-    if (invalidNumber(usageNumber) || usageNumber < 0) {
-      toast.error("Please enter a valid included usage amount");
-      return null;
-    }
-    item.included_usage = usageNumber;
   }
 
   // Usage/Feature item validation (when tiers are set)

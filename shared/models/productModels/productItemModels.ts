@@ -3,7 +3,6 @@ import { FeatureSchema, FeatureType } from "../featureModels/featureModels.js";
 
 export const TierInfinite = "inf";
 export const Infinite = "inf";
-export const UsageUnlimited = "unlimited";
 
 export enum ProductItemInterval {
   None = "none",

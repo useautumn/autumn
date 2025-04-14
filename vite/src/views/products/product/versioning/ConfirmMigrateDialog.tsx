@@ -9,18 +9,18 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useProductContext } from "./ProductContext";
+import { useProductContext } from "../ProductContext";
 import { toast } from "sonner";
 import { useState } from "react";
 
 export default function ConfirmNewVersionDialog({
   open,
   setOpen,
-  createProduct,
+  startMigration,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  createProduct: () => Promise<void>;
+  startMigration: () => Promise<void>;
 }) {
   const { product, version } = useProductContext();
   let [confirmText, setConfirmText] = useState("");
@@ -33,9 +33,9 @@ export default function ConfirmNewVersionDialog({
     }
 
     setIsLoading(true);
-    await createProduct();
+    await startMigration();
     setIsLoading(false);
-    // setOpen(false);
+    setOpen(false);
   };
 
   return (
@@ -45,15 +45,11 @@ export default function ConfirmNewVersionDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create new version?</DialogTitle>
+          <DialogTitle>Migrate customers?</DialogTitle>
           <DialogDescription className="text-sm flex flex-col gap-4">
             <p>
-              After creating a new version, it will be{" "}
-              <span className="font-bold">
-                active immediately for new customers
-              </span>
-              .<br /> You can migrate existing customers to the new version
-              after.
+              Note: This will migrate all customers on {product.name} (version{" "}
+              {version}) to the latest version.
             </p>
             <p>
               Type <code className="font-bold">{product.id}</code> to continue.
@@ -73,7 +69,7 @@ export default function ConfirmNewVersionDialog({
             onClick={onClick}
             isLoading={isLoading}
           >
-            Create new version
+            Start migration
           </Button>
         </DialogFooter>
       </DialogContent>

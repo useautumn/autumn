@@ -1,23 +1,10 @@
-import { features, products, referralPrograms } from "../../global.js";
+import { features } from "../../global.js";
 import { assert } from "chai";
 import chalk from "chalk";
-import AutumnError, { Autumn } from "@/external/autumn/autumnCli.js";
+import { Autumn } from "@/external/autumn/autumnCli.js";
 import { setupBefore } from "tests/before.js";
-import {
-  BillingInterval,
-  Customer,
-  EntInterval,
-  ErrCode,
-  ProductItemInterval,
-  ReferralCode,
-  RewardRedemption,
-  UsageUnlimited,
-} from "@autumn/shared";
-import { timeout } from "tests/utils/genUtils.js";
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays, addHours, addMonths } from "date-fns";
-import { Stripe } from "stripe";
+import { BillingInterval, EntInterval, Infinite } from "@autumn/shared";
+
 import { initCustomer } from "tests/utils/init.js";
 import {
   constructFeatureItem,
@@ -71,7 +58,7 @@ describe(`${chalk.yellowBright(
     // 3. Unlimited feature
     constructFeatureItem({
       feature_id: features.infinite1.id,
-      included_usage: UsageUnlimited,
+      included_usage: Infinite,
     }),
 
     // 4. Fixed Price

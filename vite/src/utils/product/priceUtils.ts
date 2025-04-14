@@ -4,9 +4,13 @@ import {
   BillWhen,
   EntitlementWithFeature,
   PriceType,
+  ProductItem,
+  ProductItemInterval,
 } from "@autumn/shared";
 
 import { FixedPriceConfig, Price, UsagePriceConfig } from "@autumn/shared";
+import { intervalIsNone } from "./productItemUtils";
+import { isFeatureItem } from "./getItemType";
 
 export const validBillingInterval = (
   prices: Price[],
@@ -84,9 +88,16 @@ export const getDefaultPriceConfig = (type: PriceType) => {
   };
 };
 
-export const pricesOnlyOneOff = (prices: Price[]) => {
+export const pricesOnlyOneOff = (items: ProductItem[]) => {
+  let prices = items.filter((item) => !isFeatureItem(item));
+
   if (prices.length == 0) return false;
+
   return prices.every((price) => {
-    return price.config?.interval == BillingInterval.OneOff;
+    return intervalIsNone(price.interval);
   });
+  // if (items.length == 0) return false;
+  // return items.every((item) => {
+  //   return item.interval == ProductItemInterval.None;
+  // });
 };

@@ -9,18 +9,11 @@ import {
   ProductItemBehavior,
 } from "@autumn/shared";
 import { itemToPriceAndEnt } from "./mapFromItem.js";
-import RecaseError from "@/utils/errorUtils.js";
+
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { EntitlementService } from "../entitlements/EntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { pricesAreSame } from "@/internal/prices/priceUtils.js";
-import { generateId, notNullish } from "@/utils/genUtils.js";
-import { StatusCodes } from "http-status-codes";
-import {
-  isFeaturePriceItem,
-  itemIsFree,
-  itemToEntInterval,
-} from "./productItemUtils.js";
+
 import { validateProductItems } from "./validateProductItems.js";
 
 const isNewItem = (item: ProductItem) => {

@@ -28,7 +28,7 @@ import ErrorScreen from "@/views/general/ErrorScreen";
 import ProductSidebar from "./ProductSidebar";
 import { FeaturesContext } from "@/views/features/FeaturesContext";
 import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
-import ConfirmNewVersionDialog from "./ConfirmNewVersionDialog";
+import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 
 function ProductView({ env }: { env: AppEnv }) {
   const { product_id } = useParams();

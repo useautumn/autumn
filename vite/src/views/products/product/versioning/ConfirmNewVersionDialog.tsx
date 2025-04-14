@@ -9,18 +9,18 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useProductContext } from "./ProductContext";
+import { useProductContext } from "../ProductContext";
 import { toast } from "sonner";
 import { useState } from "react";
 
 export default function ConfirmNewVersionDialog({
   open,
   setOpen,
-  startMigration,
+  createProduct,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  startMigration: () => Promise<void>;
+  createProduct: () => Promise<void>;
 }) {
   const { product, version } = useProductContext();
   let [confirmText, setConfirmText] = useState("");
@@ -33,7 +33,7 @@ export default function ConfirmNewVersionDialog({
     }
 
     setIsLoading(true);
-    await startMigration();
+    await createProduct();
     setIsLoading(false);
     setOpen(false);
   };
@@ -45,11 +45,15 @@ export default function ConfirmNewVersionDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Migrate customers?</DialogTitle>
+          <DialogTitle>Create new version?</DialogTitle>
           <DialogDescription className="text-sm flex flex-col gap-4">
             <p>
-              Note: This will migrate all customers on {product.name} (version{" "}
-              {version}) to the latest version.
+              After creating a new version, it will be{" "}
+              <span className="font-bold">
+                active immediately for new customers
+              </span>
+              .<br /> You can migrate existing customers to the new version
+              after.
             </p>
             <p>
               Type <code className="font-bold">{product.id}</code> to continue.
@@ -69,7 +73,7 @@ export default function ConfirmNewVersionDialog({
             onClick={onClick}
             isLoading={isLoading}
           >
-            Start migration
+            Create new version
           </Button>
         </DialogFooter>
       </DialogContent>

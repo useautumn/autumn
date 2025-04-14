@@ -1,23 +1,24 @@
 import {
   BillingInterval,
   EntInterval,
+  Infinite,
   ProductItem,
   ProductItemInterval,
   ProductItemType,
-  UsageUnlimited,
 } from "@autumn/shared";
 import { notNullish, nullish } from "../genUtils";
+import { isFeatureItem } from "./getItemType";
 
 export const itemIsFixedPrice = (item: ProductItem) => {
   return notNullish(item.amount) && nullish(item.feature_id);
 };
 
-export const itemIsFree = (item: ProductItem) => {
-  return (nullish(item.amount) || item.amount === 0) && nullish(item.tiers);
-};
+// export const itemIsFree = (item: ProductItem) => {
+//   return (nullish(item.amount) || item.amount === 0) && nullish(item.tiers);
+// };
 
 export const itemIsUnlimited = (item: ProductItem) => {
-  return item.included_usage == UsageUnlimited;
+  return item.included_usage == Infinite;
 };
 
 export const formatAmount = ({
@@ -36,7 +37,7 @@ export const formatAmount = ({
 export const getItemType = (item: ProductItem) => {
   if (itemIsFixedPrice(item)) {
     return ProductItemType.Price;
-  } else if (itemIsFree(item)) {
+  } else if (isFeatureItem(item)) {
     return ProductItemType.Feature;
   }
 

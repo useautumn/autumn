@@ -1,26 +1,17 @@
 import {
   Feature,
   FeatureType,
-  ProductItem,
   ProductItemInterval,
   TierInfinite,
 } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { Button } from "@/components/ui/button";
-import { MinusIcon, PlusIcon } from "lucide-react";
-
+import { PlusIcon } from "lucide-react";
 import { useNavigate } from "react-router";
-import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
-
 import { cn } from "@/lib/utils";
 import { useProductItemContext } from "./ProductItemContext";
-import { notNullish } from "@/utils/genUtils";
-import {
-  getShowParams,
-  itemIsFixedPrice,
-  itemIsFree,
-} from "@/utils/product/productItemUtils";
+import { getShowParams } from "@/utils/product/productItemUtils";
 import { ConfigWithFeature } from "./components/ConfigWithFeature";
 import FixedPriceConfig from "./components/ConfigFixedPrice";
 import { getFeature } from "@/utils/product/entitlementUtils";
@@ -70,9 +61,6 @@ export const ProductItemConfig = () => {
   // }, [item.feature_id, features]);
 
   const handleAddPrice = () => {
-    // console.log("handleAddPrice", itemIsFree(item));
-    // if (itemIsFree(item)) {
-
     setItem({
       ...item,
       tiers: [

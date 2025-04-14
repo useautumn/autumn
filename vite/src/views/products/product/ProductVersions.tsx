@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CountAndMigrate } from "./versioning/CountAndMigrate";
 
 export const ProductVersions = () => {
   const { product, numVersions, customerData, version } = useProductContext();
@@ -80,6 +81,7 @@ export const ProductVersions = () => {
             <p className="text-xs text-t3 pr-2">None</p>
           )}
         </div>
+        <CountAndMigrate />
       </div>
     </div>
   );
