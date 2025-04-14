@@ -33,7 +33,7 @@ import {
 } from "@/internal/products/productUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import {
   notNullish,
   notNullOrUndefined,
@@ -53,15 +53,15 @@ import { CusService } from "@/internal/customers/CusService.js";
 
 export const attachRouter = Router();
 
-export const checkoutPricesValid = (prices: Price[]) => {
-  for (const price of prices) {
-    if (price.billing_type === BillingType.UsageBelowThreshold) {
-      return false;
-    }
-  }
+// export const checkoutPricesValid = (prices: Price[]) => {
+//   for (const price of prices) {
+//     if (price.billing_type === BillingType.UsageBelowThreshold) {
+//       return false;
+//     }
+//   }
 
-  return true;
-};
+//   return true;
+// };
 
 export const checkAddProductErrors = async ({
   attachParams,
@@ -72,13 +72,13 @@ export const checkAddProductErrors = async ({
 }) => {
   const { prices, entitlements, optionsList } = attachParams;
 
-  if (useCheckout && !checkoutPricesValid(prices)) {
-    throw new RecaseError({
-      message: `Can't use /checkout for below threshold prices`,
-      code: ErrCode.InvalidRequest,
-      statusCode: 400,
-    });
-  }
+  // if (useCheckout && !checkoutPricesValid(prices)) {
+  //   throw new RecaseError({
+  //     message: `Can't use /checkout for below threshold prices`,
+  //     code: ErrCode.InvalidRequest,
+  //     statusCode: 400,
+  //   });
+  // }
 
   // 2. Check if options are valid
   for (const price of prices) {
@@ -110,22 +110,24 @@ export const checkAddProductErrors = async ({
         });
       }
 
-      // 2. Quantity must be >= feature allowance
-      let minQuantity = new Decimal(priceEnt.allowance!)
-        .div((price.config! as UsagePriceConfig).billing_units || 1)
-        .toNumber();
+      // // 2. Quantity must be >= feature allowance
+      // let minQuantity = new Decimal(priceEnt.allowance!)
+      //   .div((price.config! as UsagePriceConfig).billing_units || 1)
+      //   .toNumber();
 
-      if (
-        notNullOrUndefined(options?.quantity) &&
-        priceEnt.allowance &&
-        options!.quantity! < minQuantity
-      ) {
-        throw new RecaseError({
-          message: `Quantity must be greater than or equal to ${minQuantity}`,
-          code: ErrCode.InvalidOptions,
-          statusCode: 400,
-        });
-      }
+      // console.log("Min quantity", minQuantity);
+
+      // if (
+      //   notNullish(options?.quantity) &&
+      //   priceEnt.allowance &&
+      //   options!.quantity! < minQuantity
+      // ) {
+      //   throw new RecaseError({
+      //     message: `Quantity must be greater than or equal to ${minQuantity}`,
+      //     code: ErrCode.InvalidOptions,
+      //     statusCode: 400,
+      //   });
+      // }
 
       // 3. Quantity cannot be negative
       if (notNullish(options?.quantity) && options?.quantity! < 0) {
@@ -145,34 +147,23 @@ export const checkAddProductErrors = async ({
         });
       }
 
-      if (prices.length === 1) {
-        // 1. Check allowance
-        let allowance = priceEnt.allowance;
-        let minQuantity = new Decimal(allowance!)
-          .div((price.config! as UsagePriceConfig).billing_units || 1)
-          .toNumber();
+      // if (prices.length === 1) {
+      //   // 1. Check allowance
+      //   let allowance = priceEnt.allowance;
+      //   let minQuantity = new Decimal(allowance!)
+      //     .div((price.config! as UsagePriceConfig).billing_units || 1)
+      //     .toNumber();
 
-        if (priceIsOneOffAndTiered(price, priceEnt)) {
-          if (options?.quantity! <= minQuantity) {
-            throw new RecaseError({
-              message: `Quantity must be greater than ${minQuantity}`,
-              code: ErrCode.InvalidOptions,
-              statusCode: 400,
-            });
-          }
-        }
-      }
-    } else if (billingType === BillingType.UsageBelowThreshold) {
-      let priceEnt = getPriceEntitlement(price, entitlements);
-      let options = getEntOptions(optionsList, priceEnt);
-
-      if (!options?.threshold) {
-        throw new RecaseError({
-          message: `Pass in 'threshold' for feature '${priceEnt.feature_id}' in options`,
-          code: ErrCode.InvalidOptions,
-          statusCode: 400,
-        });
-      }
+      //   if (priceIsOneOffAndTiered(price, priceEnt)) {
+      //     if (options?.quantity! <= minQuantity) {
+      //       throw new RecaseError({
+      //         message: `Quantity must be greater than ${minQuantity}`,
+      //         code: ErrCode.InvalidOptions,
+      //         statusCode: 400,
+      //       });
+      //     }
+      //   }
+      // }
     }
   }
 };

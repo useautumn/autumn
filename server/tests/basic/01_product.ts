@@ -246,7 +246,7 @@ describe(`${chalk.yellowBright(
         options: [
           {
             feature_id: features.metered1.id,
-            quantity: monthlyQuantity,
+            quantity: monthlyQuantity * monthlyBillingUnits,
           },
         ],
       });

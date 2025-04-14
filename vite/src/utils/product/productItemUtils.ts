@@ -67,6 +67,8 @@ export const getShowParams = (item: ProductItem | null) => {
     feature: !itemIsFixedPrice(item),
     allowance: true,
     perEntity: notNullish(item.entity_feature_id),
-    cycle: item.interval !== ProductItemInterval.None,
+    cycle:
+      item.interval !== ProductItemInterval.None &&
+      item.reset_usage_on_interval !== false,
   };
 };

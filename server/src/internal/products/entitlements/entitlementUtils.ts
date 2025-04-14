@@ -390,15 +390,26 @@ export const handleNewEntitlements = async ({
 // OTHERS
 export const getEntRelatedPrice = (
   entitlement: Entitlement,
-  prices: Price[]
+  prices: Price[],
+  allowFeatureMatch = false
 ) => {
   return prices.find((price) => {
     if (price.config?.type === PriceType.Fixed) {
       return false;
     }
 
-    const config = price.config as UsagePriceConfig;
-    return config.internal_feature_id === entitlement.internal_feature_id;
+    let config = price.config as UsagePriceConfig;
+
+    if (allowFeatureMatch) {
+      return entitlement.internal_feature_id == config.internal_feature_id;
+    }
+
+    let entIdMatch = entitlement.id == price.entitlement_id;
+    let productIdMatch =
+      entitlement.internal_product_id == price.internal_product_id;
+    return entIdMatch && productIdMatch;
+    // const config = price.config as UsagePriceConfig;
+    // return config.internal_feature_id === entitlement.internal_feature_id;
   });
 };
 

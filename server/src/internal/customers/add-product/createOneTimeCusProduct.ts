@@ -86,14 +86,15 @@ export const updateOneTimeCusProduct = async ({
   // 1. Sort cus products by created_at
   attachParams.cusProducts?.sort((a, b) => b.created_at - a.created_at);
 
+  // 2. Get existing same cus product and customer entitlements
   let existingCusProduct = attachParams.cusProducts?.find(
     (cp) =>
       cp.product.internal_id === attachParams.product.internal_id &&
       cp.status === CusProductStatus.Active
   )!;
-
   let existingCusEnts = existingCusProduct.customer_entitlements;
 
+  // 3. Update existing entitlements
   for (const entitlement of attachParams.entitlements) {
     const existingCusEnt = existingCusEnts.find(
       (ce) => ce.internal_feature_id === entitlement.internal_feature_id
@@ -150,52 +151,50 @@ export const updateOneTimeCusProduct = async ({
           (newOptionsList[newOptionIndex].quantity || 0) +
           (curOptions.quantity || 0),
       };
-    } 
-  }
-
-
-  // Handle adding quantity to base entitlements if cus product purchased multiple times.
-  for (const entitlement of attachParams.entitlements) {
-    const relatedPrice = getEntRelatedPrice(entitlement, attachParams.prices);
-    const feature = entitlement.feature;
-
-    if (relatedPrice || feature.type == FeatureType.Boolean || entitlement.allowance_type === AllowanceType.Unlimited) {
-      continue;
-    }
-
-    const newOptionIndex = newOptionsList.findIndex(
-      (o) => o.internal_feature_id === entitlement.internal_feature_id
-    );
-
-    if (newOptionIndex === -1) {
-      // Get existing option
-      const existingOption = existingCusProduct.options.find(
-        (o) => o.internal_feature_id === entitlement.internal_feature_id
-      );
-
-      if (existingOption) {
-        newOptionsList.push({
-          feature_id: entitlement.feature.id,
-          quantity: (existingOption?.quantity || 0) + 1,
-          internal_feature_id: entitlement.internal_feature_id,
-        });
-      } else {
-        newOptionsList.push({
-          feature_id: entitlement.feature.id,
-          quantity: 2,
-          internal_feature_id: entitlement.internal_feature_id,
-        });
-      }
     }
   }
 
+  // // Handle adding quantity to base entitlements if cus product purchased multiple times.
+  // for (const entitlement of attachParams.entitlements) {
+  //   const relatedPrice = getEntRelatedPrice(entitlement, attachParams.prices);
+  //   const feature = entitlement.feature;
 
+  //   if (relatedPrice || feature.type == FeatureType.Boolean || entitlement.allowance_type === AllowanceType.Unlimited) {
+  //     continue;
+  //   }
+
+  //   const newOptionIndex = newOptionsList.findIndex(
+  //     (o) => o.internal_feature_id === entitlement.internal_feature_id
+  //   );
+
+  //   if (newOptionIndex === -1) {
+  //     // Get existing option
+  //     const existingOption = existingCusProduct.options.find(
+  //       (o) => o.internal_feature_id === entitlement.internal_feature_id
+  //     );
+
+  //     if (existingOption) {
+  //       newOptionsList.push({
+  //         feature_id: entitlement.feature.id,
+  //         quantity: (existingOption?.quantity || 0) + 1,
+  //         internal_feature_id: entitlement.internal_feature_id,
+  //       });
+  //     } else {
+  //       newOptionsList.push({
+  //         feature_id: entitlement.feature.id,
+  //         quantity: 2,
+  //         internal_feature_id: entitlement.internal_feature_id,
+  //       });
+  //     }
+  //   }
+  // }
 
   await CusProductService.update({
     sb,
     cusProductId: existingCusProduct.id,
     updates: {
       options: newOptionsList,
+      quantity: existingCusProduct.quantity + 1,
     },
   });
 };

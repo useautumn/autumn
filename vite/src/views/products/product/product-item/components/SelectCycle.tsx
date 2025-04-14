@@ -115,6 +115,7 @@ export const SelectCycle = ({
                   : EntInterval.Lifetime
               }
               onValueChange={(value) => {
+                console.log("Value", value);
                 setItem({
                   ...item,
                   interval:
@@ -161,7 +162,13 @@ export const SelectCycle = ({
               size="sm"
               variant="ghost"
               className="w-fit text-t3"
-              onClick={() => setShowCycle(false)}
+              onClick={() => {
+                setShowCycle(false);
+                setItem({
+                  ...item,
+                  reset_usage_on_interval: false,
+                });
+              }}
             >
               <X size={12} className="text-t3" />
             </Button> */}

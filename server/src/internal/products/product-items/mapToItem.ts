@@ -1,11 +1,13 @@
 import {
   AllowanceType,
+  BillWhen,
   EntInterval,
   EntitlementWithFeature,
   FeatureType,
   FixedPriceConfig,
   Price,
   ProductItem,
+  ProductItemBehavior,
   ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
@@ -75,7 +77,7 @@ export const toFeaturePriceItem = ({
       ? ProductItemInterval.None
       : config.interval!,
 
-    reset_usage_on_interval: ent.interval == EntInterval.Lifetime,
+    reset_usage_on_interval: ent.interval !== EntInterval.Lifetime,
 
     amount: null,
     tiers,
@@ -83,6 +85,11 @@ export const toFeaturePriceItem = ({
 
     entity_feature_id: ent.entity_feature_id,
     carry_over_usage: ent.carry_from_previous,
+    behavior:
+      config.bill_when == BillWhen.StartOfPeriod ||
+      config.bill_when == BillWhen.InAdvance
+        ? ProductItemBehavior.Prepaid
+        : ProductItemBehavior.PayPerUse,
 
     // Stored in backend
     created_at: ent.created_at,

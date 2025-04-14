@@ -112,7 +112,6 @@ export const getUsageBasedSub = async ({
         feature.internal_id
       );
       if (containsFeature) {
-        console.log("Found autumn sub for feature:", feature.id);
         return stripeSub;
       }
     }

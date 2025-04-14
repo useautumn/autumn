@@ -1,10 +1,12 @@
 import {
+  EntInterval,
   Entitlement,
   ErrCode,
   Feature,
   Price,
   Product,
   ProductItem,
+  ProductItemBehavior,
 } from "@autumn/shared";
 import { itemToPriceAndEnt } from "./mapFromItem.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -12,7 +14,13 @@ import { PriceService } from "@/internal/prices/PriceService.js";
 import { EntitlementService } from "../entitlements/EntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { pricesAreSame } from "@/internal/prices/priceUtils.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
+import { StatusCodes } from "http-status-codes";
+import {
+  isFeaturePriceItem,
+  itemIsFree,
+  itemToEntInterval,
+} from "./productItemUtils.js";
 
 const isNewItem = (item: ProductItem) => {
   return !item.entitlement_id && !item.price_id;
@@ -35,9 +43,6 @@ const updateDbPricesAndEnts = async ({
   deletedPrices: Price[];
   deletedEnts: Entitlement[];
 }) => {
-  // console.log("Deleting prices", deletedPrices);
-  // console.log("Deleting ents", deletedEnts);
-
   // 1. Create new ents
   await Promise.all([
     EntitlementService.insert({
@@ -91,60 +96,68 @@ const handleCustomProductItems = async ({
   sameEnts: Entitlement[];
   features: Feature[];
 }) => {
-  // Each updated price is custom
-
-  // Each updated price is custom
-  updatedPrices = updatedPrices.map((price) => ({
-    ...price,
-    id: generateId("pr"),
-    is_custom: true,
-    created_at: Date.now(),
-  }));
-
-  updatedEnts = updatedEnts.map((ent) => ({
-    ...ent,
-    id: generateId("ent"),
-    is_custom: true,
-    created_at: Date.now(),
-  }));
-
-  newPrices = newPrices.map((price) => ({
-    ...price,
-    is_custom: true,
-    created_at: Date.now(),
-  }));
-
-  newEnts = newEnts.map((ent) => ({
-    ...ent,
-    is_custom: true,
-    created_at: Date.now(),
-  }));
-
-  newPrices = [...newPrices, ...updatedPrices];
-  newEnts = [...newEnts, ...updatedEnts];
-
   await EntitlementService.insert({
     sb,
-    data: newEnts,
+    data: [...newEnts, ...updatedEnts],
   });
 
   await PriceService.insert({
     sb,
-    data: newPrices,
-  });
-
-  await PriceService.upsert({
-    sb,
-    data: newPrices,
+    data: [...newPrices, ...updatedPrices],
   });
 
   return {
-    prices: [...newPrices, ...samePrices],
-    entitlements: [...newEnts, ...sameEnts].map((ent) => ({
+    prices: [...newPrices, ...updatedPrices, ...samePrices],
+    entitlements: [...newEnts, ...updatedEnts, ...sameEnts].map((ent) => ({
       ...ent,
       feature: features.find((f) => f.id == ent.feature_id),
     })),
   };
+};
+
+const validateProductItems = ({ newItems }: { newItems: ProductItem[] }) => {
+  for (let index = 0; index < newItems.length; index++) {
+    let item = newItems[index];
+    let entInterval = itemToEntInterval(item);
+
+    if (isFeaturePriceItem(item) && entInterval == EntInterval.Lifetime) {
+      let otherItem = newItems.find((i: any, index2: any) => {
+        return i.feature_id == item.feature_id && index2 != index;
+      });
+
+      if (otherItem) {
+        throw new RecaseError({
+          message: `If feature is lifetime and paid, can't have any other features`,
+          code: ErrCode.InvalidInputs,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+
+    let otherItem = newItems.find((i: any, index2: any) => {
+      return (
+        i.feature_id == item.feature_id &&
+        index2 != index &&
+        itemToEntInterval(i) == entInterval
+      );
+    });
+
+    // console.log("Item", item);
+    // console.log("Ent interval", entInterval);
+    // console.log("Other item exists", notNullish(otherItem));
+
+    if (!otherItem) {
+      continue;
+    }
+
+    if (itemIsFree(otherItem) || item.behavior == otherItem?.behavior) {
+      throw new RecaseError({
+        message: `Can't have two features with same reset interval, unless one is prepaid, and another is pay per use`,
+        code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+  }
 };
 
 export const handleNewProductItems = async ({
@@ -166,6 +179,18 @@ export const handleNewProductItems = async ({
   logger: any;
   isCustom: boolean;
 }) => {
+  if (!newItems) {
+    return {
+      prices: [],
+      entitlements: [],
+    };
+  }
+
+  // Validate product items...
+  validateProductItems({
+    newItems,
+  });
+
   let newPrices: Price[] = [];
   let newEnts: Entitlement[] = [];
 
@@ -193,26 +218,18 @@ export const handleNewProductItems = async ({
         item,
         orgId: product.org_id!,
         internalProductId: product.internal_id!,
-        isCustom: false,
         feature: feature,
         curPrice,
         curEnt,
+        isCustom,
       });
 
     if (newPrice) {
       newPrices.push(newPrice);
     }
 
-    if (samePrice) {
-      samePrices.push(samePrice);
-    }
-
     if (newEnt) {
       newEnts.push(newEnt);
-    }
-
-    if (sameEnt) {
-      sameEnts.push(sameEnt);
     }
 
     if (updatedPrice) {
@@ -221,6 +238,14 @@ export const handleNewProductItems = async ({
 
     if (updatedEnt) {
       updatedEnts.push(updatedEnt);
+    }
+
+    if (samePrice) {
+      samePrices.push(samePrice);
+    }
+
+    if (sameEnt) {
+      sameEnts.push(sameEnt);
     }
   }
 
@@ -254,6 +279,7 @@ export const handleNewProductItems = async ({
     deletedPrices,
     deletedEnts,
   });
+
   return {
     prices: [...newPrices, ...updatedPrices],
     entitlements: [...newEnts, ...updatedEnts].map((ent) => ({

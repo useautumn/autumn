@@ -6,6 +6,7 @@ import {
   EntInterval,
   Entitlement,
   EntitlementWithFeature,
+  ErrCode,
   Feature,
   FeatureType,
   FixedPriceConfig,
@@ -13,6 +14,7 @@ import {
   Price,
   PriceType,
   ProductItem,
+  ProductItemBehavior,
   ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
@@ -22,22 +24,17 @@ import {
   intervalIsNone,
   itemIsFixedPrice,
   itemIsFree,
+  itemToEntInterval,
 } from "./productItemUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { pricesAreSame } from "@/internal/prices/priceInitUtils.js";
 import { entsAreSame } from "../entitlements/entitlementUtils.js";
+import { getBillingType } from "@/internal/prices/priceUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 const itemToBillingInterval = (interval: ProductItemInterval) => {
   if (interval == ProductItemInterval.None) {
     return BillingInterval.OneOff;
-  }
-
-  return interval;
-};
-
-const itemToEntInterval = (interval: ProductItemInterval) => {
-  if (interval == ProductItemInterval.None) {
-    return EntInterval.Lifetime;
   }
 
   return interval;
@@ -68,9 +65,16 @@ export const toPrice = ({
     internal_product_id: internalProductId,
     is_custom: isCustom,
     name: "",
-
     config,
   };
+
+  if (isCustom) {
+    price = {
+      ...price,
+      id: generateId("pr"),
+      created_at: Date.now(),
+    };
+  }
 
   return { price, ent: null };
 };
@@ -104,12 +108,22 @@ export const toFeature = ({
       item.included_usage == UsageUnlimited
         ? AllowanceType.Unlimited
         : AllowanceType.Fixed,
-    interval: itemToEntInterval(item.interval!) as EntInterval,
+    interval:
+      item.reset_usage_on_interval === false
+        ? EntInterval.Lifetime
+        : (itemToEntInterval(item) as EntInterval),
 
     carry_from_previous: item.carry_over_usage || false,
     entity_feature_id: item.entity_feature_id,
   };
 
+  if (isCustom) {
+    ent = {
+      ...ent,
+      id: generateId("ent"),
+      created_at: Date.now(),
+    };
+  }
   return { price: null, ent };
 };
 
@@ -142,22 +156,49 @@ export const toFeatureAndPrice = ({
 
     allowance: (item.included_usage as number) || 0,
     allowance_type: AllowanceType.Fixed,
-    interval: itemToEntInterval(item.interval!) as EntInterval,
+    interval:
+      item.reset_usage_on_interval === false
+        ? EntInterval.Lifetime
+        : (itemToEntInterval(item) as EntInterval),
 
     carry_from_previous: item.carry_over_usage || false,
     entity_feature_id: item.entity_feature_id,
   };
 
+  // Will only create new ent id if
+  let newEnt = !curEnt || (isCustom && !entsAreSame(curEnt, ent));
+  if (newEnt) {
+    ent = {
+      ...ent,
+      id: generateId("ent"),
+      created_at: Date.now(),
+    };
+  }
+
+  let entInterval = itemToEntInterval(item);
+  // console.log("Ent interval", entInterval);
+
   let config: UsagePriceConfig = {
     type: PriceType.Usage,
-    bill_when: BillWhen.EndOfPeriod,
+
+    bill_when:
+      item.behavior == ProductItemBehavior.Prepaid
+        ? BillWhen.StartOfPeriod
+        : BillWhen.EndOfPeriod,
+
     billing_units: item.billing_units || 1,
-    should_prorate: item.reset_usage_on_interval || false,
+    should_prorate: entInterval == EntInterval.Lifetime,
 
     internal_feature_id: internalFeatureId,
     feature_id: item.feature_id!,
-
-    usage_tiers: item.tiers as any,
+    usage_tiers: notNullish(item.amount)
+      ? [
+          {
+            amount: item.amount,
+            to: TierInfinite,
+          },
+        ]
+      : (item.tiers as any),
     interval: itemToBillingInterval(item.interval!) as BillingInterval,
   };
 
@@ -173,6 +214,19 @@ export const toFeatureAndPrice = ({
     entitlement_id: ent.id,
   };
 
+  let billingType = getBillingType(price.config!);
+  if (
+    (billingType == BillingType.UsageInArrear ||
+      billingType == BillingType.InArrearProrated) &&
+    price.config!.interval == BillingInterval.OneOff
+  ) {
+    throw new RecaseError({
+      message: `Usage prices cannot be one-off if not set to prepaid (feature: ${item.feature_id})`,
+      code: ErrCode.InvalidPrice,
+      statusCode: 400,
+    });
+  }
+
   let priceOrEntDifferent =
     (curPrice && !pricesAreSame(curPrice, price, true)) ||
     (curEnt && !entsAreSame(curEnt, ent));
@@ -185,6 +239,14 @@ export const toFeatureAndPrice = ({
     price.config = newConfig;
   }
 
+  if (isCustom) {
+    price = {
+      ...price,
+      id: generateId("pr"),
+      created_at: Date.now(),
+    };
+  }
+
   return { price, ent };
 };
 
@@ -192,18 +254,18 @@ export const itemToPriceAndEnt = ({
   item,
   orgId,
   internalProductId,
-  isCustom,
   feature,
   curPrice,
   curEnt,
+  isCustom,
 }: {
   item: ProductItem;
   orgId: string;
   internalProductId: string;
-  isCustom: boolean;
   feature?: Feature;
   curPrice?: Price;
   curEnt?: Entitlement;
+  isCustom: boolean;
 }) => {
   let newPrice: Price | null = null;
   let newEnt: Entitlement | null = null;
@@ -224,12 +286,19 @@ export const itemToPriceAndEnt = ({
 
     if (!curPrice) {
       newPrice = price;
-    } else if (!pricesAreSame(curPrice, price)) {
+    } else if (!pricesAreSame(curPrice, price, true)) {
       updatedPrice = price;
     } else {
       samePrice = curPrice;
     }
   } else if (itemIsFree(item)) {
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${item.feature_id} not found`,
+        code: ErrCode.InvalidRequest,
+      });
+    }
+
     let { ent } = toFeature({
       item,
       orgId,
@@ -242,8 +311,17 @@ export const itemToPriceAndEnt = ({
       newEnt = ent;
     } else if (!entsAreSame(curEnt, ent)) {
       updatedEnt = ent;
+    } else {
+      sameEnt = curEnt;
     }
   } else {
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${item.feature_id} not found`,
+        code: ErrCode.InvalidRequest,
+      });
+    }
+
     let { price, ent } = toFeatureAndPrice({
       item,
       orgId,
@@ -254,18 +332,41 @@ export const itemToPriceAndEnt = ({
       curEnt,
     });
 
+    let entSame = curEnt && entsAreSame(curEnt, ent);
+
+    // 1. If no curPrice, price is new
     if (!curPrice) {
       newPrice = price;
-    } else if (!pricesAreSame(curPrice, price, false)) {
+    }
+
+    // 2. If ent or price aren't same, price is updated
+    else if (!entSame || !pricesAreSame(curPrice, price, false)) {
       updatedPrice = price;
     }
 
+    // 3. price is same
+    else {
+      samePrice = curPrice;
+    }
+
+    // 1. If no curEnt, ent is new
     if (!curEnt) {
       newEnt = ent;
-    } else if (!entsAreSame(curEnt, ent)) {
+    }
+
+    // 2. If ent is different, ent is updated
+    else if (!entSame) {
       updatedEnt = ent;
     }
+
+    // 3. ent is same
+    else {
+      sameEnt = curEnt;
+    }
   }
+
+  // console.log("Item", item);
+  // console.log("Updated price", updatedPrice);
 
   return { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt };
 };
