@@ -47,7 +47,8 @@ export const intervalIsNone = (interval: any) => {
   return (
     interval == ProductItemInterval.None ||
     interval == EntInterval.Lifetime ||
-    interval == BillingInterval.OneOff
+    interval == BillingInterval.OneOff ||
+    interval == null
   );
 };
 

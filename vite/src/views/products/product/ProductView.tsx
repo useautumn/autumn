@@ -11,6 +11,8 @@ import { ManageProduct } from "./ManageProduct";
 import {
   AppEnv,
   FrontendProduct,
+  ProductItem,
+  ProductItemType,
   ProductV2,
   UpdateProductSchema,
 } from "@autumn/shared";
@@ -28,6 +30,7 @@ import ErrorScreen from "@/views/general/ErrorScreen";
 import ProductSidebar from "./ProductSidebar";
 import { FeaturesContext } from "@/views/features/FeaturesContext";
 import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
+import { getItemType } from "@/utils/product/productItemUtils";
 
 function ProductView({ env }: { env: AppEnv }) {
   const { product_id } = useParams();
@@ -62,15 +65,30 @@ function ProductView({ env }: { env: AppEnv }) {
 
   useEffect(() => {
     if (data?.product) {
-      setProduct(data.product);
-      setOriginalProduct(structuredClone(data.product));
+      const sortedProduct = {
+        ...data.product,
+        items: sortProductItems(data.product.items),
+      };
+      setProduct(sortedProduct);
+      setOriginalProduct(structuredClone(sortedProduct));
     }
 
     setShowFreeTrial(!!data?.product?.free_trial);
   }, [data]);
 
   useEffect(() => {
-    if (!originalProduct || !product) {
+    //sort product items and check if there are changes from the original
+    if (!product) return;
+    const sortedProduct = {
+      ...product,
+      items: sortProductItems(product.items),
+    };
+
+    if (JSON.stringify(product.items) !== JSON.stringify(sortedProduct.items)) {
+      setProduct(sortedProduct);
+    }
+
+    if (!originalProduct || !sortedProduct) {
       setHasChanges(false);
       return;
     }
@@ -79,7 +97,7 @@ function ProductView({ env }: { env: AppEnv }) {
     console.log("Current product:", product.items);
 
     const hasChanged =
-      JSON.stringify(product) !== JSON.stringify(originalProduct);
+      JSON.stringify(sortedProduct) !== JSON.stringify(originalProduct);
     setHasChanges(hasChanged);
   }, [product]);
 
@@ -203,3 +221,20 @@ function ProductView({ env }: { env: AppEnv }) {
 }
 
 export default ProductView;
+
+const sortProductItems = (items: ProductItem[]) => {
+  const sortedItems = [...items].sort((a, b) => {
+    const typeA = getItemType(a);
+    const typeB = getItemType(b);
+
+    const typeOrder = {
+      [ProductItemType.Feature]: 0,
+      [ProductItemType.FeaturePrice]: 1,
+      [ProductItemType.Price]: 2,
+    };
+
+    return typeOrder[typeA] - typeOrder[typeB];
+  });
+
+  return sortedItems;
+};

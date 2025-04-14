@@ -73,9 +73,19 @@ export default function TieredPrice({
         {item.tiers?.map((tier: any, index: number) => (
           <div key={index} className="flex gap-1 w-full items-center">
             <div className="w-full gap-2 flex items-center">
+              {index == 0 &&
+                item.included_usage > 0 &&
+                item.tiers.length == 1 && (
+                  <span className="text-t3 text-xs animate-in slide-in-from-left duration-200 pl-1">
+                    then
+                  </span>
+                )}
               {item.tiers?.length > 1 && ( // First tier is just a price and billing units. No from or to tiers.
                 <div className="flex w-full items-center">
-                  <div className="flex w-full text-sm">
+                  <div className="flex w-full text-sm items-center gap-2">
+                    {index == 0 && item.included_usage > 0 && (
+                      <span className="text-t3 text-xs pl-1">then</span>
+                    )}
                     <UsageTierInput
                       value={index == 0 ? 0 : item.tiers[index - 1].to}
                       onChange={(e) => null}
@@ -92,7 +102,7 @@ export default function TieredPrice({
                     <UsageTierInput
                       value={tier.to}
                       onChange={(e) => {
-                        setUsageTier(index, "to", Number(e.target.value));
+                        setUsageTier(index, "to", e.target.value);
                       }}
                       type="to"
                     />
@@ -104,7 +114,7 @@ export default function TieredPrice({
                   <UsageTierInput
                     value={tier.amount}
                     onChange={(e) =>
-                      setUsageTier(index, "amount", Number(e.target.value))
+                      setUsageTier(index, "amount", e.target.value)
                     }
                     type="amount"
                   />
@@ -120,10 +130,11 @@ export default function TieredPrice({
                         autoFocus
                         value={item.billing_units}
                         className="pr-14 !text-xs"
+                        type="number"
                         onChange={(e) =>
                           setItem({
                             ...item,
-                            billing_units: Number(e.target.value),
+                            billing_units: e.target.value,
                           })
                         }
                       />
@@ -168,7 +179,6 @@ export default function TieredPrice({
             >
               <Plus size={12} className="text-t3" />
             </Button>
-
             <Button
               isIcon
               size="sm"

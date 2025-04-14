@@ -43,7 +43,7 @@ export const ProductItemTable = () => {
 
     return (
       <div className="whitespace-nowrap flex">
-        {item.included_usage}&nbsp;
+        {item.included_usage ?? 0}&nbsp;
         <span className="truncate">{feature?.name}</span> &nbsp;
         {item.entity_feature_id && (
           <span className="truncate">
@@ -56,31 +56,6 @@ export const ProductItemTable = () => {
       </div>
     );
   };
-
-  //sorts items by type
-  useEffect(() => {
-    if (!product?.items) return;
-
-    const sortedItems = [...product.items].sort((a, b) => {
-      const typeA = getItemType(a);
-      const typeB = getItemType(b);
-
-      const typeOrder = {
-        [ProductItemType.Feature]: 0,
-        [ProductItemType.FeaturePrice]: 1,
-        [ProductItemType.Price]: 2,
-      };
-
-      return typeOrder[typeA] - typeOrder[typeB];
-    });
-
-    if (JSON.stringify(product.items) !== JSON.stringify(sortedItems)) {
-      setProduct({
-        ...product,
-        items: sortedItems,
-      });
-    }
-  }, [product?.items]);
 
   const getPaidFeatureString = (item: ProductItem) => {
     let amountStr = "";
