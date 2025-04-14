@@ -22,7 +22,7 @@ export let defaultProductItem: ProductItem = {
   included_usage: null,
 
   interval: ProductItemInterval.Month,
-  reset_usage_on_interval: true,
+  reset_usage_on_billing: true,
 
   // Price config
   amount: null,
@@ -39,7 +39,7 @@ let defaultPriceItem: ProductItem = {
   included_usage: null,
 
   interval: ProductItemInterval.Month,
-  reset_usage_on_interval: true,
+  reset_usage_on_billing: true,
 
   // Price config
   amount: 0,
@@ -144,10 +144,10 @@ export function CreateProductItem() {
 
 export const validateProductItem = (item: ProductItem, show: any) => {
   // Basic validation for all product items
-  if (!item.feature_id) {
-    toast.error("Please select a feature");
-    return null;
-  }
+  // if (!item.feature_id) {
+  //   toast.error("Please select a feature");
+  //   return null;
+  // }
 
   // if (!item.interval) {
   //   toast.error("Please select a billing interval");
@@ -155,12 +155,18 @@ export const validateProductItem = (item: ProductItem, show: any) => {
   // }
 
   // Price item validation (when amount is set)
-  if (item.amount !== null) {
+  if (item.amount !== null && show.price) {
     if (invalidNumber(item.amount)) {
       toast.error("Please enter a valid price amount");
       return null;
     }
     // item.amount = parseFloat(item.amount.toString());
+  }
+
+  //if show price and tiers0.amount is 0, error
+  if (item.tiers && item.tiers.length == 1 && item.tiers[0].amount === 0) {
+    toast.error("Please set a usage price greater than 0");
+    return null;
   }
 
   if (item.included_usage !== null) {
@@ -178,6 +184,9 @@ export const validateProductItem = (item: ProductItem, show: any) => {
 
     for (let i = 0; i < item.tiers.length; i++) {
       const tier = item.tiers[i];
+      if (tier.to === "inf") {
+        break;
+      }
 
       // Check if amount is valid
       if (invalidNumber(tier.amount)) {
@@ -186,7 +195,7 @@ export const validateProductItem = (item: ProductItem, show: any) => {
       }
 
       // Check if 'to' is valid (except for the last tier which can be -1)
-      if (invalidNumber(tier.to) && tier.to !== "inf") {
+      if (invalidNumber(tier.to)) {
         toast.error("Please enter valid usage limits for all tiers");
         return null;
       }
@@ -194,17 +203,16 @@ export const validateProductItem = (item: ProductItem, show: any) => {
       // Ensure tiers are in ascending order
       const toValue =
         typeof tier.to === "number" ? tier.to : parseFloat(tier.to);
+
       const amountValue =
         typeof tier.amount === "number" ? tier.amount : parseFloat(tier.amount);
 
-      if (tier.to !== "inf" && toValue <= previousTo) {
+      if (toValue <= previousTo) {
         toast.error("Tiers must be in ascending order");
         return null;
       }
 
-      if (tier.to !== "inf") {
-        previousTo = toValue;
-      }
+      previousTo = toValue;
 
       item.tiers[i].to = toValue;
       item.tiers[i].amount = amountValue;

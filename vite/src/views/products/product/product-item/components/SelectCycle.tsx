@@ -77,11 +77,11 @@ export const SelectCycle = ({
                     value == BillingInterval.OneOff
                       ? null
                       : (value as BillingInterval),
-                  reset_usage_on_interval:
+                  reset_usage_on_billing:
                     value == BillingInterval.OneOff &&
-                    item.reset_usage_on_interval
+                    item.reset_usage_on_billing
                       ? false
-                      : item.reset_usage_on_interval,
+                      : item.reset_usage_on_billing,
                 });
                 // value == BillingInterval.OneOff &&
                 //   setShow({ ...show, cycle: false });
@@ -110,12 +110,11 @@ export const SelectCycle = ({
             <Select
               disabled={item.included_usage == "unlimited"}
               value={
-                item.interval && item.reset_usage_on_interval
+                item.interval && item.reset_usage_on_billing
                   ? item.interval
                   : EntInterval.Lifetime
               }
               onValueChange={(value) => {
-                console.log("Value", value);
                 setItem({
                   ...item,
                   interval:
@@ -124,7 +123,7 @@ export const SelectCycle = ({
                         ? item.interval
                         : null
                       : (value as EntInterval),
-                  reset_usage_on_interval: value != EntInterval.Lifetime,
+                  reset_usage_on_billing: value != EntInterval.Lifetime,
                 });
                 // value == EntInterval.Lifetime &&
                 //   setShow({ ...show, cycle: false });
@@ -166,7 +165,7 @@ export const SelectCycle = ({
                 setShowCycle(false);
                 setItem({
                   ...item,
-                  reset_usage_on_interval: false,
+                  reset_usage_on_billing: false,
                 });
               }}
             >

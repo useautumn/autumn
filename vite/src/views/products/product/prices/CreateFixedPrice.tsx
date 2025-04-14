@@ -33,18 +33,18 @@ function CreateFixedPrice({
       <div className="flex flex-col w-full gap-6 animate-in fade-in duration-300">
         <div className="w-full flex flex-col">
           <FieldLabel>Fixed Price</FieldLabel>
-          <div className="flex h-16 items-center justify-between gap-2">
+          <div className="flex h-full items-center justify-between gap-2">
             <Input
               value={config.amount}
               onChange={(e) => {
-                setConfig({ ...config, amount: Number(e.target.value) });
+                setConfig({ ...config, amount: e.target.value });
               }}
               placeholder="30.00"
               type="number"
               step="any"
               className="h-full !text-lg min-w-36"
             />
-            <span className="text-t2 w-fit p-6 flex justify-center">
+            <span className="text-t2 w-fit px-6 flex justify-center">
               {org?.default_currency}
             </span>
           </div>

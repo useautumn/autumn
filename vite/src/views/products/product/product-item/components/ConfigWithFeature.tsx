@@ -159,7 +159,7 @@ export const ConfigWithFeature = ({
                 </div>
 
                 {/* INTERVAL CONFIG */}
-                <div className="relative w-full h-fit ">
+                {/* <div className="relative w-full h-fit ">
                   <div
                     className={cn(
                       "transition-all duration-400 ease-in-out absolute top-0 left-0 w-full h-full",
@@ -175,19 +175,19 @@ export const ConfigWithFeature = ({
                     >
                       + Interval
                     </Button>
-                  </div>
-                  <div
-                    className={cn(
-                      "transition-all duration-400 ease-in-out whitespace-nowrap",
-                      show.cycle
-                        ? "opacity-100 max-w-full max-h-[200px]"
-                        : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden"
-                    )}
-                  >
-                    <SelectCycle show={show} setShow={setShow} type="reset" />
-                  </div>
+                  </div> */}
+                <div
+                  className={cn(
+                    "transition-all duration-400 ease-in-out whitespace-nowrap w-full",
+                    show.cycle
+                      ? "opacity-100 max-w-full max-h-[200px]"
+                      : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden"
+                  )}
+                >
+                  <SelectCycle show={show} setShow={setShow} type="reset" />
                 </div>
               </div>
+              {/* </div> */}
 
               {/* PRICE CONFIG */}
               {/* <div className="relative w-full">
