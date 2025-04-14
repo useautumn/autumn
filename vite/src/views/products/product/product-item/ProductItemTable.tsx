@@ -57,6 +57,7 @@ export const ProductItemTable = () => {
     );
   };
 
+  //sorts items by type
   useEffect(() => {
     if (!product?.items) return;
 
@@ -73,10 +74,12 @@ export const ProductItemTable = () => {
       return typeOrder[typeA] - typeOrder[typeB];
     });
 
-    setProduct({
-      ...product,
-      items: sortedItems,
-    });
+    if (JSON.stringify(product.items) !== JSON.stringify(sortedItems)) {
+      setProduct({
+        ...product,
+        items: sortedItems,
+      });
+    }
   }, [product?.items]);
 
   const getPaidFeatureString = (item: ProductItem) => {

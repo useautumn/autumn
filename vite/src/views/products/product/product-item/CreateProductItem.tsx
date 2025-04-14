@@ -14,10 +14,12 @@ import { ProductItemContext } from "./ProductItemContext";
 import { CreateFeature } from "@/views/features/CreateFeature";
 import { Feature, ProductItemInterval, ProductItem } from "@autumn/shared";
 import { useProductContext } from "../ProductContext";
+import { toast } from "sonner";
+import { invalidNumber } from "@/utils/genUtils";
 
-let defaultProductItem: ProductItem = {
+export let defaultProductItem: ProductItem = {
   feature_id: null,
-  included_usage: 0,
+  included_usage: null,
 
   interval: ProductItemInterval.Month,
   reset_usage_on_interval: true,
@@ -59,9 +61,10 @@ export function CreateProductItem() {
     setItem({ ...item, feature_id: feature.id! });
   };
 
-  const handleCreateProductItem = () => {
-    // Add to product
-    setProduct({ ...product, items: [...product.items, item] });
+  const handleCreateProductItem = (show: any) => {
+    const validatedItem = validateProductItem(item, show);
+    if (!validatedItem) return;
+    setProduct({ ...product, items: [...product.items, validatedItem] });
     setOpen(false);
   };
 
@@ -138,3 +141,81 @@ export function CreateProductItem() {
     </ProductItemContext.Provider>
   );
 }
+
+export const validateProductItem = (item: ProductItem, show: any) => {
+  // Basic validation for all product items
+  if (!item.feature_id) {
+    toast.error("Please select a feature");
+    return null;
+  }
+
+  // if (!item.interval) {
+  //   toast.error("Please select a billing interval");
+  //   return null;
+  // }
+
+  // Price item validation (when amount is set)
+  if (item.amount !== null) {
+    if (invalidNumber(item.amount)) {
+      toast.error("Please enter a valid price amount");
+      return null;
+    }
+    // item.amount = parseFloat(item.amount.toString());
+  }
+
+  if (item.included_usage !== null) {
+    let usageNumber = Number(item.included_usage);
+    if (invalidNumber(usageNumber) || usageNumber < 0) {
+      toast.error("Please enter a valid included usage amount");
+      return null;
+    }
+    item.included_usage = usageNumber;
+  }
+
+  // Usage/Feature item validation (when tiers are set)
+  if (item.tiers) {
+    let previousTo = 0; // Track the previous tier's 'to' value
+
+    for (let i = 0; i < item.tiers.length; i++) {
+      const tier = item.tiers[i];
+
+      // Check if amount is valid
+      if (invalidNumber(tier.amount)) {
+        toast.error("Please enter valid prices for all tiers");
+        return null;
+      }
+
+      // Check if 'to' is valid (except for the last tier which can be -1)
+      if (invalidNumber(tier.to) && tier.to !== "inf") {
+        toast.error("Please enter valid usage limits for all tiers");
+        return null;
+      }
+
+      // Ensure tiers are in ascending order
+      const toValue =
+        typeof tier.to === "number" ? tier.to : parseFloat(tier.to);
+      const amountValue =
+        typeof tier.amount === "number" ? tier.amount : parseFloat(tier.amount);
+
+      if (tier.to !== "inf" && toValue <= previousTo) {
+        toast.error("Tiers must be in ascending order");
+        return null;
+      }
+
+      if (tier.to !== "inf") {
+        previousTo = toValue;
+      }
+
+      item.tiers[i].to = toValue;
+      item.tiers[i].amount = amountValue;
+    }
+  }
+
+  // Validate billing units
+  if (item.billing_units && invalidNumber(item.billing_units)) {
+    toast.error("Please enter valid billing units");
+    return null;
+  }
+
+  return item;
+};

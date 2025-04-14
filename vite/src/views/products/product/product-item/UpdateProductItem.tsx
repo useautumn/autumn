@@ -5,6 +5,7 @@ import { ProductItem } from "@autumn/shared";
 import { ProductItemContext } from "./ProductItemContext";
 import { useProductContext } from "../ProductContext";
 import { notNullish } from "@/utils/genUtils";
+import { defaultProductItem, validateProductItem } from "./CreateProductItem";
 
 export default function UpdateProductItem({
   selectedItem,
@@ -17,10 +18,14 @@ export default function UpdateProductItem({
 }) {
   let { product, setProduct } = useProductContext();
   let [open, setOpen] = useState(false);
-  let [item, setItem] = useState<ProductItem | null>(selectedItem);
+  let [item, setItem] = useState<ProductItem>(
+    selectedItem || defaultProductItem
+  );
   let [showCreateFeature, setShowCreateFeature] = useState(false);
 
-  let handleUpdateProductItem = () => {
+  let handleUpdateProductItem = (show: any) => {
+    const validatedItem = validateProductItem(item, show);
+    if (!validatedItem) return;
     if (notNullish(selectedIndex)) {
       let newProduct = { ...product };
       newProduct.items[selectedIndex!] = item;

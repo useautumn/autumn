@@ -45,7 +45,29 @@ export const ProductItemConfig = () => {
     (f: Feature) => f.id == item.feature_id
   );
 
-  console.log(item, "item");
+  useEffect(() => {
+    console.log(item, "item");
+    // if show price is changed to false, remove the "amount" from the item
+    if (show.price) {
+      setItem({ ...item, amount: null });
+    }
+  }, [show]);
+
+  // if item type is boolean, remove everything except for the feature_id. use getFeature to check if the item is boolean
+  // useEffect(() => {
+  //   if (getFeature(item.feature_id, features)?.type === FeatureType.Boolean) {
+  //     setItem({
+  //       feature_id: item.feature_id,
+  //       amount: null,
+  //       tiers: null,
+  //       billing_units: null,
+  //       included_usage: null,
+  //       reset_usage_on_interval: null,
+  //       carry_over_usage: null,
+  //       entity_feature_id: null,
+  //     });
+  //   }
+  // }, [item.feature_id, features]);
 
   const handleAddPrice = () => {
     // console.log("handleAddPrice", itemIsFree(item));

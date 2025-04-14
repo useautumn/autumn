@@ -96,7 +96,7 @@ export const ConfigWithFeature = ({
                     </FieldLabel>
                     <div className="flex w-full h-fit gap-2">
                       <Input
-                        placeholder="eg. 100"
+                        placeholder="None"
                         className=""
                         disabled={item.included_usage == "unlimited"}
                         value={item.included_usage}
@@ -108,7 +108,7 @@ export const ConfigWithFeature = ({
                         onChange={(e) => {
                           setItem({
                             ...item,
-                            included_usage: Number(e.target.value),
+                            included_usage: e.target.value,
                           });
                         }}
                       />
@@ -121,7 +121,7 @@ export const ConfigWithFeature = ({
                           if (itemIsUnlimited(item)) {
                             setItem({
                               ...item,
-                              included_usage: 0,
+                              included_usage: "",
                             });
                           } else {
                             setItem({
