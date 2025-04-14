@@ -144,10 +144,10 @@ export function CreateProductItem() {
 
 export const validateProductItem = (item: ProductItem, show: any) => {
   // Basic validation for all product items
-  if (!item.feature_id) {
-    toast.error("Please select a feature");
-    return null;
-  }
+  // if (!item.feature_id) {
+  //   toast.error("Please select a feature");
+  //   return null;
+  // }
 
   // if (!item.interval) {
   //   toast.error("Please select a billing interval");
