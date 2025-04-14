@@ -26,6 +26,7 @@ import {
 } from "./handleUpdateProduct.js";
 import { handleDeleteProduct } from "./handleDeleteProduct.js";
 import { handleGetProduct } from "./handleGetProduct.js";
+import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
 
 export const productApiRouter = Router();
 
@@ -35,7 +36,7 @@ productApiRouter.get("", async (req: any, res) => {
     orgId: req.orgId,
     env: req.env,
   });
-  res.status(200).send(products);
+  res.status(200).json(products);
 });
 
 productApiRouter.post("", async (req: any, res) => {
@@ -73,21 +74,21 @@ productApiRouter.post("", async (req: any, res) => {
 
     await ProductService.create({ sb, product: newProduct });
 
-    res.status(200).send({ product_id: newProduct.id });
+    res.status(200).json({ product_id: newProduct.id });
 
     return;
   } catch (error) {
     console.log("Failed to create product: ", error);
 
     if (error instanceof RecaseError) {
-      res.status(error.statusCode).send({
+      res.status(error.statusCode).json({
         message: error.message,
         code: error.code,
       });
       return;
     }
 
-    res.status(500).send(error);
+    res.status(500).json(error);
     return;
   }
 });
@@ -98,110 +99,7 @@ productApiRouter.post("/:productId", handleUpdateProductV2);
 
 productApiRouter.delete("/:productId", handleDeleteProduct);
 
-productApiRouter.post("/:productId/copy", async (req: any, res) => {
-  const { productId: fromProductId } = req.params;
-  const sb = req.sb;
-  const orgId = req.orgId;
-  const fromEnv = req.env;
-  const { env: toEnv, id: toId, name: toName } = req.body;
-
-  if (!toEnv || !toId || !toName) {
-    throw new RecaseError({
-      message: "env, id, and name are required",
-      code: ErrCode.InvalidRequest,
-      statusCode: 400,
-    });
-  }
-
-  if (fromEnv == toEnv && fromProductId == toId) {
-    throw new RecaseError({
-      message: "Product ID already exists",
-      code: ErrCode.InvalidRequest,
-      statusCode: 400,
-    });
-  }
-
-  try {
-    // 1. Check if product exists in live already...
-    const toProduct = await ProductService.getProductStrict({
-      sb,
-      productId: toId,
-      orgId,
-      env: toEnv,
-    });
-
-    if (toProduct) {
-      throw new RecaseError({
-        message: "Product already exists in live... can't copy again",
-        code: ErrCode.ProductAlreadyExists,
-        statusCode: 400,
-      });
-    }
-
-    // 1. Get sandbox product
-    const [fromFullProduct, fromFeatures, toFeatures] = await Promise.all([
-      ProductService.getFullProduct({
-        sb,
-        productId: fromProductId,
-        orgId,
-        env: fromEnv,
-      }),
-      FeatureService.getFeatures({
-        sb,
-        orgId,
-        env: fromEnv,
-      }),
-      FeatureService.getFeatures({
-        sb,
-        orgId,
-        env: toEnv,
-      }),
-    ]);
-
-    if (fromEnv != toEnv) {
-      for (const fromFeature of fromFeatures) {
-        const toFeature = toFeatures.find((f) => f.id == fromFeature.id);
-
-        if (toFeature && fromFeature.type !== toFeature.type) {
-          throw new RecaseError({
-            message: `Feature ${fromFeature.name} exists in ${toEnv}, but has a different config. Please match them then try again.`,
-            code: ErrCode.InvalidRequest,
-            statusCode: 400,
-          });
-        }
-
-        if (!toFeature) {
-          let res = await FeatureService.insert({
-            sb,
-            data: initNewFeature({
-              data: CreateFeatureSchema.parse(fromFeature),
-              orgId,
-              env: toEnv,
-            }),
-          });
-
-          toFeatures.push(res![0]);
-        }
-      }
-    }
-
-    // // 2. Copy product
-    await copyProduct({
-      sb,
-      product: fromFullProduct,
-      toOrgId: orgId,
-      toId,
-      toName,
-      toEnv: toEnv,
-      features: toFeatures,
-    });
-
-    // 2. Get product from sandbox
-    res.status(200).send({ message: "Product copied" });
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "Copy product" });
-  }
-});
+productApiRouter.post("/:productId/copy", handleCopyProduct);
 
 productApiRouter.post("/all/init_stripe", async (req: any, res) => {
   try {
@@ -262,7 +160,7 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
 
       await Promise.all(batchPriceUpdate);
     }
-    res.status(200).send({ message: "Stripe products initialized" });
+    res.status(200).json({ message: "Stripe products initialized" });
   } catch (error) {
     handleRequestError({ req, error, res, action: "Init stripe products" });
   }

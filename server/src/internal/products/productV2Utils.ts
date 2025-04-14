@@ -72,6 +72,7 @@ export const mapToProductV2 = (product: FullProduct): ProductV2 => {
     is_default: product.is_default,
     version: product.version,
     group: product.group,
+    free_trial: product.free_trial,
 
     items: items,
   };

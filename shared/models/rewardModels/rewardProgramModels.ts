@@ -8,6 +8,12 @@ export enum RewardTriggerEvent {
   Checkout = "checkout",
 }
 
+export enum RewardReceivedBy {
+  Referrer = "referrer",
+  All = "all",
+  // Redeemer = "redeemer",
+}
+
 export const RewardProgram = z.object({
   internal_id: z.string(),
   id: z.string(),
@@ -24,6 +30,8 @@ export const RewardProgram = z.object({
   org_id: z.string(),
   env: z.string(),
   created_at: z.number(),
+
+  received_by: z.nativeEnum(RewardReceivedBy),
 });
 
 export const CreateRewardProgram = z.object({
@@ -33,6 +41,8 @@ export const CreateRewardProgram = z.object({
   exclude_trial: z.boolean().optional(),
   internal_reward_id: z.string(),
   max_redemptions: z.number().optional(),
+
+  received_by: z.nativeEnum(RewardReceivedBy),
 });
 
 export type RewardProgram = z.infer<typeof RewardProgram>;

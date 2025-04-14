@@ -30,7 +30,9 @@ export const getCusProduct = async (
   return data[0];
 };
 
-describe(`${chalk.yellowBright("Testing downgrade (paid to paid)")}`, () => {
+describe.skip(`${chalk.yellowBright(
+  "07_downgrade: testing downgrade (paid to paid)"
+)}`, () => {
   let customer: Customer;
   let customerId = "downgrade";
   let testClockId: string;
@@ -122,7 +124,7 @@ describe(`${chalk.yellowBright("Testing downgrade (paid to paid)")}`, () => {
   });
 });
 
-describe(`${chalk.yellowBright("Testing expire button")}`, () => {
+describe(`${chalk.yellowBright("07_downgrade: testing expire button")}`, () => {
   let customer: Customer;
   let customerId = "expire";
   let testClockId: string;

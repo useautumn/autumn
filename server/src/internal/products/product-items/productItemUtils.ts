@@ -6,18 +6,54 @@ import {
   ProductItem,
   ProductItemType,
   ProductItemBehavior,
+  Infinite,
 } from "@autumn/shared";
+import { isFeatureItem } from "./getItemType.js";
+import {
+  billingToItemInterval,
+  entToItemInterval,
+} from "./itemIntervalUtils.js";
 
-export const intervalIsNone = (interval: string | undefined | null) => {
-  if (!interval) {
-    return true;
-  }
+export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
+  // Compare tiers
+  const compareTiers = (tiers1: any, tiers2: any) => {
+    if (!tiers1 && !tiers2) {
+      return true;
+    }
+
+    if (!tiers1 || !tiers2) {
+      return false;
+    }
+
+    if (tiers1.length !== tiers2.length) {
+      return false;
+    }
+
+    return tiers1.every(
+      (tier: any, index: number) =>
+        tier.amount === tiers2[index].amount && tier.to === tiers2[index].to
+    );
+  };
   return (
-    interval == ProductItemInterval.None ||
-    interval == EntInterval.Lifetime ||
-    interval == BillingInterval.OneOff
+    item1.feature_id == item2.feature_id &&
+    item1.included_usage == item2.included_usage &&
+    item1.interval == item2.interval &&
+    item1.reset_usage_on_billing === item2.reset_usage_on_billing &&
+    item1.amount == item2.amount &&
+    compareTiers(item1.tiers, item2.tiers)
   );
 };
+
+// export const intervalIsNone = (interval: string | undefined | null) => {
+//   if (!interval) {
+//     return true;
+//   }
+//   return (
+//     interval == ProductItemInterval.None ||
+//     interval == EntInterval.Lifetime ||
+//     interval == BillingInterval.OneOff
+//   );
+// };
 
 export const itemIsFixedPrice = (item: ProductItem) => {
   return notNullish(item.amount) && nullish(item.feature_id);
@@ -30,41 +66,14 @@ export const isFeaturePriceItem = (item: ProductItem) => {
   );
 };
 
-export const itemIsFree = (item: ProductItem) => {
-  return nullish(item.amount) && nullish(item.tiers);
-};
-
 export const getItemType = (item: ProductItem) => {
   if (itemIsFixedPrice(item)) {
     return ProductItemType.Price;
-  } else if (itemIsFree(item)) {
+  } else if (isFeatureItem(item)) {
     return ProductItemType.Feature;
   }
 
   return ProductItemType.FeaturePrice;
-};
-
-export const itemToEntInterval = (item: any) => {
-  // if (!item.interval) {
-  //   return null;
-  // }
-
-  if (
-    item.interval == ProductItemInterval.None ||
-    item.interval == EntInterval.Lifetime
-  ) {
-    return EntInterval.Lifetime;
-  }
-
-  if (item.reset_usage_on_billing === false) {
-    return EntInterval.Lifetime;
-  }
-
-  if (isFeaturePriceItem(item) && notNullish(item.reset_interval)) {
-    return item.reset_interval as any;
-  }
-
-  return item.interval;
 };
 
 // FOR TESTS?
@@ -75,14 +84,14 @@ export const constructFeatureItem = ({
   entitlement_id,
 }: {
   feature_id: string;
-  included_usage?: number | "unlimited";
-  interval?: EntInterval;
+  included_usage?: number | typeof Infinite;
+  interval: EntInterval;
   entitlement_id?: string;
 }) => {
   let item: ProductItem = {
     feature_id,
     included_usage,
-    interval: interval as any,
+    interval: entToItemInterval(interval),
     entitlement_id,
   };
 
@@ -110,7 +119,7 @@ export const constructFeaturePriceItem = ({
   amount,
   interval,
   behavior,
-  reset_usage_on_billing = false,
+  reset_usage_on_billing = true,
   billing_units = 1,
   carry_over_usage = true,
 }: {
@@ -129,7 +138,7 @@ export const constructFeaturePriceItem = ({
     feature_id,
     included_usage: included_usage as number,
     amount,
-    interval: interval as any,
+    interval: billingToItemInterval(interval),
     behavior,
     reset_usage_on_billing,
     billing_units,

@@ -12,7 +12,6 @@ import { compareMainProduct } from "tests/utils/compare.js";
 import { getFixedPriceAmount, timeout } from "tests/utils/genUtils.js";
 import {
   advanceClockForInvoice,
-  advanceTestClock,
   completeCheckoutForm,
   getDiscount,
 } from "tests/utils/stripeUtils.js";
@@ -27,7 +26,7 @@ describe(
     let customer: Customer;
     let testClockId: string;
 
-    let couponAmount = rewards.rolloverUsage.discount_value;
+    let couponAmount = rewards.rolloverUsage.discount_config.discount_value;
 
     before(async function () {
       const { testClockId: testClockId1, customer: customer1 } =
