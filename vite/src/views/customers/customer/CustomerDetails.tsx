@@ -21,18 +21,151 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import React from "react";
+import UpdateCustomerDialog from "./UpdateCustomerDialog";
+import AddCouponDialogContent from "./add-coupon/AddCouponDialogContent";
+import CopyButton from "@/components/general/CopyButton";
+import { getRedirectUrl } from "@/utils/genUtils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export const CustomerDetails = () => {
   const { customer, products, env, discount, referrals } = useCustomerContext();
   const [idCopied, setIdCopied] = useState(false);
   const [idHover, setIdHover] = useState(false);
-  const [fingerprintModalOpen, setFingerprintModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState("coupon");
   const [tempFingerprint, setTempFingerprint] = useState(
     customer.fingerprint || ""
   );
+
+  return (
+    <div className="flex-col gap-4 h-full border-l py-6 whitespace-nowrap text-t2">
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <UpdateCustomerDialog
+          selectedCustomer={customer}
+          open={isModalOpen}
+          setOpen={setIsModalOpen}
+        />
+      </Dialog>
+      <Accordion
+        type="multiple"
+        className="w-full flex flex-col"
+        defaultValue={["details", "rewards"]}
+      >
+        <div className="flex w-full border-b mt-[2.5px] p-4">
+          <SideAccordion title="Details" value="details">
+            <div className="grid grid-cols-8 auto-rows-[16px] gap-y-4 w-full items-center">
+              <span className="text-t3 text-xs font-medium col-span-2">ID</span>
+              <div className="col-span-6 justify-end flex">
+                <div className="w-full flex justify-end">
+                  <CopyButton text={customer.id} className="">
+                    {customer.id}
+                  </CopyButton>
+                </div>
+              </div>
+
+              <span className="text-t3 text-xs font-medium col-span-2">
+                Name
+              </span>
+              <div className="col-span-6 justify-end flex">
+                <Button
+                  variant="sidebarItem"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setModalType("customer");
+                  }}
+                >
+                  <span className="truncate">
+                    {customer.name || <span className="text-t3">None</span>}
+                  </span>
+                </Button>
+              </div>
+
+              <span className="text-t3 text-xs font-medium col-span-2">
+                Email
+              </span>
+              <div className="col-span-6 justify-end flex">
+                <Button
+                  variant="sidebarItem"
+                  onClick={() => {
+                    setIsModalOpen(true);
+                    setModalType("customer");
+                  }}
+                >
+                  <span className="truncate">
+                    {customer.email || <span className="text-t3">None</span>}
+                  </span>
+                </Button>
+              </div>
+
+              <span className="text-t3 text-xs font-medium col-span-2">
+                Fingerprint
+              </span>
+              <div className="col-span-6 justify-end flex">
+                <Button
+                  variant="ghost"
+                  className="text-t2 px-2 h-fit py-0.5"
+                  onClick={() => {
+                    // setTempFingerprint(customer.fingerprint || "");
+                    setIsModalOpen(true);
+                    setModalType("customer");
+                  }}
+                >
+                  {customer.fingerprint || (
+                    <span className="text-t3">None</span>
+                  )}
+                </Button>
+              </div>
+
+              {customer.processor?.id && (
+                <>
+                  <span className="text-t3 text-xs font-medium col-span-2 h-4">
+                    Stripe
+                  </span>
+                  <div className="col-span-6">
+                    <Link
+                      className="!cursor-pointer hover:underline"
+                      to={getStripeCusLink(customer.processor?.id, env)}
+                      target="_blank"
+                    >
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button
+                          variant="sidebarItem"
+                          // className="bg-white border shadow-sm rounded-md gap-2 h-6 max-h-6 !py-0"
+                        >
+                          <FontAwesomeIcon
+                            icon={faStripe}
+                            className="!h-6 text-t2"
+                          />
+                          <ArrowUpRightFromSquare
+                            size={12}
+                            className="text-t2"
+                          />
+                        </Button>
+                      </div>
+                    </Link>
+                  </div>
+                </>
+              )}
+            </div>
+          </SideAccordion>
+        </div>
+        <RewardProps />
+      </Accordion>
+    </div>
+  );
+};
+
+export const RewardProps = () => {
+  const { discount, env } = useCustomerContext();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const getDiscountText = (discount: any) => {
     const coupon = discount.coupon;
@@ -56,274 +189,168 @@ export const CustomerDetails = () => {
     }
     return coupon.name;
   };
+  let { referrals } = useCustomerContext();
+  console.log("referrals", referrals);
+
+  // if (!referrals) return null;
+
   return (
-    <div className="flex-col gap-4 h-full border-l py-6">
-      <Accordion
-        type="multiple"
-        className="w-full flex flex-col"
-        defaultValue={["details"]}
-      >
-        <div className="flex w-full border-b mt-[2px] p-4">
-          <SideAccordion title="Details" value="details">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between h-4">
-                <span className="text-t3 text-xs font-medium">Name</span>
-                <span>
-                  {customer.name || <span className="text-t3">N/A</span>}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between h-4">
-                <span className="text-t3 text-xs font-medium">ID</span>
-                <div className="flex items-center gap-2">
-                  <p
-                    onMouseEnter={() => setIdHover(true)}
-                    onMouseLeave={() => setIdHover(false)}
-                    className="flex items-center gap-1 font-mono hover:underline cursor-pointer"
-                    onClick={() => {
-                      navigator.clipboard.writeText(customer.id);
-                      setIdCopied(true);
-                      setTimeout(() => setIdCopied(false), 1000);
-                    }}
-                  >
-                    {customer.id}
-                  </p>
-                  {(idCopied || idHover) && (
-                    <div className="flex items-center justify-center">
-                      {idCopied ? <Check size={13} /> : <Copy size={13} />}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between h-4">
-                <span className="text-t3 text-xs font-medium">Email</span>
-                {customer.email ? (
-                  <span className="text-blue-500 underline">
-                    {customer.email}
-                  </span>
-                ) : (
-                  <span className="text-t3">N/A</span>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between h-4">
-                <span className="text-t3 text-xs font-medium">Fingerprint</span>
-                <Button
-                  variant="ghost"
-                  className="text-t2 px-2 h-fit py-0.5"
-                  onClick={() => {
-                    setTempFingerprint(customer.fingerprint || "");
-                    setFingerprintModalOpen(true);
-                  }}
-                >
-                  {customer.fingerprint || (
-                    <span className="text-t3">No fingerprint</span>
-                  )}
-                </Button>
-              </div>
-
-              {/* <div className="flex items-center justify-between">
-                <span className="text-t3 text-xs font-medium">Products</span>
-                <span>
-                  {customer.products
-                    .map(
-                      (p: any) =>
-                        products.find(
-                          (prod: Product) => prod.id === p.product_id
-                        )?.name
-                    )
-                    .join(", ")}
-                </span>
-              </div> */}
-
-              {discount && (
-                <div className="flex items-center justify-between">
-                  <span className="text-t3 text-xs font-medium">Discount</span>
-                  <span>{getDiscountText(discount)}</span>
-                </div>
-              )}
-
-              {customer.processor?.id && (
-                <div className="flex items-center justify-between">
-                  <span className="text-t3 text-xs font-medium">Stripe</span>
-                  <Link
-                    className="!cursor-pointer hover:underline"
-                    to={getStripeCusLink(customer.processor?.id, env)}
-                    target="_blank"
-                  >
-                    <div className="flex items-center gap-2">
-                      <FontAwesomeIcon
-                        icon={faStripe}
-                        className="!h-5 text-[#675DFF]"
-                      />
-                      <ArrowUpRightFromSquare
-                        size={10}
-                        className="text-[#675DFF]"
-                      />
-                    </div>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </SideAccordion>
-        </div>
-      </Accordion>
-
-      <Dialog
-        open={fingerprintModalOpen}
-        onOpenChange={setFingerprintModalOpen}
-      >
-        <DialogContent className="sm:min-w-sm">
-          <DialogHeader>
-            <DialogTitle>Edit Customer Fingerprint</DialogTitle>
-          </DialogHeader>
-          <div className="flex gap-4 py-4">
-            <Input
-              placeholder="Enter fingerprint"
-              value={tempFingerprint}
-              onChange={(e) => setTempFingerprint(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  // You'll need to implement the update function
-                  setFingerprintModalOpen(false);
-                }
-              }}
-            />
-            <div className="flex justify-end">
+    <div className="flex w-full border-b mt-[2.5px] p-4">
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <AddCouponDialogContent setOpen={setIsModalOpen} />
+      </Dialog>
+      <SideAccordion title="Rewards" value="rewards">
+        <div className="grid grid-cols-8 auto-rows-[16px] gap-y-4 w-full items-center">
+          <>
+            <span className="text-t3 text-xs font-medium col-span-2 h-4">
+              Coupon
+            </span>
+            <div className="col-span-6 flex justify-end">
               <Button
-                onClick={() => {
-                  // You'll need to implement the update function
-                  setFingerprintModalOpen(false);
-                }}
+                variant="sidebarItem"
+                onClick={() => setIsModalOpen(true)}
               >
-                Save
+                {discount ? (
+                  getDiscountText(discount)
+                ) : (
+                  <span className="text-t3">Add Coupon</span>
+                )}
               </Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <p className="text-t3 text-xs font-medium">Email</p>
-      {customer.email ? (
-        <p className="text-blue-500 py-0.5 w-fit underline">{customer.email}</p>
-      ) : (
-        <p className="text-t3 text-xs font-medium">N/A</p>
-      )}
+          </>
+          {referrals.referred.length > 0 && (
+            <>
+              <span className="text-t3 text-xs font-medium col-span-2">
+                Referrals
+              </span>
 
-      {customer.fingerprint && (
-        <>
-          <p className="text-t3 text-xs font-medium">Fingerprint</p>
-          <p>{customer.fingerprint}</p>
-        </>
-      )}
+              <Popover>
+                <div className="col-span-6 justify-end flex">
+                  <PopoverTrigger className="">
+                    <Button variant="sidebarItem">
+                      {referrals.referred.length} referred
+                    </Button>
+                  </PopoverTrigger>
+                </div>
 
-      <p className="text-t3 text-xs font-medium">Products</p>
-      <p>
-        {customer.products
-          .map(
-            (p: any) =>
-              products.find((prod: Product) => prod.id === p.product_id)?.name
-          )
-          .join(", ")}
-      </p>
+                <PopoverContent
+                  className="p-2 text-xs text-t2 w-48"
+                  align="end"
+                  side="bottom"
+                  sideOffset={5}
+                >
+                  <div className="flex flex-col gap-1">
+                    {referrals.referred.map((referral: any) => (
+                      <Link
+                        to={getRedirectUrl(
+                          `/customers/${referral.customer.id}`,
+                          env
+                        )}
+                        className="flex justify-between hover:bg-zinc-100 items-center"
+                        key={referral.customer.id}
+                      >
+                        <p className="max-w-40 truncate">
+                          {referral.customer.name}
+                        </p>
+                        <ArrowUpRightFromSquare size={12} />
+                      </Link>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
 
-      {discount && (
-        <>
-          <p className="text-t3 text-xs font-medium">Discount</p>
-          {getDiscountText(discount)}
-        </>
-      )}
+              <span className="text-t3 text-xs font-medium col-span-2">
+                Activated
+              </span>
+              <Popover>
+                <div className="col-span-6 justify-end flex">
+                  <PopoverTrigger className="">
+                    <Button variant="sidebarItem">
+                      {
+                        referrals.referred.filter((r: any) => r.triggered)
+                          .length
+                      }{" "}
+                      activated
+                    </Button>
+                  </PopoverTrigger>
+                </div>
 
-      <ReferralDetails />
-
-      {customer.processor?.id && (
-        <React.Fragment>
-          <Link
-            className="!cursor-pointer hover:underline"
-            to={getStripeCusLink(customer.processor?.id, env)}
-            target="_blank"
-          >
-            <div className="flex justify-center items-center w-fit gap-2">
-              <FontAwesomeIcon
-                icon={faStripe}
-                className="!h-5 text-[#675DFF]"
-              />
-              <ArrowUpRightFromSquare size={10} className="text-[#675DFF]" />
-            </div>
-          </Link>
-          <p></p>
-        </React.Fragment>
-      )}
+                <PopoverContent
+                  className="p-2 text-xs text-t2 w-48"
+                  align="end"
+                  side="bottom"
+                  sideOffset={5}
+                >
+                  <div className="flex flex-col gap-1">
+                    {referrals.referred
+                      .filter((r: any) => r.triggered)
+                      .map((referral: any) => (
+                        <Link
+                          to={getRedirectUrl(
+                            `/customers/${referral.customer.id}`,
+                            env
+                          )}
+                          className="flex justify-between hover:bg-zinc-100 items-center"
+                          key={referral.customer.id}
+                        >
+                          <p className="max-w-40 truncate">
+                            {referral.customer.name}
+                          </p>
+                          {/* <p className="text-t2 max-w-[100px] truncate font-mono">
+                          ({referral.customer.id})
+                        </p> */}
+                          <ArrowUpRightFromSquare size={12} />
+                        </Link>
+                      ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </>
+          )}
+          {referrals.redeemed.length > 0 && (
+            <>
+              <span className="text-t3 text-xs font-medium col-span-2">
+                Referred by
+              </span>
+              <Tooltip>
+                <TooltipTrigger className="flex items-center gap-1 col-span-6 justify-end">
+                  <Button variant="sidebarItem">
+                    <Link
+                      to={getRedirectUrl(
+                        `/customers/${referrals.redeemed[0].referral_code?.customer.id}`,
+                        env
+                      )}
+                      className="flex items-center gap-1 truncate w-full"
+                    >
+                      <span className="truncate">
+                        {referrals.redeemed[0].referral_code?.customer.name}
+                      </span>
+                      <div className="flex items-center justify-center">
+                        <ArrowUpRightFromSquare
+                          size={12}
+                          className="text-t2 flex "
+                        />
+                      </div>
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent
+                  className="px-2 font-mono flex flex-col gap-1"
+                  align="start"
+                  side="bottom"
+                  sideOffset={5}
+                >
+                  <p className="font-medium">Referred by: </p>
+                  <p>
+                    ({referrals.redeemed[0].referral_code?.customer.id}){" "}
+                    {referrals.redeemed[0].referral_code.code}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </>
+          )}
+        </div>
+      </SideAccordion>
     </div>
-  );
-};
-
-export const ReferralDetails = () => {
-  let { referrals } = useCustomerContext();
-  if (!referrals) return null;
-  return (
-    <>
-      {referrals.referred.length > 0 && (
-        <>
-          <p className="text-t3 text-xs font-medium">Referrals</p>
-
-          <Tooltip>
-            <TooltipTrigger className="flex items-center justify-start gap-1">
-              <p>
-                {referrals.referred.length}{" "}
-                <span className="text-t3">
-                  ({referrals.referred.filter((r: any) => r.triggered).length}{" "}
-                  activated)
-                </span>
-              </p>
-            </TooltipTrigger>
-            <TooltipContent
-              className="px-2"
-              align="start"
-              side="bottom"
-              sideOffset={5}
-            >
-              <div
-                // key={referral.id}
-                className="flex grid grid-cols-2 gap-1 font-mono"
-              >
-                {referrals.referred.map((referral: any) => (
-                  <>
-                    <p className="font-medium max-w-[140px] truncate">
-                      {referral.customer.name}
-                    </p>
-                    <p className="text-t2 max-w-[100px] truncate">
-                      ({referral.customer.id})
-                    </p>
-                  </>
-                ))}
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </>
-      )}
-      {referrals.redeemed.length > 0 && (
-        <>
-          <p className="text-t3 text-xs font-medium">Redeemed</p>
-          <Tooltip>
-            <TooltipTrigger className="flex items-center justify-start gap-1">
-              <p>{referrals.redeemed[0].referral_code.code}</p>
-            </TooltipTrigger>
-            <TooltipContent
-              className="px-2 font-mono flex flex-col gap-1"
-              align="start"
-              side="bottom"
-              sideOffset={5}
-            >
-              <p className="font-medium">Referred by: </p>
-              <p>
-                {referrals.redeemed[0].referral_code?.customer.name} (
-                {referrals.redeemed[0].referral_code?.customer.id})
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </>
-      )}
-    </>
   );
 };

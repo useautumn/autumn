@@ -97,8 +97,8 @@ export default function CustomerView({ env }: { env: AppEnv }) {
         referrals,
       }}
     >
-      <div className="flex w-full">
-        <div className="flex flex-col gap-4 w-full">
+      <div className="flex w-full overflow-hidden">
+        <div className="flex flex-col gap-4 w-full ">
           <Breadcrumb className="text-t3 pt-6 pl-10 flex justify-start ">
             <BreadcrumbList className="text-t3 text-xs">
               <BreadcrumbItem>
@@ -106,41 +106,42 @@ export default function CustomerView({ env }: { env: AppEnv }) {
                   className="cursor-pointer"
                   onClick={() => navigateTo("/customers", navigate, env)}
                 >
-                  Customers
+                  <AdminHover
+                    texts={[
+                      {
+                        key: "Internal ID",
+                        value: customer.internal_id,
+                      },
+                      {
+                        key: "Stripe ID",
+                        value: customer.processor?.id,
+                      },
+                    ]}
+                  >
+                    Customers
+                  </AdminHover>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                {customer.name ? customer.name : customer.id}
+              <BreadcrumbItem className="truncate max-w-48">
+                {customer.name
+                  ? customer.name
+                  : customer.id
+                  ? customer.id
+                  : customer.email}
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
           <div className="flex w-full justify-between">
             <div className="flex gap-2 w-full">
-              <h2 className="flex text-lg text-t1 font-medium gap-2 w-full justify-start pl-10">
-                {customer.name && (
-                  <span className="min-w-0 max-w-[50%] truncate">
-                    <AdminHover
-                      texts={[
-                        {
-                          key: "Internal ID",
-                          value: customer.internal_id,
-                        },
-                        {
-                          key: "Stripe ID",
-                          value: customer.processor?.id,
-                        },
-                      ]}
-                    >
-                      <span className="text-t1 font-medium">
-                        {customer.name}
-                      </span>
-                    </AdminHover>
-                  </span>
+              <h2 className="flex text-lg text-t1 font-medium w-full max-w-md justify-start pl-10 truncate">
+                {customer.name ? (
+                  <span className="truncate">{customer.name}</span>
+                ) : customer.id ? (
+                  <span className="truncate font-mono">{customer.id}</span>
+                ) : (
+                  <span className="truncate">{customer.email}</span>
                 )}
-                <span className="min-w-0 max-w-[50%] truncate font-mono text-t3">
-                  {customer.id}
-                </span>
               </h2>
             </div>
             <CustomerToolbar customer={customer} />
@@ -164,7 +165,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
             {/* customer details */}
           </div>
         </div>
-        <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+        <div className="flex max-w-md w-1/3 shrink-1 hidden lg:block lg:min-w-xs">
           <CustomerDetails />
         </div>
       </div>
