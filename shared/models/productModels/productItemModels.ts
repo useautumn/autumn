@@ -2,6 +2,7 @@ import { z } from "zod";
 import { FeatureSchema, FeatureType } from "../featureModels/featureModels.js";
 
 export const TierInfinite = "inf";
+export const Infinite = "inf";
 export const UsageUnlimited = "unlimited";
 
 export enum ProductItemInterval {
@@ -38,7 +39,7 @@ export enum ProductItemBehavior {
 export const ProductItemSchema = z.object({
   // Feature stuff
   feature_id: z.string().nullish(),
-  included_usage: z.union([z.number(), z.literal(UsageUnlimited)]).nullish(),
+  included_usage: z.union([z.number(), z.literal(Infinite)]).nullish(),
 
   interval: z.nativeEnum(ProductItemInterval).nullish(),
   reset_interval: z.nativeEnum(ProductItemInterval).nullish(),
