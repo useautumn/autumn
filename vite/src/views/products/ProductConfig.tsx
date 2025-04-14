@@ -4,17 +4,18 @@ import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Product } from "@autumn/shared";
 import { useState } from "react";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
+import { Pencil } from "lucide-react";
 
 export const ProductConfig = ({
   product,
   setProduct,
   isUpdate = false,
 }: {
-  product: Product;
-  setProduct: (product: Product) => void;
+  product: any;
+  setProduct: (product: any) => void;
   isUpdate?: boolean;
 }) => {
-  const [idChanged, setIdChanged] = useState(isUpdate ? true : false);
+  const [idEdit, setIdEdit] = useState(false);
 
   return (
     <>
@@ -26,7 +27,7 @@ export const ProductConfig = ({
             value={product.name}
             onChange={(e) => {
               const newFields = { ...product, name: e.target.value };
-              if (!idChanged) {
+              if (!idEdit) {
                 newFields.id = slugify(e.target.value);
               }
               setProduct(newFields);
@@ -35,18 +36,26 @@ export const ProductConfig = ({
         </div>
         <div className="w-full">
           <FieldLabel>ID</FieldLabel>
-          <Input
-            placeholder="eg. Product ID"
-            value={product.id}
-            onChange={(e) => {
-              setProduct({ ...product, id: e.target.value });
-              setIdChanged(true);
-            }}
-            // disabled={isUpdate}
-          />
+          <div className="flex items-center gap-2">
+            <Input
+              autoFocus={idEdit}
+              placeholder="eg. Product ID"
+              disabled={!idEdit}
+              className="disabled:bg-transparent disabled:border-none disabled:shadow-none"
+              value={product.id}
+              onChange={(e) => {
+                setProduct({ ...product, id: e.target.value });
+              }}
+            />
+            <Pencil
+              size={12}
+              className="text-t3 cursor-pointer w-8 h-8 px-2 "
+              onClick={() => setIdEdit(true)}
+            />
+          </div>
         </div>
       </div>
-      <div className="flex w-full gap-2">
+      {/* <div className="flex w-full gap-2">
         <div className="w-full">
           <FieldLabel>Group</FieldLabel>
           <Input
@@ -79,7 +88,7 @@ export const ProductConfig = ({
             Add this product to customers by default on creation
           </p>
         </div>
-      </div>
+      </div> */}
     </>
   );
 };
