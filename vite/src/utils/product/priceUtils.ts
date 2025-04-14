@@ -5,7 +5,6 @@ import {
   EntitlementWithFeature,
   PriceType,
   ProductItem,
-  ProductItemInterval,
 } from "@autumn/shared";
 
 import { FixedPriceConfig, Price, UsagePriceConfig } from "@autumn/shared";
@@ -100,4 +99,10 @@ export const pricesOnlyOneOff = (items: ProductItem[]) => {
   // return items.every((item) => {
   //   return item.interval == ProductItemInterval.None;
   // });
+};
+
+export const isFreeProduct = (prices: Price[]) => {
+  return prices.every((price) => {
+    return price.config?.interval == BillingInterval.OneOff;
+  });
 };

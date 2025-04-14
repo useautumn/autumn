@@ -25,6 +25,7 @@ import {
   DiscountType,
   RewardProgram,
   RewardTriggerEvent,
+  RewardReceivedBy,
 } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
 import { useProductsContext } from "../ProductsContext";
@@ -44,6 +45,7 @@ const defaultRewardProgram: CreateRewardProgram = {
   exclude_trial: false,
   internal_reward_id: "",
   max_redemptions: 0,
+  received_by: RewardReceivedBy.Referrer,
 };
 
 function CreateRewardProgramModal() {

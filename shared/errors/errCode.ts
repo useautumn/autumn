@@ -105,7 +105,8 @@ export const ErrCode = {
   // Pay for invoice
   PayInvoiceFailed: "invoice_payment_failed",
 
-  // COUPONS
+  // Rewards
+  InvalidReward: "invalid_reward",
   PromoCodeAlreadyExistsInStripe: "promo_code_already_exists_in_stripe",
 
   // Entity

@@ -2,29 +2,29 @@ import RecaseError from "@/utils/errorUtils.js";
 import {
   Reward,
   CouponDurationType,
-  DiscountType,
   ErrCode,
-  FixedPriceConfig,
   Organization,
   Price,
   PriceType,
   Product,
   UsagePriceConfig,
+  RewardType,
 } from "@autumn/shared";
 import { logger } from "@trigger.dev/sdk/v3";
 import { Stripe } from "stripe";
 
 const couponToStripeDuration = (coupon: Reward) => {
+  let discountConfig = coupon.discount_config;
   if (
-    coupon.duration_type === CouponDurationType.OneOff &&
-    coupon.should_rollover
+    discountConfig!.duration_type === CouponDurationType.OneOff &&
+    discountConfig!.should_rollover
   ) {
     return {
       duration: "forever",
     };
   }
 
-  switch (coupon.duration_type) {
+  switch (discountConfig!.duration_type) {
     case CouponDurationType.Forever:
       return {
         duration: "forever",
@@ -36,41 +36,44 @@ const couponToStripeDuration = (coupon: Reward) => {
     case CouponDurationType.Months:
       return {
         duration: "repeating",
-        duration_in_months: coupon.duration_value,
+        duration_in_months: discountConfig!.duration_value,
       };
   }
 };
 
 const couponToStripeValue = ({
-  coupon,
+  reward,
   org,
 }: {
-  coupon: Reward;
+  reward: Reward;
   org: Organization;
 }) => {
-  if (coupon.discount_type === DiscountType.Percentage) {
+  let discountConfig = reward.discount_config;
+  if (reward.type === RewardType.PercentageDiscount) {
     return {
-      percent_off: coupon.discount_value,
+      percent_off: discountConfig!.discount_value,
     };
-  } else {
+  } else if (reward.type === RewardType.FixedDiscount) {
     return {
-      amount_off: Math.round(coupon.discount_value * 100),
+      amount_off: Math.round(discountConfig!.discount_value * 100),
       currency: org.default_currency,
     };
   }
 };
 
 export const createStripeCoupon = async ({
-  coupon,
+  reward,
   stripeCli,
   org,
   prices,
 }: {
-  coupon: Reward;
+  reward: Reward;
   stripeCli: Stripe;
   org: Organization;
   prices: (Price & { product: Product })[];
 }) => {
+  let discountConfig = reward.discount_config;
+
   let stripeProdIds = prices.map((price) => {
     if (price.config!.type === PriceType.Fixed) {
       return price.product.processor?.id;
@@ -89,8 +92,7 @@ export const createStripeCoupon = async ({
     }
   });
 
-  console.log("Promo codes:", coupon.promo_codes);
-  for (const promoCode of coupon.promo_codes) {
+  for (const promoCode of reward.promo_codes) {
     try {
       const stripePromoCode = await stripeCli.promotionCodes.retrieve(
         promoCode.code
@@ -103,14 +105,14 @@ export const createStripeCoupon = async ({
   }
 
   const stripeCoupon = await stripeCli.coupons.create({
-    id: coupon.internal_id,
-    ...(couponToStripeDuration(coupon) as any),
-    ...(couponToStripeValue({ coupon, org }) as any),
-    name: coupon.name,
+    id: reward.internal_id,
+    ...(couponToStripeDuration(reward) as any),
+    ...(couponToStripeValue({ reward, org }) as any),
+    name: reward.name,
     metadata: {
-      autumn_internal_id: coupon.internal_id,
+      autumn_internal_id: reward.internal_id,
     },
-    applies_to: !coupon.apply_to_all
+    applies_to: !discountConfig!.apply_to_all
       ? {
           products: stripeProdIds,
         }
@@ -118,7 +120,7 @@ export const createStripeCoupon = async ({
   });
 
   // Create promo codes
-  for (const promoCode of coupon.promo_codes) {
+  for (const promoCode of reward.promo_codes) {
     await stripeCli.promotionCodes.create({
       coupon: stripeCoupon.id,
       code: promoCode.code,
