@@ -18,6 +18,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import CopyButton from "@/components/general/CopyButton";
 
 export const ProductProps = () => {
   const { product, setProduct, counts } = useProductContext();
@@ -28,8 +29,16 @@ export const ProductProps = () => {
 
   return (
     <>
-      <div className="flex justify-between gap-4 w-full ">
+      <div className="flex justify-between gap-4 w-full whitespace-nowrap">
         <div className="flex flex-col w-full gap-4">
+          <div className="flex items-center w-full justify-between gap-4 h-4">
+            <p className="text-xs text-t3 font-medium text-center">
+              Product ID
+            </p>
+            <CopyButton text={product.id} className="font-mono">
+              <span className="truncate block">{product.id}</span>
+            </CopyButton>
+          </div>
           <div className="flex items-center w-full justify-between h-4">
             <p className="text-xs text-t3 font-medium text-center">Customers</p>
             <Tooltip>

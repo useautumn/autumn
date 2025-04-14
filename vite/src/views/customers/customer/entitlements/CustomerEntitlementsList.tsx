@@ -114,13 +114,13 @@ export const CustomerEntitlementsList = () => {
 
   return (
     <div>
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 h-10">
+      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 px-10 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex whitespace-nowrap">
           Available Features
         </h2>
         <div className="flex w-full h-full items-center col-span-8 justify-end">
           <div className="flex w-fit h-full items-center">
-            <div className="flex justify-between items-center gap-4 px-4">
+            <div className="flex justify-between items-center gap-2 ">
               <Tabs defaultValue={featureType}>
                 <TabsList className="bg-transparent h-fit">
                   <TabsTrigger
@@ -140,7 +140,7 @@ export const CustomerEntitlementsList = () => {
                 </TabsList>
               </Tabs>
               <div className="flex items-center gap-2">
-                <p className="text-t3 text-xs">Show Expired</p>
+                <p className="text-t3 text-xs font-normal">Show Expired</p>
                 <Switch
                   checked={showExpired}
                   className="bg-primary h-3 w-6"
