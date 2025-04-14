@@ -13,7 +13,7 @@ export const itemIsFixedPrice = (item: ProductItem) => {
 };
 
 export const itemIsFree = (item: ProductItem) => {
-  return nullish(item.amount) && nullish(item.tiers);
+  return (nullish(item.amount) || item.amount === 0) && nullish(item.tiers);
 };
 
 export const itemIsUnlimited = (item: ProductItem) => {
