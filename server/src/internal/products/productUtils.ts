@@ -318,6 +318,33 @@ export const copyProduct = async ({
     processor: null,
   };
 
+  const newEntitlements: Entitlement[] = [];
+  const newEntIds: Record<string, string> = {};
+  for (const entitlement of product.entitlements) {
+    let feature = features.find((f) => f.id === entitlement.feature_id);
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${entitlement.feature_id} not found`,
+        code: ErrCode.FeatureNotFound,
+        statusCode: 404,
+      });
+    }
+
+    let newId = generateId("ent");
+    newEntitlements.push(
+      EntitlementSchema.parse({
+        ...entitlement,
+        id: newId,
+        org_id: toOrgId,
+        created_at: Date.now(),
+        internal_product_id: newProduct.internal_id,
+        internal_feature_id: feature.internal_id,
+      })
+    );
+
+    newEntIds[entitlement.id!] = newId;
+  }
+
   let newPrices: Price[] = [];
   for (const price of product.prices) {
     // 1. Copy price
@@ -343,6 +370,17 @@ export const copyProduct = async ({
 
       config.internal_feature_id = feature.internal_id!;
       config.feature_id = feature.id;
+
+      // Update entitlement id
+      let entitlementId = newEntIds[price.entitlement_id!];
+      if (!entitlementId) {
+        throw new RecaseError({
+          message: `Failed to swap entitlement id for price ${price.id}`,
+          code: ErrCode.InternalError,
+          statusCode: 500,
+        });
+      }
+      newPrice.entitlement_id = entitlementId;
     }
 
     newPrices.push(
@@ -357,45 +395,24 @@ export const copyProduct = async ({
     );
   }
 
-  const newEntitlements: Entitlement[] = [];
-  for (const entitlement of product.entitlements) {
-    let feature = features.find((f) => f.id === entitlement.feature_id);
-    if (!feature) {
-      throw new RecaseError({
-        message: `Feature ${entitlement.feature_id} not found`,
-        code: ErrCode.FeatureNotFound,
-        statusCode: 404,
-      });
-    }
-
-    newEntitlements.push(
-      EntitlementSchema.parse({
-        ...entitlement,
-        id: generateId("ent"),
-        org_id: toOrgId,
-        created_at: Date.now(),
-        internal_product_id: newProduct.internal_id,
-        internal_feature_id: feature.internal_id,
-      })
-    );
-  }
-
   await ProductService.create({
     sb,
-    product: ProductSchema.parse(newProduct),
+    product: {
+      ...ProductSchema.parse(newProduct),
+      version: 1,
+    },
   });
 
-  await Promise.all([
-    PriceService.insert({
-      sb,
-      data: newPrices,
-    }),
+  await EntitlementService.insert({
+    sb,
+    data: newEntitlements,
+  });
 
-    EntitlementService.insert({
-      sb,
-      data: newEntitlements,
-    }),
-  ]);
+  await PriceService.insert({
+    sb,
+    data: newPrices,
+  });
+
   if (product.free_trial) {
     await FreeTrialService.insert({
       sb,

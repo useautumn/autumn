@@ -11,6 +11,7 @@ import {
   FeatureType,
   FixedPriceConfig,
   FullEntitlement,
+  Infinite,
   Price,
   PriceType,
   ProductItem,
@@ -18,12 +19,10 @@ import {
   ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
-  UsageUnlimited,
 } from "@autumn/shared";
 import {
   intervalIsNone,
   itemIsFixedPrice,
-  itemIsFree,
   itemToEntInterval,
 } from "./productItemUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
@@ -31,6 +30,7 @@ import { pricesAreSame } from "@/internal/prices/priceInitUtils.js";
 import { entsAreSame } from "../entitlements/entitlementUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { isFeatureItem } from "./getItemType.js";
 
 const itemToBillingInterval = (interval: ProductItemInterval) => {
   if (interval == ProductItemInterval.None) {
@@ -106,10 +106,9 @@ export const toFeature = ({
     internal_feature_id: internalFeatureId,
     feature_id: item.feature_id!,
 
-    allowance:
-      item.included_usage == UsageUnlimited ? null : item.included_usage!,
+    allowance: item.included_usage == Infinite ? null : item.included_usage!,
     allowance_type:
-      item.included_usage == UsageUnlimited
+      item.included_usage == Infinite
         ? AllowanceType.Unlimited
         : AllowanceType.Fixed,
     interval:
@@ -302,7 +301,7 @@ export const itemToPriceAndEnt = ({
     } else {
       samePrice = curPrice;
     }
-  } else if (itemIsFree(item)) {
+  } else if (isFeatureItem(item)) {
     if (!feature) {
       throw new RecaseError({
         message: `Feature ${item.feature_id} not found`,

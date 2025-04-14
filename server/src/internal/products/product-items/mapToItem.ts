@@ -5,13 +5,13 @@ import {
   EntitlementWithFeature,
   FeatureType,
   FixedPriceConfig,
+  Infinite,
   Price,
   ProductItem,
   ProductItemBehavior,
   ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
-  UsageUnlimited,
 } from "@autumn/shared";
 import { intervalIsNone } from "./productItemUtils.js";
 import { nullish } from "@/utils/genUtils.js";
@@ -39,9 +39,7 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
   return {
     feature_id: ent.feature.id,
     included_usage:
-      ent.allowance_type == AllowanceType.Unlimited
-        ? UsageUnlimited
-        : ent.allowance,
+      ent.allowance_type == AllowanceType.Unlimited ? Infinite : ent.allowance,
     interval: intervalIsNone(ent.interval!)
       ? ProductItemInterval.None
       : ent.interval!,
