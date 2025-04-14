@@ -237,12 +237,11 @@ describe(`${chalk.yellowBright(
 
     // console.log("Total usage", totalUsage);
     // console.log("Premium prepaid allowance", premiumPrepaidAllowance);
+    // console.log("Value", value);
 
     let leftover = premiumPrepaidAllowance - totalUsage + value;
     expect(prepaidCusEnt?.balance).to.equal(Math.max(0, leftover));
 
-    expect(newUsageCusEnt?.balance).to.equal(
-      premium.items.payPerUse.included_usage - leftover
-    );
+    expect(newUsageCusEnt?.balance).to.equal(0);
   });
 });

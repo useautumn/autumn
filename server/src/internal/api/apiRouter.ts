@@ -18,6 +18,7 @@ import rewardRouter from "./rewards/rewardRouter.js";
 
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
+import expireRouter from "./customers/products/expireRouter.js";
 
 const apiRouter = Router();
 
@@ -32,24 +33,48 @@ apiRouter.use((req: any, res: any, next: any) => {
     body: req.body,
     env: req.env,
   };
+
   req.logtail.use((log: any) => {
     return {
       ...log,
       ...logtailContext,
     };
   });
-  // try {
 
-  // } catch (error) {
-  //   console.error("Failed to add context to logtail in API middleware");
-  //   console.error(error);
-  //   req.logtail = createLogtailWithContext(logtailContext);
-  // }
+  // Store JSON response
+  let originalJson = res.json;
+
+  res.json = function (body: any) {
+    res.locals.responseBody = body;
+    return originalJson.call(this, body);
+  };
+
+  // Log response after it's sent
+  let skipUrls = ["/v1/customers/all/search"];
+  res.on("finish", () => {
+    try {
+      if (skipUrls.includes(req.originalUrl)) {
+        return;
+      }
+      req.logtailAll.info(
+        `[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.minOrg?.slug})`,
+        {
+          req: {
+            ...logtailContext,
+          },
+          statusCode: res.statusCode,
+          res: res.locals.responseBody,
+        }
+      );
+      req.logtailAll.flush();
+    } catch (error) {
+      console.error("Failed to log response to logtailAll");
+      console.error(error);
+    }
+  });
 
   next();
 });
-
-apiRouter.use(attachRouter);
 
 apiRouter.get("/auth", (req: any, res) => {
   res.json({
@@ -75,5 +100,9 @@ apiRouter.use("/migrations", migrationRouter);
 apiRouter.use("/reward_programs", rewardProgramRouter);
 apiRouter.use("/referrals", referralRouter);
 apiRouter.use("/redemptions", redemptionRouter);
+
+// Cus Product
+apiRouter.use(attachRouter);
+apiRouter.use("/expire", expireRouter);
 
 export { apiRouter };

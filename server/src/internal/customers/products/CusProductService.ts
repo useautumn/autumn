@@ -245,16 +245,24 @@ export class CusProductService {
     orgId,
     env,
     inStatuses,
+    withCusEnts = false,
   }: {
     sb: SupabaseClient;
     stripeSubId: string;
     orgId: string;
     env: AppEnv;
     inStatuses?: string[];
+    withCusEnts?: boolean;
   }) {
     const query = sb
       .from("customer_products")
-      .select("*, product:products(*), customer:customers!inner(*)")
+      .select(
+        `*, product:products(*), customer:customers!inner(*)${
+          withCusEnts
+            ? ", customer_entitlements:customer_entitlements!inner(*, entitlement:entitlements!inner(*, feature:features!inner(*)))"
+            : ""
+        }` as "*"
+      )
       .or(
         `processor->>'subscription_id'.eq.'${stripeSubId}', subscription_ids.cs.{${stripeSubId}}`
       )

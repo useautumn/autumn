@@ -1,10 +1,9 @@
 import {
   Feature,
   FeatureType,
+  Infinite,
   ProductItem,
-  ProductItemInterval,
   ProductItemType,
-  UsageUnlimited,
 } from "@autumn/shared";
 import { useProductContext } from "../ProductContext";
 import { CreateProductItem } from "./CreateProductItem";
@@ -14,7 +13,6 @@ import {
   getItemType,
   intervalIsNone,
   itemIsFixedPrice,
-  itemIsFree,
 } from "@/utils/product/productItemUtils";
 import UpdateProductItem from "./UpdateProductItem";
 import { useEffect, useState } from "react";
@@ -24,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { DollarSign } from "lucide-react";
 import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isFeatureItem } from "@/utils/product/getItemType";
 export const ProductItemTable = () => {
   let { product, setProduct, features, org } = useProductContext();
   let [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
@@ -37,7 +36,7 @@ export const ProductItemTable = () => {
       return `${feature.name}`;
     }
 
-    if (item.included_usage == UsageUnlimited) {
+    if (item.included_usage == Infinite) {
       return `Unlimited ${feature?.name}`;
     }
 
@@ -119,7 +118,7 @@ export const ProductItemTable = () => {
   };
 
   const getAdminHoverTexts = (item: ProductItem) => {
-    if (itemIsFree(item)) {
+    if (isFeatureItem(item)) {
       return [
         {
           key: "Entitlement ID",
@@ -186,17 +185,17 @@ export const ProductItemTable = () => {
                 className="flex grid grid-cols-16 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3 pr-4"
                 onClick={() => handleRowClick(item, index)}
               >
-                <span className="font-mono text-t3 col-span-2 overflow-hidden flex whitespace-nowrap">
-                  <AdminHover texts={getAdminHoverTexts(item)}>
-                    {item.feature_id || ""}
-                  </AdminHover>
+                <span className="font-mono text-t3 col-span-2 overflow-hidden flex whitespace-nowrap ">
+                  {item.feature_id || ""}
                 </span>
                 <span className="col-span-8 whitespace-nowrap truncate">
-                  {itemType === ProductItemType.Feature
-                    ? getFreeFeatureString(item)
-                    : itemType === ProductItemType.Price
-                    ? getFixedPriceString(item)
-                    : getPaidFeatureString(item)}
+                  <AdminHover texts={getAdminHoverTexts(item)}>
+                    {itemType === ProductItemType.Feature
+                      ? getFreeFeatureString(item)
+                      : itemType === ProductItemType.Price
+                      ? getFixedPriceString(item)
+                      : getPaidFeatureString(item)}
+                  </AdminHover>
                 </span>
                 <span className="col-span-4 flex gap-1 justify-end w-fit ">
                   <Badge

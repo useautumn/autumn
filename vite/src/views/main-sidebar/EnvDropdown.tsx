@@ -32,7 +32,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
   const envText = env === AppEnv.Sandbox ? "Sandbox" : "Production";
 
   return (
-    <div className="flex text-t2 text-xs flex gap-1 mt-4 px-1">
+    <div className="flex text-t2 text-xs flex gap-1 mt-4 px-1 bg-white">
       <DropdownMenu>
         {expanded ? (
           <DropdownMenuTrigger

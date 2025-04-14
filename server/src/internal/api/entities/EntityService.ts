@@ -191,4 +191,30 @@ export class EntityService {
       throw error;
     }
   }
+
+  static async deleteByInternalFeatureId({
+    sb,
+    internalFeatureIds,
+    internalCustomerId,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    internalFeatureIds: string[];
+    internalCustomerId: string;
+    orgId: string;
+    env: string;
+  }) {
+    const { error } = await sb
+      .from("entities")
+      .delete()
+      .in("internal_feature_id", internalFeatureIds)
+      .eq("org_id", orgId)
+      .eq("env", env)
+      .eq("internal_customer_id", internalCustomerId);
+
+    if (error) {
+      throw error;
+    }
+  }
 }

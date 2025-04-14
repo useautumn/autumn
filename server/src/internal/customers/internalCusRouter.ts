@@ -5,6 +5,7 @@ import { InvoiceService } from "./invoices/InvoiceService.js";
 import { FeatureService } from "../features/FeatureService.js";
 import {
   CusProductStatus,
+  ErrCode,
   FullCustomerEntitlement,
   FullCustomerPrice,
 } from "@autumn/shared";
@@ -22,6 +23,8 @@ import {
   mapToProductItems,
   mapToProductV2,
 } from "../products/productV2Utils.js";
+import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
+import { CusReadService } from "./CusReadService.js";
 
 export const cusRouter = Router();
 
@@ -34,7 +37,7 @@ cusRouter.get("", async (req: any, res: any) => {
     page
   );
 
-  res.status(200).send({ customers, totalCount: count });
+  res.status(200).json({ customers, totalCount: count });
 });
 
 cusRouter.post("/search", async (req: any, res: any) => {
@@ -56,7 +59,7 @@ cusRouter.post("/search", async (req: any, res: any) => {
     });
 
     // console.log("customers", customers);
-    res.status(200).send({ customers, totalCount: count });
+    res.status(200).json({ customers, totalCount: count });
   } catch (error) {
     handleRequestError({ req, error, res, action: "search customers" });
   }
@@ -69,6 +72,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
   try {
     // Get customer invoices
+
     const [org, features, coupons, products, events, customer] =
       await Promise.all([
         OrgService.getFromReq(req),
@@ -196,7 +200,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       cusEnt.unused = unused;
     }
 
-    res.status(200).send({
+    res.status(200).json({
       customer: fullCustomer,
       products: getLatestProducts(products),
       versionCounts: getProductVersionCounts(products),
@@ -210,6 +214,69 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     });
   } catch (error) {
     handleRequestError({ req, error, res, action: "get customer data" });
+  }
+});
+
+cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
+  try {
+    const { sb, org, env } = req;
+    const { customer_id } = req.params;
+    const orgId = req.orgId;
+
+    let internalCustomer = await CusService.getByIdOrInternalId({
+      sb,
+      orgId,
+      env,
+      idOrInternalId: customer_id,
+      isFull: true,
+    });
+
+    // Get all redemptions for this customer
+    let [referred, redeemed] = await Promise.all([
+      RewardRedemptionService.getByReferrer({
+        sb,
+        internalCustomerId: internalCustomer.internal_id,
+        withCustomer: true,
+        limit: 100,
+      }),
+      RewardRedemptionService.getByCustomer({
+        sb,
+        internalCustomerId: internalCustomer.internal_id,
+        withReferralCode: true,
+        limit: 100,
+      }),
+    ]);
+
+    let redeemedCustomerIds = redeemed.map(
+      (redemption: any) => redemption.referral_code.internal_customer_id
+    );
+
+    let redeemedCustomers = await CusReadService.getInInternalIds({
+      sb,
+      internalIds: redeemedCustomerIds,
+    });
+
+    for (const redemption of redeemed) {
+      redemption.referral_code.customer = redeemedCustomers.find(
+        (customer: any) =>
+          customer.internal_id === redemption.referral_code.internal_customer_id
+      );
+    }
+
+    if (!internalCustomer) {
+      throw new RecaseError({
+        message: "Customer not found",
+        code: ErrCode.CustomerNotFound,
+      });
+    }
+
+    res.status(200).send({
+      referred,
+      redeemed,
+    });
+  } catch (error) {
+    console.error("Error getting customer referrals", error);
+    res.status(500).send({ error: "Error getting customer referrals" });
   }
 });
 
@@ -299,7 +366,7 @@ cusRouter.get(
 
       // console.log("Product", product);
 
-      res.status(200).send({ customer, product, features, numVersions });
+      res.status(200).json({ customer, product, features, numVersions });
     } catch (error) {
       handleRequestError({ req, error, res, action: "get customer product" });
     }

@@ -9,14 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CountAndMigrate } from "./versioning/CountAndMigrate";
 
 export const ProductVersions = () => {
-  const { product, numVersionsdef, customerData, version } =
-    useProductContext();
+  const { product, numVersions, customerData, version } = useProductContext();
   const navigate = useNavigate();
   const env = useEnv();
-
-  let numVersions = 3;
 
   return (
     <div className="flex justify-between gap-4 w-full text-xs">
@@ -83,6 +81,7 @@ export const ProductVersions = () => {
             <p className="text-xs text-t3 pr-2">None</p>
           )}
         </div>
+        <CountAndMigrate />
       </div>
     </div>
   );

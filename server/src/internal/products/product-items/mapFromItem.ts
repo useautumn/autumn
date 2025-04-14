@@ -11,6 +11,7 @@ import {
   FeatureType,
   FixedPriceConfig,
   FullEntitlement,
+  Infinite,
   Price,
   PriceType,
   ProductItem,
@@ -18,27 +19,18 @@ import {
   ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
-  UsageUnlimited,
 } from "@autumn/shared";
-import {
-  intervalIsNone,
-  itemIsFixedPrice,
-  itemIsFree,
-  itemToEntInterval,
-} from "./productItemUtils.js";
+import { itemIsFixedPrice } from "./productItemUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { pricesAreSame } from "@/internal/prices/priceInitUtils.js";
 import { entsAreSame } from "../entitlements/entitlementUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-
-const itemToBillingInterval = (interval: ProductItemInterval) => {
-  if (interval == ProductItemInterval.None) {
-    return BillingInterval.OneOff;
-  }
-
-  return interval;
-};
+import { isFeatureItem } from "./getItemType.js";
+import {
+  itemToBillingInterval,
+  itemToEntInterval,
+} from "./itemIntervalUtils.js";
 
 // ITEM TO PRICE AND ENTITLEMENT
 export const toPrice = ({
@@ -46,16 +38,18 @@ export const toPrice = ({
   orgId,
   internalProductId,
   isCustom,
+  newVersion,
 }: {
   item: ProductItem;
   orgId: string;
   internalProductId: string;
   isCustom: boolean;
+  newVersion?: boolean;
 }) => {
   let config: FixedPriceConfig = {
     type: PriceType.Fixed,
     amount: notNullish(item.amount) ? item.amount! : item.tiers![0].amount!,
-    interval: itemToBillingInterval(item.interval!) as BillingInterval,
+    interval: itemToBillingInterval(item) as BillingInterval,
   };
 
   let price: Price = {
@@ -68,7 +62,7 @@ export const toPrice = ({
     config,
   };
 
-  if (isCustom) {
+  if (isCustom || newVersion) {
     price = {
       ...price,
       id: generateId("pr"),
@@ -85,12 +79,14 @@ export const toFeature = ({
   internalFeatureId,
   internalProductId,
   isCustom,
+  newVersion,
 }: {
   item: ProductItem;
   orgId: string;
   internalFeatureId: string;
   internalProductId: string;
   isCustom: boolean;
+  newVersion?: boolean;
 }) => {
   let ent: Entitlement = {
     id: item.entitlement_id || generateId("ent"),
@@ -102,10 +98,9 @@ export const toFeature = ({
     internal_feature_id: internalFeatureId,
     feature_id: item.feature_id!,
 
-    allowance:
-      item.included_usage == UsageUnlimited ? null : item.included_usage!,
+    allowance: item.included_usage == Infinite ? null : item.included_usage!,
     allowance_type:
-      item.included_usage == UsageUnlimited
+      item.included_usage == Infinite
         ? AllowanceType.Unlimited
         : AllowanceType.Fixed,
     interval:
@@ -117,7 +112,7 @@ export const toFeature = ({
     entity_feature_id: item.entity_feature_id,
   };
 
-  if (isCustom) {
+  if (isCustom || newVersion) {
     ent = {
       ...ent,
       id: generateId("ent"),
@@ -135,6 +130,7 @@ export const toFeatureAndPrice = ({
   isCustom,
   curPrice,
   curEnt,
+  newVersion,
 }: {
   item: ProductItem;
   orgId: string;
@@ -143,6 +139,7 @@ export const toFeatureAndPrice = ({
   isCustom: boolean;
   curPrice?: Price;
   curEnt?: Entitlement;
+  newVersion?: boolean;
 }) => {
   let ent: Entitlement = {
     id: item.entitlement_id || generateId("ent"),
@@ -167,7 +164,7 @@ export const toFeatureAndPrice = ({
 
   // Will only create new ent id if
   let newEnt = !curEnt || (isCustom && !entsAreSame(curEnt, ent));
-  if (newEnt) {
+  if (newEnt || newVersion) {
     ent = {
       ...ent,
       id: generateId("ent"),
@@ -199,7 +196,7 @@ export const toFeatureAndPrice = ({
           },
         ]
       : (item.tiers as any),
-    interval: itemToBillingInterval(item.interval!) as BillingInterval,
+    interval: itemToBillingInterval(item) as BillingInterval,
   };
 
   let price: Price = {
@@ -231,7 +228,9 @@ export const toFeatureAndPrice = ({
     (curPrice && !pricesAreSame(curPrice, price, true)) ||
     (curEnt && !entsAreSame(curEnt, ent));
 
-  if (curPrice && priceOrEntDifferent) {
+  // console.log("Cur price exists: ", notNullish(curPrice));
+  // console.log("Price or ent different: ", priceOrEntDifferent);
+  if (curPrice && (priceOrEntDifferent || newVersion)) {
     let newConfig = price.config as UsagePriceConfig;
     let curConfig = curPrice.config as UsagePriceConfig;
     newConfig.stripe_meter_id = curConfig.stripe_meter_id;
@@ -239,7 +238,7 @@ export const toFeatureAndPrice = ({
     price.config = newConfig;
   }
 
-  if (isCustom) {
+  if (isCustom || newVersion) {
     price = {
       ...price,
       id: generateId("pr"),
@@ -258,6 +257,7 @@ export const itemToPriceAndEnt = ({
   curPrice,
   curEnt,
   isCustom,
+  newVersion,
 }: {
   item: ProductItem;
   orgId: string;
@@ -266,6 +266,7 @@ export const itemToPriceAndEnt = ({
   curPrice?: Price;
   curEnt?: Entitlement;
   isCustom: boolean;
+  newVersion?: boolean;
 }) => {
   let newPrice: Price | null = null;
   let newEnt: Entitlement | null = null;
@@ -282,16 +283,17 @@ export const itemToPriceAndEnt = ({
       orgId,
       internalProductId,
       isCustom,
+      newVersion,
     });
 
-    if (!curPrice) {
+    if (!curPrice || newVersion) {
       newPrice = price;
     } else if (!pricesAreSame(curPrice, price, true)) {
       updatedPrice = price;
     } else {
       samePrice = curPrice;
     }
-  } else if (itemIsFree(item)) {
+  } else if (isFeatureItem(item)) {
     if (!feature) {
       throw new RecaseError({
         message: `Feature ${item.feature_id} not found`,
@@ -305,9 +307,10 @@ export const itemToPriceAndEnt = ({
       internalFeatureId: feature!.internal_id!,
       internalProductId,
       isCustom,
+      newVersion,
     });
 
-    if (!curEnt) {
+    if (!curEnt || newVersion) {
       newEnt = ent;
     } else if (!entsAreSame(curEnt, ent)) {
       updatedEnt = ent;
@@ -330,12 +333,13 @@ export const itemToPriceAndEnt = ({
       isCustom,
       curPrice,
       curEnt,
+      newVersion,
     });
 
     let entSame = curEnt && entsAreSame(curEnt, ent);
 
     // 1. If no curPrice, price is new
-    if (!curPrice) {
+    if (!curPrice || newVersion) {
       newPrice = price;
     }
 
@@ -350,7 +354,7 @@ export const itemToPriceAndEnt = ({
     }
 
     // 1. If no curEnt, ent is new
-    if (!curEnt) {
+    if (!curEnt || newVersion) {
       newEnt = ent;
     }
 

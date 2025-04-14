@@ -165,7 +165,7 @@ function ProductsView({ env }: { env: AppEnv }) {
                     </div>
                     <CreateReward />
                   </div>
-                  <div className="px-10">
+                  <div className="">
                     <RewardsTable />
                   </div>
                 </div>
@@ -183,7 +183,7 @@ function ProductsView({ env }: { env: AppEnv }) {
                     </div>
                     <CreateRewardProgramModal />
                   </div>
-                  <div className="px-10">
+                  <div>
                     <RewardProgramsTable />
                   </div>
                 </div>

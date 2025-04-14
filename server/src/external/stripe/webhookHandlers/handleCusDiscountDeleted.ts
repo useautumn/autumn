@@ -139,7 +139,7 @@ export async function handleCusDiscountDeleted({
   }
 
   // Send response first...?
-  res.status(200).send("OK");
+  res.status(200).json({ message: "OK" });
 
   if (notNullish(stripeCus.test_clock)) {
     // Time out for test clock to complete

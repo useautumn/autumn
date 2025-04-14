@@ -6,6 +6,7 @@ import { ProductService } from "./ProductService.js";
 import {
   CusProductStatus,
   EntitlementWithFeature,
+  ErrCode,
   ProductItemBehavior,
 } from "@autumn/shared";
 import { BillingType } from "@autumn/shared";
@@ -29,6 +30,7 @@ import {
   itemIsFixedPrice,
 } from "./product-items/productItemUtils.js";
 import { toFeaturePriceItem } from "./product-items/mapToItem.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -185,8 +187,12 @@ productRouter.get("/:productId/data", async (req: any, res) => {
       existingMigrations,
     });
   } catch (error) {
-    console.error("Failed to get products", error);
-    res.status(500).send(error);
+    handleRequestError({
+      error,
+      req,
+      res,
+      action: "Get product data (internal)",
+    });
   }
 });
 
@@ -203,6 +209,15 @@ productRouter.get("/:productId/count", async (req: any, res) => {
       version: version ? parseInt(version) : undefined,
     });
 
+    if (!product) {
+      throw new RecaseError({
+        message: `Product ${productId} ${
+          version ? `(v${version})` : ""
+        } not found`,
+        code: ErrCode.ProductNotFound,
+      });
+    }
+
     // Get counts from postgres
     const counts = await CusProdReadService.getCounts({
       sb: req.sb,
@@ -210,41 +225,13 @@ productRouter.get("/:productId/count", async (req: any, res) => {
     });
 
     res.status(200).send(counts);
-
-    // const [activeCount, canceledCount, customCount, trialingCount] =
-    //   await Promise.all([
-    //     CusProdReadService.getCountByInternalProductId({
-    //       sb: req.sb,
-    //       orgId: req.orgId,
-    //       env: req.env,
-    //       internalProductId: product.internal_id,
-    //       inStatuses: [CusProductStatus.Active],
-    //     }),
-    //     CusProdReadService.getCanceledCountByInternalProductId({
-    //       sb: req.sb,
-    //       orgId: req.orgId,
-    //       env: req.env,
-    //       internalProductId: product.internal_id,
-    //     }),
-    //     CusProdReadService.getCustomCountByInternalProductId({
-    //       sb: req.sb,
-    //       internalProductId: product.internal_id,
-    //     }),
-    //     CusProdReadService.getTrialingCount({
-    //       sb: req.sb,
-    //       internalProductId: product.internal_id,
-    //     }),
-    //   ]);
-
-    // res.status(200).send({
-    //   active: activeCount,
-    //   canceled: canceledCount,
-    //   custom: customCount,
-    //   trialing: trialingCount,
-    // });
   } catch (error) {
-    console.error("Failed to get product counts", error);
-    res.status(500).send(error);
+    handleRequestError({
+      error,
+      req,
+      res,
+      action: "Get product counts (internal)",
+    });
   }
 });
 

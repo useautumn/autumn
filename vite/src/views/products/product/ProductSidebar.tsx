@@ -16,6 +16,7 @@ import { FreeTrialView } from "./free-trial/FreeTrialView";
 import { ProductProps } from "./ProductProps";
 import { ProductVersions } from "./ProductVersions";
 import { Badge } from "@/components/ui/badge";
+import { CountAndMigrate } from "./versioning/CountAndMigrate";
 
 export default function ProductSidebar({
   customerData,

@@ -160,7 +160,7 @@ export const validateProductItem = (item: ProductItem, show: any) => {
       toast.error("Please enter a valid price amount");
       return null;
     }
-    // item.amount = parseFloat(item.amount.toString());
+    item.amount = parseFloat(item.amount!.toString());
   }
 
   //if show price and tiers0.amount is 0, error

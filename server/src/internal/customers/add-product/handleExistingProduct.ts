@@ -3,9 +3,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import {
   BillingInterval,
   CusProductStatus,
-  EntitlementWithFeature,
   FullCusProduct,
-  Price,
   Product,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -16,10 +14,10 @@ import {
   isOneOff,
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
+
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import chalk from "chalk";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import {
   handleSameAddOnProduct,
   handleSameMainProduct,
@@ -45,6 +43,7 @@ export const getExistingCusProducts = async ({
   let curMainProduct = cusProducts.find(
     (cp: any) =>
       cp.product.group === product.group &&
+      // !cp.from_reward &&
       !cp.product.is_add_on &&
       cp.status === CusProductStatus.Active &&
       !isOneOff(cp.customer_prices.map((cp: any) => cp.price))
