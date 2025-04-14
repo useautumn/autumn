@@ -19,19 +19,19 @@ import { intervalIsNone } from "@/utils/product/productItemUtils";
 export const SelectCycle = ({
   showPrice,
   setShowCycle,
-  showCycle,
+  type,
 }: {
   showPrice: boolean;
   setShowCycle: (showCycle: boolean) => void;
   showCycle: boolean;
+  type: "price" | "reset";
 }) => {
   let { item, setItem } = useProductItemContext();
 
   return (
     <div className="flex flex-col w-full">
-      <FieldLabel className="flex justify-between items-center max-h-4">
-        <div className="flex items-center gap-2">
-          {showPrice && !showCycle && "Billing Cycle"}
+      <FieldLabel className="flex items-center gap-2">
+        {/* {showPrice && !showCycle && "Billing Cycle"}
           {!showPrice && showCycle && "Usage Reset"}
           {showPrice && showCycle && (
             <div className="flex items-center gap-2 w-fit shrink-0">
@@ -54,18 +54,18 @@ export const SelectCycle = ({
                 Cycle
               </div>
             </div>
-          )}
-          <Tooltip delayDuration={400}>
-            <TooltipTrigger asChild>
-              <InfoIcon className="w-3 h-3 text-t3/50" />
-            </TooltipTrigger>
-            <TooltipContent sideOffset={5} side="top">
-              Frequency at which this feature is reset
-            </TooltipContent>
-          </Tooltip>
-        </div>
+          )} */}
+        {type == "price" ? "Billing Interval" : "Reset Interval"}
+        <Tooltip delayDuration={400}>
+          <TooltipTrigger asChild>
+            <InfoIcon className="w-3 h-3 text-t3/50" />
+          </TooltipTrigger>
+          <TooltipContent sideOffset={5} side="top">
+            Frequency at which this feature is reset
+          </TooltipContent>
+        </Tooltip>
       </FieldLabel>
-      {showPrice ? (
+      {type == "price" ? (
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
             <Select
@@ -80,6 +80,7 @@ export const SelectCycle = ({
                   ...item,
                   interval: value as BillingInterval,
                 });
+
                 value == BillingInterval.OneOff && setShowCycle(false);
               }}
             >
@@ -104,12 +105,10 @@ export const SelectCycle = ({
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
             <Select
-              value={
-                intervalIsNone(item.interval)
-                  ? BillingInterval.OneOff
-                  : item.interval
-              }
+              value={item.interval}
+              disabled={showPrice}
               onValueChange={(value) => {
+                console.log("Value", value);
                 setItem({
                   ...item,
                   interval: value as EntInterval,
@@ -137,7 +136,13 @@ export const SelectCycle = ({
               size="sm"
               variant="ghost"
               className="w-fit text-t3"
-              onClick={() => setShowCycle(false)}
+              onClick={() => {
+                setShowCycle(false);
+                setItem({
+                  ...item,
+                  reset_usage_on_interval: false,
+                });
+              }}
             >
               <X size={12} className="text-t3" />
             </Button>

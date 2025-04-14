@@ -46,9 +46,9 @@ export const ProductItemConfig = () => {
   );
 
   const handleAddPrice = () => {
-    console.log("handleAddPrice", itemIsFree(item));
+    console.log("Item", item);
     if (itemIsFree(item)) {
-      console.log("Setting tiers");
+      console.log("Item is free");
       setItem({
         ...item,
         tiers: [
@@ -62,6 +62,7 @@ export const ProductItemConfig = () => {
     } else {
       setItem({
         ...item,
+        amount: null,
         tiers: null,
       });
       setShow({ ...show, price: false });
@@ -101,7 +102,7 @@ export const ProductItemConfig = () => {
   return (
     <div
       className={cn(
-        "flex overflow-hidden w-lg transition-all ease-in-out duration-300", //modal animations
+        "flex w-lg transition-all ease-in-out duration-300", //modal animations
         !show.feature && !show.price && "w-xs",
         !show.feature && show.price && "w-sm",
         item.tiers?.length > 1 && "w-2xl"
@@ -117,7 +118,11 @@ export const ProductItemConfig = () => {
           <FixedPriceConfig />
         </div>
       ) : (
-        <ConfigWithFeature show={show} setShow={setShow} />
+        <ConfigWithFeature
+          show={show}
+          setShow={setShow}
+          handleAddPrice={handleAddPrice}
+        />
       )}
       <div className="flex animate-in slide-in-from-right-1/2 duration-200 fade-out ml-8 max-w-48">
         <div className="border-l mr-3"></div>
@@ -168,6 +173,11 @@ export const ProductItemConfig = () => {
                   // }
                   className="w-full justify-start animate-in slide-in-from-right-1/2 duration-200 fade-out"
                   onClick={() => {
+                    console.log("Toggling cycle");
+                    console.log(
+                      "Reset usage on interval",
+                      item.reset_usage_on_interval
+                    );
                     setItem({
                       ...item,
                       reset_usage_on_interval: !item.reset_usage_on_interval,

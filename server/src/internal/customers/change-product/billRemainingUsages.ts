@@ -22,6 +22,7 @@ import { getInvoiceExpansion } from "@/external/stripe/stripeInvoiceUtils.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import { stripeToAutumnInterval } from "@/external/stripe/utils.js";
 import { getResetBalancesUpdate } from "../entitlements/groupByUtils.js";
+import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
 
 // Add usage to end of cycle
 const addUsageToNextInvoice = async ({
@@ -203,7 +204,6 @@ const invoiceForUsageImmediately = async ({
 
     await stripeCli.invoiceItems.create(invoiceItem);
 
-    // // Set cus ent to 0
     await CustomerEntitlementService.update({
       sb,
       id: item.relatedCusEnt!.id,
@@ -211,6 +211,14 @@ const invoiceForUsageImmediately = async ({
         balance: 0,
       },
     });
+    let index = curCusProduct.customer_entitlements.findIndex(
+      (ce) => ce.id === item.relatedCusEnt!.id
+    );
+
+    curCusProduct.customer_entitlements[index] = {
+      ...curCusProduct.customer_entitlements[index],
+      balance: 0,
+    };
   }
 
   // Finalize and pay invoice
@@ -314,10 +322,10 @@ export const billForRemainingUsages = async ({
   // let itemsToInvoice = [];
   for (const cp of customer_prices) {
     let config = cp.price.config! as UsagePriceConfig;
-    let relatedCusEnt = customer_entitlements.find(
-      (cusEnt) =>
-        cusEnt.entitlement.internal_feature_id === config.internal_feature_id
-    );
+    let relatedCusEnt = getRelatedCusEnt({
+      cusPrice: cp,
+      cusEnts: customer_entitlements,
+    });
 
     if (
       getBillingType(config) !== BillingType.UsageInArrear ||

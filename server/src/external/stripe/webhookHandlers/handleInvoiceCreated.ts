@@ -105,34 +105,42 @@ const handleInArrearProrated = async ({
 
   // Get linked cus ents
 
-  for (const cusEnt of cusEnts) {
+  for (const linkedCusEnt of cusEnts) {
     // isLinked
-    let isLinked = cusEnt.entitlement.entity_feature_id == feature.id;
+    let isLinked = linkedCusEnt.entitlement.entity_feature_id == feature.id;
 
-    logger.info(`Linked cus ent: ${cusEnt.feature_id}, isLinked: ${isLinked}`);
     if (!isLinked) {
       continue;
     }
 
+    logger.info(
+      `Linked cus ent: ${linkedCusEnt.feature_id}, isLinked: ${isLinked}`
+    );
+
     // Delete cus ent ids
-    let newEntities = structuredClone(cusEnt.entities!);
+    let newEntities = structuredClone(linkedCusEnt.entities!);
     for (const entityId in newEntities) {
       if (deletedEntities.some((e) => e.id == entityId)) {
         delete newEntities[entityId];
       }
     }
 
-    await CustomerEntitlementService.update({
+    console.log("New entities: ", newEntities);
+    console.log("Cus ent ID: ", linkedCusEnt.id);
+
+    let updated = await CustomerEntitlementService.update({
       sb,
-      id: cusEnt.id,
+      id: linkedCusEnt.id,
       updates: {
         entities: newEntities,
       },
     });
+    console.log(`Updated ${updated.length} cus ents`);
 
     logger.info(
       `Feature: ${feature.id}, customer: ${customer.id}, deleted entities from cus ent`
     );
+    linkedCusEnt.entities = newEntities;
   }
 
   await EntityService.deleteInInternalIds({
@@ -184,7 +192,6 @@ const handleUsageInArrear = async ({
   });
 
   let invoiceFromUpgrade = invoice.billing_reason == "subscription_update";
-
   if (invoiceCreatedRecently) {
     logger.info("Invoice created recently, skipping");
     return;
@@ -265,6 +272,12 @@ const handleUsageInArrear = async ({
 
   // reset balance
   // TODO: If lifetime, reset to 0...
+  if (relatedCusEnt.entitlement.interval == EntInterval.Lifetime) {
+    logger.info(
+      `Feature ${feature.id} has lifetime interval, skipping reset...`
+    );
+    return;
+  }
   let ent = relatedCusEnt.entitlement;
   let resetBalancesUpdate = getResetBalancesUpdate({
     cusEnt: relatedCusEnt,

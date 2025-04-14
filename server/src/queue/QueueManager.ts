@@ -1,5 +1,4 @@
 import { Queue } from "bullmq";
-import { getRedisConnection } from "./queue.js";
 import { Redis } from "ioredis";
 
 export class QueueManager {
@@ -135,6 +134,7 @@ export class QueueManager {
     if (!queueManager.queue || !queueManager.backupQueue) {
       throw new Error("Queue not initialized");
     }
+
     return useBackup ? queueManager.backupQueue : queueManager.queue;
   }
 

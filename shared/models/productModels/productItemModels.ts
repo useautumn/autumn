@@ -30,6 +30,11 @@ export const PriceTierSchema = z.object({
   amount: z.number(),
 });
 
+export enum ProductItemBehavior {
+  Prepaid = "prepaid",
+  PayPerUse = "pay_per_use",
+}
+
 export const ProductItemSchema = z.object({
   // Feature stuff
   feature_id: z.string().nullish(),
@@ -40,7 +45,7 @@ export const ProductItemSchema = z.object({
   reset_usage_on_interval: z.boolean().nullish(),
 
   // Price config
-  type: z.enum(["prepaid", "pay_per_use"]).default("pay_per_use"),
+  behavior: z.nativeEnum(ProductItemBehavior).nullish(),
 
   amount: z.number().nullish(),
   tiers: z.array(PriceTierSchema).nullish(),

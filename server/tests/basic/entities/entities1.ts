@@ -1,20 +1,20 @@
 import { compareMainProduct } from "../../utils/compare.js";
-import { initCustomer } from "../../utils/init.js";
-import { entityProducts, features, products } from "../../global.js";
-import { AutumnCli } from "../../cli/AutumnCli.js";
+
+import { entityProducts, features } from "../../global.js";
+
 import { assert, expect } from "chai";
 import chalk from "chalk";
 import AutumnError, { Autumn } from "@/external/autumn/autumnCli.js";
 import { setupBefore } from "tests/before.js";
-import { CusProductStatus, ErrCode, FullCusProduct } from "@autumn/shared";
+import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { getFeaturePrice, getUsagePriceTiers } from "tests/utils/genUtils.js";
-import { usage } from "@trigger.dev/sdk/v3";
+
 import { Stripe } from "stripe";
 import { CusService } from "@/internal/customers/CusService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { checkBalance } from "tests/utils/autumnUtils.js";
 import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
-import { advanceMonths, advanceTestClock } from "tests/utils/stripeUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addHours, addMonths } from "date-fns";
 
 // Check balance and stripe quantity
@@ -36,10 +36,10 @@ const checkEntAndStripeQuantity = async ({
   expectedBalance: number;
   expectedUsage?: number;
   expectedStripeQuantity: number;
-
 }) => {
-
-  let { customer, entitlements, products } = await autumn.customers.get(customerId);
+  let { customer, entitlements, products } = await autumn.customers.get(
+    customerId
+  );
 
   let cusProducts = await CusService.getFullCusProducts({
     sb,
@@ -49,12 +49,14 @@ const checkEntAndStripeQuantity = async ({
     inStatuses: [CusProductStatus.Active],
   });
 
-  
   let entitlement = entitlements.find((e: any) => e.feature_id == featureId);
 
   expect(entitlement.balance).to.equal(expectedBalance);
   if (expectedUsage) {
-    expect(entitlement.used).to.equal(expectedUsage, `Get customer ${customerId} returned incorrect "used" for feature ${featureId}`);
+    expect(entitlement.used).to.equal(
+      expectedUsage,
+      `Get customer ${customerId} returned incorrect "used" for feature ${featureId}`
+    );
   }
 
   if (products.length == 0) {
@@ -62,12 +64,12 @@ const checkEntAndStripeQuantity = async ({
   }
 
   // 2. Get stripe quantity
-  let mainProduct = products[0]
+  let mainProduct = products[0];
 
   if (mainProduct.subscription_ids.length == 0) {
     assert.fail(`Get customer ${customerId} returned no subscriptions`);
   }
-  
+
   let price = getFeaturePrice({
     product: mainProduct,
     featureId: featureId,
@@ -75,25 +77,32 @@ const checkEntAndStripeQuantity = async ({
   });
 
   if (!price) {
-    assert.fail(`Get customer ${customerId} returned no price for feature ${featureId}`);
+    assert.fail(
+      `Get customer ${customerId} returned no price for feature ${featureId}`
+    );
   }
 
-  let stripeSub = await stripeCli.subscriptions.retrieve(mainProduct.subscription_ids[0]);
-  let subItem = stripeSub.items.data.find((item: any) => item.price.id == price.config!.stripe_price_id);
+  let stripeSub = await stripeCli.subscriptions.retrieve(
+    mainProduct.subscription_ids[0]
+  );
+  let subItem = stripeSub.items.data.find(
+    (item: any) => item.price.id == price.config!.stripe_price_id
+  );
 
   if (!subItem) {
-    assert.fail(`Get customer ${customerId} returned no sub item for feature ${featureId}`);
+    assert.fail(
+      `Get customer ${customerId} returned no sub item for feature ${featureId}`
+    );
   }
 
-  expect(subItem.quantity).to.equal(expectedStripeQuantity, `Get customer ${customerId} returned incorrect stripe quantity for feature ${featureId}`);
-}
-
-
+  expect(subItem.quantity).to.equal(
+    expectedStripeQuantity,
+    `Get customer ${customerId} returned incorrect stripe quantity for feature ${featureId}`
+  );
+};
 
 // UNCOMMENT FROM HERE
-describe(`${chalk.yellowBright(
-  "entities1: Testing entities"
-)}`, () => {
+describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
   let customerId = "entity1";
   let autumn: Autumn;
   let stripeCli: Stripe;
@@ -118,19 +127,21 @@ describe(`${chalk.yellowBright(
     testClockId = testClockId1;
 
     // Update org config
-    await this.sb.from("organizations").update({
-      config: {
-        ...this.org.config,
-        prorate_unused: false,
-      },
-    }).eq("id", this.org.id);
+    await this.sb
+      .from("organizations")
+      .update({
+        config: {
+          ...this.org.config,
+          prorate_unused: false,
+        },
+      })
+      .eq("id", this.org.id);
   });
 
   describe("Create customer -- create entity should fail", async function () {
     let firstEntityId = "1";
 
     it("should fail to add seat when there's no balance", async function () {
-
       try {
         await this.autumn.entities.create(customerId, {
           id: "test",
@@ -140,18 +151,16 @@ describe(`${chalk.yellowBright(
 
         assert.fail("create entity should have failed");
       } catch (error: any) {
-
         expect(error).to.be.instanceOf(AutumnError);
         expect(error.code).to.equal(ErrCode.InsufficientBalance);
       }
     });
-    
+
     it("should attach entityFree product", async function () {
       await this.autumn.attach({
         customerId,
         productId: entityProducts.entityFree.id,
       });
-
 
       await this.autumn.entities.create(customerId, {
         id: firstEntityId,
@@ -162,7 +171,7 @@ describe(`${chalk.yellowBright(
       // Check if entity is created
       let res = await this.autumn.entities.list(customerId);
       let entities = res.data;
-      
+
       expect(entities).to.have.lengthOf(1);
       expect(entities[0].id).to.equal(firstEntityId);
     });
@@ -219,31 +228,30 @@ describe(`${chalk.yellowBright(
         autumn,
         featureId: features.metered1.id,
         customerId,
-        expectedBalance: entityProducts.entityPro.entitlements.metered1.allowance!,
+        expectedBalance:
+          entityProducts.entityPro.entitlements.metered1.allowance!,
       });
     });
 
     let newEntities = [
       {
-      id: "2",
-      name: "2@gmail.com",
+        id: "2",
+        name: "2@gmail.com",
         featureId: features.seats.id,
       },
       {
         id: "3",
         name: "3@gmail.com",
         featureId: features.seats.id,
-      },  
+      },
       {
         id: "4",
         name: "4@gmail.com",
         featureId: features.seats.id,
       },
-      
-    ]
+    ];
 
     it("should create 3 additional entities and be charged immediately", async function () {
-  
       await this.autumn.entities.create(customerId, newEntities);
 
       let entitiesRes = await this.autumn.entities.list(customerId);
@@ -251,10 +259,11 @@ describe(`${chalk.yellowBright(
       expect(entities).to.have.lengthOf(newEntities.length + 1);
 
       let cusRes = await autumn.customers.get(customerId);
-      
 
       let { invoices } = cusRes;
-      expect(invoices[0].total).to.equal(usageTiers[0].amount * (newEntities.length));
+      expect(invoices[0].total).to.equal(
+        usageTiers[0].amount * newEntities.length
+      );
     });
 
     it("should remove 2 entities, and have correct balance / stripe quantity", async function () {
@@ -267,8 +276,8 @@ describe(`${chalk.yellowBright(
         featureId: features.seats.id,
         customerId,
         expectedBalance: -(newEntities.length + 1),
-        expectedStripeQuantity: (newEntities.length + 1) - 1,
-        expectedUsage: (newEntities.length + 1) - 1,
+        expectedStripeQuantity: newEntities.length + 1 - 1,
+        expectedUsage: newEntities.length + 1 - 1,
       });
 
       await this.autumn.entities.delete(customerId, newEntities[1].id);
@@ -279,11 +288,10 @@ describe(`${chalk.yellowBright(
         featureId: features.seats.id,
         customerId,
         expectedBalance: -(newEntities.length + 1),
-        expectedStripeQuantity: (newEntities.length + 1) - 2,
-        expectedUsage: (newEntities.length + 1) - 2,
+        expectedStripeQuantity: newEntities.length + 1 - 2,
+        expectedUsage: newEntities.length + 1 - 2,
       });
     });
-
 
     let newEntities2 = [
       {
@@ -301,11 +309,11 @@ describe(`${chalk.yellowBright(
         name: "7@gmail.com",
         featureId: features.seats.id,
       },
-    ]
+    ];
 
     it("should create three additional seats, and be charged for only one", async function () {
       await this.autumn.entities.create(customerId, newEntities2);
-      
+
       let totalSeats = newEntities2.length + 2;
       await checkEntAndStripeQuantity({
         sb: this.sb,
@@ -324,14 +332,14 @@ describe(`${chalk.yellowBright(
     });
 
     // return;
-    
+
     it("should remove one entity, and have correct balance / stripe quantity after advancing test clock", async function () {
       await this.autumn.entities.delete(customerId, newEntities2[0].id);
 
       let totalSeats = newEntities2.length + 1;
 
       let advanceTo = addHours(addMonths(new Date(), 1), 4).getTime();
-      await advanceTestClock({stripeCli, testClockId, advanceTo});
+      await advanceTestClock({ stripeCli, testClockId, advanceTo });
 
       // Get entities
       let { data: entities } = await this.autumn.entities.list(customerId);
@@ -352,17 +360,22 @@ describe(`${chalk.yellowBright(
         autumn,
         featureId: features.metered1.id,
         customerId,
-        expectedBalance: totalSeats * entityProducts.entityPro.entitlements.metered1.allowance!,
+        expectedBalance:
+          totalSeats *
+          entityProducts.entityPro.entitlements.metered1.allowance!,
       });
     });
   });
 
   after(async function () {
-    await this.sb.from("organizations").update({
-      config: {
-        ...this.org.config,
-        prorate_unused: true,
-      },
-    }).eq("id", this.org.id);
+    await this.sb
+      .from("organizations")
+      .update({
+        config: {
+          ...this.org.config,
+          prorate_unused: true,
+        },
+      })
+      .eq("id", this.org.id);
   });
 });

@@ -200,17 +200,7 @@ export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
       continue;
     }
 
-    if (billingType === BillingType.UsageBelowThreshold) {
-      if (!featureToOptions[feature.id]) {
-        featureToOptions[feature.id] = {
-          feature_id: feature.id,
-          feature_name: feature.name,
-          threshold: 0,
-        };
-      } else {
-        featureToOptions[feature.id].threshold = 0;
-      }
-    } else if (billingType === BillingType.UsageInAdvance) {
+    if (billingType === BillingType.UsageInAdvance) {
       if (!featureToOptions[feature.id]) {
         featureToOptions[feature.id] = {
           feature_id: feature.id,

@@ -36,7 +36,7 @@ export const ProductItemTable = () => {
       return "Unlimited";
     }
 
-    if (item.reset_usage_on_interval) {
+    if (item.reset_usage_on_interval === false) {
       return `${item.included_usage}`;
     }
 

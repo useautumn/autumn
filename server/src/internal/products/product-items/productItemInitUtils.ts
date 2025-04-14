@@ -1,10 +1,12 @@
 import {
+  EntInterval,
   Entitlement,
   ErrCode,
   Feature,
   Price,
   Product,
   ProductItem,
+  ProductItemBehavior,
 } from "@autumn/shared";
 import { itemToPriceAndEnt } from "./mapFromItem.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -12,7 +14,13 @@ import { PriceService } from "@/internal/prices/PriceService.js";
 import { EntitlementService } from "../entitlements/EntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { pricesAreSame } from "@/internal/prices/priceUtils.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
+import { StatusCodes } from "http-status-codes";
+import {
+  isFeaturePriceItem,
+  itemIsFree,
+  itemToEntInterval,
+} from "./productItemUtils.js";
 
 const isNewItem = (item: ProductItem) => {
   return !item.entitlement_id && !item.price_id;
@@ -107,6 +115,51 @@ const handleCustomProductItems = async ({
   };
 };
 
+const validateProductItems = ({ newItems }: { newItems: ProductItem[] }) => {
+  for (let index = 0; index < newItems.length; index++) {
+    let item = newItems[index];
+    let entInterval = itemToEntInterval(item);
+
+    if (isFeaturePriceItem(item) && entInterval == EntInterval.Lifetime) {
+      let otherItem = newItems.find((i: any, index2: any) => {
+        return i.feature_id == item.feature_id && index2 != index;
+      });
+
+      if (otherItem) {
+        throw new RecaseError({
+          message: `If feature is lifetime and paid, can't have any other features`,
+          code: ErrCode.InvalidInputs,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+
+    let otherItem = newItems.find((i: any, index2: any) => {
+      return (
+        i.feature_id == item.feature_id &&
+        index2 != index &&
+        itemToEntInterval(i) == entInterval
+      );
+    });
+
+    // console.log("Item", item);
+    // console.log("Ent interval", entInterval);
+    // console.log("Other item exists", notNullish(otherItem));
+
+    if (!otherItem) {
+      continue;
+    }
+
+    if (itemIsFree(otherItem) || item.behavior == otherItem?.behavior) {
+      throw new RecaseError({
+        message: `Can't have two features with same reset interval, unless one is prepaid, and another is pay per use`,
+        code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+  }
+};
+
 export const handleNewProductItems = async ({
   sb,
   curPrices,
@@ -132,6 +185,11 @@ export const handleNewProductItems = async ({
       entitlements: [],
     };
   }
+
+  // Validate product items...
+  validateProductItems({
+    newItems,
+  });
 
   let newPrices: Price[] = [];
   let newEnts: Entitlement[] = [];
@@ -190,16 +248,6 @@ export const handleNewProductItems = async ({
       sameEnts.push(sameEnt);
     }
   }
-
-  // console.log("newPrices", newPrices);
-  // console.log("updatedPrices", updatedPrices);
-  // console.log("deletedPrices", deletedPrices);
-  // console.log("samePrices", samePrices);
-
-  // console.log("newEnts", newEnts);
-  // console.log("updatedEnts", updatedEnts);
-  // console.log("deletedEnts", deletedEnts);
-  // console.log("sameEnts", sameEnts);
 
   logger.info(
     `Prices: new(${newPrices.length}), updated(${updatedPrices.length}), deleted(${deletedPrices.length})`

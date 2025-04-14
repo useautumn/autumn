@@ -33,6 +33,10 @@ import { initCusEntitlement } from "./initCusEnt.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
+import {
+  addExistingUsagesToCusEnts,
+  getExistingUsages,
+} from "../entitlements/cusEntUtils/getExistingUsage.js";
 export const initCusPrice = ({
   price,
   customer,
@@ -346,11 +350,12 @@ export const createFullCusProduct = async ({
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
     const relatedPrice = getEntRelatedPrice(entitlement, prices);
-    const existingCusEnt = curCusProduct?.customer_entitlements.find(
-      (ce) => ce.internal_feature_id === entitlement.internal_feature_id
-    );
+    // const existingCusEnt = curCusProduct?.customer_entitlements.find(
+    //   (ce) => ce.internal_feature_id === entitlement.internal_feature_id
+    // );
 
     // Update existing entitlement if one off
+
     const cusEnt: any = initCusEntitlement({
       entitlement,
       customer,
@@ -359,7 +364,7 @@ export const createFullCusProduct = async ({
       nextResetAt,
       freeTrial: disableFreeTrial ? null : freeTrial,
       relatedPrice,
-      existingCusEnt,
+      // existingCusEnt,
       keepResetIntervals,
       anchorToUnix,
       entities: attachParams.entities || [],
@@ -369,6 +374,15 @@ export const createFullCusProduct = async ({
 
     cusEnts.push(cusEnt);
   }
+
+  // Perform deductions on new cus ents...
+
+  let deductedCusEnts = addExistingUsagesToCusEnts({
+    cusEnts: cusEnts,
+    entitlements: entitlements,
+    curCusProduct: curCusProduct as FullCusProduct,
+    carryExistingUsages,
+  });
 
   // 2. create customer prices
   const cusPrices: CustomerPrice[] = [];
@@ -412,7 +426,7 @@ export const createFullCusProduct = async ({
   await insertFullCusProduct({
     sb,
     cusProd,
-    cusEnts,
+    cusEnts: deductedCusEnts,
     cusPrices,
   });
 
@@ -425,19 +439,6 @@ export const createFullCusProduct = async ({
       env: customer.env,
     },
   });
-
-  // // Send webhook
-  // await sendSvixEvent({
-  //   org: customer.org,
-  //   eventType: "product.attached",
-  //   data: processFullCusProduct({
-  //     customer,
-  //     product,
-  //     prices,
-  //     entitlements,
-  //     optionsList,
-  //   }),
-  // });
 
   return {
     ...cusProd,

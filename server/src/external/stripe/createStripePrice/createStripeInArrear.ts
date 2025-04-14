@@ -9,11 +9,14 @@ import {
   Feature,
   TierInfinite,
   Entitlement,
+  ErrCode,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import { Decimal } from "decimal.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
 
 export const searchStripeMeter = async ({
   stripeCli,
@@ -157,9 +160,16 @@ export const createStripeInArrearPrice = async ({
   let config = price.config as UsagePriceConfig;
 
   // 1. Create meter
-  const feature = entitlements.find(
-    (e) => e.internal_feature_id === config.internal_feature_id
-  )!.feature;
+  let relatedEnt = getPriceEntitlement(price, entitlements);
+  let feature = relatedEnt?.feature;
+
+  if (!feature) {
+    throw new RecaseError({
+      message: `createStripeInArrearPrice: feature not found for price ${price.id}`,
+      code: ErrCode.FeatureNotFound,
+      statusCode: StatusCodes.NOT_FOUND,
+    });
+  }
 
   // 1. Get meter by event_name
   let meter = await getStripeMeter({

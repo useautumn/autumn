@@ -24,17 +24,6 @@ const PriceOptions = ({ price }: { price: any }) => {
     );
   }
 
-  if (price.billing_type == BillingType.UsageBelowThreshold) {
-    return (
-      <Input
-        className="w-32"
-        type="number"
-        placeholder="Threshold"
-        value={priceOption?.options?.threshold}
-        onChange={(e) => handleOptionChange({ threshold: e.target.value })}
-      />
-    );
-  }
   return <div>{price.name}</div>;
 };
 

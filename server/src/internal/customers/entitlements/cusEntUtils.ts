@@ -3,6 +3,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import {
   AllowanceType,
   AppEnv,
+  BillingType,
   CusEntWithEntitlement,
   CusProduct,
   CusProductStatus,
@@ -21,7 +22,7 @@ import {
   Price,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { getEntOptions } from "@/internal/prices/priceUtils.js";
+import { getBillingType, getEntOptions } from "@/internal/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import {
   notNullish,
@@ -30,15 +31,10 @@ import {
   nullOrUndefined,
 } from "@/utils/genUtils.js";
 
-import { getGroupbalanceFromParams } from "./groupByUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { StatusCodes } from "http-status-codes";
 import {
   getEntityBalance,
   getSummedEntityBalances,
 } from "./entBalanceUtils.js";
-import { entityMatchesFeature } from "@/internal/api/entities/entityUtils.js";
-import { BREAK_API_VERSION } from "@/utils/constants.js";
 
 export const getBalanceForFeature = async ({
   sb,
@@ -281,17 +277,10 @@ export const getRelatedCusPrice = (
   return cusPrices.find((cusPrice) => {
     let productMatch =
       cusPrice.customer_product_id == cusEnt.customer_product_id;
+
     let entMatch = cusPrice.price.entitlement_id == cusEnt.entitlement.id;
 
     return productMatch && entMatch;
-    // if (cusPrice.customer_product_id == cusEnt.customer_product_id) {
-    //   let config = cusPrice.price.config as UsagePriceConfig;
-    //   return (
-    //     config.internal_feature_id == cusEnt.entitlement.internal_feature_id
-    //   );
-    // }
-
-    // return false;
   });
 };
 
@@ -353,12 +342,19 @@ export const getResetBalance = ({
     return (entitlement.allowance || 0) * (productQuantity || 1);
   }
 
+  let config = relatedPrice.config as UsagePriceConfig;
+
+  let billingType = getBillingType(config);
+  if (billingType != BillingType.UsageInAdvance) {
+    return entitlement.allowance;
+  }
+
   let quantity = options?.quantity;
   let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
   if (nullish(quantity) || nullish(billingUnits)) {
-    console.log("WARNING: Quantity or billing units not found");
-    console.log("Entitlement:", entitlement.id, entitlement.feature_id);
-    console.log("Options:", options);
+    // console.log("WARNING: Quantity or billing units not found");
+    // console.log("Entitlement:", entitlement.id, entitlement.feature_id);
+    // console.log("Options:", options);
     return entitlement.allowance;
   }
 
@@ -519,8 +515,6 @@ export const getExistingUsageFromCusProducts = ({
   ) {
     return existingUsage;
   }
-
-  // Calculate existing usage
 
   // Get options
   let cusProduct = cusProducts?.find(

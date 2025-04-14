@@ -14,19 +14,26 @@ import { toProductItem } from "./product-items/mapToItem.js";
 export const mapToProductItems = ({
   prices,
   entitlements,
+  allowFeatureMatch = false,
 }: {
   prices: Price[];
   entitlements: EntitlementWithFeature[];
+  allowFeatureMatch?: boolean;
 }): ProductItem[] => {
   let items: ProductItem[] = [];
 
   for (const ent of entitlements) {
-    let relatedPrice = getEntRelatedPrice(ent, prices);
-    items.push(toProductItem({ ent, price: relatedPrice }));
+    let relatedPrice = getEntRelatedPrice(ent, prices, allowFeatureMatch);
+    let item = toProductItem({ ent, price: relatedPrice });
+    items.push(item);
   }
 
   for (const price of prices) {
-    let relatedEnt = getPriceEntitlement(price, entitlements);
+    let relatedEnt = getPriceEntitlement(
+      price,
+      entitlements,
+      allowFeatureMatch
+    );
 
     if (!relatedEnt) {
       items.push(toProductItem({ price }));
@@ -38,6 +45,8 @@ export const mapToProductItems = ({
 
 export const mapToProductV2 = (product: FullProduct): ProductV2 => {
   let items: ProductItem[] = [];
+  // console.log("Prices:", product.prices);
+  // console.log("Entitlements:", product.entitlements);
 
   for (const ent of product.entitlements) {
     let relatedPrice = getEntRelatedPrice(ent, product.prices);
@@ -47,6 +56,8 @@ export const mapToProductV2 = (product: FullProduct): ProductV2 => {
   for (const price of product.prices) {
     let relatedEnt = getPriceEntitlement(price, product.entitlements);
 
+    // console.log("Price:", price.id);
+    // console.log("Related ent:", relatedEnt);
     if (!relatedEnt) {
       items.push(toProductItem({ price }));
     }

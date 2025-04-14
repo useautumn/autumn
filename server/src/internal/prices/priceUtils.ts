@@ -112,14 +112,14 @@ export const pricesContainRecurring = (prices: Price[]) => {
   });
 };
 
-export const pricesOnlyRequireSetup = (prices: Price[]) => {
-  return prices.every((price) => {
-    return (
-      price.billing_type == BillingType.UsageBelowThreshold ||
-      price.billing_type == BillingType.UsageInArrear
-    );
-  });
-};
+// export const pricesOnlyRequireSetup = (prices: Price[]) => {
+//   return prices.every((price) => {
+//     return (
+//       price.billing_type == BillingType.UsageBelowThreshold ||
+//       price.billing_type == BillingType.UsageInArrear
+//     );
+//   });
+// };
 
 // Check if prices have different recurring intervals
 export const haveDifferentRecurringIntervals = (prices: Price[]) => {
@@ -141,38 +141,6 @@ export const haveDifferentRecurringIntervals = (prices: Price[]) => {
   return false;
 };
 
-// Get bill now vs bill later prices
-export const getCheckoutRelevantPrices = (prices: Price[]) => {
-  return prices.filter((price) => {
-    let billingType = getBillingType(price.config!);
-
-    billingType == BillingType.OneOff ||
-      billingType == BillingType.FixedCycle ||
-      billingType == BillingType.UsageInAdvance ||
-      billingType == BillingType.UsageInArrear ||
-      billingType == BillingType.InArrearProrated;
-  });
-};
-
-export const getBillNowPrices = (prices: Price[]) => {
-  return prices.filter(
-    (price) =>
-      price.billing_type == BillingType.OneOff ||
-      price.billing_type == BillingType.FixedCycle ||
-      price.billing_type == BillingType.UsageInAdvance ||
-      price.billing_type == BillingType.UsageInArrear ||
-      price.billing_type == BillingType.InArrearProrated
-  );
-};
-
-export const getBillLaterPrices = (prices: Price[]) => {
-  return prices.filter(
-    (price) =>
-      price.billing_type == BillingType.UsageBelowThreshold ||
-      price.billing_type == BillingType.UsageInArrear
-  );
-};
-
 // Get price options
 export const getEntOptions = (
   optionsList: FeatureOptions[],
@@ -189,7 +157,8 @@ export const getEntOptions = (
 
 export const getPriceEntitlement = (
   price: Price,
-  entitlements: EntitlementWithFeature[]
+  entitlements: EntitlementWithFeature[],
+  allowFeatureMatch = false
 ) => {
   let config = price.config as UsagePriceConfig;
 
@@ -197,11 +166,15 @@ export const getPriceEntitlement = (
     let entIdMatch =
       notNullish(price.entitlement_id) && price.entitlement_id == ent.id;
 
-    let featureIdMath =
+    let featureIdMatch =
       notNullish(config.internal_feature_id) &&
       config.internal_feature_id == ent.internal_feature_id;
 
     let productIdMatch = ent.internal_product_id == price.internal_product_id;
+
+    if (allowFeatureMatch) {
+      return (entIdMatch || featureIdMatch) && productIdMatch;
+    }
 
     return entIdMatch && productIdMatch;
   });
@@ -338,7 +311,7 @@ export const getPriceForOverage = (price: Price, overage: number) => {
     let tier = usageConfig.usage_tiers[i];
 
     let amountUsed = 0;
-    if (tier.to == TierInfinite) {
+    if (tier.to == TierInfinite || tier.to == -1) {
       amountUsed = remainingUsage;
     } else {
       amountUsed = Math.min(remainingUsage, tier.to - lastTo);

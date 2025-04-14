@@ -31,10 +31,10 @@ export const ProductSchema = z.object({
 export const CreateProductSchema = z.object({
   id: z.string(),
   name: z.string(),
-  is_add_on: z.boolean(),
-  is_default: z.boolean(),
+  is_add_on: z.boolean().default(false),
+  is_default: z.boolean().default(false),
   version: z.number().default(1),
-  group: z.string(),
+  group: z.string().default(""),
 });
 
 export const UpdateProductSchema = z.object({

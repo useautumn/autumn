@@ -14,6 +14,7 @@ import {
   Price,
   PriceType,
   ProductItem,
+  ProductItemBehavior,
   ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
@@ -23,6 +24,7 @@ import {
   intervalIsNone,
   itemIsFixedPrice,
   itemIsFree,
+  itemToEntInterval,
 } from "./productItemUtils.js";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { pricesAreSame } from "@/internal/prices/priceInitUtils.js";
@@ -33,14 +35,6 @@ import RecaseError from "@/utils/errorUtils.js";
 const itemToBillingInterval = (interval: ProductItemInterval) => {
   if (interval == ProductItemInterval.None) {
     return BillingInterval.OneOff;
-  }
-
-  return interval;
-};
-
-const itemToEntInterval = (interval: ProductItemInterval) => {
-  if (interval == ProductItemInterval.None) {
-    return EntInterval.Lifetime;
   }
 
   return interval;
@@ -114,7 +108,10 @@ export const toFeature = ({
       item.included_usage == UsageUnlimited
         ? AllowanceType.Unlimited
         : AllowanceType.Fixed,
-    interval: itemToEntInterval(item.interval!) as EntInterval,
+    interval:
+      item.reset_usage_on_interval === false
+        ? EntInterval.Lifetime
+        : (itemToEntInterval(item) as EntInterval),
 
     carry_from_previous: item.carry_over_usage || false,
     entity_feature_id: item.entity_feature_id,
@@ -159,7 +156,10 @@ export const toFeatureAndPrice = ({
 
     allowance: (item.included_usage as number) || 0,
     allowance_type: AllowanceType.Fixed,
-    interval: itemToEntInterval(item.interval!) as EntInterval,
+    interval:
+      item.reset_usage_on_interval === false
+        ? EntInterval.Lifetime
+        : (itemToEntInterval(item) as EntInterval),
 
     carry_from_previous: item.carry_over_usage || false,
     entity_feature_id: item.entity_feature_id,
@@ -175,19 +175,30 @@ export const toFeatureAndPrice = ({
     };
   }
 
+  let entInterval = itemToEntInterval(item);
+  // console.log("Ent interval", entInterval);
+
   let config: UsagePriceConfig = {
     type: PriceType.Usage,
 
     bill_when:
-      item.type == "prepaid" ? BillWhen.InAdvance : BillWhen.EndOfPeriod,
+      item.behavior == ProductItemBehavior.Prepaid
+        ? BillWhen.StartOfPeriod
+        : BillWhen.EndOfPeriod,
 
     billing_units: item.billing_units || 1,
-    should_prorate: item.reset_usage_on_interval || false,
+    should_prorate: entInterval == EntInterval.Lifetime,
 
     internal_feature_id: internalFeatureId,
     feature_id: item.feature_id!,
-
-    usage_tiers: item.tiers as any,
+    usage_tiers: notNullish(item.amount)
+      ? [
+          {
+            amount: item.amount,
+            to: TierInfinite,
+          },
+        ]
+      : (item.tiers as any),
     interval: itemToBillingInterval(item.interval!) as BillingInterval,
   };
 
@@ -206,7 +217,7 @@ export const toFeatureAndPrice = ({
   let billingType = getBillingType(price.config!);
   if (
     (billingType == BillingType.UsageInArrear ||
-      billingType == BillingType.UsageInAdvance) &&
+      billingType == BillingType.InArrearProrated) &&
     price.config!.interval == BillingInterval.OneOff
   ) {
     throw new RecaseError({
@@ -281,6 +292,13 @@ export const itemToPriceAndEnt = ({
       samePrice = curPrice;
     }
   } else if (itemIsFree(item)) {
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${item.feature_id} not found`,
+        code: ErrCode.InvalidRequest,
+      });
+    }
+
     let { ent } = toFeature({
       item,
       orgId,
@@ -297,6 +315,13 @@ export const itemToPriceAndEnt = ({
       sameEnt = curEnt;
     }
   } else {
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${item.feature_id} not found`,
+        code: ErrCode.InvalidRequest,
+      });
+    }
+
     let { price, ent } = toFeatureAndPrice({
       item,
       orgId,
@@ -340,13 +365,8 @@ export const itemToPriceAndEnt = ({
     }
   }
 
-  // console.log("New price", newPrice);
-  // console.log("New ent", newEnt);
+  // console.log("Item", item);
   // console.log("Updated price", updatedPrice);
-  // console.log("Updated ent", updatedEnt);
-  // console.log("Same price", samePrice);
-  // console.log("Same ent", sameEnt);
-  // throw new Error("test");
 
   return { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt };
 };
