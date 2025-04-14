@@ -56,7 +56,7 @@ export const itemToEntInterval = (item: any) => {
     return EntInterval.Lifetime;
   }
 
-  if (item.reset_usage_on_interval === false) {
+  if (item.reset_usage_on_billing === false) {
     return EntInterval.Lifetime;
   }
 
@@ -110,7 +110,7 @@ export const constructFeaturePriceItem = ({
   amount,
   interval,
   behavior,
-  reset_usage_on_interval = false,
+  reset_usage_on_billing = false,
   billing_units = 1,
   carry_over_usage = true,
 }: {
@@ -119,7 +119,7 @@ export const constructFeaturePriceItem = ({
   amount: number;
   interval: BillingInterval;
   behavior?: ProductItemBehavior;
-  reset_usage_on_interval?: boolean;
+  reset_usage_on_billing?: boolean;
   billing_units?: number;
   carry_over_usage?: boolean;
 }) => {
@@ -131,7 +131,7 @@ export const constructFeaturePriceItem = ({
     amount,
     interval: interval as any,
     behavior,
-    reset_usage_on_interval,
+    reset_usage_on_billing,
     billing_units,
     carry_over_usage,
   };

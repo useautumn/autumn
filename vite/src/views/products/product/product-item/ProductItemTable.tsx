@@ -50,7 +50,7 @@ export const ProductItemTable = () => {
             per {getFeature(item.entity_feature_id, features)?.name} &nbsp;
           </span>
         )}
-        {item.reset_usage_on_interval && (
+        {item.reset_usage_on_billing && (
           <span className="text-t3">per {item.interval}</span>
         )}
       </div>

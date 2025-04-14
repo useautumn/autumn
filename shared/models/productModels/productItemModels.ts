@@ -42,7 +42,7 @@ export const ProductItemSchema = z.object({
 
   interval: z.nativeEnum(ProductItemInterval).nullish(),
   reset_interval: z.nativeEnum(ProductItemInterval).nullish(),
-  reset_usage_on_interval: z.boolean().nullish(),
+  reset_usage_on_billing: z.boolean().nullish(),
 
   // Price config
   behavior: z.nativeEnum(ProductItemBehavior).nullish(),

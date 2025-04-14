@@ -62,7 +62,7 @@ export const ProductItemConfig = () => {
   //       tiers: null,
   //       billing_units: null,
   //       included_usage: null,
-  //       reset_usage_on_interval: null,
+  //       reset_usage_on_billing: null,
   //       carry_over_usage: null,
   //       entity_feature_id: null,
   //     });
@@ -203,11 +203,11 @@ export const ProductItemConfig = () => {
                     console.log("Toggling cycle");
                     console.log(
                       "Reset usage on interval",
-                      item.reset_usage_on_interval
+                      item.reset_usage_on_billing
                     );
                     setItem({
                       ...item,
-                      reset_usage_on_interval: !item.reset_usage_on_interval,
+                      reset_usage_on_billing: !item.reset_usage_on_billing,
                     });
                     setShow({
                       ...show,
@@ -299,7 +299,7 @@ export const ProductItemConfig = () => {
                 // disabled={!selectedFeature}
                 className="w-full"
                 onClick={() => {
-                  handleUpdateProductItem();
+                  handleUpdateProductItem(show);
                 }}
               >
                 Update Item
@@ -311,7 +311,7 @@ export const ProductItemConfig = () => {
                 disabled={!selectedFeature && !item.amount}
                 className="w-full"
                 onClick={() => {
-                  handleCreateProductItem();
+                  handleCreateProductItem(show);
                 }}
               >
                 Add to Product

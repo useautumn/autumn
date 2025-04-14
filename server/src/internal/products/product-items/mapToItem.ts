@@ -77,7 +77,7 @@ export const toFeaturePriceItem = ({
       ? ProductItemInterval.None
       : config.interval!,
 
-    reset_usage_on_interval: ent.interval !== EntInterval.Lifetime,
+    reset_usage_on_billing: ent.interval !== EntInterval.Lifetime,
 
     amount: null,
     tiers,
