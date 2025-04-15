@@ -1,5 +1,6 @@
 import Step from "@/components/general/OnboardingStep";
 import CodeBlock from "../components/CodeBlock";
+import { ArrowUpRightFromSquare } from "lucide-react";
 
 let attachCode = (productId: string, apiKey: string) => {
   return `const response = await fetch('https://api.useautumn.com/v1/attach', {
@@ -33,32 +34,42 @@ export default function AttachProduct({
   number: number;
 }) {
   return (
-    <Step title="Get a Stripe Checkout URL" number={number}>
-      <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-        <div className="flex flex-col gap-2 text-t2 w-full lg:w-1/3">
-          <p>
-            The <span className="font-mono text-red-500">/attach</span> endpoint
-            will return a Stripe Checkout URL that your customers can use to
-            purchase your product.
-          </p>
-          {/* <p>
+    <Step
+      title="Get a Stripe Checkout URL"
+      number={number}
+      description={
+        <p>
+          The{" "}
+          <span className="font-mono text-red-500">
+            <a href="https://docs.useautumn.com/api-reference/attach/post">
+              /attach
+            </a>
+          </span>{" "}
+          <ArrowUpRightFromSquare size={12} className="inline ml-1" />
+          endpoint will return a Stripe Checkout URL that your customers can use
+          to purchase your product.
+        </p>
+      }
+    >
+      {/* <div className="flex gap-8 w-full justify-between flex-col lg:flex-row"> */}
+      {/* <p>
             You can do this directly from your frontend using the Publishable
             API Key.
           </p> */}
-        </div>
-        <div className="w-full lg:w-2/3 min-w-md max-w-2xl">
-          <CodeBlock
-            snippets={[
-              {
-                title: "JavaScript",
-                language: "javascript",
-                displayLanguage: "javascript",
-                content: attachCode(productId, apiKey),
-              },
-            ]}
-          />
-        </div>
-      </div>
+
+      {/* <div className="w-full lg:w-2/3 min-w-md max-w-2xl"> */}
+      <CodeBlock
+        snippets={[
+          {
+            title: "JavaScript",
+            language: "javascript",
+            displayLanguage: "javascript",
+            content: attachCode(productId, apiKey),
+          },
+        ]}
+      />
+      {/* </div> */}
+      {/* </div> */}
     </Step>
   );
 }

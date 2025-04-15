@@ -73,42 +73,42 @@ export const CreateOrgStep = ({
         </>
       }
     >
-      <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-        <div className="w-full lg:w-2/3 min-w-md max-w-2xl flex gap-2 rounded-sm">
-          <Input
-            placeholder="Org name"
-            value={org?.name || fields.name}
-            disabled={!!org?.name}
-            onChange={(e) => {
-              const newFields = { ...fields, name: e.target.value };
-              setFields(newFields);
+      {/* <div className="flex gap-8 w-full justify-between flex-col lg:flex-row"> */}
+      <div className="w-full min-w-md max-w-2xl flex gap-2 rounded-sm">
+        <Input
+          placeholder="Org name"
+          value={org?.name || fields.name}
+          disabled={!!org?.name}
+          onChange={(e) => {
+            const newFields = { ...fields, name: e.target.value };
+            setFields(newFields);
+          }}
+        />
+        <Button
+          className="min-w-40 w-40 max-w-40"
+          disabled={!!org?.name}
+          onClick={handleCreateOrg}
+          isLoading={loading}
+          variant="gradientPrimary"
+          // startIcon={<Building size={12} />}
+        >
+          Create Organization
+        </Button>
+
+        {isExploding && (
+          <ConfettiExplosion
+            force={0.8}
+            duration={3000}
+            particleCount={250}
+            zIndex={1000}
+            width={1600}
+            onComplete={() => {
+              console.log("complete");
             }}
           />
-          <Button
-            className="min-w-40 w-40 max-w-40"
-            disabled={!!org?.name}
-            onClick={handleCreateOrg}
-            isLoading={loading}
-            variant="gradientPrimary"
-            // startIcon={<Building size={12} />}
-          >
-            Create Organization
-          </Button>
-
-          {isExploding && (
-            <ConfettiExplosion
-              force={0.8}
-              duration={3000}
-              particleCount={250}
-              zIndex={1000}
-              width={1600}
-              onComplete={() => {
-                console.log("complete");
-              }}
-            />
-          )}
-        </div>
+        )}
       </div>
+      {/* </div> */}
     </Step>
   );
 };
