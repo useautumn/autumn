@@ -25,7 +25,9 @@ export const AdminHover = ({
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger className="w-fit">{children}</TooltipTrigger>
+        <TooltipTrigger className="w-fit !cursor-default">
+          {children}
+        </TooltipTrigger>
         {isLoaded && (
           <TooltipContent
             className="bg-white/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2"
@@ -65,7 +67,7 @@ const CopyText = ({ text }: { text: string }) => {
       <p
         onMouseEnter={() => setIsHover(true)}
         onMouseLeave={() => setIsHover(false)}
-        className="flex flex-col items-start gap-1 font-mono hover:underline cursor-pointer"
+        className="flex flex-col items-start gap-1 font-mono hover:underline"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();

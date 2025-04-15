@@ -116,7 +116,7 @@ export const ProductItemConfig = () => {
       className={cn(
         "flex flex-col gap-6 w-lg transition-all ease-in-out duration-300", //modal animations
         !show.feature && "w-xs",
-        // !show.feature && show.price && "w-sm",
+        show.feature && show.price && "w-xl",
         show.price && show.feature && item.tiers?.length > 1 && "w-2xl"
       )}
     >
@@ -133,91 +133,95 @@ export const ProductItemConfig = () => {
       )}
       <div className="flex animate-in slide-in-from-bottom-1/2 duration-200 fade-out w-full justify-end">
         <div className="flex flex-col justify-between gap-10 w-full">
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={handleAddPrice}
-              disabled={item.included_usage == "unlimited"}
-              className={cn(
-                "w-0 max-w-0 p-0 overflow-hidden transition-all duration-200 ease-in-out -mr-2",
-                !show.price &&
-                  show.feature &&
-                  getFeature(item.feature_id, features)?.type !=
-                    FeatureType.Boolean
-                  ? "w-64 max-w-64 mr-0 p-2"
-                  : "w-0 max-w-0 p-0 border-none"
+          <div className="flex gap-6 w-full">
+            <div className="flex gap-2 w-full ">
+              <Button
+                variant="outline"
+                onClick={handleAddPrice}
+                disabled={item.included_usage == "unlimited"}
+                className={cn(
+                  "w-0 max-w-0 p-0 overflow-hidden transition-all duration-200 ease-in-out",
+                  !show.price &&
+                    show.feature &&
+                    getFeature(item.feature_id, features)?.type !=
+                      FeatureType.Boolean
+                    ? "w-full max-w-32 mr-0 p-2"
+                    : "w-0 max-w-0 p-0 border-none"
+                )}
+              >
+                <PlusIcon size={14} className="mr-1" />
+                Add Price
+              </Button>
+              <Button
+                className={cn(
+                  "w-0 max-w-0 p-0 overflow-hidden transition-all duration-200 ease-in-out -ml-2",
+                  !show.feature && !isUpdate
+                    ? "w-full max-w-32 mr-0 p-2"
+                    : "w-0 max-w-0 p-0 border-none"
+                )}
+                variant="outline"
+                onClick={() => {
+                  setShow({
+                    ...show,
+                    feature: true,
+                    price: item.amount > 0 ? true : false,
+                  });
+                  setItem({
+                    ...item,
+                    tiers: item.amount
+                      ? [
+                          {
+                            to: TierInfinite,
+                            amount: item.amount ?? 0,
+                          },
+                        ]
+                      : null,
+                  });
+                }}
+              >
+                <PlusIcon size={14} className="mr-1" />
+                Add Feature
+              </Button>
+            </div>
+            <div className="flex gap-2 w-full ">
+              {handleDeleteProductItem && (
+                <Button
+                  variant="destructive"
+                  // disabled={!selectedFeature}
+                  className="w-32 max-w-64 rounded-sm "
+                  // size="sm"
+                  onClick={() => {
+                    handleDeleteProductItem();
+                  }}
+                >
+                  Delete
+                </Button>
               )}
-            >
-              <PlusIcon size={14} className="mr-1" />
-              Add Price
-            </Button>
-            <Button
-              className={cn(
-                "w-0 max-w-0 p-0 overflow-hidden transition-all duration-200 ease-in-out -mr-2 ",
-                !show.feature && !isUpdate
-                  ? "w-64 max-w-64 mr-0 p-2"
-                  : "w-0 max-w-0 p-0 border-none"
+              {handleUpdateProductItem && (
+                <Button
+                  variant="gradientPrimary"
+                  // disabled={!selectedFeature}
+                  className="w-full"
+                  onClick={() => {
+                    handleUpdateProductItem(show);
+                  }}
+                >
+                  Update Item
+                </Button>
               )}
-              variant="outline"
-              onClick={() => {
-                setShow({
-                  ...show,
-                  feature: true,
-                  price: item.amount > 0 ? true : false,
-                });
-                setItem({
-                  ...item,
-                  tiers: item.amount
-                    ? [
-                        {
-                          to: TierInfinite,
-                          amount: item.amount ?? 0,
-                        },
-                      ]
-                    : null,
-                });
-              }}
-            >
-              <PlusIcon size={14} className="mr-1" />
-              Add Feature
-            </Button>
-            {handleDeleteProductItem && (
-              <Button
-                variant="destructive"
-                // disabled={!selectedFeature}
-                className="w-64 max-w-64 rounded-sm "
-                // size="sm"
-                onClick={() => {
-                  handleDeleteProductItem();
-                }}
-              >
-                Delete Item
-              </Button>
-            )}
-            {handleUpdateProductItem && (
-              <Button
-                variant="gradientPrimary"
-                // disabled={!selectedFeature}
-                className="w-full"
-                onClick={() => {
-                  handleUpdateProductItem(show);
-                }}
-              >
-                Update Item
-              </Button>
-            )}
-            {handleCreateProductItem && (
-              <Button
-                variant="gradientPrimary"
-                disabled={!selectedFeature && !item.amount}
-                className="w-full"
-                onClick={() => {
-                  handleCreateProductItem(show);
-                }}
-              >
-                Add to Product
-              </Button>
-            )}
+              {handleCreateProductItem && (
+                <Button
+                  variant="gradientPrimary"
+                  disabled={!selectedFeature && !item.amount}
+                  className="w-full"
+                  onClick={() => {
+                    handleCreateProductItem(show);
+                  }}
+                >
+                  Add to Product
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>

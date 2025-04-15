@@ -18,7 +18,7 @@ export const Row = ({
       className={cn(
         "grid grid-cols-[repeat(auto-fit,_minmax(0,_1fr))] gap-2 w-full px-10 h-8 items-center hover:bg-primary/5 whitespace-nowrap",
         type === "header" &&
-          "text-xs text-t3 h-8 items-center hover:bg-primary/0",
+          "text-xs text-t3 h-8 -mb-1 items-center hover:bg-primary/0",
         className
       )}
       onClick={onClick}

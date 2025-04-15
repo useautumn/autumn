@@ -24,6 +24,7 @@ import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFeatureItem } from "@/utils/product/getItemType";
 import { notNullish } from "@/utils/genUtils";
+import CopyButton from "@/components/general/CopyButton";
 export const ProductItemTable = () => {
   let { product, setProduct, features, org } = useProductContext();
   let [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
@@ -183,11 +184,13 @@ export const ProductItemTable = () => {
             return (
               <div
                 key={index}
-                className="flex grid grid-cols-16 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3"
+                className="flex grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3"
                 onClick={() => handleRowClick(item, index)}
               >
-                <span className="font-mono text-t3 col-span-2 overflow-hidden flex whitespace-nowrap ">
-                  {item.feature_id || ""}
+                <span className="col-span-3 overflow-hidden flex whitespace-nowrap  items-center">
+                  <span className="truncate font-mono text-t3 w-full ">
+                    {item.feature_id || ""}
+                  </span>
                 </span>
                 <span className="col-span-8 whitespace-nowrap truncate">
                   <AdminHover texts={getAdminHoverTexts(item)}>

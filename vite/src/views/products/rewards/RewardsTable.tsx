@@ -98,12 +98,12 @@ export const RewardsTable = () => {
               </span>
             )}
           </Item>
-          <Item className="col-span-2">
+          <Item className="col-span-2 text-t3 text-xs">
             {formatUnixToDateTime(reward.created_at).date}
-            <span className="text-t3">
+            {/* <span className="text-t3">
               {" "}
               {formatUnixToDateTime(reward.created_at).time}
-            </span>
+            </span> */}
           </Item>
           <Item className="col-span-1 items-center justify-end">
             <RewardRowToolbar reward={reward} />

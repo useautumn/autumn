@@ -12,6 +12,13 @@ export const formatUnixToDateTime = (unix: number | null | undefined) => {
   return { date, time };
 };
 
+export const formatUnixToDateTimeWithMs = (unix: number | null | undefined) => {
+  if (!unix) return "";
+  const date = format(new Date(unix), "d MMM");
+  const time = format(new Date(unix), "HH:mm:ss.SSS");
+  return `${date} ${time}`;
+};
+
 export const formatUnixToDateTimeString = (unix: number | null | undefined) => {
   if (!unix) return "";
   const { date, time } = formatUnixToDateTime(unix);

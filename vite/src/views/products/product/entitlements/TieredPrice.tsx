@@ -107,7 +107,7 @@ export default function TieredPrice({
                 />
               </div>
               {editBillingUnits && index == 0 ? (
-                <>
+                <div className="flex w-full border">
                   <span className="pr-2 text-t3 text-xs">per</span>
                   <div
                     className="w-full flex items-center relative"
@@ -128,7 +128,7 @@ export default function TieredPrice({
                       {selectedFeature?.name ?? "units"}
                     </span>
                   </div>
-                </>
+                </div>
               ) : (
                 <div className="flex w-full">
                   <Button
@@ -145,9 +145,9 @@ export default function TieredPrice({
                       )}
                     >
                       {config.billing_units == 1
-                        ? `per ${selectedFeature?.name ?? "units"}`
-                        : `per ${config.billing_units} ${
-                            selectedFeature?.name ?? "units"
+                        ? `per ${selectedFeature?.name || "units"}`
+                        : `per ${config?.billing_units || ""} ${
+                            selectedFeature?.name || "units"
                           }`}
                     </span>
                   </Button>

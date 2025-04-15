@@ -129,7 +129,7 @@ export default function TieredPrice({
                       <Input
                         autoFocus
                         value={item.billing_units}
-                        className="pr-14 !text-xs"
+                        className="pr-9 !text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         type="number"
                         onChange={(e) =>
                           setItem({
@@ -138,7 +138,7 @@ export default function TieredPrice({
                           })
                         }
                       />
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px] whitespace-nowrap truncate overflow-hidden max-w-12">
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px] whitespace-nowrap truncate overflow-hidden max-w-8">
                         {featureName ?? "units"}
                       </span>
                     </div>
@@ -160,7 +160,7 @@ export default function TieredPrice({
                       >
                         {item.billing_units == 1
                           ? `per ${featureName ?? "units"}`
-                          : `per ${item.billing_units} ${
+                          : `per ${item.billing_units || ""} ${
                               featureName ?? "units"
                             }`}
                       </span>

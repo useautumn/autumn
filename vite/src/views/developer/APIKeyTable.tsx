@@ -18,22 +18,22 @@ export const APIKeyTable = ({ apiKeys }: { apiKeys: ApiKey[] }) => {
 
   return (
     <div>
-      <Row type="header" className="grid-cols-18 -mb-1">
+      <Row type="header" className="grid-cols-18">
         <Item className="col-span-5">Name</Item>
-        <Item className="col-span-5">Preview</Item>
-        <Item className="col-span-7">Created At</Item>
+        <Item className="col-span-10">Preview</Item>
+        <Item className="col-span-2">Created At</Item>
         <Item className="col-span-1"></Item>
       </Row>
       {apiKeys.map((key) => (
         <Row key={key.id} className="grid-cols-18">
           <Item className="col-span-5 font-normal">{key.name}</Item>
-          <Item className="col-span-5 font-mono text-t2">{key.prefix}</Item>
-          <Item className="col-span-7">
+          <Item className="col-span-10 font-mono text-t2">{key.prefix}</Item>
+          <Item className="col-span-2 text-t3 text-xs">
             {formatUnixToDateTime(key.created_at).date}
-            <span className="text-t3">
+            {/* <span className="text-t3">
               {" "}
               {formatUnixToDateTime(key.created_at).time}{" "}
-            </span>
+            </span> */}
           </Item>
           <Item className="col-span-1 justify-end">
             <APIKeyToolbar apiKey={key} />

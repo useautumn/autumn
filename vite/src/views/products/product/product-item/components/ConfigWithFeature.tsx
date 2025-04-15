@@ -210,12 +210,12 @@ export const ConfigWithFeature = ({
                     : "opacity-0 z-[-1] max-h-0 overflow-hidden -mb-6"
                 )}
               >
-                <div className="flex gap-6">
+                <div className="flex gap-6 flex-2">
                   <TieredPrice setShow={setShow} show={show} />
                   <div
                     className={cn(
-                      "flex flex-col gap-2 w-full transition-all duration-200 ease-in-out",
-                      item.tiers?.length > 1 && "w-52"
+                      "flex flex-col gap-2 transition-all duration-300 ease-in-out",
+                      item.tiers?.length > 1 ? "w-40 min-w-40 flex-1" : "w-full"
                     )}
                   >
                     <SelectCycle show={show} setShow={setShow} type="price" />
