@@ -1,4 +1,3 @@
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -7,21 +6,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+
 import { ProductService } from "@/services/products/ProductService";
 import { useNavigate } from "react-router";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import React, { useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useProductsContext } from "./ProductsContext";
 import { PlusIcon } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
-import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { ProductConfig } from "./ProductConfig";
 
-let defaultProduct = {
+export let defaultProduct = {
   name: "",
   id: "",
   group: "",

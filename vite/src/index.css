@@ -231,6 +231,11 @@ button:focus-visible {
   --color-yellow-700: #936316;
   --color-yellow-800: #62420e;
   --color-yellow-900: #312107;
+
+  --color-code-background: #1e1e1e;
+  --color-code-tabs: #2d2d2d;
+  --color-code-bg: #1e1e1e;
+  --color-code-tabs-active: #3c3c3c;
 }
 
 /* 
