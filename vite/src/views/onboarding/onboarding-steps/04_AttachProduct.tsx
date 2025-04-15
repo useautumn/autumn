@@ -26,23 +26,25 @@ window.location.href = checkoutUrl;`;
 export default function AttachProduct({
   productId,
   apiKey,
+  number,
 }: {
   productId: string;
   apiKey: string;
+  number: number;
 }) {
   return (
-    <Step title="Attach a Product">
+    <Step title="Get a Stripe Checkout URL" number={number}>
       <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
         <div className="flex flex-col gap-2 text-t2 w-full lg:w-1/3">
           <p>
             The <span className="font-mono text-red-500">/attach</span> endpoint
-            will return a Stripe Checkout URL that you should redirect your user
-            to, when they want to purchase one of the products above.
+            will return a Stripe Checkout URL that your customers can use to
+            purchase your product.
           </p>
-          <p>
+          {/* <p>
             You can do this directly from your frontend using the Publishable
             API Key.
-          </p>
+          </p> */}
         </div>
         <div className="w-full lg:w-2/3 min-w-md max-w-2xl">
           <CodeBlock

@@ -24,9 +24,11 @@ import { slugify } from "@/utils/formatUtils/formatTextUtils";
 export const CreateProductStep = ({
   productId,
   setProductId,
+  number,
 }: {
   productId: string;
   setProductId: (productId: string) => void;
+  number: number;
 }) => {
   let [newProduct, setNewProduct] = useState<any>(defaultProduct);
   let [createClicked, setCreateClicked] = useState(false);
@@ -65,20 +67,24 @@ export const CreateProductStep = ({
   }, [data]);
 
   return (
-    <Step title="Create your first product">
+    <Step
+      title="Create your first product"
+      number={number}
+      description={
+        <p>
+          Define your product&apos;s pricing models and what customers get
+          access to.
+        </p>
+      }
+    >
       <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-        <div className="flex flex-col gap-2 text-t2 w-full lg:w-1/3">
-          <p>
-            First, create your <span className="font-bold">Features</span>, the
-            parts of your application you charge for.
-          </p>
-          <p>
+        {/* <p>
             Then, create your <span className="font-bold">Products</span>, which
             are the pricing plans that grant access to those features.
           </p>
-          <p>Some examples have been created for you.</p>
-        </div>
-        <div className="w-full lg:w-2/3 min-w-md max-w-lg flex flex-col gap-6">
+          <p>Some examples have been created for you.</p> */}
+
+        <div className="w-full lg:w-2/3 min-w-md max-w-2xl flex flex-col gap-6">
           {product ? (
             <FeaturesContext.Provider
               value={{
@@ -95,15 +101,7 @@ export const CreateProductStep = ({
                   setProduct,
                 }}
               >
-                <div className="flex w-full">
-                  <div className="flex flex-col gap-4 w-full">
-                    <div className="flex">
-                      <div className="flex-1 w-full min-w-sm">
-                        <ProductItemTable />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ProductItemTable isOnboarding={true} />
               </ProductContext.Provider>
             </FeaturesContext.Provider>
           ) : (
@@ -132,7 +130,7 @@ const CreateProductCard = ({
   createProductLoading: boolean;
 }) => {
   return (
-    <div className="rounded-sm flex gap-4 items-end">
+    <div className=" flex gap-2 items-start">
       {/* <ProductConfig
         product={newProduct}
         setProduct={setNewProduct}
@@ -154,16 +152,16 @@ const CreateProductCard = ({
           </div>
         }
       />
-      <div className="flex justify-end">
-        <Button
-          variant="gradientPrimary"
-          onClick={createProduct}
-          isLoading={createProductLoading}
-          startIcon={<PlusIcon size={15} />}
-        >
-          Create
-        </Button>
-      </div>
+
+      <Button
+        variant="gradientPrimary"
+        className="min-w-40"
+        onClick={createProduct}
+        isLoading={createProductLoading}
+        // startIcon={<PlusIcon size={15} />}
+      >
+        Create Product
+      </Button>
     </div>
   );
 };

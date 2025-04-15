@@ -8,8 +8,10 @@ import ConfettiExplosion from "react-confetti-explosion";
 import { toast } from "sonner";
 
 export const CreateOrgStep = ({
+  number,
   pollForOrg,
 }: {
+  number: number;
   pollForOrg: () => Promise<void>;
 }) => {
   const { organization: org } = useOrganization();
@@ -50,21 +52,29 @@ export const CreateOrgStep = ({
   };
 
   return (
-    <Step title="Create your organization">
-      <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-        <div className="text-t2 flex flex-col gap-2 w-full lg:w-1/3">
-          <p className="flex items-center">
-            <span>👋</span>
-            <span className="font-bold bg-gradient-to-r from-orange-500 via-pink-500 to-primary w-fit bg-clip-text text-transparent">
-              &nbsp; Welcome to Autumn
-            </span>
-          </p>
+    <Step
+      title="Create your organization"
+      number={number}
+      description={
+        <>
+          <div className="flex relative w-fit">
+            <div className="flex bg-purple-100 shadow-sm shadow-purple-500/50 w-fit px-3 py-0.5 rounded-lg  absolute w-full h-full z-0"></div>
+            <p className="flex items-center border border-primary w-fit px-3 py-0.5 rounded-lg z-10">
+              <span className="animate-bounce">👋</span>
+              <span className="font-bold text-primary">
+                &nbsp; Welcome to Autumn
+              </span>
+            </p>
+          </div>
           <p>
             Create an organization to get started and integrate pricing within 5
             minutes.
           </p>
-        </div>
-        <div className="w-full lg:w-2/3 min-w-md max-w-lg flex gap-2 rounded-sm">
+        </>
+      }
+    >
+      <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
+        <div className="w-full lg:w-2/3 min-w-md max-w-2xl flex gap-2 rounded-sm">
           <Input
             placeholder="Org name"
             value={org?.name || fields.name}
@@ -75,12 +85,12 @@ export const CreateOrgStep = ({
             }}
           />
           <Button
-            className="w-fit"
+            className="min-w-40 w-40 max-w-40"
             disabled={!!org?.name}
             onClick={handleCreateOrg}
             isLoading={loading}
             variant="gradientPrimary"
-            startIcon={<Building size={12} />}
+            // startIcon={<Building size={12} />}
           >
             Create Organization
           </Button>
