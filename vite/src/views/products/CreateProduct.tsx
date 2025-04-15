@@ -19,20 +19,22 @@ import { PlusIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
+import { ProductConfig } from "./ProductConfig";
 
+let defaultProduct = {
+  name: "",
+  id: "",
+  group: "",
+  is_add_on: false,
+  is_default: false,
+};
 function CreateProduct() {
   const { env, mutate } = useProductsContext();
   const axiosInstance = useAxiosInstance({ env });
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(false);
-  const [fields, setFields] = useState({
-    name: "",
-    id: "",
-    group: "",
-    is_add_on: false,
-    is_default: false,
-  });
+  const [product, setProduct] = useState(defaultProduct);
 
   const [idChanged, setIdChanged] = useState(false);
   const [open, setOpen] = useState(false);
@@ -42,7 +44,7 @@ function CreateProduct() {
     try {
       const productId = await ProductService.createProduct(
         axiosInstance,
-        fields
+        product
       );
 
       await mutate();
@@ -67,67 +69,11 @@ function CreateProduct() {
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogTitle>Create Product</DialogTitle>
-        <div className="flex w-full gap-2">
-          <div className="w-full">
-            <FieldLabel>Name</FieldLabel>
-            <Input
-              placeholder="eg. Starter Product"
-              value={fields.name}
-              onChange={(e) => {
-                const newFields = { ...fields, name: e.target.value };
-                if (!idChanged) {
-                  newFields.id = slugify(e.target.value);
-                }
-                setFields(newFields);
-              }}
-            />
-          </div>
-          <div className="w-full">
-            <FieldLabel>ID</FieldLabel>
-            <Input
-              placeholder="eg. Product ID"
-              value={fields.id}
-              onChange={(e) => {
-                setFields({ ...fields, id: e.target.value });
-                setIdChanged(true);
-              }}
-            />
-          </div>
-        </div>
-        <div className="flex w-full gap-2">
-          <div className="w-full">
-            <FieldLabel>Group</FieldLabel>
-            <Input
-              placeholder="eg. Product Group"
-              value={fields.group}
-              onChange={(e) => setFields({ ...fields, group: e.target.value })}
-            />
-          </div>
-          <div className="w-full"></div>
-        </div>
-        <div className="flex flex-col gap-2 text-xs">
-          <div className="flex items-center gap-2 ml-1 text-t2">
-            <Checkbox
-              // size="sm"
-              checked={fields.is_add_on}
-              onCheckedChange={(e) =>
-                setFields({ ...fields, is_add_on: e as boolean })
-              }
-            />
-            <p className="mt-[1px]">This product is an add-on</p>
-          </div>
-          <div className="flex items-center gap-2 ml-1 text-t2">
-            <Checkbox
-              checked={fields.is_default}
-              onCheckedChange={(e) =>
-                setFields({ ...fields, is_default: e as boolean })
-              }
-            />
-            <p className="mt-[1px]">
-              Add this product to customers by default on creation
-            </p>
-          </div>
-        </div>
+        <ProductConfig
+          product={product}
+          setProduct={setProduct}
+          isUpdate={false}
+        />
 
         <DialogFooter>
           <Button

@@ -362,12 +362,16 @@ export default function CustomerProductView() {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbLink
-                className="cursor-pointer"
+                className="cursor-pointer truncate max-w-48"
                 onClick={() =>
                   navigateTo(`/customers/${customer_id}`, navigation, env)
                 }
               >
-                {customer.name ? customer.name : customer.id}
+                {customer.name
+                  ? customer.name
+                  : customer.id
+                  ? customer.id
+                  : customer.email}
               </BreadcrumbLink>
               <BreadcrumbSeparator />
               <BreadcrumbItem>{product.name}</BreadcrumbItem>

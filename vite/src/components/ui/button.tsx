@@ -28,6 +28,8 @@ const buttonVariants = cva(
           "border border-zinc-200 bg-white shadow-sm hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         ghost:
           "hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
+        sidebarItem:
+          "hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 !px-2 !h-fit !py-0.5 truncate justify-start",
         link: "text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50",
         dashed:
           "font-semibold border border-1 border-dashed bg-gradient-to-b from-white to-stone-100 border-stone-300 text-primary shadow-sm hover:from-stone-100 hover:to-stone-200 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
