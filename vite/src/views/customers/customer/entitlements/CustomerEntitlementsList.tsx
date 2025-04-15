@@ -26,6 +26,8 @@ import React from "react";
 import { Item, Row } from "@/components/general/TableGrid";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const CustomerEntitlementsList = () => {
   const [featureType, setFeatureType] = useState<FeatureType>(
@@ -140,13 +142,24 @@ export const CustomerEntitlementsList = () => {
                 </TabsList>
               </Tabs>
               <div className="flex items-center gap-2">
-                <p className="text-t3 text-xs font-normal">Show Expired</p>
+                {/* <p className="text-t3 text-xs font-normal">Show Expired</p>
                 <Switch
                   checked={showExpired}
                   className="bg-primary h-3 w-6"
                   thumbClassName="size-3 data-[state=checked]:translate-x-2"
                   onCheckedChange={setShowExpired}
-                />
+                /> */}
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "text-t3 text-xs font-normal p-0",
+                    showExpired && "text-red-500 hover:text-red-600"
+                  )}
+                  size="sm"
+                  onClick={() => setShowExpired(!showExpired)}
+                >
+                  Show Expired
+                </Button>
               </div>
             </div>
           </div>
@@ -158,19 +171,19 @@ export const CustomerEntitlementsList = () => {
       />
       {sortedEntitlements.length === 0 ? (
         <div className="flex pl-10 items-center h-10">
-          <p className="text-t3 text-xs">
+          <p className="text-t3">
             Attach a product to grant access to features
           </p>
         </div>
       ) : (
         <>
-          <Row type="header" className="grid-cols-13">
+          <Row type="header" className="grid-cols-12 pr-0">
             <Item className="col-span-3">Feature</Item>
             <Item className="col-span-3">
               {featureType === FeatureType.Metered && "Balance"}
             </Item>
             <Item className="col-span-3">Product</Item>
-            <Item className="col-span-3">
+            <Item className="col-span-2">
               {featureType === FeatureType.Metered && "Next Reset"}
             </Item>
             <Item className="col-span-1" />
@@ -185,8 +198,11 @@ export const CustomerEntitlementsList = () => {
           return (
             <Row
               key={cusEnt.id}
-              className="grid-cols-13"
-              onClick={() => handleSelectCusEntitlement(cusEnt)}
+              className="grid-cols-12 pr-0"
+              onClick={() =>
+                featureType === FeatureType.Metered &&
+                handleSelectCusEntitlement(cusEnt)
+              }
             >
               <Item className="col-span-3">
                 <AdminHover texts={getAdminHoverTexts(cusEnt)}>
@@ -194,21 +210,23 @@ export const CustomerEntitlementsList = () => {
                 </AdminHover>
               </Item>
               <Item className="col-span-3">
-                {allowanceType == AllowanceType.Unlimited ? (
-                  "Unlimited"
-                ) : allowanceType == AllowanceType.None ? (
-                  "None"
-                ) : (
-                  <React.Fragment>
-                    {cusEnt.balance}
-                    <span className="text-t3">
-                      {cusEnt.unused ? ` (${cusEnt.unused} free)` : ""}
-                    </span>
-                  </React.Fragment>
-                )}
+                <div className="flex items-center font-mono font-medium rounded-md px-1 border-b border-stone-300 border-dashed ">
+                  {allowanceType == AllowanceType.Unlimited ? (
+                    "Unlimited"
+                  ) : allowanceType == AllowanceType.None ? (
+                    "None"
+                  ) : (
+                    <>
+                      {cusEnt.balance}{" "}
+                      <span className="text-t3">
+                        {cusEnt.unused ? ` (${cusEnt.unused} free)` : ""}
+                      </span>
+                    </>
+                  )}
+                </div>
               </Item>
               <Item className="col-span-3">
-                <div className="flex items-center gap-2 max-w-[150px] truncate">
+                <div className="flex items-center gap-2 max-w-[150px] truncate text-t3">
                   {getProductName(cusEnt)}
                   {customer.products.find(
                     (p: any) => p.id === cusEnt.customer_product_id
@@ -219,11 +237,9 @@ export const CustomerEntitlementsList = () => {
                   )}
                 </div>
               </Item>
-              <Item className="col-span-3 text-xs">
-                <span>{formatUnixToDateTime(cusEnt.next_reset_at).date}</span>{" "}
-                <span className="text-t3">
-                  {formatUnixToDateTime(cusEnt.next_reset_at).time}
-                </span>
+              <Item className="col-span-2 text-xs text-t3">
+                {formatUnixToDateTime(cusEnt.next_reset_at).date}{" "}
+                {formatUnixToDateTime(cusEnt.next_reset_at).time}
               </Item>
               <Item className="col-span-1" />
             </Row>

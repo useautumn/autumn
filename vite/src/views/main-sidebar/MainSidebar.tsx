@@ -7,7 +7,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { SidebarContext } from "./SidebarContext";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Code, Flag, Tag, User } from "lucide-react";
+import { Code, Flag, Package, Tag, User } from "lucide-react";
 import { EnvDropdown } from "./EnvDropdown";
 
 export const MainSidebar = () => {
@@ -41,7 +41,7 @@ export const MainSidebar = () => {
             /> */}
             <NavButton
               value="products"
-              icon={<Tag size={14} />}
+              icon={<Package size={14} />}
               title="Products"
               env={env}
             />

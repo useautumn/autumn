@@ -90,10 +90,8 @@ function UpdateCusEntitlement({
       <DialogTrigger asChild></DialogTrigger>
       <DialogContent className="min-w-sm">
         <DialogHeader>
-          <div className="flex items-center gap-4">
-            <DialogTitle>
-              {feature.name} - {cusProduct?.product.name}
-            </DialogTitle>
+          <div className="flex flex-col gap-4">
+            <DialogTitle>{feature.name}</DialogTitle>
             <CopyButton text={feature.id} className="w-fit font-mono">
               {feature.id}
             </CopyButton>

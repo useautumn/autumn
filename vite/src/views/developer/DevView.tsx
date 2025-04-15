@@ -30,7 +30,7 @@ export default function DevScreen({ env }: { env: AppEnv }) {
         {/* API Keys Section */}
         <div className="flex flex-col gap-16">
           <div>
-            <div className="sticky top-0 z-10 border-y bg-stone-100 px-10 h-10 flex justify-between items-center">
+            <div className="sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm text-t2 font-medium">Secret API Keys</h2>
                 <span className="text-t2 px-1 rounded-md bg-stone-200">
@@ -101,12 +101,10 @@ export const CopyPublishableKey = ({
   return (
     <div className="flex flex-col justify-between gap-2 w-full">
       <div className="flex items-center whitespace-nowrap overflow-hidden">
-        <div className="text-sm text-t2">{type} Publishable Key</div>
+        <div className="text-sm text-t3">{type}</div>
       </div>
-      <div className="flex items-center gap-2 px-2 font-mono bg-stone-100">
-        <div className="text-sm text-t2 truncate">{value}</div>
-        <CopyButton text={value} />
-      </div>
+
+      <CopyButton text={value}>{value}</CopyButton>
     </div>
   );
 };

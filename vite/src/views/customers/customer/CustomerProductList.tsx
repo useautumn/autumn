@@ -57,7 +57,7 @@ export const CustomerProductList = ({
 
   return (
     <div>
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 px-10 h-10">
+      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex">
           Products
         </h2>
@@ -71,14 +71,14 @@ export const CustomerProductList = ({
 
       {sortedProducts.length === 0 ? (
         <div className="flex pl-10 items-center h-10">
-          <p className="text-t3 text-xs">Attach a product to this customer</p>
+          <p className="text-t3">Attach a product to this customer</p>
         </div>
       ) : (
-        <Row type="header" className="grid-cols-13">
+        <Row type="header" className="grid-cols-12 pr-0">
           <Item className="col-span-3">Name</Item>
           <Item className="col-span-3">Product ID</Item>
           <Item className="col-span-3">Status</Item>
-          <Item className="col-span-3">Created At</Item>
+          <Item className="col-span-2">Created At</Item>
           <Item className="col-span-1" />
         </Row>
       )}
@@ -87,7 +87,7 @@ export const CustomerProductList = ({
         return (
           <Row
             key={cusProduct.id}
-            className="grid-cols-13"
+            className="grid-cols-12 pr-0"
             onClick={() => {
               navigateTo(
                 `/customers/${customer.id || customer.internal_id}/${
@@ -175,11 +175,9 @@ export const CustomerProductList = ({
                   )}
               </div>
             </Item>
-            <Item className="col-span-3 text-xs">
-              <span>{formatUnixToDateTime(cusProduct.created_at).date}</span>{" "}
-              <span className="text-t3">
-                {formatUnixToDateTime(cusProduct.created_at).time}
-              </span>
+            <Item className="col-span-2 text-xs text-t3">
+              {formatUnixToDateTime(cusProduct.created_at).date}{" "}
+              {formatUnixToDateTime(cusProduct.created_at).time}
             </Item>
             <Item className="col-span-1 pr-4 flex items-center justify-center">
               <EditCustomerProductToolbar cusProduct={cusProduct} />
@@ -201,7 +199,7 @@ const EditCustomerProductToolbar = ({
   return (
     <DropdownMenu open={dialogOpen} onOpenChange={setDialogOpen}>
       <DropdownMenuTrigger asChild>
-        <ToolbarButton className="!w-4 !h-6 !rounded-md" />
+        <ToolbarButton className="!w-4 !h-6 !rounded-md text-t3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
         {/* Update status */}

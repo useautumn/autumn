@@ -78,7 +78,9 @@ export default function ProductSidebar({
         className="w-full flex flex-col"
         defaultValue={[
           "properties",
-          ...(product.free_trial ? ["free-trial"] : []),
+          // ...(product.free_trial ? ["free-trial"] : []),
+          "versions",
+          "free-trial",
         ]}
       >
         <div className="flex w-full border-b mt-[2px] p-4">
