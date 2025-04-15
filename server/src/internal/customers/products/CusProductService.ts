@@ -40,16 +40,24 @@ export class CusProductService {
     orgId,
     env,
     withProduct = false,
+    withPrices = false,
   }: {
     sb: SupabaseClient;
     id: string;
     orgId: string;
     env: AppEnv;
     withProduct?: boolean;
+    withPrices?: boolean;
   }) {
     const { data, error } = await sb
       .from("customer_products")
-      .select(`*, customer:customers!inner(*), product:products!inner(*)`)
+      .select(
+        `*, customer:customers!inner(*)
+        ,customer_entitlements(*, entitlement:entitlements!inner(*, feature:features!inner(*)))
+        ${withProduct ? ", product:products!inner(*)" : ""}
+        ${withPrices ? ", customer_prices(*, price:prices!inner(*))" : ""}
+        ` as "*"
+      )
       .eq("id", id)
       .eq("customer.org_id", orgId)
       .eq("customer.env", env)

@@ -9,6 +9,7 @@ import {
 import { EllipsisVertical, MinusIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useProductItemContext } from "./ProductItemContext";
+import { ProductItemBehavior } from "@autumn/shared";
 
 export default function MoreMenuButton({
   show,
@@ -34,6 +35,35 @@ export default function MoreMenuButton({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-48 p-2 flex flex-col text-xs" align="end">
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="secondary"
+            className="text-xs text-t3 shadow-none border-none w-full justify-start"
+            onClick={() => {
+              setItem({
+                ...item,
+                behavior:
+                  item.behavior == ProductItemBehavior.Prepaid
+                    ? ProductItemBehavior.PayPerUse
+                    : ProductItemBehavior.Prepaid,
+              });
+            }}
+          >
+            <Checkbox
+              className="border-t3 mr-1"
+              checked={item.behavior == ProductItemBehavior.Prepaid}
+              // onCheckedChange={(checked) =>
+              //   setItem({
+              //     ...item,
+              //     behavior: checked
+              //       ? ProductItemBehavior.Prepaid
+              //       : ProductItemBehavior.PayPerUse,
+              //   })
+              // }
+            />
+            Prepaid
+          </Button>
+        </div>
         <div className="flex items-center space-x-2">
           <Button
             variant="secondary"
