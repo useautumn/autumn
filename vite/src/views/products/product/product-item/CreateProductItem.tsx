@@ -154,6 +154,8 @@ export const validateProductItem = (item: ProductItem, show: any) => {
 
   if ((item.included_usage as any) === "") {
     item.included_usage = null;
+  } else if (!invalidNumber(item.included_usage)) {
+    item.included_usage = Number(item.included_usage);
   }
 
   // Usage/Feature item validation (when tiers are set)

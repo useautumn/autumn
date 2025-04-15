@@ -26,7 +26,7 @@ export const APIKeyTable = ({ apiKeys }: { apiKeys: ApiKey[] }) => {
       </Row>
       {apiKeys.map((key) => (
         <Row key={key.id} className="grid-cols-18">
-          <Item className="col-span-5 font-medium">{key.name}</Item>
+          <Item className="col-span-5 font-normal">{key.name}</Item>
           <Item className="col-span-5 font-mono text-t2">{key.prefix}</Item>
           <Item className="col-span-7">
             {formatUnixToDateTime(key.created_at).date}
