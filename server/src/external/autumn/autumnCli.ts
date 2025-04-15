@@ -24,6 +24,7 @@ export class Autumn {
 
   constructor(apiKey?: string, baseUrl?: string) {
     this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
+
     this.headers = {
       Authorization: `Bearer ${this.apiKey}`,
       "Content-Type": "application/json",

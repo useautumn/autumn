@@ -64,9 +64,10 @@ productRouter.get("/data", async (req: any, res) => {
       org: {
         id: org.id,
         name: org.name,
-        test_pkey: org.test_pkey,
-        live_pkey: org.live_pkey,
+        // test_pkey: org.test_pkey,
+        // live_pkey: org.live_pkey,
         default_currency: org.default_currency,
+        stripe_connected: org.stripe_connected,
       },
       // coupons,
       rewards: coupons,
@@ -160,6 +161,14 @@ productRouter.get("/:productId/data", async (req: any, res) => {
         }),
       ]);
 
+    if (!product) {
+      throw new RecaseError({
+        message: `Product ${productId} ${
+          version ? `(v${version})` : ""
+        } not found`,
+        code: ErrCode.ProductNotFound,
+      });
+    }
     let entitlements = product.entitlements;
     let prices = product.prices;
 
