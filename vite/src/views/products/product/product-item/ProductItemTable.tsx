@@ -23,6 +23,7 @@ import { DollarSign } from "lucide-react";
 import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFeatureItem } from "@/utils/product/getItemType";
+import { notNullish } from "@/utils/genUtils";
 export const ProductItemTable = () => {
   let { product, setProduct, features, org } = useProductContext();
   let [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
@@ -49,7 +50,7 @@ export const ProductItemTable = () => {
             per {getFeature(item.entity_feature_id, features)?.name} &nbsp;
           </span>
         )}
-        {item.reset_usage_on_billing && (
+        {notNullish(item.interval) && (
           <span className="text-t3">per {item.interval}</span>
         )}
       </div>

@@ -120,106 +120,19 @@ export const ProductItemConfig = () => {
         show.price && show.feature && item.tiers?.length > 1 && "w-2xl"
       )}
     >
-      {
-        // !show.feature && !show.price ? (
-        //   <div className="w-full text-sm py-2 justify-center rounded-md rounded-xl text-t3 ">
-        //     Add a feature, price, or both to{" "}
-        //     <span className="font-medium">{product.name}</span>
-        //   </div>
-        // ) :
-        !show.feature ? (
-          <div className="flex w-full">
-            <FixedPriceConfig show={show} setShow={setShow} />
-          </div>
-        ) : (
-          <ConfigWithFeature
-            show={show}
-            setShow={setShow}
-            handleAddPrice={handleAddPrice}
-          />
-        )
-      }
+      {!show.feature ? (
+        <div className="flex w-full">
+          <FixedPriceConfig show={show} setShow={setShow} />
+        </div>
+      ) : (
+        <ConfigWithFeature
+          show={show}
+          setShow={setShow}
+          handleAddPrice={handleAddPrice}
+        />
+      )}
       <div className="flex animate-in slide-in-from-bottom-1/2 duration-200 fade-out w-full justify-end">
-        {/* <div className="border-l mr-3"></div> */}
         <div className="flex flex-col justify-between gap-10 w-full">
-          {/* <div className="flex flex-col gap-2 w-32">
-            <ToggleDisplayButton
-              label="Add Feature"
-              className="w-full justify-start"
-              show={show.feature}
-              disabled={isUpdate}
-              onClick={toggleShowFeature}
-            >
-              {show.feature ? (
-                <MinusIcon size={14} className="mr-1" />
-              ) : (
-                <PlusIcon size={14} className="mr-1" />
-              )}
-              {show.feature ? "Remove Feature" : "Add Feature"}
-            </ToggleDisplayButton>
-            <ToggleDisplayButton
-              label="Add Price"
-              show={show.price}
-              // disabled={
-              //   fields.allowance_type == AllowanceType.Unlimited ||
-              //   (priceConfig.type == PriceType.Fixed && isUpdate) ||
-              //   selectedFeature?.type == FeatureType.Boolean // so they can't switch a base price to a usage based price
-              // }
-              className="w-full justify-start"
-              onClick={handleAddPrice}
-            >
-              {show.price ? (
-                <MinusIcon size={14} className="mr-1" />
-              ) : (
-                <PlusIcon size={14} className="mr-1" />
-              )}
-              {show.price ? "Remove Price" : "Add Price"}
-            </ToggleDisplayButton>
-            {show.feature && selectedFeature?.type != FeatureType.Boolean && (
-              <>
-                <ToggleDisplayButton
-                  label="Add Cycle"
-                  show={show.cycle}
-                  // disabled={
-                  //   fields.allowance_type == AllowanceType.Unlimited ||
-                  //   priceConfig.interval == BillingInterval.OneOff
-                  //   // ||
-                  //   // !selectedFeature
-                  // }
-                  className="w-full justify-start animate-in slide-in-from-right-1/2 duration-200 fade-out"
-                  onClick={() => {
-                    console.log("Toggling cycle");
-                    console.log(
-                      "Reset usage on interval",
-                      item.reset_usage_on_billing
-                    );
-                    setItem({
-                      ...item,
-                      reset_usage_on_billing: !item.reset_usage_on_billing,
-                    });
-                    setShow({
-                      ...show,
-                      cycle: !show.cycle,
-                    });
-                  }}
-                >
-                  {show.cycle ? (
-                    <MinusIcon size={14} className="mr-1" />
-                  ) : (
-                    <PlusIcon size={14} className="mr-1" />
-                  )}
-                  Usage Reset
-                </ToggleDisplayButton>
-                <MoreMenuButton
-                  fields={fields}
-                  setFields={setFields}
-                  showPerEntity={showPerEntity}
-                  setShowPerEntity={setShowPerEntity}
-                  selectedFeature={selectedFeature}
-                />
-              </>
-            )}
-          </div> */}
           <div className="flex gap-2">
             <Button
               variant="outline"

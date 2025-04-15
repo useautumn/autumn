@@ -12,7 +12,7 @@ import {
 import { CountAndMigrate } from "./versioning/CountAndMigrate";
 
 export const ProductVersions = () => {
-  const { product, numVersions, customerData, version } = useProductContext();
+  const { product, numVersions, customer, version } = useProductContext();
   const navigate = useNavigate();
   const env = useEnv();
 
@@ -35,11 +35,9 @@ export const ProductVersions = () => {
               onValueChange={async (value) => {
                 navigate(
                   getRedirectUrl(
-                    `${
-                      customerData
-                        ? `/customers/${customerData.customer.id}`
-                        : "/products"
-                    }/${product.id}?version=${value}`,
+                    `${customer ? `/customers/${customer.id}` : "/products"}/${
+                      product.id
+                    }?version=${value}`,
                     env
                   )
                 );
@@ -63,8 +61,8 @@ export const ProductVersions = () => {
                         navigate(
                           getRedirectUrl(
                             `${
-                              customerData
-                                ? `/customers/${customerData.customer.id}`
+                              customer
+                                ? `/customers/${customer.id}`
                                 : "/products"
                             }/${product.id}?version=${version}`,
                             env
@@ -81,7 +79,7 @@ export const ProductVersions = () => {
             <p className="text-xs text-t3 pr-2">None</p>
           )}
         </div>
-        <CountAndMigrate />
+        {!customer && <CountAndMigrate />}
       </div>
     </div>
   );
