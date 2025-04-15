@@ -144,7 +144,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
                 )}
               </h2>
             </div>
-            <CustomerToolbar customer={customer} />
+            {/* <CustomerToolbar customer={customer} /> */}
           </div>
           <div className="flex w-full !pb-[50px]">
             {/* main content */}

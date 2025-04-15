@@ -94,7 +94,7 @@ export function MainLayout() {
       <Toaster
         position="top-center"
         className="flex justify-center"
-        duration={2000}
+        duration={6000}
         toastOptions={{
           unstyled: true,
           classNames: {
