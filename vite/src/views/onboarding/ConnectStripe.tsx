@@ -4,7 +4,6 @@ import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OrgService } from "@/services/OrgService";
@@ -200,17 +199,21 @@ function ConnectStripe({
 
 export default ConnectStripe;
 
-const CurrencySelect = ({
+export const CurrencySelect = ({
   defaultCurrency,
   setDefaultCurrency,
+  className,
+  disabled,
 }: {
   defaultCurrency: string;
   setDefaultCurrency: (currency: string) => void;
+  className?: string;
+  disabled?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild className="p-2">
+      <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
@@ -218,8 +221,10 @@ const CurrencySelect = ({
           className={cn(
             "w-full justify-between transition-colors duration-100",
             open &&
-              "border-[rgb(139,92,246)] shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]"
+              "border-[rgb(139,92,246)] shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]",
+            className
           )}
+          disabled={disabled}
         >
           {defaultCurrency ? defaultCurrency : "Select currency..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
