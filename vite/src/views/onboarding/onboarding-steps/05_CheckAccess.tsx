@@ -42,9 +42,8 @@ export default function CheckAccessStep({
     <Step
       title="Check if user has access to a feature and send usage events"
       number={number}
-    >
-      <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-        <p className="text-t2 flex flex-col gap-2 w-full lg:w-1/3">
+      description={
+        <p className="text-t2 flex flex-col gap-2 w-full max-w-md">
           <span>
             If you have a feature with access restrictions, check whether a user
             can access it by calling the{" "}
@@ -58,7 +57,10 @@ export default function CheckAccessStep({
             <span className="font-bold">Secret API Key</span> for this. */}
           </span>
         </p>
-        <div className="w-full lg:w-2/3 min-w-md max-w-2xl flex flex-col gap-2">
+      }
+    >
+      <div className="flex gap-8 w-full justify-between flex-col">
+        <div className="w-full min-w-md max-w-xl flex flex-col gap-2">
           {/* <h2 className="text-t2 font-medium text-md">Check Feature Access</h2> */}
           <CodeBlock
             snippets={[
