@@ -6,11 +6,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import {
+  formatUnixToDateTime,
+  formatUnixToDateTimeWithMs,
+} from "@/utils/formatUtils/formatDateUtils";
 import CopyButton from "@/components/general/CopyButton";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Row, Item } from "@/components/general/TableGrid";
+import {
+  TooltipProvider,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 
 export const CustomerEventsList = ({ events }: { events: any }) => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -38,16 +47,16 @@ export const CustomerEventsList = ({ events }: { events: any }) => {
 
       {events.length === 0 ? (
         <div className="flex pl-10 items-center h-10">
-          <p className="text-t3 text-xs">
+          <p className="text-t3 text-sm">
             No events received for this customer
           </p>
         </div>
       ) : (
-        <Row type="header" className="grid-cols-13">
+        <Row type="header" className="grid-cols-12 pr-0">
           <Item className="col-span-3">Event Name</Item>
+          <Item className="col-span-3">Value</Item>
           <Item className="col-span-3">Status</Item>
-          <Item className="col-span-3">Event ID</Item>
-          <Item className="col-span-3">Timestamp</Item>
+          <Item className="col-span-2">Timestamp</Item>
           <Item className="col-span-1" />
         </Row>
       )}
@@ -55,26 +64,32 @@ export const CustomerEventsList = ({ events }: { events: any }) => {
       {events.map((event: any) => (
         <Row
           key={event.id}
-          className="grid-cols-13"
+          className="grid-cols-12 pr-0"
           onClick={() => setSelectedEvent(event)}
         >
           <Item className="col-span-3 font-mono">{event.event_name}</Item>
+          <Item className="col-span-3 relative">
+            <span className="font-mono truncate">
+              {event.value || event.properties.value || 1}
+            </span>
+            {/* <div className="absolute hidden group-hover:block top-1/2 -translate-y-1/2 right-0 rounded-sm h-5 w-5">
+              <CopyButton text={event.id} className="bg-white h-full w-full" />
+            </div> */}
+          </Item>
           <Item className="col-span-3 font-mono">
             <span className="text-t3">POST </span>
             <span className="text-lime-600">200</span>
           </Item>
-          <Item className="col-span-3 relative text-t3">
-            {event.id}
-            <div className="absolute hidden group-hover:block top-1/2 -translate-y-1/2 right-0 rounded-sm h-5 w-5">
-              <CopyButton text={event.id} className="bg-white h-full w-full" />
-            </div>
-          </Item>
-          <Item className="col-span-3">
-            {formatUnixToDateTime(event.timestamp).date}
-            <span className="text-t3">
-              {" "}
-              {formatUnixToDateTime(event.timestamp).time}{" "}
-            </span>
+          <Item className="col-span-2 text-t3 text-xs">
+            <Tooltip>
+              <TooltipTrigger>
+                {formatUnixToDateTime(event.timestamp).date}{" "}
+                {formatUnixToDateTime(event.timestamp).time}{" "}
+              </TooltipTrigger>
+              <TooltipContent>
+                {formatUnixToDateTimeWithMs(event.timestamp)}
+              </TooltipContent>
+            </Tooltip>
           </Item>
           <Item className="col-span-1" />
         </Row>

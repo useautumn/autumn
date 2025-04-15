@@ -63,7 +63,7 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <p className="font-mono bg-stone-50 rounded-full text-t3 text-xs px-2 font-mono py-0 border-1 border-stone-200">
+                    <p className="font-mono rounded-full text-t3 px-2 font-mono py-0">
                       {(allCounts && allCounts[product.id]?.active) || 0}
                     </p>
                   </TooltipTrigger>

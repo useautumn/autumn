@@ -58,7 +58,13 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
             )}
           >
             {state == "expanded" ? (
-              <div className="flex items-center justify-between">
+              <div
+                className={cn(
+                  "flex items-center justify-between -ml-1 pl-1 pr-3 h-6 border border-orange-500 rounded-md bg-orange-100 text-orange-600",
+                  env === AppEnv.Live &&
+                    "text-t1 bg-transparent shadow-none border-none font-medium"
+                )}
+              >
                 <div
                   className={cn(
                     "flex justify-center w-4 h-4 items-center rounded-sm transition-all duration-100",

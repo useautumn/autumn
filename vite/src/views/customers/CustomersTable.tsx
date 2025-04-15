@@ -187,7 +187,7 @@ export const CustomersTable = ({
             className="grid grid-cols-16 gap-2 items-center px-10 w-full text-sm h-8 cursor-default hover:bg-primary/5 text-t2 whitespace-nowrap"
           >
             <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>
-            <CustomTableCell className="font-mono" colSpan={3}>
+            <CustomTableCell className="font-mono text-t3" colSpan={3}>
               {customer.id}
             </CustomTableCell>
             <CustomTableCell colSpan={3}>{customer.email}</CustomTableCell>

@@ -81,15 +81,15 @@ export const CountAndMigrate = () => {
         <Tooltip>
           <TooltipTrigger asChild>
             <div
-              className="h-7 px-3 bg-zinc-50 hover:bg-zinc-50 border border-zinc-200 cursor-pointer flex items-center gap-2 rounded-full
+              className="h-4 hover:bg-zinc-50 cursor-pointer flex items-center gap-2
             w-full
             "
             >
-              <span className="flex items-center gap-2">
-                <SmallSpinner size={16} />
-                <span className="text-sm font-medium text-zinc-500 text-xs">
+              <span className="flex items-center gap-2 justify-between w-full pr-2">
+                <span className="text-sm font-medium text-t3 text-xs">
                   Migration in progress
                 </span>
+                <SmallSpinner size={16} />
               </span>
             </div>
           </TooltipTrigger>
@@ -142,13 +142,12 @@ export const CountAndMigrate = () => {
   let trialingCount = counts?.trialing;
 
   return (
-    <div className="flex items-center gap-3 whitespace-nowrap ">
+    <>
       <ConfirmMigrateDialog
         open={confirmMigrateOpen}
         setOpen={setConfirmMigrateOpen}
         startMigration={migrateCustomers}
       />
-
       {!canMigrate ? null : existingMigrations.length > 0 ? (
         renderCurrentMigration()
       ) : (
@@ -156,13 +155,13 @@ export const CountAndMigrate = () => {
           variant="outline"
           className="
           w-full
-          h-7 text-sm font-medium text-zinc-600 bg-white border-zinc-200 hover:bg-zinc-50 hover:text-zinc-700 transition-colors"
+          h-6 text-sm font-medium text-zinc-600 bg-white border-zinc-200 hover:bg-zinc-50 hover:text-zinc-700 transition-colors"
           onClick={onMigrateClicked}
         >
           {loading && <SmallSpinner size={16} />}
           {`Migrate to v${numVersions}`}
         </Button>
       )}
-    </div>
+    </>
   );
 };

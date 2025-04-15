@@ -6,6 +6,7 @@ import { ProductItemContext } from "./ProductItemContext";
 import { useProductContext } from "../ProductContext";
 import { notNullish } from "@/utils/genUtils";
 import { defaultProductItem, validateProductItem } from "./CreateProductItem";
+import CopyButton from "@/components/general/CopyButton";
 
 export default function UpdateProductItem({
   selectedItem,
@@ -72,7 +73,14 @@ export default function UpdateProductItem({
     >
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-3xl overflow-visible">
-          <DialogTitle>Update Feature</DialogTitle>
+          <div className="flex items-center justify-between pr-9.5">
+            <DialogTitle>Update Item</DialogTitle>
+            {item.feature_id && (
+              <CopyButton text={item.feature_id || ""}>
+                {item.feature_id || ""}
+              </CopyButton>
+            )}
+          </div>
           <ProductItemConfig />
         </DialogContent>
       </Dialog>

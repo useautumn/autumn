@@ -48,8 +48,10 @@ export function MainLayout() {
         <div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
           <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
             {env === AppEnv.Sandbox && (
-              <div className="w-full min-h-10 h-10 bg-primary text-white text-sm flex items-center justify-center">
-                <p className="font-medium">You&apos;re in sandbox mode.</p>
+              <div className="w-full min-h-10 h-10 bg-orange-100 text-white text-sm flex items-center justify-center">
+                <p className="font-medium text-orange-500 font-mono">
+                  You&apos;re in sandbox
+                </p>
               </div>
             )}
             <div className="flex bg-stone-50 flex-col h-full">
@@ -118,8 +120,10 @@ const MainContent = () => {
     <div className="w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3">
       <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
         {env === AppEnv.Sandbox && (
-          <div className="w-full min-h-10 h-10 bg-primary text-white text-sm flex items-center justify-center">
-            <p className="font-medium">You&apos;re in sandbox mode.</p>
+          <div className="w-full min-h-10 h-10 bg-orange-100 text-white text-sm flex items-center justify-center">
+            <p className="font-medium text-orange-500 font-mono">
+              You&apos;re in sandbox
+            </p>
           </div>
         )}
         <div

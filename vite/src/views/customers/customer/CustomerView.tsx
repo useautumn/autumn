@@ -97,7 +97,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
         referrals,
       }}
     >
-      <div className="flex w-full overflow-hidden">
+      <div className="flex w-full overflow-auto h-full ">
         <div className="flex flex-col gap-4 w-full ">
           <Breadcrumb className="text-t3 pt-6 pl-10 flex justify-start ">
             <BreadcrumbList className="text-t3 text-xs">
@@ -161,7 +161,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
             {/* customer details */}
           </div>
         </div>
-        <div className="flex max-w-md w-1/3 shrink-1 hidden lg:block lg:min-w-xs">
+        <div className="flex max-w-md w-1/3 shrink-1 hidden lg:block lg:min-w-xs sticky top-0">
           <CustomerDetails />
         </div>
       </div>
