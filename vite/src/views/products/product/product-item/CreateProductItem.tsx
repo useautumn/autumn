@@ -80,11 +80,11 @@ export function CreateProductItem() {
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
-        <div className="flex gap-2">
+        <div className="flex gap-0">
           <DialogTrigger asChild>
             <Button
               variant="add"
-              className="w-full "
+              className="w-full w-24"
               onClick={() => setItem(defaultProductItem)}
             >
               Feature
@@ -93,7 +93,7 @@ export function CreateProductItem() {
           <DialogTrigger asChild>
             <Button
               variant="add"
-              className="w-full"
+              className="w-24 border-l-0"
               onClick={() => setItem(defaultPriceItem)}
             >
               Price
@@ -110,7 +110,7 @@ export function CreateProductItem() {
               {showCreateFeature && (
                 <Button
                   variant="ghost"
-                  className="text-xs py-0 px-2 w-fit -ml-5 -mt-7 hover:bg-transparent"
+                  className="text-xs py-0 px-2 w-fit -ml-5 -mt-5 hover:bg-transparent"
                   onClick={() => setShowCreateFeature(false)}
                 >
                   ← Product
@@ -120,8 +120,8 @@ export function CreateProductItem() {
             </div>
           </DialogHeader>
           <div className="flex overflow-visible w-fit">
-            {showCreateFeature ? (
-              <div className="w-full">
+            {showCreateFeature || features.length == 0 ? (
+              <div className="w-full -mt-2">
                 <CreateFeature
                   isFromEntitlement={true}
                   setShowFeatureCreate={setShowCreateFeature}

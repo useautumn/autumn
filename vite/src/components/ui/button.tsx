@@ -34,11 +34,12 @@ const buttonVariants = cva(
         dashed:
           "font-semibold border border-1 border-dashed bg-gradient-to-b from-white to-stone-100 border-stone-300 text-primary shadow-sm hover:from-stone-100 hover:to-stone-200 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         gradientPrimary:
-          "bg-gradient-to-b font-semibold border-t border-purple-400 outline outline-primary  rounded-md from-primary/85 to-primary text-white hover:from-primary hover:to-primary  shadow-purple-500/50 transition-[background] duration-300 !h-7.5 mt-0.25",
+          "bg-gradient-to-b font-semibold border-t border-purple-400 outline outline-primary  rounded-sm from-primary/85 to-primary text-white hover:from-primary hover:to-primary  shadow-purple-500/50 transition-[background] duration-300 !h-7.5 mt-0.25",
 
         gradientSecondary:
           "border border-stone-300 font-semibold bg-gradient-to-b from-white to-stone-100 text-t1 hover:from-stone-300 hover:to-stone-400 shadow-sm",
-        add: "text-primary border-t border-white outline outline-purple-800/20 bg-gradient-to-b from-zinc-50 to-zinc-200/70 shadow-sm hover:from-zinc-200 hover:border-zinc-200 hover:text-primary dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 !h-6 rounded-md ",
+        // add: "text-primary border-t border-white outline outline-purple-800/20 bg-gradient-to-b from-zinc-50 to-zinc-200/70 shadow-sm hover:from-zinc-200 hover:border-zinc-200 hover:text-primary dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 !h-6 rounded-md",
+        add: "text-primary border-t border-white outline outline-zinc-200 bg-gradient-to-b from-stone-100 to-zinc-50 hover:from-stone-100 hover:to-stone-100 hover:border-primary  dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 !h-9.5 rounded-none",
         // add: "border-t border-purple-400 bg-gradient-to-b from-primary/90 to-primary text-white hover:from-primary hover:to-primary !shadow-lg !h-6 rounded-md",
       },
       size: {
