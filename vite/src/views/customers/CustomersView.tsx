@@ -54,6 +54,7 @@ function CustomersView({ env }: { env: AppEnv }) {
 
   // Single useEffect to handle all data fetching
   useEffect(() => {
+    console.log("Fetching customers");
     setPaginationLoading(true);
     mutate().finally(() => {
       setPaginationLoading(false);

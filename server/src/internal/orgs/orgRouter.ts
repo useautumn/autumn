@@ -11,6 +11,7 @@ import Stripe from "stripe";
 import { OrgService } from "./OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { AppEnv } from "@autumn/shared";
+import { nullish } from "@/utils/genUtils.js";
 
 export const orgRouter = express.Router();
 
@@ -43,7 +44,7 @@ orgRouter.get("", async (req: any, res) => {
 
 orgRouter.post("/stripe", async (req: any, res) => {
   try {
-    const { testApiKey, liveApiKey, successUrl, defaultCurrency } = req.body;
+    let { testApiKey, liveApiKey, successUrl, defaultCurrency } = req.body;
 
     if (!testApiKey || !liveApiKey || !defaultCurrency || !successUrl) {
       throw new RecaseError({
@@ -65,7 +66,6 @@ orgRouter.post("/stripe", async (req: any, res) => {
         data: error,
       });
     }
-
     // 2. Create webhook endpoint
     let testWebhook: Stripe.WebhookEndpoint;
     let liveWebhook: Stripe.WebhookEndpoint;

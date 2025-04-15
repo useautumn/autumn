@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import UpdateFeature from "./UpdateFeature";
 import { FeatureTypeBadge } from "./FeatureTypeBadge";
 import { Item, Row } from "@/components/general/TableGrid";
+import CopyButton from "@/components/general/CopyButton";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export const FeaturesTable = () => {
   const { env, features, onboarding } = useFeaturesContext();
@@ -55,7 +57,7 @@ export const FeaturesTable = () => {
       {features && features.length > 0 ? (
         <Row type="header" className="grid-cols-18 -mb-1">
           <Item className="col-span-4">Name</Item>
-          <Item className="col-span-4">ID</Item>
+          <Item className="col-span-4 px-1">ID</Item>
           <Item className="col-span-3">Type</Item>
           {!onboarding && <Item className="col-span-4">Event Names</Item>}
           {!onboarding && <Item className="col-span-2">Created At</Item>}
@@ -74,10 +76,25 @@ export const FeaturesTable = () => {
           onClick={() => handleRowClick(feature.id)}
         >
           <Item className="col-span-4">
-            <span className="truncate">{feature.name}</span>
+            <span className="truncate">
+              <AdminHover
+                texts={[
+                  { key: "Internal ID", value: feature.internal_id || "" },
+                ]}
+              >
+                {feature.name}
+              </AdminHover>
+            </span>
           </Item>
           <Item className="col-span-4 font-mono">
-            <span className="truncate">{feature.id}</span>
+            <span className="truncate">
+              <CopyButton
+                text={feature.id}
+                className="bg-transparent border-none text-t3 px-1"
+              >
+                {feature.id}
+              </CopyButton>
+            </span>
           </Item>
           <Item className="col-span-3">
             <FeatureTypeBadge type={feature.type} />
