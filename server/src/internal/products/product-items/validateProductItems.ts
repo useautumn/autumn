@@ -7,14 +7,23 @@ import {
   ProductItemSchema,
   Infinite,
   ProductItemInterval,
+  Feature,
+  FeatureType,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { isFeaturePriceItem } from "./productItemUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { isFeatureItem, isPriceItem } from "./getItemType.js";
 import { itemToEntInterval } from "./itemIntervalUtils.js";
-const validateProductItem = ({ item }: { item: ProductItem }) => {
+const validateProductItem = ({
+  item,
+  features,
+}: {
+  item: ProductItem;
+  features: Feature[];
+}) => {
   item = ProductItemSchema.parse(item);
+
   // 1. Check if amount and tiers are not null
   if (notNullish(item.amount) && notNullish(item.tiers)) {
     throw new RecaseError({
@@ -101,12 +110,14 @@ const validateProductItem = ({ item }: { item: ProductItem }) => {
 };
 export const validateProductItems = ({
   newItems,
+  features,
 }: {
   newItems: ProductItem[];
+  features: Feature[];
 }) => {
   // 1. Check values
   for (let index = 0; index < newItems.length; index++) {
-    validateProductItem({ item: newItems[index] });
+    validateProductItem({ item: newItems[index], features });
   }
 
   for (let index = 0; index < newItems.length; index++) {

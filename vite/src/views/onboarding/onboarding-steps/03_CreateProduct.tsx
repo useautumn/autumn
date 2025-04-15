@@ -1,11 +1,7 @@
 import Step from "@/components/general/OnboardingStep";
 import { FeaturesContext } from "@/views/features/FeaturesContext";
-import { ProductsTable } from "@/views/products/ProductsTable";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { ProductsContext } from "@/views/products/ProductsContext";
-import CreateProduct, { defaultProduct } from "@/views/products/CreateProduct";
-import { ProductConfig } from "@/views/products/ProductConfig";
-import { Product } from "@autumn/shared";
+
+import { defaultProduct } from "@/views/products/CreateProduct";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
@@ -17,7 +13,7 @@ import { toast } from "sonner";
 import { ProductContext } from "@/views/products/product/ProductContext";
 import { ManageProduct } from "@/views/products/product/ManageProduct";
 import { ProductItemTable } from "@/views/products/product/product-item/ProductItemTable";
-import { CopyIcon, PlusIcon } from "lucide-react";
+import { ArrowUp, CopyIcon, PlusIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 
@@ -54,6 +50,22 @@ export const CreateProductStep = ({
       setProductId(newProduct.id);
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to create product"));
+    }
+    setCreateProductLoading(false);
+  };
+
+  const updateProduct = async () => {
+    setCreateProductLoading(true);
+    try {
+      const res = await ProductService.updateProduct(
+        axiosInstance,
+        productId,
+        product
+      );
+      toast.success("Product items successfully created");
+      await mutate();
+    } catch (error) {
+      toast.error(getBackendErr(error, "Failed to update product"));
     }
     setCreateProductLoading(false);
   };
@@ -100,6 +112,16 @@ export const CreateProductStep = ({
             }}
           >
             <ProductItemTable isOnboarding={true} />
+            <div className="flex justify-end mt-4">
+              <Button
+                isLoading={createProductLoading}
+                variant="gradientPrimary"
+                onClick={updateProduct}
+                className="min-w-44 w-44 max-w-44"
+              >
+                Update Product
+              </Button>
+            </div>
           </ProductContext.Provider>
         </FeaturesContext.Provider>
       ) : (
@@ -126,7 +148,7 @@ const CreateProductCard = ({
   createProductLoading: boolean;
 }) => {
   return (
-    <div className=" flex gap-2 items-start">
+    <div className="flex gap-2 items-start">
       {/* <ProductConfig
         product={newProduct}
         setProduct={setNewProduct}
@@ -151,7 +173,7 @@ const CreateProductCard = ({
 
       <Button
         variant="gradientPrimary"
-        className="min-w-40"
+        className="min-w-44 w-44 max-w-44"
         onClick={createProduct}
         isLoading={createProductLoading}
         // startIcon={<PlusIcon size={15} />}

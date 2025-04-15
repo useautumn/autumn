@@ -91,12 +91,20 @@ export const checkFeatureHasCorrectBalance = async ({
   // Get ent from cusRes
   const { entitlements: cusEnts }: any = cusRes;
   const { allowed, balanceObj }: any = entitledRes;
+
   const cusEnt = cusEnts.find(
     (e: any) =>
       e.feature_id === feature.id && e.interval == entitlement.interval
   );
 
-  expect(cusEnt).to.exist;
+  try {
+    expect(cusEnt).to.exist;
+  } catch (error) {
+    console.log(
+      `Expected cus ent ${feature.id}, interval ${entitlement.interval} to exist`
+    );
+    throw error;
+  }
 
   if (entitlement.allowance_type === AllowanceType.Unlimited) {
     // Cus ent

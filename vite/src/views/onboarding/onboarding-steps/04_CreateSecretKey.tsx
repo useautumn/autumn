@@ -115,7 +115,7 @@ export const CreateSecretKey = ({
                 onClick={handleCreate}
                 isLoading={loading}
                 variant="gradientPrimary"
-                className="min-w-40"
+                className="min-w-44 w-44 max-w-44"
               >
                 Create Secret Key
               </Button>
