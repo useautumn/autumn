@@ -59,8 +59,7 @@ export const CreateSecretKey = ({
         </p>
       }
     >
-      <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-        {/* <div className="text-t2 flex flex-col gap-2 w-full lg:w-1/3">
+      {/* <div className="text-t2 flex flex-col gap-2 w-full lg:w-1/3">
           <p>
             Your <span className="font-bold">Publishable Key</span> is safe for
             frontend use. It&apos;s limited to non-sensitive operations, like
@@ -72,60 +71,58 @@ export const CreateSecretKey = ({
             events.
           </p>
         </div> */}
-        <div className="w-full lg:w-2/3 min-w-md max-w-2xl flex gap-2 rounded-sm h-fit">
-          <DevContext.Provider
-            value={{
-              mutate: () => {},
-              onboarding: true,
-              apiKeyName,
-              setApiKeyName,
-              apiCreated,
-              setApiCreated,
-            }}
-          >
-            <div className="flex flex-col gap-2 w-full">
-              {apiKey ? (
-                <div className="flex gap-2">
-                  <Input value={apiKey} disabled />
-                  <Button
-                    variant="secondary"
-                    className="text-xs text-t3 flex gap-2 rounded-md shadow-none"
-                    endIcon={
-                      copied ? <CheckIcon size={12} /> : <CopyIcon size={12} />
-                    }
-                    onClick={() => {
-                      navigator.clipboard.writeText(apiKey);
-                      setCopied(true);
-                      setTimeout(() => {
-                        setCopied(false);
-                      }, 1000);
-                    }}
-                  >
-                    Copy
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Secret API Key Name"
-                    value={apiKeyName}
-                    disabled={apiCreated}
-                    onChange={(e) => setApiKeyName(e.target.value)}
-                  />
-                  <Button
-                    onClick={handleCreate}
-                    isLoading={loading}
-                    variant="gradientPrimary"
-                    className="min-w-40"
-                  >
-                    Create Secret Key
-                  </Button>
-                </div>
-              )}
+
+      <DevContext.Provider
+        value={{
+          mutate: () => {},
+          onboarding: true,
+          apiKeyName,
+          setApiKeyName,
+          apiCreated,
+          setApiCreated,
+        }}
+      >
+        <div className="flex flex-col gap-2 w-full">
+          {apiKey ? (
+            <div className="flex gap-2">
+              <Input value={apiKey} disabled />
+              <Button
+                variant="secondary"
+                className="text-xs text-t3 flex gap-2 rounded-md shadow-none"
+                endIcon={
+                  copied ? <CheckIcon size={12} /> : <CopyIcon size={12} />
+                }
+                onClick={() => {
+                  navigator.clipboard.writeText(apiKey);
+                  setCopied(true);
+                  setTimeout(() => {
+                    setCopied(false);
+                  }, 1000);
+                }}
+              >
+                Copy
+              </Button>
             </div>
-          </DevContext.Provider>
+          ) : (
+            <div className="flex gap-2">
+              <Input
+                placeholder="Secret API Key Name"
+                value={apiKeyName}
+                disabled={apiCreated}
+                onChange={(e) => setApiKeyName(e.target.value)}
+              />
+              <Button
+                onClick={handleCreate}
+                isLoading={loading}
+                variant="gradientPrimary"
+                className="min-w-40"
+              >
+                Create Secret Key
+              </Button>
+            </div>
+          )}
         </div>
-      </div>
+      </DevContext.Provider>
     </Step>
   );
 };

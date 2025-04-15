@@ -77,43 +77,39 @@ export const CreateProductStep = ({
         </p>
       }
     >
-      <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-        {/* <p>
+      {/* <p>
             Then, create your <span className="font-bold">Products</span>, which
             are the pricing plans that grant access to those features.
           </p>
           <p>Some examples have been created for you.</p> */}
 
-        <div className="w-full lg:w-2/3 min-w-md max-w-2xl flex flex-col gap-6">
-          {product ? (
-            <FeaturesContext.Provider
-              value={{
-                env,
-                mutate,
-              }}
-            >
-              <ProductContext.Provider
-                value={{
-                  ...data,
-                  mutate,
-                  env,
-                  product,
-                  setProduct,
-                }}
-              >
-                <ProductItemTable isOnboarding={true} />
-              </ProductContext.Provider>
-            </FeaturesContext.Provider>
-          ) : (
-            <CreateProductCard
-              newProduct={newProduct}
-              setNewProduct={setNewProduct}
-              createProduct={createProduct}
-              createProductLoading={createProductLoading}
-            />
-          )}
-        </div>
-      </div>
+      {product ? (
+        <FeaturesContext.Provider
+          value={{
+            env,
+            mutate,
+          }}
+        >
+          <ProductContext.Provider
+            value={{
+              ...data,
+              mutate,
+              env,
+              product,
+              setProduct,
+            }}
+          >
+            <ProductItemTable isOnboarding={true} />
+          </ProductContext.Provider>
+        </FeaturesContext.Provider>
+      ) : (
+        <CreateProductCard
+          newProduct={newProduct}
+          setNewProduct={setNewProduct}
+          createProduct={createProduct}
+          createProductLoading={createProductLoading}
+        />
+      )}
     </Step>
   );
 };

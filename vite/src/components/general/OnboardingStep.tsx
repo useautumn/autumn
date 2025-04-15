@@ -24,7 +24,7 @@ function Step({ title, children, className, description, number }: StepProps) {
           {number || "1"}
         </div>
       </div>
-      <div className="flex gap-1 justify-between">
+      <div className="flex flex-col gap-8 justify-between lg:flex-row mb-12">
         <div className="flex flex-col gap-4 w-full lg:w-1/3">
           <h1 className="text-t1 text-md font-medium">{title}</h1>
           {description && (
@@ -33,7 +33,7 @@ function Step({ title, children, className, description, number }: StepProps) {
             </div>
           )}
         </div>
-        <div className="mb-12">{children}</div>
+        <div className="w-full lg:w-2/3 min-w-md max-w-2xl">{children}</div>
       </div>
     </div>
   );

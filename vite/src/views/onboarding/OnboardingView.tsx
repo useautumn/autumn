@@ -131,11 +131,15 @@ function OnboardingView() {
 
             <CheckAccessStep apiKey={apiKey} number={6} />
 
-            <Step title="Done!" number={7}>
-              <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-                <p className="text-t2 gap-2 w-full lg:w-1/3">
-                  You&apos;re all set! Go to the Customers tab to manage your
-                  users, and read our{" "}
+            <Step
+              title="Done!"
+              number={7}
+              description={
+                <p>
+                  You&apos;re all set! Autumn is tracking your customers' usage,
+                  what they have access to and how much they should be billed.{" "}
+                  <br /> <br /> Go to the Customers tab to manage your users,
+                  and read our{" "}
                   <a
                     className="text-primary underline font-semibold break-none"
                     href="https://docs.useautumn.com"
@@ -147,7 +151,9 @@ function OnboardingView() {
                   </a>{" "}
                   to learn more about what you can do with Autumn.
                 </p>
-              </div>
+              }
+            >
+              <div></div>
             </Step>
           </>
         )}
