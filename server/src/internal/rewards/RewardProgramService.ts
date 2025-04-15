@@ -1,5 +1,5 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, RewardProgram } from "@autumn/shared";
+import { ErrCode, RewardProgram, RewardTriggerEvent } from "@autumn/shared";
 import { ReferralCode } from "@shared/models/rewardModels/referralModels/referralModels.js";
 
 export class RewardProgramService {
@@ -68,6 +68,32 @@ export class RewardProgramService {
       .select()
       .eq("org_id", orgId)
       .eq("env", env);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getByProductId({
+    sb,
+    productIds,
+    orgId,
+    env,
+  }: {
+    sb: any;
+    productIds: string[];
+    orgId: string;
+    env: string;
+  }) {
+    const { data, error } = await sb
+      .from("reward_programs")
+      .select("*")
+      .eq("org_id", orgId)
+      .eq("env", env)
+      .eq("when", RewardTriggerEvent.Checkout)
+      .contains("product_ids", productIds);
 
     if (error) {
       throw error;

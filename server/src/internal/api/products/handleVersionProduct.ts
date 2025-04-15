@@ -164,6 +164,7 @@ export const handleVersionProductV2 = async ({
   // Validate product items...
   validateProductItems({
     newItems: items,
+    features,
   });
 
   await ProductService.create({ sb, product: newProduct });

@@ -38,7 +38,7 @@ export const CreateOrgStep = ({
       });
 
       await setActive({ organization: org.id });
-      await pollForOrg();
+      // await pollForOrg();
       toast.success(`Created your organization: ${org.name}`);
       setIsExploding(true);
     } catch (error: any) {
@@ -74,9 +74,10 @@ export const CreateOrgStep = ({
       }
     >
       {/* <div className="flex gap-8 w-full justify-between flex-col lg:flex-row"> */}
-      <div className="w-full min-w-md max-w-2xl flex gap-2 rounded-sm">
+      <div className="w-full min-w-md flex gap-2">
         <Input
           placeholder="Org name"
+          className="w-full"
           value={org?.name || fields.name}
           disabled={!!org?.name}
           onChange={(e) => {
@@ -85,7 +86,7 @@ export const CreateOrgStep = ({
           }}
         />
         <Button
-          className="min-w-40 w-40 max-w-40"
+          className="min-w-44 w-44 max-w-44"
           disabled={!!org?.name}
           onClick={handleCreateOrg}
           isLoading={loading}
@@ -97,6 +98,7 @@ export const CreateOrgStep = ({
 
         {isExploding && (
           <ConfettiExplosion
+            className="absolute"
             force={0.8}
             duration={3000}
             particleCount={250}

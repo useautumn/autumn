@@ -35,7 +35,7 @@ export function CopyButton({ content }: { content: string }) {
 
   return (
     <button
-      className="p-2.5 text-white/60 hover:text-foreground/80 transition-colors"
+      className="p-2.5 text-white/60 hover:text-white/80 transition-colors"
       onClick={handleCopy}
     >
       {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}

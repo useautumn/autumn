@@ -46,7 +46,7 @@ orgRouter.post("/stripe", async (req: any, res) => {
   try {
     let { testApiKey, liveApiKey, successUrl, defaultCurrency } = req.body;
 
-    if (!testApiKey || !liveApiKey || !defaultCurrency || !successUrl) {
+    if (!testApiKey || !liveApiKey || !successUrl) {
       throw new RecaseError({
         message: "Missing required fields",
         code: ErrCode.StripeKeyInvalid,

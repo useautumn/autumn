@@ -76,7 +76,12 @@ export function MainLayout() {
   }
 
   if (!org && !pathname.includes("/onboarding")) {
-    return <Navigate to={getRedirectUrl("/onboarding", env)} replace={true} />;
+    return (
+      <Navigate
+        to={getRedirectUrl("/onboarding", AppEnv.Sandbox)}
+        replace={true}
+      />
+    );
   }
 
   // 3. If user, but no org, redirect to onboarding

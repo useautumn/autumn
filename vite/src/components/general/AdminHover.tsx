@@ -18,7 +18,8 @@ export const AdminHover = ({
   let isAdmin =
     email === "johnyeocx@gmail.com" ||
     email === "ayush@recaseai.com" ||
-    email === "johnyeo10@gmail.com";
+    email === "johnyeo10@gmail.com" ||
+    email == "npmrundemo@gmail.com";
 
   if (!isAdmin) return children;
 

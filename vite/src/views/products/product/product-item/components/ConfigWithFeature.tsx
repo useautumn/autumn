@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import TieredPrice from "../TieredPrice";
 
 import { useProductContext } from "../../ProductContext";
-import { Feature, FeatureType } from "@autumn/shared";
+import { Feature, FeatureType, Infinite } from "@autumn/shared";
 import { itemIsUnlimited } from "@/utils/product/productItemUtils";
 import { SelectCycle } from "./SelectCycle";
 import MoreMenuButton from "../MoreMenuButton";
@@ -92,12 +92,14 @@ export const ConfigWithFeature = ({
                       <Input
                         placeholder="None"
                         className=""
-                        disabled={item.included_usage == "unlimited"}
-                        value={item.included_usage}
+                        disabled={item.included_usage == Infinite}
+                        value={
+                          item.included_usage == Infinite
+                            ? "Unlimited"
+                            : item.included_usage
+                        }
                         type={
-                          item.included_usage === "unlimited"
-                            ? "text"
-                            : "number"
+                          item.included_usage === Infinite ? "text" : "number"
                         }
                         onChange={(e) => {
                           setItem({
@@ -108,7 +110,7 @@ export const ConfigWithFeature = ({
                       />
                       <ToggleDisplayButton
                         label="Unlimited"
-                        show={item.included_usage == "unlimited"}
+                        show={item.included_usage == Infinite}
                         className="h-8"
                         onClick={() => {
                           setShow({ ...show, price: false });
@@ -120,7 +122,7 @@ export const ConfigWithFeature = ({
                           } else {
                             setItem({
                               ...item,
-                              included_usage: "unlimited",
+                              included_usage: Infinite,
                             });
                           }
                         }}

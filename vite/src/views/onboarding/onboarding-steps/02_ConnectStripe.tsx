@@ -84,7 +84,7 @@ export const ConnectStripeStep = ({
             /> */}
         <Button
           variant="gradientPrimary"
-          className="min-w-40"
+          className="min-w-44 w-44 max-w-44"
           onClick={handleConnectStripe}
           isLoading={loading}
           disabled={stripeConnected}
