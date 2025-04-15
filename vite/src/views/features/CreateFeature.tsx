@@ -160,13 +160,7 @@ export const CreateFeatureDialog = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          startIcon={<PlusIcon size={15} />}
-          variant="ghost"
-          className="w-fit text-primary p-0"
-        >
-          Create Feature
-        </Button>
+        <Button variant="add">Feature</Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>

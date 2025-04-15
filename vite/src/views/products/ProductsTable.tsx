@@ -97,14 +97,14 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
               )}
             </Item>
             <Item className="col-span-3">{!onboarding && product.group}</Item>
-            <Item className="col-span-2 lg:overflow-visible">
+            <Item className="col-span-2 lg:overflow-visible text-t3 text-xs">
               {!onboarding && (
                 <>
                   {formatUnixToDateTime(product.created_at).date}
-                  <span className="text-t3">
+                  {/* <span className="text-t3">
                     {" "}
                     {formatUnixToDateTime(product.created_at).time}
-                  </span>
+                  </span> */}
                 </>
               )}
             </Item>

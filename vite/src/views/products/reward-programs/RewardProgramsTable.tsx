@@ -22,8 +22,8 @@ export const RewardProgramsTable = () => {
           <Item className="col-span-4">ID</Item>
           <Item className="col-span-4">Redeem On</Item>
           <Item className="col-span-4">Max Redemptions</Item>
-          <Item className="col-span-4">Products</Item>
-          <Item className="col-span-1">Created At</Item>
+          <Item className="col-span-3">Products</Item>
+          <Item className="col-span-2">Created At</Item>
           <Item className="col-span-1"></Item>
         </Row>
       ) : (
@@ -59,19 +59,19 @@ export const RewardProgramsTable = () => {
               </p>
             </div>
           </Item>
-          <Item className="col-span-4">
+          <Item className="col-span-3">
             {rewardProgram.when == RewardTriggerEvent.CustomerCreation
               ? "Sign Up"
               : rewardProgram.when == RewardTriggerEvent.Checkout
               ? "Checkout"
               : keyToTitle(rewardProgram.when)}
           </Item>
-          <Item className="col-span-1">
+          <Item className="col-span-2 text-t3 text-xs">
             {formatUnixToDateTime(rewardProgram.created_at).date}
-            <span className="text-t3">
+            {/* <span className="text-t3">
               {" "}
               {formatUnixToDateTime(rewardProgram.created_at).time}
-            </span>
+            </span> */}
           </Item>
           <Item className="col-span-1 items-center justify-end">
             <RewardProgramRowToolbar rewardProgram={rewardProgram} />
