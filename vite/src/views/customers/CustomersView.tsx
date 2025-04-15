@@ -33,6 +33,7 @@ function CustomersView({ env }: { env: AppEnv }) {
     page: 1,
     lastItemStack: [],
   });
+  const [searching, setSearching] = React.useState(false);
   const [paginationLoading, setPaginationLoading] = React.useState(false);
 
   const { data: productsData, isLoading: productsLoading } = useAxiosSWR({
@@ -54,12 +55,13 @@ function CustomersView({ env }: { env: AppEnv }) {
 
   // Single useEffect to handle all data fetching
   useEffect(() => {
-    console.log("Fetching customers");
-    setPaginationLoading(true);
-    mutate().finally(() => {
-      setPaginationLoading(false);
-    });
-  }, [pagination, filters, searchQuery]);
+    if (!searching) {
+      setPaginationLoading(true);
+      mutate().finally(() => {
+        setPaginationLoading(false);
+      });
+    }
+  }, [pagination, filters]);
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
@@ -120,7 +122,7 @@ function CustomersView({ env }: { env: AppEnv }) {
           <div className="flex w-full justify-between sticky top-0 z-10 border-y h-10 bg-stone-100 pl-10 pr-7 items-center">
             <div className="flex gap-4">
               <div className="flex items-center gap-8 text-xs text-t3 pr-1 rounded-sm shrink-0">
-                {paginationLoading ? (
+                {paginationLoading && !searching ? (
                   <div className="w-[120px] h-8 flex items-center justify-center">
                     <SmallSpinner />
                   </div>
@@ -158,6 +160,7 @@ function CustomersView({ env }: { env: AppEnv }) {
                   });
                 }}
                 mutate={mutate}
+                setSearching={setSearching}
               />
               <FilterButton />
               <p className="text-t3 text-sm whitespace-nowrap items-center flex gap-1">

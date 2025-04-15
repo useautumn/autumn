@@ -48,9 +48,11 @@ export const ConnectStripeStep = ({
   // console.log("productData", productData);
   let stripeConnected = productData?.org.stripe_connected;
   return (
-    <Step title="Connect your Stripe test account" number={number}>
-      <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-        <p className="text-t2 flex-col gap-2 w-full lg:w-1/3">
+    <Step
+      title="Connect your Stripe test account"
+      number={number}
+      description={
+        <p className="text-t2 flex-col gap-2 w-full">
           <span>
             Paste in your{" "}
             <a
@@ -64,6 +66,9 @@ export const ConnectStripeStep = ({
             </a>{" "}
           </span>
         </p>
+      }
+    >
+      <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
         <div className="flex gap-2 w-full lg:w-2/3 min-w-md max-w-2xl rounded-sm">
           <div className="flex gap-2 w-full">
             <Input
