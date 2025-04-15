@@ -101,7 +101,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           props.onClick?.(e);
         }}
       >
-        {isLoading && <LoaderCircle className="animate-spin" size={20} />}
+        {isLoading && <LoaderCircle className="animate-spin" size={17} />}
         {startIcon && !isLoading && <>{startIcon}</>}
         {variant == "add" && <PlusIcon size={12} />}
         {children}

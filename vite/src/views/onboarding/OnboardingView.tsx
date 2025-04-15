@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -49,8 +49,6 @@ import CheckAccessStep from "./onboarding-steps/05_CheckAccess";
 
 function OnboardingView() {
   const env = useEnv();
-  const { user } = useUser();
-  // Started without org...
 
   const { organization: org } = useOrganization();
   const [searchParams] = useSearchParams();
@@ -58,6 +56,7 @@ function OnboardingView() {
 
   let [apiKey, setApiKey] = useState("");
   let [productId, setProductId] = useState("");
+  const hasHandledOrg = useRef(false);
 
   const axiosInstance = useAxiosInstance({ env });
 
@@ -102,7 +101,9 @@ function OnboardingView() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (org && !orgCreated) {
+    if (org && !orgCreated && !hasHandledOrg.current) {
+      // console.log("Gonna poll for org!");
+      hasHandledOrg.current = true;
       pollForOrg();
     }
   }, [org, orgCreated]);
@@ -110,10 +111,9 @@ function OnboardingView() {
   return (
     <div className="text-sm w-full flex justify-start">
       <div className="flex flex-col p-8 px-14">
+        <CreateOrgStep pollForOrg={pollForOrg} number={1} />
         {orgCreated && (
           <>
-            <CreateOrgStep pollForOrg={pollForOrg} number={1} />
-
             <CreateProductStep
               productId={productId}
               setProductId={setProductId}

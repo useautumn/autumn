@@ -1,4 +1,9 @@
-import { ErrCode, Organization, UpdateProductSchema } from "@autumn/shared";
+import {
+  ErrCode,
+  Organization,
+  RewardProgram,
+  UpdateProductSchema,
+} from "@autumn/shared";
 import { UpdateProduct } from "@autumn/shared";
 import { Product } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -15,12 +20,10 @@ import {
   handleVersionProduct,
   handleVersionProductV2,
 } from "./handleVersionProduct.js";
-import {
-  productsAreDifferent,
-  productsAreDifferent2,
-} from "@/internal/products/productUtils.js";
+import { productsAreDifferent } from "@/internal/products/productUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 
 export const handleUpdateProductDetails = async ({
   newProduct,
@@ -28,12 +31,14 @@ export const handleUpdateProductDetails = async ({
   org,
   sb,
   cusProductExists,
+  rewardPrograms,
 }: {
   curProduct: Product;
   newProduct: UpdateProduct;
   org: Organization;
   sb: SupabaseClient;
   cusProductExists: boolean;
+  rewardPrograms: RewardProgram[];
 }) => {
   // 1. Check if they're same
   // console.log("New product: ", newProduct);
@@ -72,12 +77,23 @@ export const handleUpdateProductDetails = async ({
     return;
   }
 
-  if (newProduct.id !== curProduct.id && customersOnAllVersions.length > 0) {
-    throw new RecaseError({
-      message: "Cannot change product ID because it has existing customers",
-      code: ErrCode.ProductHasCustomers,
-      statusCode: 400,
-    });
+  if (newProduct.id !== curProduct.id) {
+    if (customersOnAllVersions.length > 0) {
+      throw new RecaseError({
+        message: "Cannot change product ID because it has existing customers",
+        code: ErrCode.ProductHasCustomers,
+        statusCode: 400,
+      });
+    }
+
+    if (rewardPrograms.length > 0) {
+      throw new RecaseError({
+        message:
+          "Cannot change product ID because existing reward programs are linked to it",
+        code: ErrCode.ProductHasRewardPrograms,
+        statusCode: 400,
+      });
+    }
   }
 
   console.log(`Updating product ${curProduct.id} (org: ${org.slug})`);
@@ -146,6 +162,7 @@ export const handleUpdateProduct = async (req: any, res: any) => {
       newProduct: UpdateProductSchema.parse(req.body),
       org,
       cusProductExists,
+      rewardPrograms: [],
     });
 
     let productHasChanged = productsAreDifferent({
@@ -232,7 +249,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       const { productId } = req.params;
       const { sb, orgId, env, logtail: logger } = req;
 
-      const [features, org, fullProduct] = await Promise.all([
+      const [features, org, fullProduct, rewardPrograms] = await Promise.all([
         FeatureService.getFromReq(req),
         OrgService.getFullOrg({
           sb,
@@ -241,6 +258,12 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         ProductService.getFullProduct({
           sb,
           productId,
+          orgId,
+          env,
+        }),
+        RewardProgramService.getByProductId({
+          sb,
+          productIds: [productId],
           orgId,
           env,
         }),
@@ -255,6 +278,8 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       }
 
       // 1. Update product details
+      // Get reward programs using product id
+
       const cusProductsCurVersion =
         await CusProductService.getByInternalProductId(
           sb,
@@ -269,6 +294,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         newProduct: UpdateProductSchema.parse(req.body),
         org,
         cusProductExists,
+        rewardPrograms,
       });
 
       // 1. Map to product items

@@ -5,6 +5,7 @@ import {
   BillingInterval,
   Feature,
   FullProduct,
+  Infinite,
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";
@@ -75,7 +76,7 @@ export const calculateMetered1Price = ({
     const tier = usageConfig.usage_tiers[i];
 
     let amtUsed;
-    if (tier.to == -1) {
+    if (tier.to == -1 || tier.to == Infinite) {
       amtUsed = usage;
     } else {
       amtUsed = Math.min(usage, tier.to);
