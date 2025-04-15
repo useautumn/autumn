@@ -164,12 +164,12 @@ export const CustomersTable = ({
 
   return (
     <>
-      <Row type="header" className="grid-cols-17 -mb-1">
+      <Row type="header" className="grid-cols-16 -mb-1">
         <Item className="col-span-3">Name</Item>
         <Item className="col-span-3">ID</Item>
         <Item className="col-span-3">Email</Item>
         <Item className="col-span-5">Products</Item>
-        <Item className="col-span-3">Created At</Item>
+        <Item className="col-span-2">Created At</Item>
       </Row>
 
       {/* <TableHead>Customer ID</TableHead>
@@ -184,7 +184,7 @@ export const CustomersTable = ({
               `/customers/${customer.id || customer.internal_id}`,
               env
             )}
-            className="grid grid-cols-17 gap-2 items-center px-10 w-full text-sm h-8 cursor-default hover:bg-primary/5 text-t2 whitespace-nowrap"
+            className="grid grid-cols-16 gap-2 items-center px-10 w-full text-sm h-8 cursor-default hover:bg-primary/5 text-t2 whitespace-nowrap"
           >
             <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>
             <CustomTableCell className="font-mono" colSpan={3}>
@@ -194,7 +194,7 @@ export const CustomersTable = ({
             <CustomTableCell colSpan={5}>
               {getCusProductsInfo(customer)}
             </CustomTableCell>
-            <CustomTableCell colSpan={3} className="">
+            <CustomTableCell colSpan={2} className="text-t3 text-xs ">
               {formatUnixToDateTime(customer.created_at).date}
               <span className="text-t3">
                 {" "}

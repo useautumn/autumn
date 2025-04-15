@@ -37,7 +37,7 @@ const buttonVariants = cva(
           "bg-gradient-to-b font-semibold border border-primary from-primary/65 to-primary text-white hover:from-primary hover:to-primary shadow-sm shadow-purple-500/50",
         gradientSecondary:
           "border border-stone-300 font-semibold bg-gradient-to-b from-white to-stone-100 text-t1 hover:from-stone-300 hover:to-stone-400 shadow-sm",
-        add: "text-primary border border-zinc-200  bg-white shadow-sm hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 !h-6 rounded-md",
+        add: "text-primary border border-zinc-200  bg-zinc-50 shadow-sm hover:bg-zinc-100 hover:text-primary dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 !h-6 rounded-md ",
         // add: "border-t border-purple-400 bg-gradient-to-b from-primary/90 to-primary text-white hover:from-primary hover:to-primary !shadow-lg !h-6 rounded-md",
       },
       size: {

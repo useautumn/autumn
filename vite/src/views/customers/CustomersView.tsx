@@ -116,7 +116,7 @@ function CustomersView({ env }: { env: AppEnv }) {
       <div className="flex flex-col gap-4 h-fit relative w-full">
         <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Customers</h1>
         <div>
-          <div className="flex w-full justify-between sticky top-0 z-10 border-y h-10 bg-stone-100 px-10 items-center">
+          <div className="flex w-full justify-between sticky top-0 z-10 border-y h-10 bg-stone-100 pl-10 pr-7 items-center">
             <div className="flex gap-4">
               {/* <p className="text-t3 text-sm whitespace-nowrap items-center flex gap-1">
               <span className="font-semibold">{data?.totalCount} </span>

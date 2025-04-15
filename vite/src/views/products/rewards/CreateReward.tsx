@@ -62,13 +62,7 @@ function CreateReward() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="ghost"
-          className="w-fit text-primary p-0"
-          startIcon={<PlusIcon size={15} />}
-        >
-          Create Reward
-        </Button>
+        <Button variant="add"> Reward</Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>

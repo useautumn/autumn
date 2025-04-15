@@ -107,7 +107,7 @@ function ProductsView({ env }: { env: AppEnv }) {
             </TabsList>
 
             <TabsContent value="products">
-              <div className="sticky top-0 z-10 border-y bg-stone-100 px-10 h-10 flex justify-between items-center">
+              <div className="sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm text-t2 font-medium col-span-2 flex">
                     Products
@@ -122,7 +122,7 @@ function ProductsView({ env }: { env: AppEnv }) {
             </TabsContent>
 
             <TabsContent value="features">
-              <div className="sticky top-0 z-10 border-y bg-stone-100 px-10 h-10 flex justify-between items-center">
+              <div className="sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <h2 className="text-sm text-t2 font-medium">Features</h2>
                   <span className="text-t2 px-1 rounded-md bg-stone-200">
@@ -138,7 +138,7 @@ function ProductsView({ env }: { env: AppEnv }) {
 
                 {/* Credits Section */}
                 <div>
-                  <div className="border-y bg-stone-100 px-10 h-10 flex justify-between items-center whitespace-nowrap">
+                  <div className="border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <h2 className="text-sm text-t2 font-medium">Credits</h2>
                       <span className="text-t2 px-1 rounded-md bg-stone-200">
@@ -156,7 +156,7 @@ function ProductsView({ env }: { env: AppEnv }) {
               <div className="flex flex-col gap-16">
                 {/* Coupons Section */}
                 <div>
-                  <div className="border-y bg-stone-100 px-10 h-10 flex justify-between items-center whitespace-nowrap">
+                  <div className="border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <h2 className="text-sm text-t2 font-medium">Coupons</h2>
                       <span className="text-t2 px-1 rounded-md bg-stone-200">
@@ -172,7 +172,7 @@ function ProductsView({ env }: { env: AppEnv }) {
 
                 {/* Referral Programs Section */}
                 <div>
-                  <div className=" z-10 border-y bg-stone-100 px-10 h-10 flex justify-between items-center whitespace-nowrap">
+                  <div className=" z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       <h2 className="text-sm text-t2 font-medium">
                         Referral Programs
