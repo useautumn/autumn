@@ -58,11 +58,11 @@ function CreateCustomer() {
     <Dialog>
       <DialogTrigger asChild>
         <Button
-          variant="ghost"
-          className="w-fit text-primary p-0"
-          startIcon={<PlusIcon size={15} />}
+          variant="add"
+          className=""
+          // startIcon={<PlusIcon size={15} />}
         >
-          Create Customer
+          Customer
         </Button>
       </DialogTrigger>
       <DialogContent className="w-[400px]">

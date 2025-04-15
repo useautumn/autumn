@@ -7,11 +7,13 @@ function CopyButton({
   text,
   className,
   children,
+  copySize,
   variant = "outline",
 }: {
   text: string;
   className?: string;
   children?: React.ReactNode;
+  copySize?: number;
   variant?: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -30,14 +32,20 @@ function CopyButton({
         "h-6 px-2 text-t2 w-fit font-mono rounded-md truncate justify-start",
         className
       )}
-      onClick={() => {
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
         navigator.clipboard.writeText(text);
         setCopied(true);
       }}
     >
       <span className="truncate block">{children}</span>
       <div className="flex items-center justify-center">
-        {copied ? <Check size={13} /> : <Copy size={13} />}
+        {copied ? (
+          <Check size={copySize || 13} />
+        ) : (
+          <Copy size={copySize || 13} />
+        )}
       </div>
     </Button>
   );

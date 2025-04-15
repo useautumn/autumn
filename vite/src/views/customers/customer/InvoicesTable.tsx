@@ -49,15 +49,15 @@ export const InvoicesTable = () => {
 
       {invoices.length === 0 ? (
         <div className="flex pl-10 items-center h-10">
-          <p className="text-t3 text-xs">No invoice history found</p>
+          <p className="text-t3">No invoice history found</p>
         </div>
       ) : (
         <>
-          <Row type="header" className="grid-cols-13">
+          <Row type="header" className="grid-cols-12 pr-0">
             <Item className="col-span-3">Products</Item>
             <Item className="col-span-3">Total</Item>
             <Item className="col-span-3">Status</Item>
-            <Item className="col-span-3">Created At</Item>
+            <Item className="col-span-2">Created At</Item>
             <Item className="col-span-1" />
           </Row>
         </>
@@ -66,7 +66,7 @@ export const InvoicesTable = () => {
       {invoices.map((invoice: Invoice) => (
         <Row
           key={invoice.id}
-          className="grid-cols-13"
+          className="grid-cols-12 pr-0"
           onClick={async () => {
             const stripeInvoice = await getStripeInvoice(invoice.stripe_id);
             if (!stripeInvoice.hosted_invoice_url) {
@@ -98,12 +98,9 @@ export const InvoicesTable = () => {
             )}
           </Item>
           <Item className="col-span-3">{invoice.status}</Item>
-          <Item className="col-span-3 text-xs">
-            {formatUnixToDateTime(invoice.created_at).date}
-            <span className="text-t3 ">
-              {" "}
-              {formatUnixToDateTime(invoice.created_at).time}{" "}
-            </span>
+          <Item className="col-span-2 text-xs text-t3">
+            {formatUnixToDateTime(invoice.created_at).date}{" "}
+            {formatUnixToDateTime(invoice.created_at).time}{" "}
           </Item>
           <Item className="col-span-1" />
         </Row>

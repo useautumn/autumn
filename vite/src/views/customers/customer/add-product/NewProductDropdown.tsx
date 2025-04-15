@@ -71,12 +71,7 @@ function AddProduct() {
       <div className="relative w-full">
         <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger asChild>
-            <Button
-              className=" text-primary h-full justify-start p-0"
-              variant="ghost"
-            >
-              Attach Product
-            </Button>
+            <Button variant="add">Attach Product</Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] p-0">
             <div className="flex items-center border-b px-2">

@@ -63,12 +63,12 @@ export const CreditSystemsTable = () => {
                 .join(", ")}
             </span>
           </Item>
-          <Item className="col-span-2">
+          <Item className="col-span-2 text-t3 text-xs">
             {formatUnixToDateTime(creditSystem.created_at).date}
-            <span className="text-t3">
+            {/* <span className="text-t3">
               {" "}
               {formatUnixToDateTime(creditSystem.created_at).time}
-            </span>
+            </span> */}
           </Item>
           <Item className="col-span-1 items-center justify-end">
             <CreditSystemRowToolbar creditSystem={creditSystem} />

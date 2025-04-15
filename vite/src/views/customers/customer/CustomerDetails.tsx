@@ -34,6 +34,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { CustomerToolbar } from "./CustomerToolbar";
 
 export const CustomerDetails = () => {
   const { customer, products, env, discount, referrals } = useCustomerContext();
@@ -46,7 +47,10 @@ export const CustomerDetails = () => {
   );
 
   return (
-    <div className="flex-col gap-4 h-full border-l py-6 whitespace-nowrap text-t2">
+    <div className="flex-col gap-4 h-full border-l py-2 whitespace-nowrap text-t2">
+      <div className="flex w-full justify-end px-4">
+        <CustomerToolbar customer={customer} />
+      </div>
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <UpdateCustomerDialog
           selectedCustomer={customer}

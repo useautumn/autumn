@@ -31,6 +31,8 @@ export const formatAmount = ({
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: defaultCurrency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 6,
   }).format(amount);
 };
 
@@ -46,10 +48,9 @@ export const getItemType = (item: ProductItem) => {
 
 export const intervalIsNone = (interval: any) => {
   return (
-    interval == ProductItemInterval.None ||
+    nullish(interval) ||
     interval == EntInterval.Lifetime ||
-    interval == BillingInterval.OneOff ||
-    interval == null
+    interval == BillingInterval.OneOff
   );
 };
 

@@ -63,7 +63,7 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <p className="font-mono bg-stone-50 rounded-full text-t3 text-xs px-2 font-mono py-0 border-1 border-stone-200">
+                    <p className="font-mono rounded-full text-t3 px-2 font-mono py-0">
                       {(allCounts && allCounts[product.id]?.active) || 0}
                     </p>
                   </TooltipTrigger>
@@ -97,14 +97,14 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
               )}
             </Item>
             <Item className="col-span-3">{!onboarding && product.group}</Item>
-            <Item className="col-span-2 lg:overflow-visible">
+            <Item className="col-span-2 lg:overflow-visible text-t3 text-xs">
               {!onboarding && (
                 <>
                   {formatUnixToDateTime(product.created_at).date}
-                  <span className="text-t3">
+                  {/* <span className="text-t3">
                     {" "}
                     {formatUnixToDateTime(product.created_at).time}
-                  </span>
+                  </span> */}
                 </>
               )}
             </Item>
