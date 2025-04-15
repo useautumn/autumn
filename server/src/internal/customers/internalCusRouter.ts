@@ -341,6 +341,7 @@ cusRouter.get(
           free_trial: cusProduct.free_trial,
           options: cusProduct.options,
           isActive: cusProduct.status === CusProductStatus.Active,
+          isCustom: cusProduct.product.is_custom,
         };
       } else {
         product = await ProductService.getFullProduct({

@@ -124,18 +124,14 @@ export default function CustomerView({ env }: { env: AppEnv }) {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem className="truncate max-w-48">
-                {customer.name
-                  ? customer.name
-                  : customer.id
-                  ? customer.id
-                  : customer.email}
+                {customer.name.trim() || customer.id || customer.email}
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
           <div className="flex w-full justify-between">
             <div className="flex gap-2 w-full">
               <h2 className="flex text-lg text-t1 font-medium w-full max-w-md justify-start pl-10 truncate">
-                {customer.name ? (
+                {customer.name.trim() ? (
                   <span className="truncate">{customer.name}</span>
                 ) : customer.id ? (
                   <span className="truncate font-mono">{customer.id}</span>
@@ -144,7 +140,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
                 )}
               </h2>
             </div>
-            <CustomerToolbar customer={customer} />
+            {/* <CustomerToolbar customer={customer} /> */}
           </div>
           <div className="flex w-full !pb-[50px]">
             {/* main content */}
