@@ -70,6 +70,7 @@ const createDefaultProducts = async ({
     env,
     internal_id: generateId("fe"),
     name: keyToTitle(f.id),
+    created_at: Date.now(),
   }));
 
   await FeatureService.insert({
