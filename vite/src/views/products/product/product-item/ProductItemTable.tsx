@@ -173,7 +173,7 @@ export const ProductItemTable = ({
       <div className="flex flex-col text-sm rounded-sm">
         <div
           className={cn(
-            "flex items-center justify-between border-y bg-stone-100 pl-10 pr-7 h-10",
+            "flex items-center justify-between border-y bg-stone-100 pl-10 pr-10 h-10",
             isOnboarding && "pl-2 pr-2 border-x"
           )}
         >
