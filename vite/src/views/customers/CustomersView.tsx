@@ -116,12 +116,8 @@ function CustomersView({ env }: { env: AppEnv }) {
       <div className="flex flex-col gap-4 h-fit relative w-full">
         <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Customers</h1>
         <div>
-          <div className="flex w-full justify-between sticky top-0 z-10 border-y h-10 bg-stone-100 px-10 items-center">
+          <div className="flex w-full justify-between sticky top-0 z-10 border-y h-10 bg-stone-100 px-10 pr-4 items-center">
             <div className="flex gap-4">
-              {/* <p className="text-t3 text-sm whitespace-nowrap items-center flex gap-1">
-              <span className="font-semibold">{data?.totalCount} </span>
-              {data?.totalCount === 1 ? "Customer" : "Customers"}
-            </p> */}
               <div className="flex items-center gap-8 text-xs text-t3 pr-1 rounded-sm shrink-0">
                 {paginationLoading ? (
                   <div className="w-[120px] h-8 flex items-center justify-center">
@@ -191,3 +187,10 @@ function CustomersView({ env }: { env: AppEnv }) {
 }
 
 export default CustomersView;
+
+{
+  /* <p className="text-t3 text-sm whitespace-nowrap items-center flex gap-1">
+              <span className="font-semibold">{data?.totalCount} </span>
+              {data?.totalCount === 1 ? "Customer" : "Customers"}
+            </p> */
+}

@@ -10,40 +10,32 @@ export const ProductOptions = ({
   oneTimePurchase: boolean;
 }) => {
   return (
-    <div className="">
-      <p className="text-md text-t2 font-medium mb-3">Options</p>
+    <div className="mt-6">
+      <div className="flex items-center justify-between border-y bg-stone-100 px-10 rounded-md h-8 w-full">
+        <h2 className="text-sm text-t2 font-medium col-span-2 flex whitespace-nowrap">
+          Billing Quantity
+        </h2>
+      </div>
+
       {options.map((option) => (
         <div
           key={option.internal_feature_id}
-          className="flex gap-16 bg-white rounded-md border p-4 items-center "
+          className="flex gap-16 rounded-md h-10 px-10 items-center "
         >
-          <p className="text-sm text-t1">{option.feature_id}</p>
+          <p className="text-sm text-t1 font-mono text-t3">
+            {option.feature_id}
+          </p>
           <div className="flex gap-4">
-            {option.threshold && (
-              <div className="flex items-center gap-2">
-                <label
-                  htmlFor={`threshold-${option.internal_feature_id}`}
-                  className="text-sm text-t2"
-                >
-                  Billing Threshold
-                </label>
-                <Input
-                  id={`threshold-${option.internal_feature_id}`}
-                  value={option.threshold}
-                  disabled
-                  className="w-24 h-8"
-                />
-              </div>
-            )}
             {option.quantity !== undefined && option.quantity !== null && (
               <div className="flex items-center gap-2">
-                <label
+                {/* <label
                   htmlFor={`quantity-${option.internal_feature_id}`}
                   className="text-sm text-t2"
                 >
                   Billing Quantity
-                </label>
-                <Input
+                </label> */}
+                <p className="text-sm text-t1 font-mono">{option.quantity}</p>
+                {/* <Input
                   id={`quantity-${option.internal_feature_id}`}
                   value={option.quantity}
                   type="number"
@@ -61,7 +53,7 @@ export const ProductOptions = ({
                   }}
                   className="w-24 h-8"
                   disabled={oneTimePurchase}
-                />
+                /> */}
               </div>
             )}
           </div>

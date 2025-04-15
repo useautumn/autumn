@@ -56,7 +56,7 @@ export const RewardsTable = () => {
           <Item className="col-span-1"></Item>
         </Row>
       ) : (
-        <div className="flex justify-start items-center h-10 text-t3">
+        <div className="flex justify-start items-center h-10 text-t3 px-10">
           Create a coupon that customers can redeem for discounts, credits or
           free products.
         </div>
@@ -93,7 +93,7 @@ export const RewardsTable = () => {
                 {reward.discount_config?.discount_value}
                 {reward.type == RewardType.PercentageDiscount
                   ? "%"
-                  : org.default_currency || "USD"}{" "}
+                  : ` ${org.default_currency || "USD"}`}{" "}
                 off
               </span>
             )}

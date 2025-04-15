@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { SidebarContext } from "./SidebarContext";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Code, Flag, Tag, User } from "lucide-react";
+import { EnvDropdown } from "./EnvDropdown";
 
 export const MainSidebar = () => {
   const env = useEnv();
@@ -30,6 +31,8 @@ export const MainSidebar = () => {
         <div>
           <SidebarTop />
           <div className="flex flex-col mt-4 px-4">
+            <EnvDropdown env={env} />
+
             {/* <NavButton
               value="features"
               icon={<Flag size={15} />}

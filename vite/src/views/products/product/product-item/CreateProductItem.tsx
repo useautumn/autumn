@@ -143,17 +143,6 @@ export function CreateProductItem() {
 }
 
 export const validateProductItem = (item: ProductItem, show: any) => {
-  // Basic validation for all product items
-  // if (!item.feature_id) {
-  //   toast.error("Please select a feature");
-  //   return null;
-  // }
-
-  // if (!item.interval) {
-  //   toast.error("Please select a billing interval");
-  //   return null;
-  // }
-
   // Price item validation (when amount is set)
   if (item.amount !== null && show.price) {
     if (invalidNumber(item.amount)) {
@@ -162,12 +151,6 @@ export const validateProductItem = (item: ProductItem, show: any) => {
     }
     item.amount = parseFloat(item.amount!.toString());
   }
-
-  //if show price and tiers0.amount is 0, error
-  // if (item.tiers && item.tiers.length == 1 && item.tiers[0].amount == 0) {
-  //   toast.error("Please set a usage price");
-  //   return null;
-  // }
 
   if ((item.included_usage as any) === "") {
     item.included_usage = null;
@@ -224,6 +207,8 @@ export const validateProductItem = (item: ProductItem, show: any) => {
   if (item.billing_units && invalidNumber(item.billing_units)) {
     toast.error("Please enter valid billing units");
     return null;
+  } else {
+    item.billing_units = Number(item.billing_units);
   }
 
   return item;

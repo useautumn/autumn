@@ -13,13 +13,7 @@ import { useProductItemContext } from "../ProductItemContext";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import TieredPrice from "../TieredPrice";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { useProductContext } from "../../ProductContext";
 import { Feature, FeatureType } from "@autumn/shared";
 import { itemIsUnlimited } from "@/utils/product/productItemUtils";

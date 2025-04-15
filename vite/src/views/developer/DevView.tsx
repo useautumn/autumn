@@ -39,20 +39,24 @@ export default function DevScreen({ env }: { env: AppEnv }) {
               </div>
               <CreateAPIKey />
             </div>
-            <div className="px-10 py-2">
-              <p className="text-sm text-t3">
-                API keys are used to securely authenticate your requests from
-                your server. Learn more{" "}
-                <a
-                  className="text-primary hover:text-primary/80 cursor-pointer"
-                  href="https://docs.useautumn.com"
-                  target="_blank"
-                >
-                  here
-                </a>
-              </p>
-            </div>
-            {apiKeys.length > 0 && <APIKeyTable apiKeys={apiKeys} />}
+
+            {apiKeys.length > 0 ? (
+              <APIKeyTable apiKeys={apiKeys} />
+            ) : (
+              <div className="px-10 py-2">
+                <p className="text-sm text-t3">
+                  API keys are used to securely authenticate your requests from
+                  your server. Learn more{" "}
+                  <a
+                    className="text-primary hover:text-primary/80 cursor-pointer"
+                    href="https://docs.useautumn.com"
+                    target="_blank"
+                  >
+                    here
+                  </a>
+                </p>
+              </div>
+            )}
           </div>
           {/* Publishable Key Section */}
           <div>

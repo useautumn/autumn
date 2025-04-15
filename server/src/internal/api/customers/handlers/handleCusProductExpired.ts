@@ -53,6 +53,7 @@ export const expireCusProduct = async ({
   }
 
   // If current product is scheduled
+
   if (cusProduct.status == CusProductStatus.Scheduled) {
     const stripeCli = createStripeCli({ org: org, env: env });
 
@@ -142,12 +143,13 @@ export const handleCusProductExpired = async (req: any, res: any) => {
     const { status } = req.body;
 
     // See if customer owns product
-    const cusProduct = await CusProductService.getByIdStrict({
+    let cusProduct = await CusProductService.getByIdStrict({
       sb: req.sb,
       id: customerProductId,
       orgId: req.orgId,
       env: req.env,
       withProduct: true,
+      withPrices: true,
     });
 
     const cusProducts = await CusService.getFullCusProducts({
@@ -157,6 +159,17 @@ export const handleCusProductExpired = async (req: any, res: any) => {
       withProduct: true,
       logger: req.logtail,
     });
+
+    await expireCusProduct({
+      sb: req.sb,
+      cusProduct,
+      cusProducts,
+      org,
+      env: req.env,
+      logger: req.logtail,
+    });
+
+    res.status(200).json({ message: "Product expired" });
   } catch (error) {
     handleRequestError({
       req,

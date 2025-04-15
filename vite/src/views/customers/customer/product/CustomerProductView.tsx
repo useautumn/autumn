@@ -321,6 +321,7 @@ export default function CustomerProductView() {
         setProduct,
         selectedEntitlementAllowance,
         setSelectedEntitlementAllowance,
+        customer: data.customer,
       }}
     >
       <CustomToaster />
