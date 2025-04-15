@@ -62,7 +62,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
                 className={cn(
                   "flex items-center justify-between -ml-1 pl-1 pr-3 h-6 border border-orange-500 rounded-md bg-orange-100 text-orange-600",
                   env === AppEnv.Live &&
-                    "text-t1 bg-transparent shadow-none border-none font-medium"
+                    "text-primary bg-purple-100 shadow-none border-primary font-medium"
                 )}
               >
                 <div

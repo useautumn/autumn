@@ -335,7 +335,8 @@ export const createFullCusProduct = async ({
 
   if (
     (isOneOff(prices) || (isFreeProduct(prices) && product.is_add_on)) &&
-    notNullish(existingCusProduct)
+    notNullish(existingCusProduct) &&
+    !attachParams.isCustom
   ) {
     await updateOneTimeCusProduct({
       sb,

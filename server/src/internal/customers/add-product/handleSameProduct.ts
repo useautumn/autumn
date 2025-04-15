@@ -33,6 +33,7 @@ import {
   ProrationBehavior,
 } from "../change-product/handleUpgrade.js";
 import { fullCusProductToProduct } from "../products/cusProductUtils.js";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
 
 const getOptionsToUpdate = (oldOptionsList: any[], newOptionsList: any[]) => {
   let differentOptionsExist = false;
@@ -385,7 +386,7 @@ export const handleSameAddOnProduct = async ({
 
   let product = products[0];
 
-  if (pricesOnlyOneOff(prices)) {
+  if (pricesOnlyOneOff(prices) || isFreeProduct(prices)) {
     attachParams.curCusProduct = undefined;
     return {
       done: false,

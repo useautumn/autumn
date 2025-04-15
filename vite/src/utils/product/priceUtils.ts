@@ -87,9 +87,13 @@ export const getDefaultPriceConfig = (type: PriceType) => {
   };
 };
 
-export const pricesOnlyOneOff = (items: ProductItem[]) => {
+export const pricesOnlyOneOff = (
+  items: ProductItem[],
+  isAddOn: boolean = false
+) => {
   let prices = items.filter((item) => !isFeatureItem(item));
 
+  if (prices.length == 0 && isAddOn) return true;
   if (prices.length == 0) return false;
 
   return prices.every((price) => {

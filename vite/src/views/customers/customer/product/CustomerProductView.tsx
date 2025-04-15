@@ -86,10 +86,16 @@ export default function CustomerProductView() {
 
   const [searchParams] = useSearchParams();
   let version = searchParams.get("version");
-
+  let customer_product_id = searchParams.get("id");
   const { data, isLoading, mutate, error } = useAxiosSWR({
     url: `/customers/${customer_id}/product/${product_id}${
-      version ? `?version=${version}` : ""
+      version && customer_product_id
+        ? `?version=${version}&customer_product_id=${customer_product_id}`
+        : version
+        ? `?version=${version}`
+        : customer_product_id
+        ? `?customer_product_id=${customer_product_id}`
+        : ""
     }`,
     env,
   });
@@ -164,8 +170,11 @@ export default function CustomerProductView() {
   }
 
   if (isLoading) return <LoadingScreen />;
-  // const oneTimePurchase = pricesOnlyOneOff(product?.prices || []);
-  const oneTimePurchase = false;
+  const oneTimePurchase = pricesOnlyOneOff(
+    product?.items || [],
+    product?.is_add_on || false
+  );
+  // const oneTimePurchase = false;
 
   const { customer } = data;
 
@@ -322,6 +331,9 @@ export default function CustomerProductView() {
         selectedEntitlementAllowance,
         setSelectedEntitlementAllowance,
         customer: data.customer,
+        handleCreateProduct,
+        actionState,
+        setUseInvoice,
       }}
     >
       <CustomToaster />
@@ -394,12 +406,14 @@ export default function CustomerProductView() {
                   oneTimePurchase={oneTimePurchase || false}
                 />
               )}
-              <div className="flex justify-end gap-2 p-4">
-                <AddProductButton
-                  handleCreateProduct={handleCreateProduct}
-                  actionState={actionState}
-                  setUseInvoice={setUseInvoice}
-                />
+              <div className="flex justify-end gap-2 p-4 block lg:hidden">
+                <div className="w-fit">
+                  <AddProductButton
+                  // handleCreateProduct={handleCreateProduct}
+                  // actionState={actionState}
+                  // setUseInvoice={setUseInvoice}
+                  />
+                </div>
               </div>
             </div>
           </div>

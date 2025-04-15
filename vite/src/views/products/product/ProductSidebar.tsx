@@ -93,7 +93,6 @@ export default function ProductSidebar({
             <ProductVersions />
           </SideAccordion>
         </div>
-
         <CreateFreeTrial
           open={freeTrialModalOpen}
           setOpen={setFreeTrialModalOpen}
@@ -121,6 +120,12 @@ export default function ProductSidebar({
               )}
             </div>
           </SideAccordion>
+        </div>
+        <div className="flex gap-2 px-4 py-6 w-full">
+          <AddProductButton
+          // handleCreateProduct={createProductClicked}
+          // actionState={actionState}
+          />
         </div>
         {/* <SideAccordion title="Product" value="product">
           <div className="flex flex-col gap-2 p-2 px-4">
