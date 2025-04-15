@@ -85,7 +85,7 @@ export const CustomerToolbar = ({
               isIcon
               variant="ghost"
               dim={6}
-              className={cn("rounded-full", className)}
+              className={cn("rounded-full text-t3", className)}
             >
               <Settings size={14} />
             </Button>

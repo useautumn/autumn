@@ -188,7 +188,7 @@ export const ProductItemConfig = () => {
                 <Button
                   variant="destructive"
                   // disabled={!selectedFeature}
-                  className="w-32 max-w-64 rounded-sm "
+                  className="w-32 max-w-64 "
                   // size="sm"
                   onClick={() => {
                     handleDeleteProductItem();

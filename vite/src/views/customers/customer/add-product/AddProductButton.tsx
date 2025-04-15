@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { useProductContext } from "@/views/products/product/ProductContext";
 
 import {
   DropdownMenu,
@@ -16,18 +17,18 @@ import {
 import { ProductActionState } from "@/utils/models";
 import { File, ShoppingCart, Upload } from "lucide-react";
 
-export const AddProductButton = ({
-  setUseInvoice,
-  handleCreateProduct,
-  actionState,
-}: {
-  setUseInvoice?: (useInvoice: boolean) => void;
-  handleCreateProduct: (useInvoice?: boolean) => Promise<void>;
-  actionState: any;
+export const AddProductButton = ({}: // setUseInvoice,
+{
+  // setUseInvoice?: (useInvoice: boolean) => void;
+  // handleCreateProduct: (useInvoice?: boolean) => Promise<void>;
+  // actionState: any;
 }) => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [open, setOpen] = useState(false);
+
+  const { handleCreateProduct, actionState, setUseInvoice } =
+    useProductContext();
 
   const handleClick = async (e: any, isInvoice: boolean) => {
     e.preventDefault();
@@ -66,7 +67,7 @@ export const AddProductButton = ({
           setLoading(false);
         }}
         variant="gradientPrimary"
-        className="w-fit gap-2"
+        className="w-full gap-2"
         isLoading={loading}
         disabled={actionState.disabled}
         startIcon={<Upload size={12} />}
@@ -85,7 +86,7 @@ export const AddProductButton = ({
               <Button
                 onClick={() => setOpen(true)}
                 variant="gradientPrimary"
-                className="w-fit gap-2"
+                className="w-full gap-2"
                 startIcon={<Upload size={12} />}
                 disabled={actionState.disabled}
               >

@@ -58,6 +58,19 @@ orgRouter.post("/stripe", async (req: any, res) => {
     try {
       await checkKeyValid(testApiKey);
       await checkKeyValid(liveApiKey);
+
+      // Get default currency from Stripe
+      let stripe = new Stripe(testApiKey);
+      let account = await stripe.accounts.retrieve();
+      if (nullish(defaultCurrency) && nullish(account.default_currency)) {
+        throw new RecaseError({
+          message: "Default currency not set",
+          code: ErrCode.StripeKeyInvalid,
+          statusCode: 500,
+        });
+      } else if (nullish(defaultCurrency)) {
+        defaultCurrency = account.default_currency;
+      }
     } catch (error: any) {
       throw new RecaseError({
         message: error.message || "Invalid Stripe API keys",

@@ -31,9 +31,18 @@ const usageEventCode = (
   })
 })`;
 
-export default function CheckAccessStep({ apiKey }: { apiKey: string }) {
+export default function CheckAccessStep({
+  apiKey,
+  number,
+}: {
+  apiKey: string;
+  number: number;
+}) {
   return (
-    <Step title="Check if user has access to a feature and send usage events">
+    <Step
+      title="Check if user has access to a feature and send usage events"
+      number={number}
+    >
       <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
         <p className="text-t2 flex flex-col gap-2 w-full lg:w-1/3">
           <span>
@@ -42,15 +51,15 @@ export default function CheckAccessStep({ apiKey }: { apiKey: string }) {
             <span className="font-mono text-red-500">/entitled</span> endpoint.
           </span>
           <span>
-            If it&apos;s a metered (usage-based) feature, send us the usage data
-            by calling the{" "}
-            <span className="font-mono text-red-500">/events</span> endpoint.
-            You must use your <span className="font-bold">Secret API Key</span>{" "}
-            for this.
+            If it&apos;s a usage-based feature, send us the usage data by
+            calling the <span className="font-mono text-red-500">/events</span>{" "}
+            endpoint.
+            {/* You must use your{" "}
+            <span className="font-bold">Secret API Key</span> for this. */}
           </span>
         </p>
         <div className="w-full lg:w-2/3 min-w-md max-w-2xl flex flex-col gap-2">
-          <h2 className="text-t2 font-medium text-md">Check Feature Access</h2>
+          {/* <h2 className="text-t2 font-medium text-md">Check Feature Access</h2> */}
           <CodeBlock
             snippets={[
               {
@@ -62,9 +71,9 @@ export default function CheckAccessStep({ apiKey }: { apiKey: string }) {
             ]}
           />
 
-          <h2 className="text-t2 font-medium text-md mt-4">
+          {/* <h2 className="text-t2 font-medium text-md mt-4">
             Send Usage Events
-          </h2>
+          </h2> */}
           <CodeBlock
             snippets={[
               {

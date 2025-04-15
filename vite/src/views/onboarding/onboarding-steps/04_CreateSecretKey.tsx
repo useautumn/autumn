@@ -18,9 +18,11 @@ import { CheckIcon, CopyIcon } from "lucide-react";
 export const CreateSecretKey = ({
   apiKey,
   setApiKey,
+  number,
 }: {
   apiKey: string;
   setApiKey: (apiKey: string) => void;
+  number: number;
 }) => {
   let env = useEnv();
   let [apiKeyName, setApiKeyName] = useState("");
@@ -48,9 +50,17 @@ export const CreateSecretKey = ({
   };
 
   return (
-    <Step title="Create an Autumn Secret Key">
+    <Step
+      title="Create an Autumn Secret Key"
+      number={number}
+      description={
+        <p>
+          Create a secret key to authenticate your requests to the Autumn API.
+        </p>
+      }
+    >
       <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
-        <div className="text-t2 flex flex-col gap-2 w-full lg:w-1/3">
+        {/* <div className="text-t2 flex flex-col gap-2 w-full lg:w-1/3">
           <p>
             Your <span className="font-bold">Publishable Key</span> is safe for
             frontend use. It&apos;s limited to non-sensitive operations, like
@@ -61,8 +71,8 @@ export const CreateSecretKey = ({
             backend server and has full API access, including for sending usage
             events.
           </p>
-        </div>
-        <div className="w-full lg:w-2/3 min-w-md max-w-lg flex gap-2 rounded-sm h-fit">
+        </div> */}
+        <div className="w-full lg:w-2/3 min-w-md max-w-2xl flex gap-2 rounded-sm h-fit">
           <DevContext.Provider
             value={{
               mutate: () => {},
@@ -106,6 +116,7 @@ export const CreateSecretKey = ({
                     onClick={handleCreate}
                     isLoading={loading}
                     variant="gradientPrimary"
+                    className="min-w-40"
                   >
                     Create Secret Key
                   </Button>
