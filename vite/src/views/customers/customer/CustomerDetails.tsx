@@ -218,7 +218,7 @@ export const RewardProps = () => {
               </Button>
             </div>
           </>
-          {referrals.referred.length > 0 && (
+          {referrals?.referred.length > 0 && (
             <>
               <span className="text-t3 text-xs font-medium col-span-2">
                 Referrals
@@ -307,7 +307,7 @@ export const RewardProps = () => {
               </Popover>
             </>
           )}
-          {referrals.redeemed.length > 0 && (
+          {referrals?.redeemed.length > 0 && (
             <>
               <span className="text-t3 text-xs font-medium col-span-2">
                 Referred by
@@ -336,13 +336,12 @@ export const RewardProps = () => {
                 </TooltipTrigger>
                 <TooltipContent
                   className="px-2 font-mono flex flex-col gap-1"
-                  align="start"
+                  align="end"
                   side="bottom"
                   sideOffset={5}
                 >
-                  <p className="font-medium">Referred by: </p>
                   <p>
-                    ({referrals.redeemed[0].referral_code?.customer.id}){" "}
+                    {referrals.redeemed[0].referral_code?.customer.id}{" "}
                     {referrals.redeemed[0].referral_code.code}
                   </p>
                 </TooltipContent>

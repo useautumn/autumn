@@ -80,26 +80,26 @@ export function CreateProductItem() {
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button
-            startIcon={<PlusIcon size={15} />}
-            variant="ghost"
-            className="w-full text-primary hover:text-primary/80"
-            onClick={() => setItem(defaultProductItem)}
-          >
-            Feature
-          </Button>
-        </DialogTrigger>
-        <DialogTrigger asChild>
-          <Button
-            startIcon={<PlusIcon size={15} />}
-            variant="ghost"
-            className="w-full text-primary hover:text-primary/80"
-            onClick={() => setItem(defaultPriceItem)}
-          >
-            Price
-          </Button>
-        </DialogTrigger>
+        <div className="flex gap-2">
+          <DialogTrigger asChild>
+            <Button
+              variant="add"
+              className="w-full "
+              onClick={() => setItem(defaultProductItem)}
+            >
+              Feature
+            </Button>
+          </DialogTrigger>
+          <DialogTrigger asChild>
+            <Button
+              variant="add"
+              className="w-full"
+              onClick={() => setItem(defaultPriceItem)}
+            >
+              Price
+            </Button>
+          </DialogTrigger>
+        </div>
         <DialogContent
           className={cn(
             "translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit overflow-visible"

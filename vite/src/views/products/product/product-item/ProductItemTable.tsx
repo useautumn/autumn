@@ -166,11 +166,11 @@ export const ProductItemTable = () => {
         setSelectedItem={setSelectedItem}
       />
       <div className="flex flex-col text-sm rounded-sm">
-        <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 h-10">
-          <h2 className="text-sm text-t2 font-medium col-span-2 flex whitespace-nowrap">
+        <div className="flex items-center justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
+          <h2 className="text-sm text-t2 font-medium  flex whitespace-nowrap">
             Product Items
           </h2>
-          <div className="flex w-full h-full items-center col-span-8 justify-end">
+          <div className="flex w-full h-full items-center justify-end">
             <div className="flex w-fit h-full items-center">
               <CreateProductItem />
             </div>
@@ -183,7 +183,7 @@ export const ProductItemTable = () => {
             return (
               <div
                 key={index}
-                className="flex grid grid-cols-16 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3 pr-4"
+                className="flex grid grid-cols-16 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3"
                 onClick={() => handleRowClick(item, index)}
               >
                 <span className="font-mono text-t3 col-span-2 overflow-hidden flex whitespace-nowrap ">
