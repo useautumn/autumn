@@ -14,12 +14,14 @@ import { getBackendErr } from "@/utils/genUtils";
 export const ConnectStripeStep = ({
   mutate,
   productData,
+  number,
 }: {
   mutate: () => Promise<void>;
   productData: any;
+  number: number;
 }) => {
   const [testApiKey, setTestApiKey] = useState("");
-  const [defaultCurrency, setDefaultCurrency] = useState("USD");
+
   const [loading, setLoading] = useState(false);
 
   const axiosInstance = useAxiosInstance({ env: AppEnv.Live });
@@ -31,7 +33,6 @@ export const ConnectStripeStep = ({
         testApiKey,
         liveApiKey: testApiKey,
         successUrl: `https://useautumn.com`,
-        defaultCurrency,
       });
 
       toast.success("Successfully connected to Stripe");
@@ -47,7 +48,7 @@ export const ConnectStripeStep = ({
   // console.log("productData", productData);
   let stripeConnected = productData?.org.stripe_connected;
   return (
-    <Step title="Connect your Stripe test account">
+    <Step title="Connect your Stripe test account" number={number}>
       <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
         <p className="text-t2 flex-col gap-2 w-full lg:w-1/3">
           <span>
@@ -63,7 +64,7 @@ export const ConnectStripeStep = ({
             </a>{" "}
           </span>
         </p>
-        <div className="flex gap-2 w-full lg:w-2/3 min-w-md max-w-lg rounded-sm">
+        <div className="flex gap-2 w-full lg:w-2/3 min-w-md max-w-2xl rounded-sm">
           <div className="flex gap-2 w-full">
             <Input
               className="w-8/10"
@@ -72,19 +73,20 @@ export const ConnectStripeStep = ({
               onChange={(e) => setTestApiKey(e.target.value)}
               disabled={stripeConnected}
             />
-            <CurrencySelect
+            {/* <CurrencySelect
               className="w-2/10"
               defaultCurrency={defaultCurrency}
               setDefaultCurrency={setDefaultCurrency}
               disabled={stripeConnected}
-            />
+            /> */}
             <Button
               variant="gradientPrimary"
+              className="min-w-40"
               onClick={handleConnectStripe}
               isLoading={loading}
               disabled={stripeConnected}
             >
-              Connect
+              Connect Stripe
             </Button>
           </div>
         </div>

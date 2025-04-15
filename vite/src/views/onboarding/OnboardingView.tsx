@@ -112,24 +112,26 @@ function OnboardingView() {
       <div className="flex flex-col p-8 px-14">
         {orgCreated && (
           <>
-            <CreateOrgStep pollForOrg={pollForOrg} />
-            <ConnectStripeStep
-              mutate={productMutate}
-              productData={productData}
-            />
+            <CreateOrgStep pollForOrg={pollForOrg} number={1} />
 
             <CreateProductStep
               productId={productId}
               setProductId={setProductId}
+              number={2}
             />
 
-            <CreateSecretKey apiKey={apiKey} setApiKey={setApiKey} />
+            <CreateSecretKey apiKey={apiKey} setApiKey={setApiKey} number={3} />
+            <ConnectStripeStep
+              mutate={productMutate}
+              productData={productData}
+              number={4}
+            />
 
-            <AttachProduct productId={productId} apiKey={apiKey} />
+            <AttachProduct productId={productId} apiKey={apiKey} number={5} />
 
-            <CheckAccessStep apiKey={apiKey} />
+            <CheckAccessStep apiKey={apiKey} number={6} />
 
-            <Step title="Done!">
+            <Step title="Done!" number={7}>
               <div className="flex gap-8 w-full justify-between flex-col lg:flex-row">
                 <p className="text-t2 gap-2 w-full lg:w-1/3">
                   You&apos;re all set! Go to the Customers tab to manage your
