@@ -67,11 +67,21 @@ export class Autumn {
     return response.json();
   }
 
-  async delete(path: string) {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: "DELETE",
-      headers: this.headers,
-    });
+  async delete(
+    path: string,
+    {
+      deleteInStripe = false,
+    }: {
+      deleteInStripe?: boolean;
+    } = {}
+  ) {
+    const response = await fetch(
+      `${this.baseUrl}${path}?${deleteInStripe ? "delete_in_stripe=true" : ""}`,
+      {
+        method: "DELETE",
+        headers: this.headers,
+      }
+    );
 
     if (response.status != 200) {
       let error: any;
@@ -185,6 +195,19 @@ export class Autumn {
 
     create: async (customer: { id: string; email: string; name: string }) => {
       const data = await this.post(`/customers`, customer);
+      return data;
+    },
+    delete: async (
+      customerId: string,
+      {
+        deleteInStripe = false,
+      }: {
+        deleteInStripe?: boolean;
+      } = {}
+    ) => {
+      const data = await this.delete(`/customers/${customerId}`, {
+        deleteInStripe,
+      });
       return data;
     },
   };
