@@ -24,8 +24,12 @@ import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFeatureItem } from "@/utils/product/getItemType";
 import { notNullish } from "@/utils/genUtils";
-import CopyButton from "@/components/general/CopyButton";
-export const ProductItemTable = () => {
+
+export const ProductItemTable = ({
+  isOnboarding = false,
+}: {
+  isOnboarding?: boolean;
+}) => {
   let { product, setProduct, features, org } = useProductContext();
   let [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
   let [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -167,7 +171,12 @@ export const ProductItemTable = () => {
         setSelectedItem={setSelectedItem}
       />
       <div className="flex flex-col text-sm rounded-sm">
-        <div className="flex items-center justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
+        <div
+          className={cn(
+            "flex items-center justify-between border-y bg-stone-100 pl-10 pr-7 h-10",
+            isOnboarding && "pl-2 pr-2 border-x"
+          )}
+        >
           <h2 className="text-sm text-t2 font-medium  flex whitespace-nowrap">
             Product Items
           </h2>
@@ -184,14 +193,19 @@ export const ProductItemTable = () => {
             return (
               <div
                 key={index}
-                className="flex grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3"
+                className={cn(
+                  "flex grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3",
+                  isOnboarding && "grid-cols-12 px-2"
+                )}
                 onClick={() => handleRowClick(item, index)}
               >
-                <span className="col-span-3 overflow-hidden flex whitespace-nowrap  items-center">
-                  <span className="truncate font-mono text-t3 w-full ">
-                    {item.feature_id || ""}
+                {!isOnboarding && (
+                  <span className="col-span-3 overflow-hidden flex whitespace-nowrap  items-center">
+                    <span className="truncate font-mono text-t3 w-full ">
+                      {item.feature_id || ""}
+                    </span>
                   </span>
-                </span>
+                )}
                 <span className="col-span-8 whitespace-nowrap truncate">
                   <AdminHover texts={getAdminHoverTexts(item)}>
                     {itemType === ProductItemType.Feature
@@ -226,11 +240,13 @@ export const ProductItemTable = () => {
                     <DollarSign size={12} /> Price
                   </Badge>
                 </span>
-                <span className="flex text-xs text-t3 items-center col-span-2 whitespace-nowrap justify-end">
-                  {item.created_at
-                    ? formatUnixToDateTime(item.created_at).date
-                    : formatUnixToDateTime(Math.floor(Date.now())).date}
-                </span>
+                {!isOnboarding && (
+                  <span className="flex text-xs text-t3 items-center col-span-2 whitespace-nowrap justify-end">
+                    {item.created_at
+                      ? formatUnixToDateTime(item.created_at).date
+                      : formatUnixToDateTime(Math.floor(Date.now())).date}
+                  </span>
+                )}
               </div>
             );
           })}

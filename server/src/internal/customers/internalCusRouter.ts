@@ -285,7 +285,7 @@ cusRouter.get(
   async (req: any, res: any) => {
     const { sb, org, env } = req;
     const { customer_id, product_id } = req.params;
-    const version = req.query.version;
+    const { version, customer_product_id } = req.query;
     const orgId = req.orgId;
 
     try {
@@ -312,7 +312,11 @@ cusRouter.get(
 
       let cusProduct;
 
-      if (notNullish(version)) {
+      if (notNullish(customer_product_id)) {
+        cusProduct = customer.products.find(
+          (p: any) => p.id === customer_product_id
+        );
+      } else if (notNullish(version)) {
         cusProduct = customer.products.find(
           (p: any) =>
             p.product.id === product_id &&
@@ -341,7 +345,7 @@ cusRouter.get(
           free_trial: cusProduct.free_trial,
           options: cusProduct.options,
           isActive: cusProduct.status === CusProductStatus.Active,
-          isCustom: cusProduct.product.is_custom,
+          isCustom: cusProduct.is_custom,
         };
       } else {
         product = await ProductService.getFullProduct({

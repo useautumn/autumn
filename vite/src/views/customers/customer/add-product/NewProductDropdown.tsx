@@ -30,11 +30,15 @@ function AddProduct() {
   const [open, setOpen] = useState(false);
 
   const filteredProducts = products.filter((product: Product) => {
-    if (product.is_add_on) return true;
+    if (product.is_add_on && !searchQuery) return true;
 
     return (
-      !customer.products?.some((cp: any) => cp.product_id === product.id) &&
-      product.name.toLowerCase().includes(searchQuery.toLowerCase())
+      !customer.products?.some(
+        (cp: any) =>
+          cp.product_id === product.id &&
+          !product.is_add_on &&
+          cp.status === "active"
+      ) && product.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 
@@ -73,7 +77,11 @@ function AddProduct() {
           <DropdownMenuTrigger asChild>
             <Button variant="add">Attach Product</Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] p-0">
+          <DropdownMenuContent
+            // className="w-[var(--radix-dropdown-menu-trigger-width)] p-0"
+            className="w-fit max-w-xl whitespace-nowrap truncate "
+            align="end"
+          >
             <div className="flex items-center border-b px-2">
               <Search size={12} className="text-t3" />
               <Input

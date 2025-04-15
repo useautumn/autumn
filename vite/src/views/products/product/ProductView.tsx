@@ -189,6 +189,8 @@ function ProductView({ env }: { env: AppEnv }) {
           counts,
           version,
           mutateCount,
+          actionState,
+          handleCreateProduct: createProductClicked,
         }}
       >
         <ConfirmNewVersionDialog
@@ -209,11 +211,10 @@ function ProductView({ env }: { env: AppEnv }) {
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2 p-4">
-              <AddProductButton
-                handleCreateProduct={createProductClicked}
-                actionState={actionState}
-              />
+            <div className="flex justify-end gap-2 p-10 w-full lg:hidden block">
+              <div className="w-fit">
+                <AddProductButton />
+              </div>
             </div>
           </div>
           <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
