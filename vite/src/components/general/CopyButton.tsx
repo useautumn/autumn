@@ -7,7 +7,7 @@ function CopyButton({
   text,
   className,
   children,
-  variant = "ghost",
+  variant = "outline",
 }: {
   text: string;
   className?: string;
@@ -26,14 +26,19 @@ function CopyButton({
     <Button
       variant={variant as ButtonProps["variant"]}
       size="icon"
-      className={cn("h-6 w-6 p-0.5 pl-1", className)}
+      className={cn(
+        "h-6 px-2 text-t2 w-fit font-mono rounded-md truncate justify-start",
+        className
+      )}
       onClick={() => {
         navigator.clipboard.writeText(text);
         setCopied(true);
       }}
     >
-      {children}
-      {copied ? <Check size={13} /> : <Copy size={13} />}
+      <span className="truncate block">{children}</span>
+      <div className="flex items-center justify-center">
+        {copied ? <Check size={13} /> : <Copy size={13} />}
+      </div>
     </Button>
   );
 }

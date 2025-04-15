@@ -59,7 +59,7 @@ const AddCouponDialogContent = ({
   };
 
   return (
-    <DialogContent>
+    <DialogContent className="min-w-sm">
       <DialogTitle>Add Reward</DialogTitle>
       {getExistingCoupon() && (
         <WarningBox>
