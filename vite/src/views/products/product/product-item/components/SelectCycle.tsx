@@ -15,6 +15,7 @@ import { BillingInterval, EntInterval } from "@autumn/shared";
 import { InfoIcon, X } from "lucide-react";
 import { useProductItemContext } from "../ProductItemContext";
 import { cn } from "@/lib/utils";
+import { itemToEntInterval } from "@/utils/product/itemIntervalUtils";
 
 export const SelectCycle = ({
   show,
@@ -30,30 +31,6 @@ export const SelectCycle = ({
   return (
     <div className={cn("flex flex-col w-full ")}>
       <FieldLabel className="flex items-center gap-2">
-        {/* {showPrice && !showCycle && "Billing Cycle"}
-          {!showPrice && showCycle && "Usage Reset"}
-          {showPrice && showCycle && (
-            <div className="flex items-center gap-2 w-fit shrink-0">
-              <div className="flex text-t3 text-t3 items-center gap-0 overflow-y-auto">
-                Billing
-                <div className="flex items-center gap-0 rounded-sm pl-1 h-4.5">
-                  <span className="">and reset</span>
-                  <Button
-                    isIcon
-                    size="sm"
-                    variant="ghost"
-                    className="w-fit text-t3 h-2 max-h-5 max-w-5.5"
-                    onClick={() => setShowCycle(false)}
-                    dim={4}
-                  >
-                    <X size={12} />
-                  </Button>
-                  &nbsp;
-                </div>
-                Cycle
-              </div>
-            </div>
-          )} */}
         {type == "price" ? "Billing Interval" : "Reset Interval"}
         <Tooltip delayDuration={400}>
           <TooltipTrigger asChild>
@@ -109,11 +86,7 @@ export const SelectCycle = ({
           <div className="flex gap-2 items-center">
             <Select
               disabled={item.included_usage == "unlimited"}
-              value={
-                item.interval && item.reset_usage_on_billing
-                  ? item.interval
-                  : EntInterval.Lifetime
-              }
+              value={itemToEntInterval(item) as string}
               onValueChange={(value) => {
                 setItem({
                   ...item,

@@ -52,7 +52,7 @@ export function MainLayout() {
                 <p className="font-medium">You&apos;re in sandbox mode.</p>
               </div>
             )}
-            <div className="flex bg-stone-50 flex-col">
+            <div className="flex bg-stone-50 flex-col h-full">
               <LoadingScreen />
             </div>
           </div>

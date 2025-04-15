@@ -52,6 +52,8 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
     // Stored in backend
     entitlement_id: ent.id,
     created_at: ent.created_at,
+
+    // reset_usage_on_billing: true,
   };
 };
 

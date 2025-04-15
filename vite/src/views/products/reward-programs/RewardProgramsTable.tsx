@@ -27,7 +27,7 @@ export const RewardProgramsTable = () => {
           <Item className="col-span-1"></Item>
         </Row>
       ) : (
-        <div className="flex justify-start items-center h-10 text-t3">
+        <div className="flex justify-start items-center h-10 text-t3 px-10">
           Referral programs automatically grant rewards (defined above) to
           customers who invite new users.
         </div>
