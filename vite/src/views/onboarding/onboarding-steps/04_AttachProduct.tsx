@@ -41,11 +41,15 @@ export default function AttachProduct({
         <p>
           The{" "}
           <span className="font-mono text-red-500">
-            <a href="https://docs.useautumn.com/api-reference/attach/post">
+            <a
+              href="https://docs.useautumn.com/api-reference/attach/post"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               /attach
             </a>
+            <ArrowUpRightFromSquare size={12} className="inline ml-1" />
           </span>{" "}
-          <ArrowUpRightFromSquare size={12} className="inline ml-1" />
           endpoint will return a Stripe Checkout URL that your customers can use
           to purchase your product.
         </p>

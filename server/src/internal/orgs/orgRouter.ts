@@ -79,7 +79,6 @@ orgRouter.post("/stripe", async (req: any, res) => {
         data: error,
       });
     }
-
     // 2. Create webhook endpoint
     let testWebhook: Stripe.WebhookEndpoint;
     let liveWebhook: Stripe.WebhookEndpoint;

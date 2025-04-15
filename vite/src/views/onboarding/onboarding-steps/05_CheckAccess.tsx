@@ -48,9 +48,13 @@ export default function CheckAccessStep({
           <span>
             Check whether a customer can access a feature by calling the{" "}
             <span className="font-mono text-red-500">
-              <a href="https://docs.useautumn.com/api-reference/entitled">
+              <a
+                href="https://docs.useautumn.com/api-reference/entitled"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 /entitled
-              </a>{" "}
+              </a>
               <ArrowUpRightFromSquare size={12} className="inline ml-1" />
             </span>{" "}
             endpoint.
@@ -59,7 +63,11 @@ export default function CheckAccessStep({
             If it&apos;s a usage-based feature, send us the usage data by
             calling the{" "}
             <span className="font-mono text-red-500">
-              <a href="https://docs.useautumn.com/api-reference/events/post">
+              <a
+                href="https://docs.useautumn.com/api-reference/events/post"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 /events
               </a>
               <ArrowUpRightFromSquare size={12} className="inline ml-1" />

@@ -8,10 +8,12 @@ export function SearchBar({
   setQuery,
   setCurrentPage,
   mutate,
+  setSearching,
 }: {
   query: string;
   setQuery: (query: string) => void;
   setCurrentPage: (page: number) => void;
+  setSearching: (searching: boolean) => void;
   mutate: () => Promise<void>;
 }) {
   const [loading, setLoading] = useState(false);
@@ -22,11 +24,13 @@ export function SearchBar({
       debounce(async (query: string) => {
         setLoading(true);
         setCurrentPage(1);
+        setSearching(true);
         await mutate();
         inputRef.current?.focus();
         setLoading(false);
+        setSearching(false);
       }, 350),
-    [mutate, setCurrentPage]
+    []
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
