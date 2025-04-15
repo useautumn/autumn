@@ -340,15 +340,18 @@ export class Autumn {
       customerId,
       featureId,
       value,
+      properties,
     }: {
       customerId: string;
       featureId: string;
       value: number;
+      properties?: any;
     }) => {
       const data = await this.post(`/events`, {
         customer_id: customerId,
         feature_id: featureId,
         value,
+        properties,
       });
       return data;
     },
