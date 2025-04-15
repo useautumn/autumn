@@ -94,9 +94,6 @@ function ProductView({ env }: { env: AppEnv }) {
       return;
     }
 
-    console.log("Original product:", originalProduct.items);
-    console.log("Current product:", product.items);
-
     const hasChanged =
       JSON.stringify(sortedProduct) !== JSON.stringify(originalProduct);
     setHasChanges(hasChanged);

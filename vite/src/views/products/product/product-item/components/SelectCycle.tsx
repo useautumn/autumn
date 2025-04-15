@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { TooltipContent } from "@/components/ui/tooltip";
 import { Tooltip, TooltipTrigger } from "@/components/ui/tooltip";
-import { BillingInterval, EntInterval } from "@autumn/shared";
+import { BillingInterval, EntInterval, Infinite } from "@autumn/shared";
 import { InfoIcon, X } from "lucide-react";
 import { useProductItemContext } from "../ProductItemContext";
 import { cn } from "@/lib/utils";
@@ -85,7 +85,7 @@ export const SelectCycle = ({
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
             <Select
-              disabled={item.included_usage == "unlimited"}
+              disabled={item.included_usage == Infinite}
               value={itemToEntInterval(item) as string}
               onValueChange={(value) => {
                 setItem({

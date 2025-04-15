@@ -14,10 +14,15 @@ export const billingToItemInterval = (billingInterval: BillingInterval) => {
   return billingInterval as unknown as ProductItemInterval;
 };
 
-export const entToItemInterval = (entInterval: EntInterval) => {
+export const entToItemInterval = (entInterval?: EntInterval) => {
+  if (nullish(entInterval)) {
+    return null;
+  }
+
   if (entInterval == EntInterval.Lifetime) {
     return null;
   }
+
   return entInterval as unknown as ProductItemInterval;
 };
 

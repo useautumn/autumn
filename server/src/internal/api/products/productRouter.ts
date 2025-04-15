@@ -1,29 +1,20 @@
 import { ProductService } from "@/internal/products/ProductService.js";
 
 import { Router } from "express";
-import {
-  AppEnv,
-  CreateFeatureSchema,
-  CreateProductSchema,
-} from "@autumn/shared";
+import { CreateProductSchema } from "@autumn/shared";
 
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
-import { initNewFeature } from "../features/featureApiRouter.js";
+
 import {
   checkStripeProductExists,
   constructProduct,
-  copyProduct,
 } from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 
-import {
-  handleUpdateProduct,
-  handleUpdateProductV2,
-} from "./handleUpdateProduct.js";
+import { handleUpdateProductV2 } from "./handleUpdateProduct.js";
 import { handleDeleteProduct } from "./handleDeleteProduct.js";
 import { handleGetProduct } from "./handleGetProduct.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";

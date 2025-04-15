@@ -32,7 +32,7 @@ export const getCusProduct = async (
   return data[0];
 };
 
-describe.skip(`${chalk.yellowBright(
+describe(`${chalk.yellowBright(
   "07_downgrade: testing downgrade (paid to paid)"
 )}`, () => {
   let customer: Customer;

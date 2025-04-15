@@ -99,7 +99,7 @@ export const PricingConfig = ({
           <TabsTrigger value={PriceType.Usage}>Usage Based</TabsTrigger>
         </TabsList> 
         <TabsContent value={PriceType.Fixed}> */}
-        <CreateFixedPrice config={fixedConfig} setConfig={setFixedConfig} />
+        {/* <CreateFixedPrice config={fixedConfig} setConfig={setFixedConfig} /> */}
         {/*  </TabsContent>
         <TabsContent value={PriceType.Usage}>
           <CreateUsagePrice

@@ -80,6 +80,7 @@ export const toFeature = ({
   internalProductId,
   isCustom,
   newVersion,
+  feature,
 }: {
   item: ProductItem;
   orgId: string;
@@ -87,7 +88,10 @@ export const toFeature = ({
   internalProductId: string;
   isCustom: boolean;
   newVersion?: boolean;
+  feature?: Feature;
 }) => {
+  let isBoolean = feature?.type == FeatureType.Boolean;
+
   let ent: Entitlement = {
     id: item.entitlement_id || generateId("ent"),
     org_id: orgId,
@@ -103,10 +107,11 @@ export const toFeature = ({
       item.included_usage == Infinite
         ? AllowanceType.Unlimited
         : AllowanceType.Fixed,
-    interval:
-      item.reset_usage_on_billing === false
-        ? EntInterval.Lifetime
-        : (itemToEntInterval(item) as EntInterval),
+    interval: isBoolean
+      ? null
+      : item.reset_usage_on_billing === false
+      ? EntInterval.Lifetime
+      : (itemToEntInterval(item) as EntInterval),
 
     carry_from_previous: item.carry_over_usage || false,
     entity_feature_id: item.entity_feature_id,
@@ -308,6 +313,7 @@ export const itemToPriceAndEnt = ({
       internalProductId,
       isCustom,
       newVersion,
+      feature,
     });
 
     if (!curEnt || newVersion) {

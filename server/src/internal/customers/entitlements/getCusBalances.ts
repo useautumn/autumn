@@ -52,7 +52,7 @@ export const getCusBalances = async ({
     if (!data[key]) {
       data[key] = {
         feature_id: feature.id,
-        interval: ent.interval || undefined,
+        interval: isBoolean || unlimited ? null : ent.interval || undefined,
         unlimited: isBoolean ? undefined : unlimited,
         balance: isBoolean ? undefined : unlimited ? null : 0,
         total: isBoolean || unlimited ? undefined : 0,

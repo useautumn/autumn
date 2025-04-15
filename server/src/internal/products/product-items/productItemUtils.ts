@@ -84,13 +84,13 @@ export const constructFeatureItem = ({
   entitlement_id,
 }: {
   feature_id: string;
-  included_usage?: number | typeof Infinite;
-  interval: EntInterval;
+  included_usage?: number | string;
+  interval?: EntInterval;
   entitlement_id?: string;
 }) => {
   let item: ProductItem = {
     feature_id,
-    included_usage,
+    included_usage: included_usage as number,
     interval: entToItemInterval(interval),
     entitlement_id,
   };

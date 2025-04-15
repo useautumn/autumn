@@ -140,6 +140,7 @@ export const handleNewProductItems = async ({
   // Validate product items...
   validateProductItems({
     newItems,
+    features,
   });
 
   let newPrices: Price[] = [];
