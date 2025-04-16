@@ -212,8 +212,8 @@ referralRouter.post("/redeem", (req, res) =>
       res.status(200).json({
         id: redemption.id,
         customer_id: customer.id,
-        triggered: redemption?.applied,
-        applied: redemption?.applied,
+        // triggered: redemption?.applied,
+        // applied: redemption?.applied,
         reward_id: reward_program.reward.id,
       });
     },
