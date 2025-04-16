@@ -113,8 +113,8 @@ export const RenderFilterTrigger = ({ setOpen }: any) => {
   return (
     <DropdownMenuTrigger asChild>
       <Button
-        variant="outline"
-        className="text-t3 bg-transparent border-none shadow-none"
+        variant="ghost"
+        className="text-t3 bg-transparent shadow-none p-0"
       >
         <ListFilter size={13} className="mr-2 text-t3" />
         Filter
