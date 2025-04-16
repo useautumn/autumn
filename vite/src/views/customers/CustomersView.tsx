@@ -120,14 +120,14 @@ function CustomersView({ env }: { env: AppEnv }) {
         <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Customers</h1>
         <div>
           <div className="flex w-full justify-between sticky top-0 z-10 border-y h-10 bg-stone-100 pl-10 pr-7 items-center">
-            <div className="flex gap-4">
+            <div className="flex gap-4 items-center">
               <div className="flex items-center gap-8 text-xs text-t3 pr-1 rounded-sm shrink-0">
                 {paginationLoading && !searching ? (
                   <div className="w-[120px] h-8 flex items-center justify-center">
                     <SmallSpinner />
                   </div>
                 ) : (
-                  <Pagination className="w-[120px] h-8 text-xs">
+                  <Pagination className="w-fit h-8 text-xs ">
                     <PaginationContent className="w-full flex justify-between ">
                       <PaginationItem>
                         <PaginationPrevious
@@ -162,11 +162,13 @@ function CustomersView({ env }: { env: AppEnv }) {
                 mutate={mutate}
                 setSearching={setSearching}
               />
-              <FilterButton />
-              <p className="text-t3 text-sm whitespace-nowrap items-center flex gap-1">
-                <span className="font-semibold">{data?.totalCount} </span>
-                {data?.totalCount === 1 ? "Customer" : "Customers"}
-              </p>
+              <div className="h-10 flex items-center border-r pr-4 gap-2">
+                <FilterButton />
+                <p className="text-t2 px-1 rounded-md bg-stone-200 text-sm h-fit">
+                  <span className="">{data?.totalCount || 0} </span>
+                  {/* {data?.totalCount === 1 || "Customer" : "Customers"} */}
+                </p>
+              </div>
             </div>
             <div className="flex gap-4">
               <CreateCustomer />
