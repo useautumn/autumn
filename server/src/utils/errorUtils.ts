@@ -106,7 +106,7 @@ export const handleRequestError = ({
     const logger = req.logtail;
     if (error instanceof RecaseError) {
       logger.warn("--------------------------------");
-      logger.warn("RECASE WARNING");
+      logger.warn(`RECASE WARNING`);
       // logger.warn(`${req.method} ${req.originalUrl}`);
       logReqUrl(logger, req, "warn");
       logger.warn(

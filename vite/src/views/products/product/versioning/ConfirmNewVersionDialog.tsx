@@ -9,7 +9,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useProductContext } from "./ProductContext";
+import { useProductContext } from "../ProductContext";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -48,8 +48,12 @@ export default function ConfirmNewVersionDialog({
           <DialogTitle>Create new version?</DialogTitle>
           <DialogDescription className="text-sm flex flex-col gap-4">
             <p>
-              Note: After creating a new version, it will be{" "}
-              <span className="font-bold">active immediately</span>.
+              After creating a new version, it will be{" "}
+              <span className="font-bold">
+                active immediately for new customers
+              </span>
+              .<br /> You can migrate existing customers to the new version
+              after.
             </p>
             <p>
               Type <code className="font-bold">{product.id}</code> to continue.

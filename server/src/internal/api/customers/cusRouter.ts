@@ -104,6 +104,7 @@ cusRouter.delete("/:customer_id", async (req: any, res: any) => {
       customerId: req.params.customer_id,
       env: req.env,
       logger: req.logtail,
+      deleteInStripe: req.query.delete_in_stripe === "true",
     });
 
     res.status(200).json(data);

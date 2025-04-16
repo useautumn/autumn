@@ -11,21 +11,24 @@ export const AdminHover = ({
   texts,
 }: {
   children: React.ReactNode;
-  texts: (string | { key: string, value: string } | undefined | null)[];
+  texts: (string | { key: string; value: string } | undefined | null)[];
 }) => {
   const { isLoaded, user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress;
   let isAdmin =
     email === "johnyeocx@gmail.com" ||
     email === "ayush@recaseai.com" ||
-    email === "johnyeo10@gmail.com";
+    email === "johnyeo10@gmail.com" ||
+    email == "npmrundemo@gmail.com";
 
   if (!isAdmin) return children;
 
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger className="w-fit">{children}</TooltipTrigger>
+        <TooltipTrigger className="w-fit !cursor-default">
+          {children}
+        </TooltipTrigger>
         {isLoaded && (
           <TooltipContent
             className="bg-white/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2"
@@ -36,10 +39,14 @@ export const AdminHover = ({
               {texts.map((text: any) => {
                 if (!text) return;
                 if (typeof text === "object") {
-                  return <div key={text.key}>
-                    <p className="text-xs text-gray-500 font-medium">{text.key}</p>
-                    <CopyText key={text.value} text={text.value} />
-                  </div>
+                  return (
+                    <div key={text.key}>
+                      <p className="text-xs text-gray-500 font-medium">
+                        {text.key}
+                      </p>
+                      <CopyText key={text.value} text={text.value} />
+                    </div>
+                  );
                 } else {
                   return <CopyText key={text} text={text} />;
                 }
@@ -61,7 +68,7 @@ const CopyText = ({ text }: { text: string }) => {
       <p
         onMouseEnter={() => setIsHover(true)}
         onMouseLeave={() => setIsHover(false)}
-        className="flex flex-col items-start gap-1 font-mono hover:underline cursor-pointer"
+        className="flex flex-col items-start gap-1 font-mono hover:underline"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -72,11 +79,9 @@ const CopyText = ({ text }: { text: string }) => {
           }, 1000);
         }}
       >
-        {text && text.split('\n').map((line, i) => (
-          <span key={i}>{line}</span>
-        ))}
+        {text && text.split("\n").map((line, i) => <span key={i}>{line}</span>)}
       </p>
-      {(isCopied || isHover) ? (
+      {isCopied || isHover ? (
         <div
           onClick={() => {
             navigator.clipboard.writeText(text);
@@ -85,7 +90,9 @@ const CopyText = ({ text }: { text: string }) => {
         >
           {isCopied ? <Check size={10} /> : <Copy size={10} />}
         </div>
-      ) : <Check size={10} className="text-transparent"/>}
+      ) : (
+        <Check size={10} className="text-transparent" />
+      )}
     </div>
   );
 };

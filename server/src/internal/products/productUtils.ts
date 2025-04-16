@@ -16,6 +16,7 @@ import {
   ProcessorType,
   Product,
   ProductSchema,
+  ProductV2,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
@@ -41,9 +42,11 @@ import { generateId } from "@/utils/genUtils.js";
 import { PriceService } from "../prices/PriceService.js";
 import { EntitlementService } from "./entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
+import { mapToProductItems } from "./productV2Utils.js";
+import { itemsAreSame } from "./product-items/productItemUtils.js";
 
 export const getLatestProducts = (products: FullProduct[]) => {
   const latestProducts = products.reduce((acc: any, product: any) => {
@@ -200,17 +203,7 @@ export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
       continue;
     }
 
-    if (billingType === BillingType.UsageBelowThreshold) {
-      if (!featureToOptions[feature.id]) {
-        featureToOptions[feature.id] = {
-          feature_id: feature.id,
-          feature_name: feature.name,
-          threshold: 0,
-        };
-      } else {
-        featureToOptions[feature.id].threshold = 0;
-      }
-    } else if (billingType === BillingType.UsageInAdvance) {
+    if (billingType === BillingType.UsageInAdvance) {
       if (!featureToOptions[feature.id]) {
         featureToOptions[feature.id] = {
           feature_id: feature.id,
@@ -325,6 +318,33 @@ export const copyProduct = async ({
     processor: null,
   };
 
+  const newEntitlements: Entitlement[] = [];
+  const newEntIds: Record<string, string> = {};
+  for (const entitlement of product.entitlements) {
+    let feature = features.find((f) => f.id === entitlement.feature_id);
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${entitlement.feature_id} not found`,
+        code: ErrCode.FeatureNotFound,
+        statusCode: 404,
+      });
+    }
+
+    let newId = generateId("ent");
+    newEntitlements.push(
+      EntitlementSchema.parse({
+        ...entitlement,
+        id: newId,
+        org_id: toOrgId,
+        created_at: Date.now(),
+        internal_product_id: newProduct.internal_id,
+        internal_feature_id: feature.internal_id,
+      })
+    );
+
+    newEntIds[entitlement.id!] = newId;
+  }
+
   let newPrices: Price[] = [];
   for (const price of product.prices) {
     // 1. Copy price
@@ -350,6 +370,17 @@ export const copyProduct = async ({
 
       config.internal_feature_id = feature.internal_id!;
       config.feature_id = feature.id;
+
+      // Update entitlement id
+      let entitlementId = newEntIds[price.entitlement_id!];
+      if (!entitlementId) {
+        throw new RecaseError({
+          message: `Failed to swap entitlement id for price ${price.id}`,
+          code: ErrCode.InternalError,
+          statusCode: 500,
+        });
+      }
+      newPrice.entitlement_id = entitlementId;
     }
 
     newPrices.push(
@@ -364,45 +395,24 @@ export const copyProduct = async ({
     );
   }
 
-  const newEntitlements: Entitlement[] = [];
-  for (const entitlement of product.entitlements) {
-    let feature = features.find((f) => f.id === entitlement.feature_id);
-    if (!feature) {
-      throw new RecaseError({
-        message: `Feature ${entitlement.feature_id} not found`,
-        code: ErrCode.FeatureNotFound,
-        statusCode: 404,
-      });
-    }
-
-    newEntitlements.push(
-      EntitlementSchema.parse({
-        ...entitlement,
-        id: generateId("ent"),
-        org_id: toOrgId,
-        created_at: Date.now(),
-        internal_product_id: newProduct.internal_id,
-        internal_feature_id: feature.internal_id,
-      })
-    );
-  }
-
   await ProductService.create({
     sb,
-    product: ProductSchema.parse(newProduct),
+    product: {
+      ...ProductSchema.parse(newProduct),
+      version: 1,
+    },
   });
 
-  await Promise.all([
-    PriceService.insert({
-      sb,
-      data: newPrices,
-    }),
+  await EntitlementService.insert({
+    sb,
+    data: newEntitlements,
+  });
 
-    EntitlementService.insert({
-      sb,
-      data: newEntitlements,
-    }),
-  ]);
+  await PriceService.insert({
+    sb,
+    data: newPrices,
+  });
+
   if (product.free_trial) {
     await FreeTrialService.insert({
       sb,
@@ -545,6 +555,41 @@ export const productsAreDifferent = ({
 
   if (!freeTrialsAreSame(product1.free_trial, product2.free_trial)) {
     return true;
+  }
+
+  return false;
+};
+
+export const productsAreDifferent2 = (
+  newProduct: ProductV2,
+  oldProduct: FullProduct
+) => {
+  let newProductItems = newProduct.items;
+  let oldProductItems = mapToProductItems({
+    prices: oldProduct.prices,
+    entitlements: oldProduct.entitlements,
+  });
+
+  if (newProductItems.length !== oldProductItems.length) {
+    return true;
+  }
+
+  for (const item of newProductItems) {
+    let oldItem = oldProductItems.find(
+      (i) =>
+        i.price_id == item.price_id || i.entitlement_id == item.entitlement_id
+    );
+
+    if (!oldItem) {
+      return true;
+    }
+
+    if (!itemsAreSame(item, oldItem)) {
+      console.log("Items are different");
+      console.log("Item 1: ", item);
+      console.log("Item 2: ", oldItem);
+      return true;
+    }
   }
 
   return false;

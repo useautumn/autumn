@@ -7,7 +7,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
-import { createStripePriceIFNotExist } from "@/external/stripe/stripePriceUtils.js";
+import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import {
   constructReward,

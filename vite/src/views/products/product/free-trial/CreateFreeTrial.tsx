@@ -15,8 +15,14 @@ import { useProductContext } from "../ProductContext";
 import { FreeTrialConfig } from "./FreeTrialConfig";
 import { toast } from "sonner";
 
-export const CreateFreeTrial = () => {
-  const [open, setOpen] = useState(false);
+export const CreateFreeTrial = ({
+  open,
+  setOpen,
+}: {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+}) => {
+  // const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [price, setPrice] = useState<any>(null);
   const { env, product, setProduct, prices } = useProductContext();
@@ -45,7 +51,7 @@ export const CreateFreeTrial = () => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+      {/* <DialogTrigger asChild>
         <Button
           variant="dashed"
           className="w-full"
@@ -53,7 +59,7 @@ export const CreateFreeTrial = () => {
         >
           Create Free Trial
         </Button>
-      </DialogTrigger>
+      </DialogTrigger> */}
       <DialogContent>
         <DialogTitle>Create Free Trial</DialogTitle>
 

@@ -109,7 +109,6 @@ export const SidebarTop = () => {
           )}
         </Button>
       </div>
-      <EnvDropdown env={env} />
     </div>
   );
 };

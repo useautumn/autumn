@@ -103,6 +103,8 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
     //   .minus(deducted)
     //   .toNumber();
 
+    let originalBalance = structuredClone(masterBalance);
+
     let { newBalance, newEntities, newAdjustment } = performDeductionOnCusEnt({
       cusEnt,
       toDeduct: deducted,
@@ -110,9 +112,12 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       allowNegativeBalance: cusEnt.usage_allowed,
     });
 
-    let originalBalance = cusEnt.balance;
-
     // Perform deduction.
+
+    // console.log("New balance", newBalance);
+    // console.log("Original balance", originalBalance);
+    // console.log("Deducted", deducted);
+    // console.log("ID:", customer_entitlement_id);
 
     await CustomerEntitlementService.update({
       sb: req.sb,
@@ -146,7 +151,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       cusEnt,
       cusPrices: [cusPrice],
       customer: customer,
-      originalBalance,
+      originalBalance: originalBalance!,
       newBalance: balance,
       deduction: deducted,
     });

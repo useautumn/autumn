@@ -7,22 +7,20 @@ import {
   FullProduct,
   Price,
   PriceType,
-  Reward,
   RewardProgram,
   RewardType,
 } from "@autumn/shared";
+
 import axios from "axios";
 
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import {
-  deleteAllStripeTestClocks,
-  deleteStripeProduct,
-} from "./stripeUtils.js";
+import { deleteAllStripeTestClocks } from "./stripeUtils.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import Stripe from "stripe";
 import { Autumn } from "@/external/autumn/autumnCli.js";
 import { deactivateStripeMeters } from "@/external/stripe/stripeProductUtils.js";
+import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 
 export const getAxiosInstance = (
   apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!
@@ -254,23 +252,21 @@ export const setupOrg = async ({
 
   // 2. Create products
   let insertProducts = [];
-  for (const product of Object.values(products)) {
+
+  for (let i = 0; i < Object.values(products).length; i++) {
+    const product = Object.values(products)[i];
     const insertProduct = async () => {
-      // console.log("Inserting:", product.id);
-      try {
-        await axiosInstance.post("/v1/products", {
-          product: {
-            id: product.id,
-            name: product.name,
-            group: product.group,
-            is_add_on: product.is_add_on,
-            is_default: product.is_default,
-          },
-        });
-      } catch (error) {
-        console.error("Error inserting product:", product.id);
-        throw error;
-      }
+      // if (product.id != "entityPro") {
+      //   return;
+      // }
+
+      const insertedProduct = await autumn.products.create({
+        id: product.id,
+        name: product.name,
+        group: product.group,
+        is_add_on: product.is_add_on,
+        is_default: product.is_default,
+      });
 
       const prices = product.prices.map((p: any) => ({
         ...p,
@@ -290,19 +286,51 @@ export const setupOrg = async ({
         })
       );
 
-      await axiosInstance.post(`/v1/products/${product.id}`, {
-        prices: prices,
-        entitlements: entitlements,
-        free_trial: product.free_trial,
+      const entWithFeatures = entitlements.map((ent) => ({
+        ...ent,
+        feature: newFeatures!.find((f) => f.id === ent.feature_id),
+      }));
+
+      let items = mapToProductItems({
+        prices,
+        entitlements: entWithFeatures,
+        allowFeatureMatch: true,
       });
+
+      try {
+        await axiosInstance.post(`/v1/products/${product.id}`, {
+          // prices: prices,
+          // entitlements: entitlements,
+          items,
+          free_trial: product.free_trial,
+        });
+      } catch (error) {
+        console.log("Product:", product.name);
+        console.error("Error creating product prices / ents");
+        console.log("Items", items);
+      }
+      return;
     };
 
     insertProducts.push(insertProduct());
+
+    // if (i > 1) {
+    //   break;
+    // }
   }
 
   await Promise.all(insertProducts);
-
   console.log("✅ Inserted products");
+
+  if (process.env.MOCHA_PARALLEL) {
+    console.log("MOCHA RUNNING IN PARALLEL");
+    await AutumnCli.initStripeProducts();
+    console.log("✅ Initialized stripe products / prices");
+  } else {
+    console.log("MOCHA RUNNING IN SERIAL");
+  }
+
+  // return;
 
   // Fetch all products
   const allProducts = await AutumnCli.getProducts();
@@ -400,12 +428,12 @@ export const setupOrg = async ({
   console.log("✅ Inserted reward triggers");
 
   // Initialize stripe products
-  // How to check if mocha is in parallel mode?
-  if (process.env.MOCHA_PARALLEL) {
-    console.log("MOCHA RUNNING IN PARALLEL");
-    await AutumnCli.initStripeProducts();
-    console.log("✅ Initialized stripe products / prices");
-  } else {
-    console.log("MOCHA RUNNING IN SERIAL");
-  }
+  // // How to check if mocha is in parallel mode?
+  // if (process.env.MOCHA_PARALLEL) {
+  //   console.log("MOCHA RUNNING IN PARALLEL");
+  //   await AutumnCli.initStripeProducts();
+  //   console.log("✅ Initialized stripe products / prices");
+  // } else {
+  //   console.log("MOCHA RUNNING IN SERIAL");
+  // }
 };

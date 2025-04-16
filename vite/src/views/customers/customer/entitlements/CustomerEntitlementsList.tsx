@@ -23,14 +23,18 @@ import { Badge } from "@/components/ui/badge";
 import UpdateCusEntitlement from "./UpdateCusEntitlement";
 import { AdminHover } from "@/components/general/AdminHover";
 import React from "react";
+import { Item, Row } from "@/components/general/TableGrid";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-export const CustomerEntitlementsList = ({
-  featureType,
-  showExpired,
-}: {
-  featureType: FeatureType;
-  showExpired: boolean;
-}) => {
+export const CustomerEntitlementsList = () => {
+  const [featureType, setFeatureType] = useState<FeatureType>(
+    FeatureType.Metered
+  );
+  const [showExpired, setShowExpired] = useState(false);
+
   const { products, customer, entities } = useCustomerContext();
   const [selectedCusEntitlement, setSelectedCusEntitlement] =
     useState<FullCustomerEntitlement | null>(null);
@@ -67,30 +71,6 @@ export const CustomerEntitlementsList = ({
     return product?.name;
   };
 
-  // const sortedEntitlements = filteredEntitlements.sort((a: any, b: any) => {
-  //   const statusA = customer.products.find(
-  //     (cp: any) => cp.id === a.customer_product_id
-  //   )?.status;
-
-  //   const statusB = customer.products.find(
-  //     (cp: any) => cp.id === b.customer_product_id
-  //   )?.status;
-
-  //   if (statusA !== statusB) {
-  //     return compareStatus(statusA, statusB);
-  //   }
-
-  //   const productA = customer.products.find(
-  //     (cp: any) => cp.id === a.customer_product_id
-  //   );
-
-  //   const productB = customer.products.find(
-  //     (cp: any) => cp.id === b.customer_product_id
-  //   );
-
-  //   return productA.product.name.localeCompare(productB.product.name);
-  // });
-
   const sortedEntitlements = filteredEntitlements;
 
   const handleSelectCusEntitlement = (cusEnt: FullCustomerEntitlement) => {
@@ -121,11 +101,8 @@ export const CustomerEntitlementsList = ({
       let mappedEntities = Object.keys(cusEnt.entities)
         .map((e: any) => {
           let entity = entities.find((ee: any) => ee.id === e);
-          if (!entity) {
-            return `${e}: Deleted`;
-          }
           let balance = cusEnt.entities![e].balance;
-          return `${entity.id} (${entity.name}): ${balance}`;
+          return `${entity?.id} (${entity?.name}): ${balance}`;
         })
         .join("\n");
       hoverTexts.push({
@@ -139,80 +116,136 @@ export const CustomerEntitlementsList = ({
 
   return (
     <div>
+      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 px-10 h-10">
+        <h2 className="text-sm text-t2 font-medium col-span-2 flex whitespace-nowrap">
+          Available Features
+        </h2>
+        <div className="flex w-full h-full items-center col-span-8 justify-end">
+          <div className="flex w-fit h-full items-center">
+            <div className="flex justify-between items-center gap-2 ">
+              <Tabs defaultValue={featureType}>
+                <TabsList className="bg-transparent h-fit">
+                  <TabsTrigger
+                    value="metered"
+                    className="text-t2 text-xs font-normal "
+                    onClick={() => setFeatureType(FeatureType.Metered)}
+                  >
+                    Metered
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="boolean"
+                    className="text-t2 text-xs font-normal"
+                    onClick={() => setFeatureType(FeatureType.Boolean)}
+                  >
+                    Boolean
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="flex items-center gap-2">
+                {/* <p className="text-t3 text-xs font-normal">Show Expired</p>
+                <Switch
+                  checked={showExpired}
+                  className="bg-primary h-3 w-6"
+                  thumbClassName="size-3 data-[state=checked]:translate-x-2"
+                  onCheckedChange={setShowExpired}
+                /> */}
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "text-t3 text-xs font-normal p-0",
+                    showExpired && "text-red-500 hover:text-red-600"
+                  )}
+                  size="sm"
+                  onClick={() => setShowExpired(!showExpired)}
+                >
+                  Show Expired
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <UpdateCusEntitlement
         selectedCusEntitlement={selectedCusEntitlement}
         setSelectedCusEntitlement={setSelectedCusEntitlement}
       />
-      <Table className="p-2">
-        <TableHeader className="bg-transparent">
-          <TableRow className="">
-            <TableHead className="">Feature</TableHead>
-            <TableHead className="">
+      {sortedEntitlements.length === 0 ? (
+        <div className="flex pl-10 items-center h-10">
+          <p className="text-t3">
+            Attach a product to grant access to features
+          </p>
+        </div>
+      ) : (
+        <>
+          <Row type="header" className="grid-cols-12 pr-0">
+            <Item className="col-span-3">Feature</Item>
+            <Item className="col-span-3">
               {featureType === FeatureType.Metered && "Balance"}
-            </TableHead>
-            <TableHead className="">Product</TableHead>
-            <TableHead className="min-w-0 w-28">
+            </Item>
+            <Item className="col-span-3">Product</Item>
+            <Item className="col-span-2">
               {featureType === FeatureType.Metered && "Next Reset"}
-            </TableHead>
-            {/* <TableHead className="">Status</TableHead> */}
-            <TableHead className="min-w-0 w-6"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedEntitlements.map(
-            (cusEnt: FullCustomerEntitlement & { unused: number }) => {
-              const entitlement = cusEnt.entitlement;
-              const allowanceType = entitlement.allowance_type;
-              return (
-                <TableRow
-                  key={cusEnt.id}
-                  onClick={() => handleSelectCusEntitlement(cusEnt)}
-                  className="cursor-pointer"
-                >
-                  <TableCell>
-                    <AdminHover texts={getAdminHoverTexts(cusEnt)}>
-                      {entitlement.feature.name}
-                    </AdminHover>
-                  </TableCell>
-                  <TableCell>
-                    {allowanceType == AllowanceType.Unlimited ? (
-                      "Unlimited"
-                    ) : allowanceType == AllowanceType.None ? (
-                      "None"
-                    ) : (
-                      <React.Fragment>
-                        {cusEnt.balance}
-                        <span className="text-t3">
-                          {cusEnt.unused ? ` (${cusEnt.unused} free)` : ""}
-                        </span>
-                      </React.Fragment>
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-[150px] truncate">
-                    {getProductName(cusEnt)} &nbsp;
-                    {customer.products.find(
-                      (p: any) => p.id === cusEnt.customer_product_id
-                    )?.status === "expired" && (
-                      <Badge variant="status" className="bg-red-500">
-                        expired
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span>
-                      {formatUnixToDateTime(cusEnt.next_reset_at).date}
-                    </span>{" "}
-                    <span className="text-t3">
-                      {formatUnixToDateTime(cusEnt.next_reset_at).time}
-                    </span>
-                  </TableCell>
-                  <TableCell></TableCell>
-                </TableRow>
-              );
-            }
-          )}
-        </TableBody>
-      </Table>
+            </Item>
+            <Item className="col-span-1" />
+          </Row>
+        </>
+      )}
+
+      {sortedEntitlements.map(
+        (cusEnt: FullCustomerEntitlement & { unused: number }) => {
+          const entitlement = cusEnt.entitlement;
+          const allowanceType = entitlement.allowance_type;
+          return (
+            <Row
+              key={cusEnt.id}
+              className="grid-cols-12 pr-0"
+              onClick={() =>
+                featureType === FeatureType.Metered &&
+                handleSelectCusEntitlement(cusEnt)
+              }
+            >
+              <Item className="col-span-3">
+                <AdminHover texts={getAdminHoverTexts(cusEnt)}>
+                  {entitlement.feature.name}
+                </AdminHover>
+              </Item>
+              <Item className="col-span-3">
+                <div className="flex items-center font-mono font-medium rounded-md px-1 border-b border-stone-300 border-dashed ">
+                  {allowanceType == AllowanceType.Unlimited ? (
+                    "Unlimited"
+                  ) : allowanceType == AllowanceType.None ? (
+                    "None"
+                  ) : (
+                    <>
+                      {cusEnt.balance}{" "}
+                      <span className="text-t3">
+                        {cusEnt.unused ? ` (${cusEnt.unused} free)` : ""}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </Item>
+              <Item className="col-span-3">
+                <div className="flex items-center gap-2 max-w-[150px] truncate text-t3">
+                  {getProductName(cusEnt)}
+                  {customer.products.find(
+                    (p: any) => p.id === cusEnt.customer_product_id
+                  )?.status === "expired" && (
+                    <Badge variant="status" className="bg-red-500">
+                      expired
+                    </Badge>
+                  )}
+                </div>
+              </Item>
+              <Item className="col-span-2 text-xs text-t3">
+                {formatUnixToDateTime(cusEnt.next_reset_at).date}{" "}
+                {formatUnixToDateTime(cusEnt.next_reset_at).time}
+              </Item>
+              <Item className="col-span-1" />
+            </Row>
+          );
+        }
+      )}
     </div>
   );
 };

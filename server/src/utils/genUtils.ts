@@ -12,6 +12,9 @@ export const generateId = (prefix: string) => {
 export const compareObjects = (obj1: any, obj2: any) => {
   for (const key in obj1) {
     if (obj1[key] !== obj2[key]) {
+      console.log("Key", key);
+      console.log("Obj1", obj1[key]);
+      console.log("Obj2", obj2[key]);
       return false;
     }
   }

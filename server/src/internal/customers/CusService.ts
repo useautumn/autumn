@@ -376,7 +376,7 @@ export class CusService {
       .from("customer_products")
       .select(
         `*, 
-        customer:customers!inner(*), product:products!inner(id, name)`,
+        customer:customers!inner(*), product:products!inner(id, name, version)`,
         {
           count: "exact",
         }

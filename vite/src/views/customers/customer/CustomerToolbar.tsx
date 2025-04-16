@@ -85,13 +85,13 @@ export const CustomerToolbar = ({
               isIcon
               variant="ghost"
               dim={6}
-              className={cn("rounded-full", className)}
+              className={cn("rounded-full text-t3", className)}
             >
               <Settings size={14} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="text-t2 w-[150px]" align="end">
-            <DialogTrigger className="w-full">
+            {/* <DialogTrigger className="w-full">
               <DropdownMenuItem
                 onClick={(e) => {
                   setModalType("add-coupon");
@@ -114,7 +114,7 @@ export const CustomerToolbar = ({
                   <Settings2 size={12} className="text-t3" />
                 </div>
               </DropdownMenuItem>
-            </DialogTrigger>
+            </DialogTrigger> */}
             <DropdownMenuItem
               className="flex items-center text-red-500 hover:!bg-red-500 hover:!text-white"
               onClick={async (e) => {

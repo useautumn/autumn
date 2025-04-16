@@ -20,6 +20,9 @@ import { useFeaturesContext } from "./FeaturesContext";
 import { Badge } from "@/components/ui/badge";
 import UpdateFeature from "./UpdateFeature";
 import { FeatureTypeBadge } from "./FeatureTypeBadge";
+import { Item, Row } from "@/components/general/TableGrid";
+import CopyButton from "@/components/general/CopyButton";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export const FeaturesTable = () => {
   const { env, features, onboarding } = useFeaturesContext();
@@ -44,57 +47,77 @@ export const FeaturesTable = () => {
   };
 
   return (
-    <>
+    <div>
       <UpdateFeature
         open={open}
         setOpen={setOpen}
         selectedFeature={selectedFeature}
         setSelectedFeature={setSelectedFeature}
       />
-      <Table>
-        <TableHeader className="rounded-full">
-          <TableRow className="border-none">
-            <TableHead className="">Name</TableHead>
-            <TableHead>ID</TableHead>
-            <TableHead>Type</TableHead>
-            {!onboarding && <TableHead>Event Names</TableHead>}
-            {!onboarding && (
-              <TableHead className="min-w-0 w-28">Created At</TableHead>
-            )}
-            <TableHead className="min-w-0 w-10"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {features &&
-            features.map((feature: Feature) => (
-              <TableRow
-                key={feature.internal_id}
-                className="cursor-pointer"
-                onClick={() => handleRowClick(feature.id)}
+      {features && features.length > 0 ? (
+        <Row type="header" className="grid-cols-18 -mb-1">
+          <Item className="col-span-4">Name</Item>
+          <Item className="col-span-4 px-1">ID</Item>
+          <Item className="col-span-3">Type</Item>
+          {!onboarding && <Item className="col-span-4">Event Names</Item>}
+          {!onboarding && <Item className="col-span-2">Created At</Item>}
+          <Item className="col-span-1"></Item>
+        </Row>
+      ) : (
+        <div className="flex justify-start items-center px-10 h-10 text-t3">
+          Define the features of your application you want to charge for.
+        </div>
+      )}
+
+      {features.map((feature: Feature) => (
+        <Row
+          key={feature.internal_id}
+          className="grid-cols-18 gap-2 items-center px-10 w-full text-sm h-8 cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap"
+          onClick={() => handleRowClick(feature.id)}
+        >
+          <Item className="col-span-4">
+            <span className="truncate">
+              <AdminHover
+                texts={[
+                  { key: "Internal ID", value: feature.internal_id || "" },
+                ]}
               >
-                <TableCell>{feature.name}</TableCell>
-                <TableCell className="font-mono">{feature.id}</TableCell>
-                <TableCell>
-                  <FeatureTypeBadge type={feature.type} />
-                </TableCell>
-                {!onboarding && (
-                  <TableCell>{getMeteredEventNames(feature)}</TableCell>
-                )}
-                {!onboarding && (
-                  <TableCell className="min-w-20 w-24">
-                    <span>{formatUnixToDateTime(feature.created_at).date}</span>{" "}
-                    <span className="text-t3">
-                      {formatUnixToDateTime(feature.created_at).time}
-                    </span>
-                  </TableCell>
-                )}
-                <TableCell className="min-w-4 w-6">
-                  <FeatureRowToolbar feature={feature} />
-                </TableCell>
-              </TableRow>
-            ))}
-        </TableBody>
-      </Table>
-    </>
+                {feature.name}
+              </AdminHover>
+            </span>
+          </Item>
+          <Item className="col-span-4 font-mono">
+            <span className="truncate">
+              <CopyButton
+                text={feature.id}
+                className="bg-transparent border-none text-t3 px-1"
+              >
+                {feature.id}
+              </CopyButton>
+            </span>
+          </Item>
+          <Item className="col-span-3">
+            <FeatureTypeBadge type={feature.type} />
+          </Item>
+          {!onboarding && (
+            <Item className="col-span-4">
+              <span className="truncate">{getMeteredEventNames(feature)}</span>
+            </Item>
+          )}
+          {!onboarding && (
+            <Item className="col-span-2 text-t3 text-xs">
+              {formatUnixToDateTime(feature.created_at).date}
+              {/* <span className="text-t3">
+                {" "}
+                {formatUnixToDateTime(feature.created_at).time}
+              </span> */}
+            </Item>
+          )}
+          <Item className="col-span-1 items-center justify-end">
+            <FeatureRowToolbar feature={feature} />
+          </Item>
+        </Row>
+      ))}
+    </div>
   );
 };

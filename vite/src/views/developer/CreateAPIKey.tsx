@@ -64,9 +64,8 @@ const CreateAPIKey = () => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          className={`${onboarding ? "w-fit" : "w-full"}`}
-          startIcon={<Plus size={15} />}
-          variant={onboarding ? "gradientPrimary" : "dashed"}
+          className={`${onboarding ? "w-fit" : ""}`}
+          variant={onboarding ? "gradientPrimary" : "add"}
           disabled={apiCreated ? true : false}
           onClick={() => {
             if (apiKeyName) {
@@ -74,7 +73,7 @@ const CreateAPIKey = () => {
             }
           }}
         >
-          Create Secret API Key
+          Secret Key
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-[520px]">

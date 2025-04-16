@@ -3,7 +3,12 @@ import { FeatureService } from "../features/FeatureService.js";
 import { entitlementRouter } from "./entitlementRouter.js";
 import { PriceService } from "../prices/PriceService.js";
 import { ProductService } from "./ProductService.js";
-import { CusProductStatus, EntitlementWithFeature } from "@autumn/shared";
+import {
+  CusProductStatus,
+  EntitlementWithFeature,
+  ErrCode,
+  ProductItemBehavior,
+} from "@autumn/shared";
 import { BillingType } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
 import { getBillingType } from "../prices/priceUtils.js";
@@ -15,6 +20,17 @@ import { getLatestProducts } from "./productUtils.js";
 import { CusProdReadService } from "../customers/products/CusProdReadService.js";
 import { MigrationService } from "../migrations/MigrationService.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
+import { mapToProductV2 } from "./productV2Utils.js";
+import {
+  itemToPriceAndEnt,
+  toFeatureAndPrice,
+} from "./product-items/mapFromItem.js";
+import {
+  isFeaturePriceItem,
+  itemIsFixedPrice,
+} from "./product-items/productItemUtils.js";
+import { toFeaturePriceItem } from "./product-items/mapToItem.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -48,9 +64,10 @@ productRouter.get("/data", async (req: any, res) => {
       org: {
         id: org.id,
         name: org.name,
-        test_pkey: org.test_pkey,
-        live_pkey: org.live_pkey,
+        // test_pkey: org.test_pkey,
+        // live_pkey: org.live_pkey,
         default_currency: org.default_currency,
+        stripe_connected: org.stripe_connected,
       },
       // coupons,
       rewards: coupons,
@@ -144,6 +161,14 @@ productRouter.get("/:productId/data", async (req: any, res) => {
         }),
       ]);
 
+    if (!product) {
+      throw new RecaseError({
+        message: `Product ${productId} ${
+          version ? `(v${version})` : ""
+        } not found`,
+        code: ErrCode.ProductNotFound,
+      });
+    }
     let entitlements = product.entitlements;
     let prices = product.prices;
 
@@ -156,7 +181,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
     });
 
     res.status(200).send({
-      product,
+      product: mapToProductV2(product),
       entitlements,
       prices,
       features,
@@ -171,8 +196,12 @@ productRouter.get("/:productId/data", async (req: any, res) => {
       existingMigrations,
     });
   } catch (error) {
-    console.error("Failed to get products", error);
-    res.status(500).send(error);
+    handleRequestError({
+      error,
+      req,
+      res,
+      action: "Get product data (internal)",
+    });
   }
 });
 
@@ -189,6 +218,15 @@ productRouter.get("/:productId/count", async (req: any, res) => {
       version: version ? parseInt(version) : undefined,
     });
 
+    if (!product) {
+      throw new RecaseError({
+        message: `Product ${productId} ${
+          version ? `(v${version})` : ""
+        } not found`,
+        code: ErrCode.ProductNotFound,
+      });
+    }
+
     // Get counts from postgres
     const counts = await CusProdReadService.getCounts({
       sb: req.sb,
@@ -196,79 +234,71 @@ productRouter.get("/:productId/count", async (req: any, res) => {
     });
 
     res.status(200).send(counts);
-
-    // const [activeCount, canceledCount, customCount, trialingCount] =
-    //   await Promise.all([
-    //     CusProdReadService.getCountByInternalProductId({
-    //       sb: req.sb,
-    //       orgId: req.orgId,
-    //       env: req.env,
-    //       internalProductId: product.internal_id,
-    //       inStatuses: [CusProductStatus.Active],
-    //     }),
-    //     CusProdReadService.getCanceledCountByInternalProductId({
-    //       sb: req.sb,
-    //       orgId: req.orgId,
-    //       env: req.env,
-    //       internalProductId: product.internal_id,
-    //     }),
-    //     CusProdReadService.getCustomCountByInternalProductId({
-    //       sb: req.sb,
-    //       internalProductId: product.internal_id,
-    //     }),
-    //     CusProdReadService.getTrialingCount({
-    //       sb: req.sb,
-    //       internalProductId: product.internal_id,
-    //     }),
-    //   ]);
-
-    // res.status(200).send({
-    //   active: activeCount,
-    //   canceled: canceledCount,
-    //   custom: customCount,
-    //   trialing: trialingCount,
-    // });
   } catch (error) {
-    console.error("Failed to get product counts", error);
-    res.status(500).send(error);
+    handleRequestError({
+      error,
+      req,
+      res,
+      action: "Get product counts (internal)",
+    });
   }
 });
 
 productRouter.use(entitlementRouter);
 
 productRouter.post("/product_options", async (req: any, res: any) => {
-  const { prices } = req.body;
+  const { items } = req.body;
 
   const features = await FeatureService.getFromReq(req);
   const featureToOptions: { [key: string]: FeatureOptions } = {};
 
-  for (const price of prices) {
-    // get billing tyoe
-    const billingType = getBillingType(price.config);
-    const feature = features.find(
-      (f) => f.internal_id === price.config.internal_feature_id
-    );
-
-    if (billingType === BillingType.UsageBelowThreshold) {
-      if (!featureToOptions[feature.id]) {
-        featureToOptions[feature.id] = {
-          feature_id: feature.id,
-          threshold: 0,
-        };
-      } else {
-        featureToOptions[feature.id].threshold = 0;
-      }
-    } else if (billingType === BillingType.UsageInAdvance) {
-      if (!featureToOptions[feature.id]) {
-        featureToOptions[feature.id] = {
-          feature_id: feature.id,
-          quantity: 0,
-        };
-      }
-
-      featureToOptions[feature.id].quantity = 0;
+  for (const item of items) {
+    if (
+      isFeaturePriceItem(item) &&
+      item.behavior == ProductItemBehavior.Prepaid
+    ) {
+      featureToOptions[item.feature_id] = {
+        feature_id: item.feature_id,
+        quantity: 0,
+      };
     }
+    // if (isFeaturePriceItem(item)) {
+    //   // console.log("Item: ", item);
+    //   let { price, ent } = toFeatureAndPrice({
+    //     item,
+    //     orgId: req.orgId,
+    //     internalFeatureId: item.feature_id,
+    //     internalProductId: "",
+    //     isCustom: false,
+    //   });
+
+    //   if (!price) {
+    //     continue;
+    //   }
+    //   let billingType = getBillingType(price.config!);
+    //   if (billingType === BillingType.UsageInAdvance) {
+
+    //   }
+    // }
   }
+  // for (const price of prices) {
+  //   // get billing tyoe
+  //   const billingType = getBillingType(price.config);
+  //   const feature = features.find(
+  //     (f) => f.internal_id === price.config.internal_feature_id
+  //   );
+
+  //   if (billingType === BillingType.UsageInAdvance) {
+  //     if (!featureToOptions[feature.id]) {
+  //       featureToOptions[feature.id] = {
+  //         feature_id: feature.id,
+  //         quantity: 0,
+  //       };
+  //     }
+
+  //     featureToOptions[feature.id].quantity = 0;
+  //   }
+  // }
 
   res.status(200).send({ options: Object.values(featureToOptions) });
 });

@@ -10,6 +10,8 @@ import { addDays } from "date-fns";
 import { timeout } from "../utils/genUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
+import { Autumn } from "@/external/autumn/autumnCli.js";
+import { setupBefore } from "tests/before.js";
 
 export const getCusProduct = async (
   sb: SupabaseClient,
@@ -30,7 +32,9 @@ export const getCusProduct = async (
   return data[0];
 };
 
-describe(`${chalk.yellowBright("Testing downgrade (paid to paid)")}`, () => {
+describe(`${chalk.yellowBright(
+  "07_downgrade: testing downgrade (paid to paid)"
+)}`, () => {
   let customer: Customer;
   let customerId = "downgrade";
   let testClockId: string;
@@ -122,17 +126,21 @@ describe(`${chalk.yellowBright("Testing downgrade (paid to paid)")}`, () => {
   });
 });
 
-describe(`${chalk.yellowBright("Testing expire button")}`, () => {
+describe(`${chalk.yellowBright("07_downgrade: testing expire button")}`, () => {
   let customer: Customer;
   let customerId = "expire";
   let testClockId: string;
 
+  let autumn: Autumn;
   before(async function () {
-    this.timeout(30000);
+    await setupBefore(this);
+    autumn = this.autumn;
+
     const stripeCli = createStripeCli({
       org: this.org,
       env: this.env,
     });
+
     const { testClockId: testClockId_, customer: customer_ } =
       await initCustomerWithTestClock({
         customerId,
@@ -146,16 +154,13 @@ describe(`${chalk.yellowBright("Testing expire button")}`, () => {
   });
 
   it("POST /attach -- attaching premium", async function () {
-    this.timeout(30000);
-    await AutumnCli.attach({
+    await autumn.attach({
       customerId: customerId,
       productId: products.premium.id,
     });
   });
 
   it("POST /expire -- expiring premium", async function () {
-    this.timeout(30000);
-
     const customerProduct = await getCusProduct(
       this.sb,
       customer.internal_id,
@@ -168,7 +173,6 @@ describe(`${chalk.yellowBright("Testing expire button")}`, () => {
 
   // Check that active product is free
   it("GET /customers/:customer_id -- checking product and ents", async function () {
-    this.timeout(30000);
     const res = await AutumnCli.getCustomer(customerId);
 
     compareMainProduct({

@@ -4,18 +4,16 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { getLinkedCusEnt } from "./entityUtils.js";
 import { EntityService } from "./EntityService.js";
-import { AppEnv, CusProductStatus, Customer, Entity, ErrCode, FullCusProduct, FullCustomerEntitlement, FullCustomerPrice, Product } from "@autumn/shared";
+import { AppEnv, Entity, ErrCode } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { getActiveCusProductStatuses } from "@/utils/constants.js";
-import { isTrialing } from "@/internal/customers/products/cusProductUtils.js";
-import {Decimal} from "decimal.js";
-import { getPriceForOverage } from "@/internal/prices/priceUtils.js";
-import { Logger } from "@slack/web-api";
-import Stripe from "stripe";
-import { getCusEntMasterBalance, getUnlimitedAndUsageAllowed } from "@/internal/customers/entitlements/cusEntUtils.js";
+
+import {
+  getCusEntMasterBalance,
+  getUnlimitedAndUsageAllowed,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
 
 export const constructEntity = ({
   inputEntity,
@@ -79,10 +77,7 @@ export const getEntityToAction = ({
 
     let replaced = false;
     for (const entity of existingEntities) {
-      if (
-        entity.deleted &&
-        !replacedEntities.includes(entity.id)
-      ) {
+      if (entity.deleted && !replacedEntities.includes(entity.id)) {
         replaced = true;
         replacedEntities.push(entity.id);
 
@@ -105,7 +100,6 @@ export const getEntityToAction = ({
     }
   }
 
-
   let cusEnts = cusProducts.flatMap((p: any) => p.customer_entitlements);
   let { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
     cusEnts,
@@ -116,8 +110,11 @@ export const getEntityToAction = ({
     return entityToAction;
   }
 
-  let balance = cusEnts.filter((ce: any) => ce.entitlement.feature.internal_id === feature.internal_id).reduce((acc: number, ce: any) => acc + ce.balance, 0);
-
+  let balance = cusEnts
+    .filter(
+      (ce: any) => ce.entitlement.feature.internal_id === feature.internal_id
+    )
+    .reduce((acc: number, ce: any) => acc + ce.balance, 0);
 
   if (balance < createCount) {
     throw new RecaseError({
@@ -129,100 +126,6 @@ export const getEntityToAction = ({
   return entityToAction;
 };
 
-// export const payForEntitiesImmediately = async ({
-//   sb,
-//   env,
-//   org,
-//   cusProduct,
-//   cusEnt,
-//   cusPrice,
-//   logger,
-//   oldUsage,
-//   createdNumber,
-//   stripeCli,
-//   product,
-//   customer,
-// }:{
-//   cusProduct: FullCusProduct;
-//   cusEnt: FullCustomerEntitlement;
-//   cusPrice: FullCustomerPrice;
-//   logger: Logger;
-//   oldUsage: number;
-//   createdNumber: number;
-//   stripeCli: Stripe;
-//   product: Product;
-//   customer: Customer;
-// }) => {
-//   if (!isTrialing(cusProduct as FullCusProduct)) {
-//     // let entitlement = cusEnt.entitlement;
-//     // let newUsage = entitlement.allowance! - newBalance;
-//     // let oldUsage = entitlement.allowance! - originalBalance;
-//     // newUsage = newUsage - (replacedCount || 0);
-
-//     // let newAmount = getPriceForOverage(cusPrice.price, newUsage);
-//     // let oldAmount = getPriceForOverage(cusPrice.price, oldUsage);
-
-//     const stripeAmount = new Decimal(newAmount)
-//       .sub(oldAmount)
-//       .mul(100)
-//       .round()
-//       .toNumber();
-
-//     logger.info(`   - Stripe amount: ${stripeAmount}`);
-
-//     if (stripeAmount > 0) {
-//       const invoice = await stripeCli.invoices.create({
-//         customer: customer.processor.id,
-//         auto_advance: false,
-//         subscription: sub.id,
-//       });
-
-//       await stripeCli.invoiceItems.create({
-//         customer: customer.processor.id,
-//         invoice: invoice.id,
-//         quantity: 1,
-//         description: `${product!.name} - ${
-//           affectedFeature.name
-//         } x ${Math.round(newUsage - oldUsage)}`,
-
-//         price_data: {
-//           product: config.stripe_product_id!,
-//           unit_amount: stripeAmount,
-//           currency: org.default_currency,
-//         },
-//       });
-      
-
-//       const { paid, error } = await payForInvoice({
-//         fullOrg: org,
-//         env,
-//         customer,
-//         invoice,
-//         logger,
-//       });
-
-      
-//       // console.log("Invoice paid result:", paid, error);
-//       const latestInvoice = await stripeCli.invoices.retrieve(invoice.id, {
-//         ...getInvoiceExpansion()
-//       });
-
-//       await InvoiceService.createInvoiceFromStripe({
-//         sb,
-//         stripeInvoice: latestInvoice,
-//         internalCustomerId: customer.internal_id,
-//         org,
-//         productIds: [product!.id],
-//         internalProductIds: [product!.internal_id],
-//       });
-
-//       if (!paid) {
-//         logger.warn("❗️ Failed to pay for invoice!");
-//       }
-//     }
-//   }
-// };
-
 export const logEntityToAction = ({
   entityToAction,
   logger,
@@ -231,9 +134,15 @@ export const logEntityToAction = ({
   logger: any;
 }) => {
   for (const id in entityToAction) {
-    logger.info(`${id} - ${entityToAction[id].action}${entityToAction[id].replace ? ` (replace ${entityToAction[id].replace.id})` : ""}`);
+    logger.info(
+      `${id} - ${entityToAction[id].action}${
+        entityToAction[id].replace
+          ? ` (replace ${entityToAction[id].replace.id})`
+          : ""
+      }`
+    );
   }
-}
+};
 export const handleCreateEntity = async (req: any, res: any) => {
   try {
     // Create entity!
@@ -241,6 +150,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
     const { sb, env, orgId, logtail: logger } = req;
     const { customer_id } = req.params;
 
+    console.log("Env", env);
     let [customer, features, org] = await Promise.all([
       CusService.getByIdOrInternalId({
         sb,
@@ -265,7 +175,6 @@ export const handleCreateEntity = async (req: any, res: any) => {
     } else {
       inputEntities = [req.body];
     }
-
 
     let featureIds = [...new Set(inputEntities.map((e: any) => e.feature_id))];
     if (featureIds.length > 1) {
@@ -303,12 +212,18 @@ export const handleCreateEntity = async (req: any, res: any) => {
       internalCustomerId: customer.internal_id,
     });
 
-
     logger.info("Existing entities:");
-    logger.info(existingEntities.map((e: any) => `${e.id} - ${e.name}, deleted: ${e.deleted}`))
-    
+    logger.info(
+      existingEntities.map(
+        (e: any) => `${e.id} - ${e.name}, deleted: ${e.deleted}`
+      )
+    );
+
     for (const entity of existingEntities) {
-      if (inputEntities.some((e: any) => e.id === entity.id) && !entity.deleted) {
+      if (
+        inputEntities.some((e: any) => e.id === entity.id) &&
+        !entity.deleted
+      ) {
         throw new RecaseError({
           message: `Entity ${entity.id} already exists`,
           code: "ENTITY_ALREADY_EXISTS",
@@ -318,7 +233,6 @@ export const handleCreateEntity = async (req: any, res: any) => {
         });
       }
     }
-    
 
     const entityToAction = getEntityToAction({
       inputEntities,
@@ -333,7 +247,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
       entityToAction,
       logger,
     });
-    
+
     // 3. CREATE LINKED CUSTOMER ENTITLEMENTS
     for (const cusProduct of cusProducts) {
       let cusEnts = cusProduct.customer_entitlements;
@@ -363,17 +277,17 @@ export const handleCreateEntity = async (req: any, res: any) => {
         cusEnt,
         entities: existingEntities,
       });
-      
+
       // const originalBalance = cusEnt.balance - (replacedCount || 0) + (unused || 0);
       // const newBalance = cusEnt.balance - (newCount + replacedCount) + (unused || 0);
       const originalBalance = cusEnt.balance + (unused || 0);
-      const newBalance = cusEnt.balance - (newCount + replacedCount) + (unused || 0);
+      const newBalance =
+        cusEnt.balance - (newCount + replacedCount) + (unused || 0);
 
       // console.log("originalBalance", originalBalance);
       // console.log("newBalance", newBalance);
       // console.log("Replaced count", replacedCount);
       // throw new Error("test");
-
 
       await adjustAllowance({
         sb,
@@ -397,7 +311,6 @@ export const handleCreateEntity = async (req: any, res: any) => {
 
       // For each linked feature, create customer entitlement for entity...
       for (const linkedCusEnt of linkedCusEnts) {
-
         let allowance = linkedCusEnt?.entitlement.allowance;
         let newEntities = linkedCusEnt?.entities || {};
 
@@ -417,11 +330,9 @@ export const handleCreateEntity = async (req: any, res: any) => {
               id: entity.id,
               ...tmp,
             };
-
-            
           }
         }
-        
+
         await CustomerEntitlementService.update({
           sb,
           id: linkedCusEnt.id,
@@ -459,7 +370,6 @@ export const handleCreateEntity = async (req: any, res: any) => {
       }
     }
     logger.info(`  Created / replaced entities!`);
-
 
     res.status(200).json({
       success: true,

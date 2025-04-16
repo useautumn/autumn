@@ -33,6 +33,8 @@ import React from "react";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { AdminHover } from "@/components/general/AdminHover";
+import AddProduct from "./add-product/NewProductDropdown";
+import { Item, Row } from "@/components/general/TableGrid";
 
 export const CustomerProductList = ({
   customer,
@@ -55,126 +57,134 @@ export const CustomerProductList = ({
 
   return (
     <div>
-      <Table className="p-2">
-        <TableHeader className="bg-transparent">
-          <TableRow className="">
-            <TableHead className="">Name</TableHead>
-            <TableHead className="">Product ID</TableHead>
-            <TableHead className="">Status</TableHead>
-            <TableHead className="min-w-0 w-28">Created At</TableHead>
+      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
+        <h2 className="text-sm text-t2 font-medium col-span-2 flex">
+          Products
+        </h2>
+        <div className="flex w-full h-full items-center col-span-8 justify-end">
+          <div className="flex w-fit h-full items-center">
+            {/* <CreateEntitlement buttonType={"feature"} /> */}
+            <AddProduct />
+          </div>
+        </div>
+      </div>
 
-            <TableHead className="min-w-0 w-8"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedProducts.map((cusProduct: FullCusProduct) => {
-            return (
-              <TableRow
-                key={cusProduct.id}
-                className="cursor-pointer"
-                onClick={() => {
-                  navigateTo(
-                    `/customers/${customer.id || customer.internal_id}/${
-                      cusProduct.product_id
-                    }?id=${cusProduct.id}`,
-                    navigate,
-                    env
-                  );
-                }}
+      {sortedProducts.length === 0 ? (
+        <div className="flex pl-10 items-center h-10">
+          <p className="text-t3">Attach a product to this customer</p>
+        </div>
+      ) : (
+        <Row type="header" className="grid-cols-12 pr-0">
+          <Item className="col-span-3">Name</Item>
+          <Item className="col-span-3">Product ID</Item>
+          <Item className="col-span-3">Status</Item>
+          <Item className="col-span-2">Created At</Item>
+          <Item className="col-span-1" />
+        </Row>
+      )}
+
+      {sortedProducts.map((cusProduct: FullCusProduct) => {
+        return (
+          <Row
+            key={cusProduct.id}
+            className="grid-cols-12 pr-0"
+            onClick={() => {
+              navigateTo(
+                `/customers/${customer.id || customer.internal_id}/${
+                  cusProduct.product_id
+                }?id=${cusProduct.id}`,
+                navigate,
+                env
+              );
+            }}
+          >
+            <Item className="col-span-3">
+              <AdminHover
+                texts={[
+                  {
+                    key: "Cus Product ID",
+                    value: cusProduct.id,
+                  },
+                  {
+                    key: "Stripe Subscription ID (1)",
+                    value: cusProduct.subscription_ids?.[0] || "N/A",
+                  },
+                ]}
               >
-                <TableCell>
-                  <AdminHover
-                    texts={[
-                      {
-                        key: "Cus Product ID",
-                        value: cusProduct.id,
-                      },
-                      {
-                        key: "Stripe Subscription ID (1)",
-                        value: cusProduct.subscription_ids?.[0] || "N/A",
-                      },
-                    ]}
-                  >
-                    <div className="flex items-center gap-2">
-                      <p>{cusProduct.product.name}</p>
-                      {versionCounts[cusProduct.product.id] > 1 && (
-                        <Badge
-                          variant="outline"
-                          className="text-xs bg-stone-50 text-t3 px-2 py-0 ml-2 font-mono"
-                        >
-                          v{cusProduct.product.version}
-                        </Badge>
-                      )}
-                    </div>
-                  </AdminHover>
-                </TableCell>
-                <TableCell className="overflow-hidden text-ellipsis">
-                  {cusProduct.product_id}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-0.5 items-center">
-                    {cusProduct.status === "active" && (
-                      <Badge variant="status" className="bg-lime-500 h-fit">
-                        active
-                      </Badge>
-                    )}
-                    {cusProduct.status === "expired" && (
-                      <Badge variant="status" className="bg-stone-800 h-fit">
-                        expired
-                      </Badge>
-                    )}
-                    {cusProduct.status === "past_due" && (
-                      <Badge variant="status" className="bg-red-500 h-fit">
-                        past due
-                      </Badge>
-                    )}
-                    {cusProduct.status === "scheduled" && (
-                      <Badge variant="status" className="bg-blue-500 h-fit">
-                        scheduled
-                      </Badge>
-                    )}
-                    {cusProduct.subscription_ids &&
-                      cusProduct.subscription_ids.length > 0 && (
-                        <React.Fragment>
-                          {cusProduct.subscription_ids.map((subId: string) => {
-                            return (
-                              <Link
-                                key={subId}
-                                to={getStripeSubLink(subId, env)}
-                                target="_blank"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                }}
-                              >
-                                <div className="flex justify-center items-center w-fit px-2 gap-2 h-6">
-                                  <ArrowUpRightFromSquare
-                                    size={12}
-                                    className="text-[#665CFF]"
-                                  />
-                                </div>
-                              </Link>
-                            );
-                          })}
-                        </React.Fragment>
-                      )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span>
-                    {formatUnixToDateTime(cusProduct.created_at).date}
-                  </span>{" "}
-                  <span className="text-t3">
-                    {formatUnixToDateTime(cusProduct.created_at).time}
-                  </span>
-                </TableCell>
-                <TableCell className="flex items-center justify-center">
-                  <EditCustomerProductToolbar cusProduct={cusProduct} />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                <div className="flex items-center gap-2">
+                  <p>{cusProduct.product.name}</p>
+                  {versionCounts[cusProduct.product.id] > 1 && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-stone-50 text-t3 px-2 py-0 ml-2 font-mono"
+                    >
+                      v{cusProduct.product.version}
+                    </Badge>
+                  )}
+                </div>
+              </AdminHover>
+            </Item>
+            <Item className="col-span-3 text-t3 font-mono overflow-hidden text-ellipsis">
+              {cusProduct.product_id}
+            </Item>
+            <Item className="col-span-3">
+              <div className="flex gap-0.5 items-center">
+                {cusProduct.status === "active" && (
+                  <Badge variant="status" className="bg-lime-500 h-fit">
+                    active
+                  </Badge>
+                )}
+                {cusProduct.status === "expired" && (
+                  <Badge variant="status" className="bg-stone-800 h-fit">
+                    expired
+                  </Badge>
+                )}
+                {cusProduct.status === "past_due" && (
+                  <Badge variant="status" className="bg-red-500 h-fit">
+                    past due
+                  </Badge>
+                )}
+                {cusProduct.status === "scheduled" && (
+                  <Badge variant="status" className="bg-blue-500 h-fit">
+                    scheduled
+                  </Badge>
+                )}
+                {cusProduct.subscription_ids &&
+                  cusProduct.subscription_ids.length > 0 && (
+                    <React.Fragment>
+                      {cusProduct.subscription_ids.map((subId: string) => {
+                        return (
+                          <Link
+                            key={subId}
+                            to={getStripeSubLink(subId, env)}
+                            target="_blank"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                            }}
+                          >
+                            <div className="flex justify-center items-center w-fit px-2 gap-2 h-6">
+                              <ArrowUpRightFromSquare
+                                size={12}
+                                className="text-[#665CFF]"
+                              />
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </React.Fragment>
+                  )}
+              </div>
+            </Item>
+            <Item className="col-span-2 text-xs text-t3">
+              {formatUnixToDateTime(cusProduct.created_at).date}{" "}
+              {formatUnixToDateTime(cusProduct.created_at).time}
+            </Item>
+            <Item className="col-span-1 pr-4 flex items-center justify-center">
+              <EditCustomerProductToolbar cusProduct={cusProduct} />
+            </Item>
+          </Row>
+        );
+      })}
     </div>
   );
 };
@@ -189,7 +199,7 @@ const EditCustomerProductToolbar = ({
   return (
     <DropdownMenu open={dialogOpen} onOpenChange={setDialogOpen}>
       <DropdownMenuTrigger asChild>
-        <ToolbarButton className="!w-4 !h-6 !rounded-md" />
+        <ToolbarButton className="!w-4 !h-6 !rounded-md text-t3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent className="text-t2">
         {/* Update status */}
