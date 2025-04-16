@@ -22,8 +22,6 @@ import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
 
 export const featureApiRouter = express.Router();
 
-
-
 export const validateFeature = (data: any) => {
   let featureType = data.type;
 
@@ -85,12 +83,14 @@ featureApiRouter.post("", async (req: any, res) => {
       ...parsedFeature,
     };
 
-    await FeatureService.insert({
+    let insertedData = await FeatureService.insert({
       sb: req.sb,
       data: feature,
     });
 
-    res.status(200).json({ message: "Feature created" });
+    let insertedFeature =
+      insertedData && insertedData.length > 0 ? insertedData[0] : null;
+    res.status(200).json(insertedFeature);
   } catch (error) {
     handleRequestError({ req, error, res, action: "Create feature" });
   }

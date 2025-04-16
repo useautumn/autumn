@@ -9,6 +9,7 @@ import {
   FullCustomerPrice,
   Organization,
   PriceType,
+  TierInfinite,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { getPriceOptions, getUsageTier } from "@/internal/prices/priceUtils.js";
@@ -357,16 +358,22 @@ export const processFullCusProduct = ({
               to: allowance,
               amount: 0,
             },
-            ...config.usage_tiers.map((tier) => ({
-              to: tier.to == -1 ? -1 : tier.to + allowance!,
-              amount: tier.amount,
-            })),
+            ...config.usage_tiers.map((tier) => {
+              let isLastTier = tier.to == -1 || tier.to == TierInfinite;
+              return {
+                to: isLastTier ? tier.to : Number(tier.to) + allowance!,
+                amount: tier.amount,
+              };
+            }),
           ];
         } else {
-          tiers = config.usage_tiers.map((tier) => ({
-            to: tier.to == -1 ? -1 : tier.to + allowance!,
-            amount: tier.amount,
-          }));
+          tiers = config.usage_tiers.map((tier) => {
+            let isLastTier = tier.to == -1 || tier.to == TierInfinite;
+            return {
+              to: isLastTier ? tier.to : Number(tier.to) + allowance!,
+              amount: tier.amount,
+            };
+          });
         }
 
         return {

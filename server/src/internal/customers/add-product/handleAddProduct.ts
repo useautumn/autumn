@@ -1,7 +1,5 @@
 import {
   getBillingType,
-  getBillLaterPrices,
-  getBillNowPrices,
   getPriceEntitlement,
   getPriceOptions,
   getProductForPrice,
@@ -141,6 +139,7 @@ const handleBillNowPrices = async ({
   await Promise.all(batchInsert);
 
   // Do this async...
+
   const insertInvoice = async (invoiceId: string) => {
     const invoice = await getStripeExpandedInvoice({
       stripeCli,
@@ -383,9 +382,7 @@ export const handleAddProduct = async ({
   }
 
   // 2. Get one-off + fixed cycle prices
-  const billNowPrices = getBillNowPrices(prices);
-
-  if (billNowPrices.length > 0) {
+  if (prices.length > 0) {
     await handleBillNowPrices({
       sb: req.sb,
       attachParams,

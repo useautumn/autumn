@@ -10,7 +10,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { Button } from "@/components/ui/button";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function FeatureConfig({
   feature,
@@ -59,8 +63,9 @@ export function FeatureConfig({
         }
   );
 
-
-  const [showEventName, setShowEventName] = useState(feature.config.filters[0].value.length > 0);
+  const [showEventName, setShowEventName] = useState(
+    feature.config.filters[0].value.length > 0
+  );
 
   const [idChanged, setIdChanged] = useState(!!feature.id);
   const [featureType, setFeatureType] = useState<string>(
@@ -75,9 +80,7 @@ export function FeatureConfig({
       type: featureType,
       config: meteredConfig,
     });
-
   }, [featureType, meteredConfig, fields]);
-
 
   return (
     <div className="flex flex-col gap-4">
@@ -87,11 +90,18 @@ export function FeatureConfig({
         value={featureType}
         onValueChange={setFeatureType}
       >
-        <TabsList>
+        <TabsList className="-ml-2">
           <TabsTrigger value={FeatureType.Metered}>Metered</TabsTrigger>
           <TabsTrigger value={FeatureType.Boolean}>Boolean</TabsTrigger>
         </TabsList>
+        <p className="text-t3 text-sm">
+          {featureType == FeatureType.Metered &&
+            "A usage-based feature that you want to track and bill for"}
+          {featureType == FeatureType.Boolean &&
+            "A feature flag that can be either enabled or disabled"}
+        </p>
       </Tabs>
+
       <div className="flex gap-2 w-full">
         <div className="w-full">
           <FieldLabel>Name</FieldLabel>
@@ -124,7 +134,6 @@ export function FeatureConfig({
           />
         </div>
       </div>
-
       {/* Filter */}
       {featureType === FeatureType.Metered && (
         <>
@@ -154,15 +163,14 @@ export function FeatureConfig({
                     setShowEventName(!showEventName);
                   }}
                 >
-                <span className="font-mono ">event_name</span>
+                  <span className="font-mono ">event_name</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent sideOffset={5} side="right">
-                <p>Link feature to a separate event</p>
+              <TooltipContent sideOffset={5} side="bottom" align="start">
+                <p>Link feature to multiple separate events</p>
               </TooltipContent>
             </Tooltip>
           </div>
-
         </>
       )}
     </div>
@@ -184,11 +192,14 @@ export const FilterInput = ({
 }) => {
   const [inputFocused, setInputFocused] = useState(false);
 
-  const filter: Expression = config.filters.length > 0 ? config.filters[0] : {
-    property: "",
-    operator: "",
-    value: [],
-  };
+  const filter: Expression =
+    config.filters.length > 0
+      ? config.filters[0]
+      : {
+          property: "",
+          operator: "",
+          value: [],
+        };
 
   const enterClicked = () => {
     let newFilter: Expression;
@@ -262,10 +273,8 @@ export const FilterInput = ({
   );
 };
 
-
-
-
-          {/* <div>
+{
+  /* <div>
             {groupByExists ? (
               <div>
                 <FieldLabel>Group By</FieldLabel>
@@ -301,9 +310,11 @@ export const FilterInput = ({
                 Group By
               </Button>
             )}
-          </div> */}
+          </div> */
+}
 
-          {/* <div>
+{
+  /* <div>
             <FieldLabel>Aggregate</FieldLabel>
             <Select
               value={meteredConfig.aggregate.type}
@@ -347,4 +358,5 @@ export const FilterInput = ({
                 })
               }
             />
-          </div> */}
+          </div> */
+}

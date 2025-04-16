@@ -24,6 +24,7 @@ export class Autumn {
 
   constructor(apiKey?: string, baseUrl?: string) {
     this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
+
     this.headers = {
       Authorization: `Bearer ${this.apiKey}`,
       "Content-Type": "application/json",
@@ -66,11 +67,21 @@ export class Autumn {
     return response.json();
   }
 
-  async delete(path: string) {
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method: "DELETE",
-      headers: this.headers,
-    });
+  async delete(
+    path: string,
+    {
+      deleteInStripe = false,
+    }: {
+      deleteInStripe?: boolean;
+    } = {}
+  ) {
+    const response = await fetch(
+      `${this.baseUrl}${path}?${deleteInStripe ? "delete_in_stripe=true" : ""}`,
+      {
+        method: "DELETE",
+        headers: this.headers,
+      }
+    );
 
     if (response.status != 200) {
       let error: any;
@@ -186,6 +197,19 @@ export class Autumn {
       const data = await this.post(`/customers`, customer);
       return data;
     },
+    delete: async (
+      customerId: string,
+      {
+        deleteInStripe = false,
+      }: {
+        deleteInStripe?: boolean;
+      } = {}
+    ) => {
+      const data = await this.delete(`/customers/${customerId}`, {
+        deleteInStripe,
+      });
+      return data;
+    },
   };
 
   entities = {
@@ -232,6 +256,29 @@ export class Autumn {
   };
 
   products = {
+    update: async (productId: string, product: any) => {
+      if (product.items && typeof product.items === "object") {
+        product.items = Object.values(product.items);
+      }
+      const data = await this.post(`/products/${productId}`, product);
+      return data;
+    },
+
+    get: async (
+      productId: string,
+      { v1Schema = false }: { v1Schema?: boolean } = {}
+    ) => {
+      const data = await this.get(
+        `/products/${productId}?${v1Schema ? "schemaVersion=1" : ""}`
+      );
+      return data;
+    },
+
+    create: async (product: any) => {
+      const data = await this.post(`/products`, product);
+      return data;
+    },
+
     delete: async (productId: string) => {
       const data = await this.delete(`/products/${productId}`);
       return data;
@@ -284,6 +331,28 @@ export class Autumn {
   redemptions = {
     get: async ({ redemptionId }: { redemptionId: string }) => {
       const data = await this.get(`/redemptions/${redemptionId}`);
+      return data;
+    },
+  };
+
+  events = {
+    send: async ({
+      customerId,
+      featureId,
+      value,
+      properties,
+    }: {
+      customerId: string;
+      featureId: string;
+      value: number;
+      properties?: any;
+    }) => {
+      const data = await this.post(`/events`, {
+        customer_id: customerId,
+        feature_id: featureId,
+        value,
+        properties,
+      });
       return data;
     },
   };

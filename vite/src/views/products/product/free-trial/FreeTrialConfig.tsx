@@ -41,7 +41,10 @@ export const FreeTrialConfig = ({
             setFields({ ...fields, unique_fingerprint: checked as boolean })
           }
         />
-        <p className="">Only allow one per customer (based on `fingerprint`)</p>
+        <p className="">
+          Only allow one free trial per customer{" "}
+          <span className=" font-mono">fingerprint</span>
+        </p>
       </div>
     </div>
   );

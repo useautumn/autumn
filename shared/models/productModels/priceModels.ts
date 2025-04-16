@@ -22,11 +22,12 @@ export const PriceSchema = z.object({
   org_id: z.string().optional(),
   internal_product_id: z.string().optional(),
   created_at: z.number().optional(),
-  billing_type: z.nativeEnum(BillingType).optional(),
+  billing_type: z.nativeEnum(BillingType).nullish(),
   is_custom: z.boolean().optional(),
 
   name: z.string().optional(),
   config: FixedPriceConfigSchema.or(UsagePriceConfigSchema).optional(),
+  entitlement_id: z.string().nullish(),
 });
 
 export type Price = z.infer<typeof PriceSchema>;

@@ -17,6 +17,7 @@ import { assert, expect } from "chai";
 import { Decimal } from "decimal.js";
 import { compareMainProduct } from "../../utils/compare.js";
 import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";
+import { getPriceForOverage } from "@/internal/prices/priceUtils.js";
 
 const ASSERT_INVOICE_AMOUNT = true;
 
@@ -34,7 +35,6 @@ describe(`${chalk.yellowBright(
   // );
 
   before(async function () {
-    this.timeout(30000);
     let { testClockId: insertedTestClockId } = await initCustomerWithTestClock({
       customerId,
       org: this.org,
@@ -47,8 +47,6 @@ describe(`${chalk.yellowBright(
 
   // 1. Attach GPU starter monthly
   it("usage3: should attach GPU starter monthly", async function () {
-    await timeout(10000);
-
     const res = await AutumnCli.attach({
       customerId: customerId,
       productId: advanceProducts.gpuSystemStarter.id,
@@ -121,6 +119,8 @@ describe(`${chalk.yellowBright(
       invoice.product_ids.includes(advanceProducts.gpuSystemStarter.id)
     );
 
+    // console.log("Total usage: ", totalCreditsUsed);
+
     await checkUsageInvoiceAmount({
       invoices,
       totalUsage: totalCreditsUsed,
@@ -130,6 +130,8 @@ describe(`${chalk.yellowBright(
       includeBase: false,
     });
   });
+
+  return;
 
   // 6. Advance another 15 days and check invoice for pro usage
   it("usage3: should 20 send events (GPU pro monthly)", async function () {

@@ -10,12 +10,12 @@ import { Input } from "@/components/ui/input";
 import { validBillingInterval } from "@/utils/product/priceUtils";
 
 export const PricingConfig = ({
-  price,
-  setPrice,
+  priceConfig,
+  setPriceConfig,
   isUpdate = false,
 }: {
-  price?: any;
-  setPrice: any;
+  priceConfig?: any;
+  setPriceConfig: any;
   isUpdate?: boolean;
 }) => {
   const defaultFixedConfig = {
@@ -42,54 +42,65 @@ export const PricingConfig = ({
   };
 
   const [priceType, setPriceType] = useState(
-    price?.config?.type || PriceType.Fixed
+    priceConfig?.type || PriceType.Fixed
   );
 
-  const [name, setName] = useState(price?.name || "");
+  const [name, setName] = useState(priceConfig?.name || "");
   const [usageTiers, setUsageTiers] = useState<any[]>([]);
   const [fixedConfig, setFixedConfig] = useState(
-    price?.config && price.config.type == PriceType.Fixed
-      ? price.config
+    priceConfig && priceConfig.type == PriceType.Fixed
+      ? priceConfig
       : defaultFixedConfig
   );
   const [usageConfig, setUsageConfig]: any = useState(
-    price?.config && price.config.type == PriceType.Usage
-      ? price.config
+    priceConfig?.config && priceConfig.config.type == PriceType.Usage
+      ? priceConfig.config
       : defaultUsageConfig
   );
 
-  const [originalPrice, _] = useState(price);
+  const [originalPrice, _] = useState(priceConfig);
 
   useEffect(() => {
-    setPrice({
-      ...originalPrice,
-      name: name,
-      config: priceType === PriceType.Fixed ? fixedConfig : usageConfig,
-    });
-  }, [fixedConfig, usageConfig, priceType, name, setPrice, originalPrice]);
+    setPriceConfig(
+      fixedConfig
+      //   {
+      //   ...originalPrice,
+      //   name: name,
+      //   config: priceType === PriceType.Fixed ? fixedConfig : usageConfig,
+
+      // }
+    );
+  }, [
+    fixedConfig,
+    usageConfig,
+    priceType,
+    name,
+    setPriceConfig,
+    originalPrice,
+  ]);
 
   return (
-    <div className="overflow-hidden flex flex-col gap-4">
-      <div className="flex flex-col">
+    <div className="overflow-hidden flex flex-col gap-4 w-full">
+      {/* <div className="flex flex-col">
         <FieldLabel>Name</FieldLabel>
         <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Price Name"
         />
-      </div>
+      </div> */}
       <Tabs
         value={priceType}
         onValueChange={(value) => setPriceType(value as PriceType)}
         defaultValue={priceType}
       >
-        <TabsList>
+        {/* <TabsList>
           <TabsTrigger value={PriceType.Fixed}>Flat Fee</TabsTrigger>
           <TabsTrigger value={PriceType.Usage}>Usage Based</TabsTrigger>
-        </TabsList>
-        <TabsContent value={PriceType.Fixed}>
-          <CreateFixedPrice config={fixedConfig} setConfig={setFixedConfig} />
-        </TabsContent>
+        </TabsList> 
+        <TabsContent value={PriceType.Fixed}> */}
+        {/* <CreateFixedPrice config={fixedConfig} setConfig={setFixedConfig} /> */}
+        {/*  </TabsContent>
         <TabsContent value={PriceType.Usage}>
           <CreateUsagePrice
             config={usageConfig}
@@ -99,7 +110,7 @@ export const PricingConfig = ({
             price={price}
             isUpdate={isUpdate}
           />
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </div>
   );
@@ -112,6 +123,11 @@ export const validateUsageConfig = (usageConfig: any) => {
 
   if (!config.internal_feature_id) {
     toast.error("Please select an entitlement");
+    return null;
+  }
+
+  if (config.usage_tiers.slice(0, -1).some((tier: any) => tier.to < 0)) {
+    toast.error("There can be no negative values in your pricing tiers");
     return null;
   }
 
@@ -142,11 +158,7 @@ export const validateUsageConfig = (usageConfig: any) => {
   // Check individual tier validity
   for (let i = 0; i < config.usage_tiers.length; i++) {
     const tier = config.usage_tiers[i];
-    if (
-      invalidNumber(tier.from) ||
-      invalidNumber(tier.to) ||
-      invalidNumber(tier.amount)
-    ) {
+    if (invalidNumber(tier.from) || invalidNumber(tier.amount)) {
       toast.error("Please fill out all tier fields");
       return null;
     }

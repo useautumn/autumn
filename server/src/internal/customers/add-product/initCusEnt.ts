@@ -160,7 +160,7 @@ const initCusEntBalance = ({
 
   options,
   relatedPrice,
-  existingCusEnt,
+  // existingCusEnt,
   entities,
   carryExistingUsages = false,
 }: {
@@ -169,7 +169,7 @@ const initCusEntBalance = ({
 
   options?: FeatureOptions;
   relatedPrice?: Price;
-  existingCusEnt?: FullCustomerEntitlement;
+  // existingCusEnt?: FullCustomerEntitlement;
   entities: Entity[];
   carryExistingUsages?: boolean;
 }) => {
@@ -186,73 +186,78 @@ const initCusEntBalance = ({
   let newEntities: Record<string, EntityBalance> | null = initCusEntEntities({
     entitlement,
     entities,
-    existingCusEnt,
     resetBalance,
   });
 
-  if (
-    !existingCusEnt ||
-    (!entitlement.carry_from_previous && !carryExistingUsages)
-  ) {
-    return { newBalance: resetBalance, newEntities };
-  }
+  return { newBalance: resetBalance, newEntities };
 
-  let existingAllowanceType = existingCusEnt.entitlement.allowance_type;
-  if (
-    nullish(existingCusEnt.balance) ||
-    existingAllowanceType === AllowanceType.Unlimited
-  ) {
-    return { newBalance: resetBalance, newEntities };
-  }
+  // // 1. Get existing usage
+  // let { cusEnt, usage } = getExistingCusEntAndUsage({
+  //   entitlement,
+  //   curCusProduct,
+  //   relatedPrice,
+  // });
 
-  // Calculate existing usage
+  // Carry over entities3
 
-  let curOptions = getEntOptions(
-    curCusProduct?.options || [],
-    existingCusEnt.entitlement
-  );
-  let curPrice = getRelatedCusPrice(
-    existingCusEnt,
-    curCusProduct?.customer_prices || []
-  );
+  // if (
+  //   !existingCusEnt ||
+  //   (!entitlement.carry_from_previous && !carryExistingUsages)
+  // ) {
+  //   return { newBalance: resetBalance, newEntities };
+  // }
 
-  // console.log("Initializing balance for entitlement", entitlement.feature.id);
-  // console.log("Existing balance", existingCusEnt?.balance);
-  // console.log("Current options", curOptions);
-  // console.log("Current price", curPrice?.price.name);
+  // let existingAllowanceType = existingCusEnt.entitlement.allowance_type;
+  // if (
+  //   nullish(existingCusEnt.balance) ||
+  //   existingAllowanceType === AllowanceType.Unlimited
+  // ) {
+  //   return { newBalance: resetBalance, newEntities };
+  // }
 
-  let existingAllowance = getResetBalance({
-    entitlement: existingCusEnt.entitlement,
-    options: curOptions,
-    relatedPrice: curPrice?.price,
-  });
+  // // Calculate existing usage
 
-  let existingUsage = existingAllowance! - existingCusEnt.balance!;
-  let newBalance = resetBalance! - existingUsage;
+  // let curOptions = getEntOptions(
+  //   curCusProduct?.options || [],
+  //   existingCusEnt.entitlement
+  // );
+  // let curPrice = getRelatedCusPrice(
+  //   existingCusEnt,
+  //   curCusProduct?.customer_prices || []
+  // );
 
-  if (
-    entitlement.entity_feature_id ==
-    existingCusEnt.entitlement.entity_feature_id
-  ) {
-    if (!newEntities) {
-      newEntities = {};
-    }
+  // let existingAllowance = getResetBalance({
+  //   entitlement: existingCusEnt.entitlement,
+  //   options: curOptions,
+  //   relatedPrice: curPrice?.price,
+  // });
 
-    for (const entityId in existingCusEnt.entities) {
-      let existingBalance = existingCusEnt.entities[entityId].balance;
-      let existingUsage = existingAllowance! - existingBalance;
+  // let existingUsage = existingAllowance! - existingCusEnt.balance!;
+  // let newBalance = resetBalance! - existingUsage;
 
-      let newBalance = resetBalance! - existingUsage;
+  // if (
+  //   entitlement.entity_feature_id ==
+  //   existingCusEnt.entitlement.entity_feature_id
+  // ) {
+  //   if (!newEntities) {
+  //     newEntities = {};
+  //   }
 
-      newEntities[entityId] = {
-        id: entityId,
-        balance: newBalance,
-        adjustment: 0,
-      };
-    }
-  }
+  //   for (const entityId in existingCusEnt.entities) {
+  //     let existingBalance = existingCusEnt.entities[entityId].balance;
+  //     let existingUsage = existingAllowance! - existingBalance;
 
-  return { newBalance, newEntities };
+  //     let newBalance = resetBalance! - existingUsage;
+
+  //     newEntities[entityId] = {
+  //       id: entityId,
+  //       balance: newBalance,
+  //       adjustment: 0,
+  //     };
+  //   }
+  // }
+
+  // return { newBalance, newEntities };
 };
 
 // MAIN FUNCTION
@@ -289,7 +294,7 @@ export const initCusEntitlement = ({
     entitlement,
     options,
     relatedPrice,
-    existingCusEnt,
+    // existingCusEnt,
     entities,
     carryExistingUsages,
     curCusProduct,

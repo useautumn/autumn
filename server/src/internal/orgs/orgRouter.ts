@@ -11,6 +11,7 @@ import Stripe from "stripe";
 import { OrgService } from "./OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { AppEnv } from "@autumn/shared";
+import { nullish } from "@/utils/genUtils.js";
 
 export const orgRouter = express.Router();
 
@@ -43,9 +44,9 @@ orgRouter.get("", async (req: any, res) => {
 
 orgRouter.post("/stripe", async (req: any, res) => {
   try {
-    const { testApiKey, liveApiKey, successUrl, defaultCurrency } = req.body;
+    let { testApiKey, liveApiKey, successUrl, defaultCurrency } = req.body;
 
-    if (!testApiKey || !liveApiKey || !defaultCurrency || !successUrl) {
+    if (!testApiKey || !liveApiKey || !successUrl) {
       throw new RecaseError({
         message: "Missing required fields",
         code: ErrCode.StripeKeyInvalid,
@@ -57,6 +58,19 @@ orgRouter.post("/stripe", async (req: any, res) => {
     try {
       await checkKeyValid(testApiKey);
       await checkKeyValid(liveApiKey);
+
+      // Get default currency from Stripe
+      let stripe = new Stripe(testApiKey);
+      let account = await stripe.accounts.retrieve();
+      if (nullish(defaultCurrency) && nullish(account.default_currency)) {
+        throw new RecaseError({
+          message: "Default currency not set",
+          code: ErrCode.StripeKeyInvalid,
+          statusCode: 500,
+        });
+      } else if (nullish(defaultCurrency)) {
+        defaultCurrency = account.default_currency;
+      }
     } catch (error: any) {
       throw new RecaseError({
         message: error.message || "Invalid Stripe API keys",
@@ -65,7 +79,6 @@ orgRouter.post("/stripe", async (req: any, res) => {
         data: error,
       });
     }
-
     // 2. Create webhook endpoint
     let testWebhook: Stripe.WebhookEndpoint;
     let liveWebhook: Stripe.WebhookEndpoint;

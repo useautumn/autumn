@@ -43,15 +43,21 @@ export function MainLayout() {
   // 1. If not loaded, show loading screen
   if (!isUserLoaded) {
     return (
-      <div className="w-screen h-screen flex bg-stone-50">
+      <div className="w-screen h-screen flex bg-stone-100">
         <MainSidebar />
-        <div className="w-full h-screen flex flex-col overflow-hidden">
-          {env === AppEnv.Sandbox && (
-            <div className="w-full h-10 bg-primary/80 text-white text-sm flex items-center justify-center">
-              <p className="font-medium">You&apos;re in sandbox mode.</p>
+        <div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
+          <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
+            {env === AppEnv.Sandbox && (
+              <div className="w-full min-h-10 h-10 bg-orange-100 text-white text-sm flex items-center justify-center">
+                <p className="font-medium text-orange-500 font-mono">
+                  You&apos;re in sandbox
+                </p>
+              </div>
+            )}
+            <div className="flex bg-stone-50 flex-col h-full">
+              <LoadingScreen />
             </div>
-          )}
-          <LoadingScreen />
+          </div>
         </div>
       </div>
     );
@@ -70,17 +76,32 @@ export function MainLayout() {
   }
 
   if (!org && !pathname.includes("/onboarding")) {
-    return <Navigate to={getRedirectUrl("/onboarding", env)} replace={true} />;
+    return (
+      <Navigate
+        to={getRedirectUrl("/onboarding", AppEnv.Sandbox)}
+        replace={true}
+      />
+    );
   }
 
   // 3. If user, but no org, redirect to onboarding
 
   return (
-    <main className="w-screen h-screen flex">
+    <main
+      className="w-screen h-screen flex bg-stone-100"
+      // style={{
+      //   backgroundImage: "url('/metal.jpg')",
+      //   backgroundSize: "cover",
+      //   backgroundPosition: "top left",
+      //   backgroundRepeat: "no-repeat",
+      //   backgroundColor: "rgba(255, 255, 255, 0)",
+      //   backgroundBlendMode: "overlay",
+      // }}
+    >
       <Toaster
         position="top-center"
         className="flex justify-center"
-        duration={2000}
+        duration={6000}
         toastOptions={{
           unstyled: true,
           classNames: {
@@ -101,29 +122,33 @@ const MainContent = () => {
   const env = useEnv();
 
   return (
-    <div className="w-full h-screen flex flex-col overflow-hidden">
-      {env === AppEnv.Sandbox && (
-        <div className="w-full h-10 bg-primary/80 text-white text-sm flex items-center justify-center">
-          <p className="font-medium">You&apos;re in sandbox mode.</p>
-        </div>
-      )}
-      <div
-        className={cn(
-          "w-full h-full overflow-auto bg-stone-50 p-6 flex justify-center"
-        )}
-      >
-        <div className="hidden md:flex w-full h-full max-w-[1048px] flex-col gap-4">
-          <Outlet />
-        </div>
-        <div className="md:hidden w-full h-full flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-sm text-center">
-            <h2 className="text-xl font-semibold mb-2">
-              Autumn is coming to mobile soon
-            </h2>
-            <p className="text-gray-600">
-              We&apos;re currently designed for larger screens. Come back on
-              your desktop?
+    <div className="w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3">
+      <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
+        {env === AppEnv.Sandbox && (
+          <div className="w-full min-h-10 h-10 bg-orange-100 text-white text-sm flex items-center justify-center">
+            <p className="font-medium text-orange-500 font-mono">
+              You&apos;re in sandbox
             </p>
+          </div>
+        )}
+        <div
+          className={cn(
+            "w-full h-full overflow-auto flex justify-center bg-stone-50"
+          )}
+        >
+          <div className="hidden md:flex w-full h-full justify-center">
+            <Outlet />
+          </div>
+          <div className="md:hidden w-full h-full flex items-center justify-center">
+            <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+              <h2 className="text-xl font-semibold mb-2">
+                Autumn is coming to mobile soon
+              </h2>
+              <p className="text-gray-600">
+                We&apos;re currently designed for larger screens. Come back on
+                your desktop?
+              </p>
+            </div>
           </div>
         </div>
       </div>

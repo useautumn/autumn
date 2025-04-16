@@ -43,10 +43,11 @@ export class CusPriceService {
       .from("customer_prices")
       .select("*, price:prices!inner(*)")
       .eq("customer_product_id", cusEnt.customer_product_id)
-      .eq(
-        "price.config->>internal_feature_id",
-        cusEnt.entitlement.internal_feature_id
-      );
+      .eq("price.entitlement_id", cusEnt.entitlement.id);
+    // .eq(
+    //   "price.config->>internal_feature_id",
+    //   cusEnt.entitlement.internal_feature_id
+    // );
 
     if (error) {
       throw new RecaseError({

@@ -89,13 +89,7 @@ function CreateCreditSystem() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant="dashed"
-          className="w-full"
-          startIcon={<PlusIcon size={15} />}
-        >
-          Create Credit System
-        </Button>
+        <Button variant="add">Credit System</Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>

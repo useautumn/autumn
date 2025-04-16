@@ -25,13 +25,12 @@ export const CreatePrice = () => {
       return;
     }
 
+    setLoading(true);
     const config = validateConfig(price, product.prices);
 
     if (!config) {
       return;
     }
-
-    setLoading(true);
 
     const newPrice = CreatePriceSchema.parse({
       name: price.name,
@@ -60,7 +59,7 @@ export const CreatePrice = () => {
       </DialogTrigger>
       <DialogContent>
         <DialogTitle>Create Price</DialogTitle>
-        <PricingConfig price={price} setPrice={setPrice} />
+        <PricingConfig priceConfig={price} setPriceConfig={setPrice} />
         <DialogFooter>
           <Button
             onClick={handleCreatePrice}

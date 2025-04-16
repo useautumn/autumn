@@ -14,11 +14,15 @@ import {
   FreeTrial,
   Organization,
   Price,
+  ProductItem,
 } from "@autumn/shared";
 
 import { FullProduct } from "@autumn/shared";
 
 import { SupabaseClient } from "@supabase/supabase-js";
+import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
 
 export const handleVersionProduct = async ({
   req,
@@ -112,4 +116,81 @@ export const handleVersionProduct = async ({
   });
 
   res.status(200).json(newFullProduct);
+};
+
+export const handleVersionProductV2 = async ({
+  req,
+  res,
+  sb,
+  latestProduct,
+  org,
+  env,
+  items,
+  freeTrial,
+}: {
+  req: any;
+  res: any;
+  sb: SupabaseClient;
+  latestProduct: FullProduct;
+  org: Organization;
+  env: AppEnv;
+  items: ProductItem[];
+  freeTrial: FreeTrial;
+}) => {
+  let curVersion = latestProduct.version;
+  let newVersion = curVersion + 1;
+
+  let features = await FeatureService.getFromReq({
+    req,
+    sb,
+    orgId: org.id,
+    env,
+  });
+
+  console.log(
+    `Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`
+  );
+
+  const newProduct = constructProduct({
+    productData: CreateProductSchema.parse({
+      ...latestProduct,
+      version: newVersion,
+    }),
+    orgId: org.id,
+    env: latestProduct.env as AppEnv,
+    processor: latestProduct.processor,
+  });
+
+  // Validate product items...
+  validateProductItems({
+    newItems: items,
+    features,
+  });
+
+  await ProductService.create({ sb, product: newProduct });
+
+  await handleNewProductItems({
+    sb,
+    curPrices: latestProduct.prices,
+    curEnts: latestProduct.entitlements,
+    newItems: items,
+    features,
+    product: newProduct,
+    logger: console,
+    isCustom: false,
+    newVersion: true,
+  });
+
+  // Handle new free trial
+  if (freeTrial) {
+    await handleNewFreeTrial({
+      sb,
+      newFreeTrial: freeTrial,
+      curFreeTrial: null,
+      internalProductId: newProduct.internal_id,
+      isCustom: false,
+    });
+  }
+
+  res.status(200).send(newProduct);
 };

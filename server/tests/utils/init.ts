@@ -14,6 +14,7 @@ import {
   FreeTrial,
   Organization,
   PriceType,
+  ProductItem,
   RewardReceivedBy,
   RewardTriggerEvent,
   RewardType,
@@ -21,6 +22,7 @@ import {
 import { getAxiosInstance } from "./setup.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { attachPmToCus } from "@/external/stripe/stripeCusUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const keyToTitle = (key: string) => {
   return key
@@ -240,6 +242,7 @@ export const initProduct = ({
   id,
   isDefault = false,
   isAddOn = false,
+  items,
   entitlements,
   prices,
   freeTrial,
@@ -248,11 +251,24 @@ export const initProduct = ({
   id: string;
   isDefault?: boolean;
   isAddOn?: boolean;
+  items?: Record<string, ProductItem>;
   entitlements: Record<string, Entitlement>;
   prices: any[];
   freeTrial: CreateFreeTrial | null;
   group?: string;
 }) => {
+  // if (notNullish(items)) {
+  //   return {
+  //     id,
+  //     name: keyToTitle(id),
+  //     is_default: isDefault,
+  //     is_add_on: isAddOn,
+  //     group: group,
+  //     items: items,
+  //     free_trial: freeTrial,
+  //   };
+  // }
+
   return {
     id,
     name: keyToTitle(id),

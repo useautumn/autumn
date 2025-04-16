@@ -19,6 +19,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CusService } from "@/services/customers/CusService";
 import { toast } from "sonner";
 import { getBackendErr } from "@/utils/genUtils";
+import CopyButton from "@/components/general/CopyButton";
 
 function UpdateCusEntitlement({
   selectedCusEntitlement,
@@ -87,12 +88,14 @@ function UpdateCusEntitlement({
       onOpenChange={() => setSelectedCusEntitlement(null)}
     >
       <DialogTrigger asChild></DialogTrigger>
-      <DialogContent>
+      <DialogContent className="min-w-sm">
         <DialogHeader>
-          <DialogTitle>
-            {feature.name} - {cusProduct?.product.name}
-          </DialogTitle>
-          <div className="text-t3 text-sm font-mono">{feature.id}</div>
+          <div className="flex flex-col gap-4">
+            <DialogTitle>{feature.name}</DialogTitle>
+            <CopyButton text={feature.id} className="w-fit font-mono">
+              {feature.id}
+            </CopyButton>
+          </div>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           <div>

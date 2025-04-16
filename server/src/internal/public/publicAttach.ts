@@ -14,19 +14,19 @@ export const publicAttachRouter = Router();
 
 export const handlePublicAttach = async (req: any, res: any) => {
   {
-    const { customer_id, product_id, success_url, options } = req.body;
-    const orgId = req.minOrg.id;
-    const env = req.env;
-
-    const sb = req.sb;
-
-    const useCheckout = true;
-    const optionsListInput = options || [];
-    console.log("--------------------------------");
-    console.log(`PUBLIC ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
-
     try {
       // 1. Get full customer product data
+      const { customer_id, product_id, success_url, options } = req.body;
+      const orgId = req.minOrg.id;
+      const env = req.env;
+
+      const sb = req.sb;
+
+      const useCheckout = true;
+      const optionsListInput = options || [];
+      console.log("--------------------------------");
+      console.log(`PUBLIC ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
+
       const attachParams: AttachParams = await getFullCusProductData({
         sb,
         customerId: customer_id,
@@ -34,8 +34,7 @@ export const handlePublicAttach = async (req: any, res: any) => {
         orgId: orgId,
         env,
         customerData: {} as any,
-        pricesInput: [],
-        entsInput: [],
+        itemsInput: [],
         optionsListInput: optionsListInput,
         freeTrialInput: null,
         isCustom: false,

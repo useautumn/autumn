@@ -360,9 +360,10 @@ export const UsageTierInput = ({
   entitlements?: any[];
 }) => {
   if ((type === "to" && value === -1) || type === "from") {
+    //disable inputs for certain tier inputs
     return (
       <Input
-        className="outline-none bg-transparent shadow-none flex-grow mr-1 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="outline-none bg-transparent shadow-none flex-grow [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         value={value === -1 ? "♾️" : value}
         disabled
         type="text"
@@ -387,11 +388,11 @@ export const UsageTierInput = ({
   // };
 
   return (
-    <div className="relative flex-grow mr-1">
+    <div className="relative w-full flex">
       <Input
         className={cn(
-          "outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-          type === "amount" && "pr-12"
+          "outline-none flex w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+          type === "amount" && "pr-8"
         )}
         value={value}
         onChange={onChange}
@@ -400,8 +401,7 @@ export const UsageTierInput = ({
       />
       {type === "amount" && (
         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-t3 text-[10px]">
-          / {getBillingUnits(config, entitlements!)}
-          units
+          USD
         </span>
       )}
     </div>

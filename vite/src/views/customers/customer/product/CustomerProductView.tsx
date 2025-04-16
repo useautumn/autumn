@@ -4,9 +4,11 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   AppEnv,
   BillingInterval,
+  FeatureOptions,
   FrontendOrganization,
   FrontendProduct,
   FullCusProduct,
+  ProductV2,
 } from "@autumn/shared";
 
 import {
@@ -53,6 +55,7 @@ import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
+import ProductSidebar from "@/views/products/product/ProductSidebar";
 
 interface OptionValue {
   feature_id: string;
@@ -72,15 +75,27 @@ export default function CustomerProductView() {
   const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
   const navigation = useNavigate();
+
+  type FrontendProduct = ProductV2 & {
+    isActive: boolean;
+    options: FeatureOptions[];
+  };
+
   const [product, setProduct] = useState<FrontendProduct | null>(null);
   const [options, setOptions] = useState<OptionValue[]>([]);
 
   const [searchParams] = useSearchParams();
   let version = searchParams.get("version");
-
+  let customer_product_id = searchParams.get("id");
   const { data, isLoading, mutate, error } = useAxiosSWR({
     url: `/customers/${customer_id}/product/${product_id}${
-      version ? `?version=${version}` : ""
+      version && customer_product_id
+        ? `?version=${version}&customer_product_id=${customer_product_id}`
+        : version
+        ? `?version=${version}`
+        : customer_product_id
+        ? `?customer_product_id=${customer_product_id}`
+        : ""
     }`,
     env,
   });
@@ -90,11 +105,11 @@ export default function CustomerProductView() {
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [requiredOptions, setRequiredOptions] = useState<OptionValue[]>([]);
   const [useInvoice, setUseInvoice] = useState(false);
-  const initialProductRef = useRef<FrontendProduct | null>(null);
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
     useState<"unlimited" | number>(0);
   const [hasChanges, setHasChanges] = useState(false);
   const [hasOptionsChanges, setHasOptionsChanges] = useState(false);
+  const initialProductRef = useRef<FrontendProduct | null>(null);
 
   // const cusProductId = searchParams.get("id");
   useEffect(() => {
@@ -109,7 +124,7 @@ export default function CustomerProductView() {
     if (!data?.product || !data?.customer) return;
 
     let product = data.product;
-    initialProductRef.current = product;
+    initialProductRef.current = structuredClone(product);
 
     if (product.options) {
       setOptions(product.options);
@@ -119,52 +134,6 @@ export default function CustomerProductView() {
     setProduct(product);
   }, [data, product_id]);
 
-  // Pure function to handle product enrichment
-  const enrichProduct = (
-    baseProduct: FrontendProduct,
-    customerProduct?: {
-      status?: string;
-      options?: OptionValue[];
-      entitlements?: typeof baseProduct.entitlements;
-      prices?: typeof baseProduct.prices;
-      free_trial?: typeof baseProduct.free_trial;
-      version?: number;
-    }
-  ) => {
-    if (!customerProduct) {
-      // console.log("baseProduct", baseProduct);
-      return {
-        ...baseProduct,
-        isActive: false,
-        options: [],
-      };
-    }
-
-    return {
-      ...baseProduct,
-      isActive: customerProduct.status === "active",
-      options: customerProduct.options ?? [],
-      entitlements: customerProduct.entitlements || baseProduct.entitlements,
-      prices: customerProduct.prices || baseProduct.prices,
-      free_trial: customerProduct.free_trial || baseProduct.free_trial,
-      version: customerProduct.version || baseProduct.version,
-      // // ...(customerProduct.entitlements && {
-      // //   entitlements: customerProduct.entitlements,
-      // // }),
-      // ...(customerProduct.prices && {
-      //   prices: customerProduct.prices,
-      // }),
-      // ...(customerProduct.free_trial && {
-      //   free_trial: customerProduct.free_trial,
-      // }),
-      // ...(customerProduct.version && {
-      //   version: customerProduct.version,
-      // }),
-    };
-  };
-
-  //check if the user has made changes to the product state
-
   useEffect(() => {
     if (!initialProductRef.current || !product) {
       setHasChanges(false);
@@ -173,13 +142,11 @@ export default function CustomerProductView() {
 
     const hasChanged =
       JSON.stringify({
-        prices: product.prices,
-        entitlements: product.entitlements,
+        items: product.items,
         free_trial: product.free_trial,
       }) !==
       JSON.stringify({
-        prices: initialProductRef.current.prices,
-        entitlements: initialProductRef.current.entitlements,
+        items: initialProductRef.current.items,
         free_trial: initialProductRef.current.free_trial,
       });
 
@@ -203,7 +170,11 @@ export default function CustomerProductView() {
   }
 
   if (isLoading) return <LoadingScreen />;
-  const oneTimePurchase = pricesOnlyOneOff(product?.prices || []);
+  const oneTimePurchase = pricesOnlyOneOff(
+    product?.items || [],
+    product?.is_add_on || false
+  );
+  // const oneTimePurchase = false;
 
   const { customer } = data;
 
@@ -217,12 +188,15 @@ export default function CustomerProductView() {
 
   const handleCreateProduct = async (useInvoiceLatest?: boolean) => {
     try {
-      if (oneTimePurchase || !product.isActive) {
+      // oneTimePurchase ||
+      // TODO: Check if product is one time purchase
+      if (!product.isActive) {
         const { data } = await ProductService.getRequiredOptions(
           axiosInstance,
           {
-            prices: product.prices,
-            entitlements: product.entitlements,
+            // prices: product.items,
+            // entitlements: product.entitlements,
+            items: product.items,
           }
         );
 
@@ -247,10 +221,12 @@ export default function CustomerProductView() {
 
       const { data } = await CusService.addProduct(axiosInstance, customer_id, {
         product_id,
-        prices: product.prices,
-        entitlements: product.entitlements,
+        // prices: product.prices,
+        // entitlements: product.entitlements,
+        items: product.items,
         free_trial: product.free_trial,
         options: requiredOptions ? requiredOptions : options,
+
         is_custom: isCustom,
         invoice_only:
           useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,
@@ -273,11 +249,6 @@ export default function CustomerProductView() {
 
       if (data.invoice) {
         window.open(getStripeInvoiceLink(data.invoice), "_blank");
-        // setUrl({
-        //   type: "invoice",
-        //   value: ,
-        // });
-        // setCheckoutDialogOpen(true);
       }
     } catch (error) {
       console.log("Error creating product: ", error);
@@ -359,6 +330,10 @@ export default function CustomerProductView() {
         setProduct,
         selectedEntitlementAllowance,
         setSelectedEntitlementAllowance,
+        customer: data.customer,
+        handleCreateProduct,
+        actionState,
+        setUseInvoice,
       }}
     >
       <CustomToaster />
@@ -385,53 +360,72 @@ export default function CustomerProductView() {
         </DialogContent>
       </Dialog>
 
-      <div className="flex flex-col gap-2">
-        <Breadcrumb className="text-t3">
-          <BreadcrumbList className="text-t3 text-xs">
-            <BreadcrumbItem>
+      <div className="flex w-full">
+        <div className="flex flex-col gap-4 w-full">
+          <Breadcrumb className="text-t3 pt-6 pl-10 flex justify-center">
+            <BreadcrumbList className="text-t3 text-xs w-full">
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  className="cursor-pointer"
+                  onClick={() => navigateTo("/customers", navigation, env)}
+                >
+                  Customers
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
               <BreadcrumbLink
-                className="cursor-pointer"
-                onClick={() => navigateTo("/customers", navigation, env)}
+                className="cursor-pointer truncate max-w-48"
+                onClick={() =>
+                  navigateTo(`/customers/${customer_id}`, navigation, env)
+                }
               >
-                Customers
+                {customer.name
+                  ? customer.name
+                  : customer.id
+                  ? customer.id
+                  : customer.email}
               </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbLink
-              className="cursor-pointer"
-              onClick={() =>
-                navigateTo(`/customers/${customer_id}`, navigation, env)
-              }
-            >
-              {customer.name ? customer.name : customer.id}
-            </BreadcrumbLink>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>{product.name}</BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        {product && (
-          <ManageProduct
-            product={product}
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>{product.name}</BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+          <div className="flex">
+            <div className="flex-1 w-full min-w-sm">
+              {product && (
+                <ManageProduct
+                  customerData={data}
+                  showFreeTrial={false}
+                  setShowFreeTrial={() => {}}
+                  version={version ? parseInt(version) : product.version}
+                />
+              )}
+              {options.length > 0 && (
+                <ProductOptions
+                  options={options}
+                  setOptions={setOptions}
+                  oneTimePurchase={oneTimePurchase || false}
+                />
+              )}
+              <div className="flex justify-end gap-2 p-4 block lg:hidden">
+                <div className="w-fit">
+                  <AddProductButton
+                  // handleCreateProduct={handleCreateProduct}
+                  // actionState={actionState}
+                  // setUseInvoice={setUseInvoice}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+          <ProductSidebar
             customerData={data}
-            version={version ? parseInt(version) : product.version}
+            options={options}
+            setOptions={setOptions}
+            oneTimePurchase={oneTimePurchase || false}
           />
-        )}
-      </div>
-
-      {options.length > 0 && (
-        <ProductOptions
-          options={options}
-          setOptions={setOptions}
-          oneTimePurchase={oneTimePurchase || false}
-        />
-      )}
-      <div className="flex justify-end gap-2">
-        {/* <ProductOptionsButton /> */}
-        <AddProductButton
-          handleCreateProduct={handleCreateProduct}
-          actionState={actionState}
-          setUseInvoice={setUseInvoice}
-        />
+        </div>
       </div>
     </ProductContext.Provider>
   );

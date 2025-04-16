@@ -4,10 +4,8 @@ import http from "http";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { AppEnv, ErrCode } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import {
-  getBalanceForFeature,
-  getCusBalances,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getBalanceForFeature } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getCusBalances } from "@/internal/customers/entitlements/getCusBalances.js";
 
 export enum SbChannelEvent {
   BalanceUpdated = "balance_updated",
@@ -145,52 +143,47 @@ export const initWs = (server: http.Server) => {
 };
 
 const handleRealtimeBalances = async (ws: WebSocket, req: any, params: any) => {
-  try {
-    const { org, env, sb } = req;
-
-    // 1. Get all customer balances
-    const balances = await getCusBalances({
-      sb,
-      customerId: params.customer_id,
-      orgId: org.id,
-      env,
-    });
-
-    ws.send(JSON.stringify({ data: balances, error: null }));
-
-    const channel = `${org.id}_${env}_${params.customer_id}`;
-
-    sb.channel(channel)
-      .on(
-        "broadcast",
-        { event: SbChannelEvent.BalanceUpdated },
-        async (payload: any) => {
-          const data = payload.payload;
-          console.log("Received balance update event from supabase:", data);
-          const newBalances = await getCusBalances({
-            sb,
-            customerId: params.customer_id,
-            orgId: org.id,
-            env,
-          });
-          ws.send(
-            JSON.stringify({
-              data: newBalances,
-              error: null,
-            })
-          );
-        }
-      )
-      .subscribe();
-  } catch (error) {
-    console.log("Error getting customer balances", error);
-    ws.send(
-      JSON.stringify({
-        data: null,
-        error: "Error getting customer balances",
-      })
-    );
-  }
+  // try {
+  //   const { org, env, sb } = req;
+  //   // 1. Get all customer balances
+  //   const balances = await getCusBalances({
+  //     sb,
+  //     customerId: params.customer_id,
+  //     orgId: org.id,
+  //     env,
+  //   });
+  //   ws.send(JSON.stringify({ data: balances, error: null }));
+  //   const channel = `${org.id}_${env}_${params.customer_id}`;
+  //   sb.channel(channel)
+  //     .on(
+  //       "broadcast",
+  //       { event: SbChannelEvent.BalanceUpdated },
+  //       async (payload: any) => {
+  //         const data = payload.payload;
+  //         console.log("Received balance update event from supabase:", data);
+  //         const newBalances = await getCusBalances({
+  //           customerId: params.customer_id,
+  //           orgId: org.id,
+  //           env,
+  //         });
+  //         ws.send(
+  //           JSON.stringify({
+  //             data: newBalances,
+  //             error: null,
+  //           })
+  //         );
+  //       }
+  //     )
+  //     .subscribe();
+  // } catch (error) {
+  //   console.log("Error getting customer balances", error);
+  //   ws.send(
+  //     JSON.stringify({
+  //       data: null,
+  //       error: "Error getting customer balances",
+  //     })
+  //   );
+  // }
 };
 
 const handleRealtimeBalance = async (ws: WebSocket, req: any, params: any) => {

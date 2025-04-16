@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import LoadingScreen from "@/views/general/LoadingScreen";
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
@@ -8,8 +8,14 @@ import { ProductContext } from "./ProductContext";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { ManageProduct } from "./ManageProduct";
-
-import { AppEnv, FrontendProduct, UpdateProductSchema } from "@autumn/shared";
+import {
+  AppEnv,
+  FrontendProduct,
+  ProductItem,
+  ProductItemType,
+  ProductV2,
+  UpdateProductSchema,
+} from "@autumn/shared";
 import { toast } from "sonner";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
@@ -21,21 +27,25 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import ErrorScreen from "@/views/general/ErrorScreen";
-import ConfirmNewVersionDialog from "./ConfirmNewVersionDialog";
+import ProductSidebar from "./ProductSidebar";
+import { FeaturesContext } from "@/views/features/FeaturesContext";
+import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
+import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
+import { getItemType } from "@/utils/product/productItemUtils";
 
 function ProductView({ env }: { env: AppEnv }) {
   const { product_id } = useParams();
-  const navigate = useNavigate();
-  const axiosInstance = useAxiosInstance({ env });
-  const initialProductRef = useRef<FrontendProduct | null>(null);
-
-  const [product, setProduct] = useState<FrontendProduct | null>(null);
-  const [hasChanges, setHasChanges] = useState(false);
-  // const [version, setVersion] = useState<number | null>(null);
-  // Get version from url query params
   const [searchParams] = useSearchParams();
-  const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
   const version = searchParams.get("version");
+
+  const axiosInstance = useAxiosInstance({ env });
+  const initialProductRef = useRef<ProductV2 | null>(null);
+
+  const [product, setProduct] = useState<ProductV2 | null>(null);
+  const [showFreeTrial, setShowFreeTrial] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
 
   const { data, isLoading, mutate } = useAxiosSWR({
     url: `/products/${product_id}/data?version=${version}`,
@@ -50,38 +60,49 @@ function ProductView({ env }: { env: AppEnv }) {
   //this is to make sure pricing for unlimited entitlements can't be applied
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
     useState<"unlimited" | number>(0);
+  const [originalProduct, setOriginalProduct] = useState<ProductV2 | null>(
+    null
+  );
 
   useEffect(() => {
     if (data?.product) {
-      setProduct(data.product);
-
-      initialProductRef.current = data.product;
+      const sortedProduct = {
+        ...data.product,
+        items: sortProductItems(data.product.items),
+      };
+      setProduct(sortedProduct);
+      setOriginalProduct(structuredClone(sortedProduct));
     }
+
+    setShowFreeTrial(!!data?.product?.free_trial);
   }, [data]);
 
   useEffect(() => {
-    if (!initialProductRef.current || !product) {
+    //sort product items and check if there are changes from the original
+    if (!product) return;
+    const sortedProduct = {
+      ...product,
+      items: sortProductItems(product.items),
+    };
+
+    if (JSON.stringify(product.items) !== JSON.stringify(sortedProduct.items)) {
+      setProduct(sortedProduct);
+    }
+
+    if (!originalProduct || !sortedProduct) {
       setHasChanges(false);
       return;
     }
 
     const hasChanged =
-      JSON.stringify({
-        prices: product.prices,
-        entitlements: product.entitlements,
-        free_trial: product.free_trial,
-      }) !==
-      JSON.stringify({
-        prices: initialProductRef.current.prices,
-        entitlements: initialProductRef.current.entitlements,
-        free_trial: initialProductRef.current.free_trial,
-      });
+      JSON.stringify(sortedProduct) !== JSON.stringify(originalProduct);
     setHasChanges(hasChanged);
   }, [product]);
 
   const isNewProduct =
-    initialProductRef.current?.entitlements?.length === 0 &&
-    initialProductRef.current?.prices?.length === 0 &&
+    // initialProductRef.current?.entitlements?.length === 0 &&
+    // initialProductRef.current?.prices?.length === 0 &&
+    initialProductRef.current?.items?.length === 0 &&
     !initialProductRef.current?.free_trial;
 
   const actionState = {
@@ -110,8 +131,7 @@ function ProductView({ env }: { env: AppEnv }) {
     try {
       await ProductService.updateProduct(axiosInstance, product.id, {
         ...UpdateProductSchema.parse(product),
-        prices: product.prices,
-        entitlements: product.entitlements,
+        items: product.items,
         free_trial: product.free_trial,
       });
 
@@ -148,56 +168,76 @@ function ProductView({ env }: { env: AppEnv }) {
   };
 
   return (
-    <ProductContext.Provider
+    <FeaturesContext.Provider
       value={{
-        ...data,
-        mutate,
         env,
-        product,
-        setProduct,
-        selectedEntitlementAllowance,
-        setSelectedEntitlementAllowance,
-        counts,
-        version,
-        mutateCount,
+        mutate,
       }}
     >
-      <ConfirmNewVersionDialog
-        open={showNewVersionDialog}
-        setOpen={setShowNewVersionDialog}
-        createProduct={createProduct}
-      />
-
-      <div className="flex flex-col gap-0.5">
-        {/* Confirm version modal */}
-        <Breadcrumb className="text-t3">
-          <BreadcrumbList className="text-t3 text-xs">
-            <BreadcrumbItem
-              onClick={() => navigateTo("/products", navigate, env)}
-              className="cursor-pointer"
-            >
-              Products
-            </BreadcrumbItem>
-
-            <BreadcrumbSeparator />
-            <BreadcrumbItem className="cursor-pointer">
-              {product.name ? product.name : product.id}
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        <ManageProduct
-          product={product}
-          version={version ? parseInt(version) : undefined}
+      <ProductContext.Provider
+        value={{
+          ...data,
+          mutate,
+          env,
+          product,
+          setProduct,
+          selectedEntitlementAllowance,
+          setSelectedEntitlementAllowance,
+          counts,
+          version,
+          mutateCount,
+          actionState,
+          handleCreateProduct: createProductClicked,
+        }}
+      >
+        <ConfirmNewVersionDialog
+          open={showNewVersionDialog}
+          setOpen={setShowNewVersionDialog}
+          createProduct={createProduct}
         />
-      </div>
-      <div className="flex justify-end gap-2">
-        <AddProductButton
-          handleCreateProduct={createProductClicked}
-          actionState={actionState}
-        />
-      </div>
-    </ProductContext.Provider>
+        <div className="flex w-full">
+          <div className="flex flex-col gap-4 w-full">
+            <ProductViewBreadcrumbs />
+
+            <div className="flex">
+              <div className="flex-1 w-full min-w-sm">
+                <ManageProduct
+                  // product={product}
+                  showFreeTrial={showFreeTrial}
+                  setShowFreeTrial={setShowFreeTrial}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 p-10 w-full lg:hidden block">
+              <div className="w-fit">
+                <AddProductButton />
+              </div>
+            </div>
+          </div>
+          <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+            <ProductSidebar />
+          </div>
+        </div>
+      </ProductContext.Provider>
+    </FeaturesContext.Provider>
   );
 }
 
 export default ProductView;
+
+const sortProductItems = (items: ProductItem[]) => {
+  const sortedItems = [...items].sort((a, b) => {
+    const typeA = getItemType(a);
+    const typeB = getItemType(b);
+
+    const typeOrder = {
+      [ProductItemType.Feature]: 0,
+      [ProductItemType.FeaturePrice]: 1,
+      [ProductItemType.Price]: 2,
+    };
+
+    return typeOrder[typeA] - typeOrder[typeB];
+  });
+
+  return sortedItems;
+};

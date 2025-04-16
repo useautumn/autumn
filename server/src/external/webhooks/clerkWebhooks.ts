@@ -70,6 +70,7 @@ const createDefaultProducts = async ({
     env,
     internal_id: generateId("fe"),
     name: keyToTitle(f.id),
+    created_at: Date.now(),
   }));
 
   await FeatureService.insert({
@@ -79,8 +80,8 @@ const createDefaultProducts = async ({
 
   const defaultProducts = [
     {
-      id: "free",
-      name: "Free",
+      id: "free-example",
+      name: "Free (Example)",
       env: AppEnv.Sandbox,
       is_default: true,
       entitlements: [
@@ -95,8 +96,8 @@ const createDefaultProducts = async ({
       prices: [],
     },
     {
-      id: "pro",
-      name: "Pro",
+      id: "pro-example",
+      name: "Pro (Example)",
       env: AppEnv.Sandbox,
       is_default: false,
       entitlements: [
@@ -138,6 +139,7 @@ const createDefaultProducts = async ({
           is_add_on: false,
           group: "",
           created_at: Date.now(),
+          version: 1,
         }),
       });
 

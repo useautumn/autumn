@@ -8,10 +8,12 @@ export function SearchBar({
   setQuery,
   setCurrentPage,
   mutate,
+  setSearching,
 }: {
   query: string;
   setQuery: (query: string) => void;
   setCurrentPage: (page: number) => void;
+  setSearching: (searching: boolean) => void;
   mutate: () => Promise<void>;
 }) {
   const [loading, setLoading] = useState(false);
@@ -22,11 +24,13 @@ export function SearchBar({
       debounce(async (query: string) => {
         setLoading(true);
         setCurrentPage(1);
+        setSearching(true);
         await mutate();
         inputRef.current?.focus();
         setLoading(false);
+        setSearching(false);
       }, 350),
-    [mutate, setCurrentPage]
+    []
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,8 +42,8 @@ export function SearchBar({
 
   return (
     <div
-      className="rounded-sm border-1 shadow-sm py-1 h-8 px-2 text-sm 
-    flex items-center w-full bg-white"
+      className="rounded-sm py-1 h-8 px-2 text-sm 
+    flex items-center w-full max-w-xs"
     >
       <Search size={13} className="text-t3 mr-2" />
       <input
@@ -47,7 +51,7 @@ export function SearchBar({
         className="outline-none w-full bg-transparent"
         placeholder="Search..."
       ></input>
-      {loading && <SmallSpinner />}
+      <div className="w-5 h-5">{loading && <SmallSpinner />}</div>
     </div>
   );
 }

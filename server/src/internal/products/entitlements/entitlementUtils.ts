@@ -120,7 +120,10 @@ export const validateEntitlement = ({
   }
 
   if (parsedEnt.allowance_type == AllowanceType.Fixed) {
-    if (!notNullOrUndefined(parsedEnt.allowance) || parsedEnt.allowance! < 0) {
+    if (
+      !notNullOrUndefined(parsedEnt.allowance) ||
+      (typeof parsedEnt.allowance === "number" && parsedEnt.allowance < 0)
+    ) {
       throw new RecaseError({
         code: ErrCode.InvalidEntitlement,
         message: `Allowance is required for feature ${parsedEnt.feature_id}`,
@@ -156,9 +159,13 @@ export const validateEntitlement = ({
       }
 
       let billingUnits = config.billing_units || 1;
-      let isMultipleOfBillingUnits = parsedEnt.allowance! % billingUnits === 0;
+      let isMultipleOfBillingUnits =
+        (parsedEnt.allowance! as number) % billingUnits === 0;
 
-      if (parsedEnt.allowance! < billingUnits || !isMultipleOfBillingUnits) {
+      if (
+        (parsedEnt.allowance! as number) < billingUnits ||
+        !isMultipleOfBillingUnits
+      ) {
         throw new RecaseError({
           code: ErrCode.InvalidEntitlement,
           message: `Allowance for ${parsedEnt.feature_id} must be ≥ billing units and a multiple of billing units`,
@@ -390,15 +397,26 @@ export const handleNewEntitlements = async ({
 // OTHERS
 export const getEntRelatedPrice = (
   entitlement: Entitlement,
-  prices: Price[]
+  prices: Price[],
+  allowFeatureMatch = false
 ) => {
   return prices.find((price) => {
     if (price.config?.type === PriceType.Fixed) {
       return false;
     }
 
-    const config = price.config as UsagePriceConfig;
-    return config.internal_feature_id === entitlement.internal_feature_id;
+    let config = price.config as UsagePriceConfig;
+
+    if (allowFeatureMatch) {
+      return entitlement.internal_feature_id == config.internal_feature_id;
+    }
+
+    let entIdMatch = entitlement.id == price.entitlement_id;
+    let productIdMatch =
+      entitlement.internal_product_id == price.internal_product_id;
+    return entIdMatch && productIdMatch;
+    // const config = price.config as UsagePriceConfig;
+    // return config.internal_feature_id === entitlement.internal_feature_id;
   });
 };
 

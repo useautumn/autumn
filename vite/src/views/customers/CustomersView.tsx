@@ -33,6 +33,7 @@ function CustomersView({ env }: { env: AppEnv }) {
     page: 1,
     lastItemStack: [],
   });
+  const [searching, setSearching] = React.useState(false);
   const [paginationLoading, setPaginationLoading] = React.useState(false);
 
   const { data: productsData, isLoading: productsLoading } = useAxiosSWR({
@@ -52,15 +53,15 @@ function CustomersView({ env }: { env: AppEnv }) {
     },
   });
 
-  
-
   // Single useEffect to handle all data fetching
   useEffect(() => {
-    setPaginationLoading(true);
-    mutate().finally(() => {
-      setPaginationLoading(false);
-    });
-  }, [pagination, filters, searchQuery]); // Added searchQuery as a dependency
+    if (!searching) {
+      setPaginationLoading(true);
+      mutate().finally(() => {
+        setPaginationLoading(false);
+      });
+    }
+  }, [pagination, filters]);
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
@@ -115,78 +116,85 @@ function CustomersView({ env }: { env: AppEnv }) {
         versionCounts: productsData?.versionCounts,
       }}
     >
-      <div className="flex flex-col gap-4 h-fit relative">
-        <h1 className="text-xl font-medium shrink-0">Customers</h1>
-
-        <div className="flex justify-between w-full sticky top-0 z-10">
-          <div className="relative w-full max-w-md flex items-center gap-2">
-            <SearchBar
-              query={searchQuery}
-              setQuery={setSearchQuery}
-              setCurrentPage={(page: number) => {
-                setPagination({
-                  page: page,
-                  lastItemStack: [],
-                });
-              }}
-              mutate={mutate}
-            />
-            <FilterButton />
-          </div>
-          {data?.customers?.length > 0 && (
-            <div className="flex items-center gap-8 text-xs border bg-white pr-1 pl-2 rounded-sm shrink-0">
-              <p>
+      <div className="flex flex-col gap-4 h-fit relative w-full">
+        <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Customers</h1>
+        <div>
+          <div className="flex w-full justify-between sticky top-0 z-10 border-y h-10 bg-stone-100 pl-10 pr-7 items-center">
+            <div className="flex gap-4">
+              <div className="flex items-center gap-8 text-xs text-t3 pr-1 rounded-sm shrink-0">
+                {paginationLoading && !searching ? (
+                  <div className="w-[120px] h-8 flex items-center justify-center">
+                    <SmallSpinner />
+                  </div>
+                ) : (
+                  <Pagination className="w-[120px] h-8 text-xs">
+                    <PaginationContent className="w-full flex justify-between ">
+                      <PaginationItem>
+                        <PaginationPrevious
+                          onClick={handlePreviousPage}
+                          isActive={pagination.page !== 1}
+                          className="text-xs cursor-pointer p-1 h-6"
+                        />
+                      </PaginationItem>
+                      <PaginationItem className="">
+                        {pagination.page} / {Math.max(totalPages, 1)}
+                      </PaginationItem>
+                      <PaginationItem>
+                        <PaginationNext
+                          onClick={handleNextPage}
+                          isActive={pagination.page !== totalPages}
+                          className="text-xs cursor-pointer p-1 h-6"
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+              </div>
+              <SearchBar
+                query={searchQuery}
+                setQuery={setSearchQuery}
+                setCurrentPage={(page: number) => {
+                  setPagination({
+                    page: page,
+                    lastItemStack: [],
+                  });
+                }}
+                mutate={mutate}
+                setSearching={setSearching}
+              />
+              <FilterButton />
+              <p className="text-t3 text-sm whitespace-nowrap items-center flex gap-1">
                 <span className="font-semibold">{data?.totalCount} </span>
                 {data?.totalCount === 1 ? "Customer" : "Customers"}
               </p>
-              {paginationLoading ? (
-                <div className="w-[120px] h-8 flex items-center justify-center">
-                  <SmallSpinner />
-                </div>
-              ) : (
-                <Pagination className="w-[120px] h-8 text-xs">
-                  <PaginationContent className="w-full flex justify-between ">
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={handlePreviousPage}
-                        isActive={pagination.page !== 1}
-                        className="text-xs cursor-pointer p-1 h-6"
-                      />
-                    </PaginationItem>
-                    <PaginationItem className="">
-                      {pagination.page} / {totalPages}
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={handleNextPage}
-                        isActive={pagination.page !== totalPages}
-                        className="text-xs cursor-pointer p-1 h-6"
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              )}
             </div>
-          )}
-        </div>
-
-        <div className="overflow-auto min-h-0">
+            <div className="flex gap-4">
+              <CreateCustomer />
+            </div>
+          </div>
           {data?.customers?.length > 0 ? (
             <div className="h-fit max-h-full">
               <CustomersTable customers={data.customers} />
             </div>
           ) : (
-            <div className="flex bg-white shadow-md border rounded-md items-center justify-center text-t3 text-md h-[150px]">
-              <span>You don&apos;t have any customers...yet</span>
+            <div className="flex rounded-md items-start pl-10 text-t3 text-sm w-full h-[150px] pt-4">
+              <span className="">No customers found... yet ;)</span>
             </div>
           )}
         </div>
-        <div className="shrink-0 sticky bottom-0">
+        {/* <div className="shrink-0 sticky bottom-0">
           <CreateCustomer />
-        </div>
+        </div> */}
       </div>
     </CustomersContext.Provider>
   );
 }
 
 export default CustomersView;
+
+{
+  /* <p className="text-t3 text-sm whitespace-nowrap items-center flex gap-1">
+              <span className="font-semibold">{data?.totalCount} </span>
+              {data?.totalCount === 1 ? "Customer" : "Customers"}
+            </p> */
+}

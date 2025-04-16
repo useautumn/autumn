@@ -79,6 +79,8 @@ export const ErrCode = {
   UpdateCusProductFailed: "update_customer_product_failed",
   DefaultProductNotAllowedPrice: "default_product_not_allowed_price",
   UpgradeFailed: "upgrade_failed",
+  ProductAlreadyExists: "product_already_exists",
+  ProductHasRewardPrograms: "product_has_reward_programs",
 
   // Entitlements
   InvalidEntitlement: "invalid_entitlement",

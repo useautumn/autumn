@@ -9,32 +9,46 @@ import {
 import { PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { FeatureType } from "@autumn/shared";
+import { Entitlement, Feature, FeatureType } from "@autumn/shared";
 import { useFeaturesContext } from "./FeaturesContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { FeatureService } from "@/services/FeatureService";
 import { FeatureConfig } from "./metered-features/FeatureConfig";
 import { getBackendErr } from "@/utils/genUtils";
 import { validateFeature } from "./featureUtils";
+import { getFeature } from "@/utils/product/entitlementUtils";
 
 const defaultFeature = {
   type: FeatureType.Metered,
-  config: {filters: [
-    {
-      property: "",
-      operator: "",
-      value: [],
-    },
-  ]},
+  config: {
+    filters: [
+      {
+        property: "",
+        operator: "",
+        value: [],
+      },
+    ],
+  },
   name: "",
   id: "",
 };
+export const CreateFeature = ({
+  isFromEntitlement,
+  setShowFeatureCreate,
+  setSelectedFeature,
+  setOpen,
+  open,
+}: {
+  isFromEntitlement: boolean;
+  setShowFeatureCreate: (show: boolean) => void;
+  setSelectedFeature: (feature: Feature) => void;
+  setOpen: (open: boolean) => void;
+  open: boolean;
+}) => {
+  const { env, mutate, features } = useFeaturesContext();
 
-export const CreateFeature = () => {
-  const { env, mutate } = useFeaturesContext();
   const axiosInstance = useAxiosInstance({ env });
 
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [feature, setFeature] = useState(defaultFeature);
   const [eventNameInput, setEventNameInput] = useState("");
@@ -48,18 +62,18 @@ export const CreateFeature = () => {
 
   const setFeatureToDefault = () => {
     setFeature({
-        type: FeatureType.Metered,
-        config: {
-            filters: [
-                {
-                    property: "",
-                    operator: "",
-                    value: [],
-                }
-            ]
-        },
-        name: "",
-        id: "",
+      type: FeatureType.Metered,
+      config: {
+        filters: [
+          {
+            property: "",
+            operator: "",
+            value: [],
+          },
+        ],
+      },
+      name: "",
+      id: "",
     });
     // setEventNameInput("");
     // setEventNameChanged(false);
@@ -91,14 +105,25 @@ export const CreateFeature = () => {
 
     setLoading(true);
     try {
-      await FeatureService.createFeature(axiosInstance, {
-        name: feature.name,
-        id: feature.id,
-        type: feature.type,
-        config: updateConfig(),
-      });
-      mutate();
-      setOpen(false);
+      let { data: createdFeature } = await FeatureService.createFeature(
+        axiosInstance,
+        {
+          name: feature.name,
+          id: feature.id,
+          type: feature.type,
+          config: updateConfig(),
+        }
+      );
+      await mutate();
+
+      if (isFromEntitlement) {
+        if (createdFeature) {
+          setSelectedFeature(createdFeature);
+        }
+        setShowFeatureCreate(false);
+      } else {
+        setOpen(false);
+      }
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to create feature"));
     }
@@ -106,41 +131,48 @@ export const CreateFeature = () => {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <div className="flex flex-col gap-4">
+      <FeatureConfig
+        feature={feature}
+        setFeature={setFeature}
+        eventNameInput={eventNameInput}
+        setEventNameInput={setEventNameInput}
+        eventNameChanged={eventNameChanged}
+        setEventNameChanged={setEventNameChanged}
+      />
+      <DialogFooter>
         <Button
-          startIcon={<PlusIcon size={15} />}
-          variant="dashed"
-          className="w-full"
-          onClick={() => {
-            setFeatureToDefault();
-          }}
+          onClick={handleCreateFeature}
+          isLoading={loading}
+          className="w-fit"
+          variant="gradientPrimary"
         >
           Create Feature
         </Button>
+      </DialogFooter>
+    </div>
+  );
+};
+
+export const CreateFeatureDialog = () => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="add">Feature</Button>
       </DialogTrigger>
       <DialogContent className="w-[500px]">
         <DialogHeader>
           <DialogTitle>Create Feature</DialogTitle>
         </DialogHeader>
-        <FeatureConfig
-          feature={feature}
-          setFeature={setFeature}
-          eventNameInput={eventNameInput}
-          setEventNameInput={setEventNameInput}
-          eventNameChanged={eventNameChanged}
-          setEventNameChanged={setEventNameChanged}
+        <CreateFeature
+          isFromEntitlement={false}
+          setShowFeatureCreate={() => {}}
+          setSelectedFeature={() => {}}
+          setOpen={setOpen}
+          open={open}
         />
-
-        <DialogFooter>
-          <Button
-            onClick={handleCreateFeature}
-            isLoading={loading}
-            variant="gradientPrimary"
-          >
-            Create
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

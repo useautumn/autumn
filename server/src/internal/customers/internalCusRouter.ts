@@ -19,6 +19,10 @@ import { getCusEntMasterBalance } from "./entitlements/cusEntUtils.js";
 import { getLatestProducts } from "../products/productUtils.js";
 import { getProductVersionCounts } from "../products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import {
+  mapToProductItems,
+  mapToProductV2,
+} from "../products/productV2Utils.js";
 import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
 import { CusReadService } from "./CusReadService.js";
 
@@ -281,7 +285,7 @@ cusRouter.get(
   async (req: any, res: any) => {
     const { sb, org, env } = req;
     const { customer_id, product_id } = req.params;
-    const version = req.query.version;
+    const { version, customer_product_id } = req.query;
     const orgId = req.orgId;
 
     try {
@@ -308,7 +312,11 @@ cusRouter.get(
 
       let cusProduct;
 
-      if (notNullish(version)) {
+      if (notNullish(customer_product_id)) {
+        cusProduct = customer.products.find(
+          (p: any) => p.id === customer_product_id
+        );
+      } else if (notNullish(version)) {
         cusProduct = customer.products.find(
           (p: any) =>
             p.product.id === product_id &&
@@ -325,15 +333,19 @@ cusRouter.get(
       let product;
 
       if (cusProduct) {
+        let prices = cusProduct.customer_prices.map(
+          (price: any) => price.price
+        );
+        let entitlements = cusProduct.customer_entitlements.map(
+          (ent: any) => ent.entitlement
+        );
         product = {
           ...cusProduct.product,
-          entitlements: cusProduct.customer_entitlements.map(
-            (ent: any) => ent.entitlement
-          ),
-          prices: cusProduct.customer_prices.map((price: any) => price.price),
+          items: mapToProductItems({ prices, entitlements }),
           free_trial: cusProduct.free_trial,
           options: cusProduct.options,
           isActive: cusProduct.status === CusProductStatus.Active,
+          isCustom: cusProduct.is_custom,
         };
       } else {
         product = await ProductService.getFullProduct({
@@ -346,6 +358,8 @@ cusRouter.get(
               ? parseInt(version)
               : undefined,
         });
+
+        product = mapToProductV2(product);
       }
 
       let numVersions = await ProductService.getProductVersionCount({

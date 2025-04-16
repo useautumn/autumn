@@ -28,6 +28,7 @@ import {
   getStripeExpandedInvoice,
   payForInvoice,
 } from "@/external/stripe/stripeInvoiceUtils.js";
+import { getRelatedCusEnt } from "@/internal/customers/prices/cusPriceUtils.js";
 
 dotenv.config();
 
@@ -65,44 +66,6 @@ const createBelowThresholdInvoice = async ({
 
   return finalizedInvoice;
 };
-
-// const payForInvoice = async ({
-//   fullOrg,
-//   env,
-//   stripeCli,
-//   customer,
-//   invoice,
-// }: {
-//   fullOrg: Organization;
-//   env: AppEnv;
-//   stripeCli: Stripe;
-//   customer: Customer;
-//   invoice: Stripe.Invoice;
-// }) => {
-//   const paymentMethod = await getCusPaymentMethod({
-//     org: fullOrg,
-//     env: env as AppEnv,
-//     stripeId: customer.processor.id,
-//   });
-
-//   if (!paymentMethod) {
-//     console.log("   ❌ No payment method found");
-//     return false;
-//   }
-
-//   try {
-//     await stripeCli.invoices.pay(invoice.id, {
-//       payment_method: paymentMethod as string,
-//     });
-//   } catch (error: any) {
-//     console.log(
-//       "   ❌ Stripe error: Failed to pay invoice: " + error?.message || error
-//     );
-//     return false;
-//   }
-
-//   return true;
-// };
 
 const handleInvoicePaymentFailure = async ({
   sb,
@@ -175,10 +138,14 @@ const invoiceCustomer = async ({
   const env = customer.env;
   const orgId = customer.org_id;
 
-  const cusEnt = fullCusProduct.customer_entitlements.find(
-    (ce: any) =>
-      ce.entitlement.internal_feature_id == config.internal_feature_id
-  );
+  // const cusEnt = fullCusProduct.customer_entitlements.find(
+  //   (ce: any) =>
+  //     ce.entitlement.internal_feature_id == config.internal_feature_id
+  // );
+  let cusEnt = getRelatedCusEnt({
+    cusPrice: fullCusPrice,
+    cusEnts: fullCusProduct.customer_entitlements,
+  });
 
   if (!cusEnt) {
     console.log("Corresponding customer entitlement not found");
@@ -321,9 +288,9 @@ const checkBalanceBelowThreshold = async ({
   });
 
   return {
-    threshold: options?.threshold,
+    threshold: null,
     balance: featureBalance,
-    below: options?.threshold && featureBalance < options?.threshold,
+    below: false,
   };
 };
 

@@ -3,10 +3,13 @@ import {
   BillingInterval,
   BillWhen,
   EntitlementWithFeature,
-  Product,
+  PriceType,
+  ProductItem,
 } from "@autumn/shared";
 
 import { FixedPriceConfig, Price, UsagePriceConfig } from "@autumn/shared";
+import { intervalIsNone } from "./productItemUtils";
+import { isFeatureItem } from "./getItemType";
 
 export const validBillingInterval = (
   prices: Price[],
@@ -57,11 +60,49 @@ export const getBillingUnits = (
   return `${entitlement.allowance} `;
 };
 
-export const pricesOnlyOneOff = (prices: Price[]) => {
+export const getDefaultPriceConfig = (type: PriceType) => {
+  if (type === PriceType.Fixed) {
+    return {
+      type: PriceType.Fixed,
+      amount: "",
+      interval: BillingInterval.Month,
+    };
+  }
+
+  return {
+    type: PriceType.Usage,
+    internal_feature_id: "",
+    feature_id: "",
+    bill_when: BillWhen.EndOfPeriod,
+    interval: BillingInterval.Month,
+    billing_units: 1,
+    usage_tiers: [
+      {
+        from: 0,
+        to: "",
+        amount: 0.0,
+      },
+    ],
+    should_prorate: false,
+  };
+};
+
+export const pricesOnlyOneOff = (
+  items: ProductItem[],
+  isAddOn: boolean = false
+) => {
+  let prices = items.filter((item) => !isFeatureItem(item));
+
+  if (prices.length == 0 && isAddOn) return true;
   if (prices.length == 0) return false;
+
   return prices.every((price) => {
-    return price.config?.interval == BillingInterval.OneOff;
+    return intervalIsNone(price.interval);
   });
+  // if (items.length == 0) return false;
+  // return items.every((item) => {
+  //   return item.interval == ProductItemInterval.None;
+  // });
 };
 
 export const isFreeProduct = (prices: Price[]) => {

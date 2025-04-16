@@ -1,0 +1,89 @@
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
+import { ProductItemConfig } from "./ProductItemConfig";
+import { ProductItem } from "@autumn/shared";
+import { ProductItemContext } from "./ProductItemContext";
+import { useProductContext } from "../ProductContext";
+import { notNullish } from "@/utils/genUtils";
+import { defaultProductItem, validateProductItem } from "./CreateProductItem";
+import CopyButton from "@/components/general/CopyButton";
+
+export default function UpdateProductItem({
+  selectedItem,
+  selectedIndex,
+  setSelectedItem,
+}: {
+  selectedItem: ProductItem | null;
+  selectedIndex: number | null;
+  setSelectedItem: (item: ProductItem | null) => void;
+}) {
+  let { product, setProduct } = useProductContext();
+  let [open, setOpen] = useState(false);
+  let [item, setItem] = useState<ProductItem>(
+    selectedItem || defaultProductItem
+  );
+  let [showCreateFeature, setShowCreateFeature] = useState(false);
+
+  let handleUpdateProductItem = (show: any) => {
+    const validatedItem = validateProductItem(item, show);
+    if (!validatedItem) return;
+    if (notNullish(selectedIndex)) {
+      let newProduct = { ...product };
+      newProduct.items[selectedIndex!] = item;
+      setProduct(newProduct);
+      setOpen(false);
+    }
+  };
+
+  let handleDeleteProductItem = () => {
+    if (notNullish(selectedIndex)) {
+      let newProduct = { ...product };
+      newProduct.items.splice(selectedIndex!, 1);
+      setProduct(newProduct);
+      setOpen(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedItem) {
+      setItem(selectedItem);
+      setOpen(true);
+    } else {
+      setOpen(false);
+    }
+  }, [selectedItem]);
+
+  useEffect(() => {
+    if (!open) {
+      setSelectedItem(null);
+    }
+  }, [open]);
+
+  return (
+    <ProductItemContext.Provider
+      value={{
+        item,
+        setItem,
+        showCreateFeature,
+        setShowCreateFeature,
+        isUpdate: true,
+        handleUpdateProductItem,
+        handleDeleteProductItem,
+      }}
+    >
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-3xl overflow-visible">
+          <div className="flex items-center justify-between pr-9.5">
+            <DialogTitle>Update Item</DialogTitle>
+            {item.feature_id && (
+              <CopyButton text={item.feature_id || ""}>
+                {item.feature_id || ""}
+              </CopyButton>
+            )}
+          </div>
+          <ProductItemConfig />
+        </DialogContent>
+      </Dialog>
+    </ProductItemContext.Provider>
+  );
+}
