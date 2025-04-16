@@ -57,6 +57,8 @@ export function CreateProductItem() {
   const [item, setItem] = useState<ProductItem>(defaultProductItem);
   const { features, product, setProduct } = useProductContext();
 
+  console.log(item);
+
   const setSelectedFeature = (feature: Feature) => {
     setItem({ ...item, feature_id: feature.id! });
   };
@@ -120,7 +122,8 @@ export function CreateProductItem() {
             </div>
           </DialogHeader>
           <div className="flex overflow-visible w-fit">
-            {showCreateFeature || features.length == 0 ? (
+            {showCreateFeature ||
+            (features.length == 0 && item.amount === null) ? (
               <div className="w-full -mt-2">
                 <CreateFeature
                   isFromEntitlement={true}
@@ -156,6 +159,11 @@ export const validateProductItem = (item: ProductItem, show: any) => {
     item.included_usage = null;
   } else if (!invalidNumber(item.included_usage)) {
     item.included_usage = Number(item.included_usage);
+  }
+
+  //if both item.tiers and item.amount are set, set item.amount to null
+  if (item.tiers && item.amount) {
+    item.amount = null;
   }
 
   // Usage/Feature item validation (when tiers are set)

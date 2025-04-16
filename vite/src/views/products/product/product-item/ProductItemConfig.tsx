@@ -40,7 +40,7 @@ export const ProductItemConfig = () => {
   useEffect(() => {
     // if show price is changed to false, remove the "amount" from the item
     if (show.price) {
-      setItem({ ...item, amount: null });
+      // setItem({ ...item, amount: null });
     }
   }, [show]);
 
