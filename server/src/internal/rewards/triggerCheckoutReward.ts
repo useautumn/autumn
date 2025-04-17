@@ -3,6 +3,7 @@ import { RewardCategory, RewardTriggerEvent } from "@autumn/shared";
 import { triggerFreeProduct, triggerRedemption } from "./referralUtils.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { getRewardCat } from "./rewardUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 export const runTriggerCheckoutReward = async ({
   sb,
   payload,
@@ -14,7 +15,12 @@ export const runTriggerCheckoutReward = async ({
 }) => {
   try {
     // Customer redeeming code, product they're buying
-    let { customer, product, org, env } = payload;
+    let { customer, product, org, env, subId } = payload;
+
+    let stripeCli = createStripeCli({
+      org,
+      env,
+    });
 
     // 1. Check if redemption exists
     let redemptions = await RewardRedemptionService.getByCustomer({
@@ -48,6 +54,19 @@ export const runTriggerCheckoutReward = async ({
         logger.info(
           `Product ${product.name} (${product.id}) not included in referral program, skipping`
         );
+        return;
+      }
+
+      // Check for trial
+      let hasTrial = false;
+      if (subId) {
+        let sub = await stripeCli.subscriptions.retrieve(subId);
+        // hasTrial = Boolean(sub.trial_end && sub.trial_end > Date.now());
+        hasTrial = sub.status === "trialing";
+      }
+
+      if (hasTrial) {
+        logger.info(`Subscription is on trial, not triggering reward`);
         return;
       }
 

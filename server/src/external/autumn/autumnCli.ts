@@ -329,7 +329,7 @@ export class Autumn {
   };
 
   redemptions = {
-    get: async ({ redemptionId }: { redemptionId: string }) => {
+    get: async (redemptionId: string) => {
       const data = await this.get(`/redemptions/${redemptionId}`);
       return data;
     },

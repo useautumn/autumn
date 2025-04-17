@@ -65,10 +65,49 @@ const updateDbPricesAndEnts = async ({
     }),
   ]);
 
-  await EntitlementService.deleteByIds({
+  // Check if any custom prices use this entitlement...
+  let deletedEntIds = deletedEnts.map((ent) => ent.id!);
+  let customPrices = await PriceService.getInIds({
     sb,
-    entitlementIds: deletedEnts.map((ent) => ent.id!),
+    entitlementIds: deletedEntIds,
   });
+
+  if (customPrices.length == 0) {
+    // Update the entitlement to be custom...
+    await EntitlementService.deleteByIds({
+      sb,
+      entitlementIds: deletedEntIds,
+    });
+  } else {
+    let updateOrDelete: any = [];
+    for (const ent of deletedEnts) {
+      let hasCustomPrice = customPrices.some(
+        (price) => price.entitlement_id == ent.id
+      );
+
+      console.log("hasCustomPrice: ", hasCustomPrice);
+      if (hasCustomPrice) {
+        updateOrDelete.push(
+          EntitlementService.update({
+            sb,
+            entitlementId: ent.id!,
+            updates: {
+              is_custom: true,
+            },
+          })
+        );
+      } else {
+        updateOrDelete.push(
+          EntitlementService.deleteByIds({
+            sb,
+            entitlementIds: [ent.id!],
+          })
+        );
+      }
+    }
+
+    await Promise.all(updateOrDelete);
+  }
 };
 
 const handleCustomProductItems = async ({

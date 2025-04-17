@@ -29,6 +29,8 @@ import { createStripeSub } from "../stripeSubUtils/createStripeSub.js";
 import { getAlignedIntervalUnix } from "@/internal/prices/billingIntervalUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
+import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -100,11 +102,13 @@ export const handleCheckoutSessionCompleted = async ({
   org,
   checkoutSession,
   env,
+  logger,
 }: {
   sb: SupabaseClient;
   org: Organization;
   checkoutSession: Stripe.Checkout.Session;
   env: AppEnv;
+  logger: any;
 }) => {
   const metadata = await getMetadataFromCheckoutSession(checkoutSession, sb);
   if (!metadata) {
@@ -284,6 +288,27 @@ export const handleCheckoutSessionCompleted = async ({
       console.log("   ✅ checkout.completed: successfully created invoice");
     } catch (error) {
       console.error("checkout.completed: error creating invoice", error);
+    }
+  }
+
+  for (const product of attachParams.products) {
+    try {
+      console.log("Triggering checkout reward check for product: ", product.id);
+      await addTaskToQueue({
+        jobName: JobName.TriggerCheckoutReward,
+        payload: {
+          customer: attachParams.customer,
+          product,
+          org,
+          env: attachParams.customer.env,
+          subId: checkoutSession.subscription as string,
+        },
+      });
+    } catch (error) {
+      logger.error(
+        `checkout.completed: failed to trigger checkout reward check`
+      );
+      logger.error(error);
     }
   }
 
