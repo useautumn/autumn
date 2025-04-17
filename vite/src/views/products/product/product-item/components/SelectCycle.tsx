@@ -32,14 +32,39 @@ export const SelectCycle = ({
     <div className={cn("flex flex-col w-full ")}>
       <FieldLabel className="flex items-center gap-2">
         {type == "price" ? "Billing Interval" : "Reset Interval"}
-        <Tooltip delayDuration={400}>
-          <TooltipTrigger asChild>
-            <InfoIcon className="w-3 h-3 text-t3/50" />
-          </TooltipTrigger>
-          <TooltipContent sideOffset={5} side="top">
-            Frequency at which this feature is reset
-          </TooltipContent>
-        </Tooltip>
+        {type == "reset" && (
+          <Tooltip delayDuration={400}>
+            <TooltipTrigger asChild>
+              <InfoIcon className="w-3 h-3 text-t3/50" />
+            </TooltipTrigger>
+            <TooltipContent
+              sideOffset={5}
+              side="top"
+              align="start"
+              className="flex flex-col"
+            >
+              <span className="mb-2">
+                How often usage counts reset for this feature:
+              </span>
+              <div>
+                <span className="font-bold">• Periodic reset:</span> for
+                consumables like API calls or credits
+                <br />
+                <span className="font-bold">• No reset:</span> for features with
+                ongoing usage like seats or workspaces
+                <br />
+                <div className="flex items-center gap-1 mt-2 text-amber-600">
+                  <InfoIcon size={14} />
+                  <span>
+                    This isn't a hard rule e.g., consumable credits that don't
+                    expire should have{" "}
+                    <span className="font-semibold">no reset</span>
+                  </span>
+                </div>
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        )}
       </FieldLabel>
       {type == "price" ? (
         <div className="flex flex-col gap-2">
