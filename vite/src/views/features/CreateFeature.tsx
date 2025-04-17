@@ -114,7 +114,7 @@ export const CreateFeature = ({
           config: updateConfig(),
         }
       );
-      await mutate();
+      
 
       if (isFromEntitlement) {
         if (createdFeature) {
@@ -122,6 +122,7 @@ export const CreateFeature = ({
         }
         setShowFeatureCreate(false);
       } else {
+        await mutate();
         setOpen(false);
       }
     } catch (error) {

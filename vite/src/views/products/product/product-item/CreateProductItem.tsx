@@ -55,11 +55,12 @@ export function CreateProductItem() {
   const [open, setOpen] = useState(false);
   const [showCreateFeature, setShowCreateFeature] = useState(false);
   const [item, setItem] = useState<ProductItem>(defaultProductItem);
-  const { features, product, setProduct } = useProductContext();
+  const { features, product, setProduct, setFeatures } = useProductContext();
 
   console.log(item);
 
   const setSelectedFeature = (feature: Feature) => {
+    setFeatures([...features, feature]);
     setItem({ ...item, feature_id: feature.id! });
   };
 
