@@ -8,7 +8,7 @@ import {
   Infinite,
   Price,
   ProductItem,
-  ProductItemBehavior,
+  UsageModel,
   ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
@@ -86,11 +86,11 @@ export const toFeaturePriceItem = ({
 
     entity_feature_id: ent.entity_feature_id,
     carry_over_usage: ent.carry_from_previous,
-    behavior:
+    usage_model:
       config.bill_when == BillWhen.StartOfPeriod ||
       config.bill_when == BillWhen.InAdvance
-        ? ProductItemBehavior.Prepaid
-        : ProductItemBehavior.PayPerUse,
+        ? UsageModel.Prepaid
+        : UsageModel.PayPerUse,
 
     // Stored in backend
     created_at: ent.created_at,

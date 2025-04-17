@@ -18,7 +18,7 @@ import { useProductContext } from "../../ProductContext";
 import { Feature, FeatureType, Infinite } from "@autumn/shared";
 import { itemIsUnlimited } from "@/utils/product/productItemUtils";
 import { SelectCycle } from "./SelectCycle";
-import MoreMenuButton from "../MoreMenuButton";
+import MoreMenuButton, { MoreMenuPriceButton } from "../MoreMenuButton";
 import PerEntityConfig from "./PerEntityConfig";
 import { getFeature } from "@/utils/product/entitlementUtils";
 
@@ -216,11 +216,12 @@ export const ConfigWithFeature = ({
                   <TieredPrice setShow={setShow} show={show} />
                   <div
                     className={cn(
-                      "flex flex-col gap-2 transition-all duration-300 ease-in-out",
+                      "flex items-end gap-2 transition-all duration-300 ease-in-out",
                       item.tiers?.length > 1 ? "w-40 min-w-40 flex-1" : "w-full"
                     )}
                   >
                     <SelectCycle show={show} setShow={setShow} type="price" />
+                    <MoreMenuPriceButton />
                   </div>
                 </div>
               </div>

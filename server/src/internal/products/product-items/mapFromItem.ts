@@ -15,7 +15,7 @@ import {
   Price,
   PriceType,
   ProductItem,
-  ProductItemBehavior,
+  UsageModel,
   ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
@@ -184,7 +184,7 @@ export const toFeatureAndPrice = ({
     type: PriceType.Usage,
 
     bill_when:
-      item.behavior == ProductItemBehavior.Prepaid
+      item.usage_model == UsageModel.Prepaid
         ? BillWhen.StartOfPeriod
         : BillWhen.EndOfPeriod,
 
