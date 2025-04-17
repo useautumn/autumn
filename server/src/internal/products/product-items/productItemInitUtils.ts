@@ -6,7 +6,7 @@ import {
   Price,
   Product,
   ProductItem,
-  ProductItemBehavior,
+  UsageModel,
 } from "@autumn/shared";
 import { itemToPriceAndEnt } from "./mapFromItem.js";
 

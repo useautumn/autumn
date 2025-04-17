@@ -8,7 +8,7 @@ import {
   AppEnv,
   BillingInterval,
   EntInterval,
-  ProductItemBehavior,
+  UsageModel,
 } from "@autumn/shared";
 import { createProduct } from "tests/utils/productUtils.js";
 import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
@@ -39,7 +39,7 @@ let pro = {
       included_usage: 0,
       amount: 0.5,
       interval: BillingInterval.Month,
-      behavior: ProductItemBehavior.PayPerUse,
+      usage_model: UsageModel.PayPerUse,
     }),
   },
 };
@@ -54,7 +54,7 @@ let premium = {
     //   included_usage: 100,
     //   amount: 15,
     //   interval: BillingInterval.Month,
-    //   behavior: ProductItemBehavior.Prepaid,
+    //   usage_model: UsageModel.Prepaid,
     // }),
 
     // Pay per use
@@ -63,7 +63,7 @@ let premium = {
       included_usage: 0,
       amount: 1,
       interval: BillingInterval.Month,
-      behavior: ProductItemBehavior.PayPerUse,
+      usage_model: UsageModel.PayPerUse,
     }),
   },
 };

@@ -224,7 +224,7 @@ export const CustomerEntitlementsList = () => {
                   {customer.products.find(
                     (p: any) => p.id === cusEnt.customer_product_id
                   )?.status === "expired" && (
-                    <Badge variant="status" className="bg-red-500">
+                    <Badge variant="status" className="bg-black">
                       expired
                     </Badge>
                   )}

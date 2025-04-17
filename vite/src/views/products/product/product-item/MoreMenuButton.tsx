@@ -7,9 +7,9 @@ import {
 } from "@/components/ui/popover";
 
 import { EllipsisVertical, MinusIcon, PlusIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useProductItemContext } from "./ProductItemContext";
-import { ProductItemBehavior } from "@autumn/shared";
+import { UsageModel } from "@autumn/shared";
 
 export default function MoreMenuButton({
   show,
@@ -20,6 +20,17 @@ export default function MoreMenuButton({
 }) {
   const [showPopover, setShowPopover] = useState(false);
   const { item, setItem } = useProductItemContext();
+
+  useEffect(() => {
+    const shouldCarryOver =
+      item.interval === null || item.reset_usage_on_billing === false;
+    if (item.carry_from_previous !== shouldCarryOver) {
+      setItem({
+        ...item,
+        carry_from_previous: shouldCarryOver,
+      });
+    }
+  }, [item.interval, item.reset_usage_on_billing]);
 
   return (
     <Popover open={showPopover} onOpenChange={setShowPopover}>
@@ -34,40 +45,35 @@ export default function MoreMenuButton({
           <EllipsisVertical size={14} className="" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-48 p-2 flex flex-col text-xs" align="end">
-        <div className="flex items-center space-x-2">
+      <PopoverContent
+        className="w-fit min-w-48 p-0 py-1 flex flex-col text-xs"
+        align="end"
+      >
+        {/* <div className="flex items-center space-x-2">
           <Button
             variant="secondary"
             className="text-xs text-t3 shadow-none border-none w-full justify-start"
             onClick={() => {
               setItem({
                 ...item,
-                behavior:
-                  item.behavior == ProductItemBehavior.Prepaid
-                    ? ProductItemBehavior.PayPerUse
-                    : ProductItemBehavior.Prepaid,
+                usage_model:
+                  item.usage_model == UsageModel.Prepaid
+                    ? UsageModel.PayPerUse
+                    : UsageModel.Prepaid,
               });
             }}
           >
             <Checkbox
               className="border-t3 mr-1"
-              checked={item.behavior == ProductItemBehavior.Prepaid}
-              // onCheckedChange={(checked) =>
-              //   setItem({
-              //     ...item,
-              //     behavior: checked
-              //       ? ProductItemBehavior.Prepaid
-              //       : ProductItemBehavior.PayPerUse,
-              //   })
-              // }
+              checked={item.usage_model == UsageModel.Prepaid}
             />
             Prepaid
           </Button>
-        </div>
+        </div> */}
         <div className="flex items-center space-x-2">
           <Button
             variant="secondary"
-            className="text-xs text-t3 shadow-none border-none w-full justify-start"
+            className="text-xs text-t2 shadow-none border-none w-full justify-start"
             onClick={() => {
               setItem({
                 ...item,
@@ -78,6 +84,9 @@ export default function MoreMenuButton({
             <Checkbox
               className="border-t3 mr-1"
               checked={item.carry_from_previous}
+              defaultChecked={
+                item.interval === null || item.reset_usage_on_billing === false
+              }
               onCheckedChange={(checked) =>
                 setItem({
                   ...item,
@@ -85,7 +94,7 @@ export default function MoreMenuButton({
                 })
               }
             />
-            Keep usage on upgrade
+            No reset on enabling product
           </Button>
         </div>
         <Button
@@ -104,9 +113,54 @@ export default function MoreMenuButton({
             setShowPopover(false);
           }}
         >
-          {show.perEntity ? "Remove Per Entity" : "Add Per Entity"}
+          {show.perEntity
+            ? "Remove per feature entity"
+            : "Add per feature entity"}
         </Button>
       </PopoverContent>
     </Popover>
   );
 }
+
+export const MoreMenuPriceButton = () => {
+  const [showPopover, setShowPopover] = useState(false);
+  const { item, setItem } = useProductItemContext();
+
+  return (
+    <Popover open={showPopover} onOpenChange={setShowPopover}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-t3 text-xs bg-transparent border-none shadow-none justify-start"
+          onClick={() => setShowPopover(!showPopover)}
+        >
+          <EllipsisVertical size={14} className="" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-0 flex flex-col text-xs" align="end">
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="secondary"
+            className="text-xs text-t2 shadow-none border-none w-full justify-start"
+            onClick={() => {
+              setItem({
+                ...item,
+                usage_model:
+                  item.usage_model == UsageModel.Prepaid
+                    ? UsageModel.PayPerUse
+                    : UsageModel.Prepaid,
+              });
+            }}
+          >
+            <Checkbox
+              className="border-t3 mr-1"
+              checked={item.usage_model == UsageModel.Prepaid}
+            />
+            Usage is Prepaid
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};

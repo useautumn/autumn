@@ -8,7 +8,7 @@ import {
   AppEnv,
   BillingInterval,
   EntInterval,
-  ProductItemBehavior,
+  UsageModel,
 } from "@autumn/shared";
 import { createProduct } from "tests/utils/productUtils.js";
 import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
@@ -45,7 +45,7 @@ let pro = {
       included_usage: 0,
       amount: 0.5,
       interval: BillingInterval.Month,
-      behavior: ProductItemBehavior.PayPerUse,
+      usage_model: UsageModel.PayPerUse,
     }),
   },
 };

@@ -190,20 +190,16 @@ export default function CustomerProductView() {
     try {
       // oneTimePurchase ||
       // TODO: Check if product is one time purchase
-      if (!product.isActive) {
-        const { data } = await ProductService.getRequiredOptions(
-          axiosInstance,
-          {
-            // prices: product.items,
-            // entitlements: product.entitlements,
-            items: product.items,
-          }
-        );
 
-        if (data.options && data.options.length > 0) {
-          setRequiredOptions(data.options);
-          return;
-        }
+      const { data } = await ProductService.getRequiredOptions(axiosInstance, {
+        // prices: product.items,
+        // entitlements: product.entitlements,
+        items: product.items,
+      });
+
+      if (data.options && data.options.length > 0) {
+        setRequiredOptions(data.options);
+        return;
       }
 
       // Continue with product creation if no required options
@@ -342,6 +338,7 @@ export default function CustomerProductView() {
         requiredOptions={requiredOptions}
         createProduct={createProduct}
         setRequiredOptions={setRequiredOptions}
+        product={product}
       />
 
       <Dialog

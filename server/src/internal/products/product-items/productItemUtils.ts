@@ -5,7 +5,7 @@ import {
   BillingInterval,
   ProductItem,
   ProductItemType,
-  ProductItemBehavior,
+  UsageModel,
   Infinite,
 } from "@autumn/shared";
 import { isFeatureItem } from "./getItemType.js";
@@ -118,7 +118,7 @@ export const constructFeaturePriceItem = ({
   included_usage,
   amount,
   interval,
-  behavior,
+  usage_model,
   reset_usage_on_billing = true,
   billing_units = 1,
   carry_over_usage = true,
@@ -127,7 +127,7 @@ export const constructFeaturePriceItem = ({
   included_usage?: number;
   amount: number;
   interval: BillingInterval;
-  behavior?: ProductItemBehavior;
+  usage_model?: UsageModel;
   reset_usage_on_billing?: boolean;
   billing_units?: number;
   carry_over_usage?: boolean;
@@ -139,7 +139,7 @@ export const constructFeaturePriceItem = ({
     included_usage: included_usage as number,
     amount,
     interval: billingToItemInterval(interval),
-    behavior,
+    usage_model,
     reset_usage_on_billing,
     billing_units,
     carry_over_usage,

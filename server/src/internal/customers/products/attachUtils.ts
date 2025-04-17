@@ -319,7 +319,10 @@ const mapOptionsList = ({
     let quantity = options?.quantity;
     if (!nullish(quantity)) {
       const prepaidPrice = prices.find(
-        (p) => getBillingType(p.config!) == BillingType.UsageInAdvance
+        (p) =>
+          getBillingType(p.config!) == BillingType.UsageInAdvance &&
+          feature.internal_id ==
+            (p.config as UsagePriceConfig).internal_feature_id
       );
 
       if (!prepaidPrice) {
