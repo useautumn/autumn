@@ -30,6 +30,7 @@ import {
   initOrgSvixApps,
 } from "@/internal/orgs/orgUtils.js";
 import { createStripeCli } from "../stripe/utils.js";
+import { getApiVersion } from "@/utils/versionUtils.js";
 
 const defaultFeatures = [
   {
