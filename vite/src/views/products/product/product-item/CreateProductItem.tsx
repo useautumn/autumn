@@ -7,7 +7,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { PlusIcon } from "lucide-react";
+
 import { useState } from "react";
 import { ProductItemConfig } from "./ProductItemConfig";
 import { ProductItemContext } from "./ProductItemContext";
@@ -25,7 +25,7 @@ export let defaultProductItem: ProductItem = {
   reset_usage_on_billing: true,
 
   // Price config
-  amount: null,
+  price: null,
   tiers: null,
   billing_units: 1,
 
@@ -42,7 +42,7 @@ let defaultPriceItem: ProductItem = {
   reset_usage_on_billing: true,
 
   // Price config
-  amount: 0,
+  price: 0,
   tiers: null,
   billing_units: 1,
 
@@ -123,7 +123,7 @@ export function CreateProductItem() {
           </DialogHeader>
           <div className="flex overflow-visible w-fit">
             {showCreateFeature ||
-            (features.length == 0 && item.amount === null) ? (
+            (features.length == 0 && item.price === null) ? (
               <div className="w-full -mt-2">
                 <CreateFeature
                   isFromEntitlement={true}
@@ -147,12 +147,12 @@ export function CreateProductItem() {
 
 export const validateProductItem = (item: ProductItem, show: any) => {
   // Price item validation (when amount is set)
-  if (item.amount !== null && show.price) {
-    if (invalidNumber(item.amount)) {
+  if (item.price !== null && show.price) {
+    if (invalidNumber(item.price)) {
       toast.error("Please enter a valid price amount");
       return null;
     }
-    item.amount = parseFloat(item.amount!.toString());
+    item.price = parseFloat(item.price!.toString());
   }
 
   if ((item.included_usage as any) === "") {
@@ -161,9 +161,9 @@ export const validateProductItem = (item: ProductItem, show: any) => {
     item.included_usage = Number(item.included_usage);
   }
 
-  //if both item.tiers and item.amount are set, set item.amount to null
-  if (item.tiers && item.amount) {
-    item.amount = null;
+  //if both item.tiers and item.price are set, set item.price to null
+  if (item.tiers && item.price) {
+    item.price = null;
   }
 
   // Usage/Feature item validation (when tiers are set)

@@ -1,20 +1,21 @@
 import { ClerkClient } from "@clerk/express";
-import { sendTextEmail } from "../resend/resendUtils.js";
+import { sendHtmlEmail, sendTextEmail } from "../resend/resendUtils.js";
 
 const getWelcomeEmailBody = (userFirstName: string) => {
-  return `hey ${userFirstName} :)
-  
-Just wanted to say thank you for signing up to Autumn! 
+  return `
+<p>Hey ${userFirstName} :)</p>
 
-I'm curious--how did you hear about us? Also are you just looking around or do you have a specific use case I can help you with? 
+<p>Just wanted to say thank you for signing up to Autumn!</p>
 
-Whatever the reason, any feedback you have for us is incredibly appreciated. And anything you need I'm here to help.
+<p>I'm curious--how did you hear about us? Also are you just looking around or do you have a specific use case I can help you with?</p>
 
-Ayush
-Co-founder, Autumn
+<p>Whatever the reason, anything you need I'm here to help.</p>
 
-Book a call with me here: https://cal.com/ayrod
-`;
+<p>Ayush<br>
+Co-founder, Autumn</p>
+
+<p>Oh, and join our <a href="https://discord.gg/PMNwStsk">Discord community</a> to connect with us and other users</p>
+  `;
 };
 
 export const sendOnboardingEmail = async ({
@@ -38,7 +39,7 @@ export const sendOnboardingEmail = async ({
     if (!email) break;
 
     console.log("Sending onboarding email to", email);
-    await sendTextEmail({
+    await sendHtmlEmail({
       to: email,
       subject: "Anything I can help with?",
       body: getWelcomeEmailBody(user.firstName ?? "there"),

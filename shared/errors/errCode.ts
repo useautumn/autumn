@@ -121,4 +121,7 @@ export const ErrCode = {
   CustomerAlreadyRedeemedReferralCode:
     "customer_already_redeemed_referral_code",
   CustomerCannotRedeemOwnCode: "customer_cannot_redeem_own_code",
+
+  // Product items
+  InvalidProductItem: "invalid_product_item",
 };

@@ -12,12 +12,13 @@ export const createProduct = async ({
     await autumn.products.delete(product.id);
   } catch (error) {}
 
-  await autumn.products.create(product);
-
   let clone = structuredClone(product);
   if (typeof clone.items === "object") {
     clone.items = Object.values(clone.items);
   }
+  await autumn.products.create(clone);
 
-  await autumn.products.update(product.id, clone);
+  // await autumn.products.update(product.id, clone);
+
+  // await autumn.products.update(product.id, clone);
 };

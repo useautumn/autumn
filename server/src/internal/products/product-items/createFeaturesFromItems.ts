@@ -23,6 +23,8 @@ export const createFeaturesFromItems = ({
       continue;
     }
 
+
+
     if (isBooleanFeatureItem(item)) {
       const feature = constructBooleanFeature({
         featureId: item.feature_id!,
@@ -39,5 +41,7 @@ export const createFeaturesFromItems = ({
       newFeatures.push(feature);
     }
   }
+
+  
   return { allFeatures: [...curFeatures, ...newFeatures], newFeatures };
 };
