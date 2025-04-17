@@ -35,6 +35,7 @@ import { ArrowUpRightFromSquare } from "lucide-react";
 import { AdminHover } from "@/components/general/AdminHover";
 import AddProduct from "./add-product/NewProductDropdown";
 import { Item, Row } from "@/components/general/TableGrid";
+import { cn } from "@/lib/utils";
 
 export const CustomerProductList = ({
   customer,
@@ -45,15 +46,19 @@ export const CustomerProductList = ({
 }) => {
   const navigate = useNavigate();
   const { env, versionCounts } = useCustomerContext();
+  const [showExpired, setShowExpired] = useState(false);
 
-  const sortedProducts = customer.products.sort((a: any, b: any) => {
-    if (a.status !== b.status) {
-      return compareStatus(a.status, b.status);
-    }
+  const sortedProducts = customer.products
+    .filter(
+      (p: CusProduct) => showExpired || p.status !== CusProductStatus.Expired
+    )
+    .sort((a: any, b: any) => {
+      if (a.status !== b.status) {
+        return compareStatus(a.status, b.status);
+      }
 
-    // return a.product.name.localeCompare(b.product.name);
-    return b.created_at - a.created_at;
-  });
+      return b.created_at - a.created_at;
+    });
 
   return (
     <div>
@@ -62,13 +67,23 @@ export const CustomerProductList = ({
           Products
         </h2>
         <div className="flex w-full h-full items-center col-span-8 justify-end">
-          <div className="flex w-fit h-full items-center">
+          <div className="flex w-fit h-full items-center gap-4">
+            <Button
+              variant="ghost"
+              className={cn(
+                "text-t3 text-xs font-normal p-0",
+                showExpired && "text-t1 hover:text-t1"
+              )}
+              size="sm"
+              onClick={() => setShowExpired(!showExpired)}
+            >
+              Show Expired
+            </Button>
             {/* <CreateEntitlement buttonType={"feature"} /> */}
             <AddProduct />
           </div>
         </div>
       </div>
-
       {sortedProducts.length === 0 ? (
         <div className="flex pl-10 items-center h-10">
           <p className="text-t3">Attach a product to this customer</p>
@@ -82,7 +97,6 @@ export const CustomerProductList = ({
           <Item className="col-span-1" />
         </Row>
       )}
-
       {sortedProducts.map((cusProduct: FullCusProduct) => {
         return (
           <Row
