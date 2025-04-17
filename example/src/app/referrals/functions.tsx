@@ -3,7 +3,6 @@
 import { Autumn } from "@/sdk/autumn";
 
 export const getReferralCode = async (customerId: string) => {
-  console.log("Getting referral code");
   const autumn = new Autumn();
   const referralCode = await autumn.referrals.createCode({
     customerId,

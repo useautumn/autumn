@@ -27,6 +27,7 @@ import { sortCusEntsForDeduction } from "../entitlements/cusEntUtils.js";
 import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
+import { CusService } from "../CusService.js";
 
 // 1. Delete future product
 export const uncancelCurrentProduct = async ({
@@ -460,4 +461,25 @@ export const searchCusProducts = ({
 
 export const isTrialing = (cusProduct: FullCusProduct) => {
   return cusProduct.trial_ends_at && cusProduct.trial_ends_at > Date.now();
+};
+
+export const getMainCusProduct = async ({
+  sb,
+  internalCustomerId,
+}: {
+  sb: SupabaseClient;
+  internalCustomerId: string;
+}) => {
+  let cusProducts = await CusService.getFullCusProducts({
+    sb,
+    internalCustomerId,
+    withPrices: true,
+    withProduct: true,
+  });
+
+  let mainCusProduct = cusProducts.find(
+    (cusProduct: FullCusProduct) => !cusProduct.product.is_add_on
+  );
+
+  return mainCusProduct;
 };

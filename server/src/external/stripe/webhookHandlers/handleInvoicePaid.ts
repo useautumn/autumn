@@ -14,13 +14,15 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { createStripeCli } from "../utils.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { Decimal } from "decimal.js";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import { generateId, nullish } from "@/utils/genUtils.js";
 import {
   getInvoiceDiscounts,
   getStripeExpandedInvoice,
   updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
 import { getStripeSubs } from "../stripeSubUtils.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
 
 const handleOneOffInvoicePaid = async ({
   sb,
@@ -209,18 +211,34 @@ export const handleInvoicePaid = async ({
       invoice,
     });
 
-    if (updated) {
-      return;
+    if (!updated) {
+      await InvoiceService.createInvoiceFromStripe({
+        sb,
+        stripeInvoice: expandedInvoice,
+        internalCustomerId: activeCusProducts[0].internal_customer_id,
+        productIds: activeCusProducts.map((p) => p.product_id),
+        internalProductIds: activeCusProducts.map((p) => p.internal_product_id),
+        org: org,
+      });
     }
 
-    await InvoiceService.createInvoiceFromStripe({
-      sb,
-      stripeInvoice: expandedInvoice,
-      internalCustomerId: activeCusProducts[0].internal_customer_id,
-      productIds: activeCusProducts.map((p) => p.product_id),
-      internalProductIds: activeCusProducts.map((p) => p.internal_product_id),
-      org: org,
-    });
+    for (const cusProd of activeCusProducts) {
+      try {
+        await addTaskToQueue({
+          jobName: JobName.TriggerCheckoutReward,
+          payload: {
+            customer: cusProd.customer,
+            product: cusProd.product,
+            org,
+            env: cusProd.customer.env,
+            subId: cusProd.subscription_ids?.[0],
+          },
+        });
+      } catch (error) {
+        logger.error(`invoice.paid: failed to trigger checkout reward check`);
+        logger.error(error);
+      }
+    }
   } else {
     await handleOneOffInvoicePaid({
       sb,
@@ -229,8 +247,6 @@ export const handleInvoicePaid = async ({
       logger: req.logger,
     });
   }
-
-  // Else, handle one-off invoice
 };
 
 const handleInvoicePaidDiscount = async ({

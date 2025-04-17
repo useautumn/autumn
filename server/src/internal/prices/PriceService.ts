@@ -5,6 +5,63 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
 export class PriceService {
+  static async getInIds({
+    sb,
+    entitlementIds,
+  }: {
+    sb: SupabaseClient;
+    entitlementIds: string[];
+  }) {
+    const { data, error } = await sb
+      .from("prices")
+      .select("*")
+      .in("entitlement_id", entitlementIds);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getByEntitlementId({
+    sb,
+    entitlementId,
+  }: {
+    sb: SupabaseClient;
+    entitlementId: string;
+  }) {
+    const { data, error } = await sb
+      .from("prices")
+      .select("*")
+      .eq("entitlement_id", entitlementId);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+
+  static async getById({
+    sb,
+    priceId,
+  }: {
+    sb: SupabaseClient;
+    priceId: string;
+  }) {
+    const { data, error } = await sb
+      .from("prices")
+      .select("*")
+      .eq("id", priceId)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
   static async getByOrg({
     sb,
     orgId,
@@ -14,7 +71,11 @@ export class PriceService {
     orgId: string;
     env: string;
   }) {
-    const { data, error } = await sb.from("prices").select("*, product:products!inner(*)").eq("product.org_id", orgId).eq("product.env", env);
+    const { data, error } = await sb
+      .from("prices")
+      .select("*, product:products!inner(*)")
+      .eq("product.org_id", orgId)
+      .eq("product.env", env);
 
     if (error) {
       throw error;

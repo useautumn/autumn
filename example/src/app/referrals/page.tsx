@@ -53,15 +53,11 @@ const useCustomer = (customerId: string) => {
 
 export default function ReferralsPage() {
   const { referralCode, isLoading } = useReferralCode("ayush");
-  const {
-    entitlements,
-    refresh,
-    isLoading: isCustomerLoading,
-  } = useCustomer("ayush");
+  const { entitlements } = useCustomer("ayush");
 
-  let referrerId = "ayush";
-  let referee1Id = "john";
-  let [referral1Code, setReferral1Code] = useState<string>("");
+  const referrerId = "ayush";
+  const referee1Id = "john";
+  const [referral1Code, setReferral1Code] = useState<string>("");
 
   return (
     <div className="min-h-screen bg-zinc-50 p-8">
@@ -156,6 +152,7 @@ export default function ReferralsPage() {
                         toast.error("Something went wrong");
                       }
                     } catch (error) {
+                      console.log("Failed to redeem code", error);
                       toast.error("Failed to redeem code");
                     }
                   }}

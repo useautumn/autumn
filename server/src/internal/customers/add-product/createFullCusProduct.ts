@@ -434,15 +434,15 @@ export const createFullCusProduct = async ({
     cusPrices,
   });
 
-  await addTaskToQueue({
-    jobName: JobName.TriggerCheckoutReward,
-    payload: {
-      customer,
-      product,
-      org,
-      env: customer.env,
-    },
-  });
+  // await addTaskToQueue({
+  //   jobName: JobName.TriggerCheckoutReward,
+  //   payload: {
+  //     customer,
+  //     product,
+  //     org,
+  //     env: customer.env,
+  //   },
+  // });
 
   return {
     ...cusProd,
