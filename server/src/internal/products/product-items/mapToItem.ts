@@ -73,6 +73,7 @@ export const toFeaturePriceItem = ({
     };
   });
 
+
   return {
     feature_id: ent.feature.id,
     included_usage: ent.allowance,
@@ -80,7 +81,7 @@ export const toFeaturePriceItem = ({
 
     reset_usage_on_billing: ent.interval !== EntInterval.Lifetime,
 
-    amount: null,
+    price: null,
     tiers,
     billing_units: config.billing_units,
 
@@ -107,7 +108,7 @@ export const toPriceItem = ({ price }: { price: Price }) => {
     feature_id: null,
 
     interval: billingToItemInterval(config.interval!),
-    amount: config.amount,
+    price: config.amount,
 
     price_id: price.id,
     created_at: price.created_at,

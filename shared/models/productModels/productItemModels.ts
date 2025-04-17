@@ -64,7 +64,7 @@ export const ProductItemSchema = z.object({
   // Price config
   usage_model: z.nativeEnum(UsageModel).nullish(),
 
-  amount: z.number().nullish(),
+  price: z.number().nullish(),
   tiers: z.array(PriceTierSchema).nullish(),
   billing_units: z.number().nullish(), // amount per billing unit (eg. $9 / 250 units)
 

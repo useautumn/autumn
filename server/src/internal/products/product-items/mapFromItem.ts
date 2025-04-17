@@ -48,7 +48,7 @@ export const toPrice = ({
 }) => {
   let config: FixedPriceConfig = {
     type: PriceType.Fixed,
-    amount: notNullish(item.amount) ? item.amount! : item.tiers![0].amount!,
+    amount: notNullish(item.price) ? item.price! : item.tiers![0].amount!,
     interval: itemToBillingInterval(item) as BillingInterval,
   };
 
@@ -193,10 +193,10 @@ export const toFeatureAndPrice = ({
 
     internal_feature_id: internalFeatureId,
     feature_id: item.feature_id!,
-    usage_tiers: notNullish(item.amount)
+    usage_tiers: notNullish(item.price)
       ? [
           {
-            amount: item.amount,
+            amount: item.price,
             to: TierInfinite,
           },
         ]

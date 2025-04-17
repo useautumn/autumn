@@ -10,7 +10,7 @@ import { notNullish, nullish } from "../genUtils";
 import { isFeatureItem } from "./getItemType";
 
 export const itemIsFixedPrice = (item: ProductItem) => {
-  return notNullish(item.amount) && nullish(item.feature_id);
+  return notNullish(item.price) && nullish(item.feature_id);
 };
 
 // export const itemIsFree = (item: ProductItem) => {
@@ -66,7 +66,7 @@ export const getShowParams = (item: ProductItem | null) => {
   }
 
   return {
-    price: notNullish(item.amount) || notNullish(item.tiers),
+    price: notNullish(item.price) || notNullish(item.tiers),
     feature: !itemIsFixedPrice(item),
     allowance: true,
     perEntity: notNullish(item.entity_feature_id),

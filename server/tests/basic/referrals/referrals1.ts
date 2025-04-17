@@ -186,7 +186,7 @@ describe(`${chalk.yellowBright(
 
   let curTime = new Date();
   it("customer should have discount for first purchase", async function () {
-    curTime = addHours(addDays(curTime, 7), 2);
+    curTime = addHours(addDays(curTime, 7), 4);
     await advanceTestClock({
       testClockId,
       advanceTo: curTime.getTime(),

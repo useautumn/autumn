@@ -250,7 +250,7 @@ describe(`${chalk.yellowBright(
           },
         ],
       });
-      await timeout(5000);
+      await timeout(10000);
 
       console.log(`   ${chalk.greenBright("Attached monthly top up")}`);
     });

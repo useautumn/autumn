@@ -39,7 +39,7 @@ export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
     item1.included_usage == item2.included_usage &&
     item1.interval == item2.interval &&
     item1.reset_usage_on_billing === item2.reset_usage_on_billing &&
-    item1.amount == item2.amount &&
+    item1.price == item2.price &&
     compareTiers(item1.tiers, item2.tiers)
   );
 };
@@ -56,13 +56,13 @@ export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
 // };
 
 export const itemIsFixedPrice = (item: ProductItem) => {
-  return notNullish(item.amount) && nullish(item.feature_id);
+  return notNullish(item.price) && nullish(item.feature_id);
 };
 
 export const isFeaturePriceItem = (item: ProductItem) => {
   return (
     notNullish(item.feature_id) &&
-    (notNullish(item.amount) || notNullish(item.tiers))
+    (notNullish(item.price) || notNullish(item.tiers))
   );
 };
 
@@ -99,14 +99,14 @@ export const constructFeatureItem = ({
 };
 
 export const constructPriceItem = ({
-  amount,
+  price,
   interval,
 }: {
-  amount: number;
+  price: number;
   interval: BillingInterval;
 }) => {
   let item: ProductItem = {
-    amount,
+    price: price,
     interval: interval as any,
   };
 
@@ -116,7 +116,7 @@ export const constructPriceItem = ({
 export const constructFeaturePriceItem = ({
   feature_id,
   included_usage,
-  amount,
+  price,
   interval,
   usage_model,
   reset_usage_on_billing = true,
@@ -125,7 +125,7 @@ export const constructFeaturePriceItem = ({
 }: {
   feature_id: string;
   included_usage?: number;
-  amount: number;
+  price: number;
   interval: BillingInterval;
   usage_model?: UsageModel;
   reset_usage_on_billing?: boolean;
@@ -137,7 +137,7 @@ export const constructFeaturePriceItem = ({
   } = {
     feature_id,
     included_usage: included_usage as number,
-    amount,
+    price,
     interval: billingToItemInterval(interval),
     usage_model,
     reset_usage_on_billing,

@@ -43,7 +43,7 @@ let pro = {
     payPerUse: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 0,
-      amount: 0.5,
+      price: 0.5,
       interval: BillingInterval.Month,
       usage_model: UsageModel.PayPerUse,
     }),

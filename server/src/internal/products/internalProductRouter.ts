@@ -180,8 +180,11 @@ productRouter.get("/:productId/data", async (req: any, res) => {
       return b.name.localeCompare(a.name);
     });
 
+    let productV2 = mapToProductV2(product);
+
+
     res.status(200).send({
-      product: mapToProductV2(product),
+      product: productV2,
       entitlements,
       prices,
       features,
@@ -259,71 +262,9 @@ productRouter.post("/product_options", async (req: any, res: any) => {
         quantity: 0,
       };
     }
-    // if (isFeaturePriceItem(item)) {
-    //   // console.log("Item: ", item);
-    //   let { price, ent } = toFeatureAndPrice({
-    //     item,
-    //     orgId: req.orgId,
-    //     internalFeatureId: item.feature_id,
-    //     internalProductId: "",
-    //     isCustom: false,
-    //   });
-
-    //   if (!price) {
-    //     continue;
-    //   }
-    //   let billingType = getBillingType(price.config!);
-    //   if (billingType === BillingType.UsageInAdvance) {
-
-    //   }
-    // }
   }
-  // for (const price of prices) {
-  //   // get billing tyoe
-  //   const billingType = getBillingType(price.config);
-  //   const feature = features.find(
-  //     (f) => f.internal_id === price.config.internal_feature_id
-  //   );
 
-  //   if (billingType === BillingType.UsageInAdvance) {
-  //     if (!featureToOptions[feature.id]) {
-  //       featureToOptions[feature.id] = {
-  //         feature_id: feature.id,
-  //         quantity: 0,
-  //       };
-  //     }
-
-  //     featureToOptions[feature.id].quantity = 0;
-  //   }
-  // }
 
   res.status(200).send({ options: Object.values(featureToOptions) });
 });
 
-// // Individual Product routes
-// productRouter.get("/:productId", async (req: any, res) => {
-//   const { productId } = req.params;
-//   try {
-//     const Product = await ProductService.getProductStrict({
-//       sb: req.sb,
-//       productId,
-//       orgId: req.orgId,
-//       env: req.env,
-//     });
-
-//     const entitlements = await ProductService.getEntitlementsByProductId({
-//       sb: req.sb,
-//       productId,
-//       orgId: req.orgId,
-//       env: req.env,
-//     });
-
-//     const prices = await PriceService.getPricesByProductId(req.sb, productId);
-
-//     res.status(200).send({ Product, entitlements, prices });
-//   } catch (error) {
-//     console.log("Failed to get Product", error);
-//     res.status(404).send("Product not found");
-//     return;
-//   }
-// });

@@ -27,20 +27,28 @@ const validateProductItem = ({
 }) => {
   item = ProductItemSchema.parse(item);
 
-  // 1. Check if amount and tiers are not null
-  if (notNullish(item.amount) && notNullish(item.tiers)) {
+  if (nullish(item.feature_id) && nullish(item.price) && nullish(item.tiers)) {
     throw new RecaseError({
-      message: `Either 'amount' or 'tiers' should be set, not both`,
-      code: ErrCode.InvalidInputs,
+      message: `Either 'feature_id', 'price', or both should be set`,
+      code: ErrCode.InvalidProductItem,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
+  // 1. Check if amount and tiers are not null
+  if (notNullish(item.price) && notNullish(item.tiers)) {
+    throw new RecaseError({
+      message: `Either 'price' or 'tiers' should be set, not both`,
+      code: ErrCode.InvalidProductItem,
       statusCode: StatusCodes.BAD_REQUEST,
     });
   }
 
   // 2. If amount is set, it must be greater than 0
-  if (notNullish(item.amount) && item.amount! <= 0) {
+  if (notNullish(item.price) && item.price! <= 0) {
     throw new RecaseError({
-      message: `Amount must be greater than 0`,
-      code: ErrCode.InvalidInputs,
+      message: `Price must be greater than 0`,
+      code: ErrCode.InvalidProductItem,
       statusCode: StatusCodes.BAD_REQUEST,
     });
   }
@@ -52,7 +60,7 @@ const validateProductItem = ({
       if (tier.amount < 0) {
         throw new RecaseError({
           message: `Tier amount must be >= 0`,
-          code: ErrCode.InvalidInputs,
+          code: ErrCode.InvalidProductItem,
           statusCode: StatusCodes.BAD_REQUEST,
         });
       }
@@ -60,7 +68,7 @@ const validateProductItem = ({
       if (i > 0 && tier.to <= item.tiers![i - 1].to) {
         throw new RecaseError({
           message: `Tier ${i + 1} should have a greater 'to' than tier ${i}`,
-          code: ErrCode.InvalidInputs,
+          code: ErrCode.InvalidProductItem,
           statusCode: StatusCodes.BAD_REQUEST,
         });
       }
@@ -70,7 +78,7 @@ const validateProductItem = ({
           message: `Final tier must be infinite${
             item.feature_id ? ` (feature: ${item.feature_id})` : ""
           }`,
-          code: ErrCode.InvalidInputs,
+          code: ErrCode.InvalidProductItem,
           statusCode: StatusCodes.BAD_REQUEST,
         });
       }
@@ -130,6 +138,7 @@ export const validateProductItems = ({
   });
 
   features = allFeatures;
+
 
   // 1. Check values
   for (let index = 0; index < newItems.length; index++) {

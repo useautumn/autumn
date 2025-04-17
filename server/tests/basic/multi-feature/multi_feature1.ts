@@ -21,14 +21,14 @@ let pro = {
     prepaid: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 50,
-      amount: 10,
+      price: 10,
       interval: BillingInterval.Month,
       usage_model: UsageModel.Prepaid,
     }),
     payPerUse: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 0,
-      amount: 0.5,
+      price: 0.5,
       interval: BillingInterval.Month,
       usage_model: UsageModel.PayPerUse,
     }),
@@ -43,7 +43,7 @@ let premium = {
     prepaid: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 100,
-      amount: 15,
+      price: 15,
       interval: BillingInterval.Month,
       usage_model: UsageModel.Prepaid,
     }),
@@ -52,7 +52,7 @@ let premium = {
     payPerUse: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 0,
-      amount: 1,
+      price: 1,
       interval: BillingInterval.Month,
       usage_model: UsageModel.PayPerUse,
     }),
@@ -227,10 +227,10 @@ describe(`${chalk.yellowBright(
     // 2. Let invoices[0] be  value * pro pay per use price
 
     let invoice1Amount =
-      (premium.items.prepaid.amount ?? 0) * prepaidQuantity -
-      (pro.items.prepaid.amount ?? 0) * prepaidQuantity;
+      (premium.items.prepaid.price ?? 0) * prepaidQuantity -
+      (pro.items.prepaid.price ?? 0) * prepaidQuantity;
 
-    let invoice0Amount = value * (pro.items.payPerUse.amount ?? 0);
+    let invoice0Amount = value * (pro.items.payPerUse.price ?? 0);
 
     expect(invoices[1].total).to.equal(invoice1Amount);
     expect(invoices[0].total).to.equal(invoice0Amount);

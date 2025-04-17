@@ -257,9 +257,9 @@ export class Autumn {
 
   products = {
     update: async (productId: string, product: any) => {
-      if (product.items && typeof product.items === "object") {
-        product.items = Object.values(product.items);
-      }
+      // if (product.items && typeof product.items === "object") {
+      //   product.items = Object.values(product.items);
+      // }
       const data = await this.post(`/products/${productId}`, product);
       return data;
     },
@@ -275,7 +275,6 @@ export class Autumn {
     },
 
     create: async (product: any) => {
-      console.log("Product:", product);
       const data = await this.post(`/products`, product);
       return data;
     },

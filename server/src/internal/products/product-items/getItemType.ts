@@ -5,7 +5,7 @@ import { nullish } from "@/utils/genUtils.js";
 export const isBooleanFeatureItem = (item: ProductItem) => {
   return (
     notNullish(item.feature_id) &&
-    (nullish(item.amount) || item.amount == 0) &&
+    (nullish(item.price) || item.price == 0) &&
     nullish(item.tiers) &&
     nullish(item.interval) &&
     nullish(item.included_usage)
@@ -15,11 +15,11 @@ export const isBooleanFeatureItem = (item: ProductItem) => {
 export const isFeatureItem = (item: ProductItem) => {
   return (
     notNullish(item.feature_id) &&
-    (nullish(item.amount) || item.amount == 0) &&
+    (nullish(item.price) || item.price == 0) &&
     nullish(item.tiers)
   );
 };
 
 export const isPriceItem = (item: ProductItem) => {
-  return notNullish(item.amount) && nullish(item.feature_id);
+  return notNullish(item.price) && nullish(item.feature_id);
 };
