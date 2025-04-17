@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   AppEnv,
   BillingInterval,
+  Feature,
   FeatureOptions,
   FrontendOrganization,
   FrontendProduct,
@@ -82,6 +83,7 @@ export default function CustomerProductView() {
   };
 
   const [product, setProduct] = useState<FrontendProduct | null>(null);
+  const [features, setFeatures] = useState<Feature[]>([]);
   const [options, setOptions] = useState<OptionValue[]>([]);
 
   const [searchParams] = useSearchParams();
@@ -116,6 +118,9 @@ export default function CustomerProductView() {
     if (data?.product) {
       setProduct(data.product);
       initialProductRef.current = data.product;
+    }
+    if (data?.features) {
+      setFeatures(data.features);
     }
   }, [data]);
 
@@ -320,6 +325,8 @@ export default function CustomerProductView() {
     <ProductContext.Provider
       value={{
         ...data,
+        features,
+        setFeatures,
         mutate,
         env,
         product,

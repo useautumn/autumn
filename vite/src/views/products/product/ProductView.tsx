@@ -10,6 +10,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { ManageProduct } from "./ManageProduct";
 import {
   AppEnv,
+  Feature,
   FrontendProduct,
   ProductItem,
   ProductItemType,
@@ -46,6 +47,7 @@ function ProductView({ env }: { env: AppEnv }) {
   const [hasChanges, setHasChanges] = useState(false);
 
   const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
+  const [features, setFeatures] = useState<Feature[]>([]);
 
   const { data, isLoading, mutate } = useAxiosSWR({
     url: `/products/${product_id}/data?version=${version}`,
@@ -72,6 +74,10 @@ function ProductView({ env }: { env: AppEnv }) {
       };
       setProduct(sortedProduct);
       setOriginalProduct(structuredClone(sortedProduct));
+    }
+
+    if (data?.features) {
+      setFeatures(data.features);
     }
 
     setShowFreeTrial(!!data?.product?.free_trial);
@@ -177,6 +183,8 @@ function ProductView({ env }: { env: AppEnv }) {
       <ProductContext.Provider
         value={{
           ...data,
+          features,
+          setFeatures,
           mutate,
           env,
           product,

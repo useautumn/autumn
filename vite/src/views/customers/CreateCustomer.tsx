@@ -13,7 +13,7 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { PlusIcon } from "lucide-react";
+
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { toast } from "sonner";
 import { useEnv } from "@/utils/envUtils";
@@ -34,15 +34,17 @@ function CreateCustomer() {
     setIsLoading(true);
 
     try {
-      const { data } = await CusService.createCustomer(axiosInstance, {
+      const {data} = await CusService.createCustomer(axiosInstance, {
         ...fields,
         id: fields.id ? fields.id : null,
         fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
       });
 
-      if (data.customer) {
+      let customer = data.customer || data;
+      console.log(customer);
+      if (customer) {
         navigateTo(
-          `/customers/${data.customer.id || data.customer.internal_id}`,
+          `/customers/${customer.id || customer.internal_id}`,
           navigate,
           env
         );
