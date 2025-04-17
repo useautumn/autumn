@@ -170,7 +170,10 @@ export const validateProductItems = ({
       continue;
     }
 
-    if (isFeatureItem(otherItem) || item.behavior == otherItem?.behavior) {
+    if (
+      isFeatureItem(otherItem) ||
+      item.usage_model == otherItem?.usage_model
+    ) {
       throw new RecaseError({
         message: `Can't have two features with same reset interval, unless one is prepaid, and another is pay per use`,
         code: ErrCode.InvalidInputs,

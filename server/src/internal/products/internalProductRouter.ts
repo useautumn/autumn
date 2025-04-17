@@ -7,7 +7,7 @@ import {
   CusProductStatus,
   EntitlementWithFeature,
   ErrCode,
-  ProductItemBehavior,
+  UsageModel,
 } from "@autumn/shared";
 import { BillingType } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
@@ -253,10 +253,7 @@ productRouter.post("/product_options", async (req: any, res: any) => {
   const featureToOptions: { [key: string]: FeatureOptions } = {};
 
   for (const item of items) {
-    if (
-      isFeaturePriceItem(item) &&
-      item.behavior == ProductItemBehavior.Prepaid
-    ) {
+    if (isFeaturePriceItem(item) && item.usage_model == UsageModel.Prepaid) {
       featureToOptions[item.feature_id] = {
         feature_id: item.feature_id,
         quantity: 0,
