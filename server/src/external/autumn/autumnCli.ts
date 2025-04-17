@@ -275,6 +275,7 @@ export class Autumn {
     },
 
     create: async (product: any) => {
+      console.log("Product:", product);
       const data = await this.post(`/products`, product);
       return data;
     },

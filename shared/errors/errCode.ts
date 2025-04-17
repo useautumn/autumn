@@ -23,6 +23,7 @@ export const ErrCode = {
   FeatureNotFound: "feature_not_found",
   InvalidFeature: "invalid_feature",
   DuplicateFeatureId: "duplicate_feature_id",
+  InvalidEventName: "invalid_event_name",
 
   // Internal
   InternalError: "internal_error",

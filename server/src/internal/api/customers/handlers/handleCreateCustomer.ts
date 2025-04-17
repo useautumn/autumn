@@ -12,7 +12,7 @@ import {
   Organization,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { getCustomerDetails } from "../cusUtils.js";
+import { getCustomerDetails } from "../getCustomerDetails.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
