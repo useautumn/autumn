@@ -34,6 +34,7 @@ export const getCusBalances = async ({
   org: Organization;
 }) => {
   const data: Record<string, any> = {};
+  const features = cusEntsWithCusProduct.map((cusEnt) => cusEnt.entitlement.feature);
 
   for (const cusEnt of cusEntsWithCusProduct) {
     const cusProduct = cusEnt.customer_product;
@@ -48,12 +49,21 @@ export const getCusBalances = async ({
       internalFeatureId: feature.internal_id!,
     });
 
-    // 2. Initialize data
-    if (!data[key]) {
+    // 1. If boolean
+    if (isBoolean) {
       data[key] = {
         feature_id: feature.id,
-        interval: isBoolean || unlimited ? null : ent.interval || undefined,
+      };
+    } else if (unlimited) {
+      data[key] = {
+        feature_id: feature.id,
+        unlimited: true,
+      };
+    } else {
+      data[key] = {
+        feature_id: feature.id, 
         unlimited: isBoolean ? undefined : unlimited,
+        interval: isBoolean || unlimited ? undefined : ent.interval || undefined,
         balance: isBoolean ? undefined : unlimited ? null : 0,
         total: isBoolean || unlimited ? undefined : 0,
         adjustment: isBoolean || unlimited ? undefined : 0,
@@ -67,6 +77,26 @@ export const getCusBalances = async ({
         data[key].allowance = isBoolean || unlimited ? undefined : 0;
       }
     }
+
+    // 2. Initialize data
+    // if (!data[key]) {
+    //   data[key] = {
+    //     feature_id: feature.id,
+    //     unlimited: isBoolean ? undefined : unlimited,
+    //     interval: isBoolean || unlimited ? undefined : ent.interval || undefined,
+    //     balance: isBoolean ? undefined : unlimited ? null : 0,
+    //     total: isBoolean || unlimited ? undefined : 0,
+    //     adjustment: isBoolean || unlimited ? undefined : 0,
+    //     used: isBoolean ? undefined : unlimited ? null : 0,
+    //     unused: 0,
+    //   };
+
+    //   if (org.config.api_version >= BREAK_API_VERSION) {
+    //     data[key].next_reset_at =
+    //       isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
+    //     data[key].allowance = isBoolean || unlimited ? undefined : 0;
+    //   }
+    // }
 
     if (isBoolean || unlimited) {
       continue;
@@ -108,6 +138,8 @@ export const getCusBalances = async ({
 
   const balances = Object.values(data);
 
+  
+
   for (const balance of balances) {
     if (
       notNullOrUndefined(balance.total) &&
@@ -125,7 +157,24 @@ export const getCusBalances = async ({
     delete balance.unused;
   }
 
-  balances.sort((a, b) => {
+
+  // Sort balances
+  balances.sort((a: any, b: any) => {
+    let featureA = features.find((f) => f.id == a.feature_id);
+    let featureB = features.find((f) => f.id == b.feature_id);
+
+    if (featureA?.type == FeatureType.Boolean && featureB?.type != FeatureType.Boolean) {
+      return -1;
+    } else if (featureA?.type != FeatureType.Boolean && featureB?.type == FeatureType.Boolean) {
+      return 1;
+    }
+
+    if (a.unlimited && !b.unlimited) {
+      return -1;
+    } else if (!a.unlimited && b.unlimited) {
+      return 1;
+    }
+
     return a.feature_id.localeCompare(b.feature_id);
   });
 

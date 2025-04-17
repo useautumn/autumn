@@ -1,12 +1,10 @@
 import {
-  EntInterval,
+  AppEnv,
   Entitlement,
-  ErrCode,
   Feature,
   Price,
   Product,
   ProductItem,
-  ProductItemBehavior,
 } from "@autumn/shared";
 import { itemToPriceAndEnt } from "./mapFromItem.js";
 
@@ -15,6 +13,8 @@ import { EntitlementService } from "../entitlements/EntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 import { validateProductItems } from "./validateProductItems.js";
+import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 const isNewItem = (item: ProductItem) => {
   return !item.entitlement_id && !item.price_id;
@@ -85,7 +85,6 @@ const updateDbPricesAndEnts = async ({
         (price) => price.entitlement_id == ent.id
       );
 
-      console.log("hasCustomPrice: ", hasCustomPrice);
       if (hasCustomPrice) {
         updateOrDelete.push(
           EntitlementService.update({
@@ -169,6 +168,8 @@ export const handleNewProductItems = async ({
   isCustom: boolean;
   newVersion?: boolean;
 }) => {
+  // Create features if not exist...
+
   if (!newItems) {
     return {
       prices: [],
@@ -177,10 +178,15 @@ export const handleNewProductItems = async ({
   }
 
   // Validate product items...
-  validateProductItems({
+
+  let { allFeatures, newFeatures } = validateProductItems({
     newItems,
     features,
+    orgId: product.org_id!,
+    env: product.env as AppEnv,
   });
+
+  features = allFeatures;
 
   let newPrices: Price[] = [];
   let newEnts: Entitlement[] = [];
@@ -249,12 +255,11 @@ export const handleNewProductItems = async ({
     `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`
   );
 
-  // console.log("New prices: ", newPrices);
-  // throw new Error("test");
-  // console.log("Updated prices: ", updatedPrices);
-  // console.log("New entitlements: ", newEnts);
-  // console.log("Updated entitlements: ", updatedEnts);
-  // throw new Error("test");
+  // Create new features
+  await FeatureService.insert({
+    sb,
+    data: newFeatures,
+  });
 
   if (isCustom || newVersion) {
     return handleCustomProductItems({

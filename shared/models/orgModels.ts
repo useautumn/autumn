@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { OrgConfigSchema } from "./orgModels/orgConfigModels.js";
+import { APIVersion } from "./apiVersionEnum.js";
 
 export const MinOrgSchema = z.object({
   id: z.string(),
@@ -35,6 +36,7 @@ export const OrganizationSchema = z.object({
   }),
 
   config: OrgConfigSchema,
+  api_version: z.nativeEnum(APIVersion),
 });
 
 export const FrontendOrganizationSchema = z.object({

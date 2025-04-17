@@ -1,5 +1,7 @@
 import {
+  APIVersion,
   AppEnv,
+  CusProductResponseSchema,
   CusProductSchema,
   CusProductStatus,
   Customer,
@@ -408,27 +410,43 @@ export const processFullCusProduct = ({
     };
   }
 
-  let cusProductResponse = {
-    id: cusProduct.product.id,
-    name: cusProduct.product.name,
-    group: cusProduct.product.group,
-    status: trialing ? CusProductStatus.Trialing : cusProduct.status,
-    created_at: cusProduct.created_at,
-    canceled_at: cusProduct.canceled_at,
-    processor: {
-      type: cusProduct.processor?.type,
-      subscription_id: cusProduct.processor?.subscription_id || null,
-    },
-    subscription_ids: cusProduct.subscription_ids || [],
-    prices: prices,
-    starts_at: cusProduct.starts_at,
+  if (org.api_version >= APIVersion.v1_1) {
+    return CusProductResponseSchema.parse({
+      id: cusProduct.product.id,
+      name: cusProduct.product.name,
+      group: cusProduct.product.group || null,
+      status: trialing ? CusProductStatus.Trialing : cusProduct.status,
+      // created_at: cusProduct.created_at,
+      canceled_at: cusProduct.canceled_at,
 
-    ...stripeSubData,
-    // prices: cusProduct.customer_prices,
-    // entitlements: cusProduct.customer_entitlements,
-  };
+      stripe_subscription_ids: cusProduct.subscription_ids || [],
+      started_at: cusProduct.starts_at,
 
-  return cusProductResponse;
+      ...stripeSubData,
+    });
+  } else {
+    let cusProductResponse = {
+      id: cusProduct.product.id,
+      name: cusProduct.product.name,
+      group: cusProduct.product.group,
+      status: trialing ? CusProductStatus.Trialing : cusProduct.status,
+      created_at: cusProduct.created_at,
+      canceled_at: cusProduct.canceled_at,
+      processor: {
+        type: cusProduct.processor?.type,
+        subscription_id: cusProduct.processor?.subscription_id || null,
+      },
+      subscription_ids: cusProduct.subscription_ids || [],
+      prices: prices,
+      starts_at: cusProduct.starts_at,
+
+      ...stripeSubData,
+      // prices: cusProduct.customer_prices,
+      // entitlements: cusProduct.customer_entitlements,
+    };
+
+    return cusProductResponse;
+  }
 };
 
 // GET CUSTOMER PRODUCT & ORG IN PARALLEL

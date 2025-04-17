@@ -35,6 +35,23 @@ export enum ProductItemBehavior {
   PayPerUse = "pay_per_use",
 }
 
+// autumn.products.create({
+//   id: "product-id",
+//   items: [
+//     {
+//       feature_id: "feature-id",
+//       included_usage: 100,
+//       interval: ProductItemInterval.Month,
+//       reset_interval: ProductItemInterval.Month,
+//       reset_usage_on_billing: true,
+//       behavior: ProductItemBehavior.Prepaid,
+//       // config: {
+//       //   behavior: ProductItemBehavior.Prepaid,
+//       // }
+//     }
+//   ]
+// })
+
 export const ProductItemSchema = z.object({
   // Feature stuff
   feature_id: z.string().nullish(),

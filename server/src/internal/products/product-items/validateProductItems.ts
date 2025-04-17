@@ -9,12 +9,15 @@ import {
   ProductItemInterval,
   Feature,
   FeatureType,
+  AppEnv,
+  Product,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { isFeaturePriceItem } from "./productItemUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { isFeatureItem, isPriceItem } from "./getItemType.js";
 import { itemToEntInterval } from "./itemIntervalUtils.js";
+import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
 const validateProductItem = ({
   item,
   features,
@@ -111,10 +114,23 @@ const validateProductItem = ({
 export const validateProductItems = ({
   newItems,
   features,
+  orgId,
+  env,
 }: {
   newItems: ProductItem[];
   features: Feature[];
+  orgId: string;
+  env: AppEnv;
 }) => {
+  let { allFeatures, newFeatures } = createFeaturesFromItems({
+    items: newItems,
+    curFeatures: features,
+    orgId,
+    env,
+  });
+
+  features = allFeatures;
+
   // 1. Check values
   for (let index = 0; index < newItems.length; index++) {
     validateProductItem({ item: newItems[index], features });
@@ -162,4 +178,6 @@ export const validateProductItems = ({
       });
     }
   }
+
+  return { allFeatures, newFeatures };
 };
