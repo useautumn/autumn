@@ -113,9 +113,7 @@ describe(`${chalk.yellowBright(
       await timeout(3000);
 
       // Get redemption object
-      let redemption = await autumn.redemptions.get({
-        redemptionId: redemptions[i].id,
-      });
+      let redemption = await autumn.redemptions.get(redemptions[i].id);
 
       // Check if redemption is triggered
       let count = i + 1;

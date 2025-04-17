@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  APIVersion,
   AppEnv,
   CreateEventSchema,
   Customer,
@@ -131,14 +132,12 @@ export const handleEventSent = async ({
   customer_data: any;
   event_data: any;
 }) => {
-
   if (event_data.feature_id) {
     return handleUsageEvent({
       req,
     });
   }
 
-  
   const { sb, pg, orgId, env } = req;
 
   const org = await OrgService.getFullOrg({
@@ -162,6 +161,14 @@ export const handleEventSent = async ({
     orgId,
     env,
   });
+
+  if (affectedFeatures.length == 0) {
+    throw new RecaseError({
+      message: `No features found for event_name ${event.event_name}`,
+      code: ErrCode.InvalidEventName,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
 
   if (affectedFeatures.length > 0) {
     const payload = {
@@ -195,24 +202,39 @@ export const handleEventSent = async ({
         });
       }
     }
+
+    return { event, affectedFeatures, org };
   }
 };
 
 eventsRouter.post("", async (req: any, res: any) => {
-  const body = req.body;
-  const orgId = req.orgId;
-  const env = req.env;
-
   try {
-    
-    await handleEventSent({
+    const body = req.body;
+    let { event, org }: any = await handleEventSent({
       req,
       customer_id: body.customer_id,
       customer_data: body.customer_data,
       event_data: body,
     });
 
-    res.status(200).json({ success: true });
+    let response: any = {
+      id: event?.id,
+      code: "event_received",
+      customer_id: body.customer_id,
+    };
+
+    if (body.feature_id) {
+      response.feature_id = body.feature_id;
+    } else {
+      response.event_name = event.event_name;
+    }
+
+    if (org.api_version == APIVersion.v1_1) {
+      res.status(200).json(response);
+    } else {
+      res.status(200).json({ success: true });
+    }
+
     return;
   } catch (error) {
     handleRequestError({ req, res, error, action: "POST event failed" });

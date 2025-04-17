@@ -1,7 +1,7 @@
 import { ProductService } from "@/internal/products/ProductService.js";
 
 import { Router } from "express";
-import { CreateProductSchema } from "@autumn/shared";
+import { CreateProductSchema, FreeTrial } from "@autumn/shared";
 
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -18,6 +18,10 @@ import { handleUpdateProductV2 } from "./handleUpdateProduct.js";
 import { handleDeleteProduct } from "./handleDeleteProduct.js";
 import { handleGetProduct } from "./handleGetProduct.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
+import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { validateAndInitFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
 
 export const productApiRouter = Router();
 
@@ -30,59 +34,7 @@ productApiRouter.get("", async (req: any, res) => {
   res.status(200).json(products);
 });
 
-productApiRouter.post("", async (req: any, res) => {
-  try {
-    const productData = CreateProductSchema.parse(req.body);
-    let sb = req.sb;
-
-    const org = await OrgService.getFullOrg({
-      sb,
-      orgId: req.orgId,
-    });
-
-    // 1. Check ir product already exists
-    const existingProduct = await ProductService.getProductStrict({
-      sb,
-      productId: productData.id,
-      orgId: org.id,
-      env: req.env,
-    });
-
-    if (existingProduct) {
-      throw new RecaseError({
-        message: `Product ${productData.id} already exists`,
-        code: ErrCode.ProductAlreadyExists,
-        statusCode: 400,
-      });
-    }
-
-    let newProduct = constructProduct({
-      productData: CreateProductSchema.parse(productData),
-      orgId: org.id,
-      env: req.env,
-      processor: null,
-    });
-
-    await ProductService.create({ sb, product: newProduct });
-
-    res.status(200).json({ product_id: newProduct.id });
-
-    return;
-  } catch (error) {
-    console.log("Failed to create product: ", error);
-
-    if (error instanceof RecaseError) {
-      res.status(error.statusCode).json({
-        message: error.message,
-        code: error.code,
-      });
-      return;
-    }
-
-    res.status(500).json(error);
-    return;
-  }
-});
+productApiRouter.post("", handleCreateProduct);
 
 productApiRouter.get("/:productId", handleGetProduct);
 

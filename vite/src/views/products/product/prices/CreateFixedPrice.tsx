@@ -35,9 +35,9 @@ function CreateFixedPrice({
           <FieldLabel>Fixed Price</FieldLabel>
           <div className="flex h-full items-center justify-between gap-2">
             <Input
-              value={config.amount}
+              value={config.price}
               onChange={(e) => {
-                setConfig({ ...config, amount: e.target.value });
+                setConfig({ ...config, price: e.target.value });
               }}
               placeholder="30.00"
               type="number"

@@ -43,7 +43,9 @@ export const RewardProgramsTable = () => {
           }}
         >
           <Item className="col-span-4">
-            <AdminHover texts={[{ key: "ID", value: rewardProgram.id }]}>
+            <AdminHover
+              texts={[{ key: "Internal ID", value: rewardProgram.internal_id }]}
+            >
               <span className="font-mono truncate">{rewardProgram.id}</span>
             </AdminHover>
           </Item>

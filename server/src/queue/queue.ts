@@ -84,7 +84,21 @@ const initWorker = ({
         return;
       }
 
+      // TRIGGER CHECKOUT REWARD
       if (job.name == JobName.TriggerCheckoutReward) {
+        if (
+          !(await acquireLock({
+            customerId: `reward_trigger:${job.data.customer?.internal_id}`,
+            timeout: 10000,
+            useBackup,
+          }))
+        ) {
+          await queue.add(job.name, job.data, {
+            delay: 1000,
+          });
+          return;
+        }
+
         await runTriggerCheckoutReward({
           payload: job.data,
           sb,
@@ -94,7 +108,7 @@ const initWorker = ({
         return;
       }
 
-      const { customerId } = job.data;
+      const { customerId } = job.data; // customerId is internal customer id
 
       while (!(await acquireLock({ customerId, timeout: 10000, useBackup }))) {
         await queue.add(job.name, job.data, {

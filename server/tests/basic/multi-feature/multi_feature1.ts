@@ -4,7 +4,7 @@ import { Autumn } from "@/external/autumn/autumnCli.js";
 import { features } from "tests/global.js";
 import { setupBefore } from "tests/before.js";
 import { initCustomer } from "tests/utils/init.js";
-import { AppEnv, BillingInterval, ProductItemBehavior } from "@autumn/shared";
+import { AppEnv, BillingInterval, UsageModel } from "@autumn/shared";
 import { createProduct } from "tests/utils/productUtils.js";
 import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
 import { getUsageCusEnt } from "tests/utils/cusProductUtils/cusEntSearchUtils.js";
@@ -21,16 +21,16 @@ let pro = {
     prepaid: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 50,
-      amount: 10,
+      price: 10,
       interval: BillingInterval.Month,
-      behavior: ProductItemBehavior.Prepaid,
+      usage_model: UsageModel.Prepaid,
     }),
     payPerUse: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 0,
-      amount: 0.5,
+      price: 0.5,
       interval: BillingInterval.Month,
-      behavior: ProductItemBehavior.PayPerUse,
+      usage_model: UsageModel.PayPerUse,
     }),
   },
 };
@@ -43,18 +43,18 @@ let premium = {
     prepaid: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 100,
-      amount: 15,
+      price: 15,
       interval: BillingInterval.Month,
-      behavior: ProductItemBehavior.Prepaid,
+      usage_model: UsageModel.Prepaid,
     }),
 
     // Pay per use
     payPerUse: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 0,
-      amount: 1,
+      price: 1,
       interval: BillingInterval.Month,
-      behavior: ProductItemBehavior.PayPerUse,
+      usage_model: UsageModel.PayPerUse,
     }),
   },
 };
@@ -227,10 +227,10 @@ describe(`${chalk.yellowBright(
     // 2. Let invoices[0] be  value * pro pay per use price
 
     let invoice1Amount =
-      (premium.items.prepaid.amount ?? 0) * prepaidQuantity -
-      (pro.items.prepaid.amount ?? 0) * prepaidQuantity;
+      (premium.items.prepaid.price ?? 0) * prepaidQuantity -
+      (pro.items.prepaid.price ?? 0) * prepaidQuantity;
 
-    let invoice0Amount = value * (pro.items.payPerUse.amount ?? 0);
+    let invoice0Amount = value * (pro.items.payPerUse.price ?? 0);
 
     expect(invoices[1].total).to.equal(invoice1Amount);
     expect(invoices[0].total).to.equal(invoice0Amount);

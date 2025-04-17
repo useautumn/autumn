@@ -111,6 +111,7 @@ const createAndInsertEvent = async ({
   };
 
   await EventService.insertEvent(req.sb, newEvent);
+  return newEvent;
 };
 
 export const handleUsageEvent = async ({
@@ -137,7 +138,7 @@ export const handleUsageEvent = async ({
     customerData: customer_data,
   });
 
-  await createAndInsertEvent({
+  let newEvent = await createAndInsertEvent({
     req,
     customer,
     featureId: feature_id,
@@ -187,7 +188,7 @@ export const handleUsageEvent = async ({
     }
   }
 
-  return;
+  return { event: newEvent, affectedFeatures: features, org };
 };
 
 usageRouter.post("", async (req: any, res: any) => {
