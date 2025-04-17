@@ -2,6 +2,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, ErrCode, Organization, OrgConfigSchema } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { initDefaultConfig } from "./orgUtils.js";
+import { getApiVersion } from "@/utils/versionUtils.js";
 
 export class OrgService {
   static async getOrgs({ sb }: { sb: SupabaseClient }) {
@@ -73,8 +74,15 @@ export class OrgService {
     }
 
     let config = data.config || {};
+    let apiVersion = getApiVersion({
+      createdAt: data.created_at,
+    });
 
-    return { ...data, config: OrgConfigSchema.parse(config) };
+    return {
+      ...data,
+      config: OrgConfigSchema.parse(config),
+      api_version: apiVersion,
+    };
   }
 
   static async getBySlug({ sb, slug }: { sb: SupabaseClient; slug: string }) {

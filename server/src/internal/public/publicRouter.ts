@@ -25,7 +25,7 @@ import { FeatureService } from "../features/FeatureService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../customers/CusService.js";
-import { getCustomerDetails } from "../api/customers/cusUtils.js";
+import { getCustomerDetails } from "../api/customers/getCustomerDetails.js";
 import publicProductsRouter from "./getPublicProducts.js";
 import { publicAttachRouter } from "./publicAttach.js";
 

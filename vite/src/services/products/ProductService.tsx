@@ -3,7 +3,7 @@ import axios, { AxiosInstance } from "axios";
 export class ProductService {
   static async createProduct(axiosInstance: AxiosInstance, data: any) {
     const response = await axiosInstance.post("/v1/products", data);
-    return response.data.product_id;
+    return response.data.id;
   }
 
   static async updateProduct(

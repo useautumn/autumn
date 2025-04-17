@@ -124,43 +124,36 @@ export const CustomerEntitlementsList = () => {
           <div className="flex w-fit h-full items-center">
             <div className="flex justify-between items-center gap-2 ">
               <Tabs defaultValue={featureType}>
-                <TabsList className="bg-transparent h-fit">
-                  <TabsTrigger
-                    value="metered"
-                    className="text-t2 text-xs font-normal "
-                    onClick={() => setFeatureType(FeatureType.Metered)}
+                <TabsList className="bg-transparent h-fit gap-4">
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "text-t3 text-xs font-normal p-0",
+                      showExpired && "text-t1 hover:text-t1"
+                    )}
+                    size="sm"
+                    onClick={() => setShowExpired(!showExpired)}
                   >
-                    Metered
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="boolean"
-                    className="text-t2 text-xs font-normal"
-                    onClick={() => setFeatureType(FeatureType.Boolean)}
-                  >
-                    Boolean
-                  </TabsTrigger>
+                    Show Expired
+                  </Button>
+                  <div>
+                    <TabsTrigger
+                      value="metered"
+                      className="text-t2 text-xs font-normal "
+                      onClick={() => setFeatureType(FeatureType.Metered)}
+                    >
+                      Metered
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="boolean"
+                      className="text-t2 text-xs font-normal"
+                      onClick={() => setFeatureType(FeatureType.Boolean)}
+                    >
+                      Boolean
+                    </TabsTrigger>
+                  </div>
                 </TabsList>
               </Tabs>
-              <div className="flex items-center gap-2">
-                {/* <p className="text-t3 text-xs font-normal">Show Expired</p>
-                <Switch
-                  checked={showExpired}
-                  className="bg-primary h-3 w-6"
-                  thumbClassName="size-3 data-[state=checked]:translate-x-2"
-                  onCheckedChange={setShowExpired}
-                /> */}
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "text-t3 text-xs font-normal p-0",
-                    showExpired && "text-red-500 hover:text-red-600"
-                  )}
-                  size="sm"
-                  onClick={() => setShowExpired(!showExpired)}
-                >
-                  Show Expired
-                </Button>
-              </div>
             </div>
           </div>
         </div>
@@ -231,7 +224,7 @@ export const CustomerEntitlementsList = () => {
                   {customer.products.find(
                     (p: any) => p.id === cusEnt.customer_product_id
                   )?.status === "expired" && (
-                    <Badge variant="status" className="bg-red-500">
+                    <Badge variant="status" className="bg-black">
                       expired
                     </Badge>
                   )}

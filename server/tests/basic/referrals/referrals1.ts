@@ -162,9 +162,7 @@ describe(`${chalk.yellowBright(
       await timeout(3000);
 
       // Get redemption object
-      let redemption = await autumn.redemptions.get({
-        redemptionId: redemptions[i].id,
-      });
+      let redemption = await autumn.redemptions.get(redemptions[i].id);
 
       // Check if redemption is triggered
       let count = i + 1;
@@ -188,7 +186,7 @@ describe(`${chalk.yellowBright(
 
   let curTime = new Date();
   it("customer should have discount for first purchase", async function () {
-    curTime = addHours(addDays(curTime, 7), 2);
+    curTime = addHours(addDays(curTime, 7), 4);
     await advanceTestClock({
       testClockId,
       advanceTo: curTime.getTime(),

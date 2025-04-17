@@ -7,7 +7,7 @@ import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { CusService } from "../../customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { getCustomerDetails } from "./cusUtils.js";
+
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
@@ -17,6 +17,7 @@ import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 import { handlePostCustomerRequest } from "./handlers/handleCreateCustomer.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { entityRouter } from "../entities/entityRouter.js";
+import { getCustomerDetails } from "./getCustomerDetails.js";
 
 export const cusRouter = Router();
 

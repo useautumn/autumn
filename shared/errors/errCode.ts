@@ -23,6 +23,7 @@ export const ErrCode = {
   FeatureNotFound: "feature_not_found",
   InvalidFeature: "invalid_feature",
   DuplicateFeatureId: "duplicate_feature_id",
+  InvalidEventName: "invalid_event_name",
 
   // Internal
   InternalError: "internal_error",
@@ -120,4 +121,7 @@ export const ErrCode = {
   CustomerAlreadyRedeemedReferralCode:
     "customer_already_redeemed_referral_code",
   CustomerCannotRedeemOwnCode: "customer_cannot_redeem_own_code",
+
+  // Product items
+  InvalidProductItem: "invalid_product_item",
 };

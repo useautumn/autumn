@@ -42,8 +42,8 @@ export function SearchBar({
 
   return (
     <div
-      className="rounded-sm py-1 h-8 px-2 text-sm 
-    flex items-center w-full max-w-xs"
+      className="rounded-sm py-1 h-10 px-2 text-sm pl-4
+    flex items-center w-full max-w-lg min-w-xs text-t2 border-x"
     >
       <Search size={13} className="text-t3 mr-2" />
       <input
@@ -51,7 +51,7 @@ export function SearchBar({
         className="outline-none w-full bg-transparent"
         placeholder="Search..."
       ></input>
-      <div className="w-5 h-5">{loading && <SmallSpinner />}</div>
+      <div className="w-5 h-5 ml-1">{loading && <SmallSpinner />}</div>
     </div>
   );
 }

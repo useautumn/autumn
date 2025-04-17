@@ -65,10 +65,10 @@ export const ProductItemTable = ({
   const getPaidFeatureString = (item: ProductItem) => {
     let amountStr = "";
 
-    if (item.amount) {
+    if (item.price) {
       amountStr = formatAmount({
         defaultCurrency: org?.default_currency || "USD",
-        amount: item.amount,
+        amount: item.price,
       });
     } else if (item.tiers && item.tiers.length == 1) {
       amountStr = formatAmount({
@@ -106,7 +106,7 @@ export const ProductItemTable = ({
     let currency = org?.default_currency || "USD";
     let formattedAmount = formatAmount({
       defaultCurrency: currency,
-      amount: item.amount!,
+      amount: item.price!,
     });
 
     if (!intervalIsNone(item.interval)) {

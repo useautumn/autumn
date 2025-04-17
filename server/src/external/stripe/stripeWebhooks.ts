@@ -111,6 +111,7 @@ stripeWebhookRouter.post(
             checkoutSession,
             org,
             env,
+            logger,
           });
           break;
 

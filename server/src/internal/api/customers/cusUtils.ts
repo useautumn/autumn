@@ -1,6 +1,7 @@
 import {
   CusProductSchema,
   CusProductStatus,
+  CusResponseSchema,
   Customer,
   CustomerData,
   CustomerResponseSchema,
@@ -34,6 +35,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { createNewCustomer } from "./handlers/handleCreateCustomer.js";
+import { APIVersion, getApiVersion } from "@/utils/versionUtils.js";
 
 export const updateCustomerDetails = async ({
   sb,
@@ -204,7 +206,7 @@ export const flipProductResults = (
 };
 
 // getCustomerDetails helpers
-const getCusInvoices = async ({
+export const getCusInvoices = async ({
   sb,
   internalCustomerId,
   limit = 20,
@@ -225,7 +227,7 @@ const getCusInvoices = async ({
   return processedInvoices;
 };
 
-const processFullCusProducts = ({
+export const processFullCusProducts = ({
   fullCusProducts,
   subs,
   org,
@@ -249,96 +251,6 @@ const processFullCusProducts = ({
   }
 
   return { main, addOns };
-};
-
-export const getCustomerDetails = async ({
-  customer,
-  sb,
-  orgId,
-  env,
-  params = {},
-  logger,
-}: {
-  customer: Customer;
-  sb: SupabaseClient;
-  orgId: string;
-  env: AppEnv;
-  params?: any;
-  logger: any;
-}) => {
-  // 1. Get full customer products & processed invoices
-  const [fullCusProducts, processedInvoices, entities, org] = await Promise.all(
-    [
-      CusService.getFullCusProducts({
-        sb,
-        internalCustomerId: customer.internal_id,
-        withProduct: true,
-        withPrices: true,
-        inStatuses: [
-          CusProductStatus.Active,
-          CusProductStatus.PastDue,
-          CusProductStatus.Scheduled,
-        ],
-        logger,
-      }),
-      getCusInvoices({
-        sb,
-        internalCustomerId: customer.internal_id,
-        limit: 20,
-      }),
-      EntityService.getByInternalCustomerId({
-        sb,
-        internalCustomerId: customer.internal_id,
-        logger,
-      }),
-      OrgService.getFullOrg({
-        sb,
-        orgId,
-      }),
-    ]
-  );
-
-  let stripeCli = createStripeCli({
-    org,
-    env,
-  });
-
-  let subs;
-  let subIds = fullCusProducts.flatMap(
-    (cp: FullCusProduct) => cp.subscription_ids
-  );
-
-  if (org.config.api_version >= BREAK_API_VERSION) {
-    subs = await getStripeSubs({
-      stripeCli,
-      subIds,
-    });
-  }
-
-  // 2. Initialize group by balances
-  let cusEnts = fullCusProductToCusEnts(fullCusProducts) as any;
-
-  // 3. Get entitlements
-  const balances = await getCusBalances({
-    cusEntsWithCusProduct: cusEnts,
-    cusPrices: fullCusProductToCusPrices(fullCusProducts),
-    entities,
-    org,
-  });
-
-  const { main, addOns } = processFullCusProducts({
-    fullCusProducts,
-    subs,
-    org,
-  });
-
-  return {
-    customer: CustomerResponseSchema.parse(customer),
-    products: main,
-    add_ons: addOns,
-    entitlements: balances,
-    invoices: processedInvoices,
-  };
 };
 
 // IMPORTANT FUNCTION

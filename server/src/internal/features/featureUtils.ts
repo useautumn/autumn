@@ -1,20 +1,29 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { MeteredConfig, ErrCode, AggregateType, CreditSystemConfig, Feature } from "@autumn/shared";
+import {
+  MeteredConfig,
+  ErrCode,
+  AggregateType,
+  CreditSystemConfig,
+  Feature,
+  FeatureType,
+  AppEnv,
+} from "@autumn/shared";
 import { EntitlementService } from "../products/entitlements/EntitlementService.js";
 import { PriceService } from "../prices/PriceService.js";
 import { FeatureService } from "./FeatureService.js";
+import { generateId, keyToTitle } from "@/utils/genUtils.js";
 
 export const validateMeteredConfig = (config: MeteredConfig) => {
   let newConfig = { ...config };
 
   // for (const filter of config.filters) {
-    // if (filter.value.length == 0) {
-    //   throw new RecaseError({
-    //     message: `Event name cannot be empty`,
-    //     code: ErrCode.InvalidFeature,
-    //     statusCode: 400,
-    //   });
-    // }
+  // if (filter.value.length == 0) {
+  //   throw new RecaseError({
+  //     message: `Event name cannot be empty`,
+  //     code: ErrCode.InvalidFeature,
+  //     statusCode: 400,
+  //   });
+  // }
   // }
   // if (config.filters.length == 0 || config.filters[0].value.length == 0) {
   //   throw new RecaseError({
@@ -97,10 +106,10 @@ export const getObjectsUsingFeature = async ({
   env: any;
   feature: Feature;
 }) => {
-  let [allEnts, allPrices, {creditSystems}] = await Promise.all([
+  let [allEnts, allPrices, { creditSystems }] = await Promise.all([
     EntitlementService.getByOrg({
       sb,
-      orgId, 
+      orgId,
       env,
     }),
     PriceService.getByOrg({
@@ -113,17 +122,82 @@ export const getObjectsUsingFeature = async ({
       orgId,
       env,
       featureId: feature.id,
-    })
+    }),
   ]);
-
 
   // console.log("All Ents", allEnts.map((ent) => `${ent.feature_id} - ${ent.entity_feature_id}`));
   // console.log("Matching feature:", feature.id);
-  let entitlements = allEnts.filter((entitlement) => entitlement.internal_feature_id == feature.internal_id);
-  let linkedEntitlements = allEnts.filter((entitlement) => entitlement.entity_feature_id == feature.id);
+  let entitlements = allEnts.filter(
+    (entitlement) => entitlement.internal_feature_id == feature.internal_id
+  );
+  let linkedEntitlements = allEnts.filter(
+    (entitlement) => entitlement.entity_feature_id == feature.id
+  );
 
-  let prices = allPrices.filter((price) => price.config.internal_feature_id == feature.internal_id);
+  let prices = allPrices.filter(
+    (price) => price.config.internal_feature_id == feature.internal_id
+  );
   // console.log("Linked entitlements", linkedEntitlements.map((ent) => `${ent.feature_id} - ${ent.entity_feature_id}`));
 
   return { entitlements, prices, creditSystems, linkedEntitlements };
-}
+};
+
+export const constructBooleanFeature = ({
+  featureId,
+  orgId,
+  env,
+}: {
+  featureId: string;
+  orgId: string;
+  env: AppEnv;
+}) => {
+  let newFeature: Feature = {
+    internal_id: generateId("fe"),
+    org_id: orgId,
+    env,
+    created_at: Date.now(),
+
+    id: featureId,
+    name: keyToTitle(featureId),
+    type: FeatureType.Boolean,
+    config: null,
+  };
+
+  return newFeature;
+};
+
+export const constructMeteredFeature = ({
+  featureId,
+  orgId,
+  env,
+}: {
+  featureId: string;
+  orgId: string;
+  env: AppEnv;
+}) => {
+  let newFeature: Feature = {
+    internal_id: generateId("fe"),
+    org_id: orgId,
+    env,
+    created_at: Date.now(),
+
+    id: featureId,
+    name: keyToTitle(featureId),
+    type: FeatureType.Metered,
+    config: {
+      filters: [
+        {
+          property: "event_name",
+          operator: "eq",
+          value: ["purchase.completed"],
+        },
+      ],
+      aggregate: {
+        type: AggregateType.Sum,
+        property: "value",
+      },
+    },
+  };
+
+  return newFeature;
+};

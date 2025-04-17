@@ -113,7 +113,12 @@ export class ProductService {
     sb: SupabaseClient;
     product: Product;
   }) {
-    const { data, error } = await sb.from("products").insert(product);
+    const { data, error } = await sb
+      .from("products")
+      .insert(product)
+      .select()
+      .single();
+
     if (error) {
       throw new RecaseError({
         message: "Failed to create product",
@@ -122,6 +127,7 @@ export class ProductService {
         data: error,
       });
     }
+
     return data;
   }
 

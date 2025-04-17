@@ -8,7 +8,7 @@ import {
   AppEnv,
   BillingInterval,
   EntInterval,
-  ProductItemBehavior,
+  UsageModel,
 } from "@autumn/shared";
 import { createProduct } from "tests/utils/productUtils.js";
 import { getMainCusProduct } from "tests/utils/cusProductUtils/cusProductUtils.js";
@@ -37,9 +37,9 @@ let pro = {
     payPerUse: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 0,
-      amount: 0.5,
+      price: 0.5,
       interval: BillingInterval.Month,
-      behavior: ProductItemBehavior.PayPerUse,
+      usage_model: UsageModel.PayPerUse,
     }),
   },
 };
@@ -54,16 +54,16 @@ let premium = {
     //   included_usage: 100,
     //   amount: 15,
     //   interval: BillingInterval.Month,
-    //   behavior: ProductItemBehavior.Prepaid,
+    //   usage_model: UsageModel.Prepaid,
     // }),
 
     // Pay per use
     payPerUse: constructFeaturePriceItem({
       feature_id: features.metered1.id,
       included_usage: 0,
-      amount: 1,
+      price: 1,
       interval: BillingInterval.Month,
-      behavior: ProductItemBehavior.PayPerUse,
+      usage_model: UsageModel.PayPerUse,
     }),
   },
 };
@@ -209,7 +209,7 @@ describe(`${chalk.yellowBright(
     // 1. Let invoices[1] be 10 * premium prepaid price - pro prepaid price
     // 2. Let invoices[0] be  value * pro pay per use price
 
-    let invoice0Amount = value * (pro.items.payPerUse.amount ?? 0);
+    let invoice0Amount = value * (pro.items.payPerUse.price ?? 0);
     expect(invoices[0].total).to.equal(invoice0Amount);
 
     expect(lifetimeCusEnt).to.not.exist;

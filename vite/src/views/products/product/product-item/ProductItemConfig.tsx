@@ -66,7 +66,7 @@ export const ProductItemConfig = () => {
       tiers: [
         {
           to: TierInfinite,
-          amount: item.amount ?? 0,
+          amount: item.price ?? 0,
         },
       ],
       interval: ProductItemInterval.Month,
@@ -88,7 +88,7 @@ export const ProductItemConfig = () => {
         ...item,
         feature_id: null,
         tiers: null,
-        amount: 0,
+        price: 0,
         interval: ProductItemInterval.Month,
       });
       setShow({ ...show, feature: !show.feature });
@@ -96,7 +96,7 @@ export const ProductItemConfig = () => {
       // Add feature
       setItem({
         ...item,
-        amount: null,
+        price: null,
         feature_id: null,
         tiers: null,
         interval: ProductItemInterval.Month,
@@ -164,15 +164,15 @@ export const ProductItemConfig = () => {
                   setShow({
                     ...show,
                     feature: true,
-                    price: item.amount > 0 ? true : false,
+                    price: item.price > 0 ? true : false,
                   });
                   setItem({
                     ...item,
-                    tiers: item.amount
+                    tiers: item.price
                       ? [
                           {
                             to: TierInfinite,
-                            amount: item.amount ?? 0,
+                            amount: item.price ?? 0,
                           },
                         ]
                       : null,
@@ -212,7 +212,7 @@ export const ProductItemConfig = () => {
               {handleCreateProductItem && (
                 <Button
                   variant="gradientPrimary"
-                  disabled={!selectedFeature && !item.amount}
+                  disabled={!selectedFeature && !item.price}
                   className="w-full"
                   onClick={() => {
                     handleCreateProductItem(show);

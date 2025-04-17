@@ -27,7 +27,7 @@ export const ProductConfig = ({
             value={product.name}
             onChange={(e) => {
               const newFields = { ...product, name: e.target.value };
-              if (!idEdit) {
+              if (!idEdit && !isUpdate) {
                 newFields.id = slugify(e.target.value);
               }
               setProduct(newFields);
