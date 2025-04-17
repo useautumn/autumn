@@ -63,13 +63,13 @@ describe(`${chalk.yellowBright(
 
     // 4. Fixed Price
     constructPriceItem({
-      amount: 10,
+      price: 10,
       interval: BillingInterval.Month,
     }),
 
     // 5. Fixed one off price
     constructPriceItem({
-      amount: 50,
+      price: 50,
       interval: BillingInterval.OneOff,
     }),
   ];
@@ -92,7 +92,7 @@ describe(`${chalk.yellowBright(
   it("should update metered feature and fixed price correctly", async function () {
     items[1].included_usage = 200;
 
-    items[3].amount = 20;
+    items[3].price = 20;
     items[3].interval = BillingInterval.OneOff as any;
 
     await autumn.products.update("product-1", {

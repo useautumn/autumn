@@ -36,7 +36,7 @@ export const OrganizationSchema = z.object({
   }),
 
   config: OrgConfigSchema,
-  api_version: z.nativeEnum(APIVersion),
+  api_version: z.nativeEnum(APIVersion).nullish(),
 });
 
 export const FrontendOrganizationSchema = z.object({

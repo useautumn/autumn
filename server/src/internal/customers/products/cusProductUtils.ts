@@ -410,7 +410,7 @@ export const processFullCusProduct = ({
     };
   }
 
-  if (org.api_version >= APIVersion.v1_1) {
+  if (org.api_version! >= APIVersion.v1_1) {
     return CusProductResponseSchema.parse({
       id: cusProduct.product.id,
       name: cusProduct.product.name,
