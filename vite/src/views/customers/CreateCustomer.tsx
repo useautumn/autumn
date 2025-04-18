@@ -43,7 +43,9 @@ function CreateCustomer() {
       let customer = data.customer || data;
       if (customer) {
         navigateTo(
-          `/customers/${customer.id || customer.autumn_id}`,
+          `/customers/${
+            customer.id || customer.autumn_id || customer.internal_id
+          }`,
           navigate,
           env
         );
