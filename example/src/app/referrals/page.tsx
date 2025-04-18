@@ -17,7 +17,6 @@ const useReferralCode = (referrerId: string) => {
         const { code } = await getReferralCode(referrerId);
         setReferralCode(code);
       } catch (error) {
-        console.log("Failed to get referral code", error);
         toast.error(`Error fetching referral code: ${error}`);
       }
       setLoading(false);

@@ -120,6 +120,7 @@ const handleBillNowPrices = async ({
 
   // Add product and entitlements to customer
   const batchInsert = [];
+
   for (const product of products) {
     batchInsert.push(
       createFullCusProduct({

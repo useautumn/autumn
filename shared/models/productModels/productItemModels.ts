@@ -70,7 +70,8 @@ export const ProductItemSchema = z.object({
 
   // Others
   entity_feature_id: z.string().nullish(),
-  carry_over_usage: z.boolean().nullish(),
+  // carry_over_usage: z.boolean().nullish(),
+  reset_usage_when_enabled: z.boolean().nullish(),
 
   // Stored in backend
   created_at: z.number().nullish(),

@@ -20,7 +20,6 @@ import { getFeature } from "@/utils/product/entitlementUtils";
 export const ProductItemConfig = () => {
   // HOOKS
   const { features, product, env } = useProductContext();
-  const navigate = useNavigate();
 
   const {
     item,
@@ -37,29 +36,6 @@ export const ProductItemConfig = () => {
     (f: Feature) => f.id == item.feature_id
   );
 
-  useEffect(() => {
-    // if show price is changed to false, remove the "amount" from the item
-    if (show.price) {
-      // setItem({ ...item, amount: null });
-    }
-  }, [show]);
-
-  // if item type is boolean, remove everything except for the feature_id. use getFeature to check if the item is boolean
-  // useEffect(() => {
-  //   if (getFeature(item.feature_id, features)?.type === FeatureType.Boolean) {
-  //     setItem({
-  //       feature_id: item.feature_id,
-  //       amount: null,
-  //       tiers: null,
-  //       billing_units: null,
-  //       included_usage: null,
-  //       reset_usage_on_billing: null,
-  //       carry_over_usage: null,
-  //       entity_feature_id: null,
-  //     });
-  //   }
-  // }, [item.feature_id, features]);
-
   const handleAddPrice = () => {
     setItem({
       ...item,
@@ -72,37 +48,6 @@ export const ProductItemConfig = () => {
       interval: ProductItemInterval.Month,
     });
     setShow({ ...show, price: !show.price });
-    // } else {
-    //   setItem({
-    //     ...item,
-    //     tiers: null,
-    //   });
-    //   setShow({ ...show, price: true });
-    // }
-  };
-
-  const toggleShowFeature = () => {
-    if (show.feature) {
-      // Remove feature
-      setItem({
-        ...item,
-        feature_id: null,
-        tiers: null,
-        price: 0,
-        interval: ProductItemInterval.Month,
-      });
-      setShow({ ...show, feature: !show.feature });
-    } else {
-      // Add feature
-      setItem({
-        ...item,
-        price: null,
-        feature_id: null,
-        tiers: null,
-        interval: ProductItemInterval.Month,
-      });
-      setShow({ ...show, price: false, feature: true });
-    }
   };
 
   useEffect(() => {

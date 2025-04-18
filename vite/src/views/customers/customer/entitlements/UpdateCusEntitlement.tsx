@@ -18,7 +18,7 @@ import { DateInputUnix } from "@/components/general/DateInputUnix";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CusService } from "@/services/customers/CusService";
 import { toast } from "sonner";
-import { getBackendErr } from "@/utils/genUtils";
+import { getBackendErr, notNullish } from "@/utils/genUtils";
 import CopyButton from "@/components/general/CopyButton";
 
 function UpdateCusEntitlement({
@@ -102,7 +102,9 @@ function UpdateCusEntitlement({
             <FieldLabel>Balance</FieldLabel>
             <Input
               type="number"
-              value={updateFields.balance || ""}
+              value={
+                notNullish(updateFields.balance) ? updateFields.balance : ""
+              }
               onChange={(e) => {
                 setUpdateFields({
                   ...updateFields,

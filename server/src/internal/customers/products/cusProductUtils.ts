@@ -272,7 +272,8 @@ export const activateFutureProduct = async ({
 // GET CUS ENTS FROM CUS PRODUCTS
 export const fullCusProductToCusEnts = (
   cusProducts: FullCusProduct[],
-  inStatuses: CusProductStatus[] = [CusProductStatus.Active]
+  inStatuses: CusProductStatus[] = [CusProductStatus.Active],
+  reverseOrder: boolean = false
 ) => {
   const cusEnts: FullCustomerEntitlement[] = [];
 
@@ -289,7 +290,7 @@ export const fullCusProductToCusEnts = (
     );
   }
 
-  sortCusEntsForDeduction(cusEnts);
+  sortCusEntsForDeduction(cusEnts, reverseOrder);
 
   return cusEnts;
 };

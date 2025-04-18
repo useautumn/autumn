@@ -9,7 +9,7 @@ import {
 import { EllipsisVertical, MinusIcon, PlusIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useProductItemContext } from "./ProductItemContext";
-import { UsageModel } from "@autumn/shared";
+import { ProductItem, UsageModel } from "@autumn/shared";
 
 export default function MoreMenuButton({
   show,
@@ -19,18 +19,22 @@ export default function MoreMenuButton({
   setShow: (show: any) => void;
 }) {
   const [showPopover, setShowPopover] = useState(false);
-  const { item, setItem } = useProductItemContext();
+  const {
+    item,
+    setItem,
+  }: { item: ProductItem; setItem: (item: ProductItem) => void } =
+    useProductItemContext();
 
-  useEffect(() => {
-    const shouldCarryOver =
-      item.interval === null || item.reset_usage_on_billing === false;
-    if (item.carry_from_previous !== shouldCarryOver) {
-      setItem({
-        ...item,
-        carry_from_previous: shouldCarryOver,
-      });
-    }
-  }, [item.interval, item.reset_usage_on_billing]);
+  // useEffect(() => {
+  //   const shouldCarryOver =
+  //     item.interval === null || item.reset_usage_on_billing === false;
+  //   if (item.carry_over_usage !== shouldCarryOver) {
+  //     setItem({
+  //       ...item,
+  //       carry_over_usage: shouldCarryOver,
+  //     });
+  //   }
+  // }, [item.interval, item.reset_usage_on_billing]);
 
   return (
     <Popover open={showPopover} onOpenChange={setShowPopover}>
@@ -49,27 +53,6 @@ export default function MoreMenuButton({
         className="w-fit min-w-48 p-0 py-1 flex flex-col text-xs"
         align="end"
       >
-        {/* <div className="flex items-center space-x-2">
-          <Button
-            variant="secondary"
-            className="text-xs text-t3 shadow-none border-none w-full justify-start"
-            onClick={() => {
-              setItem({
-                ...item,
-                usage_model:
-                  item.usage_model == UsageModel.Prepaid
-                    ? UsageModel.PayPerUse
-                    : UsageModel.Prepaid,
-              });
-            }}
-          >
-            <Checkbox
-              className="border-t3 mr-1"
-              checked={item.usage_model == UsageModel.Prepaid}
-            />
-            Prepaid
-          </Button>
-        </div> */}
         <div className="flex items-center space-x-2">
           <Button
             variant="secondary"
@@ -77,24 +60,24 @@ export default function MoreMenuButton({
             onClick={() => {
               setItem({
                 ...item,
-                carry_from_previous: !item.carry_from_previous,
+                reset_usage_when_enabled: !item.reset_usage_when_enabled,
               });
             }}
           >
             <Checkbox
               className="border-t3 mr-1"
-              checked={item.carry_from_previous}
-              defaultChecked={
-                item.interval === null || item.reset_usage_on_billing === false
-              }
+              checked={item.reset_usage_when_enabled || false}
+              // defaultChecked={
+              //   item.interval === null || item.reset_usage_on_billing === false
+              // }
               onCheckedChange={(checked) =>
                 setItem({
                   ...item,
-                  carry_from_previous: Boolean(checked),
+                  reset_usage_when_enabled: Boolean(!checked),
                 })
               }
             />
-            No reset on enabling product
+            Reset usage when product is enabled
           </Button>
         </div>
         <Button

@@ -5,26 +5,18 @@ import {
 } from "@/components/ui/tooltip";
 import { useCustomerContext } from "./CustomerContext";
 import { getStripeCusLink } from "@/utils/linkUtils";
-import { Product } from "@autumn/shared";
+
 import { faStripe } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ArrowUpRightFromSquare, Check } from "lucide-react";
-import { Copy } from "lucide-react";
 
 import { useState } from "react";
 import { Link } from "react-router";
 import { SideAccordion } from "@/components/general/SideAccordion";
 import { Accordion } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import React from "react";
+import { Dialog } from "@/components/ui/dialog";
+
 import UpdateCustomerDialog from "./UpdateCustomerDialog";
 import AddCouponDialogContent from "./add-coupon/AddCouponDialogContent";
 import CopyButton from "@/components/general/CopyButton";
@@ -194,7 +186,6 @@ export const RewardProps = () => {
     return coupon.name;
   };
   let { referrals } = useCustomerContext();
-  console.log("referrals", referrals);
 
   // if (!referrals) return null;
 

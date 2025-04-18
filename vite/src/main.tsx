@@ -11,9 +11,7 @@ if (!PUBLISHABLE_KEY) {
   throw new Error("Add your Clerk Publishable Key to the .env file");
 }
 
-// posthog.init("phc_L763VL2WY6TExI5xG5xWOua6E5LYkZN496hBeSpEdAn", {
-//   api_host: "https://us.i.posthog.com",
-// });
+
 
 const options = {
   api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,

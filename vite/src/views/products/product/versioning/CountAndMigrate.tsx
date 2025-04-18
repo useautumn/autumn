@@ -132,14 +132,13 @@ export const CountAndMigrate = () => {
   let fromIsOneOff = pricesOnlyOneOff(product.items);
 
   let migrateCount = counts?.active - counts?.canceled - counts?.custom;
-  let activeCount = counts?.active;
+
   let canMigrate =
     counts &&
     migrateCount > 0 &&
     !fromIsOneOff &&
     version &&
     version < numVersions;
-  let trialingCount = counts?.trialing;
 
   return (
     <>
