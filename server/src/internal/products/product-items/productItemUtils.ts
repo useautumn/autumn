@@ -121,7 +121,7 @@ export const constructFeaturePriceItem = ({
   usage_model,
   reset_usage_on_billing = true,
   billing_units = 1,
-  carry_over_usage = true,
+  reset_usage_when_enabled = true,
 }: {
   feature_id: string;
   included_usage?: number;
@@ -130,7 +130,7 @@ export const constructFeaturePriceItem = ({
   usage_model?: UsageModel;
   reset_usage_on_billing?: boolean;
   billing_units?: number;
-  carry_over_usage?: boolean;
+  reset_usage_when_enabled?: boolean;
 }) => {
   let item: ProductItem & {
     included_usage: number;
@@ -142,7 +142,7 @@ export const constructFeaturePriceItem = ({
     usage_model,
     reset_usage_on_billing,
     billing_units,
-    carry_over_usage,
+    reset_usage_when_enabled,
   };
 
   return item;
