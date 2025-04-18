@@ -198,6 +198,7 @@ export const updateUsage = async ({
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     withPrices: true,
     logger,
+    reverseOrder: org.config?.reverse_deduction_order,
   });
   const endTime = performance.now();
 

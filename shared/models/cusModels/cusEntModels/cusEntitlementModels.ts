@@ -16,7 +16,7 @@ export const CustomerEntitlementSchema = z.object({
   id: z.string(),
   internal_customer_id: z.string(),
   internal_feature_id: z.string(),
-  customer_id: z.string(), // for debugging purposes
+  customer_id: z.string().nullish(), // for debugging purposes
   feature_id: z.string(), // for debugging purposes
 
   customer_product_id: z.string(),

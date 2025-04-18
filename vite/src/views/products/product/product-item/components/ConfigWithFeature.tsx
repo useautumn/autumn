@@ -96,7 +96,7 @@ export const ConfigWithFeature = ({
                         value={
                           item.included_usage == Infinite
                             ? "Unlimited"
-                            : item.included_usage
+                            : item.included_usage || ""
                         }
                         type={
                           item.included_usage === Infinite ? "text" : "number"

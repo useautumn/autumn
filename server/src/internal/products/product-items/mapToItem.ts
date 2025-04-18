@@ -12,6 +12,7 @@ import {
   ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
+  Product,
 } from "@autumn/shared";
 
 import { nullish } from "@/utils/genUtils.js";
@@ -48,7 +49,7 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
     interval: entToItemInterval(ent.interval!),
 
     entity_feature_id: ent.entity_feature_id,
-    carry_over_usage: ent.carry_from_previous,
+    reset_usage_when_enabled: !ent.carry_from_previous,
 
     // Stored in backend
     entitlement_id: ent.id,
@@ -73,8 +74,7 @@ export const toFeaturePriceItem = ({
     };
   });
 
-
-  return {
+  let item: ProductItem = {
     feature_id: ent.feature.id,
     included_usage: ent.allowance,
     interval: billingToItemInterval(config.interval!),
@@ -86,7 +86,7 @@ export const toFeaturePriceItem = ({
     billing_units: config.billing_units,
 
     entity_feature_id: ent.entity_feature_id,
-    carry_over_usage: ent.carry_from_previous,
+    reset_usage_when_enabled: !ent.carry_from_previous,
     usage_model:
       config.bill_when == BillWhen.StartOfPeriod ||
       config.bill_when == BillWhen.InAdvance
@@ -100,6 +100,8 @@ export const toFeaturePriceItem = ({
 
     price_config: price.config,
   };
+
+  return item;
 };
 
 export const toPriceItem = ({ price }: { price: Price }) => {

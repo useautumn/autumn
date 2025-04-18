@@ -1,13 +1,4 @@
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-
-import {
   AllowanceType,
   FeatureType,
   FullCustomerEntitlement,
@@ -15,7 +6,6 @@ import {
 
 import { useCustomerContext } from "../CustomerContext";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { compareStatus } from "@/utils/genUtils";
 
 import { useState } from "react";
 

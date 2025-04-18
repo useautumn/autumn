@@ -23,7 +23,6 @@ export const redeemReferralCode = async ({
     customerId,
     code: referralCode,
   });
-  console.log("Referral code redeemed");
-  console.log("Redemption", redemption);
+
   return redemption;
 };

@@ -79,6 +79,8 @@ export const handleCreateCheckout = async ({
       }
     : undefined;
 
+  
+
   const checkout = await stripeCli.checkout.sessions.create({
     customer: customer.processor.id,
     line_items: items,

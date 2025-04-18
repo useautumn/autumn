@@ -72,17 +72,17 @@ export const getCustomerDetails = async ({
     ]
   );
 
-  let stripeCli = createStripeCli({
-    org,
-    env,
-  });
-
   let subs;
   let subIds = fullCusProducts.flatMap(
     (cp: FullCusProduct) => cp.subscription_ids
   );
 
-  if (org.config.api_version >= BREAK_API_VERSION) {
+  if (org.config.api_version >= BREAK_API_VERSION && org.stripe_connected) {
+    let stripeCli = createStripeCli({
+      org,
+      env,
+    });
+
     subs = await getStripeSubs({
       stripeCli,
       subIds,
@@ -106,7 +106,9 @@ export const getCustomerDetails = async ({
     org,
   });
 
-  let features = cusEnts.map((cusEnt: FullCustomerEntitlement) => cusEnt.entitlement.feature);
+  let features = cusEnts.map(
+    (cusEnt: FullCustomerEntitlement) => cusEnt.entitlement.feature
+  );
 
   if (org.api_version == APIVersion.v1_1) {
     return {
@@ -117,7 +119,9 @@ export const getCustomerDetails = async ({
         products: main,
         add_ons: addOns,
         features: balances.map((b) => {
-          let isBoolean = features.find((f: Feature) => f.id == b.feature_id)?.type == FeatureType.Boolean;
+          let isBoolean =
+            features.find((f: Feature) => f.id == b.feature_id)?.type ==
+            FeatureType.Boolean;
           if (b.unlimited || isBoolean) {
             return b;
           }
@@ -128,7 +132,6 @@ export const getCustomerDetails = async ({
             included_usage: b.allowance,
           });
         }),
-
       }),
     };
   } else {

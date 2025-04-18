@@ -34,7 +34,6 @@ export const ProductItemTable = ({
   let [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
   let [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   let [open, setOpen] = useState(false);
-
   const getFreeFeatureString = (item: ProductItem) => {
     const feature = features.find((f: Feature) => f.id == item.feature_id);
 
@@ -117,7 +116,6 @@ export const ProductItemTable = ({
   };
 
   let handleRowClick = (item: ProductItem, index: number) => {
-    console.log("Item clicked", item);
     setSelectedItem(item);
     setSelectedIndex(index);
     setOpen(true);
@@ -169,6 +167,8 @@ export const ProductItemTable = ({
         selectedItem={selectedItem}
         selectedIndex={selectedIndex}
         setSelectedItem={setSelectedItem}
+        open={open}
+        setOpen={setOpen}
       />
       <div className="flex flex-col text-sm rounded-sm">
         <div

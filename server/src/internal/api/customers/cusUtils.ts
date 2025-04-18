@@ -284,7 +284,8 @@ export const getCusEntsInFeatures = async ({
 
   const cusEntsWithCusProduct = fullCusProductToCusEnts(
     fullCusProducts!,
-    inStatuses
+    inStatuses,
+    reverseOrder
   );
 
   if (!cusEntsWithCusProduct) {
@@ -300,7 +301,7 @@ export const getCusEntsInFeatures = async ({
     cusEnts = cusEntsWithCusProduct;
   }
 
-  sortCusEntsForDeduction(cusEnts, reverseOrder);
+  // sortCusEntsForDeduction(cusEnts, reverseOrder);
 
   if (!withPrices) {
     return { cusEnts, cusPrices: undefined };

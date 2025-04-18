@@ -190,6 +190,12 @@ export const sortCusEntsForDeduction = (
     [EntInterval.Lifetime]: 8, // 1 time
   };
 
+  // console.log(
+  //   `Cus ents before (${reverseOrder ? "reversed" : "normal"})`,
+  //   cusEnts.map(
+  //     (ce) => `${ce.entitlement.feature_id} - ${ce.entitlement.interval}`
+  //   )
+  // );
   cusEnts.sort((a, b) => {
     const aEnt = a.entitlement;
     const bEnt = b.entitlement;
@@ -234,17 +240,6 @@ export const sortCusEntsForDeduction = (
       return 1;
     }
 
-    let nextResetFirst = reverseOrder ? 1 : -1;
-    // If one has a next_reset_at, it should go first
-    if (a.next_reset_at && !b.next_reset_at) {
-      return nextResetFirst;
-    }
-
-    // If b has a next_reset_at, it should go first
-    if (!a.next_reset_at && b.next_reset_at) {
-      return nextResetFirst;
-    }
-
     // If one has usage_allowed, it should go last
     if (!a.usage_allowed && b.usage_allowed) {
       return -1;
@@ -252,6 +247,18 @@ export const sortCusEntsForDeduction = (
 
     if (!b.usage_allowed && a.usage_allowed) {
       return 1;
+    }
+
+    // If one has a next_reset_at, it should go first
+    let nextResetFirst = reverseOrder ? 1 : -1;
+
+    if (a.next_reset_at && !b.next_reset_at) {
+      return nextResetFirst;
+    }
+
+    // If b has a next_reset_at, it should go first
+    if (!a.next_reset_at && b.next_reset_at) {
+      return -nextResetFirst;
     }
 
     // 3. Sort by interval
@@ -267,6 +274,13 @@ export const sortCusEntsForDeduction = (
     // 4. Sort by created_at
     return a.created_at - b.created_at;
   });
+
+  // console.log(
+  //   `Cus ents after (${reverseOrder ? "reversed" : "normal"})`,
+  //   cusEnts.map(
+  //     (ce) => `${ce.entitlement.feature_id} - ${ce.entitlement.interval}`
+  //   )
+  // );
 };
 
 // Get related cusPrice

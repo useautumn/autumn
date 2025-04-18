@@ -1,6 +1,4 @@
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
-import { handleBelowThresholdInvoicing } from "./invoiceThresholdUtils.js";
-import { getBelowThresholdPrice } from "./invoiceThresholdUtils.js";
+
 
 import {
   AllowanceType,
@@ -543,6 +541,8 @@ export const updateCustomerBalance = async ({
 }) => {
   const startTime = performance.now();
   console.log("REVERSE DEDUCTION ORDER", org.config.reverse_deduction_order);
+
+  
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
     sb,
     internalCustomerId: customer.internal_id,

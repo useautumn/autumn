@@ -34,17 +34,16 @@ function CreateCustomer() {
     setIsLoading(true);
 
     try {
-      const {data} = await CusService.createCustomer(axiosInstance, {
+      const { data } = await CusService.createCustomer(axiosInstance, {
         ...fields,
         id: fields.id ? fields.id : null,
         fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
       });
 
       let customer = data.customer || data;
-      console.log(customer);
       if (customer) {
         navigateTo(
-          `/customers/${customer.id || customer.internal_id}`,
+          `/customers/${customer.id || customer.autumn_id}`,
           navigate,
           env
         );

@@ -124,11 +124,13 @@ export const addExistingUsagesToCusEnts = ({
   entitlements,
   curCusProduct,
   carryExistingUsages = false,
+  printLogs = false,
 }: {
   cusEnts: CustomerEntitlement[];
   entitlements: EntitlementWithFeature[];
   curCusProduct: FullCusProduct;
   carryExistingUsages?: boolean;
+  printLogs?: boolean;
 }) => {
   if (!curCusProduct) {
     return cusEnts;
@@ -146,15 +148,17 @@ export const addExistingUsagesToCusEnts = ({
   // Sort cusEnts
   sortCusEntsForDeduction(fullCusEnts);
 
-  console.log("DEDUCTING EXISTING USAGE FROM CUS ENTS");
-  console.log("Existing usages:", existingUsages);
-  console.log(
-    "Sorted cusEnts:",
-    fullCusEnts.map(
-      (ce) =>
-        `${ce.entitlement.feature_id} (${ce.entitlement.interval}), balance: ${ce.balance}`
-    )
-  );
+  if (printLogs) {
+    console.log("DEDUCTING EXISTING USAGE FROM CUS ENTS");
+    console.log("Existing usages:", existingUsages);
+    console.log(
+      "Sorted cusEnts:",
+      fullCusEnts.map(
+        (ce) =>
+          `${ce.entitlement.feature_id} (${ce.entitlement.interval}), balance: ${ce.balance}`
+      )
+    );
+  }
 
   // Perform deductions...
   for (const key in existingUsages) {
@@ -177,7 +181,7 @@ export const addExistingUsagesToCusEnts = ({
       if (notNullish(entityUsages)) {
         // TODO: Check if this works...
         for (const entityId in entityUsages) {
-          let { newBalance, toDeduct } = performDeductionOnCusEnt({
+          let { toDeduct, newEntities } = performDeductionOnCusEnt({
             cusEnt,
             toDeduct: entityUsages[entityId],
             allowNegativeBalance: cusEnt.usage_allowed ?? false,
@@ -193,7 +197,7 @@ export const addExistingUsagesToCusEnts = ({
             };
           }
 
-          cusEnt.entities![entityId]!.balance = newBalance!;
+          cusEnt.entities![entityId]!.balance = newEntities![entityId]!.balance;
         }
       } else {
         let { newBalance, toDeduct } = performDeductionOnCusEnt({
@@ -205,10 +209,12 @@ export const addExistingUsagesToCusEnts = ({
         cusEnt.balance = newBalance;
       }
 
-      console.log("--------------------------------");
-      console.log("Key:", key);
-      console.log("New cus ent balance:", cusEnt.balance, cusEnt.entities);
-      console.log("Existing usages:", existingUsages);
+      if (printLogs) {
+        console.log("--------------------------------");
+        console.log("Key:", key);
+        console.log("New cus ent balance:", cusEnt.balance, cusEnt.entities);
+        console.log("Existing usages:", existingUsages);
+      }
     }
   }
 

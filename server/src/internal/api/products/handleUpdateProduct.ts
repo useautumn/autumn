@@ -20,7 +20,10 @@ import {
   handleVersionProduct,
   handleVersionProductV2,
 } from "./handleVersionProduct.js";
-import { productsAreDifferent, productsAreDifferent2 } from "@/internal/products/productUtils.js";
+import {
+  productsAreDifferent,
+  productsAreDifferent2,
+} from "@/internal/products/productUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
@@ -300,7 +303,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       // Check if product items are different
       // let productHasChanged = productsAreDifferent2(req.body, fullProduct);
 
-      let itemsExist = notNullish(req.body.items)
+      let itemsExist = notNullish(req.body.items);
       if (cusProductExists && itemsExist) {
         await handleVersionProductV2({
           req,

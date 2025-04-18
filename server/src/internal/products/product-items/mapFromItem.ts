@@ -92,6 +92,8 @@ export const toFeature = ({
 }) => {
   let isBoolean = feature?.type == FeatureType.Boolean;
 
+  let resetUsage = item.reset_usage_when_enabled || false;
+
   let ent: Entitlement = {
     id: item.entitlement_id || generateId("ent"),
     org_id: orgId,
@@ -113,7 +115,7 @@ export const toFeature = ({
       ? EntInterval.Lifetime
       : (itemToEntInterval(item) as EntInterval),
 
-    carry_from_previous: item.carry_over_usage || false,
+    carry_from_previous: !resetUsage,
     entity_feature_id: item.entity_feature_id,
   };
 
@@ -146,6 +148,7 @@ export const toFeatureAndPrice = ({
   curEnt?: Entitlement;
   newVersion?: boolean;
 }) => {
+  let resetUsage = item.reset_usage_when_enabled || false;
   let ent: Entitlement = {
     id: item.entitlement_id || generateId("ent"),
     org_id: orgId,
@@ -163,7 +166,7 @@ export const toFeatureAndPrice = ({
         ? EntInterval.Lifetime
         : (itemToEntInterval(item) as EntInterval),
 
-    carry_from_previous: item.carry_over_usage || false,
+    carry_from_previous: !resetUsage,
     entity_feature_id: item.entity_feature_id,
   };
 

@@ -318,15 +318,6 @@ export const createFullCusProduct = async ({
     });
   } catch (error) {}
 
-  if (!isOneOff(prices) && !product.is_add_on) {
-    await expireOrDeleteCusProduct({
-      sb,
-      startsAt,
-      product,
-      cusProducts: attachParams.cusProducts,
-    });
-  }
-
   const existingCusProduct = searchCusProducts({
     productId: product.id,
     cusProducts: attachParams.cusProducts!,
@@ -426,6 +417,16 @@ export const createFullCusProduct = async ({
     subscriptionScheduleIds,
     isCustom: attachParams.isCustom || false,
   });
+
+  // Expire previous product if not one off
+  if (!isOneOff(prices) && !product.is_add_on) {
+    await expireOrDeleteCusProduct({
+      sb,
+      startsAt,
+      product,
+      cusProducts: attachParams.cusProducts,
+    });
+  }
 
   await insertFullCusProduct({
     sb,

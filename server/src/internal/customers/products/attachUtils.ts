@@ -20,7 +20,6 @@ import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { PricesInput } from "@autumn/shared";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 

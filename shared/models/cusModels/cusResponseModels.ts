@@ -3,7 +3,7 @@ import { CusProductStatus } from "./cusProductModels.js";
 import { EntInterval } from "../genModels.js";
 
 export const CusProductResponseSchema = z.object({
-  id: z.string(),
+  id: z.string().nullable().default(null),
   name: z.string(),
   group: z.string().nullable(),
   status: z.nativeEnum(CusProductStatus),
@@ -19,9 +19,9 @@ export const CusProductResponseSchema = z.object({
 
 export const CusEntResponseSchema = z.object({
   feature_id: z.string(),
-  interval: z.nativeEnum(EntInterval).nullish(),  
+  interval: z.nativeEnum(EntInterval).nullish(),
   unlimited: z.boolean().nullish(),
-  balance: z.number().nullish(), // 
+  balance: z.number().nullish(), //
   usage: z.number().nullish(),
   included_usage: z.number().nullish(),
   next_reset_at: z.number().nullish(),
@@ -29,7 +29,7 @@ export const CusEntResponseSchema = z.object({
 
 export const CusResponseSchema = z.object({
   autumn_id: z.string(),
-  id: z.string(),
+  id: z.string().nullable().default(null),
   name: z.string().nullable(),
   email: z.string().nullable(),
   fingerprint: z.string().nullable(),
