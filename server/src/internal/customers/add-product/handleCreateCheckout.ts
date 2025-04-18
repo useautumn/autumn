@@ -71,7 +71,7 @@ export const handleCreateCheckout = async ({
 
   const subscriptionData = isRecurring
     ? {
-        trial_end: freeTrial
+        trial_end: freeTrial && !attachParams.disableFreeTrial
           ? freeTrialToStripeTimestamp(freeTrial)
           : undefined,
         // metadata: subMeta,

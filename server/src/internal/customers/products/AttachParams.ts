@@ -37,6 +37,7 @@ export type AttachParams = {
   entities: Entity[];
 
   isCustom?: boolean;
+  disableFreeTrial?: boolean;
 };
 
 export type InsertCusProductParams = {
@@ -62,4 +63,5 @@ export type InsertCusProductParams = {
   invoiceOnly?: boolean | undefined;
   entities: Entity[];
   isCustom?: boolean;
+  disableFreeTrial?: boolean;
 };
