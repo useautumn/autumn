@@ -348,6 +348,7 @@ export const handleCreateCustomer = async ({
   logger,
   params = {},
   processor,
+  getDetails = true,
 }: {
   cusData: CreateCustomer;
   sb: SupabaseClient;
@@ -357,6 +358,7 @@ export const handleCreateCustomer = async ({
   logger: any;
   params?: any;
   processor?: any;
+  getDetails?: boolean;
 }) => {
   const newCus = CreateCustomerSchema.parse(cusData);
 
@@ -381,6 +383,10 @@ export const handleCreateCustomer = async ({
       newCus,
       processor,
     });
+  }
+
+  if (!getDetails) {
+    return createdCustomer;
   }
 
   return await getCustomerDetails({

@@ -33,6 +33,7 @@ const getEventAndCustomer = async ({
   customer_data,
   event_data,
   logger,
+  orgSlug,
 }: {
   sb: SupabaseClient;
   orgId: string;
@@ -41,6 +42,7 @@ const getEventAndCustomer = async ({
   customer_data: any;
   event_data: any;
   logger: any;
+  orgSlug: string;
 }) => {
   if (!customer_id) {
     throw new RecaseError({
@@ -60,6 +62,7 @@ const getEventAndCustomer = async ({
     customerId: customer_id,
     customerData: customer_data,
     logger,
+    orgSlug,
   });
 
   // 3. Insert event
@@ -153,6 +156,7 @@ export const handleEventSent = async ({
     customer_data,
     event_data,
     logger: req.logtail,
+    orgSlug: req.minOrg?.slug || "",
   });
 
   const affectedFeatures = await getAffectedFeatures({

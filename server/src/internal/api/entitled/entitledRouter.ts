@@ -4,6 +4,7 @@ import { CustomerEntitlementService } from "@/internal/customers/entitlements/Cu
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import {
   AllowanceType,
+  APIVersion,
   CusEntWithEntitlement,
   CusProduct,
   Customer,
@@ -16,7 +17,10 @@ import {
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
-import { createNewCustomer } from "../customers/handlers/handleCreateCustomer.js";
+import {
+  createNewCustomer,
+  handleCreateCustomer,
+} from "../customers/handlers/handleCreateCustomer.js";
 import { handleEventSent } from "../events/eventRouter.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -350,9 +354,11 @@ const logEntitled = ({
 // FETCH FUNCTION
 const getCusEntsAndFeatures = async ({
   req,
+  logger,
 }: {
   req: any;
   sb: SupabaseClient;
+  logger: any;
 }) => {
   const timings: Record<string, number> = {};
 
@@ -408,19 +414,23 @@ const getCusEntsAndFeatures = async ({
 
   let cusEnts: CusEntWithEntitlement[] | null = null;
   if (!res1) {
-    // Check if customer exists
     const customer = await getOrCreateCustomer({
       sb,
       orgId,
       env,
       customerId: customer_id,
       customerData: customer_data,
-      logger: req.logtail,
+      logger,
+      orgSlug: org.slug,
     });
+
+    logger.info(
+      `/entitled: Auto creating customer | id: ${customer_id} | email: ${customer_data?.email}`
+    );
 
     cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
       sb,
-      internalCustomerId: customer.internal_id,
+      internalCustomerId: customer?.internal_id,
       internalFeatureIds: [
         ...creditSystems.map((cs: any) => cs.internal_id),
         feature.internal_id,
@@ -463,6 +473,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       await getCusEntsAndFeatures({
         sb,
         req,
+        logger: req.logtail,
       });
 
     logEntitled({ req, customer_id, cusEnts: cusEnts! });

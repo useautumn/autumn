@@ -34,7 +34,10 @@ import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
-import { createNewCustomer } from "./handlers/handleCreateCustomer.js";
+import {
+  createNewCustomer,
+  handleCreateCustomer,
+} from "./handlers/handleCreateCustomer.js";
 import { APIVersion, getApiVersion } from "@/utils/versionUtils.js";
 
 export const updateCustomerDetails = async ({
@@ -76,6 +79,7 @@ export const getOrCreateCustomer = async ({
   customerData,
   logger,
   skipGet = false,
+  orgSlug,
 }: {
   sb: SupabaseClient;
   orgId: string;
@@ -84,6 +88,7 @@ export const getOrCreateCustomer = async ({
   customerData?: CustomerData;
   logger: any;
   skipGet?: boolean;
+  orgSlug: string;
 }) => {
   let customer;
 
@@ -99,18 +104,32 @@ export const getOrCreateCustomer = async ({
 
   if (!customer) {
     logger.info(`no customer found, creating new`, { customerData });
-    customer = await createNewCustomer({
+    customer = await handleCreateCustomer({
+      cusData: {
+        id: customerId,
+        name: customerData?.name,
+        email: customerData?.email,
+        fingerprint: customerData?.fingerprint,
+      },
       sb,
       orgId,
       env,
-      customer: {
-        id: customerId,
-        name: customerData?.name || "",
-        email: customerData?.email || "",
-        fingerprint: customerData?.fingerprint,
-      },
       logger,
+      orgSlug: "",
+      getDetails: false,
     });
+    // customer = await createNewCustomer({
+    //   sb,
+    //   orgId,
+    //   env,
+    //   customer: {
+    //     id: customerId,
+    //     name: customerData?.name || "",
+    //     email: customerData?.email || "",
+    //     fingerprint: customerData?.fingerprint,
+    //   },
+    //   logger,
+    // });
   }
 
   customer = await updateCustomerDetails({

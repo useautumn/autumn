@@ -121,7 +121,7 @@ export const constructFeaturePriceItem = ({
   usage_model,
   reset_usage_on_billing = true,
   billing_units = 1,
-  reset_usage_when_enabled = true,
+  reset_usage_when_enabled = false,
 }: {
   feature_id: string;
   included_usage?: number;

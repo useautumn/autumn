@@ -3,13 +3,10 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { z } from "zod";
 import {
   BillingType,
-  Entitlement,
   FeatureOptions,
   FeatureOptionsSchema,
   FullCusProduct,
-  Price,
   ProductItem,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 import {
@@ -25,7 +22,7 @@ import {
   getProductForPrice,
   priceIsOneOffAndTiered,
 } from "@/internal/prices/priceUtils.js";
-import { PricesInput } from "@autumn/shared";
+
 import { getFullCusProductData } from "@/internal/customers/products/attachUtils.js";
 import {
   checkStripeProductExists,
@@ -47,21 +44,10 @@ import { handleCreateCheckout } from "@/internal/customers/add-product/handleCre
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 
 import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
-import { Decimal } from "decimal.js";
 
 import { CusService } from "@/internal/customers/CusService.js";
 
 export const attachRouter = Router();
-
-// export const checkoutPricesValid = (prices: Price[]) => {
-//   for (const price of prices) {
-//     if (price.billing_type === BillingType.UsageBelowThreshold) {
-//       return false;
-//     }
-//   }
-
-//   return true;
-// };
 
 export const checkAddProductErrors = async ({
   attachParams,
@@ -349,6 +335,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       productIds: product_ids,
       logger,
       version,
+      orgSlug: req.minOrg.slug,
     });
 
     attachParams.successUrl = successUrl;

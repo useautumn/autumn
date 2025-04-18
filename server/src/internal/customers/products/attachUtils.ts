@@ -37,12 +37,14 @@ import { getOrCreateCustomer } from "@/internal/api/customers/cusUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { Decimal } from "decimal.js";
+import { handleCreateCustomer } from "@/internal/api/customers/handlers/handleCreateCustomer.js";
 
 const getOrCreateCustomerAndProducts = async ({
   sb,
   customerId,
   customerData,
   orgId,
+  orgSlug,
   env,
   logger,
 }: {
@@ -50,6 +52,7 @@ const getOrCreateCustomerAndProducts = async ({
   customerId: string;
   customerData?: CustomerData;
   orgId: string;
+  orgSlug: string;
   env: AppEnv;
   logger: any;
 }) => {
@@ -60,30 +63,8 @@ const getOrCreateCustomerAndProducts = async ({
     customerId,
     customerData,
     logger,
+    orgSlug,
   });
-  // let customer = await CusService.getByIdOrInternalId({
-  //   sb,
-  //   idOrInternalId: customerId,
-  //   orgId,
-  //   env,
-  //   // isFull: true,
-  // });
-
-  // if (!customer) {
-  //   logger.info(`no customer found, creating new`, { customerData });
-  //   customer = await createNewCustomer({
-  //     sb,
-  //     orgId,
-  //     env,
-  //     customer: {
-  //       id: customerId,
-  //       name: customerData?.name || "",
-  //       email: customerData?.email || "",
-  //       fingerprint: customerData?.fingerprint,
-  //     },
-  //     logger,
-  //   });
-  // }
 
   // Handle existing cus product...
   const cusProducts = await CusService.getFullCusProducts({
@@ -218,6 +199,7 @@ const getCustomerProductsFeaturesAndOrg = async ({
   productId,
   productIds,
   orgId,
+  orgSlug,
   env,
   logger,
   version,
@@ -228,6 +210,7 @@ const getCustomerProductsFeaturesAndOrg = async ({
   productId?: string;
   productIds?: string[];
   orgId: string;
+  orgSlug: string;
   env: AppEnv;
   logger: any;
   version?: number;
@@ -272,6 +255,7 @@ const getCustomerProductsFeaturesAndOrg = async ({
       customerId,
       customerData,
       orgId,
+      orgSlug,
       env,
       logger,
     }),
@@ -366,6 +350,7 @@ export const getFullCusProductData = async ({
   isCustom = false,
   logger,
   version,
+  orgSlug,
 }: {
   sb: SupabaseClient;
   customerId: string;
@@ -380,6 +365,7 @@ export const getFullCusProductData = async ({
   isCustom?: boolean;
   logger: any;
   version?: number;
+  orgSlug: string;
 }) => {
   // 1. Get customer, product, org & features
   const { customer, products, org, features, cusProducts } =
@@ -390,6 +376,7 @@ export const getFullCusProductData = async ({
       productId,
       productIds,
       orgId,
+      orgSlug,
       env,
       logger,
       version,
