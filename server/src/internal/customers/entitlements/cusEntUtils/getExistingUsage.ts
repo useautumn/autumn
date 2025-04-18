@@ -148,6 +148,7 @@ export const addExistingUsagesToCusEnts = ({
   // Sort cusEnts
   sortCusEntsForDeduction(fullCusEnts);
 
+  printLogs = true;
   if (printLogs) {
     console.log("DEDUCTING EXISTING USAGE FROM CUS ENTS");
     console.log("Existing usages:", existingUsages);

@@ -32,14 +32,14 @@ export class EventService {
   static async getByCustomerId({
     fields,
     sb,
-    customerId,
     orgId,
+    internalCustomerId,
     env,
     limit = 10,
   }: {
     fields?: string[];
     sb: SupabaseClient;
-    customerId: string;
+    internalCustomerId: string;
     orgId: string;
     env: string;
     limit?: number;
@@ -47,7 +47,7 @@ export class EventService {
     const { data, error } = await sb
       .from("events")
       .select(fields ? fields.join(",") : "*")
-      .eq("customer_id", customerId)
+      .eq("internal_customer_id", internalCustomerId)
       .eq("org_id", orgId)
       .eq("env", env)
       .order("timestamp", { ascending: false })

@@ -73,42 +73,24 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
   try {
     // Get customer invoices
 
-    const [org, features, coupons, products, events, customer] =
-      await Promise.all([
-        OrgService.getFromReq(req),
-        FeatureService.getFromReq(req),
-        RewardService.getAll({
-          sb,
-          orgId: orgId,
-          env,
-        }),
+    const [org, features, coupons, products, customer] = await Promise.all([
+      OrgService.getFromReq(req),
+      FeatureService.getFromReq(req),
+      RewardService.getAll({
+        sb,
+        orgId: orgId,
+        env,
+      }),
 
-        ProductService.getFullProducts({ sb, orgId, env, returnAll: true }),
-        EventService.getByCustomerId({
-          sb,
-          customerId: customer_id,
-          env,
-          orgId: orgId,
-          limit: 10,
-          fields: [
-            "id",
-            "event_name",
-            "value",
-            "timestamp",
-            "idempotency_key",
-            "properties",
-            "set_usage",
-            "entity_id",
-          ],
-        }),
-        CusService.getByIdOrInternalId({
-          sb,
-          orgId,
-          env,
-          idOrInternalId: customer_id,
-          isFull: true,
-        }),
-      ]);
+      ProductService.getFullProducts({ sb, orgId, env, returnAll: true }),
+      CusService.getByIdOrInternalId({
+        sb,
+        orgId,
+        env,
+        idOrInternalId: customer_id,
+        isFull: true,
+      }),
+    ]);
 
     if (!customer) {
       throw new RecaseError({
@@ -117,7 +99,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       });
     }
 
-    const [invoices, entities] = await Promise.all([
+    const [invoices, entities, events] = await Promise.all([
       InvoiceService.getByInternalCustomerId({
         sb,
         internalCustomerId: customer.internal_id,
@@ -127,6 +109,23 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
         sb,
         internalCustomerId: customer.internal_id,
         logger: req.logger,
+      }),
+      EventService.getByCustomerId({
+        sb,
+        internalCustomerId: customer.internal_id,
+        env,
+        orgId: orgId,
+        limit: 10,
+        fields: [
+          "id",
+          "event_name",
+          "value",
+          "timestamp",
+          "idempotency_key",
+          "properties",
+          "set_usage",
+          "entity_id",
+        ],
       }),
     ]);
 

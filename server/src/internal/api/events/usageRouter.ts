@@ -12,6 +12,7 @@ import { StatusCodes } from "http-status-codes";
 import { QueueManager } from "@/queue/QueueManager.js";
 
 import { JobName } from "@/queue/JobName.js";
+import { getOrCreateCustomer } from "../customers/cusUtils.js";
 export const eventsRouter = Router();
 export const usageRouter = Router();
 
@@ -28,11 +29,13 @@ const getCusFeatureAndOrg = async ({
 }) => {
   // 1. Get customer
   let [customer, featureRes, org] = await Promise.all([
-    CusService.getById({
+    getOrCreateCustomer({
       sb: req.sb,
-      id: customerId,
       orgId: req.orgId,
       env: req.env,
+      customerId,
+      customerData,
+      orgSlug: req.minOrg?.slug || "",
       logger: req.logtail,
     }),
     FeatureService.getWithCreditSystems({
@@ -53,21 +56,6 @@ const getCusFeatureAndOrg = async ({
       message: `Feature ${featureId} not found`,
       code: ErrCode.FeatureNotFound,
       statusCode: StatusCodes.NOT_FOUND,
-    });
-  }
-
-  if (!customer) {
-    customer = await createNewCustomer({
-      sb: req.sb,
-      orgId: req.orgId,
-      env: req.env,
-      customer: {
-        id: customerId,
-        name: customerData?.name,
-        email: customerData?.email,
-        fingerprint: customerData?.fingerprint,
-      },
-      logger: req.logtail,
     });
   }
 
@@ -111,6 +99,7 @@ const createAndInsertEvent = async ({
   };
 
   await EventService.insertEvent(req.sb, newEvent);
+
   return newEvent;
 };
 

@@ -39,6 +39,7 @@ export const handlePublicAttach = async (req: any, res: any) => {
         freeTrialInput: null,
         isCustom: false,
         logger: req.logtail,
+        orgSlug: req.minOrg?.slug || "",
       });
       attachParams.successUrl = success_url;
 
