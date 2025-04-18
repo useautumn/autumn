@@ -304,6 +304,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     const optionsListInput: FeatureOptions[] = options || [];
     const invoiceOnly = invoice_only || false;
     const successUrl = success_url || undefined;
+    const disableFreeTrial = free_trial === false || false;
 
     // PUBLIC STUFF
     let forceCheckout = req.isPublic || force_checkout || false;
@@ -343,6 +344,8 @@ attachRouter.post("/attach", async (req: any, res) => {
     attachParams.billingAnchor = billing_cycle_anchor;
     attachParams.metadata = metadata;
     attachParams.isCustom = isCustom || false;
+    attachParams.disableFreeTrial = disableFreeTrial;
+    
     logger.info(
       `Customer: ${chalk.yellow(
         `${attachParams.customer.id} (${attachParams.customer.name})`

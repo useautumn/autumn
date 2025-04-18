@@ -295,6 +295,8 @@ export const createFullCusProduct = async ({
   carryExistingUsages?: boolean;
   carryOverTrial?: boolean;
 }) => {
+  disableFreeTrial = attachParams.disableFreeTrial || disableFreeTrial;
+  
   const logger = createLogtailWithContext({
     action: LoggerAction.CreateFullCusProduct,
     org_slug: attachParams.org.slug,
@@ -390,6 +392,8 @@ export const createFullCusProduct = async ({
 
     cusPrices.push(cusPrice);
   }
+
+  
 
   // 3. create customer product
   if (carryOverTrial && curCusProduct?.free_trial_id) {
