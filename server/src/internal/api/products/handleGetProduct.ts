@@ -6,7 +6,7 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ErrCode, ProductResponseSchema } from "@autumn/shared";
-import { ProductItemResponseSchema } from "@shared/models/productModels/productItemModels/prodItemResponseModels.js";
+import { ProductItemResponseSchema } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
 export const handleGetProduct = async (req: any, res: any) =>

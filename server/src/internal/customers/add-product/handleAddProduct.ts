@@ -36,7 +36,7 @@ import {
   getAlignedIntervalUnix,
   getNextStartOfMonthUnix,
 } from "@/internal/prices/billingIntervalUtils.js";
-import { SuccessCode } from "@shared/errors/SuccessCode.js";
+import { SuccessCode } from "@autumn/shared";
 
 const handleBillNowPrices = async ({
   sb,
@@ -441,16 +441,23 @@ export const handleAddProduct = async ({
   logger.info("Successfully created full cus product");
 
   if (fromRequest) {
-    res.status(200).json(
-      AttachResultSchema.parse({
+    let apiVersion = attachParams.org.api_version || APIVersion.v1;
+    if (apiVersion >= APIVersion.v1_1) {
+      res.status(200).json(
+        AttachResultSchema.parse({
+          success: true,
+          code: SuccessCode.FreeProductAttached,
+          message: `Successfully attached free product(s) -- ${products
+            .map((p) => p.name)
+            .join(", ")}`,
+          product_ids: products.map((p) => p.id),
+          customer_id: customer.id,
+        })
+      );
+    } else {
+      res.status(200).json({
         success: true,
-        code: SuccessCode.FreeProductAttached,
-        message: `Successfully attached free product(s) -- ${products
-          .map((p) => p.name)
-          .join(", ")}`,
-        product_ids: products.map((p) => p.id),
-        customer_id: customer.id,
-      })
-    );
+      });
+    }
   }
 };

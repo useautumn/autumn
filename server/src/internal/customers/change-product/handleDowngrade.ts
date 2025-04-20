@@ -23,7 +23,7 @@ import { generateId, notNullish } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { SuccessCode } from "@shared/errors/SuccessCode.js";
+import { SuccessCode } from "@autumn/shared";
 
 const scheduleStripeSubscription = async ({
   sb,

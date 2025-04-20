@@ -12,7 +12,7 @@ import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
 import { APIVersion } from "@autumn/shared";
-import { SuccessCode } from "@shared/errors/SuccessCode.js";
+import { SuccessCode } from "@autumn/shared";
 
 export const handleCreateCheckout = async ({
   sb,

@@ -1,6 +1,6 @@
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
-import { FullCustomerEntitlement } from "@shared/models/cusModels/cusEntModels/cusEntitlementModels.js";
+import { FullCustomerEntitlement } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
 export const getEntityBalance = ({
@@ -49,4 +49,3 @@ export const getSummedEntityBalances = ({
     ),
   };
 };
-
