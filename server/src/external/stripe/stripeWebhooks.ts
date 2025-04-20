@@ -14,10 +14,7 @@ import chalk from "chalk";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
 import { format } from "date-fns";
-import {
-  createLogtail,
-  createLogtailWithContext,
-} from "../logtail/logtailUtils.js";
+import { createLogtailWithContext } from "../logtail/logtailUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 
 export const stripeWebhookRouter = express.Router();
