@@ -15,7 +15,7 @@ import { Customer } from "@autumn/shared";
 import { createFullCusProduct } from "./createFullCusProduct.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { SuccessCode } from "@shared/errors/SuccessCode.js";
+import { SuccessCode } from "@autumn/shared";
 
 export const handleAddFreeProduct = async ({
   req,

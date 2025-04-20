@@ -34,7 +34,7 @@ import {
 } from "../change-product/handleUpgrade.js";
 import { fullCusProductToProduct } from "../products/cusProductUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { SuccessCode } from "@shared/errors/SuccessCode.js";
+import { SuccessCode } from "@autumn/shared";
 
 const getOptionsToUpdate = (oldOptionsList: any[], newOptionsList: any[]) => {
   let differentOptionsExist = false;

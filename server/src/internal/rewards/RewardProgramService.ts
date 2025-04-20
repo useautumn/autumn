@@ -1,6 +1,6 @@
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode, RewardProgram, RewardTriggerEvent } from "@autumn/shared";
-import { ReferralCode } from "@shared/models/rewardModels/referralModels/referralModels.js";
+import { ReferralCode } from "@autumn/shared";
 
 export class RewardProgramService {
   static async get({ sb, internalId }: { sb: any; internalId: string }) {

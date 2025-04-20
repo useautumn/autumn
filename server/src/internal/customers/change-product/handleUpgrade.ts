@@ -40,7 +40,7 @@ import {
 } from "@/internal/prices/billingIntervalUtils.js";
 
 import { differenceInSeconds } from "date-fns";
-import { SuccessCode } from "@shared/errors/SuccessCode.js";
+import { SuccessCode } from "@autumn/shared";
 
 export enum ProrationBehavior {
   Immediately = "immediately",

@@ -35,7 +35,7 @@ import {
   getOrCreateCustomer,
   updateCustomerDetails,
 } from "../customers/cusUtils.js";
-import { SuccessCode } from "@shared/errors/SuccessCode.js";
+import { SuccessCode } from "@autumn/shared";
 
 type CusWithEnts = Customer & {
   customer_products: CusProduct[];
