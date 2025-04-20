@@ -116,8 +116,8 @@ export const getCustomerDetails = async ({
         ...customer,
         autumn_id: customer.internal_id,
         stripe_id: customer.processor?.id,
-        products: main,
-        add_ons: addOns,
+        products: [...main, ...addOns],
+        // add_ons: addOns,
         features: balances.map((b) => {
           let isBoolean =
             features.find((f: Feature) => f.id == b.feature_id)?.type ==

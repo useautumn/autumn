@@ -7,14 +7,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
 
-import { faCopy } from "@fortawesome/pro-duotone-svg-icons";
 import { toast } from "sonner";
 import { NavButton } from "./NavButton";
 import { useEnv } from "@/utils/envUtils";
-import { Copy, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import CopyButton from "@/components/general/CopyButton";
+import { Link } from "react-router";
 
 export function SidebarContact() {
   const email = "hey@useautumn.com";
@@ -48,8 +47,12 @@ export function SidebarContact() {
           className="cursor-pointer"
         >
           <div className="flex items-center justify-between w-full">
-            <span>{email}</span>
-            <Copy size={12} />
+            {/* <span>{email}</span> */}
+            <span>hey@useautumn.com</span>
+            <CopyButton
+              text={email}
+              className="bg-transparent shadow-none hover:bg-zinc-200 w-6 gap-0 h-6 !px-0 py-0 flex items-center justify-center text-t2"
+            />
           </div>
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -58,8 +61,13 @@ export function SidebarContact() {
         >
           Book a call
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-progress h-[30px] flex justify-between">
-          Discord <Badge>Soon</Badge>
+        <DropdownMenuItem
+          className="cursor-pointer h-[30px] flex justify-between"
+          asChild
+        >
+          <Link to="https://discord.gg/PMNwStsk" target="_blank">
+            Join our Discord
+          </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

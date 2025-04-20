@@ -7,11 +7,11 @@ export const ProductResponseSchema = z.object({
   // internal_id: z.string(),
   autumn_id: z.string(),
   id: z.string(),
-  name: z.string(),
+  name: z.string().nullable(),
+  group: z.string().nullable(),
   env: z.nativeEnum(AppEnv),
   is_add_on: z.boolean(),
   is_default: z.boolean(),
-  group: z.string(),
   version: z.number(),
   created_at: z.number(),
 

@@ -1,4 +1,4 @@
-import z from "zod";
+import { z } from "zod";
 import { Reward } from "./rewardModels.js";
 
 export enum RewardTriggerEvent {

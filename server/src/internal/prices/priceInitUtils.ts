@@ -123,7 +123,13 @@ export const tiersAreSame = (tiers1: any[], tiers2: any[]) => {
   for (let i = 0; i < tiers1.length; i++) {
     let tier1 = tiers1[i];
     let tier2 = tiers2[i];
-    if (tier1.to !== tier2.to) return false;
+    // if (tier1.to !== tier2.to) return false;
+
+    // Only compare to if not last tier
+    if (i !== tiers1.length - 1) {
+      if (tier1.to !== tier2.to) return false;
+    }
+
     if (tier1.amount !== tier2.amount) return false;
   }
   return true;

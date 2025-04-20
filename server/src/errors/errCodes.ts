@@ -1,6 +1,7 @@
 export const ErrCode = {
   // General
   InvalidRequest: "invalid_request",
+  InvalidId: "invalid_id",
 
   // Org
   CreateClerkOrgFailed: "create_clerk_org_failed",

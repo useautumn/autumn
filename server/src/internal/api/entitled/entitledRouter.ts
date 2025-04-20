@@ -1,5 +1,5 @@
 import { ErrCode } from "@/errors/errCodes.js";
-import { CusService } from "@/internal/customers/CusService.js";
+
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import {
@@ -17,10 +17,7 @@ import {
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod";
-import {
-  createNewCustomer,
-  handleCreateCustomer,
-} from "../customers/handlers/handleCreateCustomer.js";
+
 import { handleEventSent } from "../events/eventRouter.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -33,11 +30,12 @@ import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js"
 import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { getMinNextResetAtCusEnt } from "@/internal/customers/entitlements/cusEntHelpers.js";
+
 import {
   getOrCreateCustomer,
   updateCustomerDetails,
 } from "../customers/cusUtils.js";
+import { SuccessCode } from "@shared/errors/SuccessCode.js";
 
 type CusWithEnts = Customer & {
   customer_products: CusProduct[];
@@ -509,10 +507,22 @@ entitledRouter.post("", async (req: any, res: any) => {
       });
     }
 
-    res.status(200).json({
-      allowed,
-      balances,
-    });
+    if (org.api_version == APIVersion.v1_1) {
+      res.status(200).json({
+        customer_id,
+        feature_id,
+        code: SuccessCode.FeatureFound,
+
+        allowed,
+        balances,
+      });
+    } else {
+      res.status(200).json({
+        allowed,
+        balances,
+      });
+    }
+
     return;
   } catch (error) {
     handleRequestError({ req, error, res, action: "Failed to GET entitled" });

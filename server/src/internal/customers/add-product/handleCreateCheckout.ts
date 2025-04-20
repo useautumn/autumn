@@ -3,7 +3,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { pricesContainRecurring } from "@/internal/prices/priceUtils.js";
 
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
-import { AttachParams } from "../products/AttachParams.js";
+import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 
@@ -11,6 +11,8 @@ import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
+import { APIVersion } from "@autumn/shared";
+import { SuccessCode } from "@shared/errors/SuccessCode.js";
 
 export const handleCreateCheckout = async ({
   sb,
@@ -71,15 +73,14 @@ export const handleCreateCheckout = async ({
 
   const subscriptionData = isRecurring
     ? {
-        trial_end: freeTrial && !attachParams.disableFreeTrial
-          ? freeTrialToStripeTimestamp(freeTrial)
-          : undefined,
+        trial_end:
+          freeTrial && !attachParams.disableFreeTrial
+            ? freeTrialToStripeTimestamp(freeTrial)
+            : undefined,
         // metadata: subMeta,
         billing_cycle_anchor: billingCycleAnchorUnixSeconds,
       }
     : undefined;
-
-  
 
   const checkout = await stripeCli.checkout.sessions.create({
     customer: customer.processor.id,
@@ -106,9 +107,23 @@ export const handleCreateCheckout = async ({
 
   logger.info(`✅ Successfully created checkout for customer ${customer.id}`);
 
-  res.status(200).json({
-    checkout_url: checkout.url,
-  });
+  if (org.api_version! >= APIVersion.v1_1) {
+    res.status(200).json(
+      AttachResultSchema.parse({
+        checkout_url: checkout.url,
+        code: SuccessCode.CheckoutCreated,
+        message: `Successfully created checkout for customer ${
+          customer.id
+        }, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
+        product_ids: attachParams.products.map((p) => p.id),
+        customer_id: customer.id,
+      })
+    );
+  } else {
+    res.status(200).json({
+      checkout_url: checkout.url,
+    });
+  }
   return;
 };
 

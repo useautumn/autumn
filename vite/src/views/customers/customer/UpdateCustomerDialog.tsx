@@ -7,11 +7,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DialogTitle } from "@/components/ui/dialog";
 import { DialogContent } from "@/components/ui/dialog";
-import { SelectContent, SelectItem } from "@/components/ui/select";
-import { WarningBox } from "@/components/general/modal-components/WarningBox";
-import { SelectValue } from "@/components/ui/select";
-import { SelectTrigger } from "@/components/ui/select";
-import { Select } from "@/components/ui/select";
+
 import { Button } from "@/components/ui/button";
 import { useCustomerContext } from "./CustomerContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -45,7 +41,11 @@ const UpdateCustomerDialog = ({
       await CusService.updateCustomer({
         axios: axiosInstance,
         customer_id: selectedCustomer.id || selectedCustomer.internal_id,
-        data: customer,
+        data: {
+          name: customer.name || null,
+          email: customer.email || null,
+          fingerprint: customer.fingerprint || null,
+        },
       });
 
       toast.success(`Successfully updated customer`);

@@ -1,5 +1,7 @@
 import { format } from "date-fns";
 import KSUID from "ksuid";
+import RecaseError from "./errorUtils.js";
+import { ErrCode } from "@/errors/errCodes.js";
 
 export const generateId = (prefix: string) => {
   if (!prefix) {
@@ -49,4 +51,14 @@ export const formatUnixToDateTime = (unixDate: number) => {
 
 export const timeout = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+export const validateId = (type: string, id: string) => {
+  if (!id.match(/^[a-zA-Z0-9_-]+$/)) {
+    throw new RecaseError({
+      message: `${type} ID can only contain alphanumeric characters, underscores, and hyphens`,
+      code: ErrCode.InvalidId,
+      statusCode: 400,
+    });
+  }
 };
