@@ -10,7 +10,7 @@ import {
   Price,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { AttachParams } from "../products/AttachParams.js";
+import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { CusProductService } from "../products/CusProductService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -34,6 +34,7 @@ import {
 } from "../change-product/handleUpgrade.js";
 import { fullCusProductToProduct } from "../products/cusProductUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { SuccessCode } from "@shared/errors/SuccessCode.js";
 
 const getOptionsToUpdate = (oldOptionsList: any[], newOptionsList: any[]) => {
   let differentOptionsExist = false;
@@ -171,7 +172,7 @@ const updateFeatureQuantity = async ({
   });
 };
 
-const hasPricesChanged = ({
+export const hasPricesChanged = ({
   oldPrices,
   newPrices,
 }: {
@@ -193,7 +194,7 @@ const hasPricesChanged = ({
   return false;
 };
 
-const hasEntitlementsChanged = ({
+export const hasEntitlementsChanged = ({
   oldEntitlements,
   newEntitlements,
 }: {
@@ -276,8 +277,6 @@ export const handleSameMainProduct = async ({
       newEntitlements: attachParams.entitlements,
     });
 
-    let isNewVersion = curMainProduct.product.version !== product.version;
-
     if (pricesChanged || entitlementsChanged) {
       logger.info(`SCENARIO 0: UPDATE SAME PRODUCT`);
       logger.info(
@@ -293,6 +292,7 @@ export const handleSameMainProduct = async ({
         curFullProduct: fullCusProductToProduct(curMainProduct),
         hasPricesChanged: pricesChanged,
         carryExistingUsages: true,
+        updateSameProduct: true,
       });
       return {
         done: true,
@@ -358,10 +358,17 @@ export const handleSameMainProduct = async ({
     }
   }
 
-  res.status(200).json({
-    success: true,
-    message: messages.join("\n"),
-  });
+  res.status(200).json(
+    AttachResultSchema.parse({
+      customer_id: customer.id,
+      product_ids: products.map((p) => p.id),
+
+      code: SuccessCode.PrepaidQuantityUpdated,
+      message: `Successfully updated prepaid quantities for ${products
+        .map((p) => p.name)
+        .join(", ")}`,
+    })
+  );
 
   return {
     done: true,

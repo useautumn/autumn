@@ -1,13 +1,13 @@
 import { CusProductService } from "../products/CusProductService.js";
 import Stripe from "stripe";
-import { AttachParams } from "../products/AttachParams.js";
+import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import {
   getStripeSchedules,
   getStripeSubs,
   getSubItemsForCusProduct,
 } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { FullCusProduct } from "@autumn/shared";
+import { APIVersion, FullCusProduct } from "@autumn/shared";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { BillingInterval } from "@autumn/shared";
@@ -23,6 +23,7 @@ import { generateId, notNullish } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { SuccessCode } from "@shared/errors/SuccessCode.js";
 
 const scheduleStripeSubscription = async ({
   sb,
@@ -286,19 +287,6 @@ export const handleDowngrade = async ({
     });
   }
 
-  // // Handle free product
-  // if (itemSets.length === 0) {
-  //   await cancelFutureProductSchedule({
-  //     sb: req.sb,
-  //     org: attachParams.org,
-  //     stripeCli,
-  //     cusProducts: attachParams.cusProducts!,
-  //     product: product,
-  //     includeOldItems: false,
-  //     logger: req.logtail,
-  //   });
-  // }
-
   // 4. Update cus product
   logger.info("3. Inserting new full cus product (starts at period end)");
   await createFullCusProduct({
@@ -310,7 +298,20 @@ export const handleDowngrade = async ({
     disableFreeTrial: true,
   });
 
-  res.status(200).json({ success: true });
+  if (attachParams.org.api_version! >= APIVersion.v1_1) {
+    res.status(200).json(
+      AttachResultSchema.parse({
+        code: SuccessCode.DowngradeScheduled,
+        message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
+        product_ids: [product.id],
+        customer_id: attachParams.customer.id,
+      })
+    );
+  } else {
+    res.status(200).json({
+      success: true,
+    });
+  }
 };
 
 // await removePreviousScheduledProducts({

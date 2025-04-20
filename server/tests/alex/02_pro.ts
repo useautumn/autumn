@@ -15,7 +15,7 @@ describe(chalk.yellowBright("Pro entitlements"), () => {
     await initCustomer({
       customer_data: {
         id: customerId,
-        name: "Alex Pro Customer",
+        // name: "Alex Pro Customer",
         email: "alex-pro-customer@test.com",
       },
       sb: this.sb,
@@ -34,6 +34,7 @@ describe(chalk.yellowBright("Pro entitlements"), () => {
     await timeout(20000);
 
     const cusRes = await AutumnCli.getCustomer(customerId);
+    expect(typeof cusRes.customer.name).to.equal("string");
 
     compareMainProduct({
       sent: alexProducts.pro,

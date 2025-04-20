@@ -292,8 +292,8 @@ export const initCustomer = async ({
 }: {
   customer_data?: {
     id: string;
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
     fingerprint?: string;
   };
   customerId?: string;

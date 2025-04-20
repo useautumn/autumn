@@ -107,13 +107,11 @@ export const createNewCustomer = async ({
 
   const customerData: Customer = {
     ...parsedCustomer,
-    id: parsedCustomer.id || null,
     name: parsedCustomer.name || "",
     email:
-      parsedCustomer.email ||
-      (nonFreeProds.length > 0
+      nonFreeProds.length > 0 && !parsedCustomer.email
         ? `${parsedCustomer.id}@invoices.useautumn.com`
-        : ""),
+        : parsedCustomer.email || "",
 
     internal_id: generateId("cus"),
     org_id: orgId,

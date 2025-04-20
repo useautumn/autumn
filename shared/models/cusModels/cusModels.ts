@@ -4,7 +4,7 @@ import { CusProductSchema } from "./cusProductModels.js";
 import { ProductSchema } from "../productModels/productModels.js";
 
 export const CustomerSchema = z.object({
-  id: z.string().nullable(), // given by user
+  id: z.string().nullish(), // given by user
   name: z.string().nullish(),
   email: z.string().nullish(),
   fingerprint: z.string().nullish(),

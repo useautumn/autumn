@@ -57,6 +57,7 @@ import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
 import ProductSidebar from "@/views/products/product/ProductSidebar";
+import { FeaturesContext } from "@/views/features/FeaturesContext";
 
 interface OptionValue {
   feature_id: string;
@@ -237,7 +238,9 @@ export default function CustomerProductView() {
             : product.version,
       });
 
-      await mutate();
+      navigateTo(`/customers/${customer_id}/${product_id}`, navigation, env);
+
+      // await mutate();
       toast.success(data.message || "Successfully attached product");
 
       if (data.checkout_url) {
@@ -322,116 +325,125 @@ export default function CustomerProductView() {
   const actionState = getProductActionState();
 
   return (
-    <ProductContext.Provider
+    <FeaturesContext.Provider
       value={{
-        ...data,
-        features,
-        setFeatures,
-        mutate,
         env,
-        product,
-        setProduct,
-        selectedEntitlementAllowance,
-        setSelectedEntitlementAllowance,
-        customer: data.customer,
-        handleCreateProduct,
-        actionState,
-        setUseInvoice,
+        mutate,
       }}
     >
-      <CustomToaster />
-
-      <RequiredOptionsModal
-        requiredOptions={requiredOptions}
-        createProduct={createProduct}
-        setRequiredOptions={setRequiredOptions}
-        product={product}
-      />
-
-      <Dialog
-        open={checkoutDialogOpen}
-        onOpenChange={() => {
-          setCheckoutDialogOpen(false);
-          setUrl(null);
+      <ProductContext.Provider
+        value={{
+          ...data,
+          features,
+          setFeatures,
+          mutate,
+          env,
+          product,
+          setProduct,
+          selectedEntitlementAllowance,
+          setSelectedEntitlementAllowance,
+          customer: data.customer,
+          handleCreateProduct,
+          actionState,
+          setUseInvoice,
         }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{url && keyToTitle(url.type)}</DialogTitle>
-          </DialogHeader>
+        <CustomToaster />
 
-          {url && <CopyUrl url={url.value} isInvoice={url.type == "invoice"} />}
-        </DialogContent>
-      </Dialog>
+        <RequiredOptionsModal
+          requiredOptions={requiredOptions}
+          createProduct={createProduct}
+          setRequiredOptions={setRequiredOptions}
+          product={product}
+        />
 
-      <div className="flex w-full">
-        <div className="flex flex-col gap-4 w-full">
-          <Breadcrumb className="text-t3 pt-6 pl-10 flex justify-center">
-            <BreadcrumbList className="text-t3 text-xs w-full">
-              <BreadcrumbItem>
+        <Dialog
+          open={checkoutDialogOpen}
+          onOpenChange={() => {
+            setCheckoutDialogOpen(false);
+            setUrl(null);
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{url && keyToTitle(url.type)}</DialogTitle>
+            </DialogHeader>
+
+            {url && (
+              <CopyUrl url={url.value} isInvoice={url.type == "invoice"} />
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <div className="flex w-full">
+          <div className="flex flex-col gap-4 w-full">
+            <Breadcrumb className="text-t3 pt-6 pl-10 flex justify-center">
+              <BreadcrumbList className="text-t3 text-xs w-full">
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    className="cursor-pointer"
+                    onClick={() => navigateTo("/customers", navigation, env)}
+                  >
+                    Customers
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
                 <BreadcrumbLink
-                  className="cursor-pointer"
-                  onClick={() => navigateTo("/customers", navigation, env)}
+                  className="cursor-pointer truncate max-w-48"
+                  onClick={() =>
+                    navigateTo(`/customers/${customer_id}`, navigation, env)
+                  }
                 >
-                  Customers
+                  {customer.name
+                    ? customer.name
+                    : customer.id
+                    ? customer.id
+                    : customer.email}
                 </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbLink
-                className="cursor-pointer truncate max-w-48"
-                onClick={() =>
-                  navigateTo(`/customers/${customer_id}`, navigation, env)
-                }
-              >
-                {customer.name
-                  ? customer.name
-                  : customer.id
-                  ? customer.id
-                  : customer.email}
-              </BreadcrumbLink>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>{product.name}</BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-          <div className="flex">
-            <div className="flex-1 w-full min-w-sm">
-              {product && (
-                <ManageProduct
-                  customerData={data}
-                  showFreeTrial={false}
-                  setShowFreeTrial={() => {}}
-                  version={version ? parseInt(version) : product.version}
-                />
-              )}
-              {options.length > 0 && (
-                <ProductOptions
-                  options={options}
-                  setOptions={setOptions}
-                  oneTimePurchase={oneTimePurchase || false}
-                />
-              )}
-              <div className="flex justify-end gap-2 p-4 block lg:hidden">
-                <div className="w-fit">
-                  <AddProductButton
-                  // handleCreateProduct={handleCreateProduct}
-                  // actionState={actionState}
-                  // setUseInvoice={setUseInvoice}
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>{product.name}</BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+            <div className="flex">
+              <div className="flex-1 w-full min-w-sm">
+                {product && (
+                  <ManageProduct
+                    customerData={data}
+                    showFreeTrial={false}
+                    setShowFreeTrial={() => {}}
+                    version={version ? parseInt(version) : product.version}
                   />
+                )}
+                {options.length > 0 && (
+                  <ProductOptions
+                    options={options}
+                    setOptions={setOptions}
+                    oneTimePurchase={oneTimePurchase || false}
+                  />
+                )}
+                <div className="flex justify-end gap-2 p-4 block lg:hidden">
+                  <div className="w-fit">
+                    <AddProductButton
+                    // handleCreateProduct={handleCreateProduct}
+                    // actionState={actionState}
+                    // setUseInvoice={setUseInvoice}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+          <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+            <ProductSidebar
+              customerData={data}
+              options={options}
+              setOptions={setOptions}
+              oneTimePurchase={oneTimePurchase || false}
+            />
+          </div>
         </div>
-        <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
-          <ProductSidebar
-            customerData={data}
-            options={options}
-            setOptions={setOptions}
-            oneTimePurchase={oneTimePurchase || false}
-          />
-        </div>
-      </div>
-    </ProductContext.Provider>
+      </ProductContext.Provider>
+    </FeaturesContext.Provider>
   );
 }
 

@@ -4,6 +4,7 @@ import { isBooleanFeatureItem } from "./getItemType.js";
 import {
   constructBooleanFeature,
   constructMeteredFeature,
+  validateFeatureId,
 } from "@/internal/features/featureUtils.js";
 
 export const createFeaturesFromItems = ({
@@ -23,7 +24,7 @@ export const createFeaturesFromItems = ({
       continue;
     }
 
-
+    validateFeatureId(item.feature_id);
 
     if (isBooleanFeatureItem(item)) {
       const feature = constructBooleanFeature({
@@ -42,6 +43,5 @@ export const createFeaturesFromItems = ({
     }
   }
 
-  
   return { allFeatures: [...curFeatures, ...newFeatures], newFeatures };
 };
