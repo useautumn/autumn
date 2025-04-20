@@ -10,7 +10,7 @@ import {
   FullCusProduct,
   LoggerAction,
 } from "@autumn/shared";
-import { generateId, notNullish } from "@/utils/genUtils.js";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 
 import { Customer } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
@@ -296,7 +296,7 @@ export const createFullCusProduct = async ({
   carryOverTrial?: boolean;
 }) => {
   disableFreeTrial = attachParams.disableFreeTrial || disableFreeTrial;
-  
+
   const logger = createLogtailWithContext({
     action: LoggerAction.CreateFullCusProduct,
     org_slug: attachParams.org.slug,
@@ -321,7 +321,8 @@ export const createFullCusProduct = async ({
   } catch (error) {}
 
   const existingCusProduct = searchCusProducts({
-    productId: product.id,
+    // productId: product.id,
+    internalProductId: product.internal_id,
     cusProducts: attachParams.cusProducts!,
     status: CusProductStatus.Active,
   });
@@ -392,8 +393,6 @@ export const createFullCusProduct = async ({
 
     cusPrices.push(cusPrice);
   }
-
-  
 
   // 3. create customer product
   if (carryOverTrial && curCusProduct?.free_trial_id) {

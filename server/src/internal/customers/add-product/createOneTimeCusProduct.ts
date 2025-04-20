@@ -92,6 +92,7 @@ export const updateOneTimeCusProduct = async ({
       cp.product.internal_id === attachParams.product.internal_id &&
       cp.status === CusProductStatus.Active
   )!;
+
   let existingCusEnts = existingCusProduct.customer_entitlements;
 
   // 3. Update existing entitlements
