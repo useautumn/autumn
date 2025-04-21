@@ -12,9 +12,7 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { Client } from "pg";
-import { createNewCustomer } from "../customers/handlers/handleCreateCustomer.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { QueueManager } from "@/queue/QueueManager.js";

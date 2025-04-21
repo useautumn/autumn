@@ -19,7 +19,6 @@ import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 import { handlePostCustomerRequest } from "./handlers/handleCreateCustomer.js";
-import { notNullish } from "@/utils/genUtils.js";
 import { entityRouter } from "../entities/entityRouter.js";
 import { getCustomerDetails } from "./getCustomerDetails.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";

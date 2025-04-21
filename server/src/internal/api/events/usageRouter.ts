@@ -4,8 +4,6 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, nullish } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { createNewCustomer } from "../customers/handlers/handleCreateCustomer.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { StatusCodes } from "http-status-codes";
