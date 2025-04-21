@@ -345,7 +345,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     attachParams.metadata = metadata;
     attachParams.isCustom = isCustom || false;
     attachParams.disableFreeTrial = disableFreeTrial;
-    
+
     logger.info(
       `Customer: ${chalk.yellow(
         `${attachParams.customer.id} (${attachParams.customer.name})`

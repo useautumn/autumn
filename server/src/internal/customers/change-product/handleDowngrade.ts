@@ -296,6 +296,7 @@ export const handleDowngrade = async ({
     subscriptionScheduleIds: scheduledIds,
     nextResetAt: latestPeriodEnd * 1000,
     disableFreeTrial: true,
+    isDowngrade: true,
   });
 
   if (attachParams.org.api_version! >= APIVersion.v1_1) {

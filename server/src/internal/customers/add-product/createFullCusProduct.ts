@@ -274,6 +274,7 @@ export const createFullCusProduct = async ({
   anchorToUnix,
   carryExistingUsages = false,
   carryOverTrial = false,
+  isDowngrade = false,
 }: {
   sb: SupabaseClient;
   attachParams: InsertCusProductParams;
@@ -294,6 +295,7 @@ export const createFullCusProduct = async ({
   anchorToUnix?: number;
   carryExistingUsages?: boolean;
   carryOverTrial?: boolean;
+  isDowngrade?: boolean;
 }) => {
   disableFreeTrial = attachParams.disableFreeTrial || disableFreeTrial;
 
@@ -380,6 +382,7 @@ export const createFullCusProduct = async ({
     entitlements: entitlements,
     curCusProduct: curCusProduct as FullCusProduct,
     carryExistingUsages,
+    isDowngrade,
   });
 
   // 2. create customer prices

@@ -71,7 +71,11 @@ const getOrCreateCustomerAndProducts = async ({
     internalCustomerId: customer.internal_id,
     withProduct: true,
     withPrices: true,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+    inStatuses: [
+      CusProductStatus.Active,
+      CusProductStatus.Scheduled,
+      CusProductStatus.PastDue,
+    ],
     logger,
   });
 

@@ -60,15 +60,15 @@ export const handleSubscriptionDeleted = async ({
     return;
   }
 
-  // Delete from subscriptions
-  try {
-    await SubService.deleteFromStripeId({
-      sb,
-      stripeId: subscription.id,
-    });
-  } catch (error) {
-    logger.error("Error deleting from subscriptions table", error);
-  }
+  // // Delete from subscriptions
+  // try {
+  //   await SubService.deleteFromStripeId({
+  //     sb,
+  //     stripeId: subscription.id,
+  //   });
+  // } catch (error) {
+  //   logger.error("Error deleting from subscriptions table", error);
+  // }
 
   // Prematurely canceled if cancel_at_period_end is false or cancel_at is more than 20 seconds apart from current_period_end
   let prematurelyCanceled = subIsPrematurelyCanceled(subscription);
