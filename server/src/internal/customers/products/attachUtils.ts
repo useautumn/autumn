@@ -37,7 +37,6 @@ import { getOrCreateCustomer } from "@/internal/api/customers/cusUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { Decimal } from "decimal.js";
-import { handleCreateCustomer } from "@/internal/api/customers/handlers/handleCreateCustomer.js";
 
 const getOrCreateCustomerAndProducts = async ({
   sb,

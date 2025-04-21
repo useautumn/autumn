@@ -104,20 +104,33 @@ export const getOrCreateCustomer = async ({
 
   if (!customer) {
     logger.info(`no customer found, creating new`, { customerData });
-    customer = await handleCreateCustomer({
-      cusData: {
-        id: customerId,
-        name: customerData?.name,
-        email: customerData?.email,
-        fingerprint: customerData?.fingerprint,
-      },
-      sb,
-      orgId,
-      env,
-      logger,
-      orgSlug: "",
-      getDetails: false,
-    });
+    try {
+      customer = await handleCreateCustomer({
+        cusData: {
+          id: customerId,
+          name: customerData?.name,
+          email: customerData?.email,
+          fingerprint: customerData?.fingerprint,
+        },
+        sb,
+        orgId,
+        env,
+        logger,
+        orgSlug: "",
+        getDetails: false,
+      });
+    } catch (error: any) {
+      if (error?.data?.code == "23505") {
+        customer = await CusService.getByIdOrInternalId({
+          sb,
+          idOrInternalId: customerId,
+          orgId,
+          env,
+        });
+      } else {
+        throw error;
+      }
+    }
     // customer = await createNewCustomer({
     //   sb,
     //   orgId,
