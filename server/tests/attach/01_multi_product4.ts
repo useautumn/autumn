@@ -71,6 +71,7 @@ describe(
     });
 
     it("should reattach premium group 1", async function () {
+      await timeout(3000);
       await AutumnCli.attach({
         customerId: customerId,
         productId: attachProducts.premiumGroup1.id,
@@ -113,6 +114,7 @@ describe(
     });
 
     it("should reattach premium group 2 (scheduled should be cancelled)", async function () {
+      await timeout(3000);
       let res = await AutumnCli.attach({
         customerId: customerId,
         productId: attachProducts.premiumGroup2.id,

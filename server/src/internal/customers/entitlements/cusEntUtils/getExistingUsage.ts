@@ -125,14 +125,16 @@ export const addExistingUsagesToCusEnts = ({
   curCusProduct,
   carryExistingUsages = false,
   printLogs = false,
+  isDowngrade = false,
 }: {
   cusEnts: CustomerEntitlement[];
   entitlements: EntitlementWithFeature[];
   curCusProduct: FullCusProduct;
   carryExistingUsages?: boolean;
   printLogs?: boolean;
+  isDowngrade?: boolean;
 }) => {
-  if (!curCusProduct) {
+  if (!curCusProduct || isDowngrade) {
     return cusEnts;
   }
 
