@@ -1,19 +1,12 @@
-import { sendEvent } from "@/app/autumn-functions";
-import { entitled } from "@/app/autumn-functions";
+import { useAutumn } from "autumn-js/next";
 import { MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
-export default function Application({
-  customerId,
-  fetchCustomer,
-}: {
-  customerId: string;
-  fetchCustomer: () => void;
-}) {
+export default function Application() {
+  const { entitled, sendEvent, refetch } = useAutumn();
 
   const sendMessageClicked = async (featureId: string) => {
-    const allowed = await entitled({
-      customerId,
+    const { allowed } = await entitled({
       featureId,
     });
 
@@ -23,9 +16,10 @@ export default function Application({
     }
 
     await sendEvent({
-      customerId,
       featureId,
     });
+
+    await refetch();
 
     toast.success(`${featureId} used!`);
   };
@@ -61,21 +55,10 @@ export default function Application({
         <button
           className="w-full bg-purple-600 hover:bg-purple-700 transition-colors"
           onClick={async () => {
-            await sendMessageClicked("message-credits");
-            await fetchCustomer();
+            await sendMessageClicked("chat-messages");
           }}
         >
-          Use Standard Message
-        </button>
-
-        <button
-          className="w-full bg-purple-600 hover:bg-purple-700 transition-colors"
-          onClick={async () => {
-            await sendMessageClicked("premium-credits");
-            await fetchCustomer();
-          }}
-        >
-          Use Claude Message
+          Use Chat Message
         </button>
       </div>
     </div>

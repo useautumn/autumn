@@ -53,6 +53,7 @@ apiRouter.use((req: any, res: any, next: any) => {
   let skipUrls = ["/v1/customers/all/search"];
   res.on("finish", () => {
     try {
+      req.logtail.flush();
       if (skipUrls.includes(req.originalUrl)) {
         return;
       }

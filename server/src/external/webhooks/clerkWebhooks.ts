@@ -258,16 +258,32 @@ export const handleClerkWebhook = async (req: any, res: any) => {
   });
 };
 
-const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
+export const handleOrgCreated = async (
+  sb: SupabaseClient,
+  eventData: {
+    id: string;
+    slug: string;
+    created_at: number;
+  }
+) => {
   console.log(
     `Handling organization.created: ${eventData.slug} (${eventData.id})`
   );
+
   try {
-    // 1. Create svix webhoooks
-    const { sandboxApp, liveApp } = await initOrgSvixApps({
-      slug: eventData.slug,
-      id: eventData.id,
-    });
+    // // Check if org already exists
+    // let org = await OrgService.getFullOrg({
+    //   sb,
+    //   orgId: eventData.id,
+    //   errorIfNotFound: false,
+    // });
+
+    // if (org) {
+    //   console.log(
+    //     `handleOrgCreated: Org already exists: ${eventData.slug} (${eventData.id})`
+    //   );
+    //   return;
+    // }
 
     // 2. Insert org
     await OrgService.insert({
@@ -282,16 +298,39 @@ const handleOrgCreated = async (sb: SupabaseClient, eventData: any) => {
         live_pkey: generatePublishableKey(AppEnv.Live),
         created_at: eventData.created_at,
         svix_config: {
-          sandbox_app_id: sandboxApp.id,
-          live_app_id: liveApp.id,
+          sandbox_app_id: "",
+          live_app_id: "",
         },
         config: {} as any,
       },
     });
 
     console.log(`Inserted org ${eventData.id}`);
-  } catch (error) {
+
+    // 1. Create svix webhoooks
+    const { sandboxApp, liveApp } = await initOrgSvixApps({
+      slug: eventData.slug,
+      id: eventData.id,
+    });
+
+    await OrgService.update({
+      sb,
+      orgId: eventData.id,
+      updates: {
+        svix_config: { sandbox_app_id: sandboxApp.id, live_app_id: liveApp.id },
+      },
+    });
+
+    console.log(`Created svix webhooks for org ${eventData.id}`);
+  } catch (error: any) {
+    if (error?.data && error.data.code == "23505") {
+      console.error(
+        `Org ${eventData.id} already exists in Supabase -- skipping creationg`
+      );
+      return;
+    }
     console.error("Failed to insert org", error);
+    return;
   }
 
   const batch = [];

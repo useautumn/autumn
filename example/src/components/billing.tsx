@@ -1,49 +1,40 @@
 "use client";
 
-import { attachProduct } from "@/app/autumn-functions";
 import { CreditCard } from "lucide-react";
 import { toast } from "sonner";
+import { useAutumn } from "autumn-js/next";
+export default function CustomerDetailsExample() {
+  const { customer, attach, openBillingPortal } = useAutumn();
+  const productId = "pro-example";
 
-export default function CustomerDetailsExample({
-  customerData,
-}: {
-  customerData: any;
-}) {
-  const { customer, entitlements, products } = customerData;
-  
   const getEntitlement = (featureId: string) => {
-    return entitlements.find(
+    return customer?.features.find(
       (entitlement: any) => entitlement.feature_id === featureId
     );
   };
 
   const upgradeClicked = async () => {
     try {
-      const res = await attachProduct({
-        customerId: customer.id,
-        productId: "pro",
+      await attach({
+        productId,
       });
-      window.open(res.checkout_url, "_blank");
     } catch (error: any) {
-      toast.error(`${error}`);
+      toast.error(`${error.message}`);
     }
   };
 
-  const buyExtraCreditsClicked = async () => {
+  const manageBillingClicked = async () => {
     try {
-      const res = await attachProduct({
-        customerId: customer.id,
-        productId: "extra-credits",
-      });
-      window.open(res.checkout_url, "_blank");
+      await openBillingPortal();
     } catch (error: any) {
-      toast.error(`${error}`);
+      toast.error(`${error.message}`);
     }
   };
 
-  const messageCredits = getEntitlement("message-credits");
-  const premiumCredits = getEntitlement("premium-credits");
-  const hasPro = products.length > 0 && products[0].id === "pro";
+  const messageCredits = getEntitlement("chat-messages");
+
+  const hasPro =
+    customer?.products?.length && customer?.products[0].id === productId;
 
   return (
     <div className="border rounded-lg bg-white overflow-hidden flex flex-col">
@@ -66,21 +57,16 @@ export default function CustomerDetailsExample({
           <div className="flex items-center justify-between py-2 border-b">
             <span className="text-sm font-medium">Customer ID</span>
             <span className="text-sm font-mono bg-stone-50 px-2 py-1 rounded">
-              {customer.id}
+              {customer?.id}
             </span>
           </div>
 
           <div className="flex items-center justify-between py-2 border-b">
-            <span className="text-sm font-medium">Standard Messages Remaining</span>
+            <span className="text-sm font-medium">Chat Messages Remaining</span>
             <span className="text-sm font-mono bg-stone-50 px-2 py-1 rounded">
-              {messageCredits?.balance || 0}
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between py-2 border-b">
-            <span className="text-sm font-medium">Premium Messages Remaining</span>
-            <span className="text-sm font-mono bg-stone-50 px-2 py-1 rounded">
-              {premiumCredits?.balance || 0}
+              {messageCredits?.unlimited
+                ? "Unlimited"
+                : messageCredits?.balance || 0}
             </span>
           </div>
 
@@ -101,24 +87,16 @@ export default function CustomerDetailsExample({
         </div>
       </div>
       <div className="flex gap-2 p-6 pt-0">
-      <div className="w-full pt-0">
         {!hasPro && (
-          <button
-            className="w-full"
-            onClick={upgradeClicked}
-          >
-            Upgrade to Pro
+          <button className="w-full" onClick={upgradeClicked}>
+            <div className="w-full pt-0">Upgrade to Pro</div>
           </button>
         )}
-      </div>
-      <div className="w-full pt-0">
-          <button
-            className="w-full"
-            onClick={buyExtraCreditsClicked}
-          >
-            Buy Extra Premium Credits
+        <div className="w-full pt-0">
+          <button className="w-full" onClick={manageBillingClicked}>
+            Manage Billing
           </button>
-      </div>
+        </div>
       </div>
     </div>
   );
