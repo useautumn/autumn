@@ -1,6 +1,8 @@
 import Step from "@/components/general/OnboardingStep";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { useOrganization, useOrganizationList } from "@clerk/clerk-react";
 import { Building } from "lucide-react";
 import { useState } from "react";
@@ -15,6 +17,8 @@ export const CreateOrgStep = ({
   pollForOrg: () => Promise<void>;
 }) => {
   const { organization: org } = useOrganization();
+  let env = useEnv();
+  let axios = useAxiosInstance({ env });
   const { createOrganization, setActive } = useOrganizationList();
 
   const [isExploding, setIsExploding] = useState(false);
@@ -35,6 +39,11 @@ export const CreateOrgStep = ({
 
       const org = await createOrganization({
         name: fields.name,
+      });
+
+      // Create org in Autumn
+      await axios.post("/organization", {
+        orgId: org.id,
       });
 
       await setActive({ organization: org.id });
