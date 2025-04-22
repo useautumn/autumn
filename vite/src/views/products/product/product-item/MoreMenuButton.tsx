@@ -25,16 +25,30 @@ export default function MoreMenuButton({
   }: { item: ProductItem; setItem: (item: ProductItem) => void } =
     useProductItemContext();
 
-  // useEffect(() => {
-  //   const shouldCarryOver =
-  //     item.interval === null || item.reset_usage_on_billing === false;
-  //   if (item.carry_over_usage !== shouldCarryOver) {
-  //     setItem({
-  //       ...item,
-  //       carry_over_usage: shouldCarryOver,
-  //     });
-  //   }
-  // }, [item.interval, item.reset_usage_on_billing]);
+  const [checkedChanged, setCheckedChanged] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
+
+  useEffect(() => {
+    //function to determine default reset usage when enabled state
+    console.log(item);
+    if (checkedChanged) return; //don't change anything if user has explicity set the state value
+
+    const defaultReset = !(
+      (item.interval === null || item.reset_usage_on_billing === false) // what our default behaviour is
+    );
+
+    if (initialLoad) {
+      const diverged = (item.reset_usage_when_enabled != defaultReset) === true; //on the first load see if it's diverged from the state (ie if this item has the value explicity set already)
+      diverged && setCheckedChanged(true);
+      setInitialLoad(false);
+      return;
+    }
+
+    setItem({
+      ...item,
+      reset_usage_when_enabled: defaultReset,
+    });
+  }, [item.interval, item.reset_usage_on_billing, checkedChanged]);
 
   return (
     <Popover open={showPopover} onOpenChange={setShowPopover}>
@@ -58,6 +72,7 @@ export default function MoreMenuButton({
             variant="secondary"
             className="text-xs text-t2 shadow-none border-none w-full justify-start"
             onClick={() => {
+              setCheckedChanged(true);
               setItem({
                 ...item,
                 reset_usage_when_enabled: !item.reset_usage_when_enabled,
@@ -70,12 +85,15 @@ export default function MoreMenuButton({
               // defaultChecked={
               //   item.interval === null || item.reset_usage_on_billing === false
               // }
-              onCheckedChange={(checked) =>
-                setItem({
-                  ...item,
-                  reset_usage_when_enabled: Boolean(!checked),
-                })
-              }
+              // onCheckedChange={() => console.log("hello")}
+              // onChange={(checked) => {
+              //   console.log("hello");
+              //   setCheckedChanged(true);
+              //   setItem({
+              //     ...item,
+              //     reset_usage_when_enabled: Boolean(!checked),
+              //   });
+              // }}
             />
             Reset usage when product is enabled
           </Button>

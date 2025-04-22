@@ -32,7 +32,7 @@ export let defaultProductItem: ProductItem = {
 
   // Others
   entity_feature_id: null,
-  reset_usage_when_enabled: false,
+  reset_usage_when_enabled: true,
 };
 
 let defaultPriceItem: ProductItem = {
@@ -49,7 +49,7 @@ let defaultPriceItem: ProductItem = {
 
   // Others
   entity_feature_id: null,
-  reset_usage_when_enabled: false,
+  reset_usage_when_enabled: true,
 };
 
 export function CreateProductItem() {
