@@ -12,9 +12,14 @@ import chalk from "chalk";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { AttachParams } from "../products/AttachParams.js";
+import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import { getPriceAmount } from "../../prices/priceUtils.js";
-import { BillingInterval, BillingType, ErrCode } from "@autumn/shared";
+import {
+  APIVersion,
+  BillingInterval,
+  BillingType,
+  ErrCode,
+} from "@autumn/shared";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import {
   getInvoiceExpansion,
@@ -31,6 +36,7 @@ import {
   getAlignedIntervalUnix,
   getNextStartOfMonthUnix,
 } from "@/internal/prices/billingIntervalUtils.js";
+import { SuccessCode } from "@autumn/shared";
 
 const handleBillNowPrices = async ({
   sb,
@@ -171,17 +177,33 @@ const handleBillNowPrices = async ({
   const invoices = await Promise.all(batchInsertInvoice);
 
   if (fromRequest) {
-    res.status(200).json({
-      success: true,
-      message: `Successfully created subscriptions and attached ${products
-        .map((p) => p.name)
-        .join(", ")} to ${customer.name}`,
-      // invoice_url: invoiceOnly &&
-      invoice: invoiceOnly ? invoices?.[0] : undefined,
-      // invoiceOnly && invoices?.[0]?.hosted_invoice_url
-      //   ? invoices[0].hosted_invoice_url
-      //   : undefined,
-    });
+    if (org.api_version! >= APIVersion.v1_1) {
+      res.status(200).json(
+        AttachResultSchema.parse({
+          message: `Successfully created subscriptions and attached ${products
+            .map((p) => p.name)
+            .join(", ")} to ${customer.name}`,
+
+          code: SuccessCode.NewProductAttached,
+          product_ids: products.map((p) => p.id),
+          customer_id: customer.id,
+
+          invoice: invoiceOnly ? invoices?.[0] : undefined,
+        })
+      );
+    } else {
+      res.status(200).json({
+        success: true,
+        message: `Successfully created subscriptions and attached ${products
+          .map((p) => p.name)
+          .join(", ")} to ${customer.name}`,
+        // invoice_url: invoiceOnly &&
+        invoice: invoiceOnly ? invoices?.[0] : undefined,
+        // invoiceOnly && invoices?.[0]?.hosted_invoice_url
+        //   ? invoices[0].hosted_invoice_url
+        //   : undefined,
+      });
+    }
   }
 };
 
@@ -318,17 +340,19 @@ const handleOneOffPrices = async ({
   logger.info("   ✅ Successfully attached product");
 
   if (fromRequest) {
-    res.status(200).json({
-      success: true,
-      message: `Successfully purchased ${products
-        .map((p) => p.name)
-        .join(", ")} and attached to ${customer.name}`,
-      invoice: invoiceOnly ? stripeInvoice : undefined,
-      // invoice_url:
-      //   invoiceOnly && finalizedInvoice?.hosted_invoice_url
-      //     ? finalizedInvoice.hosted_invoice_url
-      //     : undefined,
-    });
+    res.status(200).json(
+      AttachResultSchema.parse({
+        success: true,
+        message: `Successfully purchased ${products
+          .map((p) => p.name)
+          .join(", ")} and attached to ${customer.name}`,
+        invoice: invoiceOnly ? stripeInvoice : undefined,
+
+        code: SuccessCode.OneOffProductAttached,
+        product_ids: products.map((p) => p.id),
+        customer_id: customer.id,
+      })
+    );
   }
 };
 
@@ -417,6 +441,23 @@ export const handleAddProduct = async ({
   logger.info("Successfully created full cus product");
 
   if (fromRequest) {
-    res.status(200).json({ success: true });
+    let apiVersion = attachParams.org.api_version || APIVersion.v1;
+    if (apiVersion >= APIVersion.v1_1) {
+      res.status(200).json(
+        AttachResultSchema.parse({
+          success: true,
+          code: SuccessCode.FreeProductAttached,
+          message: `Successfully attached free product(s) -- ${products
+            .map((p) => p.name)
+            .join(", ")}`,
+          product_ids: products.map((p) => p.id),
+          customer_id: customer.id,
+        })
+      );
+    } else {
+      res.status(200).json({
+        success: true,
+      });
+    }
   }
 };

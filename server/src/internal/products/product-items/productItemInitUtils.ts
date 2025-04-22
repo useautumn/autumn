@@ -256,11 +256,12 @@ export const handleNewProductItems = async ({
     `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`
   );
 
-  // Create new features
-  await FeatureService.insert({
-    sb,
-    data: newFeatures,
-  });
+  if (newFeatures.length > 0) {
+    await FeatureService.insert({
+      sb,
+      data: newFeatures,
+    });
+  }
 
   if (isCustom || newVersion) {
     return handleCustomProductItems({

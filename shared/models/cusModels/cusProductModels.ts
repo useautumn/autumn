@@ -47,7 +47,7 @@ export const CusProductSchema = z.object({
   id: z.string(),
   internal_customer_id: z.string(),
   internal_product_id: z.string(),
-  customer_id: z.string().nullable(),
+  customer_id: z.string().nullish(),
   product_id: z.string(),
   created_at: z.number(),
 

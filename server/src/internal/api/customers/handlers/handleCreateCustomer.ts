@@ -107,13 +107,11 @@ export const createNewCustomer = async ({
 
   const customerData: Customer = {
     ...parsedCustomer,
-    id: parsedCustomer.id || null,
     name: parsedCustomer.name || "",
     email:
-      parsedCustomer.email ||
-      (nonFreeProds.length > 0
+      nonFreeProds.length > 0 && !parsedCustomer.email
         ? `${parsedCustomer.id}@invoices.useautumn.com`
-        : ""),
+        : parsedCustomer.email || "",
 
     internal_id: generateId("cus"),
     org_id: orgId,
@@ -404,15 +402,29 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
   try {
     const data = req.body;
 
-    const result = await handleCreateCustomer({
-      cusData: data,
-      sb: req.sb,
-      orgId: req.orgId,
-      orgSlug: req.minOrg.slug,
-      env: req.env,
-      logger,
-      params: req.query,
-    });
+    let result;
+    try {
+      result = await handleCreateCustomer({
+        cusData: data,
+        sb: req.sb,
+        orgId: req.orgId,
+        orgSlug: req.minOrg.slug,
+        env: req.env,
+        logger,
+        params: req.query,
+      });
+    } catch (error: any) {
+      if (error?.data?.code == "23505") {
+        result = await CusService.getByIdOrInternalId({
+          sb: req.sb,
+          idOrInternalId: data.id,
+          orgId: req.orgId,
+          env: req.env,
+        });
+      } else {
+        throw error;
+      }
+    }
 
     res.status(200).json(result);
   } catch (error: any) {

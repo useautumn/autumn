@@ -1,6 +1,4 @@
 import { CreateRewardProgram, ErrCode } from "@autumn/shared";
-import RecaseError from "@/utils/errorUtils.js";
-import chalk from "chalk";
 
 export default class AutumnError extends Error {
   message: string;

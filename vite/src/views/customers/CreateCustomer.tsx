@@ -37,6 +37,8 @@ function CreateCustomer() {
       const { data } = await CusService.createCustomer(axiosInstance, {
         ...fields,
         id: fields.id ? fields.id : null,
+        name: fields.name || null,
+        email: fields.email || null,
         fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
       });
 

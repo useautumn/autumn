@@ -13,6 +13,18 @@ import { PriceService } from "../prices/PriceService.js";
 import { FeatureService } from "./FeatureService.js";
 import { generateId, keyToTitle } from "@/utils/genUtils.js";
 
+export const validateFeatureId = (featureId: string) => {
+  if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
+    throw new RecaseError({
+      message:
+        "Feature ID can only contain alphanumeric characters, underscores, and hyphens",
+      code: ErrCode.InvalidFeature,
+      statusCode: 400,
+    });
+  }
+  return;
+};
+
 export const validateMeteredConfig = (config: MeteredConfig) => {
   let newConfig = { ...config };
 
@@ -189,7 +201,7 @@ export const constructMeteredFeature = ({
         {
           property: "event_name",
           operator: "eq",
-          value: ["purchase.completed"],
+          value: [],
         },
       ],
       aggregate: {

@@ -1,4 +1,5 @@
 import {
+  APIVersion,
   AppEnv,
   Entitlement,
   EntitlementWithFeature,
@@ -12,8 +13,9 @@ import {
 
 import { Customer } from "@autumn/shared";
 import { createFullCusProduct } from "./createFullCusProduct.js";
-import { AttachParams } from "../products/AttachParams.js";
+import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import { SuccessCode } from "@autumn/shared";
 
 export const handleAddFreeProduct = async ({
   req,
@@ -42,7 +44,19 @@ export const handleAddFreeProduct = async ({
     });
   }
 
-  console.log(`Successfully added free products`);
-
-  res.status(200).json({ success: true });
+  let apiVersion = attachParams.org.api_version || APIVersion.v1;
+  if (apiVersion >= APIVersion.v1_1) {
+    res.status(200).json(
+      AttachResultSchema.parse({
+        customer_id: customer.id,
+        product_ids: products.map((p) => p.id),
+        code: SuccessCode.FreeProductAttached,
+        message: `Successfully attached free product(s) -- ${products
+          .map((p) => p.name)
+          .join(", ")}`,
+      })
+    );
+  } else {
+    res.status(200).json({ success: true });
+  }
 };

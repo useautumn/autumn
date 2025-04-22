@@ -11,7 +11,6 @@ import {
   Customer,
   Feature,
   FullCustomerPrice,
-  InvoiceItem,
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";

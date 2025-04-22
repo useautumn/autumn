@@ -66,6 +66,7 @@ export const ErrCode = {
   AttachProductToCustomerFailed: "attach_product_to_customer_failed",
   CustomerEntitlementNotFound: "customer_entitlement_not_found",
   MultipleCustomersFound: "multiple_customers_found",
+  InvalidUpdateCustomerParams: "invalid_update_customer_params",
 
   // Product
   InvalidProduct: "invalid_product",

@@ -10,22 +10,27 @@ import {
   CreateProductSchema,
   ErrCode,
   FreeTrial,
-
   ProductResponseSchema,
 } from "@autumn/shared";
-import { keyToTitle, notNullish, nullish } from "@/utils/genUtils.js";
+import {
+  keyToTitle,
+  notNullish,
+  nullish,
+  validateId,
+} from "@/utils/genUtils.js";
 
 import { ProductService } from "@/internal/products/ProductService.js";
 import { constructProduct } from "@/internal/products/productUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 
-
 const validateCreateProduct = async ({ req }: { req: any }) => {
   let { free_trial, items } = req.body;
   let { orgId, env, sb } = req;
 
   let productData = CreateProductSchema.parse(req.body);
+
+  validateId("Product", productData.id);
 
   if (nullish(req.body.name)) {
     productData.name = keyToTitle(productData.id);
@@ -55,7 +60,7 @@ const validateCreateProduct = async ({ req }: { req: any }) => {
   }
 
   // 2. Validate items if exist
-  
+
   if (items && !Array.isArray(items)) {
     throw new RecaseError({
       message: "Items must be an array",
@@ -108,7 +113,6 @@ export const handleCreateProduct = async (req: any, res: any) =>
 
       let product = await ProductService.create({ sb, product: newProduct });
 
-      
       if (notNullish(items)) {
         await handleNewProductItems({
           sb,

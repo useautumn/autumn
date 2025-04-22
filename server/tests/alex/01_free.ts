@@ -11,8 +11,8 @@ describe(chalk.yellowBright("Free customer"), () => {
     await initCustomer({
       customer_data: {
         id: customerId,
-        name: "Alex Free Customer",
-        email: "alex-free-customer@test.com",
+        // name: null,
+        // email: null,
       },
       sb: this.sb,
       org: this.org,

@@ -17,6 +17,7 @@ import { FeatureConfig } from "./metered-features/FeatureConfig";
 import { getBackendErr } from "@/utils/genUtils";
 import { validateFeature } from "./featureUtils";
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { useEnv } from "@/utils/envUtils";
 
 const defaultFeature = {
   type: FeatureType.Metered,
@@ -45,7 +46,8 @@ export const CreateFeature = ({
   setOpen: (open: boolean) => void;
   open: boolean;
 }) => {
-  const { env, mutate, features } = useFeaturesContext();
+  const { mutate, features } = useFeaturesContext();
+  let env = useEnv();
 
   const axiosInstance = useAxiosInstance({ env });
 
@@ -114,7 +116,6 @@ export const CreateFeature = ({
           config: updateConfig(),
         }
       );
-      
 
       if (isFromEntitlement) {
         if (createdFeature) {

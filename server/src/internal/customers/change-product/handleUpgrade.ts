@@ -17,6 +17,7 @@ import {
   ErrCode,
   FullProduct,
   CusProductStatus,
+  APIVersion,
 } from "@autumn/shared";
 
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -25,7 +26,7 @@ import Stripe from "stripe";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { handleAddProduct } from "../add-product/handleAddProduct.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
-import { AttachParams } from "../products/AttachParams.js";
+import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import { CusProductService } from "../products/CusProductService.js";
 import { attachParamsToInvoice } from "../invoices/invoiceUtils.js";
 import { updateScheduledSubWithNewItems } from "./scheduleUtils.js";
@@ -39,6 +40,7 @@ import {
 } from "@/internal/prices/billingIntervalUtils.js";
 
 import { differenceInSeconds } from "date-fns";
+import { SuccessCode } from "@autumn/shared";
 
 export enum ProrationBehavior {
   Immediately = "immediately",
@@ -278,10 +280,23 @@ const handleOnlyEntsChanged = async ({
 
   logger.info("✅ Successfully updated entitlements for product");
 
-  res.status(200).json({
-    success: true,
-    message: `Successfully updated entitlements for ${curCusProduct.product.name}`,
-  });
+  let org = attachParams.org;
+
+  if (org.api_version == APIVersion.v1_1) {
+    res.status(200).json(
+      AttachResultSchema.parse({
+        customer_id: attachParams.customer.id,
+        product_ids: attachParams.products.map((p) => p.id),
+        code: SuccessCode.FeaturesUpdated,
+        message: `Successfully updated features for customer ${attachParams.customer.id} on product ${attachParams.products[0].name}`,
+      })
+    );
+  } else {
+    res.status(200).json({
+      success: true,
+      message: `Successfully updated entitlements for ${curCusProduct.product.name}`,
+    });
+  }
 };
 
 export const handleUpgrade = async ({
@@ -295,6 +310,7 @@ export const handleUpgrade = async ({
   carryExistingUsages = false,
   prorationBehavior,
   newVersion = false,
+  updateSameProduct = false,
 }: {
   req: any;
   res: any;
@@ -306,6 +322,7 @@ export const handleUpgrade = async ({
   carryExistingUsages?: boolean;
   prorationBehavior?: ProrationBehavior;
   newVersion?: boolean;
+  updateSameProduct?: boolean;
 }) => {
   const logger = req.logtail;
   const { org, customer, products } = attachParams;
@@ -478,9 +495,24 @@ export const handleUpgrade = async ({
   logger.info("✅ Done!");
 
   if (fromReq) {
-    res.status(200).json({
-      success: true,
-      message: `Successfully attached ${product.name} to ${customer.name} -- upgraded from ${curFullProduct.name}`,
-    });
+    if (org.api_version! >= APIVersion.v1_1) {
+      res.status(200).json(
+        AttachResultSchema.parse({
+          customer_id: customer.id,
+          product_ids: products.map((p) => p.id),
+          code: updateSameProduct
+            ? SuccessCode.UpdatedSameProduct
+            : newVersion
+            ? SuccessCode.UpgradedToNewVersion
+            : SuccessCode.UpgradedToNewProduct,
+          message: `Successfully attached ${product.name} to ${customer.name} -- upgraded from ${curFullProduct.name}`,
+        })
+      );
+    } else {
+      res.status(200).json({
+        success: true,
+        message: `Successfully attached ${product.name} to ${customer.name} -- upgraded from ${curFullProduct.name}`,
+      });
+    }
   }
 };
