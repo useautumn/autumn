@@ -461,21 +461,27 @@ export const fullCusProductToProduct = (cusProduct: FullCusProduct) => {
 
 export const searchCusProducts = ({
   productId,
+  internalProductId,
   cusProducts,
   status,
 }: {
-  productId: string;
+  productId?: string;
+  internalProductId?: string;
   cusProducts: FullCusProduct[];
   status?: CusProductStatus;
 }) => {
   if (!cusProducts) {
     return undefined;
   }
-  return cusProducts.find(
-    (cusProduct: FullCusProduct) =>
-      cusProduct.product.id === productId &&
-      (status ? cusProduct.status === status : true)
-  );
+  return cusProducts.find((cusProduct: FullCusProduct) => {
+    let prodIdMatch = false;
+    if (productId) {
+      prodIdMatch = cusProduct.product.id === productId;
+    } else if (internalProductId) {
+      prodIdMatch = cusProduct.product.internal_id === internalProductId;
+    }
+    return prodIdMatch && (status ? cusProduct.status === status : true);
+  });
 };
 
 export const isTrialing = (cusProduct: FullCusProduct) => {

@@ -5,7 +5,6 @@ import {
   CreateProduct,
   Entitlement,
   EntitlementSchema,
-  EntitlementWithFeature,
   ErrCode,
   Feature,
   FixedPriceConfig,

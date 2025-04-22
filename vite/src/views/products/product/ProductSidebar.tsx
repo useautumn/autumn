@@ -59,7 +59,7 @@ export default function ProductSidebar({
             </span>
             <span className="truncate">
               <span className="font-bold">
-                {customer.name.trim() || customer.id || customer.email}
+                {customer.name || customer.id || customer.email}
               </span>
             </span>
           </Badge>

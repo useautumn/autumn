@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { CusProductStatus } from "./cusProductModels.js";
-import { EntInterval } from "../genModels.js";
+import { AppEnv, EntInterval } from "../genModels.js";
 
 export const CusProductResponseSchema = z.object({
-  id: z.string().nullable().default(null),
-  name: z.string(),
+  id: z.string(),
+  name: z.string().nullable(),
   group: z.string().nullable(),
   status: z.nativeEnum(CusProductStatus),
   // created_at: z.number(),
@@ -28,16 +28,18 @@ export const CusEntResponseSchema = z.object({
 });
 
 export const CusResponseSchema = z.object({
+  // Internal fields
   autumn_id: z.string(),
-  id: z.string().nullable().default(null),
+  created_at: z.number(),
+
+  id: z.string().nullable(),
   name: z.string().nullable(),
   email: z.string().nullable(),
   fingerprint: z.string().nullable(),
-  created_at: z.number(),
-  stripe_id: z.string().nullish(),
+  stripe_id: z.string().nullable().default(null),
+  env: z.nativeEnum(AppEnv),
 
   products: z.array(CusProductResponseSchema),
-  add_ons: z.array(CusProductResponseSchema),
+  // add_ons: z.array(CusProductResponseSchema),
   features: z.any(),
-  // invoices: z.array(CusInvoiceResponseSchema).nullish(),
 });

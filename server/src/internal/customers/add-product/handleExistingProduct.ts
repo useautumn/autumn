@@ -24,6 +24,7 @@ import {
 } from "@/internal/customers/add-product/handleSameProduct.js";
 import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
+import { ACTIVE_STATUSES } from "../products/CusProductService.js";
 
 export const getExistingCusProducts = async ({
   product,
@@ -43,9 +44,8 @@ export const getExistingCusProducts = async ({
   let curMainProduct = cusProducts.find(
     (cp: any) =>
       cp.product.group === product.group &&
-      // !cp.from_reward &&
       !cp.product.is_add_on &&
-      cp.status === CusProductStatus.Active &&
+      ACTIVE_STATUSES.includes(cp.status) &&
       !isOneOff(cp.customer_prices.map((cp: any) => cp.price))
   );
 

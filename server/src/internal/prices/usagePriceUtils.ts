@@ -1,5 +1,5 @@
-import { Price } from "@shared/models/productModels/priceModels.js";
-import { UsagePriceConfig } from "@shared/models/productModels/usagePriceModels.js";
+import { Price } from "@autumn/shared";
+import { UsagePriceConfig } from "@autumn/shared";
 
 export const pricesHaveSameFeature = ({
   price1,

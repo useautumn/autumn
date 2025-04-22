@@ -11,10 +11,10 @@ import {
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
-const ACTIVE_STATUSES = [
+export const ACTIVE_STATUSES = [
   CusProductStatus.Active,
   CusProductStatus.Scheduled,
-  // CusProductStatus.PastDue,
+  CusProductStatus.PastDue,
 ];
 
 export class CusProductService {

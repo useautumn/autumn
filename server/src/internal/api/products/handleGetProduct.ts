@@ -1,8 +1,12 @@
 import { ProductService } from "@/internal/products/ProductService.js";
-import { mapToProductV2 } from "@/internal/products/productV2Utils.js";
+import {
+  mapToProductItems,
+  mapToProductV2,
+} from "@/internal/products/productV2Utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, ProductResponseSchema } from "@autumn/shared";
+import { ProductItemResponseSchema } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
 export const handleGetProduct = async (req: any, res: any) =>
@@ -45,8 +49,22 @@ export const handleGetProduct = async (req: any, res: any) =>
       if (schemaVersion == 1) {
         res.status(200).json(product);
       } else {
-        let v2Product = mapToProductV2(product);
-        res.status(200).json(v2Product);
+        // let v2Product = mapToProductV2(product);
+        res.status(200).json(
+          ProductResponseSchema.parse({
+            ...product,
+            name: product.name || null,
+            group: product.group || null,
+            autumn_id: product.internal_id,
+            items: mapToProductItems({
+              prices: product.prices,
+              entitlements: product.entitlements,
+            }).map((item) => {
+              // console.log(item);
+              return ProductItemResponseSchema.parse(item);
+            }),
+          })
+        );
       }
     },
   });

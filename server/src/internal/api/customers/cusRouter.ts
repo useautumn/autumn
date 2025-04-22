@@ -1,6 +1,10 @@
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 
-import { CreateCustomerSchema, CustomerResponseSchema } from "@autumn/shared";
+import {
+  APIVersion,
+  CreateCustomerSchema,
+  CustomerResponseSchema,
+} from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
 import { ErrorMessages } from "@/errors/errMessages.js";
 import { Router } from "express";
@@ -15,9 +19,9 @@ import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 import { handlePostCustomerRequest } from "./handlers/handleCreateCustomer.js";
-import { notNullish } from "@/utils/genUtils.js";
 import { entityRouter } from "../entities/entityRouter.js";
 import { getCustomerDetails } from "./getCustomerDetails.js";
+import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
 
 export const cusRouter = Router();
 
@@ -114,82 +118,7 @@ cusRouter.delete("/:customer_id", async (req: any, res: any) => {
   }
 });
 
-cusRouter.post("/:customer_id", async (req: any, res: any) => {
-  try {
-    const customerId = req.params.customer_id;
-    const [originalCustomer, org] = await Promise.all([
-      CusService.getByIdOrInternalId({
-        sb: req.sb,
-        idOrInternalId: customerId,
-        orgId: req.orgId,
-        env: req.env,
-      }),
-      OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId }),
-    ]);
-
-    if (!originalCustomer) {
-      throw new RecaseError({
-        message: `Update customer: Customer ${customerId} not found`,
-        code: ErrCode.CustomerNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    let newCusData: any = CreateCustomerSchema.parse(req.body);
-
-    if (notNullish(newCusData.id) && originalCustomer.id !== newCusData.id) {
-      // Fetch for existing customer
-      const existingCustomer = await CusService.getById({
-        sb: req.sb,
-        id: newCusData.id,
-        orgId: req.orgId,
-        env: req.env,
-        logger: req.logtail,
-      });
-
-      if (existingCustomer) {
-        throw new RecaseError({
-          message: `Update customer: Customer ${newCusData.id} already exists, can't change to this ID`,
-          code: ErrCode.DuplicateCustomerId,
-          statusCode: StatusCodes.CONFLICT,
-        });
-      }
-    } else {
-      delete newCusData.id;
-    }
-
-    // 2. Check if customer email is being changed
-    let stripeUpdate = {
-      email:
-        originalCustomer.email !== newCusData.email
-          ? newCusData.email
-          : undefined,
-      name:
-        originalCustomer.name !== newCusData.name ? newCusData.name : undefined,
-    };
-
-    if (
-      Object.keys(stripeUpdate).length > 0 &&
-      originalCustomer.processor?.id
-    ) {
-      const stripeCli = createStripeCli({ org, env: req.env });
-      await stripeCli.customers.update(
-        originalCustomer.processor.id,
-        stripeUpdate as any
-      );
-    }
-
-    const updatedCustomer = await CusService.update({
-      sb: req.sb,
-      internalCusId: originalCustomer.internal_id,
-      update: newCusData,
-    });
-
-    res.status(200).json({ customer: updatedCustomer });
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "update customer" });
-  }
-});
+cusRouter.post("/:customer_id", handleUpdateCustomer);
 
 // Update customer entitlement directly
 cusRouter.post(
@@ -206,14 +135,20 @@ cusRouter.post(
 
 cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
   try {
+    let returnUrl = req.query.return_url;
+
     const customerId = req.params.customer_id;
-    const customer = await CusService.getById({
-      sb: req.sb,
-      id: customerId,
-      orgId: req.orgId,
-      env: req.env,
-      logger: req.logtail,
-    });
+
+    const [org, customer] = await Promise.all([
+      OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId }),
+      CusService.getById({
+        sb: req.sb,
+        id: customerId,
+        orgId: req.orgId,
+        env: req.env,
+        logger: req.logtail,
+      }),
+    ]);
 
     if (!customer) {
       throw new RecaseError({
@@ -231,17 +166,22 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
       });
     }
 
-    const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
-
     const stripeCli = createStripeCli({ org, env: req.env });
     const portal = await stripeCli.billingPortal.sessions.create({
       customer: customer.processor.id,
-      return_url: org.stripe_config.success_url,
+      return_url: returnUrl || org.stripe_config.success_url,
     });
 
-    res.status(200).json({
-      url: portal.url,
-    });
+    if (org.api_version >= APIVersion.v1_1) {
+      res.status(200).json({
+        customer_id: customer.id,
+        url: portal.url,
+      });
+    } else {
+      res.status(200).json({
+        url: portal.url,
+      });
+    }
   } catch (error) {
     handleRequestError({ req, error, res, action: "get billing portal" });
   }

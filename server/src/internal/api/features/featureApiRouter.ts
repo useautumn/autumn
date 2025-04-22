@@ -3,27 +3,25 @@ import RecaseError, {
   formatZodError,
   handleRequestError,
 } from "@/utils/errorUtils.js";
-import {
-  AggregateType,
-  CreditSystemConfig,
-  Feature,
-  FeatureResponseSchema,
-  FeatureType,
-  MeteredConfig,
-} from "@autumn/shared";
+import { Feature, FeatureResponseSchema, FeatureType } from "@autumn/shared";
 import { CreateFeatureSchema } from "@autumn/shared";
 import express from "express";
 import { generateId } from "@/utils/genUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { handleUpdateFeature } from "./handleUpdateFeature.js";
-import { validateCreditSystem } from "@/internal/features/featureUtils.js";
+import {
+  validateCreditSystem,
+  validateFeatureId,
+} from "@/internal/features/featureUtils.js";
 import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
 
 export const featureApiRouter = express.Router();
 
 export const validateFeature = (data: any) => {
   let featureType = data.type;
+
+  validateFeatureId(data.id);
 
   let config = data.config;
   if (featureType == FeatureType.Metered) {
