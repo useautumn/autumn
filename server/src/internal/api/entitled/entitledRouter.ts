@@ -7,6 +7,7 @@ import {
   APIVersion,
   CusEntWithEntitlement,
   CusProduct,
+  CusProductStatus,
   Customer,
   Feature,
   FeatureType,
@@ -365,12 +366,20 @@ const getCusEntsAndFeatures = async ({
 
   // 1. Get customer entitlements & features / credit systems
   const startParallel = Date.now();
+  let org = await OrgService.getFullOrg({
+    sb,
+    orgId,
+  });
+
   const batchQuery = [
     CustomerEntitlementService.getCustomerAndEnts({
       sb,
       customerId: customer_id,
       orgId,
       env,
+      inStatuses: org.config?.include_past_due
+        ? [CusProductStatus.Active, CusProductStatus.PastDue]
+        : [CusProductStatus.Active],
     }).then((result) => {
       timings.cusEnts = Date.now() - startParallel;
       return result;
@@ -384,13 +393,9 @@ const getCusEntsAndFeatures = async ({
       timings.features = Date.now() - startParallel;
       return result;
     }),
-    OrgService.getFullOrg({
-      sb,
-      orgId,
-    }),
   ];
 
-  const [res1, res2, org] = await Promise.all(batchQuery);
+  const [res1, res2] = await Promise.all(batchQuery);
   const totalTime = Date.now() - startParallel;
 
   console.log("Query timings:", {
