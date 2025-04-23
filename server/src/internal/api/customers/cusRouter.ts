@@ -22,6 +22,7 @@ import { handlePostCustomerRequest } from "./handlers/handleCreateCustomer.js";
 import { entityRouter } from "../entities/entityRouter.js";
 import { getCustomerDetails } from "./getCustomerDetails.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
+import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";
 
 export const cusRouter = Router();
 
@@ -186,6 +187,8 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
     handleRequestError({ req, error, res, action: "get billing portal" });
   }
 });
+
+cusRouter.post("/:customer_id/billing_portal", handleCreateBillingPortal);
 
 cusRouter.post("/:customer_id/coupons/:coupon_id", handleAddCouponToCus);
 

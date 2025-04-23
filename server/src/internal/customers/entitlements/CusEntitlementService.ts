@@ -1,5 +1,6 @@
 import RecaseError from "@/utils/errorUtils.js";
 import {
+  CusProductStatus,
   CustomerEntitlement,
   ErrCode,
   FullCustomerEntitlement,
@@ -33,11 +34,13 @@ export class CustomerEntitlementService {
     customerId,
     orgId,
     env,
+    inStatuses = [CusProductStatus.Active],
   }: {
     sb: SupabaseClient;
     customerId: string;
     orgId: string;
     env: string;
+    inStatuses?: string[];
   }) {
     const { data, error } = await sb
       .from("customers")
@@ -49,7 +52,7 @@ export class CustomerEntitlementService {
       .eq("id", customerId)
       .eq("org_id", orgId)
       .eq("env", env)
-      .eq("customer_products.status", "active")
+      .in("customer_products.status", inStatuses)
       .single();
 
     if (error) {

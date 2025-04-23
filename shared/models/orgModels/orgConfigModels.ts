@@ -10,6 +10,8 @@ export const OrgConfigSchema = z.object({
   api_version: z.number().default(0.2),
   checkout_on_failed_payment: z.boolean().default(true),
   reverse_deduction_order: z.boolean().default(false),
+
+  include_past_due: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;
