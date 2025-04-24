@@ -37,6 +37,8 @@ import {
   updateCustomerDetails,
 } from "../customers/cusUtils.js";
 import { SuccessCode } from "@autumn/shared";
+import { handleProductCheck } from "./handlers/handleProductCheck.js";
+import { getBooleanEntitledResult } from "./checkUtils.js";
 
 type CusWithEnts = Customer & {
   customer_products: CusProduct[];
@@ -204,32 +206,6 @@ const getMeteredEntitledResult = ({
     allowed,
     balances,
   };
-};
-
-// Helper functions
-const getBooleanEntitledResult = ({
-  cusEnts,
-  res,
-  feature,
-}: {
-  cusEnts: CusEntWithEntitlement[];
-  res: any;
-  feature: Feature;
-}) => {
-  const allowed = cusEnts.some(
-    (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
-  );
-  return res.status(200).json({
-    allowed,
-    balances: allowed
-      ? [
-          {
-            feature_id: feature.id,
-            balance: null,
-          },
-        ]
-      : [],
-  });
 };
 
 // Main functions
@@ -461,11 +437,34 @@ entitledRouter.post("", async (req: any, res: any) => {
     let {
       customer_id,
       feature_id,
+      product_id,
       required_quantity,
       customer_data,
       event_data,
       entity_id,
     } = req.body;
+
+    if (!customer_id) {
+      throw new RecaseError({
+        message: "Customer ID is required",
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    if (feature_id && product_id) {
+      throw new RecaseError({
+        message:
+          "Provide either feature_id or product_id. Not allowed to provide both.",
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    if (product_id) {
+      await handleProductCheck({ req, res });
+      return;
+    }
 
     const quantity = required_quantity ? parseInt(required_quantity) : 1;
 
