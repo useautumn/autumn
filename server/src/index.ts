@@ -36,14 +36,31 @@ const init = async () => {
   await QueueManager.getInstance(); // initialize the queue manager
   // await initWorkers();
   const supabaseClient = createSupabaseClient();
+  const logtailAll = createLogtailAll();
 
   app.use((req: any, res, next) => {
     req.sb = supabaseClient;
     req.pg = pgClient;
     req.logger = logger;
+    req.logtailAll = logtailAll;
 
-    req.logtail = createLogtail();
-    req.logtailAll = createLogtailAll();
+    // Log incoming request
+
+    try {
+      logtailAll.info(`${req.method} ${req.originalUrl}`, {
+        url: req.originalUrl,
+        method: req.method,
+        headers: req.headers,
+        body: req.body,
+        ip: req.ip,
+      });
+
+      req.logtail = createLogtail();
+    } catch (error) {
+      req.logtail = logger;
+      console.error(`Error creating req.logtail`);
+      console.error(error);
+    }
 
     res.on("finish", () => {
       req.logtail.flush();
