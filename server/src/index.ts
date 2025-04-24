@@ -50,6 +50,7 @@ const init = async () => {
       let headersClone = structuredClone(req.headers);
       headersClone.authorization = undefined;
       headersClone.Authorization = undefined;
+
       logtailAll.info(`${req.method} ${req.originalUrl}`, {
         url: req.originalUrl,
         method: req.method,
@@ -59,7 +60,7 @@ const init = async () => {
 
       req.logtail = createLogtail();
     } catch (error) {
-      req.logtail = logger;
+      req.logtail = logtailAll; // fallback
       console.error(`Error creating req.logtail`);
       console.error(error);
     }
@@ -77,7 +78,6 @@ const init = async () => {
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
     next();
   });
-
   app.use("/webhooks", webhooksRouter);
 
   app.use((req: any, res, next) => {
