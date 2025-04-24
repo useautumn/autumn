@@ -19,6 +19,7 @@ import rewardRouter from "./rewards/rewardRouter.js";
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
 import expireRouter from "./customers/products/expireRouter.js";
+import { nullish } from "@/utils/genUtils.js";
 
 const apiRouter = Router();
 
@@ -57,6 +58,11 @@ apiRouter.use((req: any, res: any, next: any) => {
       if (skipUrls.includes(req.originalUrl)) {
         return;
       }
+
+      if (nullish(req.logtailAll)) {
+        return;
+      }
+
       req.logtailAll.info(
         `[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.minOrg?.slug})`,
         {

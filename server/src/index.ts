@@ -10,7 +10,6 @@ import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 
 import pg from "pg";
 
-import { initWorkers } from "./queue/queue.js";
 import http from "http";
 import { publicRouter } from "./internal/public/publicRouter.js";
 import { initLogger } from "./errors/logger.js";
@@ -22,7 +21,6 @@ import {
   createLogtailAll,
 } from "./external/logtail/logtailUtils.js";
 import { format } from "date-fns";
-import { handleRequestError } from "./utils/errorUtils.js";
 
 const init = async () => {
   const app = express();
