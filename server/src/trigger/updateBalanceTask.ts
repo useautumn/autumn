@@ -1,5 +1,3 @@
-
-
 import {
   AllowanceType,
   AppEnv,
@@ -22,12 +20,8 @@ import {
   getCreditSystemDeduction,
   performDeduction,
 } from "./deductUtils.js";
-import {
-  getGroupBalanceFromProperties,
-  getGroupBalanceUpdate,
-  initGroupBalancesForEvent,
-} from "@/internal/customers/entitlements/groupByUtils.js";
-import { notNullish, nullish, nullOrUndefined } from "@/utils/genUtils.js";
+
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import {
   creditSystemContainsFeature,
   featureToCreditSystem,
@@ -542,7 +536,6 @@ export const updateCustomerBalance = async ({
   const startTime = performance.now();
   console.log("REVERSE DEDUCTION ORDER", org.config.reverse_deduction_order);
 
-  
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
     sb,
     internalCustomerId: customer.internal_id,

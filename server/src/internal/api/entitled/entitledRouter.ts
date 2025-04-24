@@ -440,6 +440,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       product_id,
       required_quantity,
       customer_data,
+      send_event,
       event_data,
       entity_id,
     } = req.body;
@@ -483,9 +484,11 @@ entitledRouter.post("", async (req: any, res: any) => {
     // 2. If boolean, return true
     if (feature.type === FeatureType.Boolean) {
       return getBooleanEntitledResult({
+        customer_id,
         res,
         cusEnts,
         feature,
+        org,
       });
     }
 
@@ -498,27 +501,63 @@ entitledRouter.post("", async (req: any, res: any) => {
       org,
     });
 
-    if (allowed && notNullish(event_data) && req.isPublic !== true) {
-      await handleEventSent({
-        req,
-        customer_id: customer_id,
-        customer_data: customer_data,
-        event_data: {
+    if (allowed && req.isPublic !== true) {
+      if (send_event) {
+        await handleEventSent({
+          req: {
+            ...req,
+            body: {
+              ...req.body,
+              value: quantity,
+            },
+          },
           customer_id: customer_id,
-          feature_id: feature_id,
-          ...event_data,
-        },
-      });
+          customer_data: customer_data,
+          event_data: {
+            customer_id: customer_id,
+            feature_id: feature_id,
+            value: quantity,
+            entity_id: entity_id,
+          },
+        });
+      } else if (notNullish(event_data)) {
+        await handleEventSent({
+          req,
+          customer_id: customer_id,
+          customer_data: customer_data,
+          event_data: {
+            customer_id: customer_id,
+            feature_id: feature_id,
+            ...event_data,
+          },
+        });
+      }
     }
 
     if (org.api_version == APIVersion.v1_1) {
+      // Get latest balance...
+
+      let balance;
+      if (creditSystems.length > 0) {
+        let creditSystem = creditSystems[0];
+        balance = balances.find(
+          (balance: any) => balance.feature_id === creditSystem.id
+        );
+      } else {
+        balance = balances.find(
+          (balance: any) => balance.feature_id === feature.id
+        );
+      }
+
       res.status(200).json({
         customer_id,
-        feature_id,
+        feature_id: balance?.feature_id || feature_id,
+        required_quantity: quantity,
         code: SuccessCode.FeatureFound,
 
         allowed,
-        balances,
+        unlimited: balance?.unlimited || false,
+        balance: balance?.unlimited ? null : balance?.balance,
       });
     } else {
       res.status(200).json({

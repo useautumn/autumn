@@ -45,7 +45,9 @@ export const getExistingCusProducts = async ({
     (cp: any) =>
       cp.product.group === product.group &&
       !cp.product.is_add_on &&
-      ACTIVE_STATUSES.includes(cp.status) &&
+      // ACTIVE_STATUSES.includes(cp.status) &&
+      (cp.status == CusProductStatus.Active ||
+        cp.status == CusProductStatus.PastDue) &&
       !isOneOff(cp.customer_prices.map((cp: any) => cp.price))
   );
 
