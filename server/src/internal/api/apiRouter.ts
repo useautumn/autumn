@@ -92,7 +92,7 @@ apiRouter.use("/features", featureApiRouter);
 apiRouter.use("/entitlements", entitlementApiRouter);
 apiRouter.use("/events", eventsRouter);
 apiRouter.use("/prices", priceRouter);
-apiRouter.use("/entitled", entitledRouter);
+
 apiRouter.use("/usage", usageRouter);
 apiRouter.use("/entities", entityRouter);
 apiRouter.use("/migrations", migrationRouter);
@@ -105,5 +105,7 @@ apiRouter.use("/redemptions", redemptionRouter);
 // Cus Product
 apiRouter.use(attachRouter);
 apiRouter.use("/expire", expireRouter);
+apiRouter.use("/entitled", entitledRouter);
+apiRouter.use("/check", entitledRouter);
 
 export { apiRouter };
