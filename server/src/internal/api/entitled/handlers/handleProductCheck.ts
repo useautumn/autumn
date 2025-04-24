@@ -9,6 +9,7 @@ import {
   SuccessCode,
 } from "@autumn/shared";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const handleProductCheck = async ({
   req,
@@ -39,10 +40,21 @@ export const handleProductCheck = async ({
     sb,
     internalCustomerId: customer.internal_id,
     withProduct: true,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    // inStatuses: [
+    //   CusProductStatus.Active,
+    //   CusProductStatus.PastDue,
+    //   CusProductStatus.Expired,
+    //   CusProductStatus.Canceled,
+    // ],
   });
 
-  let cusProduct = cusProducts.find(
+  cusProducts.sort((a: FullCusProduct, b: FullCusProduct) => {
+    if (a.status === b.status) return 0;
+    if (a.status === CusProductStatus.Expired) return 1;
+    else return -1;
+  });
+
+  let cusProduct: FullCusProduct = cusProducts.find(
     (cusProduct: FullCusProduct) => cusProduct.product.id === product_id
   );
 
@@ -56,12 +68,25 @@ export const handleProductCheck = async ({
     return;
   }
 
+  let onTrial =
+    notNullish(cusProduct.trial_ends_at) &&
+    cusProduct.trial_ends_at! > Date.now();
+
   res.status(200).json({
     customer_id,
     code: SuccessCode.ProductFound,
     product_id,
-    allowed: true,
+    allowed:
+      cusProduct.status === CusProductStatus.Active ||
+      cusProduct.status === CusProductStatus.PastDue,
+
+    status: notNullish(cusProduct.canceled_at)
+      ? "canceled"
+      : onTrial
+      ? "trialing"
+      : cusProduct.status,
   });
+
   return;
 
   // // 4. Get balances
