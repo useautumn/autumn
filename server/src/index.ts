@@ -47,12 +47,14 @@ const init = async () => {
     // Log incoming request
 
     try {
+      let headersClone = structuredClone(req.headers);
+      headersClone.authorization = undefined;
+      headersClone.Authorization = undefined;
       logtailAll.info(`${req.method} ${req.originalUrl}`, {
         url: req.originalUrl,
         method: req.method,
-        headers: req.headers,
+        headers: headersClone,
         body: req.body,
-        ip: req.ip,
       });
 
       req.logtail = createLogtail();
