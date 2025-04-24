@@ -19,4 +19,5 @@ export enum SuccessCode {
   CheckoutCreated = "checkout_created",
   NewProductAttached = "new_product_attached",
   OneOffProductAttached = "one_off_product_attached",
+  ProductFound = "product_found",
 }
