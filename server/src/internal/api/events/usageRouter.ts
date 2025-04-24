@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { Customer, ErrCode, Event } from "@autumn/shared";
+import { Customer, ErrCode, Event, SuccessCode } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, nullish } from "@/utils/genUtils.js";
 
@@ -181,7 +181,12 @@ export const handleUsageEvent = async ({
 usageRouter.post("", async (req: any, res: any) => {
   try {
     await handleUsageEvent({ req, setUsage: true });
-    res.status(StatusCodes.OK).json({ success: true });
+    // res.status(StatusCodes.OK).json({ success: true });
+    res.status(StatusCodes.OK).json({
+      code: SuccessCode.FeatureFound,
+      customer_id: req.body.customer_id,
+      feature_id: req.body.feature_id,
+    });
   } catch (error) {
     return handleRequestError({
       req,
