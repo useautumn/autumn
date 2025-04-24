@@ -34,14 +34,34 @@ const init = async () => {
   await QueueManager.getInstance(); // initialize the queue manager
   // await initWorkers();
   const supabaseClient = createSupabaseClient();
+  const logtailAll = createLogtailAll();
 
   app.use((req: any, res, next) => {
     req.sb = supabaseClient;
     req.pg = pgClient;
     req.logger = logger;
+    req.logtailAll = logtailAll;
 
-    req.logtail = createLogtail();
-    req.logtailAll = createLogtailAll();
+    // Log incoming request
+
+    try {
+      let headersClone = structuredClone(req.headers);
+      headersClone.authorization = undefined;
+      headersClone.Authorization = undefined;
+
+      logtailAll.info(`${req.method} ${req.originalUrl}`, {
+        url: req.originalUrl,
+        method: req.method,
+        headers: headersClone,
+        body: req.body,
+      });
+
+      req.logtail = createLogtail();
+    } catch (error) {
+      req.logtail = logtailAll; // fallback
+      console.error(`Error creating req.logtail`);
+      console.error(error);
+    }
 
     res.on("finish", () => {
       req.logtail.flush();
@@ -56,7 +76,6 @@ const init = async () => {
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
     next();
   });
-
   app.use("/webhooks", webhooksRouter);
 
   app.use((req: any, res, next) => {
