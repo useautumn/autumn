@@ -45,16 +45,18 @@ const init = async () => {
     // Log incoming request
 
     try {
-      let headersClone = structuredClone(req.headers);
-      headersClone.authorization = undefined;
-      headersClone.Authorization = undefined;
+      if (logtailAll) {
+        let headersClone = structuredClone(req.headers);
+        headersClone.authorization = undefined;
+        headersClone.Authorization = undefined;
 
-      logtailAll.info(`${req.method} ${req.originalUrl}`, {
-        url: req.originalUrl,
-        method: req.method,
-        headers: headersClone,
-        body: req.body,
-      });
+        logtailAll.info(`${req.method} ${req.originalUrl}`, {
+          url: req.originalUrl,
+          method: req.method,
+          headers: headersClone,
+          body: req.body,
+        });
+      }
 
       req.logtail = createLogtail();
     } catch (error) {
