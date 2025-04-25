@@ -41,6 +41,7 @@ import {
 
 import { differenceInSeconds } from "date-fns";
 import { SuccessCode } from "@autumn/shared";
+import { notNullish } from "@/utils/genUtils.js";
 
 export enum ProrationBehavior {
   Immediately = "immediately",
@@ -397,16 +398,18 @@ export const handleUpgrade = async ({
       keepResetIntervals: newVersion, // keep reset intervals if upgrading version (migrations)
     });
 
-    for (const subId of curCusProduct.subscription_ids!) {
-      try {
-        await stripeCli.subscriptions.cancel(subId);
-      } catch (error) {
-        throw new RecaseError({
-          message: `Handling upgrade (cur product on trial): failed to cancel subscription ${subId}`,
-          code: ErrCode.StripeCancelSubscriptionFailed,
-          statusCode: StatusCodes.BAD_REQUEST,
-          data: error,
-        });
+    if (notNullish(curCusProduct.subscription_ids)) {
+      for (const subId of curCusProduct.subscription_ids!) {
+        try {
+          await stripeCli.subscriptions.cancel(subId);
+        } catch (error) {
+          throw new RecaseError({
+            message: `Handling upgrade (cur product on trial): failed to cancel subscription ${subId}`,
+            code: ErrCode.StripeCancelSubscriptionFailed,
+            statusCode: StatusCodes.BAD_REQUEST,
+            data: error,
+          });
+        }
       }
     }
     return;
