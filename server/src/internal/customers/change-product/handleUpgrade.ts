@@ -351,7 +351,7 @@ export const handleUpgrade = async ({
   const stripeCli = createStripeCli({ org, env: customer.env });
   const stripeSubs = await getStripeSubs({
     stripeCli,
-    subIds: curCusProduct.subscription_ids!,
+    subIds: curCusProduct.subscription_ids,
   });
 
   // 1. If current product has trial and new product has trial, cancel and start new subscription
@@ -374,9 +374,19 @@ export const handleUpgrade = async ({
     !isFreeProduct(attachParams.prices);
 
   if (trialToTrial || trialToPaid || toFreeProduct || paidToFreeProduct) {
-    logger.info(
-      "Upgrading from trial to trial, cancelling and starting new subscription"
-    );
+    if (trialToTrial) {
+      logger.info(
+        `Upgrading from trial to trial, cancelling and starting new subscription`
+      );
+    } else if (trialToPaid) {
+      logger.info(
+        `Upgrading from trial to paid, cancelling and starting new subscription`
+      );
+    } else if (toFreeProduct) {
+      logger.info(
+        `switching to free product, cancelling (if needed) and adding free product`
+      );
+    }
 
     await handleAddProduct({
       req,
