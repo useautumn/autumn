@@ -17,7 +17,7 @@ import { handleOrgCreated } from "@/external/webhooks/clerkWebhooks.js";
 
 const mainRouter = Router();
 
-mainRouter.get("", (req: any, res) => {
+mainRouter.get("", async (req: any, res) => {
   res.status(200).json({ message: "Hello World" });
 });
 

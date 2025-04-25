@@ -1,17 +1,12 @@
 import { Router } from "express";
 import { FeatureService } from "../features/FeatureService.js";
 import { entitlementRouter } from "./entitlementRouter.js";
-import { PriceService } from "../prices/PriceService.js";
+
 import { ProductService } from "./ProductService.js";
-import {
-  CusProductStatus,
-  EntitlementWithFeature,
-  ErrCode,
-  UsageModel,
-} from "@autumn/shared";
+import { ErrCode, UsageModel } from "@autumn/shared";
 import { BillingType } from "@autumn/shared";
 import { FeatureOptions } from "@autumn/shared";
-import { getBillingType } from "../prices/priceUtils.js";
+
 import { OrgService } from "../orgs/OrgService.js";
 import { RewardService } from "../rewards/RewardService.js";
 import { getProductVersionCounts } from "./productUtils.js";
@@ -21,16 +16,14 @@ import { CusProdReadService } from "../customers/products/CusProdReadService.js"
 import { MigrationService } from "../migrations/MigrationService.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { mapToProductV2 } from "./productV2Utils.js";
-import {
-  itemToPriceAndEnt,
-  toFeatureAndPrice,
-} from "./product-items/mapFromItem.js";
-import {
-  isFeaturePriceItem,
-  itemIsFixedPrice,
-} from "./product-items/productItemUtils.js";
-import { toFeaturePriceItem } from "./product-items/mapToItem.js";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+
+import { isFeaturePriceItem } from "./product-items/productItemUtils.js";
+
+import RecaseError, {
+  handleFrontendReqError,
+  handleRequestError,
+} from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -167,6 +160,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
           version ? `(v${version})` : ""
         } not found`,
         code: ErrCode.ProductNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
       });
     }
     let entitlements = product.entitlements;
@@ -181,7 +175,6 @@ productRouter.get("/:productId/data", async (req: any, res) => {
     });
 
     let productV2 = mapToProductV2(product);
-
 
     res.status(200).send({
       product: productV2,
@@ -199,7 +192,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
       existingMigrations,
     });
   } catch (error) {
-    handleRequestError({
+    handleFrontendReqError({
       error,
       req,
       res,
@@ -227,6 +220,7 @@ productRouter.get("/:productId/count", async (req: any, res) => {
           version ? `(v${version})` : ""
         } not found`,
         code: ErrCode.ProductNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
       });
     }
 
@@ -238,7 +232,7 @@ productRouter.get("/:productId/count", async (req: any, res) => {
 
     res.status(200).send(counts);
   } catch (error) {
-    handleRequestError({
+    handleFrontendReqError({
       error,
       req,
       res,
@@ -250,21 +244,28 @@ productRouter.get("/:productId/count", async (req: any, res) => {
 productRouter.use(entitlementRouter);
 
 productRouter.post("/product_options", async (req: any, res: any) => {
-  const { items } = req.body;
+  try {
+    const { items } = req.body;
 
-  const features = await FeatureService.getFromReq(req);
-  const featureToOptions: { [key: string]: FeatureOptions } = {};
+    const features = await FeatureService.getFromReq(req);
+    const featureToOptions: { [key: string]: FeatureOptions } = {};
 
-  for (const item of items) {
-    if (isFeaturePriceItem(item) && item.usage_model == UsageModel.Prepaid) {
-      featureToOptions[item.feature_id] = {
-        feature_id: item.feature_id,
-        quantity: 0,
-      };
+    for (const item of items) {
+      if (isFeaturePriceItem(item) && item.usage_model == UsageModel.Prepaid) {
+        featureToOptions[item.feature_id] = {
+          feature_id: item.feature_id,
+          quantity: 0,
+        };
+      }
     }
+
+    res.status(200).send({ options: Object.values(featureToOptions) });
+  } catch (error) {
+    handleFrontendReqError({
+      error,
+      req,
+      res,
+      action: "Get product options",
+    });
   }
-
-
-  res.status(200).send({ options: Object.values(featureToOptions) });
 });
-
