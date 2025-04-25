@@ -10,7 +10,6 @@ import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 
 import pg from "pg";
 
-import { initWorkers } from "./queue/queue.js";
 import http from "http";
 import { publicRouter } from "./internal/public/publicRouter.js";
 import { initLogger } from "./errors/logger.js";
@@ -22,13 +21,14 @@ import {
   createLogtailAll,
 } from "./external/logtail/logtailUtils.js";
 import { format } from "date-fns";
-import { handleRequestError } from "./utils/errorUtils.js";
 
 const init = async () => {
   const app = express();
 
   const logger = initLogger();
   const server = http.createServer(app);
+  server.keepAliveTimeout = 120000; // 120 seconds
+  server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
 
   const pgClient = new pg.Client(process.env.SUPABASE_CONNECTION_STRING || "");
   await pgClient.connect();
@@ -114,7 +114,29 @@ const init = async () => {
   });
 };
 
-init();
+import cluster from "cluster";
+import os from "os";
+let numCPUs = os.cpus().length;
+
+if (cluster.isPrimary) {
+  console.log(`Master ${process.pid} is running`);
+  console.log("Number of CPUs", numCPUs);
+  let numWorkers = Math.min(numCPUs, 3);
+
+  for (let i = 0; i < numWorkers; i++) {
+    cluster.fork();
+  }
+
+  cluster.on("exit", (worker, code, signal) => {
+    console.log(`Worker ${worker.process.pid} died`);
+    cluster.fork();
+  });
+} else {
+  init();
+}
+
+// console.log("Number of CPUs", numCPUs);
+// init();
 
 // process.on("unhandledRejection", (reason, promise) => {
 //   try {
