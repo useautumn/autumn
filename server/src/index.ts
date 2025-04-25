@@ -128,7 +128,14 @@ if (cluster.isPrimary) {
   }
 
   cluster.on("exit", (worker, code, signal) => {
-    console.log(`Worker ${worker.process.pid} died`);
+    try {
+      let logtail = createLogtail();
+      logtail.error(`WORKER DIED: ${worker.process.pid}`);
+      logtail.flush();
+    } catch (error) {
+      console.log("Error sending log to logtail", error);
+    }
+    // LOG in Render
     cluster.fork();
   });
 } else {

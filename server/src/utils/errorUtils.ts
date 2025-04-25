@@ -1,5 +1,6 @@
 import { ErrCode } from "@autumn/shared";
 import chalk from "chalk";
+import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
 import { ZodError } from "zod";
 
@@ -162,5 +163,51 @@ export const handleRequestError = ({
     console.log(`Request: ${req.originalUrl}`);
     console.log(`Body: ${req.body}`);
     console.log(`Log Error: ${error}`);
+  }
+};
+
+export const handleFrontendReqError = ({
+  error,
+  req,
+  res,
+  action,
+}: {
+  error: any;
+  req: any;
+  res: any;
+  action: string;
+}) => {
+  try {
+    let logger = req.logtail;
+    req.logtail.use((log: any) => {
+      return {
+        ...log,
+        from_frontend: true,
+      };
+    });
+
+    if (
+      error instanceof RecaseError &&
+      error.statusCode == StatusCodes.NOT_FOUND
+    ) {
+      req.logtail.warn(
+        `(frontend) ${req.method} ${req.originalUrl}: not found`
+      );
+      res.status(404).json({
+        message: error.message,
+        code: error.code,
+      });
+      return;
+    }
+
+    logger.warn("--------------------------------");
+    logger.warn("FRONTEND REQUEST WARNING");
+    logger.warn(`${req.method} ${req.originalUrl}`, {
+      type: "frontend_request",
+    });
+    logger.warn(`${action}`);
+    logger.warn(`${error}`);
+  } catch (error) {
+    console.log("Failed to log error / warning");
   }
 };

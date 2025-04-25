@@ -9,7 +9,10 @@ import {
   FullCustomerEntitlement,
   FullCustomerPrice,
 } from "@autumn/shared";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError, {
+  handleFrontendReqError,
+  handleRequestError,
+} from "@/utils/errorUtils.js";
 import { RewardService } from "../rewards/RewardService.js";
 import { EventService } from "../api/events/EventService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
@@ -25,19 +28,24 @@ import {
 } from "../products/productV2Utils.js";
 import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
 import { CusReadService } from "./CusReadService.js";
+import { StatusCodes } from "http-status-codes";
 
 export const cusRouter = Router();
 
 cusRouter.get("", async (req: any, res: any) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const { data: customers, count } = await CusService.getCustomers(
-    req.sb,
-    req.orgId,
-    req.env,
-    page
-  );
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const { data: customers, count } = await CusService.getCustomers(
+      req.sb,
+      req.orgId,
+      req.env,
+      page
+    );
 
-  res.status(200).json({ customers, totalCount: count });
+    res.status(200).json({ customers, totalCount: count });
+  } catch (error) {
+    handleFrontendReqError({ req, error, res, action: "get customers" });
+  }
 });
 
 cusRouter.post("/search", async (req: any, res: any) => {
@@ -61,7 +69,8 @@ cusRouter.post("/search", async (req: any, res: any) => {
     // console.log("customers", customers);
     res.status(200).json({ customers, totalCount: count });
   } catch (error) {
-    handleRequestError({ req, error, res, action: "search customers" });
+    // handleRequestError({ req, error, res, action: "search customers" });
+    handleFrontendReqError({ req, error, res, action: "search customers" });
   }
 });
 
@@ -95,7 +104,8 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
     if (!customer) {
       throw new RecaseError({
         message: "Customer not found",
-        code: "CUSTOMER_NOT_FOUND",
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
       });
     }
 
@@ -212,7 +222,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       entities,
     });
   } catch (error) {
-    handleRequestError({ req, error, res, action: "get customer data" });
+    handleFrontendReqError({ req, error, res, action: "get customer data" });
   }
 });
 
@@ -229,6 +239,14 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
       idOrInternalId: customer_id,
       isFull: true,
     });
+
+    if (!internalCustomer) {
+      throw new RecaseError({
+        message: "Customer not found",
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
 
     // Get all redemptions for this customer
     let [referred, redeemed] = await Promise.all([
@@ -262,20 +280,17 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
       );
     }
 
-    if (!internalCustomer) {
-      throw new RecaseError({
-        message: "Customer not found",
-        code: ErrCode.CustomerNotFound,
-      });
-    }
-
     res.status(200).send({
       referred,
       redeemed,
     });
   } catch (error) {
-    console.error("Error getting customer referrals", error);
-    res.status(500).send({ error: "Error getting customer referrals" });
+    handleFrontendReqError({
+      req,
+      error,
+      res,
+      action: "get customer referrals",
+    });
   }
 });
 
@@ -306,6 +321,7 @@ cusRouter.get(
         throw new RecaseError({
           message: "Customer not found",
           code: "CUSTOMER_NOT_FOUND",
+          statusCode: StatusCodes.NOT_FOUND,
         });
       }
 
@@ -372,7 +388,12 @@ cusRouter.get(
 
       res.status(200).json({ customer, product, features, numVersions });
     } catch (error) {
-      handleRequestError({ req, error, res, action: "get customer product" });
+      handleFrontendReqError({
+        req,
+        error,
+        res,
+        action: "get customer product",
+      });
     }
   }
 );
