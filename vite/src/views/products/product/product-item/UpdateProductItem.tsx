@@ -26,7 +26,7 @@ export default function UpdateProductItem({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) {
-  let { product, setProduct } = useProductContext();
+  let { product, setProduct, features } = useProductContext();
 
   // let [item, setItem] = useState<ProductItem>(
   //   selectedItem || defaultProductItem
@@ -34,7 +34,11 @@ export default function UpdateProductItem({
   let [showCreateFeature, setShowCreateFeature] = useState(false);
 
   let handleUpdateProductItem = (show: any) => {
-    const validatedItem = validateProductItem(selectedItem!, show);
+    const validatedItem = validateProductItem({
+      item: selectedItem!,
+      show,
+      features,
+    });
     if (!validatedItem) return;
     if (notNullish(selectedIndex)) {
       let newProduct = { ...product };

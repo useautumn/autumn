@@ -295,6 +295,7 @@ export const setupOrg = async ({
         prices,
         entitlements: entWithFeatures,
         allowFeatureMatch: true,
+        features: newFeatures!,
       });
 
       try {

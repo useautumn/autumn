@@ -3,8 +3,8 @@ import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Input } from "@/components/ui/input";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { cn } from "@/lib/utils";
-import { PlusIcon, XIcon } from "lucide-react";
-import { Expression, MeteredConfig } from "@autumn/shared";
+import { Clock, InfoIcon, PlusIcon, XIcon, Zap } from "lucide-react";
+import { Expression, FeatureUsageType, MeteredConfig } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -15,6 +15,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Label } from "@radix-ui/react-dropdown-menu";
+import { Switch } from "@/components/ui/switch";
 
 export function FeatureConfig({
   feature,
@@ -56,6 +58,7 @@ export function FeatureConfig({
               value: [],
             },
           ],
+          usage_type: FeatureUsageType.Single,
           // aggregate: {
           //   type: "count",
           //   property: null,
@@ -64,7 +67,7 @@ export function FeatureConfig({
   );
 
   const [showEventName, setShowEventName] = useState(
-    feature.config.filters[0].value.length > 0
+    feature.config && feature.config.filters[0].value.length > 0
   );
 
   const [idChanged, setIdChanged] = useState(!!feature.id);
@@ -101,6 +104,44 @@ export function FeatureConfig({
             "A feature flag that can be either enabled or disabled"}
         </p>
       </Tabs>
+      {featureType === FeatureType.Metered && (
+        <div className="w-full">
+          <div className="flex flex-col gap-2">
+            <Tabs
+              defaultValue={FeatureUsageType.Single}
+              value={meteredConfig.usage_type}
+              onValueChange={(value) => {
+                setMeteredConfig({
+                  ...meteredConfig,
+                  usage_type: value as FeatureUsageType,
+                });
+              }}
+            >
+              <TabsList className="-mx-2">
+                <TabsTrigger
+                  value={FeatureUsageType.Single}
+                  className="flex items-center gap-1"
+                >
+                  <Zap className="h-3 w-3 text-t3" />
+                  <span>Single Use</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value={FeatureUsageType.Continuous}
+                  className="flex items-center gap-1"
+                >
+                  <Clock className="h-3 w-3 text-t3" />
+                  <span>Continuous Use</span>
+                </TabsTrigger>
+              </TabsList>
+              <p className="text-sm text-t3 ">
+                {meteredConfig.usage_type === FeatureUsageType.Continuous
+                  ? "This feature is used over time like seats or projects"
+                  : "This feature can only be used once like API calls or credits"}
+              </p>
+            </Tabs>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2 w-full">
         <div className="w-full">
@@ -134,6 +175,7 @@ export function FeatureConfig({
           />
         </div>
       </div>
+
       {/* Filter */}
       {featureType === FeatureType.Metered && (
         <>

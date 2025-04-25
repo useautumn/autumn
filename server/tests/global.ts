@@ -6,9 +6,9 @@ import {
   AppEnv,
   BillingInterval,
   CouponDurationType,
-  DiscountType,
   EntInterval,
   Feature,
+  FeatureUsageType,
   RewardReceivedBy,
   RewardTriggerEvent,
   RewardType,
@@ -37,16 +37,19 @@ export const features: Record<string, Feature & { eventName: string }> = {
     aggregateType: AggregateType.Sum,
     groupBy: "user_id",
     eventName: "metered_1",
+    usageType: FeatureUsageType.Single,
   }),
   infinite1: initFeature({
     id: "infinite1",
     type: FeatureType.Metered,
+    usageType: FeatureUsageType.Single,
   }),
   metered2: initFeature({
     id: "metered2",
     type: FeatureType.Metered,
     aggregateType: AggregateType.Count,
     eventName: "metered_2",
+    usageType: FeatureUsageType.Single,
   }),
 
   // GPU SYSTEM
@@ -54,17 +57,20 @@ export const features: Record<string, Feature & { eventName: string }> = {
     id: "gpu1",
     type: FeatureType.Metered,
     groupBy: "user_id",
+    usageType: FeatureUsageType.Single,
   }),
   gpu2: initFeature({
     id: "gpu2",
     type: FeatureType.Metered,
     groupBy: "user_id",
+    usageType: FeatureUsageType.Single,
   }),
 
   // In arrear prorated
   seats: initFeature({
     id: "seats",
     type: FeatureType.Metered,
+    usageType: FeatureUsageType.Continuous,
   }),
 };
 
@@ -84,6 +90,7 @@ export const creditSystems = {
         credit_amount: 0.0213,
       },
     ],
+    usageType: FeatureUsageType.Single,
   }),
 };
 

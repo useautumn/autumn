@@ -561,12 +561,14 @@ export const productsAreDifferent = ({
 
 export const productsAreDifferent2 = (
   newProduct: ProductV2,
-  oldProduct: FullProduct
+  oldProduct: FullProduct,
+  features: Feature[]
 ) => {
   let newProductItems = newProduct.items;
   let oldProductItems = mapToProductItems({
     prices: oldProduct.prices,
     entitlements: oldProduct.entitlements,
+    features,
   });
 
   if (newProductItems.length !== oldProductItems.length) {

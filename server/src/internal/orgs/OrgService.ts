@@ -66,11 +66,16 @@ export class OrgService {
       .single();
 
     if (error) {
-      throw new RecaseError({
-        message: "Failed to get org from supabase",
-        code: ErrCode.OrgNotFound,
-        statusCode: 404,
-      });
+      if (error.code === "PGRST116") {
+        throw new RecaseError({
+          message: "Failed to get org from supabase",
+          code: ErrCode.OrgNotFound,
+          statusCode: 404,
+          data: error,
+        });
+      } else {
+        throw error;
+      }
     }
 
     let config = data.config || {};

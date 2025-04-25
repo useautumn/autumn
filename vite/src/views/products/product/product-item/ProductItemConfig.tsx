@@ -1,7 +1,9 @@
 import {
   Feature,
   FeatureType,
+  FeatureUsageType,
   Infinite,
+  ProductItemFeatureType,
   ProductItemInterval,
   TierInfinite,
 } from "@autumn/shared";
@@ -9,7 +11,7 @@ import { useEffect, useState } from "react";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
-import { useNavigate } from "react-router";
+
 import { cn } from "@/lib/utils";
 import { useProductItemContext } from "./ProductItemContext";
 import { getShowParams } from "@/utils/product/productItemUtils";
@@ -53,6 +55,20 @@ export const ProductItemConfig = () => {
   useEffect(() => {
     setShow(getShowParams(item));
   }, []);
+
+  useEffect(() => {
+    let feature = features.find((f: any) => f.id == item.feature_id);
+    if (feature) {
+      if (feature.type == FeatureType.Boolean) {
+        setItem({ ...item, feature_type: ProductItemFeatureType.Static });
+      } else {
+        setItem({
+          ...item,
+          feature_type: feature.config?.usage_type,
+        });
+      }
+    }
+  }, [item.feature_id]);
 
   // return <></>;
 

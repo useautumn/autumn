@@ -174,7 +174,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
       return b.name.localeCompare(a.name);
     });
 
-    let productV2 = mapToProductV2(product);
+    let productV2 = mapToProductV2({ product, features });
 
     res.status(200).send({
       product: productV2,

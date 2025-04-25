@@ -1,10 +1,8 @@
-import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
-  uncancelCurrentProduct,
   cancelCusProductSubscriptions,
   expireAndActivate,
   fullCusProductToProduct,
@@ -44,9 +42,12 @@ export const expireCusProduct = async ({
   );
 
   // If current product is default, can't expire it
-  if (cusProduct.product.is_default) {
+  if (
+    cusProduct.product.is_default &&
+    cusProduct.status == CusProductStatus.Active
+  ) {
     throw new RecaseError({
-      message: `Product ${cusProduct.product.name} is default and can't be expired`,
+      message: `Product ${cusProduct.product.name} is default and active and can't be expired`,
       code: ErrCode.InvalidRequest,
       statusCode: StatusCodes.BAD_REQUEST,
     });

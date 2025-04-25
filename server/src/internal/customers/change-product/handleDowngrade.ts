@@ -265,7 +265,19 @@ export const handleDowngrade = async ({
     },
   });
 
-  // For scheduled products that are not in same interval, remove from schedule
+  // 3. Update cus product
+  logger.info("3. Inserting new full cus product (starts at period end)");
+  await createFullCusProduct({
+    sb: req.sb,
+    attachParams: attachToInsertParams(attachParams, product),
+    startsAt: latestPeriodEnd * 1000,
+    subscriptionScheduleIds: scheduledIds,
+    nextResetAt: latestPeriodEnd * 1000,
+    disableFreeTrial: true,
+    isDowngrade: true,
+  });
+
+  // 4. For scheduled products that are not in same interval, remove from schedule
   for (const scheduleObj of schedules) {
     const { schedule, interval } = scheduleObj;
 
@@ -286,18 +298,6 @@ export const handleDowngrade = async ({
       env: attachParams.customer.env,
     });
   }
-
-  // 4. Update cus product
-  logger.info("3. Inserting new full cus product (starts at period end)");
-  await createFullCusProduct({
-    sb: req.sb,
-    attachParams: attachToInsertParams(attachParams, product),
-    startsAt: latestPeriodEnd * 1000,
-    subscriptionScheduleIds: scheduledIds,
-    nextResetAt: latestPeriodEnd * 1000,
-    disableFreeTrial: true,
-    isDowngrade: true,
-  });
 
   if (attachParams.org.api_version! >= APIVersion.v1_1) {
     res.status(200).json(

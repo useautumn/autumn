@@ -1,12 +1,24 @@
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { AppEnv, CusProductStatus, Organization } from "@autumn/shared";
-import Stripe from "stripe";
+import {
+  AppEnv,
+  CusProductStatus,
+  FullCusProduct,
+  Organization,
+} from "@autumn/shared";
+
 import { createStripeCli } from "../utils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
+import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 
 export const handleSubscriptionUpdated = async ({
   sb,
   org,
   subscription,
+  previousAttributes,
   env,
   logger,
 }: {
@@ -14,6 +26,7 @@ export const handleSubscriptionUpdated = async ({
   org: Organization;
   env: AppEnv;
   subscription: any;
+  previousAttributes: any;
   logger: any;
 }) => {
   let subStatusMap: {
@@ -65,8 +78,111 @@ export const handleSubscriptionUpdated = async ({
     );
   }
 
-  // console.log("Cancel on past due:", org.config.cancel_on_past_due);
-  // throw new Error("test");
+  // Handle if canceled
+  let isCanceled =
+    nullish(previousAttributes?.canceled_at) &&
+    !nullish(subscription.canceled_at);
+
+  if (isCanceled && updatedCusProducts.length > 0) {
+    let allDefaultProducts = await ProductService.getFullDefaultProducts({
+      sb,
+      orgId: org.id,
+      env,
+    });
+
+    let cusProducts = await CusService.getFullCusProducts({
+      sb,
+      internalCustomerId: updatedCusProducts[0].customer.internal_id,
+      withProduct: true,
+      withPrices: true,
+      inStatuses: [CusProductStatus.Scheduled],
+    });
+
+    let defaultProducts = allDefaultProducts.filter((p) =>
+      cusProducts.some((cp: FullCusProduct) => cp.product.group == p.group)
+    );
+
+    let customer = updatedCusProducts[0].customer;
+
+    if (defaultProducts.length > 0) {
+      console.log(
+        `subscription.updated: canceled -> attempting to schedule default products: ${defaultProducts
+          .map((p) => p.name)
+          .join(", ")}`
+      );
+    }
+
+    for (let product of defaultProducts) {
+      let alreadyScheduled = cusProducts.some(
+        (cp: FullCusProduct) => cp.product.id == product.id
+      );
+
+      if (alreadyScheduled) {
+        continue;
+      }
+
+      await createFullCusProduct({
+        sb,
+        attachParams: {
+          customer,
+          product,
+          prices: product.prices,
+          entitlements: product.entitlements,
+          freeTrial: product.free_trial || null,
+          optionsList: [],
+          entities: [],
+          org,
+        },
+        startsAt: subscription.current_period_end * 1000,
+      });
+    }
+  }
+
+  let uncanceled =
+    notNullish(previousAttributes?.canceled_at) &&
+    nullish(subscription.canceled_at);
+
+  if (uncanceled && updatedCusProducts.length > 0) {
+    let customer = updatedCusProducts[0].customer;
+    let allCusProducts = await CusService.getFullCusProducts({
+      sb,
+      internalCustomerId: customer.internal_id,
+      withProduct: true,
+      withPrices: true,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
+    });
+
+    let { curScheduledProduct } = await getExistingCusProducts({
+      product: updatedCusProducts[0].product,
+      cusProducts: allCusProducts,
+    });
+
+    if (curScheduledProduct) {
+      console.log("subscription.updated: uncanceled -> removing scheduled");
+      let stripeCli = createStripeCli({
+        org,
+        env,
+      });
+      await cancelFutureProductSchedule({
+        sb,
+        org,
+        stripeCli,
+        cusProducts: allCusProducts,
+        product: updatedCusProducts[0].product,
+        logger,
+        env,
+      });
+
+      await CusProductService.delete({
+        sb,
+        cusProductId: curScheduledProduct.id,
+      });
+    }
+  }
 
   // Cancel subscription immediately
   if (subscription.status === "past_due" && org.config.cancel_on_past_due) {

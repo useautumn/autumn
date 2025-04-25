@@ -1,3 +1,5 @@
+import { FeatureUsageType } from "./meteredModels.js";
+
 export type CreditSchemaItem = {
   metered_feature_id: string;
   feature_amount: number;
@@ -10,6 +12,7 @@ export type CreditSchemaItem = {
 
 export type CreditSystemConfig = {
   schema: CreditSchemaItem[];
+  usage_type: FeatureUsageType;
 };
 
 export type CreditSystem = {

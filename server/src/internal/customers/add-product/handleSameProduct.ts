@@ -16,7 +16,6 @@ import { CusProductService } from "../products/CusProductService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
 import {
-  getStripeSchedules,
   getStripeSubs,
   getUsageBasedSub,
 } from "@/external/stripe/stripeSubUtils.js";
@@ -24,10 +23,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
 import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
-import {
-  cancelFutureProductSchedule,
-  getFilteredScheduleItems,
-} from "../change-product/scheduleUtils.js";
+import { cancelFutureProductSchedule } from "../change-product/scheduleUtils.js";
 import {
   handleUpgrade,
   ProrationBehavior,

@@ -26,10 +26,16 @@ export const GroupBySchema = z.object({
   property: z.string(),
 });
 
+export enum FeatureUsageType {
+  Single = "single_use",
+  Continuous = "continuous_use",
+}
+
 export const MeteredConfigSchema = z.object({
   filters: z.array(ExpressionSchema),
   aggregate: AggregateSchema,
   group_by: GroupBySchema.nullable(),
+  usage_type: z.enum([FeatureUsageType.Single, FeatureUsageType.Continuous]),
 });
 
 export type MeteredConfig = z.infer<typeof MeteredConfigSchema>;

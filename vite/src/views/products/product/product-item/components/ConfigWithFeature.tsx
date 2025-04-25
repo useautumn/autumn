@@ -15,7 +15,13 @@ import { Button } from "@/components/ui/button";
 import TieredPrice from "../TieredPrice";
 
 import { useProductContext } from "../../ProductContext";
-import { Feature, FeatureType, Infinite } from "@autumn/shared";
+import {
+  Feature,
+  FeatureType,
+  FeatureUsageType,
+  Infinite,
+  ProductItemFeatureType,
+} from "@autumn/shared";
 import { itemIsUnlimited } from "@/utils/product/productItemUtils";
 import { SelectCycle } from "./SelectCycle";
 import MoreMenuButton, { MoreMenuPriceButton } from "../MoreMenuButton";
@@ -129,15 +135,6 @@ export const ConfigWithFeature = ({
                       >
                         ♾️
                       </ToggleDisplayButton>
-                      {/* <Button
-                      isIcon
-                      size="sm"
-                      variant="ghost"
-                      className="w-fit text-t3"
-                      onClick={() => setShow({ ...show, allowance: false })}
-                    >
-                      <X size={12} className="text-t3" />
-                    </Button> */}
                     </div>
                   </div>
                 </div>
@@ -148,7 +145,6 @@ export const ConfigWithFeature = ({
                     "transition-all duration-400 ease-in-out whitespace-nowrap w-0 max-w-0 opacity-0 z-[-1] overflow-hidden -ml-2",
                     show.perEntity &&
                       "opacity-100 max-w-full w-full max-h-[200px] z-10 ml-0"
-                    // : "opacity-0 z-[-1] max-h-7 overflow-hidden"
                   )}
                 >
                   <PerEntityConfig />
@@ -180,30 +176,16 @@ export const ConfigWithFeature = ({
                       : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden"
                   )}
                 >
-                  <SelectCycle show={show} setShow={setShow} type="reset" />
+                  {item.feature_type == ProductItemFeatureType.SingleUse &&
+                    !show.price && (
+                      <SelectCycle show={show} setShow={setShow} type="reset" />
+                    )}
                 </div>
               </div>
               {/* </div> */}
 
               {/* PRICE CONFIG */}
-              {/* <div className="relative w-full">
-              <div
-                className={cn(
-                  "transition-all duration-400 ease-in-out absolute top-0 left-0",
-                  !show.price
-                    ? "h-[32px] z-10"
-                    : "opacity-0 overflow-hidden z-[-1]"
-                )}
-              >
-                <ToggleDisplayButton
-                  label="Add Price"
-                  show={show.price}
-                  onClick={handleAddPrice}
-                  className="text-sm"
-                >
-                  Add Price
-                </ToggleDisplayButton>
-              </div> */}
+
               <div
                 className={cn(
                   "transition-all duration-300 ease-in-out whitespace-nowrap",
@@ -227,15 +209,6 @@ export const ConfigWithFeature = ({
               </div>
               {/* </div> */}
             </div>
-            {/* {selectedFeature && (
-        <UsageResetTooltip
-          showCycle={showCycle}
-          selectedFeature={selectedFeature}
-          showPrice={showPrice}
-          priceConfig={priceConfig}
-          fields={fields}
-        />
-      )} */}
           </div>
         </div>
       )}

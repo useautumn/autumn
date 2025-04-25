@@ -1,45 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-
 import { toast } from "sonner";
-import {
-  useOrganization,
-  useOrganizationList,
-  useUser,
-} from "@clerk/clerk-react";
-import { Navigate, useNavigate, useSearchParams } from "react-router";
+import { useOrganization } from "@clerk/clerk-react";
+import { useSearchParams } from "react-router";
 import Step from "@/components/general/OnboardingStep";
-import ConnectStripe from "./ConnectStripe";
-import { FeaturesTable } from "../features/FeaturesTable";
-import { AppEnv, Feature } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
-import { FeaturesContext } from "../features/FeaturesContext";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import ConfettiExplosion from "react-confetti-explosion";
-import { CreateFeature } from "../features/CreateFeature";
-import { ProductsContext } from "../products/ProductsContext";
-import { ProductsTable } from "../products/ProductsTable";
-import CreateProduct from "../products/CreateProduct";
-import CreateAPIKey from "../developer/CreateAPIKey";
-import { DevContext } from "../developer/DevContext";
-import { CodeDisplay } from "@/components/general/CodeDisplay";
-
-import {
-  faBuilding,
-  faExternalLinkAlt,
-} from "@fortawesome/pro-duotone-svg-icons";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { CopyPublishableKey } from "../developer/DevView";
 import { useEnv } from "@/utils/envUtils";
-import {
-  ArrowUpRight,
-  ArrowUpRightFromSquare,
-  Book,
-  Building,
-} from "lucide-react";
+import { Book } from "lucide-react";
 import { CreateOrgStep } from "./onboarding-steps/01_CreateOrg";
 import { ConnectStripeStep } from "./onboarding-steps/02_ConnectStripe";
 import { CreateProductStep } from "./onboarding-steps/03_CreateProduct";

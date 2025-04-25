@@ -31,7 +31,7 @@ export const SelectCycle = ({
   return (
     <div className={cn("flex flex-col w-full ")}>
       <FieldLabel className="flex items-center gap-2">
-        {type == "price" ? "Billing Interval" : "Reset Interval"}
+        {"Billing Interval"}
         {type == "reset" && (
           <Tooltip delayDuration={400}>
             <TooltipTrigger asChild>
@@ -79,14 +79,7 @@ export const SelectCycle = ({
                     value == BillingInterval.OneOff
                       ? null
                       : (value as BillingInterval),
-                  reset_usage_on_billing:
-                    value == BillingInterval.OneOff &&
-                    item.reset_usage_on_billing
-                      ? false
-                      : item.reset_usage_on_billing,
                 });
-                // value == BillingInterval.OneOff &&
-                //   setShow({ ...show, cycle: false });
               }}
             >
               <SelectTrigger>
@@ -109,28 +102,26 @@ export const SelectCycle = ({
       ) : (
         <div className="flex flex-col gap-2">
           <div className="flex gap-2 items-center">
-            <Select
-              disabled={item.included_usage == Infinite}
-              value={itemToEntInterval(item) as string}
-              onValueChange={(value) => {
-                setItem({
-                  ...item,
-                  interval:
-                    value == EntInterval.Lifetime
-                      ? show.price
-                        ? item.interval
-                        : null
-                      : (value as EntInterval),
-                  reset_usage_on_billing: value != EntInterval.Lifetime,
-                });
-                // value == EntInterval.Lifetime &&
-                //   setShow({ ...show, cycle: false });
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select reset" />
-              </SelectTrigger>
-              {!show.price ? (
+            {!show.price && (
+              <Select
+                disabled={item.included_usage == Infinite}
+                value={itemToEntInterval(item) as string}
+                onValueChange={(value) => {
+                  setItem({
+                    ...item,
+                    interval:
+                      value == EntInterval.Lifetime
+                        ? show.price
+                          ? item.interval
+                          : null
+                        : (value as EntInterval),
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select reset" />
+                </SelectTrigger>
+
                 <SelectContent>
                   {Object.values(EntInterval).map((interval) => (
                     <SelectItem key={interval} value={interval}>
@@ -142,8 +133,9 @@ export const SelectCycle = ({
                     </SelectItem>
                   ))}
                 </SelectContent>
-              ) : (
-                <SelectContent>
+              </Select>
+            )}
+            {/* <SelectContent>
                   <SelectItem value={EntInterval.Lifetime}>no reset</SelectItem>
                   {item.interval && (
                     <SelectItem value={item.interval}>
@@ -151,24 +143,7 @@ export const SelectCycle = ({
                       <span className="text-t3">(per {item.interval})</span>
                     </SelectItem>
                   )}
-                </SelectContent>
-              )}
-            </Select>
-            {/* <Button
-              isIcon
-              size="sm"
-              variant="ghost"
-              className="w-fit text-t3"
-              onClick={() => {
-                setShowCycle(false);
-                setItem({
-                  ...item,
-                  reset_usage_on_billing: false,
-                });
-              }}
-            >
-              <X size={12} className="text-t3" />
-            </Button> */}
+                </SelectContent> */}
           </div>
         </div>
       )}
