@@ -5,6 +5,7 @@ import { CreditSystemRowToolbar } from "./CreditSystemRowToolbar";
 import { useFeaturesContext } from "../features/FeaturesContext";
 import UpdateCreditSystem from "./UpdateCreditSystem";
 import { Item, Row } from "@/components/general/TableGrid";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export const CreditSystemsTable = () => {
   const { creditSystems } = useFeaturesContext();
@@ -51,7 +52,15 @@ export const CreditSystemsTable = () => {
           onClick={() => handleRowClick(creditSystem.id)}
         >
           <Item className="col-span-4">
-            <span className="truncate font-medium">{creditSystem.name}</span>
+            <span className="truncate font-medium">
+              <AdminHover
+                texts={[
+                  { key: "Internal ID", value: creditSystem.internal_id || "" },
+                ]}
+              >
+                {creditSystem.name}
+              </AdminHover>
+            </span>
           </Item>
           <Item className="col-span-4">
             <span className="truncate font-mono">{creditSystem.id}</span>

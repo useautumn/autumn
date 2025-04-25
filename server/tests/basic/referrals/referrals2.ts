@@ -155,7 +155,7 @@ describe(`${chalk.yellowBright(
     });
 
     // 3. Advance test clock to 1 month + 7 days from start (trigger new invoice)
-    curTime = addDays(curTime, 7);
+    curTime = addDays(curTime, 8);
     await advanceTestClock({
       testClockId,
       advanceTo: curTime.getTime(),

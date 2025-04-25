@@ -1,3 +1,4 @@
+import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
   mapToProductItems,
@@ -29,12 +30,15 @@ export const handleGetProduct = async (req: any, res: any) =>
         });
       }
 
-      let product = await ProductService.getFullProduct({
-        sb,
-        orgId,
-        env,
-        productId,
-      });
+      let [product, features] = await Promise.all([
+        ProductService.getFullProduct({
+          sb,
+          orgId,
+          env,
+          productId,
+        }),
+        FeatureService.getFromReq(req),
+      ]);
 
       if (!product) {
         throw new RecaseError({
@@ -49,7 +53,6 @@ export const handleGetProduct = async (req: any, res: any) =>
       if (schemaVersion == 1) {
         res.status(200).json(product);
       } else {
-        // let v2Product = mapToProductV2(product);
         res.status(200).json(
           ProductResponseSchema.parse({
             ...product,
@@ -59,6 +62,7 @@ export const handleGetProduct = async (req: any, res: any) =>
             items: mapToProductItems({
               prices: product.prices,
               entitlements: product.entitlements,
+              features: features,
             }).map((item) => {
               // console.log(item);
               return ProductItemResponseSchema.parse(item);

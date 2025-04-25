@@ -1,7 +1,6 @@
 import {
   AllowanceType,
   BillWhen,
-  EntInterval,
   EntitlementWithFeature,
   FeatureType,
   FixedPriceConfig,
@@ -9,10 +8,9 @@ import {
   Price,
   ProductItem,
   UsageModel,
-  ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
-  Product,
+  ProductItemFeatureType,
 } from "@autumn/shared";
 
 import { nullish } from "@/utils/genUtils.js";
@@ -54,8 +52,6 @@ export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
     // Stored in backend
     entitlement_id: ent.id,
     created_at: ent.created_at,
-
-    // reset_usage_on_billing: true,
   };
 };
 
@@ -76,10 +72,11 @@ export const toFeaturePriceItem = ({
 
   let item: ProductItem = {
     feature_id: ent.feature.id,
+    feature_type:
+      ent.feature.config?.usage_type || ProductItemFeatureType.SingleUse,
+
     included_usage: ent.allowance,
     interval: billingToItemInterval(config.interval!),
-
-    reset_usage_on_billing: ent.interval !== EntInterval.Lifetime,
 
     price: null,
     tiers,

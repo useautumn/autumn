@@ -12,18 +12,22 @@ import { useState } from "react";
 import { ProductItemConfig } from "./ProductItemConfig";
 import { ProductItemContext } from "./ProductItemContext";
 import { CreateFeature } from "@/views/features/CreateFeature";
-import { Feature, ProductItemInterval, ProductItem } from "@autumn/shared";
+import {
+  Feature,
+  ProductItemInterval,
+  ProductItem,
+  ProductItemFeatureType,
+} from "@autumn/shared";
 import { useProductContext } from "../ProductContext";
-import { toast } from "sonner";
-import { invalidNumber } from "@/utils/genUtils";
+
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
 
 export let defaultProductItem: ProductItem = {
   feature_id: null,
+
   included_usage: null,
 
   interval: ProductItemInterval.Month,
-  reset_usage_on_billing: true,
 
   // Price config
   price: null,
@@ -40,7 +44,6 @@ let defaultPriceItem: ProductItem = {
   included_usage: null,
 
   interval: ProductItemInterval.Month,
-  reset_usage_on_billing: true,
 
   // Price config
   price: 0,
@@ -59,12 +62,14 @@ export function CreateProductItem() {
   const { features, product, setProduct, setFeatures } = useProductContext();
 
   const setSelectedFeature = (feature: Feature) => {
+    console.log("Setting selected feature", feature);
     setFeatures([...features, feature]);
+    console.log("Made it here");
     setItem({ ...item, feature_id: feature.id! });
   };
 
   const handleCreateProductItem = (show: any) => {
-    const validatedItem = validateProductItem(item, show);
+    const validatedItem = validateProductItem({ item, show, features });
     if (!validatedItem) return;
     setProduct({ ...product, items: [...product.items, validatedItem] });
     setOpen(false);

@@ -7,12 +7,37 @@ import {
   ProductItemType,
   UsageModel,
   Infinite,
+  ProductItemFeatureType,
+  Feature,
+  FeatureType,
 } from "@autumn/shared";
 import { isFeatureItem } from "./getItemType.js";
 import {
   billingToItemInterval,
   entToItemInterval,
 } from "./itemIntervalUtils.js";
+
+export const getItemFeatureType = ({
+  item,
+  features,
+}: {
+  item: ProductItem;
+  features: Feature[];
+}) => {
+  let feature = features.find((f) => f.id == item.feature_id);
+
+  if (feature) {
+    if (feature.type == FeatureType.Boolean) {
+      return ProductItemFeatureType.Static;
+    } else if (feature.type == FeatureType.CreditSystem) {
+      return ProductItemFeatureType.SingleUse;
+    } else {
+      return feature.config?.usage_type;
+    }
+  }
+
+  return undefined;
+};
 
 export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
   // Compare tiers
@@ -38,22 +63,11 @@ export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
     item1.feature_id == item2.feature_id &&
     item1.included_usage == item2.included_usage &&
     item1.interval == item2.interval &&
-    item1.reset_usage_on_billing === item2.reset_usage_on_billing &&
+    item1.feature_type == item2.feature_type &&
     item1.price == item2.price &&
     compareTiers(item1.tiers, item2.tiers)
   );
 };
-
-// export const intervalIsNone = (interval: string | undefined | null) => {
-//   if (!interval) {
-//     return true;
-//   }
-//   return (
-//     interval == ProductItemInterval.None ||
-//     interval == EntInterval.Lifetime ||
-//     interval == BillingInterval.OneOff
-//   );
-// };
 
 export const itemIsFixedPrice = (item: ProductItem) => {
   return notNullish(item.price) && nullish(item.feature_id);
@@ -115,20 +129,20 @@ export const constructPriceItem = ({
 
 export const constructFeaturePriceItem = ({
   feature_id,
+  feature_type,
   included_usage,
   price,
   interval,
   usage_model,
-  reset_usage_on_billing = true,
   billing_units = 1,
   reset_usage_when_enabled = false,
 }: {
   feature_id: string;
+  feature_type: ProductItemFeatureType;
   included_usage?: number;
   price: number;
   interval: BillingInterval;
   usage_model?: UsageModel;
-  reset_usage_on_billing?: boolean;
   billing_units?: number;
   reset_usage_when_enabled?: boolean;
 }) => {
@@ -136,11 +150,11 @@ export const constructFeaturePriceItem = ({
     included_usage: number;
   } = {
     feature_id,
+    feature_type,
     included_usage: included_usage as number,
     price,
     interval: billingToItemInterval(interval),
     usage_model,
-    reset_usage_on_billing,
     billing_units,
     reset_usage_when_enabled,
   };

@@ -49,13 +49,16 @@ export default function TieredPrice({
   };
 
   const handleRemoveTier = (index: number) => {
+    // let featureType = features.find((f: Feature) => f.id == item.feature_id)
+    //   ?.config?.usage_type;
+
     const newTiers = [...item.tiers];
+
     if (newTiers.length == 1) {
       setShow({ ...show, price: false });
       setItem({
         ...item,
         tiers: null,
-        interval: item.reset_usage_on_billing ? item.interval : null,
       });
       return;
     }

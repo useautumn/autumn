@@ -11,6 +11,7 @@ import {
   FeatureType,
   AppEnv,
   Product,
+  ProductItemFeatureType,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { isFeaturePriceItem } from "./productItemUtils.js";
@@ -139,10 +140,14 @@ export const validateProductItems = ({
 
   features = allFeatures;
 
-
   // 1. Check values
   for (let index = 0; index < newItems.length; index++) {
     validateProductItem({ item: newItems[index], features });
+    let feature = features.find((f) => f.id == newItems[index].feature_id);
+
+    if (feature && feature.type == FeatureType.Metered) {
+      newItems[index].feature_type = feature.config?.usage_type;
+    }
   }
 
   for (let index = 0; index < newItems.length; index++) {
