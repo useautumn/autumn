@@ -3,6 +3,7 @@ import {
   BillingInterval,
   EntInterval,
   ProductItem,
+  ProductItemFeatureType,
   ProductItemInterval,
 } from "@autumn/shared";
 
@@ -39,7 +40,7 @@ export const itemToEntInterval = (item: ProductItem) => {
     return EntInterval.Lifetime;
   }
 
-  if (item.reset_usage_on_billing === false) {
+  if (item.feature_type == ProductItemFeatureType.ContinuousUse) {
     return EntInterval.Lifetime;
   }
 

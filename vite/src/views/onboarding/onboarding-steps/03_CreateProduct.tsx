@@ -71,10 +71,12 @@ export const CreateProductStep = ({
   };
 
   const [product, setProduct] = useState<any>();
+  const [features, setFeatures] = useState<any[]>();
 
   useEffect(() => {
     if (data?.product) {
       setProduct(data.product);
+      setFeatures(data.features);
     }
   }, [data]);
 
@@ -109,6 +111,8 @@ export const CreateProductStep = ({
               env,
               product,
               setProduct,
+              features,
+              setFeatures,
             }}
           >
             <ProductItemTable isOnboarding={true} />

@@ -14,7 +14,7 @@ const getWelcomeEmailBody = (userFirstName: string) => {
 <p>Ayush<br>
 Co-founder, Autumn</p>
 
-<p>Oh, and join our <a href="https://discord.gg/PMNwStsk">Discord community</a> to connect with us and other users</p>
+<p>Oh, and join our <a href="https://discord.gg/STqxY92zuS">Discord community</a> to connect with us and other users</p>
   `;
 };
 

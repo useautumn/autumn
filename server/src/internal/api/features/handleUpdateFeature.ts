@@ -1,16 +1,35 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusProdReadService } from "@/internal/customers/products/CusProdReadService.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { getObjectsUsingFeature, validateCreditSystem } from "@/internal/features/featureUtils.js";
+import {
+  getObjectsUsingFeature,
+  validateCreditSystem,
+} from "@/internal/features/featureUtils.js";
 import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { keyToTitle } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { Entitlement, Feature, FeatureType, Price, CreditSystem, UsagePriceConfig, CreditSystemConfig, AppEnv } from "@autumn/shared";
+import {
+  Entitlement,
+  Feature,
+  FeatureType,
+  Price,
+  CreditSystem,
+  UsagePriceConfig,
+  CreditSystemConfig,
+  AppEnv,
+  EntitlementWithFeature,
+  EntInterval,
+  FeatureUsageType,
+  PriceType,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
-const handleFeatureIdChanged  = async ({
+const handleFeatureIdChanged = async ({
   sb,
   orgId,
   env,
@@ -31,7 +50,6 @@ const handleFeatureIdChanged  = async ({
   creditSystems: Feature[];
   newId: string;
 }) => {
-
   // 1. Check if any customer entitlement linked to this feature
   let cusEnts = await CustomerEntitlementService.getByFeature({
     sb,
@@ -49,13 +67,15 @@ const handleFeatureIdChanged  = async ({
   // 2. Update all linked objects
   let batchUpdate = [];
   for (let entitlement of linkedEntitlements) {
-    batchUpdate.push(EntitlementService.update({
-      sb,
-      entitlementId: entitlement.id!,
-      updates: {
-        entity_feature_id: newId,
-      },
-    }));
+    batchUpdate.push(
+      EntitlementService.update({
+        sb,
+        entitlementId: entitlement.id!,
+        updates: {
+          entity_feature_id: newId,
+        },
+      })
+    );
   }
 
   await Promise.all(batchUpdate);
@@ -63,16 +83,18 @@ const handleFeatureIdChanged  = async ({
   // 3. Update all linked prices
   let priceUpdate = [];
   for (let price of prices) {
-    priceUpdate.push(PriceService.update({
-      sb,
-      priceId: price.id!,
-      update: {
-        config: {
-          ...price.config,
-          feature_id: newId,
-        } as UsagePriceConfig,
-      },
-    }));
+    priceUpdate.push(
+      PriceService.update({
+        sb,
+        priceId: price.id!,
+        update: {
+          config: {
+            ...price.config,
+            feature_id: newId,
+          } as UsagePriceConfig,
+        },
+      })
+    );
   }
 
   await Promise.all(priceUpdate);
@@ -86,18 +108,20 @@ const handleFeatureIdChanged  = async ({
         newSchema[i].metered_feature_id = newId;
       }
     }
-    creditSystemUpdate.push(FeatureService.updateStrict({
-      sb,
-      featureId: creditSystem.id!,
-      updates: {
-        config: {
-          ...creditSystem.config,
-          schema: newSchema,
+    creditSystemUpdate.push(
+      FeatureService.updateStrict({
+        sb,
+        featureId: creditSystem.id!,
+        updates: {
+          config: {
+            ...creditSystem.config,
+            schema: newSchema,
+          },
         },
-      },
-      orgId,
-      env,
-    }));
+        orgId,
+        env,
+      })
+    );
   }
 
   await Promise.all(creditSystemUpdate);
@@ -105,27 +129,134 @@ const handleFeatureIdChanged  = async ({
   // 5. Update all linked entitlements
   let entitlementUpdate = [];
   for (let entitlement of entitlements) {
-    entitlementUpdate.push(EntitlementService.update({
-      sb,
-      entitlementId: entitlement.id!,
-      updates: {
-        feature_id: newId,
-      },
-    }));
+    entitlementUpdate.push(
+      EntitlementService.update({
+        sb,
+        entitlementId: entitlement.id!,
+        updates: {
+          feature_id: newId,
+        },
+      })
+    );
   }
 
   await Promise.all(entitlementUpdate);
-  
-}
+};
+
+const handleFeatureUsageTypeChanged = async ({
+  sb,
+  orgId,
+  env,
+  feature,
+  newUsageType,
+  linkedEntitlements,
+  entitlements,
+  prices,
+  creditSystems,
+}: {
+  sb: SupabaseClient;
+  orgId: string;
+  env: AppEnv;
+  feature: Feature;
+  newUsageType: FeatureUsageType;
+  linkedEntitlements: EntitlementWithFeature[];
+  entitlements: EntitlementWithFeature[];
+  prices: Price[];
+  creditSystems: Feature[];
+}) => {
+  let usageTypeTitle = keyToTitle(newUsageType);
+  if (creditSystems.length > 0) {
+    throw new RecaseError({
+      message: `Cannot set to ${usageTypeTitle} because it is used in credit system ${creditSystems[0].id}`,
+      code: ErrCode.InvalidFeature,
+      statusCode: 400,
+    });
+  }
+
+  if (linkedEntitlements.length > 0) {
+    throw new RecaseError({
+      message: `Cannot set to ${usageTypeTitle} because it is used as an entity by ${linkedEntitlements[0].feature.name}`,
+      code: ErrCode.InvalidFeature,
+      statusCode: 400,
+    });
+  }
+
+  // Get cus product using feature...
+  let cusProds = await CusProdReadService.getByFeature({
+    sb,
+    internalFeatureId: feature.internal_id!,
+  });
+
+  if (cusProds && cusProds.length > 0) {
+    throw new RecaseError({
+      message: `Cannot set to ${usageTypeTitle} because it is used by customers in product ${cusProds[0].product.name}`,
+      code: ErrCode.InvalidFeature,
+      statusCode: 400,
+    });
+  }
+
+  if (entitlements.length > 0) {
+    console.log(
+      `Feature usage type changed to ${newUsageType}, updating entitlements and prices`
+    );
+    if (newUsageType == FeatureUsageType.Continuous) {
+      let batchEntUpdate = [];
+      for (let entitlement of entitlements) {
+        batchEntUpdate.push(
+          EntitlementService.update({
+            sb,
+            entitlementId: entitlement.id!,
+            updates: {
+              interval: EntInterval.Lifetime,
+            },
+          })
+        );
+      }
+
+      await Promise.all(batchEntUpdate);
+      console.log(`Updated ${entitlements.length} entitlements`);
+    }
+  }
+
+  if (prices.length > 0) {
+    let batchPriceUpdate = [];
+    for (let price of prices) {
+      let priceConfig = price.config as UsagePriceConfig;
+
+      batchPriceUpdate.push(
+        PriceService.update({
+          sb,
+          priceId: price.id!,
+          update: {
+            config: {
+              ...priceConfig,
+              should_prorate:
+                newUsageType == FeatureUsageType.Continuous ? false : true, // if continuous, don't prorate -> get usage_in_arrear type...
+              stripe_price_id: null,
+            },
+          },
+        })
+      );
+    }
+
+    await Promise.all(batchPriceUpdate);
+    console.log(`Updated ${prices.length} prices`);
+  }
+
+  // // Allow update for entitlement / price?
+  // if (entitlements.length > 0) {
+  // }
+};
+
 export const handleUpdateFeature = async (req: any, res: any) =>
   routeHandler({
     req,
     res,
     action: "Update feature",
     handler: async () => {
-      let featureId  = req.params.feature_id;
+      let featureId = req.params.feature_id;
       let data = req.body;
-      
+
       // 1. Get feature by ID
       let feature = await FeatureService.getById({
         sb: req.sb,
@@ -143,22 +274,32 @@ export const handleUpdateFeature = async (req: any, res: any) =>
       }
 
       // If changing type or ID fetch entitlements and prices
-      
 
       // 1. Check if changing type...
       let isChangingType = feature.type !== data.type;
       let isChangingId = feature.id !== data.id;
+      let isChangingUsageType =
+        feature.type != FeatureType.Boolean &&
+        data.type != FeatureType.Boolean &&
+        feature.config?.usage_type != data.config?.usage_type;
 
-      if (isChangingType || isChangingId) {
-        let { entitlements, prices, creditSystems, linkedEntitlements } = await getObjectsUsingFeature({
-          sb: req.sb,
-          orgId: req.orgId,
-          env: req.env,
-          feature,
-        });
+      if (isChangingType || isChangingId || isChangingUsageType) {
+        let { entitlements, prices, creditSystems, linkedEntitlements } =
+          await getObjectsUsingFeature({
+            sb: req.sb,
+            orgId: req.orgId,
+            env: req.env,
+            feature,
+          });
 
         // 1. Can't change type if any objects are linked to it
-        if (isChangingType && (linkedEntitlements.length > 0 || prices.length > 0 || creditSystems.length > 0 || entitlements.length > 0)) {
+        if (
+          isChangingType &&
+          (linkedEntitlements.length > 0 ||
+            prices.length > 0 ||
+            creditSystems.length > 0 ||
+            entitlements.length > 0)
+        ) {
           throw new RecaseError({
             message: `Cannot change type of feature ${featureId} because it is used in an entitlement or credit system`,
             code: ErrCode.InvalidFeature,
@@ -179,6 +320,20 @@ export const handleUpdateFeature = async (req: any, res: any) =>
             newId: data.id,
           });
         }
+
+        if (isChangingUsageType) {
+          await handleFeatureUsageTypeChanged({
+            sb: req.sb,
+            orgId: req.orgId,
+            env: req.env,
+            feature,
+            linkedEntitlements,
+            entitlements,
+            prices,
+            creditSystems,
+            newUsageType: data.config?.usage_type,
+          });
+        }
       }
 
       // // 1. Update feature from boolean to metered?
@@ -193,7 +348,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
         orgId: req.orgId,
         env: req.env,
         featureId,
-  
+
         updates: {
           id: data.id !== undefined ? data.id : feature.id,
           name: data.name !== undefined ? data.name : feature.name,
@@ -207,7 +362,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
               : data.config,
         },
       });
-  
+
       res.status(200).json({ success: true, feature_id: featureId });
     },
   });

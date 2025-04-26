@@ -1,16 +1,11 @@
 import { ProductService } from "@/internal/products/ProductService.js";
 
 import { Router } from "express";
-import { CreateProductSchema, FreeTrial } from "@autumn/shared";
 
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
+import { handleRequestError } from "@/utils/errorUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-import {
-  checkStripeProductExists,
-  constructProduct,
-} from "@/internal/products/productUtils.js";
+import { checkStripeProductExists } from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 
@@ -18,9 +13,7 @@ import { handleUpdateProductV2 } from "./handleUpdateProduct.js";
 import { handleDeleteProduct } from "./handleDeleteProduct.js";
 import { handleGetProduct } from "./handleGetProduct.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
-import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
-import { notNullish } from "@/utils/genUtils.js";
-import { validateAndInitFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
+
 import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
 
 export const productApiRouter = Router();

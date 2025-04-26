@@ -17,7 +17,6 @@ import { SearchBar } from "./SearchBar";
 import LoadingScreen from "../general/LoadingScreen";
 import FilterButton from "./FilterButton";
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { Toaster } from "@/components/ui/sonner";
 
 function CustomersView({ env }: { env: AppEnv }) {
   // const [debouncedSearch, setDebouncedSearch] = React.useState("");
@@ -70,7 +69,7 @@ function CustomersView({ env }: { env: AppEnv }) {
   }
 
   const handleNextPage = async () => {
-    if (pagination.page === totalPages) return;
+    if (totalPages == 0 || pagination.page === totalPages) return;
     setPagination((prev) => {
       const lastItem = data?.customers[data?.customers.length - 1];
       const newItem = {

@@ -9,14 +9,6 @@ import {
 
 import { Link } from "react-router";
 
-import {
-  Table,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
 import { getRedirectUrl } from "@/utils/genUtils";
 import { Badge } from "@/components/ui/badge";
 import { unixHasPassed } from "@/utils/dateUtils";

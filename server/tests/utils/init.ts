@@ -11,6 +11,7 @@ import {
   Entitlement,
   Feature,
   FeatureType,
+  FeatureUsageType,
   FreeTrial,
   Organization,
   PriceType,
@@ -37,6 +38,7 @@ export const initFeature = ({
   aggregateType = AggregateType.Sum,
   groupBy = "",
   eventName,
+  usageType = FeatureUsageType.Single,
 }: {
   id: string;
   type: FeatureType;
@@ -48,6 +50,7 @@ export const initFeature = ({
   aggregateType?: AggregateType;
   groupBy?: string;
   eventName?: string;
+  usageType?: FeatureUsageType;
 }): (Feature & { eventName: string }) | any => {
   const name = keyToTitle(id);
 
@@ -76,11 +79,12 @@ export const initFeature = ({
           type: aggregateType,
           property: "value",
         },
-        group_by: groupBy
-          ? {
-              property: groupBy,
-            }
-          : undefined,
+        usage_type: usageType,
+        // group_by: groupBy
+        //   ? {
+        //       property: groupBy,
+        //     }
+        //   : undefined,
       },
     } as Feature;
   }
@@ -92,6 +96,7 @@ export const initFeature = ({
       type,
       config: {
         schema: creditSchema,
+        usage_type: FeatureUsageType.Single,
       },
     } as Feature;
   }

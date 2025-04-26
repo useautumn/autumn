@@ -1,5 +1,6 @@
 import {
   EntitlementWithFeature,
+  Feature,
   FeatureType,
   FullProduct,
   Price,
@@ -10,14 +11,17 @@ import {
 import { getEntRelatedPrice } from "./entitlements/entitlementUtils.js";
 import { getPriceEntitlement } from "../prices/priceUtils.js";
 import { toProductItem } from "./product-items/mapToItem.js";
+import { getItemFeatureType } from "./product-items/productItemUtils.js";
 
 export const mapToProductItems = ({
   prices,
   entitlements,
+  features,
   allowFeatureMatch = false,
 }: {
   prices: Price[];
   entitlements: EntitlementWithFeature[];
+  features: Feature[];
   allowFeatureMatch?: boolean;
 }): ProductItem[] => {
   let items: ProductItem[] = [];
@@ -40,10 +44,23 @@ export const mapToProductItems = ({
     }
   }
 
+  for (const item of items) {
+    let feature = features.find((f) => f.id == item.feature_id);
+    if (feature) {
+      item.feature_type = getItemFeatureType({ item, features });
+    }
+  }
+
   return items;
 };
 
-export const mapToProductV2 = (product: FullProduct): ProductV2 => {
+export const mapToProductV2 = ({
+  product,
+  features,
+}: {
+  product: FullProduct;
+  features: Feature[];
+}): ProductV2 => {
   let items: ProductItem[] = [];
   // console.log("Prices:", product.prices);
   // console.log("Entitlements:", product.entitlements);
@@ -61,6 +78,10 @@ export const mapToProductV2 = (product: FullProduct): ProductV2 => {
     if (!relatedEnt) {
       items.push(toProductItem({ price }));
     }
+  }
+
+  for (const item of items) {
+    item.feature_type = getItemFeatureType({ item, features });
   }
 
   let productV2: ProductV2 = {

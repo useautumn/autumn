@@ -85,6 +85,7 @@ stripeWebhookRouter.post(
             sb: request.sb,
             org,
             subscription,
+            previousAttributes: event.data.previous_attributes,
             env,
             logger,
           });
@@ -184,39 +185,3 @@ stripeWebhookRouter.post(
     response.status(200).send();
   }
 );
-
-// if (
-//   event.type == "invoice.created" ||
-//   event.type == "invoice.paid" ||
-//   event.type == "invoice.finalized"
-// ) {
-//   // 1. created
-//   let invoice: Stripe.Invoice = event.data.object;
-//   console.log(
-//     "Invoice created: ",
-//     format(new Date(invoice.created * 1000), "MMM dd hh:mm:ss a")
-//   );
-//   console.log("Status: ", invoice.status);
-
-//   let transitions = invoice.status_transitions;
-
-//   if (transitions.finalized_at) {
-//     console.log(
-//       "Finalized at:  ",
-//       format(new Date(transitions.finalized_at * 1000), "MMM dd hh:mm:ss a")
-//     );
-//   } else {
-//     console.log("Finalized at: not set");
-//   }
-
-//   if (transitions.paid_at) {
-//     console.log(
-//       "Paid at: ",
-//       format(new Date(transitions.paid_at * 1000), "MMM dd hh:mm:ss a")
-//     );
-//   } else {
-//     console.log("Paid at: not set");
-//   }
-
-//   // console.log("Invoice: ", event.data.object);
-// }

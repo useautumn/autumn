@@ -9,7 +9,6 @@ import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
   CusProductStatus,
-  CustomerEntitlement,
   ErrCode,
   FullCusProduct,
   FullCustomerEntitlement,
@@ -19,7 +18,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
-import { SubService } from "@/internal/subscriptions/SubService.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 
 export const handleSubscriptionDeleted = async ({

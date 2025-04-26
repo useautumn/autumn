@@ -356,7 +356,7 @@ cusRouter.get(
         );
         product = {
           ...cusProduct.product,
-          items: mapToProductItems({ prices, entitlements }),
+          items: mapToProductItems({ prices, entitlements, features }),
           free_trial: cusProduct.free_trial,
           options: cusProduct.options,
           isActive: cusProduct.status === CusProductStatus.Active,
@@ -374,7 +374,7 @@ cusRouter.get(
               : undefined,
         });
 
-        product = mapToProductV2(product);
+        product = mapToProductV2({ product, features });
       }
 
       let numVersions = await ProductService.getProductVersionCount({
