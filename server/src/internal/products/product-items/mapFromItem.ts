@@ -5,23 +5,21 @@ import {
   BillWhen,
   EntInterval,
   Entitlement,
-  EntitlementWithFeature,
   ErrCode,
   Feature,
   FeatureType,
   FixedPriceConfig,
-  FullEntitlement,
   Infinite,
   Price,
   PriceType,
   ProductItem,
   UsageModel,
-  ProductItemInterval,
   TierInfinite,
   UsagePriceConfig,
+  ProductItemFeatureType,
 } from "@autumn/shared";
 import { itemIsFixedPrice } from "./productItemUtils.js";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
 import { pricesAreSame } from "@/internal/prices/priceInitUtils.js";
 import { entsAreSame } from "../entitlements/entitlementUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
@@ -109,11 +107,8 @@ export const toFeature = ({
       item.included_usage == Infinite
         ? AllowanceType.Unlimited
         : AllowanceType.Fixed,
-    interval: isBoolean
-      ? null
-      : item.reset_usage_on_billing === false
-      ? EntInterval.Lifetime
-      : (itemToEntInterval(item) as EntInterval),
+
+    interval: isBoolean ? null : (itemToEntInterval(item) as EntInterval),
 
     carry_from_previous: !resetUsage,
     entity_feature_id: item.entity_feature_id,
@@ -149,6 +144,7 @@ export const toFeatureAndPrice = ({
   newVersion?: boolean;
 }) => {
   let resetUsage = item.reset_usage_when_enabled || false;
+
   let ent: Entitlement = {
     id: item.entitlement_id || generateId("ent"),
     org_id: orgId,
@@ -161,10 +157,7 @@ export const toFeatureAndPrice = ({
 
     allowance: (item.included_usage as number) || 0,
     allowance_type: AllowanceType.Fixed,
-    interval:
-      item.reset_usage_on_billing === false
-        ? EntInterval.Lifetime
-        : (itemToEntInterval(item) as EntInterval),
+    interval: itemToEntInterval(item) as EntInterval,
 
     carry_from_previous: !resetUsage,
     entity_feature_id: item.entity_feature_id,
@@ -181,7 +174,6 @@ export const toFeatureAndPrice = ({
   }
 
   let entInterval = itemToEntInterval(item);
-  // console.log("Ent interval", entInterval);
 
   let config: UsagePriceConfig = {
     type: PriceType.Usage,
@@ -308,6 +300,7 @@ export const itemToPriceAndEnt = ({
         code: ErrCode.InvalidRequest,
       });
     }
+    let isBoolean = feature?.type == FeatureType.Boolean;
 
     let { ent } = toFeature({
       item,
@@ -321,7 +314,10 @@ export const itemToPriceAndEnt = ({
 
     if (!curEnt || newVersion) {
       newEnt = ent;
-    } else if (!entsAreSame(curEnt, ent)) {
+    }
+
+    // Boolean features can't be updated
+    else if (!isBoolean && !entsAreSame(curEnt, ent)) {
       updatedEnt = ent;
     } else {
       sameEnt = curEnt;
@@ -377,9 +373,6 @@ export const itemToPriceAndEnt = ({
       sameEnt = curEnt;
     }
   }
-
-  // console.log("Item", item);
-  // console.log("Updated price", updatedPrice);
 
   return { newPrice, newEnt, updatedPrice, updatedEnt, samePrice, sameEnt };
 };

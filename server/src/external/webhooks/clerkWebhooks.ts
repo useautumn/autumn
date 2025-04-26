@@ -14,6 +14,7 @@ import {
   EntInterval,
   EntitlementSchema,
   FeatureType,
+  FeatureUsageType,
   PriceSchema,
   PriceType,
   ProductSchema,
@@ -29,8 +30,6 @@ import {
   deleteStripeWebhook,
   initOrgSvixApps,
 } from "@/internal/orgs/orgUtils.js";
-import { createStripeCli } from "../stripe/utils.js";
-import { getApiVersion } from "@/utils/versionUtils.js";
 
 const defaultFeatures = [
   {
@@ -53,6 +52,7 @@ const defaultFeatures = [
       aggregate: {
         type: AggregateType.Count,
       },
+      usage_type: FeatureUsageType.Single,
     },
   },
 ];

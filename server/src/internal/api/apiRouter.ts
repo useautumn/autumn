@@ -90,7 +90,7 @@ apiRouter.use("/rewards", rewardRouter);
 apiRouter.use("/features", featureApiRouter);
 
 apiRouter.use("/entitlements", entitlementApiRouter);
-apiRouter.use("/events", eventsRouter);
+
 apiRouter.use("/prices", priceRouter);
 
 apiRouter.use("/usage", usageRouter);
@@ -107,5 +107,8 @@ apiRouter.use(attachRouter);
 apiRouter.use("/expire", expireRouter);
 apiRouter.use("/entitled", entitledRouter);
 apiRouter.use("/check", entitledRouter);
+
+apiRouter.use("/events", eventsRouter);
+apiRouter.use("/track", eventsRouter);
 
 export { apiRouter };

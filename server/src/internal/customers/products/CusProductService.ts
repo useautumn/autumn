@@ -605,7 +605,20 @@ export class CusProductService {
       query.neq("id", excludeIds);
     }
 
-    const { data: updated, error } = await query.select();
+    const { data: updated, error } = await query.select(
+      `*, 
+      product:products!inner(*), 
+      customer:customers!inner(*),
+      customer_entitlements:customer_entitlements!inner(
+        *, entitlement:entitlements!inner(
+          *, feature:features!inner(*)
+        )
+      ),
+      customer_prices:customer_prices(
+        *, price:prices(*)
+      )
+      `
+    );
 
     if (error) {
       throw error;

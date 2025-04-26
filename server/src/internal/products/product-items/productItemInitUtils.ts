@@ -5,21 +5,14 @@ import {
   Price,
   Product,
   ProductItem,
-  UsageModel,
 } from "@autumn/shared";
 import { itemToPriceAndEnt } from "./mapFromItem.js";
-
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { EntitlementService } from "../entitlements/EntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-
 import { validateProductItems } from "./validateProductItems.js";
-import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-
-const isNewItem = (item: ProductItem) => {
-  return !item.entitlement_id && !item.price_id;
-};
+import { isFeatureItem } from "./getItemType.js";
 
 const updateDbPricesAndEnts = async ({
   sb,
@@ -195,9 +188,15 @@ export const handleNewProductItems = async ({
   let updatedPrices: Price[] = [];
   let updatedEnts: Entitlement[] = [];
 
-  let deletedPrices: Price[] = curPrices.filter(
-    (price) => !newItems.some((item) => item.price_id == price.id)
-  );
+  let deletedPrices: Price[] = curPrices.filter((price) => {
+    let item = newItems.find((item) => item.price_id == price.id);
+    if (!item) {
+      return true;
+    }
+
+    return isFeatureItem(item);
+  });
+
   let deletedEnts: Entitlement[] = curEnts.filter(
     (ent) => !newItems.some((item) => item.entitlement_id == ent.id)
   );
@@ -255,6 +254,13 @@ export const handleNewProductItems = async ({
   logger.info(
     `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`
   );
+
+  console.log("newEnts", newEnts);
+  console.log("newPrices", newPrices);
+  console.log("updatedEnts", updatedEnts);
+  console.log("updatedPrices", updatedPrices);
+  console.log("deletedEnts", deletedEnts);
+  console.log("deletedPrices", deletedPrices);
 
   if (newFeatures.length > 0) {
     await FeatureService.insert({

@@ -206,7 +206,7 @@ export const handleFrontendReqError = ({
       type: "frontend_request",
     });
     logger.warn(`${action}`);
-    logger.warn(`${error}`);
+    logger.warn(error);
   } catch (error) {
     console.log("Failed to log error / warning");
   }

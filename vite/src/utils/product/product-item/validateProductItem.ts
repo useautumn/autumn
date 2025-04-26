@@ -1,11 +1,34 @@
 import { invalidNumber, notNullish } from "@/utils/genUtils";
-import { ProductItem } from "@autumn/shared";
+import {
+  EntInterval,
+  Feature,
+  FeatureUsageType,
+  ProductItem,
+} from "@autumn/shared";
 import { toast } from "sonner";
+import { isFeatureItem } from "../getItemType";
 
-export const validateProductItem = (item: ProductItem, show: any) => {
+export const validateProductItem = ({
+  item,
+  show,
+  features,
+}: {
+  item: ProductItem;
+  show: any;
+  features: Feature[];
+}) => {
   // Price item validation (when amount is set)
 
-  console.log("item", item);
+  let feature = features.find((f) => f.id == item.feature_id);
+  // 1. If featureItem and feature is continuous, set interval to null
+  if (
+    feature &&
+    feature.config?.usage_type == FeatureUsageType.Continuous &&
+    isFeatureItem(item)
+  ) {
+    item.interval = null;
+  }
+
   if (notNullish(item.price) && show.price) {
     if (invalidNumber(item.price)) {
       toast.error("Please enter a valid price amount");

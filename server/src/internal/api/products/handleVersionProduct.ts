@@ -20,7 +20,7 @@ import {
 import { FullProduct } from "@autumn/shared";
 
 import { SupabaseClient } from "@supabase/supabase-js";
-import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
 

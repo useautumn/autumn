@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   Infinite,
   PriceTierSchema,
+  ProductItemFeatureType,
   ProductItemInterval,
   UsageModel,
 } from "../productItemModels.js";
@@ -9,6 +10,8 @@ import {
 export const ProductItemResponseSchema = z.object({
   // Feature stuff
   feature_id: z.string().nullish(),
+  feature_type: z.nativeEnum(ProductItemFeatureType).nullish(),
+
   included_usage: z.number().or(z.literal(Infinite)).nullish(),
   interval: z.nativeEnum(ProductItemInterval).nullish(),
 
@@ -17,7 +20,6 @@ export const ProductItemResponseSchema = z.object({
   tiers: z.array(PriceTierSchema).nullish(),
   usage_model: z.nativeEnum(UsageModel).nullish(),
   billing_units: z.number().nullish(), // amount per billing unit (eg. $9 / 250 units)
-  reset_usage_on_billing: z.boolean().nullish(),
   reset_usage_when_enabled: z.boolean().nullish(),
 
   // Others

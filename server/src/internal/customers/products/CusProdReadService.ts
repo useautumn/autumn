@@ -129,4 +129,31 @@ export class CusProdReadService {
 
     return count || 0;
   }
+
+  static async getByFeature({
+    sb,
+    internalFeatureId,
+  }: {
+    sb: SupabaseClient;
+    internalFeatureId: string;
+  }) {
+    let { data, error } = await sb
+      .from("customer_products")
+      .select(
+        `*, 
+        customer_entitlements!inner(*, entitlement:entitlements!inner(*, feature:features!inner(*))), 
+        product:products!inner(*)`
+      )
+      .eq(
+        "customer_entitlements.entitlement.internal_feature_id",
+        internalFeatureId
+      )
+      .limit(1);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
 }

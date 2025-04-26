@@ -6,17 +6,22 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { PlusIcon } from "lucide-react";
+
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Entitlement, Feature, FeatureType } from "@autumn/shared";
+import {
+  Entitlement,
+  Feature,
+  FeatureType,
+  FeatureUsageType,
+} from "@autumn/shared";
 import { useFeaturesContext } from "./FeaturesContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { FeatureService } from "@/services/FeatureService";
 import { FeatureConfig } from "./metered-features/FeatureConfig";
 import { getBackendErr } from "@/utils/genUtils";
 import { validateFeature } from "./featureUtils";
-import { getFeature } from "@/utils/product/entitlementUtils";
+
 import { useEnv } from "@/utils/envUtils";
 
 const defaultFeature = {
@@ -29,6 +34,7 @@ const defaultFeature = {
         value: [],
       },
     ],
+    usage_type: FeatureUsageType.Single,
   },
   name: "",
   id: "",
@@ -58,28 +64,9 @@ export const CreateFeature = ({
 
   useEffect(() => {
     if (open) {
-      setFeatureToDefault();
+      setFeature(defaultFeature);
     }
   }, [open]);
-
-  const setFeatureToDefault = () => {
-    setFeature({
-      type: FeatureType.Metered,
-      config: {
-        filters: [
-          {
-            property: "",
-            operator: "",
-            value: [],
-          },
-        ],
-      },
-      name: "",
-      id: "",
-    });
-    // setEventNameInput("");
-    // setEventNameChanged(false);
-  };
 
   const updateConfig = () => {
     const config: any = structuredClone(feature.config);

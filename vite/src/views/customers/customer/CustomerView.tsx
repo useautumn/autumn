@@ -2,7 +2,7 @@
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import { AppEnv, FeatureType } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,20 +11,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { CustomerContext } from "./CustomerContext";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-import { CustomerToolbar } from "./CustomerToolbar";
-import { Switch } from "@/components/ui/switch";
-import AddProduct from "./add-product/NewProductDropdown";
-
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-
+import { Link, useNavigate, useParams } from "react-router";
 import { CustomerProductList } from "./CustomerProductList";
-
 import { CustomerEntitlementsList } from "./entitlements/CustomerEntitlementsList";
 import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
 import { CustomerEventsList } from "./product/CustomerEventsList";
 import { useState } from "react";
-
 import ErrorScreen from "@/views/general/ErrorScreen";
 import { InvoicesTable } from "./InvoicesTable";
 import { CustomerDetails } from "./CustomerDetails";

@@ -7,11 +7,13 @@ import {
   Feature,
   FeatureType,
   AppEnv,
+  FeatureUsageType,
 } from "@autumn/shared";
 import { EntitlementService } from "../products/entitlements/EntitlementService.js";
 import { PriceService } from "../prices/PriceService.js";
 import { FeatureService } from "./FeatureService.js";
 import { generateId, keyToTitle } from "@/utils/genUtils.js";
+import { StatusCodes } from "http-status-codes";
 
 export const validateFeatureId = (featureId: string) => {
   if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
@@ -28,22 +30,13 @@ export const validateFeatureId = (featureId: string) => {
 export const validateMeteredConfig = (config: MeteredConfig) => {
   let newConfig = { ...config };
 
-  // for (const filter of config.filters) {
-  // if (filter.value.length == 0) {
-  //   throw new RecaseError({
-  //     message: `Event name cannot be empty`,
-  //     code: ErrCode.InvalidFeature,
-  //     statusCode: 400,
-  //   });
-  // }
-  // }
-  // if (config.filters.length == 0 || config.filters[0].value.length == 0) {
-  //   throw new RecaseError({
-  //     message: `Event name is required for metered feature`,
-  //     code: ErrCode.InvalidFeature,
-  //     statusCode: 400,
-  //   });
-  // }
+  if (!config.usage_type) {
+    throw new RecaseError({
+      message: `Usage type (single or continuous) is required for metered feature`,
+      code: ErrCode.InvalidFeature,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
 
   if (config.aggregate?.type == AggregateType.Count) {
     newConfig.aggregate = {
@@ -55,10 +48,6 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
       type: AggregateType.Sum,
       property: "value",
     };
-  }
-
-  if (!newConfig.group_by) {
-    newConfig.group_by = null;
   }
 
   return newConfig;
@@ -88,7 +77,7 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
     });
   }
 
-  let newConfig = { ...config };
+  let newConfig = { ...config, usage_type: FeatureUsageType.Single };
   for (let i = 0; i < newConfig.schema.length; i++) {
     newConfig.schema[i].feature_amount = 1;
 
@@ -182,10 +171,12 @@ export const constructMeteredFeature = ({
   featureId,
   orgId,
   env,
+  usageType,
 }: {
   featureId: string;
   orgId: string;
   env: AppEnv;
+  usageType: FeatureUsageType;
 }) => {
   let newFeature: Feature = {
     internal_id: generateId("fe"),
@@ -208,6 +199,7 @@ export const constructMeteredFeature = ({
         type: AggregateType.Sum,
         property: "value",
       },
+      usage_type: usageType,
     },
   };
 

@@ -22,6 +22,7 @@ export function MainLayout() {
   const { setActive } = useOrganizationList();
   const env = useEnv();
   const { pathname } = useLocation();
+
   const posthog = usePostHog();
 
   useEffect(() => {

@@ -11,8 +11,8 @@ import { useEffect, useState } from "react";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
-import { PlusIcon } from "lucide-react";
-import { Feature, FeatureType } from "@autumn/shared";
+
+import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
 import CreditSystemConfig from "./CreditSystemConfig";
 import { useFeaturesContext } from "../features/FeaturesContext";
@@ -22,6 +22,7 @@ const defaultCreditSystem = {
   type: FeatureType.CreditSystem,
   config: {
     schema: [{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 }],
+    usage_type: FeatureUsageType.Single,
   },
 };
 

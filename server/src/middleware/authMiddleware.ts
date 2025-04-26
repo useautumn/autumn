@@ -7,7 +7,7 @@ const getTokenData = async (req: any, res: any) => {
   try {
     token = req.headers["authorization"]?.split(" ")[1];
     if (!token) {
-      throw new Error("No token provided");
+      throw new Error("authorization header has no token");
     }
   } catch (error) {
     throw new Error("clerk token not found in request headers / invalid");
@@ -39,7 +39,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     let tokenData = await getTokenData(req, res);
 
     if (!tokenData?.org_id) {
-      throw new Error("No org in token");
+      throw new Error("token data has no org_id");
     }
 
     let tokenOrg = tokenData!.org as any;
@@ -55,7 +55,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
   } catch (error: any) {
     console.log(
       // `withOrgAuth error (${req.headers["authorization"]}):`,
-      `withOrgAuth error:`,
+      `(warning) clerk auth failed:`,
       error?.message || error
     );
     res.status(401).json({ message: "Unauthorized" });
