@@ -83,7 +83,10 @@ export const handleSubscriptionUpdated = async ({
     nullish(previousAttributes?.canceled_at) &&
     !nullish(subscription.canceled_at);
 
-  if (isCanceled && updatedCusProducts.length > 0) {
+  let comment = subscription.cancellation_details?.comment;
+  let isAutumnDowngrade = comment === "autumn_downgrade";
+
+  if (isCanceled && updatedCusProducts.length > 0 && !isAutumnDowngrade) {
     let allDefaultProducts = await ProductService.getFullDefaultProducts({
       sb,
       orgId: org.id,
@@ -98,8 +101,11 @@ export const handleSubscriptionUpdated = async ({
       inStatuses: [CusProductStatus.Scheduled],
     });
 
+    // Default products to activate...
     let defaultProducts = allDefaultProducts.filter((p) =>
-      cusProducts.some((cp: FullCusProduct) => cp.product.group == p.group)
+      updatedCusProducts.some(
+        (cp: FullCusProduct) => cp.product.group == p.group
+      )
     );
 
     let customer = updatedCusProducts[0].customer;
@@ -114,7 +120,7 @@ export const handleSubscriptionUpdated = async ({
 
     for (let product of defaultProducts) {
       let alreadyScheduled = cusProducts.some(
-        (cp: FullCusProduct) => cp.product.id == product.id
+        (cp: FullCusProduct) => cp.product.group == product.group
       );
 
       if (alreadyScheduled) {

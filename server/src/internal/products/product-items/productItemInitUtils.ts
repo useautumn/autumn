@@ -255,13 +255,6 @@ export const handleNewProductItems = async ({
     `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`
   );
 
-  console.log("newEnts", newEnts);
-  console.log("newPrices", newPrices);
-  console.log("updatedEnts", updatedEnts);
-  console.log("updatedPrices", updatedPrices);
-  console.log("deletedEnts", deletedEnts);
-  console.log("deletedPrices", deletedPrices);
-
   if (newFeatures.length > 0) {
     await FeatureService.insert({
       sb,

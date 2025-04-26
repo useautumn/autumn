@@ -159,10 +159,16 @@ export const handleDowngrade = async ({
     if (differenceInDays(latestEndDate, curEndDate) > 10) {
       await stripeCli.subscriptions.update(sub.id, {
         cancel_at: latestPeriodEnd,
+        cancellation_details: {
+          comment: "autumn_downgrade",
+        },
       });
     } else {
       await stripeCli.subscriptions.update(sub.id, {
         cancel_at_period_end: true,
+        cancellation_details: {
+          comment: "autumn_downgrade",
+        },
       });
     }
   }
@@ -265,7 +271,7 @@ export const handleDowngrade = async ({
     },
   });
 
-  // 3. Update cus product
+  // 4. Update cus product
   logger.info("3. Inserting new full cus product (starts at period end)");
   await createFullCusProduct({
     sb: req.sb,
@@ -276,28 +282,6 @@ export const handleDowngrade = async ({
     disableFreeTrial: true,
     isDowngrade: true,
   });
-
-  // 4. For scheduled products that are not in same interval, remove from schedule
-  for (const scheduleObj of schedules) {
-    const { schedule, interval } = scheduleObj;
-
-    let intervalsToRemove = [];
-    if (!itemSets.some((itemSet) => itemSet.interval === interval)) {
-      intervalsToRemove.push(interval);
-    }
-
-    await cancelFutureProductSchedule({
-      sb: req.sb,
-      org: attachParams.org,
-      stripeCli,
-      cusProducts: attachParams.cusProducts!,
-      product: product,
-      includeOldItems: false,
-      logger: req.logtail,
-      inIntervals: intervalsToRemove,
-      env: attachParams.customer.env,
-    });
-  }
 
   if (attachParams.org.api_version! >= APIVersion.v1_1) {
     res.status(200).json(

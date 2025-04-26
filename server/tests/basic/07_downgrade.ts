@@ -49,12 +49,7 @@ describe(`${chalk.yellowBright(
     });
 
     customer = await initCustomer({
-      customer_data: {
-        id: customerId,
-        name: "Test Customer",
-        email: "test@test.com",
-        fingerprint: "fp1",
-      },
+      customerId,
       sb: this.sb,
       org: this.org,
       env: this.env,
@@ -103,9 +98,35 @@ describe(`${chalk.yellowBright(
     assert.isNotNull(resPro);
   });
 
-  // Advance time 1 month
-  it("Advancing stripe clock and seeing if pro is attached", async function () {
+  // Attach premium to see if scheduled product is removed
+  it("checking if attach premium will remove scheduled product", async function () {
     this.timeout(30000);
+    await AutumnCli.attach({
+      customerId: customerId,
+      productId: products.premium.id,
+    });
+
+    const res = await AutumnCli.getCustomer(customerId);
+    const resPro = res.products.find(
+      (p: any) =>
+        p.id === products.pro.id && p.status === CusProductStatus.Scheduled
+    );
+    assert.isUndefined(resPro);
+
+    compareMainProduct({
+      sent: products.premium,
+      cusRes: res,
+    });
+  });
+
+  // Advance time 1 month
+  it("Attaching pro, advancing stripe clock and seeing if pro is attached", async function () {
+    this.timeout(30000);
+    await AutumnCli.attach({
+      customerId: customerId,
+      productId: products.pro.id,
+    });
+
     const stripeCli = createStripeCli({
       org: this.org,
       env: this.env,
