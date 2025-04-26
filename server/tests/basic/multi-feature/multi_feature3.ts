@@ -8,6 +8,7 @@ import {
   AppEnv,
   BillingInterval,
   EntInterval,
+  ProductItemFeatureType,
   UsageModel,
 } from "@autumn/shared";
 import { createProduct } from "tests/utils/productUtils.js";
@@ -42,6 +43,7 @@ let pro = {
     }),
     payPerUse: constructFeaturePriceItem({
       feature_id: features.metered1.id,
+      feature_type: ProductItemFeatureType.SingleUse,
       included_usage: 0,
       price: 0.5,
       interval: BillingInterval.Month,
