@@ -41,6 +41,7 @@ import {
 
 import { differenceInSeconds } from "date-fns";
 import { SuccessCode } from "@autumn/shared";
+import { notNullish } from "@/utils/genUtils.js";
 
 export enum ProrationBehavior {
   Immediately = "immediately",
@@ -351,7 +352,7 @@ export const handleUpgrade = async ({
   const stripeCli = createStripeCli({ org, env: customer.env });
   const stripeSubs = await getStripeSubs({
     stripeCli,
-    subIds: curCusProduct.subscription_ids!,
+    subIds: curCusProduct.subscription_ids,
   });
 
   // 1. If current product has trial and new product has trial, cancel and start new subscription
@@ -374,9 +375,19 @@ export const handleUpgrade = async ({
     !isFreeProduct(attachParams.prices);
 
   if (trialToTrial || trialToPaid || toFreeProduct || paidToFreeProduct) {
-    logger.info(
-      "Upgrading from trial to trial, cancelling and starting new subscription"
-    );
+    if (trialToTrial) {
+      logger.info(
+        `Upgrading from trial to trial, cancelling and starting new subscription`
+      );
+    } else if (trialToPaid) {
+      logger.info(
+        `Upgrading from trial to paid, cancelling and starting new subscription`
+      );
+    } else if (toFreeProduct) {
+      logger.info(
+        `switching to free product, cancelling (if needed) and adding free product`
+      );
+    }
 
     await handleAddProduct({
       req,
@@ -387,16 +398,18 @@ export const handleUpgrade = async ({
       keepResetIntervals: newVersion, // keep reset intervals if upgrading version (migrations)
     });
 
-    for (const subId of curCusProduct.subscription_ids!) {
-      try {
-        await stripeCli.subscriptions.cancel(subId);
-      } catch (error) {
-        throw new RecaseError({
-          message: `Handling upgrade (cur product on trial): failed to cancel subscription ${subId}`,
-          code: ErrCode.StripeCancelSubscriptionFailed,
-          statusCode: StatusCodes.BAD_REQUEST,
-          data: error,
-        });
+    if (notNullish(curCusProduct.subscription_ids)) {
+      for (const subId of curCusProduct.subscription_ids!) {
+        try {
+          await stripeCli.subscriptions.cancel(subId);
+        } catch (error) {
+          throw new RecaseError({
+            message: `Handling upgrade (cur product on trial): failed to cancel subscription ${subId}`,
+            code: ErrCode.StripeCancelSubscriptionFailed,
+            statusCode: StatusCodes.BAD_REQUEST,
+            data: error,
+          });
+        }
       }
     }
     return;

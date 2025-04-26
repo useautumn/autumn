@@ -50,6 +50,8 @@ export const runMigrationTask = async ({
       logger,
     });
 
+    logger.info(`Job ${migrationJobId} | Found ${customers?.length} customers`);
+
     // STEP 2: MIGRATE CUSTOMERS..
     await migrateCustomers({
       sb,

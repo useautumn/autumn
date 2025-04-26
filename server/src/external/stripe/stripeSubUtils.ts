@@ -15,8 +15,11 @@ export const getStripeSubs = async ({
   subIds,
 }: {
   stripeCli: Stripe;
-  subIds: string[];
+  subIds?: string[] | null;
 }) => {
+  if (!subIds) {
+    return [];
+  }
   const batchGet = [];
   const getStripeSub = async (subId: string) => {
     try {
