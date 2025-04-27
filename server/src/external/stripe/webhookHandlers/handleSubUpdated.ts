@@ -78,115 +78,117 @@ export const handleSubscriptionUpdated = async ({
     );
   }
 
-  // Handle if canceled
-  let isCanceled =
-    nullish(previousAttributes?.canceled_at) &&
-    !nullish(subscription.canceled_at);
+  // Handle syncing status
+  if (org.config.sync_status) {
+    let isCanceled =
+      nullish(previousAttributes?.canceled_at) &&
+      !nullish(subscription.canceled_at);
 
-  let comment = subscription.cancellation_details?.comment;
-  let isAutumnDowngrade = comment === "autumn_downgrade";
+    let comment = subscription.cancellation_details?.comment;
+    let isAutumnDowngrade = comment === "autumn_downgrade";
 
-  if (isCanceled && updatedCusProducts.length > 0 && !isAutumnDowngrade) {
-    let allDefaultProducts = await ProductService.getFullDefaultProducts({
-      sb,
-      orgId: org.id,
-      env,
-    });
+    if (isCanceled && updatedCusProducts.length > 0 && !isAutumnDowngrade) {
+      let allDefaultProducts = await ProductService.getFullDefaultProducts({
+        sb,
+        orgId: org.id,
+        env,
+      });
 
-    let cusProducts = await CusService.getFullCusProducts({
-      sb,
-      internalCustomerId: updatedCusProducts[0].customer.internal_id,
-      withProduct: true,
-      withPrices: true,
-      inStatuses: [CusProductStatus.Scheduled],
-    });
+      let cusProducts = await CusService.getFullCusProducts({
+        sb,
+        internalCustomerId: updatedCusProducts[0].customer.internal_id,
+        withProduct: true,
+        withPrices: true,
+        inStatuses: [CusProductStatus.Scheduled],
+      });
 
-    // Default products to activate...
-    let defaultProducts = allDefaultProducts.filter((p) =>
-      updatedCusProducts.some(
-        (cp: FullCusProduct) => cp.product.group == p.group
-      )
-    );
-
-    let customer = updatedCusProducts[0].customer;
-
-    if (defaultProducts.length > 0) {
-      console.log(
-        `subscription.updated: canceled -> attempting to schedule default products: ${defaultProducts
-          .map((p) => p.name)
-          .join(", ")}`
-      );
-    }
-
-    for (let product of defaultProducts) {
-      let alreadyScheduled = cusProducts.some(
-        (cp: FullCusProduct) => cp.product.group == product.group
+      // Default products to activate...
+      let defaultProducts = allDefaultProducts.filter((p) =>
+        updatedCusProducts.some(
+          (cp: FullCusProduct) => cp.product.group == p.group
+        )
       );
 
-      if (alreadyScheduled) {
-        continue;
+      let customer = updatedCusProducts[0].customer;
+
+      if (defaultProducts.length > 0) {
+        console.log(
+          `subscription.updated: canceled -> attempting to schedule default products: ${defaultProducts
+            .map((p) => p.name)
+            .join(", ")}`
+        );
       }
 
-      await createFullCusProduct({
-        sb,
-        attachParams: {
-          customer,
-          product,
-          prices: product.prices,
-          entitlements: product.entitlements,
-          freeTrial: product.free_trial || null,
-          optionsList: [],
-          entities: [],
-          org,
-        },
-        startsAt: subscription.current_period_end * 1000,
-      });
+      for (let product of defaultProducts) {
+        let alreadyScheduled = cusProducts.some(
+          (cp: FullCusProduct) => cp.product.group == product.group
+        );
+
+        if (alreadyScheduled) {
+          continue;
+        }
+
+        await createFullCusProduct({
+          sb,
+          attachParams: {
+            customer,
+            product,
+            prices: product.prices,
+            entitlements: product.entitlements,
+            freeTrial: product.free_trial || null,
+            optionsList: [],
+            entities: [],
+            org,
+          },
+          startsAt: subscription.current_period_end * 1000,
+        });
+      }
     }
-  }
 
-  let uncanceled =
-    notNullish(previousAttributes?.canceled_at) &&
-    nullish(subscription.canceled_at);
+    let uncanceled =
+      notNullish(previousAttributes?.canceled_at) &&
+      nullish(subscription.canceled_at);
 
-  if (uncanceled && updatedCusProducts.length > 0) {
-    let customer = updatedCusProducts[0].customer;
-    let allCusProducts = await CusService.getFullCusProducts({
-      sb,
-      internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
-      inStatuses: [
-        CusProductStatus.Active,
-        CusProductStatus.PastDue,
-        CusProductStatus.Scheduled,
-      ],
-    });
-
-    let { curScheduledProduct } = await getExistingCusProducts({
-      product: updatedCusProducts[0].product,
-      cusProducts: allCusProducts,
-    });
-
-    if (curScheduledProduct) {
-      console.log("subscription.updated: uncanceled -> removing scheduled");
-      let stripeCli = createStripeCli({
-        org,
-        env,
-      });
-      await cancelFutureProductSchedule({
+    if (uncanceled && updatedCusProducts.length > 0) {
+      let customer = updatedCusProducts[0].customer;
+      let allCusProducts = await CusService.getFullCusProducts({
         sb,
-        org,
-        stripeCli,
-        cusProducts: allCusProducts,
+        internalCustomerId: customer.internal_id,
+        withProduct: true,
+        withPrices: true,
+        inStatuses: [
+          CusProductStatus.Active,
+          CusProductStatus.PastDue,
+          CusProductStatus.Scheduled,
+        ],
+      });
+
+      let { curScheduledProduct } = await getExistingCusProducts({
         product: updatedCusProducts[0].product,
-        logger,
-        env,
+        cusProducts: allCusProducts,
       });
 
-      await CusProductService.delete({
-        sb,
-        cusProductId: curScheduledProduct.id,
-      });
+      if (curScheduledProduct) {
+        console.log("subscription.updated: uncanceled -> removing scheduled");
+        let stripeCli = createStripeCli({
+          org,
+          env,
+        });
+        await cancelFutureProductSchedule({
+          sb,
+          org,
+          stripeCli,
+          cusProducts: allCusProducts,
+          product: updatedCusProducts[0].product,
+          logger,
+          env,
+        });
+
+        await CusProductService.delete({
+          sb,
+          cusProductId: curScheduledProduct.id,
+        });
+      }
     }
   }
 
