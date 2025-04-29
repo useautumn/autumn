@@ -208,7 +208,7 @@ export class AutumnCli {
 
   static async getProducts() {
     const axiosInstance = getAxiosInstance();
-    const { data } = await axiosInstance.get(`/v1/products`);
+    const { data } = await axiosInstance.get(`/v1/products?v1_schema=true`);
     return data;
   }
 

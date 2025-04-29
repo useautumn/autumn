@@ -27,6 +27,7 @@ export const createStripeSub = async ({
   invoiceOnly = false,
   billingCycleAnchorUnix,
   itemSet,
+  shouldPreview = false,
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
@@ -37,6 +38,7 @@ export const createStripeSub = async ({
   billingCycleAnchorUnix?: number;
 
   itemSet: ItemSet;
+  shouldPreview?: boolean;
 }) => {
   let paymentMethod = await getCusPaymentMethod({
     org,
@@ -61,6 +63,18 @@ export const createStripeSub = async ({
     (i: any, index: number) =>
       prices[index].config!.interval === BillingInterval.OneOff
   );
+
+  if (shouldPreview) {
+    return await stripeCli.invoices.createPreview({
+      subscription_details: {
+        items: subItems as any,
+        trial_end: freeTrialToStripeTimestamp(freeTrial),
+        billing_cycle_anchor: billingCycleAnchorUnix,
+      },
+      invoice_items: invoiceItems as any,
+      customer: customer.processor.id,
+    });
+  }
 
   try {
     const subscription = await stripeCli.subscriptions.create({

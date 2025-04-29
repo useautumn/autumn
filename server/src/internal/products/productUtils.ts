@@ -100,9 +100,11 @@ export const constructProduct = ({
 export const isProductUpgrade = ({
   prices1,
   prices2,
+  usageAlwaysUpgrade = true,
 }: {
   prices1: Price[];
   prices2: Price[];
+  usageAlwaysUpgrade?: boolean;
 }) => {
   if (isFreeProduct(prices1) && !isFreeProduct(prices2)) {
     return true;
@@ -118,7 +120,8 @@ export const isProductUpgrade = ({
     ) &&
     prices2.every(
       (p) => getBillingType(p.config!) === BillingType.UsageInArrear
-    )
+    ) &&
+    usageAlwaysUpgrade
   ) {
     return true;
   }

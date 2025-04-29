@@ -1,7 +1,55 @@
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { AppEnv, ErrCode } from "@autumn/shared";
 
-const allowedEndpoints = ["/v1/entitled", "/v1/attach"];
+const allowedEndpoints = [
+  {
+    method: "GET",
+    path: "/v1/products",
+  },
+  {
+    method: "POST",
+    path: "/v1/entitled",
+  },
+  {
+    method: "POST",
+    path: "/v1/check",
+  },
+  {
+    method: "POST",
+    path: "/v1/attach",
+  },
+  {
+    method: "GET",
+    path: "/v1/customers/:customerId",
+  },
+];
+
+const isAllowedEndpoint = ({
+  pattern,
+  path,
+  method,
+}: {
+  pattern: string;
+  path: string;
+  method: string;
+}) => {
+  // Convert pattern to regex, handling path params like :id
+  const matchPath = (pattern: string, path: string) => {
+    // Convert pattern to regex, handling path params like :id
+    const regexPattern = pattern.replace(/:[^/]+/g, "[^/]+");
+    const regex = new RegExp(`^${regexPattern}$`);
+    // Remove query params before testing
+    const pathWithoutQuery = path.split("?")[0];
+    return regex.test(pathWithoutQuery);
+  };
+
+  for (const endpoint of allowedEndpoints) {
+    if (endpoint.method === method && matchPath(endpoint.path, path)) {
+      return true;
+    }
+  }
+  return false;
+};
 
 export const verifyBearerPublishableKey = async (
   pkey: string,
@@ -10,7 +58,13 @@ export const verifyBearerPublishableKey = async (
   next: any
 ) => {
   try {
-    if (!allowedEndpoints.includes(req.originalUrl)) {
+    if (
+      !isAllowedEndpoint({
+        pattern: req.originalUrl,
+        path: req.originalUrl,
+        method: req.method,
+      })
+    ) {
       return {
         error: ErrCode.EndpointNotPublic,
         fallback: false,

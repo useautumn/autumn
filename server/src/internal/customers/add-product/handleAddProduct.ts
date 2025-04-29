@@ -38,20 +38,22 @@ import {
 } from "@/internal/prices/billingIntervalUtils.js";
 import { SuccessCode } from "@autumn/shared";
 
-const handleBillNowPrices = async ({
+export const handleBillNowPrices = async ({
   sb,
   attachParams,
   res,
   req,
   fromRequest = true,
   carryExistingUsages = false,
+  shouldPreview = false,
 }: {
-  sb: SupabaseClient;
+  sb: any;
   attachParams: AttachParams;
   res: any;
   req: any;
   fromRequest?: boolean;
   carryExistingUsages?: boolean;
+  shouldPreview?: boolean;
 }) => {
   const logger = req.logtail;
   const { org, customer, products, freeTrial, invoiceOnly } = attachParams;
@@ -99,10 +101,17 @@ const handleBillNowPrices = async ({
         invoiceOnly,
         itemSet,
         billingCycleAnchorUnix,
+        shouldPreview,
       });
 
-      subscriptions.push(subscription);
-      invoiceIds.push(subscription.latest_invoice as string);
+      if (shouldPreview) {
+        return subscription;
+      }
+
+      let sub = subscription as Stripe.Subscription;
+
+      subscriptions.push(sub);
+      invoiceIds.push(sub.latest_invoice as string);
     } catch (error: any) {
       if (
         (error instanceof RecaseError &&

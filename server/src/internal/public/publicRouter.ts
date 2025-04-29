@@ -1,26 +1,9 @@
 import { Router } from "express";
 import { OrgService } from "../orgs/OrgService.js";
-import {
-  AppEnv,
-  CusProductStatus,
-  CustomerResponseSchema,
-  ErrCode,
-  FeatureType,
-  FullProduct,
-  Price,
-  PriceType,
-  Product,
-  PublicEntitlementSchema,
-  PublicProductSchema,
-  UsagePriceConfig,
-} from "@autumn/shared";
+import { AppEnv, CusProductStatus, ErrCode } from "@autumn/shared";
 import { ProductService } from "../products/ProductService.js";
-import { CusProductService } from "../customers/products/CusProductService.js";
 import { processFullCusProduct } from "../customers/products/cusProductUtils.js";
-import {
-  getOptionsFromPrices,
-  isProductUpgrade,
-} from "../products/productUtils.js";
+import { getOptionsFromPrices } from "../products/productUtils.js";
 import { FeatureService } from "../features/FeatureService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";

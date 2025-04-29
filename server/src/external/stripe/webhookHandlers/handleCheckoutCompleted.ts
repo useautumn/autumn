@@ -227,7 +227,7 @@ export const handleCheckoutSessionCompleted = async ({
         itemSet.interval
       );
 
-      const subscription = await createStripeSub({
+      const subscription = (await createStripeSub({
         sb,
         stripeCli,
         customer: attachParams.customer,
@@ -235,7 +235,7 @@ export const handleCheckoutSessionCompleted = async ({
         itemSet,
         freeTrial: attachParams.freeTrial, // add free trial to subscription...
         billingCycleAnchorUnix,
-      });
+      })) as Stripe.Subscription;
 
       otherSubscriptions.push(subscription.id);
       invoiceIds.push(subscription.latest_invoice as string);

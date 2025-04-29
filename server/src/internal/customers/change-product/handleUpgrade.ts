@@ -50,7 +50,7 @@ export enum ProrationBehavior {
 }
 
 // UPGRADE FUNCTIONS
-const handleStripeSubUpdate = async ({
+export const handleStripeSubUpdate = async ({
   sb,
   stripeCli,
   curCusProduct,
@@ -60,8 +60,9 @@ const handleStripeSubUpdate = async ({
   logger,
   carryExistingUsages = false,
   prorationBehavior = ProrationBehavior.Immediately,
+  shouldPreview = false,
 }: {
-  sb: SupabaseClient;
+  sb: any;
   stripeCli: Stripe;
   curCusProduct: FullCusProduct;
   attachParams: AttachParams;
@@ -70,6 +71,7 @@ const handleStripeSubUpdate = async ({
   logger: any;
   carryExistingUsages?: boolean;
   prorationBehavior?: ProrationBehavior;
+  shouldPreview?: boolean;
 }) => {
   // HANLDE UPGRADE
 
@@ -110,7 +112,7 @@ const handleStripeSubUpdate = async ({
 
   // 3. Update current subscription
   let newSubs = [];
-  const subUpdate: Stripe.Subscription = await updateStripeSubscription({
+  const subUpdateRes = await updateStripeSubscription({
     sb,
     stripeCli,
     subscriptionId: firstSub.id,
@@ -120,9 +122,15 @@ const handleStripeSubUpdate = async ({
     invoiceOnly: attachParams.invoiceOnly || false,
     prorationBehavior,
     logger,
-
     itemSet: firstItemSet,
+    shouldPreview,
   });
+
+  if (shouldPreview) {
+    return subUpdateRes;
+  }
+
+  let subUpdate = subUpdateRes as Stripe.Subscription;
 
   newSubs.push(subUpdate);
 
@@ -217,7 +225,7 @@ const handleStripeSubUpdate = async ({
       billingCycleAnchorUnix = undefined;
     }
 
-    const newSub = await createStripeSub({
+    const newSub = (await createStripeSub({
       sb,
       stripeCli,
       customer: attachParams.customer,
@@ -226,7 +234,7 @@ const handleStripeSubUpdate = async ({
       invoiceOnly: attachParams.invoiceOnly || false,
       freeTrial: attachParams.freeTrial,
       billingCycleAnchorUnix,
-    });
+    })) as Stripe.Subscription;
 
     newSubs.push(newSub);
     newSubIds.push(newSub.id);
@@ -366,7 +374,7 @@ export const handleUpgrade = async ({
     curCusProduct.trial_ends_at &&
     curCusProduct.trial_ends_at > Date.now() &&
     !attachParams.freeTrial &&
-    !newVersion; // Only carry over trial if migrating from one version to another...
+    !newVersion; // If trial to paid and not migrating, cancel trial and start new sub immediately.
 
   // 2. If upgrade is free to paid, or paid to free (migration / update)
   let toFreeProduct = isFreeProduct(attachParams.prices);
@@ -378,10 +386,6 @@ export const handleUpgrade = async ({
     if (trialToTrial) {
       logger.info(
         `Upgrading from trial to trial, cancelling and starting new subscription`
-      );
-    } else if (trialToPaid) {
-      logger.info(
-        `Upgrading from trial to paid, cancelling and starting new subscription`
       );
     } else if (toFreeProduct) {
       logger.info(
@@ -416,18 +420,23 @@ export const handleUpgrade = async ({
   }
 
   logger.info("1. Updating current subscription to new product");
-  let { subUpdate, newSubIds, invoiceIds, remainingExistingSubIds, newSubs } =
-    await handleStripeSubUpdate({
-      sb: req.sb,
-      curCusProduct,
-      stripeCli,
-      attachParams,
-      disableFreeTrial,
-      stripeSubs,
-      logger,
-      carryExistingUsages,
-      prorationBehavior,
-    });
+  let {
+    subUpdate,
+    newSubIds,
+    invoiceIds,
+    remainingExistingSubIds,
+    newSubs,
+  }: any = await handleStripeSubUpdate({
+    sb: req.sb,
+    curCusProduct,
+    stripeCli,
+    attachParams,
+    disableFreeTrial,
+    stripeSubs,
+    logger,
+    carryExistingUsages,
+    prorationBehavior,
+  });
 
   logger.info("2. Bill for remaining usages");
   await billForRemainingUsages({

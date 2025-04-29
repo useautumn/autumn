@@ -286,18 +286,48 @@ const invoiceForUsageImmediately = async ({
   // }
 };
 
+const getRemainingUsagesPreview = async ({
+  intervalToInvoiceItems,
+  curCusProduct,
+}: {
+  intervalToInvoiceItems: any;
+  curCusProduct: FullCusProduct;
+}) => {
+  let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
+  if (invoiceItems.length === 0) {
+    return;
+  }
+
+  let items = [];
+  for (const item of invoiceItems) {
+    const amount = getPriceForOverage(item.price, item.overage);
+    const description = `${curCusProduct.product.name} - ${
+      item.feature.name
+    } x ${Math.round(item.usage)}`;
+
+    items.push({
+      amount,
+      description,
+    });
+  }
+
+  return items;
+};
+
 export const billForRemainingUsages = async ({
   logger,
   sb,
   attachParams,
   curCusProduct,
   newSubs,
+  shouldPreview = false,
 }: {
   logger: any;
-  sb: SupabaseClient;
+  sb: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
   newSubs: Stripe.Subscription[];
+  shouldPreview?: boolean;
 }) => {
   const { customer_prices, customer_entitlements } = curCusProduct;
   const { customer, org } = attachParams;
@@ -359,6 +389,13 @@ export const billForRemainingUsages = async ({
   }
 
   // console.log("BILL UPGRADE IMMEDIATELY", org.config?.bill_upgrade_immediately);
+
+  if (shouldPreview) {
+    return getRemainingUsagesPreview({
+      intervalToInvoiceItems,
+      curCusProduct,
+    });
+  }
 
   if (org.config?.bill_upgrade_immediately) {
     await invoiceForUsageImmediately({

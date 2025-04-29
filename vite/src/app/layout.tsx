@@ -85,20 +85,8 @@ export function MainLayout() {
     );
   }
 
-  // 3. If user, but no org, redirect to onboarding
-
   return (
-    <main
-      className="w-screen h-screen flex bg-stone-100"
-      // style={{
-      //   backgroundImage: "url('/metal.jpg')",
-      //   backgroundSize: "cover",
-      //   backgroundPosition: "top left",
-      //   backgroundRepeat: "no-repeat",
-      //   backgroundColor: "rgba(255, 255, 255, 0)",
-      //   backgroundBlendMode: "overlay",
-      // }}
-    >
+    <main className="w-screen h-screen flex bg-stone-100">
       <Toaster
         position="top-center"
         className="flex justify-center"

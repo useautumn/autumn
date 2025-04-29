@@ -26,6 +26,9 @@ export const getPricesForCusProduct = ({
 }: {
   cusProduct: FullCusProduct;
 }) => {
+  if (!cusProduct) {
+    return [];
+  }
   return cusProduct.customer_prices.map((price) => price.price);
 };
 
@@ -281,6 +284,13 @@ export const cancelFutureProductSchedule = async ({
         await stripeCli.subscriptions.update(subWithSameInterval.id, {
           cancel_at: null,
         });
+        await CusProductService.update({
+          sb,
+          cusProductId: curMainProduct!.id,
+          updates: {
+            canceled_at: null,
+          },
+        });
       }
       logger.info(`✅ Cancelled schedule: ${schedule.id}`);
     }
@@ -373,6 +383,13 @@ export const cancelFutureProductSchedule = async ({
       if (curMainSubIds && curMainSubIds.length > 0) {
         await stripeCli.subscriptions.update(curMainSubIds[0], {
           cancel_at: null,
+        });
+        await CusProductService.update({
+          sb,
+          cusProductId: curMainProduct!.id,
+          updates: {
+            canceled_at: null,
+          },
         });
       }
     }

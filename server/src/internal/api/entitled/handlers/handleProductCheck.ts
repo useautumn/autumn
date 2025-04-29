@@ -1,15 +1,16 @@
+import { notNullish } from "@/utils/genUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { getOrCreateCustomer } from "../../customers/cusUtils.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
   CusProductStatus,
-  FeatureType,
   FullCusProduct,
+  FullProduct,
   SuccessCode,
 } from "@autumn/shared";
-import { getUnlimitedAndUsageAllowed } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { getAttachContext } from "./getAttachContext.js";
+import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 
 export const handleProductCheck = async ({
   req,
@@ -18,11 +19,11 @@ export const handleProductCheck = async ({
   req: any;
   res: any;
 }) => {
-  const { customer_id, product_id, customer_data } = req.body;
+  const { customer_id, product_id, customer_data, with_preview } = req.body;
   const { orgId, sb, env, logtail: logger } = req;
 
   // 1. Get customer and org
-  let [customer, org] = await Promise.all([
+  let [customer, org, product] = await Promise.all([
     getOrCreateCustomer({
       sb,
       orgId,
@@ -33,20 +34,34 @@ export const handleProductCheck = async ({
       orgSlug: req.minOrg?.slug,
     }),
     OrgService.getFromReq(req),
+    ProductService.getFullProduct({
+      sb,
+      orgId,
+      env,
+      productId: product_id,
+    }),
   ]);
 
-  // 2. Get cus products
-  const cusProducts = await CusService.getFullCusProducts({
-    sb,
-    internalCustomerId: customer.internal_id,
-    withProduct: true,
-    // inStatuses: [
-    //   CusProductStatus.Active,
-    //   CusProductStatus.PastDue,
-    //   CusProductStatus.Expired,
-    //   CusProductStatus.Canceled,
-    // ],
-  });
+  // 2. Get cus products and payment method in parallel
+  const [cusProducts, paymentMethod] = await Promise.all([
+    CusService.getFullCusProducts({
+      sb,
+      internalCustomerId: customer.internal_id,
+      withProduct: true,
+      withPrices: true,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
+    }),
+    getCusPaymentMethod({
+      org,
+      env: customer.env,
+      stripeId: customer.processor?.id,
+      errorIfNone: false,
+    }),
+  ]);
 
   cusProducts.sort((a: FullCusProduct, b: FullCusProduct) => {
     if (a.status === b.status) return 0;
@@ -64,6 +79,17 @@ export const handleProductCheck = async ({
       code: SuccessCode.ProductFound,
       product_id,
       allowed: false,
+
+      preview: with_preview
+        ? await getAttachContext({
+            customer,
+            org,
+            env,
+            product: product!,
+            cusProducts,
+            paymentMethod,
+          })
+        : undefined,
     });
     return;
   }
@@ -79,12 +105,22 @@ export const handleProductCheck = async ({
     allowed:
       cusProduct.status === CusProductStatus.Active ||
       cusProduct.status === CusProductStatus.PastDue,
-
     status: notNullish(cusProduct.canceled_at)
       ? "canceled"
       : onTrial
       ? "trialing"
       : cusProduct.status,
+
+    preview: with_preview
+      ? await getAttachContext({
+          customer,
+          org,
+          env,
+          product: product!,
+          cusProducts,
+          paymentMethod,
+        })
+      : undefined,
   });
 
   return;

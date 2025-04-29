@@ -65,7 +65,7 @@ export function SidebarContact() {
           className="cursor-pointer h-[30px] flex justify-between"
           asChild
         >
-          <Link to="https://discord.gg/PMNwStsk" target="_blank">
+          <Link to="https://discord.gg/STqxY92zuS" target="_blank">
             Join our Discord
           </Link>
         </DropdownMenuItem>

@@ -13,6 +13,7 @@ import ProductsView from "./views/products/ProductsView";
 
 import OnboardingView from "./views/onboarding/OnboardingView";
 import { DefaultView } from "./views/DefaultView";
+import CliAuth from "./views/CliAuth";
 
 export default function App() {
   return (
@@ -22,6 +23,8 @@ export default function App() {
           <Route path="*" element={<DefaultView />} />
           <Route path="/onboarding" element={<OnboardingView />} />
           <Route path="/sandbox/onboarding" element={<OnboardingView />} />
+
+          <Route path="/cli-auth" element={<CliAuth />} />
 
           {/* FEATURES */}
           <Route

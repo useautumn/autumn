@@ -50,7 +50,7 @@ describe(`${chalk.yellowBright("Testing pkey (x-publishable-key)")}`, () => {
     }
   });
 
-  it("should return checkout URL for both bearer and x-publishable-key", async function () {
+  it("should return checkout URL for both bearer key", async function () {
     this.timeout(30000);
     const axiosInstanceBearer = getPublicAxiosInstance({
       withBearer: true,
@@ -68,14 +68,8 @@ describe(`${chalk.yellowBright("Testing pkey (x-publishable-key)")}`, () => {
 
     assert.exists(data.checkout_url);
 
-    const { data: dataXKey } = await axiosInstanceXKey.post("/v1/attach", {
-      customer_id: customerId,
-      product_id: products.pro.id,
-    });
+    await completeCheckoutForm(data.checkout_url);
 
-    assert.exists(dataXKey.checkout_url);
-
-    await completeCheckoutForm(dataXKey.checkout_url);
     await timeout(5000);
   });
 

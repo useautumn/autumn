@@ -26,17 +26,19 @@ export const updateStripeSubscription = async ({
   prorationBehavior,
   logger,
   itemSet,
+  shouldPreview,
 }: {
   sb: SupabaseClient;
   org: Organization;
   customer: Customer;
   stripeCli: Stripe;
   subscriptionId: string;
-  trialEnd?: number;
+  trialEnd?: number | null;
   invoiceOnly: boolean;
   prorationBehavior?: ProrationBehavior;
   logger: any;
   itemSet: ItemSet;
+  shouldPreview?: boolean;
 }) => {
   let paymentMethod = await getCusPaymentMethod({
     org,
@@ -71,6 +73,22 @@ export const updateStripeSubscription = async ({
     prorationBehavior,
   });
 
+  if (shouldPreview) {
+    // console.log("Sub items: ", subItems);
+    // console.log("Sub invoice items: ", subInvoiceItems);
+    let preview = await stripeCli.invoices.createPreview({
+      subscription_details: {
+        items: subItems,
+        proration_behavior: stripeProration as any,
+        trial_end: trialEnd as any,
+      },
+      subscription: subscriptionId,
+      invoice_items: subInvoiceItems,
+      customer: customer.processor.id,
+    });
+    return preview;
+  }
+
   try {
     const sub = await stripeCli.subscriptions.update(subscriptionId, {
       items: subItems,
@@ -99,6 +117,8 @@ export const updateStripeSubscription = async ({
     console.log("Error updating stripe subscription.", error.message);
 
     if (isStripeCardDeclined(error)) {
+      logger.info("Error");
+      logger.info(error);
       throw new RecaseError({
         code: ErrCode.StripeCardDeclined,
         message: `Card was declined, Stripe decline code: ${error.decline_code}, Code: ${error.code}`,

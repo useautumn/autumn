@@ -6,12 +6,18 @@ import {
   Price,
   ProductItem,
   ProductItemInterval,
+  ProductItemResponseSchema,
+  ProductResponseSchema,
   ProductV2,
 } from "@autumn/shared";
 import { getEntRelatedPrice } from "./entitlements/entitlementUtils.js";
 import { getPriceEntitlement } from "../prices/priceUtils.js";
 import { toProductItem } from "./product-items/mapToItem.js";
-import { getItemFeatureType } from "./product-items/productItemUtils.js";
+import {
+  getItemFeatureType,
+  isFeaturePriceItem,
+} from "./product-items/productItemUtils.js";
+import { isPriceItem } from "./product-items/getItemType.js";
 
 export const mapToProductItems = ({
   prices,
@@ -99,4 +105,27 @@ export const mapToProductV2 = ({
   };
 
   return productV2;
+};
+
+export const getProductResponse = ({
+  product,
+  features,
+}: {
+  product: FullProduct;
+  features: Feature[];
+}) => {
+  return ProductResponseSchema.parse({
+    ...product,
+    name: product.name || null,
+    group: product.group || null,
+    autumn_id: product.internal_id,
+    items: mapToProductItems({
+      prices: product.prices,
+      entitlements: product.entitlements,
+      features: features,
+    }).map((item) => {
+      // console.log(item);
+      return ProductItemResponseSchema.parse(item);
+    }),
+  });
 };

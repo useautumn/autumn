@@ -5,7 +5,10 @@ import { Router } from "express";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-import { checkStripeProductExists } from "@/internal/products/productUtils.js";
+import {
+  checkStripeProductExists,
+  isProductUpgrade,
+} from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 
@@ -15,16 +18,44 @@ import { handleGetProduct } from "./handleGetProduct.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
 
 import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
+import { getProductResponse } from "@/internal/products/productV2Utils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const productApiRouter = Router();
 
 productApiRouter.get("", async (req: any, res) => {
-  const products = await ProductService.getFullProducts({
-    sb: req.sb,
-    orgId: req.orgId,
-    env: req.env,
-  });
-  res.status(200).json(products);
+  try {
+    const [org, features, products] = await Promise.all([
+      OrgService.getFromReq(req),
+      FeatureService.getFeatures({
+        sb: req.sb,
+        orgId: req.orgId,
+        env: req.env,
+      }),
+      ProductService.getFullProducts({
+        sb: req.sb,
+        orgId: req.orgId,
+        env: req.env,
+      }),
+    ]);
+
+    let prods = products.map((p) =>
+      getProductResponse({ product: p, features })
+    );
+
+    if (req.query.v1_schema === "true") {
+      res.status(200).json({
+        list: products,
+      });
+      return;
+    }
+
+    res.status(200).json({
+      list: prods,
+    });
+  } catch (error) {
+    handleRequestError({ req, error, res, action: "Get products" });
+  }
 });
 
 productApiRouter.post("", handleCreateProduct);

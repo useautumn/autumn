@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { FeatureSchema, FeatureType } from "../featureModels/featureModels.js";
 
 export const TierInfinite = "inf";
 export const Infinite = "inf";
@@ -11,6 +10,7 @@ export enum ProductItemInterval {
   Minute = "minute",
   Hour = "hour",
   Day = "day",
+  Week = "week",
 
   // Billing interval
   Month = "month",
