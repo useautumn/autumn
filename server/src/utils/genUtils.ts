@@ -49,6 +49,13 @@ export const formatUnixToDateTime = (unixDate: number) => {
   return format(new Date(unixDate), "yyyy MMM dd HH:mm:ss");
 };
 
+export const formatUnixToDate = (unixDate?: number) => {
+  if (!unixDate) {
+    return null;
+  }
+  return format(new Date(unixDate), "d MMM yyyy");
+};
+
 export const timeout = (ms: number) => {
   return new Promise((resolve) => setTimeout(resolve, ms));
 };

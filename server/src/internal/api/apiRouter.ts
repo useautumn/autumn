@@ -19,6 +19,7 @@ import rewardRouter from "./rewards/rewardRouter.js";
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
 import expireRouter from "./customers/products/expireRouter.js";
+import { componentRouter } from "./components/componentRouter.js";
 
 const apiRouter = Router();
 
@@ -86,6 +87,7 @@ apiRouter.get("/auth", (req: any, res) => {
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/invoices", invoiceRouter);
 apiRouter.use("/products", productApiRouter);
+apiRouter.use("/components", componentRouter);
 apiRouter.use("/rewards", rewardRouter);
 apiRouter.use("/features", featureApiRouter);
 

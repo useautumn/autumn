@@ -1,5 +1,9 @@
 import { CusService } from "@/internal/customers/CusService.js";
-import { CusProductStatus, FullCusProduct, UsagePriceConfig } from "@autumn/shared";
+import {
+  CusProductStatus,
+  FullCusProduct,
+  UsagePriceConfig,
+} from "@autumn/shared";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 
 export const timeout = (ms: number) => {
@@ -94,7 +98,7 @@ export const getFeaturePrice = ({
   let mainProduct = cusProducts[0];
 
   for (const cusPrice of mainProduct.customer_prices) {
-    let price = cusPrice.price
+    let price = cusPrice.price;
     if ((price.config! as UsagePriceConfig).feature_id === featureId) {
       return price;
     }

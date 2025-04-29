@@ -27,6 +27,26 @@ import { StatusCodes } from "http-status-codes";
 
 export const productRouter = Router({ mergeParams: true });
 
+productRouter.get("/", async (req: any, res) => {
+  try {
+    let sb = req.sb;
+    let products = await ProductService.getFullProducts({
+      sb,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
+    res.status(200).send(products);
+  } catch (error) {
+    handleFrontendReqError({
+      error,
+      req,
+      res,
+      action: "Get products (internal)",
+    });
+  }
+});
+
 productRouter.get("/data", async (req: any, res) => {
   let sb = req.sb;
 

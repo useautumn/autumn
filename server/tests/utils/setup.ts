@@ -334,7 +334,7 @@ export const setupOrg = async ({
   // return;
 
   // Fetch all products
-  const allProducts = await AutumnCli.getProducts();
+  const { list: allProducts } = await AutumnCli.getProducts();
   const productIds = allProducts.map((p: any) => p.id);
 
   // Insert coupons

@@ -283,6 +283,15 @@ export const handleDowngrade = async ({
     isDowngrade: true,
   });
 
+  // 5. Updating current cus product canceled_at...
+  await CusProductService.update({
+    sb: req.sb,
+    cusProductId: curCusProduct.id,
+    updates: {
+      canceled_at: latestPeriodEnd * 1000,
+    },
+  });
+
   if (attachParams.org.api_version! >= APIVersion.v1_1) {
     res.status(200).json(
       AttachResultSchema.parse({

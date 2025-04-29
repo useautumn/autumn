@@ -333,8 +333,8 @@ export class CusProductService {
       .select(
         `
           *, 
-          customer_entitlements:customer_entitlements!inner(*, entitlement:entitlements!inner(*, feature:features!inner(*))), 
-          customer_prices:customer_prices!inner(*, price:prices!inner(*))
+          customer_entitlements:customer_entitlements(*, entitlement:entitlements!inner(*, feature:features!inner(*))), 
+          customer_prices:customer_prices(*, price:prices!inner(*))
         `
       )
       .eq("id", cusProductId)

@@ -25,7 +25,10 @@ export const getStripeSubs = async ({
     try {
       return await stripeCli.subscriptions.retrieve(subId);
     } catch (error: any) {
-      console.log("Error getting stripe subscription.", error.message);
+      console.log(
+        `(warning) getStripeSubs: Failed to get sub ${subId}`,
+        error.message
+      );
       return null;
     }
   };
