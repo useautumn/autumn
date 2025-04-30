@@ -5,7 +5,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { EntityService } from "./EntityService.js";
-import { AppEnv, Entity, ErrCode } from "@autumn/shared";
+import { AppEnv, CusProductStatus, Entity, ErrCode } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { getActiveCusProductStatuses } from "@/utils/constants.js";
@@ -150,13 +150,13 @@ export const handleCreateEntity = async (req: any, res: any) => {
     const { sb, env, orgId, logtail: logger } = req;
     const { customer_id } = req.params;
 
-    console.log("Env", env);
     let [customer, features, org] = await Promise.all([
-      CusService.getByIdOrInternalId({
+      CusService.getWithProducts({
         sb,
         idOrInternalId: customer_id,
         orgId,
         env,
+        inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
       }),
       FeatureService.getFromReq(req),
       OrgService.getFromReq(req),
@@ -194,14 +194,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
       });
     }
 
-    let cusProducts = await CusService.getFullCusProducts({
-      sb,
-      internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
-      inStatuses: getActiveCusProductStatuses(),
-      logger,
-    });
+    let cusProducts = await customer.customer_products;
 
     // Fetch existing
     let existingEntities = await EntityService.get({
@@ -289,6 +282,8 @@ export const handleCreateEntity = async (req: any, res: any) => {
       // console.log("Replaced count", replacedCount);
       // throw new Error("test");
 
+      console.log("Org", org);
+
       await adjustAllowance({
         sb,
         env,
@@ -369,6 +364,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
         });
       }
     }
+
     logger.info(`  Created / replaced entities!`);
 
     res.status(200).json({

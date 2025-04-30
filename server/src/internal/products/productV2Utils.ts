@@ -118,7 +118,7 @@ export const getProductResponse = ({
     ...product,
     name: product.name || null,
     group: product.group || null,
-    autumn_id: product.internal_id,
+    // autumn_id: product.internal_id,
     items: mapToProductItems({
       prices: product.prices,
       entitlements: product.entitlements,

@@ -48,13 +48,8 @@ productRouter.get("/", async (req: any, res) => {
 });
 
 productRouter.get("/data", async (req: any, res) => {
-  let sb = req.sb;
-
   try {
-    await OrgService.getFullOrg({
-      sb,
-      orgId: req.orgId,
-    });
+    let { sb } = req;
 
     const [products, features, org, coupons, rewardPrograms] =
       await Promise.all([

@@ -46,6 +46,8 @@ import { handleChangeProduct } from "@/internal/customers/change-product/handleC
 import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 
 import { CusService } from "@/internal/customers/CusService.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const attachRouter = Router();
 
@@ -321,13 +323,20 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     z.array(FeatureOptionsSchema).parse(optionsListInput);
 
+    let [org, features] = await Promise.all([
+      OrgService.getFromReq(req),
+      FeatureService.getFromReq(req),
+    ]);
+
     // Get curCusProducts too...
     const attachParams: AttachParams = await getFullCusProductData({
       sb,
       customerId: customer_id,
       productId: product_id,
       customerData: customer_data,
-      orgId,
+      org,
+      orgId: org.id,
+      features,
       env,
       itemsInput,
       optionsListInput,
@@ -336,7 +345,6 @@ attachRouter.post("/attach", async (req: any, res) => {
       productIds: product_ids,
       logger,
       version,
-      orgSlug: req.minOrg.slug,
     });
 
     attachParams.successUrl = successUrl;

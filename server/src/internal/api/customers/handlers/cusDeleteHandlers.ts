@@ -2,34 +2,31 @@ import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, ErrCode, MinOrg } from "@autumn/shared";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { AppEnv, ErrCode, MinOrg, Organization } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import chalk from "chalk";
 import { StatusCodes } from "http-status-codes";
 
 export const deleteCusById = async ({
   sb,
-  minOrg,
+  org,
   customerId,
   env,
   logger,
   deleteInStripe = false,
 }: {
   sb: SupabaseClient;
-  minOrg: MinOrg;
+  org: Organization;
   customerId: string;
   env: AppEnv;
   logger: any;
   deleteInStripe?: boolean;
 }) => {
   console.log(
-    `${chalk.yellow("deleteCusById")}: ${customerId}, ${minOrg.id}, ${env}`
+    `${chalk.yellow("deleteCusById")}: ${customerId}, ${org.id}, ${env}`
   );
-  const orgId = minOrg.id;
-  const fullOrg = await OrgService.getFullOrg({
-    sb,
-    orgId,
-  });
+  const orgId = org.id;
 
   const customer = await CusService.getByIdOrInternalId({
     sb,
@@ -51,7 +48,7 @@ export const deleteCusById = async ({
       // Only delete stripe customer in sandbox
       if (customer.processor?.id && env === AppEnv.Sandbox) {
         await deleteStripeCustomer({
-          org: fullOrg,
+          org,
           env: env,
           stripeId: customer.processor.id,
         });
@@ -78,3 +75,22 @@ export const deleteCusById = async ({
     customer,
   };
 };
+
+export const handleDeleteCustomer = async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "delete customer",
+    handler: async () => {
+      const data = await deleteCusById({
+        sb: req.sb,
+        org: req.org,
+        customerId: req.params.customer_id,
+        env: req.env,
+        logger: req.logtail,
+        deleteInStripe: req.query.delete_in_stripe === "true",
+      });
+
+      res.status(200).json(data);
+    },
+  });

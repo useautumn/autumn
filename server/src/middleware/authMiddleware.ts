@@ -1,3 +1,4 @@
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import { verifyToken } from "@clerk/express";
 import { NextFunction } from "express";
 
@@ -14,10 +15,6 @@ const getTokenData = async (req: any, res: any) => {
   }
 
   let secretKey = process.env.CLERK_SECRET_KEY;
-  // let origin = req.headers.origin;
-  // if (origin && origin.includes("localhost")) {
-  //   secretKey = process.env.CLERK_TEST_SECRET_KEY;
-  // }
 
   try {
     let verified = await verifyToken(token, {
@@ -43,6 +40,13 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     }
 
     let tokenOrg = tokenData!.org as any;
+
+    let { org, features } = await OrgService.getWithFeatures({
+      sb: req.sb,
+      orgId: tokenOrg.id,
+      env: req.env,
+    });
+
     req.minOrg = {
       id: tokenOrg?.id,
       slug: tokenOrg?.slug,
@@ -50,6 +54,8 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
 
     req.orgId = tokenData!.org_id;
     req.user = tokenData!.user;
+    req.org = org;
+    req.features = features;
 
     next();
   } catch (error: any) {

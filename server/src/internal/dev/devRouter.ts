@@ -1,6 +1,6 @@
 import { deleteKey } from "@/external/unkeyUtils.js";
 import { withOrgAuth } from "@/middleware/authMiddleware.js";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, SuccessCode } from "@autumn/shared";
 import { Router } from "express";
 import { ApiKeyService } from "./ApiKeyService.js";
 import { OrgService } from "../orgs/OrgService.js";
@@ -8,6 +8,8 @@ import { createKey } from "./api-keys/apiKeyUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getSvixDashboardUrl } from "@/external/svix/svixUtils.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
+import { CacheManager } from "@/external/caching/CacheManager.js";
+import { CacheType } from "@/external/caching/cacheActions.js";
 
 export const devRouter = Router();
 
@@ -47,18 +49,7 @@ export const handleCreateApiKey = async ({
 devRouter.get("/data", withOrgAuth, async (req: any, res) => {
   try {
     const apiKeys = await ApiKeyService.getByOrg(req.sb, req.orgId, req.env);
-    const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
-
-    // Get svix dashboard url
-    // let svixDashboardUrl = null;
-    // try {
-    //   svixDashboardUrl = await getSvixDashboardUrl({
-    //     org,
-    //     env: req.env,
-    //   });
-    // } catch (error) {
-    //   console.error("Failed to get svix dashboard url", error);
-    // }
+    const org = await OrgService.getFromReq(req);
 
     res.status(200).json({
       api_keys: apiKeys,
@@ -98,19 +89,32 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) => {
 devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
   const { id } = req.params;
   try {
-    let count = await ApiKeyService.deleteStrict(req.sb, id, req.orgId);
-    if (count === 0) {
+    let data = await ApiKeyService.deleteStrict(req.sb, id, req.orgId);
+    if (data.length === 0) {
       console.error("API key not found");
       res.status(404).json({ error: "API key not found" });
       return;
     }
+
+    let batchInvalidate = [];
+    for (let apiKey of data) {
+      batchInvalidate.push(
+        CacheManager.invalidate({
+          action: CacheType.SecretKey,
+          value: apiKey.hashed_key,
+        })
+      );
+    }
+    await Promise.all(batchInvalidate);
+
+    res
+      .status(200)
+      .json({ message: "API key deleted", code: "api_key_deleted" });
   } catch (error) {
     console.error("Failed to delete API key", error);
     res.status(500).json({ error: "Failed to delete API key" });
     return;
   }
-
-  res.status(200).json({ message: "API key deleted" });
 });
 
 // am_live_3ZaPDgqt7K4GkdirAU9oDFT3

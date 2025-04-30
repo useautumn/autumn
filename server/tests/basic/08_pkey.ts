@@ -8,7 +8,8 @@ import { ErrCode } from "@autumn/shared";
 import { compareMainProduct } from "../utils/compare.js";
 import { AutumnCli } from "../cli/AutumnCli.js";
 import chalk from "chalk";
-describe(`${chalk.yellowBright("Testing pkey (x-publishable-key)")}`, () => {
+
+describe(`${chalk.yellowBright("Testing pkey")}`, () => {
   // 1. Initialize customer with card
   let customerId = "pkeyTestCustomer";
   const bearerPublicAxios = getPublicAxiosInstance({
@@ -54,10 +55,6 @@ describe(`${chalk.yellowBright("Testing pkey (x-publishable-key)")}`, () => {
     this.timeout(30000);
     const axiosInstanceBearer = getPublicAxiosInstance({
       withBearer: true,
-    });
-
-    const axiosInstanceXKey = getPublicAxiosInstance({
-      withBearer: false,
     });
 
     // 1. Should be able to upgrade to pro
@@ -123,13 +120,6 @@ describe(`${chalk.yellowBright("Testing pkey (x-publishable-key)")}`, () => {
     const { data } = await bearerPublicAxios.post("/v1/entitled", {
       customer_id: customerId,
       feature_id: features.metered1.id,
-
-      event_data: {
-        event_name: features.metered1.id,
-        properties: {
-          value: 10,
-        },
-      },
     });
 
     assert.equal(data.allowed, true);

@@ -11,7 +11,6 @@ import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 import pg from "pg";
 
 import http from "http";
-import { publicRouter } from "./internal/public/publicRouter.js";
 import { initLogger } from "./errors/logger.js";
 import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
@@ -34,6 +33,8 @@ const init = async () => {
   await pgClient.connect();
 
   await QueueManager.getInstance(); // initialize the queue manager
+  await CacheManager.getInstance();
+
   // await initWorkers();
   const supabaseClient = createSupabaseClient();
   const logtailAll = createLogtailAll();
@@ -104,7 +105,6 @@ const init = async () => {
 
   app.use(express.json());
   app.use(mainRouter);
-  app.use("/public", publicRouter);
   app.use("/v1", apiRouter);
 
   const PORT = 8080;
@@ -116,42 +116,34 @@ const init = async () => {
 
 import cluster from "cluster";
 import os from "os";
-let numCPUs = os.cpus().length;
+import { CacheManager } from "./external/caching/CacheManager.js";
 
-if (cluster.isPrimary) {
-  console.log(`Master ${process.pid} is running`);
-  console.log("Number of CPUs", numCPUs);
-  let numWorkers = Math.min(numCPUs, 3);
-
-  for (let i = 0; i < numWorkers; i++) {
-    cluster.fork();
-  }
-
-  cluster.on("exit", (worker, code, signal) => {
-    try {
-      let logtail = createLogtail();
-      logtail.error(`WORKER DIED: ${worker.process.pid}`);
-      logtail.flush();
-    } catch (error) {
-      console.log("Error sending log to logtail", error);
-    }
-    // LOG in Render
-    cluster.fork();
-  });
-} else {
+if (process.env.NODE_ENV === "development") {
   init();
+} else {
+  let numCPUs = os.cpus().length;
+
+  if (cluster.isPrimary) {
+    console.log(`Master ${process.pid} is running`);
+    console.log("Number of CPUs", numCPUs);
+    let numWorkers = Math.min(numCPUs, 3);
+
+    for (let i = 0; i < numWorkers; i++) {
+      cluster.fork();
+    }
+
+    cluster.on("exit", (worker, code, signal) => {
+      try {
+        let logtail = createLogtail();
+        logtail.error(`WORKER DIED: ${worker.process.pid}`);
+        logtail.flush();
+      } catch (error) {
+        console.log("Error sending log to logtail", error);
+      }
+      // LOG in Render
+      cluster.fork();
+    });
+  } else {
+    init();
+  }
 }
-
-// console.log("Number of CPUs", numCPUs);
-// init();
-
-// process.on("unhandledRejection", (reason, promise) => {
-//   try {
-//     const logtail = createLogtail();
-//     logtail.error("❗️❗️❗️ UNHANDLED REJECTION");
-//     logtail.error(reason);
-//     logtail.flush();
-//   } catch (error) {
-//     console.log("Unhandled rejection", error);
-//   }
-// });

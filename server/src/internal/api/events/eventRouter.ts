@@ -7,6 +7,8 @@ import {
   ErrCode,
   Event,
   Feature,
+  FeatureType,
+  Organization,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -19,28 +21,28 @@ import { QueueManager } from "@/queue/QueueManager.js";
 import { subDays } from "date-fns";
 import { handleUsageEvent } from "./usageRouter.js";
 import { StatusCodes } from "http-status-codes";
-import { getOrCreateCustomer } from "../customers/cusUtils.js";
+import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 
 export const eventsRouter = Router();
 
 const getEventAndCustomer = async ({
   sb,
-  orgId,
+  org,
   env,
   customer_id,
   customer_data,
   event_data,
   logger,
-  orgSlug,
 }: {
   sb: SupabaseClient;
-  orgId: string;
+  org: Organization;
   env: AppEnv;
   customer_id: string;
   customer_data: any;
   event_data: any;
   logger: any;
-  orgSlug: string;
 }) => {
   if (!customer_id) {
     throw new RecaseError({
@@ -55,12 +57,11 @@ const getEventAndCustomer = async ({
   // 2. Check if customer ID is valid
   customer = await getOrCreateCustomer({
     sb,
-    orgId,
+    org,
     env,
     customerId: customer_id,
     customerData: customer_data,
     logger,
-    orgSlug,
   });
 
   // 3. Insert event
@@ -78,7 +79,7 @@ const getEventAndCustomer = async ({
     ...parsedEvent,
     properties: parsedEvent.properties || {},
     id: generateId("evt"),
-    org_id: orgId,
+    org_id: org.id,
     env: env,
     internal_customer_id: customer.internal_id,
     timestamp: eventTimestamp,
@@ -90,36 +91,63 @@ const getEventAndCustomer = async ({
 };
 
 const getAffectedFeatures = async ({
+  req,
   pg,
   event,
   orgId,
   env,
 }: {
+  req: any;
   pg: Client;
   event: Event;
   orgId: string;
   env: AppEnv;
 }) => {
-  const { rows }: { rows: Feature[] } = await pg.query(`
-    with features_with_event as (
-      select * from features
-      where org_id = '${orgId}'
-      and env = '${env}'
-      and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
-    )
+  let features = await FeatureService.getFromReq(req);
 
-    select * from features WHERE
-    org_id = '${orgId}'
-    and env = '${env}'
-    and EXISTS (
-      SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
-      schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
-    )
-    UNION all
-    select * from features_with_event
-  `);
+  let featuresWithEvent = features.filter((feature) => {
+    return (
+      feature.type == FeatureType.Metered &&
+      feature.config.filters.some((filter: any) => {
+        return filter.value.includes(event.event_name);
+      })
+    );
+  });
 
-  return rows;
+  let creditSystems = features.filter((cs: Feature) => {
+    return (
+      cs.type == FeatureType.CreditSystem &&
+      featuresWithEvent.some((f) =>
+        creditSystemContainsFeature({
+          creditSystem: cs,
+          meteredFeatureId: f.id,
+        })
+      )
+    );
+  });
+
+  return [...featuresWithEvent, ...creditSystems];
+
+  // const { rows }: { rows: Feature[] } = await pg.query(`
+  //   with features_with_event as (
+  //     select * from features
+  //     where org_id = '${orgId}'
+  //     and env = '${env}'
+  //     and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
+  //   )
+
+  //   select * from features WHERE
+  //   org_id = '${orgId}'
+  //   and env = '${env}'
+  //   and EXISTS (
+  //     SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
+  //     schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
+  //   )
+  //   UNION all
+  //   select * from features_with_event
+  // `);
+
+  // return rows;
 };
 
 export const handleEventSent = async ({
@@ -141,23 +169,20 @@ export const handleEventSent = async ({
 
   const { sb, pg, orgId, env } = req;
 
-  const org = await OrgService.getFullOrg({
-    sb,
-    orgId,
-  });
+  const org = await OrgService.getFromReq(req);
 
   const { customer, event } = await getEventAndCustomer({
     sb,
-    orgId,
+    org,
     env,
     customer_id,
     customer_data,
     event_data,
     logger: req.logtail,
-    orgSlug: req.minOrg?.slug || "",
   });
 
   const affectedFeatures = await getAffectedFeatures({
+    req,
     pg: pg,
     event,
     orgId,

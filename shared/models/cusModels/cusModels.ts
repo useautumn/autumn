@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AppEnv } from "../genModels.js";
-import { CusProductSchema } from "./cusProductModels.js";
+import { CusProductSchema, FullCusProductSchema } from "./cusProductModels.js";
 import { ProductSchema } from "../productModels/productModels.js";
 
 export const CustomerSchema = z.object({

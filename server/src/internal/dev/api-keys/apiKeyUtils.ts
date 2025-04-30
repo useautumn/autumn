@@ -2,7 +2,9 @@ import { generateId } from "@/utils/genUtils.js";
 import { ApiKey, AppEnv } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import crypto from "crypto";
-import { ApiKeyService } from "../ApiKeyService.js";
+import { ApiKeyService, CachedKeyService } from "../ApiKeyService.js";
+import { CacheType } from "@/external/caching/cacheActions.js";
+import { getAPIKeyCache } from "@/external/caching/cacheUtils.js";
 
 function generateApiKey(length = 32, prefix = "") {
   try {
@@ -24,7 +26,7 @@ function generateApiKey(length = 32, prefix = "") {
   }
 }
 
-const hashApiKey = (apiKey: string) => {
+export const hashApiKey = (apiKey: string) => {
   return crypto.createHash("sha256").update(apiKey).digest("hex");
 };
 
@@ -73,13 +75,26 @@ export const verifyKey = async ({
   logger: any;
 }) => {
   const hashedKey = hashApiKey(key);
-  const apiKey = await ApiKeyService.getByHashedKey({
-    sb,
-    hashedKey,
-    logger,
+  const env = key.startsWith("am_sk_test") ? AppEnv.Sandbox : AppEnv.Live;
+
+  // New method...
+
+  const start = performance.now();
+  // await CachedKeyService.clearCache({
+  //   hashedKey,
+  // });
+  const data = await getAPIKeyCache({
+    action: CacheType.SecretKey,
+    key: hashedKey,
+    fn: async () => await ApiKeyService.verifyAndFetch({ sb, hashedKey, env }),
   });
 
-  if (!apiKey) {
+  try {
+    const elapsed = (performance.now() - start).toFixed(2);
+    console.log(`verify secret key took ${elapsed}ms`);
+  } catch (error) {}
+
+  if (!data) {
     return {
       valid: false,
       data: null,
@@ -88,7 +103,7 @@ export const verifyKey = async ({
 
   return {
     valid: true,
-    data: apiKey,
+    data: data,
   };
 };
 

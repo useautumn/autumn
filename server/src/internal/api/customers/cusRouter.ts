@@ -13,7 +13,10 @@ import { CusService } from "../../customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { deleteCusById } from "./handlers/cusDeleteHandlers.js";
+import {
+  deleteCusById,
+  handleDeleteCustomer,
+} from "./handlers/cusDeleteHandlers.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
@@ -23,6 +26,7 @@ import { entityRouter } from "../entities/entityRouter.js";
 import { getCustomerDetails } from "./getCustomerDetails.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
 import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";
+import { handleGetCustomer } from "./handlers/handleGetCustomer.js";
 
 export const cusRouter = Router();
 
@@ -64,60 +68,9 @@ cusRouter.post("", handlePostCustomerRequest);
 
 // BY CUSTOMER ID
 
-cusRouter.get("/:customer_id", async (req: any, res: any) => {
-  try {
-    let customerId = req.params.customer_id;
-    let customer = await CusService.getById({
-      sb: req.sb,
-      id: customerId,
-      orgId: req.orgId,
-      env: req.env,
-      logger: req.logtail,
-    });
+cusRouter.get("/:customer_id", handleGetCustomer);
 
-    if (!customer) {
-      req.logtail.warn(
-        `GET /customers/${customerId}: not found | Org: ${req.minOrg.slug}`
-      );
-      res.status(StatusCodes.NOT_FOUND).json({
-        message: `Customer ${customerId} not found`,
-        code: ErrCode.CustomerNotFound,
-      });
-      return;
-    }
-
-    // const { main, addOns, balances, invoices } =
-    let cusData = await getCustomerDetails({
-      customer,
-      sb: req.sb,
-      orgId: req.orgId,
-      env: req.env,
-      // params: req.query,
-      logger: req.logtail,
-    });
-
-    res.status(200).json(cusData);
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "get customer" });
-  }
-});
-
-cusRouter.delete("/:customer_id", async (req: any, res: any) => {
-  try {
-    const data = await deleteCusById({
-      sb: req.sb,
-      minOrg: req.minOrg,
-      customerId: req.params.customer_id,
-      env: req.env,
-      logger: req.logtail,
-      deleteInStripe: req.query.delete_in_stripe === "true",
-    });
-
-    res.status(200).json(data);
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "delete customer" });
-  }
-});
+cusRouter.delete("/:customer_id", handleDeleteCustomer);
 
 cusRouter.post("/:customer_id", handleUpdateCustomer);
 
@@ -141,7 +94,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
     const customerId = req.params.customer_id;
 
     const [org, customer] = await Promise.all([
-      OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId }),
+      OrgService.getFromReq(req),
       CusService.getById({
         sb: req.sb,
         id: customerId,
