@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { Customer, ErrCode, Event } from "@autumn/shared";
+import { Customer, ErrCode, Event, FeatureType } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, nullish } from "@/utils/genUtils.js";
 
@@ -11,6 +11,7 @@ import { QueueManager } from "@/queue/QueueManager.js";
 
 import { JobName } from "@/queue/JobName.js";
 import { getOrCreateCustomer } from "../customers/cusUtils.js";
+import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 export const eventsRouter = Router();
 export const usageRouter = Router();
 
@@ -26,7 +27,7 @@ const getCusFeatureAndOrg = async ({
   customerData: any;
 }) => {
   // 1. Get customer
-  let [customer, featureRes, org] = await Promise.all([
+  let [customer, features, org] = await Promise.all([
     getOrCreateCustomer({
       sb: req.sb,
       orgId: req.orgId,
@@ -36,19 +37,20 @@ const getCusFeatureAndOrg = async ({
       orgSlug: req.minOrg?.slug || "",
       logger: req.logtail,
     }),
-    FeatureService.getWithCreditSystems({
-      sb: req.sb,
-      featureId,
-      orgId: req.orgId,
-      env: req.env,
-    }),
-    OrgService.getFullOrg({
-      sb: req.sb,
-      orgId: req.minOrg.id,
-    }),
+    FeatureService.getFromReq(req),
+    OrgService.getFromReq(req),
   ]);
 
-  let { feature, creditSystems } = featureRes;
+  let feature = features.find((f) => f.id == featureId);
+  let creditSystems = features.filter(
+    (f) =>
+      f.type == FeatureType.CreditSystem &&
+      creditSystemContainsFeature({
+        creditSystem: f,
+        meteredFeatureId: featureId,
+      })
+  );
+
   if (!feature) {
     throw new RecaseError({
       message: `Feature ${featureId} not found`,
@@ -116,6 +118,7 @@ export const handleUsageEvent = async ({
       statusCode: StatusCodes.BAD_REQUEST,
     });
   }
+
   properties = properties || {};
 
   const { customer, org, feature, creditSystems } = await getCusFeatureAndOrg({

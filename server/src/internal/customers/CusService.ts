@@ -62,7 +62,9 @@ export class CusService {
 
     let { customer, products } = data;
 
-    // printCusProducts(products);
+    if (!products) {
+      products = [];
+    }
 
     for (let product of products) {
       if (!product.customer_prices) {

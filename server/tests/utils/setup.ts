@@ -21,6 +21,9 @@ import Stripe from "stripe";
 import { Autumn } from "@/external/autumn/autumnCli.js";
 import { deactivateStripeMeters } from "@/external/stripe/stripeProductUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+import { CacheManager } from "@/external/caching/CacheManager.js";
+import { CacheType } from "@/external/caching/cacheActions.js";
+import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 
 export const getAxiosInstance = (
   apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!
@@ -67,6 +70,18 @@ export const clearOrg = async ({
 
   const sb = createSupabaseClient();
   const org = await OrgService.getBySlug({ sb, slug: orgSlug });
+
+  await Promise.all([
+    CacheManager.invalidate({
+      action: CacheType.SecretKey,
+      value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
+    }),
+    CacheManager.invalidate({
+      action: CacheType.PublicKey,
+      value: process.env.UNIT_TEST_AUTUMN_PUBLIC_KEY!,
+    }),
+  ]);
+  await CacheManager.disconnect();
 
   if (!org) {
     throw new Error(`Org ${orgSlug} not found`);

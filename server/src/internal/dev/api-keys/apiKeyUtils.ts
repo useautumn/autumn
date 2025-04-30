@@ -26,7 +26,7 @@ function generateApiKey(length = 32, prefix = "") {
   }
 }
 
-const hashApiKey = (apiKey: string) => {
+export const hashApiKey = (apiKey: string) => {
   return crypto.createHash("sha256").update(apiKey).digest("hex");
 };
 

@@ -53,13 +53,24 @@ export class CacheManager {
     return CacheManager.instance;
   }
 
-  public static async getJson(key: string) {
+  public static async getClient() {
     const cache = await CacheManager.getInstance();
-    if (!cache.client) {
+    return cache.client;
+  }
+
+  public static async getJson(key: string) {
+    let client = await CacheManager.getClient();
+
+    if (!client) {
       throw new Error("Cache client not initialized");
     }
 
-    let res = await cache.client.get(key);
+    if (client.status !== "ready") {
+      console.warn("Cache client is not in ready state");
+      return null;
+    }
+
+    let res = await client.get(key);
 
     if (!res) {
       return null;
@@ -69,12 +80,17 @@ export class CacheManager {
   }
 
   public static async setJson(key: string, value: any, ttl: number = 3600) {
-    const cache = await CacheManager.getInstance();
-    if (!cache.client) {
+    let client = await CacheManager.getClient();
+    if (!client) {
       throw new Error("Cache client not initialized");
     }
 
-    await cache.client.set(key, JSON.stringify(value), "EX", ttl);
+    if (client.status !== "ready") {
+      console.warn("Cache client is not in ready state");
+      return;
+    }
+
+    await client.set(key, JSON.stringify(value), "EX", ttl);
   }
 
   public static async invalidate({
@@ -84,17 +100,30 @@ export class CacheManager {
     action: string;
     value: string;
   }) {
-    const cache = await CacheManager.getInstance();
-    if (!cache.client) {
+    let client = await CacheManager.getClient();
+    if (!client) {
       throw new Error("Cache client not initialized");
     }
-    await cache.client.del(`${action}:${value}`);
+
+    if (client.status !== "ready") {
+      console.warn("Cache client is not in ready state");
+      return;
+    }
+
+    await client.del(`${action}:${value}`);
   }
 
-  async disconnect() {
-    if (this.client) {
-      await this.client.quit();
-      this.initialized = false;
+  static async disconnect() {
+    let client = await CacheManager.getClient();
+    if (!client) {
+      throw new Error("Cache client not initialized");
     }
+
+    if (client.status !== "ready") {
+      console.warn("Cache client is not in ready state");
+      return;
+    }
+
+    await client.quit();
   }
 }

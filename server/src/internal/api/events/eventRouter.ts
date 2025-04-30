@@ -7,6 +7,7 @@ import {
   ErrCode,
   Event,
   Feature,
+  FeatureType,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -20,6 +21,8 @@ import { subDays } from "date-fns";
 import { handleUsageEvent } from "./usageRouter.js";
 import { StatusCodes } from "http-status-codes";
 import { getOrCreateCustomer } from "../customers/cusUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 
 export const eventsRouter = Router();
 
@@ -90,36 +93,63 @@ const getEventAndCustomer = async ({
 };
 
 const getAffectedFeatures = async ({
+  req,
   pg,
   event,
   orgId,
   env,
 }: {
+  req: any;
   pg: Client;
   event: Event;
   orgId: string;
   env: AppEnv;
 }) => {
-  const { rows }: { rows: Feature[] } = await pg.query(`
-    with features_with_event as (
-      select * from features
-      where org_id = '${orgId}'
-      and env = '${env}'
-      and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
-    )
+  let features = await FeatureService.getFromReq(req);
 
-    select * from features WHERE
-    org_id = '${orgId}'
-    and env = '${env}'
-    and EXISTS (
-      SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
-      schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
-    )
-    UNION all
-    select * from features_with_event
-  `);
+  let featuresWithEvent = features.filter((feature) => {
+    return (
+      feature.type == FeatureType.Metered &&
+      feature.config.filters.some((filter: any) => {
+        return filter.value.includes(event.event_name);
+      })
+    );
+  });
 
-  return rows;
+  let creditSystems = features.filter((cs: Feature) => {
+    return (
+      cs.type == FeatureType.CreditSystem &&
+      featuresWithEvent.some((f) =>
+        creditSystemContainsFeature({
+          creditSystem: cs,
+          meteredFeatureId: f.id,
+        })
+      )
+    );
+  });
+
+  return [...featuresWithEvent, ...creditSystems];
+
+  // const { rows }: { rows: Feature[] } = await pg.query(`
+  //   with features_with_event as (
+  //     select * from features
+  //     where org_id = '${orgId}'
+  //     and env = '${env}'
+  //     and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
+  //   )
+
+  //   select * from features WHERE
+  //   org_id = '${orgId}'
+  //   and env = '${env}'
+  //   and EXISTS (
+  //     SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
+  //     schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
+  //   )
+  //   UNION all
+  //   select * from features_with_event
+  // `);
+
+  // return rows;
 };
 
 export const handleEventSent = async ({
@@ -155,6 +185,7 @@ export const handleEventSent = async ({
   });
 
   const affectedFeatures = await getAffectedFeatures({
+    req,
     pg: pg,
     event,
     orgId,

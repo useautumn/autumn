@@ -3,10 +3,11 @@ import { handleCreateCustomer } from "@/internal/api/customers/handlers/handleCr
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AppEnv, CustomerData } from "autumn-js";
 import { CusService } from "../CusService.js";
-import { CusProductStatus, FullCustomer } from "@autumn/shared";
+import { CusProductStatus, FullCustomer, Organization } from "@autumn/shared";
+
 export const getOrCreateCustomer = async ({
   sb,
-  orgId,
+  org,
   customerId,
   customerData,
   env,
@@ -19,7 +20,7 @@ export const getOrCreateCustomer = async ({
   skipGet = false,
 }: {
   sb: SupabaseClient;
-  orgId: string;
+  org: Organization;
   env: AppEnv;
   customerId: string;
   customerData?: CustomerData;
@@ -33,7 +34,7 @@ export const getOrCreateCustomer = async ({
     customer = await CusService.getWithProducts({
       sb,
       idOrInternalId: customerId,
-      orgId,
+      orgId: org.id,
       env,
       inStatuses,
     });
@@ -50,17 +51,16 @@ export const getOrCreateCustomer = async ({
           fingerprint: customerData?.fingerprint,
         },
         sb,
-        orgId,
+        org,
         env,
         logger,
-        orgSlug: "",
         getDetails: false,
       });
 
       customer = await CusService.getWithProducts({
         sb,
         idOrInternalId: customerId,
-        orgId,
+        orgId: org.id,
         env,
         inStatuses,
       });
@@ -69,7 +69,7 @@ export const getOrCreateCustomer = async ({
         customer = await CusService.getWithProducts({
           sb,
           idOrInternalId: customerId,
-          orgId,
+          orgId: org.id,
           env,
           inStatuses,
         });
