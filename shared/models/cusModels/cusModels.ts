@@ -40,12 +40,7 @@ export const CustomerResponseSchema = CustomerSchema.omit({
   org_id: true,
 });
 
-export const FullCustomerSchema = CustomerSchema.extend({
-  customer_products: z.array(FullCusProductSchema),
-});
-
 export type Customer = z.infer<typeof CustomerSchema>;
 export type CustomerData = z.infer<typeof CustomerDataSchema>;
 export type CustomerResponse = z.infer<typeof CustomerResponseSchema>;
 export type CreateCustomer = z.infer<typeof CreateCustomerSchema>;
-export type FullCustomer = z.infer<typeof FullCustomerSchema>;
