@@ -20,6 +20,7 @@ import {
   CusEntResponseSchema,
   FeatureType,
   Feature,
+  Organization,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { EntityService } from "../entities/EntityService.js";
@@ -28,22 +29,28 @@ import { getCusInvoices, processFullCusProducts } from "./cusUtils.js";
 export const getCustomerDetails = async ({
   customer,
   sb,
-  orgId,
+  org,
   env,
   params = {},
   logger,
+  cusProducts,
 }: {
   customer: Customer;
   sb: SupabaseClient;
-  orgId: string;
+  org: Organization;
   env: AppEnv;
   params?: any;
   logger: any;
+  cusProducts?: FullCusProduct[];
 }) => {
   // 1. Get full customer products & processed invoices
-  const [fullCusProducts, processedInvoices, entities, org] = await Promise.all(
-    [
-      CusService.getFullCusProducts({
+  const [fullCusProducts, processedInvoices, entities] = await Promise.all([
+    (async () => {
+      if (cusProducts) {
+        return cusProducts;
+      }
+
+      return await CusService.getFullCusProducts({
         sb,
         internalCustomerId: customer.internal_id,
         withProduct: true,
@@ -54,23 +61,19 @@ export const getCustomerDetails = async ({
           CusProductStatus.Scheduled,
         ],
         logger,
-      }),
-      getCusInvoices({
-        sb,
-        internalCustomerId: customer.internal_id,
-        limit: 20,
-      }),
-      EntityService.getByInternalCustomerId({
-        sb,
-        internalCustomerId: customer.internal_id,
-        logger,
-      }),
-      OrgService.getFullOrg({
-        sb,
-        orgId,
-      }),
-    ]
-  );
+      });
+    })(),
+    getCusInvoices({
+      sb,
+      internalCustomerId: customer.internal_id,
+      limit: 20,
+    }),
+    EntityService.getByInternalCustomerId({
+      sb,
+      internalCustomerId: customer.internal_id,
+      logger,
+    }),
+  ]);
 
   let subs;
   let subIds = fullCusProducts.flatMap(
@@ -111,10 +114,10 @@ export const getCustomerDetails = async ({
   );
 
   if (org.api_version == APIVersion.v1_1) {
-    return {
+    let cusResponse = {
       ...CusResponseSchema.parse({
         ...customer,
-        autumn_id: customer.internal_id,
+        // autumn_id: customer.internal_id,
         stripe_id: customer.processor?.id,
         products: [...main, ...addOns],
         // add_ons: addOns,
@@ -134,6 +137,15 @@ export const getCustomerDetails = async ({
         }),
       }),
     };
+
+    if (params?.with_autumn_id === "true") {
+      return {
+        ...cusResponse,
+        autumn_id: customer.internal_id,
+      };
+    } else {
+      return cusResponse;
+    }
   } else {
     return {
       customer: CustomerResponseSchema.parse(customer),

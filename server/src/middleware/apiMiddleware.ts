@@ -1,9 +1,6 @@
 import { withOrgAuth } from "./authMiddleware.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
-import {
-  verifyBearerPublishableKey,
-  verifyPublishableKey,
-} from "./publicAuthMiddleware.js";
+import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { ErrCode } from "@autumn/shared";
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
@@ -39,13 +36,15 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
     });
 
     if (valid && data) {
-      req.orgId = data.org_id;
-      req.env = data.env;
+      let { org, features, env } = data;
+      req.orgId = org.id;
+      req.env = env;
       req.minOrg = {
-        id: data.org_id,
-        slug: data.meta.org_slug,
+        id: org.id,
+        slug: org.slug,
       };
-
+      req.org = org;
+      req.features = features;
       next();
 
       return {
@@ -101,53 +100,33 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
     return;
   }
 
-  // 2. Verify publishable key
-  try {
-    const { error, fallback, statusCode } = await verifyPublishableKey(
-      req,
-      res,
-      next
-    );
-
-    if (!error) {
-      return;
-    }
-
-    if (error && !fallback) {
-      res.status(statusCode).json({
-        message: error,
-        code: error,
-      });
-      return;
-    }
-  } catch (error) {
-    console.log("Error: verifyPublishableKey failed", error);
-    res.status(500).json({
-      message: "Failed to verify publishable key -- internal server error",
-      code: ErrCode.FailedToVerifyPublishableKey,
-    });
-    return;
-  }
-
-  // Finally, verify via org auth
   withOrgAuth(req, res, next);
 
-  // // Fallback: Verify via Unkey
+  // // 2. Verify publishable key (through x-publishable-key header)
   // try {
-  //   const result = await validateApiKey(apiKey);
+  //   const { error, fallback, statusCode } = await verifyPublishableKey(
+  //     req,
+  //     res,
+  //     next
+  //   );
 
-  //   req.orgId = result.ownerId;
-  //   req.env = result.environment;
-  //   req.minOrg = {
-  //     id: result.ownerId,
-  //     slug: result.meta?.org_slug,
-  //   };
+  //   if (!error) {
+  //     return;
+  //   }
 
-  //   next();
+  //   if (error && !fallback) {
+  //     res.status(statusCode).json({
+  //       message: error,
+  //       code: error,
+  //     });
+  //     return;
+  //   }
   // } catch (error) {
-  //   console.log("WARNING: Unkey API verification failed");
-  //   console.log(error);
-  //   withOrgAuth(req, res, next);
+  //   console.log("Error: verifyPublishableKey failed", error);
+  //   res.status(500).json({
+  //     message: "Failed to verify publishable key -- internal server error",
+  //     code: ErrCode.FailedToVerifyPublishableKey,
+  //   });
   //   return;
   // }
 };

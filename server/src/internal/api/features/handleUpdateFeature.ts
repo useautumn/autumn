@@ -18,14 +18,11 @@ import {
   Feature,
   FeatureType,
   Price,
-  CreditSystem,
   UsagePriceConfig,
-  CreditSystemConfig,
   AppEnv,
   EntitlementWithFeature,
   EntInterval,
   FeatureUsageType,
-  PriceType,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
@@ -39,6 +36,7 @@ const handleFeatureIdChanged = async ({
   prices,
   creditSystems,
   newId,
+  logger,
 }: {
   sb: SupabaseClient;
   orgId: string;
@@ -49,6 +47,7 @@ const handleFeatureIdChanged = async ({
   prices: Price[];
   creditSystems: Feature[];
   newId: string;
+  logger: any;
 }) => {
   // 1. Check if any customer entitlement linked to this feature
   let cusEnts = await CustomerEntitlementService.getByFeature({
@@ -120,6 +119,7 @@ const handleFeatureIdChanged = async ({
         },
         orgId,
         env,
+        logger,
       })
     );
   }
@@ -256,6 +256,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
     handler: async () => {
       let featureId = req.params.feature_id;
       let data = req.body;
+      let { logtail: logger } = req;
 
       // 1. Get feature by ID
       let feature = await FeatureService.getById({
@@ -318,6 +319,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
             prices,
             creditSystems,
             newId: data.id,
+            logger,
           });
         }
 
@@ -335,13 +337,6 @@ export const handleUpdateFeature = async (req: any, res: any) =>
           });
         }
       }
-
-      // // 1. Update feature from boolean to metered?
-      // throw new RecaseError({
-      //   message: "Feature is not metered",
-      //   code: ErrCode.InvalidRequest,
-      //   statusCode: 400,
-      // });
 
       await FeatureService.updateStrict({
         sb: req.sb,
@@ -361,6 +356,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
               ? validateMeteredConfig(data.config)
               : data.config,
         },
+        logger,
       });
 
       res.status(200).json({ success: true, feature_id: featureId });

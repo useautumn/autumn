@@ -1,12 +1,10 @@
+import { z } from "zod";
 import {
   CusProductSchema,
   CusProductStatus,
-  CusResponseSchema,
   Customer,
   CustomerData,
-  CustomerResponseSchema,
   CustomerSchema,
-  FullCusProduct,
   FullCustomerEntitlement,
   Organization,
   ProductSchema,
@@ -19,26 +17,14 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 
-import { z } from "zod";
 import {
   fullCusProductToCusEnts,
   fullCusProductToCusPrices,
   processFullCusProduct,
 } from "@/internal/customers/products/cusProductUtils.js";
-import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { getCusBalances } from "@/internal/customers/entitlements/getCusBalances.js";
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
-import { EntityService } from "../entities/EntityService.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { BREAK_API_VERSION } from "@/utils/constants.js";
-import {
-  createNewCustomer,
-  handleCreateCustomer,
-} from "./handlers/handleCreateCustomer.js";
-import { APIVersion, getApiVersion } from "@/utils/versionUtils.js";
+import { handleCreateCustomer } from "./handlers/handleCreateCustomer.js";
 
 export const updateCustomerDetails = async ({
   sb,
@@ -47,7 +33,7 @@ export const updateCustomerDetails = async ({
   logger,
 }: {
   sb: SupabaseClient;
-  customer: Customer;
+  customer: any;
   customerData?: CustomerData;
   logger: any;
 }) => {
@@ -61,96 +47,13 @@ export const updateCustomerDetails = async ({
 
   if (Object.keys(updates).length > 0) {
     logger.info(`Updating customer details`, { updates });
-    customer = await CusService.update({
+    await CusService.update({
       sb,
       internalCusId: customer.internal_id,
       update: updates,
     });
+    customer = { ...customer, ...updates };
   }
-
-  return customer;
-};
-
-export const getOrCreateCustomer = async ({
-  sb,
-  orgId,
-  env,
-  customerId,
-  customerData,
-  logger,
-  skipGet = false,
-  orgSlug,
-}: {
-  sb: SupabaseClient;
-  orgId: string;
-  env: AppEnv;
-  customerId: string;
-  customerData?: CustomerData;
-  logger: any;
-  skipGet?: boolean;
-  orgSlug: string;
-}) => {
-  let customer;
-
-  if (!skipGet) {
-    customer = await CusService.getByIdOrInternalId({
-      sb,
-      idOrInternalId: customerId,
-      orgId,
-      env,
-      // isFull: true,
-    });
-  }
-
-  if (!customer) {
-    logger.info(`no customer found, creating new`, { customerData });
-    try {
-      customer = await handleCreateCustomer({
-        cusData: {
-          id: customerId,
-          name: customerData?.name,
-          email: customerData?.email,
-          fingerprint: customerData?.fingerprint,
-        },
-        sb,
-        orgId,
-        env,
-        logger,
-        orgSlug: "",
-        getDetails: false,
-      });
-    } catch (error: any) {
-      if (error?.data?.code == "23505") {
-        customer = await CusService.getByIdOrInternalId({
-          sb,
-          idOrInternalId: customerId,
-          orgId,
-          env,
-        });
-      } else {
-        throw error;
-      }
-    }
-    // customer = await createNewCustomer({
-    //   sb,
-    //   orgId,
-    //   env,
-    //   customer: {
-    //     id: customerId,
-    //     name: customerData?.name || "",
-    //     email: customerData?.email || "",
-    //     fingerprint: customerData?.fingerprint,
-    //   },
-    //   logger,
-    // });
-  }
-
-  customer = await updateCustomerDetails({
-    sb,
-    customer,
-    customerData,
-    logger,
-  });
 
   return customer;
 };
@@ -237,7 +140,6 @@ export const flipProductResults = (
   return customers;
 };
 
-// getCustomerDetails helpers
 export const getCusInvoices = async ({
   sb,
   internalCustomerId,

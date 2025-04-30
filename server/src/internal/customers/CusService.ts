@@ -9,13 +9,78 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
-import { CusProductService } from "./products/CusProductService.js";
 import { flipProductResults } from "../api/customers/cusUtils.js";
-import { format } from "date-fns";
 import { sbWithRetry } from "@/external/supabaseUtils.js";
-import { logger } from "@trigger.dev/sdk/v3";
+
+const printCusProducts = (cusProducts: FullCusProduct[]) => {
+  for (let cusProduct of cusProducts) {
+    console.log(`Product: ${cusProduct.product.name}`);
+    for (let cusEnt of cusProduct.customer_entitlements) {
+      console.log(
+        `Entitlement: ${cusEnt.entitlement.feature_id}, Balance: ${cusEnt.balance}`
+      );
+    }
+
+    for (let cusPrice of cusProduct.customer_prices) {
+      console.log(`cusPrice:`, cusPrice.id, cusPrice.price.id);
+    }
+  }
+};
 
 export class CusService {
+  static async getWithProducts({
+    sb,
+    idOrInternalId,
+    orgId,
+    env,
+    inStatuses = [
+      CusProductStatus.Active,
+      CusProductStatus.PastDue,
+      CusProductStatus.Scheduled,
+    ],
+  }: {
+    sb: SupabaseClient;
+    idOrInternalId: string;
+    orgId: string;
+    env: AppEnv;
+    inStatuses?: CusProductStatus[];
+  }) {
+    const { data, error } = await sb.rpc("get_cus_with_products", {
+      p_cus_id: idOrInternalId,
+      p_org_id: orgId,
+      p_env: env,
+      p_statuses: inStatuses,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data || !data.customer) {
+      return null;
+    }
+
+    let { customer, products } = data;
+
+    if (!products) {
+      products = [];
+    }
+
+    for (let product of products) {
+      if (!product.customer_prices) {
+        product.customer_prices = [];
+      }
+
+      if (!product.customer_entitlements) {
+        product.customer_entitlements = [];
+      }
+    }
+    return {
+      ...customer,
+      customer_products: products,
+    };
+  }
+
   static async getById({
     sb,
     id,

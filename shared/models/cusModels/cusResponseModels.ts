@@ -29,10 +29,10 @@ export const CusEntResponseSchema = z.object({
 
 export const CusResponseSchema = z.object({
   // Internal fields
-  autumn_id: z.string(),
-  created_at: z.number(),
+  autumn_id: z.string().nullish(),
 
   id: z.string().nullable(),
+  created_at: z.number(),
   name: z.string().nullable(),
   email: z.string().nullable(),
   fingerprint: z.string().nullable(),

@@ -16,6 +16,9 @@ import { checkBalance } from "tests/utils/autumnUtils.js";
 import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addHours, addMonths } from "date-fns";
+import { CacheManager } from "@/external/caching/CacheManager.js";
+import { CacheType } from "@/external/caching/cacheActions.js";
+import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 
 // Check balance and stripe quantity
 const checkEntAndStripeQuantity = async ({
@@ -136,6 +139,12 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
         },
       })
       .eq("id", this.org.id);
+
+    await CacheManager.invalidate({
+      action: CacheType.SecretKey,
+      value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
+    });
+    await CacheManager.disconnect();
   });
 
   describe("Create customer -- create entity should fail", async function () {
@@ -377,5 +386,9 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
         },
       })
       .eq("id", this.org.id);
+    void CacheManager.invalidate({
+      action: CacheType.SecretKey,
+      value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
+    });
   });
 });

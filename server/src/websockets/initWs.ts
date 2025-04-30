@@ -40,7 +40,7 @@ const getPkey = async (req: any) => {
 
   const env = pkey.startsWith("am_pk_test_") ? AppEnv.Sandbox : AppEnv.Live;
   const sb = createSupabaseClient();
-  const org = await OrgService.getFromPkey({ sb, pkey, env });
+  const org = await OrgService.getFromPkeyWithFeatures({ sb, pkey, env });
 
   if (!org) {
     return {

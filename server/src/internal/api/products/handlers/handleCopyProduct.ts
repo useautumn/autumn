@@ -17,6 +17,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
       const orgId = req.orgId;
       const fromEnv = req.env;
       const { env: toEnv, id: toId, name: toName } = req.body;
+      let { logtail: logger } = req;
 
       if (!toEnv || !toId || !toName) {
         throw new RecaseError({
@@ -90,6 +91,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
                 orgId,
                 env: toEnv,
               }),
+              logger,
             });
 
             toFeatures.push(res![0]);

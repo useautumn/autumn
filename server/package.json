@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --no-deprecation --exec tsx src/index.ts --ignore scripts --ignore tests",
+    "dev": "NODE_ENV=development nodemon --no-deprecation --exec tsx src/index.ts --ignore scripts --ignore tests",
     "start": "tsx src/index.ts",
     "workers": "tsx watch src/workers.ts",
     "workers:start": "node --no-deprecation dist/src/workers.js",
