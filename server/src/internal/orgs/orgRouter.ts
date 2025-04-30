@@ -12,7 +12,7 @@ import { OrgService } from "./OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { AppEnv } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
-import { handleOrgCreated } from "@/external/webhooks/clerkWebhooks.js";
+import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
 export const orgRouter = express.Router();
 
@@ -25,10 +25,7 @@ orgRouter.get("", async (req: any, res) => {
       return;
     }
 
-    const org = await OrgService.getFullOrg({
-      sb: req.sb,
-      orgId: req.orgId,
-    });
+    const org = await OrgService.getFromReq(req);
 
     res.status(200).json({
       org,
@@ -46,7 +43,7 @@ orgRouter.get("", async (req: any, res) => {
 orgRouter.post("/stripe", async (req: any, res) => {
   try {
     let { testApiKey, liveApiKey, successUrl, defaultCurrency } = req.body;
-
+    let { sb, orgId, logtail: logger } = req;
     if (!testApiKey || !liveApiKey || !successUrl) {
       throw new RecaseError({
         message: "Missing required fields",
@@ -57,6 +54,12 @@ orgRouter.post("/stripe", async (req: any, res) => {
 
     // 1. Check if API keys are valid
     try {
+      await clearOrgCache({
+        sb,
+        orgId,
+        logger,
+      });
+
       await checkKeyValid(testApiKey);
       await checkKeyValid(liveApiKey);
 
@@ -155,9 +158,13 @@ orgRouter.post("/stripe", async (req: any, res) => {
 orgRouter.delete("/stripe", async (req: any, res) => {
   // 1. Get org
   try {
-    const org = await OrgService.getFullOrg({
-      sb: req.sb,
-      orgId: req.orgId,
+    const org = await OrgService.getFromReq(req);
+
+    let { sb, orgId, logtail: logger } = req;
+    await clearOrgCache({
+      sb,
+      orgId,
+      logger,
     });
 
     // 2. Delete webhook endpoint

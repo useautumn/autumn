@@ -111,10 +111,10 @@ export const getCustomerDetails = async ({
   );
 
   if (org.api_version == APIVersion.v1_1) {
-    return {
+    let cusResponse = {
       ...CusResponseSchema.parse({
         ...customer,
-        autumn_id: customer.internal_id,
+        // autumn_id: customer.internal_id,
         stripe_id: customer.processor?.id,
         products: [...main, ...addOns],
         // add_ons: addOns,
@@ -134,6 +134,15 @@ export const getCustomerDetails = async ({
         }),
       }),
     };
+
+    if (params?.with_autumn_id === "true") {
+      return {
+        ...cusResponse,
+        autumn_id: customer.internal_id,
+      };
+    } else {
+      return cusResponse;
+    }
   } else {
     return {
       customer: CustomerResponseSchema.parse(customer),

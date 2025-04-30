@@ -32,10 +32,7 @@ const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
       env: req.env,
     }),
     FeatureService.getFromReq(req),
-    OrgService.getFullOrg({
-      sb: req.sb,
-      orgId: req.minOrg.id,
-    }),
+    OrgService.getFromReq(req),
   ]);
 
   if (!customer) {
@@ -83,7 +80,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
     const { cusEnts, cusPrices } = await getCusEntsInFeatures({
       sb: req.sb,
       internalCustomerId: customer.internal_id,
-      internalFeatureIds: featuresToUpdate.map((f) => f.internal_id),
+      internalFeatureIds: featuresToUpdate.map((f) => f.internal_id!),
       inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
       withPrices: true,
       logger: req.logtail,
@@ -139,12 +136,12 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 
       let { unlimited } = getUnlimitedAndUsageAllowed({
         cusEnts,
-        internalFeatureId: feature.internal_id,
+        internalFeatureId: feature!.internal_id!,
       });
 
       if (unlimited) {
         throw new RecaseError({
-          message: `Can't set balance for unlimited feature: ${feature.id}`,
+          message: `Can't set balance for unlimited feature: ${feature!.id}`,
           code: ErrCode.InvalidRequest,
           statusCode: StatusCodes.BAD_REQUEST,
         });
@@ -158,7 +155,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       delete properties.balance;
 
       for (const cusEnt of cusEnts) {
-        if (cusEnt.internal_feature_id !== feature.internal_id) {
+        if (cusEnt.internal_feature_id !== feature!.internal_id!) {
           continue;
         }
 
@@ -169,7 +166,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
           continue;
         }
 
-        let {balance: cusEntBalance} = getCusEntBalance({
+        let { balance: cusEntBalance } = getCusEntBalance({
           cusEnt,
           entityId: balance.entity_id,
         });
@@ -195,7 +192,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       let toDeduct = curBalance.sub(newBalance).toNumber();
 
       if (toDeduct == 0) {
-        logger.info(`Skipping ${feature.id} -- no change`);
+        logger.info(`Skipping ${feature!.id} -- no change`);
       }
 
       featureDeductions.push({
@@ -219,16 +216,18 @@ export const handleUpdateBalances = async (req: any, res: any) => {
           const cusEnt = notNullish(interval)
             ? cusEnts.find(
                 (cusEnt) =>
-                  cusEnt.internal_feature_id === feature.internal_id &&
+                  cusEnt.internal_feature_id === feature!.internal_id! &&
                   cusEnt.entitlement.interval === interval
               )
             : cusEnts.find(
-                (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
+                (cusEnt) => cusEnt.internal_feature_id === feature!.internal_id!
               );
 
           if (!cusEnt) {
             logger.warn(
-              `No active cus ent to set unlimited balance for feature: ${feature.id}`
+              `No active cus ent to set unlimited balance for feature: ${
+                feature!.id
+              }`
             );
             return;
           }
@@ -247,7 +246,8 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 
         for (const cusEnt of cusEnts) {
           if (
-            cusEnt.internal_feature_id !== featureDeduction.feature.internal_id
+            cusEnt.internal_feature_id !==
+            featureDeduction.feature!.internal_id!
           ) {
             continue;
           }
@@ -256,7 +256,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
             toDeduct,
             deductParams: {
               sb: req.sb,
-              feature,
+              feature: featureDeduction.feature!,
               env: req.env,
               org,
               cusPrices: cusPrices as any[],
@@ -279,7 +279,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
           cusEnts,
           deductParams: {
             sb,
-            feature,
+            feature: featureDeduction.feature!,
             env,
             org,
             cusPrices: cusPrices as any[],

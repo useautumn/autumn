@@ -77,6 +77,7 @@ const createDefaultProducts = async ({
   await FeatureService.insert({
     sb,
     data: insertedFeatures,
+    logger: console,
   });
 
   const defaultProducts = [
@@ -271,20 +272,6 @@ export const handleOrgCreated = async (
   );
 
   try {
-    // // Check if org already exists
-    // let org = await OrgService.getFullOrg({
-    //   sb,
-    //   orgId: eventData.id,
-    //   errorIfNotFound: false,
-    // });
-
-    // if (org) {
-    //   console.log(
-    //     `handleOrgCreated: Org already exists: ${eventData.slug} (${eventData.id})`
-    //   );
-    //   return;
-    // }
-
     // 2. Insert org
     await OrgService.insert({
       sb,

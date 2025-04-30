@@ -1,8 +1,45 @@
+import { CacheType } from "@/external/caching/cacheActions.js";
+import { CacheManager } from "@/external/caching/CacheManager.js";
+import { getAPIKeyCache } from "@/external/caching/cacheUtils.js";
 import { sbWithRetry } from "@/external/supabaseUtils.js";
-import { ApiKey, AppEnv } from "@autumn/shared";
+
+import { ApiKey, AppEnv, ErrCode } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export class ApiKeyService {
+  static async verifyAndFetch({
+    sb,
+    hashedKey,
+    env,
+  }: {
+    sb: SupabaseClient;
+    hashedKey: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb.rpc("verify_api_key", {
+      p_hashed_key: hashedKey,
+      p_env: env,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data.success || !data.organization) {
+      console.warn(`(warning) failed to verify secret key: ${data.error}`);
+      return null;
+    }
+
+    let org = structuredClone(data.organization);
+
+    delete org.features;
+    return {
+      org,
+      features: data.organization?.features || [],
+      env,
+    };
+  }
+
   static async getByOrg(sb: SupabaseClient, orgId: string, env: AppEnv) {
     const { data, error } = await sb
       .from("api_keys")
@@ -10,7 +47,7 @@ export class ApiKeyService {
       .eq("org_id", orgId)
       .eq("env", env)
       .order("created_at", {
-        ascending: false
+        ascending: false,
       })
       .order("id");
 
@@ -25,17 +62,18 @@ export class ApiKeyService {
   }
 
   static async deleteStrict(sb: SupabaseClient, id: string, orgId: string) {
-    const { error, count } = await sb
+    const { data, error } = await sb
       .from("api_keys")
       .delete()
       .eq("id", id)
-      .eq("org_id", orgId);
+      .eq("org_id", orgId)
+      .select();
 
     if (error) {
       throw new Error("Failed to delete API key");
     }
 
-    return count;
+    return data;
   }
 
   static async getByHashedKey({
@@ -82,6 +120,21 @@ export class ApiKeyService {
 
     if (error) {
       throw error;
+    }
+  }
+}
+
+export class CachedKeyService {
+  static async clearCache({ hashedKey }: { hashedKey: string }) {
+    try {
+      await CacheManager.invalidate({
+        action: CacheType.SecretKey,
+        value: hashedKey,
+      });
+    } catch (error) {
+      console.error(
+        `(warning) failed to clear cache for verify action: ${error}`
+      );
     }
   }
 }

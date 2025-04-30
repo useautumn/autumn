@@ -31,25 +31,12 @@ import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js"
 import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-
-import {
-  getOrCreateCustomer,
-  updateCustomerDetails,
-} from "../customers/cusUtils.js";
+import { updateCustomerDetails } from "../customers/cusUtils.js";
 import { SuccessCode } from "@autumn/shared";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 import { getBooleanEntitledResult } from "./checkUtils.js";
-
-type CusWithEnts = Customer & {
-  customer_products: CusProduct[];
-  customer_entitlements: CusEntWithEntitlement[];
-};
-
-const EntitledSchema = z.object({
-  customer_id: z.string(),
-  feature_id: z.string(),
-  required_quantity: z.number(),
-});
+import { CusService } from "@/internal/customers/CusService.js";
+import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 
 export const entitledRouter = Router();
 
@@ -172,27 +159,6 @@ const getMeteredEntitledResult = ({
       balance: actual,
     };
 
-    if (org.config.api_version >= BREAK_API_VERSION) {
-      // newBalance.next_reset_at = getMinNextResetAtCusEnt({
-      //   cusEnts,
-      //   feature,
-      // });
-      // newBalance.allowance = getTotalAllowanceFromCusEnts({
-      //   cusEnts,
-      //   feature,
-      // });
-      // newBalance.used = getTotalUsedFromCusEnts({
-      //   cusEnts,
-      //   feature,
-      //   entityId,
-      // });
-      // newBalance.required = required;
-      // newBalance.usage_allowed = false;
-      // newBalance.unlimited = false;
-    }
-
-    // feature.config.group_by will always be defined
-    // TODO: Rework this...
     if (entityId) {
       newBalance.entity_id = entityId;
     }
@@ -209,22 +175,14 @@ const getMeteredEntitledResult = ({
 };
 
 // Main functions
-const getFeaturesAndCreditSystems2 = async ({
-  sb,
-  orgId,
-  env,
+const getFeatureAndCreditSystems = async ({
+  req,
   featureId,
 }: {
-  sb: SupabaseClient;
-  orgId: string;
-  env: string;
+  req: any;
   featureId: string;
 }) => {
-  const features = await FeatureService.getFeatures({
-    sb,
-    orgId,
-    env,
-  });
+  const features = await FeatureService.getFromReq(req);
 
   const feature: Feature | undefined = features.find(
     (feature) => feature.id === featureId
@@ -242,45 +200,6 @@ const getFeaturesAndCreditSystems2 = async ({
   return { feature, creditSystems };
 };
 
-const getCusEntsActiveInFeatureIds = ({
-  cusWithEnts,
-  features,
-}: {
-  cusWithEnts: CusWithEnts;
-  features: Feature[];
-}) => {
-  const internalFeatureIds = features.map((feature) => feature.internal_id);
-  const cusEnts = cusWithEnts.customer_entitlements;
-
-  if (
-    cusWithEnts.customer_products.length === 0 ||
-    cusWithEnts.customer_entitlements.length == 0
-  ) {
-    return [];
-  }
-
-  const activeCusEnts = cusEnts
-    .filter((cusEnt) => {
-      return (
-        internalFeatureIds.includes(cusEnt.internal_feature_id) &&
-        cusWithEnts.customer_products.some(
-          (product) => product.id === cusEnt.customer_product_id
-        )
-      );
-    })
-    .map((ent) => {
-      return {
-        ...ent,
-        customer_product: cusWithEnts.customer_products.find(
-          (cusProduct) => cusProduct.id === ent.customer_product_id
-        ),
-      };
-    });
-
-  // no need to sort?
-  return activeCusEnts;
-};
-
 const logEntitled = ({
   req,
   customer_id,
@@ -288,7 +207,7 @@ const logEntitled = ({
 }: {
   req: any;
   customer_id: string;
-  cusEnts: CusEntWithEntitlement[];
+  cusEnts: FullCustomerEntitlement[];
 }) => {
   try {
     console.log(
@@ -335,53 +254,34 @@ const getCusEntsAndFeatures = async ({
   sb: SupabaseClient;
   logger: any;
 }) => {
-  const timings: Record<string, number> = {};
-
   let { customer_id, feature_id, customer_data } = req.body;
   let { sb, orgId, env } = req;
 
-  // 1. Get customer entitlements & features / credit systems
-  const startParallel = Date.now();
-  let org = await OrgService.getFullOrg({
-    sb,
-    orgId,
-  });
+  // 1. Get org and features
+  const startTime = Date.now();
 
-  const batchQuery = [
-    CustomerEntitlementService.getCustomerAndEnts({
-      sb,
-      customerId: customer_id,
-      orgId,
-      env,
-      inStatuses: org.config?.include_past_due
-        ? [CusProductStatus.Active, CusProductStatus.PastDue]
-        : [CusProductStatus.Active],
-    }).then((result) => {
-      timings.cusEnts = Date.now() - startParallel;
-      return result;
-    }),
-    getFeaturesAndCreditSystems2({
-      sb,
-      orgId,
-      env,
+  // Fetch org, feature, and customer in parallel
+  const [org, featureRes, customer] = await Promise.all([
+    OrgService.getFromReq(req),
+    getFeatureAndCreditSystems({
+      req,
       featureId: feature_id,
-    }).then((result) => {
-      timings.features = Date.now() - startParallel;
-      return result;
     }),
-  ];
+    getOrCreateCustomer({
+      sb,
+      orgId,
+      env,
+      customerId: customer_id,
+      customerData: customer_data,
+      inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+      logger,
+    }),
+  ]);
 
-  const [res1, res2] = await Promise.all(batchQuery);
-  const totalTime = Date.now() - startParallel;
+  const { feature, creditSystems } = featureRes;
 
-  console.log("Query timings:", {
-    customerEntitlements: timings.cusEnts,
-    features: timings.features,
-    total: totalTime,
-  });
-
-  // 2. Get active customer entitlements for features
-  const { feature, creditSystems }: any = res2;
+  const duration = Date.now() - startTime;
+  console.log(`/check: fetched org, features & customer in ${duration}ms`);
 
   if (!feature) {
     throw new RecaseError({
@@ -391,43 +291,17 @@ const getCusEntsAndFeatures = async ({
     });
   }
 
-  let cusEnts: CusEntWithEntitlement[] | null = null;
-  if (!res1) {
-    const customer = await getOrCreateCustomer({
-      sb,
-      orgId,
-      env,
-      customerId: customer_id,
-      customerData: customer_data,
-      logger,
-      orgSlug: org.slug,
-    });
+  let cusProducts = customer.customer_products;
 
-    logger.info(
-      `/entitled: Auto creating customer | id: ${customer_id} | email: ${customer_data?.email}`
-    );
-
-    cusEnts = await CustomerEntitlementService.getActiveInFeatureIds({
-      sb,
-      internalCustomerId: customer?.internal_id,
-      internalFeatureIds: [
-        ...creditSystems.map((cs: any) => cs.internal_id),
-        feature.internal_id,
-      ],
+  // For logging purposes...
+  let cusEnts = cusProducts.flatMap((cusProduct) => {
+    return cusProduct.customer_entitlements.map((cusEnt) => {
+      return {
+        ...cusEnt,
+        customer_product: cusProduct,
+      };
     });
-  } else {
-    await updateCustomerDetails({
-      sb,
-      customer: res1,
-      customerData: customer_data,
-      logger: req.logtail,
-    });
-
-    cusEnts = getCusEntsActiveInFeatureIds({
-      cusWithEnts: res1 as CusWithEnts,
-      features: [feature, ...creditSystems],
-    });
-  }
+  });
 
   return { cusEnts, feature, creditSystems, org };
 };
@@ -472,6 +346,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     const { orgId, env, sb } = req;
 
     // 1. Get cusEnts & features
+
     const { cusEnts, feature, creditSystems, org } =
       await getCusEntsAndFeatures({
         sb,
@@ -535,8 +410,6 @@ entitledRouter.post("", async (req: any, res: any) => {
     }
 
     if (org.api_version == APIVersion.v1_1) {
-      // Get latest balance...
-
       let balance;
       if (creditSystems.length > 0) {
         let creditSystem = creditSystems[0];
@@ -571,3 +444,66 @@ entitledRouter.post("", async (req: any, res: any) => {
     handleRequestError({ req, error, res, action: "Failed to GET entitled" });
   }
 });
+
+// const batchQuery = [
+//   CustomerEntitlementService.getCustomerAndEnts({
+//     sb,
+//     customerId: customer_id,
+//     orgId,
+//     env,
+//     inStatuses: org.config?.include_past_due
+//       ? [CusProductStatus.Active, CusProductStatus.PastDue]
+//       : [CusProductStatus.Active],
+//   }).then((result) => {
+//     timings.cusEnts = Date.now() - startParallel;
+//     return result;
+//   }),
+//   getFeaturesAndCreditSystems2({
+//     sb,
+//     orgId,
+//     env,
+//     featureId: feature_id,
+//   }).then((result) => {
+//     timings.features = Date.now() - startParallel;
+//     return result;
+//   }),
+// ];
+
+// const getCusEntsActiveInFeatureIds = ({
+//   cusWithEnts,
+//   features,
+// }: {
+//   cusWithEnts: CusWithEnts;
+//   features: Feature[];
+// }) => {
+//   const internalFeatureIds = features.map((feature) => feature.internal_id);
+//   const cusEnts = cusWithEnts.customer_entitlements;
+
+//   if (
+//     cusWithEnts.customer_products.length === 0 ||
+//     cusWithEnts.customer_entitlements.length == 0
+//   ) {
+//     return [];
+//   }
+
+//   const activeCusEnts = cusEnts
+//     .filter((cusEnt) => {
+//       return (
+//         internalFeatureIds.includes(cusEnt.internal_feature_id) &&
+//         cusWithEnts.customer_products.some(
+//           (product) => product.id === cusEnt.customer_product_id
+//         )
+//       );
+//     })
+//     .map((ent) => {
+//       return {
+//         ...ent,
+//         customer_product: cusWithEnts.customer_products.find(
+//           (cusProduct) => cusProduct.id === ent.customer_product_id
+//         ),
+//       };
+//     });
+
+//   // no need to sort?
+//   return activeCusEnts;
+// };

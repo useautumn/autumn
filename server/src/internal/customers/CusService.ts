@@ -16,6 +16,54 @@ import { sbWithRetry } from "@/external/supabaseUtils.js";
 import { logger } from "@trigger.dev/sdk/v3";
 
 export class CusService {
+  static async getWithProducts({
+    sb,
+    idOrInternalId,
+    orgId,
+    env,
+    inStatuses = [
+      CusProductStatus.Active,
+      CusProductStatus.PastDue,
+      CusProductStatus.Scheduled,
+    ],
+  }: {
+    sb: SupabaseClient;
+    idOrInternalId: string;
+    orgId: string;
+    env: AppEnv;
+    inStatuses?: CusProductStatus[];
+  }) {
+    const { data, error } = await sb.rpc("get_cus_with_products", {
+      p_cus_id: idOrInternalId,
+      p_org_id: orgId,
+      p_env: env,
+      p_statuses: inStatuses,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data || !data.customer) {
+      return null;
+    }
+
+    let { customer, products } = data;
+    for (let product of products) {
+      if (!product.customer_prices) {
+        product.customer_prices = [];
+      }
+
+      if (!product.customer_entitlements) {
+        product.customer_entitlements = [];
+      }
+    }
+    return {
+      ...customer,
+      customer_products: products,
+    };
+  }
+
   static async getById({
     sb,
     id,

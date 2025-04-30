@@ -5,6 +5,57 @@ import { initDefaultConfig } from "./orgUtils.js";
 import { getApiVersion } from "@/utils/versionUtils.js";
 
 export class OrgService {
+  static async getWithKeys({
+    sb,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    orgId: string;
+    env?: AppEnv;
+  }) {
+    const query = sb
+      .from("organizations")
+      .select("*, api_keys(*)")
+      .eq("id", orgId);
+
+    if (env) {
+      query.eq("api_keys.env", env);
+    }
+
+    const { data, error } = await query.single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
+  static async getWithFeatures({
+    sb,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("organizations")
+      .select("*, features(*)")
+      .eq("id", orgId)
+      .eq("features.env", env)
+      .single();
+
+    if (error) {
+      throw new Error("Error getting orgs from supabase");
+    }
+
+    let org = structuredClone(data);
+    delete org.features;
+    return { org, features: data.features || [] };
+  }
+
   static async getOrgs({ sb }: { sb: SupabaseClient }) {
     const { data, error } = await sb.from("organizations").select("*");
     if (error) {
@@ -13,7 +64,7 @@ export class OrgService {
     return data;
   }
 
-  static async getFromPkey({
+  static async getFromPkeyWithFeatures({
     sb,
     pkey,
     env,
@@ -25,9 +76,9 @@ export class OrgService {
     let fieldName = env === AppEnv.Sandbox ? "test_pkey" : "live_pkey";
     const { data, error } = await sb
       .from("organizations")
-      .select("*")
+      .select("*, features(*)")
       .eq(fieldName, pkey)
-      .select()
+      .eq("features.env", env)
       .single();
 
     if (error) {
@@ -39,12 +90,26 @@ export class OrgService {
         message: "Error getting org from supabase",
         code: ErrCode.OrgNotFound,
         statusCode: 404,
+        data: error,
       });
     }
 
     return data;
   }
   static async getFromReq(req: any) {
+    if (req.org) {
+      let org = structuredClone(req.org);
+      let config = org.config || {};
+      let apiVersion = getApiVersion({
+        createdAt: org.created_at,
+      });
+      return {
+        ...org,
+        config: OrgConfigSchema.parse(config),
+        api_version: apiVersion,
+      };
+    }
+
     return await this.getFullOrg({
       sb: req.sb,
       orgId: req.orgId,

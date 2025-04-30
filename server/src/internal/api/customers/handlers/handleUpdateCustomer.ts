@@ -22,7 +22,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
           orgId: req.orgId,
           env: req.env,
         }),
-        OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId }),
+        OrgService.getFromReq(req),
       ]);
 
       if (!originalCustomer) {
