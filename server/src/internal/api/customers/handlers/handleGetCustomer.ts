@@ -51,7 +51,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
       });
 
       const end = performance.now();
-      req.logtail.info(`get customer took ${(end - start).toFixed(2)}ms`);
+      console.log(`get customer took ${(end - start).toFixed(2)}ms`);
 
       res.status(200).json(cusData);
     },

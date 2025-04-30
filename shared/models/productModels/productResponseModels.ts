@@ -5,7 +5,7 @@ import { FreeTrialResponseSchema, FreeTrialSchema } from "./freeTrialModels.js";
 
 export const ProductResponseSchema = z.object({
   // internal_id: z.string(),
-  autumn_id: z.string(),
+  // autumn_id: z.string(),
   id: z.string(),
   name: z.string().nullable(),
   group: z.string().nullable(),

@@ -1,7 +1,6 @@
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { CreditSchemaItem, Feature, FeatureType } from "@autumn/shared";
-import { faXmark } from "@fortawesome/pro-duotone-svg-icons";
 
 import {
   Select,
@@ -79,7 +78,7 @@ function CreditSystemConfig({
       ...creditSystem,
       name: fields.name,
       id: fields.id,
-      type: FeatureType.Metered,
+      type: FeatureType.CreditSystem,
       config: creditSystemConfig,
     });
   }, [fields, creditSystemConfig]);

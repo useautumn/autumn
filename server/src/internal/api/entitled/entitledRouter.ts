@@ -1,14 +1,9 @@
 import { ErrCode } from "@/errors/errCodes.js";
-
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import {
   AllowanceType,
   APIVersion,
-  CusEntWithEntitlement,
-  CusProduct,
   CusProductStatus,
-  Customer,
   Feature,
   FeatureType,
   FullCustomerEntitlement,
@@ -17,7 +12,6 @@ import {
 
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { z } from "zod";
 
 import { handleEventSent } from "../events/eventRouter.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -29,13 +23,10 @@ import {
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { updateCustomerDetails } from "../customers/cusUtils.js";
 import { SuccessCode } from "@autumn/shared";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 import { getBooleanEntitledResult } from "./checkUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 
 export const entitledRouter = Router();
@@ -106,7 +97,9 @@ const getMeteredEntitledResult = ({
 
   for (const feature of [originalFeature, ...creditSystems]) {
     // 1. Skip if feature not among cusEnt
+
     if (!cusEntsContainFeature({ cusEnts, feature })) {
+      console.log("Feature not found", feature.id);
       continue;
     }
 
@@ -131,16 +124,6 @@ const getMeteredEntitledResult = ({
             }),
       });
 
-      // if (org.config.api_version >= BREAK_API_VERSION) {
-      //   balances[balances.length - 1].next_reset_at = getMinNextResetAtCusEnt({
-      //     cusEnts,
-      //     feature,
-      //   });
-      //   balances[balances.length - 1].allowance = getTotalAllowanceFromCusEnts({
-      //     cusEnts,
-      //     feature,
-      //   });
-      // }
       continue;
     }
 
@@ -269,7 +252,7 @@ const getCusEntsAndFeatures = async ({
     }),
     getOrCreateCustomer({
       sb,
-      orgId,
+      org: req.org,
       env,
       customerId: customer_id,
       customerData: customer_data,
@@ -292,6 +275,11 @@ const getCusEntsAndFeatures = async ({
   }
 
   let cusProducts = customer.customer_products;
+  if (!org.config.include_past_due) {
+    cusProducts = cusProducts.filter(
+      (cusProduct) => cusProduct.status !== CusProductStatus.PastDue
+    );
+  }
 
   // For logging purposes...
   let cusEnts = cusProducts.flatMap((cusProduct) => {
@@ -343,9 +331,7 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     const quantity = required_quantity ? parseInt(required_quantity) : 1;
 
-    const { orgId, env, sb } = req;
-
-    // 1. Get cusEnts & features
+    const { sb } = req;
 
     const { cusEnts, feature, creditSystems, org } =
       await getCusEntsAndFeatures({

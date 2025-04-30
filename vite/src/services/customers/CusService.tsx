@@ -3,7 +3,7 @@ import { Customer } from "@autumn/shared";
 
 export class CusService {
   static async createCustomer(axios: AxiosInstance, data: any) {
-    return await axios.post("/v1/customers", data);
+    return await axios.post("/v1/customers?with_autumn_id=true", data);
   }
 
   static async deleteCustomer(axios: AxiosInstance, customer_id: any) {
