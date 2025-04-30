@@ -23,6 +23,7 @@ export const clearOrgCache = async ({
     });
 
     let secretKeys = org.api_keys.map((key: ApiKey) => key.hashed_key);
+
     let publicKeys = [org.test_pkey, org.live_pkey];
 
     let batchDelete = [];
