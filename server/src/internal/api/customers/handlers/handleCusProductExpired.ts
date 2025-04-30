@@ -133,15 +133,9 @@ export const expireCusProduct = async ({
 };
 
 export const handleCusProductExpired = async (req: any, res: any) => {
-  const org = await OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId });
-  const logger = req.logtail;
-
-  // 2. Expire starterGroup 1 didn't work
-  // 1. Expire freeGroup2 didn't work
-
   try {
+    const org = await OrgService.getFromReq(req);
     const customerProductId = req.params.customer_product_id;
-    const { status } = req.body;
 
     // See if customer owns product
     let cusProduct = await CusProductService.getByIdStrict({

@@ -4,15 +4,17 @@ import { AppEnv, CreditSchemaItem, Feature, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 import { creditSystemContainsFeature } from "./creditSystemUtils.js";
+import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 
 export class FeatureService {
   static async getFromReq(req: any) {
+    if (req.features) return req.features as Feature[];
     const features = await FeatureService.getFeatures({
       sb: req.sb,
       orgId: req.orgId,
       env: req.env,
     });
-    return features;
+    return features as Feature[];
   }
 
   static async getFeatures({
@@ -94,12 +96,14 @@ export class FeatureService {
     orgId,
     env,
     updates,
+    logger,
   }: {
     sb: SupabaseClient;
     featureId: string;
     orgId: string;
     env: AppEnv;
     updates: any;
+    logger: any;
   }) {
     let { error } = await sb
       .from("features")
@@ -126,14 +130,23 @@ export class FeatureService {
         data: error,
       });
     }
+
+    await clearOrgCache({
+      sb,
+      orgId,
+      env,
+      logger,
+    });
   }
 
   static async insert({
     sb,
     data,
+    logger,
   }: {
     sb: SupabaseClient;
     data: Feature[] | Feature;
+    logger: any;
   }) {
     // Insert feature into DB
     let { data: insertedData, error } = await sb
@@ -151,6 +164,15 @@ export class FeatureService {
         });
       }
       throw error;
+    }
+
+    if (insertedData && insertedData.length > 0) {
+      let orgId = insertedData[0].org_id;
+      await clearOrgCache({
+        sb,
+        orgId,
+        logger,
+      });
     }
 
     return insertedData;
@@ -183,6 +205,11 @@ export class FeatureService {
           statusCode: 404,
         });
       }
+
+      await clearOrgCache({
+        sb,
+        orgId,
+      });
 
       throw error;
     }

@@ -47,7 +47,7 @@ export const updateCustomerDetails = async ({
   logger,
 }: {
   sb: SupabaseClient;
-  customer: Customer;
+  customer: any;
   customerData?: CustomerData;
   logger: any;
 }) => {
@@ -61,11 +61,12 @@ export const updateCustomerDetails = async ({
 
   if (Object.keys(updates).length > 0) {
     logger.info(`Updating customer details`, { updates });
-    customer = await CusService.update({
+    await CusService.update({
       sb,
       internalCusId: customer.internal_id,
       update: updates,
     });
+    customer = { ...customer, ...updates };
   }
 
   return customer;
@@ -93,12 +94,11 @@ export const getOrCreateCustomer = async ({
   let customer;
 
   if (!skipGet) {
-    customer = await CusService.getByIdOrInternalId({
+    customer = await CusService.getWithProducts({
       sb,
       idOrInternalId: customerId,
       orgId,
       env,
-      // isFull: true,
     });
   }
 
@@ -121,7 +121,7 @@ export const getOrCreateCustomer = async ({
       });
     } catch (error: any) {
       if (error?.data?.code == "23505") {
-        customer = await CusService.getByIdOrInternalId({
+        customer = await CusService.getWithProducts({
           sb,
           idOrInternalId: customerId,
           orgId,
@@ -131,18 +131,6 @@ export const getOrCreateCustomer = async ({
         throw error;
       }
     }
-    // customer = await createNewCustomer({
-    //   sb,
-    //   orgId,
-    //   env,
-    //   customer: {
-    //     id: customerId,
-    //     name: customerData?.name || "",
-    //     email: customerData?.email || "",
-    //     fingerprint: customerData?.fingerprint,
-    //   },
-    //   logger,
-    // });
   }
 
   customer = await updateCustomerDetails({

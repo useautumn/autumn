@@ -141,10 +141,7 @@ export const handleEventSent = async ({
 
   const { sb, pg, orgId, env } = req;
 
-  const org = await OrgService.getFullOrg({
-    sb,
-    orgId,
-  });
+  const org = await OrgService.getFromReq(req);
 
   const { customer, event } = await getEventAndCustomer({
     sb,
@@ -154,7 +151,7 @@ export const handleEventSent = async ({
     customer_data,
     event_data,
     logger: req.logtail,
-    orgSlug: req.minOrg?.slug || "",
+    orgSlug: org.slug,
   });
 
   const affectedFeatures = await getAffectedFeatures({

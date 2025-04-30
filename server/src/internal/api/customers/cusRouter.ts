@@ -106,7 +106,7 @@ cusRouter.delete("/:customer_id", async (req: any, res: any) => {
   try {
     const data = await deleteCusById({
       sb: req.sb,
-      minOrg: req.minOrg,
+      org: req.org,
       customerId: req.params.customer_id,
       env: req.env,
       logger: req.logtail,
@@ -141,7 +141,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
     const customerId = req.params.customer_id;
 
     const [org, customer] = await Promise.all([
-      OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId }),
+      OrgService.getFromReq(req),
       CusService.getById({
         sb: req.sb,
         id: customerId,

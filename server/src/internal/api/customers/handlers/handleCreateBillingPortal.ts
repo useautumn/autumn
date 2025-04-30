@@ -12,7 +12,7 @@ export const handleCreateBillingPortal = async (req: any, res: any) => {
     let returnUrl = req.body.return_url;
 
     const [org, customer] = await Promise.all([
-      OrgService.getFullOrg({ sb: req.sb, orgId: req.orgId }),
+      OrgService.getFromReq(req),
       CusService.getById({
         sb: req.sb,
         id: customerId,

@@ -255,6 +255,6 @@ export const toPricecnProduct = ({
     buttonText,
     price: price,
     items: pricecnItems,
-    href: org.stripe_config?.success_url,
+    // buttonUrl: org.stripe_config?.success_url,
   };
 };

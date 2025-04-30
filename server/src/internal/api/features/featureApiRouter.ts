@@ -71,19 +71,21 @@ featureApiRouter.post("", async (req: any, res) => {
   let data = req.body;
 
   try {
+    let { sb, orgId, env, logtail: logger } = req;
     let parsedFeature = validateFeature(data);
 
     let feature: Feature = {
       internal_id: generateId("fe"),
-      org_id: req.orgId,
+      org_id: orgId,
       created_at: Date.now(),
-      env: req.env,
+      env: env,
       ...parsedFeature,
     };
 
     let insertedData = await FeatureService.insert({
-      sb: req.sb,
+      sb,
       data: feature,
+      logger,
     });
 
     let insertedFeature =
