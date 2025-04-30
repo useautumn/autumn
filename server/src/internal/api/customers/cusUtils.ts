@@ -1,12 +1,10 @@
+import { z } from "zod";
 import {
   CusProductSchema,
   CusProductStatus,
-  CusResponseSchema,
   Customer,
   CustomerData,
-  CustomerResponseSchema,
   CustomerSchema,
-  FullCusProduct,
   FullCustomerEntitlement,
   Organization,
   ProductSchema,
@@ -19,26 +17,14 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 
-import { z } from "zod";
 import {
   fullCusProductToCusEnts,
   fullCusProductToCusPrices,
   processFullCusProduct,
 } from "@/internal/customers/products/cusProductUtils.js";
-import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { getCusBalances } from "@/internal/customers/entitlements/getCusBalances.js";
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
-import { EntityService } from "../entities/EntityService.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { BREAK_API_VERSION } from "@/utils/constants.js";
-import {
-  createNewCustomer,
-  handleCreateCustomer,
-} from "./handlers/handleCreateCustomer.js";
-import { APIVersion, getApiVersion } from "@/utils/versionUtils.js";
+import { handleCreateCustomer } from "./handlers/handleCreateCustomer.js";
 
 export const updateCustomerDetails = async ({
   sb,
@@ -225,7 +211,6 @@ export const flipProductResults = (
   return customers;
 };
 
-// getCustomerDetails helpers
 export const getCusInvoices = async ({
   sb,
   internalCustomerId,

@@ -9,11 +9,23 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
-import { CusProductService } from "./products/CusProductService.js";
 import { flipProductResults } from "../api/customers/cusUtils.js";
-import { format } from "date-fns";
 import { sbWithRetry } from "@/external/supabaseUtils.js";
-import { logger } from "@trigger.dev/sdk/v3";
+
+const printCusProducts = (cusProducts: FullCusProduct[]) => {
+  for (let cusProduct of cusProducts) {
+    console.log(`Product: ${cusProduct.product.name}`);
+    for (let cusEnt of cusProduct.customer_entitlements) {
+      console.log(
+        `Entitlement: ${cusEnt.entitlement.feature_id}, Balance: ${cusEnt.balance}`
+      );
+    }
+
+    for (let cusPrice of cusProduct.customer_prices) {
+      console.log(`cusPrice:`, cusPrice.id, cusPrice.price.id);
+    }
+  }
+};
 
 export class CusService {
   static async getWithProducts({
@@ -49,6 +61,9 @@ export class CusService {
     }
 
     let { customer, products } = data;
+
+    // printCusProducts(products);
+
     for (let product of products) {
       if (!product.customer_prices) {
         product.customer_prices = [];

@@ -69,7 +69,7 @@ export const initStripeCusAndProducts = async ({
 
 export const createNewCustomer = async ({
   sb,
-  orgId,
+  org,
   env,
   customer,
   nextResetAt,
@@ -77,7 +77,7 @@ export const createNewCustomer = async ({
   logger,
 }: {
   sb: SupabaseClient;
-  orgId: string;
+  org: Organization;
   env: AppEnv;
   customer: CreateCustomer;
   nextResetAt?: number;
@@ -85,17 +85,13 @@ export const createNewCustomer = async ({
   logger: any;
 }) => {
   logger.info(`Creating new customer: ${customer.id}`);
-  logger.info(`Org ID: ${orgId}`);
+  logger.info(`Org ID: ${org.id}`);
   logger.info(`Customer data: ${JSON.stringify(customer)}`);
 
-  const [org, defaultProds] = await Promise.all([
-    OrgService.getFullOrg({
-      sb,
-      orgId,
-    }),
+  const [defaultProds] = await Promise.all([
     ProductService.getFullDefaultProducts({
       sb,
-      orgId,
+      orgId: org.id,
       env,
     }),
   ]);
@@ -114,7 +110,7 @@ export const createNewCustomer = async ({
         : parsedCustomer.email || "",
 
     internal_id: generateId("cus"),
-    org_id: orgId,
+    org_id: org.id,
     created_at: Date.now(),
     env,
     processor,
@@ -142,9 +138,6 @@ export const createNewCustomer = async ({
   });
 
   if (nonFreeProds.length > 0) {
-    // Create
-    // <id>@invoices.useautumn.com
-
     await initStripeCusAndProducts({
       sb,
       org,
@@ -202,14 +195,14 @@ export const createNewCustomer = async ({
 
 const handleIdIsNull = async ({
   sb,
-  orgId,
+  org,
   env,
   newCus,
   logger,
   processor,
 }: {
   sb: SupabaseClient;
-  orgId: string;
+  org: Organization;
   env: AppEnv;
   newCus: CreateCustomer;
   logger: any;
@@ -229,7 +222,7 @@ const handleIdIsNull = async ({
   let existingCustomers = await CusService.getByEmail({
     sb,
     email: newCus.email,
-    orgId,
+    orgId: org.id,
     env,
   });
 
@@ -252,7 +245,7 @@ const handleIdIsNull = async ({
 
   const createdCustomer = await createNewCustomer({
     sb,
-    orgId,
+    org,
     env,
     customer: newCus,
     logger,
@@ -265,16 +258,14 @@ const handleIdIsNull = async ({
 // CAN ALSO USE DURING MIGRATION...
 export const handleCreateCustomerWithId = async ({
   sb,
-  orgId,
-  orgSlug,
+  org,
   env,
   logger,
   newCus,
   processor,
 }: {
   sb: SupabaseClient;
-  orgId: string;
-  orgSlug: string;
+  org: Organization;
   env: AppEnv;
   logger: any;
   newCus: CreateCustomer;
@@ -284,14 +275,14 @@ export const handleCreateCustomerWithId = async ({
   let existingCustomer = await CusService.getById({
     sb,
     id: newCus.id!,
-    orgId,
+    orgId: org.id,
     env,
     logger,
   });
 
   if (existingCustomer) {
     logger.info(
-      `POST /customers, existing customer found: ${existingCustomer.id} (org: ${orgSlug})`
+      `POST /customers, existing customer found: ${existingCustomer.id} (org: ${org.slug})`
     );
 
     //
@@ -303,13 +294,13 @@ export const handleCreateCustomerWithId = async ({
     let cusWithEmail = await CusService.getByEmail({
       sb,
       email: newCus.email!,
-      orgId,
+      orgId: org.id,
       env,
     });
 
     if (cusWithEmail.length === 1 && cusWithEmail[0].id === null) {
       logger.info(
-        `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${orgSlug})`
+        `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${org.slug})`
       );
 
       let updatedCustomer = await CusService.update({
@@ -329,7 +320,7 @@ export const handleCreateCustomerWithId = async ({
   // 2. Handle email step...
   return await createNewCustomer({
     sb,
-    orgId,
+    org,
     env,
     customer: newCus,
     logger,
@@ -340,8 +331,7 @@ export const handleCreateCustomerWithId = async ({
 export const handleCreateCustomer = async ({
   cusData,
   sb,
-  orgId,
-  orgSlug,
+  org,
   env,
   logger,
   params = {},
@@ -350,8 +340,7 @@ export const handleCreateCustomer = async ({
 }: {
   cusData: CreateCustomer;
   sb: SupabaseClient;
-  orgId: string;
-  orgSlug: string;
+  org: Organization;
   env: AppEnv;
   logger: any;
   params?: any;
@@ -365,7 +354,7 @@ export const handleCreateCustomer = async ({
   if (newCus.id === null) {
     createdCustomer = await handleIdIsNull({
       sb,
-      orgId,
+      org,
       env,
       newCus,
       logger,
@@ -374,8 +363,7 @@ export const handleCreateCustomer = async ({
   } else {
     createdCustomer = await handleCreateCustomerWithId({
       sb,
-      orgId,
-      orgSlug,
+      org,
       env,
       logger,
       newCus,
@@ -390,7 +378,7 @@ export const handleCreateCustomer = async ({
   return await getCustomerDetails({
     customer: createdCustomer,
     sb,
-    orgId,
+    org,
     env,
     params,
     logger,
@@ -404,11 +392,11 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
 
     let result;
     try {
+      let org = await OrgService.getFromReq(req);
       result = await handleCreateCustomer({
         cusData: data,
         sb: req.sb,
-        orgId: req.orgId,
-        orgSlug: req.minOrg.slug,
+        org,
         env: req.env,
         logger,
         params: req.query,

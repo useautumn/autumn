@@ -2,6 +2,7 @@ import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 import { AppEnv, ErrCode, MinOrg, Organization } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import chalk from "chalk";
@@ -74,3 +75,22 @@ export const deleteCusById = async ({
     customer,
   };
 };
+
+export const handleDeleteCustomer = async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "delete customer",
+    handler: async () => {
+      const data = await deleteCusById({
+        sb: req.sb,
+        org: req.org,
+        customerId: req.params.customer_id,
+        env: req.env,
+        logger: req.logtail,
+        deleteInStripe: req.query.delete_in_stripe === "true",
+      });
+
+      res.status(200).json(data);
+    },
+  });
