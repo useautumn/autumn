@@ -10,7 +10,7 @@ import { StatusCodes } from "http-status-codes";
 import { QueueManager } from "@/queue/QueueManager.js";
 
 import { JobName } from "@/queue/JobName.js";
-import { getOrCreateCustomer } from "../customers/cusUtils.js";
+import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 export const eventsRouter = Router();
 export const usageRouter = Router();
@@ -27,18 +27,17 @@ const getCusFeatureAndOrg = async ({
   customerData: any;
 }) => {
   // 1. Get customer
-  let [customer, features, org] = await Promise.all([
+  let org = await OrgService.getFromReq(req);
+  let [customer, features] = await Promise.all([
     getOrCreateCustomer({
       sb: req.sb,
-      orgId: req.orgId,
+      org,
       env: req.env,
       customerId,
       customerData,
-      orgSlug: req.minOrg?.slug || "",
       logger: req.logtail,
     }),
     FeatureService.getFromReq(req),
-    OrgService.getFromReq(req),
   ]);
 
   let feature = features.find((f) => f.id == featureId);

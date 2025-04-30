@@ -1,7 +1,7 @@
 import { notNullish } from "@/utils/genUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { getOrCreateCustomer } from "../../customers/cusUtils.js";
+
 import {
   CusProductStatus,
   FullCusProduct,
@@ -11,6 +11,7 @@ import {
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getAttachContext } from "./getAttachContext.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 
 export const handleProductCheck = async ({
   req,
@@ -26,12 +27,11 @@ export const handleProductCheck = async ({
   let [customer, org, product] = await Promise.all([
     getOrCreateCustomer({
       sb,
-      orgId,
+      org: req.org,
       env,
       customerId: customer_id,
       customerData: customer_data,
       logger,
-      orgSlug: req.minOrg?.slug,
     }),
     OrgService.getFromReq(req),
     ProductService.getFullProduct({

@@ -8,6 +8,7 @@ import {
   Event,
   Feature,
   FeatureType,
+  Organization,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -20,7 +21,7 @@ import { QueueManager } from "@/queue/QueueManager.js";
 import { subDays } from "date-fns";
 import { handleUsageEvent } from "./usageRouter.js";
 import { StatusCodes } from "http-status-codes";
-import { getOrCreateCustomer } from "../customers/cusUtils.js";
+import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 
@@ -28,22 +29,20 @@ export const eventsRouter = Router();
 
 const getEventAndCustomer = async ({
   sb,
-  orgId,
+  org,
   env,
   customer_id,
   customer_data,
   event_data,
   logger,
-  orgSlug,
 }: {
   sb: SupabaseClient;
-  orgId: string;
+  org: Organization;
   env: AppEnv;
   customer_id: string;
   customer_data: any;
   event_data: any;
   logger: any;
-  orgSlug: string;
 }) => {
   if (!customer_id) {
     throw new RecaseError({
@@ -58,12 +57,11 @@ const getEventAndCustomer = async ({
   // 2. Check if customer ID is valid
   customer = await getOrCreateCustomer({
     sb,
-    orgId,
+    org,
     env,
     customerId: customer_id,
     customerData: customer_data,
     logger,
-    orgSlug,
   });
 
   // 3. Insert event
@@ -81,7 +79,7 @@ const getEventAndCustomer = async ({
     ...parsedEvent,
     properties: parsedEvent.properties || {},
     id: generateId("evt"),
-    org_id: orgId,
+    org_id: org.id,
     env: env,
     internal_customer_id: customer.internal_id,
     timestamp: eventTimestamp,
@@ -175,13 +173,12 @@ export const handleEventSent = async ({
 
   const { customer, event } = await getEventAndCustomer({
     sb,
-    orgId,
+    org,
     env,
     customer_id,
     customer_data,
     event_data,
     logger: req.logtail,
-    orgSlug: org.slug,
   });
 
   const affectedFeatures = await getAffectedFeatures({

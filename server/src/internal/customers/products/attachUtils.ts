@@ -10,6 +10,7 @@ import {
   FeatureOptions,
   FreeTrial,
   FullCusProduct,
+  Organization,
   Price,
   ProductItem,
   UsagePriceConfig,
@@ -33,7 +34,7 @@ import { CusService } from "../CusService.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
-import { getOrCreateCustomer } from "@/internal/api/customers/cusUtils.js";
+import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { Decimal } from "decimal.js";
@@ -42,42 +43,33 @@ const getOrCreateCustomerAndProducts = async ({
   sb,
   customerId,
   customerData,
-  orgId,
-  orgSlug,
+  org,
   env,
   logger,
 }: {
   sb: SupabaseClient;
   customerId: string;
   customerData?: CustomerData;
-  orgId: string;
-  orgSlug: string;
+  org: Organization;
   env: AppEnv;
   logger: any;
 }) => {
   const customer = await getOrCreateCustomer({
     sb,
-    orgId,
+    org,
     env,
     customerId,
     customerData,
     logger,
-    orgSlug,
-  });
-
-  // Handle existing cus product...
-  const cusProducts = await CusService.getFullCusProducts({
-    sb,
-    internalCustomerId: customer.internal_id,
-    withProduct: true,
-    withPrices: true,
     inStatuses: [
       CusProductStatus.Active,
       CusProductStatus.Scheduled,
       CusProductStatus.PastDue,
     ],
-    logger,
   });
+
+  // Handle existing cus product...
+  const cusProducts = customer.customer_products;
 
   return { customer, cusProducts };
 };
@@ -197,77 +189,39 @@ const getProducts = async ({
 
 const getCustomerProductsFeaturesAndOrg = async ({
   sb,
+  org,
   customerId,
   customerData,
   productId,
   productIds,
-  orgId,
-  orgSlug,
+
   env,
   logger,
   version,
 }: {
   sb: SupabaseClient;
+  org: Organization;
   customerData?: CustomerData;
   customerId: string;
   productId?: string;
   productIds?: string[];
-  orgId: string;
-  orgSlug: string;
   env: AppEnv;
   logger: any;
   version?: number;
 }) => {
-  const getOrg = async () => {
-    let fullOrg;
-    try {
-      fullOrg = await OrgService.getFullOrg({
-        sb,
-        orgId,
-      });
-      return fullOrg;
-    } catch (error) {
-      throw new RecaseError({
-        message: `Failed to get organization ${orgId}`,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        code: ErrCode.InternalError,
-      });
-    }
-  };
-
-  const getFeatures = async () => {
-    try {
-      const features = await FeatureService.getFeatures({
-        sb,
-        orgId,
-        env,
-      });
-      return features;
-    } catch (error) {
-      throw new RecaseError({
-        message: `Failed to get features for organization ${orgId}`,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        code: ErrCode.InternalError,
-      });
-    }
-  };
-
-  const [cusRes, products, org, features] = await Promise.all([
+  const [cusRes, products] = await Promise.all([
     getOrCreateCustomerAndProducts({
       sb,
       customerId,
       customerData,
-      orgId,
-      orgSlug,
+      org,
       env,
       logger,
     }),
-    getProducts({ sb, productId, productIds, orgId, env, version }),
-    getOrg(),
-    getFeatures(),
+    getProducts({ sb, productId, productIds, orgId: org.id, env, version }),
   ]);
 
-  return { ...cusRes, products, org, features };
+  return { ...cusRes, products };
 };
 
 const getEntsWithFeature = (ents: Entitlement[], features: Feature[]) => {
@@ -340,6 +294,8 @@ const mapOptionsList = ({
 };
 
 export const getFullCusProductData = async ({
+  org,
+  features,
   sb,
   customerId,
   customerData,
@@ -353,8 +309,9 @@ export const getFullCusProductData = async ({
   isCustom = false,
   logger,
   version,
-  orgSlug,
 }: {
+  org: Organization;
+  features: Feature[];
   sb: SupabaseClient;
   customerId: string;
   customerData?: Customer;
@@ -368,18 +325,16 @@ export const getFullCusProductData = async ({
   isCustom?: boolean;
   logger: any;
   version?: number;
-  orgSlug: string;
 }) => {
   // 1. Get customer, product, org & features
-  const { customer, products, org, features, cusProducts } =
+  const { customer, products, cusProducts } =
     await getCustomerProductsFeaturesAndOrg({
+      org,
       sb,
       customerId,
       customerData,
       productId,
       productIds,
-      orgId,
-      orgSlug,
       env,
       logger,
       version,

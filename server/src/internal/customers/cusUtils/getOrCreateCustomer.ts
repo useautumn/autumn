@@ -1,9 +1,14 @@
 import { updateCustomerDetails } from "@/internal/api/customers/cusUtils.js";
 import { handleCreateCustomer } from "@/internal/api/customers/handlers/handleCreateCustomer.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { AppEnv, CustomerData } from "autumn-js";
 import { CusService } from "../CusService.js";
-import { CusProductStatus, FullCustomer, Organization } from "@autumn/shared";
+import {
+  AppEnv,
+  CusProductStatus,
+  CustomerData,
+  FullCustomer,
+  Organization,
+} from "@autumn/shared";
 
 export const getOrCreateCustomer = async ({
   sb,
