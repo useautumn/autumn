@@ -28,6 +28,7 @@ import { SuccessCode } from "@autumn/shared";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 import { getBooleanEntitledResult } from "./checkUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
+import { CusService } from "@/internal/customers/CusService.js";
 
 export const entitledRouter = Router();
 

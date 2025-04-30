@@ -2,6 +2,7 @@ import { withOrgAuth } from "./authMiddleware.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { ErrCode } from "@autumn/shared";
+import { logger } from "@trigger.dev/sdk/v3";
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
   const authHeader =
@@ -28,11 +29,12 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
   }
 
   // Try verify via Autumn
+
+  let logger = req.logtail;
   try {
     const { valid, data } = await verifyKey({
       sb: req.sb,
       key: apiKey,
-      logger: req.logtail,
     });
 
     if (valid && data) {
@@ -53,7 +55,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
         statusCode: null,
       };
     } else {
-      console.log(`Autumn API verification failed`);
+      logger.info(`Autumn API verification failed`);
       return {
         error: ErrCode.FailedToVerifySecretKey,
         fallback: true,
@@ -61,8 +63,11 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
       };
     }
   } catch (error) {
-    console.log("Error: Failed to fetch key from Autumn");
-    console.log(error);
+    try {
+      logger.error("Failed to fetch key from Autumn", error);
+    } catch (error) {
+      console.error("(log failed) Failed to fetch key from Autumn", error);
+    }
     return {
       error: ErrCode.FailedToFetchKeyFromAutumn,
       fallback: true,
@@ -91,8 +96,13 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
       });
       return;
     }
-  } catch (error) {
-    console.log("Error: verifySecretKey failed", error);
+  } catch (error: any) {
+    try {
+      let logger = req.logtail;
+      logger.error("Error: verifySecretKey failed", error);
+    } catch (error) {
+      console.error("(log failed) Error: verifySecretKey failed", error);
+    }
     res.status(500).json({
       message: "Failed to verify secret key -- internal server error",
       code: ErrCode.FailedToVerifySecretKey,

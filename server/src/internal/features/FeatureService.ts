@@ -206,13 +206,14 @@ export class FeatureService {
         });
       }
 
-      await clearOrgCache({
-        sb,
-        orgId,
-      });
-
       throw error;
     }
+
+    await clearOrgCache({
+      sb,
+      orgId,
+      env,
+    });
   }
 
   static async getWithCreditSystems({

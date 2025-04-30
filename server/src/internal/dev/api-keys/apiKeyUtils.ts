@@ -68,31 +68,18 @@ export const createKey = async ({
 export const verifyKey = async ({
   sb,
   key,
-  logger,
 }: {
   sb: SupabaseClient;
   key: string;
-  logger: any;
 }) => {
   const hashedKey = hashApiKey(key);
   const env = key.startsWith("am_sk_test") ? AppEnv.Sandbox : AppEnv.Live;
 
-  // New method...
-
-  const start = performance.now();
-  // await CachedKeyService.clearCache({
-  //   hashedKey,
-  // });
   const data = await getAPIKeyCache({
     action: CacheType.SecretKey,
     key: hashedKey,
     fn: async () => await ApiKeyService.verifyAndFetch({ sb, hashedKey, env }),
   });
-
-  try {
-    const elapsed = (performance.now() - start).toFixed(2);
-    console.log(`verify secret key took ${elapsed}ms`);
-  } catch (error) {}
 
   if (!data) {
     return {
