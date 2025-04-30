@@ -11,7 +11,6 @@ import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 import pg from "pg";
 
 import http from "http";
-import { publicRouter } from "./internal/public/publicRouter.js";
 import { initLogger } from "./errors/logger.js";
 import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
@@ -106,7 +105,6 @@ const init = async () => {
 
   app.use(express.json());
   app.use(mainRouter);
-  app.use("/public", publicRouter);
   app.use("/v1", apiRouter);
 
   const PORT = 8080;

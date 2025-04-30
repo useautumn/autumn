@@ -97,7 +97,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
       let customerDetails = await getCustomerDetails({
         sb: req.sb,
         customer: updatedCustomer,
-        orgId: req.orgId,
+        org,
         env: req.env,
         logger: req.logtail,
       });
