@@ -4,6 +4,7 @@ import {
   getPriceOptions,
   getProductForPrice,
   pricesOnlyOneOff,
+  priceToAmountOrTiers,
 } from "@/internal/prices/priceUtils.js";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -19,6 +20,8 @@ import {
   BillingInterval,
   BillingType,
   ErrCode,
+  PriceType,
+  UsageModel,
 } from "@autumn/shared";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import {
@@ -216,18 +219,20 @@ export const handleBillNowPrices = async ({
   }
 };
 
-const handleOneOffPrices = async ({
+export const handleOneOffPrices = async ({
   req,
   sb,
   attachParams,
   res,
   fromRequest = true,
+  shouldPreview = false,
 }: {
   req: any;
-  sb: SupabaseClient;
+  sb: any;
   attachParams: AttachParams;
   res: any;
   fromRequest?: boolean;
+  shouldPreview?: boolean;
 }) => {
   const logger = req.logtail;
   logger.info("Scenario 4A: One-off prices");
@@ -245,12 +250,7 @@ const handleOneOffPrices = async ({
   // 1. Create invoice
   const stripeCli = createStripeCli({ org, env: customer.env });
 
-  logger.info("   1. Creating invoice");
-  let stripeInvoice = await stripeCli.invoices.create({
-    customer: customer.processor.id,
-    auto_advance: false,
-    currency: org.default_currency,
-  });
+  let invoiceItems = [];
 
   // 2. Create invoice items
   for (const price of prices) {
@@ -284,11 +284,44 @@ const handleOneOffPrices = async ({
       };
     }
 
-    await stripeCli.invoiceItems.create({
-      customer: customer.processor.id,
-      invoice: stripeInvoice.id,
+    let previewData = {};
+    if (shouldPreview) {
+      previewData = {
+        ...priceToAmountOrTiers(price),
+        usage_model:
+          billingType == BillingType.UsageInAdvance
+            ? UsageModel.Prepaid
+            : price.config?.type == PriceType.Usage
+            ? UsageModel.PayPerUse
+            : null,
+        feature_name: entitlement?.feature.name,
+      };
+    }
+
+    invoiceItems.push({
       description: `${product?.name}${allowanceStr}`,
       ...amountData,
+      ...previewData,
+    });
+  }
+
+  if (shouldPreview) {
+    return invoiceItems;
+  }
+
+  logger.info("   1. Creating invoice");
+  let stripeInvoice = await stripeCli.invoices.create({
+    customer: customer.processor.id,
+    auto_advance: false,
+    currency: org.default_currency,
+  });
+
+  logger.info("   2. Creating invoice items");
+  for (const invoiceItem of invoiceItems) {
+    await stripeCli.invoiceItems.create({
+      ...invoiceItem,
+      customer: customer.processor.id,
+      invoice: stripeInvoice.id,
     });
   }
 
@@ -298,7 +331,7 @@ const handleOneOffPrices = async ({
       getInvoiceExpansion()
     );
 
-    logger.info("   2. Paying invoice");
+    logger.info("   3. Paying invoice");
     const { paid, error } = await payForInvoice({
       fullOrg: org,
       env: customer.env,
@@ -316,6 +349,7 @@ const handleOneOffPrices = async ({
           res,
           attachParams,
         });
+        return;
       } else {
         throw error;
       }
@@ -323,7 +357,7 @@ const handleOneOffPrices = async ({
   }
 
   // Insert full customer product
-  logger.info("   3. Creating full customer product");
+  logger.info("   4. Creating full customer product");
   const batchInsert = [];
   for (const product of products) {
     batchInsert.push(
@@ -336,7 +370,7 @@ const handleOneOffPrices = async ({
   }
   await Promise.all(batchInsert);
 
-  logger.info("   4. Creating invoice from stripe");
+  logger.info("   5. Creating invoice from stripe");
   await InvoiceService.createInvoiceFromStripe({
     sb,
     stripeInvoice: stripeInvoice,

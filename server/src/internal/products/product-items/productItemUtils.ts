@@ -17,6 +17,23 @@ import {
   entToItemInterval,
 } from "./itemIntervalUtils.js";
 
+export const itemToPriceOrTiers = (item: ProductItem) => {
+  if (item.price) {
+    return {
+      price: item.price,
+    };
+  } else if (item.tiers) {
+    if (item.tiers.length > 1) {
+      return {
+        tiers: item.tiers,
+      };
+    } else {
+      return {
+        price: item.tiers[0].amount,
+      };
+    }
+  }
+};
 export const getItemFeatureType = ({
   item,
   features,

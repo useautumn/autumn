@@ -20,7 +20,6 @@ import {
   APIVersion,
 } from "@autumn/shared";
 
-import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";

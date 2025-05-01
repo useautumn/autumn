@@ -14,12 +14,14 @@ import { getUpgradePreview } from "@/internal/customers/previews/getUpgradePrevi
 import { fullCusProductToProduct } from "@/internal/customers/products/cusProductUtils.js";
 import {
   isFreeProduct,
+  isOneOff,
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import {
   AppEnv,
   Customer,
+  Feature,
   FullCusProduct,
   FullProduct,
   Organization,
@@ -29,27 +31,39 @@ import {
 //   AlreadyAttached,
 // }
 
-export const getAttachContext = async ({
+export const getAttachPreview = async ({
   customer,
   org,
   env,
   product,
   cusProducts,
-  paymentMethod,
+  features,
 }: {
   customer: Customer;
   org: Organization;
   env: AppEnv;
   product: FullProduct;
   cusProducts: FullCusProduct[];
-  paymentMethod: any;
+  features: Feature[];
 }) => {
   // Handle errors
-  if (!paymentMethod) {
+  let paymentMethod: any;
+  try {
+    paymentMethod = await getCusPaymentMethod({
+      org,
+      env: customer.env,
+      stripeId: customer.processor?.id,
+      errorIfNone: false,
+    });
+
+    if (!paymentMethod) {
+      return null;
+    }
+  } catch (error) {
     return null;
   }
 
-  let { curMainProduct, curScheduledProduct }: any =
+  let { curMainProduct, curScheduledProduct, curSameProduct }: any =
     await getExistingCusProducts({
       product,
       cusProducts: cusProducts || [],
@@ -66,15 +80,21 @@ export const getAttachContext = async ({
       message: "You already have this product scheduled to start soon.",
       error_on_attach: true,
     };
-  } else if (
-    curMainProduct?.product.id === product.id &&
-    !curScheduledProduct
-  ) {
-    return {
-      title: "Product already attached",
-      message: "You already have this product attached.",
-      error_on_attach: true,
-    };
+  } else if (curSameProduct) {
+    // 1. If main product and no scheduled product and main isn't one off
+    if (!product.is_add_on && !curScheduledProduct && !isOneOff(curPrices)) {
+      return {
+        title: "Product already attached",
+        message: "You already have this product attached.",
+        error_on_attach: true,
+      };
+    } else if (product.is_add_on && !isOneOff(product.prices)) {
+      return {
+        title: "Product already attached",
+        message: "You already have this product attached.",
+        error_on_attach: true,
+      };
+    }
   }
 
   if (isFreeProduct(curPrices)) {
@@ -82,7 +102,7 @@ export const getAttachContext = async ({
   }
 
   // Case 1: No / free main product
-  if (!curMainProduct) {
+  if (!curMainProduct || product.is_add_on) {
     // 1a. If both are free, no context
     if (isFreeProduct(product.prices)) {
       return null;
@@ -95,6 +115,7 @@ export const getAttachContext = async ({
         curMainProduct,
         curScheduledProduct,
         cusProducts,
+        features,
       });
     }
   }

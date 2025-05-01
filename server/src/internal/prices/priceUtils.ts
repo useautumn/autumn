@@ -112,16 +112,6 @@ export const pricesContainRecurring = (prices: Price[]) => {
   });
 };
 
-// export const pricesOnlyRequireSetup = (prices: Price[]) => {
-//   return prices.every((price) => {
-//     return (
-//       price.billing_type == BillingType.UsageBelowThreshold ||
-//       price.billing_type == BillingType.UsageInArrear
-//     );
-//   });
-// };
-
-// Check if prices have different recurring intervals
 export const haveDifferentRecurringIntervals = (prices: Price[]) => {
   let interval = null;
 
@@ -262,6 +252,7 @@ export const getPriceAmount = ({
   price: Price;
   options?: FeatureOptions;
   relatedEnt?: EntitlementWithFeature;
+  quantity?: number;
 }) => {
   let billingType = getBillingType(price.config!);
   if (billingType == BillingType.OneOff) {
@@ -377,4 +368,25 @@ export const getProductForPrice = (price: Price, products: FullProduct[]) => {
   return products.find(
     (product) => product.internal_id === price.internal_product_id
   );
+};
+
+// Price to price / tiers
+export const priceToAmountOrTiers = (price: Price) => {
+  if (price.config!.type == PriceType.Fixed) {
+    let config = price.config as FixedPriceConfig;
+    return {
+      price: config.amount,
+    };
+  } else {
+    let config = price.config as UsagePriceConfig;
+    if (config.usage_tiers.length > 1) {
+      return {
+        tiers: config.usage_tiers,
+      };
+    } else {
+      return {
+        price: config.usage_tiers[0].amount,
+      };
+    }
+  }
 };

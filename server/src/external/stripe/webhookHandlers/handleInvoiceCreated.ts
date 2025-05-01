@@ -450,7 +450,11 @@ export const handleInvoiceCreated = async ({
       stripeSubId: invoice.subscription as string,
       orgId: org.id,
       env,
-      inStatuses: [CusProductStatus.Active, CusProductStatus.Expired],
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.Expired,
+        CusProductStatus.PastDue,
+      ],
     });
 
     if (activeProducts.length == 0) {
