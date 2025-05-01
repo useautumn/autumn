@@ -78,25 +78,28 @@ const formatMessage = ({
     ? "will be charged to your card immediately"
     : "will be added to your next bill";
 
-  let html = `<p>By clicking confirm, you will upgrade your plan to ${product.name} and the following amount ${addString}.</p>`;
-
-  html += `<br/><ul>${itemsToHtml({ items: baseLineItems })}${itemsToHtml({
-    items: usageLineItems,
-  })}</ul><br/>`;
-
-  html += `<p><strong style="font-size: 1.1em;">Total: ${formatCurrency({
-    amount: totalAmount,
-    defaultCurrency: org.default_currency,
-  })}</strong></p>`;
-
   let message = `By clicking confirm, you will upgrade your plan to ${
     product.name
   } and ${formatCurrency({
     amount: totalAmount,
     defaultCurrency: org.default_currency,
-  })} ${addString}.`;
+  })} ${addString}:\n`;
 
-  return { html, message };
+  for (let item of baseLineItems) {
+    message += `\n${item.description}: ${formatCurrency({
+      amount: item.amount,
+      defaultCurrency: org.default_currency,
+    })}`;
+  }
+
+  for (let item of usageLineItems) {
+    message += `\n${item.description}: ${formatCurrency({
+      amount: item.amount,
+      defaultCurrency: org.default_currency,
+    })}`;
+  }
+
+  return { message };
 };
 
 export const getUpgradePreview = async ({
@@ -180,7 +183,6 @@ export const getUpgradePreview = async ({
   return {
     title: `Upgrade to ${product.name}`,
     message: formattedMessage.message,
-    html: formattedMessage.html,
     amount_due: Number(totalAmount.toFixed(2)),
     due_when: org.config.bill_upgrade_immediately
       ? "immediately"

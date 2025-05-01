@@ -1,4 +1,4 @@
-import { Organization } from "@autumn/shared";
+import { Organization, PriceTier } from "@autumn/shared";
 
 export const formatCurrency = ({
   amount,
@@ -11,7 +11,35 @@ export const formatCurrency = ({
     style: "currency",
     currency: defaultCurrency || "usd",
   });
-  return formatter.format(Math.abs(amount));
+  return formatter.format(amount);
+};
+
+export const formatTiers = ({
+  tiers,
+
+  org,
+}: {
+  tiers: PriceTier[];
+
+  org: Organization;
+}) => {
+  if (tiers.length == 1) {
+    return formatCurrency({
+      amount: tiers[0].amount,
+      defaultCurrency: org.default_currency,
+    });
+  }
+
+  let tiersStart = formatCurrency({
+    amount: tiers[0].amount,
+    defaultCurrency: org.default_currency,
+  });
+  let tiersEnd = formatCurrency({
+    amount: tiers[tiers.length - 1].amount,
+    defaultCurrency: org.default_currency,
+  });
+
+  return `${tiersStart} - ${tiersEnd}`;
 };
 
 export const getItemsHtml = ({

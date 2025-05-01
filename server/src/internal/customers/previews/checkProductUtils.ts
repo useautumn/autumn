@@ -6,14 +6,53 @@ import {
   isFeatureItem,
   isPriceItem,
 } from "@/internal/products/product-items/getItemType.js";
-import { itemToPriceOrTiers } from "@/internal/products/product-items/productItemUtils.js";
-import {
-  Feature,
-  FullProduct,
-  Organization,
-  ProductItem,
-  ProductV2,
-} from "@autumn/shared";
+
+import { Feature, Organization, ProductItem, ProductV2 } from "@autumn/shared";
+import { formatCurrency, formatTiers } from "./previewUtils.js";
+import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
+
+export const getProductChargeText = ({
+  product,
+  org,
+  features,
+}: {
+  product: ProductV2;
+  org: Organization;
+  features: Feature[];
+}) => {
+  let basePrices = product.items.filter((i) => isPriceItem(i));
+  let total = basePrices.reduce((acc, curr) => acc + curr.price!, 0);
+
+  let itemStrs = [];
+  if (total > 0) {
+    itemStrs.push(
+      formatCurrency({
+        amount: total,
+        defaultCurrency: org.default_currency,
+      })
+    );
+  }
+
+  let prepaidPrices = product.items.filter(
+    (i) => isFeaturePriceItem(i) && i.usage_model == "prepaid"
+  );
+
+  let prepaidStrings = prepaidPrices.map((i) => {
+    let feature = features.find((f) => f.id === i.feature_id);
+    let priceStr = formatTiers({
+      tiers: i.tiers!,
+      org,
+    });
+
+    let featureStr =
+      i.billing_units && i.billing_units > 1
+        ? `${i.billing_units} ${feature?.name}`
+        : feature?.name;
+
+    return `${priceStr} / ${featureStr}`;
+  });
+  return [...itemStrs, ...prepaidStrings];
+};
 
 export const getItemDescription = ({
   item,
@@ -28,7 +67,6 @@ export const getItemDescription = ({
 }) => {
   let prices = product.items.filter((i) => !isFeatureItem(i));
 
-  // let { price, tiers } = itemToPriceOrTiers(item);
   let priceStr = getPriceText({
     item,
     org,

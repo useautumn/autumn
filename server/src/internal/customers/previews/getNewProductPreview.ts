@@ -1,33 +1,20 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
 import {
-  BillingType,
-  CheckProdItemSchema,
   Feature,
   FullCusProduct,
   FullProduct,
   Organization,
+  UsageModel,
 } from "@autumn/shared";
 
 import { AppEnv } from "@autumn/shared";
 
 import { Customer } from "@autumn/shared";
-import {
-  handleBillNowPrices,
-  handleOneOffPrices,
-} from "../add-product/handleAddProduct.js";
-import { formatCurrency, getItemsHtml, itemsToHtml } from "./previewUtils.js";
-import {
-  mapToProductItems,
-  mapToProductV2,
-} from "@/internal/products/productV2Utils.js";
-import {
-  getBillingType,
-  getPriceEntitlement,
-} from "@/internal/prices/priceUtils.js";
-import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
+
+import { mapToProductV2 } from "@/internal/products/productV2Utils.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
-import { itemToPriceOrTiers } from "@/internal/products/product-items/productItemUtils.js";
-import { getItemDescription } from "./checkProductUtils.js";
+import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
+import { getProductChargeText } from "./checkProductUtils.js";
 import { isFeatureItem } from "@/internal/products/product-items/getItemType.js";
 import { sortProductItems } from "@/internal/products/pricecn/pricecnUtils.js";
 
@@ -58,95 +45,39 @@ export const getNewProductPreview = async ({
   });
 
   let sortedItems = sortProductItems(productV2.items, features);
-  let items = sortedItems
-    .filter((i) => !isFeatureItem(i))
-    .map((item) => {
+  let items = sortedItems.filter((i) => !isFeatureItem(i));
+  let itemStrs = getProductChargeText({
+    product: productV2,
+    org,
+    features,
+  });
+
+  let message = `By clicking confirm, you will subscribe to ${product.name} and the following amount will be charged:\n`;
+  for (let item of itemStrs) {
+    message += `\n${item}`;
+  }
+
+  let title = "";
+  if (isOneOff(product.prices)) {
+    title = `Purchase ${product.name}`;
+  } else {
+    title = `Subscribe to ${product.name}`;
+  }
+
+  let options = items
+    .filter((i) => isFeaturePriceItem(i) && i.usage_model == UsageModel.Prepaid)
+    .map((i) => {
       return {
-        description: getItemDescription({
-          item,
-          features,
-          product: productV2,
-          org,
-        }),
+        feature_id: i.feature_id,
+        feature_name: features.find((f) => f.id == i.feature_id)?.name,
+        billing_units: i.billing_units,
       };
     });
 
-  console.log("items", items);
-  throw new Error("Not implemented");
-
-  // if (isOneOff(product.prices)) {
-  //   let invoiceItems = await handleOneOffPrices({
-  //     sb: null,
-  //     attachParams,
-  //     req: {
-  //       logtail: console,
-  //     },
-  //     res: null,
-  //     fromRequest: false,
-  //     shouldPreview: true,
-  //   }) || [];
-
-  //   for (let item of invoiceItems) {
-  //     delete item.description;
-  //   }
-  //   throw new Error("Not implemented");
-  //   // let items = res?.lines?.data.map((line: any) => {
-  //   //   return {
-  //   //     name: line.description,
-  //   //     amount: line.amount / 100,
-  //   //     currency: line.currency,
-  //   //   };
-  //   // });
-  // } else {
-  //   res = (await handleBillNowPrices({
-  //     sb: null,
-  //     attachParams,
-  //     req: {
-  //       logtail: console,
-  //     },
-  //     res: null,
-  //     fromRequest: false,
-  //     shouldPreview: true,
-  //   })) as any;
-
-  //   let items = res?.lines?.data.map((line: any) => {
-  //     let price = product.prices.find(
-  //       (p: any) => p.config.stripe_price_id === line.price.id
-  //     );
-  //     let tiers = (price?.config as any)?.usage_tiers;
-  //     let entitlement;
-
-  //     if (price) {
-  //       entitlement = getPriceEntitlement(price, product.entitlements);
-  //     }
-
-  //     return {
-  //       name: entitlement
-  //         ? `${product.name} (${entitlement?.feature.name})`
-  //         : `${product.name} (Base)`,
-  //       // description: line.description,
-  //       amount: line.amount / 100,
-  //       currency: line.currency,
-  //       tiers: tiers,
-  //     };
-  //   });
-  // }
-
-  // let html = `<p>By clicking confirm, you will subscribe to ${product.name} and the following amount will be charged immediately:</p>`;
-  // html += getItemsHtml({ items: items, org: org });
-
-  // ${formatCurrency({
-  //   amount: totalAmount,
-  //   defaultCurrency: items?.[0]?.currency,
-  // })}
-
-  let message = `By clicking confirm, you will subscribe to ${product.name} and the following amount will be charged immediately:`;
-
-  // console.log("items", items);
   return {
-    title: `Upgrade to ${product.name}`,
+    title,
     message,
-    line_items: items,
     due_when: "immediately",
+    options,
   };
 };
