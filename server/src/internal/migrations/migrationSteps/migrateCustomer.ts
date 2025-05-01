@@ -51,7 +51,7 @@ export const migrateCustomer = async ({
       internalCustomerId: customer.internal_id,
       withProduct: true,
       withPrices: true,
-      inStatuses: [CusProductStatus.Active],
+      inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     });
 
     let entities = await EntityService.get({

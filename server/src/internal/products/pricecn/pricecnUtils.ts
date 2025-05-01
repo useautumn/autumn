@@ -17,7 +17,7 @@ import { notNullish, nullish } from "@/utils/genUtils.js";
 import { numberWithCommas } from "tests/utils/general/numberUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 
-const sortProductItems = (items: ProductItem[], features: Feature[]) => {
+export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
   items.sort((a, b) => {
     let aIsPriceItem = isPriceItem(a);
     let bIsPriceItem = isPriceItem(b);
@@ -61,7 +61,7 @@ const sortProductItems = (items: ProductItem[], features: Feature[]) => {
   return items;
 };
 
-const getPriceText = ({
+export const getPriceText = ({
   item,
   org,
 }: {
@@ -93,7 +93,7 @@ const getPriceText = ({
   }
 };
 
-const getPricecnPrice = ({
+export const getPricecnPrice = ({
   org,
   items,
   features,
@@ -107,6 +107,7 @@ const getPricecnPrice = ({
   if (!priceExists) {
     return {
       primaryText: "Free",
+      secondaryText: " ",
     };
   }
 
@@ -124,7 +125,7 @@ const getPricecnPrice = ({
   }
 };
 
-const featureToPricecnItem = ({
+export const featureToPricecnItem = ({
   feature,
   item,
 }: {
@@ -157,7 +158,7 @@ const featureToPricecnItem = ({
   };
 };
 
-const featurePricetoPricecnItem = ({
+export const featurePricetoPricecnItem = ({
   feature,
   item,
   org,
@@ -183,21 +184,23 @@ const featurePricetoPricecnItem = ({
         } included`;
 
   let priceStr = getPriceText({ item, org });
+  let priceStr2 = "";
   if (item.billing_units && item.billing_units > 1) {
-    priceStr = `then ${priceStr} / ${item.billing_units} ${feature.name}`;
+    priceStr2 = `${numberWithCommas(item.billing_units)} ${feature.name}`;
   } else {
-    priceStr = `then ${priceStr} / ${feature.name}`;
+    priceStr2 = `${feature.name}`;
   }
 
   if (includedUsageStr) {
     return {
       primaryText: includedUsageStr,
-      secondaryText: priceStr,
+      secondaryText: `then ${priceStr} / ${priceStr2}`,
     };
   }
 
   return {
     primaryText: priceStr,
+    secondaryText: `per ${priceStr2}`,
   };
 };
 

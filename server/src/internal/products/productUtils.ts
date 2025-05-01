@@ -47,6 +47,22 @@ import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
 import { mapToProductItems } from "./productV2Utils.js";
 import { itemsAreSame } from "./product-items/productItemUtils.js";
 
+export const sortProductsByPrice = (products: FullProduct[]) => {
+  products.sort((a, b) => {
+    let isUpgradeA = isProductUpgrade({
+      prices1: a.prices,
+      prices2: b.prices,
+      usageAlwaysUpgrade: false,
+    });
+
+    if (isUpgradeA) {
+      return -1;
+    } else {
+      return 1;
+    }
+  });
+};
+
 export const getLatestProducts = (products: FullProduct[]) => {
   const latestProducts = products.reduce((acc: any, product: any) => {
     if (!acc[product.id]) {

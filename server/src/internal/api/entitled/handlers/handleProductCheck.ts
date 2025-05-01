@@ -9,9 +9,10 @@ import {
   SuccessCode,
 } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { getAttachContext } from "./getAttachContext.js";
+import { getAttachPreview } from "./getAttachPreview.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const handleProductCheck = async ({
   req,
@@ -24,7 +25,7 @@ export const handleProductCheck = async ({
   const { orgId, sb, env, logtail: logger } = req;
 
   // 1. Get customer and org
-  let [customer, org, product] = await Promise.all([
+  let [customer, org, product, features] = await Promise.all([
     getOrCreateCustomer({
       sb,
       org: req.org,
@@ -40,10 +41,11 @@ export const handleProductCheck = async ({
       env,
       productId: product_id,
     }),
+    FeatureService.getFromReq(req),
   ]);
 
   // 2. Get cus products and payment method in parallel
-  const [cusProducts, paymentMethod] = await Promise.all([
+  const [cusProducts] = await Promise.all([
     CusService.getFullCusProducts({
       sb,
       internalCustomerId: customer.internal_id,
@@ -54,12 +56,6 @@ export const handleProductCheck = async ({
         CusProductStatus.PastDue,
         CusProductStatus.Scheduled,
       ],
-    }),
-    getCusPaymentMethod({
-      org,
-      env: customer.env,
-      stripeId: customer.processor?.id,
-      errorIfNone: false,
     }),
   ]);
 
@@ -81,13 +77,13 @@ export const handleProductCheck = async ({
       allowed: false,
 
       preview: with_preview
-        ? await getAttachContext({
+        ? await getAttachPreview({
             customer,
             org,
             env,
             product: product!,
             cusProducts,
-            paymentMethod,
+            features,
           })
         : undefined,
     });
@@ -112,13 +108,13 @@ export const handleProductCheck = async ({
       : cusProduct.status,
 
     preview: with_preview
-      ? await getAttachContext({
+      ? await getAttachPreview({
           customer,
           org,
           env,
           product: product!,
           cusProducts,
-          paymentMethod,
+          features,
         })
       : undefined,
   });
