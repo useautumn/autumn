@@ -3,7 +3,7 @@ import chalk from "chalk";
 import { Autumn } from "@/external/autumn/autumnCli.js";
 import { features } from "tests/global.js";
 import { setupBefore } from "tests/before.js";
-import { initCustomer } from "tests/utils/init.js";
+
 import {
   AppEnv,
   BillingInterval,
@@ -24,12 +24,9 @@ import {
 } from "@/internal/products/product-items/productItemUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { timeout } from "@/utils/genUtils.js";
-import {
-  advanceClockForInvoice,
-  advanceTestClock,
-} from "tests/utils/stripeUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
-import { addDays } from "date-fns";
+import { addDays, addMonths } from "date-fns";
 
 // Scenario 1: prepaid + pay per use monthly -> prepaid + pay per use monthly
 let pro = {
@@ -163,15 +160,12 @@ describe(`${chalk.yellowBright(
   });
 
   it("cycle 1:should have correct usage after first cycle", async function () {
-    let advanceTo = addDays(new Date(), 30).getTime();
+    let advanceTo = addMonths(new Date(), 1).getTime();
     await advanceTestClock({
       stripeCli: this.stripeCli,
       testClockId,
       advanceTo,
     });
-
-    // let { invoices } = await autumn.customers.get(customerId);
-    // expect(invoices[0].total).to.equal(overageValue * (pro.items.payPerUse.amount ?? 0));
 
     let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
       customerId,

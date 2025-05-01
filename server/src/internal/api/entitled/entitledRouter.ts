@@ -309,6 +309,8 @@ entitledRouter.post("", async (req: any, res: any) => {
       entity_id,
     } = req.body;
 
+    const { logtail: logger } = req;
+
     if (!customer_id) {
       throw new RecaseError({
         message: "Customer ID is required",
@@ -408,16 +410,21 @@ entitledRouter.post("", async (req: any, res: any) => {
     // 3. If with preview, get preview
     let preview = undefined;
     if (req.body.with_preview) {
-      let featureToUse = creditSystems.length > 0 ? creditSystems[0] : feature;
-      preview = await getCheckPreview({
-        allowed,
-        balance: balances.find(
-          (balance: any) => balance.feature_id === featureToUse.id
-        )?.balance,
-        feature: featureToUse,
-        sb,
-        cusProducts,
-      });
+      try {
+        let featureToUse =
+          creditSystems.length > 0 ? creditSystems[0] : feature;
+        preview = await getCheckPreview({
+          allowed,
+          balance: balances.find(
+            (balance: any) => balance.feature_id === featureToUse.id
+          )?.balance,
+          feature: featureToUse,
+          sb,
+          cusProducts,
+        });
+      } catch (error) {
+        logger.error("Failed to get check preview", error);
+      }
     }
 
     if (org.api_version == APIVersion.v1_1) {
