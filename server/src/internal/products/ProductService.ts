@@ -2,7 +2,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, ErrCode, FullProduct, Price, Product } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
-import { getLatestProducts } from "./productUtils.js";
+import { getLatestProducts, sortProductsByPrice } from "./productUtils.js";
 
 export class ProductService {
   // GET
@@ -425,6 +425,27 @@ export class ProductService {
     if (error) {
       throw error;
     }
+
+    return data;
+  }
+
+  static async getByFeature({
+    sb,
+    internalFeatureId,
+  }: {
+    sb: SupabaseClient;
+    internalFeatureId: string;
+  }) {
+    const { data, error } = await sb.rpc("get_products_by_feature", {
+      p_internal_feature_id: internalFeatureId,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    // Sort products by pricing
+    sortProductsByPrice(data);
 
     return data;
   }

@@ -29,6 +29,7 @@ import { handleProductCheck } from "./handlers/handleProductCheck.js";
 import { getBooleanEntitledResult } from "./checkUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { getCheckPreview } from "./getCheckPreview.js";
 
 export const entitledRouter = Router();
 
@@ -292,7 +293,7 @@ const getCusEntsAndFeatures = async ({
     });
   });
 
-  return { cusEnts, feature, creditSystems, org };
+  return { cusEnts, feature, creditSystems, org, cusProducts };
 };
 
 entitledRouter.post("", async (req: any, res: any) => {
@@ -316,6 +317,14 @@ entitledRouter.post("", async (req: any, res: any) => {
       });
     }
 
+    if (!feature_id && !product_id) {
+      throw new RecaseError({
+        message: "Feature ID or product ID is required",
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
     if (feature_id && product_id) {
       throw new RecaseError({
         message:
@@ -334,7 +343,7 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     const { sb } = req;
 
-    const { cusEnts, feature, creditSystems, org } =
+    const { cusEnts, feature, creditSystems, org, cusProducts } =
       await getCusEntsAndFeatures({
         sb,
         req,
@@ -396,6 +405,21 @@ entitledRouter.post("", async (req: any, res: any) => {
       }
     }
 
+    // 3. If with preview, get preview
+    let preview = undefined;
+    if (req.body.with_preview) {
+      let featureToUse = creditSystems.length > 0 ? creditSystems[0] : feature;
+      preview = await getCheckPreview({
+        allowed,
+        balance: balances.find(
+          (balance: any) => balance.feature_id === featureToUse.id
+        )?.balance,
+        feature: featureToUse,
+        sb,
+        cusProducts,
+      });
+    }
+
     if (org.api_version == APIVersion.v1_1) {
       let balance;
       if (creditSystems.length > 0) {
@@ -418,11 +442,13 @@ entitledRouter.post("", async (req: any, res: any) => {
         allowed,
         unlimited: balance?.unlimited || false,
         balance: balance?.unlimited ? null : balance?.balance,
+        preview,
       });
     } else {
       res.status(200).json({
         allowed,
         balances,
+        preview,
       });
     }
 
