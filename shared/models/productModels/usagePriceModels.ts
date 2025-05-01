@@ -15,7 +15,7 @@ export enum BillWhen {
   BelowThreshold = "below_threshold",
 }
 
-export const UsageTier = z.object({
+export const UsageTierSchema = z.object({
   // from: z.number(),
   to: z.number().or(z.literal(TierInfinite)),
   amount: z.number(),
@@ -30,7 +30,7 @@ export const UsagePriceConfigSchema = z.object({
   internal_feature_id: z.string(),
   feature_id: z.string(),
 
-  usage_tiers: z.array(UsageTier),
+  usage_tiers: z.array(UsageTierSchema),
   interval: z.nativeEnum(BillingInterval).optional(),
 
   // For usage in arrear
