@@ -1,10 +1,8 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
 import {
   Feature,
   FullCusProduct,
   FullProduct,
   Organization,
-  UsageModel,
 } from "@autumn/shared";
 
 import { AppEnv } from "@autumn/shared";
@@ -13,8 +11,7 @@ import { Customer } from "@autumn/shared";
 
 import { mapToProductV2 } from "@/internal/products/productV2Utils.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
-import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
-import { getProductChargeText } from "./checkProductUtils.js";
+
 import {
   isFeatureItem,
   isPriceItem,
@@ -23,8 +20,9 @@ import {
   getPricecnPrice,
   sortProductItems,
 } from "@/internal/products/pricecn/pricecnUtils.js";
-import { formatCurrency } from "./previewUtils.js";
+
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
+import { getItemDescription } from "./checkProductUtils.js";
 
 export const getNewProductPreview = async ({
   customer,
@@ -61,8 +59,15 @@ export const getNewProductPreview = async ({
         features,
         isMainPrice: index == 0,
       });
+      let description = getItemDescription({
+        item: i,
+        features,
+        product: productV2,
+        org,
+      });
 
       return {
+        description,
         price: `${pricecnPrice.primaryText} ${pricecnPrice.secondaryText}`,
       };
     });
