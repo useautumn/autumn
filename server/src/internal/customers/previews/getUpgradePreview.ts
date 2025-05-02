@@ -5,9 +5,11 @@ import {
 import {
   AppEnv,
   Customer,
+  Feature,
   FullCusProduct,
   FullProduct,
   Organization,
+  UsageModel,
 } from "@autumn/shared";
 import { AttachParams } from "../products/AttachParams.js";
 import { handleStripeSubUpdate } from "../change-product/handleUpgrade.js";
@@ -19,6 +21,10 @@ import { logger } from "@trigger.dev/sdk/v3";
 import { formatCurrency, itemsToHtml } from "./previewUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
+import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
+import { getOptions } from "@/internal/api/entitled/checkUtils.js";
+import { isPriceItem } from "@/internal/products/product-items/getItemType.js";
 
 export const isAddProductFlow = ({
   curCusProduct,
@@ -158,6 +164,7 @@ export const getUpgradePreview = async ({
   env,
   product,
   curMainProduct,
+  features,
   logger,
 }: {
   sb: SupabaseClient;
@@ -166,6 +173,7 @@ export const getUpgradePreview = async ({
   env: AppEnv;
   product: FullProduct;
   curMainProduct: FullCusProduct;
+  features: Feature[];
   logger: any;
 }) => {
   // Create stripe product / prices if not exist
@@ -249,16 +257,44 @@ export const getUpgradePreview = async ({
     product,
   });
 
+  // Get options
+  let prodItems = mapToProductItems({
+    prices: product.prices,
+    entitlements: product.entitlements,
+    features,
+  });
+  let options = getOptions({
+    prodItems,
+    features,
+  });
+
+  let proratedAmount = totalAmount;
+  let regularAmount = prodItems
+    .filter((i) => isPriceItem(i))
+    .reduce((sum, i) => sum + i.price!, 0);
+
+  let dueToday, dueNextCycle;
+  if (org.config.bill_upgrade_immediately) {
+    dueToday = Number(proratedAmount.toFixed(2));
+    dueNextCycle = Number(regularAmount.toFixed(2));
+  } else {
+    dueToday = 0;
+    dueNextCycle = Number((proratedAmount + regularAmount).toFixed(2));
+  }
   return {
     title: `Upgrade to ${product.name}`,
     message: formattedMessage.message,
     items,
     // amount_due: Number(totalAmount.toFixed(2)),
-    due_when: org.config.bill_upgrade_immediately
-      ? "immediately"
-      : "next_billing_cycle",
+    // total: totalAmount,
+    options,
+    due_immediately: {
+      price: dueToday,
+      currency: org.default_currency || "USD",
+    },
+    due_next_cycle: {
+      price: dueNextCycle,
+      currency: org.default_currency || "USD",
+    },
   };
-
-  // console.log(formatInvoicePreview(updatePreview.lines.data));
-  // console.log("Usage line items: ", usageLineItems);
 };

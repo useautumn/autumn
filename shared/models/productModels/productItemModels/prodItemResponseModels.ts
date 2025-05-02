@@ -4,11 +4,13 @@ import {
   PriceTierSchema,
   ProductItemFeatureType,
   ProductItemInterval,
+  ProductItemType,
   UsageModel,
 } from "../productItemModels.js";
 
 export const ProductItemResponseSchema = z.object({
   // Feature stuff
+  type: z.nativeEnum(ProductItemType).nullish(),
   feature_id: z.string().nullish(),
   feature_type: z.nativeEnum(ProductItemFeatureType).nullish(),
 

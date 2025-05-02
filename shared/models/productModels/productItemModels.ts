@@ -21,7 +21,7 @@ export enum ProductItemInterval {
 
 export enum ProductItemType {
   Feature = "feature",
-  FeaturePrice = "feature_price",
+  FeaturePrice = "priced_feature",
   Price = "price",
 }
 

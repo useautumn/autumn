@@ -15,9 +15,11 @@ import { getPriceEntitlement } from "../prices/priceUtils.js";
 import { toProductItem } from "./product-items/mapToItem.js";
 import {
   getItemFeatureType,
+  getItemType,
   isFeaturePriceItem,
 } from "./product-items/productItemUtils.js";
 import { isPriceItem } from "./product-items/getItemType.js";
+import { sortProductItems } from "./pricecn/pricecnUtils.js";
 
 export const mapToProductItems = ({
   prices,
@@ -114,18 +116,26 @@ export const getProductResponse = ({
   product: FullProduct;
   features: Feature[];
 }) => {
+  let items = mapToProductItems({
+    prices: product.prices,
+    entitlements: product.entitlements,
+    features: features,
+  }).map((item) => {
+    // console.log(item);
+    let res = ProductItemResponseSchema.parse({
+      type: getItemType(item),
+      ...item,
+    });
+
+    return res;
+  });
+
+  items = sortProductItems(items, features);
+
   return ProductResponseSchema.parse({
     ...product,
     name: product.name || null,
     group: product.group || null,
-    // autumn_id: product.internal_id,
-    items: mapToProductItems({
-      prices: product.prices,
-      entitlements: product.entitlements,
-      features: features,
-    }).map((item) => {
-      // console.log(item);
-      return ProductItemResponseSchema.parse(item);
-    }),
+    items: items,
   });
 };

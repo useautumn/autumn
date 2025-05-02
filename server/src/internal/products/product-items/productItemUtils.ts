@@ -98,10 +98,10 @@ export const isFeaturePriceItem = (item: ProductItem) => {
 };
 
 export const getItemType = (item: ProductItem) => {
-  if (itemIsFixedPrice(item)) {
-    return ProductItemType.Price;
-  } else if (isFeatureItem(item)) {
+  if (isFeatureItem(item)) {
     return ProductItemType.Feature;
+  } else if (isFeaturePriceItem(item)) {
+    return ProductItemType.FeaturePrice;
   }
 
   return ProductItemType.FeaturePrice;

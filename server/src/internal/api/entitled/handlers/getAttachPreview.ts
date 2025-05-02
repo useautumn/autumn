@@ -172,6 +172,7 @@ export const getAttachPreview = async ({
       product,
       curMainProduct,
       logger,
+      features,
     });
   } else {
     return await getDowngradePreview({

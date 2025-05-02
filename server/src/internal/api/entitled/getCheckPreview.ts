@@ -6,6 +6,7 @@ import {
   isProductUpgrade,
   sortProductsByPrice,
 } from "@/internal/products/productUtils.js";
+import { getProductResponse } from "@/internal/products/productV2Utils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { Feature, FullCusProduct, FullProduct } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -16,12 +17,16 @@ export const getCheckPreview = async ({
   balance,
   feature,
   cusProducts,
+  raw = false,
+  allFeatures,
 }: {
   sb: SupabaseClient;
   allowed: boolean;
   balance?: number;
   feature: Feature;
   cusProducts: FullCusProduct[];
+  raw?: boolean;
+  allFeatures: Feature[];
 }) => {
   if (allowed) {
     return null;
@@ -61,7 +66,7 @@ export const getCheckPreview = async ({
     }
   }
 
-  let mainProds = [];
+  let mainProds: FullProduct[] = [];
   if (!highestTierProd) {
     mainProds = products.filter((product: FullProduct) => !product.is_add_on);
   } else {
@@ -144,6 +149,31 @@ export const getCheckPreview = async ({
       let prodString = `Please purchase the ${addOns[0].name} add on to use this feature.`;
       msg = `${msg} ${prodString}`;
     }
+  }
+
+  if (raw) {
+    let products = [...mainProds, ...addOns];
+    for (let p of products) {
+      p.entitlements = p.entitlements.map((e) => ({
+        ...e,
+        feature: allFeatures.find((f) => f.id == e.feature_id)!,
+      }));
+    }
+
+    let v2Prods = products.map((p) =>
+      getProductResponse({ product: p, features: allFeatures })
+    );
+
+    let nextTier = mainProds.length > 0 ? mainProds[0] : addOns[0];
+
+    return {
+      message: msg,
+      products: v2Prods,
+      next_tier: getProductResponse({
+        product: nextTier,
+        features: allFeatures,
+      }),
+    };
   }
 
   return {
