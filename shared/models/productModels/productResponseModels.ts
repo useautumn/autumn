@@ -2,6 +2,7 @@ import { z } from "zod";
 import { AppEnv } from "../genModels.js";
 import { ProductItemSchema } from "./productItemModels.js";
 import { FreeTrialResponseSchema, FreeTrialSchema } from "./freeTrialModels.js";
+import { ProductItemResponseSchema } from "./productItemModels/prodItemResponseModels.js";
 
 export const ProductResponseSchema = z.object({
   // internal_id: z.string(),
@@ -15,7 +16,7 @@ export const ProductResponseSchema = z.object({
   version: z.number(),
   created_at: z.number(),
 
-  items: z.array(ProductItemSchema),
+  items: z.array(ProductItemResponseSchema),
   free_trial: FreeTrialResponseSchema.nullable(),
 });
 

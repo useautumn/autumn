@@ -189,7 +189,7 @@ const getFeatureAndCreditSystems = async ({
     );
   });
 
-  return { feature, creditSystems };
+  return { feature, creditSystems, allFeatures: features };
 };
 
 const logEntitled = ({
@@ -270,7 +270,7 @@ const getCusEntsAndFeatures = async ({
     }),
   ]);
 
-  const { feature, creditSystems } = featureRes;
+  const { feature, creditSystems, allFeatures } = featureRes;
 
   const duration = Date.now() - startTime;
   console.log(`/check: fetched org, features & customer in ${duration}ms`);
@@ -300,7 +300,7 @@ const getCusEntsAndFeatures = async ({
     });
   });
 
-  return { cusEnts, feature, creditSystems, org, cusProducts };
+  return { cusEnts, feature, creditSystems, org, cusProducts, allFeatures };
 };
 
 entitledRouter.post("", async (req: any, res: any) => {
@@ -354,14 +354,14 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     const { sb } = req;
 
-    const { cusEnts, feature, creditSystems, org, cusProducts } =
+    const { cusEnts, feature, creditSystems, org, cusProducts, allFeatures } =
       await getCusEntsAndFeatures({
         sb,
         req,
         logger: req.logtail,
       });
 
-    logEntitled({ req, customer_id, cusEnts: cusEnts! });
+    // logEntitled({ req, customer_id, cusEnts: cusEnts! });
 
     // 2. If boolean, return true
     if (feature.type === FeatureType.Boolean) {
@@ -433,6 +433,15 @@ entitledRouter.post("", async (req: any, res: any) => {
     // 3. If with preview, get preview
     let preview = undefined;
     if (req.body.with_preview) {
+      let withPreview = req.body.with_preview;
+      if (withPreview !== "raw" && withPreview !== "formatted") {
+        throw new RecaseError({
+          message: "with_preview must be 'raw' or 'formatted'",
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+
       try {
         preview = await getCheckPreview({
           allowed,
@@ -440,6 +449,8 @@ entitledRouter.post("", async (req: any, res: any) => {
           feature: featureToUse!,
           sb,
           cusProducts,
+          raw: req.body.with_preview === "raw",
+          allFeatures,
         });
       } catch (error) {
         logger.error("Failed to get check preview", error);
