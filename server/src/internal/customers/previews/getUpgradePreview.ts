@@ -288,7 +288,7 @@ export const getUpgradePreview = async ({
     // amount_due: Number(totalAmount.toFixed(2)),
     // total: totalAmount,
     options,
-    due_immediately: {
+    due_today: {
       price: dueToday,
       currency: org.default_currency || "USD",
     },

@@ -93,7 +93,7 @@ export const getNewProductPreview = async ({
     message,
     items: lineItems,
     options,
-    due_immediately: {
+    due_today: {
       price: dueToday,
       currency: org.default_currency || "USD",
     },
