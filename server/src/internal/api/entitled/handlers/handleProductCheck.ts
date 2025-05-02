@@ -84,6 +84,9 @@ export const handleProductCheck = async ({
             product: product!,
             cusProducts,
             features,
+            sb,
+            logger,
+            shouldFormat: with_preview == "formatted",
           })
         : undefined,
     });
@@ -115,6 +118,8 @@ export const handleProductCheck = async ({
           product: product!,
           cusProducts,
           features,
+          sb,
+          logger,
         })
       : undefined,
   });

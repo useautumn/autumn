@@ -97,10 +97,12 @@ export const getPricecnPrice = ({
   org,
   items,
   features,
+  isMainPrice = true,
 }: {
   org: Organization;
   features: Feature[];
   items: ProductItem[];
+  isMainPrice?: boolean;
 }) => {
   let priceExists = items.some((i) => isPriceItem(i) || isFeaturePriceItem(i));
 
@@ -112,7 +114,6 @@ export const getPricecnPrice = ({
   }
 
   let priceItem = items[0];
-  let currency = org.default_currency || "USD";
 
   if (isPriceItem(priceItem)) {
     return {
@@ -121,7 +122,12 @@ export const getPricecnPrice = ({
     };
   } else {
     let feature = features.find((f) => f.id == priceItem.feature_id);
-    return featurePricetoPricecnItem({ feature, item: priceItem, org });
+    return featurePricetoPricecnItem({
+      feature,
+      item: priceItem,
+      org,
+      isMainPrice,
+    });
   }
 };
 
@@ -162,10 +168,12 @@ export const featurePricetoPricecnItem = ({
   feature,
   item,
   org,
+  isMainPrice = false,
 }: {
   feature?: Feature;
   item: ProductItem;
   org: Organization;
+  isMainPrice?: boolean;
 }) => {
   if (!feature) {
     throw new RecaseError({
@@ -191,16 +199,18 @@ export const featurePricetoPricecnItem = ({
     priceStr2 = `${feature.name}`;
   }
 
+  let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";
+
   if (includedUsageStr) {
     return {
       primaryText: includedUsageStr,
-      secondaryText: `then ${priceStr} / ${priceStr2}`,
+      secondaryText: `then ${priceStr} per ${priceStr2}${intervalStr}`,
     };
   }
 
   return {
     primaryText: priceStr,
-    secondaryText: `per ${priceStr2}`,
+    secondaryText: `per ${priceStr2}${intervalStr}`,
   };
 };
 

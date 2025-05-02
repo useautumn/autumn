@@ -1,4 +1,7 @@
-import { isFreeProduct } from "@/internal/products/productUtils.js";
+import {
+  checkStripeProductExists,
+  isFreeProduct,
+} from "@/internal/products/productUtils.js";
 import {
   AppEnv,
   Customer,
@@ -14,6 +17,8 @@ import Stripe from "stripe";
 import { billForRemainingUsages } from "../change-product/billRemainingUsages.js";
 import { logger } from "@trigger.dev/sdk/v3";
 import { formatCurrency, itemsToHtml } from "./previewUtils.js";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 
 export const isAddProductFlow = ({
   curCusProduct,
@@ -78,47 +83,101 @@ const formatMessage = ({
     ? "will be charged to your card immediately"
     : "will be added to your next bill";
 
-  let message = `By clicking confirm, you will upgrade your plan to ${
-    product.name
-  } and ${formatCurrency({
-    amount: totalAmount,
-    defaultCurrency: org.default_currency,
-  })} ${addString}:\n`;
+  // ${formatCurrency({
+  //   amount: totalAmount,
+  //   defaultCurrency: org.default_currency,
+  // })}
 
-  for (let item of baseLineItems) {
-    message += `\n${item.description}: ${formatCurrency({
-      amount: item.amount,
-      defaultCurrency: org.default_currency,
-    })}`;
-  }
+  let message = `By clicking confirm, you will upgrade your plan to ${product.name} and the following amount ${addString}:\n`;
 
-  for (let item of usageLineItems) {
-    message += `\n${item.description}: ${formatCurrency({
-      amount: item.amount,
-      defaultCurrency: org.default_currency,
-    })}`;
-  }
+  // for (let item of baseLineItems) {
+  //   message += `\n${item.description}: ${formatCurrency({
+  //     amount: item.amount,
+  //     defaultCurrency: org.default_currency,
+  //   })}`;
+  // }
+
+  // for (let item of usageLineItems) {
+  //   message += `\n${item.description}: ${formatCurrency({
+  //     amount: item.amount,
+  //     defaultCurrency: org.default_currency,
+  //   })}`;
+  // }
 
   return { message };
 };
 
+const createStripeProductAndPrices = async ({
+  sb,
+  org,
+  env,
+  product,
+  logger,
+}: {
+  sb: SupabaseClient;
+  org: Organization;
+  env: AppEnv;
+  product: FullProduct;
+  logger: any;
+}) => {
+  if (!product.processor?.id) {
+    await checkStripeProductExists({
+      sb,
+      org,
+      env,
+      product,
+      logger,
+    });
+  }
+
+  let batchPriceUpdates = [];
+  for (let price of product.prices) {
+    let stripeCli = createStripeCli({ org, env });
+    if (!price.config?.stripe_price_id) {
+      batchPriceUpdates.push(
+        createStripePriceIFNotExist({
+          sb,
+          stripeCli,
+          price,
+          entitlements: product.entitlements,
+          product,
+          org,
+          logger,
+        })
+      );
+    }
+  }
+
+  await Promise.all(batchPriceUpdates);
+};
+
 export const getUpgradePreview = async ({
+  sb,
   customer,
   org,
   env,
   product,
   curMainProduct,
-  curScheduledProduct,
+  logger,
 }: {
+  sb: SupabaseClient;
   customer: Customer;
   org: Organization;
   env: AppEnv;
   product: FullProduct;
   curMainProduct: FullCusProduct;
-  curScheduledProduct: FullCusProduct;
+  logger: any;
 }) => {
+  // Create stripe product / prices if not exist
+  await createStripeProductAndPrices({
+    sb,
+    org,
+    env,
+    product,
+    logger,
+  });
+
   let stripeCli = createStripeCli({ org, env });
-  // 1. Get update preview
   let stripeSubs = await getStripeSubs({
     stripeCli,
     subIds: curMainProduct.subscription_ids,
@@ -173,6 +232,16 @@ export const getUpgradePreview = async ({
     0
   );
 
+  let items = [...baseLineItems, ...usageLineItems].map((item) => {
+    return {
+      price: formatCurrency({
+        amount: item.amount,
+        defaultCurrency: org.default_currency,
+      }),
+      description: item.description,
+    };
+  });
+
   let formattedMessage = formatMessage({
     baseLineItems,
     usageLineItems,
@@ -183,7 +252,8 @@ export const getUpgradePreview = async ({
   return {
     title: `Upgrade to ${product.name}`,
     message: formattedMessage.message,
-    amount_due: Number(totalAmount.toFixed(2)),
+    items,
+    // amount_due: Number(totalAmount.toFixed(2)),
     due_when: org.config.bill_upgrade_immediately
       ? "immediately"
       : "next_billing_cycle",

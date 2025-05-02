@@ -282,8 +282,6 @@ export const handleCreateEntity = async (req: any, res: any) => {
       // console.log("Replaced count", replacedCount);
       // throw new Error("test");
 
-      console.log("Org", org);
-
       await adjustAllowance({
         sb,
         env,

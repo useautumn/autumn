@@ -16,7 +16,11 @@ import { isOneOff } from "@/internal/products/productUtils.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { getProductChargeText } from "./checkProductUtils.js";
 import { isFeatureItem } from "@/internal/products/product-items/getItemType.js";
-import { sortProductItems } from "@/internal/products/pricecn/pricecnUtils.js";
+import {
+  getPricecnPrice,
+  sortProductItems,
+} from "@/internal/products/pricecn/pricecnUtils.js";
+import { formatCurrency } from "./previewUtils.js";
 
 export const getNewProductPreview = async ({
   customer,
@@ -37,34 +41,41 @@ export const getNewProductPreview = async ({
   cusProducts: FullCusProduct[];
   features: Feature[];
 }) => {
-  let stripeCli = createStripeCli({ org, env });
-
   let productV2 = mapToProductV2({
     product,
     features,
   });
 
   let sortedItems = sortProductItems(productV2.items, features);
-  let items = sortedItems.filter((i) => !isFeatureItem(i));
-  let itemStrs = getProductChargeText({
-    product: productV2,
-    org,
-    features,
-  });
+  let lineItems = sortedItems
+    .filter((i) => !isFeatureItem(i))
+    .map((i, index) => {
+      let pricecnPrice = getPricecnPrice({
+        org,
+        items: [i],
+        features,
+        isMainPrice: index == 0,
+      });
+      return {
+        price: `${pricecnPrice.primaryText} ${pricecnPrice.secondaryText}`,
+      };
+    });
+  // let itemStrs = getProductChargeText({
+  //   product: productV2,
+  //   org,
+  //   features,
+  // });
 
-  let message = `By clicking confirm, you will subscribe to ${product.name} and the following amount will be charged:\n`;
-  for (let item of itemStrs) {
-    message += `\n${item}`;
-  }
-
-  let title = "";
+  let type = "Subscribe to";
   if (isOneOff(product.prices)) {
-    title = `Purchase ${product.name}`;
-  } else {
-    title = `Subscribe to ${product.name}`;
+    type = "Purchase";
   }
+  let title = `${type} ${product.name}`;
+  let message = `By clicking confirm, you will ${type.toLowerCase()} ${
+    product.name
+  } and the following amount will be charged:\n`;
 
-  let options = items
+  let options = sortedItems
     .filter((i) => isFeaturePriceItem(i) && i.usage_model == UsageModel.Prepaid)
     .map((i) => {
       return {
@@ -77,7 +88,7 @@ export const getNewProductPreview = async ({
   return {
     title,
     message,
-    due_when: "immediately",
+    items: lineItems,
     options,
   };
 };
