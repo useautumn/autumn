@@ -26,27 +26,35 @@ import {
   FullProduct,
   Organization,
 } from "@autumn/shared";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 // enum AttachContextCode {
 //   AlreadyAttached,
 // }
 
 export const getAttachPreview = async ({
+  sb,
   customer,
   org,
   env,
   product,
   cusProducts,
   features,
+  logger,
+  shouldFormat = true,
 }: {
+  sb: SupabaseClient;
   customer: Customer;
   org: Organization;
   env: AppEnv;
   product: FullProduct;
   cusProducts: FullCusProduct[];
   features: Feature[];
+  logger: any;
+  shouldFormat?: boolean;
 }) => {
   // Handle errors
+
   let paymentMethod: any;
   try {
     paymentMethod = await getCusPaymentMethod({
@@ -157,12 +165,13 @@ export const getAttachPreview = async ({
 
   if (isUpgrade) {
     return await getUpgradePreview({
+      sb,
       customer,
       org,
       env,
       product,
       curMainProduct,
-      curScheduledProduct,
+      logger,
     });
   } else {
     return await getDowngradePreview({

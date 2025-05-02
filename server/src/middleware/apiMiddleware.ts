@@ -47,7 +47,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
       };
       req.org = org;
       req.features = features;
-      console.log("Org", org.slug);
+
       next();
 
       return {

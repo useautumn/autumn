@@ -94,7 +94,7 @@ const getMeteredEntitledResult = ({
     };
   }
 
-  let allowed = true;
+  let allowed = false;
   const balances = [];
 
   for (const feature of [originalFeature, ...creditSystems]) {
@@ -102,6 +102,7 @@ const getMeteredEntitledResult = ({
 
     if (!cusEntsContainFeature({ cusEnts, feature })) {
       console.log("Feature not found", feature.id);
+
       continue;
     }
 
@@ -125,8 +126,9 @@ const getMeteredEntitledResult = ({
               entityId,
             }),
       });
-
-      continue;
+      allowed = true;
+      // continue;
+      break;
     }
 
     // 3. Get required and actual balance
@@ -150,7 +152,12 @@ const getMeteredEntitledResult = ({
 
     balances.push(newBalance);
 
-    allowed = allowed && actual! >= required;
+    // allowed = allowed && actual! >= required;
+    allowed = actual! >= required;
+
+    if (allowed) {
+      break;
+    }
   }
 
   return {
@@ -303,6 +310,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       feature_id,
       product_id,
       required_quantity,
+      required_balance,
       customer_data,
       send_event,
       event_data,
@@ -341,7 +349,8 @@ entitledRouter.post("", async (req: any, res: any) => {
       return;
     }
 
-    const quantity = required_quantity ? parseInt(required_quantity) : 1;
+    const requiredBalance = required_balance || required_quantity;
+    const quantity = requiredBalance ? parseInt(requiredBalance) : 1;
 
     const { sb } = req;
 
@@ -407,48 +416,47 @@ entitledRouter.post("", async (req: any, res: any) => {
       }
     }
 
+    let features = [feature, ...creditSystems];
+    let balanceObj: any, featureToUse: any;
+    try {
+      balanceObj = balances.length > 0 ? balances[0] : null;
+      featureToUse =
+        notNullish(balanceObj) && balanceObj.feature_id !== feature.id
+          ? features.find((f) => f.id === balanceObj.feature_id)
+          : creditSystems.length > 0
+          ? creditSystems[0]
+          : feature;
+    } catch (error) {
+      logger.error(`/check: failed to get balance & feature to use`, error);
+    }
+
     // 3. If with preview, get preview
     let preview = undefined;
     if (req.body.with_preview) {
       try {
-        let featureToUse =
-          creditSystems.length > 0 ? creditSystems[0] : feature;
         preview = await getCheckPreview({
           allowed,
-          balance: balances.find(
-            (balance: any) => balance.feature_id === featureToUse.id
-          )?.balance,
-          feature: featureToUse,
+          balance: balanceObj?.balance,
+          feature: featureToUse!,
           sb,
           cusProducts,
         });
       } catch (error) {
         logger.error("Failed to get check preview", error);
+        console.error(error);
       }
     }
 
     if (org.api_version == APIVersion.v1_1) {
-      let balance;
-      if (creditSystems.length > 0) {
-        let creditSystem = creditSystems[0];
-        balance = balances.find(
-          (balance: any) => balance.feature_id === creditSystem.id
-        );
-      } else {
-        balance = balances.find(
-          (balance: any) => balance.feature_id === feature.id
-        );
-      }
-
       res.status(200).json({
         customer_id,
-        feature_id: balance?.feature_id || feature_id,
-        required_quantity: quantity,
+        feature_id: featureToUse?.id,
+        required_balance: quantity,
         code: SuccessCode.FeatureFound,
 
         allowed,
-        unlimited: balance?.unlimited || false,
-        balance: balance?.unlimited ? null : balance?.balance,
+        unlimited: balanceObj?.unlimited || false,
+        balance: balanceObj?.unlimited ? null : balanceObj?.balance || null,
         preview,
       });
     } else {

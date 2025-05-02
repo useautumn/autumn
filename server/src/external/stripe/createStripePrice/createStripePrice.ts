@@ -111,6 +111,7 @@ export const createStripePriceIFNotExist = async ({
     billingType == BillingType.FixedCycle ||
     billingType == BillingType.OneOff
   ) {
+    logger.info("Creating stripe fixed price");
     await createStripeFixedPrice({
       sb,
       stripeCli,

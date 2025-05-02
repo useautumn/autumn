@@ -1,6 +1,7 @@
 import { fullCusProductToProduct } from "@/internal/customers/products/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
+  isFreeProduct,
   isOneOff,
   isProductUpgrade,
   sortProductsByPrice,
@@ -101,8 +102,20 @@ export const getCheckPreview = async ({
     };
   }
 
+  let nextProd = mainProds.length > 0 ? mainProds[0] : addOns[0];
+  // let curProduct = mainCusProds.find(
+  //   (cp: FullCusProduct) => cp.product.group == nextProd.group
+  // );
+
+  let title = nextProd.free_trial
+    ? `Start trial for ${nextProd.name}`
+    : !nextProd.is_add_on
+    ? `Upgrade to ${nextProd.name}`
+    : `Purchase ${nextProd.name}`;
+
   // If there's a current balance...
   let msg = "";
+
   if (notNullish(balance)) {
     msg = `You have run out of ${feature.name}.`;
 
@@ -119,7 +132,7 @@ export const getCheckPreview = async ({
   }
   // If it will be a new feature...
   else {
-    let msg = `Your current plan does not include the ${feature.name} feature.`;
+    msg = `Your current plan does not include the ${feature.name} feature.`;
 
     if (mainProds.length > 0) {
       let prodString = `Please upgrade to ${mainProds[0].name} to use this feature.`;
@@ -134,13 +147,10 @@ export const getCheckPreview = async ({
   }
 
   return {
+    // title: "Not allowed",
+    title,
     message: msg,
-    next_action: {
-      product_id: mainProds.length > 0 ? mainProds[0].id : addOns[0].id,
-      button_text:
-        mainProds.length > 0
-          ? `Upgrade to ${mainProds[0].name}`
-          : `Purchase ${addOns[0].name}`,
-    },
+    upgrade_product_id: mainProds.length > 0 ? mainProds[0].id : addOns[0].id,
+    button_text: title,
   };
 };
