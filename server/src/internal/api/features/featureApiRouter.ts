@@ -15,6 +15,9 @@ import {
   validateFeatureId,
 } from "@/internal/features/featureUtils.js";
 import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 
 export const featureApiRouter = express.Router();
 
@@ -82,10 +85,19 @@ featureApiRouter.post("", async (req: any, res) => {
       ...parsedFeature,
     };
 
+    let org = await OrgService.getFromReq(req);
     let insertedData = await FeatureService.insert({
       sb,
       data: feature,
       logger,
+    });
+
+    await addTaskToQueue({
+      jobName: JobName.GenerateFeatureDisplay,
+      payload: {
+        feature,
+        org: org,
+      },
     });
 
     let insertedFeature =

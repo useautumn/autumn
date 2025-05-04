@@ -11,6 +11,7 @@ import { Feature, Organization, ProductItem, ProductV2 } from "@autumn/shared";
 import { formatCurrency, formatTiers } from "./previewUtils.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { getFeatureNameWithCapital } from "@/internal/features/displayUtils.js";
 
 export const getProductChargeText = ({
   product,
@@ -84,17 +85,17 @@ export const getItemDescription = ({
     return baseName;
   } else {
     let feature = features.find((f) => f.id === item.feature_id);
-    let pricecnItem = featurePricetoPricecnItem({
-      feature,
-      item,
-      org,
-    });
+    // let pricecnItem = featurePricetoPricecnItem({
+    //   feature,
+    //   item,
+    //   org,
+    // });
 
-    // let combinedStr = pricecnItem.primaryText + " " + pricecnItem.secondaryText;
-    // combinedStr = `${feature?.name} - ${combinedStr}`;
-    // if (item.usage_model == "pay_per_use") {
-    //   combinedStr = `${combinedStr}`;
-    // }
-    return `${feature?.name}`;
+    // // let combinedStr = pricecnItem.primaryText + " " + pricecnItem.secondaryText;
+    // // combinedStr = `${feature?.name} - ${combinedStr}`;
+    // // if (item.usage_model == "pay_per_use") {
+    // //   combinedStr = `${combinedStr}`;
+    // // }
+    return `${getFeatureNameWithCapital({ feature: feature! })}`;
   }
 };

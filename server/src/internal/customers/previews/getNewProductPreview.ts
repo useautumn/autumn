@@ -23,6 +23,7 @@ import {
 
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemDescription } from "./checkProductUtils.js";
+import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
 
 export const getNewProductPreview = async ({
   customer,
@@ -59,6 +60,7 @@ export const getNewProductPreview = async ({
         features,
         isMainPrice: index == 0,
       });
+
       let description = getItemDescription({
         item: i,
         features,
@@ -69,6 +71,7 @@ export const getNewProductPreview = async ({
       return {
         description,
         price: `${pricecnPrice.primaryText} ${pricecnPrice.secondaryText}`,
+        usage_model: isFeaturePriceItem(i) ? i.usage_model : undefined,
       };
     });
 

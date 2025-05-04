@@ -25,7 +25,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
-import { createSvixApp, deleteSvixApp } from "../svix/svixUtils.js";
+import { deleteSvixApp } from "../svix/svixUtils.js";
 import {
   deleteStripeWebhook,
   initOrgSvixApps,
@@ -36,6 +36,10 @@ const defaultFeatures = [
     internal_id: "",
     id: "pro-analytics",
     type: FeatureType.Boolean,
+    display: {
+      singular: "pro analytics",
+      plural: "pro analytics",
+    },
   },
   {
     internal_id: "",
@@ -53,6 +57,10 @@ const defaultFeatures = [
         type: AggregateType.Count,
       },
       usage_type: FeatureUsageType.Single,
+      display: {
+        singular: "chat message",
+        plural: "chat messages",
+      },
     },
   },
 ];

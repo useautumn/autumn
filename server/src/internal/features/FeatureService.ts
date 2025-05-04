@@ -90,6 +90,36 @@ export class FeatureService {
     return rows;
   }
 
+  static async update({
+    sb,
+    internalFeatureId,
+    updates,
+  }: {
+    sb: SupabaseClient;
+    internalFeatureId: string;
+    updates: any;
+  }) {
+    let { data, error } = await sb
+      .from("features")
+      .update(updates)
+      .eq("internal_id", internalFeatureId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    if (data) {
+      await clearOrgCache({
+        sb,
+        orgId: data.org_id,
+        env: data.env,
+      });
+    }
+
+    return data;
+  }
   static async updateStrict({
     sb,
     featureId,
@@ -105,7 +135,7 @@ export class FeatureService {
     updates: any;
     logger: any;
   }) {
-    let { error } = await sb
+    let { data, error } = await sb
       .from("features")
       .update(updates)
       .eq("id", featureId)
@@ -137,6 +167,8 @@ export class FeatureService {
       env,
       logger,
     });
+
+    return data;
   }
 
   static async insert({

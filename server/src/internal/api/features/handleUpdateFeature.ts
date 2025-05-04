@@ -5,11 +5,14 @@ import { CusProductService } from "@/internal/customers/products/CusProductServi
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import {
   getObjectsUsingFeature,
+  runSaveFeatureDisplayTask,
   validateCreditSystem,
 } from "@/internal/features/featureUtils.js";
 import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
+import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { keyToTitle } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
@@ -284,6 +287,8 @@ export const handleUpdateFeature = async (req: any, res: any) =>
         data.type != FeatureType.Boolean &&
         feature.config?.usage_type != data.config?.usage_type;
 
+      let isChangingName = feature.name !== data.name;
+
       if (isChangingType || isChangingId || isChangingUsageType) {
         let { entitlements, prices, creditSystems, linkedEntitlements } =
           await getObjectsUsingFeature({
@@ -338,7 +343,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
         }
       }
 
-      await FeatureService.updateStrict({
+      let updatedFeature = await FeatureService.updateStrict({
         sb: req.sb,
         orgId: req.orgId,
         env: req.env,
@@ -358,6 +363,16 @@ export const handleUpdateFeature = async (req: any, res: any) =>
         },
         logger,
       });
+
+      if (isChangingName) {
+        await addTaskToQueue({
+          jobName: JobName.GenerateFeatureDisplay,
+          payload: {
+            feature: updatedFeature,
+            org: req.org,
+          },
+        });
+      }
 
       res.status(200).json({ success: true, feature_id: featureId });
     },

@@ -31,6 +31,21 @@ import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { Client } from "pg";
 
+// Format invoice nicely
+
+// // 1. Sort invoice items by
+// let lineItems = invoice.lines.data;
+// lineItems.sort((a, b) => a.period.start - b.period.start);
+// for (const item of lineItems) {
+//   console.log(item.description);
+//   let periodStart = formatUnixToDateTime(item.period.start * 1000);
+//   let periodEnd = formatUnixToDateTime(item.period.end * 1000);
+//   console.log(`${periodStart} - ${periodEnd}`);
+//   console.log(`${item.amount} ${item.currency}`);
+//   console.log("--------------------------------");
+// }
+
+// return;
 const handleInArrearProrated = async ({
   sb,
   cusEnts,

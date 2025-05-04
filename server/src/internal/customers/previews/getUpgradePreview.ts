@@ -247,6 +247,7 @@ export const getUpgradePreview = async ({
         defaultCurrency: org.default_currency,
       }),
       description: item.description,
+      usage_model: isFeaturePriceItem(item) ? item.usage_model : undefined,
     };
   });
 
