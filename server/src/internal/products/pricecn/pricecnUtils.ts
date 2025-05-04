@@ -16,6 +16,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { numberWithCommas } from "tests/utils/general/numberUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
+import { getFeatureName } from "@/internal/features/displayUtils.js";
 
 export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
   items.sort((a, b) => {
@@ -59,6 +60,19 @@ export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
   });
 
   return items;
+};
+
+export const getIncludedFeatureName = ({
+  item,
+  feature,
+}: {
+  item: ProductItem;
+  feature: Feature;
+}) => {
+  return getFeatureName({
+    feature,
+    plural: typeof item.included_usage === "number" && item.included_usage > 1,
+  });
 };
 
 export const getPriceText = ({
@@ -152,6 +166,11 @@ export const featureToPricecnItem = ({
     };
   }
 
+  let featureName = getIncludedFeatureName({
+    feature,
+    item,
+  });
+
   let includedUsageTxt =
     item.included_usage == Infinite
       ? "Unlimited "
@@ -160,7 +179,7 @@ export const featureToPricecnItem = ({
       : `${numberWithCommas(item.included_usage!)} `;
 
   return {
-    primaryText: `${includedUsageTxt}${feature.name}`,
+    primaryText: `${includedUsageTxt}${featureName}`,
   };
 };
 
@@ -169,11 +188,13 @@ export const featurePricetoPricecnItem = ({
   item,
   org,
   isMainPrice = false,
+  withNameAfterIncluded = false,
 }: {
   feature?: Feature;
   item: ProductItem;
   org: Organization;
   isMainPrice?: boolean;
+  withNameAfterIncluded?: boolean;
 }) => {
   if (!feature) {
     throw new RecaseError({
@@ -184,19 +205,29 @@ export const featurePricetoPricecnItem = ({
   }
 
   // 1. Get included usage
+  let includedFeatureName = getIncludedFeatureName({
+    feature,
+    item,
+  });
+
   let includedUsageStr =
     nullish(item.included_usage) || item.included_usage == 0
       ? ""
       : `${numberWithCommas(item.included_usage as number)} ${
-          feature.name
-        } included`;
+          withNameAfterIncluded ? `${includedFeatureName} ` : ""
+        }included`;
 
   let priceStr = getPriceText({ item, org });
+  let billingFeatureName = getFeatureName({
+    feature,
+    plural: typeof item.billing_units == "number" && item.billing_units > 1,
+  });
+
   let priceStr2 = "";
   if (item.billing_units && item.billing_units > 1) {
-    priceStr2 = `${numberWithCommas(item.billing_units)} ${feature.name}`;
+    priceStr2 = `${numberWithCommas(item.billing_units)} ${billingFeatureName}`;
   } else {
-    priceStr2 = `${feature.name}`;
+    priceStr2 = `${billingFeatureName}`;
   }
 
   let intervalStr = isMainPrice && item.interval ? ` per ${item.interval}` : "";

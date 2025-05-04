@@ -8,6 +8,8 @@ import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
+import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
+import { CacheManager } from "@/external/caching/CacheManager.js";
 
 const NUM_WORKERS = 5;
 
@@ -75,6 +77,15 @@ const initWorker = ({
   let worker = new Worker(
     "autumn",
     async (job: Job) => {
+      if (job.name == JobName.GenerateFeatureDisplay) {
+        await runSaveFeatureDisplayTask({
+          sb,
+          feature: job.data.feature,
+          org: job.data.org,
+          logger: logtail,
+        });
+        return;
+      }
       if (job.name == JobName.Migration) {
         await runMigrationTask({
           payload: job.data,
@@ -174,6 +185,7 @@ export const initWorkers = async () => {
 
   const mainQueue = await QueueManager.getQueue({ useBackup: false });
   const backupQueue = await QueueManager.getQueue({ useBackup: true });
+  await CacheManager.getInstance();
   const logtail = createLogtail();
   const sb = createSupabaseClient();
 

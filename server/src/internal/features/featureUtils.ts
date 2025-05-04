@@ -8,12 +8,15 @@ import {
   FeatureType,
   AppEnv,
   FeatureUsageType,
+  Organization,
 } from "@autumn/shared";
 import { EntitlementService } from "../products/entitlements/EntitlementService.js";
 import { PriceService } from "../prices/PriceService.js";
 import { FeatureService } from "./FeatureService.js";
 import { generateId, keyToTitle } from "@/utils/genUtils.js";
 import { StatusCodes } from "http-status-codes";
+import { logger } from "@trigger.dev/sdk/v3";
+import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
 
 export const validateFeatureId = (featureId: string) => {
   if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
@@ -204,4 +207,37 @@ export const constructMeteredFeature = ({
   };
 
   return newFeature;
+};
+
+export const runSaveFeatureDisplayTask = async ({
+  sb,
+  feature,
+  org,
+  logger,
+}: {
+  sb: any;
+  feature: Feature;
+  org: Organization;
+  logger: any;
+}) => {
+  let display;
+  try {
+    logger.info(
+      `Generating feature display for ${feature.id} (org: ${org.slug})`
+    );
+    display = await generateFeatureDisplay(feature);
+    logger.info(`Result: ${JSON.stringify(display)}`);
+    await FeatureService.update({
+      sb,
+      internalFeatureId: feature.internal_id!,
+      updates: {
+        display,
+      },
+    });
+  } catch (error) {
+    logger.error("failed to generate feature display", {
+      error,
+      feature,
+    });
+  }
 };

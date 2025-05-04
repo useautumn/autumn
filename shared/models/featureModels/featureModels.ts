@@ -22,6 +22,12 @@ export const FeatureSchema = z.object({
   name: z.string().nonempty(),
   type: z.nativeEnum(FeatureType),
   config: z.any(),
+  display: z
+    .object({
+      singular: z.string().optional(),
+      plural: z.string().optional(),
+    })
+    .nullish(),
 });
 
 export const CreateFeatureSchema = FeatureSchema.omit({

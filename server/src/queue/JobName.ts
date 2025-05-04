@@ -5,4 +5,5 @@ export enum JobName {
   Migration = "migration",
 
   TriggerCheckoutReward = "trigger-checkout-reward",
+  GenerateFeatureDisplay = "generate-feature-display",
 }
