@@ -76,6 +76,8 @@ export const createStripeSub = async ({
     });
   }
 
+  
+
   try {
     const subscription = await stripeCli.subscriptions.create({
       ...paymentMethodData,

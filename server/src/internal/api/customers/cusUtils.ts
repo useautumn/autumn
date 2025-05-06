@@ -115,6 +115,7 @@ export const attachDefaultProducts = async ({
         freeTrial: null, // TODO: Free trial not supported on default product yet
         optionsList: [],
         entities: [],
+        features: [],
       },
       nextResetAt,
     });

@@ -1,18 +1,26 @@
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
   AppEnv,
+  CollectionMethod,
   CusProductStatus,
+  ErrCode,
   FullCusProduct,
   Organization,
 } from "@autumn/shared";
 
 import { createStripeCli } from "../utils.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
+import {
+  getWebhookLock,
+  releaseWebhookLock,
+} from "@/external/redis/stripeWebhookLocks.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const handleSubscriptionUpdated = async ({
   sb,
@@ -29,6 +37,15 @@ export const handleSubscriptionUpdated = async ({
   previousAttributes: any;
   logger: any;
 }) => {
+  const lockKey = `sub_updated_${subscription.id}`;
+
+  // Handle syncing status
+  let stripeCli = createStripeCli({
+    org,
+    env,
+  });
+  let fullSub = await stripeCli.subscriptions.retrieve(subscription.id);
+
   let subStatusMap: {
     [key: string]: CusProductStatus;
   } = {
@@ -38,7 +55,6 @@ export const handleSubscriptionUpdated = async ({
   };
 
   // Get cus products by stripe sub id
-
   const cusProducts = await CusProductService.getByStripeSubId({
     sb,
     stripeSubId: subscription.id,
@@ -54,6 +70,38 @@ export const handleSubscriptionUpdated = async ({
     return;
   }
 
+  // Create a lock to prevent race conditions
+  let lockAcquired = false;
+  try {
+    let attempts = 0;
+
+    while (!lockAcquired && attempts < 3) {
+      lockAcquired = await getWebhookLock({ lockKey, logger });
+      if (!lockAcquired) {
+        attempts++;
+        console.log(
+          `sub.updated: failed to acquire lock for ${subscription.id}, attempt ${attempts}`
+        );
+        if (attempts < 3) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      } else {
+        break;
+      }
+    }
+  } catch (error) {
+    logger.error("lock error, setting lockAcquired to true");
+    lockAcquired = true;
+  }
+
+  if (!lockAcquired) {
+    throw new RecaseError({
+      message: `Failed to acquire lock for stripe webhook, sub.updated.`,
+      code: ErrCode.InvalidRequest,
+      statusCode: 400,
+    });
+  }
+
   // 1. Fetch subscription
   const updatedCusProducts = await CusProductService.updateByStripeSubId({
     sb,
@@ -63,7 +111,7 @@ export const handleSubscriptionUpdated = async ({
       canceled_at: subscription.canceled_at
         ? subscription.canceled_at * 1000
         : null,
-      collection_method: subscription.collection_method,
+      collection_method: fullSub.collection_method as CollectionMethod,
     },
   });
 
@@ -78,7 +126,6 @@ export const handleSubscriptionUpdated = async ({
     );
   }
 
-  // Handle syncing status
   if (org.config.sync_status) {
     let isCanceled =
       nullish(previousAttributes?.canceled_at) &&
@@ -115,7 +162,9 @@ export const handleSubscriptionUpdated = async ({
         console.log(
           `subscription.updated: canceled -> attempting to schedule default products: ${defaultProducts
             .map((p) => p.name)
-            .join(", ")}`
+            .join(", ")}, period end: ${formatUnixToDateTime(
+            fullSub.current_period_end * 1000
+          )}`
         );
       }
 
@@ -138,9 +187,10 @@ export const handleSubscriptionUpdated = async ({
             freeTrial: product.free_trial || null,
             optionsList: [],
             entities: [],
+            features: [],
             org,
           },
-          startsAt: subscription.current_period_end * 1000,
+          startsAt: fullSub.current_period_end * 1000,
         });
       }
     }
@@ -214,69 +264,6 @@ export const handleSubscriptionUpdated = async ({
       );
     }
   }
+
+  await releaseWebhookLock({ lockKey, logger });
 };
-
-// const handleSubPastDue = async ({
-//   sb,
-//   org,
-//   subscription,
-// }: {
-//   sb: any;
-//   org: Organization;
-//   subscription: any;
-// }) => {
-//   const updated = await CusProductService.updateStatusByStripeSubId({
-//     sb,
-//     stripeSubId: subscription.id,
-//     status: CusProductStatus.PastDue,
-//   });
-
-//   if (updated) {
-//     console.log("Customer product status updated to past due:", updated?.id);
-//   }
-// };
-
-// const handleSubActive = async ({
-//   sb,
-//   org,
-//   subscription,
-// }: {
-//   sb: any;
-//   org: Organization;
-//   subscription: any;
-// }) => {
-//   const updated = await CusProductService.updateStatusByStripeSubId({
-//     sb,
-//     stripeSubId: subscription.id,
-//     status: CusProductStatus.Active,
-//   });
-
-//   if (updated) {
-//     console.log("Customer product status updated to active:", updated?.id);
-//   }
-// };
-
-// const undoStripeSubCancellation = async ({
-//   sb,
-//   org,
-//   subscription,
-// }: {
-//   sb: any;
-//   org: Organization;
-//   subscription: any;
-// }) => {
-//   const { data: updated, error } = await sb
-//     .from("customer_products")
-//     .update({
-//       canceled_at: null,
-//       expires_at: null,
-//     })
-//     .eq("processor->>subscription_id", subscription.id)
-//     .select();
-
-//   if (!updated || updated.length === 0) {
-//     return;
-//   }
-
-//   console.log("Stripe subscription cancelled undone:", subscription.id);
-// };

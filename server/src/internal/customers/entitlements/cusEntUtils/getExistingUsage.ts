@@ -1,8 +1,11 @@
 import {
   CustomerEntitlement,
   CustomerEntitlementSchema,
+  EntInterval,
   Entitlement,
   EntitlementWithFeature,
+  Entity,
+  Feature,
   FeatureType,
   FullCusProduct,
   FullCustomerEntitlement,
@@ -55,15 +58,36 @@ export const getExistingCusEntAndUsage = async ({
 
 export const getExistingUsages = ({
   curCusProduct,
+  entities,
+  features,
 }: {
   curCusProduct: FullCusProduct;
+  entities: Entity[];
+  features: Feature[];
 }) => {
   let usages: Record<
     string,
-    { usage: number; entityUsages: Record<string, number> | null }
+    { usage: number; entityUsages: Record<string, number> | null; fromEntities: boolean }
   > = {};
 
   let cusPrices = curCusProduct.customer_prices;
+
+  // Get entityUsage
+  for (const entity of entities) {
+    let feature = features.find((f) => f.internal_id === entity.internal_feature_id);
+    let key = `${feature?.id}-${EntInterval.Lifetime}`;
+
+    if (!usages[key]) {
+      usages[key] = {
+        usage: 0,
+        entityUsages: null,
+        fromEntities: true,
+      };
+    }
+
+    usages[key].usage += 1;
+  }
+  
   for (const cusEnt of curCusProduct.customer_entitlements) {
     let ent = cusEnt.entitlement;
     let key = `${ent.feature_id}-${ent.interval}`;
@@ -85,7 +109,12 @@ export const getExistingUsages = ({
       usages[key] = {
         usage: 0,
         entityUsages: null,
+        fromEntities: false,
       };
+    }
+
+    if (usages[key].fromEntities) {
+      continue;
     }
 
     // 1. To check, does ent options work with multiple features?
@@ -126,6 +155,8 @@ export const addExistingUsagesToCusEnts = ({
   carryExistingUsages = false,
   printLogs = false,
   isDowngrade = false,
+  entities,
+  features,
 }: {
   cusEnts: CustomerEntitlement[];
   entitlements: EntitlementWithFeature[];
@@ -133,6 +164,8 @@ export const addExistingUsagesToCusEnts = ({
   carryExistingUsages?: boolean;
   printLogs?: boolean;
   isDowngrade?: boolean;
+  entities: Entity[];
+  features: Feature[];
 }) => {
   if (!curCusProduct || isDowngrade) {
     return cusEnts;
@@ -140,6 +173,8 @@ export const addExistingUsagesToCusEnts = ({
 
   let existingUsages = getExistingUsages({
     curCusProduct,
+    entities,
+    features,
   });
 
   let fullCusEnts = cusEnts.map((ce) => {
