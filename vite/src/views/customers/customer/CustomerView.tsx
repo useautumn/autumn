@@ -72,7 +72,8 @@ export default function CustomerView({ env }: { env: AppEnv }) {
     );
   }
 
-  const { customer, products, invoices, coupons, discount, events } = data;
+  const { customer, products, invoices, coupons, discount, events, entities } =
+    data;
 
   return (
     <CustomerContext.Provider
@@ -107,6 +108,12 @@ export default function CustomerView({ env }: { env: AppEnv }) {
                       {
                         key: "Stripe ID",
                         value: customer.processor?.id,
+                      },
+                      {
+                        key: "Entities",
+                        value: (entities || [])
+                          .map((e: any) => e.id)
+                          .join(", "),
                       },
                     ]}
                   >

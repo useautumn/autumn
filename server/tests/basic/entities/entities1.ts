@@ -150,20 +150,20 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
   describe("Create customer -- create entity should fail", async function () {
     let firstEntityId = "1";
 
-    it("should fail to add seat when there's no balance", async function () {
-      try {
-        await this.autumn.entities.create(customerId, {
-          id: "test",
-          name: "test",
-          featureId: "seats",
-        });
+    // it("should fail to add seat when there's no balance", async function () {
+    //   try {
+    //     await this.autumn.entities.create(customerId, {
+    //       id: "test",
+    //       name: "test",
+    //       featureId: "seats",
+    //     });
 
-        assert.fail("create entity should have failed");
-      } catch (error: any) {
-        expect(error).to.be.instanceOf(AutumnError);
-        expect(error.code).to.equal(ErrCode.InsufficientBalance);
-      }
-    });
+    //     assert.fail("create entity should have failed");
+    //   } catch (error: any) {
+    //     expect(error).to.be.instanceOf(AutumnError);
+    //     expect(error.code).to.equal(ErrCode.InsufficientBalance);
+    //   }
+    // });
 
     it("should attach entityFree product", async function () {
       await this.autumn.attach({

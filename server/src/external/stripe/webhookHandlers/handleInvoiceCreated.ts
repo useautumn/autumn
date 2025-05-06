@@ -243,6 +243,7 @@ const handleUsageInArrear = async ({
     cusEnt: relatedCusEnt as any,
     balance: relatedCusEnt.balance!,
     entities: relatedCusEnt.entities!,
+    billingUnits: (price.config as UsagePriceConfig).billing_units || 1,
   });
 
   const totalQuantity = new Decimal(allowance).minus(balance).toNumber();

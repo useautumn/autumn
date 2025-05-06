@@ -377,7 +377,6 @@ export const createFullCusProduct = async ({
 
   // Perform deductions on new cus ents...
 
-
   let deductedCusEnts = addExistingUsagesToCusEnts({
     cusEnts: cusEnts,
     entitlements: entitlements,

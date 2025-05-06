@@ -110,18 +110,18 @@ export const getEntityToAction = ({
     return entityToAction;
   }
 
-  let balance = cusEnts
-    .filter(
-      (ce: any) => ce.entitlement.feature.internal_id === feature.internal_id
-    )
-    .reduce((acc: number, ce: any) => acc + ce.balance, 0);
+  // let balance = cusEnts
+  //   .filter(
+  //     (ce: any) => ce.entitlement.feature.internal_id === feature.internal_id
+  //   )
+  //   .reduce((acc: number, ce: any) => acc + ce.balance, 0);
 
-  if (balance < createCount) {
-    throw new RecaseError({
-      message: `You don't have enough ${feature.name}`,
-      code: ErrCode.InsufficientBalance,
-    });
-  }
+  // if (balance < createCount) {
+  //   throw new RecaseError({
+  //     message: `You don't have enough ${feature.name}`,
+  //     code: ErrCode.InsufficientBalance,
+  //   });
+  // }
 
   return entityToAction;
 };
@@ -271,15 +271,12 @@ export const handleCreateEntity = async (req: any, res: any) => {
         entities: existingEntities,
       });
 
-      // const originalBalance = cusEnt.balance - (replacedCount || 0) + (unused || 0);
-      // const newBalance = cusEnt.balance - (newCount + replacedCount) + (unused || 0);
       const originalBalance = cusEnt.balance + (unused || 0);
       const newBalance =
         cusEnt.balance - (newCount + replacedCount) + (unused || 0);
 
       // console.log("originalBalance", originalBalance);
       // console.log("newBalance", newBalance);
-      // console.log("Replaced count", replacedCount);
       // throw new Error("test");
 
       await adjustAllowance({
