@@ -67,14 +67,20 @@ export const getExistingUsages = ({
 }) => {
   let usages: Record<
     string,
-    { usage: number; entityUsages: Record<string, number> | null; fromEntities: boolean }
+    {
+      usage: number;
+      entityUsages: Record<string, number> | null;
+      fromEntities: boolean;
+    }
   > = {};
 
-  let cusPrices = curCusProduct.customer_prices;
+  let cusPrices = curCusProduct?.customer_prices || [];
 
   // Get entityUsage
   for (const entity of entities) {
-    let feature = features.find((f) => f.internal_id === entity.internal_feature_id);
+    let feature = features.find(
+      (f) => f.internal_id === entity.internal_feature_id
+    );
     let key = `${feature?.id}-${EntInterval.Lifetime}`;
 
     if (!usages[key]) {
@@ -87,8 +93,8 @@ export const getExistingUsages = ({
 
     usages[key].usage += 1;
   }
-  
-  for (const cusEnt of curCusProduct.customer_entitlements) {
+
+  for (const cusEnt of curCusProduct?.customer_entitlements || []) {
     let ent = cusEnt.entitlement;
     let key = `${ent.feature_id}-${ent.interval}`;
     let feature = ent.feature;
@@ -167,7 +173,7 @@ export const addExistingUsagesToCusEnts = ({
   entities: Entity[];
   features: Feature[];
 }) => {
-  if (!curCusProduct || isDowngrade) {
+  if (isDowngrade) {
     return cusEnts;
   }
 

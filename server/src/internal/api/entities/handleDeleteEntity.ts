@@ -6,10 +6,12 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleCustomerRaceCondition } from "@/external/redis/redisUtils.js";
-import { getCusEntMasterBalance, getRelatedCusPrice } from "@/internal/customers/entitlements/cusEntUtils.js";
+import {
+  getCusEntMasterBalance,
+  getRelatedCusPrice,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
 import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
 import { removeEntityFromCusEnt } from "./entityUtils.js";
-import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 
 export const handleDeleteEntity = async (req: any, res: any) => {
@@ -17,7 +19,6 @@ export const handleDeleteEntity = async (req: any, res: any) => {
     const { orgId, env, logtail: logger, sb } = req;
     const { customer_id, entity_id } = req.params;
 
-    
     await handleCustomerRaceCondition({
       action: "entity",
       customerId: customer_id,
@@ -30,7 +31,6 @@ export const handleDeleteEntity = async (req: any, res: any) => {
     // console.log("Handling race condition for:", customer_id);
     // console.log("Customer ID:", customer_id);
     // console.log("Entity ID:", entity_id);
-
 
     const customer = await CusService.getById({
       sb: req.sb,
@@ -54,11 +54,8 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       orgId: req.orgId,
       env: req.env,
     });
-    
 
-    const entity = existingEntities.find(
-      (e: any) => e.id === entity_id
-    );
+    const entity = existingEntities.find((e: any) => e.id === entity_id);
 
     if (!entity) {
       throw new RecaseError({
@@ -99,7 +96,10 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         continue;
       }
 
-      let relatedCusPrice = getRelatedCusPrice(cusEnt, cusProduct.customer_prices);
+      let relatedCusPrice = getRelatedCusPrice(
+        cusEnt,
+        cusProduct.customer_prices
+      );
 
       if (relatedCusPrice) {
         cusPriceExists = true;
@@ -109,9 +109,9 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         cusEnt,
         entities: existingEntities,
       });
-      
-      let newBalance = (cusEnt.balance + 1) + (unused || 0);
-      
+
+      let newBalance = cusEnt.balance + 1 + (unused || 0);
+
       await adjustAllowance({
         sb,
         env,
@@ -124,24 +124,34 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         newBalance,
         deduction: 1,
         product,
+        fromEntities: true,
       });
     }
 
-    if (!cusPriceExists) {
+    if (!cusPriceExists || org.config.prorate_unused) {
       // Completely remove entity
       let cusEnts = fullCusProductToCusEnts(cusProducts);
 
+      // TODO: Charge for unused feature IDs...
+
       for (const cusEnt of cusEnts) {
+        let relatedCusPrice = getRelatedCusPrice(
+          cusEnt,
+          cusProducts.flatMap((p: any) => p.customer_prices)
+        );
         await removeEntityFromCusEnt({
           sb,
           cusEnt,
           entity,
           logger,
+          cusPrice: relatedCusPrice,
         });
       }
 
       // Perform deduction on cus ent
-      let updateCusEnt = cusEnts.find((e: any) => e.entitlement.feature.id === entity.feature_id);
+      let updateCusEnt = cusEnts.find(
+        (e: any) => e.entitlement.feature.id === entity.feature_id
+      );
       if (updateCusEnt) {
         await CustomerEntitlementService.incrementBalance({
           pg: req.pg,
@@ -149,14 +159,13 @@ export const handleDeleteEntity = async (req: any, res: any) => {
           amount: 1,
         });
       }
-      
+
       await EntityService.deleteInInternalIds({
         sb,
         internalIds: [entity.internal_id],
         orgId: req.orgId,
         env: req.env,
       });
-      
     } else {
       await EntityService.update({
         sb,
@@ -168,8 +177,6 @@ export const handleDeleteEntity = async (req: any, res: any) => {
     }
 
     logger.info(` ✅ Finished deleting entity ${entity_id}`);
-
-
 
     res.status(200).json({
       success: true,

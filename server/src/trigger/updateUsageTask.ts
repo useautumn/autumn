@@ -179,6 +179,7 @@ export const updateUsage = async ({
   properties,
   setUsage,
   logger,
+  entityId,
 }: {
   sb: SupabaseClient;
   customer: Customer;
@@ -189,6 +190,7 @@ export const updateUsage = async ({
   properties: any;
   setUsage: boolean;
   logger: any;
+  entityId: string;
 }) => {
   const startTime = performance.now();
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
@@ -236,6 +238,7 @@ export const updateUsage = async ({
   }
 
   // 4. Perform deductions and update customer balance
+
   for (const obj of featureDeductions) {
     let { feature, deduction: toDeduct } = obj;
 
@@ -260,6 +263,7 @@ export const updateUsage = async ({
         featureDeductions,
         willDeductCredits: true,
         setZeroAdjustment: true,
+        entityId,
       });
     }
 
@@ -280,6 +284,7 @@ export const updateUsage = async ({
         properties,
       },
       setZeroAdjustment: true,
+      entityId,
     });
   }
 
@@ -298,8 +303,16 @@ export const runUpdateUsageTask = async ({
 }) => {
   try {
     // 1. Update customer balance
-    const { customer, features, value, set_usage, properties, org, env } =
-      payload;
+    const {
+      customer,
+      features,
+      value,
+      set_usage,
+      properties,
+      org,
+      env,
+      entityId,
+    } = payload;
 
     console.log("--------------------------------");
     console.log(
@@ -316,6 +329,7 @@ export const runUpdateUsageTask = async ({
       env,
       setUsage: set_usage,
       logger,
+      entityId,
     });
 
     if (!cusEnts || cusEnts.length === 0) {

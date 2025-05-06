@@ -1,6 +1,17 @@
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import {
+  getBillingInterval,
+  getBillingType,
+} from "@/internal/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { Entitlement, Entity, Feature, FullCustomerEntitlement } from "@autumn/shared";
+import {
+  BillingType,
+  Entitlement,
+  Entity,
+  Feature,
+  FullCustomerEntitlement,
+  FullCustomerPrice,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getLinkedCusEnt = ({
@@ -31,9 +42,15 @@ export const entityFeatureIdExists = ({
   return notNullish(ent.entity_feature_id);
 };
 
-export const entityMatchesFeature = ({feature, entity}: {feature: Feature, entity: Entity}) => {
+export const entityMatchesFeature = ({
+  feature,
+  entity,
+}: {
+  feature: Feature;
+  entity: Entity;
+}) => {
   return feature.id == entity.feature_id;
-}
+};
 
 export const entitlementLinkedToEntity = ({
   entitlement,
@@ -43,7 +60,7 @@ export const entitlementLinkedToEntity = ({
   entity: Entity;
 }) => {
   return entitlement.entity_feature_id == entity.feature_id;
-}
+};
 
 export const isLinkedToEntity = ({
   cusEnt,
@@ -53,18 +70,20 @@ export const isLinkedToEntity = ({
   entity: Entity;
 }) => {
   return cusEnt.entitlement.entity_feature_id == entity.feature_id;
-}
+};
 
 export const removeEntityFromCusEnt = async ({
   sb,
   cusEnt,
   entity,
   logger,
+  cusPrice,
 }: {
   sb: SupabaseClient;
   cusEnt: FullCustomerEntitlement;
   entity: Entity;
   logger: any;
+  cusPrice?: FullCustomerPrice;
 }) => {
   // isLinked
   let isLinked = isLinkedToEntity({
@@ -72,21 +91,25 @@ export const removeEntityFromCusEnt = async ({
     entity,
   });
 
-  
   if (!isLinked) {
     return;
   }
-  
+
   let entitlement = cusEnt.entitlement;
-  console.log(`Linked cus ent: ${entitlement.feature.id}, isLinked: ${isLinked}`);
+  console.log(
+    `Linked cus ent: ${entitlement.feature.id}, isLinked: ${isLinked}`
+  );
 
   // Delete cus ent ids
   let newEntities = structuredClone(cusEnt.entities!);
-  for (const entityId in newEntities) {
-    if (entityId in newEntities) {
-      delete newEntities[entityId];
-    }
+
+  // TODO: Send usage to stripe if cus price exists
+  if (cusPrice) {
+    let billingType = getBillingType(cusPrice.price.config!);
+    console.log("Usage to send:", -newEntities[entity.id]?.balance);
   }
+
+  delete newEntities[entity.id];
 
   await CustomerEntitlementService.update({
     sb,
@@ -99,4 +122,4 @@ export const removeEntityFromCusEnt = async ({
   logger.info(
     `Feature: ${entitlement.feature.id}, customer: ${cusEnt.customer_id}, deleted entities from cus ent`
   );
-}
+};

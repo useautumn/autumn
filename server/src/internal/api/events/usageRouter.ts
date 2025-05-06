@@ -109,7 +109,8 @@ export const handleUsageEvent = async ({
   req: any;
   setUsage?: boolean;
 }) => {
-  let { customer_id, customer_data, properties, feature_id, value } = req.body;
+  let { customer_id, customer_data, properties, feature_id, value, entity_id } =
+    req.body;
   if (!customer_id || !feature_id) {
     throw new RecaseError({
       message: "customer_id and feature_id are required",
@@ -155,6 +156,7 @@ export const handleUsageEvent = async ({
     properties,
     value,
     set_usage: setUsage,
+    entityId: entity_id,
   };
 
   try {

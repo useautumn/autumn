@@ -55,6 +55,7 @@ export const adjustAllowance = async ({
   deduction,
   product,
   replacedCount,
+  fromEntities = false,
 }: {
   sb: SupabaseClient;
   env: AppEnv;
@@ -68,6 +69,7 @@ export const adjustAllowance = async ({
   deduction: number;
   product?: Product;
   replacedCount?: number;
+  fromEntities?: boolean;
 }) => {
   // Get customer entitlement
 

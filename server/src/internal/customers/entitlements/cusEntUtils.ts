@@ -35,6 +35,7 @@ import {
   getEntityBalance,
   getSummedEntityBalances,
 } from "./entBalanceUtils.js";
+import { Decimal } from "decimal.js";
 
 export const getBalanceForFeature = async ({
   sb,
@@ -469,10 +470,12 @@ export const getTotalNegativeBalance = ({
   cusEnt,
   balance,
   entities,
+  billingUnits,
 }: {
   cusEnt: FullCustomerEntitlement;
   balance: number;
   entities: Record<string, { balance: number; adjustment: number }>;
+  billingUnits?: number;
 }) => {
   let entityFeatureId = cusEnt.entitlement.entity_feature_id;
 
@@ -483,6 +486,14 @@ export const getTotalNegativeBalance = ({
   let totalNegative = 0;
   for (const group in entities) {
     if (entities[group].balance < 0) {
+      let balance = entities[group].balance;
+      if (billingUnits) {
+        balance = new Decimal(balance)
+          .div(billingUnits)
+          .round()
+          .mul(billingUnits)
+          .toNumber();
+      }
       totalNegative += entities[group].balance;
     }
   }
@@ -504,6 +515,19 @@ export const getExistingUsageFromCusProducts = ({
 }) => {
   if (!entitlement || entitlement.feature.type === FeatureType.Boolean) {
     return 0;
+  }
+
+  // Existing usage should also include entities
+  let entityUsage = entities.reduce((acc, entity) => {
+    if (entity.internal_feature_id !== entitlement.internal_feature_id) {
+      return acc;
+    }
+
+    return acc + 1;
+  }, 0);
+
+  if (entityUsage > 0) {
+    return entityUsage;
   }
 
   let existingUsage = 0;
@@ -556,19 +580,6 @@ export const getExistingUsageFromCusProducts = ({
   existingUsage = existingAllowance! - balance!;
   if (unused && unused > 0) {
     existingUsage -= unused;
-  }
-
-  // Existing usage should also include entities
-  let entityUsage = entities.reduce((acc, entity) => {
-    if (entity.internal_feature_id !== entitlement.internal_feature_id) {
-      return acc;
-    }
-
-    return acc + 1;
-  }, 0);
-
-  if (entityUsage > 0) {
-    return entityUsage;
   }
 
   // if (!existingUsage && entitlement.allowance_type == AllowanceType.Fixed) {
