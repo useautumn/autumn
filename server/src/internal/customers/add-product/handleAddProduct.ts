@@ -59,7 +59,11 @@ export const handleBillNowPrices = async ({
   shouldPreview?: boolean;
 }) => {
   const logger = req.logtail;
-  const { org, customer, products, freeTrial, invoiceOnly } = attachParams;
+  let { org, customer, products, freeTrial, invoiceOnly } = attachParams;
+
+  if (attachParams.disableFreeTrial) {
+    freeTrial = null;
+  }
 
   const stripeCli = createStripeCli({ org, env: customer.env });
 
@@ -69,10 +73,11 @@ export const handleBillNowPrices = async ({
     carryExistingUsages,
   });
 
-  
 
   let subscriptions: Stripe.Subscription[] = [];
   let invoiceIds: string[] = [];
+
+  
 
   for (const itemSet of itemSets) {
     if (itemSet.interval === BillingInterval.OneOff) {
