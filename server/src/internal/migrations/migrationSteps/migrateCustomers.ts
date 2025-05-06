@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import {
   Customer,
+  Feature,
   FullProduct,
   MigrationJob,
   MigrationJobStep,
@@ -25,6 +26,7 @@ export const migrateCustomers = async ({
   toProduct,
   logger,
   customers,
+  features,
 }: {
   sb: SupabaseClient;
   migrationJob: MigrationJob;
@@ -32,6 +34,7 @@ export const migrateCustomers = async ({
   toProduct: FullProduct;
   logger: any;
   customers: Customer[];
+  features: Feature[];
 }) => {
   // console.log(`Migrating ${customers.length} customers`);
   // return;
@@ -89,6 +92,7 @@ export const migrateCustomers = async ({
           orgId,
           fromProduct,
           toProduct,
+          features,
         })
       );
     }

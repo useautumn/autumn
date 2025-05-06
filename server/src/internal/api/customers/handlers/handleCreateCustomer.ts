@@ -162,8 +162,9 @@ export const createNewCustomer = async ({
         freeTrial: null,
         optionsList: [],
         cusProducts: [],
-        invoiceOnly: true,
         entities: [],
+        features: [],
+        invoiceOnly: true,
       },
       fromRequest: false,
     });
@@ -182,6 +183,7 @@ export const createNewCustomer = async ({
         optionsList: [],
         cusProducts: [],
         entities: [],
+        features: [],
       },
       nextResetAt,
       anchorToUnix: org.config.anchor_start_of_month

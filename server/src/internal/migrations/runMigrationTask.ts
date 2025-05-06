@@ -4,6 +4,7 @@ import { ProductService } from "../products/ProductService.js";
 import { getMigrationCustomers } from "./migrationSteps/getMigrationCustomers.js";
 import { migrateCustomers } from "./migrationSteps/migrateCustomers.js";
 import { MigrationJobStep } from "@autumn/shared";
+import { FeatureService } from "../features/FeatureService.js";
 
 export const runMigrationTask = async ({
   payload,
@@ -50,6 +51,12 @@ export const runMigrationTask = async ({
       logger,
     });
 
+    let features = await FeatureService.getFeatures({
+      sb,
+      orgId,
+      env,
+    });
+
     logger.info(`Job ${migrationJobId} | Found ${customers?.length} customers`);
 
     // STEP 2: MIGRATE CUSTOMERS..
@@ -60,6 +67,7 @@ export const runMigrationTask = async ({
       toProduct,
       customers,
       logger,
+      features,
     });
 
     // await new Promise((resolve) => setTimeout(resolve, 10000));

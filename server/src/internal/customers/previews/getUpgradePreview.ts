@@ -195,6 +195,7 @@ export const getUpgradePreview = async ({
     org,
     customer,
     products: [product],
+    features,
     prices: product.prices,
     entitlements: product.entitlements,
     freeTrial: product.free_trial || null,

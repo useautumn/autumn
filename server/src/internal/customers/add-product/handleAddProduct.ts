@@ -63,10 +63,13 @@ export const handleBillNowPrices = async ({
 
   const stripeCli = createStripeCli({ org, env: customer.env });
 
+
   let itemSets = await getStripeSubItems({
     attachParams,
     carryExistingUsages,
   });
+
+  
 
   let subscriptions: Stripe.Subscription[] = [];
   let invoiceIds: string[] = [];
