@@ -34,8 +34,8 @@ export const NavButton = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        `cursor-pointer text-t2 font-medium transition-all duration-100 
-        text-black text-sm flex h-9 items-center text-t1 hover:text-primary`,
+        `cursor-pointer font-medium transition-all duration-100 
+         text-sm flex h-9 items-center text-t2 hover:text-primary`,
         isActive && "font-semibold text-primary hover:text-primary/80",
         className
       )}

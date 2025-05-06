@@ -12,9 +12,11 @@ import {
 } from "@clerk/clerk-react";
 import { useOrganization } from "@clerk/clerk-react";
 import { useEffect } from "react";
-import { Navigate, Outlet, useLocation } from "react-router";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router";
 
 import { usePostHog } from "posthog-js/react";
+import { Button } from "@/components/ui/button";
+import { ArrowUpRightFromSquare } from "lucide-react";
 
 export function MainLayout() {
   const { isLoaded: isUserLoaded, user } = useUser();
@@ -22,6 +24,7 @@ export function MainLayout() {
   const { setActive } = useOrganizationList();
   const env = useEnv();
   const { pathname } = useLocation();
+  const navigate = useNavigate();
 
   const posthog = usePostHog();
 
@@ -49,10 +52,20 @@ export function MainLayout() {
         <div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
           <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
             {env === AppEnv.Sandbox && (
-              <div className="w-full min-h-10 h-10 bg-orange-100 text-white text-sm flex items-center justify-center">
+              <div className="w-full min-h-10 h-10 bg-orange-100 text-white text-sm flex items-center justify-center relative px-4">
                 <p className="font-medium text-orange-500 font-mono">
                   You&apos;re in sandbox
                 </p>
+                <Button
+                  variant="default"
+                  className="h-6 border border-orange-500 bg-transparent text-orange-500 hover:bg-orange-500 hover:text-white font-mono rounded-lg ml-auto absolute right-4"
+                  onClick={() => {
+                    navigateTo("/onboarding", navigate, AppEnv.Sandbox);
+                  }}
+                >
+                  Onboarding
+                  <ArrowUpRightFromSquare size={12} className="inline ml-1" />
+                </Button>
               </div>
             )}
             <div className="flex bg-stone-50 flex-col h-full">
@@ -109,15 +122,24 @@ export function MainLayout() {
 
 const MainContent = () => {
   const env = useEnv();
+  const navigate = useNavigate();
 
   return (
     <div className="w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3">
       <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
         {env === AppEnv.Sandbox && (
-          <div className="w-full min-h-10 h-10 bg-orange-100 text-white text-sm flex items-center justify-center">
-            <p className="font-medium text-orange-500 font-mono">
-              You&apos;re in sandbox
-            </p>
+          <div className="w-full min-h-10 h-10 bg-orange-100 text-sm flex items-center justify-center relative px-4 text-orange-500 ">
+            <p className="font-medium font-mono">You&apos;re in sandbox</p>
+            <Button
+              variant="default"
+              className="h-6 border border-orange-500 bg-transparent text-orange-500 hover:bg-orange-500 hover:text-white font-mono rounded-lg ml-auto absolute right-4"
+              onClick={() => {
+                navigateTo("/onboarding", navigate, AppEnv.Sandbox);
+              }}
+            >
+              Onboarding
+              <ArrowUpRightFromSquare size={12} className="inline ml-1" />
+            </Button>
           </div>
         )}
         <div

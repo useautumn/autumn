@@ -2,26 +2,60 @@ import Step from "@/components/general/OnboardingStep";
 import CodeBlock from "../components/CodeBlock";
 import { ArrowUpRightFromSquare } from "lucide-react";
 
-let attachCode = (productId: string, apiKey: string) => {
-  return `const response = await fetch('https://api.useautumn.com/v1/attach', {
-  method: "POST",
-  headers: {
-    Authorization: 'Bearer ${apiKey || "<AUTUMN_SECRET_KEY>"}',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    "customer_id": "<YOUR_INTERNAL_USER_ID>", //Use your internal user ID 
-    "product_id": "${
-      productId || "<PRODUCT_ID>"
-    }" // Set above in the 'Products' table
-  })
-})
+let attachCodeNextjs = (productId: string, apiKey: string) => {
+  return `// app/layout.tsx
 
-const data = await response.json();
-const checkoutUrl = data.checkout_url;
+  import { AutumnProvider } from "autumn-js/next";
+
+  export default function RootLayout({
+    children,
+  }: {
+    children: React.ReactNode,
+  }) {
+    return (
+      <html>
+        <body>
+        // Wrap your app with AutumnProvider
+          <AutumnProvider
+            customerId="YOUR_INTERNAL_CUSTOMER_ID"
+            customerData={{ name: "John Doe" }}
+          >
+            {children}
+          </AutumnProvider>
+        </body>
+      </html>
+    );
+  }
+
+// app/page.tsx
+
+  import { useAutumn } from 'autumn-js/next';
+
+  const { attach } = useAutumn();
+
+  <Button onClick={() => attach({ product_id: "${
+    productId || "PRODUCT_ID"
+  }" })}>
+    Buy ${productId || "Product"}
+  </Button>
+`;
+};
+
+const attachCodeTypescript = (productId: string, apiKey: string) => {
+  return `import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  // Set your publishable key (using VITE as an example)
+  publishableKey: import.meta.env.VITE_AUTUMN_PUBLISHABLE_KEY,
+});
+
+const checkoutUrl = await autumn.attach({ product_id: "${
+    productId || "PRODUCT_ID"
+  }" });
 
 // Redirect the user to the checkout URL
-window.location.href = checkoutUrl;`;
+window.location.href = checkoutUrl;
+`;
 };
 
 export default function AttachProduct({
@@ -50,8 +84,8 @@ export default function AttachProduct({
             </a>
             <ArrowUpRightFromSquare size={12} className="inline ml-1" />
           </span>{" "}
-          endpoint will return a Stripe Checkout URL that your customers can use
-          to purchase your product.
+          endpoint will return a Stripe Checkout URL. Once paid, the user will
+          be granted access to the features you defined above.
         </p>
       }
     >
@@ -65,10 +99,16 @@ export default function AttachProduct({
       <CodeBlock
         snippets={[
           {
-            title: "JavaScript",
+            title: "Next.js",
             language: "javascript",
             displayLanguage: "javascript",
-            content: attachCode(productId, apiKey),
+            content: attachCodeNextjs(productId, apiKey),
+          },
+          {
+            title: "Typescript",
+            language: "typescript",
+            displayLanguage: "typescript",
+            content: attachCodeTypescript(productId, apiKey),
           },
         ]}
       />
