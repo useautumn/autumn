@@ -377,12 +377,15 @@ export const createFullCusProduct = async ({
 
   // Perform deductions on new cus ents...
 
+
   let deductedCusEnts = addExistingUsagesToCusEnts({
     cusEnts: cusEnts,
     entitlements: entitlements,
     curCusProduct: curCusProduct as FullCusProduct,
     carryExistingUsages,
     isDowngrade,
+    entities: attachParams.entities,
+    features: attachParams.features,
   });
 
   // 2. create customer prices

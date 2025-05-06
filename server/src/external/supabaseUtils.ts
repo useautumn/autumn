@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import fetchRetry from "fetch-retry";
+import { createLogtail } from "./logtail/logtailUtils.js";
 
 // Wrap the global fetch with fetch-retry
 const fetchWithRetry = fetchRetry(fetch, {
@@ -7,6 +8,21 @@ const fetchWithRetry = fetchRetry(fetch, {
   retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000), // Exponential backoff starting at 1s, max 30s
   retryOn: (attempt, error, response) => {
     // Retry on gateway errors (502) and Cloudflare errors (520)
+
+    
+    if (error) {
+      try {
+        let logger = createLogtail();
+        logger.error(`SUPABASE RETRY FUNCTION`, {
+          attempt,
+          error,
+          response,
+        });
+      } catch (error) {
+        console.error("Error creating Logtail logger:", error);
+      }
+    }
+
     let shouldRetry = false;
     try {
       if (

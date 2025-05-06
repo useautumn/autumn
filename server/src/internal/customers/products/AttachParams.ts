@@ -3,6 +3,7 @@ import {
   EntitlementWithFeature,
   Entity,
   FeatureOptions,
+  Feature,
   FreeTrial,
   FullCusProduct,
   FullProduct,
@@ -40,6 +41,7 @@ export type AttachParams = {
 
   isCustom?: boolean;
   disableFreeTrial?: boolean;
+  features: Feature[];
 };
 
 export type InsertCusProductParams = {
@@ -66,6 +68,7 @@ export type InsertCusProductParams = {
   entities: Entity[];
   isCustom?: boolean;
   disableFreeTrial?: boolean;
+  features: Feature[];
 };
 
 export const AttachResultSchema = z.object({

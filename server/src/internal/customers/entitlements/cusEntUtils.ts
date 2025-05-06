@@ -558,6 +558,19 @@ export const getExistingUsageFromCusProducts = ({
     existingUsage -= unused;
   }
 
+  // Existing usage should also include entities
+  let entityUsage = entities.reduce((acc, entity) => {
+    if (entity.internal_feature_id !== entitlement.internal_feature_id) {
+      return acc;
+    }
+
+    return acc + 1;
+  }, 0);
+
+  if (entityUsage > 0) {
+    return entityUsage;
+  }
+
   // if (!existingUsage && entitlement.allowance_type == AllowanceType.Fixed) {
   //   let filteredEntities = entities.filter((e) => entityMatchesFeature({feature: entitlement.feature, entity: e}));
   //   let newExistingUsage = -(entitlement.allowance! - filteredEntities.length);

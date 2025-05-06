@@ -116,7 +116,13 @@ export const handleRequestError = ({
         } for ${action}`
       );
       error.print(logger);
-      logRequestBody(logger, req, "warn");
+      if (req.originalUrl.includes("/webhooks/stripe")) {
+        logger.warn("request body", {
+          body: getJsonBody(req.body),
+        });
+      } else {
+        logRequestBody(logger, req, "warn");
+      }
 
       logger.warn("--------------------------------");
       res.status(error.statusCode).json({
@@ -136,16 +142,15 @@ export const handleRequestError = ({
       } for ${action}`
     );
 
-    logRequestBody(logger, req, "error");
-
     if (error instanceof Stripe.errors.StripeError) {
-      logger.error("Type: StripeError");
+      logger.error("Request body:", getJsonBody(req.body));
       logger.error(error.message);
       res.status(400).json({
         message: error.message,
         code: ErrCode.InvalidInputs,
       });
     } else if (error instanceof ZodError) {
+      logRequestBody(logger, req, "error");
       logger.error("Type: ZodError");
       logger.error(formatZodError(error));
       res.status(400).json({
@@ -153,6 +158,7 @@ export const handleRequestError = ({
         code: ErrCode.InvalidInputs,
       });
     } else {
+      logRequestBody(logger, req, "error");
       logger.error(`Type: Unknown`);
       logger.error(error);
       res.status(500).json({ message: "Internal server error" });
