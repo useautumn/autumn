@@ -133,10 +133,26 @@ export function FeatureConfig({
                   <span>Continuous Use</span>
                 </TabsTrigger>
               </TabsList>
-              <p className="text-sm text-t3 ">
+              <p className="text-sm text-t3 flex items-center gap-1">
                 {meteredConfig.usage_type === FeatureUsageType.Continuous
-                  ? "This feature is used over time like seats or projects"
-                  : "This feature can only be used once like API calls or credits"}
+                  ? "For features used on an ongoing basis, like seats or storage"
+                  : "For consumable features like credits or API calls"}
+                <Tooltip delayDuration={400}>
+                  <TooltipTrigger asChild>
+                    <InfoIcon className="w-3 h-3 text-t3/50" />
+                  </TooltipTrigger>
+                  <TooltipContent
+                    sideOffset={5}
+                    side="top"
+                    align="start"
+                    className="flex flex-col"
+                  >
+                    <p>
+                      This helps us determine things like whether to reset
+                      usage, prorate billing etc.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
               </p>
             </Tabs>
           </div>

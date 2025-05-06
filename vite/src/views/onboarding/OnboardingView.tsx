@@ -16,6 +16,7 @@ import { CreateProductStep } from "./onboarding-steps/03_CreateProduct";
 import { CreateSecretKey } from "./onboarding-steps/04_CreateSecretKey";
 import AttachProduct from "./onboarding-steps/04_AttachProduct";
 import CheckAccessStep from "./onboarding-steps/05_CheckAccess";
+import Install from "./onboarding-steps/Install";
 
 function OnboardingView() {
   const env = useEnv();
@@ -97,7 +98,9 @@ function OnboardingView() {
               number={4}
             />
 
-            <AttachProduct productId={productId} apiKey={apiKey} number={5} />
+            <Install number={5} />
+
+            <AttachProduct productId={productId} apiKey={apiKey} number={6} />
 
             <CheckAccessStep apiKey={apiKey} number={6} />
 

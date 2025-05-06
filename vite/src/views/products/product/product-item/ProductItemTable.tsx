@@ -194,7 +194,7 @@ export const ProductItemTable = ({
               <div
                 key={index}
                 className={cn(
-                  "flex grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3",
+                  "grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3",
                   isOnboarding && "grid-cols-12 px-2"
                 )}
                 onClick={() => handleRowClick(item, index)}
@@ -250,6 +250,38 @@ export const ProductItemTable = ({
               </div>
             );
           })}
+          {product.items.length === 0 && (
+            <div className="flex flex-col px-10 h-full mt-2">
+              <p className="text-t3">
+                Product items determine what customers get access to and how
+                they're billed{" "}
+                <a
+                  href="https://docs.useautumn.com/products/create-product"
+                  target="_blank"
+                  className="underline "
+                >
+                  learn more:
+                </a>
+              </p>
+              <div className="flex flex-col gap-2 px-4 mt-2">
+                <p className="text-t3">
+                  ↳ <span className="font-medium text-t2">Features:</span>{" "}
+                  features included with this product (eg, 100 credits per
+                  month)
+                </p>
+                <p className="text-t3">
+                  ↳ <span className="font-medium text-t2">Prices:</span> a fixed
+                  price to charge customers (eg, $10 per month)
+                </p>
+                <p className="text-t3">
+                  ↳{" "}
+                  <span className="font-medium text-t2">Priced Features:</span>{" "}
+                  features that have a price based on their usage (eg, $1 per
+                  credit)
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
