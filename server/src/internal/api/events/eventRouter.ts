@@ -256,7 +256,7 @@ eventsRouter.post("", async (req: any, res: any) => {
       response.event_name = event.event_name;
     }
 
-    if (org.api_version == APIVersion.v1_1) {
+    if (org.api_version >= APIVersion.v1_1) {
       res.status(200).json(response);
     } else {
       res.status(200).json({ success: true });

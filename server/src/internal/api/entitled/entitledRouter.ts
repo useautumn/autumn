@@ -458,7 +458,8 @@ entitledRouter.post("", async (req: any, res: any) => {
       }
     }
 
-    if (org.api_version == APIVersion.v1_1) {
+    console.log("Org API version:", org.api_version);
+    if (org.api_version >= APIVersion.v1_1) {
       res.status(200).json({
         customer_id,
         feature_id: featureToUse?.id,

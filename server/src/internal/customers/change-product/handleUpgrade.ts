@@ -290,7 +290,8 @@ const handleOnlyEntsChanged = async ({
 
   let org = attachParams.org;
 
-  if (org.api_version == APIVersion.v1_1) {
+  let apiVersion = org.api_version || APIVersion.v1;
+  if (apiVersion >= APIVersion.v1_1) {
     res.status(200).json(
       AttachResultSchema.parse({
         customer_id: attachParams.customer.id,
