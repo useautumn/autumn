@@ -271,12 +271,12 @@ export const ProductItemTable = ({
                 </p>
                 <p className="text-t3">
                   ↳ <span className="font-medium text-t2">Prices:</span> a fixed
-                  price to charge customers for the product (eg, $10 per month)
+                  price to charge customers (eg, $10 per month)
                 </p>
                 <p className="text-t3">
                   ↳{" "}
                   <span className="font-medium text-t2">Priced Features:</span>{" "}
-                  Features that have a price based on their usage (eg, $1 per
+                  features that have a price based on their usage (eg, $1 per
                   credit)
                 </p>
               </div>
