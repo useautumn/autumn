@@ -17,6 +17,7 @@ import {
   Price,
   BillingType,
   UsagePriceConfig,
+  Feature,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { MigrationService } from "../MigrationService.js";
@@ -33,6 +34,7 @@ export const migrateCustomer = async ({
   orgId,
   fromProduct,
   toProduct,
+  features,
 }: {
   migrationJob: MigrationJob;
   sb: SupabaseClient;
@@ -43,6 +45,7 @@ export const migrateCustomer = async ({
   fromProduct: FullProduct;
   toProduct: FullProduct;
   logger: any;
+  features: Feature[];
 }) => {
   try {
     // await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -72,7 +75,7 @@ export const migrateCustomer = async ({
       prices: toProduct.prices,
       entitlements: toProduct.entitlements,
       freeTrial: toProduct.free_trial || null,
-
+      features,
       optionsList: curCusProduct.options,
       entities,
       cusProducts,

@@ -170,6 +170,7 @@ export const triggerFreeProduct = async ({
     optionsList: [],
     entities: [],
     freeTrial: null,
+    features: [],
     customer: referrer,
     cusProducts: referrerCusProducts,
   };
