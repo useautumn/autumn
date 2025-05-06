@@ -182,6 +182,7 @@ export const activateDefaultProduct = async ({
       freeTrial: defaultProd.free_trial || null,
       optionsList: [],
       entities: [],
+      features: [],
     },
   });
 
