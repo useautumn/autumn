@@ -70,4 +70,7 @@ export const ErrCode = {
 
   // Payment errors
   CardDeclinedError: "card_declined_error",
+
+  // Entity
+  EntityNotFound: "entity_not_found",
 };

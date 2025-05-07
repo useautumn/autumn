@@ -76,6 +76,8 @@ export const initCusProduct = ({
   subscriptionIds,
   subscriptionScheduleIds,
   isCustom,
+  entityId,
+  internalEntityId,
 }: {
   customer: Customer;
   product: FullProduct;
@@ -94,6 +96,8 @@ export const initCusProduct = ({
   subscriptionIds?: string[];
   subscriptionScheduleIds?: string[];
   isCustom?: boolean;
+  entityId?: string;
+  internalEntityId?: string;
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
 
@@ -133,6 +137,8 @@ export const initCusProduct = ({
     scheduled_ids: subscriptionScheduleIds,
     is_custom: isCustom || false,
     quantity: 1,
+    internal_entity_id: internalEntityId,
+    entity_id: entityId,
   };
 };
 
@@ -191,18 +197,21 @@ export const expireOrDeleteCusProduct = async ({
   startsAt,
   product,
   cusProducts,
+  internalEntityId,
 }: {
   sb: SupabaseClient;
   startsAt?: number;
   product: FullProduct;
   cusProducts?: FullCusProduct[];
+  internalEntityId?: string;
 }) => {
   // 1. If startsAt
   if (startsAt && startsAt > Date.now()) {
     let curScheduledProduct = cusProducts?.find(
       (cp) =>
         cp.product.group === product.group &&
-        cp.status === CusProductStatus.Scheduled
+        cp.status === CusProductStatus.Scheduled &&
+        (internalEntityId ? cp.internal_entity_id === internalEntityId : true)
     );
 
     if (curScheduledProduct) {
@@ -215,6 +224,7 @@ export const expireOrDeleteCusProduct = async ({
     let { curMainProduct } = await getExistingCusProducts({
       product,
       cusProducts: cusProducts as FullCusProduct[],
+      internalEntityId,
     });
 
     if (curMainProduct) {
@@ -234,11 +244,13 @@ export const getExistingCusProduct = async ({
   cusProducts,
   product,
   internalCustomerId,
+  internalEntityId,
 }: {
   sb?: SupabaseClient;
   cusProducts?: FullCusProduct[];
   product: FullProduct;
   internalCustomerId: string;
+  internalEntityId?: string;
 }) => {
   if (!cusProducts) {
     cusProducts = await CusService.getFullCusProducts({
@@ -250,6 +262,7 @@ export const getExistingCusProduct = async ({
   const { curMainProduct } = await getExistingCusProducts({
     product,
     cusProducts: cusProducts as FullCusProduct[],
+    internalEntityId,
   });
 
   return curMainProduct;
@@ -319,6 +332,7 @@ export const createFullCusProduct = async ({
       cusProducts: attachParams.cusProducts,
       product,
       internalCustomerId: customer.internal_id,
+      internalEntityId: attachParams.internalEntityId,
     });
   } catch (error) {}
 
@@ -350,12 +364,6 @@ export const createFullCusProduct = async ({
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
     const relatedPrice = getEntRelatedPrice(entitlement, prices);
-    // const existingCusEnt = curCusProduct?.customer_entitlements.find(
-    //   (ce) => ce.internal_feature_id === entitlement.internal_feature_id
-    // );
-
-    // Update existing entitlement if one off
-
     const cusEnt: any = initCusEntitlement({
       entitlement,
       customer,
@@ -424,6 +432,8 @@ export const createFullCusProduct = async ({
     subscriptionIds,
     subscriptionScheduleIds,
     isCustom: attachParams.isCustom || false,
+    entityId: attachParams.entityId,
+    internalEntityId: attachParams.internalEntityId,
   });
 
   // Expire previous product if not one off
@@ -433,6 +443,7 @@ export const createFullCusProduct = async ({
       startsAt,
       product,
       cusProducts: attachParams.cusProducts,
+      internalEntityId: attachParams.internalEntityId,
     });
   }
 

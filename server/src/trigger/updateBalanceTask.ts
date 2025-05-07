@@ -5,6 +5,7 @@ import {
   CusProductStatus,
   Event,
   Feature,
+  FullCustomer,
   FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
@@ -31,6 +32,7 @@ import {
   getTotalNegativeBalance,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { entityFeatureIdExists } from "@/internal/api/entities/entityUtils.js";
+import { CusService } from "@/internal/customers/CusService.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
 
@@ -127,7 +129,6 @@ export const logBalanceUpdate = ({
   entityId?: string | null;
   org: Organization;
 }) => {
-  console.log(`   - getCusEntsInFeatures: ${timeTaken}ms`);
   console.log(
     `   - Customer: ${customer.id} (${customer.env}) | Org: ${
       org.slug
@@ -307,20 +308,11 @@ export const deductAllowanceFromCusEnt = async ({
   entityId?: string | null;
   setZeroAdjustment?: boolean;
 }) => {
-  const { sb, feature, env, org, cusPrices, customer, properties } =
-    deductParams;
+  const { sb, feature, env, org, cusPrices, customer } = deductParams;
 
   if (toDeduct == 0) {
     return 0;
   }
-
-  // Either deduct from balance or entity balance
-
-  // let newBalance = structuredClone(cusEnt.balance);
-  // let newEntities = structuredClone(cusEnt.entities);
-  // let deducted = 0;
-
-  // console.log("entityId", entityId);
 
   let {
     newBalance,
@@ -346,10 +338,6 @@ export const deductAllowanceFromCusEnt = async ({
     balance: newBalance!,
     entities: newEntities!,
   });
-  // console.log("Saving:", {
-  //   balance: newBalance,
-  //   entities: newEntities,
-  // });
 
   let updates: any = {
     balance: newBalance,
@@ -358,6 +346,7 @@ export const deductAllowanceFromCusEnt = async ({
   if (setZeroAdjustment) {
     updates.adjustment = 0;
   }
+
   await CustomerEntitlementService.update({
     sb,
     id: cusEnt.id,
@@ -518,7 +507,8 @@ export const deductFromUsageBasedCusEnt = async ({
 // Main function to update customer balance
 export const updateCustomerBalance = async ({
   sb,
-  customer,
+  customerId,
+  entityId,
   event,
   features,
   org,
@@ -526,7 +516,8 @@ export const updateCustomerBalance = async ({
   logger,
 }: {
   sb: SupabaseClient;
-  customer: Customer;
+  customerId: string;
+  entityId: string;
   event: Event;
   features: Feature[];
   org: Organization;
@@ -535,13 +526,19 @@ export const updateCustomerBalance = async ({
 }) => {
   const startTime = performance.now();
   console.log("REVERSE DEDUCTION ORDER", org.config.reverse_deduction_order);
+  const customer = await CusService.getWithProducts({
+    sb,
+    idOrInternalId: customerId,
+    orgId: org.id,
+    env,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    entityId,
+  });
 
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
     sb,
-    internalCustomerId: customer.internal_id,
+    customer,
     internalFeatureIds: features.map((f) => f.internal_id!),
-    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-    withPrices: true,
     logger,
     reverseOrder: org.config.reverse_deduction_order,
   });
@@ -565,14 +562,6 @@ export const updateCustomerBalance = async ({
     org,
     entityId: event.entity_id,
   });
-
-  // // 2. Handle group_by initialization
-  // await initGroupBalancesForEvent({
-  //   sb,
-  //   features,
-  //   cusEnts,
-  //   properties: event.properties,
-  // });
 
   // 3. Return if no customer entitlements or features found
   if (cusEnts.length === 0 || features.length === 0) {
@@ -643,49 +632,28 @@ export const runUpdateBalanceTask = async ({
 }) => {
   try {
     // 1. Update customer balance
-    const { customer, features, event, org, env } = payload;
+    const { customerId, features, event, org, env, entityId } = payload;
 
     console.log("--------------------------------");
     console.log(
-      `UPDATING BALANCE FOR CUSTOMER (${customer.id}), ORG: ${org.slug}`
+      `UPDATING BALANCE FOR CUSTOMER (${customerId}), ORG: ${org.slug}`
     );
 
     const cusEnts: any = await updateCustomerBalance({
       sb,
-      customer,
+      customerId,
       features,
       event,
       org,
       env,
       logger,
+      entityId,
     });
 
     if (!cusEnts || cusEnts.length === 0) {
       return;
     }
     console.log("   ✅ Customer balance updated");
-
-    // // 2. Check if there's below threshold price
-    // const belowThresholdPrice = await getBelowThresholdPrice({
-    //   sb,
-    //   internalCustomerId: customer.internal_id,
-    //   cusEnts,
-    // });
-
-    // if (belowThresholdPrice) {
-    //   console.log("2. Below threshold price found");
-
-    //   // await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    //   await handleBelowThresholdInvoicing({
-    //     sb,
-    //     internalCustomerId: customer.internal_id,
-    //     belowThresholdPrice,
-    //     logger,
-    //   });
-    // } else {
-    //   console.log("   ✅ No below threshold price found");
-    // }
   } catch (error) {
     if (logger) {
       logger.use((log: any) => {

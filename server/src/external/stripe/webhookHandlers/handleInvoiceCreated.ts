@@ -30,6 +30,10 @@ import { getResetBalancesUpdate } from "@/internal/customers/entitlements/groupB
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { Client } from "pg";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { getFeatureName } from "@/internal/features/displayUtils.js";
+import { submitUsageToStripe } from "../stripeMeterUtils.js";
+import { getInvoiceItemForUsage } from "../stripePriceUtils.js";
 
 // Format invoice nicely
 
@@ -239,16 +243,19 @@ const handleUsageInArrear = async ({
     return;
   }
 
-  const balance = getTotalNegativeBalance({
+  const totalNegativeBalance = getTotalNegativeBalance({
     cusEnt: relatedCusEnt as any,
     balance: relatedCusEnt.balance!,
     entities: relatedCusEnt.entities!,
     billingUnits: (price.config as UsagePriceConfig).billing_units || 1,
   });
 
-  const totalQuantity = new Decimal(allowance).minus(balance).toNumber();
+  const totalQuantity = new Decimal(allowance)
+    .minus(totalNegativeBalance)
+    .toNumber();
 
   const billingUnits = (price.config as UsagePriceConfig).billing_units || 1;
+
   const roundedQuantity =
     Math.ceil(new Decimal(totalQuantity).div(billingUnits).toNumber()) *
     billingUnits;
@@ -257,43 +264,48 @@ const handleUsageInArrear = async ({
     subDays(new Date(invoice.created * 1000), 1).getTime() / 1000
   );
 
-  // 1. Get stripe meter
-  const stripeMeter = await stripeCli.billing.meters.retrieve(
-    config.stripe_meter_id!
-  );
-
-  await stripeCli.billing.meterEvents.create({
-    // event_name: price.id!,
-    event_name: stripeMeter.event_name,
-    payload: {
-      stripe_customer_id: customer.processor.id,
-      value: roundedQuantity.toString(),
-    },
-    timestamp: usageTimestamp,
-  });
-
   let feature = relatedCusEnt.entitlement.feature;
-  logger.info(
-    `✅ Submitted meter event for customer ${customer.id}, feature: ${feature.id}, stripe event: ${stripeMeter.event_name}`
-  );
-  logger.info(
-    `Allowance: ${allowance}, Balance: ${balance}, Quantity: ${totalQuantity}, Rounded: ${roundedQuantity}`
-  );
+  if (activeProduct.internal_entity_id) {
+    let currency = invoice.currency;
+    // console.log("Total negative balance: ", totalNegativeBalance);
+    // console.log("Total quantity: ", roundedQuantity);
+    let invoiceItem = getInvoiceItemForUsage({
+      stripeInvoiceId: invoice.id,
+      price,
+      overage: -totalNegativeBalance,
+      customer,
+      currency,
+      cusProduct: activeProduct,
+      feature,
+      totalUsage: totalQuantity,
+      logger,
+      periodStart: invoice.period_start,
+      periodEnd: invoice.period_end,
+    });
 
-  let invoiceCreatedStr = formatUnixToDateTime(invoice.created * 1000);
-  let usageTimestampStr = formatUnixToDateTime(usageTimestamp * 1000);
-  logger.info(
-    `Invoice created: ${invoiceCreatedStr}, Usage timestamp: ${usageTimestampStr}`
-  );
+    await stripeCli.invoiceItems.create(invoiceItem);
+  } else {
+    await submitUsageToStripe({
+      price,
+      stripeCli,
+      usage: roundedQuantity,
+      customer,
+      usageTimestamp,
+      feature: relatedCusEnt.entitlement.feature,
+      logger,
+    });
+  }
 
-  // reset balance
-  // TODO: If lifetime, reset to 0...
+  // let invoiceCreatedStr = formatUnixToDateTime(invoice.created * 1000);
+  // let usageTimestampStr = formatUnixToDateTime(usageTimestamp * 1000);
+  // logger.info(
+  //   `Invoice created: ${invoiceCreatedStr}, Usage timestamp: ${usageTimestampStr}`
+  // );
+
   if (relatedCusEnt.entitlement.interval == EntInterval.Lifetime) {
-    logger.info(
-      `Feature ${feature.id} has lifetime interval, skipping reset...`
-    );
     return;
   }
+
   let ent = relatedCusEnt.entitlement;
   let resetBalancesUpdate = getResetBalancesUpdate({
     cusEnt: relatedCusEnt,
@@ -480,6 +492,52 @@ export const handleInvoiceCreated = async ({
       return;
     }
 
+    let internalEntityId = activeProducts.find(
+      (p) => p.internal_entity_id
+    )?.internal_entity_id;
+
+    let features = await FeatureService.getFeatures({
+      sb,
+      orgId: org.id,
+      env,
+    });
+
+    if (internalEntityId) {
+      // Add memo to invoice
+      try {
+        let stripeCli = createStripeCli({ org, env });
+        let entity = await EntityService.getByInternalId({
+          sb,
+          internalId: internalEntityId,
+          orgId: org.id,
+          env,
+        });
+
+        if (entity) {
+          logger.info(`Entity: ${entity.name}`);
+        }
+
+        // Add memo to invoice
+        let feature = features.find(
+          (f) => f.internal_id == entity?.internal_feature_id
+        );
+
+        await stripeCli.invoices.update(invoice.id, {
+          description: `${getFeatureName({
+            feature,
+            plural: false,
+            capitalize: true,
+          })}: ${entity?.name} (ID: ${entity?.id})`,
+        });
+      } catch (error: any) {
+        if (
+          error.message != "Finalized invoices can't be updated in this way"
+        ) {
+          logger.error(`Failed to add entity ID to invoice description`, error);
+        }
+      }
+    }
+
     const stripeSubs = await getStripeSubs({
       stripeCli: createStripeCli({ org, env }),
       subIds: activeProducts.map((p) => p.subscription_ids).flat(),
@@ -514,3 +572,20 @@ export const handleInvoiceCreated = async ({
 //   });
 //   continue;
 // }
+
+// // 1. Get stripe meter
+// const stripeMeter = await stripeCli.billing.meters.retrieve(
+//   config.stripe_meter_id!
+// );
+
+// await stripeCli.billing.meterEvents.create({
+//   // event_name: price.id!,
+//   event_name: stripeMeter.event_name,
+//   payload: {
+//     stripe_customer_id: customer.processor.id,
+//     value: roundedQuantity.toString(),
+//   },
+//   timestamp: usageTimestamp,
+// });
+
+// let feature = relatedCusEnt.entitlement.feature;

@@ -12,6 +12,7 @@ export const priceToInArrearProrated = ({
 }) => {
   const config = price.config as UsagePriceConfig;
   let quantity = existingUsage || 0;
+
   if (quantity == 0 && isCheckout) {
     return {
       price: config.stripe_placeholder_price_id,

@@ -15,28 +15,36 @@ expireRouter.post("", async (req, res) =>
     action: "expire",
     handler: async (req, res) => {
       let { sb, orgId, env, logtail: logger } = req;
-      let { customer_id, product_id } = req.body;
+      let { customer_id, product_id, entity_id, cancel_immediately } = req.body;
+
+      let expireImmediately = cancel_immediately || false;
 
       let [customer, org] = await Promise.all([
-        CusService.getById({ sb, orgId, id: customer_id, env, logger }),
+        CusService.getWithProducts({
+          sb,
+          orgId,
+          idOrInternalId: customer_id,
+          env,
+          withEntities: true,
+          entityId: entity_id,
+          inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+        }),
         OrgService.getFromReq(req),
       ]);
 
-      let cusProducts = await CusService.getFullCusProducts({
-        sb,
-        internalCustomerId: customer.internal_id,
-        withProduct: true,
-        withPrices: true,
-        logger,
-        inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-      });
-
-      for (const cusProduct of cusProducts) {
-        cusProduct.customer = customer;
+      if (entity_id && !customer.entity) {
+        throw new RecaseError({
+          code: ErrCode.EntityNotFound,
+          message: `Entity ${entity_id} not found for customer ${customer_id}`,
+        });
       }
 
+      let cusProducts = customer.customer_products;
+
       let cusProductsToExpire = cusProducts.filter(
-        (cusProduct: FullCusProduct) => cusProduct.product.id == product_id
+        (cusProduct: FullCusProduct) =>
+          cusProduct.product.id == product_id &&
+          (entity_id ? cusProduct.entity_id == entity_id : true)
       );
 
       if (cusProductsToExpire.length == 0) {
@@ -54,6 +62,8 @@ expireRouter.post("", async (req, res) =>
           org,
           env,
           logger,
+          customer,
+          expireImmediately,
         });
       }
 

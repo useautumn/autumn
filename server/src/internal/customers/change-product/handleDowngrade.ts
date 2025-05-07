@@ -137,6 +137,11 @@ export const handleDowngrade = async ({
 
   // 1. Cancel all current subscriptions
   const intervalToOtherSubs: Record<string, any> = {};
+  console.log(
+    "Subs: ",
+    curSubscriptions.map((s) => s.id)
+  );
+
   for (const sub of curSubscriptions) {
     let latestEndDate = new Date(latestPeriodEnd * 1000);
     let curEndDate = new Date(sub.current_period_end * 1000);

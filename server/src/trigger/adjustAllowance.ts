@@ -153,7 +153,9 @@ export const adjustAllowance = async ({
     `   - New quantity = ${paidUsage} (paid) + ${cusEnt.entitlement.allowance} (allowance) = ${quantity} `
   );
 
-  let prorationBehaviour = "create_prorations";
+  let prorationBehaviour = org.config.bill_upgrade_immediately
+    ? "always_invoice"
+    : "create_prorations";
 
   // If prorate unused is false, then remove end of cycle
   if (!org.config.prorate_unused) {
@@ -256,12 +258,22 @@ export const adjustAllowance = async ({
     await stripeCli.subscriptionItems.update(subItem.id, {
       quantity: quantity,
       proration_behavior: prorationBehaviour as any,
+      payment_behavior: fromEntities ? "error_if_incomplete" : undefined,
     });
     logger.info(`   ✅ Adjusted sub item ${subItem.id} to ${quantity}`);
   } catch (error: any) {
-    logger.error(`❗️ Error updating subscription item`);
-    logger.error(error);
-    return;
+    if (fromEntities) {
+      throw new RecaseError({
+        message: `Failed to update subscription subscription: ${error.message}`,
+        code: ErrCode.StripeUpdateSubscriptionFailed,
+        statusCode: error.statusCode,
+      });
+    } else {
+      logger.error(
+        `❗️ adjustAllowance: Error updating subscription item (from event)`
+      );
+      logger.error(error);
+    }
   }
 
   return;

@@ -38,18 +38,24 @@ export class CusService {
       CusProductStatus.PastDue,
       CusProductStatus.Scheduled,
     ],
+    withEntities = false,
+    entityId,
   }: {
     sb: SupabaseClient;
     idOrInternalId: string;
     orgId: string;
     env: AppEnv;
     inStatuses?: CusProductStatus[];
+    withEntities?: boolean;
+    entityId?: string;
   }) {
     const { data, error } = await sb.rpc("get_cus_with_products", {
       p_cus_id: idOrInternalId,
       p_org_id: orgId,
       p_env: env,
       p_statuses: inStatuses,
+      p_with_entities: withEntities,
+      p_entity_id: entityId,
     });
 
     if (error) {
@@ -60,7 +66,7 @@ export class CusService {
       return null;
     }
 
-    let { customer, products } = data;
+    let { customer, products, entities, entity } = data;
 
     if (!products) {
       products = [];
@@ -78,6 +84,8 @@ export class CusService {
     return {
       ...customer,
       customer_products: products,
+      entities: entities,
+      entity: entity,
     };
   }
 

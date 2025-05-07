@@ -19,7 +19,10 @@ import { createStripeFixedPrice } from "./createStripeFixedPrice.js";
 import { createStripePrepaid } from "./createStripePrepaid.js";
 import { createStripeOneOffTieredProduct } from "./createStripeOneOffTiered.js";
 import { createStripeInArrearPrice } from "./createStripeInArrear.js";
-import { createStripeArrearProrated } from "./createStripeArrearProrated.js";
+import {
+  createStripeArrearProrated,
+  createStripeMeteredPrice,
+} from "./createStripeArrearProrated.js";
 
 export const checkCurStripePrice = async ({
   price,
@@ -100,8 +103,9 @@ export const createStripePriceIFNotExist = async ({
     stripeCli,
   });
 
-  price.config!.stripe_price_id = stripePrice?.id;
-  (price.config! as UsagePriceConfig).stripe_product_id = stripeProd?.id;
+  let config = price.config! as UsagePriceConfig;
+  config.stripe_price_id = stripePrice?.id;
+  config.stripe_product_id = stripeProd?.id;
 
   let relatedEnt = getPriceEntitlement(price, entitlements);
   let isOneOffAndTiered = priceIsOneOffAndTiered(price, relatedEnt);
@@ -111,15 +115,17 @@ export const createStripePriceIFNotExist = async ({
     billingType == BillingType.FixedCycle ||
     billingType == BillingType.OneOff
   ) {
-    logger.info("Creating stripe fixed price");
-    await createStripeFixedPrice({
-      sb,
-      stripeCli,
-      price,
-      product,
-      org,
-      curStripePrice: stripePrice,
-    });
+    if (!stripePrice) {
+      logger.info("Creating stripe fixed price");
+      await createStripeFixedPrice({
+        sb,
+        stripeCli,
+        price,
+        product,
+        org,
+        curStripePrice: stripePrice,
+      });
+    }
   }
 
   // 2. If prepaid
@@ -161,6 +167,23 @@ export const createStripePriceIFNotExist = async ({
         org,
         curStripeProd: stripeProd,
       });
+    } else if (!config.stripe_placeholder_price_id) {
+      logger.info(`Creating stripe placeholder price`);
+      let placeholderPrice = await createStripeMeteredPrice({
+        sb,
+        stripeCli,
+        price,
+        entitlements,
+        product,
+        org,
+      });
+      config.stripe_placeholder_price_id = placeholderPrice.id;
+      await sb
+        .from("prices")
+        .update({
+          config,
+        })
+        .eq("id", price.id);
     }
   }
 

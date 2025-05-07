@@ -123,6 +123,10 @@ export const CustomerProductList = ({
                     key: "Stripe Subscription ID (1)",
                     value: cusProduct.subscription_ids?.[0] || "N/A",
                   },
+                  {
+                    key: "Entity ID",
+                    value: cusProduct.entity_id || "N/A",
+                  },
                 ]}
               >
                 <div className="flex items-center gap-2">

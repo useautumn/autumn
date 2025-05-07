@@ -390,3 +390,21 @@ export const priceToAmountOrTiers = (price: Price) => {
     }
   }
 };
+
+export const roundUsage = ({
+  usage,
+  billingUnits,
+}: {
+  usage: number;
+  billingUnits: number;
+}) => {
+  if (!billingUnits || billingUnits == 1) {
+    return usage;
+  }
+
+  return new Decimal(usage)
+    .div(billingUnits)
+    .ceil()
+    .mul(billingUnits)
+    .toNumber();
+};

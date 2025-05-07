@@ -72,6 +72,18 @@ export const calculateMetered1Price = ({
   return totalPrice;
 };
 
+export const subToAutumnInterval = (sub: Stripe.Subscription) => {
+  let recuringItem = sub.items.data.find((i) => i.price.recurring != null);
+  if (!recuringItem) {
+    return BillingInterval.OneOff;
+  }
+
+  return stripeToAutumnInterval({
+    interval: recuringItem.price.recurring!.interval,
+    intervalCount: recuringItem.price.recurring!.interval_count,
+  });
+};
+
 export const stripeToAutumnInterval = ({
   interval,
   intervalCount,

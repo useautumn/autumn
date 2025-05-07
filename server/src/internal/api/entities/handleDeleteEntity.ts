@@ -145,6 +145,9 @@ export const handleDeleteEntity = async (req: any, res: any) => {
           entity,
           logger,
           cusPrice: relatedCusPrice,
+          customer,
+          org,
+          env,
         });
       }
 

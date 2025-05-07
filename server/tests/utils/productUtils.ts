@@ -16,6 +16,7 @@ export const createProduct = async ({
   if (typeof clone.items === "object") {
     clone.items = Object.values(clone.items);
   }
+
   await autumn.products.create(clone);
 
   // await autumn.products.update(product.id, clone);

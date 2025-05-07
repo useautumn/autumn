@@ -113,17 +113,20 @@ export const constructFeatureItem = ({
   included_usage,
   interval,
   entitlement_id,
+  entity_feature_id,
 }: {
   feature_id: string;
   included_usage?: number | string;
   interval?: EntInterval;
   entitlement_id?: string;
+  entity_feature_id?: string;
 }) => {
   let item: ProductItem = {
     feature_id,
     included_usage: included_usage as number,
     interval: entToItemInterval(interval),
     entitlement_id,
+    entity_feature_id,
   };
 
   return item;
@@ -146,6 +149,7 @@ export const constructPriceItem = ({
 
 export const constructFeaturePriceItem = ({
   feature_id,
+
   feature_type,
   included_usage,
   price,
@@ -153,15 +157,17 @@ export const constructFeaturePriceItem = ({
   usage_model,
   billing_units = 1,
   reset_usage_when_enabled = false,
+  entity_feature_id,
 }: {
   feature_id: string;
-  feature_type: ProductItemFeatureType;
+  feature_type?: ProductItemFeatureType;
   included_usage?: number;
   price: number;
   interval: BillingInterval;
   usage_model?: UsageModel;
   billing_units?: number;
   reset_usage_when_enabled?: boolean;
+  entity_feature_id?: string;
 }) => {
   let item: ProductItem & {
     included_usage: number;
@@ -174,6 +180,7 @@ export const constructFeaturePriceItem = ({
     usage_model,
     billing_units,
     reset_usage_when_enabled,
+    entity_feature_id,
   };
 
   return item;

@@ -1,5 +1,12 @@
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { CusProductStatus, Organization, ProcessorType } from "@autumn/shared";
+import {
+  BillingType,
+  CusProductStatus,
+  FullCusProduct,
+  Organization,
+  Price,
+  ProcessorType,
+} from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
@@ -8,17 +15,20 @@ import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js"
 import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
+import { getBillingType } from "@/internal/prices/priceUtils.js";
 
 export const handleSubCreated = async ({
   sb,
   subscription,
   org,
   env,
+  logger,
 }: {
   sb: SupabaseClient;
   subscription: Stripe.Subscription;
   org: Organization;
   env: AppEnv;
+  logger: any;
 }) => {
   if (subscription.schedule) {
     const cusProds = await CusProductService.getByStripeScheduledId({
@@ -115,4 +125,71 @@ export const handleSubCreated = async ({
 
     await Promise.all(batchUpdate);
   }
+
+  // Get cus prods for sub
+  let cusProds = await CusProductService.getByStripeSubId({
+    sb,
+    stripeSubId: subscription.id,
+    orgId: org.id,
+    env,
+    withCusEnts: true,
+    withCusPrices: true,
+  });
+
+  let stripeCli = createStripeCli({ org, env });
+  let handleInArrearWithEntity = async (cusProd: FullCusProduct) => {
+    if (!cusProd.internal_entity_id) {
+      return;
+    }
+
+    let arrearPrices = cusProd.customer_prices
+      .map((cp) => cp.price)
+      .filter(
+        (p: Price) =>
+          getBillingType(p.config as any) == BillingType.UsageInArrear
+      );
+
+    if (arrearPrices.length == 0) {
+      return;
+    }
+
+    let itemsToDelete = [];
+    for (const arrearPrice of arrearPrices) {
+      let subItem = subscription.items.data.find(
+        (i) => i.price.id == arrearPrice.config?.stripe_price_id
+      );
+
+      if (!subItem) {
+        continue;
+      }
+
+      itemsToDelete.push({
+        id: subItem.id,
+        deleted: true,
+      });
+    }
+
+    if (itemsToDelete.length > 0) {
+      try {
+        await stripeCli.subscriptions.update(subscription.id, {
+          items: itemsToDelete,
+        });
+        console.log(
+          `sub.created, cus product with entity: deleted ${itemsToDelete.length} items`
+        );
+      } catch (error) {
+        logger.error(
+          `sub.created, cus product with entity: failed to delete items`,
+          error
+        );
+      }
+    }
+  };
+
+  let batchUpdate = [];
+  for (const cusProd of cusProds) {
+    batchUpdate.push(handleInArrearWithEntity(cusProd));
+  }
+
+  await Promise.all(batchUpdate);
 };

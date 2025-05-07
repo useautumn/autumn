@@ -12,7 +12,11 @@ import chalk from "chalk";
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import {
+  createStripeCli,
+  stripeToAutumnInterval,
+  subToAutumnInterval,
+} from "@/external/stripe/utils.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import { getPriceAmount } from "../../prices/priceUtils.js";
 import {
@@ -40,6 +44,8 @@ import {
   getNextStartOfMonthUnix,
 } from "@/internal/prices/billingIntervalUtils.js";
 import { SuccessCode } from "@autumn/shared";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { nullish } from "@/utils/genUtils.js";
 
 export const handleBillNowPrices = async ({
   sb,
@@ -49,6 +55,7 @@ export const handleBillNowPrices = async ({
   fromRequest = true,
   carryExistingUsages = false,
   shouldPreview = false,
+  disableMerge = false,
 }: {
   sb: any;
   attachParams: AttachParams;
@@ -57,9 +64,11 @@ export const handleBillNowPrices = async ({
   fromRequest?: boolean;
   carryExistingUsages?: boolean;
   shouldPreview?: boolean;
+  disableMerge?: boolean;
 }) => {
   const logger = req.logtail;
-  let { org, customer, products, freeTrial, invoiceOnly } = attachParams;
+  let { org, customer, products, freeTrial, invoiceOnly, cusProducts } =
+    attachParams;
 
   if (attachParams.disableFreeTrial) {
     freeTrial = null;
@@ -75,28 +84,44 @@ export const handleBillNowPrices = async ({
   let subscriptions: Stripe.Subscription[] = [];
   let invoiceIds: string[] = [];
 
+  // Merge billing cycles...
+  let mergeCusProduct =
+    !disableMerge && org.config.merge_billing_cycles
+      ? cusProducts?.find((cp) =>
+          products.some((p) => p.group == cp.product.group)
+        )
+      : undefined;
+
+  let mergeSubs = await getStripeSubs({
+    stripeCli,
+    subIds: mergeCusProduct?.subscription_ids,
+  });
+
   for (const itemSet of itemSets) {
     if (itemSet.interval === BillingInterval.OneOff) {
       continue;
     }
 
-    const { items } = itemSet;
+    let mergeWithSub = mergeSubs.find(
+      (sub) => subToAutumnInterval(sub) == itemSet.interval
+    );
 
     let subscription;
     try {
-      // Should create 2 subscriptions
-
       let billingCycleAnchorUnix;
       if (org.config.anchor_start_of_month) {
         billingCycleAnchorUnix = getNextStartOfMonthUnix(itemSet.interval);
       }
 
       if (attachParams.billingAnchor) {
-        // Add interval to now
         billingCycleAnchorUnix = getAlignedIntervalUnix(
           attachParams.billingAnchor,
           itemSet.interval
         );
+      }
+
+      if (mergeWithSub) {
+        billingCycleAnchorUnix = mergeWithSub.current_period_end * 1000;
       }
 
       subscription = await createStripeSub({
@@ -410,6 +435,7 @@ export const handleAddProduct = async ({
   fromRequest = true,
   carryExistingUsages = false,
   keepResetIntervals = false,
+  disableMerge = false,
 }: {
   req: {
     sb: SupabaseClient;
@@ -420,6 +446,7 @@ export const handleAddProduct = async ({
   fromRequest?: boolean;
   carryExistingUsages?: boolean;
   keepResetIntervals?: boolean;
+  disableMerge?: boolean;
 }) => {
   const logger = req.logtail;
   const { customer, products, prices } = attachParams;
@@ -462,6 +489,7 @@ export const handleAddProduct = async ({
       res,
       fromRequest,
       carryExistingUsages,
+      disableMerge,
     });
 
     return;

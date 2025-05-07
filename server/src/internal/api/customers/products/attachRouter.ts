@@ -256,7 +256,6 @@ export const checkStripeConnections = async ({
     );
   }
   await Promise.all(batchPriceUpdates);
-  // throw new Error("test");
 };
 
 export const customerHasPm = async ({
@@ -279,6 +278,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     const {
       customer_id,
       product_id,
+      entity_id,
       customer_data,
 
       is_custom,
@@ -333,6 +333,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       sb,
       customerId: customer_id,
       productId: product_id,
+      entityId: entity_id,
       customerData: customer_data,
       org,
       orgId: org.id,

@@ -1,16 +1,23 @@
+import { submitUsageToStripe } from "@/external/stripe/stripeMeterUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import {
   getBillingInterval,
   getBillingType,
+  roundUsage,
 } from "@/internal/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
+  AppEnv,
   BillingType,
+  Customer,
   Entitlement,
   Entity,
   Feature,
   FullCustomerEntitlement,
   FullCustomerPrice,
+  Organization,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
@@ -78,12 +85,18 @@ export const removeEntityFromCusEnt = async ({
   entity,
   logger,
   cusPrice,
+  customer,
+  org,
+  env,
 }: {
   sb: SupabaseClient;
   cusEnt: FullCustomerEntitlement;
   entity: Entity;
   logger: any;
   cusPrice?: FullCustomerPrice;
+  customer: Customer;
+  org: Organization;
+  env: AppEnv;
 }) => {
   // isLinked
   let isLinked = isLinkedToEntity({
@@ -104,9 +117,30 @@ export const removeEntityFromCusEnt = async ({
   let newEntities = structuredClone(cusEnt.entities!);
 
   // TODO: Send usage to stripe if cus price exists
+  let stripeCli = createStripeCli({
+    org,
+    env,
+  });
   if (cusPrice) {
-    let billingType = getBillingType(cusPrice.price.config!);
-    console.log("Usage to send:", -newEntities[entity.id]?.balance);
+    let config = cusPrice.price.config as UsagePriceConfig;
+    let billingType = getBillingType(config);
+    if (billingType == BillingType.UsageInArrear) {
+      let usage = -newEntities[entity.id]?.balance;
+
+      usage = roundUsage({
+        usage,
+        billingUnits: config.billing_units!,
+      });
+
+      await submitUsageToStripe({
+        price: cusPrice.price,
+        usage,
+        customer,
+        feature: entitlement.feature,
+        logger,
+        stripeCli,
+      });
+    }
   }
 
   delete newEntities[entity.id];

@@ -20,10 +20,6 @@ export const createStripeFixedPrice = async ({
   org: Organization;
   curStripePrice: Stripe.Price | null;
 }) => {
-  if (curStripePrice) {
-    return;
-  }
-
   const config = price.config as FixedPriceConfig;
 
   let amount = new Decimal(config.amount).mul(100).toNumber();

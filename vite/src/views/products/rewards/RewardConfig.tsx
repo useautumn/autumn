@@ -5,13 +5,7 @@ import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 import { SelectTrigger, SelectValue } from "@/components/ui/select";
 import { keyToTitle, slugify } from "@/utils/formatUtils/formatTextUtils";
-import {
-  Reward,
-  CouponDurationType,
-  RewardType,
-  Product,
-  FullProduct,
-} from "@autumn/shared";
+import { Reward, RewardType, Product, FullProduct } from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import { DiscountConfig } from "./DiscountConfig";
 import { notNullish } from "@/utils/genUtils";

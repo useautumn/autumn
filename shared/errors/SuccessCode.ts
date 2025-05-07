@@ -20,4 +20,6 @@ export enum SuccessCode {
   NewProductAttached = "new_product_attached",
   OneOffProductAttached = "one_off_product_attached",
   ProductFound = "product_found",
+
+  RenewedProduct = "renewed_product",
 }

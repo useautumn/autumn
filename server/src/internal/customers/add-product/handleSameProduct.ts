@@ -4,6 +4,7 @@ import {
   ErrCode,
   Feature,
   FullCusProduct,
+  FullCustomer,
   FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
@@ -31,6 +32,7 @@ import {
 import { fullCusProductToProduct } from "../products/cusProductUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { SuccessCode } from "@autumn/shared";
+import { notNullish } from "@/utils/genUtils.js";
 
 const getOptionsToUpdate = (oldOptionsList: any[], newOptionsList: any[]) => {
   let differentOptionsExist = false;
@@ -297,7 +299,9 @@ export const handleSameMainProduct = async ({
     }
   }
 
-  if (optionsToUpdate.length === 0 && !curScheduledProduct) {
+  let isCanceled = notNullish(curMainProduct.canceled_at);
+
+  if (optionsToUpdate.length === 0 && !curScheduledProduct && !isCanceled) {
     // Update options
     throw new RecaseError({
       message: `Customer already has product ${product.name}, can't attach again`,
@@ -308,13 +312,13 @@ export const handleSameMainProduct = async ({
 
   let messages: string[] = [];
 
-  if (curScheduledProduct) {
-    // 1. Delete future product
-    const stripeCli = createStripeCli({
-      org,
-      env: customer.env,
-    });
+  // 1. Delete future product
+  const stripeCli = createStripeCli({
+    org,
+    env: customer.env,
+  });
 
+  if (curScheduledProduct) {
     await cancelFutureProductSchedule({
       sb,
       org,
@@ -333,6 +337,25 @@ export const handleSameMainProduct = async ({
 
     messages.push(
       `Removed scheduled product ${curScheduledProduct.product.name}`
+    );
+  } else if (isCanceled) {
+    for (const subId of curMainProduct.subscription_ids || []) {
+      await stripeCli.subscriptions.update(subId, {
+        cancel_at: null,
+      });
+    }
+
+    let entities = attachParams.entities;
+    let entity = curMainProduct.internal_entity_id
+      ? entities.find(
+          (e) => e.internal_id === curMainProduct.internal_entity_id
+        )
+      : undefined;
+
+    messages.push(
+      `Successfully renewed product ${product.name}${
+        entity ? ` for entity ${entity.name || entity.id}` : ""
+      }`
     );
   }
 
@@ -359,8 +382,8 @@ export const handleSameMainProduct = async ({
       customer_id: customer.id,
       product_ids: products.map((p) => p.id),
 
-      code: SuccessCode.PrepaidQuantityUpdated,
-      message: `Successfully updated prepaid quantities for ${products
+      code: SuccessCode.RenewedProduct,
+      message: `Successfully renewed product ${products
         .map((p) => p.name)
         .join(", ")}`,
     })

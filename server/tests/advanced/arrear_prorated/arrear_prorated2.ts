@@ -11,6 +11,9 @@ import Stripe from "stripe";
 
 import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";
+import { CacheManager } from "@/external/caching/CacheManager.js";
+import { CacheType } from "@/external/caching/cacheActions.js";
+import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 
 const advanceAPThroughBalances = async ({
   stripeSub,
@@ -169,7 +172,7 @@ const advanceAPThroughBalances = async ({
 };
 
 describe(`${chalk.yellowBright(
-  "Testing update in arrear prorated through /balances"
+  "arrear_prorated2: testing update in arrear prorated through /balances"
 )}`, () => {
   const customerId = "arrear-prorated-balances";
 
@@ -196,6 +199,23 @@ describe(`${chalk.yellowBright(
     });
 
     testClockId = createdTestClockId;
+
+    // Update org config
+    await this.sb
+      .from("organizations")
+      .update({
+        config: {
+          ...this.org.config,
+          bill_upgrade_immediately: false,
+        },
+      })
+      .eq("id", this.org.id);
+
+    await CacheManager.invalidate({
+      action: CacheType.SecretKey,
+      value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
+    });
+    await CacheManager.disconnect();
   });
 
   it("should attach in arrear prorated seats", async () => {
@@ -258,6 +278,21 @@ describe(`${chalk.yellowBright(
     });
   });
 
+  after(async function () {
+    await this.sb
+      .from("organizations")
+      .update({
+        config: {
+          ...this.org.config,
+          bill_upgrade_immediately: true,
+        },
+      })
+      .eq("id", this.org.id);
+    void CacheManager.invalidate({
+      action: CacheType.SecretKey,
+      value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
+    });
+  });
   // TODO: Test reset at for in arrear prorated with Ent Interval = Lifetime
   // TODO: Test in arrear prorated for entitlements with billing units > 1
 });

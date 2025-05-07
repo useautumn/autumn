@@ -106,7 +106,7 @@ apiRouter.use("/redemptions", redemptionRouter);
 
 // Cus Product
 apiRouter.use(attachRouter);
-apiRouter.use("/expire", expireRouter);
+apiRouter.use("/cancel", expireRouter);
 apiRouter.use("/entitled", entitledRouter);
 apiRouter.use("/check", entitledRouter);
 

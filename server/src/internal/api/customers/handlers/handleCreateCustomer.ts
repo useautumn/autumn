@@ -75,6 +75,7 @@ export const createNewCustomer = async ({
   nextResetAt,
   processor,
   logger,
+  createDefaultProducts = true,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -83,6 +84,7 @@ export const createNewCustomer = async ({
   nextResetAt?: number;
   processor?: any;
   logger: any;
+  createDefaultProducts?: boolean;
 }) => {
   logger.info(`Creating new customer: ${customer.id}`);
   logger.info(`Org ID: ${org.id}`);
@@ -136,6 +138,10 @@ export const createNewCustomer = async ({
     sb,
     customer: customerData,
   });
+
+  if (!createDefaultProducts) {
+    return newCustomer;
+  }
 
   if (nonFreeProds.length > 0) {
     await initStripeCusAndProducts({
@@ -202,6 +208,7 @@ const handleIdIsNull = async ({
   newCus,
   logger,
   processor,
+  createDefaultProducts,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -209,6 +216,7 @@ const handleIdIsNull = async ({
   newCus: CreateCustomer;
   logger: any;
   processor?: any;
+  createDefaultProducts?: boolean;
 }) => {
   // 1. ID is null
   if (!newCus.email) {
@@ -252,6 +260,7 @@ const handleIdIsNull = async ({
     customer: newCus,
     logger,
     processor,
+    createDefaultProducts,
   });
 
   return createdCustomer;
@@ -265,6 +274,7 @@ export const handleCreateCustomerWithId = async ({
   logger,
   newCus,
   processor,
+  createDefaultProducts = true,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -272,6 +282,7 @@ export const handleCreateCustomerWithId = async ({
   logger: any;
   newCus: CreateCustomer;
   processor?: any;
+  createDefaultProducts?: boolean;
 }) => {
   // 1. Get by ID
   let existingCustomer = await CusService.getById({
@@ -327,6 +338,7 @@ export const handleCreateCustomerWithId = async ({
     customer: newCus,
     logger,
     processor,
+    createDefaultProducts,
   });
 };
 
@@ -339,6 +351,7 @@ export const handleCreateCustomer = async ({
   params = {},
   processor,
   getDetails = true,
+  createDefaultProducts = true,
 }: {
   cusData: CreateCustomer;
   sb: SupabaseClient;
@@ -348,6 +361,7 @@ export const handleCreateCustomer = async ({
   params?: any;
   processor?: any;
   getDetails?: boolean;
+  createDefaultProducts?: boolean;
 }) => {
   const newCus = CreateCustomerSchema.parse(cusData);
 
@@ -361,6 +375,7 @@ export const handleCreateCustomer = async ({
       newCus,
       logger,
       processor,
+      createDefaultProducts,
     });
   } else {
     createdCustomer = await handleCreateCustomerWithId({
@@ -370,6 +385,7 @@ export const handleCreateCustomer = async ({
       logger,
       newCus,
       processor,
+      createDefaultProducts,
     });
   }
 

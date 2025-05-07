@@ -6,9 +6,12 @@ import {
   AppEnv,
   CusProductStatus,
   CustomerData,
+  ErrCode,
   FullCustomer,
   Organization,
 } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const getOrCreateCustomer = async ({
   sb,
@@ -23,6 +26,8 @@ export const getOrCreateCustomer = async ({
     CusProductStatus.Scheduled,
   ],
   skipGet = false,
+  withEntities = false,
+  entityId,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -32,6 +37,8 @@ export const getOrCreateCustomer = async ({
   logger: any;
   inStatuses?: CusProductStatus[];
   skipGet?: boolean;
+  withEntities?: boolean;
+  entityId?: string;
 }): Promise<FullCustomer> => {
   let customer;
 
@@ -42,6 +49,8 @@ export const getOrCreateCustomer = async ({
       orgId: org.id,
       env,
       inStatuses,
+      withEntities,
+      entityId,
     });
   }
 
@@ -68,6 +77,8 @@ export const getOrCreateCustomer = async ({
         orgId: org.id,
         env,
         inStatuses,
+        withEntities,
+        entityId,
       });
     } catch (error: any) {
       if (error?.data?.code == "23505") {
@@ -77,6 +88,8 @@ export const getOrCreateCustomer = async ({
           orgId: org.id,
           env,
           inStatuses,
+          withEntities,
+          entityId,
         });
       } else {
         throw error;
@@ -91,5 +104,12 @@ export const getOrCreateCustomer = async ({
     logger,
   });
 
+  if (entityId && !customer.entity) {
+    throw new RecaseError({
+      message: `Entity ${entityId} not found for customer ${customerId}`,
+      code: ErrCode.EntityNotFound,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
   return customer as FullCustomer;
 };

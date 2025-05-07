@@ -119,9 +119,15 @@ const initWorker = ({
         return;
       }
 
-      const { customerId } = job.data; // customerId is internal customer id
+      const { internalCustomerId } = job.data; // customerId is internal customer id
 
-      while (!(await acquireLock({ customerId, timeout: 10000, useBackup }))) {
+      while (
+        !(await acquireLock({
+          customerId: internalCustomerId,
+          timeout: 10000,
+          useBackup,
+        }))
+      ) {
         await queue.add(job.name, job.data, {
           delay: 50,
         });
@@ -141,7 +147,7 @@ const initWorker = ({
       } catch (error) {
         console.error("Error processing job:", error);
       } finally {
-        await releaseLock({ customerId, useBackup });
+        await releaseLock({ customerId: internalCustomerId, useBackup });
       }
     },
     {

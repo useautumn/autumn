@@ -42,6 +42,9 @@ export type AttachParams = {
   isCustom?: boolean;
   disableFreeTrial?: boolean;
   features: Feature[];
+
+  entityId?: string;
+  internalEntityId?: string;
 };
 
 export type InsertCusProductParams = {
@@ -69,6 +72,9 @@ export type InsertCusProductParams = {
   isCustom?: boolean;
   disableFreeTrial?: boolean;
   features: Feature[];
+
+  entityId?: string;
+  internalEntityId?: string;
 };
 
 export const AttachResultSchema = z.object({

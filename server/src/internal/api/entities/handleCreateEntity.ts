@@ -157,6 +157,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
         orgId,
         env,
         inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+        withEntities: true,
       }),
       FeatureService.getFromReq(req),
       OrgService.getFromReq(req),
@@ -195,15 +196,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
     }
 
     let cusProducts = await customer.customer_products;
-
-    // Fetch existing
-    let existingEntities = await EntityService.get({
-      sb,
-      orgId,
-      env,
-      internalFeatureId: feature.internal_id,
-      internalCustomerId: customer.internal_id,
-    });
+    let existingEntities = customer.entities;
 
     logger.info("Existing entities:");
     logger.info(
@@ -275,10 +268,6 @@ export const handleCreateEntity = async (req: any, res: any) => {
       const newBalance =
         cusEnt.balance - (newCount + replacedCount) + (unused || 0);
 
-      // console.log("originalBalance", originalBalance);
-      // console.log("newBalance", newBalance);
-      // throw new Error("test");
-
       await adjustAllowance({
         sb,
         env,
@@ -292,6 +281,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
         deduction: newCount + replacedCount,
         product,
         replacedCount,
+        fromEntities: true,
       });
 
       await req.pg.query(

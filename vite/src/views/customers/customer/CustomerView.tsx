@@ -21,6 +21,13 @@ import ErrorScreen from "@/views/general/ErrorScreen";
 import { InvoicesTable } from "./InvoicesTable";
 import { CustomerDetails } from "./CustomerDetails";
 import { AdminHover } from "@/components/general/AdminHover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function CustomerView({ env }: { env: AppEnv }) {
   const { customer_id } = useParams();
@@ -139,7 +146,18 @@ export default function CustomerView({ env }: { env: AppEnv }) {
                 )}
               </h2>
             </div>
-            {/* <CustomerToolbar customer={customer} /> */}
+            <Select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select entity" />
+              </SelectTrigger>
+              <SelectContent>
+                {entities.map((entity: any) => (
+                  <SelectItem key={entity.id} value={entity.id}>
+                    {entity.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex w-full !pb-[50px]">
             {/* main content */}
