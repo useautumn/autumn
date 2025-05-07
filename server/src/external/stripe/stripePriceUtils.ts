@@ -4,6 +4,10 @@ import {
   Price,
   AllowanceType,
   Feature,
+  Customer,
+  Organization,
+  FullCusProduct,
+  UsagePriceConfig,
 } from "@autumn/shared";
 
 import Stripe from "stripe";
@@ -13,6 +17,7 @@ import {
   getEntOptions,
   getPriceAmount,
   getPriceEntitlement,
+  getPriceForOverage,
   getPriceOptions,
   getProductForPrice,
 } from "@/internal/prices/priceUtils.js";
@@ -21,6 +26,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { priceToStripeItem } from "./priceToStripeItem/priceToStripeItem.js";
+import { getFeatureName } from "@/internal/features/displayUtils.js";
 
 export const createSubMeta = ({ features }: { features: Feature[] }) => {
   const usageFeatures = features.map((f) => ({
@@ -118,6 +124,7 @@ export const getStripeSubItems = async ({
         cusProducts: attachParams.cusProducts,
         entities: attachParams.entities,
         carryExistingUsages,
+        internalEntityId: attachParams.internalEntityId,
       });
 
       if (
@@ -179,48 +186,64 @@ export const getStripeSubItems = async ({
   return itemSets;
 };
 
-// Can delete
-export const pricesToInvoiceItems = async ({
-  sb,
-  stripeCli,
-  attachParams,
+export const getInvoiceItemForUsage = ({
   stripeInvoiceId,
+  price,
+  feature,
+  totalUsage,
+  overage,
+  currency,
+  customer,
+  cusProduct,
+  logger,
+  periodStart,
+  periodEnd,
 }: {
-  sb: SupabaseClient;
-  stripeCli: Stripe;
-  attachParams: AttachParams;
   stripeInvoiceId: string;
+  price: Price;
+  feature: Feature;
+  totalUsage: number;
+  overage: number;
+  currency: string;
+  customer: Customer;
+  cusProduct: FullCusProduct;
+  logger: any;
+  periodStart: number;
+  periodEnd: number;
 }) => {
-  const { prices, optionsList, entitlements, products, customer } =
-    attachParams;
-  for (const price of prices) {
-    // Calculate amount
-    const options = getPriceOptions(price, optionsList);
-    const entitlement = getPriceEntitlement(price, entitlements);
-    const amount = getPriceAmount({
-      price,
-      options,
-      relatedEnt: entitlement,
-    });
+  let priceAmount = getPriceForOverage(price, overage);
+  let featureName = getFeatureName({
+    feature,
+    plural: totalUsage == 1 ? false : true,
+    capitalize: true,
+  });
 
-    let allowanceStr = "";
-    if (entitlement) {
-      allowanceStr =
-        entitlement.allowance_type == AllowanceType.Unlimited
-          ? "Unlimited"
-          : entitlement.allowance_type == AllowanceType.None
-          ? "None"
-          : `${entitlement.allowance}`;
-      allowanceStr = `x ${allowanceStr} (${entitlement.feature.name})`;
-    }
+  let config = price.config! as UsagePriceConfig;
+  let invoiceItem: Stripe.InvoiceItemCreateParams = {
+    invoice: stripeInvoiceId,
+    customer: customer.processor.id,
+    currency,
 
-    let product = getProductForPrice(price, products)!;
+    description: `${cusProduct.product.name} - ${featureName} x ${Math.round(
+      totalUsage
+    )}`,
 
-    await stripeCli.invoiceItems.create({
-      customer: customer.processor.id,
-      amount: amount * 100,
-      invoice: stripeInvoiceId,
-      description: `${product.name}${allowanceStr}`,
-    });
-  }
+    price_data: {
+      product: config.stripe_product_id!,
+      unit_amount: Math.max(Math.round(priceAmount * 100), 0),
+      currency,
+    },
+    period: {
+      start: periodStart,
+      end: periodEnd,
+    },
+  };
+
+  logger.info(
+    `🌟🌟 Created invoice item for ${
+      feature.name
+    } usage. Amount: ${priceAmount.toFixed(2)}, Total Usage: ${totalUsage}`
+  );
+
+  return invoiceItem;
 };

@@ -29,9 +29,11 @@ import { ACTIVE_STATUSES } from "../products/CusProductService.js";
 export const getExistingCusProducts = async ({
   product,
   cusProducts,
+  internalEntityId,
 }: {
   product: Product;
   cusProducts: FullCusProduct[];
+  internalEntityId?: string;
 }) => {
   if (!cusProducts || cusProducts.length === 0) {
     return {
@@ -41,25 +43,34 @@ export const getExistingCusProducts = async ({
     };
   }
 
-  let curMainProduct = cusProducts.find(
-    (cp: any) =>
-      cp.product.group === product.group &&
-      !cp.product.is_add_on &&
-      // ACTIVE_STATUSES.includes(cp.status) &&
-      (cp.status == CusProductStatus.Active ||
-        cp.status == CusProductStatus.PastDue) &&
-      !isOneOff(cp.customer_prices.map((cp: any) => cp.price))
-  );
+  let curMainProduct = cusProducts.find((cp: any) => {
+    let sameGroup = cp.product.group === product.group;
+    let isMain = !cp.product.is_add_on;
+    let isActive =
+      cp.status == CusProductStatus.Active ||
+      cp.status == CusProductStatus.PastDue;
+
+    let oneOff = isOneOff(cp.customer_prices.map((cp: any) => cp.price));
+
+    let sameEntity = internalEntityId
+      ? cp.internal_entity_id === internalEntityId
+      : true;
+
+    return sameGroup && isMain && isActive && !oneOff && sameEntity;
+  });
 
   const curSameProduct = cusProducts!.find(
-    (cp: any) => cp.product.internal_id === product.internal_id
+    (cp: any) =>
+      cp.product.internal_id === product.internal_id &&
+      (internalEntityId ? cp.internal_entity_id === internalEntityId : true)
   );
 
   const curScheduledProduct = cusProducts!.find(
     (cp: any) =>
       cp.status === CusProductStatus.Scheduled &&
       cp.product.group === product.group &&
-      !cp.product.is_add_on
+      !cp.product.is_add_on &&
+      (internalEntityId ? cp.internal_entity_id === internalEntityId : true)
   );
 
   return { curMainProduct, curSameProduct, curScheduledProduct };
@@ -164,6 +175,7 @@ export const handleExistingProduct = async ({
     await getExistingCusProducts({
       product,
       cusProducts: cusProducts || [],
+      internalEntityId: attachParams.internalEntityId,
     });
 
   if (isOneOff(product.prices)) {

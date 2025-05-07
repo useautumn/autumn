@@ -61,6 +61,16 @@ export const CustomerEntitlementsList = () => {
     return product?.name;
   };
 
+  const getEntity = (cusEnt: FullCustomerEntitlement) => {
+    const cusProduct = customer.products.find(
+      (p: any) => p.id === cusEnt.customer_product_id
+    );
+    const entity = entities.find(
+      (e: any) => e.internal_id === cusProduct?.internal_entity_id
+    );
+    return entity;
+  };
+
   const sortedEntitlements = filteredEntitlements;
 
   const handleSelectCusEntitlement = (cusEnt: FullCustomerEntitlement) => {
@@ -178,6 +188,7 @@ export const CustomerEntitlementsList = () => {
         (cusEnt: FullCustomerEntitlement & { unused: number }) => {
           const entitlement = cusEnt.entitlement;
           const allowanceType = entitlement.allowance_type;
+          // const entity = getEntity(cusEnt);
           return (
             <Row
               key={cusEnt.id}

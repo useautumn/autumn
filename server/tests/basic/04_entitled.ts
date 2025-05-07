@@ -20,7 +20,8 @@ const checkEntitledOnProduct = async ({
 }) => {
   // 1. Send events
   const allowance = totalAllowance || product.entitlements.metered1.allowance;
-  const randomNum = Math.floor(Math.random() * (allowance - 1));
+  // const randomNum = Math.floor(Math.random() * (allowance - 1));
+  const randomNum = 3;
 
   const batchUpdates = [];
   for (let i = 0; i < randomNum; i++) {

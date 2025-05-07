@@ -10,6 +10,7 @@ import {
   Customer,
   Feature,
   FeatureType,
+  FullCustomer,
   FullCustomerEntitlement,
   Organization,
 } from "@autumn/shared";
@@ -28,6 +29,7 @@ import {
   deductFromUsageBasedCusEnt,
 } from "./updateBalanceTask.js";
 import { JobName } from "@/queue/JobName.js";
+import { CusService } from "@/internal/customers/CusService.js";
 
 // 2. Get deductions for each feature
 const getFeatureDeductions = ({
@@ -114,25 +116,22 @@ const getFeatureDeductions = ({
 };
 
 const logUsageUpdate = ({
-  timeTaken,
   customer,
   features,
   cusEnts,
   featureDeductions,
-  properties,
   org,
   setUsage,
+  entityId,
 }: {
-  timeTaken: string;
   customer: Customer;
   features: Feature[];
   cusEnts: FullCustomerEntitlement[];
   featureDeductions: any;
-  properties: any;
   org: Organization;
   setUsage: boolean;
+  entityId?: string;
 }) => {
-  console.log(`   - getCusEntsInFeatures: ${timeTaken}ms`);
   console.log(
     `   - Customer: ${customer.id} (${customer.env}) | Org: ${
       org.slug
@@ -145,18 +144,16 @@ const logUsageUpdate = ({
     "   - CusEnts:",
     cusEnts.map((cusEnt: any) => {
       let balanceStr = cusEnt.balance;
-      // let { groupVal, balance } = getGroupBalanceFromProperties({
-      //   properties,
-      //   cusEnt,
-      //   features,
-      // });
-
       try {
         if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
           balanceStr = "Unlimited";
         }
       } catch (error) {
         balanceStr = "failed_to_get_balance";
+      }
+
+      if (entityId && cusEnt.entities) {
+        balanceStr = `${cusEnt.entities?.[entityId!]?.balance} [${entityId}]`;
       }
 
       return `${cusEnt.feature_id} - ${balanceStr} (${
@@ -171,7 +168,7 @@ const logUsageUpdate = ({
 // Main function to update customer balance
 export const updateUsage = async ({
   sb,
-  customer,
+  customerId,
   features,
   org,
   env,
@@ -182,7 +179,7 @@ export const updateUsage = async ({
   entityId,
 }: {
   sb: SupabaseClient;
-  customer: Customer;
+  customerId: string;
   features: Feature[];
   org: Organization;
   env: AppEnv;
@@ -190,19 +187,24 @@ export const updateUsage = async ({
   properties: any;
   setUsage: boolean;
   logger: any;
-  entityId: string;
+  entityId?: string;
 }) => {
-  const startTime = performance.now();
+  const customer = await CusService.getWithProducts({
+    sb,
+    idOrInternalId: customerId,
+    orgId: org.id,
+    env,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    entityId,
+  });
+
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
     sb,
-    internalCustomerId: customer.internal_id,
+    customer,
     internalFeatureIds: features.map((f) => f.internal_id!),
-    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-    withPrices: true,
     logger,
     reverseOrder: org.config?.reverse_deduction_order,
   });
-  const endTime = performance.now();
 
   // 1. Get deductions for each feature
   const featureDeductions = getFeatureDeductions({
@@ -213,31 +215,20 @@ export const updateUsage = async ({
   });
 
   logUsageUpdate({
-    timeTaken: (endTime - startTime).toFixed(2),
     customer,
     features,
     cusEnts,
     featureDeductions,
-    properties,
     org,
     setUsage,
+    entityId,
   });
-
-  // // 2. Handle group_by initialization
-  // await initGroupBalancesForEvent({
-  //   sb,
-  //   features,
-  //   cusEnts,
-  //   properties,
-  // });
 
   // 3. Return if no customer entitlements or features found
   if (cusEnts.length === 0 || features.length === 0) {
     console.log("   - No customer entitlements or features found");
     return;
   }
-
-  // 4. Perform deductions and update customer balance
 
   for (const obj of featureDeductions) {
     let { feature, deduction: toDeduct } = obj;
@@ -304,7 +295,8 @@ export const runUpdateUsageTask = async ({
   try {
     // 1. Update customer balance
     const {
-      customer,
+      internalCustomerId,
+      customerId,
       features,
       value,
       set_usage,
@@ -316,12 +308,12 @@ export const runUpdateUsageTask = async ({
 
     console.log("--------------------------------");
     console.log(
-      `HANDLING USAGE TASK FOR CUSTOMER (${customer.id}), ORG: ${org.slug}`
+      `HANDLING USAGE TASK FOR CUSTOMER (${customerId}), ORG: ${org.slug}`
     );
 
     const cusEnts: any = await updateUsage({
       sb,
-      customer,
+      customerId,
       features,
       value,
       properties,
@@ -336,26 +328,6 @@ export const runUpdateUsageTask = async ({
       return;
     }
     console.log("   ✅ Customer balance updated");
-
-    // // 2. Check if there's below threshold price
-    // const belowThresholdPrice = await getBelowThresholdPrice({
-    //   sb,
-    //   internalCustomerId: customer.internal_id,
-    //   cusEnts,
-    // });
-
-    // if (belowThresholdPrice) {
-    //   console.log("2. Below threshold price found");
-
-    //   await handleBelowThresholdInvoicing({
-    //     sb,
-    //     internalCustomerId: customer.internal_id,
-    //     belowThresholdPrice,
-    //     logger,
-    //   });
-    // } else {
-    //   console.log("   ✅ No below threshold price found");
-    // }
   } catch (error) {
     if (logger) {
       logger.use((log: any) => {

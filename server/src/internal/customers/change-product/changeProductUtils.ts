@@ -23,6 +23,7 @@ export const cancelScheduledProductIfExists = async ({
   let { curScheduledProduct } = await getExistingCusProducts({
     product: curFullProduct,
     cusProducts: attachParams.cusProducts!,
+    internalEntityId: attachParams.internalEntityId,
   });
 
   if (curScheduledProduct) {

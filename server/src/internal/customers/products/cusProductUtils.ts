@@ -23,6 +23,7 @@ import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import Stripe from "stripe";
 import {
   deleteScheduledIds,
+  getStripeSubs,
   subIsPrematurelyCanceled,
 } from "@/external/stripe/stripeSubUtils.js";
 import { sortCusEntsForDeduction } from "../entitlements/cusEntUtils.js";
@@ -89,12 +90,14 @@ export const cancelCusProductSubscriptions = async ({
   org,
   env,
   excludeIds,
+  expireImmediately = true,
 }: {
   sb: SupabaseClient;
   cusProduct: FullCusProduct;
   org: Organization;
   env: AppEnv;
   excludeIds?: string[];
+  expireImmediately?: boolean;
 }) => {
   // 1. Cancel all subscriptions
   const stripeCli = createStripeCli({
@@ -102,13 +105,31 @@ export const cancelCusProductSubscriptions = async ({
     env: env,
   });
 
+  let latestSubEnd: number | undefined;
+  if (cusProduct.subscription_ids && cusProduct.subscription_ids.length > 0) {
+    let stripeSubs = await getStripeSubs({
+      stripeCli,
+      subIds: cusProduct.subscription_ids,
+    });
+
+    latestSubEnd = stripeSubs[0].current_period_end;
+  }
+
   const cancelStripeSub = async (subId: string) => {
     if (excludeIds && excludeIds.includes(subId)) {
       return;
     }
 
     try {
-      await stripeCli.subscriptions.cancel(subId);
+      if (expireImmediately) {
+        await stripeCli.subscriptions.cancel(subId);
+      } else {
+        await stripeCli.subscriptions.update(subId, {
+          cancel_at: latestSubEnd || undefined,
+          cancel_at_period_end: latestSubEnd ? undefined : true,
+        });
+      }
+
       console.log(
         `Cancelled stripe subscription ${subId}, org: ${org.slug}, product: ${cusProduct.product.name}, customer: ${cusProduct.customer.id}`
       );

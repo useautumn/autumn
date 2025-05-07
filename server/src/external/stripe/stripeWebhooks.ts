@@ -76,6 +76,7 @@ stripeWebhookRouter.post(
             org,
             subscription: event.data.object,
             env,
+            logger,
           });
           break;
 

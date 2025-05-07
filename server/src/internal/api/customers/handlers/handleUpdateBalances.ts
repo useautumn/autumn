@@ -25,11 +25,12 @@ import { notNullish } from "@/utils/genUtils.js";
 const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
   // 1. Get customer
   const [customer, features, org] = await Promise.all([
-    CusService.getByIdOrInternalId({
+    CusService.getWithProducts({
       sb: req.sb,
       idOrInternalId: customerId,
       orgId: req.orgId,
       env: req.env,
+      entityId: req.params.entity_id,
     }),
     FeatureService.getFromReq(req),
     OrgService.getFromReq(req),
@@ -79,10 +80,8 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 
     const { cusEnts, cusPrices } = await getCusEntsInFeatures({
       sb: req.sb,
-      internalCustomerId: customer.internal_id,
+      customer,
       internalFeatureIds: featuresToUpdate.map((f) => f.internal_id!),
-      inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-      withPrices: true,
       logger: req.logtail,
     });
 

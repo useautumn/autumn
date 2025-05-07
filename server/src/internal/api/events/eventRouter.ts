@@ -3,11 +3,13 @@ import {
   APIVersion,
   AppEnv,
   CreateEventSchema,
+  CusProductStatus,
   Customer,
   ErrCode,
   Event,
   Feature,
   FeatureType,
+  FullCustomer,
   Organization,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
@@ -24,6 +26,8 @@ import { StatusCodes } from "http-status-codes";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
 
 export const eventsRouter = Router();
 
@@ -35,6 +39,7 @@ const getEventAndCustomer = async ({
   customer_data,
   event_data,
   logger,
+  entityId,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -42,6 +47,7 @@ const getEventAndCustomer = async ({
   customer_id: string;
   customer_data: any;
   event_data: any;
+  entityId: string;
   logger: any;
 }) => {
   if (!customer_id) {
@@ -52,7 +58,7 @@ const getEventAndCustomer = async ({
     });
   }
 
-  let customer: Customer;
+  let customer: FullCustomer;
 
   // 2. Check if customer ID is valid
   customer = await getOrCreateCustomer({
@@ -62,6 +68,8 @@ const getEventAndCustomer = async ({
     customerId: customer_id,
     customerData: customer_data,
     logger,
+    entityId,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
   });
 
   // 3. Insert event
@@ -92,16 +100,10 @@ const getEventAndCustomer = async ({
 
 const getAffectedFeatures = async ({
   req,
-  pg,
   event,
-  orgId,
-  env,
 }: {
   req: any;
-  pg: Client;
   event: Event;
-  orgId: string;
-  env: AppEnv;
 }) => {
   let features = await FeatureService.getFromReq(req);
 
@@ -127,27 +129,6 @@ const getAffectedFeatures = async ({
   });
 
   return [...featuresWithEvent, ...creditSystems];
-
-  // const { rows }: { rows: Feature[] } = await pg.query(`
-  //   with features_with_event as (
-  //     select * from features
-  //     where org_id = '${orgId}'
-  //     and env = '${env}'
-  //     and config -> 'filters' @> '[{"value": ["${event.event_name}"]}]'::jsonb
-  //   )
-
-  //   select * from features WHERE
-  //   org_id = '${orgId}'
-  //   and env = '${env}'
-  //   and EXISTS (
-  //     SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
-  //     schema_element->>'metered_feature_id' IN (SELECT id FROM features_with_event)
-  //   )
-  //   UNION all
-  //   select * from features_with_event
-  // `);
-
-  // return rows;
 };
 
 export const handleEventSent = async ({
@@ -179,14 +160,12 @@ export const handleEventSent = async ({
     customer_data,
     event_data,
     logger: req.logtail,
+    entityId: event_data.entity_id,
   });
 
   const affectedFeatures = await getAffectedFeatures({
     req,
-    pg: pg,
     event,
-    orgId,
-    env,
   });
 
   if (affectedFeatures.length == 0) {
@@ -199,36 +178,19 @@ export const handleEventSent = async ({
 
   if (affectedFeatures.length > 0) {
     const payload = {
-      customerId: customer.internal_id,
-      customer,
+      internalCustomerId: customer.internal_id,
+      customerId: customer.id,
+      entityId: event_data.entity_id,
       features: affectedFeatures,
       event,
       org,
       env,
     };
 
-    const queue = await QueueManager.getQueue({ useBackup: false });
-
-    try {
-      // Add timeout to queue operation
-      await queue.add("update-balance", payload);
-      // console.log("Added update-balance to queue");
-    } catch (error: any) {
-      try {
-        console.log("Adding update-balance to backup queue");
-        const backupQueue = await QueueManager.getQueue({ useBackup: true });
-        await backupQueue.add("update-balance", payload);
-      } catch (error: any) {
-        throw new RecaseError({
-          message: "Failed to add update-balance to queue (backup)",
-          code: "EVENT_QUEUE_ERROR",
-          statusCode: 500,
-          data: {
-            message: error.message,
-          },
-        });
-      }
-    }
+    await addTaskToQueue({
+      jobName: JobName.UpdateBalance,
+      payload,
+    });
 
     return { event, affectedFeatures, org };
   }
@@ -267,6 +229,4 @@ eventsRouter.post("", async (req: any, res: any) => {
     handleRequestError({ req, res, error, action: "POST event failed" });
     return;
   }
-
-  return;
 });

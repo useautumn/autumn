@@ -5,6 +5,7 @@ import {
   Customer,
   CustomerData,
   CustomerSchema,
+  FullCustomer,
   FullCustomerEntitlement,
   Organization,
   ProductSchema,
@@ -25,6 +26,7 @@ import {
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { handleCreateCustomer } from "./handlers/handleCreateCustomer.js";
+import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
 
 export const updateCustomerDetails = async ({
   sb,
@@ -191,58 +193,67 @@ export const processFullCusProducts = ({
 // IMPORTANT FUNCTION
 export const getCusEntsInFeatures = async ({
   sb,
-  internalCustomerId,
+  customer,
   internalFeatureIds,
-  inStatuses = [CusProductStatus.Active],
-  withPrices = false,
-  withProduct = false,
   logger,
   reverseOrder = false,
 }: {
   sb: SupabaseClient;
-  internalCustomerId: string;
+  customer: FullCustomer;
   internalFeatureIds?: string[];
-  inStatuses?: CusProductStatus[];
-  withPrices?: boolean;
-  withProduct?: boolean;
   logger: any;
   reverseOrder?: boolean;
 }) => {
-  const fullCusProducts = await CusService.getFullCusProducts({
-    sb,
-    internalCustomerId,
-    inStatuses: inStatuses,
-    withPrices: withPrices,
-    withProduct: withProduct,
-    logger,
+  let cusProducts = customer.customer_products;
+  let cusEnts = cusProducts.flatMap((cusProduct) => {
+    return cusProduct.customer_entitlements.map((cusEnt) => ({
+      ...cusEnt,
+      customer_product: cusProduct,
+    }));
   });
 
-  const cusEntsWithCusProduct = fullCusProductToCusEnts(
-    fullCusProducts!,
-    inStatuses,
-    reverseOrder
-  );
+  let cusPrices = cusProducts.flatMap((cusProduct) => {
+    return cusProduct.customer_prices || [];
+  });
 
-  if (!cusEntsWithCusProduct) {
-    return { cusEnts: [] };
-  }
-
-  let cusEnts: FullCustomerEntitlement[] = [];
   if (internalFeatureIds) {
-    cusEnts = cusEntsWithCusProduct.filter((cusEnt) =>
+    cusEnts = cusEnts.filter((cusEnt) =>
       internalFeatureIds.includes(cusEnt.internal_feature_id)
     );
-  } else {
-    cusEnts = cusEntsWithCusProduct;
   }
 
-  // sortCusEntsForDeduction(cusEnts, reverseOrder);
-
-  if (!withPrices) {
-    return { cusEnts, cusPrices: undefined };
+  if (customer.entity) {
+    let entity = customer.entity;
+    cusEnts = cusEnts.filter(
+      (cusEnt) =>
+        cusEnt.customer_product.internal_entity_id === entity.internal_id ||
+        cusEnt.entities
+    );
   }
 
-  const cusPrices = fullCusProductToCusPrices(fullCusProducts, inStatuses);
+  sortCusEntsForDeduction(cusEnts, reverseOrder);
+  // // const cusEntsWithCusProduct = fullCusProductToCusEnts(
+  // //   customer.customer_products,
+  // //   [CusProductStatus.Active, CusProductStatus.PastDue],
+  // //   reverseOrder
+  // // );
+
+  // if (!cusEntsWithCusProduct) {
+  //   return { cusEnts: [] };
+  // }
+
+  // let cusEnts: FullCustomerEntitlement[] = [];
+  // if (internalFeatureIds) {
+  //   cusEnts = cusEntsWithCusProduct.filter((cusEnt) =>
+  //     internalFeatureIds.includes(cusEnt.internal_feature_id)
+  //   );
+  // } else {
+  //   cusEnts = cusEntsWithCusProduct;
+  // }
+
+  // // sortCusEntsForDeduction(cusEnts, reverseOrder);
+
+  // const cusPrices = fullCusProductToCusPrices(fullCusProducts, inStatuses);
 
   return { cusEnts, cusPrices };
 };

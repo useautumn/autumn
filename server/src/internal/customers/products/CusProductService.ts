@@ -254,6 +254,7 @@ export class CusProductService {
     env,
     inStatuses,
     withCusEnts = false,
+    withCusPrices = false,
   }: {
     sb: SupabaseClient;
     stripeSubId: string;
@@ -261,6 +262,7 @@ export class CusProductService {
     env: AppEnv;
     inStatuses?: string[];
     withCusEnts?: boolean;
+    withCusPrices?: boolean;
   }) {
     const query = sb
       .from("customer_products")
@@ -268,6 +270,10 @@ export class CusProductService {
         `*, product:products(*), customer:customers!inner(*)${
           withCusEnts
             ? ", customer_entitlements:customer_entitlements(*, entitlement:entitlements!inner(*, feature:features!inner(*)))"
+            : ""
+        }${
+          withCusPrices
+            ? ", customer_prices:customer_prices(*, price:prices!inner(*))"
             : ""
         }` as "*"
       )

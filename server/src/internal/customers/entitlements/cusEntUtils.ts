@@ -176,7 +176,9 @@ export const getCusEntBalance = ({
 };
 
 export const sortCusEntsForDeduction = (
-  cusEnts: FullCustomerEntitlement[],
+  cusEnts: (FullCustomerEntitlement & {
+    customer_product?: FullCusProduct;
+  })[],
   reverseOrder: boolean = false
 ) => {
   let intervalOrder: Record<EntInterval, number> = {
@@ -263,13 +265,24 @@ export const sortCusEntsForDeduction = (
     }
 
     // 3. Sort by interval
-
-    if (aEnt.interval && bEnt.interval) {
+    if (aEnt.interval && bEnt.interval && aEnt.interval != bEnt.interval) {
       if (reverseOrder) {
         return intervalOrder[bEnt.interval] - intervalOrder[aEnt.interval];
       } else {
         return intervalOrder[aEnt.interval] - intervalOrder[bEnt.interval];
       }
+    }
+
+    // Check if a is main product
+    let aIsAddOn = a.customer_product?.product?.is_add_on;
+    let bIsAddOn = b.customer_product?.product?.is_add_on;
+
+    if (aIsAddOn && !bIsAddOn) {
+      return 1;
+    }
+
+    if (!aIsAddOn && bIsAddOn) {
+      return -1;
     }
 
     // 4. Sort by created_at
@@ -494,7 +507,7 @@ export const getTotalNegativeBalance = ({
           .mul(billingUnits)
           .toNumber();
       }
-      totalNegative += entities[group].balance;
+      totalNegative += balance;
     }
   }
 
@@ -507,11 +520,13 @@ export const getExistingUsageFromCusProducts = ({
   cusProducts,
   entities,
   carryExistingUsages = false,
+  internalEntityId,
 }: {
   entitlement: EntitlementWithFeature;
   cusProducts?: FullCusProduct[];
   entities: Entity[];
   carryExistingUsages?: boolean;
+  internalEntityId?: string;
 }) => {
   if (!entitlement || entitlement.feature.type === FeatureType.Boolean) {
     return 0;
@@ -535,7 +550,11 @@ export const getExistingUsageFromCusProducts = ({
   // NOTE: Assuming that feature entitlements are unique to each main product...
   let existingCusEnt = cusProducts
     ?.filter(
-      (cp) => cp.status === CusProductStatus.Active && !cp.product.is_add_on
+      (cp) =>
+        (cp.status === CusProductStatus.Active ||
+          cp.status === CusProductStatus.PastDue) &&
+        !cp.product.is_add_on &&
+        (internalEntityId ? cp.internal_entity_id === internalEntityId : true)
     )
     .flatMap((cp) => cp.customer_entitlements)
     .find((ce) => ce.internal_feature_id === entitlement.internal_feature_id);

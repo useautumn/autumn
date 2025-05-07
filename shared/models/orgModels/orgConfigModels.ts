@@ -13,6 +13,7 @@ export const OrgConfigSchema = z.object({
 
   include_past_due: z.boolean().default(false),
   sync_status: z.boolean().default(true),
+  merge_billing_cycles: z.boolean().default(true),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;

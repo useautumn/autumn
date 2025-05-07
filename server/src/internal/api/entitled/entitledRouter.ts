@@ -101,8 +101,6 @@ const getMeteredEntitledResult = ({
     // 1. Skip if feature not among cusEnt
 
     if (!cusEntsContainFeature({ cusEnts, feature })) {
-      console.log("Feature not found", feature.id);
-
       continue;
     }
 
@@ -246,7 +244,8 @@ const getCusEntsAndFeatures = async ({
   sb: SupabaseClient;
   logger: any;
 }) => {
-  let { customer_id, feature_id, customer_data } = req.body;
+  let { customer_id, feature_id, customer_data, entity_id } = req.body;
+
   let { sb, orgId, env } = req;
 
   // 1. Get org and features
@@ -267,8 +266,17 @@ const getCusEntsAndFeatures = async ({
       customerData: customer_data,
       inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
       logger,
+      entityId: entity_id,
     }),
   ]);
+
+  if (entity_id && !customer.entity) {
+    throw new RecaseError({
+      message: `Entity ${entity_id} not found for customer ${customer_id}`,
+      code: ErrCode.EntityNotFound,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
 
   const { feature, creditSystems, allFeatures } = featureRes;
 
@@ -300,7 +308,25 @@ const getCusEntsAndFeatures = async ({
     });
   });
 
-  return { cusEnts, feature, creditSystems, org, cusProducts, allFeatures };
+  if (customer.entity) {
+    cusEnts = cusEnts.filter((cusEnt) => {
+      return (
+        notNullish(cusEnt.entities) ||
+        cusEnt.customer_product.internal_entity_id ===
+          customer.entity.internal_id
+      );
+    });
+  }
+
+  return {
+    cusEnts,
+    feature,
+    creditSystems,
+    org,
+    cusProducts,
+    allFeatures,
+    entity: customer.entity,
+  };
 };
 
 entitledRouter.post("", async (req: any, res: any) => {

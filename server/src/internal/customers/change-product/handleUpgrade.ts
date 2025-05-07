@@ -400,6 +400,7 @@ export const handleUpgrade = async ({
       fromRequest: fromReq,
       carryExistingUsages,
       keepResetIntervals: newVersion, // keep reset intervals if upgrading version (migrations)
+      disableMerge: true,
     });
 
     if (notNullish(curCusProduct.subscription_ids)) {

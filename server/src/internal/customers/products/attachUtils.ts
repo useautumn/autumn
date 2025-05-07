@@ -6,6 +6,7 @@ import {
   CustomerData,
   Entitlement,
   EntitlementWithFeature,
+  Entity,
   Feature,
   FeatureOptions,
   FreeTrial,
@@ -20,9 +21,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 
 import {
   getFreeTrialAfterFingerprint,
@@ -30,7 +29,6 @@ import {
 } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 import { StatusCodes } from "http-status-codes";
-import { CusService } from "../CusService.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
@@ -38,41 +36,6 @@ import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCu
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { Decimal } from "decimal.js";
-
-const getOrCreateCustomerAndProducts = async ({
-  sb,
-  customerId,
-  customerData,
-  org,
-  env,
-  logger,
-}: {
-  sb: SupabaseClient;
-  customerId: string;
-  customerData?: CustomerData;
-  org: Organization;
-  env: AppEnv;
-  logger: any;
-}) => {
-  const customer = await getOrCreateCustomer({
-    sb,
-    org,
-    env,
-    customerId,
-    customerData,
-    logger,
-    inStatuses: [
-      CusProductStatus.Active,
-      CusProductStatus.Scheduled,
-      CusProductStatus.PastDue,
-    ],
-  });
-
-  // Handle existing cus product...
-  const cusProducts = customer.customer_products;
-
-  return { customer, cusProducts };
-};
 
 const getProducts = async ({
   sb,
@@ -187,7 +150,7 @@ const getProducts = async ({
   return [];
 };
 
-const getCustomerProductsFeaturesAndOrg = async ({
+const getCustomerAndProducts = async ({
   sb,
   org,
   customerId,
@@ -198,6 +161,7 @@ const getCustomerProductsFeaturesAndOrg = async ({
   env,
   logger,
   version,
+  entityId,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -208,20 +172,30 @@ const getCustomerProductsFeaturesAndOrg = async ({
   env: AppEnv;
   logger: any;
   version?: number;
+  entityId?: string;
 }) => {
-  const [cusRes, products] = await Promise.all([
-    getOrCreateCustomerAndProducts({
+  const [customer, products] = await Promise.all([
+    getOrCreateCustomer({
       sb,
-      customerId,
-      customerData,
       org,
       env,
+      customerId,
+      customerData,
       logger,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.Scheduled,
+        CusProductStatus.PastDue,
+      ],
+      entityId,
+      withEntities: true,
     }),
     getProducts({ sb, productId, productIds, orgId: org.id, env, version }),
   ]);
 
-  return { ...cusRes, products };
+  let cusProducts = customer.customer_products;
+
+  return { customer, cusProducts, products };
 };
 
 const getEntsWithFeature = (ents: Entitlement[], features: Feature[]) => {
@@ -300,6 +274,7 @@ export const getFullCusProductData = async ({
   customerId,
   customerData,
   productId,
+  entityId,
   productIds,
   orgId,
   itemsInput,
@@ -315,6 +290,7 @@ export const getFullCusProductData = async ({
   sb: SupabaseClient;
   customerId: string;
   customerData?: Customer;
+  entityId?: string;
   productId?: string;
   productIds?: string[];
   orgId: string;
@@ -327,24 +303,17 @@ export const getFullCusProductData = async ({
   version?: number;
 }) => {
   // 1. Get customer, product, org & features
-  const { customer, products, cusProducts } =
-    await getCustomerProductsFeaturesAndOrg({
-      org,
-      sb,
-      customerId,
-      customerData,
-      productId,
-      productIds,
-      env,
-      logger,
-      version,
-    });
-
-  const entities = await EntityService.get({
+  const { customer, products, cusProducts } = await getCustomerAndProducts({
+    org,
     sb,
-    internalCustomerId: customer.internal_id,
-    orgId,
+    customerId,
+    customerData,
+    productId,
+    productIds,
     env,
+    logger,
+    version,
+    entityId,
   });
 
   if (!isCustom) {
@@ -358,8 +327,6 @@ export const getFullCusProductData = async ({
         internalCustomerId: customer.internal_id,
       });
     }
-
-
 
     return {
       customer,
@@ -377,8 +344,11 @@ export const getFullCusProductData = async ({
         .flat() as EntitlementWithFeature[],
       freeTrial,
       cusProducts,
-      entities,
-
+      entities: customer.entities,
+      entityId: entityId,
+      internalEntityId: entityId
+        ? customer.entities.find((e) => e.id === entityId)?.internal_id
+        : undefined,
     };
   }
 
@@ -454,6 +424,10 @@ export const getFullCusProductData = async ({
     entitlements: entitlements as EntitlementWithFeature[],
     freeTrial: uniqueFreeTrial,
     cusProducts,
-    entities,
+    entities: customer.entities,
+    entityId: entityId,
+    internalEntityId: entityId
+      ? customer.entities.find((e) => e.internal_id === entityId)?.internal_id
+      : undefined,
   };
 };

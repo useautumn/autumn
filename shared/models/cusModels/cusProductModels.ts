@@ -45,10 +45,12 @@ export enum CusProductStatus {
 
 export const CusProductSchema = z.object({
   id: z.string(),
-  internal_customer_id: z.string(),
   internal_product_id: z.string(),
-  customer_id: z.string().nullish(),
   product_id: z.string(),
+  internal_customer_id: z.string(),
+  customer_id: z.string().nullish(),
+  internal_entity_id: z.string().nullish(),
+  entity_id: z.string().nullish(),
   created_at: z.number(),
 
   // Useful for event-driven subscriptions (and usage-based to check limits)
