@@ -183,22 +183,33 @@ export const handleCheckoutSessionCompleted = async ({
 
     for (const item of subscription.items.data) {
       let stripePriceId = item.price.id;
-      let autumnPrice = attachParams.prices.find(
+
+      // 1. Check for arrear prorated price
+      let arrearProratedPrice = attachParams.prices.find(
         (p) =>
           (p.config! as UsagePriceConfig).stripe_placeholder_price_id ==
           stripePriceId
       );
 
-      if (!autumnPrice) {
+      if (arrearProratedPrice) {
+        let config = arrearProratedPrice.config as UsagePriceConfig;
+        await stripeCli.subscriptionItems.update(item.id, {
+          price: config.stripe_price_id!,
+          quantity: 0,
+        });
         continue;
       }
 
-      // Add new subscription item
-      let config = autumnPrice.config as UsagePriceConfig;
-      await stripeCli.subscriptionItems.update(item.id, {
-        price: config.stripe_price_id!,
-        quantity: 0,
-      });
+      let arrearPrice = attachParams.prices.find(
+        (p) =>
+          p.config!.stripe_price_id == stripePriceId &&
+          getBillingType(p.config!) == BillingType.UsageInArrear
+      );
+
+      if (arrearPrice) {
+        await stripeCli.subscriptionItems.del(item.id);
+        continue;
+      }
     }
   }
 

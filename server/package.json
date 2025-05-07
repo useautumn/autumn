@@ -45,7 +45,7 @@
     "@types/express": "^5.0.0",
     "@unkey/api": "^0.29.0",
     "ai": "^4.3.10",
-    "autumn-js": "^0.0.27",
+    "autumn-js": "^0.0.28",
     "body-parser": "^1.20.3",
     "bullmq": "^5.31.1",
     "chai": "^5.1.2",
