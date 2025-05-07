@@ -9,7 +9,7 @@ export const getFeatureName = ({
 }: {
   feature: Feature;
   plural: boolean;
-  capitalize: boolean;
+  capitalize?: boolean;
 }) => {
   let featureName = feature.name;
 
