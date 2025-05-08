@@ -4,6 +4,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import {
   CusProductStatus,
   CustomerEntitlementSchema,
+  Entity,
   EntityExpand,
   EntityResponseSchema,
   ErrCode,
@@ -47,6 +48,9 @@ export const handleGetEntity = async (req: any, res: any) =>
       });
 
       let entity = entities[0];
+      let fullEntity = fullEntities.find(
+        (e: Entity) => e.id == entityId
+      ) as Entity;
 
       let withInvoices = expand.includes(EntityExpand.Invoices);
       let invoices: InvoiceResponse[] | undefined;
@@ -55,7 +59,7 @@ export const handleGetEntity = async (req: any, res: any) =>
         invoices = await getInvoicesForResponse({
           sb,
           internalCustomerId: customer.internal_id,
-          internalEntityId: fullEntities[0].internal_id,
+          internalEntityId: fullEntity.internal_id,
         });
       }
 
