@@ -74,11 +74,11 @@ export const SelectEntity = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  const entity = entities.find((entity: Entity) => entity.id === entityId);
-
-  if (entities.length === 0) {
+  if (!entities || entities.length === 0) {
     return null;
   }
+
+  const entity = entities.find((entity: Entity) => entity.id === entityId);
 
   return (
     <>

@@ -57,13 +57,13 @@ export const ManageProduct = ({
   version?: number;
 }) => {
   const env = useEnv();
-  let { product, entityId, customer, setEntityId } = useProductContext();
+  let { product, entityId, customer } = useProductContext();
 
   const navigate = useNavigate();
 
-  const entity = customer?.entities.find(
-    (entity: Entity) => entity.id === entityId
-  );
+  // const entity = customer?.entities.find(
+  //   (entity: Entity) => entity.id === entityId
+  // );
 
   return (
     <div className="flex flex-col gap-4">
