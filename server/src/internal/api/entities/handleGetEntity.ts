@@ -4,9 +4,11 @@ import { CusService } from "@/internal/customers/CusService.js";
 import {
   CusProductStatus,
   CustomerEntitlementSchema,
+  EntityExpand,
   EntityResponseSchema,
   ErrCode,
   FullCusProduct,
+  InvoiceResponse,
 } from "@autumn/shared";
 import {
   getCusFeaturesResponse,
@@ -17,6 +19,10 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import Stripe from "stripe";
 import RecaseError from "@/utils/errorUtils.js";
+import { parseEntityExpand } from "./entityUtils.js";
+import { getCusInvoices } from "../customers/cusUtils.js";
+import { getEntityResponse } from "./getEntityUtils.js";
+import { getInvoicesForResponse } from "@/internal/customers/invoices/invoiceUtils.js";
 
 export const handleGetEntity = async (req: any, res: any) =>
   routeHandler({
@@ -26,68 +32,37 @@ export const handleGetEntity = async (req: any, res: any) =>
     handler: async (req, res) => {
       const entityId = req.params.entity_id as string;
       const customerId = req.params.customer_id as string;
+      const expand = parseEntityExpand(req.query.expand);
 
       let { orgId, env, sb, logtail: logger } = req;
 
-      let customer = await CusService.getWithProducts({
-        idOrInternalId: customerId,
-        orgId,
-        env,
+      let org = await OrgService.getFromReq(req);
+
+      let { entities, customer, fullEntities } = await getEntityResponse({
         sb,
-        inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-        entityId,
-        withEntities: true,
+        entityIds: [entityId],
+        org,
+        env,
+        customerId,
       });
 
-      if (!customer.entity) {
-        throw new RecaseError({
-          message: `Entity ${entityId} not found for customer ${customerId}`,
-          code: ErrCode.EntityNotFound,
-          statusCode: 400,
+      let entity = entities[0];
+
+      let withInvoices = expand.includes(EntityExpand.Invoices);
+      let invoices: InvoiceResponse[] | undefined;
+
+      if (withInvoices) {
+        invoices = await getInvoicesForResponse({
+          sb,
+          internalCustomerId: customer.internal_id,
+          internalEntityId: fullEntities[0].internal_id,
         });
       }
 
-      let org = await OrgService.getFromReq(req);
-
-      let cusProducts = customer.customer_products.filter(
-        (p: FullCusProduct) =>
-          p.internal_entity_id == customer.entity.internal_id
-      );
-
-      let stripeCli = createStripeCli({
-        org,
-        env,
-      });
-
-      let subs = (await getStripeSubs({
-        stripeCli,
-        subIds: cusProducts.flatMap(
-          (p: FullCusProduct) => p.subscription_ids || []
-        ),
-      })) as Stripe.Subscription[];
-
-      let products = await getCusProductsResponse({
-        cusProducts,
-        subs,
-        org,
-      });
-
-      let features = await getCusFeaturesResponse({
-        cusProducts,
-        org,
-        entities: customer.entities,
-      });
-
-      let entity = customer.entity;
       res.status(200).json(
         EntityResponseSchema.parse({
-          id: entity.id,
-          name: entity.name,
-          customer_id: customerId,
-          created_at: entity.created_at,
-          env,
-          products,
-          features,
+          ...entity,
+          invoices: withInvoices ? invoices : undefined,
         })
       );
     },

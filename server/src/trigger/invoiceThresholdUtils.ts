@@ -100,6 +100,7 @@ const handleInvoicePaymentFailure = async ({
     internalCustomerId: fullCusProduct.internal_customer_id,
     productIds: [fullCusProduct.product.id],
     internalProductIds: [fullCusProduct.internal_product_id],
+    internalEntityId: fullCusProduct.internal_entity_id || undefined,
     status: InvoiceStatus.Void,
     org: fullOrg,
   });
@@ -202,6 +203,7 @@ const invoiceCustomer = async ({
     internalCustomerId: customer.internal_id,
     productIds: [fullCusProduct.product.id],
     internalProductIds: [fullCusProduct.internal_product_id],
+    internalEntityId: fullCusProduct.internal_entity_id || undefined,
     status: InvoiceStatus.Paid,
     org: fullOrg,
   });

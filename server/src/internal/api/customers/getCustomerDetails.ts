@@ -23,6 +23,9 @@ import {
   CusEntResponse,
   CusEntResponseV2,
   CusProductResponse,
+  FullCustomer,
+  CusExpand,
+  InvoiceResponse,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { EntityService } from "../entities/EntityService.js";
@@ -120,50 +123,30 @@ export const getCustomerDetails = async ({
   params = {},
   logger,
   cusProducts,
+  expand,
 }: {
-  customer: Customer;
+  customer: FullCustomer;
   sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   params?: any;
   logger: any;
-  cusProducts?: FullCusProduct[];
+  cusProducts: FullCusProduct[];
+  expand: CusExpand[];
 }) => {
-  // 1. Get full customer products & processed invoices
-  const [fullCusProducts, processedInvoices, entities] = await Promise.all([
-    (async () => {
-      if (cusProducts) {
-        return cusProducts;
-      }
-
-      return await CusService.getFullCusProducts({
-        sb,
-        internalCustomerId: customer.internal_id,
-        withProduct: true,
-        withPrices: true,
-        inStatuses: [
-          CusProductStatus.Active,
-          CusProductStatus.PastDue,
-          CusProductStatus.Scheduled,
-        ],
-        logger,
-      });
-    })(),
-    getCusInvoices({
-      sb,
-      internalCustomerId: customer.internal_id,
-      limit: 20,
-    }),
-    EntityService.getByInternalCustomerId({
-      sb,
-      internalCustomerId: customer.internal_id,
-      logger,
-    }),
-  ]);
-
   let subs;
-  let subIds = fullCusProducts.flatMap(
-    (cp: FullCusProduct) => cp.subscription_ids
+
+  let cusEnts = fullCusProductToCusEnts(cusProducts) as any;
+
+  const balances = await getCusBalances({
+    cusEntsWithCusProduct: cusEnts,
+    cusPrices: fullCusProductToCusPrices(cusProducts),
+    entities: customer.entities,
+    org,
+  });
+
+  let subIds = cusProducts.flatMap(
+    (cp: FullCusProduct) => cp.subscription_ids || []
   );
 
   if (org.config.api_version >= BREAK_API_VERSION && org.stripe_connected) {
@@ -178,19 +161,8 @@ export const getCustomerDetails = async ({
     });
   }
 
-  // 2. Initialize group by balances
-  let cusEnts = fullCusProductToCusEnts(fullCusProducts) as any;
-
-  // 3. Get entitlements
-  const balances = await getCusBalances({
-    cusEntsWithCusProduct: cusEnts,
-    cusPrices: fullCusProductToCusPrices(fullCusProducts),
-    entities,
-    org,
-  });
-
   const { main, addOns } = processFullCusProducts({
-    fullCusProducts,
+    fullCusProducts: cusProducts,
     subs,
     org,
   });
@@ -224,19 +196,24 @@ export const getCustomerDetails = async ({
         features,
         entList,
       });
-      let productObject: Record<string, CusProductResponse> = {};
-      for (let product of products) {
-        productObject[product.id] = product as any;
-      }
-      products = productObject;
+    }
+
+    let withInvoices = expand.includes(CusExpand.Invoices);
+    let invoices: InvoiceResponse[] | undefined;
+    if (withInvoices) {
+      invoices = await getCusInvoices({
+        sb,
+        internalCustomerId: customer.internal_id,
+      });
     }
 
     let cusResponse = {
       ...CusResponseSchema.parse({
         ...customer,
         stripe_id: customer.processor?.id,
-        products,
         features: entList,
+        products,
+        invoices: withInvoices ? invoices : undefined,
       }),
     };
 
@@ -249,6 +226,12 @@ export const getCustomerDetails = async ({
       return cusResponse;
     }
   } else {
+    const processedInvoices = await getCusInvoices({
+      sb,
+      internalCustomerId: customer.internal_id,
+      limit: 20,
+    });
+
     return {
       customer: CustomerResponseSchema.parse(customer),
       products: main,

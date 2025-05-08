@@ -234,6 +234,7 @@ const invoiceForUsageImmediately = async ({
       sb,
       stripeInvoice: finalizedInvoice,
       internalCustomerId: customer.internal_id,
+      internalEntityId: curCusProduct.internal_entity_id || undefined,
       org: org,
       productIds: [curProduct.id],
       internalProductIds: [curProduct.internal_id],

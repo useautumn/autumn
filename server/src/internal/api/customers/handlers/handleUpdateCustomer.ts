@@ -7,6 +7,7 @@ import { routeHandler } from "@/utils/routerUtils.js";
 import { CreateCustomerSchema, ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../getCustomerDetails.js";
+import { parseCusExpand } from "../cusUtils.js";
 
 export const handleUpdateCustomer = async (req: any, res: any) =>
   routeHandler({
@@ -87,19 +88,29 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         );
       }
 
-      const updatedCustomer = await CusService.update({
+      await CusService.update({
         sb: req.sb,
         internalCusId: originalCustomer.internal_id,
         update: newCusData,
       });
 
+      let finalCustomer = await CusService.getWithProducts({
+        sb: req.sb,
+        idOrInternalId: originalCustomer.internal_id,
+        orgId: req.orgId,
+        env: req.env,
+        withEntities: true,
+      });
+
       // res.status(200).json({ customer: updatedCustomer });
       let customerDetails = await getCustomerDetails({
         sb: req.sb,
-        customer: updatedCustomer,
+        customer: finalCustomer,
         org,
         env: req.env,
         logger: req.logtail,
+        cusProducts: finalCustomer.customer_products,
+        expand: parseCusExpand(req.query.expand),
       });
 
       res.status(200).json(customerDetails);

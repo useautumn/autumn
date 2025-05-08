@@ -1,10 +1,6 @@
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 
-import {
-  APIVersion,
-  CreateCustomerSchema,
-  CustomerResponseSchema,
-} from "@autumn/shared";
+import { APIVersion } from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
 import { ErrorMessages } from "@/errors/errMessages.js";
 import { Router } from "express";
@@ -13,17 +9,13 @@ import { CusService } from "../../customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import { createStripeCli } from "@/external/stripe/utils.js";
-import {
-  deleteCusById,
-  handleDeleteCustomer,
-} from "./handlers/cusDeleteHandlers.js";
+import { handleDeleteCustomer } from "./handlers/cusDeleteHandlers.js";
 import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
 import { handlePostCustomerRequest } from "./handlers/handleCreateCustomer.js";
 import { entityRouter } from "../entities/entityRouter.js";
-import { getCustomerDetails } from "./getCustomerDetails.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
 import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";
 import { handleGetCustomer } from "./handlers/handleGetCustomer.js";

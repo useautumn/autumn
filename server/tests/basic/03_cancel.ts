@@ -59,6 +59,7 @@ describe(`${chalk.yellowBright(
 
     // 1. Cancel pro product
     const cusRes: any = await AutumnCli.getCustomer(customerId);
+
     const proProduct = cusRes.products.find(
       (p: any) => p.id === products.pro.id
     );

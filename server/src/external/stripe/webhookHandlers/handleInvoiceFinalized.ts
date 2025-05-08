@@ -67,6 +67,7 @@ export const handleInvoiceFinalized = async ({
       internalCustomerId: activeProducts[0].internal_customer_id,
       productIds: activeProducts.map((p) => p.product.id),
       internalProductIds: activeProducts.map((p) => p.internal_product_id),
+      internalEntityId: activeProducts[0].internal_entity_id,
       status: invoice.status as InvoiceStatus,
       org,
     });

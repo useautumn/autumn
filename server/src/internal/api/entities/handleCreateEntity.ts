@@ -5,7 +5,13 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { EntityService } from "./EntityService.js";
-import { AppEnv, CusProductStatus, Entity, ErrCode } from "@autumn/shared";
+import {
+  APIVersion,
+  AppEnv,
+  CusProductStatus,
+  Entity,
+  ErrCode,
+} from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { getActiveCusProductStatuses } from "@/utils/constants.js";
@@ -14,6 +20,7 @@ import {
   getCusEntMasterBalance,
   getUnlimitedAndUsageAllowed,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getEntityResponse } from "./getEntityUtils.js";
 
 export const constructEntity = ({
   inputEntity,
@@ -350,11 +357,30 @@ export const handleCreateEntity = async (req: any, res: any) => {
       }
     }
 
+    if (org.api_version == APIVersion.v1) {
+      res.status(200).json({
+        success: true,
+      });
+      return;
+    }
+
+    let { entities } = await getEntityResponse({
+      sb,
+      entityIds: inputEntities.map((e: any) => e.id),
+      org,
+      env,
+      customerId: customer.id,
+    });
+
     logger.info(`  Created / replaced entities!`);
 
-    res.status(200).json({
-      success: true,
-    });
+    if (Array.isArray(req.body)) {
+      res.status(200).json({
+        list: entities,
+      });
+    } else {
+      res.status(200).json(entities[0]);
+    }
   } catch (error) {
     handleRequestError({ error, req, res, action: "create entity" });
   }

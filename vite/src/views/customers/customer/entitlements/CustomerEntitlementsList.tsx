@@ -25,7 +25,7 @@ export const CustomerEntitlementsList = () => {
   );
   const [showExpired, setShowExpired] = useState(false);
 
-  const { products, customer, entities } = useCustomerContext();
+  const { products, customer, entities, entityId } = useCustomerContext();
   const [selectedCusEntitlement, setSelectedCusEntitlement] =
     useState<FullCustomerEntitlement | null>(null);
 
@@ -37,6 +37,7 @@ export const CustomerEntitlementsList = () => {
       );
       const isExpired = cusProduct?.status === "expired";
       const isScheduled = cusProduct?.status === "scheduled";
+
       // Filter by feature type
       const featureTypeMatches =
         featureType === FeatureType.Boolean
@@ -47,7 +48,19 @@ export const CustomerEntitlementsList = () => {
       // Filter by expired status
       const expiredStatusMatches = showExpired ? true : !isExpired;
 
-      return featureTypeMatches && expiredStatusMatches && !isScheduled;
+      // Filter by entity
+      const entity = entities.find((e: any) => e.id === entityId);
+      let entityMatches =
+        customer.products.find((p: any) => p.id === cusEnt.customer_product_id)
+          ?.internal_entity_id === entity?.internal_id ||
+        Object.keys(cusEnt.entities || {}).includes(entity?.id);
+
+      return (
+        featureTypeMatches &&
+        expiredStatusMatches &&
+        !isScheduled &&
+        (entityId ? entityMatches : true)
+      );
     }
   );
 
@@ -59,16 +72,6 @@ export const CustomerEntitlementsList = () => {
     const product = products.find((p: any) => p.id === cusProduct?.product_id);
 
     return product?.name;
-  };
-
-  const getEntity = (cusEnt: FullCustomerEntitlement) => {
-    const cusProduct = customer.products.find(
-      (p: any) => p.id === cusEnt.customer_product_id
-    );
-    const entity = entities.find(
-      (e: any) => e.internal_id === cusProduct?.internal_entity_id
-    );
-    return entity;
   };
 
   const sortedEntitlements = filteredEntitlements;
@@ -209,6 +212,10 @@ export const CustomerEntitlementsList = () => {
                     "Unlimited"
                   ) : allowanceType == AllowanceType.None ? (
                     "None"
+                  ) : entityId && cusEnt.entities?.[entityId] ? (
+                    <div className="flex items-center gap-2">
+                      {cusEnt.entities?.[entityId]?.balance}{" "}
+                    </div>
                   ) : (
                     <>
                       {cusEnt.balance}{" "}

@@ -31,7 +31,6 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
-import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";

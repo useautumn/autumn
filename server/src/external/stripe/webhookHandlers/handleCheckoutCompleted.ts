@@ -294,6 +294,7 @@ export const handleCheckoutSessionCompleted = async ({
         internalCustomerId: attachParams.customer.internal_id,
         productIds: products.map((p) => p.id),
         internalProductIds: products.map((p) => p.internal_id),
+        internalEntityId: attachParams.internalEntityId,
       });
 
       console.log("   ✅ checkout.completed: successfully created invoice");

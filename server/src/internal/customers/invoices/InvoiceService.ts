@@ -1,15 +1,16 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   Invoice,
+  InvoiceResponse,
   InvoiceStatus,
   LoggerAction,
   Organization,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { generateId } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, generateId } from "@/utils/genUtils.js";
 import { Autumn } from "@/external/autumn/autumnCli.js";
 import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils.js";
-import { logger } from "@trigger.dev/sdk/v3";
+
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 
 export const processInvoice = (invoice: Invoice) => {
@@ -21,26 +22,33 @@ export const processInvoice = (invoice: Invoice) => {
     currency: invoice.currency,
     created_at: invoice.created_at,
     hosted_invoice_url: invoice.hosted_invoice_url,
-  };
+  } as InvoiceResponse;
 };
 
 export class InvoiceService {
   static async getByInternalCustomerId({
     sb,
     internalCustomerId,
+    internalEntityId,
     limit = 100,
   }: {
     sb: SupabaseClient;
     internalCustomerId: string;
+    internalEntityId?: string;
     limit?: number;
   }) {
-    const { data, error } = await sb
+    let query = sb
       .from("invoices")
       .select("*")
-      .eq("internal_customer_id", internalCustomerId)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .limit(limit);
+      .eq("internal_customer_id", internalCustomerId);
+
+    if (internalEntityId) {
+      query = query.eq("internal_entity_id", internalEntityId);
+    }
+
+    query = query.order("created_at", { ascending: false }).limit(limit);
+
+    const { data, error } = await query;
 
     if (error) {
       throw error;
@@ -102,6 +110,7 @@ export class InvoiceService {
     sb,
     stripeInvoice,
     internalCustomerId,
+    internalEntityId,
     productIds,
     internalProductIds,
     status,
@@ -111,6 +120,7 @@ export class InvoiceService {
     sb: SupabaseClient;
     stripeInvoice: Stripe.Invoice;
     internalCustomerId: string;
+    internalEntityId?: string;
     productIds: string[];
     internalProductIds: string[];
     status?: InvoiceStatus | null;
@@ -137,6 +147,8 @@ export class InvoiceService {
       hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
       status: status || (stripeInvoice.status as InvoiceStatus | null),
       internal_product_ids: uniqueInternalProductIds,
+      internal_entity_id: internalEntityId || null,
+
       // Stripe stuff
       total: stripeInvoice.total / 100,
       currency: stripeInvoice.currency,

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CusProductStatus } from "./cusProductModels.js";
 import { AppEnv, EntInterval } from "../genModels.js";
+import { InvoiceResponseSchema } from "./invoiceModels/invoiceResponseModels.js";
 
 export const CusProductResponseSchema = z.object({
   id: z.string(),
@@ -15,6 +16,7 @@ export const CusProductResponseSchema = z.object({
 
   current_period_start: z.number().nullish(),
   current_period_end: z.number().nullish(),
+  entity_id: z.string().nullish(),
 });
 
 export const CusEntResponseSchema = z.object({
@@ -62,11 +64,10 @@ export const CusResponseSchema = z.object({
   stripe_id: z.string().nullable().default(null),
   env: z.nativeEnum(AppEnv),
 
-  products: z
-    .array(CusProductResponseSchema)
-    .or(z.record(z.string(), CusProductResponseSchema)),
-  // add_ons: z.array(CusProductResponseSchema),
+  products: z.array(CusProductResponseSchema),
   features: z.any(),
+
+  invoices: z.array(InvoiceResponseSchema).optional(),
 });
 
 export type CusResponse = z.infer<typeof CusResponseSchema>;

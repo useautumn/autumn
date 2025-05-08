@@ -22,10 +22,9 @@ import SmallSpinner from "@/components/general/SmallSpinner";
 import { Search } from "lucide-react";
 
 function AddProduct() {
-  const { products, customer, env, org } = useCustomerContext();
+  const { products, customer, env, entityId } = useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
   const [options, setOptions] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [open, setOpen] = useState(false);
 
@@ -64,7 +63,9 @@ function AddProduct() {
     }
 
     navigateTo(
-      `/customers/${customer.id || customer.internal_id}/${productId}`,
+      `/customers/${customer.id || customer.internal_id}/${productId}${
+        entityId ? `?entity_id=${entityId}` : ""
+      }`,
       navigate,
       env
     );

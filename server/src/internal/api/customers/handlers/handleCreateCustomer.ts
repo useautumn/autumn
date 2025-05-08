@@ -6,6 +6,7 @@ import {
   BillingInterval,
   CreateCustomer,
   CreateCustomerSchema,
+  CusProductStatus,
   Customer,
   ErrCode,
   FullProduct,
@@ -26,6 +27,8 @@ import {
 } from "@/internal/products/productUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
+import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
+import { parseCusExpand } from "../cusUtils.js";
 
 export const initStripeCusAndProducts = async ({
   sb,
@@ -297,8 +300,6 @@ export const handleCreateCustomerWithId = async ({
     logger.info(
       `POST /customers, existing customer found: ${existingCustomer.id} (org: ${org.slug})`
     );
-
-    //
     return existingCustomer;
   }
 
@@ -389,50 +390,42 @@ export const handleCreateCustomer = async ({
     });
   }
 
-  if (!getDetails) {
-    return createdCustomer;
-  }
-
-  return await getCustomerDetails({
-    customer: createdCustomer,
-    sb,
-    org,
-    env,
-    params,
-    logger,
-  });
+  return createdCustomer;
 };
 
 export const handlePostCustomerRequest = async (req: any, res: any) => {
   const logger = req.logtail;
   try {
     const data = req.body;
+    const expand = parseCusExpand(req.query.expand);
 
-    let result;
-    try {
-      let org = await OrgService.getFromReq(req);
-      result = await handleCreateCustomer({
-        cusData: data,
-        sb: req.sb,
-        org,
-        env: req.env,
-        logger,
-        params: req.query,
-      });
-    } catch (error: any) {
-      if (error?.data?.code == "23505") {
-        result = await CusService.getByIdOrInternalId({
-          sb: req.sb,
-          idOrInternalId: data.id,
-          orgId: req.orgId,
-          env: req.env,
-        });
-      } else {
-        throw error;
-      }
-    }
+    let org = await OrgService.getFromReq(req);
+    let customer = await getOrCreateCustomer({
+      sb: req.sb,
+      org,
+      env: req.env,
+      customerId: data.id,
+      customerData: data,
+      logger,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
+    });
 
-    res.status(200).json(result);
+    let cusDetails = await getCustomerDetails({
+      customer,
+      sb: req.sb,
+      org,
+      env: req.env,
+      params: req.query,
+      logger,
+      cusProducts: customer.customer_products,
+      expand,
+    });
+
+    res.status(200).json(cusDetails);
   } catch (error: any) {
     if (
       error instanceof RecaseError &&

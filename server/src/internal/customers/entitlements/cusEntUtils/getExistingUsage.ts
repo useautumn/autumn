@@ -2,7 +2,6 @@ import {
   CustomerEntitlement,
   CustomerEntitlementSchema,
   EntInterval,
-  Entitlement,
   EntitlementWithFeature,
   Entity,
   Feature,
@@ -11,7 +10,7 @@ import {
   FullCustomerEntitlement,
   Price,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import {
   getRelatedCusPrice,
   getResetBalance,

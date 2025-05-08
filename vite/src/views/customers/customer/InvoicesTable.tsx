@@ -1,23 +1,17 @@
-import { TableHead } from "@/components/ui/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
 import { useCustomerContext } from "./CustomerContext";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { navigateTo } from "@/utils/genUtils";
-import { AppEnv, Invoice, Product } from "@autumn/shared";
+import { Invoice, Product } from "@autumn/shared";
 import { toast } from "sonner";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { Row, Item } from "@/components/general/TableGrid";
 
 export const InvoicesTable = () => {
-  const { env, invoices, products } = useCustomerContext();
+  const { env, invoices, products, entityId, entities } = useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
+
+  const entity = entities.find((e: any) => e.id === entityId);
+
   const getStripeInvoice = async (stripeInvoiceId: string) => {
     try {
       const { data } = await axiosInstance.get(
@@ -36,6 +30,10 @@ export const InvoicesTable = () => {
     }, 0);
   };
 
+  const invoicesFiltered = invoices.filter((invoice: Invoice) => {
+    return entity ? invoice.internal_entity_id === entity.internal_id : true;
+  });
+
   return (
     <div>
       <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 h-10">
@@ -47,7 +45,7 @@ export const InvoicesTable = () => {
         </div>
       </div>
 
-      {invoices.length === 0 ? (
+      {invoicesFiltered.length === 0 ? (
         <div className="flex pl-10 items-center h-10">
           <p className="text-t3">No invoice history found</p>
         </div>
@@ -63,7 +61,7 @@ export const InvoicesTable = () => {
         </>
       )}
 
-      {invoices.map((invoice: Invoice) => (
+      {invoicesFiltered.map((invoice: Invoice) => (
         <Row
           key={invoice.id}
           className="grid-cols-12 pr-0"

@@ -9,7 +9,6 @@ import {
   FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
-  InvoiceItem,
   LoggerAction,
   Organization,
   Price,
@@ -24,7 +23,7 @@ import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
 import { getRelatedCusEnt } from "@/internal/customers/prices/cusPriceUtils.js";
-import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import { getTotalNegativeBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { getResetBalancesUpdate } from "@/internal/customers/entitlements/groupByUtils.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
