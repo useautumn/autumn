@@ -357,7 +357,8 @@ export const handleCreateEntity = async (req: any, res: any) => {
       }
     }
 
-    if (org.api_version == APIVersion.v1) {
+    let apiVersion = org.api_version || APIVersion.v1;
+    if (apiVersion < APIVersion.v1_2) {
       res.status(200).json({
         success: true,
       });
