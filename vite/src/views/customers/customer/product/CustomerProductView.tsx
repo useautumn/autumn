@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   AppEnv,
   BillingInterval,
+  Entity,
   Feature,
   FeatureOptions,
   FrontendOrganization,
@@ -72,8 +73,30 @@ export enum ProductActionState {
   EnableProduct = "enable_product",
 }
 
+// Helper to build query params for product URL
+function getProductUrlParams({
+  version,
+  customer_product_id,
+  entity_id,
+}: {
+  version?: string | null;
+  customer_product_id?: string | null;
+  entity_id?: string | null;
+}) {
+  const params = new URLSearchParams();
+  if (version) params.append("version", version);
+  if (customer_product_id)
+    params.append("customer_product_id", customer_product_id);
+  if (entity_id) params.append("entity_id", entity_id);
+  const str = params.toString();
+  return str ? `?${str}` : "";
+}
+
 export default function CustomerProductView() {
   const { customer_id, product_id } = useParams();
+  const [searchParams] = useSearchParams();
+  const entityIdParam = searchParams.get("entity_id");
+  const [entityId, setEntityId] = useState<string | null>(entityIdParam);
   const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
   const navigation = useNavigate();
@@ -87,19 +110,22 @@ export default function CustomerProductView() {
   const [features, setFeatures] = useState<Feature[]>([]);
   const [options, setOptions] = useState<OptionValue[]>([]);
 
-  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    if (entityIdParam) {
+      setEntityId(entityIdParam);
+    } else {
+      setEntityId(null);
+    }
+  }, [entityIdParam]);
+
   let version = searchParams.get("version");
   let customer_product_id = searchParams.get("id");
   const { data, isLoading, mutate, error } = useAxiosSWR({
-    url: `/customers/${customer_id}/product/${product_id}${
-      version && customer_product_id
-        ? `?version=${version}&customer_product_id=${customer_product_id}`
-        : version
-        ? `?version=${version}`
-        : customer_product_id
-        ? `?customer_product_id=${customer_product_id}`
-        : ""
-    }`,
+    url: `/customers/${customer_id}/product/${product_id}${getProductUrlParams({
+      version,
+      customer_product_id,
+      entity_id: entityId,
+    })}`,
     env,
   });
 
@@ -114,7 +140,6 @@ export default function CustomerProductView() {
   const [hasOptionsChanges, setHasOptionsChanges] = useState(false);
   const initialProductRef = useRef<FrontendProduct | null>(null);
 
-  // const cusProductId = searchParams.get("id");
   useEffect(() => {
     if (data?.product) {
       setProduct(data.product);
@@ -125,7 +150,6 @@ export default function CustomerProductView() {
     }
   }, [data]);
 
-  // Get product from customer data and check if it is active
   useEffect(() => {
     if (!data?.product || !data?.customer) return;
 
@@ -180,9 +204,6 @@ export default function CustomerProductView() {
     product?.items || [],
     product?.is_add_on || false
   );
-  // const oneTimePurchase = false;
-
-  const { customer } = data;
 
   if (!customer_id || !product_id) {
     return <div>Customer or product not found</div>;
@@ -192,14 +213,13 @@ export default function CustomerProductView() {
     return <div>Product not found</div>;
   }
 
+  const { customer, entities } = data;
+
+  const entity = entities.find((entity: Entity) => entity.id === entityId);
+
   const handleCreateProduct = async (useInvoiceLatest?: boolean) => {
     try {
-      // oneTimePurchase ||
-      // TODO: Check if product is one time purchase
-
       const { data } = await ProductService.getRequiredOptions(axiosInstance, {
-        // prices: product.items,
-        // entitlements: product.entitlements,
         items: product.items,
       });
 
@@ -223,24 +243,31 @@ export default function CustomerProductView() {
 
       const { data } = await CusService.addProduct(axiosInstance, customer_id, {
         product_id,
-        // prices: product.prices,
-        // entitlements: product.entitlements,
+        entity_id: entityId,
         items: product.items,
         free_trial: product.free_trial,
         options: requiredOptions ? requiredOptions : options,
-
         is_custom: isCustom,
+
         invoice_only:
           useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,
+
         version:
           version && Number.isInteger(parseInt(version))
             ? parseInt(version)
             : product.version,
       });
 
-      navigateTo(`/customers/${customer_id}/${product_id}`, navigation, env);
+      navigateTo(
+        `/customers/${customer_id}/${product_id}${getProductUrlParams({
+          version,
+          customer_product_id,
+          entity_id: entityId,
+        })}`,
+        navigation,
+        env
+      );
 
-      // await mutate();
       toast.success(data.message || "Successfully attached product");
 
       if (data.checkout_url) {
@@ -346,6 +373,8 @@ export default function CustomerProductView() {
           handleCreateProduct,
           actionState,
           setUseInvoice,
+          entityId,
+          setEntityId,
         }}
       >
         <CustomToaster />
@@ -391,7 +420,13 @@ export default function CustomerProductView() {
                 <BreadcrumbLink
                   className="cursor-pointer truncate max-w-48"
                   onClick={() =>
-                    navigateTo(`/customers/${customer_id}`, navigation, env)
+                    navigateTo(
+                      `/customers/${customer_id}${
+                        entityId ? `?entity_id=${entityId}` : ""
+                      }`,
+                      navigation,
+                      env
+                    )
                   }
                 >
                   {customer.name
@@ -423,11 +458,7 @@ export default function CustomerProductView() {
                 )}
                 <div className="flex justify-end gap-2 p-4 block lg:hidden">
                   <div className="w-fit">
-                    <AddProductButton
-                    // handleCreateProduct={handleCreateProduct}
-                    // actionState={actionState}
-                    // setUseInvoice={setUseInvoice}
-                    />
+                    <AddProductButton />
                   </div>
                 </div>
               </div>

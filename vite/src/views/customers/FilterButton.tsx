@@ -12,28 +12,36 @@ import {
 import { useCustomersContext } from "./CustomersContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { Check, ListFilter, X } from "lucide-react";
+import { useSearchParams } from "react-router";
+import { useSetSearchParams } from "@/utils/setSearchParams";
+import { useEffect } from "react";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
+  const [searchParams] = useSearchParams();
+  const setSearchParams = useSetSearchParams();
+  // useEffect(() => {
+  //   let statusParam = searchParams.get("status");
+  //   let productIdParam = searchParams.get("product_id");
+  //   setFilters({ status: statusParam, product_id: productIdParam });
+  // }, [searchParams]);
 
   return (
     <DropdownMenu>
       <RenderFilterTrigger />
 
       <DropdownMenuContent className="w-56" align="start">
-        {/* Search filter properties */}
-        {/* <DropdownMenuLabel>Filter</DropdownMenuLabel> */}
-        {/* <DropdownMenuSeparator /> */}
-        {/* 1. Status filter */}
-
         <FilterStatus />
-        {/* 2. Product filter */}
         <ProductStatus />
-
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem
-            onClick={() => setFilters({})}
+            onClick={() =>
+              setSearchParams({
+                status: "",
+                product_id: "",
+              })
+            }
             className="cursor-pointer"
           >
             <X size={14} className="text-t3" />
@@ -51,21 +59,26 @@ export const FilterStatus = () => {
   const { filters, setFilters } = useCustomersContext();
   const statuses = ["canceled", "free_trial"];
 
+  const [searchParams] = useSearchParams();
+  const setSearchParams = useSetSearchParams();
+
   return (
     <DropdownMenuGroup>
       <DropdownMenuLabel className="text-t3 !font-regular text-xs">
         Status
       </DropdownMenuLabel>
       {statuses.map((status: any) => {
-        const isActive = filters?.status === status;
+        const isActive = searchParams.get("status") === status;
         return (
           <DropdownMenuItem
             key={status}
             onClick={() => {
               if (isActive) {
-                setFilters({ ...filters, status: undefined });
+                // setFilters({ ...filters, status: undefined });
+                setSearchParams({ status: "" });
               } else {
-                setFilters({ ...filters, status });
+                // setFilters({ ...filters, status });
+                setSearchParams({ status });
               }
             }}
             className="flex items-center justify-between cursor-pointer text-sm"
@@ -80,22 +93,24 @@ export const FilterStatus = () => {
 };
 
 export const ProductStatus = () => {
-  const { filters, setFilters, products } = useCustomersContext();
+  const { products } = useCustomersContext();
+  const setSearchParams = useSetSearchParams();
+  const [searchParams] = useSearchParams();
   return (
     <DropdownMenuGroup>
       <DropdownMenuLabel className="text-t3 !font-regular text-xs">
         Product
       </DropdownMenuLabel>
       {products.map((product: any) => {
-        const isActive = filters?.product_id === product.id;
+        const isActive = searchParams.get("product_id") === product.id;
         return (
           <DropdownMenuItem
             key={product.id}
             onClick={() => {
               if (isActive) {
-                setFilters({ ...filters, product_id: undefined });
+                setSearchParams({ product_id: "" });
               } else {
-                setFilters({ ...filters, product_id: product.id });
+                setSearchParams({ product_id: product.id });
               }
             }}
             className="flex items-center justify-between cursor-pointer"

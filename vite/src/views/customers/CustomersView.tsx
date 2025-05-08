@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { AppEnv } from "@autumn/shared";
 import { useAxiosPostSWR, useAxiosSWR } from "@/services/useAxiosSwr";
 import { CustomersContext } from "./CustomersContext";
@@ -17,14 +17,22 @@ import { SearchBar } from "./SearchBar";
 import LoadingScreen from "../general/LoadingScreen";
 import FilterButton from "./FilterButton";
 import SmallSpinner from "@/components/general/SmallSpinner";
+import { useSearchParams } from "react-router";
+import { useSetSearchParams } from "@/utils/setSearchParams";
 
 function CustomersView({ env }: { env: AppEnv }) {
-  // const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const pageSize = 50;
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [filters, setFilters] = React.useState<any>({});
-  // const [currentPage, setCurrentPage] = React.useState(1);
-  // const [lastItemStack, setLastItemStack] = React.useState<any[]>([]);
+  const [searchParams] = useSearchParams();
+
+  const [searchQuery, setSearchQuery] = React.useState(
+    searchParams.get("q") || ""
+  );
+
+  const [filters, setFilters] = React.useState<any>({
+    status: searchParams.get("status"),
+    product_id: searchParams.get("product_id"),
+  });
+
   const [pagination, setPagination] = React.useState<{
     page: number;
     lastItemStack: any;
@@ -32,6 +40,7 @@ function CustomersView({ env }: { env: AppEnv }) {
     page: 1,
     lastItemStack: [],
   });
+
   const [searching, setSearching] = React.useState(false);
   const [paginationLoading, setPaginationLoading] = React.useState(false);
 
@@ -44,23 +53,63 @@ function CustomersView({ env }: { env: AppEnv }) {
     url: `/v1/customers/all/search`,
     env,
     data: {
+      search: searchParams.get("q") || "",
+      filters: {
+        status: searchParams.get("status"),
+        product_id: searchParams.get("product_id"),
+      },
+
       page: pagination.page,
       page_size: pageSize,
-      search: searchQuery,
-      filters,
       last_item: pagination.lastItemStack[pagination.lastItemStack.length - 1],
+      last_id:
+        pagination.lastItemStack[pagination.lastItemStack.length - 1]
+          ?.internal_id,
     },
   });
 
-  // Single useEffect to handle all data fetching
+  const isFirstRender = useRef(true);
+  const paginationFirstRender = useRef(true);
+  const searchParamsChanged = useRef(false);
+
+  const resetPagination = () => {
+    setPagination({
+      page: 1,
+      lastItemStack: [],
+    });
+  };
+
   useEffect(() => {
-    if (!searching) {
-      setPaginationLoading(true);
-      mutate().finally(() => {
-        setPaginationLoading(false);
-      });
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
     }
-  }, [pagination, filters]);
+
+    searchParamsChanged.current = true;
+    resetPagination();
+
+    setPaginationLoading(true);
+    mutate().finally(() => {
+      setPaginationLoading(false);
+    });
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (paginationFirstRender.current) {
+      paginationFirstRender.current = false;
+      return;
+    }
+
+    if (searchParamsChanged.current) {
+      searchParamsChanged.current = false;
+      return;
+    }
+
+    setPaginationLoading(true);
+    mutate().finally(() => {
+      setPaginationLoading(false);
+    });
+  }, [pagination]);
 
   const totalPages = Math.ceil((data?.totalCount || 0) / pageSize);
 
@@ -79,6 +128,7 @@ function CustomersView({ env }: { env: AppEnv }) {
       };
 
       const newLastItemStack = [...prev.lastItemStack, newItem];
+
       return {
         page: prev.page + 1,
         lastItemStack: newLastItemStack,
@@ -120,9 +170,9 @@ function CustomersView({ env }: { env: AppEnv }) {
         <div>
           <div className="flex w-full justify-between sticky top-0 z-10 border-y h-10 bg-stone-100 pl-10 pr-7 items-center">
             <div className="flex gap-4 items-center">
-              <div className="flex items-center gap-8 text-xs text-t3 pr-1 rounded-sm shrink-0">
+              <div className="flex justify-center items-center gap-8 text-xs text-t3 pr-1 rounded-sm shrink-0 w-[100px]">
                 {paginationLoading && !searching ? (
-                  <div className="w-[120px] h-8 flex items-center justify-center">
+                  <div className="h-8 flex items-center justify-center">
                     <SmallSpinner />
                   </div>
                 ) : (

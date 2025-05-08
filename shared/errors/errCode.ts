@@ -15,6 +15,7 @@ export const ErrCode = {
   InvalidInputs: "invalid_inputs",
   LimitsReached: "limits_reached",
   InvalidRequest: "invalid_request",
+  InvalidExpand: "invalid_expand",
 
   // Org
   OrgNotFound: "org_not_found",

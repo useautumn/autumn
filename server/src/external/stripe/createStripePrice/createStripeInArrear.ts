@@ -129,6 +129,7 @@ export const priceToInArrearTiers = (
     let amount = new Decimal(tier.amount)
       .div(usageConfig.billing_units ?? 1)
       .mul(100)
+      .toDecimalPlaces(10)
       .toString();
 
     tiers.push({

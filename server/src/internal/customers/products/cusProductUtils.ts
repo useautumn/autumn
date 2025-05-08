@@ -444,6 +444,7 @@ export const processFullCusProduct = ({
 
       stripe_subscription_ids: cusProduct.subscription_ids || [],
       started_at: cusProduct.starts_at,
+      entity_id: cusProduct.entity_id || undefined,
 
       ...stripeSubData,
     });

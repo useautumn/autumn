@@ -1,11 +1,8 @@
 import { submitUsageToStripe } from "@/external/stripe/stripeMeterUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-import {
-  getBillingInterval,
-  getBillingType,
-  roundUsage,
-} from "@/internal/prices/priceUtils.js";
+import { getBillingType, roundUsage } from "@/internal/prices/priceUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
   AppEnv,
@@ -13,6 +10,8 @@ import {
   Customer,
   Entitlement,
   Entity,
+  EntityExpand,
+  ErrCode,
   Feature,
   FullCustomerEntitlement,
   FullCustomerPrice,
@@ -20,6 +19,7 @@ import {
   UsagePriceConfig,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { StatusCodes } from "http-status-codes/build/cjs/status-codes.js";
 
 export const getLinkedCusEnt = ({
   linkedFeature,
@@ -156,4 +156,24 @@ export const removeEntityFromCusEnt = async ({
   logger.info(
     `Feature: ${entitlement.feature.id}, customer: ${cusEnt.customer_id}, deleted entities from cus ent`
   );
+};
+
+export const parseEntityExpand = (expand: string): EntityExpand[] => {
+  if (expand) {
+    let options = expand.split(",");
+    let result: EntityExpand[] = [];
+    for (const option of options) {
+      if (!Object.values(EntityExpand).includes(option as EntityExpand)) {
+        throw new RecaseError({
+          message: `Invalid expand option: ${option}`,
+          code: ErrCode.InvalidExpand,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+      result.push(option as EntityExpand);
+    }
+    return result;
+  } else {
+    return [];
+  }
 };

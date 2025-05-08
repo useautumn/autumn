@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "../products/AttachParams.js";
-import { InvoiceService } from "./InvoiceService.js";
+import { InvoiceService, processInvoice } from "./InvoiceService.js";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
@@ -51,6 +51,7 @@ export const attachParamsToInvoice = async ({
         sb,
         stripeInvoice,
         internalCustomerId: attachParams.customer.internal_id,
+        internalEntityId: attachParams.internalEntityId,
         org: attachParams.org,
         productIds: attachParams.products.map((p) => p.id),
         internalProductIds: attachParams.products.map((p) => p.internal_id),
@@ -60,4 +61,27 @@ export const attachParamsToInvoice = async ({
     logger.warn("Failed to insert invoice from attach params");
     logger.warn(error);
   }
+};
+
+export const getInvoicesForResponse = async ({
+  sb,
+  internalCustomerId,
+  internalEntityId,
+  limit = 20,
+}: {
+  sb: SupabaseClient;
+  internalCustomerId: string;
+  internalEntityId?: string;
+  limit?: number;
+}) => {
+  let invoices = await InvoiceService.getByInternalCustomerId({
+    sb,
+    internalCustomerId,
+    internalEntityId,
+    limit,
+  });
+
+  const processedInvoices = invoices.map(processInvoice);
+
+  return processedInvoices;
 };

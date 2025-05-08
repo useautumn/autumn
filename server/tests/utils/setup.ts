@@ -249,6 +249,18 @@ export const setupOrg = async ({
   }
   await Promise.all(insertFeatures);
 
+  const org = await OrgService.getFullOrg({ sb, orgId });
+  await OrgService.update({
+    sb,
+    orgId,
+    updates: {
+      config: {
+        ...org.config,
+        bill_upgrade_immediately: true,
+      },
+    },
+  });
+
   const { data: newFeatures } = await sb
     .from("features")
     .select("*")

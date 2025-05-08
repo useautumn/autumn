@@ -1,7 +1,8 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { debounce } from "lodash";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search } from "lucide-react";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 export function SearchBar({
   query,
@@ -16,27 +17,42 @@ export function SearchBar({
   setSearching: (searching: boolean) => void;
   mutate: () => Promise<void>;
 }) {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const prevQueryRef = useRef<string>(query);
 
   const debouncedSearch = useMemo(
     () =>
       debounce(async (query: string) => {
-        setLoading(true);
-        setCurrentPage(1);
-        setSearching(true);
-        await mutate();
-        inputRef.current?.focus();
-        setLoading(false);
-        setSearching(false);
+        let params = new URLSearchParams(location.search);
+        params.set("q", query);
+        // setQuery(query);
+        navigate(`${location.pathname}?${params.toString()}`);
       }, 350),
     []
   );
 
+  const handleQueryChange = async () => {
+    setLoading(true);
+    setCurrentPage(1);
+    setSearching(true);
+    await mutate();
+    setLoading(false);
+    setSearching(false);
+  };
+
+  // useEffect(() => {
+  //   const searchParamQuery = searchParams.get("q") || "";
+  //   if (searchParamQuery !== prevQueryRef.current) {
+  //     prevQueryRef.current = searchParamQuery;
+  //     handleQueryChange();
+  //   }
+  // }, [searchParams]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
-
-    setQuery(q);
     debouncedSearch(q);
   };
 
@@ -50,6 +66,7 @@ export function SearchBar({
         onChange={handleChange}
         className="outline-none w-full bg-transparent"
         placeholder="Search..."
+        defaultValue={query}
       ></input>
       <div className="w-5 h-5 ml-1">{loading && <SmallSpinner />}</div>
     </div>

@@ -26,6 +26,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   AppEnv,
+  Entity,
   MigrationJob,
   MigrationJobStep,
   ProductV2,
@@ -41,6 +42,8 @@ import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
 import ConfirmMigrateDialog from "./versioning/ConfirmMigrateDialog";
 import { CreateProductItem } from "./product-item/CreateProductItem";
 import { ProductItemTable } from "./product-item/ProductItemTable";
+import { EntityHeader } from "@/views/customers/customer/components/entity-header";
+import { SelectEntity } from "@/views/customers/customer/customer-sidebar/customer-entities";
 
 export const ManageProduct = ({
   customerData,
@@ -54,13 +57,17 @@ export const ManageProduct = ({
   version?: number;
 }) => {
   const env = useEnv();
-  let { numVersions, count, product } = useProductContext();
+  let { product, entityId, customer, setEntityId } = useProductContext();
 
   const navigate = useNavigate();
 
+  const entity = customer?.entities.find(
+    (entity: Entity) => entity.id === entityId
+  );
+
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between grid grid-cols-10 gap-8 pl-10">
+      <div className="flex items-center justify-between pl-10 pr-10">
         <div className="col-span-2 flex">
           <div className="flex flex-col gap-1 justify-center w-full whitespace-nowrap">
             <AdminHover texts={[product.internal_id!]}>
@@ -70,60 +77,13 @@ export const ManageProduct = ({
             </AdminHover>
           </div>
         </div>
-
-        {/* {!customerData && <CountAndMigrate />} */}
-
-        {/* <Select
-            value={version ? version.toString() : product.version.toString()}
-            onValueChange={async (value) => {
-              navigate(
-                getRedirectUrl(
-                  `${
-                    customerData
-                      ? `/customers/${customerData.customer.id}`
-                      : "/products"
-                  }/${product.id}?version=${value}`,
-                  env
-                )
-              );
-            }}
-          >
-            <SelectTrigger className="h-7 w-[140px] bg-white">
-              <SelectValue placeholder="Select version" />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: numVersions }, (_, i) => i + 1)
-                .reverse()
-                .map((version) => (
-                  <SelectItem key={version} value={version.toString()}>
-                    Version {version}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select> */}
-        {/* {!customerData && (
-            <EditProductToolbar product={product} className="text-t2" />
-          )} */}
+        {/* <EntityHeader entity={entity} /> */}
+        <SelectEntity entityId={entityId} entities={customer?.entities} />
       </div>
 
       <div className="flex flex-col gap-10">
         <ProductItemTable />
-        {/* <div className="flex flex-col">
-          <ProductEntitlementTable entitlements={product.entitlements} />
-        </div>
-        <div className="flex flex-col">
-          {product.prices.length > 0 && (
-            <ProductPricingTable prices={product.prices} />
-          )}
-        </div> */}
       </div>
-
-      {/* {showFreeTrial && (
-        <div className="flex flex-col gap-4">
-          <p className="text-md text-t2 font-medium">Free Trial</p>
-          <FreeTrialView product={product} />
-        </div>
-      )} */}
     </div>
   );
 };

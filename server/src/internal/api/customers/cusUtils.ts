@@ -1,12 +1,13 @@
 import { z } from "zod";
 import {
+  CusExpand,
   CusProductSchema,
-  CusProductStatus,
   Customer,
   CustomerData,
   CustomerSchema,
+  ErrCode,
   FullCustomer,
-  FullCustomerEntitlement,
+  InvoiceResponse,
   Organization,
   ProductSchema,
 } from "@autumn/shared";
@@ -18,15 +19,12 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 
-import {
-  fullCusProductToCusEnts,
-  fullCusProductToCusPrices,
-  processFullCusProduct,
-} from "@/internal/customers/products/cusProductUtils.js";
+import { processFullCusProduct } from "@/internal/customers/products/cusProductUtils.js";
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
-import { handleCreateCustomer } from "./handlers/handleCreateCustomer.js";
 import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
 
 export const updateCustomerDetails = async ({
   sb,
@@ -146,12 +144,12 @@ export const flipProductResults = (
 export const getCusInvoices = async ({
   sb,
   internalCustomerId,
-  limit = 20,
+  limit = 10,
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
   limit?: number;
-}) => {
+}): Promise<InvoiceResponse[]> => {
   // Get customer invoices
   const invoices = await InvoiceService.getByInternalCustomerId({
     sb,
@@ -232,28 +230,26 @@ export const getCusEntsInFeatures = async ({
   }
 
   sortCusEntsForDeduction(cusEnts, reverseOrder);
-  // // const cusEntsWithCusProduct = fullCusProductToCusEnts(
-  // //   customer.customer_products,
-  // //   [CusProductStatus.Active, CusProductStatus.PastDue],
-  // //   reverseOrder
-  // // );
-
-  // if (!cusEntsWithCusProduct) {
-  //   return { cusEnts: [] };
-  // }
-
-  // let cusEnts: FullCustomerEntitlement[] = [];
-  // if (internalFeatureIds) {
-  //   cusEnts = cusEntsWithCusProduct.filter((cusEnt) =>
-  //     internalFeatureIds.includes(cusEnt.internal_feature_id)
-  //   );
-  // } else {
-  //   cusEnts = cusEntsWithCusProduct;
-  // }
-
-  // // sortCusEntsForDeduction(cusEnts, reverseOrder);
-
-  // const cusPrices = fullCusProductToCusPrices(fullCusProducts, inStatuses);
 
   return { cusEnts, cusPrices };
+};
+
+export const parseCusExpand = (expand: string): CusExpand[] => {
+  if (expand) {
+    let options = expand.split(",");
+    let result: CusExpand[] = [];
+    for (const option of options) {
+      if (!Object.values(CusExpand).includes(option as CusExpand)) {
+        throw new RecaseError({
+          message: `Invalid expand option: ${option}`,
+          code: ErrCode.InvalidExpand,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+      result.push(option as CusExpand);
+    }
+    return result;
+  } else {
+    return [];
+  }
 };

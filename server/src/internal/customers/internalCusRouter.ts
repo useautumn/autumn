@@ -299,23 +299,20 @@ cusRouter.get(
   async (req: any, res: any) => {
     const { sb, org, env } = req;
     const { customer_id, product_id } = req.params;
-    const { version, customer_product_id } = req.query;
+    const { version, customer_product_id, entity_id } = req.query;
     const orgId = req.orgId;
 
     try {
-      const customer = await CusService.getByIdOrInternalId({
+      const customer = await CusService.getWithProducts({
         sb,
         orgId,
         env,
         idOrInternalId: customer_id,
-        isFull: true,
+        withEntities: true,
+        entityId: entity_id,
       });
 
-      const features = await FeatureService.getFeatures({
-        sb,
-        orgId,
-        env,
-      });
+      const features = await FeatureService.getFromReq(req);
 
       if (!customer) {
         throw new RecaseError({
@@ -325,23 +322,32 @@ cusRouter.get(
         });
       }
 
+      let cusProducts = customer.customer_products;
+      let entity = customer.entity;
       let cusProduct;
 
       if (notNullish(customer_product_id)) {
-        cusProduct = customer.products.find(
-          (p: any) => p.id === customer_product_id
+        cusProduct = cusProducts.find(
+          (p: any) =>
+            p.id === customer_product_id &&
+            (entity ? p.internal_entity_id === entity.internal_id : true)
         );
       } else if (notNullish(version)) {
-        cusProduct = customer.products.find(
+        cusProduct = cusProducts.find(
           (p: any) =>
             p.product.id === product_id &&
-            p.status === CusProductStatus.Active &&
-            p.product.version === parseInt(version)
+            (p.status === CusProductStatus.Active ||
+              p.status === CusProductStatus.PastDue) &&
+            p.product.version === parseInt(version) &&
+            (entity ? p.internal_entity_id === entity.internal_id : true)
         );
       } else {
-        cusProduct = customer.products.find(
+        cusProduct = cusProducts.find(
           (p: any) =>
-            p.product.id === product_id && p.status === CusProductStatus.Active
+            p.product.id === product_id &&
+            (p.status === CusProductStatus.Active ||
+              p.status === CusProductStatus.PastDue) &&
+            (entity ? p.internal_entity_id === entity.internal_id : true)
         );
       }
 
@@ -386,7 +392,13 @@ cusRouter.get(
 
       // console.log("Product", product);
 
-      res.status(200).json({ customer, product, features, numVersions });
+      res.status(200).json({
+        customer,
+        product,
+        features,
+        numVersions,
+        entities: customer.entities,
+      });
     } catch (error) {
       handleFrontendReqError({
         req,

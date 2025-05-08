@@ -37,6 +37,7 @@ import { isTrialing } from "@/internal/customers/products/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { formatUnixToDateTime } from "@/utils/genUtils.js";
 
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
@@ -234,6 +235,7 @@ export const adjustAllowance = async ({
           sb,
           stripeInvoice: latestInvoice,
           internalCustomerId: customer.internal_id,
+          internalEntityId: cusProduct.internal_entity_id || undefined,
           org,
           productIds: [product!.id],
           internalProductIds: [product!.internal_id],

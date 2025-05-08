@@ -506,6 +506,7 @@ export const handleUpgrade = async ({
         sb: req.sb,
         stripeInvoice,
         internalCustomerId: customer.internal_id,
+        internalEntityId: attachParams.internalEntityId,
         org,
         productIds: products.map((p) => p.id),
         internalProductIds: products.map((p) => p.internal_id),

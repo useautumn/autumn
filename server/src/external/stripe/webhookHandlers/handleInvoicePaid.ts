@@ -216,6 +216,7 @@ export const handleInvoicePaid = async ({
         sb,
         stripeInvoice: expandedInvoice,
         internalCustomerId: activeCusProducts[0].internal_customer_id,
+        internalEntityId: activeCusProducts[0].internal_entity_id,
         productIds: activeCusProducts.map((p) => p.product_id),
         internalProductIds: activeCusProducts.map((p) => p.internal_product_id),
         org: org,

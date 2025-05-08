@@ -23,6 +23,8 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useCustomersContext } from "./CustomersContext";
 import { Item, Row } from "@/components/general/TableGrid";
+import React from "react";
+import { AdminHover } from "@/components/general/AdminHover";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
   customer_products: z.array(
@@ -164,13 +166,8 @@ export const CustomersTable = ({
         <Item className="col-span-2">Created At</Item>
       </Row>
 
-      {/* <TableHead>Customer ID</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Products</TableHead>
-          <TableHead>Created At</TableHead> */}
-      {/* <TableHead className="w-20"></TableHead> */}
       {customers.map((customer, index) => (
-        <>
+        <React.Fragment key={index}>
           <Link
             to={getRedirectUrl(
               `/customers/${customer.id || customer.internal_id}`,
@@ -181,7 +178,11 @@ export const CustomersTable = ({
           >
             <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>
             <CustomTableCell className="font-mono text-t3" colSpan={3}>
-              {customer.id}
+              <AdminHover
+                texts={[{ key: "internal", value: customer.internal_id }]}
+              >
+                {customer.id}
+              </AdminHover>
             </CustomTableCell>
             <CustomTableCell colSpan={3}>{customer.email}</CustomTableCell>
             <CustomTableCell colSpan={5}>
@@ -195,20 +196,7 @@ export const CustomersTable = ({
               </span>
             </CustomTableCell>
           </Link>
-          {/* <TableCell className="font-mono">{customer.id} </TableCell>
-            <TableCell>{customer.email} </TableCell>
-            <TableCell>{getCusProductsInfo(customer)}</TableCell>
-            <TableCell className="min-w-20 w-24">
-              {formatUnixToDateTime(customer.created_at).date}
-              <span className="text-t3">
-                {" "}
-                {formatUnixToDateTime(customer.created_at).time}{" "}
-              </span>
-            </TableCell> */}
-          {/* <TableCell className="w-20">
-              <ProductRowToolbar product={product} />
-            </TableCell> */}
-        </>
+        </React.Fragment>
       ))}
     </>
   );

@@ -396,13 +396,7 @@ export class CusService {
       );
     }
 
-    console.log("pageNumber", pageNumber);
-    if (pageNumber) {
-      const from = (pageNumber - 1) * pageSize;
-      const to = from + pageSize - 1;
-      query.range(from, to);
-    } else if (lastItem) {
-      console.log("Using last item");
+    if (lastItem) {
       query.or(
         `"created_at".lt.${lastItem.created_at},` +
           `and("created_at".eq.${lastItem.created_at},"internal_id".gt.${lastItem.internal_id})`,
@@ -412,6 +406,21 @@ export class CusService {
         }
       );
     }
+
+    // if (pageNumber) {
+    //   const from = (pageNumber - 1) * pageSize;
+    //   const to = from + pageSize - 1;
+    //   query.range(from, to);
+    // } else if (lastItem) {
+    //   query.or(
+    //     `"created_at".lt.${lastItem.created_at},` +
+    //       `and("created_at".eq.${lastItem.created_at},"internal_id".gt.${lastItem.internal_id})`,
+    //     customerPrefix && {
+    //       foreignTable: "customers",
+    //       referencedTable: "customers",
+    //     }
+    //   );
+    // }
 
     if (customerPrefix) {
       query.order(`customer(created_at)`, { ascending: false });
@@ -534,10 +543,6 @@ export class CusService {
     let select =
       "*, customer_products:customer_products(*, product:products(*))";
 
-    if (filters.status || filters.product_id) {
-      select = `*, customer_products:customer_products!inner(*, product:products(*))`;
-    }
-
     let query = sb
       .from("customers")
       .select(select, {
@@ -555,22 +560,6 @@ export class CusService {
       lastItem,
       customerPrefix: "",
     });
-    // if (filters?.status === "canceled") {
-    //   console.log("Adding canceled filter");
-    //   query
-    //     .not("customer_products.canceled_at", "is", null)
-    //     .gt("customer_products.canceled_at", Date.now());
-    // } else if (filters?.status === "free_trial") {
-    //   console.log("Adding free trial filter");
-    //   query
-    //     .eq("customer_products.status", CusProductStatus.Active)
-    //     .gt("customer_products.trial_ends_at", Date.now());
-    // }
-
-    // if (filters?.product_id) {
-    //   console.log("Filtering for product:", filters.product_id);
-    //   query.eq("customer_products.product.id", filters.product_id);
-    // }
 
     const { data, count, error } = await query;
 

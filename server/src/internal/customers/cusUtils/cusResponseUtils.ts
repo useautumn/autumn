@@ -32,12 +32,6 @@ export const getCusProductsResponse = async ({
 
   let products: any = [...main, ...addOns];
 
-  let productObject: Record<string, CusProductResponse> = {};
-  for (let product of products) {
-    productObject[product.id] = product as any;
-  }
-  products = productObject;
-
   return products;
 };
 

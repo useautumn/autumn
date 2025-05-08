@@ -19,6 +19,7 @@ export const InvoiceSchema = z.object({
   id: z.string(),
   created_at: z.number(),
   internal_customer_id: z.string(),
+  internal_entity_id: z.string().nullable(),
   product_ids: z.array(z.string()),
   internal_product_ids: z.array(z.string()),
 

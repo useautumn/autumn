@@ -1,8 +1,9 @@
 import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Button } from "./button";
 
 function Select({
   ...props
@@ -26,18 +27,18 @@ function SelectTrigger({
   className,
   children,
   iconClassName,
+  onClear,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   iconClassName?: string;
+  onClear?: () => void;
 }) {
   return (
-    <SelectPrimitive.Trigger
-      data-slot="select-trigger"
-      className={cn(
-        `flex  w-full items-center justify-between whitespace-nowrap rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm ring-offset-white placeholder:text-t3 focus:outline-none  disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 dark:border-zinc-800 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus:ring-zinc-300 
-
-
-        
+    <div className="relative">
+      <SelectPrimitive.Trigger
+        data-slot="select-trigger"
+        className={cn(
+          `flex  w-full items-center justify-between whitespace-nowrap rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm ring-offset-white placeholder:text-t3 focus:outline-none  disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 dark:border-zinc-800 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus:ring-zinc-300 
         h-8
         
         data-[state=open]:border-primary data-[state=open]:shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]
@@ -48,15 +49,37 @@ function SelectTrigger({
         transition-colors duration-100
         p-2
         `,
-        className
+          className
+        )}
+        {...props}
+      >
+        {children}
+        <SelectPrimitive.Icon asChild>
+          <ChevronDownIcon
+            className={cn(
+              "size-4 opacity-50",
+              onClear ? "opacity-0" : iconClassName
+            )}
+          />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+      {onClear && (
+        <div className="absolute right-1 top-1/2 -translate-y-1/2 inset-y-0 flex justify-center items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="w-4 h-4 text-t3 cursor-pointer flex items-center justify-center"
+            onClick={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClear();
+            }}
+          >
+            <X size={14} />
+          </Button>
+        </div>
       )}
-      {...props}
-    >
-      {children}
-      <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className={cn("size-4 opacity-50", iconClassName)} />
-      </SelectPrimitive.Icon>
-    </SelectPrimitive.Trigger>
+    </div>
   );
 }
 

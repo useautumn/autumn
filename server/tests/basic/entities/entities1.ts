@@ -7,7 +7,11 @@ import chalk from "chalk";
 import AutumnError, { Autumn } from "@/external/autumn/autumnCli.js";
 import { setupBefore } from "tests/before.js";
 import { CusProductStatus, ErrCode } from "@autumn/shared";
-import { getFeaturePrice, getUsagePriceTiers } from "tests/utils/genUtils.js";
+import {
+  getFeaturePrice,
+  getUsagePriceTiers,
+  timeout,
+} from "tests/utils/genUtils.js";
 
 import { Stripe } from "stripe";
 import { CusService } from "@/internal/customers/CusService.js";

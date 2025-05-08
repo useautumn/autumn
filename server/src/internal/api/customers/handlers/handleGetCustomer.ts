@@ -4,6 +4,7 @@ import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../getCustomerDetails.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { parseCusExpand } from "../cusUtils.js";
 
 export const handleGetCustomer = async (req: any, res: any) =>
   routeHandler({
@@ -13,6 +14,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
     handler: async () => {
       let customerId = req.params.customer_id;
       let { orgId, env } = req;
+      let { expand } = req.query;
 
       const [org, customer] = await Promise.all([
         OrgService.getFromReq(req),
@@ -26,6 +28,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
             CusProductStatus.PastDue,
             CusProductStatus.Scheduled,
           ],
+          withEntities: true,
         }),
       ]);
 
@@ -47,6 +50,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
         env: req.env,
         logger: req.logtail,
         cusProducts: customer.customer_products,
+        expand: parseCusExpand(expand),
       });
 
       res.status(200).json(cusData);

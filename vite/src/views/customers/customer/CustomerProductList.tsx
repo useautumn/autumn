@@ -45,13 +45,31 @@ export const CustomerProductList = ({
   products: any;
 }) => {
   const navigate = useNavigate();
-  const { env, versionCounts } = useCustomerContext();
+  const { env, versionCounts, entities, entityId } = useCustomerContext();
   const [showExpired, setShowExpired] = useState(false);
 
   const sortedProducts = customer.products
-    .filter(
-      (p: CusProduct) => showExpired || p.status !== CusProductStatus.Expired
-    )
+    .filter((p: CusProduct & { entitlements: any[] }) => {
+      if (showExpired) {
+        return true;
+      }
+
+      const entity = entities.find((e: any) => e.id === entityId);
+
+      const entityMatches = entity
+        ? p.internal_entity_id === entity.internal_id ||
+          p.entitlements.some(
+            (cusEnt: any) =>
+              cusEnt.entities &&
+              Object.keys(cusEnt.entities).includes(entity.internal_id)
+          )
+        : true;
+
+      return (
+        p.status !== CusProductStatus.Expired &&
+        (entityId ? entityMatches : true)
+      );
+    })
     .sort((a: any, b: any) => {
       if (a.status !== b.status) {
         return compareStatus(a.status, b.status);
@@ -103,10 +121,15 @@ export const CustomerProductList = ({
             key={cusProduct.id}
             className="grid-cols-12 pr-0"
             onClick={() => {
+              let entity = entities.find(
+                (e: any) => e.internal_id === cusProduct.internal_entity_id
+              );
               navigateTo(
                 `/customers/${customer.id || customer.internal_id}/${
                   cusProduct.product_id
-                }?id=${cusProduct.id}`,
+                }?id=${cusProduct.id}${
+                  entity ? `&entity_id=${entity.id}` : ""
+                }`,
                 navigate,
                 env
               );

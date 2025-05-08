@@ -114,6 +114,7 @@ export const handleSubCreated = async ({
           sb,
           stripeInvoice: invoice,
           internalCustomerId: cusProd.internal_customer_id,
+          internalEntityId: cusProd.internal_entity_id,
           productIds: [cusProd.product_id],
           internalProductIds: [cusProd.internal_product_id],
           org,
