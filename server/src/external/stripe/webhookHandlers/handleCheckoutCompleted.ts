@@ -206,7 +206,7 @@ export const handleCheckoutSessionCompleted = async ({
           getBillingType(p.config!) == BillingType.UsageInArrear
       );
 
-      if (arrearPrice) {
+      if (arrearPrice && attachParams.internalEntityId) {
         await stripeCli.subscriptionItems.del(item.id);
         continue;
       }
