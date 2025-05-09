@@ -1,27 +1,14 @@
-import {
-  formatUnixToDateTime,
-  formatUnixToDateTimeString,
-} from "@/utils/formatUtils/formatDateUtils";
-import { Feature, FeatureType, Product } from "@autumn/shared";
-import React, { useState } from "react";
-import { useNavigate } from "react-router";
-
-import { FeatureRowToolbar } from "./FeatureRowToolbar";
-import {
-  Table,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableBody,
-  TableCell,
-} from "@/components/ui/table";
-import { navigateTo } from "@/utils/genUtils";
-import { useFeaturesContext } from "./FeaturesContext";
-import { Badge } from "@/components/ui/badge";
 import UpdateFeature from "./UpdateFeature";
+import CopyButton from "@/components/general/CopyButton";
+
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { Feature, FeatureType } from "@autumn/shared";
+import { FeatureRowToolbar } from "./FeatureRowToolbar";
+import { useFeaturesContext } from "./FeaturesContext";
 import { FeatureTypeBadge } from "./FeatureTypeBadge";
 import { Item, Row } from "@/components/general/TableGrid";
-import CopyButton from "@/components/general/CopyButton";
 import { AdminHover } from "@/components/general/AdminHover";
 
 export const FeaturesTable = () => {

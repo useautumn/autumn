@@ -25,6 +25,7 @@ import { useCustomersContext } from "./CustomersContext";
 import { Item, Row } from "@/components/general/TableGrid";
 import React from "react";
 import { AdminHover } from "@/components/general/AdminHover";
+import CopyButton from "@/components/general/CopyButton";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
   customer_products: z.array(
@@ -177,12 +178,20 @@ export const CustomersTable = ({
             className="grid grid-cols-16 gap-2 items-center px-10 w-full text-sm h-8 cursor-default hover:bg-primary/5 text-t2 whitespace-nowrap"
           >
             <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>
-            <CustomTableCell className="font-mono text-t3" colSpan={3}>
-              <AdminHover
-                texts={[{ key: "internal", value: customer.internal_id }]}
-              >
-                {customer.id}
-              </AdminHover>
+            <CustomTableCell
+              className="font-mono text-t3 -translate-x-1"
+              colSpan={3}
+            >
+              <span className="truncate">
+                <CopyButton
+                  text={customer.id || ""}
+                  className="bg-transparent border-none text-t3 px-1 shadow-none"
+                >
+                  {customer.id}
+                </CopyButton>
+              </span>
+
+              {/* {customer.id} */}
             </CustomTableCell>
             <CustomTableCell colSpan={3}>{customer.email}</CustomTableCell>
             <CustomTableCell colSpan={5}>

@@ -294,6 +294,8 @@ attachRouter.post("/attach", async (req: any, res) => {
       billing_cycle_anchor,
       metadata,
       version,
+
+      checkout_session_params,
     } = req.body;
 
     const { orgId, env } = req;
@@ -354,6 +356,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     attachParams.metadata = metadata;
     attachParams.isCustom = isCustom || false;
     attachParams.disableFreeTrial = disableFreeTrial;
+    attachParams.checkoutSessionParams = checkout_session_params;
 
     logger.info(
       `Customer: ${chalk.yellow(

@@ -45,6 +45,8 @@ export type AttachParams = {
 
   entityId?: string;
   internalEntityId?: string;
+
+  checkoutSessionParams?: any;
 };
 
 export type InsertCusProductParams = {
