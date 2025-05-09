@@ -29,6 +29,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { parseCusExpand } from "../cusUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const initStripeCusAndProducts = async ({
   sb,
@@ -400,6 +401,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
     const expand = parseCusExpand(req.query.expand);
 
     let org = await OrgService.getFromReq(req);
+    let features = await FeatureService.getFromReq(req);
     let customer = await getOrCreateCustomer({
       sb: req.sb,
       org,
@@ -423,6 +425,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
       logger,
       cusProducts: customer.customer_products,
       expand,
+      features,
     });
 
     res.status(200).json(cusDetails);

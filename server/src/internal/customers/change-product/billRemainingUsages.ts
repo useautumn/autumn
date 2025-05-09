@@ -1,7 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Stripe } from "stripe";
 import { AttachParams } from "../products/AttachParams.js";
-import { FullCusProduct } from "@autumn/shared";
+import { FullCusProduct, InvoiceItem } from "@autumn/shared";
 import {
   BillingInterval,
   BillingType,
@@ -23,6 +23,8 @@ import { InvoiceService } from "../invoices/InvoiceService.js";
 import { stripeToAutumnInterval } from "@/external/stripe/utils.js";
 import { getResetBalancesUpdate } from "../entitlements/groupByUtils.js";
 import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
+import { getInvoiceItems } from "../invoices/invoiceUtils.js";
+import { formatUnixToDateTime } from "@/utils/genUtils.js";
 
 // Add usage to end of cycle
 const addUsageToNextInvoice = async ({
@@ -87,6 +89,10 @@ const addUsageToNextInvoice = async ({
           currency: org.default_currency,
         },
         subscription: relatedSub.id,
+        period: {
+          start: item.periodStart,
+          end: item.periodEnd,
+        },
       };
 
       await stripeCli.invoiceItems.create(invoiceItem);
@@ -177,6 +183,8 @@ const invoiceForUsageImmediately = async ({
     });
   }
 
+  let autumnInvoiceItems: InvoiceItem[] = [];
+
   for (const item of invoiceItems) {
     const amount = getPriceForOverage(item.price, item.overage);
     let config = item.price.config! as UsagePriceConfig;
@@ -187,22 +195,36 @@ const invoiceForUsageImmediately = async ({
 
     // TO TEST
     let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
+    let description = `${curCusProduct.product.name} - ${
+      item.feature.name
+    } x ${Math.round(item.usage)}`;
 
     let invoiceItem = {
       customer: customer.processor.id,
       invoice: invoice.id,
       currency: org.default_currency,
-      description: `${curCusProduct.product.name} - ${
-        item.feature.name
-      } x ${Math.round(item.usage)}`,
+      description: description,
       price_data: {
         product: stripePrice.product as string,
         unit_amount: Math.round(amount * 100),
         currency: org.default_currency,
       },
+      period: {
+        start: item.periodStart,
+        end: item.periodEnd,
+      },
     };
 
-    await stripeCli.invoiceItems.create(invoiceItem);
+    let stripeInvoiceItem = await stripeCli.invoiceItems.create(invoiceItem);
+
+    autumnInvoiceItems.push({
+      price_id: item.price.id!,
+      internal_feature_id: item.feature.internal_id || null,
+      description: description,
+      period_start: item.periodStart * 1000,
+      period_end: item.periodEnd * 1000,
+      stripe_id: stripeInvoiceItem.id,
+    });
 
     await CustomerEntitlementService.update({
       sb,
@@ -238,7 +260,9 @@ const invoiceForUsageImmediately = async ({
       org: org,
       productIds: [curProduct.id],
       internalProductIds: [curProduct.internal_id],
+      items: autumnInvoiceItems,
     });
+
     const { paid, error } = await payForInvoice({
       fullOrg: org,
       env: customer.env,
@@ -262,29 +286,7 @@ const invoiceForUsageImmediately = async ({
         total: Number((finalizedInvoice.total / 100).toFixed(2)),
       },
     });
-
-    // TODO: Send revenue event
   }
-
-  // if (!attachParams.invoiceOnly) {
-  //   const { paid, error } = await payForInvoice({
-  //     fullOrg: org,
-  //     env: customer.env,
-  //     customer,
-  //     invoice: finalizedInvoice,
-  //     logger,
-  //   });
-
-  //   if (!paid) {
-  //     return;
-  //     // await stripeCli.invoices.voidInvoice(invoice.id);
-  //     // throw new RecaseError({
-  //     //   message: "Failed to pay invoice for remaining usages",
-  //     //   code: ErrCode.PayInvoiceFailed,
-  //     //   statusCode: StatusCodes.BAD_REQUEST,
-  //     // });
-  //   }
-  // }
 };
 
 const getRemainingUsagesPreview = async ({
@@ -350,7 +352,10 @@ export const billForRemainingUsages = async ({
 
   // Get usage based prices
   const intervalToInvoiceItems: any = {};
-  // let itemsToInvoice = [];
+  const stripeCli = createStripeCli({
+    org: org,
+    env: customer.env,
+  });
   for (const cp of customer_prices) {
     let config = cp.price.config! as UsagePriceConfig;
     let relatedCusEnt = getRelatedCusEnt({
@@ -380,16 +385,26 @@ export const billForRemainingUsages = async ({
       intervalToInvoiceItems[interval] = [];
     }
 
+    let sub = intervalToSub[interval];
+
+    let stripeNow = Math.floor(Date.now() / 1000);
+    if (sub.test_clock) {
+      let stripeClock = await stripeCli.testHelpers.testClocks.retrieve(
+        sub.test_clock
+      );
+      stripeNow = stripeClock.frozen_time;
+    }
+
     intervalToInvoiceItems[interval].push({
       overage,
       usage,
       feature: relatedCusEnt?.entitlement.feature,
       price: cp.price,
       relatedCusEnt,
+      periodStart: sub?.current_period_start,
+      periodEnd: stripeNow,
     });
   }
-
-  // console.log("BILL UPGRADE IMMEDIATELY", org.config?.bill_upgrade_immediately);
 
   if (shouldPreview) {
     return getRemainingUsagesPreview({

@@ -1,10 +1,15 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
+  Feature,
   Invoice,
+  InvoiceItem,
+  InvoiceItemResponseSchema,
   InvoiceResponse,
+  InvoiceResponseSchema,
   InvoiceStatus,
   LoggerAction,
   Organization,
+  Price,
 } from "@autumn/shared";
 import Stripe from "stripe";
 import { formatUnixToDateTime, generateId } from "@/utils/genUtils.js";
@@ -13,7 +18,15 @@ import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils.js";
 
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 
-export const processInvoice = (invoice: Invoice) => {
+export const processInvoice = ({
+  invoice,
+  withItems = false,
+  features,
+}: {
+  invoice: Invoice;
+  withItems?: boolean;
+  features?: Feature[];
+}) => {
   return {
     product_ids: invoice.product_ids,
     stripe_id: invoice.stripe_id,
@@ -22,6 +35,21 @@ export const processInvoice = (invoice: Invoice) => {
     currency: invoice.currency,
     created_at: invoice.created_at,
     hosted_invoice_url: invoice.hosted_invoice_url,
+    items: withItems
+      ? (invoice.items || []).map((i) => {
+          let feature = features?.find(
+            (f) => f.internal_id === i.internal_feature_id
+          );
+
+          return InvoiceItemResponseSchema.parse({
+            description: i.description,
+            period_start: i.period_start,
+            period_end: i.period_end,
+            feature_id: feature?.id,
+            feature_name: feature?.name,
+          });
+        })
+      : undefined,
   } as InvoiceResponse;
 };
 
@@ -116,6 +144,7 @@ export class InvoiceService {
     status,
     org,
     sendRevenueEvent = true,
+    items = [],
   }: {
     sb: SupabaseClient;
     stripeInvoice: Stripe.Invoice;
@@ -126,6 +155,7 @@ export class InvoiceService {
     status?: InvoiceStatus | null;
     org: Organization;
     sendRevenueEvent?: boolean;
+    items?: InvoiceItem[];
   }) {
     // Convert product ids to unique product ids
     const uniqueProductIds = [...new Set(productIds)];
@@ -156,6 +186,8 @@ export class InvoiceService {
         expandedInvoice: stripeInvoice,
         logger: logger,
       }),
+
+      items: items,
     };
 
     const { error } = await sb.from("invoices").insert(invoice);
@@ -215,22 +247,3 @@ export class InvoiceService {
     }
   }
 }
-
-// // Check if invoice already exists
-// // TODO: Fix This
-// const existingInvoice = await this.getInvoiceByStripeId({
-//   sb,
-//   stripeInvoiceId: stripeInvoice.id,
-// });
-
-// if (existingInvoice) {
-//   console.log("Invoice already exists");
-//   return;
-// }
-
-// // const { error } = await sb
-// //   .from("invoices")
-// //   .upsert(invoice, {
-// //     onConflict: "stripe_id",
-// //   })
-// //   .select();

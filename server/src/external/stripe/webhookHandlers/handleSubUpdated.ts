@@ -20,7 +20,7 @@ import {
   releaseWebhookLock,
 } from "@/external/redis/stripeWebhookLocks.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
 
 export const handleSubscriptionUpdated = async ({
   sb,
@@ -241,6 +241,11 @@ export const handleSubscriptionUpdated = async ({
       }
     }
   }
+
+  await SubService.updateFromStripe({
+    sb,
+    stripeSub: fullSub,
+  });
 
   // Cancel subscription immediately
   if (subscription.status === "past_due" && org.config.cancel_on_past_due) {

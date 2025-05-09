@@ -262,10 +262,9 @@ export const getPriceAmount = ({
     let quantity = options?.quantity!;
     let config = price.config as UsagePriceConfig;
 
-    // 1. Allowance
-    let allowance = relatedEnt?.allowance;
-
-    let overage = quantity * config.billing_units! - allowance!;
+    let overage = new Decimal(quantity)
+      .mul(config.billing_units || 1)
+      .toNumber();
 
     return getPriceForOverage(price, overage);
   }
