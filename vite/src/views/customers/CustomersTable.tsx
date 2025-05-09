@@ -178,20 +178,13 @@ export const CustomersTable = ({
             className="grid grid-cols-16 gap-2 items-center px-10 w-full text-sm h-8 cursor-default hover:bg-primary/5 text-t2 whitespace-nowrap"
           >
             <CustomTableCell colSpan={3}>{customer.name}</CustomTableCell>
-            <CustomTableCell
-              className="font-mono text-t3 -translate-x-1"
-              colSpan={3}
-            >
-              <span className="truncate">
-                <CopyButton
-                  text={customer.id || ""}
-                  className="bg-transparent border-none text-t3 px-1 shadow-none"
-                >
-                  {customer.id}
-                </CopyButton>
-              </span>
-
-              {/* {customer.id} */}
+            <CustomTableCell className="font-mono -translate-x-1" colSpan={3}>
+              <CopyButton
+                text={customer.id || ""}
+                className="bg-transparent text-t3 border-none px-1 shadow-none max-w-full"
+              >
+                <span className="truncate">{customer.id}</span>
+              </CopyButton>
             </CustomTableCell>
             <CustomTableCell colSpan={3}>{customer.email}</CustomTableCell>
             <CustomTableCell colSpan={5}>

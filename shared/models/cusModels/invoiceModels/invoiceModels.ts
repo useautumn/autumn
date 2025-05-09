@@ -15,6 +15,15 @@ export const InvoiceDiscountSchema = z.object({
   amount_used: z.number(),
 });
 
+export const InvoiceItemSchema = z.object({
+  price_id: z.string().nullish(),
+  stripe_id: z.string(),
+  internal_feature_id: z.string().nullable(),
+  description: z.string(),
+  period_start: z.number(),
+  period_end: z.number(),
+});
+
 export const InvoiceSchema = z.object({
   id: z.string(),
   created_at: z.number(),
@@ -33,7 +42,9 @@ export const InvoiceSchema = z.object({
   currency: z.string(),
   receipt_url: z.string().nullish(),
   discounts: z.array(InvoiceDiscountSchema),
+  items: z.array(InvoiceItemSchema),
 });
 
 export type Invoice = z.infer<typeof InvoiceSchema>;
 export type InvoiceDiscount = z.infer<typeof InvoiceDiscountSchema>;
+export type InvoiceItem = z.infer<typeof InvoiceItemSchema>;
