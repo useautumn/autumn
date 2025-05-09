@@ -103,6 +103,8 @@ export const handleCreateCheckout = async ({
     saved_payment_method_options: {
       payment_method_save: "enabled",
     },
+
+    ...(attachParams.checkoutSessionParams || {}),
   });
 
   logger.info(`✅ Successfully created checkout for customer ${customer.id}`);

@@ -30,12 +30,17 @@ export const createCheckoutMetadata = async ({
 }) => {
   const metaId = generateId("meta");
 
+  let attachClone = structuredClone(attachParams);
+  if (attachClone.checkoutSessionParams) {
+    delete attachClone.checkoutSessionParams;
+  }
+
   const metadata: AutumnMetadata = {
     id: metaId,
     created_at: Date.now(),
     expires_at: addDays(Date.now(), 10).getTime(), // 10 days
     data: {
-      ...attachParams,
+      ...attachClone,
       itemMetas,
     },
   };

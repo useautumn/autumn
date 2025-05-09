@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { Item, Row } from "@/components/general/TableGrid";
+import CopyButton from "@/components/general/CopyButton";
 
 export const ProductsTable = ({ products }: { products: Product[] }) => {
   const { env, onboarding } = useProductsContext();
@@ -56,8 +57,16 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
                 <span className="truncate">{product.name}</span>
               </AdminHover>
             </Item>
-            <Item className="col-span-3 font-mono ">
-              <span className="truncate">{product.id}</span>
+            <Item className="col-span-3 font-mono -translate-x-1">
+              <span className="truncate ">
+                <CopyButton
+                  text={product.id || ""}
+                  className="bg-transparent border-none text-t3 px-1 shadow-none"
+                >
+                  {product.id}
+                </CopyButton>
+              </span>
+              {/* <span className="truncate">{product.id}</span> */}
             </Item>
             <Item className="col-span-3">
               <TooltipProvider>
