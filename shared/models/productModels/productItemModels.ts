@@ -45,6 +45,7 @@ export const ProductItemSchema = z.object({
   // Feature stuff
   feature_id: z.string().nullish(),
   feature_type: z.nativeEnum(ProductItemFeatureType).nullish(),
+
   included_usage: z.union([z.number(), z.literal(Infinite)]).nullish(),
 
   interval: z.nativeEnum(ProductItemInterval).nullish(),

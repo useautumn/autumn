@@ -76,7 +76,6 @@ export const ProductRowToolbar = ({
                 setSelectedProduct(product);
                 setDialogType("copy");
                 setModalOpen(true);
-                // await handleCopy();
               }}
             >
               <div className="flex items-center justify-between w-full gap-2">
