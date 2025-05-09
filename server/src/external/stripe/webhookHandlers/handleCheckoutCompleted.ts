@@ -31,6 +31,7 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -178,6 +179,8 @@ export const handleCheckoutSessionCompleted = async ({
         usage_features: attachParams.itemSets?.[0]?.usageFeatures || [],
         org_id: org.id,
         env: attachParams.customer.env,
+        current_period_start: subscription.current_period_start,
+        current_period_end: subscription.current_period_end,
       },
     });
 
@@ -206,7 +209,11 @@ export const handleCheckoutSessionCompleted = async ({
           getBillingType(p.config!) == BillingType.UsageInArrear
       );
 
-      if (arrearPrice) {
+      if (arrearPrice && attachParams.internalEntityId) {
+        console.log(
+          "   - checkout.completed: deleting subscription item",
+          item.id
+        );
         await stripeCli.subscriptionItems.del(item.id);
         continue;
       }
@@ -287,6 +294,12 @@ export const handleCheckoutSessionCompleted = async ({
         stripeInvoiceId: invoiceId,
       });
 
+      let invoiceItems = await getInvoiceItems({
+        stripeInvoice: invoice,
+        prices: attachParams.prices,
+        logger,
+      });
+
       await InvoiceService.createInvoiceFromStripe({
         sb,
         org,
@@ -295,6 +308,7 @@ export const handleCheckoutSessionCompleted = async ({
         productIds: products.map((p) => p.id),
         internalProductIds: products.map((p) => p.internal_id),
         internalEntityId: attachParams.internalEntityId,
+        items: invoiceItems,
       });
 
       console.log("   ✅ checkout.completed: successfully created invoice");

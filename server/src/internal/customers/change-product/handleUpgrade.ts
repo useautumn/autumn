@@ -27,7 +27,10 @@ import { handleAddProduct } from "../add-product/handleAddProduct.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import { CusProductService } from "../products/CusProductService.js";
-import { attachParamsToInvoice } from "../invoices/invoiceUtils.js";
+import {
+  attachParamsToInvoice,
+  getInvoiceItems,
+} from "../invoices/invoiceUtils.js";
 import { updateScheduledSubWithNewItems } from "./scheduleUtils.js";
 import { billForRemainingUsages } from "./billRemainingUsages.js";
 import { updateStripeSubscription } from "@/external/stripe/stripeSubUtils/updateStripeSub.js";
@@ -40,7 +43,7 @@ import {
 
 import { differenceInSeconds } from "date-fns";
 import { SuccessCode } from "@autumn/shared";
-import { notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
 
 export enum ProrationBehavior {
   Immediately = "immediately",
@@ -485,21 +488,24 @@ export const handleUpgrade = async ({
     disableFreeTrial,
     carryExistingUsages,
     carryOverTrial: true,
-
-    // nextResetAt: subUpdate.current_period_end
-    //   ? subUpdate.current_period_end * 1000
-    //   : undefined,
   });
 
   // Create invoices
   logger.info("4. Creating invoices");
   logger.info(`Invoice IDs: ${invoiceIds}`);
   const batchInsertInvoice = [];
+
   for (const invoiceId of invoiceIds) {
     const insertInvoice = async () => {
       const stripeInvoice = await getStripeExpandedInvoice({
         stripeCli,
         stripeInvoiceId: invoiceId,
+      });
+
+      let autumnInvoiceItems = await getInvoiceItems({
+        stripeInvoice,
+        prices: attachParams.prices,
+        logger,
       });
 
       await InvoiceService.createInvoiceFromStripe({
@@ -510,6 +516,7 @@ export const handleUpgrade = async ({
         org,
         productIds: products.map((p) => p.id),
         internalProductIds: products.map((p) => p.internal_id),
+        items: autumnInvoiceItems,
       });
     };
     batchInsertInvoice.push(insertInvoice());

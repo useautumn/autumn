@@ -311,7 +311,9 @@ export class CusProductService {
   }) {
     const query = sb
       .from("customer_products")
-      .select("*, product:products(*), customer:customers!inner(*)")
+      .select(
+        `*, product:products(*), customer:customers!inner(*), customer_prices:customer_prices(*, price:prices!inner(*))`
+      )
       .or(
         `processor->>'subscription_schedule_id'.eq.'${stripeScheduledId}', scheduled_ids.cs.{${stripeScheduledId}}`
       )

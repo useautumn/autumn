@@ -82,6 +82,8 @@ const scheduleStripeSubscription = async ({
       usage_features: itemSet.usageFeatures,
       org_id: org.id,
       env: customer.env,
+      current_period_start: null,
+      current_period_end: null,
     },
   });
 

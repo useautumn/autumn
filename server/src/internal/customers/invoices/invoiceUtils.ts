@@ -4,6 +4,13 @@ import { InvoiceService, processInvoice } from "./InvoiceService.js";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
+import {
+  Feature,
+  InvoiceItem,
+  Price,
+  PriceType,
+  UsagePriceConfig,
+} from "@autumn/shared";
 
 export const attachParamsToInvoice = async ({
   sb,
@@ -84,4 +91,46 @@ export const getInvoicesForResponse = async ({
   const processedInvoices = invoices.map(processInvoice);
 
   return processedInvoices;
+};
+
+export const getInvoiceItems = async ({
+  stripeInvoice,
+  prices,
+  logger,
+}: {
+  stripeInvoice: Stripe.Invoice;
+  prices: Price[];
+  logger: any;
+}) => {
+  let invoiceItems: InvoiceItem[] = [];
+
+  try {
+    for (const line of stripeInvoice.lines.data) {
+      let price = prices.find(
+        (p) => p.config?.stripe_price_id === line.price?.id
+      );
+
+      if (!price) {
+        continue;
+      }
+
+      let usageConfig = price.config as UsagePriceConfig;
+      invoiceItems.push({
+        price_id: price.id!,
+        stripe_id: line.id,
+        internal_feature_id: usageConfig.internal_feature_id || null,
+        description: line.description || "",
+        period_start: line.period.start * 1000,
+        period_end: line.period.end * 1000,
+      });
+    }
+  } catch (error) {
+    logger.error(
+      `Failed to get invoice items for invoice ${stripeInvoice.id}`,
+      error
+    );
+    return [];
+  }
+
+  return invoiceItems;
 };

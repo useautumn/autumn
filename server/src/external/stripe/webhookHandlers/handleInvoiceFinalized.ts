@@ -5,6 +5,8 @@ import {
   AppEnv,
   BillingType,
   CusProductStatus,
+  FullCusProduct,
+  FullCustomerPrice,
   InvoiceStatus,
   Organization,
   UsagePriceConfig,
@@ -18,6 +20,7 @@ import {
   getStripeExpandedInvoice,
   updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
+import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 
 export const handleInvoiceFinalized = async ({
   sb,
@@ -25,12 +28,14 @@ export const handleInvoiceFinalized = async ({
   invoice,
   env,
   event,
+  logger,
 }: {
   sb: SupabaseClient;
   org: Organization;
   invoice: Stripe.Invoice;
   env: AppEnv;
   event: Stripe.Event;
+  logger: any;
 }) => {
   if (invoice.subscription) {
     const stripeCli = createStripeCli({ org, env });
@@ -45,6 +50,8 @@ export const handleInvoiceFinalized = async ({
       orgId: org.id,
       env,
       inStatuses: [CusProductStatus.Active],
+      withCusPrices: true,
+      withCusEnts: true,
     });
     if (activeProducts.length === 0) {
       console.log("invoice.finalized: No active products found");
@@ -60,7 +67,16 @@ export const handleInvoiceFinalized = async ({
       return;
     }
 
-    // Create invoice if not exists...?
+    let prices = activeProducts.flatMap((cp) =>
+      cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price)
+    );
+
+    let invoiceItems = await getInvoiceItems({
+      stripeInvoice: invoice,
+      prices: prices,
+      logger,
+    });
+
     await InvoiceService.createInvoiceFromStripe({
       sb,
       stripeInvoice: expandedInvoice,
@@ -70,6 +86,7 @@ export const handleInvoiceFinalized = async ({
       internalEntityId: activeProducts[0].internal_entity_id,
       status: invoice.status as InvoiceStatus,
       org,
+      items: invoiceItems,
     });
   }
 };

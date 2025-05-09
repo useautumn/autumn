@@ -117,6 +117,7 @@ export const featuresToObject = ({
 
 export const getCustomerDetails = async ({
   customer,
+  features,
   sb,
   org,
   env,
@@ -126,6 +127,7 @@ export const getCustomerDetails = async ({
   expand,
 }: {
   customer: FullCustomer;
+  features: Feature[];
   sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
@@ -167,9 +169,9 @@ export const getCustomerDetails = async ({
     org,
   });
 
-  let features = cusEnts.map(
-    (cusEnt: FullCustomerEntitlement) => cusEnt.entitlement.feature
-  );
+  // let features = cusEnts.map(
+  //   (cusEnt: FullCustomerEntitlement) => cusEnt.entitlement.feature
+  // );
 
   let apiVersion = org.api_version || APIVersion.v1;
 
@@ -226,10 +228,15 @@ export const getCustomerDetails = async ({
       return cusResponse;
     }
   } else {
+    let withItems = org.config.api_version >= BREAK_API_VERSION;
+    console.log(withItems);
+
     const processedInvoices = await getCusInvoices({
       sb,
       internalCustomerId: customer.internal_id,
       limit: 20,
+      withItems,
+      features,
     });
 
     return {

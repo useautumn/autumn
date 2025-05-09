@@ -76,8 +76,6 @@ export const createStripeSub = async ({
     });
   }
 
-  
-
   try {
     const subscription = await stripeCli.subscriptions.create({
       ...paymentMethodData,
@@ -106,6 +104,8 @@ export const createStripeSub = async ({
         usage_features: usageFeatures,
         org_id: org.id,
         env: customer.env,
+        current_period_start: subscription.current_period_start,
+        current_period_end: subscription.current_period_end,
       },
     });
 

@@ -5,6 +5,7 @@ import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../getCustomerDetails.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { parseCusExpand } from "../cusUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const handleGetCustomer = async (req: any, res: any) =>
   routeHandler({
@@ -16,7 +17,8 @@ export const handleGetCustomer = async (req: any, res: any) =>
       let { orgId, env } = req;
       let { expand } = req.query;
 
-      const [org, customer] = await Promise.all([
+      const [features, org, customer] = await Promise.all([
+        FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
         CusService.getWithProducts({
           sb: req.sb,
@@ -51,6 +53,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
         logger: req.logtail,
         cusProducts: customer.customer_products,
         expand: parseCusExpand(expand),
+        features,
       });
 
       res.status(200).json(cusData);
