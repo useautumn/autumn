@@ -39,6 +39,7 @@ export const cancelScheduledProductIfExists = async ({
       stripeCli,
       logger,
       env: attachParams.customer.env,
+      internalEntityId: attachParams.internalEntityId || undefined,
     });
 
     // 2. Delete scheduled product

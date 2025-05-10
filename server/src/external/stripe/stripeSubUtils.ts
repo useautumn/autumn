@@ -1,14 +1,17 @@
 import Stripe from "stripe";
 import {
+  BillingInterval,
   CusProductStatus,
   Feature,
   FullCusProduct,
   Organization,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { differenceInSeconds } from "date-fns";
 import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { stripeToAutumnInterval } from "./utils.js";
 
 export const getStripeSubs = async ({
   stripeCli,
@@ -157,7 +160,13 @@ export const getSubItemsForCusProduct = async ({
   for (const item of stripeSub.items.data) {
     if (item.price.product == product.processor?.id) {
       subItems.push(item);
-    } else if (prices.some((p) => p.config?.stripe_price_id == item.price.id)) {
+    } else if (
+      prices.some(
+        (p) =>
+          p.config?.stripe_price_id == item.price.id ||
+          (p.config as UsagePriceConfig).stripe_product_id == item.price.product
+      )
+    ) {
       subItems.push(item);
     }
   }
@@ -181,9 +190,19 @@ export const getStripeSchedules = async ({
       const schedule = await stripeCli.subscriptionSchedules.retrieve(
         scheduleId
       );
-      const firstItem = schedule.phases[0].items[0];
-      const price = await stripeCli.prices.retrieve(firstItem.price as string);
-      return { schedule, interval: price.recurring?.interval };
+
+      const batchPricesGet = [];
+      for (const item of schedule.phases[0].items) {
+        batchPricesGet.push(stripeCli.prices.retrieve(item.price as string));
+      }
+      const prices = await Promise.all(batchPricesGet);
+      const interval = prices[0].recurring?.interval;
+      const billingInterval = stripeToAutumnInterval({
+        interval: prices[0].recurring?.interval as string,
+        intervalCount: prices[0].recurring?.interval_count || 1,
+      });
+
+      return { schedule, interval: billingInterval, prices };
     } catch (error: any) {
       console.log("Error getting stripe schedule.", error.message);
       return null;
@@ -196,7 +215,11 @@ export const getStripeSchedules = async ({
 
   let schedulesAndSubs = await Promise.all(batchGet);
 
-  return schedulesAndSubs.filter((schedule) => schedule !== null);
+  return schedulesAndSubs.filter((schedule) => schedule !== null) as {
+    schedule: Stripe.SubscriptionSchedule;
+    interval: BillingInterval;
+    prices: Stripe.Price[];
+  }[];
 };
 
 // OTHERS

@@ -295,7 +295,7 @@ export const advanceClockForInvoice = async ({
   );
 
   if (waitForMeterUpdate) {
-    const timeoutSeconds = 220;
+    const timeoutSeconds = 200;
     for (let i = 0; i < timeoutSeconds; i += 10) {
       console.log(`   - ${i} / ${timeoutSeconds}`);
       await timeout(10000);

@@ -17,6 +17,8 @@ export const handleGetCustomer = async (req: any, res: any) =>
       let { orgId, env } = req;
       let { expand } = req.query;
 
+      let expandArray = parseCusExpand(expand);
+
       const [features, org, customer] = await Promise.all([
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
@@ -31,6 +33,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
             CusProductStatus.Scheduled,
           ],
           withEntities: true,
+          expand: expandArray,
         }),
       ]);
 
@@ -52,7 +55,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
         env: req.env,
         logger: req.logtail,
         cusProducts: customer.customer_products,
-        expand: parseCusExpand(expand),
+        expand: expandArray,
         features,
       });
 

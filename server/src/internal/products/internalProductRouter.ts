@@ -4,7 +4,7 @@ import { entitlementRouter } from "./entitlementRouter.js";
 
 import { ProductService } from "./ProductService.js";
 import { ErrCode, UsageModel } from "@autumn/shared";
-import { BillingType } from "@autumn/shared";
+
 import { FeatureOptions } from "@autumn/shared";
 
 import { OrgService } from "../orgs/OrgService.js";
@@ -19,10 +19,7 @@ import { mapToProductV2 } from "./productV2Utils.js";
 
 import { isFeaturePriceItem } from "./product-items/productItemUtils.js";
 
-import RecaseError, {
-  handleFrontendReqError,
-  handleRequestError,
-} from "@/utils/errorUtils.js";
+import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 
 export const productRouter = Router({ mergeParams: true });

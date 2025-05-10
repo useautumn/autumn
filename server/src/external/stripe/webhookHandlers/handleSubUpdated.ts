@@ -230,6 +230,7 @@ export const handleSubscriptionUpdated = async ({
           stripeCli,
           cusProducts: allCusProducts,
           product: updatedCusProducts[0].product,
+          internalEntityId: updatedCusProducts[0].internal_entity_id,
           logger,
           env,
         });

@@ -3,7 +3,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useEffect } from "react";
 import { useState } from "react";
-import { CreateFreeTrial } from "@autumn/shared";
+import { CreateFreeTrial, FreeTrialDuration } from "@autumn/shared";
+import {
+  Select,
+  SelectItem,
+  SelectContent,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export const FreeTrialConfig = ({
   freeTrial,
@@ -15,6 +22,7 @@ export const FreeTrialConfig = ({
   const [fields, setFields] = useState<CreateFreeTrial>({
     length: freeTrial?.length || 7,
     unique_fingerprint: freeTrial?.unique_fingerprint || false,
+    duration: freeTrial?.duration || FreeTrialDuration.Day,
   });
 
   useEffect(() => {
@@ -31,7 +39,30 @@ export const FreeTrialConfig = ({
             setFields({ ...fields, length: e.target.value as any })
           }
           type="number"
-          endContent={<p className="text-t3">Days</p>}
+          endContent={
+            <Select
+              value={freeTrial.duration}
+              onValueChange={(value) =>
+                setFields({
+                  ...fields,
+                  duration: value as FreeTrialDuration,
+                })
+              }
+            >
+              <SelectTrigger className="border-none shadow-none my-1">
+                <SelectValue placeholder="Days">
+                  {freeTrial.duration}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {Object.values(FreeTrialDuration).map((duration) => (
+                  <SelectItem key={duration} value={duration}>
+                    {duration}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          }
         />
       </div>
       <div className="flex items-center gap-2">

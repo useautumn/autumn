@@ -211,7 +211,9 @@ export const expireOrDeleteCusProduct = async ({
       (cp) =>
         cp.product.group === product.group &&
         cp.status === CusProductStatus.Scheduled &&
-        (internalEntityId ? cp.internal_entity_id === internalEntityId : true)
+        (internalEntityId
+          ? cp.internal_entity_id === internalEntityId
+          : nullish(cp.internal_entity_id))
     );
 
     if (curScheduledProduct) {

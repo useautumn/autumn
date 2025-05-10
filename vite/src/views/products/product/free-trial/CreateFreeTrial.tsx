@@ -1,12 +1,7 @@
 import { DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { PlusIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+
 import { useState } from "react";
 
 import { useProductContext } from "../ProductContext";
@@ -14,6 +9,7 @@ import { useProductContext } from "../ProductContext";
 // import { FrontendFreeTrial } from "@autumn/shared";
 import { FreeTrialConfig } from "./FreeTrialConfig";
 import { toast } from "sonner";
+import { FreeTrialDuration } from "@autumn/shared";
 
 export const CreateFreeTrial = ({
   open,
@@ -30,6 +26,7 @@ export const CreateFreeTrial = ({
   const [freeTrial, setFreeTrial] = useState({
     length: 7,
     unique_fingerprint: false,
+    duration: FreeTrialDuration.Day,
   });
 
   const handleCreateFreeTrial = async () => {
@@ -44,6 +41,7 @@ export const CreateFreeTrial = ({
       free_trial: {
         length: lengthInt,
         unique_fingerprint: freeTrial.unique_fingerprint,
+        duration: freeTrial.duration,
       },
     });
     setOpen(false);
@@ -51,15 +49,6 @@ export const CreateFreeTrial = ({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      {/* <DialogTrigger asChild>
-        <Button
-          variant="dashed"
-          className="w-full"
-          startIcon={<PlusIcon size={15} />}
-        >
-          Create Free Trial
-        </Button>
-      </DialogTrigger> */}
       <DialogContent>
         <DialogTitle>Create Free Trial</DialogTitle>
 

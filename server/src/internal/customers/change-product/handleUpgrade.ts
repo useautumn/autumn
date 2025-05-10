@@ -18,6 +18,7 @@ import {
   FullProduct,
   CusProductStatus,
   APIVersion,
+  UsagePriceConfig,
 } from "@autumn/shared";
 
 import { StatusCodes } from "http-status-codes";
@@ -31,7 +32,8 @@ import {
   attachParamsToInvoice,
   getInvoiceItems,
 } from "../invoices/invoiceUtils.js";
-import { updateScheduledSubWithNewItems } from "./scheduleUtils.js";
+import { updateScheduledSubWithNewItems } from "./scheduleUtils/updateScheduleWithNewItems.js";
+
 import { billForRemainingUsages } from "./billRemainingUsages.js";
 import { updateStripeSubscription } from "@/external/stripe/stripeSubUtils/updateStripeSub.js";
 import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSub.js";
@@ -90,7 +92,9 @@ export const handleStripeSubUpdate = async ({
   // 1. DELETE ITEMS FROM CURRENT SUB THAT CORRESPOND TO OLD PRODUCT
   for (const item of firstSub.items.data) {
     let stripePriceExists = curPrices.some(
-      (p) => p.config!.stripe_price_id === item.price.id
+      (p) =>
+        p.config!.stripe_price_id === item.price.id ||
+        (p.config as UsagePriceConfig).stripe_product_id === item.price.product
     );
 
     let stripeProdExists =
