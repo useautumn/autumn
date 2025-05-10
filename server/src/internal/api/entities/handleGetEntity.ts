@@ -39,6 +39,7 @@ export const handleGetEntity = async (req: any, res: any) =>
 
       let org = await OrgService.getFromReq(req);
 
+      const start = performance.now();
       let { entities, customer, fullEntities } = await getEntityResponse({
         sb,
         entityIds: [entityId],
@@ -46,6 +47,8 @@ export const handleGetEntity = async (req: any, res: any) =>
         env,
         customerId,
       });
+      const end = performance.now();
+      logger.info(`getEntityResponse took ${(end - start).toFixed(2)}ms`);
 
       let entity = entities[0];
       let fullEntity = fullEntities.find(
@@ -56,11 +59,18 @@ export const handleGetEntity = async (req: any, res: any) =>
       let invoices: InvoiceResponse[] | undefined;
 
       if (withInvoices) {
+        const invoiceStart = performance.now();
         invoices = await getInvoicesForResponse({
           sb,
           internalCustomerId: customer.internal_id,
           internalEntityId: fullEntity.internal_id,
         });
+        const invoiceEnd = performance.now();
+        logger.info(
+          `getInvoicesForResponse took ${(invoiceEnd - invoiceStart).toFixed(
+            2
+          )}ms`
+        );
       }
 
       res.status(200).json(
