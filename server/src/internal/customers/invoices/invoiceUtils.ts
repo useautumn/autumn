@@ -88,7 +88,13 @@ export const getInvoicesForResponse = async ({
     limit,
   });
 
-  const processedInvoices = invoices.map(processInvoice);
+  const processedInvoices = invoices.map((i) =>
+    processInvoice({
+      invoice: i,
+      withItems: false,
+      features: [],
+    })
+  );
 
   return processedInvoices;
 };
