@@ -13,6 +13,7 @@ import {
   FeatureType,
   FeatureUsageType,
   FreeTrial,
+  FreeTrialDuration,
   Organization,
   PriceType,
   ProductItem,
@@ -240,6 +241,7 @@ export const initFreeTrial = ({
   return {
     length,
     unique_fingerprint: uniqueFingerprint,
+    duration: FreeTrialDuration.Day,
   };
 };
 
