@@ -28,7 +28,7 @@ import { SuccessCode } from "@autumn/shared";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 import { getBooleanEntitledResult } from "./checkUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { CusService } from "@/internal/customers/CusService.js";
+
 import { getCheckPreview } from "./getCheckPreview.js";
 
 export const entitledRouter = Router();
@@ -292,6 +292,12 @@ const getCusEntsAndFeatures = async ({
   }
 
   let cusProducts = customer.customer_products;
+
+  console.log(
+    "Cus products",
+    cusProducts.map((p) => p.product)
+  );
+
   if (!org.config.include_past_due) {
     cusProducts = cusProducts.filter(
       (cusProduct) => cusProduct.status !== CusProductStatus.PastDue
