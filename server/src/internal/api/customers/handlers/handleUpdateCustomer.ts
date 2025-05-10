@@ -8,6 +8,7 @@ import { CreateCustomerSchema, ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../getCustomerDetails.js";
 import { parseCusExpand } from "../cusUtils.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const handleUpdateCustomer = async (req: any, res: any) =>
   routeHandler({
@@ -16,7 +17,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
     action: "POST/customers/:customer_id",
     handler: async (req, res) => {
       const customerId = req.params.customer_id;
-      const [originalCustomer, org] = await Promise.all([
+      const [originalCustomer, org, features] = await Promise.all([
         CusService.getByIdOrInternalId({
           sb: req.sb,
           idOrInternalId: customerId,
@@ -24,6 +25,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
           env: req.env,
         }),
         OrgService.getFromReq(req),
+        FeatureService.getFromReq(req),
       ]);
 
       if (!originalCustomer) {
@@ -111,6 +113,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         logger: req.logtail,
         cusProducts: finalCustomer.customer_products,
         expand: parseCusExpand(req.query.expand),
+        features,
       });
 
       res.status(200).json(customerDetails);

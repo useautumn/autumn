@@ -5,6 +5,7 @@ import { Invoice, Product } from "@autumn/shared";
 import { toast } from "sonner";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { Row, Item } from "@/components/general/TableGrid";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export const InvoicesTable = () => {
   const { env, invoices, products, entityId, entities } = useCustomerContext();
@@ -79,12 +80,19 @@ export const InvoicesTable = () => {
           }}
         >
           <Item className="col-span-3">
-            {invoice.product_ids
-              .map((p: string) => {
-                return products.find((product: Product) => product.id === p)
-                  ?.name;
-              })
-              .join(", ")}
+            <AdminHover
+              texts={[
+                { key: "ID", value: invoice.id },
+                { key: "Stripe ID", value: invoice.stripe_id },
+              ]}
+            >
+              {invoice.product_ids
+                .map((p: string) => {
+                  return products.find((product: Product) => product.id === p)
+                    ?.name;
+                })
+                .join(", ")}
+            </AdminHover>
           </Item>
           <Item className="col-span-3">
             {invoice.total.toFixed(2)} {invoice.currency.toUpperCase()}

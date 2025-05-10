@@ -1,11 +1,10 @@
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
   BillingType,
-  CusProductStatus,
   FullCusProduct,
+  FullCustomerPrice,
   Organization,
   Price,
-  ProcessorType,
 } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -16,6 +15,7 @@ import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 
 export const handleSubCreated = async ({
   sb,
@@ -55,6 +55,8 @@ export const handleSubCreated = async ({
         scheduleId: subscription.schedule as string,
         updates: {
           stripe_id: subscription.id,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end,
         },
       });
     } else {
@@ -78,6 +80,8 @@ export const handleSubCreated = async ({
           usage_features: subUsageFeatures,
           org_id: org.id,
           env: env,
+          current_period_start: subscription.current_period_start,
+          current_period_end: subscription.current_period_end,
         },
       });
     }
@@ -110,6 +114,14 @@ export const handleSubCreated = async ({
           stripeInvoiceId: subscription.latest_invoice as string,
         });
 
+        let invoiceItems = await getInvoiceItems({
+          stripeInvoice: invoice,
+          prices: cusProd.customer_prices.map(
+            (cpr: FullCustomerPrice) => cpr.price
+          ),
+          logger,
+        });
+
         await InvoiceService.createInvoiceFromStripe({
           sb,
           stripeInvoice: invoice,
@@ -118,6 +130,7 @@ export const handleSubCreated = async ({
           productIds: [cusProd.product_id],
           internalProductIds: [cusProd.internal_product_id],
           org,
+          items: invoiceItems,
         });
       };
 

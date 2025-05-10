@@ -2,6 +2,7 @@ import {
   ErrCode,
   FullCusProduct,
   FullCustomerEntitlement,
+  InvoiceItem,
   Product,
 } from "@autumn/shared";
 import {
@@ -38,6 +39,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
+import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
@@ -231,6 +233,22 @@ export const adjustAllowance = async ({
           ...getInvoiceExpansion(),
         });
 
+        let invoiceItems: InvoiceItem[] = [];
+        try {
+          invoiceItems = [
+            {
+              price_id: cusPrice.price.id!,
+              stripe_id: latestInvoice.id,
+              internal_feature_id: affectedFeature.internal_id || null,
+              description: `${product!.name} - ${
+                affectedFeature.name
+              } x ${Math.round(newUsage - oldUsage)}`,
+              period_start: Date.now(),
+              period_end: sub.current_period_end * 1000,
+            },
+          ];
+        } catch (error) {}
+
         await InvoiceService.createInvoiceFromStripe({
           sb,
           stripeInvoice: latestInvoice,
@@ -239,6 +257,7 @@ export const adjustAllowance = async ({
           org,
           productIds: [product!.id],
           internalProductIds: [product!.internal_id],
+          items: invoiceItems,
         });
 
         if (!paid) {

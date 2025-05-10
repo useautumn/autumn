@@ -2,12 +2,14 @@ import {
   BillingInterval,
   BillingType,
   Price,
-  AllowanceType,
   Feature,
   Customer,
-  Organization,
   FullCusProduct,
   UsagePriceConfig,
+  FullProduct,
+  Organization,
+  Entitlement,
+  EntitlementWithFeature,
 } from "@autumn/shared";
 
 import Stripe from "stripe";
@@ -15,18 +17,16 @@ import {
   compareBillingIntervals,
   getBillingType,
   getEntOptions,
-  getPriceAmount,
   getPriceEntitlement,
   getPriceForOverage,
-  getPriceOptions,
   getProductForPrice,
 } from "@/internal/prices/priceUtils.js";
 
-import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { priceToStripeItem } from "./priceToStripeItem/priceToStripeItem.js";
 import { getFeatureName } from "@/internal/features/displayUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const createSubMeta = ({ features }: { features: Feature[] }) => {
   const usageFeatures = features.map((f) => ({
@@ -111,7 +111,6 @@ export const getStripeSubItems = async ({
     const prices = intervalToPrices[interval];
 
     let subItems: any[] = [];
-    let itemMetas: any[] = [];
 
     let usage_features: any[] = [];
 
@@ -148,21 +147,33 @@ export const getStripeSubItems = async ({
         isCheckout,
         relatedEnt: priceEnt,
         existingUsage,
+        withEntity: notNullish(attachParams.internalEntityId),
       });
 
       if (!stripeItem) {
         continue;
       }
 
-      const { lineItem, lineItemMeta } = stripeItem;
+      const { lineItem } = stripeItem;
 
       subItems.push(lineItem);
-      itemMetas.push(lineItemMeta);
+    }
+
+    if (subItems.length == 0) {
+      // Get all monthly items...
+      subItems.push(
+        ...getArrearItems({
+          prices,
+          org,
+          interval: interval as BillingInterval,
+          products,
+          entitlements,
+        })
+      );
     }
 
     itemSets.push({
       items: subItems,
-      itemMetas,
       interval,
       subMeta: {
         usage_features: JSON.stringify(usage_features),
@@ -246,4 +257,65 @@ export const getInvoiceItemForUsage = ({
   );
 
   return invoiceItem;
+};
+
+export const getArrearItems = ({
+  prices,
+  products,
+  entitlements,
+  org,
+  interval,
+}: {
+  prices: Price[];
+  products: FullProduct[];
+  entitlements: EntitlementWithFeature[];
+  interval: BillingInterval;
+  org: Organization;
+}) => {
+  let placeholderItems: any[] = [];
+  for (const price of prices) {
+    let billingType = getBillingType(price.config!);
+    if (price.config!.interval! != interval) {
+      continue;
+    }
+
+    if (billingType == BillingType.UsageInArrear) {
+      let config = price.config! as UsagePriceConfig;
+      placeholderItems.push({
+        price_data: {
+          product: config.stripe_product_id!,
+          unit_amount: 0,
+          currency: org.default_currency || "usd",
+          recurring: {
+            ...billingIntervalToStripe(interval),
+          },
+        },
+        quantity: 0,
+      });
+    }
+  }
+
+  return placeholderItems;
+};
+
+export const getPlaceholderItem = ({
+  product,
+  org,
+  interval,
+}: {
+  product: FullProduct;
+  org: Organization;
+  interval: BillingInterval;
+}) => {
+  return {
+    price_data: {
+      product: product.processor!.id,
+      unit_amount: 0,
+      currency: org.default_currency || "usd",
+      recurring: {
+        ...billingIntervalToStripe(interval as BillingInterval),
+      },
+    },
+    quantity: 0,
+  };
 };

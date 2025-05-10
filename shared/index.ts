@@ -24,7 +24,6 @@ export * from "./models/cusModels/cusProductModels.js";
 export * from "./models/cusModels/cusPriceModels/pricesInputModel.js";
 export * from "./models/cusModels/cusPriceModels/cusPriceModels.js";
 export * from "./models/cusModels/invoiceModels/invoiceModels.js";
-export * from "./models/cusModels/invoiceModels/invoiceItemModels.js";
 export * from "./models/cusModels/cusResponseModels.js";
 
 // Org Models

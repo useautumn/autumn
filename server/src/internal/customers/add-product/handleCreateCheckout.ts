@@ -49,7 +49,7 @@ export const handleCreateCheckout = async ({
   }
 
   // Handle first item set
-  const { items, itemMetas, subMeta } = itemSets[0];
+  const { items } = itemSets[0];
   attachParams.itemSets = itemSets;
 
   const isRecurring = pricesContainRecurring(attachParams.prices);
@@ -58,7 +58,6 @@ export const handleCreateCheckout = async ({
   const metaId = await createCheckoutMetadata({
     sb,
     attachParams,
-    itemMetas,
   });
 
   let billingCycleAnchorUnixSeconds = org.config.anchor_start_of_month

@@ -1,13 +1,6 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Separator } from "@/components/ui/separator";
+import { Accordion } from "@/components/ui/accordion";
 import { useProductContext } from "./ProductContext";
-import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
-import { Gift, Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import { AddProductButton } from "@/views/customers/customer/add-product/AddProductButton";
 import { SideAccordion } from "@/components/general/SideAccordion";
 import { useState } from "react";
@@ -16,19 +9,8 @@ import { FreeTrialView } from "./free-trial/FreeTrialView";
 import { ProductProps } from "./ProductProps";
 import { ProductVersions } from "./ProductVersions";
 import { Badge } from "@/components/ui/badge";
-import { CountAndMigrate } from "./versioning/CountAndMigrate";
 
-export default function ProductSidebar({
-  customerData,
-  options,
-  setOptions,
-  oneTimePurchase,
-}: {
-  customerData?: any;
-  options?: any;
-  setOptions?: any;
-  oneTimePurchase?: boolean;
-}) {
+export default function ProductSidebar() {
   const { product, org, setProduct, customer } = useProductContext();
   const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
 
@@ -122,19 +104,8 @@ export default function ProductSidebar({
           </SideAccordion>
         </div>
         <div className="flex gap-2 px-4 py-6 w-full">
-          <AddProductButton
-          // handleCreateProduct={createProductClicked}
-          // actionState={actionState}
-          />
+          <AddProductButton />
         </div>
-        {/* <SideAccordion title="Product" value="product">
-          <div className="flex flex-col gap-2 p-2 px-4">
-            <div className="flex items-center justify-between">
-              <span>Status</span>
-              <span className="text-muted-foreground">Active</span>
-            </div>
-          </div>
-        </SideAccordion> */}
       </Accordion>
     </div>
   );

@@ -34,21 +34,6 @@ import { getFeatureName } from "@/internal/features/displayUtils.js";
 import { submitUsageToStripe } from "../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../stripePriceUtils.js";
 
-// Format invoice nicely
-
-// // 1. Sort invoice items by
-// let lineItems = invoice.lines.data;
-// lineItems.sort((a, b) => a.period.start - b.period.start);
-// for (const item of lineItems) {
-//   console.log(item.description);
-//   let periodStart = formatUnixToDateTime(item.period.start * 1000);
-//   let periodEnd = formatUnixToDateTime(item.period.end * 1000);
-//   console.log(`${periodStart} - ${periodEnd}`);
-//   console.log(`${item.amount} ${item.currency}`);
-//   console.log("--------------------------------");
-// }
-
-// return;
 const handleInArrearProrated = async ({
   sb,
   cusEnts,
@@ -266,8 +251,6 @@ const handleUsageInArrear = async ({
   let feature = relatedCusEnt.entitlement.feature;
   if (activeProduct.internal_entity_id) {
     let currency = invoice.currency;
-    // console.log("Total negative balance: ", totalNegativeBalance);
-    // console.log("Total quantity: ", roundedQuantity);
     let invoiceItem = getInvoiceItemForUsage({
       stripeInvoiceId: invoice.id,
       price,
@@ -398,7 +381,9 @@ export const sendUsageAndReset = async ({
       logger.info(
         `✨ Handling end of period usage for customer ${customer.name}, org: ${org.slug}`
       );
+
       logger.info(`   - Feature: ${relatedCusEnt.entitlement.feature.id}`);
+
       await handleUsageInArrear({
         sb,
         invoice,
@@ -556,35 +541,3 @@ export const handleInvoiceCreated = async ({
     }
   }
 };
-
-// if (billingType == BillingType.InArrearProrated) {
-//   console.log("   ✨ In arrear (PRORATED)");
-//   await handleInArrearProrated({
-//     sb,
-//     cusEnts,
-//     cusPrice,
-//     customer,
-//     org,
-//     env,
-//     invoice,
-//     usageSub: usageBasedSub,
-//   });
-//   continue;
-// }
-
-// // 1. Get stripe meter
-// const stripeMeter = await stripeCli.billing.meters.retrieve(
-//   config.stripe_meter_id!
-// );
-
-// await stripeCli.billing.meterEvents.create({
-//   // event_name: price.id!,
-//   event_name: stripeMeter.event_name,
-//   payload: {
-//     stripe_customer_id: customer.processor.id,
-//     value: roundedQuantity.toString(),
-//   },
-//   timestamp: usageTimestamp,
-// });
-
-// let feature = relatedCusEnt.entitlement.feature;

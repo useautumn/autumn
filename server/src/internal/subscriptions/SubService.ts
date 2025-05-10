@@ -1,6 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AppEnv, Subscription } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
+import Stripe from "stripe";
 
 export class SubService {
   static async createSub({
@@ -68,6 +69,8 @@ export class SubService {
           usage_features: usageFeatures,
           org_id: orgId,
           env,
+          current_period_start: null,
+          current_period_end: null,
         },
       });
     }
@@ -89,6 +92,30 @@ export class SubService {
     }
 
     return updatedSub;
+  }
+
+  static async updateFromStripe({
+    sb,
+    stripeSub,
+  }: {
+    sb: SupabaseClient;
+    stripeSub: Stripe.Subscription;
+  }) {
+    let { data, error } = await sb
+      .from("subscriptions")
+      .update({
+        current_period_start: stripeSub.current_period_start,
+        current_period_end: stripeSub.current_period_end,
+      })
+      .eq("stripe_id", stripeSub.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
   }
 
   static async updateFromStripeId({

@@ -117,6 +117,7 @@ export const featuresToObject = ({
 
 export const getCustomerDetails = async ({
   customer,
+  features,
   sb,
   org,
   env,
@@ -126,6 +127,7 @@ export const getCustomerDetails = async ({
   expand,
 }: {
   customer: FullCustomer;
+  features: Feature[];
   sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
@@ -166,10 +168,6 @@ export const getCustomerDetails = async ({
     subs,
     org,
   });
-
-  let features = cusEnts.map(
-    (cusEnt: FullCustomerEntitlement) => cusEnt.entitlement.feature
-  );
 
   let apiVersion = org.api_version || APIVersion.v1;
 
@@ -214,6 +212,9 @@ export const getCustomerDetails = async ({
         features: entList,
         products,
         invoices: withInvoices ? invoices : undefined,
+        trials_used: expand.includes(CusExpand.TrialsUsed)
+          ? customer.trials_used
+          : undefined,
       }),
     };
 
@@ -226,10 +227,14 @@ export const getCustomerDetails = async ({
       return cusResponse;
     }
   } else {
+    let withItems = org.config.api_version >= BREAK_API_VERSION;
+
     const processedInvoices = await getCusInvoices({
       sb,
       internalCustomerId: customer.internal_id,
       limit: 20,
+      withItems,
+      features,
     });
 
     return {
@@ -238,6 +243,9 @@ export const getCustomerDetails = async ({
       add_ons: addOns,
       entitlements: balances,
       invoices: processedInvoices,
+      trials_used: expand.includes(CusExpand.TrialsUsed)
+        ? customer.trials_used
+        : undefined,
     };
   }
 };

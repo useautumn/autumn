@@ -8,7 +8,15 @@ import {
   FullProduct,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { addDays, addMinutes, addSeconds, getTime } from "date-fns";
+import {
+  addDays,
+  addMinutes,
+  addMonths,
+  addSeconds,
+  addWeeks,
+  addYears,
+  getTime,
+} from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
 
 export const validateAndInitFreeTrial = ({
@@ -26,7 +34,7 @@ export const validateAndInitFreeTrial = ({
     ...freeTrialSchema,
     id: generateId("ft"),
     created_at: Date.now(),
-    duration: FreeTrialDuration.Day,
+    duration: freeTrial.duration || FreeTrialDuration.Day,
     internal_product_id: internalProductId,
     is_custom: isCustom,
   };
@@ -40,14 +48,32 @@ export const freeTrialsAreSame = (
   if (!ft1 || !ft2) return false;
   return (
     ft1.length === ft2.length &&
-    ft1.unique_fingerprint === ft2.unique_fingerprint
+    ft1.unique_fingerprint === ft2.unique_fingerprint &&
+    ft1.duration === ft2.duration
   );
 };
 
 export const freeTrialToStripeTimestamp = (freeTrial: FreeTrial | null) => {
   if (!freeTrial) return undefined;
-  // 1. Add days
-  let trialEnd = addDays(new Date(), freeTrial.length);
+
+  let duration = freeTrial.duration || FreeTrialDuration.Day;
+  let length = freeTrial.length;
+
+  let trialEnd: Date;
+  if (duration === FreeTrialDuration.Day) {
+    trialEnd = addDays(new Date(), length);
+  } else if (duration === FreeTrialDuration.Month) {
+    trialEnd = addMonths(new Date(), length);
+  } else if (duration === FreeTrialDuration.Year) {
+    trialEnd = addYears(new Date(), length);
+  } else {
+    throw new RecaseError({
+      message: `Invalid free trial duration: ${duration}`,
+      code: "invalid_free_trial_duration",
+      statusCode: 400,
+    });
+  }
+
   trialEnd = addMinutes(trialEnd, 1);
 
   return Math.ceil(trialEnd.getTime() / 1000);
@@ -115,13 +141,19 @@ export const getFreeTrialAfterFingerprint = async ({
   freeTrial,
   fingerprint,
   internalCustomerId,
+  multipleAllowed,
 }: {
   sb: SupabaseClient;
   freeTrial: FreeTrial | null | undefined;
   fingerprint: string | null | undefined;
   internalCustomerId: string;
+  multipleAllowed: boolean;
 }): Promise<FreeTrial | null> => {
   if (!freeTrial) return null;
+
+  if (multipleAllowed) {
+    return freeTrial;
+  }
 
   let uniqueFreeTrial: FreeTrial | null = freeTrial;
   if (uniqueFreeTrial.unique_fingerprint && fingerprint) {
@@ -167,10 +199,8 @@ export const handleNewFreeTrial = async ({
   internalProductId: string;
   isCustom: boolean;
 }) => {
-  
   // If new free trial is null
   if (!newFreeTrial) {
-
     // Delete if not custom and current free trial exists
     if (!isCustom && curFreeTrial) {
       await FreeTrialService.delete({

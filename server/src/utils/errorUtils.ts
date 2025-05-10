@@ -143,8 +143,9 @@ export const handleRequestError = ({
     );
 
     if (error instanceof Stripe.errors.StripeError) {
+      logger.error("Stripe error");
       logger.error("Request body:", getJsonBody(req.body));
-      logger.error(error.message);
+      logger.error(error.message || error);
       res.status(400).json({
         message: error.message,
         code: ErrCode.InvalidInputs,

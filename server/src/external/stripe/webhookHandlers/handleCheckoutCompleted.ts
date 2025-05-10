@@ -7,6 +7,7 @@ import {
   AppEnv,
   BillingType,
   CusProductStatus,
+  FullProduct,
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";
@@ -28,9 +29,11 @@ import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 import { createStripeSub } from "../stripeSubUtils/createStripeSub.js";
 import { getAlignedIntervalUnix } from "@/internal/prices/billingIntervalUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
+import { getPlaceholderItem } from "../stripePriceUtils.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -178,6 +181,8 @@ export const handleCheckoutSessionCompleted = async ({
         usage_features: attachParams.itemSets?.[0]?.usageFeatures || [],
         org_id: org.id,
         env: attachParams.customer.env,
+        current_period_start: subscription.current_period_start,
+        current_period_end: subscription.current_period_end,
       },
     });
 
@@ -230,6 +235,40 @@ export const handleCheckoutSessionCompleted = async ({
     }
 
     for (const itemSet of remainingSets) {
+      let finalItems = itemSet.items.filter((item: any) => {
+        let price = attachParams.prices.find(
+          (p) => p.config!.stripe_price_id == item.price
+        );
+
+        if (!price) {
+          return true;
+        }
+
+        let billingType = getBillingType(price.config!);
+
+        if (
+          billingType == BillingType.UsageInArrear &&
+          notNullish(attachParams.internalEntityId)
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+
+      itemSet.items =
+        finalItems.length == 0
+          ? attachParams.products.map((p: FullProduct) =>
+              getPlaceholderItem({
+                product: p,
+                org,
+                interval: itemSet.interval,
+              })
+            )
+          : finalItems;
+
+      console.log("Item set items: ", itemSet.items);
+
       const stripeCli = createStripeCli({ org, env });
 
       // Handle billing cycle anchor...
@@ -287,6 +326,12 @@ export const handleCheckoutSessionCompleted = async ({
         stripeInvoiceId: invoiceId,
       });
 
+      let invoiceItems = await getInvoiceItems({
+        stripeInvoice: invoice,
+        prices: attachParams.prices,
+        logger,
+      });
+
       await InvoiceService.createInvoiceFromStripe({
         sb,
         org,
@@ -295,6 +340,7 @@ export const handleCheckoutSessionCompleted = async ({
         productIds: products.map((p) => p.id),
         internalProductIds: products.map((p) => p.internal_id),
         internalEntityId: attachParams.internalEntityId,
+        items: invoiceItems,
       });
 
       console.log("   ✅ checkout.completed: successfully created invoice");
@@ -326,33 +372,3 @@ export const handleCheckoutSessionCompleted = async ({
 
   return;
 };
-
-// Old quantity method
-// for (let i = 0; i < lineItems.length; i++) {
-//   const item = lineItems[i];
-//   const itemMeta = itemMetas[i];
-
-//   if (!itemMeta) {
-//     console.log("No item meta found, skipping");
-//     continue;
-//   }
-
-//   // Feature ID:
-//   const internalFeatureId = itemMeta.internal_feature_id;
-//   const featureId = itemMeta.feature_id;
-
-//   const index = attachParams.optionsList.findIndex(
-//     (feature) => feature.internal_feature_id == internalFeatureId
-//   );
-
-//   if (index == -1) {
-//     attachParams.optionsList.push({
-//       feature_id: featureId,
-//       internal_feature_id: internalFeatureId,
-//       quantity: item.quantity,
-//     });
-//   } else {
-//     attachParams.optionsList[index].quantity = item.quantity;
-//   }
-//   console.log(`Updated options list: ${featureId} - ${item.quantity}`);
-// }

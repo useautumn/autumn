@@ -34,8 +34,10 @@ import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 
-const getOptionsToUpdate = (oldOptionsList: any[], newOptionsList: any[]) => {
-  let differentOptionsExist = false;
+export const getOptionsToUpdate = (
+  oldOptionsList: any[],
+  newOptionsList: any[]
+) => {
   let optionsToUpdate = [];
   for (const newOptions of newOptionsList) {
     let internalFeatureId = newOptions.internal_feature_id;
@@ -327,6 +329,7 @@ export const handleSameMainProduct = async ({
       product: product,
       logger,
       env: customer.env,
+      internalEntityId: curScheduledProduct.internal_entity_id,
     });
 
     // Delete scheduled product
@@ -388,70 +391,6 @@ export const handleSameMainProduct = async ({
         .join(", ")}`,
     })
   );
-
-  return {
-    done: true,
-    curCusProduct: curMainProduct,
-  };
-};
-
-export const handleSameAddOnProduct = async ({
-  sb,
-  curSameProduct,
-  curMainProduct,
-  attachParams,
-  res,
-}: {
-  sb: SupabaseClient;
-  curSameProduct: FullCusProduct;
-  curMainProduct: FullCusProduct | null;
-  attachParams: AttachParams;
-  res: any;
-}) => {
-  const { optionsList: newOptionsList, prices, products } = attachParams;
-
-  let product = products[0];
-
-  if (pricesOnlyOneOff(prices) || isFreeProduct(prices)) {
-    attachParams.curCusProduct = undefined;
-    return {
-      done: false,
-      curCusProduct: null,
-    };
-  }
-
-  let optionsToUpdate = getOptionsToUpdate(
-    curSameProduct.options,
-    newOptionsList
-  );
-
-  if (optionsToUpdate.length === 0) {
-    throw new RecaseError({
-      message: `Customer already has add-on product ${product.name}, can't attach again`,
-      code: ErrCode.CustomerAlreadyHasProduct,
-      statusCode: 400,
-    });
-  }
-
-  throw new RecaseError({
-    message:
-      "Updating add on product quantity is feature flagged -- please contact hey@useautumn to enable it for this account!",
-    code: ErrCode.InternalError,
-    statusCode: 500,
-  });
-
-  console.log("Updating add on product with new quantities:", optionsToUpdate);
-  let messages: string[] = [];
-  for (const option of optionsToUpdate) {
-    messages.push(
-      `Updated quantity for ${option.new.feature_id} to ${option.new.quantity}`
-    );
-  }
-
-  res.status(200).json({
-    success: true,
-    message: messages.join("\n"),
-  });
 
   return {
     done: true,

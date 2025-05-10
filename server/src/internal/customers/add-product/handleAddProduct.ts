@@ -14,7 +14,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import {
   createStripeCli,
-  stripeToAutumnInterval,
   subToAutumnInterval,
 } from "@/external/stripe/utils.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
@@ -24,6 +23,7 @@ import {
   BillingInterval,
   BillingType,
   ErrCode,
+  InvoiceItem,
   PriceType,
   UsageModel,
 } from "@autumn/shared";
@@ -45,7 +45,8 @@ import {
 } from "@/internal/prices/billingIntervalUtils.js";
 import { SuccessCode } from "@autumn/shared";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { nullish } from "@/utils/genUtils.js";
+
+import { getInvoiceItems } from "../invoices/invoiceUtils.js";
 
 export const handleBillNowPrices = async ({
   sb,
@@ -84,9 +85,9 @@ export const handleBillNowPrices = async ({
   let subscriptions: Stripe.Subscription[] = [];
   let invoiceIds: string[] = [];
 
-  // Merge billing cycles...
+  // Only merge if no free trials
   let mergeCusProduct =
-    !disableMerge && org.config.merge_billing_cycles
+    !disableMerge && !freeTrial && org.config.merge_billing_cycles
       ? cusProducts?.find((cp) =>
           products.some((p) => p.group == cp.product.group)
         )
@@ -194,6 +195,12 @@ export const handleBillNowPrices = async ({
       stripeInvoiceId: invoiceId,
     });
 
+    let invoiceItems = await getInvoiceItems({
+      stripeInvoice: invoice,
+      prices: attachParams.prices,
+      logger,
+    });
+
     await InvoiceService.createInvoiceFromStripe({
       sb,
       stripeInvoice: invoice,
@@ -202,6 +209,7 @@ export const handleBillNowPrices = async ({
       internalProductIds: products.map((p) => p.internal_id),
       productIds: products.map((p) => p.id),
       org,
+      items: invoiceItems,
     });
 
     return invoice;
@@ -281,6 +289,7 @@ export const handleOneOffPrices = async ({
   const stripeCli = createStripeCli({ org, env: customer.env });
 
   let invoiceItems = [];
+  let autumnInvoiceItems: InvoiceItem[] = [];
 
   // 2. Create invoice items
   for (const price of prices) {
@@ -333,10 +342,19 @@ export const handleOneOffPrices = async ({
       ...amountData,
       ...previewData,
     });
+
+    autumnInvoiceItems.push({
+      price_id: price.id!,
+      description: `${product?.name}${allowanceStr}`,
+      internal_feature_id: entitlement?.feature.internal_id || null,
+      period_start: Date.now(),
+      period_end: Date.now(),
+      stripe_id: "",
+    });
   }
 
   if (shouldPreview) {
-    return invoiceItems;
+    return autumnInvoiceItems;
   }
 
   logger.info("   1. Creating invoice");
@@ -347,12 +365,19 @@ export const handleOneOffPrices = async ({
   });
 
   logger.info("   2. Creating invoice items");
-  for (const invoiceItem of invoiceItems) {
-    await stripeCli.invoiceItems.create({
+
+  for (let i = 0; i < invoiceItems.length; i++) {
+    let invoiceItem = invoiceItems[i];
+    let stripeInvoiceItem = await stripeCli.invoiceItems.create({
       ...invoiceItem,
       customer: customer.processor.id,
       invoice: stripeInvoice.id,
     });
+
+    autumnInvoiceItems[i] = {
+      ...autumnInvoiceItems[i],
+      stripe_id: stripeInvoiceItem.id,
+    };
   }
 
   if (!attachParams.invoiceOnly) {
@@ -370,6 +395,7 @@ export const handleOneOffPrices = async ({
       logger,
     });
 
+    console.log("Error code: ", error?.code);
     if (!paid) {
       await stripeCli.invoices.voidInvoice(stripeInvoice.id);
       if (fromRequest && org.config.checkout_on_failed_payment) {
@@ -409,6 +435,7 @@ export const handleOneOffPrices = async ({
     productIds: products.map((p) => p.id),
     internalProductIds: products.map((p) => p.internal_id),
     org: org,
+    items: autumnInvoiceItems,
   });
 
   logger.info("   ✅ Successfully attached product");
