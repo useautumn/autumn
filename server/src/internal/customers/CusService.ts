@@ -4,6 +4,7 @@ import {
   CusExpand,
   CusProductStatus,
   Customer,
+  EntityExpand,
   FullCusProduct,
 } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
@@ -42,6 +43,7 @@ export class CusService {
     withEntities = false,
     entityId,
     expand,
+    withSubs = false,
   }: {
     sb: SupabaseClient;
     idOrInternalId: string;
@@ -50,7 +52,8 @@ export class CusService {
     inStatuses?: CusProductStatus[];
     withEntities?: boolean;
     entityId?: string;
-    expand?: CusExpand[];
+    expand?: (CusExpand | EntityExpand)[];
+    withSubs?: boolean;
   }) {
     const { data, error } = await sb.rpc("get_cus_with_products", {
       p_cus_id: idOrInternalId,
@@ -60,6 +63,8 @@ export class CusService {
       p_with_entities: withEntities,
       p_entity_id: entityId,
       p_with_trials_used: expand?.includes(CusExpand.TrialsUsed),
+      p_with_subs: withSubs,
+      p_with_invoices: expand?.includes(CusExpand.Invoices),
     });
 
     if (error) {
@@ -101,6 +106,8 @@ export class CusService {
       entities: entities,
       entity: entity,
       trials_used: trialsUsed,
+      subscriptions: data.subscriptions,
+      invoices: data.invoices,
     };
   }
 
