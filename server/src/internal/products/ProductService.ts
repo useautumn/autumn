@@ -311,6 +311,7 @@ export class ProductService {
     }
 
     let product = data[0];
+
     product.free_trial =
       product.free_trial.length > 0 ? product.free_trial[0] : null;
     return product;

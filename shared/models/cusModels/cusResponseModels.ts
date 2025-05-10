@@ -52,6 +52,12 @@ export const CusEntResponseV2Schema = z.object({
     .nullish(),
 });
 
+export const TrialUsedResponseSchema = z.object({
+  product_id: z.string(),
+  customer_id: z.string(),
+  fingerprint: z.string(),
+});
+
 export const CusResponseSchema = z.object({
   // Internal fields
   autumn_id: z.string().nullish(),
@@ -68,6 +74,7 @@ export const CusResponseSchema = z.object({
   features: z.any(),
 
   invoices: z.array(InvoiceResponseSchema).optional(),
+  trials_used: z.array(TrialUsedResponseSchema).optional(),
 });
 
 export type CusResponse = z.infer<typeof CusResponseSchema>;

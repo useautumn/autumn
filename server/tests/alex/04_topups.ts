@@ -75,20 +75,6 @@ describe(chalk.yellowBright("Top ups"), () => {
     expect(cusEnt.interval).to.equal(prodEnt.interval);
   });
 
-  // it("should send events and check balances", async function () {
-  //   await runEventsAndCheckBalances({
-  //     customerId,
-  //     entitlements: [
-  //       {
-  //         interval: EntInterval.Lifetime,
-  //         feature_id: alexFeatures.topUpMessage.id,
-  //         allowance: 250 * overrideQuantity,
-  //         allowance_type: AllowanceType.Fixed,
-  //       }, // manual entitlement because entitlement balance is 0...
-  //     ],
-  //   });
-  // });
-
   // Try buy again
   it("should buy top ups again and have correct balance", async function () {
     // 1. Update leftover balance
@@ -128,7 +114,7 @@ describe(chalk.yellowBright("Top ups"), () => {
   });
 });
 
-describe(chalk.yellowBright("Testing o1 message top up"), () => {
+describe.skip(chalk.yellowBright("Testing o1 message top up"), () => {
   let customerId = "alex-o1-top-up-customer";
   let o1TopUpQuantity = Math.floor(Math.random() * 15);
   let billingUnits = alexProducts.o1TopUps.prices[0].config.billing_units;

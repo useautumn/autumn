@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import {
-  AppEnv,
-  BillingInterval,
-  Entity,
-  Feature,
-  FeatureOptions,
-  FrontendOrganization,
-  FrontendProduct,
-  FullCusProduct,
-  ProductV2,
-} from "@autumn/shared";
+import { Entity, Feature, FeatureOptions, ProductV2 } from "@autumn/shared";
 
 import {
   BreadcrumbItem,
@@ -308,6 +298,13 @@ export default function CustomerProductView() {
       };
     }
 
+    if (product.is_add_on) {
+      return {
+        buttonText: "Enable Product",
+        tooltipText: `Enable product ${product.name} for ${customer.name}`,
+        disabled: false,
+      };
+    }
     // Case 1: Product is active, no changes, and is not an add-on
     if (product.isActive && !hasOptionsChanges && !hasChanges) {
       return {
@@ -465,12 +462,7 @@ export default function CustomerProductView() {
             </div>
           </div>
           <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
-            <ProductSidebar
-              customerData={data}
-              options={options}
-              setOptions={setOptions}
-              oneTimePurchase={oneTimePurchase || false}
-            />
+            <ProductSidebar />
           </div>
         </div>
       </ProductContext.Provider>

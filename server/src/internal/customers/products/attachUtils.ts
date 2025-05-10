@@ -324,6 +324,7 @@ export const getFullCusProductData = async ({
         freeTrial: freeTrialProduct.free_trial,
         fingerprint: customer.fingerprint,
         internalCustomerId: customer.internal_id,
+        multipleAllowed: org.config.multiple_trials,
       });
     }
 
@@ -407,6 +408,7 @@ export const getFullCusProductData = async ({
     freeTrial: freeTrial,
     fingerprint: customer.fingerprint,
     internalCustomerId: customer.internal_id,
+    multipleAllowed: org.config.multiple_trials,
   });
 
   return {

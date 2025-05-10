@@ -60,14 +60,6 @@ export const checkAddProductErrors = async ({
 }) => {
   const { prices, entitlements, optionsList } = attachParams;
 
-  // if (useCheckout && !checkoutPricesValid(prices)) {
-  //   throw new RecaseError({
-  //     message: `Can't use /checkout for below threshold prices`,
-  //     code: ErrCode.InvalidRequest,
-  //     statusCode: 400,
-  //   });
-  // }
-
   // 2. Check if options are valid
   for (const price of prices) {
     const billingType = getBillingType(price.config!);
@@ -98,25 +90,6 @@ export const checkAddProductErrors = async ({
         });
       }
 
-      // // 2. Quantity must be >= feature allowance
-      // let minQuantity = new Decimal(priceEnt.allowance!)
-      //   .div((price.config! as UsagePriceConfig).billing_units || 1)
-      //   .toNumber();
-
-      // console.log("Min quantity", minQuantity);
-
-      // if (
-      //   notNullish(options?.quantity) &&
-      //   priceEnt.allowance &&
-      //   options!.quantity! < minQuantity
-      // ) {
-      //   throw new RecaseError({
-      //     message: `Quantity must be greater than or equal to ${minQuantity}`,
-      //     code: ErrCode.InvalidOptions,
-      //     statusCode: 400,
-      //   });
-      // }
-
       // 3. Quantity cannot be negative
       if (notNullish(options?.quantity) && options?.quantity! < 0) {
         throw new RecaseError({
@@ -134,24 +107,6 @@ export const checkAddProductErrors = async ({
           statusCode: 400,
         });
       }
-
-      // if (prices.length === 1) {
-      //   // 1. Check allowance
-      //   let allowance = priceEnt.allowance;
-      //   let minQuantity = new Decimal(allowance!)
-      //     .div((price.config! as UsagePriceConfig).billing_units || 1)
-      //     .toNumber();
-
-      //   if (priceIsOneOffAndTiered(price, priceEnt)) {
-      //     if (options?.quantity! <= minQuantity) {
-      //       throw new RecaseError({
-      //         message: `Quantity must be greater than ${minQuantity}`,
-      //         code: ErrCode.InvalidOptions,
-      //         statusCode: 400,
-      //       });
-      //     }
-      //   }
-      // }
     }
   }
 };

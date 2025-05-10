@@ -1,6 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import {
   AppEnv,
+  CusExpand,
   CusProductStatus,
   Customer,
   FullCusProduct,
@@ -40,6 +41,7 @@ export class CusService {
     ],
     withEntities = false,
     entityId,
+    expand,
   }: {
     sb: SupabaseClient;
     idOrInternalId: string;
@@ -48,6 +50,7 @@ export class CusService {
     inStatuses?: CusProductStatus[];
     withEntities?: boolean;
     entityId?: string;
+    expand?: CusExpand[];
   }) {
     const { data, error } = await sb.rpc("get_cus_with_products", {
       p_cus_id: idOrInternalId,
@@ -56,6 +59,7 @@ export class CusService {
       p_statuses: inStatuses,
       p_with_entities: withEntities,
       p_entity_id: entityId,
+      p_with_trials_used: expand?.includes(CusExpand.TrialsUsed),
     });
 
     if (error) {
@@ -81,11 +85,22 @@ export class CusService {
         product.customer_entitlements = [];
       }
     }
+
+    let trialsUsed = data.trials_used;
+    if (trialsUsed) {
+      trialsUsed = trialsUsed.filter(
+        (trial: any, index: number, self: any) =>
+          index ===
+          self.findIndex((t: any) => t.product_id === trial.product_id)
+      );
+    }
+
     return {
       ...customer,
       customer_products: products,
       entities: entities,
       entity: entity,
+      trials_used: trialsUsed,
     };
   }
 

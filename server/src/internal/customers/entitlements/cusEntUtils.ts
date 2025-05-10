@@ -554,7 +554,9 @@ export const getExistingUsageFromCusProducts = ({
         (cp.status === CusProductStatus.Active ||
           cp.status === CusProductStatus.PastDue) &&
         !cp.product.is_add_on &&
-        (internalEntityId ? cp.internal_entity_id === internalEntityId : true)
+        (internalEntityId
+          ? cp.internal_entity_id === internalEntityId
+          : nullish(cp.internal_entity_id))
     )
     .flatMap((cp) => cp.customer_entitlements)
     .find((ce) => ce.internal_feature_id === entitlement.internal_feature_id);

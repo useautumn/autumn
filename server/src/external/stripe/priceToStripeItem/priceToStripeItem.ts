@@ -1,10 +1,9 @@
 import {
   getBillingType,
-  getPriceForOverage,
   priceIsOneOffAndTiered,
 } from "@/internal/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { nullish } from "@/utils/genUtils.js";
+
 import {
   BillingType,
   ErrCode,
@@ -15,7 +14,7 @@ import {
   UsagePriceConfig,
 } from "@autumn/shared";
 import { EntitlementWithFeature, Price } from "@autumn/shared";
-import { Decimal } from "decimal.js";
+
 import {
   priceToOneOffAndTiered,
   priceToUsageInAdvance,
@@ -31,6 +30,7 @@ export const priceToStripeItem = ({
   options,
   isCheckout = false,
   existingUsage,
+  withEntity = false,
 }: {
   price: Price;
   relatedEnt: EntitlementWithFeature;
@@ -39,6 +39,7 @@ export const priceToStripeItem = ({
   options: FeatureOptions | undefined | null;
   isCheckout: boolean;
   existingUsage: number;
+  withEntity: boolean;
 }) => {
   // TODO: Implement this
   const billingType = getBillingType(price.config!);
@@ -102,6 +103,10 @@ export const priceToStripeItem = ({
         message: `Couldn't find price: ${price.name}, ${price.id} in Stripe`,
         statusCode: 400,
       });
+    }
+
+    if (withEntity && !isCheckout) {
+      return null;
     }
 
     lineItem = {

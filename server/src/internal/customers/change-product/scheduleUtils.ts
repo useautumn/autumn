@@ -5,21 +5,26 @@ import {
 } from "@/external/stripe/stripeSubUtils.js";
 import {
   AppEnv,
-  CusProductStatus,
   FullCusProduct,
   FullProduct,
   Organization,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { fullCusProductToProduct } from "../products/cusProductUtils.js";
+import {
+  fullCusProductToProduct,
+  isActiveStatus,
+} from "../products/cusProductUtils.js";
 import { CusProductService } from "../products/CusProductService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { AttachParams } from "../products/AttachParams.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
-import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { SubService } from "@/internal/subscriptions/SubService.js";
-import { ItemSet } from "@/utils/models/ItemSet.js";
+
+import { getFilteredScheduleItems } from "./scheduleUtils/getFilteredScheduleItems.js";
+import { updateScheduledSubWithNewItems } from "./scheduleUtils/updateScheduleWithNewItems.js";
+import {
+  addCurMainProductToSchedule,
+  getOtherCusProductsOnSub,
+} from "./scheduleUtils/cancelScheduledFreeProduct.js";
 
 export const getPricesForCusProduct = ({
   cusProduct,
@@ -30,86 +35,6 @@ export const getPricesForCusProduct = ({
     return [];
   }
   return cusProduct.customer_prices.map((price) => price.price);
-};
-
-export const getFilteredScheduleItems = ({
-  scheduleItems,
-  cusProducts,
-}: {
-  scheduleItems: any[];
-  cusProducts: (FullCusProduct | null | undefined)[];
-}) => {
-  let curPrices: any[] = [];
-  for (const cusProduct of cusProducts) {
-    if (cusProduct) {
-      curPrices = curPrices.concat(getPricesForCusProduct({ cusProduct }));
-    }
-  }
-
-  return scheduleItems.filter(
-    (scheduleItem: any) =>
-      !curPrices.some(
-        (price) => price.config?.stripe_price_id === scheduleItem.price
-      )
-  );
-};
-
-export const updateScheduledSubWithNewItems = async ({
-  sb,
-  scheduleObj,
-  newItems,
-  cusProducts,
-  stripeCli,
-  itemSet,
-  org,
-  env,
-}: {
-  sb: SupabaseClient;
-  scheduleObj: any;
-  newItems: any[];
-  cusProducts: (FullCusProduct | null | undefined)[];
-  stripeCli: Stripe;
-  itemSet: ItemSet | null;
-  org: Organization;
-  env: AppEnv;
-}) => {
-  const { schedule, interval } = scheduleObj;
-
-  let filteredScheduleItems = getFilteredScheduleItems({
-    scheduleItems: schedule.phases[0].items,
-    cusProducts: cusProducts,
-  });
-
-  // 2. Add new schedule items
-  let newScheduleItems = filteredScheduleItems
-    .map((item: any) => ({
-      price: item.price,
-    }))
-    .concat(
-      ...newItems.map((item: any) => ({
-        price: item.price,
-      }))
-    );
-
-  await stripeCli.subscriptionSchedules.update(schedule.id, {
-    phases: [
-      {
-        items: newScheduleItems,
-        start_date: schedule.phases[0].start_date,
-      },
-    ],
-  });
-
-  // Update sub schedule ID
-  if (itemSet) {
-    await SubService.addUsageFeatures({
-      sb,
-      scheduleId: scheduleObj.schedule.id,
-      usageFeatures: itemSet.usageFeatures,
-      orgId: org.id,
-      env: env,
-    });
-  }
 };
 
 export const getScheduleIdsFromCusProducts = ({
@@ -137,6 +62,7 @@ export const cancelFutureProductSchedule = async ({
   logger,
   inIntervals,
   env,
+  internalEntityId,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -147,11 +73,13 @@ export const cancelFutureProductSchedule = async ({
   logger: any;
   inIntervals?: string[];
   env: AppEnv;
+  internalEntityId?: string;
 }) => {
   // 1. Get main and scheduled products
   const { curMainProduct, curScheduledProduct } = await getExistingCusProducts({
     product,
     cusProducts,
+    internalEntityId,
   });
 
   if (!curMainProduct) {
@@ -194,37 +122,26 @@ export const cancelFutureProductSchedule = async ({
       - Cancel schedule
   */
 
+  // Case where cur scheduled product is not free
   for (const scheduleObj of schedules) {
-    const { schedule, interval } = scheduleObj;
+    const { schedule, interval, prices } = scheduleObj;
 
     if (inIntervals && !inIntervals.includes(interval!)) {
       continue;
     }
 
+    // 1. Remove cur scheduled product items from schedule
+    const activeCusProducts = cusProducts.filter((cusProduct) =>
+      isActiveStatus(cusProduct?.status)
+    );
     const filteredScheduleItems = getFilteredScheduleItems({
-      scheduleItems: schedule.phases[0].items,
-      cusProducts: [curMainProduct, curScheduledProduct],
+      scheduleObj,
+      // cusProducts: [curMainProduct, curScheduledProduct],
+      cusProducts: [...activeCusProducts, curScheduledProduct],
     });
 
-    let updateSchedule = filteredScheduleItems.length > 0;
-
-    if (updateSchedule) {
-      // If scheduled items are all active cus products, can just cancel schedule...
-      const activeCusProducts = cusProducts.filter(
-        (cusProduct) => cusProduct.status === CusProductStatus.Active
-      );
-
-      const scheduledItemsWithoutActiveCusProducts = getFilteredScheduleItems({
-        scheduleItems: filteredScheduleItems,
-        cusProducts: activeCusProducts,
-      });
-
-      if (scheduledItemsWithoutActiveCusProducts.length == 0) {
-        updateSchedule = false;
-      }
-    }
-
-    if (updateSchedule) {
+    // 2. If any items left, update schedule with cur main product!
+    if (filteredScheduleItems.length > 0) {
       let oldItemSet = oldItemSets.find(
         (itemSet) => itemSet.interval === interval
       );
@@ -266,7 +183,11 @@ export const cancelFutureProductSchedule = async ({
       }
 
       logger.info(`✅ Updated schedule: ${schedule.id}`);
-    } else {
+    }
+
+    // 99% of cases, should just cancel schedule
+    else {
+      logger.info(`Interval: ${interval}, cancelling schedule: ${schedule.id}`);
       try {
         await stripeCli.subscriptionSchedules.cancel(schedule.id);
       } catch (error: any) {
@@ -298,93 +219,49 @@ export const cancelFutureProductSchedule = async ({
   }
 
   // Handle case where scheduled product is free
-
   if (
     includeOldItems &&
     curScheduledProduct &&
     isFreeProduct(getPricesForCusProduct({ cusProduct: curScheduledProduct! }))
   ) {
-    logger.info("Handling case if curScheduledProduct is free");
+    logger.info(`CASE: DELETING FREE SCHEDULED PRODUCT`);
+
     // 1. Look at main product
     let curMainSubIds = curMainProduct.subscription_ids;
 
     // 2. Check if there are other products with same subscription and scheduled ids
-    let otherCusProductsWithSameSub: FullCusProduct[] = [];
-    for (const cusProduct of cusProducts) {
-      // 1. Check if contains one of the curMainSubIds
-      if (
-        cusProduct.id === curMainProduct.id ||
-        !curMainSubIds?.some((subId) =>
-          cusProduct?.subscription_ids?.includes(subId)
-        )
-      ) {
-        continue;
-      }
-
-      // 2. Check if there's a scheduled product
-      let { curScheduledProduct: otherScheduledProduct } =
-        await getExistingCusProducts({
-          product: cusProduct.product,
-          cusProducts: cusProducts,
-        });
-
-      if (otherScheduledProduct) {
-        otherCusProductsWithSameSub.push(otherScheduledProduct);
-      }
-    }
+    let otherCusProductsWithSameSub = await getOtherCusProductsOnSub({
+      cusProducts,
+      curMainProduct,
+      curMainSubIds,
+    });
 
     if (otherCusProductsWithSameSub.length > 0) {
-      let schedules = await getStripeSchedules({
-        stripeCli: stripeCli,
-        scheduleIds: getScheduleIdsFromCusProducts({
-          cusProducts: otherCusProductsWithSameSub,
-        }),
+      await addCurMainProductToSchedule({
+        sb,
+        org,
+        env,
+        stripeCli,
+        otherCusProductsOnSub: otherCusProductsWithSameSub,
+        oldItemSets,
+        curMainProduct,
+        logger,
       });
+    }
 
-      for (const scheduleObj of schedules) {
-        const { schedule, interval } = scheduleObj;
-
-        // Get new items
-        let oldItemSet = oldItemSets.find(
-          (itemSet) => itemSet.interval === interval
-        );
-
-        await updateScheduledSubWithNewItems({
-          scheduleObj: scheduleObj,
-          newItems: oldItemSet?.items || [],
-          cusProducts: [],
-          stripeCli: stripeCli,
-          itemSet: null,
-          sb: sb,
-          org: org,
-          env: env,
-        });
-
-        // Put back schedule id into curMainProduct
-        await CusProductService.update({
-          sb,
-          cusProductId: curMainProduct!.id,
-          updates: {
-            scheduled_ids: [
-              ...(curMainProduct!.scheduled_ids || []),
-              schedule.id,
-            ],
-          },
-        });
-        logger.info(
-          `✅ Added old items for product ${fullCurProduct.name} to schedule: ${schedule.id}`
-        );
-      }
-    } else {
-      // TODO: Check if this is correct
+    // 99% of cases!
+    else {
       logger.info(
         "No other cus products with same sub, uncanceling current main product"
       );
 
       if (curMainSubIds && curMainSubIds.length > 0) {
-        await stripeCli.subscriptions.update(curMainSubIds[0], {
-          cancel_at: null,
-        });
+        for (const subId of curMainSubIds) {
+          await stripeCli.subscriptions.update(subId, {
+            cancel_at: null,
+          });
+        }
+
         await CusProductService.update({
           sb,
           cusProductId: curMainProduct!.id,

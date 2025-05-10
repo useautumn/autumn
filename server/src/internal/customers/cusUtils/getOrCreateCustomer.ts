@@ -4,6 +4,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { CusService } from "../CusService.js";
 import {
   AppEnv,
+  CusExpand,
   CusProductStatus,
   CustomerData,
   ErrCode,
@@ -28,6 +29,7 @@ export const getOrCreateCustomer = async ({
   skipGet = false,
   withEntities = false,
   entityId,
+  expand,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -39,6 +41,7 @@ export const getOrCreateCustomer = async ({
   skipGet?: boolean;
   withEntities?: boolean;
   entityId?: string;
+  expand?: CusExpand[];
 }): Promise<FullCustomer> => {
   let customer;
 
@@ -51,6 +54,7 @@ export const getOrCreateCustomer = async ({
       inStatuses,
       withEntities,
       entityId,
+      expand,
     });
   }
 
@@ -79,6 +83,7 @@ export const getOrCreateCustomer = async ({
         inStatuses,
         withEntities,
         entityId,
+        expand,
       });
     } catch (error: any) {
       if (error?.data?.code == "23505") {
@@ -90,6 +95,7 @@ export const getOrCreateCustomer = async ({
           inStatuses,
           withEntities,
           entityId,
+          expand,
         });
       } else {
         throw error;

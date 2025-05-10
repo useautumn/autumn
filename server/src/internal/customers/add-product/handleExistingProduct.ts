@@ -18,13 +18,12 @@ import {
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import chalk from "chalk";
 
-import {
-  handleSameAddOnProduct,
-  handleSameMainProduct,
-} from "@/internal/customers/add-product/handleSameProduct.js";
+import { handleSameMainProduct } from "@/internal/customers/add-product/handleSameProduct.js";
+
 import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
-import { ACTIVE_STATUSES } from "../products/CusProductService.js";
+import { nullish } from "@/utils/genUtils.js";
+import { handleSameAddOnProduct } from "./handleSameProduct/handleSameAddOn.js";
 
 export const getExistingCusProducts = async ({
   product,
@@ -54,7 +53,7 @@ export const getExistingCusProducts = async ({
 
     let sameEntity = internalEntityId
       ? cp.internal_entity_id === internalEntityId
-      : true;
+      : nullish(cp.internal_entity_id);
 
     return sameGroup && isMain && isActive && !oneOff && sameEntity;
   });
@@ -62,7 +61,9 @@ export const getExistingCusProducts = async ({
   const curSameProduct = cusProducts!.find(
     (cp: any) =>
       cp.product.internal_id === product.internal_id &&
-      (internalEntityId ? cp.internal_entity_id === internalEntityId : true)
+      (internalEntityId
+        ? cp.internal_entity_id === internalEntityId
+        : nullish(cp.internal_entity_id))
   );
 
   const curScheduledProduct = cusProducts!.find(
@@ -70,7 +71,9 @@ export const getExistingCusProducts = async ({
       cp.status === CusProductStatus.Scheduled &&
       cp.product.group === product.group &&
       !cp.product.is_add_on &&
-      (internalEntityId ? cp.internal_entity_id === internalEntityId : true)
+      (internalEntityId
+        ? cp.internal_entity_id === internalEntityId
+        : nullish(cp.internal_entity_id))
   );
 
   return { curMainProduct, curSameProduct, curScheduledProduct };

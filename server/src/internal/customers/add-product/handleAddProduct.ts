@@ -14,7 +14,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import {
   createStripeCli,
-  stripeToAutumnInterval,
   subToAutumnInterval,
 } from "@/external/stripe/utils.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
@@ -46,7 +45,7 @@ import {
 } from "@/internal/prices/billingIntervalUtils.js";
 import { SuccessCode } from "@autumn/shared";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { nullish } from "@/utils/genUtils.js";
+
 import { getInvoiceItems } from "../invoices/invoiceUtils.js";
 
 export const handleBillNowPrices = async ({
@@ -86,9 +85,9 @@ export const handleBillNowPrices = async ({
   let subscriptions: Stripe.Subscription[] = [];
   let invoiceIds: string[] = [];
 
-  // Merge billing cycles...
+  // Only merge if no free trials
   let mergeCusProduct =
-    !disableMerge && org.config.merge_billing_cycles
+    !disableMerge && !freeTrial && org.config.merge_billing_cycles
       ? cusProducts?.find((cp) =>
           products.some((p) => p.group == cp.product.group)
         )

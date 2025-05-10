@@ -4,26 +4,23 @@ import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import {
   getStripeSchedules,
   getStripeSubs,
-  getSubItemsForCusProduct,
 } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { APIVersion, FullCusProduct } from "@autumn/shared";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { BillingInterval } from "@autumn/shared";
-import {
-  cancelFutureProductSchedule,
-  getScheduleIdsFromCusProducts,
-  updateScheduledSubWithNewItems,
-} from "./scheduleUtils.js";
+import { updateScheduledSubWithNewItems } from "./scheduleUtils/updateScheduleWithNewItems.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { differenceInDays } from "date-fns";
-import { generateId, notNullish } from "@/utils/genUtils.js";
+
+import { generateId } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { SuccessCode } from "@autumn/shared";
+import { cancelCurSubs } from "./handleDowngrade/cancelCurSubs.js";
+import { getScheduleIdsFromCusProducts } from "./scheduleUtils.js";
 
 const scheduleStripeSubscription = async ({
   sb,
@@ -127,63 +124,23 @@ export const handleDowngrade = async ({
     `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
   );
 
-  // Make use of stripe subscription schedules to handle the downgrade
-  logger.info("1. Cancelling current subscription (at period end)");
-
   const curSubscriptions = await getStripeSubs({
     stripeCli,
     subIds: curCusProduct.subscription_ids!,
   });
-  curSubscriptions.sort((a, b) => b.current_period_end - a.current_period_end);
+
   const latestPeriodEnd = curSubscriptions[0].current_period_end;
 
   // 1. Cancel all current subscriptions
-  const intervalToOtherSubs: Record<string, any> = {};
-  console.log(
-    "Subs: ",
-    curSubscriptions.map((s) => s.id)
-  );
-
-  for (const sub of curSubscriptions) {
-    let latestEndDate = new Date(latestPeriodEnd * 1000);
-    let curEndDate = new Date(sub.current_period_end * 1000);
-
-    const { otherSubItems } = await getSubItemsForCusProduct({
-      stripeSub: sub,
-      cusProduct: curCusProduct,
-    });
-
-    let interval = sub.items.data[0].price.recurring!.interval;
-    intervalToOtherSubs[interval] = {
-      otherSubItems,
-      otherSub: sub,
-    };
-
-    if (notNullish(sub.schedule)) {
-      await stripeCli.subscriptionSchedules.release(sub.schedule as string);
-    }
-
-    if (differenceInDays(latestEndDate, curEndDate) > 10) {
-      await stripeCli.subscriptions.update(sub.id, {
-        cancel_at: latestPeriodEnd,
-        cancellation_details: {
-          comment: "autumn_downgrade",
-        },
-      });
-    } else {
-      await stripeCli.subscriptions.update(sub.id, {
-        cancel_at_period_end: true,
-        cancellation_details: {
-          comment: "autumn_downgrade",
-        },
-      });
-    }
-  }
+  logger.info("1. Cancelling current subscription (at period end)");
+  const intervalToOtherSubs = await cancelCurSubs({
+    curSubs: curSubscriptions,
+    stripeCli,
+    curCusProduct,
+  });
 
   // 3. Schedule new subscription IF new product is not free...
   logger.info("2. Schedule new subscription");
-
-  // 1. Fetch scheduled subs
   let oldScheduledIds: string[] = getScheduleIdsFromCusProducts({
     cusProducts: [curCusProduct, attachParams.curScheduledProduct],
   });
@@ -197,9 +154,10 @@ export const handleDowngrade = async ({
     });
   }
 
-  // Create new subscription schedule
+  // 4. Create new subscription schedule
   const itemSets: any[] = await getStripeSubItems({
     attachParams,
+    isCheckout: false,
   });
 
   let scheduledIds: string[] = [];

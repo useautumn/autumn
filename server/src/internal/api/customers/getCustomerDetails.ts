@@ -169,10 +169,6 @@ export const getCustomerDetails = async ({
     org,
   });
 
-  // let features = cusEnts.map(
-  //   (cusEnt: FullCustomerEntitlement) => cusEnt.entitlement.feature
-  // );
-
   let apiVersion = org.api_version || APIVersion.v1;
 
   if (apiVersion >= APIVersion.v1_1) {
@@ -216,6 +212,9 @@ export const getCustomerDetails = async ({
         features: entList,
         products,
         invoices: withInvoices ? invoices : undefined,
+        trials_used: expand.includes(CusExpand.TrialsUsed)
+          ? customer.trials_used
+          : undefined,
       }),
     };
 
@@ -229,7 +228,6 @@ export const getCustomerDetails = async ({
     }
   } else {
     let withItems = org.config.api_version >= BREAK_API_VERSION;
-    console.log(withItems);
 
     const processedInvoices = await getCusInvoices({
       sb,
@@ -245,6 +243,9 @@ export const getCustomerDetails = async ({
       add_ons: addOns,
       entitlements: balances,
       invoices: processedInvoices,
+      trials_used: expand.includes(CusExpand.TrialsUsed)
+        ? customer.trials_used
+        : undefined,
     };
   }
 };

@@ -12,7 +12,9 @@ export const FreeTrialView = ({ product }: { product: any }) => {
                 <p className="text-xs text-t3 font-medium text-center">
                   Length{" "}
                 </p>
-                <p className="text-t2 ">{product.free_trial.length} days</p>
+                <p className="text-t2 ">
+                  {product.free_trial.length} {product.free_trial.duration}
+                </p>
               </div>
               <div className="flex items-center w-full justify-between h-4">
                 <p className="text-xs text-t3 font-medium text-center">

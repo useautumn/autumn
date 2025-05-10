@@ -414,6 +414,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
         CusProductStatus.PastDue,
         CusProductStatus.Scheduled,
       ],
+      expand,
     });
 
     let cusDetails = await getCustomerDetails({
