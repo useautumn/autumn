@@ -243,10 +243,17 @@ export const handleSubscriptionUpdated = async ({
     }
   }
 
-  await SubService.updateFromStripe({
-    sb,
-    stripeSub: fullSub,
-  });
+  try {
+    await SubService.updateFromStripe({
+      sb,
+      stripeSub: fullSub,
+    });
+  } catch (error) {
+    logger.warn(
+      `Failed to update sub from stripe. Stripe sub ID: ${subscription.id}, org: ${org.slug}, env: ${env}`,
+      error
+    );
+  }
 
   // Cancel subscription immediately
   if (subscription.status === "past_due" && org.config.cancel_on_past_due) {
