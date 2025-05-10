@@ -212,10 +212,6 @@ export const handleCheckoutSessionCompleted = async ({
       );
 
       if (arrearPrice && attachParams.internalEntityId) {
-        console.log(
-          "   - checkout.completed: deleting subscription item",
-          item.id
-        );
         await stripeCli.subscriptionItems.del(item.id);
         continue;
       }
