@@ -50,6 +50,7 @@ export const removeScheduledProduct = async ({
     stripeCli,
     logger,
     env,
+    internalEntityId: cusProduct.internal_entity_id || undefined,
   });
 
   // 2. Delete scheduled product

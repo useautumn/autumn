@@ -18,6 +18,7 @@ import {
   FullProduct,
   CusProductStatus,
   APIVersion,
+  UsagePriceConfig,
 } from "@autumn/shared";
 
 import { StatusCodes } from "http-status-codes";
@@ -27,8 +28,12 @@ import { handleAddProduct } from "../add-product/handleAddProduct.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import { CusProductService } from "../products/CusProductService.js";
-import { attachParamsToInvoice } from "../invoices/invoiceUtils.js";
-import { updateScheduledSubWithNewItems } from "./scheduleUtils.js";
+import {
+  attachParamsToInvoice,
+  getInvoiceItems,
+} from "../invoices/invoiceUtils.js";
+import { updateScheduledSubWithNewItems } from "./scheduleUtils/updateScheduleWithNewItems.js";
+
 import { billForRemainingUsages } from "./billRemainingUsages.js";
 import { updateStripeSubscription } from "@/external/stripe/stripeSubUtils/updateStripeSub.js";
 import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSub.js";
@@ -40,7 +45,7 @@ import {
 
 import { differenceInSeconds } from "date-fns";
 import { SuccessCode } from "@autumn/shared";
-import { notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
 
 export enum ProrationBehavior {
   Immediately = "immediately",
@@ -87,7 +92,9 @@ export const handleStripeSubUpdate = async ({
   // 1. DELETE ITEMS FROM CURRENT SUB THAT CORRESPOND TO OLD PRODUCT
   for (const item of firstSub.items.data) {
     let stripePriceExists = curPrices.some(
-      (p) => p.config!.stripe_price_id === item.price.id
+      (p) =>
+        p.config!.stripe_price_id === item.price.id ||
+        (p.config as UsagePriceConfig).stripe_product_id === item.price.product
     );
 
     let stripeProdExists =
@@ -485,21 +492,24 @@ export const handleUpgrade = async ({
     disableFreeTrial,
     carryExistingUsages,
     carryOverTrial: true,
-
-    // nextResetAt: subUpdate.current_period_end
-    //   ? subUpdate.current_period_end * 1000
-    //   : undefined,
   });
 
   // Create invoices
   logger.info("4. Creating invoices");
   logger.info(`Invoice IDs: ${invoiceIds}`);
   const batchInsertInvoice = [];
+
   for (const invoiceId of invoiceIds) {
     const insertInvoice = async () => {
       const stripeInvoice = await getStripeExpandedInvoice({
         stripeCli,
         stripeInvoiceId: invoiceId,
+      });
+
+      let autumnInvoiceItems = await getInvoiceItems({
+        stripeInvoice,
+        prices: attachParams.prices,
+        logger,
       });
 
       await InvoiceService.createInvoiceFromStripe({
@@ -510,6 +520,7 @@ export const handleUpgrade = async ({
         org,
         productIds: products.map((p) => p.id),
         internalProductIds: products.map((p) => p.internal_id),
+        items: autumnInvoiceItems,
       });
     };
     batchInsertInvoice.push(insertInvoice());

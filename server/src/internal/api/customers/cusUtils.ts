@@ -6,6 +6,7 @@ import {
   CustomerData,
   CustomerSchema,
   ErrCode,
+  Feature,
   FullCustomer,
   InvoiceResponse,
   Organization,
@@ -145,10 +146,14 @@ export const getCusInvoices = async ({
   sb,
   internalCustomerId,
   limit = 10,
+  withItems = false,
+  features,
 }: {
   sb: SupabaseClient;
   internalCustomerId: string;
   limit?: number;
+  withItems?: boolean;
+  features?: Feature[];
 }): Promise<InvoiceResponse[]> => {
   // Get customer invoices
   const invoices = await InvoiceService.getByInternalCustomerId({
@@ -157,7 +162,13 @@ export const getCusInvoices = async ({
     limit,
   });
 
-  const processedInvoices = invoices.map(processInvoice);
+  const processedInvoices = invoices.map((i) =>
+    processInvoice({
+      invoice: i,
+      withItems,
+      features,
+    })
+  );
 
   return processedInvoices;
 };

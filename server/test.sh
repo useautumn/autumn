@@ -8,6 +8,8 @@ if [ "$1" == "basic-parallel" ]; then
     tests/basic/*.ts \
     tests/basic/multi-feature/*.ts \
     tests/basic/entities/*.ts \
+    && $MOCHA_CMD \
+    'tests/basic/referrals/*.ts' 'tests/attach/**/*.ts' \
     # tests/basic/referrals/*.ts \
     # tests/attach/**/*.ts \
 
@@ -15,8 +17,8 @@ if [ "$1" == "basic-parallel" ]; then
 elif [ "$1" == "advanced-parallel" ]; then
     MOCHA_PARALLEL=true  \
     $MOCHA_SETUP \
-    && $MOCHA_CMD 'tests/advanced/arrear_prorated/*.ts' 'tests/advanced/coupons/*.ts'\
-    # && $MOCHA_CMD 'tests/advanced/usage/*.ts' \
+    && $MOCHA_CMD 'tests/advanced/usage/*.ts' \
+    # && $MOCHA_CMD 'tests/advanced/arrear_prorated/*.ts' 'tests/advanced/coupons/*.ts'\
     # && $MOCHA_CMD 'tests/advanced/coupons/*.ts'\
 
 

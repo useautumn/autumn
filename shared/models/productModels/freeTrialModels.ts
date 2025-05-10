@@ -3,8 +3,8 @@ import { z } from "zod";
 export enum FreeTrialDuration {
   Day = "day",
   // Week = "week",
-  // Month = "month",
-  // Year = "year",
+  Month = "month",
+  Year = "year",
 }
 
 export const FreeTrialSchema = z.object({
@@ -24,6 +24,7 @@ export const CreateFreeTrialSchema = z.object({
     .or(z.number())
     .transform((val) => Number(val)),
   unique_fingerprint: z.boolean(),
+  duration: z.nativeEnum(FreeTrialDuration).default(FreeTrialDuration.Day),
 });
 
 export const FreeTrialResponseSchema = z.object({

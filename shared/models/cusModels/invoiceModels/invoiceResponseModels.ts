@@ -1,5 +1,14 @@
 import { z } from "zod";
 
+export const InvoiceItemResponseSchema = z.object({
+  description: z.string(),
+  period_start: z.number(),
+  period_end: z.number(),
+
+  feature_id: z.string().optional(),
+  feature_name: z.string().optional(),
+});
+
 export const InvoiceResponseSchema = z.object({
   product_ids: z.array(z.string()),
   stripe_id: z.string(),

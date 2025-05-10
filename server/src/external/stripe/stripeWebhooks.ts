@@ -147,6 +147,7 @@ stripeWebhookRouter.post(
             invoice: finalizedInvoice,
             env,
             event,
+            logger,
           });
           break;
         case "subscription_schedule.canceled":

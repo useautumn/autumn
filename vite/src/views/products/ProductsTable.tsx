@@ -57,16 +57,13 @@ export const ProductsTable = ({ products }: { products: Product[] }) => {
                 <span className="truncate">{product.name}</span>
               </AdminHover>
             </Item>
-            <Item className="col-span-3 font-mono -translate-x-1">
-              <span className="truncate ">
-                <CopyButton
-                  text={product.id || ""}
-                  className="bg-transparent border-none text-t3 px-1 shadow-none"
-                >
-                  {product.id}
-                </CopyButton>
-              </span>
-              {/* <span className="truncate">{product.id}</span> */}
+            <Item className="col-span-3 font-mono  -translate-x-1">
+              <CopyButton
+                text={product.id || ""}
+                className="bg-transparent text-t3 border-none px-1 shadow-none max-w-full"
+              >
+                <span className="truncate">{product.id}</span>
+              </CopyButton>
             </Item>
             <Item className="col-span-3">
               <TooltipProvider>

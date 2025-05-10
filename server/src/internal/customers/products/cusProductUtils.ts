@@ -32,6 +32,12 @@ import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { CusService } from "../CusService.js";
 
+export const isActiveStatus = (status: CusProductStatus) => {
+  return (
+    status === CusProductStatus.Active || status === CusProductStatus.PastDue
+  );
+};
+
 // 1. Delete future product
 export const uncancelCurrentProduct = async ({
   sb,

@@ -5,6 +5,7 @@ import {
   AppEnv,
   CouponDurationType,
   FullCusProduct,
+  FullCustomerPrice,
   InvoiceStatus,
   Organization,
   Reward,
@@ -23,6 +24,7 @@ import {
 import { getStripeSubs } from "../stripeSubUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
+import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 
 const handleOneOffInvoicePaid = async ({
   sb,
@@ -175,6 +177,7 @@ export const handleInvoicePaid = async ({
       stripeSubId: invoice.subscription as string,
       orgId: org.id,
       env,
+      withCusPrices: true,
     });
 
     if (!activeCusProducts || activeCusProducts.length === 0) {
@@ -212,6 +215,13 @@ export const handleInvoicePaid = async ({
     });
 
     if (!updated) {
+      let invoiceItems = await getInvoiceItems({
+        stripeInvoice: expandedInvoice,
+        prices: activeCusProducts.flatMap((p) =>
+          p.customer_prices.map((cpr: FullCustomerPrice) => cpr.price)
+        ),
+        logger,
+      });
       await InvoiceService.createInvoiceFromStripe({
         sb,
         stripeInvoice: expandedInvoice,
@@ -220,6 +230,7 @@ export const handleInvoicePaid = async ({
         productIds: activeCusProducts.map((p) => p.product_id),
         internalProductIds: activeCusProducts.map((p) => p.internal_product_id),
         org: org,
+        items: invoiceItems,
       });
     }
 

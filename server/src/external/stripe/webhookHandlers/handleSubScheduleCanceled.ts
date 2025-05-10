@@ -41,8 +41,6 @@ export const handleSubscriptionScheduleCanceled = async ({
   for (const cusProduct of cusProductsOnSchedule) {
     console.log("   - Cus product", cusProduct.product.name, cusProduct.status);
 
-    // Delete other scheduled IDs?
-
     const stripeCli = createStripeCli({ org, env });
 
     if (cusProduct.status === CusProductStatus.Scheduled) {
@@ -96,31 +94,4 @@ export const handleSubscriptionScheduleCanceled = async ({
       error
     );
   }
-
-  // if (cusProduct) {
-  //   console.log("Handling subscription_schedule.canceled");
-  //   await CusProductService.delete({
-  //     sb,
-  //     cusProductId: cusProduct.id,
-  //   });
-  //   console.log("   - Deleted cus product");
-
-  //   for (const subId of cusProduct?.subscription_ids!) {
-  //     if (subId === schedule.id) {
-  //       continue;
-  //     }
-
-  //     try {
-  //       await stripeCli.subscriptions.cancel(subId);
-  //     } catch (error) {
-  //       throw new RecaseError({
-  //         message: `handleSubScheduleCanceled: failed to cancel subscription ${subId}`,
-  //         code: ErrCode.StripeCancelSubscriptionScheduleFailed,
-  //         statusCode: 200,
-  //         data: error,
-  //       });
-  //     }
-  //   }
-  //   console.log("   - Cancelled all other scheduled subs");
-  // }
 };

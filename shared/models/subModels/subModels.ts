@@ -10,6 +10,10 @@ export const SubscriptionSchema = z.object({
   // metadata: z.record(z.string(), z.any()),
   usage_features: z.array(z.string()),
   org_id: z.string(),
+
+  current_period_start: z.number().nullable(),
+  current_period_end: z.number().nullable(),
+
   env: z.nativeEnum(AppEnv),
 });
 
