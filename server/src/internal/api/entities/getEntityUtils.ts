@@ -35,7 +35,7 @@ export const getEntityResponse = async ({
   org: Organization;
   env: AppEnv;
   customerId: string;
-  expand: EntityExpand[];
+  expand?: EntityExpand[];
   entityId?: string;
 }) => {
   let customer = await CusService.getWithProducts({

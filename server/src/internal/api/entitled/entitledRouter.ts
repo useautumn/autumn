@@ -293,11 +293,6 @@ const getCusEntsAndFeatures = async ({
 
   let cusProducts = customer.customer_products;
 
-  console.log(
-    "Cus products",
-    cusProducts.map((p) => p.product)
-  );
-
   if (!org.config.include_past_due) {
     cusProducts = cusProducts.filter(
       (cusProduct) => cusProduct.status !== CusProductStatus.PastDue
