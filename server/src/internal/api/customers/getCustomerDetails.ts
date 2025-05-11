@@ -138,11 +138,15 @@ export const getCustomerDetails = async ({
 }) => {
   let subs;
 
-  let cusEnts = fullCusProductToCusEnts(cusProducts) as any;
+  let inStatuses = org.config.include_past_due
+    ? [CusProductStatus.Active, CusProductStatus.PastDue]
+    : [CusProductStatus.Active];
+
+  let cusEnts = fullCusProductToCusEnts(cusProducts, inStatuses) as any;
 
   const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,
-    cusPrices: fullCusProductToCusPrices(cusProducts),
+    cusPrices: fullCusProductToCusPrices(cusProducts, inStatuses),
     entities: customer.entities,
     org,
   });

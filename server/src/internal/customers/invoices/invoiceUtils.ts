@@ -6,6 +6,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import {
   Feature,
+  Invoice,
   InvoiceItem,
   Price,
   PriceType,
@@ -70,8 +71,25 @@ export const attachParamsToInvoice = async ({
   }
 };
 
+export const invoicesToResponse = ({
+  invoices,
+  logger,
+}: {
+  invoices: Invoice[];
+  logger: any;
+}) => {
+  return invoices.map((i) =>
+    processInvoice({
+      invoice: i,
+      withItems: false,
+      features: [],
+    })
+  );
+};
+
 export const getInvoicesForResponse = async ({
   sb,
+
   internalCustomerId,
   internalEntityId,
   limit = 20,

@@ -5,15 +5,18 @@ import {
   getCusFeaturesResponse,
   getCusProductsResponse,
 } from "@/internal/customers/cusUtils/cusResponseUtils.js";
+import { SubService } from "@/internal/subscriptions/SubService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
   CusProductStatus,
   Entity,
+  EntityExpand,
   EntityResponse,
   ErrCode,
   FullCusProduct,
   Organization,
+  Subscription,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
@@ -24,12 +27,16 @@ export const getEntityResponse = async ({
   org,
   env,
   customerId,
+  expand,
+  entityId,
 }: {
   sb: SupabaseClient;
   entityIds: string[];
   org: Organization;
   env: AppEnv;
   customerId: string;
+  expand?: EntityExpand[];
+  entityId?: string;
 }) => {
   let customer = await CusService.getWithProducts({
     idOrInternalId: customerId,
@@ -38,6 +45,9 @@ export const getEntityResponse = async ({
     sb,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     withEntities: true,
+    withSubs: true,
+    expand,
+    entityId,
   });
 
   let entities = customer.entities.filter((e: Entity) =>
@@ -49,17 +59,7 @@ export const getEntityResponse = async ({
       entities.some((e: Entity) => e.internal_id == p.internal_entity_id)
   );
 
-  let stripeCli = createStripeCli({
-    org,
-    env,
-  });
-
-  let subs = (await getStripeSubs({
-    stripeCli,
-    subIds: entityCusProducts.flatMap(
-      (p: FullCusProduct) => p.subscription_ids || []
-    ),
-  })) as Stripe.Subscription[];
+  let subs = customer.subscriptions || [];
 
   const entityResponses: EntityResponse[] = [];
   for (const entityId of entityIds) {
@@ -76,9 +76,9 @@ export const getEntityResponse = async ({
       (p: FullCusProduct) => p.internal_entity_id == entity.internal_id
     );
 
-    let entitySubs = subs.filter((s) =>
+    let entitySubs = subs.filter((s: Subscription) =>
       entityCusProducts.some((p: FullCusProduct) =>
-        p.subscription_ids?.includes(s.id)
+        p.subscription_ids?.includes(s.stripe_id || "")
       )
     );
 
@@ -109,5 +109,6 @@ export const getEntityResponse = async ({
     entities: entityResponses,
     customer,
     fullEntities: customer.entities,
+    invoices: customer.invoices,
   };
 };
