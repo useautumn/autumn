@@ -13,6 +13,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const handleCreateCheckout = async ({
   sb,
@@ -81,6 +82,11 @@ export const handleCreateCheckout = async ({
       }
     : undefined;
 
+  let checkoutParams = attachParams.checkoutSessionParams || {};
+  let allowPromotionCodes = notNullish(checkoutParams.discounts)
+    ? undefined
+    : checkoutParams.allow_promotion_codes || true;
+
   const checkout = await stripeCli.checkout.sessions.create({
     customer: customer.processor.id,
     line_items: items,
@@ -92,7 +98,7 @@ export const handleCreateCheckout = async ({
       autumn_metadata_id: metaId,
       ...(attachParams.metadata ? attachParams.metadata : {}),
     },
-    allow_promotion_codes: true,
+    allow_promotion_codes: allowPromotionCodes,
     invoice_creation: !isRecurring
       ? {
           enabled: true,
