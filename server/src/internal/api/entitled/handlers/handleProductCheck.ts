@@ -4,6 +4,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import {
   CusProductStatus,
+  Entity,
   FullCusProduct,
   FullProduct,
   SuccessCode,
@@ -21,7 +22,8 @@ export const handleProductCheck = async ({
   req: any;
   res: any;
 }) => {
-  const { customer_id, product_id, customer_data, with_preview } = req.body;
+  const { customer_id, product_id, entity_id, customer_data, with_preview } =
+    req.body;
   const { orgId, sb, env, logtail: logger } = req;
 
   // 1. Get customer and org
@@ -32,7 +34,13 @@ export const handleProductCheck = async ({
       env,
       customerId: customer_id,
       customerData: customer_data,
+      entityId: entity_id,
       logger,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
     }),
     OrgService.getFromReq(req),
     ProductService.getFullProduct({
@@ -44,28 +52,15 @@ export const handleProductCheck = async ({
     FeatureService.getFromReq(req),
   ]);
 
-  // 2. Get cus products and payment method in parallel
-  const [cusProducts] = await Promise.all([
-    CusService.getFullCusProducts({
-      sb,
-      internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
-      inStatuses: [
-        CusProductStatus.Active,
-        CusProductStatus.PastDue,
-        CusProductStatus.Scheduled,
-      ],
-    }),
-  ]);
+  let cusProducts = customer.customer_products;
+  if (customer.entity) {
+    cusProducts = cusProducts.filter(
+      (cusProduct: FullCusProduct) =>
+        cusProduct.internal_entity_id == customer.entity.internal_id
+    );
+  }
 
-  cusProducts.sort((a: FullCusProduct, b: FullCusProduct) => {
-    if (a.status === b.status) return 0;
-    if (a.status === CusProductStatus.Expired) return 1;
-    else return -1;
-  });
-
-  let cusProduct: FullCusProduct = cusProducts.find(
+  let cusProduct: FullCusProduct | undefined = cusProducts.find(
     (cusProduct: FullCusProduct) => cusProduct.product.id === product_id
   );
 
@@ -101,6 +96,7 @@ export const handleProductCheck = async ({
     customer_id,
     code: SuccessCode.ProductFound,
     product_id,
+    entity_id,
     allowed:
       cusProduct.status === CusProductStatus.Active ||
       cusProduct.status === CusProductStatus.PastDue,
@@ -125,48 +121,4 @@ export const handleProductCheck = async ({
   });
 
   return;
-
-  // // 4. Get balances
-  // let balances: any = {};
-  // let cusEnts = cusProduct.customer_entitlements;
-  // for (let cusEnt of cusEnts) {
-  //   let feature = cusEnt.entitlement.feature;
-  //   let isBoolean = feature.type === FeatureType.Boolean;
-  //   let { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
-  //     cusEnts,
-  //     internalFeatureId: feature.internal_id,
-  //   });
-
-  //   if (isBoolean) {
-  //     balances[feature.id] = {
-  //       feature_id: feature.id,
-  //       balance: unlimited ? null : cusEnt.balance,
-  //     };
-  //     continue;
-  //   }
-
-  //   if (unlimited) {
-  //     balances[feature.id] = {
-  //       feature_id: feature.id,
-  //       unlimited: true,
-  //       usage_allowed: usageAllowed,
-  //       balance: null,
-  //     };
-  //     continue;
-  //   }
-
-  //   if (!balances[feature.id]) {
-  //     // Initialize
-  //     balances[feature.id] = {
-  //       feature_id: feature.id,
-  //       balance: cusEnt.balance,
-  //       usage_allowed: usageAllowed,
-  //       unlimited: false,
-  //     };
-  //   } else {
-  //     // Update
-  //     balances[feature.id].balance += cusEnt.balance;
-  //     balances[feature.id].usage_allowed = usageAllowed;
-  //   }
-  // }
 };
