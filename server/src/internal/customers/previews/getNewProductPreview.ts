@@ -1,14 +1,4 @@
-import {
-  Feature,
-  FullCusProduct,
-  FullProduct,
-  Organization,
-} from "@autumn/shared";
-
-import { AppEnv } from "@autumn/shared";
-
-import { Customer } from "@autumn/shared";
-
+import { Feature, FullProduct, Organization } from "@autumn/shared";
 import { mapToProductV2 } from "@/internal/products/productV2Utils.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 
@@ -16,6 +6,7 @@ import {
   isFeatureItem,
   isPriceItem,
 } from "@/internal/products/product-items/getItemType.js";
+
 import {
   getPricecnPrice,
   sortProductItems,
@@ -24,24 +15,15 @@ import {
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemDescription } from "./checkProductUtils.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
+import { AttachPreviewType } from "@autumn/shared";
 
 export const getNewProductPreview = async ({
-  customer,
   org,
-  env,
   product,
-  curMainProduct,
-  curScheduledProduct,
-  cusProducts,
   features,
 }: {
-  customer: Customer;
   org: Organization;
-  env: AppEnv;
   product: FullProduct;
-  curMainProduct: FullCusProduct;
-  curScheduledProduct: FullCusProduct;
-  cusProducts: FullCusProduct[];
   features: Feature[];
 }) => {
   let productV2 = mapToProductV2({
@@ -97,8 +79,13 @@ export const getNewProductPreview = async ({
   });
 
   return {
-    title,
-    message,
+    // title,
+    // message,
+    scenario: AttachPreviewType.New,
+    product_id: product.id,
+    product_name: product.name,
+    recurring: !isOneOff(product.prices),
+
     items: lineItems,
     options,
     due_today: {

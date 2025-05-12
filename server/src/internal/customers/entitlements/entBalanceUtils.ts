@@ -35,6 +35,8 @@ export const getSummedEntityBalances = ({
     return {
       balance: 0,
       adjustment: 0,
+      unused: 0,
+      count: 0,
     };
   }
 
@@ -47,5 +49,7 @@ export const getSummedEntityBalances = ({
       (acc, curr) => acc + curr.adjustment,
       0
     ),
+    unused: 0,
+    count: Object.values(cusEnt.entities!).length,
   };
 };

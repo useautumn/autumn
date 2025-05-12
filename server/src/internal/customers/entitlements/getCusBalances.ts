@@ -15,6 +15,7 @@ import { notNullOrUndefined } from "@/utils/genUtils.js";
 
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
+  getCusEntBalance,
   getCusEntMasterBalance,
   getRelatedCusPrice,
   getResetBalance,
@@ -34,7 +35,7 @@ export const getV1EntitlementsRes = ({
   unlimited: boolean;
   ent: EntitlementWithFeature;
 }) => {
-  let res: any =  {
+  let res: any = {
     feature_id: ent.feature.id,
     unlimited: isBoolean ? undefined : unlimited,
     interval: isBoolean || unlimited ? null : ent.interval || undefined,
@@ -52,8 +53,7 @@ export const getV1EntitlementsRes = ({
   }
 
   return res;
-}
-  
+};
 
 // IMPORTANT FUNCTION
 export const getCusBalances = async ({
@@ -61,6 +61,7 @@ export const getCusBalances = async ({
   cusPrices,
   entities,
   org,
+  entityId,
 }: {
   cusEntsWithCusProduct: (FullCustomerEntitlement & {
     customer_product: FullCusProduct;
@@ -68,18 +69,19 @@ export const getCusBalances = async ({
   cusPrices: FullCustomerPrice[];
   entities: Entity[];
   org: Organization;
+  entityId?: string;
 }) => {
   const data: Record<string, any> = {};
-  const features = cusEntsWithCusProduct.map((cusEnt) => cusEnt.entitlement.feature);
+  const features = cusEntsWithCusProduct.map(
+    (cusEnt) => cusEnt.entitlement.feature
+  );
 
-  
   for (const cusEnt of cusEntsWithCusProduct) {
     const cusProduct = cusEnt.customer_product;
     const feature = cusEnt.entitlement.feature;
     const ent: EntitlementWithFeature = cusEnt.entitlement;
     let key = `${ent.interval || "no-interval"}-${feature.id}`;
 
-    
     // 1. Handle boolean
     let isBoolean = feature.type == FeatureType.Boolean;
     const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
@@ -108,16 +110,17 @@ export const getCusBalances = async ({
         };
       } else {
         data[key] = {
-          feature_id: feature.id, 
+          feature_id: feature.id,
           unlimited: isBoolean ? undefined : unlimited,
-          interval: isBoolean || unlimited ? undefined : ent.interval || undefined,
+          interval:
+            isBoolean || unlimited ? undefined : ent.interval || undefined,
           balance: isBoolean ? undefined : unlimited ? null : 0,
           total: isBoolean || unlimited ? undefined : 0,
           adjustment: isBoolean || unlimited ? undefined : 0,
           used: isBoolean ? undefined : unlimited ? null : 0,
           unused: 0,
         };
-  
+
         if (org.config.api_version >= BREAK_API_VERSION) {
           data[key].next_reset_at =
             isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
@@ -126,35 +129,19 @@ export const getCusBalances = async ({
       }
     }
 
-    // // 2. Initialize data
-    // // if (!data[key]) {
-    //   data[key] = {
-    //     feature_id: feature.id,
-    //     unlimited: isBoolean ? undefined : unlimited,
-    //     interval: isBoolean || unlimited ? undefined : ent.interval || undefined,
-    //     balance: isBoolean ? undefined : unlimited ? null : 0,
-    //     total: isBoolean || unlimited ? undefined : 0,
-    //     adjustment: isBoolean || unlimited ? undefined : 0,
-    //     used: isBoolean ? undefined : unlimited ? null : 0,
-    //     unused: 0,
-    //   };
-
-    //   if (org.config.api_version >= BREAK_API_VERSION) {
-    //     data[key].next_reset_at =
-    //       isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
-    //     data[key].allowance = isBoolean || unlimited ? undefined : 0;
-    //   }
-    // // }
-
     if (isBoolean || unlimited) {
       continue;
     }
 
-    
+    // let { balance, adjustment, count, unused } = getCusEntMasterBalance({
+    //   cusEnt,
+    //   entities,
+    // });
 
-    let { balance, adjustment, count, unused } = getCusEntMasterBalance({
+    let { balance, adjustment, count, unused } = getCusEntBalance({
       cusEnt,
       entities,
+      entityId,
     });
 
     data[key].balance += balance || 0;
@@ -184,12 +171,9 @@ export const getCusBalances = async ({
         relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
       });
     }
-
   }
 
   const balances = Object.values(data);
-
-  
 
   for (const balance of balances) {
     if (
@@ -208,25 +192,30 @@ export const getCusBalances = async ({
     delete balance.unused;
   }
 
-
   // Sort balances
   if (org.api_version == APIVersion.v1) {
     balances.sort((a: any, b: any) => {
       let featureA = features.find((f) => f.id == a.feature_id);
       let featureB = features.find((f) => f.id == b.feature_id);
-  
-      if (featureA?.type == FeatureType.Boolean && featureB?.type != FeatureType.Boolean) {
+
+      if (
+        featureA?.type == FeatureType.Boolean &&
+        featureB?.type != FeatureType.Boolean
+      ) {
         return -1;
-      } else if (featureA?.type != FeatureType.Boolean && featureB?.type == FeatureType.Boolean) {
+      } else if (
+        featureA?.type != FeatureType.Boolean &&
+        featureB?.type == FeatureType.Boolean
+      ) {
         return 1;
       }
-  
+
       if (a.unlimited && !b.unlimited) {
         return -1;
       } else if (!a.unlimited && b.unlimited) {
         return 1;
       }
-  
+
       return a.feature_id.localeCompare(b.feature_id);
     });
   }

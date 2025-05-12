@@ -8,7 +8,12 @@ import {
 } from "@/internal/products/productUtils.js";
 import { getProductResponse } from "@/internal/products/productV2Utils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { Feature, FullCusProduct, FullProduct } from "@autumn/shared";
+import {
+  Feature,
+  FeaturePreviewScenario,
+  FullCusProduct,
+  FullProduct,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getCheckPreview = async ({
@@ -43,14 +48,10 @@ export const getCheckPreview = async ({
   let highestTierProd =
     cusOwnedProducts.length > 0 ? cusOwnedProducts[0] : null;
 
-  const start = Date.now();
   let products: FullProduct[] = await ProductService.getByFeature({
     sb,
     internalFeatureId: feature.internal_id!,
   });
-
-  const timeTaken = Date.now() - start;
-  console.log(`get_products_by_feature took ${timeTaken}ms`);
 
   // 1. Get add ons
   let addOns = [];
@@ -88,15 +89,6 @@ export const getCheckPreview = async ({
     }
   }
 
-  console.log(
-    "Main prods",
-    mainProds.map((p) => p.name)
-  );
-  console.log(
-    "Add ons",
-    addOns.map((a) => a.name)
-  );
-
   if (mainProds.length === 0 && addOns.length === 0) {
     return {
       message: notNullish(balance)
@@ -120,8 +112,10 @@ export const getCheckPreview = async ({
 
   // If there's a current balance...
   let msg = "";
+  let scenario: FeaturePreviewScenario = FeaturePreviewScenario.FeatureFlag;
 
   if (notNullish(balance)) {
+    scenario = FeaturePreviewScenario.UsageLimit;
     msg = `You have run out of ${feature.name}.`;
 
     if (mainProds.length > 0) {
@@ -151,36 +145,49 @@ export const getCheckPreview = async ({
     }
   }
 
-  if (raw) {
-    let products = [...mainProds, ...addOns];
-    for (let p of products) {
-      p.entitlements = p.entitlements.map((e) => ({
-        ...e,
-        feature: allFeatures.find((f) => f.id == e.feature_id)!,
-      }));
-    }
-
-    let v2Prods = products.map((p) =>
-      getProductResponse({ product: p, features: allFeatures })
-    );
-
-    let nextTier = mainProds.length > 0 ? mainProds[0] : addOns[0];
-
-    return {
-      message: msg,
-      products: v2Prods,
-      next_tier: getProductResponse({
-        product: nextTier,
-        features: allFeatures,
-      }),
-    };
+  let rawProducts = [...mainProds, ...addOns];
+  for (let p of rawProducts) {
+    p.entitlements = p.entitlements.map((e) => ({
+      ...e,
+      feature: allFeatures.find((f) => f.id == e.feature_id)!,
+    }));
   }
 
+  let v2Prods = rawProducts.map((p) =>
+    getProductResponse({ product: p, features: allFeatures })
+  );
+
+  let nextTier =
+    mainProds.length > 0 ? mainProds[0] : addOns.length > 0 ? addOns[0] : null;
+
+  let nextTierResponse = nextTier
+    ? getProductResponse({
+        product: nextTier,
+        features: allFeatures,
+      })
+    : null;
+
+  // if (raw) {
+  //   return {
+  //     title,
+  //     message: msg,
+  //     feature_id: feature.id,
+  //     feature_name: feature.name,
+  //     products: v2Prods,
+  //     // next_tier: nextTierResponse,
+  //   };
+  // }
+
   return {
-    // title: "Not allowed",
     title,
     message: msg,
-    upgrade_product_id: mainProds.length > 0 ? mainProds[0].id : addOns[0].id,
-    button_text: title,
+    scenario,
+    feature_id: feature.id,
+    feature_name: feature.name,
+    products: v2Prods,
+    // next_tier: nextTierResponse,
+
+    // Will depracate
+    upgrade_product_id: nextTier?.id || null,
   };
 };

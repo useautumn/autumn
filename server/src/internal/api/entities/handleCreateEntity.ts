@@ -245,13 +245,10 @@ export const handleCreateEntity = async (req: any, res: any) => {
     for (const cusProduct of cusProducts) {
       let cusEnts = cusProduct.customer_entitlements;
       let product = cusProduct.product;
-      let cusEnt = cusEnts.find(
+
+      let mainCusEnt = cusEnts.find(
         (e: any) => e.entitlement.feature.id === feature_id
       );
-
-      if (!cusEnt) {
-        continue;
-      }
 
       // Get linked features
       let linkedCusEnts = cusEnts.filter(
@@ -262,41 +259,49 @@ export const handleCreateEntity = async (req: any, res: any) => {
       let replacedCount = Object.keys(entityToAction).filter(
         (id) => entityToAction[id].action === "replace"
       ).length;
+
       let newCount = Object.keys(entityToAction).filter(
         (id) => entityToAction[id].action === "create"
       ).length;
 
-      let { unused } = getCusEntMasterBalance({
-        cusEnt,
-        entities: existingEntities,
-      });
+      if (mainCusEnt) {
+        let { unused } = getCusEntMasterBalance({
+          cusEnt: mainCusEnt,
+          entities: existingEntities,
+        });
 
-      const originalBalance = cusEnt.balance + (unused || 0);
-      const newBalance =
-        cusEnt.balance - (newCount + replacedCount) + (unused || 0);
+        const originalBalance = mainCusEnt.balance + (unused || 0);
+        const newBalance =
+          mainCusEnt.balance - (newCount + replacedCount) + (unused || 0);
 
-      await adjustAllowance({
-        sb,
-        env,
-        org,
-        cusPrices: cusProducts.flatMap((p: any) => p.customer_prices),
-        customer,
-        affectedFeature: feature,
-        cusEnt: { ...cusEnt, customer_product: cusProduct },
-        originalBalance,
-        newBalance,
-        deduction: newCount + replacedCount,
-        product,
-        replacedCount,
-        fromEntities: true,
-      });
+        await adjustAllowance({
+          sb,
+          env,
+          org,
+          cusPrices: cusProducts.flatMap((p: any) => p.customer_prices),
+          customer,
+          affectedFeature: feature,
+          cusEnt: { ...mainCusEnt, customer_product: cusProduct },
+          originalBalance,
+          newBalance,
+          deduction: newCount + replacedCount,
+          product,
+          replacedCount,
+          fromEntities: true,
+        });
 
-      await req.pg.query(
-        `UPDATE customer_entitlements SET balance = balance - $1 WHERE id = $2`,
-        [newCount, cusEnt.id]
-      );
+        await req.pg.query(
+          `UPDATE customer_entitlements SET balance = balance - $1 WHERE id = $2`,
+          [newCount, mainCusEnt.id]
+        );
+      }
 
       // For each linked feature, create customer entitlement for entity...
+      console.log("Cus product:", cusProduct.product.name);
+      console.log(
+        "Linked cus ents:",
+        linkedCusEnts.map((e: any) => e.entitlement.feature.name)
+      );
       for (const linkedCusEnt of linkedCusEnts) {
         let allowance = linkedCusEnt?.entitlement.allowance;
         let newEntities = linkedCusEnt?.entities || {};

@@ -6,6 +6,7 @@ import {
   getCusProductsResponse,
 } from "@/internal/customers/cusUtils/cusResponseUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { nullish } from "@/utils/genUtils.js";
 import {
   AppEnv,
   CusProductStatus,
@@ -46,7 +47,8 @@ export const getEntityResponse = async ({
 
   let entityCusProducts = customer.customer_products.filter(
     (p: FullCusProduct) =>
-      entities.some((e: Entity) => e.internal_id == p.internal_entity_id)
+      entities.some((e: Entity) => e.internal_id == p.internal_entity_id) ||
+      nullish(p.internal_entity_id)
   );
 
   let stripeCli = createStripeCli({
@@ -72,9 +74,9 @@ export const getEntityResponse = async ({
       });
     }
 
-    let cusProducts = customer.customer_products.filter(
-      (p: FullCusProduct) => p.internal_entity_id == entity.internal_id
-    );
+    // let cusProducts = customer.customer_products.filter(
+    //   (p: FullCusProduct) => p.internal_entity_id == entity.internal_id
+    // );
 
     let entitySubs = subs.filter((s) =>
       entityCusProducts.some((p: FullCusProduct) =>
@@ -83,15 +85,16 @@ export const getEntityResponse = async ({
     );
 
     let products = await getCusProductsResponse({
-      cusProducts,
+      cusProducts: entityCusProducts,
       subs: entitySubs,
       org,
     });
 
     let features = await getCusFeaturesResponse({
-      cusProducts,
+      cusProducts: entityCusProducts,
       org,
       entities: customer.entities,
+      entityId,
     });
 
     entityResponses.push({

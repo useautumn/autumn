@@ -1,12 +1,7 @@
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { updateStripeSubscription } from "@/external/stripe/stripeSubUtils/updateStripeSub.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
-import {
-  handleStripeSubUpdate,
-  handleUpgrade,
-} from "@/internal/customers/change-product/handleUpgrade.js";
+
 import { getPricesForCusProduct } from "@/internal/customers/change-product/scheduleUtils.js";
 import { getDowngradePreview } from "@/internal/customers/previews/getDowngradePreview.js";
 import { getNewProductPreview } from "@/internal/customers/previews/getNewProductPreview.js";
@@ -28,9 +23,10 @@ import {
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
-// enum AttachContextCode {
-//   AlreadyAttached,
-// }
+import {
+  AttachPreviewType,
+  CheckProductFormattedPreview,
+} from "@autumn/shared";
 
 export const getAttachPreview = async ({
   sb,
@@ -53,8 +49,6 @@ export const getAttachPreview = async ({
   logger: any;
   shouldFormat?: boolean;
 }) => {
-  // Handle errors
-
   let paymentMethod: any;
   try {
     paymentMethod = await getCusPaymentMethod({
@@ -81,27 +75,35 @@ export const getAttachPreview = async ({
     cusProduct: curMainProduct,
   });
 
-  // Handle errors
   if (curScheduledProduct?.product.id === product.id) {
-    return {
+    // title: "Scheduled product already exists",
+    // message: "You already have this product scheduled to start soon.",
+    let result: CheckProductFormattedPreview = {
       title: "Scheduled product already exists",
       message: "You already have this product scheduled to start soon.",
+      scenario: AttachPreviewType.Scheduled,
+      recurring: !isOneOff(product.prices),
       error_on_attach: true,
+      product_id: product.id,
+      product_name: product.name,
     };
+
+    return result;
   } else if (curSameProduct) {
-    // 1. If main product and no scheduled product and main isn't one off
     if (!product.is_add_on && !curScheduledProduct && !isOneOff(curPrices)) {
-      return {
+      // title: "Product already attached",
+      // message: "You already have this product attached.",
+      let result: CheckProductFormattedPreview = {
         title: "Product already attached",
         message: "You already have this product attached.",
+        scenario: AttachPreviewType.Active,
+        recurring: !isOneOff(product.prices),
         error_on_attach: true,
+        product_id: product.id,
+        product_name: product.name,
       };
-    } else if (product.is_add_on && !isOneOff(product.prices)) {
-      return {
-        title: "Product already attached",
-        message: "You already have this product attached.",
-        error_on_attach: true,
-      };
+
+      return result;
     }
   }
 
@@ -116,13 +118,8 @@ export const getAttachPreview = async ({
       return null;
     } else {
       return await getNewProductPreview({
-        customer,
         org,
-        env,
         product,
-        curMainProduct,
-        curScheduledProduct,
-        cusProducts,
         features,
       });
     }
@@ -138,20 +135,26 @@ export const getAttachPreview = async ({
 
       let message, html;
       message = `Clicking 'confirm' will renew your subscription to ${curMainProduct.product.name}, and you will be continue to be charged on ${scheduledStart}.`;
-      html = `<p>${message}</p>`;
 
       let scheduledIsFree = isFreeProduct(scheduledProduct.prices);
       if (!scheduledIsFree) {
         let scheduledMessage = `Your downgrade to ${scheduledProduct.name} which was scheduled to start on ${scheduledStart} will also be reversed.`;
         message += `\n\n${scheduledMessage}`;
-        html += `<br/><p>${scheduledMessage}</p><br/>`;
       }
 
-      return {
+      let result: CheckProductFormattedPreview = {
         title: `Renew subscription to ${curMainProduct.product.name}`,
         message,
-        html,
+        scenario: AttachPreviewType.Renew,
+        product_id: product.id,
+        product_name: product.name,
+        recurring: !isOneOff(product.prices),
       };
+
+      return result;
+      // title: `Renew subscription to ${curMainProduct.product.name}`,
+      // message,
+      // html,
     }
     // 2b. Can't attach same product
     else return null;

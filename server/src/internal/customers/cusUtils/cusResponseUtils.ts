@@ -39,10 +39,12 @@ export const getCusFeaturesResponse = async ({
   cusProducts,
   org,
   entities,
+  entityId,
 }: {
   cusProducts: FullCusProduct[];
   org: Organization;
   entities: Entity[];
+  entityId?: string;
 }) => {
   let cusEnts = fullCusProductToCusEnts(cusProducts) as any;
 
@@ -51,6 +53,7 @@ export const getCusFeaturesResponse = async ({
     cusPrices: fullCusProductToCusPrices(cusProducts),
     entities,
     org,
+    entityId,
   });
 
   let features = cusEnts.map(

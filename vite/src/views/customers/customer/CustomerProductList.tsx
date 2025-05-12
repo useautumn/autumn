@@ -7,7 +7,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { compareStatus, getBackendErr, navigateTo } from "@/utils/genUtils";
+import {
+  compareStatus,
+  getBackendErr,
+  navigateTo,
+  notNullish,
+} from "@/utils/genUtils";
 import { CusProduct, CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { useCustomerContext } from "./CustomerContext";
@@ -56,14 +61,15 @@ export const CustomerProductList = ({
 
       const entity = entities.find((e: any) => e.id === entityId);
 
-      const entityMatches = entity
-        ? p.internal_entity_id === entity.internal_id ||
-          p.entitlements.some(
-            (cusEnt: any) =>
-              cusEnt.entities &&
-              Object.keys(cusEnt.entities).includes(entity.internal_id)
-          )
-        : true;
+      const entityMatches =
+        entity && notNullish(p.internal_entity_id)
+          ? p.internal_entity_id === entity.internal_id ||
+            p.entitlements.some(
+              (cusEnt: any) =>
+                cusEnt.entities &&
+                Object.keys(cusEnt.entities).includes(entity.internal_id)
+            )
+          : true;
 
       return (
         p.status !== CusProductStatus.Expired &&

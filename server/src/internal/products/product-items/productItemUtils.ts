@@ -104,7 +104,7 @@ export const getItemType = (item: ProductItem) => {
     return ProductItemType.FeaturePrice;
   }
 
-  return ProductItemType.FeaturePrice;
+  return ProductItemType.Price;
 };
 
 // FOR TESTS?

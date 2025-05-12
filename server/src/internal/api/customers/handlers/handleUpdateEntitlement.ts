@@ -10,7 +10,10 @@ import { CusPriceService } from "@/internal/customers/prices/CusPriceService.js"
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { getCusEntMasterBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import {
+  getCusEntBalance,
+  getCusEntMasterBalance,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
 import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
 
 const getCusOrgAndCusPrice = async ({
@@ -46,7 +49,7 @@ const getCusOrgAndCusPrice = async ({
 export const handleUpdateEntitlement = async (req: any, res: any) => {
   try {
     const { customer_entitlement_id } = req.params;
-    const { balance, next_reset_at } = req.body;
+    const { balance, next_reset_at, entity_id } = req.body;
 
     if (isNaN(parseFloat(balance))) {
       throw new RecaseError({
@@ -92,16 +95,16 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       });
     }
 
-    let { balance: masterBalance } = getCusEntMasterBalance({
+    // let { balance: masterBalance } = getCusEntMasterBalance({
+    //   cusEnt,
+    //   entities: cusEnt.customer_product.entities,
+    // });
+    let { balance: masterBalance } = getCusEntBalance({
       cusEnt,
-      entities: cusEnt.customer_product.entities,
+      entityId: entity_id,
     });
 
     const deducted = new Decimal(masterBalance!).minus(balance).toNumber();
-
-    // const adjustment = new Decimal(cusEnt.adjustment!)
-    //   .minus(deducted)
-    //   .toNumber();
 
     let originalBalance = structuredClone(masterBalance);
 
@@ -110,14 +113,8 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       toDeduct: deducted,
       addAdjustment: true,
       allowNegativeBalance: cusEnt.usage_allowed,
+      entityId: entity_id,
     });
-
-    // Perform deduction.
-
-    // console.log("New balance", newBalance);
-    // console.log("Original balance", originalBalance);
-    // console.log("Deducted", deducted);
-    // console.log("ID:", customer_entitlement_id);
 
     await CustomerEntitlementService.update({
       sb: req.sb,
