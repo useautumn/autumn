@@ -79,8 +79,8 @@ export const getNewProductPreview = async ({
   });
 
   return {
-    // title,
-    // message,
+    title,
+    message,
     scenario: AttachPreviewType.New,
     product_id: product.id,
     product_name: product.name,

@@ -208,10 +208,10 @@ export const CustomerEntitlementsList = () => {
               </Item>
               <Item className="col-span-3">
                 <div className="flex items-center font-mono font-medium rounded-md px-1 border-b border-stone-300 border-dashed ">
-                  {allowanceType == AllowanceType.Unlimited ? (
+                  {entitlement.feature.type == FeatureType.Boolean ? (
+                    <></>
+                  ) : allowanceType == AllowanceType.Unlimited ? (
                     "Unlimited"
-                  ) : allowanceType == AllowanceType.None ? (
-                    "None"
                   ) : entityId && cusEnt.entities?.[entityId] ? (
                     <div className="flex items-center gap-2">
                       {cusEnt.entities?.[entityId]?.balance}{" "}
