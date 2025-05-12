@@ -23,7 +23,10 @@ import RecaseError from "@/utils/errorUtils.js";
 import { parseEntityExpand } from "./entityUtils.js";
 import { getCusInvoices } from "../customers/cusUtils.js";
 import { getEntityResponse } from "./getEntityUtils.js";
-import { getInvoicesForResponse } from "@/internal/customers/invoices/invoiceUtils.js";
+import {
+  getInvoicesForResponse,
+  invoicesToResponse,
+} from "@/internal/customers/invoices/invoiceUtils.js";
 
 export const handleGetEntity = async (req: any, res: any) =>
   routeHandler({
@@ -40,43 +43,31 @@ export const handleGetEntity = async (req: any, res: any) =>
       let org = await OrgService.getFromReq(req);
 
       const start = performance.now();
-      let { entities, customer, fullEntities } = await getEntityResponse({
-        sb,
-        entityIds: [entityId],
-        org,
-        env,
-        customerId,
-      });
+      let { entities, customer, fullEntities, invoices } =
+        await getEntityResponse({
+          sb,
+          entityIds: [entityId],
+          org,
+          env,
+          customerId,
+          expand,
+          entityId,
+        });
       const end = performance.now();
       logger.info(`getEntityResponse took ${(end - start).toFixed(2)}ms`);
 
       let entity = entities[0];
-      let fullEntity = fullEntities.find(
-        (e: Entity) => e.id == entityId
-      ) as Entity;
-
       let withInvoices = expand.includes(EntityExpand.Invoices);
-      let invoices: InvoiceResponse[] | undefined;
-
-      if (withInvoices) {
-        const invoiceStart = performance.now();
-        invoices = await getInvoicesForResponse({
-          sb,
-          internalCustomerId: customer.internal_id,
-          internalEntityId: fullEntity.internal_id,
-        });
-        const invoiceEnd = performance.now();
-        logger.info(
-          `getInvoicesForResponse took ${(invoiceEnd - invoiceStart).toFixed(
-            2
-          )}ms`
-        );
-      }
 
       res.status(200).json(
         EntityResponseSchema.parse({
           ...entity,
-          invoices: withInvoices ? invoices : undefined,
+          invoices: withInvoices
+            ? invoicesToResponse({
+                invoices,
+                logger,
+              })
+            : undefined,
         })
       );
     },
