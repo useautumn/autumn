@@ -1,5 +1,5 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { Feature } from "@shared/models/featureModels/featureModels.js";
+import { Feature } from "@autumn/shared";
 import { generateObject } from "ai";
 import { z } from "zod";
 
