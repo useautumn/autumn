@@ -9,7 +9,6 @@ const fetchWithRetry = fetchRetry(fetch, {
   retryOn: (attempt, error, response) => {
     // Retry on gateway errors (502) and Cloudflare errors (520)
 
-    
     if (error) {
       try {
         let logger = createLogtail();
@@ -27,7 +26,7 @@ const fetchWithRetry = fetchRetry(fetch, {
     try {
       if (
         error?.message?.includes("cloudflare") ||
-        error?.message?.includes("TypeError: fetch failed")
+        error?.message?.includes("fetch failed")
       ) {
         shouldRetry = true;
       }

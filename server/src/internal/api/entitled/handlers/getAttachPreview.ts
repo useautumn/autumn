@@ -18,6 +18,7 @@ import {
   Customer,
   Feature,
   FullCusProduct,
+  FullCustomer,
   FullProduct,
   Organization,
 } from "@autumn/shared";
@@ -40,7 +41,7 @@ export const getAttachPreview = async ({
   shouldFormat = true,
 }: {
   sb: SupabaseClient;
-  customer: Customer;
+  customer: FullCustomer;
   org: Organization;
   env: AppEnv;
   product: FullProduct;
@@ -69,6 +70,7 @@ export const getAttachPreview = async ({
     await getExistingCusProducts({
       product,
       cusProducts: cusProducts || [],
+      internalEntityId: customer.entity?.internal_id,
     });
 
   let curPrices = getPricesForCusProduct({

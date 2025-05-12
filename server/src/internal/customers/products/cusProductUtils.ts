@@ -11,6 +11,7 @@ import {
   FullCustomerPrice,
   Organization,
   PriceType,
+  Subscription,
   TierInfinite,
   UsagePriceConfig,
 } from "@autumn/shared";
@@ -347,7 +348,7 @@ export const processFullCusProduct = ({
 }: {
   cusProduct: FullCusProduct;
   org: Organization;
-  subs?: Stripe.Subscription[];
+  subs?: (Stripe.Subscription | Subscription)[];
 }) => {
   // Process prices
 
@@ -428,7 +429,9 @@ export const processFullCusProduct = ({
     subIds.length > 0 &&
     org.config.api_version >= BREAK_API_VERSION
   ) {
-    let baseSub = subs?.find((s) => s.id == subIds[0]);
+    let baseSub = subs?.find(
+      (s) => s.id == subIds[0] || (s as Subscription).stripe_id == subIds[0]
+    );
     stripeSubData = {
       current_period_end: baseSub?.current_period_end
         ? baseSub.current_period_end * 1000

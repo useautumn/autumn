@@ -14,13 +14,13 @@ import {
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
-import { getActiveCusProductStatuses } from "@/utils/constants.js";
 
 import {
   getCusEntMasterBalance,
   getUnlimitedAndUsageAllowed,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { getEntityResponse } from "./getEntityUtils.js";
+import { StatusCodes } from "http-status-codes";
 
 export const constructEntity = ({
   inputEntity,
@@ -189,6 +189,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
       throw new RecaseError({
         message: "Multiple features not supported",
         code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
       });
     }
 
@@ -199,6 +200,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
       throw new RecaseError({
         message: `Feature ${feature_id} not found`,
         code: ErrCode.FeatureNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
       });
     }
 
@@ -223,6 +225,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
           data: {
             entity,
           },
+          statusCode: StatusCodes.CONFLICT,
         });
       }
     }
