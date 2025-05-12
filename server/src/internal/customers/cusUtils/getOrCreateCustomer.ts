@@ -77,7 +77,7 @@ export const getOrCreateCustomer = async ({
 
       customer = await CusService.getWithProducts({
         sb,
-        idOrInternalId: customerId,
+        idOrInternalId: customerId || customer.internal_id,
         orgId: org.id,
         env,
         inStatuses,
