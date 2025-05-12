@@ -12,7 +12,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { InfoIcon } from "lucide-react";
-import { Feature, FeatureType } from "@autumn/shared";
+import {
+  Feature,
+  FeatureType,
+  FeatureUsageType,
+  ProductItemFeatureType,
+} from "@autumn/shared";
 
 export default function PerEntityConfig() {
   let { features } = useProductContext();
@@ -51,6 +56,10 @@ export default function PerEntityConfig() {
                 return false;
               }
               if (item.feature_id?.internal_id === feature.id) {
+                return false;
+              }
+
+              if (feature.config?.usage_type == FeatureUsageType.Single) {
                 return false;
               }
               return true;

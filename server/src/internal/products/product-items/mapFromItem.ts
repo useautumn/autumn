@@ -103,10 +103,11 @@ export const toFeature = ({
     feature_id: item.feature_id!,
 
     allowance: item.included_usage == Infinite ? null : item.included_usage!,
-    allowance_type:
-      item.included_usage == Infinite
-        ? AllowanceType.Unlimited
-        : AllowanceType.Fixed,
+    allowance_type: isBoolean
+      ? null
+      : item.included_usage == Infinite
+      ? AllowanceType.Unlimited
+      : AllowanceType.Fixed,
 
     interval: isBoolean ? null : (itemToEntInterval(item) as EntInterval),
 

@@ -151,36 +151,20 @@ export const ConfigWithFeature = ({
                 </div>
 
                 {/* INTERVAL CONFIG */}
-                {/* <div className="relative w-full h-fit ">
-                  <div
-                    className={cn(
-                      "transition-all duration-400 ease-in-out absolute top-0 left-0 w-full h-full",
-                      !show.cycle
-                        ? "h-full z-10"
-                        : "opacity-0 overflow-hidden z-[-1]"
-                    )}
-                  >
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShow({ ...show, cycle: !show.cycle })}
-                      className="text-sm w-full h-full bg-transparent text-t3"
+
+                {item.feature_type == ProductItemFeatureType.SingleUse &&
+                  !show.price && (
+                    <div
+                      className={cn(
+                        "transition-all duration-400 ease-in-out whitespace-nowrap w-full",
+                        show.cycle
+                          ? "opacity-100 max-w-full max-h-[200px]"
+                          : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden"
+                      )}
                     >
-                      + Interval
-                    </Button>
-                  </div> */}
-                <div
-                  className={cn(
-                    "transition-all duration-400 ease-in-out whitespace-nowrap w-full",
-                    show.cycle
-                      ? "opacity-100 max-w-full max-h-[200px]"
-                      : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden"
-                  )}
-                >
-                  {item.feature_type == ProductItemFeatureType.SingleUse &&
-                    !show.price && (
                       <SelectCycle show={show} setShow={setShow} type="reset" />
-                    )}
-                </div>
+                    </div>
+                  )}
               </div>
               {/* </div> */}
 

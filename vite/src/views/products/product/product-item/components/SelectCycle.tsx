@@ -31,7 +31,7 @@ export const SelectCycle = ({
   return (
     <div className={cn("flex flex-col w-full ")}>
       <FieldLabel className="flex items-center gap-2">
-        {"Billing Interval"}
+        {show.price ? "Billing Interval" : "Reset Interval"}
         {type == "reset" && (
           <Tooltip delayDuration={400}>
             <TooltipTrigger asChild>

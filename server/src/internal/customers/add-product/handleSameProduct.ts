@@ -30,7 +30,7 @@ import {
   ProrationBehavior,
 } from "../change-product/handleUpgrade.js";
 import { fullCusProductToProduct } from "../products/cusProductUtils.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
+
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 
@@ -146,17 +146,7 @@ const updateFeatureQuantity = async ({
       let updates: any = {
         balance: new Decimal(cusEnt?.balance || 0).plus(difference).toNumber(),
       };
-      // if (cusEnt.balances) {
-      //   updates.balances = { ...cusEnt.balances };
-      //   for (const [key, value] of Object.entries(cusEnt.balances)) {
-      //     updates.balances[key] = {
-      //       ...cusEnt.balances[key],
-      //       balance: new Decimal(value.balance || 0)
-      //         .plus(difference)
-      //         .toNumber(),
-      //     };
-      //   }
-      // }
+
       await CustomerEntitlementService.update({
         sb,
         id: cusEnt.id,
@@ -168,7 +158,7 @@ const updateFeatureQuantity = async ({
   await CusProductService.update({
     sb,
     cusProductId: curCusProduct.id,
-    updates: { options: optionsToUpdate },
+    updates: { options: optionsToUpdate.map((o) => o.new) },
   });
 };
 

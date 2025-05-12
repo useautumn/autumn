@@ -12,7 +12,7 @@ export const keyToTitleFirstCaps = (key: string) => {
 };
 
 export const slugify = (text: string) => {
-  return text.toLowerCase().replace(/ /g, "-");
+  return text.toLowerCase().replace(/ /g, "_");
 };
 
 export const formatCurrency = (amount: number, currency: string = "USD") => {

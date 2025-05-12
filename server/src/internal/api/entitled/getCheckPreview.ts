@@ -89,13 +89,30 @@ export const getCheckPreview = async ({
     }
   }
 
+  let rawProducts = [...mainProds, ...addOns];
+  for (let p of rawProducts) {
+    p.entitlements = p.entitlements.map((e) => ({
+      ...e,
+      feature: allFeatures.find((f) => f.id == e.feature_id)!,
+    }));
+  }
+
+  let v2Prods = rawProducts.map((p) =>
+    getProductResponse({ product: p, features: allFeatures })
+  );
+
   if (mainProds.length === 0 && addOns.length === 0) {
     return {
+      scenario: FeaturePreviewScenario.FeatureFlag,
+      title: "Feature Unavailable",
+      feature_id: feature.id,
+      feature_name: feature.name,
       message: notNullish(balance)
         ? `You have run out of ${feature.name}. Please contact us to get more.`
         : `Your current plan does not include the ${feature.name} feature. Please contact us to get access.`,
 
-      next_action: null,
+      products: v2Prods,
+      upgrade_product_id: null,
     };
   }
 
@@ -145,27 +162,8 @@ export const getCheckPreview = async ({
     }
   }
 
-  let rawProducts = [...mainProds, ...addOns];
-  for (let p of rawProducts) {
-    p.entitlements = p.entitlements.map((e) => ({
-      ...e,
-      feature: allFeatures.find((f) => f.id == e.feature_id)!,
-    }));
-  }
-
-  let v2Prods = rawProducts.map((p) =>
-    getProductResponse({ product: p, features: allFeatures })
-  );
-
   let nextTier =
     mainProds.length > 0 ? mainProds[0] : addOns.length > 0 ? addOns[0] : null;
-
-  let nextTierResponse = nextTier
-    ? getProductResponse({
-        product: nextTier,
-        features: allFeatures,
-      })
-    : null;
 
   // if (raw) {
   //   return {

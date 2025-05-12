@@ -60,7 +60,10 @@ export const ProductItemConfig = () => {
     let feature = features.find((f: any) => f.id == item.feature_id);
     if (feature) {
       if (feature.type == FeatureType.Boolean) {
-        setItem({ ...item, feature_type: ProductItemFeatureType.Static });
+        setItem({
+          feature_id: item.feature_id,
+          feature_type: ProductItemFeatureType.Static,
+        });
       } else {
         setItem({
           ...item,
@@ -70,7 +73,22 @@ export const ProductItemConfig = () => {
     }
   }, [item.feature_id]);
 
-  // return <></>;
+  useEffect(() => {
+    if (!show.perEntity) {
+      setItem({
+        ...item,
+        entity_feature_id: null,
+      });
+    }
+
+    if (!show.price) {
+      setItem({
+        ...item,
+        price: null,
+        tiers: null,
+      });
+    }
+  }, [show.perEntity, show.price]);
 
   return (
     <div

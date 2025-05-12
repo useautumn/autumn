@@ -28,28 +28,6 @@ export default function MoreMenuButton({
   const [checkedChanged, setCheckedChanged] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
 
-  // useEffect(() => {
-  //   //function to determine default reset usage when enabled state
-  //   console.log(item);
-  //   if (checkedChanged) return; //don't change anything if user has explicity set the state value
-
-  //   const defaultReset = !(
-  //     (item.interval === null || item.reset_usage_on_billing === false) // what our default behaviour is
-  //   );
-
-  //   if (initialLoad) {
-  //     const diverged = (item.reset_usage_when_enabled != defaultReset) === true; //on the first load see if it's diverged from the state (ie if this item has the value explicity set already)
-  //     diverged && setCheckedChanged(true);
-  //     setInitialLoad(false);
-  //     return;
-  //   }
-
-  //   setItem({
-  //     ...item,
-  //     reset_usage_when_enabled: defaultReset,
-  //   });
-  // }, [item.interval, item.reset_usage_on_billing, checkedChanged]);
-
   return (
     <Popover open={showPopover} onOpenChange={setShowPopover}>
       <PopoverTrigger asChild>
@@ -58,7 +36,6 @@ export default function MoreMenuButton({
           size="sm"
           className="text-t3 text-xs bg-transparent border-none shadow-none justify-start"
           onClick={() => setShowPopover(!showPopover)}
-          // disabled={!selectedFeature}
         >
           <EllipsisVertical size={14} className="" />
         </Button>
@@ -98,7 +75,6 @@ export default function MoreMenuButton({
           }
           onClick={() => {
             setShow({ ...show, perEntity: !show.perEntity });
-            // hide the popover
             setShowPopover(false);
           }}
         >
