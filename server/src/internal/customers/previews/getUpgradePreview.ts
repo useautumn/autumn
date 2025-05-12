@@ -1,9 +1,12 @@
 import {
   checkStripeProductExists,
   isFreeProduct,
+  isOneOff,
 } from "@/internal/products/productUtils.js";
 import {
   AppEnv,
+  AttachPreviewType,
+  CheckProductFormattedPreview,
   Customer,
   Feature,
   FullCusProduct,
@@ -283,13 +286,21 @@ export const getUpgradePreview = async ({
     dueToday = 0;
     dueNextCycle = Number((proratedAmount + regularAmount).toFixed(2));
   }
-  return {
+  const result: CheckProductFormattedPreview = {
     title: `Upgrade to ${product.name}`,
     message: formattedMessage.message,
+
+    scenario: AttachPreviewType.Upgrade,
+    product_id: product.id,
+    product_name: product.name,
+    recurring: !isOneOff(product.prices),
+    next_cycle_at: stripeSubs[0].current_period_end * 1000,
+    current_product_name: curMainProduct.product.name,
+
     items,
     // amount_due: Number(totalAmount.toFixed(2)),
     // total: totalAmount,
-    options,
+    options: options as any,
     due_today: {
       price: dueToday,
       currency: org.default_currency || "USD",
@@ -299,4 +310,6 @@ export const getUpgradePreview = async ({
       currency: org.default_currency || "USD",
     },
   };
+
+  return result;
 };

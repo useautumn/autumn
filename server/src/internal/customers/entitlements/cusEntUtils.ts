@@ -146,15 +146,16 @@ export const getCusEntMasterBalance = ({
 
 export const getCusEntBalance = ({
   cusEnt,
-  entityId,
   entities,
+  entityId,
 }: {
   cusEnt: FullCustomerEntitlement;
-  entityId?: string | null;
   entities?: Entity[];
+  entityId?: string | null;
 }) => {
   let entitlement = cusEnt.entitlement;
-  let balance, adjustment;
+  let ent = cusEnt.entitlement;
+  let feature = ent.feature;
 
   if (notNullish(entitlement.entity_feature_id)) {
     if (nullish(entityId)) {
@@ -163,15 +164,29 @@ export const getCusEntBalance = ({
       });
     }
 
-    return getEntityBalance({
-      cusEnt,
-      entityId: entityId!,
-    });
+    return {
+      ...getEntityBalance({
+        cusEnt,
+        entityId: entityId!,
+      }),
+      unused: 0,
+      count: 1,
+    };
   }
+
+  let unusedCount =
+    (entities &&
+      entities.filter(
+        (entity) =>
+          entity.internal_feature_id == feature.internal_id && entity.deleted
+      ).length) ||
+    0;
 
   return {
     balance: cusEnt.balance,
     adjustment: cusEnt.adjustment,
+    unused: unusedCount,
+    count: 1,
   };
 };
 

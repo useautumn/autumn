@@ -1,9 +1,10 @@
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import {
   AppEnv,
+  AttachPreviewType,
   FullCusProduct,
   FullProduct,
   Organization,
@@ -51,6 +52,17 @@ export const getDowngradePreview = async ({
       ? `Cancel subscription to ${curMainProduct.product.name}`
       : `Downgrade to ${product.name}`,
     message,
+
+    scenario: isFreeProduct(product.prices)
+      ? AttachPreviewType.Cancel
+      : AttachPreviewType.Downgrade,
+    product_id: product.id,
+    product_name: product.name,
+
+    recurring: !isOneOff(product.prices),
+    next_cycle_at: latestPeriodEnd * 1000,
+    current_product_name: curMainProduct.product.name,
+
     error_on_attach: false,
   };
 };

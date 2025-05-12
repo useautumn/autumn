@@ -29,13 +29,19 @@ function UpdateCusEntitlement({
   setSelectedCusEntitlement: (cusEnt: FullCustomerEntitlement | null) => void;
 }) {
   // Get customer product
-  const { customer, env, cusMutate } = useCustomerContext();
+  const { customer, env, cusMutate, entityId } = useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
 
   const [updateLoading, setUpdateLoading] = useState(false);
+
+  let cusEnt = selectedCusEntitlement;
+
   const [updateFields, setUpdateFields] = useState<any>({
-    balance: selectedCusEntitlement?.balance,
-    next_reset_at: selectedCusEntitlement?.next_reset_at,
+    balance:
+      entityId && notNullish(cusEnt?.entities?.[entityId]?.balance)
+        ? cusEnt?.entities?.[entityId]?.balance
+        : cusEnt?.balance,
+    next_reset_at: cusEnt?.next_reset_at,
   });
 
   const getCusProduct = (cusEnt: FullCustomerEntitlement) => {
@@ -47,8 +53,11 @@ function UpdateCusEntitlement({
 
   useEffect(() => {
     setUpdateFields({
-      balance: selectedCusEntitlement?.balance,
-      next_reset_at: selectedCusEntitlement?.next_reset_at,
+      balance:
+        entityId && notNullish(cusEnt?.entities?.[entityId]?.balance)
+          ? cusEnt?.entities?.[entityId]?.balance
+          : cusEnt?.balance,
+      next_reset_at: cusEnt?.next_reset_at,
     });
   }, [selectedCusEntitlement]);
 
@@ -72,6 +81,7 @@ function UpdateCusEntitlement({
       await CusService.updateCusEntitlement(axiosInstance, cusEnt.id, {
         balance: balanceInt,
         next_reset_at: updateFields.next_reset_at,
+        entity_id: entityId,
       });
       toast.success("Entitlement updated successfully");
       await cusMutate();

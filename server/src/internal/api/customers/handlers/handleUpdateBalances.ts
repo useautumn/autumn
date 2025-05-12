@@ -170,21 +170,6 @@ export const handleUpdateBalances = async (req: any, res: any) => {
           entityId: balance.entity_id,
         });
 
-        // curBalance = curBalance.add(new Decimal(cusEnt.balance!));
-        // const { groupVal, balance } = getGroupBalanceFromProperties({
-        //   properties,
-        //   feature,
-        //   cusEnt,
-        //   features: featuresToUpdate,
-        // });
-
-        // if (notNullish(groupVal) && nullish(balance)) {
-        //   logger.info(
-        //     `   - No balance found for group by value: ${groupVal}, for customer: ${customer.id}, skipping`
-        //   );
-        //   continue;
-        // }
-
         curBalance = curBalance.add(new Decimal(cusEntBalance!));
       }
 

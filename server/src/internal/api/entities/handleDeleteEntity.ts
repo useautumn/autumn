@@ -28,10 +28,6 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       logger,
     });
 
-    // console.log("Handling race condition for:", customer_id);
-    // console.log("Customer ID:", customer_id);
-    // console.log("Entity ID:", entity_id);
-
     const customer = await CusService.getById({
       sb: req.sb,
       id: customer_id,
