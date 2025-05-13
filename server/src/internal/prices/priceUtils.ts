@@ -1,4 +1,4 @@
-import { compareObjects, notNullish } from "@/utils/genUtils.js";
+import { compareObjects, generateId, notNullish } from "@/utils/genUtils.js";
 import {
   BillWhen,
   BillingInterval,
@@ -13,6 +13,7 @@ import {
   ErrCode,
   FullProduct,
   TierInfinite,
+  Product,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -26,6 +27,34 @@ const BillingIntervalOrder = [
   BillingInterval.Month,
   BillingInterval.OneOff,
 ];
+
+export const constructPrice = ({
+  internalProductId,
+  entitlementId,
+  orgId,
+  fixedConfig,
+  usageConfig,
+  isCustom,
+}: {
+  internalProductId: string;
+  isCustom: boolean;
+  orgId: string;
+  entitlementId?: string;
+  fixedConfig?: FixedPriceConfig;
+  usageConfig?: UsagePriceConfig;
+}) => {
+  let newPrice: Price = {
+    id: generateId("pr"),
+    org_id: orgId,
+    internal_product_id: internalProductId,
+    created_at: Date.now(),
+    is_custom: isCustom,
+    config: usageConfig || fixedConfig,
+    entitlement_id: entitlementId,
+  };
+
+  return newPrice;
+};
 
 export const getBillingType = (config: FixedPriceConfig | UsagePriceConfig) => {
   // 1. Fixed cycle / one off

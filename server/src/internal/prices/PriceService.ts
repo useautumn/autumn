@@ -5,6 +5,29 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
 export class PriceService {
+  static async getByStripeId({
+    sb,
+    stripeId,
+  }: {
+    sb: SupabaseClient;
+    stripeId: string;
+  }) {
+    const { data, error } = await sb
+      .from("prices")
+      .select("*")
+      .eq("config->>stripe_price_id", stripeId);
+
+    if (error) {
+      throw error;
+    }
+
+    if (data.length === 0) {
+      return null;
+    }
+
+    return data[0];
+  }
+
   static async getInIds({
     sb,
     entitlementIds,

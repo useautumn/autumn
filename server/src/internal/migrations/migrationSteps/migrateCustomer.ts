@@ -24,6 +24,7 @@ import { MigrationService } from "../MigrationService.js";
 import { constructMigrationError } from "../migrationUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { FeatureOptions } from "@autumn/shared";
+
 export const migrateCustomer = async ({
   migrationJob,
   sb,
