@@ -17,7 +17,7 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
-import { differenceInMinutes, format, subDays } from "date-fns";
+import { differenceInMinutes, subDays } from "date-fns";
 import { getStripeSubs, getUsageBasedSub } from "../stripeSubUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
@@ -211,19 +211,11 @@ const handleUsageInArrear = async ({
   // For upgrade, bill_immediately: invoice period start = sub period start (cur cycle), invoice period end cancel immediately date
 
   let allowance = relatedCusEnt.entitlement.allowance!;
-
   let config = price.config as UsagePriceConfig;
 
   // If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
   if (relatedCusEnt.balance! > 0 && !relatedCusEnt.next_reset_at) {
     logger.info("Balance > 0 and next_reset_at is null, skipping");
-    return;
-  }
-
-  if (!config.stripe_meter_id) {
-    logger.warn(
-      `Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`
-    );
     return;
   }
 
@@ -267,6 +259,13 @@ const handleUsageInArrear = async ({
 
     await stripeCli.invoiceItems.create(invoiceItem);
   } else {
+    if (!config.stripe_meter_id) {
+      logger.warn(
+        `Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`
+      );
+      return;
+    }
+
     await submitUsageToStripe({
       price,
       stripeCli,

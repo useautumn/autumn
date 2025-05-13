@@ -8,12 +8,14 @@ export class EntityService {
     internalCustomerId,
     orgId,
     env,
+    errorIfNotFound = true,
   }: {
     sb: SupabaseClient;
     entityId: string;
     internalCustomerId?: string;
     orgId: string;
     env: string;
+    errorIfNotFound?: boolean;
   }) {
     const { data, error } = await sb
       .from("entities")
@@ -25,6 +27,14 @@ export class EntityService {
       .single();
 
     if (error) {
+      if (
+        !errorIfNotFound &&
+        error.code === "PGRST116" &&
+        error.details.includes("0 rows")
+      ) {
+        return null;
+      }
+
       throw error;
     }
 
