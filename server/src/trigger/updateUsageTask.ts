@@ -43,7 +43,9 @@ const getFeatureDeductions = ({
   features: Feature[];
   shouldSet: boolean;
 }) => {
-  let meteredFeature = features.find((f) => f.type === FeatureType.Metered)!;
+  let meteredFeature =
+    features.find((f) => f.type === FeatureType.Metered) || features[0];
+
   const featureDeductions = [];
   for (const feature of features) {
     let newValue = value;

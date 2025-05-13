@@ -131,7 +131,10 @@ export const getInvoiceItems = async ({
   try {
     for (const line of stripeInvoice.lines.data) {
       let price = prices.find(
-        (p) => p.config?.stripe_price_id === line.price?.id
+        (p) =>
+          p.config?.stripe_price_id === line.price?.id ||
+          (p.config as UsagePriceConfig)?.stripe_product_id ===
+            line.price?.product
       );
 
       if (!price) {

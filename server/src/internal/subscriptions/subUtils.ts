@@ -15,8 +15,8 @@ export const constructSub = ({
   usageFeatures: string[];
   orgId: string;
   env: AppEnv;
-  currentPeriodStart: number;
-  currentPeriodEnd: number;
+  currentPeriodStart?: number;
+  currentPeriodEnd?: number;
 }) => {
   let newSub: Subscription = {
     id: generateId("sub"),
@@ -26,8 +26,8 @@ export const constructSub = ({
     usage_features: usageFeatures,
     org_id: orgId,
     env: env,
-    current_period_start: currentPeriodStart,
-    current_period_end: currentPeriodEnd,
+    current_period_start: currentPeriodStart || null,
+    current_period_end: currentPeriodEnd || null,
   };
 
   return newSub;

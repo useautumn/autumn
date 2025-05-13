@@ -50,6 +50,7 @@ stripeWebhookRouter.post(
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
+    // event = JSON.parse(request.body);
 
     const logger = createLogtailWithContext({
       action: LoggerAction.StripeWebhook,
