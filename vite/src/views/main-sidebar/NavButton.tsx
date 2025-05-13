@@ -13,6 +13,7 @@ export const NavButton = ({
   env,
   className,
   href,
+  online = false,
 }: {
   value: string;
   icon: any;
@@ -20,6 +21,7 @@ export const NavButton = ({
   env: AppEnv;
   className?: string;
   href?: string;
+  online?: boolean;
 }) => {
   // Get window path
   const { state } = useSidebarContext();
@@ -51,6 +53,12 @@ export const NavButton = ({
         {icon}
       </div>
       {state == "expanded" && <span className="">{title}</span>}
+      {online && (
+        <span className="relative flex h-2 w-2 ml-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
+        </span>
+      )}
     </Link>
   );
 };
