@@ -33,7 +33,8 @@ export function SidebarContact() {
             env={env}
             value="chat"
             icon={<MessageCircle size={14} />}
-            title="Chat with us"
+            title="Need help?"
+            online={true}
           />
         </div>
       </DropdownMenuTrigger>
@@ -62,11 +63,15 @@ export function SidebarContact() {
           Book a call
         </DropdownMenuItem>
         <DropdownMenuItem
-          className="cursor-pointer h-[30px] flex justify-between"
+          className="cursor-pointer h-[30px] flex justify-start"
           asChild
         >
           <Link to="https://discord.gg/STqxY92zuS" target="_blank">
-            Join our Discord
+            We're online on Discord
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500"></span>
+            </span>
           </Link>
         </DropdownMenuItem>
       </DropdownMenuContent>
