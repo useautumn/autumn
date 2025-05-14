@@ -22,7 +22,7 @@ import {
   getUnlimitedAndUsageAllowed,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { SuccessCode } from "@autumn/shared";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
@@ -190,51 +190,6 @@ const getFeatureAndCreditSystems = async ({
   return { feature, creditSystems, allFeatures: features };
 };
 
-const logEntitled = ({
-  req,
-  customer_id,
-  cusEnts,
-}: {
-  req: any;
-  customer_id: string;
-  cusEnts: FullCustomerEntitlement[];
-}) => {
-  try {
-    console.log(
-      `${req.isPublic ? "(Public) " : ""}CusEnts (${customer_id}):`,
-      cusEnts.map((cusEnt: any) => {
-        let balanceStr = cusEnt.balance;
-        let group = req.body.group;
-
-        try {
-          if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
-            balanceStr = "Unlimited";
-          } else if (group) {
-            let groupBalance = cusEnt.balances?.[group].balance;
-            balanceStr = `${groupBalance || "null"} (${group})`;
-          }
-        } catch (error) {
-          balanceStr = "failed_to_get_balance";
-        }
-
-        try {
-          if (cusEnt.entitlement.allowance_type === AllowanceType.Unlimited) {
-            balanceStr = "Unlimited";
-          } else if (cusEnt.entitlement.allowance_type === AllowanceType.None) {
-            balanceStr = "None";
-          }
-        } catch (error) {}
-
-        return `${cusEnt.feature_id} - ${balanceStr} (${
-          cusEnt.customer_product ? cusEnt.customer_product.product_id : ""
-        })`;
-      })
-    );
-  } catch (error) {
-    console.log("Failed to log entitled", error);
-  }
-};
-
 // FETCH FUNCTION
 const getCusEntsAndFeatures = async ({
   req,
@@ -312,7 +267,8 @@ const getCusEntsAndFeatures = async ({
   if (customer.entity) {
     cusEnts = cusEnts.filter((cusEnt) => {
       return (
-        notNullish(cusEnt.entities) ||
+        // notNullish(cusEnt.entities) ||
+        nullish(cusEnt.customer_product.internal_entity_id) ||
         cusEnt.customer_product.internal_entity_id ===
           customer.entity.internal_id
       );
