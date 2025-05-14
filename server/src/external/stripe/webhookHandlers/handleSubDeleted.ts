@@ -126,30 +126,6 @@ export const handleSubscriptionDeleted = async ({
       },
     });
 
-    // try {
-    //   // 2. TODO: Clear entities
-    //   let internalFeatureIds = new Set(
-    //     cusProduct.customer_entitlements.map(
-    //       (ce: FullCustomerEntitlement) => ce.entitlement.internal_feature_id!
-    //     )
-    //   );
-
-    //   await EntityService.deleteByInternalFeatureId({
-    //     sb,
-    //     internalCustomerId: cusProduct.customer.internal_id,
-    //     internalFeatureIds: Array.from(internalFeatureIds),
-    //     orgId: org.id,
-    //     env,
-    //   });
-
-    //   logger.info(
-    //     `   ✅ deleted ${internalFeatureIds.size} entities for customer ${cusProduct.customer.id}`
-    //   );
-    // } catch (error) {
-    //   logger.error("Failed to delete entities on sub deleted");
-    //   logger.error(error);
-    // }
-
     if (cusProduct.product.is_add_on) {
       return;
     }

@@ -34,7 +34,7 @@ import {
 const defaultFeatures = [
   {
     internal_id: "",
-    id: "pro-analytics",
+    id: "pro_analytics",
     type: FeatureType.Boolean,
     display: {
       singular: "pro analytics",
@@ -43,12 +43,12 @@ const defaultFeatures = [
   },
   {
     internal_id: "",
-    id: "chat-messages",
+    id: "chat_messages",
     type: FeatureType.Metered,
     config: {
       filters: [
         {
-          value: ["chat-messages"],
+          value: ["chat_messages"],
           property: "",
           operator: "",
         },
@@ -90,7 +90,7 @@ const createDefaultProducts = async ({
 
   const defaultProducts = [
     {
-      id: "free-example",
+      id: "free_example",
       name: "Free (Example)",
       env: AppEnv.Sandbox,
       is_default: true,
@@ -106,7 +106,7 @@ const createDefaultProducts = async ({
       prices: [],
     },
     {
-      id: "pro-example",
+      id: "pro_example",
       name: "Pro (Example)",
       env: AppEnv.Sandbox,
       is_default: false,

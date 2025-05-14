@@ -91,18 +91,6 @@ export const expireCusProduct = async ({
     `Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`
   );
 
-  // If current product is default, can't expire it
-  if (
-    cusProduct.product.is_default &&
-    cusProduct.status == CusProductStatus.Active
-  ) {
-    throw new RecaseError({
-      message: `Product ${cusProduct.product.name} is default and active and can't be expired`,
-      code: ErrCode.InvalidRequest,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-  }
-
   // If current product is scheduled
 
   if (cusProduct.status == CusProductStatus.Scheduled) {
@@ -114,6 +102,7 @@ export const expireCusProduct = async ({
       env,
       logger,
     });
+    return;
   }
 
   // 1. If main product, can't expire if there's scheduled product

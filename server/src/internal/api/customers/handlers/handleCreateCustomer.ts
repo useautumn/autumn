@@ -400,6 +400,14 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
     const data = req.body;
     const expand = parseCusExpand(req.query.expand);
 
+    if (!data.id && !data.email) {
+      throw new RecaseError({
+        message: "ID or email is required",
+        code: ErrCode.InvalidRequest,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
     let org = await OrgService.getFromReq(req);
     let features = await FeatureService.getFromReq(req);
     let customer = await getOrCreateCustomer({

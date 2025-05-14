@@ -88,6 +88,8 @@ export const getAttachPreview = async ({
       error_on_attach: true,
       product_id: product.id,
       product_name: product.name,
+      current_product_name: curMainProduct?.product?.name,
+      next_cycle_at: curScheduledProduct.starts_at,
     };
 
     return result;
@@ -144,6 +146,8 @@ export const getAttachPreview = async ({
         message += `\n\n${scheduledMessage}`;
       }
 
+      // Get
+
       let result: CheckProductFormattedPreview = {
         title: `Renew subscription to ${curMainProduct.product.name}`,
         message,
@@ -154,9 +158,6 @@ export const getAttachPreview = async ({
       };
 
       return result;
-      // title: `Renew subscription to ${curMainProduct.product.name}`,
-      // message,
-      // html,
     }
     // 2b. Can't attach same product
     else return null;

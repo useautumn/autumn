@@ -26,6 +26,7 @@ import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js"
 import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 
 export const updateCustomerDetails = async ({
   sb,
@@ -235,8 +236,9 @@ export const getCusEntsInFeatures = async ({
     let entity = customer.entity;
     cusEnts = cusEnts.filter(
       (cusEnt) =>
-        cusEnt.customer_product.internal_entity_id === entity.internal_id ||
-        cusEnt.entities
+        nullish(cusEnt.customer_product.internal_entity_id) ||
+        cusEnt.customer_product.internal_entity_id === entity.internal_id
+      // || cusEnt.entities
     );
   }
 
