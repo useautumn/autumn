@@ -105,7 +105,8 @@ export const createStripeCoupon = async ({
   }
 
   const stripeCoupon = await stripeCli.coupons.create({
-    id: reward.internal_id,
+    // id: reward.internal_id,
+    id: reward.id,
     ...(couponToStripeDuration(reward) as any),
     ...(couponToStripeValue({ reward, org }) as any),
     name: reward.name,

@@ -17,10 +17,12 @@ import { featuresToObject } from "@/internal/api/customers/getCustomerDetails.js
 
 export const getCusProductsResponse = async ({
   cusProducts,
+  entities,
   subs,
   org,
 }: {
   cusProducts: FullCusProduct[];
+  entities: Entity[];
   subs: Stripe.Subscription[];
   org: Organization;
 }) => {
@@ -28,6 +30,7 @@ export const getCusProductsResponse = async ({
     fullCusProducts: cusProducts,
     subs,
     org,
+    entities,
   });
 
   let products: any = [...main, ...addOns];

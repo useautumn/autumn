@@ -1,11 +1,3 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import {
   compareStatus,
@@ -134,7 +126,7 @@ export const CustomerProductList = ({
                 `/customers/${customer.id || customer.internal_id}/${
                   cusProduct.product_id
                 }?id=${cusProduct.id}${
-                  entity ? `&entity_id=${entity.id}` : ""
+                  entity ? `&entity_id=${entity.id || entity.internal_id}` : ""
                 }`,
                 navigate,
                 env

@@ -23,18 +23,19 @@ export const creditSystemContainsFeature = ({
 };
 
 export const getCreditSystemsFromFeature = ({
-  meteredFeatureId,
+  featureId,
   features,
 }: {
-  meteredFeatureId: string;
+  featureId: string;
   features: Feature[];
 }) => {
   return features.filter(
     (f) =>
       f.type == FeatureType.CreditSystem &&
+      f.id != featureId &&
       creditSystemContainsFeature({
         creditSystem: f,
-        meteredFeatureId,
+        meteredFeatureId: featureId,
       })
   );
 };

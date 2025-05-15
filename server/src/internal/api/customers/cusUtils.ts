@@ -5,6 +5,7 @@ import {
   Customer,
   CustomerData,
   CustomerSchema,
+  Entity,
   ErrCode,
   Feature,
   FullCustomer,
@@ -178,16 +179,18 @@ export const processFullCusProducts = ({
   fullCusProducts,
   subs,
   org,
+  entities = [],
 }: {
   fullCusProducts: any;
   subs: any;
   org: Organization;
+  entities?: Entity[];
 }) => {
   // Process full cus products
   let main = [];
   let addOns = [];
   for (const cusProduct of fullCusProducts) {
-    let processed = processFullCusProduct({ cusProduct, subs, org });
+    let processed = processFullCusProduct({ cusProduct, subs, org, entities });
 
     let isAddOn = cusProduct.product.is_add_on;
     if (isAddOn) {

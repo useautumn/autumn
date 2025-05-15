@@ -268,7 +268,7 @@ export const handleSameMainProduct = async ({
     });
 
     if (pricesChanged || entitlementsChanged) {
-      logger.info(`SCENARIO 0: UPDATE SAME PRODUCT`);
+      logger.info(`SCENARIO 0: UPDATE SAME PRODUCT (CUSTOM)`);
       logger.info(
         `Prices changed: ${pricesChanged}, Entitlements changed: ${entitlementsChanged}`
       );

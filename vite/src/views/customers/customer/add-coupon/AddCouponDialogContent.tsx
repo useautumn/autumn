@@ -37,7 +37,6 @@ const AddCouponDialogContent = ({
       });
       setOpen(false);
       await cusMutate();
-
       toast.success("Reward added to customer");
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to create coupon"));

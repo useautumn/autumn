@@ -63,6 +63,7 @@ export const cancelFutureProductSchedule = async ({
   inIntervals,
   env,
   internalEntityId,
+  renewCurProduct = true,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -74,6 +75,7 @@ export const cancelFutureProductSchedule = async ({
   inIntervals?: string[];
   env: AppEnv;
   internalEntityId?: string;
+  renewCurProduct?: boolean;
 }) => {
   // 1. Get main and scheduled products
   const { curMainProduct, curScheduledProduct } = await getExistingCusProducts({
@@ -158,7 +160,7 @@ export const cancelFutureProductSchedule = async ({
       });
 
       // Put back schedule id into curMainProduct
-      if (includeOldItems) {
+      if (includeOldItems && renewCurProduct) {
         await CusProductService.update({
           sb,
           cusProductId: curMainProduct!.id,
@@ -202,7 +204,7 @@ export const cancelFutureProductSchedule = async ({
           sub.items.data[0]?.price?.recurring?.interval === interval
       );
 
-      if (subWithSameInterval) {
+      if (subWithSameInterval && renewCurProduct) {
         await stripeCli.subscriptions.update(subWithSameInterval.id, {
           cancel_at: null,
         });

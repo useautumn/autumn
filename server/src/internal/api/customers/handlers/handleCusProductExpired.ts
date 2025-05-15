@@ -28,6 +28,7 @@ export const removeScheduledProduct = async ({
   org,
   env,
   logger,
+  renewCurProduct = true,
 }: {
   sb: SupabaseClient;
   cusProduct: FullCusProduct;
@@ -35,6 +36,7 @@ export const removeScheduledProduct = async ({
   org: Organization;
   env: AppEnv;
   logger: any;
+  renewCurProduct?: boolean;
 }) => {
   const stripeCli = createStripeCli({ org: org, env: env });
 
@@ -51,6 +53,7 @@ export const removeScheduledProduct = async ({
     logger,
     env,
     internalEntityId: cusProduct.internal_entity_id || undefined,
+    renewCurProduct,
   });
 
   // 2. Delete scheduled product

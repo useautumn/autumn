@@ -40,7 +40,7 @@ export const handleAddCouponToCus = async (req: any, res: any) => {
 
     // Attach coupon to customer
     await stripeCli.customers.update(customer.processor.id, {
-      coupon: coupon.internal_id,
+      coupon: coupon.id,
     });
 
     res.status(200).json({ customer, coupon });

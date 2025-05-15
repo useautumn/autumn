@@ -198,6 +198,7 @@ export const checkStripeConnections = async ({
   const batchPriceUpdates = [];
   for (const price of prices) {
     let product = getProductForPrice(price, products);
+
     batchPriceUpdates.push(
       createStripePriceIFNotExist({
         sb: req.sb,
@@ -207,6 +208,7 @@ export const checkStripeConnections = async ({
         product: product!,
         org,
         logger,
+        internalEntityId: attachParams.internalEntityId,
       })
     );
   }

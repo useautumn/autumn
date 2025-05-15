@@ -275,7 +275,7 @@ export const initGroupBalancesFromGetCus = async ({
     }
 
     let creditSystems = getCreditSystemsFromFeature({
-      meteredFeatureId: feature.id,
+      featureId: feature.id,
       features,
     });
 

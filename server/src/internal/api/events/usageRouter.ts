@@ -79,6 +79,7 @@ const createAndInsertEvent = async ({
   value,
   set_usage,
   properties,
+  idempotencyKey,
 }: {
   req: any;
   customer: Customer;
@@ -86,6 +87,7 @@ const createAndInsertEvent = async ({
   value?: number;
   set_usage?: boolean;
   properties: any;
+  idempotencyKey?: string;
 }) => {
   if (!customer.id) {
     throw new RecaseError({
@@ -101,6 +103,7 @@ const createAndInsertEvent = async ({
     env: req.env,
     internal_customer_id: customer.internal_id,
     timestamp: Date.now(),
+    idempotency_key: idempotencyKey,
     customer_id: customer.id,
     event_name: featureId,
     properties,
@@ -120,8 +123,15 @@ export const handleUsageEvent = async ({
   req: any;
   setUsage?: boolean;
 }) => {
-  let { customer_id, customer_data, properties, feature_id, value, entity_id } =
-    req.body;
+  let {
+    customer_id,
+    customer_data,
+    properties,
+    feature_id,
+    value,
+    entity_id,
+    idempotency_key,
+  } = req.body;
   if (!customer_id || !feature_id) {
     throw new RecaseError({
       message: "customer_id and feature_id are required",
@@ -147,6 +157,7 @@ export const handleUsageEvent = async ({
     value,
     set_usage: setUsage,
     properties,
+    idempotencyKey: idempotency_key,
   });
 
   const features = [feature, ...creditSystems];

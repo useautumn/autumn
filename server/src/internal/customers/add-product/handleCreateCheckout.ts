@@ -120,10 +120,10 @@ export const handleCreateCheckout = async ({
         checkout_url: checkout.url,
         code: SuccessCode.CheckoutCreated,
         message: `Successfully created checkout for customer ${
-          customer.id
+          customer.id || customer.internal_id
         }, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
         product_ids: attachParams.products.map((p) => p.id),
-        customer_id: customer.id,
+        customer_id: customer.id || customer.internal_id,
       })
     );
   } else {

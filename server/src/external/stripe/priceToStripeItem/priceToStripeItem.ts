@@ -97,16 +97,16 @@ export const priceToStripeItem = ({
     const config = price.config as UsagePriceConfig;
     const priceId = config.stripe_price_id;
 
+    if (withEntity && !isCheckout) {
+      return null;
+    }
+
     if (!priceId) {
       throw new RecaseError({
         code: ErrCode.PriceNotFound,
         message: `Couldn't find price: ${price.name}, ${price.id} in Stripe`,
         statusCode: 400,
       });
-    }
-
-    if (withEntity && !isCheckout) {
-      return null;
     }
 
     lineItem = {

@@ -71,3 +71,6 @@ export * from "./models/cusModels/invoiceModels/invoiceResponseModels.js";
 
 // Check Models
 export * from "./models/checkModels/checkPreviewModels.js";
+
+// Reward Models
+export * from "./models/rewardModels/rewardResponseModels.js";

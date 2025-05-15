@@ -2,13 +2,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { Stripe } from "stripe";
 import { AttachParams } from "../products/AttachParams.js";
 import { FullCusProduct, InvoiceItem } from "@autumn/shared";
-import {
-  BillingInterval,
-  BillingType,
-  CusEntWithEntitlement,
-  ErrCode,
-  UsagePriceConfig,
-} from "@autumn/shared";
+import { BillingInterval, BillingType, UsagePriceConfig } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import {
   getBillingType,
@@ -23,8 +17,6 @@ import { InvoiceService } from "../invoices/InvoiceService.js";
 import { stripeToAutumnInterval } from "@/external/stripe/utils.js";
 import { getResetBalancesUpdate } from "../entitlements/groupByUtils.js";
 import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
-import { getInvoiceItems } from "../invoices/invoiceUtils.js";
-import { formatUnixToDateTime } from "@/utils/genUtils.js";
 
 // Add usage to end of cycle
 const addUsageToNextInvoice = async ({
@@ -175,8 +167,8 @@ const invoiceForUsageImmediately = async ({
       });
     }
   } else {
-    console.log("Creating new invoice");
     newInvoice = true;
+
     invoice = await stripeCli.invoices.create({
       customer: customer.processor.id,
       auto_advance: true,
@@ -189,15 +181,15 @@ const invoiceForUsageImmediately = async ({
     const amount = getPriceForOverage(item.price, item.overage);
     let config = item.price.config! as UsagePriceConfig;
 
-    logger.info(
-      `   feature: ${item.feature.id}, overage: ${item.overage}, amount: ${amount}`
-    );
-
     // TO TEST
     let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
     let description = `${curCusProduct.product.name} - ${
       item.feature.name
     } x ${Math.round(item.usage)}`;
+
+    logger.info(
+      `🌟🌟🌟 (Bill remaining) created invoice item: ${description} -- ${amount}`
+    );
 
     let invoiceItem = {
       customer: customer.processor.id,
@@ -324,6 +316,7 @@ export const billForRemainingUsages = async ({
   curCusProduct,
   newSubs,
   shouldPreview = false,
+  bilImmediatelyOverride = false,
 }: {
   logger: any;
   sb: any;
@@ -331,6 +324,7 @@ export const billForRemainingUsages = async ({
   curCusProduct: FullCusProduct;
   newSubs: Stripe.Subscription[];
   shouldPreview?: boolean;
+  bilImmediatelyOverride?: boolean;
 }) => {
   const { customer_prices, customer_entitlements } = curCusProduct;
   const { customer, org } = attachParams;
@@ -413,7 +407,7 @@ export const billForRemainingUsages = async ({
     });
   }
 
-  if (org.config?.bill_upgrade_immediately) {
+  if (org.config?.bill_upgrade_immediately || bilImmediatelyOverride) {
     await invoiceForUsageImmediately({
       intervalToInvoiceItems,
       customer,

@@ -1,49 +1,9 @@
-import { EditProductToolbar } from "./EditProductToolbar";
-import { ProductEntitlementTable } from "./entitlements/ProductEntitlementTable";
-import { CreateEntitlement } from "./entitlements/CreateEntitlement";
-import { ProductPricingTable } from "./prices/ProductPricingTable";
-import { CreatePrice } from "./prices/CreatePrice";
-
-import { Badge } from "@/components/ui/badge";
 import { AdminHover } from "@/components/general/AdminHover";
-import { FreeTrialView } from "./free-trial/FreeTrialView";
-import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
-import { Gift } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useProductContext } from "./ProductContext";
 import { useNavigate } from "react-router";
-import { getBackendErr, getRedirectUrl } from "@/utils/genUtils";
 import { useEnv } from "@/utils/envUtils";
-import { Button } from "@/components/ui/button";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import {
-  AppEnv,
-  Entity,
-  MigrationJob,
-  MigrationJobStep,
-  ProductV2,
-} from "@autumn/shared";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import {
-  Tooltip,
-  TooltipProvider,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
-import ConfirmMigrateDialog from "./versioning/ConfirmMigrateDialog";
-import { CreateProductItem } from "./product-item/CreateProductItem";
 import { ProductItemTable } from "./product-item/ProductItemTable";
-import { EntityHeader } from "@/views/customers/customer/components/entity-header";
-import { SelectEntity } from "@/views/customers/customer/customer-sidebar/customer-entities";
+import { SelectEntity } from "@/views/customers/customer/customer-sidebar/select-entity";
 
 export const ManageProduct = ({
   customerData,
@@ -78,7 +38,9 @@ export const ManageProduct = ({
           </div>
         </div>
         {/* <EntityHeader entity={entity} /> */}
-        <SelectEntity entityId={entityId} entities={customer?.entities} />
+        {customer && (
+          <SelectEntity entityId={entityId} entities={customer?.entities} />
+        )}
       </div>
 
       <div className="flex flex-col gap-10">

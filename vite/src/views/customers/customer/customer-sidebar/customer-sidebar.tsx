@@ -1,17 +1,6 @@
-import { getStripeCusLink } from "@/utils/linkUtils";
-
-import { faStripe } from "@fortawesome/free-brands-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { ArrowUpRightFromSquare, Check } from "lucide-react";
-
 import { useState } from "react";
-import { Link } from "react-router";
-import { SideAccordion } from "@/components/general/SideAccordion";
 import { Accordion } from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
-
-import CopyButton from "@/components/general/CopyButton";
 import { CustomerRewards } from "./customer-rewards";
 import { useCustomerContext } from "../CustomerContext";
 import UpdateCustomerDialog from "../UpdateCustomerDialog";

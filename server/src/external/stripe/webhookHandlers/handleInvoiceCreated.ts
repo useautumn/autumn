@@ -496,22 +496,28 @@ export const handleInvoiceCreated = async ({
           env,
         });
 
-        if (entity) {
-          logger.info(`Entity: ${entity.name}`);
-        }
-
-        // Add memo to invoice
         let feature = features.find(
           (f) => f.internal_id == entity?.internal_feature_id
         );
 
-        await stripeCli.invoices.update(invoice.id, {
-          description: `${getFeatureName({
-            feature,
-            plural: false,
-            capitalize: true,
-          })}: ${entity?.name} (ID: ${entity?.id})`,
-        });
+        let entDetails = "";
+        if (entity.name) {
+          entDetails = `${entity.name}${
+            entity.id ? ` (ID: ${entity.id})` : ""
+          }`;
+        } else if (entity.id) {
+          entDetails = `${entity.id}`;
+        }
+
+        if (entDetails) {
+          await stripeCli.invoices.update(invoice.id, {
+            description: `${getFeatureName({
+              feature,
+              plural: false,
+              capitalize: true,
+            })}: ${entity?.name} (ID: ${entity?.id})`,
+          });
+        }
       } catch (error: any) {
         if (
           error.message != "Finalized invoices can't be updated in this way"

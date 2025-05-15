@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CusProductStatus } from "./cusProductModels.js";
 import { AppEnv, EntInterval } from "../genModels.js";
 import { InvoiceResponseSchema } from "./invoiceModels/invoiceResponseModels.js";
+import { RewardResponseSchema } from "../rewardModels/rewardResponseModels.js";
 
 export const CusProductResponseSchema = z.object({
   id: z.string(),
@@ -75,6 +76,7 @@ export const CusResponseSchema = z.object({
 
   invoices: z.array(InvoiceResponseSchema).optional(),
   trials_used: z.array(TrialUsedResponseSchema).optional(),
+  rewards: RewardResponseSchema.nullish(),
 });
 
 export type CusResponse = z.infer<typeof CusResponseSchema>;

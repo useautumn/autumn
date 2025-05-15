@@ -1,6 +1,11 @@
 import express from "express";
-import { CreateRewardSchema, RewardCategory, RewardType } from "@autumn/shared";
-import { handleRequestError } from "@/utils/errorUtils.js";
+import {
+  CreateRewardSchema,
+  ErrCode,
+  RewardCategory,
+  RewardType,
+} from "@autumn/shared";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
@@ -149,16 +154,30 @@ rewardRouter.post("/:internalId", async (req: any, res: any) => {
       env,
     });
 
+    const reward = await RewardService.getByInternalId({
+      sb: req.sb,
+      internalId,
+      orgId,
+      env,
+    });
+
+    if (!reward) {
+      throw new RecaseError({
+        message: `Reward ${internalId} not found`,
+        code: ErrCode.InvalidRequest,
+      });
+    }
+
     const prices = await PriceService.getPricesFromIds({
       sb: req.sb,
       priceIds: rewardBody.price_ids,
     });
 
     // 1. Delete old prices from stripe
-    await stripeCli.coupons.del(internalId);
+    await stripeCli.coupons.del(reward.id);
 
     let rewardCat = getRewardCat(rewardBody);
-    if (rewardCat !== RewardCategory.Discount) {
+    if (rewardCat == RewardCategory.Discount) {
       await createStripeCoupon({
         reward: rewardBody,
         stripeCli,

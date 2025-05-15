@@ -347,7 +347,9 @@ export const getFullCusProductData = async ({
       entities: customer.entities,
       entityId: entityId,
       internalEntityId: entityId
-        ? customer.entities.find((e) => e.id === entityId)?.internal_id
+        ? customer.entities.find(
+            (e) => e.id === entityId || e.internal_id === entityId
+          )?.internal_id
         : undefined,
     };
   }
@@ -428,7 +430,9 @@ export const getFullCusProductData = async ({
     entities: customer.entities,
     entityId: entityId,
     internalEntityId: entityId
-      ? customer.entities.find((e) => e.internal_id === entityId)?.internal_id
+      ? customer.entities.find(
+          (e) => e.id === entityId || e.internal_id === entityId
+        )?.internal_id
       : undefined,
   };
 };
