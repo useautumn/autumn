@@ -149,6 +149,9 @@ export const createStripeInArrearPrice = async ({
   entitlements,
   org,
   logger,
+  curStripePrice,
+  curStripeProduct,
+  internalEntityId,
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
@@ -157,12 +160,44 @@ export const createStripeInArrearPrice = async ({
   org: Organization;
   entitlements: EntitlementWithFeature[];
   logger: any;
+  curStripePrice?: Stripe.Price | null;
+  curStripeProduct?: Stripe.Product | null;
+  internalEntityId?: string;
 }) => {
   let config = price.config as UsagePriceConfig;
 
   // 1. Create meter
   let relatedEnt = getPriceEntitlement(price, entitlements);
   let feature = relatedEnt?.feature;
+
+  // 1. If internal entity ID and not curStripe product, create product
+  if (internalEntityId) {
+    if (!curStripeProduct) {
+      logger.info(
+        `Creating stripe in arrear product for ${relatedEnt.feature.name} (internal entity ID exists!)`
+      );
+      let stripeProduct = await stripeCli.products.create({
+        name: `${product.name} - ${feature!.name}`,
+      });
+      config.stripe_product_id = stripeProduct.id;
+
+      await PriceService.update({
+        sb,
+        priceId: price.id!,
+        update: { config },
+      });
+    }
+    return;
+  }
+
+  // 2. If no internal entity ID, create Stripe price if not exists...
+  if (curStripePrice) {
+    return;
+  }
+
+  logger.info(
+    `Creating stripe in arrear price for ${relatedEnt.feature.name} (no internal entity ID)`
+  );
 
   if (!feature) {
     throw new RecaseError({

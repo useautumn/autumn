@@ -44,9 +44,6 @@ function AddProduct() {
   const navigate = useNavigate();
 
   const handleAddProduct = async (productId: string, setLoading: any) => {
-    // Check org
-
-    // 1. Get org from backend
     const { data } = await OrgService.get(axiosInstance);
 
     if (!data.org) {

@@ -4,6 +4,26 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes/build/cjs/status-codes.js";
 
 export class EntitlementService {
+  static async getInFeatureIds({
+    sb,
+
+    internalFeatureIds,
+  }: {
+    sb: SupabaseClient;
+
+    internalFeatureIds: string[];
+  }) {
+    const { data, error } = await sb
+      .from("entitlements")
+      .select("*")
+      .in("internal_feature_id", internalFeatureIds);
+
+    if (error) {
+      throw error;
+    }
+
+    return data;
+  }
   static async getByOrg({
     sb,
     orgId,
@@ -13,7 +33,11 @@ export class EntitlementService {
     orgId: string;
     env: string;
   }) {
-    const { data, error } = await sb.from("entitlements").select("*, feature:features!inner(*)").eq("feature.org_id", orgId).eq("feature.env", env);
+    const { data, error } = await sb
+      .from("entitlements")
+      .select("*, feature:features!inner(*)")
+      .eq("feature.org_id", orgId)
+      .eq("feature.env", env);
 
     if (error) {
       throw error;
@@ -206,7 +230,10 @@ export class EntitlementService {
     entitlementId: string;
     updates: Partial<Entitlement>;
   }) {
-    const { data, error } = await sb.from("entitlements").update(updates).eq("id", entitlementId);
+    const { data, error } = await sb
+      .from("entitlements")
+      .update(updates)
+      .eq("id", entitlementId);
 
     if (error) {
       throw error;
@@ -214,6 +241,4 @@ export class EntitlementService {
 
     return data;
   }
-  
-  
 }

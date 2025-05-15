@@ -84,6 +84,7 @@ export const createStripePriceIFNotExist = async ({
   product,
   org,
   logger,
+  internalEntityId,
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
@@ -92,6 +93,7 @@ export const createStripePriceIFNotExist = async ({
   product: Product;
   org: Organization;
   logger: any;
+  internalEntityId?: string;
 }) => {
   // Fetch latest price data...
 
@@ -188,19 +190,17 @@ export const createStripePriceIFNotExist = async ({
   }
 
   if (billingType == BillingType.UsageInArrear) {
-    if (!stripePrice) {
-      logger.info(
-        `Creating stripe in arrear price for ${relatedEnt.feature.name}`
-      );
-      await createStripeInArrearPrice({
-        sb,
-        stripeCli,
-        price,
-        entitlements,
-        product,
-        org,
-        logger,
-      });
-    }
+    await createStripeInArrearPrice({
+      sb,
+      stripeCli,
+      price,
+      entitlements,
+      product,
+      org,
+      logger,
+      curStripePrice: stripePrice,
+      curStripeProduct: stripeProd,
+      internalEntityId,
+    });
   }
 };

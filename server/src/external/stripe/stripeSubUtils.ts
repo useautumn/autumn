@@ -16,9 +16,11 @@ import { stripeToAutumnInterval } from "./utils.js";
 export const getStripeSubs = async ({
   stripeCli,
   subIds,
+  expand,
 }: {
   stripeCli: Stripe;
   subIds?: string[] | null;
+  expand?: string[];
 }) => {
   if (!subIds) {
     return [];
@@ -26,7 +28,9 @@ export const getStripeSubs = async ({
   const batchGet = [];
   const getStripeSub = async (subId: string) => {
     try {
-      return await stripeCli.subscriptions.retrieve(subId);
+      return await stripeCli.subscriptions.retrieve(subId, {
+        expand: expand || undefined,
+      });
     } catch (error: any) {
       console.log(
         `(warning) getStripeSubs: Failed to get sub ${subId}`,

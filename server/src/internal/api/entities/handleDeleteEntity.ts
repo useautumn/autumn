@@ -1,7 +1,7 @@
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { EntityService } from "./EntityService.js";
 import { StatusCodes } from "http-status-codes";
-import { ErrCode } from "@autumn/shared";
+import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -13,6 +13,12 @@ import {
 import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
 import { removeEntityFromCusEnt } from "./entityUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
+import { removeScheduledProduct } from "../customers/handlers/handleCusProductExpired.js";
 
 export const handleDeleteEntity = async (req: any, res: any) => {
   try {
@@ -73,6 +79,11 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       withProduct: true,
       withPrices: true,
       logger,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
     });
 
     const org = await OrgService.getFromReq(req);
@@ -145,6 +156,40 @@ export const handleDeleteEntity = async (req: any, res: any) => {
           org,
           env,
         });
+      }
+
+      try {
+        let stripeCli = createStripeCli({ org, env });
+        let curSubs = await getStripeSubs({
+          stripeCli,
+          subIds: cusProducts.flatMap((p: any) => p.subscription_ids),
+        });
+
+        for (const cusProduct of cusProducts) {
+          if (cusProduct.internal_entity_id !== entity.internal_id) {
+            continue;
+          }
+
+          if (cusProduct.status == CusProductStatus.Scheduled) {
+            await removeScheduledProduct({
+              sb,
+              cusProduct,
+              cusProducts,
+              org,
+              env,
+              logger,
+              renewCurProduct: false,
+            });
+          } else {
+            await cancelCurSubs({
+              curCusProduct: cusProduct,
+              curSubs,
+              stripeCli,
+            });
+          }
+        }
+      } catch (error) {
+        logger.error("FAILED TO CANCEL SUBS FOR DELETED ENTITY", error);
       }
 
       // Perform deduction on cus ent

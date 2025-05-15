@@ -263,7 +263,8 @@ export const handleDowngrade = async ({
         code: SuccessCode.DowngradeScheduled,
         message: `Successfully downgraded from ${curCusProduct.product.name} to ${product.name}`,
         product_ids: [product.id],
-        customer_id: attachParams.customer.id,
+        customer_id:
+          attachParams.customer.id || attachParams.customer.internal_id,
       })
     );
   } else {

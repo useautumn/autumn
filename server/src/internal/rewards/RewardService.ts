@@ -64,6 +64,31 @@ export class RewardService {
     }
   }
 
+  static async getById({
+    sb,
+    id,
+    orgId,
+    env,
+  }: {
+    sb: SupabaseClient;
+    id: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const { data, error } = await sb
+      .from("rewards")
+      .select()
+      .eq("id", id)
+      .eq("org_id", orgId)
+      .eq("env", env)
+      .single();
+
+    if (error) {
+      throw error;
+    }
+    return data;
+  }
+
   static async getByInternalId({
     sb,
     internalId,

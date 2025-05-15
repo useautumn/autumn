@@ -9,10 +9,7 @@ import {
   FullCustomerEntitlement,
   FullCustomerPrice,
 } from "@autumn/shared";
-import RecaseError, {
-  handleFrontendReqError,
-  handleRequestError,
-} from "@/utils/errorUtils.js";
+import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { RewardService } from "../rewards/RewardService.js";
 import { EventService } from "../api/events/EventService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";

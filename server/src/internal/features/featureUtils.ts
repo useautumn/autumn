@@ -17,6 +17,8 @@ import { generateId, keyToTitle } from "@/utils/genUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { logger } from "@trigger.dev/sdk/v3";
 import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
+import { ProductService } from "../products/ProductService.js";
+import { getCreditSystemsFromFeature } from "./creditSystemUtils.js";
 
 export const validateFeatureId = (featureId: string) => {
   if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
@@ -103,34 +105,28 @@ export const getObjectsUsingFeature = async ({
   sb,
   orgId,
   env,
+  allFeatures,
   feature,
 }: {
   sb: any;
   orgId: string;
   env: any;
+  allFeatures: Feature[];
   feature: Feature;
 }) => {
-  let [allEnts, allPrices, { creditSystems }] = await Promise.all([
-    EntitlementService.getByOrg({
-      sb,
-      orgId,
-      env,
-    }),
-    PriceService.getByOrg({
-      sb,
-      orgId,
-      env,
-    }),
-    FeatureService.getWithCreditSystems({
-      sb,
-      orgId,
-      env,
-      featureId: feature.id,
-    }),
-  ]);
+  let products = await ProductService.getFullProducts({
+    sb,
+    orgId,
+    env,
+  });
 
-  // console.log("All Ents", allEnts.map((ent) => `${ent.feature_id} - ${ent.entity_feature_id}`));
-  // console.log("Matching feature:", feature.id);
+  let allPrices = products.flatMap((p) => p.prices);
+  let allEnts = products.flatMap((p) => p.entitlements);
+  let creditSystems = getCreditSystemsFromFeature({
+    featureId: feature.id,
+    features: allFeatures,
+  });
+
   let entitlements = allEnts.filter(
     (entitlement) => entitlement.internal_feature_id == feature.internal_id
   );
@@ -139,9 +135,8 @@ export const getObjectsUsingFeature = async ({
   );
 
   let prices = allPrices.filter(
-    (price) => price.config.internal_feature_id == feature.internal_id
+    (price) => (price.config as any).internal_feature_id == feature.internal_id
   );
-  // console.log("Linked entitlements", linkedEntitlements.map((ent) => `${ent.feature_id} - ${ent.entity_feature_id}`));
 
   return { entitlements, prices, creditSystems, linkedEntitlements };
 };

@@ -26,10 +26,15 @@ import {
   FullCustomer,
   CusExpand,
   InvoiceResponse,
+  RewardType,
+  RewardResponse,
+  CouponDurationType,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { EntityService } from "../entities/EntityService.js";
 import { getCusInvoices, processFullCusProducts } from "./cusUtils.js";
+import { invoicesToResponse } from "@/internal/customers/invoices/invoiceUtils.js";
+import Stripe from "stripe";
 
 export const sumValues = (
   entList: CusEntResponse[],
@@ -136,8 +141,9 @@ export const getCustomerDetails = async ({
   cusProducts: FullCusProduct[];
   expand: CusExpand[];
 }) => {
-  let subs;
+  let withRewards = expand.includes(CusExpand.Rewards);
 
+  let subs;
   let inStatuses = org.config.include_past_due
     ? [CusProductStatus.Active, CusProductStatus.PastDue]
     : [CusProductStatus.Active];
@@ -164,6 +170,7 @@ export const getCustomerDetails = async ({
     subs = await getStripeSubs({
       stripeCli,
       subIds,
+      expand: withRewards ? ["discounts"] : undefined,
     });
   }
 
@@ -201,12 +208,69 @@ export const getCustomerDetails = async ({
     }
 
     let withInvoices = expand.includes(CusExpand.Invoices);
-    let invoices: InvoiceResponse[] | undefined;
-    if (withInvoices) {
-      invoices = await getCusInvoices({
-        sb,
-        internalCustomerId: customer.internal_id,
+
+    let rewards: RewardResponse | undefined;
+    if (withRewards && customer.processor?.id) {
+      let stripeCli = createStripeCli({
+        org,
+        env,
       });
+
+      const [stripeCus, subsResult] = await Promise.all([
+        stripeCli.customers.retrieve(
+          customer.processor?.id!
+        ) as Promise<Stripe.Customer>,
+        !subs
+          ? getStripeSubs({
+              stripeCli,
+              subIds,
+              expand: ["discounts"],
+            })
+          : null,
+      ]);
+
+      if (!subs && subsResult) {
+        subs = subsResult;
+      }
+
+      let stripeDiscounts: Stripe.Discount[] = subs?.flatMap(
+        (s) => s.discounts
+      ) as Stripe.Discount[];
+
+      if (stripeCus.discount) {
+        stripeDiscounts.push(stripeCus.discount);
+      }
+
+      rewards = {
+        discounts: stripeDiscounts.map((d) => {
+          let duration_type: CouponDurationType;
+          let duration_value = 0;
+          if (d.coupon?.duration === "forever") {
+            duration_type = CouponDurationType.Forever;
+          } else if (d.coupon?.duration === "once") {
+            duration_type = CouponDurationType.OneOff;
+          } else if (d.coupon?.duration === "repeating") {
+            duration_type = CouponDurationType.Months;
+            duration_value = d.coupon?.duration_in_months || 0;
+          } else {
+            duration_type = CouponDurationType.OneOff;
+          }
+          return {
+            id: d.coupon?.id,
+            name: d.coupon?.name ?? "",
+            type: d.coupon?.amount_off
+              ? RewardType.FixedDiscount
+              : RewardType.PercentageDiscount,
+            discount_value: d.coupon?.amount_off || d.coupon?.percent_off || 0,
+            currency: d.coupon?.currency ?? null,
+            start: d.start ?? null,
+            end: d.end ?? null,
+            subscription_id: d.subscription ?? null,
+            duration_type,
+            duration_value,
+          };
+        }),
+      };
     }
 
     let cusResponse = {
@@ -215,10 +279,17 @@ export const getCustomerDetails = async ({
         stripe_id: customer.processor?.id,
         features: entList,
         products,
-        invoices: withInvoices ? invoices : undefined,
+        // invoices: withInvoices ? invoices : undefined,
+        invoices: withInvoices
+          ? invoicesToResponse({
+              invoices: customer.invoices || [],
+              logger,
+            })
+          : undefined,
         trials_used: expand.includes(CusExpand.TrialsUsed)
           ? customer.trials_used
           : undefined,
+        rewards: withRewards ? rewards : undefined,
       }),
     };
 

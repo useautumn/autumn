@@ -1,11 +1,10 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { CusProdReadService } from "@/internal/customers/products/CusProdReadService.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import {
   getObjectsUsingFeature,
-  runSaveFeatureDisplayTask,
   validateCreditSystem,
 } from "@/internal/features/featureUtils.js";
 import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
@@ -167,7 +166,7 @@ const handleFeatureUsageTypeChanged = async ({
   prices: Price[];
   creditSystems: Feature[];
 }) => {
-  let usageTypeTitle = keyToTitle(newUsageType);
+  let usageTypeTitle = keyToTitle(newUsageType).toLowerCase();
   if (creditSystems.length > 0) {
     throw new RecaseError({
       message: `Cannot set to ${usageTypeTitle} because it is used in credit system ${creditSystems[0].id}`,
@@ -185,14 +184,14 @@ const handleFeatureUsageTypeChanged = async ({
   }
 
   // Get cus product using feature...
-  let cusProds = await CusProdReadService.getByFeature({
+  let cusEnts = await CustomerEntitlementService.getByFeature({
     sb,
     internalFeatureId: feature.internal_id!,
   });
 
-  if (cusProds && cusProds.length > 0) {
+  if (cusEnts && cusEnts.length > 0) {
     throw new RecaseError({
-      message: `Cannot set to ${usageTypeTitle} because it is used by customers in product ${cusProds[0].product.name}`,
+      message: `Cannot set to ${usageTypeTitle} because it is / was used by customers`,
       code: ErrCode.InvalidFeature,
       statusCode: 400,
     });
@@ -262,12 +261,8 @@ export const handleUpdateFeature = async (req: any, res: any) =>
       let { logtail: logger } = req;
 
       // 1. Get feature by ID
-      let feature = await FeatureService.getById({
-        sb: req.sb,
-        orgId: req.orgId,
-        env: req.env,
-        featureId,
-      });
+      let features = await FeatureService.getFromReq(req);
+      let feature = features.find((f) => f.id == featureId);
 
       if (!feature) {
         throw new RecaseError({
@@ -276,8 +271,6 @@ export const handleUpdateFeature = async (req: any, res: any) =>
           statusCode: 404,
         });
       }
-
-      // If changing type or ID fetch entitlements and prices
 
       // 1. Check if changing type...
       let isChangingType = feature.type !== data.type;
@@ -295,6 +288,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
             sb: req.sb,
             orgId: req.orgId,
             env: req.env,
+            allFeatures: features,
             feature,
           });
 

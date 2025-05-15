@@ -27,7 +27,7 @@ import { Building2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { EntityHeader } from "./components/entity-header";
-import { SelectEntity } from "./customer-sidebar/customer-entities";
+import { SelectEntity } from "./customer-sidebar/select-entity";
 
 export default function CustomerView({ env }: { env: AppEnv }) {
   const { customer_id } = useParams();

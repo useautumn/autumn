@@ -20,7 +20,6 @@ import {
   Subscription,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import Stripe from "stripe";
 
 export const getEntityResponse = async ({
   sb,
@@ -30,6 +29,7 @@ export const getEntityResponse = async ({
   customerId,
   expand,
   entityId,
+  withAutumnId = false,
 }: {
   sb: SupabaseClient;
   entityIds: string[];
@@ -38,6 +38,7 @@ export const getEntityResponse = async ({
   customerId: string;
   expand?: EntityExpand[];
   entityId?: string;
+  withAutumnId?: boolean;
 }) => {
   let customer = await CusService.getWithProducts({
     idOrInternalId: customerId,
@@ -50,6 +51,14 @@ export const getEntityResponse = async ({
     expand,
     entityId,
   });
+
+  if (!customer) {
+    throw new RecaseError({
+      message: `Customer ${customerId} not found`,
+      code: ErrCode.CustomerNotFound,
+      statusCode: 400,
+    });
+  }
 
   let entities = customer.entities.filter((e: Entity) =>
     entityIds.includes(e.id)
@@ -74,10 +83,6 @@ export const getEntityResponse = async ({
       });
     }
 
-    // let cusProducts = customer.customer_products.filter(
-    //   (p: FullCusProduct) => p.internal_entity_id == entity.internal_id
-    // );
-
     let entitySubs = subs.filter((s: Subscription) =>
       entityCusProducts.some((p: FullCusProduct) =>
         p.subscription_ids?.includes(s.stripe_id || "")
@@ -86,6 +91,7 @@ export const getEntityResponse = async ({
 
     let products = await getCusProductsResponse({
       cusProducts: entityCusProducts,
+      entities: customer.entities,
       subs: entitySubs,
       org,
     });
@@ -98,6 +104,7 @@ export const getEntityResponse = async ({
     });
 
     entityResponses.push({
+      ...(withAutumnId ? { autumn_id: entity.internal_id } : {}),
       id: entity.id,
       name: entity.name,
       customer_id: customerId,

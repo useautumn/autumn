@@ -8,10 +8,12 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
+  BillingType,
   CusProductStatus,
   ErrCode,
   FullCusProduct,
   FullCustomerEntitlement,
+  FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -19,6 +21,159 @@ import Stripe from "stripe";
 
 import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { billForRemainingUsages } from "@/internal/customers/change-product/billRemainingUsages.js";
+
+const handleCusProductDeleted = async ({
+  cusProduct,
+  subscription,
+  logger,
+  env,
+  org,
+  sb,
+  prematurelyCanceled,
+}: {
+  cusProduct: FullCusProduct;
+  subscription: Stripe.Subscription;
+  logger: any;
+  env: AppEnv;
+  org: Organization;
+  sb: SupabaseClient;
+  prematurelyCanceled: boolean;
+}) => {
+  if (
+    !cusProduct ||
+    cusProduct.customer.env !== env ||
+    cusProduct.customer.org_id !== org.id
+  ) {
+    console.log(
+      "   ⚠️ customer product not found / env mismatch / org mismatch"
+    );
+    return;
+  }
+
+  if (cusProduct.internal_entity_id) {
+    let customer = cusProduct.customer;
+    let usagePrices = cusProduct.customer_prices.filter(
+      (cp: FullCustomerPrice) =>
+        getBillingType(cp.price.config!) === BillingType.UsageInArrear
+    );
+
+    if (usagePrices.length > 0) {
+      // Create invoice for remaining usage charges
+      logger.info(
+        `Customer ${customer.name} (${customer.id}), Entity: ${cusProduct.internal_entity_id}`
+      );
+      logger.info(
+        `Product ${cusProduct.product.name} subscription deleted, billing for remaining usages`
+      );
+      await billForRemainingUsages({
+        sb,
+        curCusProduct: cusProduct,
+        logger,
+        attachParams: {
+          customer: cusProduct.customer,
+          org,
+          invoiceOnly: false,
+
+          // PLACEHOLDERS
+          products: [],
+          prices: [],
+          entitlements: [],
+          features: [],
+          freeTrial: null,
+          optionsList: [],
+          entities: [],
+        },
+        newSubs: [subscription],
+      });
+    }
+  }
+
+  if (cusProduct.status === CusProductStatus.Expired) {
+    console.log(
+      `   ⚠️ customer product already expired, skipping: ${cusProduct.product.name} (${cusProduct.id})`
+    );
+    return;
+  }
+
+  if (
+    cusProduct.scheduled_ids &&
+    cusProduct.scheduled_ids.length > 0 &&
+    !prematurelyCanceled
+  ) {
+    console.log(
+      `   ⚠️ Cus product ${cusProduct.product.name} (${cusProduct.id}) has scheduled_ids and not prematurely canceled: removing subscription_id from cus product`
+    );
+
+    // Remove subscription_id from cus product
+    await CusProductService.update({
+      sb,
+      cusProductId: cusProduct.id,
+      updates: {
+        subscription_ids: cusProduct.subscription_ids?.filter(
+          (id) => id !== subscription.id
+        ),
+      },
+    });
+
+    return;
+  }
+
+  // 1. Expire current product
+  await CusProductService.update({
+    sb,
+    cusProductId: cusProduct.id,
+    updates: {
+      status: CusProductStatus.Expired,
+      ended_at: subscription.ended_at ? subscription.ended_at * 1000 : null,
+    },
+  });
+
+  if (cusProduct.product.is_add_on) {
+    return;
+  }
+
+  const activatedFuture = await activateFutureProduct({
+    sb,
+    cusProduct,
+    subscription,
+    org,
+    env,
+  });
+
+  if (activatedFuture) {
+    console.log("   ✅ activated future product");
+    return;
+  }
+
+  // 2. Either activate future or default product
+  const currentProduct = await CusProductService.getCurrentProductByGroup({
+    sb,
+    internalCustomerId: cusProduct.customer.internal_id,
+    productGroup: cusProduct.product.group,
+  });
+
+  await activateDefaultProduct({
+    productGroup: cusProduct.product.group,
+    orgId: org.id,
+    customer: cusProduct.customer,
+    org,
+    sb,
+    env,
+    curCusProduct: currentProduct,
+  });
+
+  // Cancel other subscriptions
+
+  await cancelCusProductSubscriptions({
+    sb,
+    cusProduct,
+    org,
+    env,
+    excludeIds: [subscription.id],
+  });
+};
 
 export const handleSubscriptionDeleted = async ({
   sb,
@@ -40,6 +195,7 @@ export const handleSubscriptionDeleted = async ({
     orgId: org.id,
     env,
     withCusEnts: true,
+    withCusPrices: true,
   });
 
   if (activeCusProducts.length === 0) {
@@ -58,122 +214,22 @@ export const handleSubscriptionDeleted = async ({
     return;
   }
 
-  // // Delete from subscriptions
-  // try {
-  //   await SubService.deleteFromStripeId({
-  //     sb,
-  //     stripeId: subscription.id,
-  //   });
-  // } catch (error) {
-  //   logger.error("Error deleting from subscriptions table", error);
-  // }
-
   // Prematurely canceled if cancel_at_period_end is false or cancel_at is more than 20 seconds apart from current_period_end
   let prematurelyCanceled = subIsPrematurelyCanceled(subscription);
 
-  const handleCusProductDeleted = async (
-    cusProduct: FullCusProduct,
-    subscription: Stripe.Subscription
-  ) => {
-    if (
-      !cusProduct ||
-      cusProduct.customer.env !== env ||
-      cusProduct.customer.org_id !== org.id
-    ) {
-      console.log(
-        "   ⚠️ customer product not found / env mismatch / org mismatch"
-      );
-      return;
-    }
-
-    if (cusProduct.status === CusProductStatus.Expired) {
-      console.log(
-        `   ⚠️ customer product already expired, skipping: ${cusProduct.product.name} (${cusProduct.id})`
-      );
-      return;
-    }
-
-    if (
-      cusProduct.scheduled_ids &&
-      cusProduct.scheduled_ids.length > 0 &&
-      !prematurelyCanceled
-    ) {
-      console.log(
-        `   ⚠️ Cus product ${cusProduct.product.name} (${cusProduct.id}) has scheduled_ids and not prematurely canceled: removing subscription_id from cus product`
-      );
-
-      // Remove subscription_id from cus product
-      await CusProductService.update({
-        sb,
-        cusProductId: cusProduct.id,
-        updates: {
-          subscription_ids: cusProduct.subscription_ids?.filter(
-            (id) => id !== subscription.id
-          ),
-        },
-      });
-
-      return;
-    }
-
-    // 1. Expire current product
-    await CusProductService.update({
-      sb,
-      cusProductId: cusProduct.id,
-      updates: {
-        status: CusProductStatus.Expired,
-        ended_at: subscription.ended_at ? subscription.ended_at * 1000 : null,
-      },
-    });
-
-    if (cusProduct.product.is_add_on) {
-      return;
-    }
-
-    const activatedFuture = await activateFutureProduct({
-      sb,
-      cusProduct,
-      subscription,
-      org,
-      env,
-    });
-
-    if (activatedFuture) {
-      console.log("   ✅ activated future product");
-      return;
-    }
-
-    // 2. Either activate future or default product
-    const currentProduct = await CusProductService.getCurrentProductByGroup({
-      sb,
-      internalCustomerId: cusProduct.customer.internal_id,
-      productGroup: cusProduct.product.group,
-    });
-
-    await activateDefaultProduct({
-      productGroup: cusProduct.product.group,
-      orgId: org.id,
-      customer: cusProduct.customer,
-      org,
-      sb,
-      env,
-      curCusProduct: currentProduct,
-    });
-
-    // Cancel other subscriptions
-
-    await cancelCusProductSubscriptions({
-      sb,
-      cusProduct,
-      org,
-      env,
-      excludeIds: [subscription.id],
-    });
-  };
-
   const batchUpdate = [];
   for (const cusProduct of activeCusProducts) {
-    batchUpdate.push(handleCusProductDeleted(cusProduct, subscription));
+    batchUpdate.push(
+      handleCusProductDeleted({
+        cusProduct,
+        subscription,
+        logger,
+        env,
+        org,
+        sb,
+        prematurelyCanceled,
+      })
+    );
   }
 
   await Promise.all(batchUpdate);

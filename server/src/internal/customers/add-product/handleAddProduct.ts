@@ -236,7 +236,7 @@ export const handleBillNowPrices = async ({
 
           code: SuccessCode.NewProductAttached,
           product_ids: products.map((p) => p.id),
-          customer_id: customer.id,
+          customer_id: customer.id || customer.internal_id,
 
           invoice: invoiceOnly ? invoices?.[0] : undefined,
         })
@@ -247,11 +247,7 @@ export const handleBillNowPrices = async ({
         message: `Successfully created subscriptions and attached ${products
           .map((p) => p.name)
           .join(", ")} to ${customer.name}`,
-        // invoice_url: invoiceOnly &&
         invoice: invoiceOnly ? invoices?.[0] : undefined,
-        // invoiceOnly && invoices?.[0]?.hosted_invoice_url
-        //   ? invoices[0].hosted_invoice_url
-        //   : undefined,
       });
     }
   }
@@ -451,7 +447,7 @@ export const handleOneOffPrices = async ({
 
         code: SuccessCode.OneOffProductAttached,
         product_ids: products.map((p) => p.id),
-        customer_id: customer.id,
+        customer_id: customer.id || customer.internal_id,
       })
     );
   }

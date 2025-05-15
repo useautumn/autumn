@@ -302,9 +302,9 @@ const handleInvoicePaidDiscount = async ({
           : curCoupon.id;
 
       // 1. Fetch coupon from Autumn
-      const autumnReward: Reward | null = await RewardService.getByInternalId({
+      const autumnReward: Reward | null = await RewardService.getById({
         sb,
-        internalId: couponId,
+        id: couponId,
         orgId: org.id,
         env,
       });
@@ -325,9 +325,6 @@ const handleInvoicePaidDiscount = async ({
       const originalCoupon = await stripeCli.coupons.retrieve(couponId, {
         expand: ["applies_to"],
       });
-
-      // console.log("Total discount amounts", totalDiscountAmounts);
-      // console.log("Autumn reward", autumnReward);
 
       // 1. New amount:
       // const autumnDiscountConfig = autumnReward.discount_config!;

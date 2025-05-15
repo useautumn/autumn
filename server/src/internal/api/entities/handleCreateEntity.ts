@@ -12,7 +12,7 @@ import {
   Entity,
   ErrCode,
 } from "@autumn/shared";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 
 import {
@@ -72,7 +72,6 @@ export const getEntityToAction = ({
     let curEntity = existingEntities.find((e: any) => e.id === inputEntity.id);
 
     if (curEntity && curEntity.deleted) {
-      // Replace
       entityToAction[inputEntity.id] = {
         action: "replace",
         replace: curEntity,
@@ -83,6 +82,7 @@ export const getEntityToAction = ({
     }
 
     let replaced = false;
+
     for (const entity of existingEntities) {
       if (entity.deleted && !replacedEntities.includes(entity.id)) {
         replaced = true;
@@ -95,10 +95,28 @@ export const getEntityToAction = ({
         };
         break;
       }
+
+      // If there's an entity with null ID and cur input entity has an ID, fill it up!
+
+      if (
+        nullish(entity.id) &&
+        notNullish(inputEntity.id) &&
+        !replacedEntities.includes(entity.internal_id) &&
+        entity.feature_id === feature.id
+      ) {
+        entityToAction[inputEntity.id] = {
+          action: "replace",
+          replace: entity,
+          entity: inputEntity,
+        };
+
+        replacedEntities.push(entity.internal_id);
+        replaced = true;
+        break;
+      }
     }
 
     if (!replaced) {
-      // Create
       entityToAction[inputEntity.id] = {
         action: "create",
         entity: inputEntity,
@@ -106,29 +124,6 @@ export const getEntityToAction = ({
       createCount++;
     }
   }
-
-  let cusEnts = cusProducts.flatMap((p: any) => p.customer_entitlements);
-  let { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
-    cusEnts,
-    internalFeatureId: feature.internal_id,
-  });
-
-  if (unlimited || usageAllowed) {
-    return entityToAction;
-  }
-
-  // let balance = cusEnts
-  //   .filter(
-  //     (ce: any) => ce.entitlement.feature.internal_id === feature.internal_id
-  //   )
-  //   .reduce((acc: number, ce: any) => acc + ce.balance, 0);
-
-  // if (balance < createCount) {
-  //   throw new RecaseError({
-  //     message: `You don't have enough ${feature.name}`,
-  //     code: ErrCode.InsufficientBalance,
-  //   });
-  // }
 
   return entityToAction;
 };
@@ -144,12 +139,125 @@ export const logEntityToAction = ({
     logger.info(
       `${id} - ${entityToAction[id].action}${
         entityToAction[id].replace
-          ? ` (replace ${entityToAction[id].replace.id})`
+          ? ` (replace ${
+              entityToAction[id].replace.id ||
+              entityToAction[id].replace.internal_id
+            })`
           : ""
       }`
     );
   }
 };
+
+export const validateAndGetInputEntities = async ({
+  sb,
+  req,
+  customer_id,
+  orgId,
+  env,
+  logger,
+}: {
+  sb: any;
+  req: any;
+  customer_id: string;
+  orgId: string;
+  env: AppEnv;
+  logger: any;
+}) => {
+  // 1. Get customer, features and orgs
+  let [customer, features, org] = await Promise.all([
+    CusService.getWithProducts({
+      sb,
+      idOrInternalId: customer_id,
+      orgId,
+      env,
+      inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+      withEntities: true,
+    }),
+    FeatureService.getFromReq(req),
+    OrgService.getFromReq(req),
+  ]);
+
+  if (!customer) {
+    throw new RecaseError({
+      message: `Customer ${customer_id} not found`,
+      code: ErrCode.CustomerNotFound,
+    });
+  }
+
+  // 2. Get input entities
+  let inputEntities: any[] = [];
+  if (Array.isArray(req.body)) {
+    inputEntities = req.body;
+  } else {
+    inputEntities = [req.body];
+  }
+
+  let featureIds = [...new Set(inputEntities.map((e: any) => e.feature_id))];
+  if (featureIds.length > 1) {
+    throw new RecaseError({
+      message: "Multiple features not supported",
+      code: ErrCode.InvalidInputs,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
+  let feature_id = featureIds[0];
+  let feature = features.find((f: any) => f.id === feature_id);
+
+  if (!feature) {
+    throw new RecaseError({
+      message: `Feature ${feature_id} not found`,
+      code: ErrCode.FeatureNotFound,
+      statusCode: StatusCodes.NOT_FOUND,
+    });
+  }
+
+  let cusProducts = await customer.customer_products;
+  let existingEntities = customer.entities;
+
+  logger.info("Existing entities:");
+  logger.info(
+    existingEntities.map(
+      (e: any) => `${e.id} - ${e.name}, deleted: ${e.deleted}`
+    )
+  );
+
+  let noIdEntities = existingEntities.filter((e: any) => !e.id);
+  let noIdNewEntities = inputEntities.filter((e: any) => !e.id);
+  if (noIdEntities.length + noIdNewEntities.length > 1) {
+    throw new RecaseError({
+      message: "Can only have one entity with no ID",
+      code: ErrCode.EntityIdRequired,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
+  for (const entity of existingEntities) {
+    if (inputEntities.some((e: any) => e.id === entity.id) && !entity.deleted) {
+      throw new RecaseError({
+        message: `Entity ${entity.id} already exists`,
+        code: "ENTITY_ALREADY_EXISTS",
+        data: {
+          entity,
+        },
+        statusCode: StatusCodes.CONFLICT,
+      });
+    }
+  }
+
+  return {
+    customer,
+    features,
+    org,
+    inputEntities,
+    feature_id,
+    feature,
+    cusProducts,
+    existingEntities,
+  };
+};
+
 export const handleCreateEntity = async (req: any, res: any) => {
   try {
     // Create entity!
@@ -157,78 +265,23 @@ export const handleCreateEntity = async (req: any, res: any) => {
     const { sb, env, orgId, logtail: logger } = req;
     const { customer_id } = req.params;
 
-    let [customer, features, org] = await Promise.all([
-      CusService.getWithProducts({
-        sb,
-        idOrInternalId: customer_id,
-        orgId,
-        env,
-        inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-        withEntities: true,
-      }),
-      FeatureService.getFromReq(req),
-      OrgService.getFromReq(req),
-    ]);
-
-    if (!customer) {
-      throw new RecaseError({
-        message: `Customer ${customer_id} not found`,
-        code: ErrCode.CustomerNotFound,
-      });
-    }
-
-    let inputEntities: any[] = [];
-    if (Array.isArray(req.body)) {
-      inputEntities = req.body;
-    } else {
-      inputEntities = [req.body];
-    }
-
-    let featureIds = [...new Set(inputEntities.map((e: any) => e.feature_id))];
-    if (featureIds.length > 1) {
-      throw new RecaseError({
-        message: "Multiple features not supported",
-        code: ErrCode.InvalidInputs,
-        statusCode: StatusCodes.BAD_REQUEST,
-      });
-    }
-
-    let feature_id = featureIds[0];
-    let feature = features.find((f: any) => f.id === feature_id);
-
-    if (!feature) {
-      throw new RecaseError({
-        message: `Feature ${feature_id} not found`,
-        code: ErrCode.FeatureNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
-
-    let cusProducts = await customer.customer_products;
-    let existingEntities = customer.entities;
-
-    logger.info("Existing entities:");
-    logger.info(
-      existingEntities.map(
-        (e: any) => `${e.id} - ${e.name}, deleted: ${e.deleted}`
-      )
-    );
-
-    for (const entity of existingEntities) {
-      if (
-        inputEntities.some((e: any) => e.id === entity.id) &&
-        !entity.deleted
-      ) {
-        throw new RecaseError({
-          message: `Entity ${entity.id} already exists`,
-          code: "ENTITY_ALREADY_EXISTS",
-          data: {
-            entity,
-          },
-          statusCode: StatusCodes.CONFLICT,
-        });
-      }
-    }
+    const {
+      customer,
+      features,
+      org,
+      inputEntities,
+      feature_id,
+      feature,
+      cusProducts,
+      existingEntities,
+    } = await validateAndGetInputEntities({
+      sb,
+      req,
+      customer_id,
+      orgId,
+      env,
+      logger,
+    });
 
     const entityToAction = getEntityToAction({
       inputEntities,
@@ -238,7 +291,6 @@ export const handleCreateEntity = async (req: any, res: any) => {
       cusProducts,
     });
 
-    logger.info("Entity to action:");
     logEntityToAction({
       entityToAction,
       logger,
@@ -257,6 +309,14 @@ export const handleCreateEntity = async (req: any, res: any) => {
       let linkedCusEnts = cusEnts.filter(
         (e: any) => e.entitlement.entity_feature_id === feature.id
       );
+
+      if (linkedCusEnts.length > 0 && inputEntities.some((e: any) => !e.id)) {
+        throw new RecaseError({
+          message: "Entity ID is required",
+          code: ErrCode.EntityIdRequired,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
 
       // 1. Pay for new seats
       let replacedCount = Object.keys(entityToAction).filter(
@@ -299,12 +359,6 @@ export const handleCreateEntity = async (req: any, res: any) => {
         );
       }
 
-      // For each linked feature, create customer entitlement for entity...
-      console.log("Cus product:", cusProduct.product.name);
-      console.log(
-        "Linked cus ents:",
-        linkedCusEnts.map((e: any) => e.entitlement.feature.name)
-      );
       for (const linkedCusEnt of linkedCusEnts) {
         let allowance = linkedCusEnt?.entitlement.allowance;
         let newEntities = linkedCusEnt?.entities || {};
@@ -378,7 +432,8 @@ export const handleCreateEntity = async (req: any, res: any) => {
       entityIds: inputEntities.map((e: any) => e.id),
       org,
       env,
-      customerId: customer.id,
+      customerId: customer.id || customer.internal_id,
+      withAutumnId: req.query.with_autumn_id === "true",
     });
 
     logger.info(`  Created / replaced entities!`);

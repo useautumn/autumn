@@ -91,30 +91,6 @@ export const CustomerToolbar = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="text-t2 w-[150px]" align="end">
-            {/* <DialogTrigger className="w-full">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  setModalType("add-coupon");
-                  setModalOpen(true);
-                }}
-              >
-                <div className="flex text-sm items-center justify-between w-full gap-2">
-                  <p className="text-t2">Add Reward</p>
-                  <Ticket size={12} className="text-t3" />
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={(e) => {
-                  setModalType("edit");
-                  setModalOpen(true);
-                }}
-              >
-                <div className="flex text-sm items-center justify-between w-full gap-2">
-                  <p className="text-t2">Update</p>
-                  <Settings2 size={12} className="text-t3" />
-                </div>
-              </DropdownMenuItem>
-            </DialogTrigger> */}
             <DropdownMenuItem
               className="flex items-center text-red-500 hover:!bg-red-500 hover:!text-white"
               onClick={async (e) => {

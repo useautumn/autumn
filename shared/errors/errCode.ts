@@ -126,4 +126,7 @@ export const ErrCode = {
 
   // Product items
   InvalidProductItem: "invalid_product_item",
+
+  // Entity
+  EntityIdRequired: "entity_id_required",
 };
