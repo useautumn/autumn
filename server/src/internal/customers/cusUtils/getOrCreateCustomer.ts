@@ -67,6 +67,7 @@ export const getOrCreateCustomer = async ({
           name: customerData?.name,
           email: customerData?.email,
           fingerprint: customerData?.fingerprint,
+          metadata: customerData?.metadata || {},
         },
         sb,
         org,

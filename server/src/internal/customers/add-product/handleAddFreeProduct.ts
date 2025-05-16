@@ -32,7 +32,8 @@ export const handleAddFreeProduct = async ({
     });
   }
 
-  if (attachParams.apiVersion! >= APIVersion.v1_1) {
+  let apiVersion = attachParams.apiVersion || APIVersion.v1;
+  if (apiVersion >= APIVersion.v1_1) {
     res.status(200).json(
       AttachResultSchema.parse({
         customer_id: customer.id || customer.internal_id,
