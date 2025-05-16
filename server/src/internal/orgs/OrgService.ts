@@ -3,6 +3,7 @@ import { AppEnv, ErrCode, Organization, OrgConfigSchema } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { initDefaultConfig } from "./orgUtils.js";
 import { getApiVersion } from "@/utils/versionUtils.js";
+import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 
 export class OrgService {
   static async getWithKeys({
@@ -221,6 +222,11 @@ export class OrgService {
     if (error) {
       throw new Error("Error updating org in supabase");
     }
+
+    await clearOrgCache({
+      sb,
+      orgId,
+    });
 
     return data;
   }

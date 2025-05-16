@@ -2,6 +2,7 @@ import {
   isFeaturePriceItem,
   itemToPriceOrTiers,
 } from "@/internal/products/product-items/productItemUtils.js";
+import { orgToVersion } from "@/utils/versionUtils.js";
 import {
   APIVersion,
   CusEntWithEntitlement,
@@ -19,17 +20,19 @@ export const getBooleanEntitledResult = ({
   org,
   res,
   feature,
+  apiVersion,
 }: {
   customer_id: string;
   cusEnts: CusEntWithEntitlement[];
   org: Organization;
   res: any;
   feature: Feature;
+  apiVersion: number;
 }) => {
   const allowed = cusEnts.some(
     (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
   );
-  let apiVersion = org.api_version || APIVersion.v1_1;
+
   if (apiVersion >= APIVersion.v1_1) {
     return res.status(200).json({
       customer_id,

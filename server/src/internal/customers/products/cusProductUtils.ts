@@ -347,11 +347,13 @@ export const processFullCusProduct = ({
   subs,
   org,
   entities = [],
+  apiVersion,
 }: {
   cusProduct: FullCusProduct;
   org: Organization;
   subs?: (Stripe.Subscription | Subscription)[];
   entities?: Entity[];
+  apiVersion: number;
 }) => {
   // Process prices
 
@@ -445,7 +447,7 @@ export const processFullCusProduct = ({
     };
   }
 
-  if (org.api_version! >= APIVersion.v1_1) {
+  if (apiVersion >= APIVersion.v1_1) {
     return CusProductResponseSchema.parse({
       id: cusProduct.product.id,
       name: cusProduct.product.name,

@@ -2,7 +2,6 @@ import {
   APIVersion,
   EntitlementWithFeature,
   Entity,
-  Feature,
   FeatureType,
   FullCusProduct,
   FullCustomerEntitlement,
@@ -16,7 +15,6 @@ import { notNullOrUndefined } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
   getCusEntBalance,
-  getCusEntMasterBalance,
   getRelatedCusPrice,
   getResetBalance,
   getUnlimitedAndUsageAllowed,
@@ -132,11 +130,6 @@ export const getCusBalances = async ({
     if (isBoolean || unlimited) {
       continue;
     }
-
-    // let { balance, adjustment, count, unused } = getCusEntMasterBalance({
-    //   cusEnt,
-    //   entities,
-    // });
 
     let { balance, adjustment, count, unused } = getCusEntBalance({
       cusEnt,

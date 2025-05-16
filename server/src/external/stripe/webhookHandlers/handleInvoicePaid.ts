@@ -302,6 +302,7 @@ const handleInvoicePaidDiscount = async ({
           : curCoupon.id;
 
       // 1. Fetch coupon from Autumn
+      logger.info(`Fetching coupon from Autumn DB: ${couponId}`);
       const autumnReward: Reward | null = await RewardService.getById({
         sb,
         id: couponId,

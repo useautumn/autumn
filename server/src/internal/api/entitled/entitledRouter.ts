@@ -1,7 +1,6 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import {
-  AllowanceType,
   APIVersion,
   CusProductStatus,
   Feature,
@@ -30,6 +29,7 @@ import { getBooleanEntitledResult } from "./checkUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 
 import { getCheckPreview } from "./getCheckPreview.js";
+import { orgToVersion } from "@/utils/versionUtils.js";
 
 export const entitledRouter = Router();
 
@@ -344,6 +344,11 @@ entitledRouter.post("", async (req: any, res: any) => {
         logger: req.logtail,
       });
 
+    let apiVersion = orgToVersion({
+      org,
+      reqApiVersion: req.apiVersion,
+    });
+
     // logEntitled({ req, customer_id, cusEnts: cusEnts! });
 
     // 2. If boolean, return true
@@ -354,6 +359,7 @@ entitledRouter.post("", async (req: any, res: any) => {
         cusEnts,
         feature,
         org,
+        apiVersion,
       });
     }
 
@@ -441,7 +447,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       }
     }
 
-    if (org.api_version >= APIVersion.v1_1) {
+    if (apiVersion >= APIVersion.v1_1) {
       res.status(200).json({
         customer_id,
         feature_id: featureToUse?.id,

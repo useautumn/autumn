@@ -114,7 +114,8 @@ export const handleCreateCheckout = async ({
 
   logger.info(`✅ Successfully created checkout for customer ${customer.id}`);
 
-  if (org.api_version! >= APIVersion.v1_1) {
+  let apiVersion = attachParams.apiVersion || APIVersion.v1;
+  if (apiVersion >= APIVersion.v1_1) {
     res.status(200).json(
       AttachResultSchema.parse({
         checkout_url: checkout.url,

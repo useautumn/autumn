@@ -39,7 +39,7 @@ export const clearOrgCache = async ({
     for (let key of publicKeys) {
       batchDelete.push(
         CacheManager.invalidate({
-          action: CacheType.SecretKey,
+          action: CacheType.PublicKey,
           value: key,
         })
       );

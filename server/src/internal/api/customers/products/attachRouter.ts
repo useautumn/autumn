@@ -2,6 +2,7 @@ import { Router } from "express";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { z } from "zod";
 import {
+  APIVersion,
   BillingType,
   FeatureOptions,
   FeatureOptionsSchema,
@@ -48,6 +49,7 @@ import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { orgToVersion } from "@/utils/versionUtils.js";
 
 export const attachRouter = Router();
 
@@ -306,6 +308,12 @@ attachRouter.post("/attach", async (req: any, res) => {
       logger,
       version,
     });
+
+    attachParams.apiVersion =
+      orgToVersion({
+        org,
+        reqApiVersion: req.apiVersion,
+      }) || APIVersion.v1;
 
     attachParams.successUrl = successUrl;
     attachParams.invoiceOnly = invoiceOnly;

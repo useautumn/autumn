@@ -2,11 +2,41 @@ import { withOrgAuth } from "./authMiddleware.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { ErrCode } from "@autumn/shared";
-import { logger } from "@trigger.dev/sdk/v3";
+import RecaseError from "@/utils/errorUtils.js";
+import { floatToVersion } from "@/utils/versionUtils.js";
+
+// const parseVersion = (version: string) => {
+
+// };
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
   const authHeader =
     req.headers["authorization"] || req.headers["Authorization"];
+
+  const version = req.headers["x-api-version"];
+
+  if (version) {
+    let versionFloat = parseFloat(version);
+
+    if (isNaN(versionFloat)) {
+      return {
+        error: ErrCode.InvalidApiVersion,
+        fallback: false,
+        statusCode: 400,
+      };
+    }
+
+    let apiVersion = floatToVersion(versionFloat);
+    if (!apiVersion) {
+      return {
+        error: ErrCode.InvalidApiVersion,
+        fallback: false,
+        statusCode: 400,
+      };
+    }
+
+    req.apiVersion = apiVersion;
+  }
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return {

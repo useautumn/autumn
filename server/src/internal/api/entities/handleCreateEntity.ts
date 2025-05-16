@@ -21,6 +21,7 @@ import {
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { getEntityResponse } from "./getEntityUtils.js";
 import { StatusCodes } from "http-status-codes";
+import { orgToVersion } from "@/utils/versionUtils.js";
 
 export const constructEntity = ({
   inputEntity,
@@ -419,7 +420,11 @@ export const handleCreateEntity = async (req: any, res: any) => {
       }
     }
 
-    let apiVersion = org.api_version || APIVersion.v1;
+    let apiVersion = orgToVersion({
+      org,
+      reqApiVersion: req.apiVersion,
+    });
+
     if (apiVersion < APIVersion.v1_2) {
       res.status(200).json({
         success: true,
@@ -434,6 +439,7 @@ export const handleCreateEntity = async (req: any, res: any) => {
       env,
       customerId: customer.id || customer.internal_id,
       withAutumnId: req.query.with_autumn_id === "true",
+      apiVersion,
     });
 
     logger.info(`  Created / replaced entities!`);

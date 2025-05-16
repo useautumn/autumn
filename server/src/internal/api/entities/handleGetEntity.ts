@@ -1,32 +1,10 @@
 import { routeHandler } from "@/utils/routerUtils.js";
-import { EntityService } from "./EntityService.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import {
-  CusProductStatus,
-  CustomerEntitlementSchema,
-  Entity,
-  EntityExpand,
-  EntityResponseSchema,
-  ErrCode,
-  FullCusProduct,
-  InvoiceResponse,
-} from "@autumn/shared";
-import {
-  getCusFeaturesResponse,
-  getCusProductsResponse,
-} from "@/internal/customers/cusUtils/cusResponseUtils.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { EntityExpand, EntityResponseSchema } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import Stripe from "stripe";
-import RecaseError from "@/utils/errorUtils.js";
 import { parseEntityExpand } from "./entityUtils.js";
-import { getCusInvoices } from "../customers/cusUtils.js";
 import { getEntityResponse } from "./getEntityUtils.js";
-import {
-  getInvoicesForResponse,
-  invoicesToResponse,
-} from "@/internal/customers/invoices/invoiceUtils.js";
+import { invoicesToResponse } from "@/internal/customers/invoices/invoiceUtils.js";
+import { orgToVersion } from "@/utils/versionUtils.js";
 
 export const handleGetEntity = async (req: any, res: any) =>
   routeHandler({
@@ -41,6 +19,10 @@ export const handleGetEntity = async (req: any, res: any) =>
       let { orgId, env, sb, logtail: logger } = req;
 
       let org = await OrgService.getFromReq(req);
+      let apiVersion = orgToVersion({
+        org,
+        reqApiVersion: req.apiVersion,
+      });
 
       const start = performance.now();
       let { entities, customer, fullEntities, invoices } =
@@ -52,6 +34,7 @@ export const handleGetEntity = async (req: any, res: any) =>
           customerId,
           expand,
           entityId,
+          apiVersion,
         });
       const end = performance.now();
       logger.info(`getEntityResponse took ${(end - start).toFixed(2)}ms`);
