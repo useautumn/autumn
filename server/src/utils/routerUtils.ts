@@ -1,11 +1,12 @@
-import { handleRequestError } from "./errorUtils.js";
+import { ErrCode } from "@autumn/shared";
+import RecaseError, { handleRequestError } from "./errorUtils.js";
 
 export const routeHandler = async ({
   req,
   res,
   action,
   handler,
-}:{
+}: {
   req: any;
   res: any;
   action: string;
@@ -14,6 +15,18 @@ export const routeHandler = async ({
   try {
     await handler(req, res);
   } catch (error) {
+    try {
+      if (error instanceof RecaseError) {
+        if (error.code === ErrCode.EntityNotFound) {
+          req.logger.warn(`${error.message}, org: ${req.minOrg?.slug}`);
+          return res.status(404).json({
+            error: error.message,
+            code: error.code,
+          });
+        }
+      }
+    } catch (error) {}
+
     handleRequestError({
       error,
       req,
@@ -21,4 +34,4 @@ export const routeHandler = async ({
       action,
     });
   }
-}
+};
