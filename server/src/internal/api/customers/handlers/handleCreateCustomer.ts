@@ -435,6 +435,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
       cusProducts: customer.customer_products,
       expand,
       features,
+      reqApiVersion: req.apiVersion,
     });
 
     res.status(200).json(cusDetails);

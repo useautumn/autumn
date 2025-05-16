@@ -20,17 +20,20 @@ export const getCusProductsResponse = async ({
   entities,
   subs,
   org,
+  apiVersion,
 }: {
   cusProducts: FullCusProduct[];
   entities: Entity[];
   subs: Stripe.Subscription[];
   org: Organization;
+  apiVersion: number;
 }) => {
   const { main, addOns } = processFullCusProducts({
     fullCusProducts: cusProducts,
     subs,
     org,
     entities,
+    apiVersion,
   });
 
   let products: any = [...main, ...addOns];

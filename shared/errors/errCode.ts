@@ -10,6 +10,7 @@ export const ErrCode = {
   GetOrgFromPublishableKeyFailed: "get_org_from_publishable_key_failed",
   EndpointNotPublic: "endpoint_not_public",
   FailedToVerifyPublishableKey: "failed_to_verify_publishable_key",
+  InvalidApiVersion: "invalid_api_version",
 
   // General
   InvalidInputs: "invalid_inputs",

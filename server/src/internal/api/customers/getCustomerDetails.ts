@@ -35,6 +35,7 @@ import { EntityService } from "../entities/EntityService.js";
 import { getCusInvoices, processFullCusProducts } from "./cusUtils.js";
 import { invoicesToResponse } from "@/internal/customers/invoices/invoiceUtils.js";
 import Stripe from "stripe";
+import { orgToVersion } from "@/utils/versionUtils.js";
 
 export const sumValues = (
   entList: CusEntResponse[],
@@ -130,6 +131,7 @@ export const getCustomerDetails = async ({
   logger,
   cusProducts,
   expand,
+  reqApiVersion,
 }: {
   customer: FullCustomer;
   features: Feature[];
@@ -140,7 +142,13 @@ export const getCustomerDetails = async ({
   logger: any;
   cusProducts: FullCusProduct[];
   expand: CusExpand[];
+  reqApiVersion?: number;
 }) => {
+  let apiVersion = orgToVersion({
+    org,
+    reqApiVersion,
+  });
+
   let withRewards = expand.includes(CusExpand.Rewards);
 
   let subs;
@@ -178,9 +186,8 @@ export const getCustomerDetails = async ({
     fullCusProducts: cusProducts,
     subs,
     org,
+    apiVersion,
   });
-
-  let apiVersion = org.api_version || APIVersion.v1;
 
   if (apiVersion >= APIVersion.v1_1) {
     let entList: any = balances.map((b) => {

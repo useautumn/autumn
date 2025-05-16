@@ -180,17 +180,25 @@ export const processFullCusProducts = ({
   subs,
   org,
   entities = [],
+  apiVersion,
 }: {
   fullCusProducts: any;
   subs: any;
   org: Organization;
   entities?: Entity[];
+  apiVersion: number;
 }) => {
   // Process full cus products
   let main = [];
   let addOns = [];
   for (const cusProduct of fullCusProducts) {
-    let processed = processFullCusProduct({ cusProduct, subs, org, entities });
+    let processed = processFullCusProduct({
+      cusProduct,
+      subs,
+      org,
+      entities,
+      apiVersion,
+    });
 
     let isAddOn = cusProduct.product.is_add_on;
     if (isAddOn) {

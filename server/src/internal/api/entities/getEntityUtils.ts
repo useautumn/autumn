@@ -30,6 +30,7 @@ export const getEntityResponse = async ({
   expand,
   entityId,
   withAutumnId = false,
+  apiVersion,
 }: {
   sb: SupabaseClient;
   entityIds: string[];
@@ -39,6 +40,7 @@ export const getEntityResponse = async ({
   expand?: EntityExpand[];
   entityId?: string;
   withAutumnId?: boolean;
+  apiVersion: number;
 }) => {
   let customer = await CusService.getWithProducts({
     idOrInternalId: customerId,
@@ -94,6 +96,7 @@ export const getEntityResponse = async ({
       entities: customer.entities,
       subs: entitySubs,
       org,
+      apiVersion,
     });
 
     let features = await getCusFeaturesResponse({

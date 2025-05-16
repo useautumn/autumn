@@ -257,7 +257,8 @@ export const handleDowngrade = async ({
     },
   });
 
-  if (attachParams.org.api_version! >= APIVersion.v1_1) {
+  let apiVersion = attachParams.apiVersion || APIVersion.v1;
+  if (apiVersion >= APIVersion.v1_1) {
     res.status(200).json(
       AttachResultSchema.parse({
         code: SuccessCode.DowngradeScheduled,

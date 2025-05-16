@@ -4,7 +4,6 @@ import {
   AppEnv,
   CreateEventSchema,
   CusProductStatus,
-  Customer,
   ErrCode,
   Event,
   Feature,
@@ -16,10 +15,10 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
-import { Client } from "pg";
+
 import { SupabaseClient } from "@supabase/supabase-js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { QueueManager } from "@/queue/QueueManager.js";
+
 import { subDays } from "date-fns";
 import { handleUsageEvent } from "./usageRouter.js";
 import { StatusCodes } from "http-status-codes";
@@ -28,6 +27,7 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
+import { orgToVersion } from "@/utils/versionUtils.js";
 
 export const eventsRouter = Router();
 
@@ -206,6 +206,11 @@ eventsRouter.post("", async (req: any, res: any) => {
       event_data: body,
     });
 
+    let apiVersion = orgToVersion({
+      org,
+      reqApiVersion: req.apiVersion,
+    });
+
     let response: any = {
       id: event?.id,
       code: "event_received",
@@ -218,7 +223,7 @@ eventsRouter.post("", async (req: any, res: any) => {
       response.event_name = event.event_name;
     }
 
-    if (org.api_version >= APIVersion.v1_1) {
+    if (apiVersion >= APIVersion.v1_1) {
       res.status(200).json(response);
     } else {
       res.status(200).json({ success: true });

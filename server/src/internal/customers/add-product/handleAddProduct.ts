@@ -227,7 +227,8 @@ export const handleBillNowPrices = async ({
   const invoices = await Promise.all(batchInsertInvoice);
 
   if (fromRequest) {
-    if (org.api_version! >= APIVersion.v1_1) {
+    let apiVersion = attachParams.apiVersion || APIVersion.v1;
+    if (apiVersion >= APIVersion.v1_1) {
       res.status(200).json(
         AttachResultSchema.parse({
           message: `Successfully created subscriptions and attached ${products
