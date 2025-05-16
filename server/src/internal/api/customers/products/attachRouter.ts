@@ -196,6 +196,23 @@ export const checkStripeConnections = async ({
     );
   }
   await Promise.all(batchProductUpdates);
+};
+
+export const createStripePrices = async ({
+  attachParams,
+  useCheckout,
+  req,
+  logger,
+}: {
+  attachParams: AttachParams;
+  useCheckout: boolean;
+  req: any;
+  logger: any;
+}) => {
+  const { prices, entitlements, products, org, internalEntityId } =
+    attachParams;
+
+  const stripeCli = createStripeCli({ org, env: attachParams.customer.env });
 
   const batchPriceUpdates = [];
   for (const price of prices) {
@@ -211,6 +228,7 @@ export const checkStripeConnections = async ({
         org,
         logger,
         internalEntityId: attachParams.internalEntityId,
+        useCheckout,
       })
     );
   }
@@ -333,9 +351,14 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // 3. Check for stripe connection
     await checkStripeConnections({ req, attachParams });
-
     let hasPm = await customerHasPm({ attachParams });
     const useCheckout = !hasPm || forceCheckout;
+    await createStripePrices({
+      attachParams,
+      useCheckout,
+      req,
+      logger,
+    });
 
     logger.info(
       `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(

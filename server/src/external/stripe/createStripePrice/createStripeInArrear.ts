@@ -152,6 +152,7 @@ export const createStripeInArrearPrice = async ({
   curStripePrice,
   curStripeProduct,
   internalEntityId,
+  useCheckout = false,
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
@@ -163,6 +164,7 @@ export const createStripeInArrearPrice = async ({
   curStripePrice?: Stripe.Price | null;
   curStripeProduct?: Stripe.Product | null;
   internalEntityId?: string;
+  useCheckout?: boolean;
 }) => {
   let config = price.config as UsagePriceConfig;
 
@@ -171,7 +173,7 @@ export const createStripeInArrearPrice = async ({
   let feature = relatedEnt?.feature;
 
   // 1. If internal entity ID and not curStripe product, create product
-  if (internalEntityId) {
+  if (internalEntityId && !useCheckout) {
     if (!curStripeProduct) {
       logger.info(
         `Creating stripe in arrear product for ${relatedEnt.feature.name} (internal entity ID exists!)`

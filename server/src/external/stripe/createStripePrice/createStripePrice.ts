@@ -85,6 +85,7 @@ export const createStripePriceIFNotExist = async ({
   org,
   logger,
   internalEntityId,
+  useCheckout = false,
 }: {
   sb: SupabaseClient;
   stripeCli: Stripe;
@@ -94,6 +95,7 @@ export const createStripePriceIFNotExist = async ({
   org: Organization;
   logger: any;
   internalEntityId?: string;
+  useCheckout?: boolean;
 }) => {
   // Fetch latest price data...
 
@@ -201,6 +203,7 @@ export const createStripePriceIFNotExist = async ({
       curStripePrice: stripePrice,
       curStripeProduct: stripeProd,
       internalEntityId,
+      useCheckout,
     });
   }
 };
