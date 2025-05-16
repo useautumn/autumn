@@ -1,7 +1,5 @@
 import { z } from "zod";
 import { AppEnv } from "../genModels.js";
-import { CusProductSchema, FullCusProductSchema } from "./cusProductModels.js";
-import { ProductSchema } from "../productModels/productModels.js";
 
 export const CustomerSchema = z.object({
   id: z.string().nullish(), // given by user
@@ -15,6 +13,7 @@ export const CustomerSchema = z.object({
   created_at: z.number(),
   env: z.nativeEnum(AppEnv),
   processor: z.any(),
+  metadata: z.record(z.any()).nullish().default({}),
 });
 
 export const CreateCustomerSchema = z.object({
@@ -25,12 +24,14 @@ export const CreateCustomerSchema = z.object({
   name: z.string().nullish(),
   email: z.string().nullish(),
   fingerprint: z.string().nullish(),
+  metadata: z.record(z.any()).nullish().default({}),
 });
 
 export const CustomerDataSchema = z.object({
   name: z.string().nullish(),
   email: z.string().nullish(),
   fingerprint: z.string().nullish(),
+  metadata: z.record(z.any()).nullish().default({}),
 });
 
 export const CustomerResponseSchema = CustomerSchema.omit({

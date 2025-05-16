@@ -68,6 +68,28 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
       }
 
       // 2. Check if customer email is being changed
+      let oldMetadata = originalCustomer.metadata || {};
+      let newMetadata = newCusData.metadata || {};
+      for (let key in newMetadata) {
+        if (newMetadata[key] === null) {
+          delete newMetadata[key];
+          delete oldMetadata[key];
+        }
+      }
+
+      // console.log("Old metadata:", {
+      //   ...oldMetadata,
+      // });
+      // console.log("New metadata:", {
+      //   ...newMetadata,
+      // });
+
+      // console.log("Full Metadata:", {
+      //   ...oldMetadata,
+      //   ...newMetadata,
+      // });
+      // throw new Error("test");
+
       let stripeUpdate = {
         email:
           originalCustomer.email !== newCusData.email
@@ -93,7 +115,13 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
       await CusService.update({
         sb: req.sb,
         internalCusId: originalCustomer.internal_id,
-        update: newCusData,
+        update: {
+          ...newCusData,
+          metadata: {
+            ...oldMetadata,
+            ...newMetadata,
+          },
+        },
       });
 
       let finalCustomer = await CusService.getWithProducts({

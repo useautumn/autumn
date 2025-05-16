@@ -297,6 +297,7 @@ export const getCustomerDetails = async ({
           ? customer.trials_used
           : undefined,
         rewards: withRewards ? rewards : undefined,
+        metadata: customer.metadata,
       }),
     };
 

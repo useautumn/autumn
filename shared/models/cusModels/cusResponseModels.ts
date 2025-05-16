@@ -77,6 +77,7 @@ export const CusResponseSchema = z.object({
   invoices: z.array(InvoiceResponseSchema).optional(),
   trials_used: z.array(TrialUsedResponseSchema).optional(),
   rewards: RewardResponseSchema.nullish(),
+  metadata: z.record(z.any()).default({}),
 });
 
 export type CusResponse = z.infer<typeof CusResponseSchema>;

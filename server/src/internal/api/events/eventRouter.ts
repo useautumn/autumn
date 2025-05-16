@@ -28,6 +28,7 @@ import { creditSystemContainsFeature } from "@/internal/features/creditSystemUti
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 
 export const eventsRouter = Router();
 
