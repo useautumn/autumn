@@ -4,13 +4,11 @@ import {
   Customer,
   FreeTrial,
   Organization,
-  Price,
   ErrCode,
   BillingInterval,
 } from "@autumn/shared";
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
-import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";

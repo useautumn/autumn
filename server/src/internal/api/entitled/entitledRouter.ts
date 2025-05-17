@@ -409,6 +409,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     let balanceObj: any, featureToUse: any;
     try {
       balanceObj = balances.length > 0 ? balances[0] : null;
+
       featureToUse =
         notNullish(balanceObj) && balanceObj.feature_id !== feature.id
           ? features.find((f) => f.id === balanceObj.feature_id)
@@ -451,7 +452,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       res.status(200).json({
         customer_id,
         feature_id: featureToUse?.id,
-        required_balance: quantity,
+        required_balance: balanceObj?.required,
         code: SuccessCode.FeatureFound,
 
         allowed,
