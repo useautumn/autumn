@@ -332,8 +332,25 @@ entitledRouter.post("", async (req: any, res: any) => {
       return;
     }
 
-    const requiredBalance = required_balance || required_quantity;
-    const quantity = requiredBalance ? parseInt(requiredBalance) : 1;
+    const requiredBalance = notNullish(required_balance)
+      ? required_balance
+      : notNullish(required_quantity)
+      ? required_quantity
+      : null;
+
+    let quantity = 1;
+    if (notNullish(requiredBalance)) {
+      let floatQuantity = parseFloat(requiredBalance);
+
+      if (isNaN(floatQuantity)) {
+        throw new RecaseError({
+          message: "Invalid required_balance",
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+      quantity = floatQuantity;
+    }
 
     const { sb } = req;
 
