@@ -3,7 +3,7 @@
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { AutumnProvider, PricingPage } from "@useautumn/react";
+
 import { useDemoSWR } from "@/services/useAxiosSwr";
 import CustomerBalances from "./CustomerBalances";
 import { APIPlayground } from "./APIPlayground";
@@ -101,74 +101,70 @@ export default function DynamicDemo() {
   };
 
   return (
-    <AutumnProvider publishableKey={publishableKey || ""} endpoint={endpoint}>
-      <div className="w-full h-screen flex justify-between">
-        <div className="flex flex-col gap-4 w-full px-10 pt-4">
-          <div className="flex gap-4 items-center">
-            <div className="text-xl font-extrabold">Demo</div>
-          </div>
-
-          <div className="flex gap-2 flex-wrap">
-            {buttons.map((button, index) => (
-              <ActionButton
-                key={index}
-                buttonData={button}
-                handleClicked={() =>
-                  handleBtnClicked({
-                    featureId: button.feature_id,
-                    value: button.value,
-                  })
-                }
-              />
-            ))}
-          </div>
-
-          <div className="text-lg font-medium mt-4 -mb-3">Billing</div>
-          <p className="text-sm text-t3">You have access to:</p>
-          <CustomerBalances customer={customer} />
-          <div className="text-lg font-medium mt-2">Pricing</div>
-
-          <div className="min-w-[600px]">
-            <PricingPage customerId={customerId} />
-          </div>
-
-          <p className="text-xs text-t3">
-            Make a test purchase to see how Autumn handles it. Use the Stripe
-            test card <span className="font-bold">4242 4242 4242 4242</span>{" "}
-            with any expiration date, CVC and cardholder details.
-          </p>
+    <div className="w-full h-screen flex justify-between">
+      <div className="flex flex-col gap-4 w-full px-10 pt-4">
+        <div className="flex gap-4 items-center">
+          <div className="text-xl font-extrabold">Demo</div>
         </div>
-        <div className="space-y-4 flex flex-col bg-gray-900 p-4 h-full min-h-fit w-[400px]">
-          {/* <Image
+
+        <div className="flex gap-2 flex-wrap">
+          {buttons.map((button, index) => (
+            <ActionButton
+              key={index}
+              buttonData={button}
+              handleClicked={() =>
+                handleBtnClicked({
+                  featureId: button.feature_id,
+                  value: button.value,
+                })
+              }
+            />
+          ))}
+        </div>
+
+        <div className="text-lg font-medium mt-4 -mb-3">Billing</div>
+        <p className="text-sm text-t3">You have access to:</p>
+        <CustomerBalances customer={customer} />
+        <div className="text-lg font-medium mt-2">Pricing</div>
+
+        <div className="min-w-[600px]"></div>
+
+        <p className="text-xs text-t3">
+          Make a test purchase to see how Autumn handles it. Use the Stripe test
+          card <span className="font-bold">4242 4242 4242 4242</span> with any
+          expiration date, CVC and cardholder details.
+        </p>
+      </div>
+      <div className="space-y-4 flex flex-col bg-gray-900 p-4 h-full min-h-fit w-[400px]">
+        {/* <Image
             src="/demo-assets/autumn-logo.png"
             alt="Autumn Logo"
             width={100}
             height={100}
           /> */}
-          <APIPlayground
-            title="Check Feature Access"
-            endpoint="GET /entitled"
-            request={entitledReq}
-            response={hasAccessResponse}
-            loading={hasAccessLoading}
-          />
-          <APIPlayground
-            title="Send Usage Event"
-            endpoint="POST /events"
-            request={eventsReq}
-            response={sendEventResponse}
-            loading={sendEventLoading}
-          />
-          <APIPlayground
-            title="Get Customer"
-            endpoint="GET /customers/:customer_id"
-            request={getCustomerRequest}
-            response={getCustomerResponse}
-            loading={customerLoading}
-          />
-        </div>
+        <APIPlayground
+          title="Check Feature Access"
+          endpoint="GET /entitled"
+          request={entitledReq}
+          response={hasAccessResponse}
+          loading={hasAccessLoading}
+        />
+        <APIPlayground
+          title="Send Usage Event"
+          endpoint="POST /events"
+          request={eventsReq}
+          response={sendEventResponse}
+          loading={sendEventLoading}
+        />
+        <APIPlayground
+          title="Get Customer"
+          endpoint="GET /customers/:customer_id"
+          request={getCustomerRequest}
+          response={getCustomerResponse}
+          loading={customerLoading}
+        />
       </div>
-    </AutumnProvider>
+    </div>
   );
 }
 

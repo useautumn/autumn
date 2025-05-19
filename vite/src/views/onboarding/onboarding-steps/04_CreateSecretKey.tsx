@@ -1,14 +1,11 @@
 import { Input } from "@/components/ui/input";
 
-import { CopyPublishableKey } from "@/views/developer/DevView";
-
 import { DevContext } from "@/views/developer/DevContext";
 
 import Step from "@/components/general/OnboardingStep";
-import { AppEnv } from "@autumn/shared";
+
 import { useEnv } from "@/utils/envUtils";
 import { useState } from "react";
-import CreateAPIKey from "@/views/developer/CreateAPIKey";
 import { toast } from "sonner";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

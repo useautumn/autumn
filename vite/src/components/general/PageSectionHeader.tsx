@@ -7,9 +7,3 @@ export const PageSectionHeader = ({ title }: { title: string }) => {
     </div>
   );
 };
-
-{
-  /* <span className="text-t2 px-1 rounded-md bg-stone-200">
-        {apiKeys.length}
-      </span> */
-}

@@ -445,6 +445,13 @@ export class ProductService {
       throw error;
     }
 
+    if (!data) {
+      console.log(
+        "ProductService.getByFeature returning no data, error:",
+        error
+      );
+      return [];
+    }
     // Sort products by pricing
     sortProductsByPrice(data);
 
