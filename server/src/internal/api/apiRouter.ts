@@ -20,6 +20,8 @@ import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
 import expireRouter from "./customers/products/expireRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
+import { withOrgAuth } from "@/middleware/authMiddleware.js";
+import { autumnHandler } from "autumn-js/express";
 
 const apiRouter = Router();
 

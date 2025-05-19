@@ -41,6 +41,9 @@ const buttonVariants = cva(
         // add: "text-primary border-t border-white outline outline-purple-800/20 bg-gradient-to-b from-zinc-50 to-zinc-200/70 shadow-sm hover:from-zinc-200 hover:border-zinc-200 hover:text-primary dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 !h-6 rounded-md",
         add: "text-primary border-t border-white outline outline-zinc-200 bg-gradient-to-b from-stone-100 to-zinc-50 hover:from-stone-100 hover:to-stone-100 hover:border-primary  dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 !h-9.5 rounded-none",
         // add: "border-t border-purple-400 bg-gradient-to-b from-primary/90 to-primary text-white hover:from-primary hover:to-primary !shadow-lg !h-6 rounded-md",
+
+        destructivePrimary:
+          "bg-gradient-to-b font-semibold border-t border-red-400 outline outline-red-500 rounded-sm from-red-500/85 to-red-500 text-white hover:from-red-500 hover:to-red-500 shadow-red-500/50 transition-[background] duration-300 !h-7.5 mt-0.25",
       },
       size: {
         default: "h-8 px-3 flex items-center gap-1",

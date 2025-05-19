@@ -23,14 +23,14 @@ export const ProductItemResponseSchema = z.object({
   usage_model: z.nativeEnum(UsageModel).nullish(),
   billing_units: z.number().nullish(), // amount per billing unit (eg. $9 / 250 units)
   reset_usage_when_enabled: z.boolean().nullish(),
-
-  // Others
-  // entity_feature_id: z.string().nullish(),
-  // carry_over_usage: z.boolean().nullish(),
-
-  // Stored in backend
-  // created_at: z.number().nullish(),
-  // entitlement_id: z.string().nullish(),
-  // price_id: z.string().nullish(),
-  // price_config: z.any().nullish(),
 });
+
+// Others
+// entity_feature_id: z.string().nullish(),
+// carry_over_usage: z.boolean().nullish(),
+
+// Stored in backend
+// created_at: z.number().nullish(),
+// entitlement_id: z.string().nullish(),
+// price_id: z.string().nullish(),
+// price_config: z.any().nullish(),

@@ -35,8 +35,6 @@ export const handleCreateCheckout = async ({
     env: customer.env,
   });
 
-  // Get stripeItems
-
   const itemSets = await getStripeSubItems({
     attachParams,
     isCheckout: true,
@@ -86,6 +84,8 @@ export const handleCreateCheckout = async ({
   let allowPromotionCodes = notNullish(checkoutParams.discounts)
     ? undefined
     : checkoutParams.allow_promotion_codes || true;
+
+  console.log("Items: ", items);
 
   const checkout = await stripeCli.checkout.sessions.create({
     customer: customer.processor.id,

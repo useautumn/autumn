@@ -5,7 +5,10 @@ import {
 } from "@/external/stripe/stripeSubUtils.js";
 import {
   AppEnv,
+  AttachScenario,
   FullCusProduct,
+  FullCustomerEntitlement,
+  FullCustomerPrice,
   FullProduct,
   Organization,
 } from "@autumn/shared";
@@ -25,6 +28,12 @@ import {
   addCurMainProductToSchedule,
   getOtherCusProductsOnSub,
 } from "./scheduleUtils/cancelScheduledFreeProduct.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
+import {
+  addProductsUpdatedWebhookTask,
+  constructProductsUpdatedData,
+} from "@/external/svix/handleProductsUpdatedWebhook.js";
 
 export const getPricesForCusProduct = ({
   cusProduct,
@@ -64,6 +73,7 @@ export const cancelFutureProductSchedule = async ({
   env,
   internalEntityId,
   renewCurProduct = true,
+  sendWebhook = true,
 }: {
   sb: SupabaseClient;
   org: Organization;
@@ -76,6 +86,7 @@ export const cancelFutureProductSchedule = async ({
   env: AppEnv;
   internalEntityId?: string;
   renewCurProduct?: boolean;
+  sendWebhook?: boolean;
 }) => {
   // 1. Get main and scheduled products
   const { curMainProduct, curScheduledProduct } = await getExistingCusProducts({
@@ -271,6 +282,35 @@ export const cancelFutureProductSchedule = async ({
             canceled_at: null,
           },
         });
+
+        try {
+          let product = curMainProduct.product;
+          let prices = curMainProduct.customer_prices.map(
+            (cp: FullCustomerPrice) => cp.price
+          );
+          let entitlements = curMainProduct.customer_entitlements.map(
+            (ce: FullCustomerEntitlement) => ce.entitlement
+          );
+
+          if (sendWebhook) {
+            await addProductsUpdatedWebhookTask({
+              internalCustomerId: curMainProduct.internal_customer_id,
+              org: org,
+              env: env,
+              customerId: null,
+              scenario: AttachScenario.Renew,
+              product: product,
+              prices: prices,
+              entitlements: entitlements,
+              freeTrial: curMainProduct.free_trial || null,
+              logger: logger,
+            });
+          }
+        } catch (error) {
+          logger.error(
+            `❌ Error sending products updated webhook from cancelFutureProductSchedule: ${error}`
+          );
+        }
       }
     }
   }

@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import { orgRouter } from "./orgs/orgRouter.js";
 import { Router } from "express";
 import { userRouter } from "./users/userRouter.js";
@@ -14,6 +16,7 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 
 import { StatusCodes } from "http-status-codes";
 import { handleOrgCreated } from "@/external/webhooks/clerkWebhooks.js";
+import { autumnHandler } from "autumn-js/express";
 
 const mainRouter = Router();
 
@@ -74,4 +77,27 @@ mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
 mainRouter.use("/test", testRouter);
+
+mainRouter.use(
+  "/api/autumn",
+  withOrgAuth,
+  (req: any, res: any, next: any) => {
+    console.log("Autumn middleware:", req.originalUrl);
+    next();
+  },
+  autumnHandler({
+    identify: async (req: any) => {
+      console.log("Org:", req.minOrg);
+      console.log("User:", req.user);
+      return {
+        customerId: req.minOrg?.id,
+        customerData: {
+          name: req.minOrg?.slug,
+          email: req.user?.email,
+        },
+      };
+    },
+  })
+);
+
 export default mainRouter;

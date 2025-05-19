@@ -24,10 +24,7 @@ import {
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  AttachPreviewType,
-  CheckProductFormattedPreview,
-} from "@autumn/shared";
+import { AttachScenario, CheckProductFormattedPreview } from "@autumn/shared";
 
 export const getAttachPreview = async ({
   sb,
@@ -83,7 +80,7 @@ export const getAttachPreview = async ({
     let result: CheckProductFormattedPreview = {
       title: "Scheduled product already exists",
       message: "You already have this product scheduled to start soon.",
-      scenario: AttachPreviewType.Scheduled,
+      scenario: AttachScenario.Scheduled,
       recurring: !isOneOff(product.prices),
       error_on_attach: true,
       product_id: product.id,
@@ -100,7 +97,7 @@ export const getAttachPreview = async ({
       let result: CheckProductFormattedPreview = {
         title: "Product already attached",
         message: "You already have this product attached.",
-        scenario: AttachPreviewType.Active,
+        scenario: AttachScenario.Active,
         recurring: !isOneOff(product.prices),
         error_on_attach: true,
         product_id: product.id,
@@ -151,7 +148,7 @@ export const getAttachPreview = async ({
       let result: CheckProductFormattedPreview = {
         title: `Renew subscription to ${curMainProduct.product.name}`,
         message,
-        scenario: AttachPreviewType.Renew,
+        scenario: AttachScenario.Renew,
         product_id: product.id,
         product_name: product.name,
         recurring: !isOneOff(product.prices),

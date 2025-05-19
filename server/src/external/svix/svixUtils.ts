@@ -46,18 +46,23 @@ export const deleteSvixApp = async ({ appId }: { appId: string }) => {
 
 export const sendSvixEvent = async ({
   org,
+  env,
   eventType,
   data,
 }: {
   org: Organization;
+  env: AppEnv;
   eventType: string;
   data: any;
 }) => {
   const svix = createSvixCli();
-  // await svix.message.create(getSvixAppId({ org, env: org.env }), {
-  //   eventType,
-  //   payload: data,
-  // });
+  return await svix.message.create(getSvixAppId({ org, env }), {
+    eventType,
+    payload: {
+      type: eventType,
+      data,
+    },
+  });
 };
 
 export const getSvixDashboardUrl = async ({

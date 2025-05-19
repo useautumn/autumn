@@ -9,6 +9,7 @@ import {
   FullProduct,
   Organization,
   Price,
+  AttachScenario,
 } from "@autumn/shared";
 
 import { z } from "zod";
@@ -48,6 +49,7 @@ export type AttachParams = {
 
   checkoutSessionParams?: any;
   apiVersion?: number;
+  scenario?: AttachScenario;
 };
 
 export type InsertCusProductParams = {

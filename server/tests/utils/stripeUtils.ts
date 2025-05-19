@@ -210,6 +210,7 @@ export const advanceTestClock = async ({
   numberOfHours,
   numberOfMonths,
   advanceTo,
+  waitForSeconds,
 }: {
   stripeCli: Stripe;
   testClockId: string;
@@ -219,6 +220,7 @@ export const advanceTestClock = async ({
   numberOfHours?: number;
   numberOfMonths?: number;
   advanceTo?: number;
+  waitForSeconds?: number;
 }) => {
   if (!startingFrom) {
     startingFrom = new Date();
@@ -249,7 +251,9 @@ export const advanceTestClock = async ({
     frozen_time: Math.floor(advanceTo / 1000),
   });
 
-  await timeout(STRIPE_TEST_CLOCK_TIMING);
+  await timeout(
+    waitForSeconds ? waitForSeconds * 1000 : STRIPE_TEST_CLOCK_TIMING
+  );
 };
 
 export const waitForMeterUpdate = async () => {

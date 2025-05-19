@@ -1,4 +1,4 @@
-import { APIVersion } from "@autumn/shared";
+import { APIVersion, AttachScenario } from "@autumn/shared";
 
 import { createFullCusProduct } from "./createFullCusProduct.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
@@ -42,6 +42,7 @@ export const handleAddFreeProduct = async ({
         message: `Successfully attached free product(s) -- ${products
           .map((p) => p.name)
           .join(", ")}`,
+        scenario: AttachScenario.New,
       })
     );
   } else {

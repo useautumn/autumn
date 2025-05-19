@@ -4,7 +4,7 @@ import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import {
   AppEnv,
-  AttachPreviewType,
+  AttachScenario,
   FullCusProduct,
   FullProduct,
   Organization,
@@ -54,8 +54,8 @@ export const getDowngradePreview = async ({
     message,
 
     scenario: isFreeProduct(product.prices)
-      ? AttachPreviewType.Cancel
-      : AttachPreviewType.Downgrade,
+      ? AttachScenario.Cancel
+      : AttachScenario.Downgrade,
     product_id: product.id,
     product_name: product.name,
 
