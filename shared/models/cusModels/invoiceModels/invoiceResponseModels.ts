@@ -16,6 +16,7 @@ export const InvoiceResponseSchema = z.object({
   total: z.number(),
   currency: z.string(),
   created_at: z.number(),
+  hosted_invoice_url: z.string().nullish(),
   // period_start: z.number().nullish(),
   // period_end: z.number().nullish(),
 });
