@@ -104,6 +104,7 @@ const init = async () => {
   });
 
   app.use(express.json());
+
   app.use(mainRouter);
   app.use("/v1", apiRouter);
 

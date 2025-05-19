@@ -8,11 +8,11 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
+  AttachScenario,
   BillingType,
   CusProductStatus,
   ErrCode,
   FullCusProduct,
-  FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
@@ -20,9 +20,10 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
-import { EntityService } from "@/internal/api/entities/EntityService.js";
+
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { billForRemainingUsages } from "@/internal/customers/change-product/billRemainingUsages.js";
+import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
 
 const handleCusProductDeleted = async ({
   cusProduct,
@@ -130,6 +131,19 @@ const handleCusProductDeleted = async ({
     },
   });
 
+  await addProductsUpdatedWebhookTask({
+    internalCustomerId: cusProduct.internal_customer_id,
+    org,
+    env,
+    customerId: null,
+    scenario: AttachScenario.Expired,
+    product: cusProduct.product,
+    prices: cusProduct.customer_prices.map((cp) => cp.price),
+    entitlements: cusProduct.customer_entitlements.map((ce) => ce.entitlement),
+    freeTrial: cusProduct.free_trial || null,
+    logger,
+  });
+
   if (cusProduct.product.is_add_on) {
     return;
   }
@@ -140,6 +154,7 @@ const handleCusProductDeleted = async ({
     subscription,
     org,
     env,
+    logger,
   });
 
   if (activatedFuture) {

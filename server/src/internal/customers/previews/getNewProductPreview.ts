@@ -15,7 +15,7 @@ import {
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemDescription } from "./checkProductUtils.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
-import { AttachPreviewType } from "@autumn/shared";
+import { AttachScenario } from "@autumn/shared";
 
 export const getNewProductPreview = async ({
   org,
@@ -81,7 +81,7 @@ export const getNewProductPreview = async ({
   return {
     title,
     message,
-    scenario: AttachPreviewType.New,
+    scenario: AttachScenario.New,
     product_id: product.id,
     product_name: product.name,
     recurring: !isOneOff(product.prices),

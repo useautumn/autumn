@@ -440,14 +440,14 @@ entitledRouter.post("", async (req: any, res: any) => {
     // 3. If with preview, get preview
     let preview = undefined;
     if (req.body.with_preview) {
-      let withPreview = req.body.with_preview;
-      if (withPreview !== "raw" && withPreview !== "formatted") {
-        throw new RecaseError({
-          message: "with_preview must be 'raw' or 'formatted'",
-          code: ErrCode.InvalidRequest,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
-      }
+      // let withPreview = notNullish(req.body.with_preview);
+      // if (withPreview !== "raw" && withPreview !== "formatted") {
+      //   throw new RecaseError({
+      //     message: "with_preview must be 'raw' or 'formatted'",
+      //     code: ErrCode.InvalidRequest,
+      //     statusCode: StatusCodes.BAD_REQUEST,
+      //   });
+      // }
 
       try {
         preview = await getCheckPreview({
@@ -474,7 +474,7 @@ entitledRouter.post("", async (req: any, res: any) => {
 
         allowed,
         unlimited: balanceObj?.unlimited || false,
-        balance: balanceObj?.unlimited ? null : balanceObj?.balance || null,
+        balance: balanceObj?.unlimited ? null : balanceObj?.balance,
         preview,
       });
     } else {

@@ -5,7 +5,7 @@ import {
 } from "@/internal/products/productUtils.js";
 import {
   AppEnv,
-  AttachPreviewType,
+  AttachScenario,
   CheckProductFormattedPreview,
   Customer,
   Feature,
@@ -290,7 +290,7 @@ export const getUpgradePreview = async ({
     title: `Upgrade to ${product.name}`,
     message: formattedMessage.message,
 
-    scenario: AttachPreviewType.Upgrade,
+    scenario: AttachScenario.Upgrade,
     product_id: product.id,
     product_name: product.name,
     recurring: !isOneOff(product.prices),

@@ -2,7 +2,7 @@ import { UsageModel } from "../productModels/productItemModels.js";
 import { Infinite } from "../productModels/productItemModels.js";
 import { ProductResponse } from "../productModels/productResponseModels.js";
 
-export enum AttachPreviewType {
+export enum AttachScenario {
   // AlreadyAttached = "already_attached",
   // AlreadyScheduled = "already_scheduled",
   Scheduled = "scheduled",
@@ -12,12 +12,13 @@ export enum AttachPreviewType {
   Upgrade = "upgrade",
   Downgrade = "downgrade",
   Cancel = "cancel",
+  Expired = "expired",
 }
 
 export interface CheckProductFormattedPreview {
   title: string;
   message: string;
-  scenario: AttachPreviewType;
+  scenario: AttachScenario;
   product_id: string;
   product_name: string;
   recurring: boolean;

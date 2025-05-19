@@ -1,10 +1,13 @@
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
   AppEnv,
+  AttachScenario,
   CollectionMethod,
   CusProductStatus,
   ErrCode,
   FullCusProduct,
+  FullCustomerEntitlement,
+  FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
 
@@ -21,6 +24,7 @@ import {
 } from "@/external/redis/stripeWebhookLocks.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
+import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
 
 export const handleSubscriptionUpdated = async ({
   sb,
@@ -61,6 +65,8 @@ export const handleSubscriptionUpdated = async ({
     orgId: org.id,
     env,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    withCusPrices: true,
+    withCusEnts: true,
   });
 
   if (cusProducts.length === 0) {
@@ -134,6 +140,7 @@ export const handleSubscriptionUpdated = async ({
     let comment = subscription.cancellation_details?.comment;
     let isAutumnDowngrade = comment === "autumn_downgrade";
 
+    // CANCELED CASE
     if (isCanceled && updatedCusProducts.length > 0 && !isAutumnDowngrade) {
       let allDefaultProducts = await ProductService.getFullDefaultProducts({
         sb,
@@ -156,8 +163,6 @@ export const handleSubscriptionUpdated = async ({
         )
       );
 
-      let customer = updatedCusProducts[0].customer;
-
       if (defaultProducts.length > 0) {
         console.log(
           `subscription.updated: canceled -> attempting to schedule default products: ${defaultProducts
@@ -176,11 +181,10 @@ export const handleSubscriptionUpdated = async ({
         if (alreadyScheduled) {
           continue;
         }
-
         await createFullCusProduct({
           sb,
           attachParams: {
-            customer,
+            customer: updatedCusProducts[0].customer,
             product,
             prices: product.prices,
             entitlements: product.entitlements,
@@ -191,7 +195,32 @@ export const handleSubscriptionUpdated = async ({
             org,
           },
           startsAt: fullSub.current_period_end * 1000,
+          sendWebhook: false,
         });
+      }
+
+      for (let cusProd of updatedCusProducts) {
+        try {
+          let product = cusProd.product;
+          let prices = cusProd.customer_prices.map(
+            (cp: FullCustomerPrice) => cp.price
+          );
+          let entitlements = cusProd.customer_entitlements.map(
+            (ce: FullCustomerEntitlement) => ce.entitlement
+          );
+          await addProductsUpdatedWebhookTask({
+            internalCustomerId: cusProd.internal_customer_id,
+            org,
+            env,
+            customerId: null,
+            logger,
+            scenario: AttachScenario.Cancel,
+            product: product,
+            prices: prices,
+            entitlements: entitlements,
+            freeTrial: cusProd.free_trial || null,
+          });
+        } catch (error) {}
       }
     }
 
@@ -233,6 +262,7 @@ export const handleSubscriptionUpdated = async ({
           internalEntityId: updatedCusProducts[0].internal_entity_id,
           logger,
           env,
+          sendWebhook: false,
         });
 
         await CusProductService.delete({
@@ -240,6 +270,30 @@ export const handleSubscriptionUpdated = async ({
           cusProductId: curScheduledProduct.id,
         });
       }
+
+      try {
+        for (let cusProd of updatedCusProducts) {
+          let product = cusProd.product;
+          let prices = cusProd.customer_prices.map(
+            (cp: FullCustomerPrice) => cp.price
+          );
+          let entitlements = cusProd.customer_entitlements.map(
+            (ce: FullCustomerEntitlement) => ce.entitlement
+          );
+          await addProductsUpdatedWebhookTask({
+            internalCustomerId: cusProd.internal_customer_id,
+            org,
+            env,
+            customerId: null,
+            logger,
+            scenario: AttachScenario.Renew,
+            product: product,
+            prices: prices,
+            entitlements: entitlements,
+            freeTrial: cusProd.free_trial || null,
+          });
+        }
+      } catch (error) {}
     }
   }
 

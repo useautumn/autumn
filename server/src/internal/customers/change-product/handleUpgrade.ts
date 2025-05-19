@@ -19,6 +19,7 @@ import {
   CusProductStatus,
   APIVersion,
   UsagePriceConfig,
+  AttachScenario,
 } from "@autumn/shared";
 
 import { StatusCodes } from "http-status-codes";
@@ -492,6 +493,7 @@ export const handleUpgrade = async ({
     disableFreeTrial,
     carryExistingUsages,
     carryOverTrial: true,
+    scenario: AttachScenario.Upgrade,
   });
 
   // Create invoices

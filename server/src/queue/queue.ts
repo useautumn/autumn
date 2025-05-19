@@ -10,6 +10,7 @@ import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
+import { sendProductsUpdatedWebhook } from "@/external/svix/handleProductsUpdatedWebhook.js";
 
 const NUM_WORKERS = 5;
 
@@ -95,11 +96,11 @@ const initWorker = ({
         return;
       }
 
-      // TRIGGER CHECKOUT REWARD
-      if (job.name == JobName.TriggerCheckoutReward) {
+      if (job.name == JobName.SendProductsUpdatedWebhook) {
+        let lockKey = `${job.name}:${job.data.internalCustomerId}`;
         if (
           !(await acquireLock({
-            customerId: `reward_trigger:${job.data.customer?.internal_id}`,
+            customerId: lockKey,
             timeout: 10000,
             useBackup,
           }))
@@ -110,11 +111,46 @@ const initWorker = ({
           return;
         }
 
-        await runTriggerCheckoutReward({
-          payload: job.data,
-          sb,
-          logger: logtail,
-        });
+        try {
+          await sendProductsUpdatedWebhook({
+            sb,
+            logger: logtail,
+            data: job.data,
+          });
+        } catch (error) {
+          console.error("Error processing job:", error);
+        } finally {
+          await releaseLock({ customerId: lockKey, useBackup });
+        }
+      }
+
+      // TRIGGER CHECKOUT REWARD
+      if (job.name == JobName.TriggerCheckoutReward) {
+        let lockKey = `reward_trigger:${job.data.customer?.internal_id}`;
+        if (
+          !(await acquireLock({
+            customerId: lockKey,
+            timeout: 10000,
+            useBackup,
+          }))
+        ) {
+          await queue.add(job.name, job.data, {
+            delay: 1000,
+          });
+          return;
+        }
+
+        try {
+          await runTriggerCheckoutReward({
+            payload: job.data,
+            sb,
+            logger: logtail,
+          });
+        } catch (error) {
+          console.error("Error processing job:", error);
+        } finally {
+          await releaseLock({ customerId: lockKey, useBackup });
+        }
 
         return;
       }

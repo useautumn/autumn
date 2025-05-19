@@ -44,9 +44,15 @@ autumnWebhookRouter.post(
   "",
   express.raw({ type: "application/json" }),
   async (req, res) => {
-    console.log("Webhook from autumn");
-
     const evt = await verifyAutumnWebhook(req, res);
-    console.log(evt);
+    console.log("Received webhook from autumn");
+    const { type, data } = evt;
+    console.log("Type", type, "Scenario:", data?.scenario);
+    // console.log("Data", data);
+    // console.log("JSON", JSON.stringify(evt, null, 2));
+    res.status(200).json({
+      success: true,
+      message: "Webhook received",
+    });
   }
 );

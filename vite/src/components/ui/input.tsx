@@ -5,10 +5,11 @@ import { cn } from "@/lib/utils";
 interface InputProps extends React.ComponentProps<"input"> {
   startContent?: React.ReactNode;
   endContent?: React.ReactNode;
+  variant?: "default" | "destructive";
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, startContent, endContent, ...props }, ref) => {
+  ({ className, type, startContent, endContent, variant, ...props }, ref) => {
     const hasAdornment = startContent || endContent;
     const [isFocused, setIsFocused] = React.useState(false);
 
@@ -27,7 +28,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               isFocused &&
                 `transition-colors duration-100 focus-visible:outline-none focus-visible:ring-0
             border-[rgb(139,92,246)] shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]`,
-              className
+              variant === "destructive" && className
             )}
             data-disabled={props.disabled}
           >
@@ -59,8 +60,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             
             p-2 h-8 shadow-sm 
   
-            transition-colors duration-100 focus-visible:outline-none focus-visible:ring-0
+            duration-100 focus-visible:outline-none focus-visible:ring-0
             focus-visible:border-[rgb(139,92,246)] focus-visible:shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]`,
+              variant === "destructive" &&
+                `focus-visible:border-red-400 focus-visible:shadow-[0_0_2px_1px_rgba(239,68,68,0.25)]`,
               className
             )}
             ref={ref}

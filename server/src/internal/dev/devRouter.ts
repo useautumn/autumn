@@ -50,10 +50,15 @@ devRouter.get("/data", withOrgAuth, async (req: any, res) => {
   try {
     const apiKeys = await ApiKeyService.getByOrg(req.sb, req.orgId, req.env);
     const org = await OrgService.getFromReq(req);
+    const dashboardUrl = await getSvixDashboardUrl({
+      env: req.env,
+      org: org,
+    });
 
     res.status(200).json({
       api_keys: apiKeys,
       org,
+      svix_dashboard_url: dashboardUrl,
     });
   } catch (error) {
     handleRequestError({ error, req, res, action: "Get /dev/data" });

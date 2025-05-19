@@ -3,6 +3,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
+  AttachScenario,
   BillingInterval,
   CreateCustomer,
   CreateCustomerSchema,
@@ -199,6 +200,7 @@ export const createNewCustomer = async ({
       anchorToUnix: org.config.anchor_start_of_month
         ? getNextStartOfMonthUnix(BillingInterval.Month)
         : undefined,
+      scenario: AttachScenario.New,
     });
   }
 

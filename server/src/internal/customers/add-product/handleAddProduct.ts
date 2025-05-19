@@ -20,6 +20,7 @@ import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import { getPriceAmount } from "../../prices/priceUtils.js";
 import {
   APIVersion,
+  AttachScenario,
   BillingInterval,
   BillingType,
   ErrCode,
@@ -47,6 +48,14 @@ import { SuccessCode } from "@autumn/shared";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
 import { getInvoiceItems } from "../invoices/invoiceUtils.js";
+import { sendSvixEvent } from "@/external/svix/svixUtils.js";
+import { getCustomerDetails } from "@/internal/api/customers/getCustomerDetails.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
+import {
+  constructProductsUpdatedData,
+  ProductsUpdatedDataSchema,
+} from "@/external/svix/handleProductsUpdatedWebhook.js";
 
 export const handleBillNowPrices = async ({
   sb,
@@ -182,6 +191,7 @@ export const handleBillNowPrices = async ({
             ? subscriptions[0].current_period_end * 1000
             : undefined,
         carryExistingUsages,
+        scenario: AttachScenario.New,
       })
     );
   }
@@ -449,6 +459,7 @@ export const handleOneOffPrices = async ({
         code: SuccessCode.OneOffProductAttached,
         product_ids: products.map((p) => p.id),
         customer_id: customer.id || customer.internal_id,
+        scenario: AttachScenario.New,
       })
     );
   }

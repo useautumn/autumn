@@ -17,6 +17,7 @@ import {
   getPriceEntitlement,
 } from "@/internal/prices/priceUtils.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
+import { Decimal } from "decimal.js";
 
 export const prepaidToStripeTiers = (
   price: Price,
@@ -99,9 +100,15 @@ export const createStripePrepaid = async ({
   if (price.config!.interval == BillingInterval.OneOff) {
     const amount = config.usage_tiers[0].amount;
 
+    let unitAmountDecimalStr = new Decimal(amount)
+      .mul(100)
+      .toDecimalPlaces(10)
+      .toString();
+
     stripePrice = await stripeCli.prices.create({
       ...productData,
-      unit_amount_decimal: (amount * 100).toString(),
+      // unit_amount_decimal: (amount * 100).toString(),
+      unit_amount_decimal: unitAmountDecimalStr,
       currency: org.default_currency,
     });
 

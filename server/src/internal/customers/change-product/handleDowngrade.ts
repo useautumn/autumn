@@ -6,13 +6,16 @@ import {
   getStripeSubs,
 } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { APIVersion, FullCusProduct } from "@autumn/shared";
+import { APIVersion, AttachScenario, FullCusProduct } from "@autumn/shared";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { BillingInterval } from "@autumn/shared";
 import { updateScheduledSubWithNewItems } from "./scheduleUtils/updateScheduleWithNewItems.js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import {
+  attachToInsertParams,
+  isFreeProduct,
+} from "@/internal/products/productUtils.js";
 
 import { generateId } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
@@ -238,6 +241,7 @@ export const handleDowngrade = async ({
 
   // 4. Update cus product
   logger.info("3. Inserting new full cus product (starts at period end)");
+  const newProductFree = isFreeProduct(attachParams.prices);
   await createFullCusProduct({
     sb: req.sb,
     attachParams: attachToInsertParams(attachParams, product),
@@ -246,6 +250,7 @@ export const handleDowngrade = async ({
     nextResetAt: latestPeriodEnd * 1000,
     disableFreeTrial: true,
     isDowngrade: true,
+    scenario: newProductFree ? AttachScenario.Cancel : AttachScenario.Downgrade,
   });
 
   // 5. Updating current cus product canceled_at...

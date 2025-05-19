@@ -1,6 +1,7 @@
 import {
   APIVersion,
   AppEnv,
+  AttachScenario,
   CusProductResponseSchema,
   CusProductSchema,
   CusProductStatus,
@@ -33,6 +34,12 @@ import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { CusService } from "../CusService.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
+import {
+  addProductsUpdatedWebhookTask,
+  constructProductsUpdatedData,
+} from "@/external/svix/handleProductsUpdatedWebhook.js";
 
 export const isActiveStatus = (status: CusProductStatus) => {
   return (
@@ -213,6 +220,7 @@ export const activateDefaultProduct = async ({
       entities: [],
       features: [],
     },
+    scenario: AttachScenario.New,
   });
 
   console.log(`   ✅ activated default product: ${defaultProd.group}`);
@@ -253,12 +261,14 @@ export const activateFutureProduct = async ({
   subscription,
   org,
   env,
+  logger = console,
 }: {
   sb: SupabaseClient;
   cusProduct: FullCusProduct;
   subscription: Stripe.Subscription;
   org: Organization;
   env: AppEnv;
+  logger: any;
 }) => {
   const stripeCli = createStripeCli({
     org,
@@ -295,6 +305,28 @@ export const activateFutureProduct = async ({
       cusProductId: futureProduct.id,
       updates: { status: CusProductStatus.Active },
     });
+
+    let product = futureProduct.product;
+    let prices = futureProduct.customer_prices.map(
+      (cp: FullCustomerPrice) => cp.price
+    );
+    let entitlements = futureProduct.customer_entitlements.map(
+      (ce: FullCustomerEntitlement) => ce.entitlement
+    );
+
+    await addProductsUpdatedWebhookTask({
+      internalCustomerId: cusProduct.internal_customer_id,
+      org,
+      env,
+      customerId: null,
+      scenario: AttachScenario.New,
+      product,
+      prices,
+      entitlements,
+      freeTrial: futureProduct.free_trial || null,
+      logger,
+    });
+
     return true;
   }
 };

@@ -77,19 +77,6 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         }
       }
 
-      // console.log("Old metadata:", {
-      //   ...oldMetadata,
-      // });
-      // console.log("New metadata:", {
-      //   ...newMetadata,
-      // });
-
-      // console.log("Full Metadata:", {
-      //   ...oldMetadata,
-      //   ...newMetadata,
-      // });
-      // throw new Error("test");
-
       let stripeUpdate = {
         email:
           originalCustomer.email !== newCusData.email
@@ -142,6 +129,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         cusProducts: finalCustomer.customer_products,
         expand: parseCusExpand(req.query.expand),
         features,
+        reqApiVersion: req.apiVersion,
       });
 
       res.status(200).json(customerDetails);

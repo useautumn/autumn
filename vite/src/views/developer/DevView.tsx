@@ -7,9 +7,13 @@ import { AppEnv } from "@autumn/shared";
 
 import { DevContext } from "./DevContext";
 import { APIKeyTable } from "./APIKeyTable";
-import CopyButton from "@/components/general/CopyButton";
 
 import "svix-react/style.css";
+import { ApiKeysView } from "./ApiKeys";
+import { useCustomer } from "autumn-js/react";
+import { notNullish } from "@/utils/genUtils";
+import { PageSectionHeader } from "@/components/general/PageSectionheader";
+import { AppPortal } from "svix-react";
 
 export default function DevScreen({ env }: { env: AppEnv }) {
   const { data, isLoading, mutate } = useAxiosSWR({
@@ -17,6 +21,9 @@ export default function DevScreen({ env }: { env: AppEnv }) {
     env: env,
     withAuth: true,
   });
+
+  const { customer } = useCustomer();
+  const showWebhooks = notNullish(customer?.features.webhooks);
 
   if (isLoading) return <LoadingScreen />;
 
@@ -27,84 +34,33 @@ export default function DevScreen({ env }: { env: AppEnv }) {
       <div className="flex flex-col gap-4 h-fit relative w-full text-sm">
         <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Developer</h1>
 
-        {/* API Keys Section */}
         <div className="flex flex-col gap-16">
-          <div>
-            <div className="sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm text-t2 font-medium">Secret API Keys</h2>
-                <span className="text-t2 px-1 rounded-md bg-stone-200">
-                  {apiKeys.length}
-                </span>
-              </div>
-              <CreateAPIKey />
-            </div>
-
-            {apiKeys.length > 0 ? (
-              <APIKeyTable apiKeys={apiKeys} />
-            ) : (
-              <div className="px-10 py-2">
-                <p className="text-sm text-t3">
-                  API keys are used to securely authenticate your requests from
-                  your server. Learn more{" "}
-                  <a
-                    className="text-primary hover:text-primary/80 cursor-pointer"
-                    href="https://docs.useautumn.com"
-                    target="_blank"
-                  >
-                    here
-                  </a>
-                </p>
-              </div>
-            )}
-          </div>
-          {/* Publishable Key Section */}
-          <div>
-            <div className="border-y bg-stone-100 px-10 h-10 flex items-center">
-              <h2 className="text-sm text-t2 font-medium">Publishable Key</h2>
-            </div>
-            <div className="px-10 py-4 flex flex-col gap-6">
-              <p className="text-sm text-t3">
-                You can safely use this from your frontend with certain
-                endpoints, such as{" "}
-                <span className="font-mono text-red-500">/attach</span> and{" "}
-                <span className="font-mono text-red-500">/entitled</span>.
-              </p>
-              <div className="flex flex-col gap-2 w-fit rounded-sm ">
-                {env === AppEnv.Sandbox ? (
-                  <CopyPublishableKey
-                    type="Sandbox"
-                    value={data?.org?.test_pkey}
-                  />
-                ) : (
-                  <CopyPublishableKey
-                    type="Production"
-                    value={data?.org?.live_pkey}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
+          <ApiKeysView apiKeys={apiKeys} />
+          {showWebhooks && (
+            <ConfigureWebhookSection dashboardUrl={data.svix_dashboard_url} />
+          )}
         </div>
       </div>
     </DevContext.Provider>
   );
 }
 
-export const CopyPublishableKey = ({
-  type,
-  value,
-}: {
-  type: "Sandbox" | "Production";
-  value: string;
-}) => {
+const ConfigureWebhookSection = ({ dashboardUrl }: any) => {
   return (
-    <div className="flex flex-col justify-between gap-2 w-full">
-      <div className="flex items-center whitespace-nowrap overflow-hidden">
-        <div className="text-sm text-t3">{type}</div>
-      </div>
+    <div className="bg-white">
+      <PageSectionHeader title="Webhooks" />
 
-      <CopyButton text={value}>{value}</CopyButton>
+      <AppPortal
+        url={dashboardUrl}
+        style={{
+          height: "100%",
+          borderRadius: "none",
+          marginTop: "0.5rem",
+          // paddingLeft: "1rem",
+          // paddingRight: "1rem",
+        }}
+        fullSize
+      />
     </div>
   );
 };

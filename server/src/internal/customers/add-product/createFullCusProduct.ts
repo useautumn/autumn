@@ -37,6 +37,7 @@ import {
   addExistingUsagesToCusEnts,
   getExistingUsages,
 } from "../entitlements/cusEntUtils/getExistingUsage.js";
+import { constructProductsUpdatedData } from "@/external/svix/handleProductsUpdatedWebhook.js";
 export const initCusPrice = ({
   price,
   customer,
@@ -276,7 +277,6 @@ export const createFullCusProduct = async ({
   startsAt,
   subscriptionId,
   nextResetAt,
-  billLaterOnly = false,
   disableFreeTrial = false,
   lastInvoiceId = null,
   trialEndsAt = null,
@@ -290,6 +290,8 @@ export const createFullCusProduct = async ({
   carryExistingUsages = false,
   carryOverTrial = false,
   isDowngrade = false,
+  scenario = "default",
+  sendWebhook = true,
 }: {
   sb: SupabaseClient;
   attachParams: InsertCusProductParams;
@@ -311,6 +313,8 @@ export const createFullCusProduct = async ({
   carryExistingUsages?: boolean;
   carryOverTrial?: boolean;
   isDowngrade?: boolean;
+  scenario?: string;
+  sendWebhook?: boolean;
 }) => {
   disableFreeTrial = attachParams.disableFreeTrial || disableFreeTrial;
 
@@ -456,15 +460,32 @@ export const createFullCusProduct = async ({
     cusPrices,
   });
 
-  // await addTaskToQueue({
-  //   jobName: JobName.TriggerCheckoutReward,
-  //   payload: {
-  //     customer,
-  //     product,
-  //     org,
-  //     env: customer.env,
-  //   },
-  // });
+  try {
+    if (sendWebhook) {
+      await addTaskToQueue({
+        jobName: JobName.SendProductsUpdatedWebhook,
+        payload: constructProductsUpdatedData({
+          internalCustomerId: customer.internal_id,
+          org,
+          env: customer.env,
+          customerId: customer.id || null,
+
+          product: isDowngrade ? curCusProduct!.product : product,
+          prices: isDowngrade
+            ? curCusProduct!.customer_prices.map((cp) => cp.price)
+            : prices,
+          entitlements: isDowngrade
+            ? curCusProduct!.customer_entitlements.map((ce) => ce.entitlement)
+            : entitlements,
+
+          freeTrial,
+          scenario,
+        }),
+      });
+    }
+  } catch (error) {
+    logger.error("Failed to add products updated webhook task to queue");
+  }
 
   return {
     ...cusProd,

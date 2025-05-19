@@ -2,7 +2,6 @@ import { withOrgAuth } from "./authMiddleware.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { ErrCode } from "@autumn/shared";
-import RecaseError from "@/utils/errorUtils.js";
 import { floatToVersion } from "@/utils/versionUtils.js";
 
 // const parseVersion = (version: string) => {

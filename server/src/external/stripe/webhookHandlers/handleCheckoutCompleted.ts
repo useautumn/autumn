@@ -5,6 +5,7 @@ import { CusProductService } from "@/internal/customers/products/CusProductServi
 import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
 import {
   AppEnv,
+  AttachScenario,
   BillingType,
   CusProductStatus,
   FullProduct,
@@ -314,6 +315,7 @@ export const handleCheckoutSessionCompleted = async ({
           ? checkoutSub.current_period_end * 1000
           : undefined
         : undefined,
+      scenario: AttachScenario.New,
     });
   }
 

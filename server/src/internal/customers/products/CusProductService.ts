@@ -164,7 +164,7 @@ export class CusProductService {
         *, 
         product:products!inner(*, prices(*)),
         customer_prices:customer_prices(*, price:prices!inner(*)),
-        customer_entitlements:customer_entitlements!inner(*, entitlement:entitlements!inner(*, feature:features!inner(*))),
+        customer_entitlements:customer_entitlements(*, entitlement:entitlements!inner(*, feature:features!inner(*))),
         customer:customers!inner(*)
       `
       )
@@ -416,7 +416,13 @@ export class CusProductService {
   }) {
     const { data, error } = await sb
       .from("customer_products")
-      .select("*, product:products!inner(*)")
+      .select(
+        `*, 
+          product:products!inner(*), 
+          customer_entitlements:customer_entitlements(*, entitlement:entitlements!inner(*, feature:features!inner(*))), 
+          customer_prices:customer_prices(*, price:prices!inner(*))
+        `
+      )
       .eq("internal_customer_id", internalCustomerId)
       .eq("product.group", productGroup)
       .eq("status", CusProductStatus.Scheduled)
