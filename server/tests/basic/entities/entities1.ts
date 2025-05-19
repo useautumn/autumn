@@ -248,7 +248,7 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
       stripeCli,
       testClockId,
       advanceTo: advanceToDay,
-      waitForSeconds: 10,
+      waitForSeconds: 20,
     });
 
     await this.autumn.entities.create(customerId, newEntities);
