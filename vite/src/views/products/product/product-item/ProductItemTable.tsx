@@ -1,3 +1,4 @@
+import UpdateProductItem from "./UpdateProductItem";
 import {
   Feature,
   FeatureType,
@@ -14,8 +15,8 @@ import {
   intervalIsNone,
   itemIsFixedPrice,
 } from "@/utils/product/productItemUtils";
-import UpdateProductItem from "./UpdateProductItem";
-import { useEffect, useState } from "react";
+
+import { useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
 import { getFeature } from "@/utils/product/entitlementUtils";
 import { Badge } from "@/components/ui/badge";

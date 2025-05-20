@@ -68,6 +68,10 @@ export const ProductItemConfig = () => {
         setItem({
           ...item,
           feature_type: feature.config?.usage_type,
+          reset_usage_when_enabled:
+            feature.config?.usage_type == FeatureUsageType.Continuous
+              ? false
+              : true,
         });
       }
     }

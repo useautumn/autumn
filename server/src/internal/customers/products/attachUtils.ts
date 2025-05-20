@@ -7,6 +7,7 @@ import {
   Entitlement,
   EntitlementWithFeature,
   Entity,
+  EntityData,
   Feature,
   FeatureOptions,
   FreeTrial,
@@ -152,6 +153,7 @@ const getProducts = async ({
 const getCustomerAndProducts = async ({
   sb,
   org,
+  features,
   customerId,
   customerData,
   productId,
@@ -161,9 +163,11 @@ const getCustomerAndProducts = async ({
   logger,
   version,
   entityId,
+  entityData,
 }: {
   sb: SupabaseClient;
   org: Organization;
+  features: Feature[];
   customerData?: CustomerData;
   customerId: string;
   productId?: string;
@@ -172,11 +176,13 @@ const getCustomerAndProducts = async ({
   logger: any;
   version?: number;
   entityId?: string;
+  entityData?: EntityData;
 }) => {
   const [customer, products] = await Promise.all([
     getOrCreateCustomer({
       sb,
       org,
+      features,
       env,
       customerId,
       customerData,
@@ -186,8 +192,9 @@ const getCustomerAndProducts = async ({
         CusProductStatus.Scheduled,
         CusProductStatus.PastDue,
       ],
-      entityId,
       withEntities: true,
+      entityId,
+      entityData,
     }),
     getProducts({ sb, productId, productIds, orgId: org.id, env, version }),
   ]);
@@ -275,7 +282,6 @@ export const getFullCusProductData = async ({
   productId,
   entityId,
   productIds,
-  orgId,
   itemsInput,
   env,
   optionsListInput,
@@ -283,16 +289,15 @@ export const getFullCusProductData = async ({
   isCustom = false,
   logger,
   version,
+  entityData,
 }: {
   org: Organization;
   features: Feature[];
   sb: SupabaseClient;
   customerId: string;
   customerData?: Customer;
-  entityId?: string;
   productId?: string;
   productIds?: string[];
-  orgId: string;
   itemsInput: ProductItem[];
   env: AppEnv;
   optionsListInput: FeatureOptions[];
@@ -300,10 +305,13 @@ export const getFullCusProductData = async ({
   isCustom?: boolean;
   logger: any;
   version?: number;
+  entityId?: string;
+  entityData?: EntityData;
 }) => {
   // 1. Get customer, product, org & features
   const { customer, products, cusProducts } = await getCustomerAndProducts({
     org,
+    features,
     sb,
     customerId,
     customerData,
@@ -312,7 +320,9 @@ export const getFullCusProductData = async ({
     env,
     logger,
     version,
+
     entityId,
+    entityData,
   });
 
   if (!isCustom) {

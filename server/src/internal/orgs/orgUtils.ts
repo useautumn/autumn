@@ -3,6 +3,8 @@ import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, ErrCode, Organization } from "@autumn/shared";
 import { createSvixApp } from "@/external/svix/svixUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { OrgService } from "./OrgService.js";
+import { FeatureService } from "../features/FeatureService.js";
 
 export const initOrgSvixApps = async ({
   id,
@@ -95,4 +97,15 @@ export const createOrgResponse = (org: Organization) => {
     test_pkey: org.test_pkey,
     live_pkey: org.live_pkey,
   };
+};
+
+export const getOrgAndFeatures = async ({ req }: { req: any }) => {
+  let { orgId, env } = req;
+
+  let [org, features] = await Promise.all([
+    OrgService.getFromReq(req),
+    FeatureService.getFromReq(req),
+  ]);
+
+  return { org, features };
 };

@@ -19,7 +19,7 @@ export const RewardConfig = ({
   reward: Reward;
   setReward: (reward: Reward) => void;
 }) => {
-  const { org, products } = useProductsContext();
+  const { products } = useProductsContext();
   const [idChanged, setIdChanged] = useState(false);
 
   useEffect(() => {

@@ -30,11 +30,6 @@ export const SelectItemFeature = ({
         value={item.feature_id || ""}
         onValueChange={(value) => {
           setItem({ ...item, feature_id: value });
-          // setSelectedFeature(getFeature(value, features));
-          // setPriceConfig({
-          //   ...priceConfig,
-          //   internal_feature_id: value,
-          // });
         }}
         disabled={isUpdate}
       >
@@ -69,7 +64,14 @@ export const SelectItemFeature = ({
           variant="ghost"
           className="w-fit text-t3"
           onClick={() => {
-            setItem({ ...item, feature_id: null, included_usage: null });
+            setItem({
+              ...item,
+              feature_id: null,
+              included_usage: null,
+              feature_type: null,
+              tiers: null,
+              price: item.tiers?.[0]?.amount || 0,
+            });
             setShow({ ...show, feature: false });
           }}
         >

@@ -1,3 +1,5 @@
+import PerEntityConfig from "./PerEntityConfig";
+import TieredPrice from "../TieredPrice";
 import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import { SelectItemFeature } from "./SelectItemFeature";
 import { cn } from "@/lib/utils";
@@ -7,25 +9,16 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { InfoIcon, X } from "lucide-react";
+import { InfoIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useProductItemContext } from "../ProductItemContext";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import TieredPrice from "../TieredPrice";
-
 import { useProductContext } from "../../ProductContext";
-import {
-  Feature,
-  FeatureType,
-  FeatureUsageType,
-  Infinite,
-  ProductItemFeatureType,
-} from "@autumn/shared";
+import { FeatureType, Infinite, ProductItemFeatureType } from "@autumn/shared";
 import { itemIsUnlimited } from "@/utils/product/productItemUtils";
 import { SelectCycle } from "./SelectCycle";
 import MoreMenuButton, { MoreMenuPriceButton } from "../MoreMenuButton";
-import PerEntityConfig from "./PerEntityConfig";
+
 import { getFeature } from "@/utils/product/entitlementUtils";
 
 export const ConfigWithFeature = ({

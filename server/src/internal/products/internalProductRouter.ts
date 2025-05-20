@@ -1,26 +1,21 @@
 import { Router } from "express";
 import { FeatureService } from "../features/FeatureService.js";
 import { entitlementRouter } from "./entitlementRouter.js";
-
+import { StatusCodes } from "http-status-codes";
 import { ProductService } from "./ProductService.js";
 import { ErrCode, UsageModel } from "@autumn/shared";
-
 import { FeatureOptions } from "@autumn/shared";
-
 import { OrgService } from "../orgs/OrgService.js";
 import { RewardService } from "../rewards/RewardService.js";
 import { getProductVersionCounts } from "./productUtils.js";
 import { getLatestProducts } from "./productUtils.js";
-
 import { CusProdReadService } from "../customers/products/CusProdReadService.js";
 import { MigrationService } from "../migrations/MigrationService.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { mapToProductV2 } from "./productV2Utils.js";
-
 import { isFeaturePriceItem } from "./product-items/productItemUtils.js";
 
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
-import { StatusCodes } from "http-status-codes";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -63,7 +58,9 @@ productRouter.get("/data", async (req: any, res) => {
       ]);
 
     res.status(200).json({
-      products: getLatestProducts(products),
+      products: getLatestProducts(products).map((product) => {
+        return mapToProductV2({ product, features });
+      }),
       versionCounts: getProductVersionCounts(products),
       features,
       org: {

@@ -119,14 +119,22 @@ export class EntityService {
     internalId: string;
     update: any;
   }) {
-    const { error } = await sb
+    const { data, error } = await sb
       .from("entities")
       .update(update)
-      .eq("internal_id", internalId);
+      .eq("internal_id", internalId)
+      .select()
+      .single();
 
     if (error) {
+      if (error.code === "PGRST116") {
+        return null;
+      }
+
       throw error;
     }
+
+    return data;
   }
 
   static async getByInternalCustomerId({
