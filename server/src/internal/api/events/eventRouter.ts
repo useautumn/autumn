@@ -4,6 +4,7 @@ import {
   AppEnv,
   CreateEventSchema,
   CusProductStatus,
+  EntityData,
   ErrCode,
   Event,
   Feature,
@@ -36,20 +37,24 @@ const getEventAndCustomer = async ({
   sb,
   org,
   env,
+  features,
   customer_id,
   customer_data,
   event_data,
   logger,
   entityId,
+  entityData,
 }: {
   sb: SupabaseClient;
   org: Organization;
+  features: Feature[];
   env: AppEnv;
   customer_id: string;
   customer_data: any;
   event_data: any;
   entityId: string;
   logger: any;
+  entityData?: EntityData;
 }) => {
   if (!customer_id) {
     throw new RecaseError({
@@ -71,6 +76,8 @@ const getEventAndCustomer = async ({
     logger,
     entityId,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    entityData,
+    features,
   });
 
   // 3. Insert event
@@ -152,7 +159,7 @@ export const handleEventSent = async ({
   const { sb, pg, orgId, env } = req;
 
   const org = await OrgService.getFromReq(req);
-
+  const features = await FeatureService.getFromReq(req);
   const { customer, event } = await getEventAndCustomer({
     sb,
     org,
@@ -162,6 +169,8 @@ export const handleEventSent = async ({
     event_data,
     logger: req.logtail,
     entityId: event_data.entity_id,
+    entityData: event_data.entity_data,
+    features,
   });
 
   const affectedFeatures = await getAffectedFeatures({

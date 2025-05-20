@@ -20,5 +20,11 @@ export const CreateEntitySchema = z.object({
   feature_id: z.string(), // Feature ID of entity
 });
 
+export const EntityDataSchema = z.object({
+  name: z.string(), // Name of entity
+  feature_id: z.string(), // Feature ID of entity
+});
+
 export type Entity = z.infer<typeof EntitySchema>;
 export type CreateEntity = z.infer<typeof CreateEntitySchema>;
+export type EntityData = z.infer<typeof EntityDataSchema>;

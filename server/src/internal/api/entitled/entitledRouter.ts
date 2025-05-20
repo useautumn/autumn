@@ -9,17 +9,18 @@ import {
   Organization,
 } from "@autumn/shared";
 
+import {
+  cusEntsContainFeature,
+  getFeatureBalance,
+  getUnlimitedAndUsageAllowed,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
+
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 
 import { handleEventSent } from "../events/eventRouter.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import {
-  cusEntsContainFeature,
-  getFeatureBalance,
-  getUnlimitedAndUsageAllowed,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -27,7 +28,6 @@ import { SuccessCode } from "@autumn/shared";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 import { getBooleanEntitledResult } from "./checkUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-
 import { getCheckPreview } from "./getCheckPreview.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 
@@ -201,39 +201,34 @@ const getCusEntsAndFeatures = async ({
 }) => {
   let { customer_id, feature_id, customer_data, entity_id } = req.body;
 
-  let { sb, orgId, env } = req;
+  let { sb, env } = req;
 
   // 1. Get org and features
   const startTime = Date.now();
 
   // Fetch org, feature, and customer in parallel
-  const [org, featureRes, customer] = await Promise.all([
+  const [org, featureRes] = await Promise.all([
     OrgService.getFromReq(req),
     getFeatureAndCreditSystems({
       req,
       featureId: feature_id,
     }),
-    getOrCreateCustomer({
-      sb,
-      org: req.org,
-      env,
-      customerId: customer_id,
-      customerData: customer_data,
-      inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-      logger,
-      entityId: entity_id,
-    }),
   ]);
 
-  if (entity_id && !customer.entity) {
-    throw new RecaseError({
-      message: `Entity ${entity_id} not found for customer ${customer_id}`,
-      code: ErrCode.EntityNotFound,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-  }
-
   const { feature, creditSystems, allFeatures } = featureRes;
+
+  const customer = await getOrCreateCustomer({
+    sb,
+    org: req.org,
+    env,
+    customerId: customer_id,
+    customerData: customer_data,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    logger,
+    entityId: entity_id,
+    entityData: req.body.entity_data,
+    features: allFeatures,
+  });
 
   const duration = Date.now() - startTime;
   console.log(`/check: fetched org, features & customer in ${duration}ms`);

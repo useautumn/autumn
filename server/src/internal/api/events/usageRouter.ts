@@ -19,6 +19,7 @@ import { JobName } from "@/queue/JobName.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 export const eventsRouter = Router();
 export const usageRouter = Router();
 
@@ -36,8 +37,8 @@ const getCusFeatureAndOrg = async ({
   customerData: any;
 }) => {
   // 1. Get customer
-  let org = await OrgService.getFromReq(req);
-  let [customer, features] = await Promise.all([
+  let { org, features } = await getOrgAndFeatures({ req });
+  let [customer] = await Promise.all([
     getOrCreateCustomer({
       sb: req.sb,
       org,
@@ -45,10 +46,12 @@ const getCusFeatureAndOrg = async ({
       customerId,
       customerData,
       logger: req.logtail,
-      entityId,
       inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+
+      entityId,
+      entityData: req.body.entity_data,
+      features,
     }),
-    FeatureService.getFromReq(req),
   ]);
 
   let feature = features.find((f) => f.id == featureId);

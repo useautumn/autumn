@@ -425,6 +425,10 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
         CusProductStatus.Scheduled,
       ],
       expand,
+
+      features,
+      entityId: data.entity_id,
+      entityData: data.entity_data,
     });
 
     let cusDetails = await getCustomerDetails({

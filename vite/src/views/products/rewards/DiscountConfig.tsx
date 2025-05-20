@@ -10,6 +10,7 @@ import {
   CouponDurationType,
   DiscountType,
   RewardType,
+  ProductItem,
 } from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import {
@@ -29,6 +30,8 @@ import { Check, ChevronsUpDown, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { isFeatureItem } from "@/utils/product/getItemType";
+import { formatProductItemText } from "@/utils/product/product-item/formatProductItem";
 
 export const DiscountConfig = ({
   reward,
@@ -48,7 +51,7 @@ export const DiscountConfig = ({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 w-[400px]">
       <div className="flex items-center gap-2">
         <div className="w-6/12">
           <FieldLabel>Amount</FieldLabel>
@@ -129,7 +132,7 @@ const ProductPriceSelector = ({
   reward: Reward;
   setReward: (reward: Reward) => void;
 }) => {
-  const { products, features } = useProductsContext();
+  const { products, features, org } = useProductsContext();
   const [open, setOpen] = useState(false);
 
   let config = reward.discount_config!;
@@ -172,7 +175,7 @@ const ProductPriceSelector = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50"
+          className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50 max-w-[400px]"
         >
           {config.apply_to_all ? (
             "All Products"
@@ -183,9 +186,19 @@ const ProductPriceSelector = ({
               {config.price_ids.map((priceId) => (
                 <div
                   key={priceId}
-                  className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit"
+                  className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit max-w-full"
                 >
-                  <p>{getPriceText(priceId)}</p>
+                  <p className="truncate">
+                    {formatProductItemText({
+                      item: products
+                        .find((p: any) =>
+                          p.items.find((i: any) => i.price_id === priceId)
+                        )
+                        .items.find((i: any) => i.price_id === priceId),
+                      org,
+                      features,
+                    })}
+                  </p>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -226,20 +239,31 @@ const ProductPriceSelector = ({
               {!config.apply_to_all &&
                 products.map((product: any) => (
                   <CommandGroup key={product.id} heading={product.name}>
-                    {product.prices.length > 0 ? (
-                      product.prices?.map((price: any) => (
-                        <CommandItem
-                          key={price.id}
-                          value={price.id}
-                          onSelect={() => handlePriceToggle(price.id)}
-                          className="cursor-pointer"
-                        >
-                          <div className="flex items-center">{price.name}</div>
-                          {config.price_ids.includes(price.id) && (
-                            <Check size={12} className="text-t3" />
-                          )}
-                        </CommandItem>
-                      ))
+                    {product.items.length > 0 ? (
+                      product.items
+                        ?.filter((item: ProductItem) => {
+                          return !isFeatureItem(item);
+                        })
+                        .map((item: any) => (
+                          <CommandItem
+                            key={item.id}
+                            value={item.id}
+                            onSelect={() => handlePriceToggle(item.price_id)}
+                            className="cursor-pointer overflow-x-hidden max-w-[380px]"
+                          >
+                            <span className="truncate overflow-x-hidden">
+                              {formatProductItemText({
+                                item,
+                                org,
+                                features,
+                              })}
+                            </span>
+
+                            {config.price_ids.includes(item.price_id) && (
+                              <Check size={12} className="text-t3" />
+                            )}
+                          </CommandItem>
+                        ))
                     ) : (
                       <CommandItem disabled>
                         <p className="text-sm text-t3">No prices available</p>

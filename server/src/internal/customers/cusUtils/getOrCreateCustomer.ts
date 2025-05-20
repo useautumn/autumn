@@ -7,16 +7,21 @@ import {
   CusExpand,
   CusProductStatus,
   CustomerData,
+  EntityData,
   ErrCode,
+  Feature,
   FullCustomer,
   Organization,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+
+import { createEntities } from "@/internal/api/entities/handleCreateEntity.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
 
 export const getOrCreateCustomer = async ({
   sb,
   org,
+  features,
   customerId,
   customerData,
   env,
@@ -28,11 +33,15 @@ export const getOrCreateCustomer = async ({
   ],
   skipGet = false,
   withEntities = false,
-  entityId,
   expand,
+
+  // Entity stuff
+  entityId,
+  entityData,
 }: {
   sb: SupabaseClient;
   org: Organization;
+  features: Feature[];
   env: AppEnv;
   customerId: string;
   customerData?: CustomerData;
@@ -40,8 +49,9 @@ export const getOrCreateCustomer = async ({
   inStatuses?: CusProductStatus[];
   skipGet?: boolean;
   withEntities?: boolean;
-  entityId?: string;
   expand?: CusExpand[];
+  entityId?: string;
+  entityData?: EntityData;
 }): Promise<FullCustomer> => {
   let customer;
 
@@ -112,11 +122,34 @@ export const getOrCreateCustomer = async ({
   });
 
   if (entityId && !customer.entity) {
-    throw new RecaseError({
-      message: `Entity ${entityId} not found for customer ${customerId}`,
-      code: ErrCode.EntityNotFound,
-      statusCode: StatusCodes.BAD_REQUEST,
+    logger.info(`Auto creating entity ${entityId} for customer ${customerId}`);
+
+    let newEntities = await createEntities({
+      sb,
+      org,
+      customerId,
+      createEntityData: {
+        id: entityId,
+        name: entityData?.name,
+        feature_id: entityData?.feature_id,
+      },
+      features,
+      env,
+      logger,
+      fromAutoCreate: true,
     });
+
+    customer.entities = [...(customer.entities || []), ...newEntities];
+    customer.entity = newEntities.length > 0 ? newEntities[0] : null;
+
+    if (customer.entity === null) {
+      throw new RecaseError({
+        message: `Entity ${entityId} not found for customer ${customerId}. This entity must be createdfirst as it has a price associated with it.`,
+        code: ErrCode.EntityNotFound,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
   }
+
   return customer as FullCustomer;
 };

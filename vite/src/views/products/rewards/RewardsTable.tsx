@@ -1,21 +1,7 @@
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { useProductsContext } from "../ProductsContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import {
-  Reward,
-  CouponDurationType,
-  DiscountType,
-  RewardType,
-  Product,
-} from "@autumn/shared";
+import { Reward, RewardType, Product } from "@autumn/shared";
 import UpdateReward from "./UpdateReward";
 import { useState } from "react";
 import { RewardRowToolbar } from "./RewardRowToolbar";
@@ -27,16 +13,7 @@ export const RewardsTable = () => {
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [open, setOpen] = useState(false);
 
-  // const handleRowClick = (id: string) => {
-  //   const creditSystem = creditSystems.find(
-  //     (creditSystem: Feature) => creditSystem.id === id
-  //   );
-  //   console.log(creditSystem);
-  //   if (!creditSystem) return;
-
-  //   setSelectedCreditSystem(creditSystem);
-  //   setOpen(true);
-  // };
+  console.log("products: ", products);
 
   return (
     <>
@@ -100,10 +77,6 @@ export const RewardsTable = () => {
           </Item>
           <Item className="col-span-2 text-t3 text-xs">
             {formatUnixToDateTime(reward.created_at).date}
-            {/* <span className="text-t3">
-              {" "}
-              {formatUnixToDateTime(reward.created_at).time}
-            </span> */}
           </Item>
           <Item className="col-span-1 items-center justify-end">
             <RewardRowToolbar reward={reward} />

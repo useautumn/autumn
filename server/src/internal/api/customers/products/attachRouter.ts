@@ -255,8 +255,9 @@ attachRouter.post("/attach", async (req: any, res) => {
     const {
       customer_id,
       product_id,
-      entity_id,
       customer_data,
+      entity_id,
+      entity_data,
 
       is_custom,
       // prices,
@@ -315,7 +316,6 @@ attachRouter.post("/attach", async (req: any, res) => {
       entityId: entity_id,
       customerData: customer_data,
       org,
-      orgId: org.id,
       features,
       env,
       itemsInput,
@@ -325,6 +325,7 @@ attachRouter.post("/attach", async (req: any, res) => {
       productIds: product_ids,
       logger,
       version,
+      entityData: entity_data,
     });
 
     attachParams.apiVersion =

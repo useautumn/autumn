@@ -13,9 +13,9 @@ import {
 import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
 import { removeEntityFromCusEnt } from "./entityUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
+
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
 import { removeScheduledProduct } from "../customers/handlers/handleCusProductExpired.js";

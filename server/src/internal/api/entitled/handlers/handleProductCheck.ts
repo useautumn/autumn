@@ -14,6 +14,7 @@ import { getAttachPreview } from "./getAttachPreview.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 
 export const handleProductCheck = async ({
   req,
@@ -22,34 +23,43 @@ export const handleProductCheck = async ({
   req: any;
   res: any;
 }) => {
-  const { customer_id, product_id, entity_id, customer_data, with_preview } =
-    req.body;
+  const {
+    customer_id,
+    product_id,
+    entity_id,
+    customer_data,
+    with_preview,
+    entity_data,
+  } = req.body;
   const { orgId, sb, env, logtail: logger } = req;
 
+  let { org, features } = await getOrgAndFeatures({ req });
+
   // 1. Get customer and org
-  let [customer, org, product, features] = await Promise.all([
+  let [customer, product] = await Promise.all([
     getOrCreateCustomer({
       sb,
-      org: req.org,
+      org,
       env,
       customerId: customer_id,
       customerData: customer_data,
-      entityId: entity_id,
       logger,
       inStatuses: [
         CusProductStatus.Active,
         CusProductStatus.PastDue,
         CusProductStatus.Scheduled,
       ],
+      features,
+
+      entityId: entity_id,
+      entityData: entity_data,
     }),
-    OrgService.getFromReq(req),
     ProductService.getFullProduct({
       sb,
       orgId,
       env,
       productId: product_id,
     }),
-    FeatureService.getFromReq(req),
   ]);
 
   let cusProducts = customer.customer_products;
