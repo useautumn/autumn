@@ -146,12 +146,12 @@ export const cancelCusProductSubscriptions = async ({
       }
 
       console.log(
-        `Cancelled stripe subscription ${subId}, org: ${org.slug}, product: ${cusProduct.product.name}, customer: ${cusProduct.customer.id}`
+        `Cancelled stripe subscription ${subId}, org: ${org.slug}, product: ${cusProduct.product.name}, customer: ${cusProduct.customer.id}`,
       );
     } catch (error: any) {
       if (error.code != "resource_missing") {
         console.log(
-          `Error canceling stripe subscription ${error.code}: ${error.message}`
+          `Error canceling stripe subscription ${error.code}: ${error.message}`,
         );
       } // else subscription probably already cancelled
     }
@@ -287,7 +287,7 @@ export const activateFutureProduct = async ({
 
   if (subIsPrematurelyCanceled(subscription)) {
     console.log(
-      "   🔔 Subscription prematurely canceled, deleting scheduled products"
+      "   🔔 Subscription prematurely canceled, deleting scheduled products",
     );
 
     await deleteScheduledIds({
@@ -308,10 +308,10 @@ export const activateFutureProduct = async ({
 
     let product = futureProduct.product;
     let prices = futureProduct.customer_prices.map(
-      (cp: FullCustomerPrice) => cp.price
+      (cp: FullCustomerPrice) => cp.price,
     );
     let entitlements = futureProduct.customer_entitlements.map(
-      (ce: FullCustomerEntitlement) => ce.entitlement
+      (ce: FullCustomerEntitlement) => ce.entitlement,
     );
 
     await addProductsUpdatedWebhookTask({
@@ -335,7 +335,7 @@ export const activateFutureProduct = async ({
 export const fullCusProductToCusEnts = (
   cusProducts: FullCusProduct[],
   inStatuses: CusProductStatus[] = [CusProductStatus.Active],
-  reverseOrder: boolean = false
+  reverseOrder: boolean = false,
 ) => {
   const cusEnts: FullCustomerEntitlement[] = [];
 
@@ -348,7 +348,7 @@ export const fullCusProductToCusEnts = (
       ...cusProduct.customer_entitlements.map((cusEnt) => ({
         ...cusEnt,
         customer_product: CusProductSchema.parse(cusProduct),
-      }))
+      })),
     );
   }
 
@@ -359,7 +359,7 @@ export const fullCusProductToCusEnts = (
 
 export const fullCusProductToCusPrices = (
   cusProducts: FullCusProduct[],
-  inStatuses: CusProductStatus[] = [CusProductStatus.Active]
+  inStatuses: CusProductStatus[] = [CusProductStatus.Active],
 ) => {
   const cusPrices: FullCustomerPrice[] = [];
 
@@ -467,7 +467,7 @@ export const processFullCusProduct = ({
     org.config.api_version >= BREAK_API_VERSION
   ) {
     let baseSub = subs?.find(
-      (s) => s.id == subIds[0] || (s as Subscription).stripe_id == subIds[0]
+      (s) => s.id == subIds[0] || (s as Subscription).stripe_id == subIds[0],
     );
     stripeSubData = {
       current_period_end: baseSub?.current_period_end
@@ -476,6 +476,13 @@ export const processFullCusProduct = ({
       current_period_start: baseSub?.current_period_start
         ? baseSub.current_period_start * 1000
         : null,
+    };
+  }
+
+  if (!subIds && trialing) {
+    stripeSubData = {
+      current_period_start: cusProduct.starts_at,
+      current_period_end: cusProduct.trial_ends_at,
     };
   }
 
@@ -575,7 +582,7 @@ export const getMainCusProduct = async ({
   });
 
   let mainCusProduct = cusProducts.find(
-    (cusProduct: FullCusProduct) => !cusProduct.product.is_add_on
+    (cusProduct: FullCusProduct) => !cusProduct.product.is_add_on,
   );
 
   return mainCusProduct;

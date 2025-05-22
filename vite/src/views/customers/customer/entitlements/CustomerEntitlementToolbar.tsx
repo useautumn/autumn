@@ -1,5 +1,4 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faEllipsisVertical, faTrash } from "@fortawesome/pro-solid-svg-icons";
 
 import {
   DropdownMenu,

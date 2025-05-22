@@ -40,7 +40,7 @@ productApiRouter.get("", async (req: any, res) => {
     ]);
 
     let prods = products.map((p) =>
-      getProductResponse({ product: p, features })
+      getProductResponse({ product: p, features }),
     );
 
     if (req.query.v1_schema === "true") {
@@ -97,7 +97,7 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
           env,
           product,
           logger,
-        })
+        }),
       );
       await Promise.all(batchPromises);
     }
@@ -118,10 +118,10 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
             price,
             entitlements,
             product: fullProducts.find(
-              (p) => p.internal_id == price.internal_product_id
+              (p) => p.internal_id == price.internal_product_id,
             )!,
             logger,
-          })
+          }),
         );
       }
 

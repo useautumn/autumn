@@ -222,10 +222,17 @@ export const adjustAllowance = async ({
         });
 
         if (!paid) {
-          await stripeCli.invoices.voidInvoice(invoice.id);
+          try {
+            await stripeCli.invoices.voidInvoice(invoice.id);
+          } catch (error: any) {}
+
           throw new RecaseError({
             message: "Failed to pay for invoice",
             code: ErrCode.PayInvoiceFailed,
+            data: {
+              invoiceId: invoice.id,
+              error,
+            },
           });
         }
 
@@ -259,10 +266,6 @@ export const adjustAllowance = async ({
           internalProductIds: [product!.internal_id],
           items: invoiceItems,
         });
-
-        if (!paid) {
-          logger.warn("❗️ Failed to pay for invoice!");
-        }
       }
     }
   }

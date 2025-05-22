@@ -26,5 +26,5 @@ createRoot(document.getElementById("root")!).render(
         <App />
       </PostHogProvider>
     </ClerkProvider>
-  </StrictMode>
+  </StrictMode>,
 );

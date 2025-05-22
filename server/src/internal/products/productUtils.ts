@@ -108,6 +108,7 @@ export const constructProduct = ({
     processor,
     internal_id: generateId("prod"),
     created_at: Date.now(),
+    version: 1,
   };
 
   return newProduct;
@@ -132,10 +133,10 @@ export const isProductUpgrade = ({
 
   if (
     prices1.every(
-      (p) => getBillingType(p.config!) === BillingType.UsageInArrear
+      (p) => getBillingType(p.config!) === BillingType.UsageInArrear,
     ) &&
     prices2.every(
-      (p) => getBillingType(p.config!) === BillingType.UsageInArrear
+      (p) => getBillingType(p.config!) === BillingType.UsageInArrear,
     ) &&
     usageAlwaysUpgrade
   ) {
@@ -177,7 +178,7 @@ export const isProductUpgrade = ({
 
 export const isSameBillingInterval = (
   product1: FullProduct,
-  product2: FullProduct
+  product2: FullProduct,
 ) => {
   return (
     getBillingInterval(product1.prices) === getBillingInterval(product2.prices)
@@ -194,7 +195,7 @@ export const isFreeProduct = (prices: Price[]) => {
     if ("usage_tiers" in price.config!) {
       totalPrice += price.config!.usage_tiers.reduce(
         (acc, tier) => acc + tier.amount,
-        0
+        0,
       );
     } else {
       totalPrice += price.config!.amount;
@@ -214,7 +215,7 @@ export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
     // get billing tyoe
     const billingType = getBillingType(price.config!);
     const feature = features.find(
-      (f) => f.internal_id === config.internal_feature_id
+      (f) => f.internal_id === config.internal_feature_id,
     );
 
     if (!feature) {
@@ -261,7 +262,7 @@ export const checkStripeProductExists = async ({
   } else {
     try {
       let stripeProduct = await stripeCli.products.retrieve(
-        product.processor!.id
+        product.processor!.id,
       );
       if (!stripeProduct.active) {
         createNew = true;
@@ -298,7 +299,7 @@ export const getPricesForProduct = (product: FullProduct, prices: Price[]) => {
 
 export const attachToInsertParams = (
   attachParams: AttachParams,
-  product: FullProduct
+  product: FullProduct,
 ) => {
   return {
     ...attachParams,
@@ -357,7 +358,7 @@ export const copyProduct = async ({
         created_at: Date.now(),
         internal_product_id: newProduct.internal_id,
         internal_feature_id: feature.internal_id,
-      })
+      }),
     );
 
     newEntIds[entitlement.id!] = newId;
@@ -409,7 +410,7 @@ export const copyProduct = async ({
         org_id: toOrgId,
         internal_product_id: newProduct.internal_id,
         config: config,
-      })
+      }),
     );
   }
 
@@ -496,7 +497,7 @@ export const initProductInStripe = async ({
         entitlements: product.entitlements,
         product: product,
         logger,
-      })
+      }),
     );
   }
 
@@ -547,7 +548,7 @@ export const productsAreDifferent = ({
 
   for (const entitlement of product1.entitlements) {
     let newEntitlement = product2.entitlements.find(
-      (e) => e.id === entitlement.id
+      (e) => e.id === entitlement.id,
     );
     if (!newEntitlement) {
       return true;
@@ -560,7 +561,7 @@ export const productsAreDifferent = ({
 
   for (const entitlement of product2.entitlements) {
     let newEntitlement = product1.entitlements.find(
-      (e) => e.id === entitlement.id
+      (e) => e.id === entitlement.id,
     );
     if (!newEntitlement) {
       return true;
@@ -581,7 +582,7 @@ export const productsAreDifferent = ({
 export const productsAreDifferent2 = (
   newProduct: ProductV2,
   oldProduct: FullProduct,
-  features: Feature[]
+  features: Feature[],
 ) => {
   let newProductItems = newProduct.items;
   let oldProductItems = mapToProductItems({
@@ -597,7 +598,7 @@ export const productsAreDifferent2 = (
   for (const item of newProductItems) {
     let oldItem = oldProductItems.find(
       (i) =>
-        i.price_id == item.price_id || i.entitlement_id == item.entitlement_id
+        i.price_id == item.price_id || i.entitlement_id == item.entitlement_id,
     );
 
     if (!oldItem) {

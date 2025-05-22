@@ -13,6 +13,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { validateProductItems } from "./validateProductItems.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { isFeatureItem } from "./getItemType.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const updateDbPricesAndEnts = async ({
   sb,
@@ -76,7 +77,7 @@ const updateDbPricesAndEnts = async ({
     let updateOrDelete: any = [];
     for (const ent of deletedEnts) {
       let hasCustomPrice = customPrices.some(
-        (price) => price.entitlement_id == ent.id
+        (price) => price.entitlement_id == ent.id,
       );
 
       if (hasCustomPrice) {
@@ -87,14 +88,14 @@ const updateDbPricesAndEnts = async ({
             updates: {
               is_custom: true,
             },
-          })
+          }),
         );
       } else {
         updateOrDelete.push(
           EntitlementService.deleteByIds({
             sb,
             entitlementIds: [ent.id!],
-          })
+          }),
         );
       }
     }
@@ -142,6 +143,7 @@ const handleCustomProductItems = async ({
 };
 
 export const handleNewProductItems = async ({
+  db,
   sb,
   curPrices,
   curEnts,
@@ -152,6 +154,7 @@ export const handleNewProductItems = async ({
   isCustom,
   newVersion,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   curPrices: Price[];
   curEnts: Entitlement[];
@@ -198,7 +201,7 @@ export const handleNewProductItems = async ({
   });
 
   let deletedEnts: Entitlement[] = curEnts.filter(
-    (ent) => !newItems.some((item) => item.entitlement_id == ent.id)
+    (ent) => !newItems.some((item) => item.entitlement_id == ent.id),
   );
 
   let samePrices: Price[] = [];
@@ -248,15 +251,16 @@ export const handleNewProductItems = async ({
   }
 
   logger.info(
-    `Prices: new(${newPrices.length}), updated(${updatedPrices.length}), deleted(${deletedPrices.length})`
+    `Prices: new(${newPrices.length}), updated(${updatedPrices.length}), deleted(${deletedPrices.length})`,
   );
 
   logger.info(
-    `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`
+    `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`,
   );
 
   if (newFeatures.length > 0) {
     await FeatureService.insert({
+      db,
       sb,
       data: newFeatures,
       logger,

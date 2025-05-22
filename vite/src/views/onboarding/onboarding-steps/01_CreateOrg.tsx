@@ -17,8 +17,8 @@ export const CreateOrgStep = ({
   pollForOrg: () => Promise<void>;
 }) => {
   const { organization: org } = useOrganization();
-  let env = useEnv();
-  let axios = useAxiosInstance({ env });
+  const env = useEnv();
+  const axios = useAxiosInstance({ env });
   const { createOrganization, setActive } = useOrganizationList();
 
   const [isExploding, setIsExploding] = useState(false);
@@ -42,9 +42,11 @@ export const CreateOrgStep = ({
       });
 
       // Create org in Autumn
-      await axios.post("/organization", {
+      const res = await axios.post("/organization", {
         orgId: org.id,
       });
+
+      console.log("Org created in Autumn", res);
 
       await setActive({ organization: org.id });
       // await pollForOrg();

@@ -130,7 +130,7 @@ export const handlePublicAttachErrors = async ({
 
   // 1. If on paid plan, not allowed to switch product
   const curProductFree = isFreeProduct(
-    curCusProduct?.customer_prices.map((cp: any) => cp.price) || [] // if no current product...
+    curCusProduct?.customer_prices.map((cp: any) => cp.price) || [], // if no current product...
   );
 
   if (!curProductFree) {
@@ -192,7 +192,7 @@ export const checkStripeConnections = async ({
         env,
         product,
         logger,
-      })
+      }),
     );
   }
   await Promise.all(batchProductUpdates);
@@ -229,7 +229,7 @@ export const createStripePrices = async ({
         logger,
         internalEntityId: attachParams.internalEntityId,
         useCheckout,
-      })
+      }),
     );
   }
   await Promise.all(batchPriceUpdates);
@@ -311,6 +311,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     // Get curCusProducts too...
     const attachParams: AttachParams = await getFullCusProductData({
       sb,
+      db: req.db,
       customerId: customer_id,
       productId: product_id,
       entityId: entity_id,
@@ -344,10 +345,10 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     logger.info(
       `Customer: ${chalk.yellow(
-        `${attachParams.customer.id} (${attachParams.customer.name})`
+        `${attachParams.customer.id} (${attachParams.customer.name})`,
       )}, Products: ${chalk.yellow(
-        attachParams.products.map((p) => p.id).join(", ")
-      )}`
+        attachParams.products.map((p) => p.id).join(", "),
+      )}`,
     );
 
     // 3. Check for stripe connection
@@ -363,16 +364,16 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     logger.info(
       `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(
-        forceCheckout
-      )}`
+        forceCheckout,
+      )}`,
     );
     logger.info(
       `Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
-        isCustom
+        isCustom,
       )}, Invoice Only: ${chalk.yellow(invoiceOnly)}`,
       {
         details: { hasPm, forceCheckout, useCheckout, isCustom, invoiceOnly },
-      }
+      },
     );
 
     // -------------------- ERROR CHECKING --------------------
