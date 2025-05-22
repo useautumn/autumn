@@ -29,7 +29,9 @@ const init = async () => {
   server.keepAliveTimeout = 120000; // 120 seconds
   server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
 
-  const pgClient = new pg.Client(process.env.SUPABASE_CONNECTION_STRING || "");
+  const pgClient = new pg.Client(
+    process.env.SUPABASE_CONNECTION_STRING || process.env.DATABASE_URL || "",
+  );
   await pgClient.connect();
 
   await QueueManager.getInstance(); // initialize the queue manager
@@ -96,8 +98,8 @@ const init = async () => {
 
     console.log(
       `${chalk.gray(format(new Date(), "dd MMM HH:mm:ss"))} ${methodColor(
-        method
-      )} ${chalk.white(path)}`
+        method,
+      )} ${chalk.white(path)}`,
     );
 
     next();
