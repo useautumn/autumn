@@ -17,6 +17,7 @@ import { CreateSecretKey } from "./onboarding-steps/04_CreateSecretKey";
 import AttachProduct from "./onboarding-steps/04_AttachProduct";
 import CheckAccessStep from "./onboarding-steps/05_CheckAccess";
 import Install from "./onboarding-steps/Install";
+import LoadingScreen from "../general/LoadingScreen";
 
 function OnboardingView() {
   const env = useEnv();
@@ -25,11 +26,35 @@ function OnboardingView() {
   const [searchParams] = useSearchParams();
   const [orgCreated, setOrgCreated] = useState(org ? true : false);
 
-  let [apiKey, setApiKey] = useState("");
-  let [productId, setProductId] = useState("");
-  const hasHandledOrg = useRef(false);
+  const [apiKey, setApiKey] = useState("");
+  const [productId, setProductId] = useState("");
 
+  const hasHandledOrg = useRef(false);
+  const hasHandledToken = useRef(false);
   const axiosInstance = useAxiosInstance({ env });
+
+  const [loading, setLoading] = useState(
+    searchParams.get("token") ? true : false,
+  );
+
+  const handleToken = async () => {
+    if (searchParams.get("token")) {
+      console.log("Token: ", searchParams.get("token"));
+      axiosInstance.post("/onboarding", {
+        token: searchParams.get("token"),
+      });
+
+      // await new Promise((resolve) => setTimeout(resolve, 3000));
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (searchParams.get("token") && !hasHandledToken.current) {
+      hasHandledToken.current = true;
+      handleToken();
+    }
+  }, [searchParams]);
 
   const {
     data: productData,
@@ -73,11 +98,14 @@ function OnboardingView() {
 
   useEffect(() => {
     if (org && !orgCreated && !hasHandledOrg.current) {
-      // console.log("Gonna poll for org!");
       hasHandledOrg.current = true;
       pollForOrg();
     }
   }, [org, orgCreated]);
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="text-sm w-full flex justify-start">

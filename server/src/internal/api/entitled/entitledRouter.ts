@@ -463,6 +463,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     if (apiVersion >= APIVersion.v1_1) {
       res.status(200).json({
         customer_id,
+        entity_id,
         feature_id: featureToUse?.id,
         required_balance: balanceObj?.required,
         code: SuccessCode.FeatureFound,

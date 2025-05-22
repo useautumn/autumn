@@ -17,6 +17,7 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { handleOrgCreated } from "@/external/webhooks/clerkWebhooks.js";
 import { autumnHandler } from "autumn-js/express";
+import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
 
 const mainRouter = Router();
 
@@ -24,8 +25,11 @@ mainRouter.get("", async (req: any, res) => {
   res.status(200).json({ message: "Hello World" });
 });
 
+mainRouter.use("/onboarding", withAuth, onboardingRouter);
+
 mainRouter.post("/organization", withAuth, async (req: any, res) => {
   try {
+    let { db } = req;
     let { orgId } = req.body;
 
     let userId = req.userId;
@@ -57,13 +61,12 @@ mainRouter.post("/organization", withAuth, async (req: any, res) => {
       });
     }
 
-    handleOrgCreated(req.sb, {
+    await handleOrgCreated(db, {
       id: orgId,
       slug: org.slug || "",
       created_at: Date.now(),
-    });
-
-    res.status(200).json({ message: "Success" });
+    }),
+      res.status(200).json({ message: "Success" });
   } catch (error: any) {
     handleRequestError({ error, req, res, action: "create org" });
   }
@@ -97,7 +100,7 @@ mainRouter.use(
         },
       };
     },
-  })
+  }),
 );
 
 export default mainRouter;

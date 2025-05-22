@@ -26,10 +26,6 @@ export * from "./models/cusModels/cusPriceModels/cusPriceModels.js";
 export * from "./models/cusModels/invoiceModels/invoiceModels.js";
 export * from "./models/cusModels/cusResponseModels.js";
 
-// Org Models
-export * from "./models/orgModels.js";
-export * from "./models/orgModels/orgConfigModels.js";
-
 // Error Codes
 export * from "./errors/errCode.js";
 export * from "./errors/internalErrCode.js";
@@ -74,3 +70,8 @@ export * from "./models/checkModels/checkPreviewModels.js";
 
 // Reward Models
 export * from "./models/rewardModels/rewardResponseModels.js";
+
+// Org Models
+export * from "./models/orgModels/orgModels.js";
+export * from "./models/orgModels/orgConfigModels.js";
+export * from "./models/orgModels/chatResultModels.js";

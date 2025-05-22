@@ -36,6 +36,7 @@ import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCu
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { getBillingType } from "@/internal/prices/priceUtils.js";
 import { Decimal } from "decimal.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const getProducts = async ({
   sb,
@@ -132,7 +133,7 @@ const getProducts = async ({
         // Find another product in the same group that is not an add-on
         const otherProduct = products.find(
           (p) =>
-            p.group === product.group && !p.is_add_on && p.id !== product.id
+            p.group === product.group && !p.is_add_on && p.id !== product.id,
         );
         if (otherProduct) {
           throw new RecaseError({
@@ -208,7 +209,7 @@ const getEntsWithFeature = (ents: Entitlement[], features: Feature[]) => {
   return ents.map((ent) => ({
     ...ent,
     feature: features.find(
-      (f) => f.internal_id === ent.internal_feature_id
+      (f) => f.internal_id === ent.internal_feature_id,
     ) as Feature,
   }));
 };
@@ -225,7 +226,7 @@ const mapOptionsList = ({
   let newOptionsList: FeatureOptions[] = [];
   for (const options of optionsListInput) {
     const feature = features.find(
-      (feature) => feature.id === options.feature_id
+      (feature) => feature.id === options.feature_id,
     );
 
     if (!feature) {
@@ -242,7 +243,7 @@ const mapOptionsList = ({
         (p) =>
           getBillingType(p.config!) == BillingType.UsageInAdvance &&
           feature.internal_id ==
-            (p.config as UsagePriceConfig).internal_feature_id
+            (p.config as UsagePriceConfig).internal_feature_id,
       );
 
       if (!prepaidPrice) {
@@ -274,6 +275,7 @@ const mapOptionsList = ({
 };
 
 export const getFullCusProductData = async ({
+  db,
   org,
   features,
   sb,
@@ -291,6 +293,7 @@ export const getFullCusProductData = async ({
   version,
   entityData,
 }: {
+  db: DrizzleCli;
   org: Organization;
   features: Feature[];
   sb: SupabaseClient;
@@ -358,7 +361,7 @@ export const getFullCusProductData = async ({
       entityId: entityId,
       internalEntityId: entityId
         ? customer.entities.find(
-            (e) => e.id === entityId || e.internal_id === entityId
+            (e) => e.id === entityId || e.internal_id === entityId,
           )?.internal_id
         : undefined,
     };
@@ -397,6 +400,7 @@ export const getFullCusProductData = async ({
   }
 
   let { prices, entitlements } = await handleNewProductItems({
+    db,
     sb,
     curPrices,
     curEnts,
@@ -441,7 +445,7 @@ export const getFullCusProductData = async ({
     entityId: entityId,
     internalEntityId: entityId
       ? customer.entities.find(
-          (e) => e.id === entityId || e.internal_id === entityId
+          (e) => e.id === entityId || e.internal_id === entityId,
         )?.internal_id
       : undefined,
   };

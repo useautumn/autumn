@@ -34,7 +34,6 @@ export enum FeatureUsageType {
 export const MeteredConfigSchema = z.object({
   filters: z.array(ExpressionSchema),
   aggregate: AggregateSchema,
-  group_by: GroupBySchema.nullable(),
   usage_type: z.enum([FeatureUsageType.Single, FeatureUsageType.Continuous]),
 });
 

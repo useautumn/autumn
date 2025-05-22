@@ -14,6 +14,8 @@
     "build": "tsc"
   },
   "dependencies": {
+    "drizzle-orm": "^0.43.1",
+    "drizzle-zod": "^0.8.1",
     "zod": "^3.x"
   },
   "devDependencies": {

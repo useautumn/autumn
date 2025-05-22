@@ -23,8 +23,9 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { constructProduct } from "@/internal/products/productUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { Request } from "@/utils/models/Request.js";
 
-const validateCreateProduct = async ({ req }: { req: any }) => {
+const validateCreateProduct = async ({ req }: { req: Request }) => {
   let { free_trial, items } = req.body;
   let { orgId, env, sb } = req;
 
@@ -92,14 +93,14 @@ const validateCreateProduct = async ({ req }: { req: any }) => {
     productData,
   };
 };
-export const handleCreateProduct = async (req: any, res: any) =>
+export const handleCreateProduct = async (req: Request, res: any) =>
   routeHandler({
     req,
     res,
     action: "POST /products",
     handler: async (req, res) => {
       let { free_trial, items } = req.body;
-      let { logtail: logger, orgId, env, sb } = req;
+      let { logtail: logger, orgId, env, sb, db } = req;
 
       let { features, freeTrial, productData } = await validateCreateProduct({
         req,
@@ -115,6 +116,7 @@ export const handleCreateProduct = async (req: any, res: any) =>
 
       if (notNullish(items)) {
         await handleNewProductItems({
+          db,
           sb,
           product,
           features,
@@ -143,7 +145,7 @@ export const handleCreateProduct = async (req: any, res: any) =>
           autumn_id: product.internal_id,
           items: items || [],
           free_trial: freeTrial,
-        })
+        }),
       );
     },
   });

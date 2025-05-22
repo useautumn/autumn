@@ -11,6 +11,7 @@ import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutRewa
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { sendProductsUpdatedWebhook } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 
 const NUM_WORKERS = 5;
 
@@ -68,12 +69,14 @@ const initWorker = ({
   useBackup,
   logtail,
   sb,
+  db,
 }: {
   id: number;
   queue: Queue;
   useBackup: boolean;
   logtail: any;
   sb: SupabaseClient;
+  db: DrizzleCli;
 }) => {
   let worker = new Worker(
     "autumn",
@@ -81,6 +84,7 @@ const initWorker = ({
       if (job.name == JobName.GenerateFeatureDisplay) {
         await runSaveFeatureDisplayTask({
           sb,
+          db,
           feature: job.data.feature,
           org: job.data.org,
           logger: logtail,
@@ -197,7 +201,7 @@ const initWorker = ({
       },
       drainDelay: 1000,
       maxStalledCount: 0,
-    }
+    },
   );
 
   worker.on("ready", () => {
@@ -230,13 +234,28 @@ export const initWorkers = async () => {
   await CacheManager.getInstance();
   const logtail = createLogtail();
   const sb = createSupabaseClient();
+  const db = initDrizzle();
 
   for (let i = 0; i < NUM_WORKERS; i++) {
     workers.push(
-      initWorker({ id: i, queue: mainQueue, useBackup: false, logtail, sb })
+      initWorker({
+        id: i,
+        queue: mainQueue,
+        useBackup: false,
+        logtail,
+        sb,
+        db,
+      }),
     );
     workers.push(
-      initWorker({ id: i, queue: backupQueue, useBackup: true, logtail, sb })
+      initWorker({
+        id: i,
+        queue: backupQueue,
+        useBackup: true,
+        logtail,
+        sb,
+        db,
+      }),
     );
   }
 

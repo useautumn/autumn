@@ -16,7 +16,10 @@ import {
 } from "@autumn/shared";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
-import { getCusEntMasterBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import {
+  getCusEntMasterBalance,
+  getRelatedCusPrice,
+} from "@/internal/customers/entitlements/cusEntUtils.js";
 import { getEntityResponse } from "./getEntityUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { orgToVersion } from "@/utils/versionUtils.js";
@@ -348,7 +351,14 @@ export const createEntities = async ({
 
     if (mainCusEnt) {
       if (fromAutoCreate) {
-        return [];
+        let cusPrice = getRelatedCusPrice(
+          mainCusEnt,
+          cusProduct.customer_prices || []
+        );
+
+        if (cusPrice) {
+          return [];
+        }
       }
 
       let { unused } = getCusEntMasterBalance({

@@ -85,6 +85,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
 
           if (!toFeature) {
             let res = await FeatureService.insert({
+              db: req.db,
               sb,
               data: initNewFeature({
                 data: CreateFeatureSchema.parse(fromFeature),

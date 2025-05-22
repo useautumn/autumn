@@ -33,8 +33,8 @@ export const CreateProductSchema = z.object({
   name: z.string().default(""),
   is_add_on: z.boolean().default(false),
   is_default: z.boolean().default(false),
-  version: z.number().default(1),
-  group: z.string().default(""),
+  version: z.number().optional().default(1),
+  group: z.string().optional().default(""),
 });
 
 export const UpdateProductSchema = z.object({
@@ -56,7 +56,7 @@ export const FrontendProductSchema = ProductSchema.omit({
   entitlements: z.array(
     EntitlementSchema.extend({
       feature: FeatureSchema,
-    })
+    }),
   ),
   free_trial: FreeTrialSchema,
   options: z.any(),
@@ -67,7 +67,7 @@ export const FullProductSchema = ProductSchema.extend({
   entitlements: z.array(
     EntitlementSchema.extend({
       feature: FeatureSchema,
-    })
+    }),
   ),
   free_trial: FreeTrialSchema.optional(),
 });

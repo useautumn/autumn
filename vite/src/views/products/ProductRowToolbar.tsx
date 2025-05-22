@@ -1,5 +1,4 @@
 import SmallSpinner from "@/components/general/SmallSpinner";
-import { faClone, faPencil, faTrash } from "@fortawesome/pro-solid-svg-icons";
 
 import {
   DropdownMenu,
