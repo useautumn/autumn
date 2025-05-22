@@ -477,14 +477,16 @@ export const processFullCusProduct = ({
         ? baseSub.current_period_start * 1000
         : null,
     };
-  } else if (subIds && subIds.length > 0 && trialing) {
-    stripeSubData = {
-      current_period_start: cusProduct.starts_at,
-      current_period_end: cusProduct.trial_ends_at,
-    };
   }
 
   if (apiVersion >= APIVersion.v1_1) {
+    if ((!subIds || subIds.length == 0) && trialing) {
+      stripeSubData = {
+        current_period_start: cusProduct.starts_at,
+        current_period_end: cusProduct.trial_ends_at,
+      };
+    }
+
     return CusProductResponseSchema.parse({
       id: cusProduct.product.id,
       name: cusProduct.product.name,
