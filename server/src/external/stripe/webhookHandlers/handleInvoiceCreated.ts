@@ -30,9 +30,10 @@ import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { Client } from "pg";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { getFeatureName } from "@/internal/features/displayUtils.js";
+import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 import { submitUsageToStripe } from "../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../stripePriceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const handleInArrearProrated = async ({
   sb,
@@ -81,7 +82,7 @@ const handleInArrearProrated = async ({
 
   let feature = cusEnt.entitlement.feature;
   logger.info(
-    `Handling invoice.created for in arrear prorated, feature: ${feature.id}`
+    `Handling invoice.created for in arrear prorated, feature: ${feature.id}`,
   );
 
   let deletedEntities = await EntityService.getByInternalCustomerId({
@@ -98,12 +99,12 @@ const handleInArrearProrated = async ({
   }
 
   logger.info(
-    `✨ Handling in arrear prorated, customer ${customer.name}, org: ${org.slug}`
+    `✨ Handling in arrear prorated, customer ${customer.name}, org: ${org.slug}`,
   );
 
   logger.info(
     `Deleting entities, feature ${feature.id}, customer ${customer.id}, org ${org.slug}`,
-    deletedEntities
+    deletedEntities,
   );
 
   // Get linked cus ents
@@ -117,7 +118,7 @@ const handleInArrearProrated = async ({
     }
 
     logger.info(
-      `Linked cus ent: ${linkedCusEnt.feature_id}, isLinked: ${isLinked}`
+      `Linked cus ent: ${linkedCusEnt.feature_id}, isLinked: ${isLinked}`,
     );
 
     // Delete cus ent ids
@@ -141,7 +142,7 @@ const handleInArrearProrated = async ({
     console.log(`Updated ${updated.length} cus ents`);
 
     logger.info(
-      `Feature: ${feature.id}, customer: ${customer.id}, deleted entities from cus ent`
+      `Feature: ${feature.id}, customer: ${customer.id}, deleted entities from cus ent`,
     );
     linkedCusEnt.entities = newEntities;
   }
@@ -155,14 +156,14 @@ const handleInArrearProrated = async ({
   logger.info(
     `Feature: ${feature.id}, Deleted ${
       deletedEntities.length
-    }, entities: ${deletedEntities.map((e) => `${e.id}`).join(", ")}`
+    }, entities: ${deletedEntities.map((e) => `${e.id}`).join(", ")}`,
   );
 
   // Increase balance
   if (notNullish(cusEnt.balance)) {
     logger.info(`Incrementing balance for cus ent: ${cusEnt.id}`);
     await pg.query(
-      `UPDATE customer_entitlements SET balance = balance + ${deletedEntities.length} WHERE id = '${cusEnt.id}'`
+      `UPDATE customer_entitlements SET balance = balance + ${deletedEntities.length} WHERE id = '${cusEnt.id}'`,
     );
   }
 };
@@ -237,7 +238,7 @@ const handleUsageInArrear = async ({
     billingUnits;
 
   const usageTimestamp = Math.round(
-    subDays(new Date(invoice.created * 1000), 1).getTime() / 1000
+    subDays(new Date(invoice.created * 1000), 1).getTime() / 1000,
   );
 
   let feature = relatedCusEnt.entitlement.feature;
@@ -261,7 +262,7 @@ const handleUsageInArrear = async ({
   } else {
     if (!config.stripe_meter_id) {
       logger.warn(
-        `Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`
+        `Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`,
       );
       return;
     }
@@ -378,7 +379,7 @@ export const sendUsageAndReset = async ({
 
     if (billingType == BillingType.UsageInArrear) {
       logger.info(
-        `✨ Handling end of period usage for customer ${customer.name}, org: ${org.slug}`
+        `✨ Handling end of period usage for customer ${customer.name}, org: ${org.slug}`,
       );
 
       logger.info(`   - Feature: ${relatedCusEnt.entitlement.feature.id}`);
@@ -426,13 +427,14 @@ const invoiceCusProductCreatedDifference = ({
     Math.abs(
       differenceInMinutes(
         new Date(cusProduct.created_at),
-        new Date(invoice.created * 1000)
-      )
+        new Date(invoice.created * 1000),
+      ),
     ) < minutes
   );
 };
 
 export const handleInvoiceCreated = async ({
+  db,
   pg,
   sb,
   org,
@@ -440,6 +442,7 @@ export const handleInvoiceCreated = async ({
   env,
   event,
 }: {
+  db: DrizzleCli;
   pg: Client;
   sb: SupabaseClient;
   org: Organization;
@@ -470,23 +473,22 @@ export const handleInvoiceCreated = async ({
 
     if (activeProducts.length == 0) {
       logger.warn(
-        `Stripe invoice.created -- no active products found (${org.slug})`
+        `Stripe invoice.created -- no active products found (${org.slug})`,
       );
       return;
     }
 
     let internalEntityId = activeProducts.find(
-      (p) => p.internal_entity_id
+      (p) => p.internal_entity_id,
     )?.internal_entity_id;
 
-    let features = await FeatureService.getFeatures({
-      sb,
+    let features = await FeatureService.list({
+      db,
       orgId: org.id,
       env,
     });
 
     if (internalEntityId) {
-      // Add memo to invoice
       try {
         let stripeCli = createStripeCli({ org, env });
         let entity = await EntityService.getByInternalId({
@@ -497,7 +499,7 @@ export const handleInvoiceCreated = async ({
         });
 
         let feature = features.find(
-          (f) => f.internal_id == entity?.internal_feature_id
+          (f) => f.internal_id == entity?.internal_feature_id,
         );
 
         let entDetails = "";
@@ -509,7 +511,7 @@ export const handleInvoiceCreated = async ({
           entDetails = `${entity.id}`;
         }
 
-        if (entDetails) {
+        if (entDetails && feature) {
           await stripeCli.invoices.update(invoice.id, {
             description: `${getFeatureName({
               feature,

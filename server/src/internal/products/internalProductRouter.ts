@@ -144,11 +144,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
           env,
           version: version ? parseInt(version) : undefined,
         }),
-        FeatureService.getFeatures({
-          sb,
-          orgId,
-          env,
-        }),
+        FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
         ProductService.getProductVersionCount({
           sb,

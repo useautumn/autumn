@@ -28,7 +28,8 @@ import {
   FeatureUsageType,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Request } from "@/utils/models/Request.js";
+import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
+
 const handleFeatureIdChanged = async ({
   db,
   sb,
@@ -113,19 +114,17 @@ const handleFeatureIdChanged = async ({
       }
     }
     creditSystemUpdate.push(
-      FeatureService.updateStrict({
+      FeatureService.update({
         db,
-        sb,
-        featureId: creditSystem.id!,
+        id: creditSystem.id!,
+        orgId,
+        env,
         updates: {
           config: {
             ...creditSystem.config,
             schema: newSchema,
           },
         },
-        orgId,
-        env,
-        logger,
       }),
     );
   }
@@ -254,12 +253,12 @@ const handleFeatureUsageTypeChanged = async ({
   // }
 };
 
-export const handleUpdateFeature = async (req: Request, res: any) =>
+export const handleUpdateFeature = async (req: any, res: any) =>
   routeHandler({
     req,
     res,
     action: "Update feature",
-    handler: async () => {
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       let featureId = req.params.feature_id;
       let data = req.body;
       let { logtail: logger } = req;
@@ -342,13 +341,11 @@ export const handleUpdateFeature = async (req: Request, res: any) =>
         }
       }
 
-      let updatedFeature = await FeatureService.updateStrict({
+      let updatedFeature = await FeatureService.update({
         db: req.db,
-        sb: req.sb,
+        id: featureId,
         orgId: req.orgId,
         env: req.env,
-        featureId,
-
         updates: {
           id: data.id !== undefined ? data.id : feature.id,
           name: data.name !== undefined ? data.name : feature.name,
@@ -361,7 +358,6 @@ export const handleUpdateFeature = async (req: Request, res: any) =>
                 ? validateMeteredConfig(data.config)
                 : data.config,
         },
-        logger,
       });
 
       if (isChangingName) {

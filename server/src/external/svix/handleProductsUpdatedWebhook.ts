@@ -20,6 +20,7 @@ import { z } from "zod";
 import { getProductResponse } from "@/internal/products/productV2Utils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const ProductsUpdatedWebhookSchema = z.object({
   scenario: z.string(),
@@ -114,10 +115,12 @@ export const constructProductsUpdatedData = ({
 };
 
 export const sendProductsUpdatedWebhook = async ({
+  db,
   sb,
   logger,
   data,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   logger: any;
   data: {
@@ -143,8 +146,8 @@ export const sendProductsUpdatedWebhook = async ({
     ],
   });
 
-  const features = await FeatureService.getFeatures({
-    sb,
+  const features = await FeatureService.list({
+    db,
     orgId: org.id,
     env,
   });

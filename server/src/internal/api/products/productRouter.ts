@@ -25,34 +25,6 @@ export const productApiRouter = Router();
 
 productApiRouter.get("", async (req: any, res) => {
   try {
-    const [org, features, products] = await Promise.all([
-      OrgService.getFromReq(req),
-      FeatureService.getFeatures({
-        sb: req.sb,
-        orgId: req.orgId,
-        env: req.env,
-      }),
-      ProductService.getFullProducts({
-        sb: req.sb,
-        orgId: req.orgId,
-        env: req.env,
-      }),
-    ]);
-
-    let prods = products.map((p) =>
-      getProductResponse({ product: p, features }),
-    );
-
-    if (req.query.v1_schema === "true") {
-      res.status(200).json({
-        list: products,
-      });
-      return;
-    }
-
-    res.status(200).json({
-      list: prods,
-    });
   } catch (error) {
     handleRequestError({ req, error, res, action: "Get products" });
   }

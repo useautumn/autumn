@@ -23,9 +23,9 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { constructProduct } from "@/internal/products/productUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { Request } from "@/utils/models/Request.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
-const validateCreateProduct = async ({ req }: { req: Request }) => {
+const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
   let { free_trial, items } = req.body;
   let { orgId, env, sb } = req;
 
@@ -38,11 +38,7 @@ const validateCreateProduct = async ({ req }: { req: Request }) => {
   }
 
   const [features, existingProduct] = await Promise.all([
-    FeatureService.getFeatures({
-      sb,
-      orgId,
-      env,
-    }),
+    FeatureService.getFromReq(req),
     ProductService.getProductStrict({
       sb,
       productId: productData.id,

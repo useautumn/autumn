@@ -9,7 +9,7 @@ import type {
 import { Client } from "pg";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
-export interface Request extends ExpressRequest {
+export interface ExtendedRequest extends ExpressRequest {
   sb: SupabaseClient;
   pg: Client;
   db: DrizzleCli;
@@ -25,4 +25,4 @@ export interface Request extends ExpressRequest {
   features: Feature[];
 }
 
-export interface Response extends ExpressResponse {}
+export interface ExtendedResponse extends ExpressResponse {}
