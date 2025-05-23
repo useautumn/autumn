@@ -108,8 +108,8 @@ export default function CustomerProductView() {
     }
   }, [entityIdParam]);
 
-  let version = searchParams.get("version");
-  let customer_product_id = searchParams.get("id");
+  const version = searchParams.get("version");
+  const customer_product_id = searchParams.get("id");
   const { data, isLoading, mutate, error } = useAxiosSWR({
     url: `/customers/${customer_id}/product/${product_id}${getProductUrlParams({
       version,
@@ -143,7 +143,7 @@ export default function CustomerProductView() {
   useEffect(() => {
     if (!data?.product || !data?.customer) return;
 
-    let product = data.product;
+    const product = data.product;
     initialProductRef.current = structuredClone(product);
 
     if (product.options) {
@@ -192,7 +192,7 @@ export default function CustomerProductView() {
   if (isLoading) return <LoadingScreen />;
   const oneTimePurchase = pricesOnlyOneOff(
     product?.items || [],
-    product?.is_add_on || false
+    product?.is_add_on || false,
   );
 
   if (!customer_id || !product_id) {
@@ -220,7 +220,7 @@ export default function CustomerProductView() {
 
       // Continue with product creation if no required options
       await createProduct(
-        useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice
+        useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,
       );
     } catch (error) {
       toast.error(getBackendErr(error, "Error checking required options"));
@@ -229,7 +229,7 @@ export default function CustomerProductView() {
 
   const createProduct = async (useInvoiceLatest?: boolean) => {
     try {
-      let isCustom = hasChanges;
+      const isCustom = hasChanges;
 
       const { data } = await CusService.addProduct(axiosInstance, customer_id, {
         product_id,
@@ -255,7 +255,7 @@ export default function CustomerProductView() {
           entity_id: entityId,
         })}`,
         navigation,
-        env
+        env,
       );
 
       toast.success(data.message || "Successfully attached product");
@@ -281,7 +281,7 @@ export default function CustomerProductView() {
         navigateTo(
           `/integrations/stripe?redirect=${redirectUrl}`,
           navigation,
-          env
+          env,
         );
       } else {
         toast.error(getBackendErr(error, "Error creating product"));
@@ -422,15 +422,15 @@ export default function CustomerProductView() {
                         entityId ? `?entity_id=${entityId}` : ""
                       }`,
                       navigation,
-                      env
+                      env,
                     )
                   }
                 >
                   {customer.name
                     ? customer.name
                     : customer.id
-                    ? customer.id
-                    : customer.email}
+                      ? customer.id
+                      : customer.email}
                 </BreadcrumbLink>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>{product.name}</BreadcrumbItem>
@@ -438,14 +438,7 @@ export default function CustomerProductView() {
             </Breadcrumb>
             <div className="flex">
               <div className="flex-1 w-full min-w-sm">
-                {product && (
-                  <ManageProduct
-                    customerData={data}
-                    showFreeTrial={false}
-                    setShowFreeTrial={() => {}}
-                    version={version ? parseInt(version) : product.version}
-                  />
-                )}
+                {product && <ManageProduct />}
                 {options.length > 0 && (
                   <ProductOptions
                     options={options}

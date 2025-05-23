@@ -18,7 +18,7 @@ import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-
+import { Request } from "@/utils/models/Request.js";
 export const featureApiRouter = express.Router();
 
 export const validateFeature = (data: any) => {
@@ -74,7 +74,7 @@ featureApiRouter.post("", async (req: any, res) => {
   let data = req.body;
 
   try {
-    let { sb, orgId, env, logtail: logger } = req;
+    let { db, orgId, env, logtail: logger } = req;
     let parsedFeature = validateFeature(data);
 
     let feature: Feature = {
@@ -87,7 +87,7 @@ featureApiRouter.post("", async (req: any, res) => {
 
     let org = await OrgService.getFromReq(req);
     let insertedData = await FeatureService.insert({
-      sb,
+      db,
       data: feature,
       logger,
     });
@@ -110,7 +110,7 @@ featureApiRouter.post("", async (req: any, res) => {
 
 featureApiRouter.post("/:feature_id", handleUpdateFeature);
 
-featureApiRouter.delete("/:featureId", async (req: any, res) => {
+featureApiRouter.delete("/:featureId", async (req: Request, res: any) => {
   let orgId = req.orgId;
   let { featureId } = req.params;
 
@@ -149,6 +149,7 @@ featureApiRouter.delete("/:featureId", async (req: any, res) => {
     }
 
     await FeatureService.deleteStrict({
+      db: req.db,
       sb: req.sb,
       orgId,
       featureId,

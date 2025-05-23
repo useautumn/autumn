@@ -56,7 +56,6 @@ export const toPrice = ({
     org_id: orgId,
     internal_product_id: internalProductId,
     is_custom: isCustom,
-    name: "",
     config,
   };
 
@@ -106,8 +105,8 @@ export const toFeature = ({
     allowance_type: isBoolean
       ? null
       : item.included_usage == Infinite
-      ? AllowanceType.Unlimited
-      : AllowanceType.Fixed,
+        ? AllowanceType.Unlimited
+        : AllowanceType.Fixed,
 
     interval: isBoolean ? null : (itemToEntInterval(item) as EntInterval),
 
@@ -206,8 +205,6 @@ export const toFeatureAndPrice = ({
     org_id: orgId,
     internal_product_id: internalProductId,
     is_custom: isCustom,
-    name: "",
-
     config,
     entitlement_id: ent.id,
   };

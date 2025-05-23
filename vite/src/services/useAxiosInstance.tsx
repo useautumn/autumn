@@ -3,14 +3,16 @@ import { endpoint } from "@/utils/constants";
 import { useAuth } from "@clerk/clerk-react";
 import { AppEnv } from "@autumn/shared";
 import { useEnv } from "@/utils/envUtils";
+const defaultParams = {
+  isAuth: true,
+};
 
-export function useAxiosInstance({
-  env,
-  isAuth = true,
-}: {
-  env?: AppEnv;
-  isAuth?: boolean;
-}) {
+export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
+  const finalParams: any = {
+    ...defaultParams,
+    ...(params || {}),
+  };
+
   const trueEnv = useEnv();
 
   const axiosInstance = axios.create({
@@ -19,7 +21,7 @@ export function useAxiosInstance({
 
   const { getToken } = useAuth();
 
-  if (isAuth) {
+  if (finalParams.isAuth) {
     axiosInstance.interceptors.request.use(
       async (config: any) => {
         const token = await getToken({
@@ -35,7 +37,7 @@ export function useAxiosInstance({
       },
       (error: any) => {
         return Promise.reject(error);
-      }
+      },
     );
   }
 

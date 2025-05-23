@@ -16,7 +16,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
       const sb = req.sb;
       const orgId = req.orgId;
       const fromEnv = req.env;
-      const { env: toEnv, id: toId, name: toName } = req.body;
+      const { db, env: toEnv, id: toId, name: toName } = req.body;
       let { logtail: logger } = req;
 
       if (!toEnv || !toId || !toName) {
@@ -85,7 +85,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
 
           if (!toFeature) {
             let res = await FeatureService.insert({
-              sb,
+              db,
               data: initNewFeature({
                 data: CreateFeatureSchema.parse(fromFeature),
                 orgId,

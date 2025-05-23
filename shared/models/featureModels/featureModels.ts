@@ -1,16 +1,6 @@
 import { z } from "zod";
 import { AppEnv } from "../genModels.js";
-
-export enum FeatureType {
-  Boolean = "boolean",
-  Metered = "metered",
-  CreditSystem = "credit_system",
-}
-
-export enum AggregateType {
-  Count = "count",
-  Sum = "sum",
-}
+import { FeatureType } from "./featureEnums.js";
 
 export const FeatureSchema = z.object({
   internal_id: z.string().optional(),

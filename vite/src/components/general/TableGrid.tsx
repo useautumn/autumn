@@ -5,12 +5,14 @@ export const Row = ({
   className,
   type,
   onClick,
+  isOnboarding = false,
   ...props
 }: {
   children?: React.ReactNode;
   className?: string;
   type?: "header" | "body";
   onClick?: () => void;
+  isOnboarding?: boolean;
   props?: React.ComponentProps<"div">;
 }) => {
   return (
@@ -19,7 +21,8 @@ export const Row = ({
         "grid grid-cols-[repeat(auto-fit,_minmax(0,_1fr))] gap-2 w-full px-10 h-8 items-center hover:bg-primary/5 whitespace-nowrap",
         type === "header" &&
           "text-xs text-t3 h-8 -mb-1 items-center hover:bg-primary/0",
-        className
+        isOnboarding && "px-2",
+        className,
       )}
       onClick={onClick}
       {...props}
@@ -40,7 +43,7 @@ export const Item = ({
     <div
       className={cn(
         "col-span-1 flex h-full w-full items-center gap-2 truncate",
-        className
+        className,
       )}
     >
       {children}

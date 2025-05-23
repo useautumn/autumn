@@ -1,4 +1,4 @@
-import { decryptData } from "@/utils/encryptUtils.js";
+import { decryptData, generatePublishableKey } from "@/utils/encryptUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, ErrCode, Organization } from "@autumn/shared";
 import { createSvixApp } from "@/external/svix/svixUtils.js";
@@ -6,6 +6,23 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "./OrgService.js";
 import { FeatureService } from "../features/FeatureService.js";
 
+export const constructOrg = ({ id, slug }: { id: string; slug: string }) => {
+  return {
+    id,
+    slug,
+    created_at: Date.now(),
+    default_currency: "usd",
+    stripe_connected: false,
+    stripe_config: null,
+    test_pkey: generatePublishableKey(AppEnv.Sandbox),
+    live_pkey: generatePublishableKey(AppEnv.Live),
+    svix_config: {
+      sandbox_app_id: "",
+      live_app_id: "",
+    },
+    config: {} as any,
+  };
+};
 export const initOrgSvixApps = async ({
   id,
   slug,
@@ -19,14 +36,14 @@ export const initOrgSvixApps = async ({
       name: `${slug}_${AppEnv.Sandbox}`,
       orgId: id,
       env: AppEnv.Sandbox,
-    })
+    }),
   );
   batchCreate.push(
     createSvixApp({
       name: `${slug}_${AppEnv.Live}`,
       orgId: id,
       env: AppEnv.Live,
-    })
+    }),
   );
 
   const [sandboxApp, liveApp] = await Promise.all(batchCreate);

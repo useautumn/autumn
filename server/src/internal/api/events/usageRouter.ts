@@ -190,26 +190,6 @@ export const handleUsageEvent = async ({
     payload,
   });
 
-  // try {
-  //   // Add timeout to queue operation
-  //   await queue.add(JobName.UpdateUsage, payload);
-  // } catch (error: any) {
-  //   try {
-  //     console.log("Adding update-balance to backup queue");
-  //     const backupQueue = await QueueManager.getQueue({ useBackup: true });
-  //     await backupQueue.add(JobName.UpdateUsage, payload);
-  //   } catch (error: any) {
-  //     throw new RecaseError({
-  //       message: "Failed to add update-usage to queue (backup)",
-  //       code: "EVENT_QUEUE_ERROR",
-  //       statusCode: 500,
-  //       data: {
-  //         message: error.message,
-  //       },
-  //     });
-  //   }
-  // }
-
   return { event: newEvent, affectedFeatures: features, org };
 };
 

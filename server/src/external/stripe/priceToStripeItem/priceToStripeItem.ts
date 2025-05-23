@@ -104,7 +104,7 @@ export const priceToStripeItem = ({
     if (!priceId) {
       throw new RecaseError({
         code: ErrCode.PriceNotFound,
-        message: `Couldn't find price: ${price.name}, ${price.id} in Stripe`,
+        message: `Couldn't find Autumn price: ${price.id} in Stripe`,
         statusCode: 400,
       });
     }

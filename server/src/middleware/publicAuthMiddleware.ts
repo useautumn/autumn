@@ -1,5 +1,4 @@
 import { verifyPublicKey } from "@/internal/dev/api-keys/publicKeyUtils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { AppEnv, ErrCode } from "@autumn/shared";
 
 const allowedEndpoints = [

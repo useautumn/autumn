@@ -65,7 +65,7 @@ export const constructPrice = ({
 // GET PRICES
 const validatePrice = (
   price: Price,
-  relatedEnt?: Entitlement | undefined | null
+  relatedEnt?: Entitlement | undefined | null,
 ) => {
   if (!price.config?.type) {
     throw new RecaseError({
@@ -138,7 +138,7 @@ export const tiersAreSame = (tiers1: any[], tiers2: any[]) => {
 export const pricesAreSame = (
   price1: Price,
   price2: Price,
-  logDifferences = false
+  logDifferences = false,
 ) => {
   // if (price1.name !== price2.name) return false;
 
@@ -170,7 +170,7 @@ export const pricesAreSame = (
         "Differences:",
         Object.values(diffs)
           .filter((d) => d.condition)
-          .map((d) => d.message)
+          .map((d) => d.message),
       );
     }
 
@@ -208,10 +208,10 @@ export const pricesAreSame = (
       usage_tiers: {
         condition: !tiersAreSame(
           usageConfig1.usage_tiers,
-          usageConfig2.usage_tiers
+          usageConfig2.usage_tiers,
         ),
         message: `Usage tiers different: ${usageConfig1.usage_tiers.map(
-          (t) => `${t.to} (${t.amount})`
+          (t) => `${t.to} (${t.amount})`,
         )} !== ${usageConfig2.usage_tiers.map((t) => `${t.to} (${t.amount})`)}`,
       },
       // stripe_price_id: {
@@ -245,7 +245,7 @@ export const pricesAreSame = (
         "Differences:",
         Object.values(diffs)
           .filter((d) => d.condition)
-          .map((d) => d.message)
+          .map((d) => d.message),
       );
     }
 
@@ -328,7 +328,7 @@ export const handleNewPrices = async ({
       const feature = features.find((f) => f.id === config.feature_id);
       if (!feature) {
         throw new RecaseError({
-          message: `Feature ${config.feature_id} not found for price ${price.name}`,
+          message: `Feature ${config.feature_id} not found for price (autumn id: ${price.id})`,
           code: ErrCode.FeatureNotFound,
           statusCode: 400,
         });
@@ -345,7 +345,7 @@ export const handleNewPrices = async ({
 
   // 1. Deleted entitlements: filter out entitlements that are not in newEnts
   const removedPrices: Price[] = curPrices.filter(
-    (price) => !newPrices.some((p: Price) => p.id === price.id)
+    (price) => !newPrices.some((p: Price) => p.id === price.id),
   );
 
   const createdPrices: Price[] = [];
@@ -356,7 +356,7 @@ export const handleNewPrices = async ({
 
     const relatedEnt = getPriceEntitlement(
       newPrice,
-      entitlements as EntitlementWithFeature[]
+      entitlements as EntitlementWithFeature[],
     );
 
     validatePrice(newPrice, relatedEnt);
@@ -370,7 +370,7 @@ export const handleNewPrices = async ({
           orgId,
           internalProductId,
           isCustom,
-        })
+        }),
       );
     }
 
@@ -391,7 +391,7 @@ export const handleNewPrices = async ({
           internalProductId,
           isCustom,
           keepStripePrice: newVersion && pricesAreSame(curPrice, newPrice),
-        })
+        }),
       );
       removedPrices.push(curPrice);
     }
@@ -421,7 +421,7 @@ export const handleNewPrices = async ({
   if (product.is_default && !isCustom) {
     if (
       createdPrices.some(
-        (p) => getBillingType(p.config!) == BillingType.UsageInAdvance
+        (p) => getBillingType(p.config!) == BillingType.UsageInAdvance,
       )
     ) {
       throw new RecaseError({
@@ -455,6 +455,6 @@ export const handleNewPrices = async ({
   }
 
   console.log(
-    `Successfully handled new prices. Created ${createdPrices.length}, updated ${updatedPrices.length}, removed ${removedPrices.length}`
+    `Successfully handled new prices. Created ${createdPrices.length}, updated ${updatedPrices.length}, removed ${removedPrices.length}`,
   );
 };

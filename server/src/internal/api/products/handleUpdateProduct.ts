@@ -24,6 +24,8 @@ import { productsAreDifferent } from "@/internal/products/productUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
+import { Request, Response } from "@/utils/models/Request.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleUpdateProductDetails = async ({
   newProduct,
@@ -46,7 +48,7 @@ export const handleUpdateProductDetails = async ({
 
   let customersOnAllVersions = await CusProductService.getByProductId(
     sb,
-    curProduct.id
+    curProduct.id,
   );
 
   const productsAreSame = (prod1: Product, prod2: UpdateProduct) => {
@@ -151,7 +153,7 @@ export const handleUpdateProduct = async (req: any, res: any) => {
     const cusProductsCurVersion =
       await CusProductService.getByInternalProductId(
         sb,
-        fullProduct.internal_id
+        fullProduct.internal_id,
       );
 
     let cusProductExists = cusProductsCurVersion.length > 0;
@@ -247,7 +249,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
     action: "Update product",
     handler: async () => {
       const { productId } = req.params;
-      const { sb, orgId, env, logtail: logger } = req;
+      const { sb, orgId, env, logtail: logger, db } = req;
 
       const [features, org, fullProduct, rewardPrograms] = await Promise.all([
         FeatureService.getFromReq(req),
@@ -282,7 +284,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       const cusProductsCurVersion =
         await CusProductService.getByInternalProductId(
           sb,
-          fullProduct.internal_id
+          fullProduct.internal_id,
         );
 
       let cusProductExists = cusProductsCurVersion.length > 0;
@@ -295,9 +297,6 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         cusProductExists,
         rewardPrograms,
       });
-
-      // 1. Map to product items
-      // Check if product items are different
 
       let itemsExist = notNullish(req.body.items);
       if (cusProductExists && itemsExist) {
@@ -317,6 +316,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       const { items, free_trial } = req.body;
 
       await handleNewProductItems({
+        db,
         sb,
         curPrices: fullProduct.prices,
         curEnts: fullProduct.entitlements,

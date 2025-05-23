@@ -9,6 +9,7 @@ import {
   CollectionMethod,
   FullCusProduct,
   LoggerAction,
+  FullCustomerEntitlement,
 } from "@autumn/shared";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 
@@ -370,6 +371,17 @@ export const createFullCusProduct = async ({
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
     const relatedPrice = getEntRelatedPrice(entitlement, prices);
+
+    // let existingCusEnt: FullCustomerEntitlement | undefined =
+    //   curCusProduct?.customer_entitlements.find(
+    //     (ce) =>
+    //       ce.entitlement.internal_feature_id === entitlement.internal_feature_id
+    //   );
+
+    // if (freeTrial && existingCusEnt) {
+    //   existingCusEnt = undefined;
+    // }
+
     const cusEnt: any = initCusEntitlement({
       entitlement,
       customer,

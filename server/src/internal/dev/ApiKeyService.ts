@@ -2,8 +2,9 @@ import { CacheType } from "@/external/caching/cacheActions.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { getAPIKeyCache } from "@/external/caching/cacheUtils.js";
 import { sbWithRetry } from "@/external/supabaseUtils.js";
+import { getApiVersion } from "@/utils/versionUtils.js";
 
-import { ApiKey, AppEnv, ErrCode } from "@autumn/shared";
+import { ApiKey, AppEnv, ErrCode, OrgConfigSchema } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export class ApiKeyService {
@@ -31,8 +32,14 @@ export class ApiKeyService {
     }
 
     let org = structuredClone(data.organization);
-
     delete org.features;
+
+    // Add org config and api version
+    org.config = OrgConfigSchema.parse(org.config || {});
+    org.api_version = getApiVersion({
+      createdAt: org.created_at,
+    });
+
     return {
       org,
       features: data.organization?.features || [],
@@ -133,7 +140,7 @@ export class CachedKeyService {
       });
     } catch (error) {
       console.error(
-        `(warning) failed to clear cache for verify action: ${error}`
+        `(warning) failed to clear cache for verify action: ${error}`,
       );
     }
   }

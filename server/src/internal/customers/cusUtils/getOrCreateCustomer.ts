@@ -144,7 +144,7 @@ export const getOrCreateCustomer = async ({
 
     if (customer.entity === null) {
       throw new RecaseError({
-        message: `Entity ${entityId} not found for customer ${customerId}. This entity must be createdfirst as it has a price associated with it.`,
+        message: `Entity ${entityId} not found for customer ${customerId}. This entity must be created first as it has a price associated with it.`,
         code: ErrCode.EntityNotFound,
         statusCode: StatusCodes.BAD_REQUEST,
       });

@@ -25,7 +25,7 @@ export const PriceSchema = z.object({
   billing_type: z.nativeEnum(BillingType).nullish(),
   is_custom: z.boolean().optional(),
 
-  name: z.string().optional(),
+  // name: z.string().optional(),
   config: FixedPriceConfigSchema.or(UsagePriceConfigSchema).optional(),
   entitlement_id: z.string().nullish(),
 });
@@ -33,7 +33,7 @@ export const PriceSchema = z.object({
 export type Price = z.infer<typeof PriceSchema>;
 
 export const CreatePriceSchema = z.object({
-  name: z.string().nonempty(),
+  // name: z.string().nonempty(),
   config: FixedPriceConfigSchema.or(UsagePriceConfigSchema),
 });
 

@@ -15,7 +15,7 @@ export const pricingMiddleware = async (req: any, res: any, next: any) => {
   try {
     if (path == "/products" && method == "POST") {
       await isEntitled({
-        minOrg: req.minOrg,
+        org: req.org,
         env: req.env,
         featureId: FeatureId.Products,
       });
@@ -27,7 +27,7 @@ export const pricingMiddleware = async (req: any, res: any, next: any) => {
       if (path == "/products" && method === "POST") {
         console.log("sending product create event");
         await sendProductEvent({
-          minOrg: req.minOrg,
+          org: req.org,
           env: req.env,
           incrementBy: 1,
         });
@@ -36,7 +36,7 @@ export const pricingMiddleware = async (req: any, res: any, next: any) => {
       if (path.match(/^\/products\/[^\/]+$/) && method === "DELETE") {
         console.log("sending product delete event");
         await sendProductEvent({
-          minOrg: req.minOrg,
+          org: req.org,
           env: req.env,
           incrementBy: -1,
         });

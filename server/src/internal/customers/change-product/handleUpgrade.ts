@@ -489,7 +489,10 @@ export const handleUpgrade = async ({
     sb: req.sb,
     attachParams: attachToInsertParams(attachParams, products[0]),
     subscriptionIds: newSubIds,
-    keepResetIntervals: true,
+    // keepResetIntervals: true,
+    anchorToUnix:
+      newSubs.length > 0 ? newSubs[0].current_period_end * 1000 : undefined,
+
     disableFreeTrial,
     carryExistingUsages,
     carryOverTrial: true,

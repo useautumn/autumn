@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { FeatureSchema, FeatureType } from "../featureModels/featureModels.js";
+import { FeatureSchema } from "../featureModels/featureModels.js";
+import { FeatureType } from "../featureModels/featureEnums.js";
 import { EntInterval } from "../genModels.js";
 import { UsagePriceConfigSchema } from "./usagePriceModels.js";
 

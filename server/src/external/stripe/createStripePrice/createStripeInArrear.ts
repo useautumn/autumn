@@ -52,7 +52,7 @@ export const searchStripeMeter = async ({
   logger.info(`Stripe meter list took ${end - start}ms`);
 
   let stripeMeter = allStripeMeters.find(
-    (m) => m.event_name == eventName || m.id == meterId
+    (m) => m.event_name == eventName || m.id == meterId,
   );
 
   return stripeMeter;
@@ -86,7 +86,7 @@ export const getStripeMeter = async ({
       createNew = true;
     } else {
       logger.info(
-        `✅ Found existing meter for ${product.name} - ${feature!.name}`
+        `✅ Found existing meter for ${product.name} - ${feature!.name}`,
       );
       return stripeMeter;
     }
@@ -106,7 +106,7 @@ export const getStripeMeter = async ({
 // IN ARREAR
 export const priceToInArrearTiers = (
   price: Price,
-  entitlement: Entitlement
+  entitlement: Entitlement,
 ) => {
   let usageConfig = structuredClone(price.config) as UsagePriceConfig;
   const tiers: any[] = [];
@@ -176,7 +176,7 @@ export const createStripeInArrearPrice = async ({
   if (internalEntityId && !useCheckout) {
     if (!curStripeProduct) {
       logger.info(
-        `Creating stripe in arrear product for ${relatedEnt.feature.name} (internal entity ID exists!)`
+        `Creating stripe in arrear product for ${relatedEnt.feature.name} (internal entity ID exists!)`,
       );
       let stripeProduct = await stripeCli.products.create({
         name: `${product.name} - ${feature!.name}`,
@@ -198,7 +198,7 @@ export const createStripeInArrearPrice = async ({
   }
 
   logger.info(
-    `Creating stripe in arrear price for ${relatedEnt.feature.name} (no internal entity ID)`
+    `Creating stripe in arrear price for ${relatedEnt.feature.name} (no internal entity ID)`,
   );
 
   if (!feature) {
@@ -222,7 +222,7 @@ export const createStripeInArrearPrice = async ({
 
   const tiers = priceToInArrearTiers(
     price,
-    getPriceEntitlement(price, entitlements)
+    getPriceEntitlement(price, entitlements),
   );
 
   let priceAmountData = {};
@@ -260,7 +260,7 @@ export const createStripeInArrearPrice = async ({
       meter: meter!.id,
       usage_type: "metered",
     },
-    nickname: `Autumn Price (${price.name})`,
+    nickname: `Autumn Price (${relatedEnt.feature.name})`,
   });
 
   config.stripe_price_id = stripePrice.id;

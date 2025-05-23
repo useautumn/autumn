@@ -1,12 +1,38 @@
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, CreditSchemaItem, Feature, FeatureType } from "@autumn/shared";
+import {
+  AppEnv,
+  CreditSchemaItem,
+  Feature,
+  features,
+  FeatureType,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Client } from "pg";
 import { creditSystemContainsFeature } from "./creditSystemUtils.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class FeatureService {
+  static async list({
+    db,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const features = await db.query.features.findMany({
+      where: (features, { eq, and }) =>
+        and(eq(features.org_id, orgId), eq(features.env, env)),
+
+      orderBy: (features, { desc }) => [desc(features.internal_id)],
+    });
+
+    return features as Feature[];
+  }
+
   static async getFromReq(req: any) {
     if (req.features) return req.features as Feature[];
     const features = await FeatureService.getFeatures({
@@ -94,10 +120,12 @@ export class FeatureService {
     sb,
     internalFeatureId,
     updates,
+    db,
   }: {
     sb: SupabaseClient;
     internalFeatureId: string;
     updates: any;
+    db: DrizzleCli;
   }) {
     let { data, error } = await sb
       .from("features")
@@ -112,7 +140,7 @@ export class FeatureService {
 
     if (data) {
       await clearOrgCache({
-        sb,
+        db,
         orgId: data.org_id,
         env: data.env,
       });
@@ -120,7 +148,9 @@ export class FeatureService {
 
     return data;
   }
+
   static async updateStrict({
+    db,
     sb,
     featureId,
     orgId,
@@ -128,6 +158,7 @@ export class FeatureService {
     updates,
     logger,
   }: {
+    db: DrizzleCli;
     sb: SupabaseClient;
     featureId: string;
     orgId: string;
@@ -162,7 +193,7 @@ export class FeatureService {
     }
 
     await clearOrgCache({
-      sb,
+      db,
       orgId,
       env,
       logger,
@@ -172,21 +203,33 @@ export class FeatureService {
   }
 
   static async insert({
-    sb,
+    db,
     data,
     logger,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     data: Feature[] | Feature;
     logger: any;
   }) {
     // Insert feature into DB
-    let { data: insertedData, error } = await sb
-      .from("features")
-      .insert(data)
-      .select();
+    // let { data: insertedData, error } =
 
-    if (error) {
+    try {
+      let insertedData = await db
+        .insert(features)
+        .values(data as any) // DRIZZLE TYPE REFACTOR
+        .returning();
+
+      if (insertedData && insertedData.length > 0) {
+        let orgId = insertedData[0].org_id;
+        await clearOrgCache({
+          db,
+          orgId: orgId!,
+          logger,
+        });
+      }
+      return insertedData;
+    } catch (error: any) {
       if (error.code === "23505") {
         let id = Array.isArray(data) ? data.map((f) => f.id) : data.id;
         throw new RecaseError({
@@ -195,28 +238,18 @@ export class FeatureService {
           statusCode: 400,
         });
       }
-      throw error;
     }
-
-    if (insertedData && insertedData.length > 0) {
-      let orgId = insertedData[0].org_id;
-      await clearOrgCache({
-        sb,
-        orgId,
-        logger,
-      });
-    }
-
-    return insertedData;
   }
 
   static async deleteStrict({
     sb,
+    db,
     featureId,
     orgId,
     env,
   }: {
     sb: SupabaseClient;
+    db: DrizzleCli;
     featureId: string;
     orgId: string;
     env: AppEnv;
@@ -242,7 +275,7 @@ export class FeatureService {
     }
 
     await clearOrgCache({
-      sb,
+      db,
       orgId,
       env,
     });
@@ -279,7 +312,7 @@ export class FeatureService {
         creditSystemContainsFeature({
           creditSystem: f,
           meteredFeatureId: featureId,
-        })
+        }),
     );
 
     return {

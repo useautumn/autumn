@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { useOrganization } from "@clerk/clerk-react";
+import { useOrganization, useOrganizationList } from "@clerk/clerk-react";
 import { useSearchParams } from "react-router";
 import Step from "@/components/general/OnboardingStep";
 import { AppEnv } from "@autumn/shared";
@@ -17,19 +17,27 @@ import { CreateSecretKey } from "./onboarding-steps/04_CreateSecretKey";
 import AttachProduct from "./onboarding-steps/04_AttachProduct";
 import CheckAccessStep from "./onboarding-steps/05_CheckAccess";
 import Install from "./onboarding-steps/Install";
+import LoadingScreen from "../general/LoadingScreen";
+import { ProductList } from "./onboarding-steps/03_ProductList";
+import { useCreateOrg } from "./hooks/useCreateOrg";
 
 function OnboardingView() {
   const env = useEnv();
 
   const { organization: org } = useOrganization();
+  const { setActive } = useOrganizationList();
+
   const [searchParams] = useSearchParams();
   const [orgCreated, setOrgCreated] = useState(org ? true : false);
 
-  let [apiKey, setApiKey] = useState("");
-  let [productId, setProductId] = useState("");
-  const hasHandledOrg = useRef(false);
+  const [apiKey, setApiKey] = useState("");
+  const [productId, setProductId] = useState("");
 
-  const axiosInstance = useAxiosInstance({ env });
+  const hasHandledOrg = useRef(false);
+  const hasHandledToken = useRef(false);
+  const axiosInstance = useAxiosInstance();
+  const token = searchParams.get("token");
+  const [loading, setLoading] = useState(true);
 
   const {
     data: productData,
@@ -41,66 +49,55 @@ function OnboardingView() {
     withAuth: true,
   });
 
-  const pollForOrg = async () => {
-    for (let i = 0; i < 10; i++) {
-      console.log("polling for org, attempt", i);
-      const requiredProdLength = env == AppEnv.Sandbox ? 2 : 0;
+  useEffect(() => {
+    const handleToken = async () => {
       try {
-        const response = await axiosInstance.get("/products/data");
-        const pollingData = response.data;
+        const { data } = await axiosInstance.post("/onboarding", {
+          token,
+        });
 
-        if (pollingData?.products.length != requiredProdLength) {
-          throw new Error("Products not created");
-        }
-        setOrgCreated(true);
         await productMutate();
-        return;
       } catch (error) {
-        console.log("error", error);
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-    }
+    };
 
-    window.location.reload();
-  };
-
-  useEffect(() => {
-    const toastMessage = searchParams.get("toast");
-    if (toastMessage) {
-      toast.error(toastMessage);
+    if (org && token && !hasHandledToken.current) {
+      hasHandledToken.current = true;
+      handleToken();
     }
-  }, [searchParams]);
+  }, [org, searchParams, token, axiosInstance, productMutate]);
 
   useEffect(() => {
-    if (org && !orgCreated && !hasHandledOrg.current) {
-      // console.log("Gonna poll for org!");
-      hasHandledOrg.current = true;
-      pollForOrg();
+    if (org && !token) {
+      setLoading(false);
     }
-  }, [org, orgCreated]);
+  }, [org, token]);
+
+  useCreateOrg({ productMutate });
+
+  if (loading || productLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="text-sm w-full flex justify-start">
       <div className="flex flex-col p-8 px-14">
-        <CreateOrgStep pollForOrg={pollForOrg} number={1} />
-        {orgCreated && (
+        {productData && (
           <>
-            <CreateProductStep
-              productId={productId}
-              setProductId={setProductId}
-              number={2}
-            />
-
-            <CreateSecretKey apiKey={apiKey} setApiKey={setApiKey} number={3} />
+            <ProductList data={productData} mutate={productMutate} />
+            <CreateSecretKey apiKey={apiKey} setApiKey={setApiKey} number={2} />
             <ConnectStripeStep
               mutate={productMutate}
               productData={productData}
-              number={4}
+              number={3}
             />
 
-            <Install number={5} />
+            <Install number={4} />
 
-            <AttachProduct productId={productId} apiKey={apiKey} number={6} />
+            <AttachProduct productId={productId} apiKey={apiKey} number={5} />
 
             <CheckAccessStep apiKey={apiKey} number={6} />
 

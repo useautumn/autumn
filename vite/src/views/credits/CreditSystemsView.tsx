@@ -1,15 +1,11 @@
 "use client";
 
-import React, { useContext } from "react";
-
-import { AppEnv, DBConnection, Feature, FeatureType } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import CreateCreditSystem from "./CreateCreditSystem";
-import { useFeaturesContext } from "../features/FeaturesContext";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "../general/LoadingScreen";
 import { FeaturesContext } from "../features/FeaturesContext";
 import { CreditSystemsTable } from "./CreditSystemsTable";
-import { CustomToaster } from "@/components/general/CustomToaster";
 
 function CreditSystemsView({ env }: { env: AppEnv }) {
   const { data, isLoading, error, mutate } = useAxiosSWR({

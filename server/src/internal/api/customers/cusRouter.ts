@@ -69,14 +69,14 @@ cusRouter.post("/:customer_id", handleUpdateCustomer);
 // Update customer entitlement directly
 cusRouter.post(
   "/customer_entitlements/:customer_entitlement_id",
-  handleUpdateEntitlement
+  handleUpdateEntitlement,
 );
 
 cusRouter.post("/:customer_id/balances", handleUpdateBalances);
 
 cusRouter.post(
   "/customer_products/:customer_product_id",
-  handleCusProductExpired
+  handleCusProductExpired,
 );
 
 cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
@@ -115,7 +115,7 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
     const stripeCli = createStripeCli({ org, env: req.env });
     const portal = await stripeCli.billingPortal.sessions.create({
       customer: customer.processor.id,
-      return_url: returnUrl || org.stripe_config.success_url,
+      return_url: returnUrl || org.stripe_config?.success_url,
     });
 
     if (org.api_version >= APIVersion.v1_1) {

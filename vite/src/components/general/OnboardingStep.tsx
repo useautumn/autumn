@@ -15,7 +15,7 @@ function Step({ title, children, className, description, number }: StepProps) {
     <div
       className={cn(
         "relative pl-8 pb-8 border-l border-stone-200 gap-4 flex flex-col",
-        className
+        className,
       )}
     >
       <div className="absolute -left-[17px] -top-1 flex items-center justify-center w-8 h-8 rounded-full bg-stone-50 border">
@@ -28,7 +28,7 @@ function Step({ title, children, className, description, number }: StepProps) {
         <div className="flex flex-col gap-4 w-full lg:w-1/3">
           <h1 className="text-t1 text-md font-medium">{title}</h1>
           {description && (
-            <div className="text-t2 flex flex-col gap-4 w-full">
+            <div className="text-t2/70 flex flex-col gap-4 w-full">
               {description}
             </div>
           )}

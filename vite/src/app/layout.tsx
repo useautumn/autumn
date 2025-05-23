@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
 import { useAuth } from "@clerk/clerk-react";
+
 export function MainLayout() {
   const { isLoaded: isUserLoaded, user } = useUser();
   const { organization: org } = useOrganization();
@@ -157,7 +158,7 @@ const MainContent = () => {
         )}
         <div
           className={cn(
-            "w-full h-full overflow-auto flex justify-center bg-stone-50"
+            "w-full h-full overflow-auto flex justify-center bg-stone-50",
           )}
         >
           <div className="hidden md:flex w-full h-full justify-center">
