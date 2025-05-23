@@ -108,7 +108,6 @@ export const constructProduct = ({
     processor,
     internal_id: generateId("prod"),
     created_at: Date.now(),
-    version: 1,
   };
 
   return newProduct;
