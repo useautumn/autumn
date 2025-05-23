@@ -153,6 +153,7 @@ export const handleNewProductItems = async ({
   logger,
   isCustom,
   newVersion,
+  saveToDb = true,
 }: {
   db: DrizzleCli;
   sb: SupabaseClient;
@@ -164,9 +165,9 @@ export const handleNewProductItems = async ({
   logger: any;
   isCustom: boolean;
   newVersion?: boolean;
+  saveToDb?: boolean;
 }) => {
   // Create features if not exist...
-
   if (!newItems) {
     return {
       prices: [],
@@ -175,7 +176,6 @@ export const handleNewProductItems = async ({
   }
 
   // Validate product items...
-
   let { allFeatures, newFeatures } = validateProductItems({
     newItems,
     features,
@@ -258,16 +258,15 @@ export const handleNewProductItems = async ({
     `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`,
   );
 
-  if (newFeatures.length > 0) {
+  if (newFeatures.length > 0 && saveToDb) {
     await FeatureService.insert({
       db,
-      sb,
       data: newFeatures,
       logger,
     });
   }
 
-  if (isCustom || newVersion) {
+  if ((isCustom || newVersion) && saveToDb) {
     return handleCustomProductItems({
       sb,
       newPrices,
@@ -280,15 +279,17 @@ export const handleNewProductItems = async ({
     });
   }
 
-  await updateDbPricesAndEnts({
-    sb,
-    newPrices,
-    newEnts,
-    updatedPrices,
-    updatedEnts,
-    deletedPrices,
-    deletedEnts,
-  });
+  if (saveToDb) {
+    await updateDbPricesAndEnts({
+      sb,
+      newPrices,
+      newEnts,
+      updatedPrices,
+      updatedEnts,
+      deletedPrices,
+      deletedEnts,
+    });
+  }
 
   return {
     prices: [...newPrices, ...updatedPrices],

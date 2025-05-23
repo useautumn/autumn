@@ -1,15 +1,18 @@
 import { Router } from "express";
 import { Request } from "@/utils/models/Request.js";
-import { chatResults } from "@/db/schema/index.js";
+
 import { eq } from "drizzle-orm";
 import { routeHandler } from "@/utils/routerUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { createClerkCli } from "@/external/clerkUtils.js";
-import { handleOrgCreated } from "@/external/webhooks/clerkWebhooks.js";
-import { OrgService } from "../OrgService.js";
 import { AppEnv } from "@autumn/shared";
 import { parseChatResultFeatures } from "./parseChatFeatures.js";
 import { parseChatProducts } from "./parseChatProducts.js";
+import { chatResults } from "@autumn/shared";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
+import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
+import { PriceService } from "@/internal/prices/PriceService.js";
 
 export const onboardingRouter = Router();
 
@@ -19,7 +22,7 @@ onboardingRouter.post("", async (req: Request, res: any) =>
     res,
     action: "onboarding",
     handler: async (req: Request, res: any) => {
-      const { db, userId } = req;
+      const { db, sb, logtail: logger, org } = req;
       const { token } = req.body;
 
       if (!token) {
@@ -30,7 +33,6 @@ onboardingRouter.post("", async (req: Request, res: any) =>
         });
       }
 
-      // 1. Get chat result
       let chatResult = await db.query.chatResults.findFirst({
         where: eq(chatResults.id, token),
       });
@@ -43,49 +45,69 @@ onboardingRouter.post("", async (req: Request, res: any) =>
         });
       }
 
-      let clerk = createClerkCli();
-      let user = await clerk.users.getUser(userId!);
-
-      // console.log(`Creating default org for user ${user.id}`);
-      // let org = await clerk.organizations.createOrganization({
-      //   name: `${user.firstName}'s Org`,
-      // });
-
-      // // 2. Create org membership for user
-      // await clerk.organizations.createOrganizationMembership({
-      //   organizationId: org.id,
-      //   userId: userId!,
-      //   role: "org:admin",
-      // });
-
-      // // 3. Create org in db
-      // await handleOrgCreated(db, {
-      //   id: org.id,
-      //   slug: org.slug,
-      //   created_at: org.createdAt,
-      // });
-
-      // 4. Create new products
-      let features = chatResult?.data.features;
-      let products = chatResult?.data.products;
-
-      let backendFeatures = parseChatResultFeatures(features);
-      let backendProducts = parseChatProducts({
-        features: backendFeatures,
-        chatProducts: products,
+      let curProducts = await ProductService.getFullProducts({
+        sb,
+        orgId: org.id,
+        env: AppEnv.Sandbox,
       });
 
-      console.log(backendFeatures);
+      let curFeatures = await FeatureService.list({
+        db,
+        orgId: org.id,
+        env: AppEnv.Sandbox,
+      });
 
-      // for (const feature of features) {
-      //   await ProductService.create({
-      //     sb,
-      //     product: feature,
-      //   });
-      // }
+      let newProducts = chatResult.data.products.filter((product) => {
+        return !curProducts.some((p) => p.id === product.id);
+      });
+
+      let newFeatures = chatResult.data.features.filter((feature) => {
+        return !curFeatures.some((f) => f.id === feature.id);
+      });
+
+      if (newFeatures.length > 0 || newProducts.length > 0) {
+        let backendFeatures = parseChatResultFeatures({
+          features: newFeatures,
+          orgId: org.id,
+        });
+
+        let { products, prices, ents } = await parseChatProducts({
+          db,
+          sb,
+          logger,
+          orgId: org.id,
+          features: [...curFeatures, ...backendFeatures],
+          chatProducts: newProducts,
+        });
+
+        await Promise.all([
+          FeatureService.insert({
+            db,
+            data: backendFeatures,
+            logger,
+          }),
+          (async () => {
+            for (const product of products) {
+              await ProductService.create({ sb, product });
+            }
+          })(),
+        ]);
+
+        await EntitlementService.insert({
+          sb,
+          data: ents,
+        });
+
+        await PriceService.insert({
+          sb,
+          data: prices,
+        });
+      }
 
       res.status(200).json({
-        message: "Onboarding successful",
+        org_id: org.id,
+        feature_ids: chatResult.data.features.map((f) => f.id),
+        product_ids: chatResult.data.products.map((p) => p.id),
       });
     },
   }),

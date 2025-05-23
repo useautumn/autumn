@@ -1,5 +1,4 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { entitlements, prices, features, products } from "@/db/schema/index.js";
 import { generateId, keyToTitle } from "@/utils/genUtils.js";
 import {
   FeatureType,
@@ -9,6 +8,12 @@ import {
   AllowanceType,
   PriceType,
   BillingInterval,
+
+  // DB Models
+  entitlements,
+  prices,
+  features,
+  products,
 } from "@autumn/shared";
 
 import { AppEnv } from "autumn-js";

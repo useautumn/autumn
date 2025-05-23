@@ -63,7 +63,7 @@ function ProductView({ env }: { env: AppEnv }) {
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
     useState<"unlimited" | number>(0);
   const [originalProduct, setOriginalProduct] = useState<ProductV2 | null>(
-    null
+    null,
   );
 
   useEffect(() => {
@@ -119,8 +119,8 @@ function ProductView({ env }: { env: AppEnv }) {
         ? "Add entitlements and prices to create a new product"
         : `Make a change to the entitlements or prices to update ${product?.name}`
       : isNewProduct
-      ? `Create a new product: ${product?.name} `
-      : `Save changes to product: ${product?.name}`,
+        ? `Create a new product: ${product?.name} `
+        : `Save changes to product: ${product?.name}`,
   };
 
   if (isLoading) return <LoadingScreen />;
@@ -209,11 +209,7 @@ function ProductView({ env }: { env: AppEnv }) {
 
             <div className="flex">
               <div className="flex-1 w-full min-w-sm">
-                <ManageProduct
-                  // product={product}
-                  showFreeTrial={showFreeTrial}
-                  setShowFreeTrial={setShowFreeTrial}
-                />
+                <ManageProduct />
               </div>
             </div>
             <div className="flex justify-end gap-2 p-10 w-full lg:hidden block">

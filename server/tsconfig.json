@@ -25,7 +25,22 @@
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src", "tests", "tests-old/utils.ts", "tests-old/global.ts"],
+  "include": [
+    "src",
+    "tests",
+    "tests-old/utils.ts",
+    "tests-old/global.ts",
+    "../shared/db/allTables.ts",
+    "../shared/db/apiKeysTable.ts",
+    "../shared/db/chatResultsTable.ts",
+    "../shared/db/cusTable.ts",
+    "../shared/db/entitlementsTable.ts",
+    "../shared/db/featuresTable.ts",
+    "../shared/db/invoicesTable.ts",
+    "../shared/db/orgTable.ts",
+    "../shared/db/pricesTable.ts",
+    "../shared/db/productsTable.ts"
+  ],
   "references": [
     {
       "path": "../shared"

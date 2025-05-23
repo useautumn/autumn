@@ -21,7 +21,7 @@ import { Decimal } from "decimal.js";
 
 export const prepaidToStripeTiers = (
   price: Price,
-  entitlement: EntitlementWithFeature
+  entitlement: EntitlementWithFeature,
 ) => {
   let usageConfig = structuredClone(price.config) as UsagePriceConfig;
 
@@ -137,7 +137,7 @@ export const createStripePrepaid = async ({
       recurring: {
         ...(recurringData as any),
       },
-      nickname: `Autumn Price (${price.name})`,
+      nickname: `Autumn Price (${relatedEnt.feature.name})`,
     });
 
     config.stripe_price_id = stripePrice.id;

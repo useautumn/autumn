@@ -16,10 +16,8 @@ import {
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { constructOrg } from "@/internal/orgs/orgUtils.js";
 import { createOnboardingProducts } from "@/internal/orgs/onboarding/createOnboardingProducts.js";
-import { organizations } from "@/db/schema/tables/orgTable.js";
 import { eq } from "drizzle-orm";
-import { ErrCode } from "@/errors/errCodes.js";
-import { Organization } from "@autumn/shared";
+import { Organization, organizations } from "@autumn/shared";
 
 const verifyClerkWebhook = async (req: Request, res: Response) => {
   const wh = new Webhook(process.env.CLERK_SIGNING_SECRET!);
@@ -60,6 +58,7 @@ const verifyClerkWebhook = async (req: Request, res: Response) => {
 
 export const handleClerkWebhook = async (req: any, res: any) => {
   let event = await verifyClerkWebhook(req, res);
+
   if (!event) {
     return;
   }
@@ -70,7 +69,11 @@ export const handleClerkWebhook = async (req: any, res: any) => {
   try {
     switch (eventType) {
       case "organization.created":
-        await handleOrgCreated(req.db, eventData);
+        await saveOrgToDB({
+          db: req.db,
+          id: eventData.id,
+          slug: eventData.slug,
+        });
         break;
 
       case "organization.deleted":
@@ -99,47 +102,46 @@ export const handleClerkWebhook = async (req: any, res: any) => {
   });
 };
 
-export const handleOrgCreated = async (
-  db: DrizzleCli,
-  eventData: {
-    id: string;
-    slug: string;
-    created_at: number;
-  },
-) => {
-  console.log(
-    `Handling organization.created: ${eventData.slug} (${eventData.id})`,
-  );
+export const saveOrgToDB = async ({
+  db,
+  id,
+  slug,
+}: {
+  db: DrizzleCli;
+  id: string;
+  slug: string;
+}) => {
+  console.log(`Handling organization.created: ${slug} (${id})`);
 
   try {
     // 2. Insert org
     await OrgService.insert({
       db,
       org: constructOrg({
-        id: eventData.id,
-        slug: eventData.slug,
+        id,
+        slug,
       }),
     });
 
     // 1. Create svix webhoooks
     const { sandboxApp, liveApp } = await initOrgSvixApps({
-      slug: eventData.slug,
-      id: eventData.id,
+      slug,
+      id,
     });
 
     await OrgService.update({
       db,
-      orgId: eventData.id,
+      orgId: id,
       updates: {
         svix_config: { sandbox_app_id: sandboxApp.id, live_app_id: liveApp.id },
       },
     });
 
-    console.log(`Created svix webhooks for org ${eventData.id}`);
+    console.log(`Created svix webhooks for org ${id}`);
   } catch (error: any) {
     if (error?.data && error.data.code == "23505") {
       console.error(
-        `Org ${eventData.id} already exists in Supabase -- skipping creationg`,
+        `Org ${id} already exists in Supabase -- skipping creationg`,
       );
       return;
     }
@@ -152,16 +154,16 @@ export const handleOrgCreated = async (
   const batch = [];
 
   try {
-    batch.push(
-      createOnboardingProducts({
-        db,
-        orgId: eventData.id,
-      }),
-    );
+    // batch.push(
+    //   createOnboardingProducts({
+    //     db,
+    //     orgId: eventData.id,
+    //   }),
+    // );
 
     batch.push(
       sendOnboardingEmail({
-        orgId: eventData.id,
+        orgId: id,
         clerkCli: createClerkCli(),
       }),
     );
@@ -201,7 +203,7 @@ const handleOrgDeleted = async ({
 
     console.log("1. Deleting svix webhooks");
     const batch = [];
-    if (org.svix_config.sandbox_app_id) {
+    if (org.svix_config?.sandbox_app_id) {
       batch.push(
         deleteSvixApp({
           appId: org.svix_config.sandbox_app_id,
@@ -209,7 +211,7 @@ const handleOrgDeleted = async ({
       );
     }
 
-    if (org.svix_config.live_app_id) {
+    if (org.svix_config?.live_app_id) {
       batch.push(
         deleteSvixApp({
           appId: org.svix_config.live_app_id,

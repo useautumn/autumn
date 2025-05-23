@@ -16,18 +16,16 @@ export const handleDeleteProduct = (req: any, res: any) =>
       const orgId = req.orgId;
       const env = req.env;
 
-      const [org, product] = await Promise.all([
-        OrgService.getFullOrg({
-          sb,
-          orgId,
-        }),
-        ProductService.getProductStrict({
-          sb,
-          productId,
-          orgId,
-          env,
-        }),
-      ]);
+      console.log("Org ID", orgId);
+      console.log("Product ID", productId);
+      console.log("Env", env);
+
+      const product = await ProductService.getProductStrict({
+        sb,
+        productId,
+        orgId,
+        env,
+      });
 
       if (!product) {
         throw new RecaseError({
@@ -39,7 +37,7 @@ export const handleDeleteProduct = (req: any, res: any) =>
 
       let cusProducts = await CusProductService.getByInternalProductId(
         sb,
-        product.internal_id
+        product.internal_id,
       );
 
       if (cusProducts.length > 0) {

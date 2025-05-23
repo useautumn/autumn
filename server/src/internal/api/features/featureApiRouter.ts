@@ -74,7 +74,7 @@ featureApiRouter.post("", async (req: any, res) => {
   let data = req.body;
 
   try {
-    let { sb, orgId, env, logtail: logger } = req;
+    let { db, orgId, env, logtail: logger } = req;
     let parsedFeature = validateFeature(data);
 
     let feature: Feature = {
@@ -87,8 +87,7 @@ featureApiRouter.post("", async (req: any, res) => {
 
     let org = await OrgService.getFromReq(req);
     let insertedData = await FeatureService.insert({
-      db: req.db,
-      sb,
+      db,
       data: feature,
       logger,
     });

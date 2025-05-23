@@ -1,10 +1,12 @@
 import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
+import { constructFeature } from "@/internal/features/utils/constructFeatureUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { keyToTitle } from "@/utils/genUtils.js";
 import {
   AggregateType,
+  AppEnv,
   ChatFeatureCreditSchema,
   ChatResultFeature,
-  Feature,
   FeatureType,
   FeatureUsageType,
   MeteredConfig,
@@ -46,7 +48,13 @@ const validateFeatures = (features: ChatResultFeature[]) => {
   });
 };
 
-export const parseChatResultFeatures = (features: ChatResultFeature[]) => {
+export const parseChatResultFeatures = ({
+  features,
+  orgId,
+}: {
+  features: ChatResultFeature[];
+  orgId: string;
+}) => {
   validateFeatures(features);
 
   return features.map((feature) => {
@@ -75,13 +83,15 @@ export const parseChatResultFeatures = (features: ChatResultFeature[]) => {
       });
     }
 
-    let backendFeat: Feature = {
+    let backendFeat = constructFeature({
       id: feature.id,
-      name: feature.name,
-      type: type,
+      name: keyToTitle(feature.id),
+      type,
+      env: AppEnv.Sandbox,
+      config,
+      orgId: orgId,
       display: feature.display,
-      config: config,
-    };
+    });
 
     return backendFeat;
   });

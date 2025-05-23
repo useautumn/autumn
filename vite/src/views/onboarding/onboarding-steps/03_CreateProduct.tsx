@@ -11,9 +11,7 @@ import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
 import { ProductContext } from "@/views/products/product/ProductContext";
-import { ManageProduct } from "@/views/products/product/ManageProduct";
 import { ProductItemTable } from "@/views/products/product/product-item/ProductItemTable";
-import { ArrowUp, CopyIcon, PlusIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 
@@ -26,12 +24,12 @@ export const CreateProductStep = ({
   setProductId: (productId: string) => void;
   number: number;
 }) => {
-  let [newProduct, setNewProduct] = useState<any>(defaultProduct);
-  let [createClicked, setCreateClicked] = useState(false);
-  let [createProductLoading, setCreateProductLoading] = useState(false);
+  const env = useEnv();
+  const axiosInstance = useAxiosInstance({ env });
 
-  let env = useEnv();
-  let axiosInstance = useAxiosInstance({ env });
+  const [newProduct, setNewProduct] = useState<any>(defaultProduct);
+  const [createClicked, setCreateClicked] = useState(false);
+  const [createProductLoading, setCreateProductLoading] = useState(false);
 
   const { data, isLoading, mutate } = useAxiosSWR({
     url: `/products/${newProduct.id}/data`,
@@ -60,7 +58,7 @@ export const CreateProductStep = ({
       const res = await ProductService.updateProduct(
         axiosInstance,
         productId,
-        product
+        product,
       );
       toast.success("Product items successfully created");
       await mutate();
@@ -91,12 +89,6 @@ export const CreateProductStep = ({
         </p>
       }
     >
-      {/* <p>
-            Then, create your <span className="font-bold">Products</span>, which
-            are the pricing plans that grant access to those features.
-          </p>
-          <p>Some examples have been created for you.</p> */}
-
       {product ? (
         <FeaturesContext.Provider
           value={{

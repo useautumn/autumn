@@ -1,8 +1,6 @@
-import { AppEnv, ErrCode, MinOrg, Organization } from "@autumn/shared";
+import { AppEnv, ErrCode, Organization } from "@autumn/shared";
 import { Autumn } from "./autumnCli.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 
 export enum FeatureId {
   Products = "products",
@@ -10,43 +8,12 @@ export enum FeatureId {
   Revenue = "revenue",
 }
 
-export const sendFeatureEvent = async ({
-  minOrg,
-  env,
-  incrementBy,
-}: {
-  minOrg: MinOrg;
-  env: AppEnv;
-  incrementBy: number;
-}) => {
-  if (env !== AppEnv.Live) {
-    return;
-  }
-
-  try {
-    const autumn = new Autumn();
-
-    await autumn.sendEvent({
-      customerId: minOrg.id,
-      eventName: "feature",
-      properties: {
-        value: incrementBy,
-      },
-      customer_data: {
-        name: minOrg.slug,
-      },
-    });
-  } catch (error: any) {
-    console.log("Failed to send feature event", error?.message || error);
-  }
-};
-
 export const sendProductEvent = async ({
-  minOrg,
+  org,
   env,
   incrementBy,
 }: {
-  minOrg: MinOrg;
+  org: Organization;
   env: AppEnv;
   incrementBy: number;
 }) => {
@@ -58,13 +25,13 @@ export const sendProductEvent = async ({
     const autumn = new Autumn();
 
     await autumn.sendEvent({
-      customerId: minOrg.id,
+      customerId: org.id,
       eventName: "product",
       properties: {
         value: incrementBy,
       },
       customer_data: {
-        name: minOrg.slug,
+        name: org.slug,
       },
     });
     console.log("sent product event", incrementBy);
@@ -74,11 +41,11 @@ export const sendProductEvent = async ({
 };
 
 export const isEntitled = async ({
-  minOrg,
+  org,
   env,
   featureId,
 }: {
-  minOrg: MinOrg;
+  org: Organization;
   env: AppEnv;
   featureId: FeatureId;
 }) => {
@@ -91,10 +58,10 @@ export const isEntitled = async ({
   let result;
   try {
     result = await autumn.entitled({
-      customerId: minOrg.id,
+      customerId: org.id,
       featureId: featureId,
       customer_data: {
-        name: minOrg.slug,
+        name: org.slug,
       },
     });
   } catch (error: any) {

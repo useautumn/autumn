@@ -31,10 +31,11 @@ export const ProductItemTable = ({
 }: {
   isOnboarding?: boolean;
 }) => {
-  let { product, setProduct, features, org } = useProductContext();
-  let [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
-  let [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  let [open, setOpen] = useState(false);
+  const { product, setProduct, features, org } = useProductContext();
+  const [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [open, setOpen] = useState(false);
+
   const getFreeFeatureString = (item: ProductItem) => {
     const feature = features.find((f: Feature) => f.id == item.feature_id);
 
@@ -85,7 +86,7 @@ export const ProductItemTable = ({
       })}`;
     }
 
-    let feature = features.find((f: Feature) => f.id == item.feature_id);
+    const feature = features.find((f: Feature) => f.id == item.feature_id);
 
     amountStr += ` per ${item.billing_units! > 1 ? item.billing_units : ""} ${
       feature?.name
@@ -103,8 +104,8 @@ export const ProductItemTable = ({
   };
 
   const getFixedPriceString = (item: ProductItem) => {
-    let currency = org?.default_currency || "USD";
-    let formattedAmount = formatAmount({
+    const currency = org?.default_currency || "USD";
+    const formattedAmount = formatAmount({
       defaultCurrency: currency,
       amount: item.price!,
     });
@@ -116,7 +117,7 @@ export const ProductItemTable = ({
     return `${formattedAmount}`;
   };
 
-  let handleRowClick = (item: ProductItem, index: number) => {
+  const handleRowClick = (item: ProductItem, index: number) => {
     setSelectedItem(item);
     setSelectedIndex(index);
     setOpen(true);
@@ -175,7 +176,7 @@ export const ProductItemTable = ({
         <div
           className={cn(
             "flex items-center justify-between border-y bg-stone-100 pl-10 pr-10 h-10",
-            isOnboarding && "pl-2 pr-2 border-x"
+            isOnboarding && "pl-2 pr-2 border-x",
           )}
         >
           <h2 className="text-sm text-t2 font-medium  flex whitespace-nowrap">
@@ -189,14 +190,14 @@ export const ProductItemTable = ({
         </div>
         <div className="flex flex-col">
           {product.items.map((item: ProductItem, index: number) => {
-            let itemType = getItemType(item);
+            const itemType = getItemType(item);
 
             return (
               <div
                 key={index}
                 className={cn(
                   "grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3",
-                  isOnboarding && "grid-cols-12 px-2"
+                  isOnboarding && "grid-cols-12 px-2",
                 )}
                 onClick={() => handleRowClick(item, index)}
               >
@@ -212,8 +213,8 @@ export const ProductItemTable = ({
                     {itemType === ProductItemType.Feature
                       ? getFreeFeatureString(item)
                       : itemType === ProductItemType.Price
-                      ? getFixedPriceString(item)
-                      : getPaidFeatureString(item)}
+                        ? getFixedPriceString(item)
+                        : getPaidFeatureString(item)}
                   </AdminHover>
                 </span>
                 <span className="col-span-4 flex gap-1 justify-end w-fit ">
@@ -223,7 +224,7 @@ export const ProductItemTable = ({
                       "text-xs flex gap-1 items-center opacity-0",
                       (itemType === ProductItemType.Feature ||
                         itemType === ProductItemType.FeaturePrice) &&
-                        "opacity-100"
+                        "opacity-100",
                     )}
                   >
                     <Flag size={12} /> Feature
@@ -235,7 +236,7 @@ export const ProductItemTable = ({
                       "text-xs flex gap-1 items-center opacity-0",
                       (itemType === ProductItemType.Price ||
                         itemType === ProductItemType.FeaturePrice) &&
-                        "opacity-100"
+                        "opacity-100",
                     )}
                   >
                     <DollarSign size={12} /> Price

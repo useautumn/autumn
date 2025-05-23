@@ -48,14 +48,6 @@ import { SuccessCode } from "@autumn/shared";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
 import { getInvoiceItems } from "../invoices/invoiceUtils.js";
-import { sendSvixEvent } from "@/external/svix/svixUtils.js";
-import { getCustomerDetails } from "@/internal/api/customers/getCustomerDetails.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { JobName } from "@/queue/JobName.js";
-import {
-  constructProductsUpdatedData,
-  ProductsUpdatedDataSchema,
-} from "@/external/svix/handleProductsUpdatedWebhook.js";
 
 export const handleBillNowPrices = async ({
   sb,
@@ -98,7 +90,7 @@ export const handleBillNowPrices = async ({
   let mergeCusProduct =
     !disableMerge && !freeTrial && org.config.merge_billing_cycles
       ? cusProducts?.find((cp) =>
-          products.some((p) => p.group == cp.product.group)
+          products.some((p) => p.group == cp.product.group),
         )
       : undefined;
 
@@ -113,7 +105,7 @@ export const handleBillNowPrices = async ({
     }
 
     let mergeWithSub = mergeSubs.find(
-      (sub) => subToAutumnInterval(sub) == itemSet.interval
+      (sub) => subToAutumnInterval(sub) == itemSet.interval,
     );
 
     let subscription;
@@ -126,7 +118,7 @@ export const handleBillNowPrices = async ({
       if (attachParams.billingAnchor) {
         billingCycleAnchorUnix = getAlignedIntervalUnix(
           attachParams.billingAnchor,
-          itemSet.interval
+          itemSet.interval,
         );
       }
 
@@ -192,7 +184,7 @@ export const handleBillNowPrices = async ({
             : undefined,
         carryExistingUsages,
         scenario: AttachScenario.New,
-      })
+      }),
     );
   }
   await Promise.all(batchInsert);
@@ -250,7 +242,7 @@ export const handleBillNowPrices = async ({
           customer_id: customer.id || customer.internal_id,
 
           invoice: invoiceOnly ? invoices?.[0] : undefined,
-        })
+        }),
       );
     } else {
       res.status(200).json({
@@ -338,8 +330,8 @@ export const handleOneOffPrices = async ({
           billingType == BillingType.UsageInAdvance
             ? UsageModel.Prepaid
             : price.config?.type == PriceType.Usage
-            ? UsageModel.PayPerUse
-            : null,
+              ? UsageModel.PayPerUse
+              : null,
         feature_name: entitlement?.feature.name,
       };
     }
@@ -390,7 +382,7 @@ export const handleOneOffPrices = async ({
   if (!attachParams.invoiceOnly) {
     stripeInvoice = await stripeCli.invoices.finalizeInvoice(
       stripeInvoice.id,
-      getInvoiceExpansion()
+      getInvoiceExpansion(),
     );
 
     logger.info("   3. Paying invoice");
@@ -428,7 +420,7 @@ export const handleOneOffPrices = async ({
         sb,
         attachParams: attachToInsertParams(attachParams, product),
         lastInvoiceId: stripeInvoice.id,
-      })
+      }),
     );
   }
   await Promise.all(batchInsert);
@@ -460,7 +452,7 @@ export const handleOneOffPrices = async ({
         product_ids: products.map((p) => p.id),
         customer_id: customer.id || customer.internal_id,
         scenario: AttachScenario.New,
-      })
+      }),
     );
   }
 };
@@ -492,14 +484,14 @@ export const handleAddProduct = async ({
     if (product.is_add_on) {
       logger.info(
         `Adding add-on ${chalk.yellowBright(
-          product.name
-        )} to customer ${chalk.yellowBright(customer.id)}`
+          product.name,
+        )} to customer ${chalk.yellowBright(customer.id)}`,
       );
     } else {
       logger.info(
         `Adding product ${chalk.yellowBright(
-          product.name
-        )} to customer ${chalk.yellowBright(customer.id)}`
+          product.name,
+        )} to customer ${chalk.yellowBright(customer.id)}`,
       );
     }
   }
@@ -545,7 +537,7 @@ export const handleAddProduct = async ({
         billLaterOnly: true,
         carryExistingUsages,
         keepResetIntervals,
-      })
+      }),
     );
   }
   await Promise.all(batchInsert);
@@ -564,7 +556,7 @@ export const handleAddProduct = async ({
             .join(", ")}`,
           product_ids: products.map((p) => p.id),
           customer_id: customer.id,
-        })
+        }),
       );
     } else {
       res.status(200).json({
