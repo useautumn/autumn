@@ -161,6 +161,8 @@ export const handleVersionProductV2 = async ({
     processor: latestProduct.processor,
   });
 
+  console.log("New product:", newProduct);
+
   // Validate product items...
   validateProductItems({
     newItems: items,
