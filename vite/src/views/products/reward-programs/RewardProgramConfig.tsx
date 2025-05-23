@@ -40,7 +40,7 @@ export const RewardProgramConfig = ({
   rewardProgram: RewardProgram;
   setRewardProgram: (rewardProgram: RewardProgram) => void;
 }) => {
-  let { rewards } = useProductsContext();
+  const { rewards } = useProductsContext();
 
   return (
     <div className="flex flex-col gap-4">

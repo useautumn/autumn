@@ -234,7 +234,7 @@ export const initWorkers = async () => {
   await CacheManager.getInstance();
   const logtail = createLogtail();
   const sb = createSupabaseClient();
-  const db = initDrizzle();
+  const { db, client } = initDrizzle();
 
   for (let i = 0; i < NUM_WORKERS; i++) {
     workers.push(
