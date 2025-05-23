@@ -38,11 +38,11 @@ export const getCheckPreview = async ({
   }
 
   let mainCusProds = cusProducts.filter(
-    (cp: FullCusProduct) => !cp.product.is_add_on
+    (cp: FullCusProduct) => !cp.product.is_add_on,
   );
 
   let cusOwnedProducts = mainCusProds.map((cp: FullCusProduct) =>
-    fullCusProductToProduct(cp)
+    fullCusProductToProduct(cp),
   );
   sortProductsByPrice(cusOwnedProducts);
   let highestTierProd =
@@ -98,7 +98,7 @@ export const getCheckPreview = async ({
   }
 
   let v2Prods = rawProducts.map((p) =>
-    getProductResponse({ product: p, features: allFeatures })
+    getProductResponse({ product: p, features: allFeatures }),
   );
 
   if (mainProds.length === 0 && addOns.length === 0) {
@@ -124,8 +124,8 @@ export const getCheckPreview = async ({
   let title = nextProd.free_trial
     ? `Start trial for ${nextProd.name}`
     : !nextProd.is_add_on
-    ? `Upgrade to ${nextProd.name}`
-    : `Purchase ${nextProd.name}`;
+      ? `Upgrade to ${nextProd.name}`
+      : `Purchase ${nextProd.name}`;
 
   // If there's a current balance...
   let msg = "";
@@ -164,17 +164,6 @@ export const getCheckPreview = async ({
 
   let nextTier =
     mainProds.length > 0 ? mainProds[0] : addOns.length > 0 ? addOns[0] : null;
-
-  // if (raw) {
-  //   return {
-  //     title,
-  //     message: msg,
-  //     feature_id: feature.id,
-  //     feature_name: feature.name,
-  //     products: v2Prods,
-  //     // next_tier: nextTierResponse,
-  //   };
-  // }
 
   return {
     title,

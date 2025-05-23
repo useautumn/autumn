@@ -175,14 +175,14 @@ const getFeatureAndCreditSystems = async ({
   const features = await FeatureService.getFromReq(req);
 
   const feature: Feature | undefined = features.find(
-    (feature) => feature.id === featureId
+    (feature) => feature.id === featureId,
   );
 
   const creditSystems: Feature[] = features.filter((feature) => {
     return (
       feature.type == FeatureType.CreditSystem &&
       feature.config.schema.some(
-        (schema: any) => schema.metered_feature_id === featureId
+        (schema: any) => schema.metered_feature_id === featureId,
       )
     );
   });
@@ -245,7 +245,7 @@ const getCusEntsAndFeatures = async ({
 
   if (!org.config.include_past_due) {
     cusProducts = cusProducts.filter(
-      (cusProduct) => cusProduct.status !== CusProductStatus.PastDue
+      (cusProduct) => cusProduct.status !== CusProductStatus.PastDue,
     );
   }
 
@@ -330,8 +330,8 @@ entitledRouter.post("", async (req: any, res: any) => {
     const requiredBalance = notNullish(required_balance)
       ? required_balance
       : notNullish(required_quantity)
-      ? required_quantity
-      : null;
+        ? required_quantity
+        : null;
 
     let quantity = 1;
     if (notNullish(requiredBalance)) {
@@ -365,13 +365,17 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     // 2. If boolean, return true
     if (feature.type === FeatureType.Boolean) {
-      return getBooleanEntitledResult({
+      return await getBooleanEntitledResult({
         customer_id,
         res,
         cusEnts,
         feature,
         org,
         apiVersion,
+        withPreview: req.body.with_preview,
+        cusProducts,
+        allFeatures,
+        sb,
       });
     }
 
@@ -426,8 +430,8 @@ entitledRouter.post("", async (req: any, res: any) => {
         notNullish(balanceObj) && balanceObj.feature_id !== feature.id
           ? features.find((f) => f.id === balanceObj.feature_id)
           : creditSystems.length > 0
-          ? creditSystems[0]
-          : feature;
+            ? creditSystems[0]
+            : feature;
     } catch (error) {
       logger.error(`/check: failed to get balance & feature to use`, error);
     }
