@@ -4,10 +4,33 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { getApiVersion } from "@/utils/versionUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { organizations, apiKeys } from "@/db/schema/index.js";
 import { eq } from "drizzle-orm";
+import { organizations, apiKeys } from "@autumn/shared";
 
 export class OrgService {
+  // Drizzle get
+  static async get({ db, orgId }: { db: DrizzleCli; orgId: string }) {
+    const result = await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+    });
+
+    if (!result) {
+      throw new RecaseError({
+        message: "Organization not found",
+        code: ErrCode.OrgNotFound,
+        statusCode: 404,
+      });
+    }
+
+    return {
+      ...result,
+      config: OrgConfigSchema.parse(result.config || {}),
+      api_version: getApiVersion({
+        createdAt: result.created_at!,
+      }),
+    };
+  }
+
   static async getWithKeys({
     db,
     orgId,
@@ -96,6 +119,7 @@ export class OrgService {
 
     return data;
   }
+
   static async getFromReq(req: any) {
     if (req.org) {
       let org = structuredClone(req.org);
@@ -194,17 +218,22 @@ export class OrgService {
     orgId: string;
     updates: any;
   }) {
-    let result = await db
-      .update(organizations)
-      .set(updates)
-      .where(eq(organizations.id, orgId))
-      .returning();
+    try {
+      let result = await db
+        .update(organizations)
+        .set(updates)
+        .where(eq(organizations.id, orgId))
+        .returning();
 
-    await clearOrgCache({
-      db,
-      orgId,
-    });
+      await clearOrgCache({
+        db,
+        orgId,
+      });
 
-    return result.length > 0 ? result[0] : null;
+      return result.length > 0 ? result[0] : null;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
   }
 }

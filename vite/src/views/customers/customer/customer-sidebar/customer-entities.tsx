@@ -14,7 +14,7 @@ export const CustomerEntities = () => {
   const entity = entities.find((entity: Entity) => entity.id === entityId);
 
   const feature = features.find(
-    (feature: Feature) => entity?.internal_feature_id === feature.internal_id
+    (feature: Feature) => entity?.internal_feature_id === feature.internal_id,
   );
 
   const featureName = getFeatureName({

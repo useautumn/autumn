@@ -82,7 +82,7 @@ export class ProductService {
     const { data, error } = await sb
       .from("products")
       .select(
-        "*, prices(*), entitlements(*, feature:features(*)), free_trial:free_trials(*)"
+        "*, prices(*), entitlements(*, feature:features(*)), free_trial:free_trials(*)",
       )
       .eq("org_id", orgId)
       .eq("env", env)
@@ -198,7 +198,7 @@ export class ProductService {
         ),
         prices(*),
         free_trial:free_trials(*)
-      `
+      `,
       )
       .eq("org_id", orgId)
       .eq("env", env)
@@ -271,7 +271,7 @@ export class ProductService {
           feature:features (id, name, type)
         ),
         prices (*)
-      `
+      `,
     );
 
     if (productId) {
@@ -448,7 +448,7 @@ export class ProductService {
     if (!data) {
       console.log(
         "ProductService.getByFeature returning no data, error:",
-        error
+        error,
       );
       return [];
     }
@@ -458,41 +458,3 @@ export class ProductService {
     return data;
   }
 }
-
-// static async deleteProduct({
-//   sb,
-//   productId,
-//   orgId,
-//   env,
-// }: {
-//   sb: SupabaseClient;
-//   productId: string;
-//   orgId: string;
-//   env: AppEnv;
-// }) {
-//   const { error } = await sb
-//     .from("products")
-//     .delete()
-//     .eq("id", productId)
-//     .eq("org_id", orgId)
-//     .eq("env", env);
-
-//   if (error) {
-//     throw error;
-//   }
-// }
-
-// UNUSED
-// static async getProducts(sb: SupabaseClient, orgId: string, env: AppEnv) {
-//   const { data, error } = await sb
-//     .from("products")
-//     .select("*")
-//     .eq("org_id", orgId)
-//     .eq("env", env);
-
-//   if (error) {
-//     throw error;
-//   }
-
-//   return data;
-// }

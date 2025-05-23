@@ -29,21 +29,23 @@ const init = async () => {
   server.keepAliveTimeout = 120000; // 120 seconds
   server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
 
-  const pgClient = new pg.Client(process.env.DATABASE_URL || "");
-  await pgClient.connect();
+  const pgClient = new pg.Client(
+    process.env.SUPABASE_CONNECTION_STRING || process.env.DATABASE_URL || "",
+  );
 
+  await pgClient.connect();
   await QueueManager.getInstance(); // initialize the queue manager
   await CacheManager.getInstance();
 
   // await initWorkers();
   const supabaseClient = createSupabaseClient();
   const logtailAll = createLogtailAll();
-  const drizzle = initDrizzle();
+  const { client, db } = initDrizzle();
 
   app.use((req: any, res, next) => {
     req.sb = supabaseClient;
     req.pg = pgClient;
-    req.db = drizzle;
+    req.db = db;
     req.logger = logger;
     req.logtailAll = logtailAll;
 

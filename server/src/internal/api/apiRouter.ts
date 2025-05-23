@@ -29,8 +29,8 @@ apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
 apiRouter.use((req: any, res: any, next: any) => {
   const logtailContext: any = {
-    org_id: req.minOrg?.id,
-    org_slug: req.minOrg?.slug,
+    org_id: req.org?.id,
+    org_slug: req.org?.slug,
     method: req.method,
     url: req.originalUrl,
     body: req.body,
@@ -61,14 +61,14 @@ apiRouter.use((req: any, res: any, next: any) => {
         return;
       }
       req.logtailAll.info(
-        `[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.minOrg?.slug})`,
+        `[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.org?.slug})`,
         {
           req: {
             ...logtailContext,
           },
           statusCode: res.statusCode,
           res: res.locals.responseBody,
-        }
+        },
       );
       req.logtailAll.flush();
     } catch (error) {

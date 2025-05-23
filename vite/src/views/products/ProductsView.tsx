@@ -27,7 +27,6 @@ import { FeaturesContext } from "../features/FeaturesContext";
 function ProductsView({ env }: { env: AppEnv }) {
   const [tab, setTab] = useState("products");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [showCredits, setShowCredits] = useState(false);
   const { data, isLoading, mutate } = useAxiosSWR({
     url: `/products/data`,
     env: env,
@@ -54,7 +53,7 @@ function ProductsView({ env }: { env: AppEnv }) {
 
   const creditSystems =
     featuresData?.features?.filter(
-      (f: Feature) => f.type === "credit_system"
+      (f: Feature) => f.type === "credit_system",
     ) || [];
 
   if (isLoading) return <LoadingScreen />;
@@ -75,11 +74,11 @@ function ProductsView({ env }: { env: AppEnv }) {
         value={{
           features:
             featuresData?.features?.filter(
-              (f: Feature) => f.type !== "credit_system"
+              (f: Feature) => f.type !== "credit_system",
             ) || [],
           creditSystems:
             featuresData?.features?.filter(
-              (f: Feature) => f.type === "credit_system"
+              (f: Feature) => f.type === "credit_system",
             ) || [],
           dbConns: featuresData?.dbConns || [],
           env,

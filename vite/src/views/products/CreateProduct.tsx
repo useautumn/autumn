@@ -11,47 +11,62 @@ import { ProductService } from "@/services/products/ProductService";
 import { useNavigate } from "react-router";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useProductsContext } from "./ProductsContext";
 import { PlusIcon } from "lucide-react";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { ProductConfig } from "./ProductConfig";
+import { ProductV2 } from "@autumn/shared";
 
-export let defaultProduct = {
+export const defaultProduct = {
   name: "",
   id: "",
   group: "",
   is_add_on: false,
   is_default: false,
 };
-function CreateProduct() {
-  const { env, mutate } = useProductsContext();
-  const axiosInstance = useAxiosInstance({ env });
-  const navigate = useNavigate();
 
+function CreateProduct({
+  onSuccess,
+}: {
+  onSuccess?: (newProduct: ProductV2) => Promise<void>;
+}) {
+  const { env, mutate } = useProductsContext();
   const [loading, setLoading] = useState(false);
   const [product, setProduct] = useState(defaultProduct);
-
-  const [idChanged, setIdChanged] = useState(false);
   const [open, setOpen] = useState(false);
+
+  const axiosInstance = useAxiosInstance({ env });
+  const navigate = useNavigate();
 
   const handleCreateClicked = async () => {
     setLoading(true);
     try {
-      const productId = await ProductService.createProduct(
+      const newProduct = await ProductService.createProduct(
         axiosInstance,
-        product
+        product,
       );
 
       await mutate();
 
-      navigateTo(`/products/${productId}`, navigate, env);
+      if (onSuccess) {
+        await onSuccess(newProduct);
+      } else {
+        navigateTo(`/products/${newProduct.id}`, navigate, env);
+      }
+      setOpen(false);
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to create product"));
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    if (open) {
+      setProduct(defaultProduct);
+    }
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>

@@ -3,7 +3,6 @@ import { OrgService } from "../OrgService.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ApiKey } from "@/db/schema/tables/apiKeysTable.js";
 
 export const clearOrgCache = async ({
   // sb,
@@ -30,7 +29,7 @@ export const clearOrgCache = async ({
       return;
     }
 
-    let secretKeys = org.api_keys.map((key: ApiKey) => key.hashed_key);
+    let secretKeys = org.api_keys.map((key: any) => key.hashed_key);
     let publicKeys = [org.test_pkey, org.live_pkey];
 
     let batchDelete = [];

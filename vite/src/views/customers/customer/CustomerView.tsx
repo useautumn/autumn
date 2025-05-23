@@ -20,13 +20,8 @@ import { useEffect, useState } from "react";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import { InvoicesTable } from "./InvoicesTable";
 
-import { AdminHover } from "@/components/general/AdminHover";
 import { CustomerSidebar } from "./customer-sidebar/customer-sidebar";
 import { CustomerBreadcrumbs } from "./customer-breadcrumbs";
-import { Building2, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { XMarkIcon } from "@heroicons/react/24/outline";
-import { EntityHeader } from "./components/entity-header";
 import { SelectEntity } from "./customer-sidebar/select-entity";
 
 export default function CustomerView({ env }: { env: AppEnv }) {

@@ -5,6 +5,7 @@ import {
   Feature,
   FeatureType,
   FullProduct,
+  organizations,
   Price,
   PriceType,
   RewardProgram,
@@ -25,6 +26,7 @@ import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
 import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
+import { eq } from "drizzle-orm";
 
 export const getAxiosInstance = (
   apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!,
@@ -242,7 +244,8 @@ export const setupOrg = async ({
 }) => {
   const axiosInstance = getAxiosInstance();
   const sb = createSupabaseClient();
-  const db = initDrizzle();
+  const { client, db } = initDrizzle();
+
   const autumn = new Autumn(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!);
 
   let insertFeatures = [];
@@ -251,7 +254,7 @@ export const setupOrg = async ({
   }
   await Promise.all(insertFeatures);
 
-  const org = await OrgService.getFullOrg({ sb, orgId });
+  const org = await OrgService.get({ db, orgId });
   await OrgService.update({
     db,
     orgId,
@@ -262,6 +265,8 @@ export const setupOrg = async ({
       },
     },
   });
+
+  await client.end();
 
   const { data: newFeatures } = await sb
     .from("features")
@@ -456,14 +461,4 @@ export const setupOrg = async ({
   }
   await Promise.all(insertRewardTriggers);
   console.log("✅ Inserted reward triggers");
-
-  // Initialize stripe products
-  // // How to check if mocha is in parallel mode?
-  // if (process.env.MOCHA_PARALLEL) {
-  //   console.log("MOCHA RUNNING IN PARALLEL");
-  //   await AutumnCli.initStripeProducts();
-  //   console.log("✅ Initialized stripe products / prices");
-  // } else {
-  //   console.log("MOCHA RUNNING IN SERIAL");
-  // }
 };

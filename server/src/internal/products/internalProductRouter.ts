@@ -97,7 +97,7 @@ productRouter.get("/counts", async (req: any, res) => {
           sb,
           internalProductId: product.internal_id,
         });
-      })
+      }),
     );
 
     // let result: { [key: string]: any } = {};

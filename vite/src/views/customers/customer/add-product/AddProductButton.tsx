@@ -17,12 +17,7 @@ import {
 import { ProductActionState } from "@/utils/models";
 import { File, ShoppingCart, Upload } from "lucide-react";
 
-export const AddProductButton = ({}: // setUseInvoice,
-{
-  // setUseInvoice?: (useInvoice: boolean) => void;
-  // handleCreateProduct: (useInvoice?: boolean) => Promise<void>;
-  // actionState: any;
-}) => {
+export const AddProductButton = () => {
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [open, setOpen] = useState(false);

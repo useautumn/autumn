@@ -9,19 +9,21 @@ import { useState } from "react";
 export const AdminHover = ({
   children,
   texts,
+  hide = false,
 }: {
   children: React.ReactNode;
   texts: (string | { key: string; value: string } | undefined | null)[];
+  hide?: boolean;
 }) => {
   const { isLoaded, user } = useUser();
   const email = user?.primaryEmailAddress?.emailAddress;
-  let isAdmin =
+  const isAdmin =
     email === "johnyeocx@gmail.com" ||
     email === "ayush@recaseai.com" ||
     email === "johnyeo10@gmail.com" ||
     email == "npmrundemo@gmail.com";
 
-  if (!isAdmin) return children;
+  if (!isAdmin || hide) return children;
 
   return (
     <TooltipProvider>

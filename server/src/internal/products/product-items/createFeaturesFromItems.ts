@@ -9,11 +9,12 @@ import {
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { isBooleanFeatureItem } from "./getItemType.js";
+import { validateFeatureId } from "@/internal/features/featureUtils.js";
 import {
   constructBooleanFeature,
   constructMeteredFeature,
-  validateFeatureId,
-} from "@/internal/features/featureUtils.js";
+} from "@/internal/features/utils/constructFeatureUtils.js";
+
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 
