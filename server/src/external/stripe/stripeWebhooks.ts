@@ -63,11 +63,13 @@ stripeWebhookRouter.post(
 
     console.log(
       `${chalk.gray(format(new Date(), "dd MMM HH:mm:ss"))} ${chalk.yellow(
-        "Stripe Webhook: "
+        "Stripe Webhook: ",
       )} ${request.url} ${request.url.includes("live") ? "   " : ""}| ${
         event?.type
-      } | ID: ${event?.id}`
+      } | ID: ${event?.id}`,
     );
+
+    const { db, pg, sb } = request;
 
     try {
       switch (event.type) {
@@ -131,12 +133,13 @@ stripeWebhookRouter.post(
         case "invoice.created":
           const createdInvoice = event.data.object;
           await handleInvoiceCreated({
-            sb: request.sb,
+            db,
+            sb,
             org,
             invoice: createdInvoice,
             env,
             event,
-            pg: request.pg,
+            pg,
           });
           break;
 
@@ -186,5 +189,5 @@ stripeWebhookRouter.post(
 
     // DO NOT DELETE -- RESPONSIBLE FOR SENDING SUCCESSFUL RESPONSE TO STRIPE...
     response.status(200).send();
-  }
+  },
 );

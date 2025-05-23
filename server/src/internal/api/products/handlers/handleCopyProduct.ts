@@ -59,13 +59,13 @@ export const handleCopyProduct = async (req: any, res: any) =>
           orgId,
           env: fromEnv,
         }),
-        FeatureService.getFeatures({
-          sb,
+        FeatureService.list({
+          db,
           orgId,
           env: fromEnv,
         }),
-        FeatureService.getFeatures({
-          sb,
+        FeatureService.list({
+          db,
           orgId,
           env: toEnv,
         }),

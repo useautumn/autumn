@@ -20,12 +20,14 @@ import {
   handleVersionProduct,
   handleVersionProductV2,
 } from "./handleVersionProduct.js";
-import { productsAreDifferent } from "@/internal/products/productUtils.js";
+import {
+  productsAreDifferent,
+  productsAreDifferent2,
+} from "@/internal/products/productUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
-import { Request, Response } from "@/utils/models/Request.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 
 export const handleUpdateProductDetails = async ({
   newProduct,
@@ -130,10 +132,7 @@ export const handleUpdateProduct = async (req: any, res: any) => {
   try {
     const [features, org, fullProduct] = await Promise.all([
       FeatureService.getFromReq(req),
-      OrgService.getFullOrg({
-        sb,
-        orgId,
-      }),
+      OrgService.getFromReq(req),
       ProductService.getFullProduct({
         sb,
         productId,
@@ -299,6 +298,13 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       });
 
       let itemsExist = notNullish(req.body.items);
+
+      // let itemsDifferent = productsAreDifferent2(
+      //   req.body,
+      //   fullProduct,
+      //   features,
+      // );
+
       if (cusProductExists && itemsExist) {
         await handleVersionProductV2({
           req,

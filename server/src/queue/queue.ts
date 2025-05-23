@@ -83,7 +83,6 @@ const initWorker = ({
     async (job: Job) => {
       if (job.name == JobName.GenerateFeatureDisplay) {
         await runSaveFeatureDisplayTask({
-          sb,
           db,
           feature: job.data.feature,
           org: job.data.org,
@@ -93,6 +92,7 @@ const initWorker = ({
       }
       if (job.name == JobName.Migration) {
         await runMigrationTask({
+          db,
           payload: job.data,
           logger: logtail,
           sb,
@@ -117,6 +117,7 @@ const initWorker = ({
 
         try {
           await sendProductsUpdatedWebhook({
+            db,
             sb,
             logger: logtail,
             data: job.data,

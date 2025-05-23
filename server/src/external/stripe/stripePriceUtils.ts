@@ -25,7 +25,7 @@ import {
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { priceToStripeItem } from "./priceToStripeItem/priceToStripeItem.js";
-import { getFeatureName } from "@/internal/features/displayUtils.js";
+import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 export const createSubMeta = ({ features }: { features: Feature[] }) => {
@@ -99,7 +99,7 @@ export const getStripeSubItems = async ({
   if (oneOffPrices && Object.keys(intervalToPrices).length > 1) {
     const nextIntervalKey = Object.keys(intervalToPrices)[0];
     intervalToPrices[nextIntervalKey!].push(
-      ...structuredClone(intervalToPrices[BillingInterval.OneOff])
+      ...structuredClone(intervalToPrices[BillingInterval.OneOff]),
     );
     delete intervalToPrices[BillingInterval.OneOff];
   }
@@ -168,7 +168,7 @@ export const getStripeSubItems = async ({
           interval: interval as BillingInterval,
           products,
           entitlements,
-        })
+        }),
       );
     }
 
@@ -236,7 +236,7 @@ export const getInvoiceItemForUsage = ({
     currency,
 
     description: `${cusProduct.product.name} - ${featureName} x ${Math.round(
-      totalUsage
+      totalUsage,
     )}`,
 
     price_data: {
@@ -253,7 +253,7 @@ export const getInvoiceItemForUsage = ({
   logger.info(
     `🌟🌟 Created invoice item for ${
       feature.name
-    } usage. Amount: ${priceAmount.toFixed(2)}, Total Usage: ${totalUsage}`
+    } usage. Amount: ${priceAmount.toFixed(2)}, Total Usage: ${totalUsage}`,
   );
 
   return invoiceItem;

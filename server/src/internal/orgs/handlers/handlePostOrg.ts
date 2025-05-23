@@ -1,7 +1,7 @@
 import { createClerkCli } from "@/external/clerkUtils.js";
 import { saveOrgToDB } from "@/external/webhooks/clerkWebhooks.js";
 
-import { Request, Response } from "@/utils/models/Request.js";
+import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 
 export const handlePostOrg = async (req: any, res: any) =>
@@ -9,7 +9,7 @@ export const handlePostOrg = async (req: any, res: any) =>
     req,
     res,
     action: "create org",
-    handler: async (req: Request, res: Response) => {
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { userId, db } = req;
 
       const clerk = createClerkCli();

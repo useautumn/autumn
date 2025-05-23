@@ -140,12 +140,7 @@ export const handleVersionProductV2 = async ({
   let curVersion = latestProduct.version;
   let newVersion = curVersion + 1;
 
-  let features = await FeatureService.getFromReq({
-    req,
-    sb,
-    orgId: org.id,
-    env,
-  });
+  let features = await FeatureService.getFromReq(req);
 
   console.log(
     `Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`,
@@ -154,6 +149,7 @@ export const handleVersionProductV2 = async ({
   const newProduct = constructProduct({
     productData: CreateProductSchema.parse({
       ...latestProduct,
+      ...req.body,
       version: newVersion,
     }),
     orgId: org.id,

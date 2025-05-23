@@ -23,7 +23,7 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
 
       const [org, features, products, customer] = await Promise.all([
         OrgService.getFromReq(req),
-        FeatureService.getFeatures({ sb, orgId, env }),
+        FeatureService.getFromReq(req),
         ProductService.getFullProducts({ sb, orgId, env }),
         (async () => {
           if (!customerId) {
@@ -92,12 +92,12 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
             curMainProduct,
             curScheduledProduct,
           });
-        })
+        }),
       );
 
       res.status(200).json({
         list: pricecnProds,
       });
     },
-  })
+  }),
 );

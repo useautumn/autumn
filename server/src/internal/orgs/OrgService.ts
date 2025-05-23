@@ -8,6 +8,28 @@ import { eq } from "drizzle-orm";
 import { organizations, apiKeys } from "@autumn/shared";
 
 export class OrgService {
+  static async getFromReq(req: any) {
+    if (req.org) {
+      let org = structuredClone(req.org);
+      let config = org.config || {};
+      let apiVersion = getApiVersion({
+        createdAt: org.created_at,
+      });
+      return {
+        ...org,
+        config: OrgConfigSchema.parse(config),
+        api_version: apiVersion,
+      };
+    }
+
+    return await this.get({ db: req.db, orgId: req.orgId });
+
+    // return await this.getFullOrg({
+    //   sb: req.sb,
+    //   orgId: req.orgId,
+    // });
+  }
+
   // Drizzle get
   static async get({ db, orgId }: { db: DrizzleCli; orgId: string }) {
     const result = await db.query.organizations.findFirst({
@@ -118,26 +140,6 @@ export class OrgService {
     }
 
     return data;
-  }
-
-  static async getFromReq(req: any) {
-    if (req.org) {
-      let org = structuredClone(req.org);
-      let config = org.config || {};
-      let apiVersion = getApiVersion({
-        createdAt: org.created_at,
-      });
-      return {
-        ...org,
-        config: OrgConfigSchema.parse(config),
-        api_version: apiVersion,
-      };
-    }
-
-    return await this.getFullOrg({
-      sb: req.sb,
-      orgId: req.orgId,
-    });
   }
 
   static async getFullOrg({

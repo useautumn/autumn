@@ -15,19 +15,18 @@ import {
   getCusEntMasterBalance,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 const getCusOrgAndCusPrice = async ({
+  req,
   sb,
   cusEnt,
   orgId,
-  env,
-  logger,
 }: {
+  req: ExtendedRequest;
   sb: SupabaseClient;
   cusEnt: FullCustomerEntitlement;
   orgId: string;
-  env: AppEnv;
-  logger: any;
 }) => {
   const [cusPrice, customer, org] = await Promise.all([
     CusPriceService.getRelatedToCusEnt({
@@ -38,14 +37,12 @@ const getCusOrgAndCusPrice = async ({
       sb: sb,
       internalId: cusEnt.internal_customer_id,
     }),
-    OrgService.getFullOrg({
-      sb: sb,
-      orgId: orgId,
-    }),
+    OrgService.getFromReq(req),
   ]);
 
   return { cusPrice, customer, org };
 };
+
 export const handleUpdateEntitlement = async (req: any, res: any) => {
   try {
     const { customer_entitlement_id } = req.params;
@@ -128,11 +125,10 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
     });
 
     const { cusPrice, customer, org } = await getCusOrgAndCusPrice({
+      req,
       sb: req.sb,
       cusEnt,
       orgId: req.orgId,
-      env: req.env,
-      logger: req.logtail,
     });
 
     if (!cusPrice) {

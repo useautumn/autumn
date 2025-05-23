@@ -12,6 +12,7 @@ import { Client } from "pg";
 import { creditSystemContainsFeature } from "./creditSystemUtils.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { and, eq } from "drizzle-orm";
 
 export class FeatureService {
   static async list({
@@ -30,176 +31,83 @@ export class FeatureService {
       orderBy: (features, { desc }) => [desc(features.internal_id)],
     });
 
-    return features as Feature[];
+    return features as Feature[]; // TODO: DRIZZLE TYPE REFACTOR
   }
 
   static async getFromReq(req: any) {
     if (req.features) return req.features as Feature[];
-    const features = await FeatureService.getFeatures({
-      sb: req.sb,
+    const features = await FeatureService.list({
+      db: req.db,
       orgId: req.orgId,
       env: req.env,
     });
+    // const features = await FeatureService.getFeatures({
+    //   sb: req.sb,
+    //   orgId: req.orgId,
+    //   env: req.env,
+    // });
     return features as Feature[];
   }
 
-  static async getFeatures({
-    sb,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    orgId: string;
-    env: string;
-  }) {
-    const { data, error } = await sb
-      .from("features")
-      .select("*")
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .order("created_at", { ascending: false })
-      .order("id");
-
-    if (error) {
-      throw error;
-    }
-    return data;
-  }
-
-  static async getById({
-    sb,
-    featureId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    featureId: string;
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const { data, error } = await sb
-      .from("features")
-      .select("*")
-      .eq("id", featureId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-      throw error;
-    }
-    return data;
-  }
-
-  static async getCreditSystemsUsingFeature({
-    pg,
-    featureId,
-    orgId,
-    env,
-  }: {
-    pg: Client;
-    featureId: string;
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const query = `select * from features WHERE EXISTS (
-      SELECT 1 FROM jsonb_array_elements(config->'schema') as schema_element WHERE
-      schema_element->>'metered_feature_id' = '${featureId}'
-      AND org_id = '${orgId}' AND env = '${env}'
-    )`;
-
-    const { rows } = await pg.query(query);
-
-    return rows;
-  }
-
   static async update({
-    sb,
-    internalFeatureId,
-    updates,
     db,
-  }: {
-    sb: SupabaseClient;
-    internalFeatureId: string;
-    updates: any;
-    db: DrizzleCli;
-  }) {
-    let { data, error } = await sb
-      .from("features")
-      .update(updates)
-      .eq("internal_id", internalFeatureId)
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    if (data) {
-      await clearOrgCache({
-        db,
-        orgId: data.org_id,
-        env: data.env,
-      });
-    }
-
-    return data;
-  }
-
-  static async updateStrict({
-    db,
-    sb,
-    featureId,
+    id,
     orgId,
     env,
+    internalId,
     updates,
-    logger,
   }: {
     db: DrizzleCli;
-    sb: SupabaseClient;
-    featureId: string;
-    orgId: string;
-    env: AppEnv;
+    id?: string;
+    orgId?: string;
+    env?: AppEnv;
+    internalId?: string;
     updates: any;
-    logger: any;
   }) {
-    let { data, error } = await sb
-      .from("features")
-      .update(updates)
-      .eq("id", featureId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .select()
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        throw new RecaseError({
-          message: "Feature not found",
-          code: ErrCode.FeatureNotFound,
-          statusCode: 404,
-        });
-      }
-
+    if (!id && !internalId) {
       throw new RecaseError({
-        message: "Failed to update feature",
-        code: ErrCode.UpdateFeatureFailed,
+        message: "id or internalId is required to update feature",
+        code: ErrCode.InternalError,
         statusCode: 500,
-        data: error,
       });
+    }
+
+    if (id && (!orgId || !env)) {
+      throw new RecaseError({
+        message: "orgId and env are required to update feature by id",
+        code: ErrCode.InternalError,
+        statusCode: 500,
+      });
+    }
+
+    let updatedFeatures;
+    if (internalId) {
+      updatedFeatures = await db
+        .update(features)
+        .set(updates)
+        .where(eq(features.internal_id, internalId))
+        .returning();
+    } else {
+      updatedFeatures = await db
+        .update(features)
+        .set(updates)
+        .where(
+          and(
+            eq(features.id, id!),
+            eq(features.org_id, orgId!),
+            eq(features.env, env!),
+          ),
+        )
+        .returning();
     }
 
     await clearOrgCache({
       db,
-      orgId,
-      env,
-      logger,
+      orgId: updatedFeatures[0].org_id!,
+      env: updatedFeatures[0].env as AppEnv,
     });
 
-    return data;
+    return updatedFeatures as Feature[];
   }
 
   static async insert({
@@ -211,9 +119,6 @@ export class FeatureService {
     data: Feature[] | Feature;
     logger: any;
   }) {
-    // Insert feature into DB
-    // let { data: insertedData, error } =
-
     try {
       let insertedData = await db
         .insert(features)
@@ -228,7 +133,7 @@ export class FeatureService {
           logger,
         });
       }
-      return insertedData;
+      return insertedData as Feature[]; // DRIZZLE TYPE REFACTOR
     } catch (error: any) {
       if (error.code === "23505") {
         let id = Array.isArray(data) ? data.map((f) => f.id) : data.id;
@@ -241,37 +146,30 @@ export class FeatureService {
     }
   }
 
-  static async deleteStrict({
-    sb,
+  static async delete({
     db,
     featureId,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
     db: DrizzleCli;
     featureId: string;
     orgId: string;
     env: AppEnv;
   }) {
-    let { error } = await sb
-      .from("features")
-      .delete()
-      .eq("id", featureId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .select();
+    let deletedFeatures = await db
+      .delete(features)
+      .where(
+        and(
+          eq(features.id, featureId),
+          eq(features.org_id, orgId),
+          eq(features.env, env),
+        ),
+      )
+      .returning();
 
-    if (error) {
-      if (error.code === "PGRST106") {
-        throw new RecaseError({
-          message: "Feature not found",
-          code: ErrCode.FeatureNotFound,
-          statusCode: 404,
-        });
-      }
-
-      throw error;
+    if (deletedFeatures.length === 0) {
+      return null;
     }
 
     await clearOrgCache({
@@ -279,45 +177,6 @@ export class FeatureService {
       orgId,
       env,
     });
-  }
-
-  static async getWithCreditSystems({
-    sb,
-    featureId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    featureId: string;
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const { data, error } = await sb
-      .from("features")
-      .select("*")
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .or(`id.eq.${featureId},type.eq.${FeatureType.CreditSystem}`);
-
-    if (error) {
-      throw error;
-    }
-
-    let feature = data.find((f) => f.id === featureId);
-
-    let creditSystems = data.filter(
-      (f) =>
-        f.type === FeatureType.CreditSystem &&
-        f.id !== featureId &&
-        creditSystemContainsFeature({
-          creditSystem: f,
-          meteredFeatureId: featureId,
-        }),
-    );
-
-    return {
-      feature,
-      creditSystems,
-    };
+    return deletedFeatures[0] as Feature;
   }
 }

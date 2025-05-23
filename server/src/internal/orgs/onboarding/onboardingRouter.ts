@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { Request } from "@/utils/models/Request.js";
 
 import { eq } from "drizzle-orm";
 import { routeHandler } from "@/utils/routerUtils.js";
@@ -13,6 +12,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/prices/PriceService.js";
+import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 
 export const onboardingRouter = Router();
 
@@ -21,7 +21,7 @@ onboardingRouter.post("", async (req: Request, res: any) =>
     req,
     res,
     action: "onboarding",
-    handler: async (req: Request, res: any) => {
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { db, sb, logtail: logger, org } = req;
       const { token } = req.body;
 

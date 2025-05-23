@@ -3,7 +3,6 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { ErrCode, APIVersion } from "@autumn/shared";
-import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
 export const handleCreateBillingPortal = async (req: any, res: any) => {

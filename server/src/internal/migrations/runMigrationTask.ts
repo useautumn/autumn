@@ -5,12 +5,15 @@ import { getMigrationCustomers } from "./migrationSteps/getMigrationCustomers.js
 import { migrateCustomers } from "./migrationSteps/migrateCustomers.js";
 import { MigrationJobStep } from "@autumn/shared";
 import { FeatureService } from "../features/FeatureService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const runMigrationTask = async ({
+  db,
   payload,
   logger,
   sb,
 }: {
+  db: DrizzleCli;
   payload: any;
   logger: any;
   sb: any;
@@ -51,8 +54,8 @@ export const runMigrationTask = async ({
       logger,
     });
 
-    let features = await FeatureService.getFeatures({
-      sb,
+    let features = await FeatureService.list({
+      db,
       orgId,
       env,
     });
