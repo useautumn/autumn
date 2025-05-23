@@ -7,30 +7,41 @@ import {
   APIVersion,
   CusEntWithEntitlement,
   Feature,
+  FullCusProduct,
   FullProduct,
   Organization,
   ProductItem,
   SuccessCode,
   UsageModel,
 } from "@autumn/shared";
+import { getCheckPreview } from "./getCheckPreview.js";
+import { SupabaseClient } from "@supabase/supabase-js";
 
-export const getBooleanEntitledResult = ({
+export const getBooleanEntitledResult = async ({
+  sb,
   customer_id,
   cusEnts,
   org,
   res,
   feature,
   apiVersion,
+  withPreview,
+  cusProducts,
+  allFeatures,
 }: {
+  sb: SupabaseClient;
   customer_id: string;
   cusEnts: CusEntWithEntitlement[];
   org: Organization;
   res: any;
   feature: Feature;
   apiVersion: number;
+  withPreview: boolean;
+  cusProducts: FullCusProduct[];
+  allFeatures: Feature[];
 }) => {
   const allowed = cusEnts.some(
-    (cusEnt) => cusEnt.internal_feature_id === feature.internal_id
+    (cusEnt) => cusEnt.internal_feature_id === feature.internal_id,
   );
 
   if (apiVersion >= APIVersion.v1_1) {
@@ -39,6 +50,17 @@ export const getBooleanEntitledResult = ({
       feature_id: feature.id,
       code: SuccessCode.FeatureFound,
       allowed,
+      preview: withPreview
+        ? await getCheckPreview({
+            sb,
+            allowed,
+            balance: undefined,
+            feature,
+            raw: false,
+            cusProducts,
+            allFeatures,
+          })
+        : undefined,
     });
   } else {
     return res.status(200).json({
