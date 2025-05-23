@@ -14,6 +14,7 @@ import { notNullish } from "@/utils/genUtils";
 
 import { AppPortal } from "svix-react";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
+import { PublishableKeySection } from "./publishable-key";
 
 export default function DevScreen({ env }: { env: AppEnv }) {
   const { data, isLoading, mutate } = useAxiosSWR({
@@ -24,6 +25,7 @@ export default function DevScreen({ env }: { env: AppEnv }) {
 
   const { customer } = useCustomer();
   const showWebhooks = notNullish(customer?.features.webhooks);
+  const showPkey = notNullish(customer?.features.pkey);
 
   if (isLoading) return <LoadingScreen />;
 
@@ -36,6 +38,9 @@ export default function DevScreen({ env }: { env: AppEnv }) {
 
         <div className="flex flex-col gap-16">
           <ApiKeysView apiKeys={apiKeys} />
+
+          {showPkey && <PublishableKeySection org={data.org} />}
+
           {showWebhooks && (
             <ConfigureWebhookSection dashboardUrl={data.svix_dashboard_url} />
           )}

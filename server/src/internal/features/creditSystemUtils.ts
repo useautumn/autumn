@@ -1,5 +1,4 @@
-import RecaseError from "@/utils/errorUtils.js";
-import { CreditSchemaItem, ErrCode, FeatureType } from "@autumn/shared";
+import { CreditSchemaItem, FeatureType } from "@autumn/shared";
 
 import { Feature } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -36,7 +35,7 @@ export const getCreditSystemsFromFeature = ({
       creditSystemContainsFeature({
         creditSystem: f,
         meteredFeatureId: featureId,
-      })
+      }),
   );
 };
 

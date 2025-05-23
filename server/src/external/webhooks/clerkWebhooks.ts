@@ -1,191 +1,23 @@
 import { Request, Response } from "express";
 import { Webhook } from "svix";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { createClerkCli } from "../clerkUtils.js";
 import { sendOnboardingEmail } from "./sendOnboardingEmail.js";
-import { generatePublishableKey } from "@/utils/encryptUtils.js";
-import {
-  AggregateType,
-  AllowanceType,
-  AppEnv,
-  BillingInterval,
-  EntInterval,
-  EntitlementSchema,
-  FeatureType,
-  FeatureUsageType,
-  PriceSchema,
-  PriceType,
-  ProductSchema,
-} from "@autumn/shared";
-import { FeatureService } from "@/internal/features/FeatureService.js";
-import { generateId, keyToTitle } from "@/utils/genUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { AppEnv } from "autumn-js";
+
 import { deleteSvixApp } from "../svix/svixUtils.js";
 import {
   deleteStripeWebhook,
   initOrgSvixApps,
 } from "@/internal/orgs/orgUtils.js";
 
-const defaultFeatures = [
-  {
-    internal_id: "",
-    id: "pro_analytics",
-    type: FeatureType.Boolean,
-    display: {
-      singular: "pro analytics",
-      plural: "pro analytics",
-    },
-  },
-  {
-    internal_id: "",
-    id: "chat_messages",
-    type: FeatureType.Metered,
-    config: {
-      filters: [
-        {
-          value: ["chat_messages"],
-          property: "",
-          operator: "",
-        },
-      ],
-      aggregate: {
-        type: AggregateType.Count,
-      },
-      usage_type: FeatureUsageType.Single,
-      display: {
-        singular: "chat message",
-        plural: "chat messages",
-      },
-    },
-  },
-];
-
-const createDefaultProducts = async ({
-  sb,
-  orgId,
-}: {
-  sb: SupabaseClient;
-  orgId: string;
-}) => {
-  const env = AppEnv.Sandbox;
-  const insertedFeatures = defaultFeatures.map((f) => ({
-    ...f,
-    org_id: orgId,
-    env,
-    internal_id: generateId("fe"),
-    name: keyToTitle(f.id),
-    created_at: Date.now(),
-  }));
-
-  await FeatureService.insert({
-    sb,
-    data: insertedFeatures,
-    logger: console,
-  });
-
-  const defaultProducts = [
-    {
-      id: "free_example",
-      name: "Free (Example)",
-      env: AppEnv.Sandbox,
-      is_default: true,
-      entitlements: [
-        {
-          internal_feature_id: insertedFeatures[1].internal_id,
-          feature_id: insertedFeatures[1].id,
-          allowance: 10,
-          interval: EntInterval.Month,
-          allowance_type: AllowanceType.Fixed,
-        },
-      ],
-      prices: [],
-    },
-    {
-      id: "pro_example",
-      name: "Pro (Example)",
-      env: AppEnv.Sandbox,
-      is_default: false,
-      entitlements: [
-        {
-          internal_feature_id: insertedFeatures[0].internal_id,
-          feature_id: insertedFeatures[0].id,
-        },
-        {
-          internal_feature_id: insertedFeatures[1].internal_id,
-          feature_id: insertedFeatures[1].id,
-          allowance_type: AllowanceType.Unlimited,
-        },
-      ],
-      prices: [
-        {
-          name: "Monthly",
-          config: {
-            type: PriceType.Fixed,
-            amount: 20.5,
-            interval: BillingInterval.Month,
-          },
-        },
-      ],
-    },
-  ];
-
-  const batchInsert = [];
-  for (const product of defaultProducts) {
-    const insertProduct = async (product: any) => {
-      let internalProductId = generateId("pr");
-
-      await ProductService.create({
-        sb,
-        product: ProductSchema.parse({
-          ...product,
-          internal_id: internalProductId,
-          org_id: orgId,
-          env,
-          is_add_on: false,
-          group: "",
-          created_at: Date.now(),
-          version: 1,
-        }),
-      });
-
-      for (const entitlement of product.entitlements) {
-        await EntitlementService.insert({
-          sb,
-          data: EntitlementSchema.parse({
-            ...entitlement,
-            id: generateId("en"),
-            internal_product_id: internalProductId,
-            created_at: Date.now(),
-            org_id: orgId,
-          }),
-        });
-      }
-
-      for (const price of product.prices) {
-        await PriceService.insert({
-          sb,
-          data: PriceSchema.parse({
-            ...price,
-            id: generateId("pr"),
-            internal_product_id: internalProductId,
-            created_at: Date.now(),
-            org_id: orgId,
-            billing_type: getBillingType(price.config),
-          }),
-        });
-      }
-    };
-
-    batchInsert.push(insertProduct(product));
-  }
-
-  await Promise.all(batchInsert);
-};
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { constructOrg } from "@/internal/orgs/orgUtils.js";
+import { createOnboardingProducts } from "@/internal/orgs/onboarding/createOnboardingProducts.js";
+import { eq } from "drizzle-orm";
+import { Organization, organizations } from "@autumn/shared";
 
 const verifyClerkWebhook = async (req: Request, res: Response) => {
   const wh = new Webhook(process.env.CLERK_SIGNING_SECRET!);
@@ -226,6 +58,7 @@ const verifyClerkWebhook = async (req: Request, res: Response) => {
 
 export const handleClerkWebhook = async (req: any, res: any) => {
   let event = await verifyClerkWebhook(req, res);
+
   if (!event) {
     return;
   }
@@ -236,17 +69,19 @@ export const handleClerkWebhook = async (req: any, res: any) => {
   try {
     switch (eventType) {
       case "organization.created":
-        await handleOrgCreated(req.sb, eventData);
+        await saveOrgToDB({
+          db: req.db,
+          id: eventData.id,
+          slug: eventData.slug,
+        });
         break;
 
       case "organization.deleted":
-        await handleOrgDeleted(req.sb, eventData);
+        await handleOrgDeleted({
+          db: req.db,
+          eventData,
+        });
         break;
-      // await OrgService.delete({
-      //   sb: req.sb,
-      //   orgId: eventData.id,
-      // });
-      // console.log(`Deleted org ${eventData.id}`);
 
       default:
         break;
@@ -267,118 +102,120 @@ export const handleClerkWebhook = async (req: any, res: any) => {
   });
 };
 
-export const handleOrgCreated = async (
-  sb: SupabaseClient,
-  eventData: {
-    id: string;
-    slug: string;
-    created_at: number;
-  }
-) => {
-  console.log(
-    `Handling organization.created: ${eventData.slug} (${eventData.id})`
-  );
+export const saveOrgToDB = async ({
+  db,
+  id,
+  slug,
+}: {
+  db: DrizzleCli;
+  id: string;
+  slug: string;
+}) => {
+  console.log(`Handling organization.created: ${slug} (${id})`);
 
   try {
     // 2. Insert org
     await OrgService.insert({
-      sb,
-      org: {
-        id: eventData.id,
-        slug: eventData.slug,
-        default_currency: "usd",
-        stripe_connected: false,
-        stripe_config: null,
-        test_pkey: generatePublishableKey(AppEnv.Sandbox),
-        live_pkey: generatePublishableKey(AppEnv.Live),
-        created_at: eventData.created_at,
-        svix_config: {
-          sandbox_app_id: "",
-          live_app_id: "",
-        },
-        config: {} as any,
-      },
+      db,
+      org: constructOrg({
+        id,
+        slug,
+      }),
     });
-
-    console.log(`Inserted org ${eventData.id}`);
 
     // 1. Create svix webhoooks
     const { sandboxApp, liveApp } = await initOrgSvixApps({
-      slug: eventData.slug,
-      id: eventData.id,
+      slug,
+      id,
     });
 
     await OrgService.update({
-      sb,
-      orgId: eventData.id,
+      db,
+      orgId: id,
       updates: {
         svix_config: { sandbox_app_id: sandboxApp.id, live_app_id: liveApp.id },
       },
     });
 
-    console.log(`Created svix webhooks for org ${eventData.id}`);
+    console.log(`Created svix webhooks for org ${id}`);
   } catch (error: any) {
     if (error?.data && error.data.code == "23505") {
       console.error(
-        `Org ${eventData.id} already exists in Supabase -- skipping creationg`
+        `Org ${id} already exists in Supabase -- skipping creationg`,
       );
       return;
     }
-    console.error("Failed to insert org", error);
+    console.error(
+      `Failed to insert org. Code: ${error.code}, message: ${error.message}`,
+    );
     return;
   }
 
   const batch = [];
 
   try {
-    batch.push(
-      createDefaultProducts({
-        sb,
-        orgId: eventData.id,
-      })
-    );
+    // batch.push(
+    //   createOnboardingProducts({
+    //     db,
+    //     orgId: eventData.id,
+    //   }),
+    // );
 
     batch.push(
       sendOnboardingEmail({
-        orgId: eventData.id,
+        orgId: id,
         clerkCli: createClerkCli(),
-      })
+      }),
     );
 
     await Promise.all(batch);
   } catch (error) {
     console.error(
       "Failed to create default products or send onboarding email",
-      error
+      error,
     );
   }
 };
 
-const handleOrgDeleted = async (sb: SupabaseClient, eventData: any) => {
-  console.log(`Handling organization.deleted: (${eventData.id})`);
-
-  const org = await OrgService.getFullOrg({
-    sb,
-    orgId: eventData.id,
-  });
-
+const handleOrgDeleted = async ({
+  db,
+  eventData,
+}: {
+  db: DrizzleCli;
+  eventData: any;
+}) => {
   // 1. Delete svix webhooks
 
   try {
+    console.log(`Handling organization.deleted: (${eventData.id})`);
+
+    const org = (await db.query.organizations.findFirst({
+      where: eq(organizations.id, eventData.id),
+    })) as unknown as Organization;
+
+    if (!org) {
+      throw new RecaseError({
+        message: `Clerk webhook, tried deleting org ${eventData.slug} but not found`,
+        code: "org_not_found",
+        statusCode: 404,
+      });
+    }
+
     console.log("1. Deleting svix webhooks");
     const batch = [];
-    if (org.svix_config.sandbox_app_id) {
+    if (org.svix_config?.sandbox_app_id) {
       batch.push(
         deleteSvixApp({
           appId: org.svix_config.sandbox_app_id,
-        })
+        }),
       );
     }
-    if (org.svix_config.live_app_id) {
+
+    if (org.svix_config?.live_app_id) {
       batch.push(
         deleteSvixApp({
           appId: org.svix_config.live_app_id,
-        })
+        }),
       );
     }
 
@@ -401,7 +238,7 @@ const handleOrgDeleted = async (sb: SupabaseClient, eventData: any) => {
     // 3. Delete org
     console.log("3. Deleting org");
     await OrgService.delete({
-      sb,
+      db,
       orgId: eventData.id,
     });
 

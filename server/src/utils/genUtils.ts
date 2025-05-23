@@ -46,6 +46,9 @@ export const notNullish = (value: any) => {
 };
 
 export const formatUnixToDateTime = (unixDate: number) => {
+  if (!unixDate) {
+    return null;
+  }
   return format(new Date(unixDate), "yyyy MMM dd HH:mm:ss");
 };
 

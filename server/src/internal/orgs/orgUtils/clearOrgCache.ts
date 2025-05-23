@@ -1,15 +1,18 @@
-import { ApiKey, AppEnv } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import { OrgService } from "../OrgService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+
 export const clearOrgCache = async ({
-  sb,
+  // sb,
+  db,
   orgId,
   env,
   logger = console,
 }: {
-  sb: SupabaseClient;
+  // sb: SupabaseClient;
+  db: DrizzleCli;
   orgId: string;
   env?: AppEnv;
   logger?: any;
@@ -17,13 +20,16 @@ export const clearOrgCache = async ({
   // 1. Get all hashed secret key and public key for org
   try {
     let org = await OrgService.getWithKeys({
-      sb,
+      db,
       orgId,
       env,
     });
 
-    let secretKeys = org.api_keys.map((key: ApiKey) => key.hashed_key);
+    if (!org) {
+      return;
+    }
 
+    let secretKeys = org.api_keys.map((key: any) => key.hashed_key);
     let publicKeys = [org.test_pkey, org.live_pkey];
 
     let batchDelete = [];
@@ -31,8 +37,8 @@ export const clearOrgCache = async ({
       batchDelete.push(
         CacheManager.invalidate({
           action: CacheType.SecretKey,
-          value: key,
-        })
+          value: key!,
+        }),
       );
     }
 
@@ -40,8 +46,8 @@ export const clearOrgCache = async ({
       batchDelete.push(
         CacheManager.invalidate({
           action: CacheType.PublicKey,
-          value: key,
-        })
+          value: key!,
+        }),
       );
     }
 

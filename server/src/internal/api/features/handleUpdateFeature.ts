@@ -1,3 +1,4 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { CusProdReadService } from "@/internal/customers/products/CusProdReadService.js";
@@ -27,8 +28,9 @@ import {
   FeatureUsageType,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-
+import { Request } from "@/utils/models/Request.js";
 const handleFeatureIdChanged = async ({
+  db,
   sb,
   orgId,
   env,
@@ -40,6 +42,7 @@ const handleFeatureIdChanged = async ({
   newId,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   orgId: string;
   env: AppEnv;
@@ -75,7 +78,7 @@ const handleFeatureIdChanged = async ({
         updates: {
           entity_feature_id: newId,
         },
-      })
+      }),
     );
   }
 
@@ -94,7 +97,7 @@ const handleFeatureIdChanged = async ({
             feature_id: newId,
           } as UsagePriceConfig,
         },
-      })
+      }),
     );
   }
 
@@ -111,6 +114,7 @@ const handleFeatureIdChanged = async ({
     }
     creditSystemUpdate.push(
       FeatureService.updateStrict({
+        db,
         sb,
         featureId: creditSystem.id!,
         updates: {
@@ -122,7 +126,7 @@ const handleFeatureIdChanged = async ({
         orgId,
         env,
         logger,
-      })
+      }),
     );
   }
 
@@ -138,7 +142,7 @@ const handleFeatureIdChanged = async ({
         updates: {
           feature_id: newId,
         },
-      })
+      }),
     );
   }
 
@@ -199,7 +203,7 @@ const handleFeatureUsageTypeChanged = async ({
 
   if (entitlements.length > 0) {
     console.log(
-      `Feature usage type changed to ${newUsageType}, updating entitlements and prices`
+      `Feature usage type changed to ${newUsageType}, updating entitlements and prices`,
     );
     if (newUsageType == FeatureUsageType.Continuous) {
       let batchEntUpdate = [];
@@ -211,7 +215,7 @@ const handleFeatureUsageTypeChanged = async ({
             updates: {
               interval: EntInterval.Lifetime,
             },
-          })
+          }),
         );
       }
 
@@ -237,7 +241,7 @@ const handleFeatureUsageTypeChanged = async ({
               stripe_price_id: null,
             },
           },
-        })
+        }),
       );
     }
 
@@ -250,7 +254,7 @@ const handleFeatureUsageTypeChanged = async ({
   // }
 };
 
-export const handleUpdateFeature = async (req: any, res: any) =>
+export const handleUpdateFeature = async (req: Request, res: any) =>
   routeHandler({
     req,
     res,
@@ -309,6 +313,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
 
         if (isChangingId) {
           await handleFeatureIdChanged({
+            db: req.db,
             sb: req.sb,
             orgId: req.orgId,
             env: req.env,
@@ -338,6 +343,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
       }
 
       let updatedFeature = await FeatureService.updateStrict({
+        db: req.db,
         sb: req.sb,
         orgId: req.orgId,
         env: req.env,
@@ -352,8 +358,8 @@ export const handleUpdateFeature = async (req: any, res: any) =>
             feature.type == FeatureType.CreditSystem
               ? validateCreditSystem(data.config)
               : feature.type == FeatureType.Metered
-              ? validateMeteredConfig(data.config)
-              : data.config,
+                ? validateMeteredConfig(data.config)
+                : data.config,
         },
         logger,
       });

@@ -307,6 +307,12 @@ cusRouter.get(
         idOrInternalId: customer_id,
         withEntities: true,
         entityId: entity_id,
+        inStatuses: [
+          CusProductStatus.Active,
+          CusProductStatus.PastDue,
+          CusProductStatus.Scheduled,
+          CusProductStatus.Expired,
+        ],
       });
 
       const features = await FeatureService.getFromReq(req);

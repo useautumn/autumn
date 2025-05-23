@@ -3,13 +3,13 @@ import axios, { AxiosInstance } from "axios";
 export class ProductService {
   static async createProduct(axiosInstance: AxiosInstance, data: any) {
     const response = await axiosInstance.post("/v1/products", data);
-    return response.data.id;
+    return response.data;
   }
 
   static async updateProduct(
     axiosInstance: AxiosInstance,
     productId: string,
-    data: any
+    data: any,
   ) {
     await axiosInstance.post(`/v1/products/${productId}`, data);
   }
@@ -25,7 +25,7 @@ export class ProductService {
   static async createPrice(
     axiosInstance: AxiosInstance,
     productId: string,
-    data: any
+    data: any,
   ) {
     await axiosInstance.post(`/products/${productId}/prices`, data);
   }
@@ -39,7 +39,7 @@ export class ProductService {
   static async copyProduct(
     axiosInstance: AxiosInstance,
     productId: string,
-    data: any
+    data: any,
   ) {
     await axiosInstance.post(`/v1/products/${productId}/copy`, data);
   }

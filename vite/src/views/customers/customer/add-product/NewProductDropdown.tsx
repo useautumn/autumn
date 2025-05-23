@@ -12,7 +12,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { AddProductContext } from "./CreateCheckoutContext";
 import { Input } from "@/components/ui/input";
 
-import { faSearch } from "@fortawesome/pro-solid-svg-icons";
 import { useNavigate } from "react-router";
 import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
 import { toast } from "sonner";

@@ -19,7 +19,12 @@ import {
   getRelatedCusPrice,
   getResetBalance,
 } from "../entitlements/cusEntUtils.js";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import {
+  formatUnixToDateTime,
+  generateId,
+  notNullish,
+  nullish,
+} from "@/utils/genUtils.js";
 import { getBillingType, getEntOptions } from "@/internal/prices/priceUtils.js";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -103,7 +108,6 @@ const initCusEntNextResetAt = ({
     return null;
   }
 
-  // 2. If nextResetAt (hardcoded), just return that...
   if (nextResetAt) {
     return nextResetAt;
   }
@@ -130,13 +134,6 @@ const initCusEntNextResetAt = ({
     nextResetAtCalculated,
     resetInterval
   ).getTime();
-
-  // console.log(
-  //   "ANCHOR TO UNIX",
-  //   anchorToUnix
-  //     ? format(new Date(anchorToUnix), "dd MMM yyyy HH:mm:ss")
-  //     : "undefined"
-  // );
 
   // If anchorToUnix, align next reset at to anchorToUnix...
   if (anchorToUnix && nextResetAtCalculated) {

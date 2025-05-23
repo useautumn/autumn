@@ -5,6 +5,7 @@ import {
   Feature,
   FeatureType,
   FullProduct,
+  organizations,
   Price,
   PriceType,
   RewardProgram,
@@ -24,9 +25,11 @@ import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
 import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import { initDrizzle } from "@/db/initDrizzle.js";
+import { eq } from "drizzle-orm";
 
 export const getAxiosInstance = (
-  apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!
+  apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!,
 ) => {
   return axios.create({
     baseURL: "http://localhost:8080",
@@ -131,7 +134,7 @@ export const clearOrg = async ({
     console.log(
       `   ✅ Deleted ${i + batch.length}/${
         stripeCustomers.data.length
-      } Stripe customers`
+      } Stripe customers`,
     );
   }
 
@@ -177,7 +180,7 @@ export const clearOrg = async ({
     console.log(
       `   ✅ Deleted ${i + batch.length}/${
         stripeProducts.data.length
-      } Stripe products`
+      } Stripe products`,
     );
   }
 
@@ -241,6 +244,8 @@ export const setupOrg = async ({
 }) => {
   const axiosInstance = getAxiosInstance();
   const sb = createSupabaseClient();
+  const { client, db } = initDrizzle();
+
   const autumn = new Autumn(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!);
 
   let insertFeatures = [];
@@ -249,9 +254,9 @@ export const setupOrg = async ({
   }
   await Promise.all(insertFeatures);
 
-  const org = await OrgService.getFullOrg({ sb, orgId });
+  const org = await OrgService.get({ db, orgId });
   await OrgService.update({
-    sb,
+    db,
     orgId,
     updates: {
       config: {
@@ -260,6 +265,8 @@ export const setupOrg = async ({
       },
     },
   });
+
+  await client.end();
 
   const { data: newFeatures } = await sb
     .from("features")
@@ -300,7 +307,7 @@ export const setupOrg = async ({
         config: {
           ...p.config,
           internal_feature_id: newFeatures!.find(
-            (f) => f.id === (p.config as any)?.feature_id
+            (f) => f.id === (p.config as any)?.feature_id,
           )?.internal_id,
         },
       }));
@@ -310,7 +317,7 @@ export const setupOrg = async ({
           ...ent,
           internal_feature_id: newFeatures!.find((f) => f.id === ent.feature_id)
             ?.internal_id,
-        })
+        }),
       );
 
       const entWithFeatures = entitlements.map((ent) => ({
@@ -396,15 +403,15 @@ export const setupOrg = async ({
               .filter((price: Price) => price.config!.type === PriceType.Usage)
               .map((price) => {
                 return price.id;
-              })
+              }),
           );
         } else if (reward.product_ids) {
           priceIds = allProducts
             .filter((product: FullProduct) =>
-              reward.product_ids.includes(product.id)
+              reward.product_ids.includes(product.id),
             )
             .flatMap((product: FullProduct) =>
-              product.prices.map((price) => price.id)
+              product.prices.map((price) => price.id),
             );
         }
 
@@ -454,14 +461,4 @@ export const setupOrg = async ({
   }
   await Promise.all(insertRewardTriggers);
   console.log("✅ Inserted reward triggers");
-
-  // Initialize stripe products
-  // // How to check if mocha is in parallel mode?
-  // if (process.env.MOCHA_PARALLEL) {
-  //   console.log("MOCHA RUNNING IN PARALLEL");
-  //   await AutumnCli.initStripeProducts();
-  //   console.log("✅ Initialized stripe products / prices");
-  // } else {
-  //   console.log("MOCHA RUNNING IN SERIAL");
-  // }
 };

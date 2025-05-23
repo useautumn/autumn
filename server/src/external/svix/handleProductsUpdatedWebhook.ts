@@ -5,24 +5,19 @@ import {
   Entitlement,
   FreeTrial,
   FullProduct,
-  FullProductSchema,
   Organization,
-  OrganizationSchema,
   Price,
   Product,
   ProductResponseSchema,
-  ProductV2Schema,
 } from "@autumn/shared";
-import { createSvixCli, getSvixAppId, sendSvixEvent } from "./svixUtils.js";
+
+import { sendSvixEvent } from "./svixUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getCustomerDetails } from "@/internal/api/customers/getCustomerDetails.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { z } from "zod";
-import {
-  getProductResponse,
-  mapToProductV2,
-} from "@/internal/products/productV2Utils.js";
+import { getProductResponse } from "@/internal/products/productV2Utils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 
@@ -30,15 +25,6 @@ const ProductsUpdatedWebhookSchema = z.object({
   scenario: z.string(),
   product: ProductResponseSchema,
   customer: CusResponseSchema,
-});
-
-export const ProductsUpdatedDataSchema = z.object({
-  internalCustomerId: z.string(),
-  org: OrganizationSchema,
-  env: z.nativeEnum(AppEnv),
-  customerId: z.string(),
-  product: FullProductSchema,
-  scenario: z.string(),
 });
 
 export const addProductsUpdatedWebhookTask = async ({
@@ -198,6 +184,6 @@ export const sendProductsUpdatedWebhook = async ({
       customer_id: customer.id,
       product_id: product.id,
       scenario,
-    }
+    },
   );
 };

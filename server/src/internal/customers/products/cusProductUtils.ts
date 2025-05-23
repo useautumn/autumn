@@ -448,7 +448,7 @@ export const processFullCusProduct = ({
 
         return {
           tiers: tiers,
-          name: price.name,
+          name: "",
           quantity: priceOptions?.quantity,
         };
       }
@@ -476,6 +476,13 @@ export const processFullCusProduct = ({
       current_period_start: baseSub?.current_period_start
         ? baseSub.current_period_start * 1000
         : null,
+    };
+  }
+
+  if (!subIds && trialing) {
+    stripeSubData = {
+      current_period_start: cusProduct.starts_at,
+      current_period_end: cusProduct.trial_ends_at,
     };
   }
 

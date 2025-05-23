@@ -56,7 +56,7 @@ export const handleVersionProduct = async ({
   });
 
   console.log(
-    `Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`
+    `Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`,
   );
 
   const newProduct = constructProduct({
@@ -148,7 +148,7 @@ export const handleVersionProductV2 = async ({
   });
 
   console.log(
-    `Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`
+    `Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`,
   );
 
   const newProduct = constructProduct({
@@ -172,6 +172,7 @@ export const handleVersionProductV2 = async ({
   await ProductService.create({ sb, product: newProduct });
 
   await handleNewProductItems({
+    db: req.db,
     sb,
     curPrices: latestProduct.prices,
     curEnts: latestProduct.entitlements,

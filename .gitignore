@@ -3,11 +3,13 @@ vite-lfg/
 lfg/
 lfg
 vite-lfg
-db/
+/db/
+
 start.sh
 supabase.sh
 
 
+*.DS_Store
 
 **/certificates/
 **/node_modules/

@@ -1,4 +1,0 @@
-Check links:
-npm ls -g --link
-
-npm ls --link

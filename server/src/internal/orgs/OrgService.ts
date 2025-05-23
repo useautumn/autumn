@@ -1,37 +1,59 @@
 import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, ErrCode, Organization, OrgConfigSchema } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { initDefaultConfig } from "./orgUtils.js";
 import { getApiVersion } from "@/utils/versionUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { eq } from "drizzle-orm";
+import { organizations, apiKeys } from "@autumn/shared";
 
 export class OrgService {
+  // Drizzle get
+  static async get({ db, orgId }: { db: DrizzleCli; orgId: string }) {
+    const result = await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+    });
+
+    if (!result) {
+      throw new RecaseError({
+        message: "Organization not found",
+        code: ErrCode.OrgNotFound,
+        statusCode: 404,
+      });
+    }
+
+    return {
+      ...result,
+      config: OrgConfigSchema.parse(result.config || {}),
+      api_version: getApiVersion({
+        createdAt: result.created_at!,
+      }),
+    };
+  }
+
   static async getWithKeys({
-    sb,
+    db,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     orgId: string;
     env?: AppEnv;
   }) {
-    const query = sb
-      .from("organizations")
-      .select("*, api_keys(*)")
-      .eq("id", orgId);
+    const result = await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+      with: {
+        api_keys: env ? { where: eq(apiKeys.env, env) } : true,
+      },
+    });
 
-    if (env) {
-      query.eq("api_keys.env", env);
+    if (!result) {
+      return null;
     }
 
-    const { data, error } = await query.single();
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return result;
   }
+
   static async getWithFeatures({
     sb,
     orgId,
@@ -97,6 +119,7 @@ export class OrgService {
 
     return data;
   }
+
   static async getFromReq(req: any) {
     if (req.org) {
       let org = structuredClone(req.org);
@@ -178,56 +201,39 @@ export class OrgService {
 
     return data;
   }
-  static async insert({ sb, org }: { sb: SupabaseClient; org: Organization }) {
-    // Insert org into supabase
-    const { data, error } = await sb.from("organizations").insert(org);
-    if (error) {
-      throw new RecaseError({
-        message: "Error inserting org into supabase",
-        code: ErrCode.InternalError,
-        statusCode: 400,
-        data: error,
-      });
-    }
-
-    return data;
+  static async insert({ db, org }: { db: DrizzleCli; org: any }) {
+    await db.insert(organizations).values(org);
   }
 
-  static async delete({ sb, orgId }: { sb: SupabaseClient; orgId: string }) {
-    const { error } = await sb.from("organizations").delete().eq("id", orgId);
-    if (error) {
-      throw new RecaseError({
-        message: "Error deleting org from supabase",
-        code: ErrCode.InternalError,
-        statusCode: 400,
-        data: error,
-      });
-    }
+  static async delete({ db, orgId }: { db: DrizzleCli; orgId: string }) {
+    await db.delete(organizations).where(eq(organizations.id, orgId));
   }
 
   static async update({
-    sb,
+    db,
     orgId,
     updates,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     orgId: string;
-    updates: Partial<Organization>;
+    updates: any;
   }) {
-    const { data, error } = await sb
-      .from("organizations")
-      .update(updates)
-      .eq("id", orgId);
+    try {
+      let result = await db
+        .update(organizations)
+        .set(updates)
+        .where(eq(organizations.id, orgId))
+        .returning();
 
-    if (error) {
-      throw new Error("Error updating org in supabase");
+      await clearOrgCache({
+        db,
+        orgId,
+      });
+
+      return result.length > 0 ? result[0] : null;
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
-
-    await clearOrgCache({
-      sb,
-      orgId,
-    });
-
-    return data;
   }
 }

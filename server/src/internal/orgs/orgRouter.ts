@@ -43,7 +43,7 @@ orgRouter.get("", async (req: any, res) => {
 orgRouter.post("/stripe", async (req: any, res) => {
   try {
     let { testApiKey, liveApiKey, successUrl, defaultCurrency } = req.body;
-    let { sb, orgId, logtail: logger } = req;
+    let { db, orgId, logtail: logger } = req;
     if (!testApiKey || !liveApiKey || !successUrl) {
       throw new RecaseError({
         message: "Missing required fields",
@@ -55,7 +55,7 @@ orgRouter.post("/stripe", async (req: any, res) => {
     // 1. Check if API keys are valid
     try {
       await clearOrgCache({
-        sb,
+        db,
         orgId,
         logger,
       });
@@ -92,12 +92,12 @@ orgRouter.post("/stripe", async (req: any, res) => {
       testWebhook = await createWebhookEndpoint(
         testApiKey,
         AppEnv.Sandbox,
-        req.orgId
+        req.orgId,
       );
       liveWebhook = await createWebhookEndpoint(
         liveApiKey,
         AppEnv.Live,
-        req.orgId
+        req.orgId,
       );
     } catch (error) {
       throw new RecaseError({
@@ -110,7 +110,7 @@ orgRouter.post("/stripe", async (req: any, res) => {
 
     // 1. Update org in Supabase
     await OrgService.update({
-      sb: req.sb,
+      db,
       orgId: req.orgId,
       updates: {
         stripe_connected: true,
@@ -160,9 +160,9 @@ orgRouter.delete("/stripe", async (req: any, res) => {
   try {
     const org = await OrgService.getFromReq(req);
 
-    let { sb, orgId, logtail: logger } = req;
+    let { db, orgId, logtail: logger } = req;
     await clearOrgCache({
-      sb,
+      db,
       orgId,
       logger,
     });
@@ -191,7 +191,7 @@ orgRouter.delete("/stripe", async (req: any, res) => {
     }
 
     await OrgService.update({
-      sb: req.sb,
+      db,
       orgId: req.orgId,
       updates: {
         stripe_connected: false,

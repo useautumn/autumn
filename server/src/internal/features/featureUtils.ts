@@ -19,6 +19,7 @@ import { logger } from "@trigger.dev/sdk/v3";
 import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
 import { ProductService } from "../products/ProductService.js";
 import { getCreditSystemsFromFeature } from "./creditSystemUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const validateFeatureId = (featureId: string) => {
   if (!featureId.match(/^[a-zA-Z0-9_-]+$/)) {
@@ -55,7 +56,7 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
     };
   }
 
-  return newConfig;
+  return newConfig as MeteredConfig;
 };
 
 export const validateCreditSystem = (config: CreditSystemConfig) => {
@@ -70,7 +71,7 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 
   // Check if multiple of the same feature
   const meteredFeatureIds = schema.map(
-    (schemaItem) => schemaItem.metered_feature_id
+    (schemaItem) => schemaItem.metered_feature_id,
   );
   console.log("Metered feature ids:", meteredFeatureIds);
   const uniqueMeteredFeatureIds = Array.from(new Set(meteredFeatureIds));
@@ -128,88 +129,27 @@ export const getObjectsUsingFeature = async ({
   });
 
   let entitlements = allEnts.filter(
-    (entitlement) => entitlement.internal_feature_id == feature.internal_id
+    (entitlement) => entitlement.internal_feature_id == feature.internal_id,
   );
   let linkedEntitlements = allEnts.filter(
-    (entitlement) => entitlement.entity_feature_id == feature.id
+    (entitlement) => entitlement.entity_feature_id == feature.id,
   );
 
   let prices = allPrices.filter(
-    (price) => (price.config as any).internal_feature_id == feature.internal_id
+    (price) => (price.config as any).internal_feature_id == feature.internal_id,
   );
 
   return { entitlements, prices, creditSystems, linkedEntitlements };
 };
 
-export const constructBooleanFeature = ({
-  featureId,
-  orgId,
-  env,
-}: {
-  featureId: string;
-  orgId: string;
-  env: AppEnv;
-}) => {
-  let newFeature: Feature = {
-    internal_id: generateId("fe"),
-    org_id: orgId,
-    env,
-    created_at: Date.now(),
-
-    id: featureId,
-    name: keyToTitle(featureId),
-    type: FeatureType.Boolean,
-    config: null,
-  };
-
-  return newFeature;
-};
-
-export const constructMeteredFeature = ({
-  featureId,
-  orgId,
-  env,
-  usageType,
-}: {
-  featureId: string;
-  orgId: string;
-  env: AppEnv;
-  usageType: FeatureUsageType;
-}) => {
-  let newFeature: Feature = {
-    internal_id: generateId("fe"),
-    org_id: orgId,
-    env,
-    created_at: Date.now(),
-
-    id: featureId,
-    name: keyToTitle(featureId),
-    type: FeatureType.Metered,
-    config: {
-      filters: [
-        {
-          property: "event_name",
-          operator: "eq",
-          value: [],
-        },
-      ],
-      aggregate: {
-        type: AggregateType.Sum,
-        property: "value",
-      },
-      usage_type: usageType,
-    },
-  };
-
-  return newFeature;
-};
-
 export const runSaveFeatureDisplayTask = async ({
+  db,
   sb,
   feature,
   org,
   logger,
 }: {
+  db: DrizzleCli;
   sb: any;
   feature: Feature;
   org: Organization;
@@ -218,11 +158,12 @@ export const runSaveFeatureDisplayTask = async ({
   let display;
   try {
     logger.info(
-      `Generating feature display for ${feature.id} (org: ${org.slug})`
+      `Generating feature display for ${feature.id} (org: ${org.slug})`,
     );
     display = await generateFeatureDisplay(feature);
     logger.info(`Result: ${JSON.stringify(display)}`);
     await FeatureService.update({
+      db,
       sb,
       internalFeatureId: feature.internal_id!,
       updates: {

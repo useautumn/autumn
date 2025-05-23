@@ -225,6 +225,7 @@ eventsRouter.post("", async (req: any, res: any) => {
       id: event?.id,
       code: "event_received",
       customer_id: body.customer_id,
+      entity_id: body.entity_id,
     };
 
     if (body.feature_id) {

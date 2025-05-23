@@ -19,7 +19,12 @@
     "testa-parallel": "mocha 'tests/alex/00_setup.ts' && mocha --parallel --timeout 10000000 'tests/alex/**/*.ts' --ignore 'tests/alex/00_setup.ts'",
     "testa": "mocha 'tests/alex/00_setup.ts' && mocha --timeout 10000000 'tests/alex/01_free.ts' --ignore 'tests/alex/00_setup.ts'",
     "test": "mocha --timeout 10000000 'tests/**/*.ts' --ignore 'tests/alex/**/*.ts'",
-    "test-custom": "mocha --timeout 1000000 'tests/01_product.ts'"
+    "test-custom": "mocha --timeout 1000000 'tests/01_product.ts'",
+    "db:pull": "NODE_OPTIONS='--import tsx' drizzle-kit pull",
+    "db:generate": "NODE_OPTIONS='--import tsx' drizzle-kit generate",
+    "db:migrate": "NODE_OPTIONS='--import tsx' drizzle-kit migrate",
+    "db:push": "NODE_OPTIONS='--import tsx' drizzle-kit push ",
+    "db:custom": "NODE_OPTIONS='--import tsx' drizzle-kit generate --custom --name=add_new_col"
   },
   "mocha": {
     "node-option": [
@@ -58,7 +63,8 @@
     "currency-symbol-map": "^5.1.0",
     "date-fns": "^4.1.0",
     "decimal.js": "^10.5.0",
-    "dotenv": "^16.4.7",
+    "dotenv": "^16.5.0",
+    "drizzle-orm": "^0.43.1",
     "express": "^4.21.1",
     "fetch-retry": "^6.0.0",
     "http-status-codes": "^2.3.0",
@@ -70,13 +76,12 @@
     "pg": "^8.13.1",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
-    "postgres": "^3.4.5",
+    "postgres": "^3.4.7",
     "recaseai": "^0.0.37",
     "resend": "^4.1.1",
     "stripe": "^17.5.0",
     "svix": "^1.45.1",
     "tsc-alias": "^1.8.10",
-    "tsx": "^4.19.2",
     "vigilant-js": "^2.0.9",
     "ws": "^8.18.0"
   },
@@ -86,10 +91,12 @@
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.13.4",
     "@types/pg": "^8.11.10",
+    "drizzle-kit": "^0.31.1",
     "mocha": "^11.1.0",
     "puppeteer": "^24.2.0",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.19.4",
     "typescript": "^5.7.3"
   }
 }

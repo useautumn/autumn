@@ -32,18 +32,20 @@ const init = async () => {
   const pgClient = new pg.Client(
     process.env.SUPABASE_CONNECTION_STRING || process.env.DATABASE_URL || "",
   );
-  await pgClient.connect();
 
+  await pgClient.connect();
   await QueueManager.getInstance(); // initialize the queue manager
   await CacheManager.getInstance();
 
   // await initWorkers();
   const supabaseClient = createSupabaseClient();
   const logtailAll = createLogtailAll();
+  const { client, db } = initDrizzle();
 
   app.use((req: any, res, next) => {
     req.sb = supabaseClient;
     req.pg = pgClient;
+    req.db = db;
     req.logger = logger;
     req.logtailAll = logtailAll;
 
@@ -120,6 +122,7 @@ const init = async () => {
 import cluster from "cluster";
 import os from "os";
 import { CacheManager } from "./external/caching/CacheManager.js";
+import { initDrizzle } from "./db/initDrizzle.js";
 
 if (process.env.NODE_ENV === "development") {
   init();

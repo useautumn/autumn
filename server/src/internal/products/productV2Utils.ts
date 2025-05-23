@@ -44,7 +44,7 @@ export const mapToProductItems = ({
     let relatedEnt = getPriceEntitlement(
       price,
       entitlements,
-      allowFeatureMatch
+      allowFeatureMatch,
     );
 
     if (!relatedEnt) {
