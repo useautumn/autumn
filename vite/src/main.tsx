@@ -19,12 +19,16 @@ const options = {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
-      <PostHogProvider
-        apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-        options={options}
-      >
+      {process.env.NODE_ENV === "development" ? (
         <App />
-      </PostHogProvider>
+      ) : (
+        <PostHogProvider
+          apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
+          options={options}
+        >
+          <App />
+        </PostHogProvider>
+      )}
     </ClerkProvider>
   </StrictMode>,
 );

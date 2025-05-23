@@ -25,15 +25,11 @@ function OnboardingView() {
   const env = useEnv();
 
   const { organization: org } = useOrganization();
-  const { setActive } = useOrganizationList();
-
   const [searchParams] = useSearchParams();
-  const [orgCreated, setOrgCreated] = useState(org ? true : false);
 
   const [apiKey, setApiKey] = useState("");
   const [productId, setProductId] = useState("");
 
-  const hasHandledOrg = useRef(false);
   const hasHandledToken = useRef(false);
   const axiosInstance = useAxiosInstance();
   const token = searchParams.get("token");
@@ -48,6 +44,8 @@ function OnboardingView() {
     env: env,
     withAuth: true,
   });
+
+  useCreateOrg({ productMutate });
 
   useEffect(() => {
     const handleToken = async () => {
@@ -75,8 +73,6 @@ function OnboardingView() {
       setLoading(false);
     }
   }, [org, token]);
-
-  useCreateOrg({ productMutate });
 
   if (loading || productLoading) {
     return <LoadingScreen />;

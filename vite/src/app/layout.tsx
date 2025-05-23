@@ -33,7 +33,7 @@ export function MainLayout() {
 
   useEffect(() => {
     // Identify user
-    if (user) {
+    if (user && process.env.NODE_ENV !== "development") {
       let email = user.primaryEmailAddress?.emailAddress;
       if (!email) {
         email = user.emailAddresses[0].emailAddress;
@@ -85,12 +85,12 @@ export function MainLayout() {
     return <RedirectToSignIn />;
   }
 
-  // 1. If not org, and memberships > 0, set org active
-  if (!org && user.organizationMemberships.length > 0 && setActive) {
-    setActive({
-      organization: user.organizationMemberships[0].organization.id,
-    });
-  }
+  // // 1. If not org, and memberships > 0, set org active
+  // if (!org && user.organizationMemberships.length > 0 && setActive) {
+  //   setActive({
+  //     organization: user.organizationMemberships[0].organization.id,
+  //   });
+  // }
 
   if (!org && !pathname.includes("/onboarding")) {
     return (

@@ -1,8 +1,8 @@
-import { useOrganization } from "@clerk/clerk-react";
+import { useOrganization, useUser } from "@clerk/clerk-react";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useOrganizationList } from "@clerk/clerk-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export const useCreateOrg = ({
   productMutate,
@@ -10,6 +10,7 @@ export const useCreateOrg = ({
   productMutate: () => Promise<void>;
 }) => {
   const axiosInstance = useAxiosInstance();
+  const { user } = useUser();
   const { organization: org } = useOrganization();
   const { setActive } = useOrganizationList();
   const hasCreatedOrg = useRef(false);
@@ -19,13 +20,33 @@ export const useCreateOrg = ({
       if (hasCreatedOrg.current) return;
 
       hasCreatedOrg.current = true;
-      const { data } = await axiosInstance.post("/organization");
-      await setActive?.({ organization: data.id });
-      await productMutate();
+
+      // Either set first org active, or create a new org
+      try {
+        if (
+          user?.organizationMemberships?.length &&
+          user.organizationMemberships.length > 0
+        ) {
+          await setActive?.({
+            organization: user.organizationMemberships[0].organization.id,
+          });
+          await productMutate();
+
+          return;
+        } else {
+          const { data } = await axiosInstance.post("/organization");
+
+          const res = await setActive?.({ organization: data.id });
+
+          await productMutate();
+        }
+      } catch (error) {
+        console.error("Error creating organization:", error);
+      }
     };
 
-    if (!org) {
+    if (!org && setActive) {
       createDefaultOrg();
     }
-  }, [org]);
+  }, [org, axiosInstance, setActive, productMutate, user]);
 };
