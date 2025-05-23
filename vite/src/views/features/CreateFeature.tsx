@@ -53,7 +53,7 @@ export const CreateFeature = ({
   open: boolean;
 }) => {
   const { mutate, features } = useFeaturesContext();
-  let env = useEnv();
+  const env = useEnv();
 
   const axiosInstance = useAxiosInstance({ env });
 
@@ -94,14 +94,14 @@ export const CreateFeature = ({
 
     setLoading(true);
     try {
-      let { data: createdFeature } = await FeatureService.createFeature(
+      const { data: createdFeature } = await FeatureService.createFeature(
         axiosInstance,
         {
           name: feature.name,
           id: feature.id,
           type: feature.type,
           config: updateConfig(),
-        }
+        },
       );
 
       if (isFromEntitlement) {
