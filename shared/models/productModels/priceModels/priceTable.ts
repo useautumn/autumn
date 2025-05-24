@@ -7,10 +7,12 @@ import {
   jsonb,
   text,
 } from "drizzle-orm/pg-core";
+
 import { entitlements } from "../entModels/entTable.js";
 import { products } from "../productTable.js";
 import { FixedPriceConfig } from "./priceConfig/fixedPriceConfig.js";
 import { UsagePriceConfig } from "./priceConfig/usagePriceConfig.js";
+import { sql } from "drizzle-orm";
 
 export const prices = pgTable(
   "prices",
@@ -23,7 +25,7 @@ export const prices = pgTable(
     name: text(),
     billing_type: text("billing_type"),
     is_custom: boolean("is_custom").default(false),
-    entitlement_id: text("entitlement_id"),
+    entitlement_id: text("entitlement_id").default(sql`null`),
   },
   (table) => [
     foreignKey({

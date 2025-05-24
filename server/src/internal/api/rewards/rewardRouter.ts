@@ -23,7 +23,7 @@ const rewardRouter = express.Router();
 
 rewardRouter.post("", async (req: any, res: any) => {
   try {
-    const { orgId, env } = req;
+    const { db, sb, orgId, env, logtail: logger } = req;
     const rewardBody = req.body;
     const rewardData = CreateRewardSchema.parse(rewardBody);
 
@@ -43,14 +43,15 @@ rewardRouter.post("", async (req: any, res: any) => {
       });
 
       let discountConfig = newReward.discount_config;
+
       // Get prices for coupon
       const [prices, entitlements] = await Promise.all([
         PriceService.getPricesFromIds({
-          sb: req.sb,
+          sb,
           priceIds: discountConfig!.price_ids || [],
         }),
-        EntitlementService.getFullEntitlements({
-          sb: req.sb,
+        EntitlementService.getByOrg({
+          db,
           orgId,
           env,
         }),
@@ -69,10 +70,10 @@ rewardRouter.post("", async (req: any, res: any) => {
               price,
               entitlements,
               org,
-              logger: req.logger,
+              logger,
               sb: req.sb,
               product: price.product,
-            })
+            }),
           );
           await Promise.all(batchPriceCreate);
         }

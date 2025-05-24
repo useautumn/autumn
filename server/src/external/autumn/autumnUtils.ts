@@ -1,6 +1,7 @@
 import { AppEnv, ErrCode, Organization } from "@autumn/shared";
-import { Autumn } from "./autumnCli.js";
+// import { Autumn } from "./autumnCli.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { Autumn } from "autumn-js";
 
 export enum FeatureId {
   Products = "products",
@@ -24,12 +25,10 @@ export const sendProductEvent = async ({
   try {
     const autumn = new Autumn();
 
-    await autumn.sendEvent({
-      customerId: org.id,
-      eventName: "product",
-      properties: {
-        value: incrementBy,
-      },
+    await autumn.track({
+      customer_id: org.id,
+      event_name: "product",
+      value: incrementBy,
       customer_data: {
         name: org.slug,
       },
@@ -55,27 +54,24 @@ export const isEntitled = async ({
 
   const autumn = new Autumn();
 
-  let result;
-  try {
-    result = await autumn.entitled({
-      customerId: org.id,
-      featureId: featureId,
-      customer_data: {
-        name: org.slug,
-      },
-    });
-  } catch (error: any) {
-    if (error instanceof RecaseError) {
-      console.log("Recase error:", error.data);
-    }
+  console.log("Checking entitlement for", org.id, featureId);
 
+  const { data, error } = await autumn.check({
+    customer_id: org.id,
+    feature_id: featureId,
+    customer_data: {
+      name: org.slug,
+    },
+  });
+
+  if (error) {
     throw new RecaseError({
       message: "Failed to check entitlement...",
       code: ErrCode.InternalError,
     });
   }
 
-  if (result?.allowed) {
+  if (data?.allowed) {
     return true;
   }
 
@@ -87,6 +83,6 @@ export const isEntitled = async ({
   throw new RecaseError({
     message: `${errText} Please upgrade your plan or contact hey@useautumn.com to get more!`,
     code: ErrCode.InternalError,
-    data: result,
+    data: data,
   });
 };

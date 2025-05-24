@@ -38,18 +38,17 @@ import {
   nullOrUndefined,
 } from "@/utils/genUtils.js";
 import chalk from "chalk";
-import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
-import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
-import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-
-import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
-
-import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
+
+import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
+import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
+import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
+import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
+import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 
 export const attachRouter = Router();
 

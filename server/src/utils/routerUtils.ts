@@ -18,7 +18,7 @@ export const routeHandler = async ({
     try {
       if (error instanceof RecaseError) {
         if (error.code === ErrCode.EntityNotFound) {
-          req.logger.warn(`${error.message}, org: ${req.minOrg?.slug}`);
+          req.logtail.warn(`${error.message}, org: ${req.minOrg?.slug}`);
           return res.status(404).json({
             message: error.message,
             code: error.code,

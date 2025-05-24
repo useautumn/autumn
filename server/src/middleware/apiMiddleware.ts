@@ -4,10 +4,6 @@ import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { ErrCode } from "@autumn/shared";
 import { floatToVersion } from "@/utils/versionUtils.js";
 
-// const parseVersion = (version: string) => {
-
-// };
-
 export const verifySecretKey = async (req: any, res: any, next: any) => {
   const authHeader =
     req.headers["authorization"] || req.headers["Authorization"];
@@ -112,7 +108,7 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
     const { error, fallback, statusCode } = await verifySecretKey(
       req,
       res,
-      next
+      next,
     );
 
     if (!error) {

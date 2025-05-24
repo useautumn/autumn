@@ -21,10 +21,11 @@ import {
   RewardTriggerEvent,
   RewardType,
 } from "@autumn/shared";
+
 import { getAxiosInstance } from "./setup.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { attachPmToCus } from "@/external/stripe/stripeCusUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
 
 export const keyToTitle = (key: string) => {
   return key
@@ -124,7 +125,7 @@ export const initEntitlement = ({
     return {
       feature_id: feature.id,
       internal_feature_id: feature.internal_id,
-    };
+    } as Entitlement;
   }
 
   const isUnlimitedOrNone =
@@ -138,7 +139,9 @@ export const initEntitlement = ({
     interval: isUnlimitedOrNone ? null : interval,
     entity_feature_id: entityFeatureId,
     carry_from_previous: carryFromPrevious,
-  };
+    created_at: Date.now(),
+    id: generateId("ent"),
+  } as Entitlement;
 };
 
 export const initPrice = ({

@@ -90,7 +90,6 @@ const handleInArrearProrated = async ({
     internalCustomerId: customer.internal_id!,
     inFeatureIds: [feature.internal_id!],
     isDeleted: true,
-    logger,
   });
 
   if (deletedEntities.length == 0) {

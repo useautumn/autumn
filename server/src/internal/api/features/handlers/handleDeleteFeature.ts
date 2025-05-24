@@ -39,17 +39,14 @@ export const handleDeleteFeature = async (req: any, res: any) =>
       }
 
       // Get prices that use this feature
-      const ents: any[] = await EntitlementService.getByFeature({
-        sb: req.sb,
-        orgId,
+      const ent = await EntitlementService.getByFeature({
+        db,
         internalFeatureId: feature.internal_id!,
-        env: req.env,
-        withProduct: true,
       });
 
-      if (ents.length > 0) {
+      if (ent) {
         throw new RecaseError({
-          message: `Feature ${featureId} is used in ${ents[0].product.name}`,
+          message: `Feature ${featureId} is used in a product`,
           code: ErrCode.InvalidFeature,
           statusCode: 400,
         });

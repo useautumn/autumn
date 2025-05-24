@@ -36,7 +36,7 @@ cusRouter.get("", async (req: any, res: any) => {
       req.sb,
       req.orgId,
       req.env,
-      page
+      page,
     );
 
     res.status(200).json({ customers, totalCount: count });
@@ -115,7 +115,6 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       EntityService.getByInternalCustomerId({
         sb,
         internalCustomerId: customer.internal_id,
-        logger: req.logger,
       }),
       EventService.getByCustomerId({
         sb,
@@ -141,12 +140,12 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       product.entitlements = product.customer_entitlements.map(
         (cusEnt: FullCustomerEntitlement) => {
           return cusEnt.entitlement;
-        }
+        },
       );
       product.prices = product.customer_prices.map(
         (cusPrice: FullCustomerPrice) => {
           return cusPrice.price;
-        }
+        },
       );
     }
 
@@ -155,7 +154,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       try {
         const stripeCli = createStripeCli({ org, env });
         const stripeCus: any = await stripeCli.customers.retrieve(
-          customer.processor.id
+          customer.processor.id,
         );
 
         if (stripeCus.discount) {
@@ -179,10 +178,10 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       (a: any, b: any) => {
         // Sort by cusProduct created_at
         const productA = fullCustomer.products.find(
-          (p: any) => p.id === a.customer_product_id
+          (p: any) => p.id === a.customer_product_id,
         );
         const productB = fullCustomer.products.find(
-          (p: any) => p.id === b.customer_product_id
+          (p: any) => p.id === b.customer_product_id,
         );
 
         // new Date(productB.created_at).getTime() - new Date(productA.created_at).getTime() || productA.id.localeCompare(productB.id) ||
@@ -190,7 +189,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime() ||
           b.id.localeCompare(a.id)
         );
-      }
+      },
     );
 
     for (const cusEnt of fullCustomer.entitlements) {
@@ -262,7 +261,7 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
     ]);
 
     let redeemedCustomerIds = redeemed.map(
-      (redemption: any) => redemption.referral_code.internal_customer_id
+      (redemption: any) => redemption.referral_code.internal_customer_id,
     );
 
     let redeemedCustomers = await CusReadService.getInInternalIds({
@@ -273,7 +272,8 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
     for (const redemption of redeemed) {
       redemption.referral_code.customer = redeemedCustomers.find(
         (customer: any) =>
-          customer.internal_id === redemption.referral_code.internal_customer_id
+          customer.internal_id ===
+          redemption.referral_code.internal_customer_id,
       );
     }
 
@@ -333,7 +333,7 @@ cusRouter.get(
         cusProduct = cusProducts.find(
           (p: any) =>
             p.id === customer_product_id &&
-            (entity ? p.internal_entity_id === entity.internal_id : true)
+            (entity ? p.internal_entity_id === entity.internal_id : true),
         );
       } else if (notNullish(version)) {
         cusProduct = cusProducts.find(
@@ -342,7 +342,7 @@ cusRouter.get(
             (p.status === CusProductStatus.Active ||
               p.status === CusProductStatus.PastDue) &&
             p.product.version === parseInt(version) &&
-            (entity ? p.internal_entity_id === entity.internal_id : true)
+            (entity ? p.internal_entity_id === entity.internal_id : true),
         );
       } else {
         cusProduct = cusProducts.find(
@@ -350,7 +350,7 @@ cusRouter.get(
             p.product.id === product_id &&
             (p.status === CusProductStatus.Active ||
               p.status === CusProductStatus.PastDue) &&
-            (entity ? p.internal_entity_id === entity.internal_id : true)
+            (entity ? p.internal_entity_id === entity.internal_id : true),
         );
       }
 
@@ -358,10 +358,10 @@ cusRouter.get(
 
       if (cusProduct) {
         let prices = cusProduct.customer_prices.map(
-          (price: any) => price.price
+          (price: any) => price.price,
         );
         let entitlements = cusProduct.customer_entitlements.map(
-          (ent: any) => ent.entitlement
+          (ent: any) => ent.entitlement,
         );
         product = {
           ...cusProduct.product,
@@ -410,5 +410,5 @@ cusRouter.get(
         action: "get customer product",
       });
     }
-  }
+  },
 );
