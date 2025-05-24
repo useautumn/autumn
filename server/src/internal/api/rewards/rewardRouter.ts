@@ -11,7 +11,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import {
@@ -46,9 +46,9 @@ rewardRouter.post("", async (req: any, res: any) => {
 
       // Get prices for coupon
       const [prices, entitlements] = await Promise.all([
-        PriceService.getPricesFromIds({
-          sb,
-          priceIds: discountConfig!.price_ids || [],
+        PriceService.getInIds({
+          db,
+          ids: discountConfig!.price_ids || [],
         }),
         EntitlementService.getByOrg({
           db,
@@ -71,7 +71,7 @@ rewardRouter.post("", async (req: any, res: any) => {
               entitlements,
               org,
               logger,
-              sb: req.sb,
+              db,
               product: price.product,
             }),
           );
@@ -146,7 +146,7 @@ rewardRouter.delete("/:id", async (req: any, res: any) => {
 rewardRouter.post("/:internalId", async (req: any, res: any) => {
   try {
     const { internalId } = req.params;
-    const { orgId, env } = req;
+    const { orgId, env, db } = req;
     const rewardBody = req.body;
 
     const org = await OrgService.getFromReq(req);
@@ -169,9 +169,9 @@ rewardRouter.post("/:internalId", async (req: any, res: any) => {
       });
     }
 
-    const prices = await PriceService.getPricesFromIds({
-      sb: req.sb,
-      priceIds: rewardBody.price_ids,
+    const prices = await PriceService.getInIds({
+      db,
+      ids: rewardBody.price_ids,
     });
 
     // 1. Delete old prices from stripe

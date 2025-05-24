@@ -1,19 +1,8 @@
+import { CusProductStatus, FullCusProduct, SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-
-import {
-  CusProductStatus,
-  Entity,
-  FullCusProduct,
-  FullProduct,
-  SuccessCode,
-} from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getAttachPreview } from "./getAttachPreview.js";
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 
 export const handleProductCheck = async ({
@@ -31,13 +20,14 @@ export const handleProductCheck = async ({
     with_preview,
     entity_data,
   } = req.body;
-  const { orgId, sb, env, logtail: logger } = req;
+  const { orgId, sb, env, logtail: logger, db } = req;
 
   let { org, features } = await getOrgAndFeatures({ req });
 
   // 1. Get customer and org
   let [customer, product] = await Promise.all([
     getOrCreateCustomer({
+      db,
       sb,
       org,
       env,
@@ -66,12 +56,12 @@ export const handleProductCheck = async ({
   if (customer.entity) {
     cusProducts = cusProducts.filter(
       (cusProduct: FullCusProduct) =>
-        cusProduct.internal_entity_id == customer.entity.internal_id
+        cusProduct.internal_entity_id == customer.entity.internal_id,
     );
   }
 
   let cusProduct: FullCusProduct | undefined = cusProducts.find(
-    (cusProduct: FullCusProduct) => cusProduct.product.id === product_id
+    (cusProduct: FullCusProduct) => cusProduct.product.id === product_id,
   );
 
   if (!cusProduct) {
@@ -83,6 +73,7 @@ export const handleProductCheck = async ({
 
       preview: with_preview
         ? await getAttachPreview({
+            db,
             customer,
             org,
             env,
@@ -113,11 +104,12 @@ export const handleProductCheck = async ({
     status: notNullish(cusProduct.canceled_at)
       ? "canceled"
       : onTrial
-      ? "trialing"
-      : cusProduct.status,
+        ? "trialing"
+        : cusProduct.status,
 
     preview: with_preview
       ? await getAttachPreview({
+          db,
           customer,
           org,
           env,

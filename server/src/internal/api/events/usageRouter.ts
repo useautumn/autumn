@@ -37,10 +37,12 @@ const getCusFeatureAndOrg = async ({
   customerData: any;
 }) => {
   // 1. Get customer
+  const { db, sb } = req;
   let { org, features } = await getOrgAndFeatures({ req });
   let [customer] = await Promise.all([
     getOrCreateCustomer({
-      sb: req.sb,
+      db,
+      sb,
       org,
       env: req.env,
       customerId,
@@ -61,7 +63,7 @@ const getCusFeatureAndOrg = async ({
       creditSystemContainsFeature({
         creditSystem: f,
         meteredFeatureId: featureId,
-      })
+      }),
   );
 
   if (!feature) {

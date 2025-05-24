@@ -21,7 +21,7 @@ import { CusProductService } from "@/internal/customers/products/CusProductServi
 import {
   getEntOptions,
   getPriceEntitlement,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import {
   getInvoiceExpansion,
@@ -231,7 +231,7 @@ const invoiceCustomer = async ({
     "| Update amount:",
     cusEnt.entitlement.allowance,
     "| New balance:",
-    newBalance
+    newBalance,
   );
 
   await CustomerEntitlementService.update({
@@ -277,7 +277,7 @@ const checkBalanceBelowThreshold = async ({
 }) => {
   // 1. Get options
   const entitlements = fullCusProduct.customer_entitlements.map(
-    (ce: any) => ce.entitlement
+    (ce: any) => ce.entitlement,
   );
   const priceEnt = getPriceEntitlement(belowThresholdPrice.price, entitlements);
   const options = getEntOptions(fullCusProduct.options, priceEnt);
@@ -327,7 +327,7 @@ export const handleBelowThresholdInvoicing = async ({
   });
 
   console.log(
-    `   - Current balance: ${balance}, threshold: ${threshold}, below: ${below}`
+    `   - Current balance: ${balance}, threshold: ${threshold}, below: ${below}`,
   );
 
   if (!below) {
@@ -362,7 +362,7 @@ export const getBelowThresholdPrice = async ({
     .eq("price.billing_type", "usage_below_threshold")
     .in(
       "price.config->>entitlement_id",
-      cusEnts.map((ent) => ent.entitlement_id)
+      cusEnts.map((ent) => ent.entitlement_id),
     );
 
   // TODO: extend this to handle multiple below threshold prices

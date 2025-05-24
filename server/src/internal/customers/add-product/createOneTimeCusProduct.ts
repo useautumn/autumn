@@ -15,7 +15,7 @@ import { CustomerEntitlementService } from "../entitlements/CusEntitlementServic
 import { initCusEntitlement } from "./initCusEnt.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 import { CusProductService } from "../products/CusProductService.js";
-import { getEntOptions } from "@/internal/prices/priceUtils.js";
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { getResetBalance } from "../entitlements/cusEntUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 const updateOneOffExistingEntitlement = async ({
@@ -57,7 +57,7 @@ const updateOneOffExistingEntitlement = async ({
 
   if (nullish(resetBalance)) {
     logger.warn(
-      "Tried updating one off entitlement, no reset balance, entitlement: "
+      "Tried updating one off entitlement, no reset balance, entitlement: ",
     );
     logger.warn(entitlement);
     return;
@@ -90,7 +90,7 @@ export const updateOneTimeCusProduct = async ({
   let existingCusProduct = attachParams.cusProducts?.find(
     (cp) =>
       cp.product.internal_id === attachParams.product.internal_id &&
-      cp.status === CusProductStatus.Active
+      cp.status === CusProductStatus.Active,
   )!;
 
   let existingCusEnts = existingCusProduct.customer_entitlements;
@@ -98,7 +98,7 @@ export const updateOneTimeCusProduct = async ({
   // 3. Update existing entitlements
   for (const entitlement of attachParams.entitlements) {
     const existingCusEnt = existingCusEnts.find(
-      (ce) => ce.internal_feature_id === entitlement.internal_feature_id
+      (ce) => ce.internal_feature_id === entitlement.internal_feature_id,
     );
 
     let relatedPrice = getEntRelatedPrice(entitlement, attachParams.prices);
@@ -142,7 +142,7 @@ export const updateOneTimeCusProduct = async ({
   for (const curOptions of existingCusProduct.options) {
     // Find the option in the new options list
     const newOptionIndex = newOptionsList.findIndex(
-      (o) => o.internal_feature_id === curOptions.internal_feature_id
+      (o) => o.internal_feature_id === curOptions.internal_feature_id,
     );
 
     if (newOptionIndex !== -1) {

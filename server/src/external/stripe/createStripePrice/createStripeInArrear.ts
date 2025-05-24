@@ -1,5 +1,5 @@
-import { PriceService } from "@/internal/prices/PriceService.js";
-import { getPriceEntitlement } from "@/internal/prices/priceUtils.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import {
   Product,
   Price,
@@ -17,6 +17,7 @@ import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import { Decimal } from "decimal.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const searchStripeMeter = async ({
   stripeCli,
@@ -142,7 +143,7 @@ export const priceToInArrearTiers = (
 };
 
 export const createStripeInArrearPrice = async ({
-  sb,
+  db,
   stripeCli,
   product,
   price,
@@ -154,7 +155,7 @@ export const createStripeInArrearPrice = async ({
   internalEntityId,
   useCheckout = false,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   stripeCli: Stripe;
   product: Product;
   price: Price;
@@ -184,8 +185,8 @@ export const createStripeInArrearPrice = async ({
       config.stripe_product_id = stripeProduct.id;
 
       await PriceService.update({
-        sb,
-        priceId: price.id!,
+        db,
+        id: price.id!,
         update: { config },
       });
     }
@@ -267,8 +268,8 @@ export const createStripeInArrearPrice = async ({
   config.stripe_product_id = stripePrice.product as string;
   config.stripe_meter_id = meter!.id;
   await PriceService.update({
-    sb,
-    priceId: price.id!,
+    db,
+    id: price.id!,
     update: { config },
   });
 };

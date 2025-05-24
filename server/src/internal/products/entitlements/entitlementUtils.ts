@@ -21,7 +21,7 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 import { addDays } from "date-fns";
 import { EntitlementService } from "./EntitlementService.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 
 export const entIntervalToTrialDuration = (interval: EntInterval) => {
   switch (interval) {

@@ -25,8 +25,10 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 
 import { AttachScenario, CheckProductFormattedPreview } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getAttachPreview = async ({
+  db,
   sb,
   customer,
   org,
@@ -37,6 +39,7 @@ export const getAttachPreview = async ({
   logger,
   shouldFormat = true,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   customer: FullCustomer;
   org: Organization;
@@ -168,6 +171,7 @@ export const getAttachPreview = async ({
 
   if (isUpgrade) {
     return await getUpgradePreview({
+      db,
       sb,
       customer,
       org,

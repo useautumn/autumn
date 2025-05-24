@@ -21,7 +21,7 @@ import { getRelatedCusPrice } from "@/internal/customers/entitlements/cusEntUtil
 import {
   getBillingType,
   getPriceForOverage,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 
 import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
@@ -101,13 +101,11 @@ export const adjustAllowance = async ({
   logger.info(
     `   - Balance: ${originalBalance} -> ${newBalance}${
       replacedCount ? ` (replaced ${replacedCount})` : ""
-    }`
+    }`,
   );
 
   if (!cusProduct) {
-    logger.error(
-      "❗️ Error: can't adjust allowance, no customer product found"
-    );
+    logger.error("❗️ Error: can't adjust allowance, no customer product found");
     return;
   }
 
@@ -129,7 +127,7 @@ export const adjustAllowance = async ({
   let config = cusPrice.price.config as UsagePriceConfig;
 
   let subItem = sub.items.data.find(
-    (item) => item.price.id === config.stripe_price_id
+    (item) => item.price.id === config.stripe_price_id,
   );
 
   if (!subItem) {
@@ -153,7 +151,7 @@ export const adjustAllowance = async ({
     .toNumber();
 
   logger.info(
-    `   - New quantity = ${paidUsage} (paid) + ${cusEnt.entitlement.allowance} (allowance) = ${quantity} `
+    `   - New quantity = ${paidUsage} (paid) + ${cusEnt.entitlement.allowance} (allowance) = ${quantity} `,
   );
 
   let prorationBehaviour = org.config.bill_upgrade_immediately
@@ -274,7 +272,7 @@ export const adjustAllowance = async ({
     quantity = 0;
     logger.warn("❗️ Warning: quantity is negative, setting to 0");
     logger.warn(
-      `❗️ Allowance: ${cusEnt.entitlement.allowance}, New Balance: ${newBalance}`
+      `❗️ Allowance: ${cusEnt.entitlement.allowance}, New Balance: ${newBalance}`,
     );
   }
 
@@ -294,7 +292,7 @@ export const adjustAllowance = async ({
       });
     } else {
       logger.error(
-        `❗️ adjustAllowance: Error updating subscription item (from event)`
+        `❗️ adjustAllowance: Error updating subscription item (from event)`,
       );
       logger.error(error);
     }

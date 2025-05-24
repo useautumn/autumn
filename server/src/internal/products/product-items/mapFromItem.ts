@@ -20,9 +20,9 @@ import {
 } from "@autumn/shared";
 import { itemIsFixedPrice } from "./productItemUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
-import { pricesAreSame } from "@/internal/prices/priceInitUtils.js";
+import { pricesAreSame } from "@/internal/products/prices/priceInitUtils.js";
 import { entsAreSame } from "../entitlements/entitlementUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { isFeatureItem } from "./getItemType.js";
 import {

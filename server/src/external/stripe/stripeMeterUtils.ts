@@ -1,5 +1,5 @@
 import { Customer, Feature } from "@autumn/shared";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { BillingType, Price, UsagePriceConfig } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
@@ -26,11 +26,11 @@ export const submitUsageToStripe = async ({
 
   if (billingType != BillingType.UsageInArrear) {
     logger.warn(
-      `Price ${price.id} is not usage in arrear type, can't send usage`
+      `Price ${price.id} is not usage in arrear type, can't send usage`,
     );
   }
   const stripeMeter = await stripeCli.billing.meters.retrieve(
-    config.stripe_meter_id!
+    config.stripe_meter_id!,
   );
 
   await stripeCli.billing.meterEvents.create({
@@ -44,6 +44,6 @@ export const submitUsageToStripe = async ({
   });
 
   logger.info(
-    `🌟🌟🌟 Submitted meter event for customer ${customer.id}, feature: ${feature.name}, usage: ${usage}`
+    `🌟🌟🌟 Submitted meter event for customer ${customer.id}, feature: ${feature.name}, usage: ${usage}`,
   );
 };

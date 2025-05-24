@@ -17,8 +17,10 @@ import {
 import { createEntities } from "@/internal/api/entities/handleCreateEntity.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getOrCreateCustomer = async ({
+  db,
   sb,
   org,
   features,
@@ -39,6 +41,7 @@ export const getOrCreateCustomer = async ({
   entityId,
   entityData,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   features: Feature[];
@@ -72,6 +75,7 @@ export const getOrCreateCustomer = async ({
     logger.info(`no customer found, creating new`, { customerData });
     try {
       customer = await handleCreateCustomer({
+        db,
         cusData: {
           id: customerId,
           name: customerData?.name,

@@ -9,7 +9,7 @@ import { CustomerEntitlementService } from "./internal/customers/entitlements/Cu
 import { createSupabaseClient } from "./external/supabaseUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
-import { getEntOptions } from "./internal/prices/priceUtils.js";
+import { getEntOptions } from "./internal/products/prices/priceUtils.js";
 import { getNextResetAt } from "./utils/timeUtils.js";
 import chalk from "chalk";
 import { z } from "zod";
@@ -30,7 +30,7 @@ dotenv.config();
 const FullCustomerEntitlementWithProduct = FullCustomerEntitlementSchema.extend(
   {
     customer_product: CusProductSchema,
-  }
+  },
 );
 
 type FullCustomerEntitlementWithProduct = z.infer<
@@ -81,11 +81,11 @@ const checkSubAnchor = async ({
   console.log("Checking billing cycle anchor");
   console.log(
     "Next reset at       ",
-    format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss")
+    format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss"),
   );
   console.log(
     "Billing cycle anchor",
-    format(new UTCDate(billingCycleAnchor), "dd MMM yyyy HH:mm:ss")
+    format(new UTCDate(billingCycleAnchor), "dd MMM yyyy HH:mm:ss"),
   );
 
   const billingCycleDay = getDate(new UTCDate(billingCycleAnchor));
@@ -126,7 +126,7 @@ const resetCustomerEntitlement = async ({
     const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
     const entOptions = getEntOptions(
       cusEnt.customer_product.options,
-      cusEnt.entitlement
+      cusEnt.entitlement,
     );
 
     const resetBalance = getResetBalance({
@@ -151,10 +151,10 @@ const resetCustomerEntitlement = async ({
 
       console.log(
         `Reset ${cusEnt.id} | customer: ${chalk.yellow(
-          cusEnt.customer_id
+          cusEnt.customer_id,
         )} | feature: ${chalk.yellow(
-          cusEnt.feature_id
-        )} | new balance: unlimited`
+          cusEnt.feature_id,
+        )} | new balance: unlimited`,
       );
       return;
     }
@@ -170,16 +170,16 @@ const resetCustomerEntitlement = async ({
 
       console.log(
         `Reset ${cusEnt.id} | customer: ${chalk.yellow(
-          cusEnt.customer_id
+          cusEnt.customer_id,
         )} | feature: ${chalk.yellow(
-          cusEnt.feature_id
-        )} | reset to lifetime (next_reset_at: null)`
+          cusEnt.feature_id,
+        )} | reset to lifetime (next_reset_at: null)`,
       );
       return;
     }
     let nextResetAt = getNextResetAt(
       new UTCDate(cusEnt.next_reset_at!),
-      cusEnt.entitlement.interval as EntInterval
+      cusEnt.entitlement.interval as EntInterval,
     );
 
     let resetBalanceUpdate = getResetBalancesUpdate({
@@ -210,18 +210,18 @@ const resetCustomerEntitlement = async ({
 
     console.log(
       `Reset ${cusEnt.id} | customer: ${chalk.yellow(
-        cusEnt.customer_id
+        cusEnt.customer_id,
       )} | feature: ${chalk.yellow(
-        cusEnt.feature_id
+        cusEnt.feature_id,
       )} | new balance: ${chalk.green(
-        resetBalance
+        resetBalance,
       )} | new next_reset_at: ${chalk.green(
-        format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss")
-      )}`
+        format(new UTCDate(nextResetAt), "dd MMM yyyy HH:mm:ss"),
+      )}`,
     );
   } catch (error: any) {
     console.log(
-      `Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`
+      `Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`,
     );
   }
 };
@@ -229,7 +229,7 @@ const resetCustomerEntitlement = async ({
 export const cronTask = async () => {
   console.log(
     "\n----------------------------------\nRUNNING RESET CRON:",
-    format(new UTCDate(), "yyyy-MM-dd HH:mm:ss")
+    format(new UTCDate(), "yyyy-MM-dd HH:mm:ss"),
   );
   // 1. Query customer_entitlements for all customers with reset_interval < now
   const sb = createSupabaseClient();
@@ -249,7 +249,7 @@ export const cronTask = async () => {
           resetCustomerEntitlement({
             sb,
             cusEnt: cusEnt as FullCustomerEntitlementWithProduct,
-          })
+          }),
         );
       }
 
@@ -258,7 +258,7 @@ export const cronTask = async () => {
 
     console.log(
       "FINISHED RESET CRON:",
-      format(new UTCDate(), "yyyy-MM-dd HH:mm:ss")
+      format(new UTCDate(), "yyyy-MM-dd HH:mm:ss"),
     );
     console.log("----------------------------------\n");
   } catch (error) {
@@ -274,7 +274,7 @@ const job = new CronJob(
   },
   null, // onComplete
   true, // start immediately
-  "UTC" // timezone (adjust as needed)
+  "UTC", // timezone (adjust as needed)
 );
 
 // job.start();

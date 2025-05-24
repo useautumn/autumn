@@ -7,7 +7,7 @@ import { constructMigrationJob } from "@/internal/migrations/migrationUtils.js";
 import { MigrationService } from "@/internal/migrations/MigrationService.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
+import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 
 export const migrationRouter = express.Router();

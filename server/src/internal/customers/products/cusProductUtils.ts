@@ -17,7 +17,10 @@ import {
   TierInfinite,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { getPriceOptions, getUsageTier } from "@/internal/prices/priceUtils.js";
+import {
+  getPriceOptions,
+  getUsageTier,
+} from "@/internal/products/prices/priceUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { CusProductService } from "./CusProductService.js";

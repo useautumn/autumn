@@ -20,7 +20,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
   initProductInStripe,
@@ -31,8 +31,10 @@ import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js"
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { parseCusExpand } from "../cusUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const initStripeCusAndProducts = async ({
+  db,
   sb,
   org,
   env,
@@ -40,6 +42,7 @@ export const initStripeCusAndProducts = async ({
   products,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
@@ -60,12 +63,13 @@ export const initStripeCusAndProducts = async ({
   for (const product of products) {
     batchInit.push(
       initProductInStripe({
+        db,
         sb,
         org,
         env,
         logger,
         product,
-      })
+      }),
     );
   }
 
@@ -73,6 +77,7 @@ export const initStripeCusAndProducts = async ({
 };
 
 export const createNewCustomer = async ({
+  db,
   sb,
   org,
   env,
@@ -82,6 +87,7 @@ export const createNewCustomer = async ({
   logger,
   createDefaultProducts = true,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
@@ -150,6 +156,7 @@ export const createNewCustomer = async ({
 
   if (nonFreeProds.length > 0) {
     await initStripeCusAndProducts({
+      db,
       sb,
       org,
       env,
@@ -208,6 +215,7 @@ export const createNewCustomer = async ({
 };
 
 const handleIdIsNull = async ({
+  db,
   sb,
   org,
   env,
@@ -216,6 +224,7 @@ const handleIdIsNull = async ({
   processor,
   createDefaultProducts,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
@@ -246,7 +255,7 @@ const handleIdIsNull = async ({
     for (const existingCustomer of existingCustomers) {
       if (existingCustomer.id === null) {
         logger.info(
-          `Create customer by email: ${newCus.email} already exists, skipping...`
+          `Create customer by email: ${newCus.email} already exists, skipping...`,
         );
         return existingCustomer;
       }
@@ -260,6 +269,7 @@ const handleIdIsNull = async ({
   }
 
   const createdCustomer = await createNewCustomer({
+    db,
     sb,
     org,
     env,
@@ -274,6 +284,7 @@ const handleIdIsNull = async ({
 
 // CAN ALSO USE DURING MIGRATION...
 export const handleCreateCustomerWithId = async ({
+  db,
   sb,
   org,
   env,
@@ -282,6 +293,7 @@ export const handleCreateCustomerWithId = async ({
   processor,
   createDefaultProducts = true,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
@@ -301,7 +313,7 @@ export const handleCreateCustomerWithId = async ({
 
   if (existingCustomer) {
     logger.info(
-      `POST /customers, existing customer found: ${existingCustomer.id} (org: ${org.slug})`
+      `POST /customers, existing customer found: ${existingCustomer.id} (org: ${org.slug})`,
     );
     return existingCustomer;
   }
@@ -317,7 +329,7 @@ export const handleCreateCustomerWithId = async ({
 
     if (cusWithEmail.length === 1 && cusWithEmail[0].id === null) {
       logger.info(
-        `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${org.slug})`
+        `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${org.slug})`,
       );
 
       let updatedCustomer = await CusService.update({
@@ -336,6 +348,7 @@ export const handleCreateCustomerWithId = async ({
 
   // 2. Handle email step...
   return await createNewCustomer({
+    db,
     sb,
     org,
     env,
@@ -347,6 +360,7 @@ export const handleCreateCustomerWithId = async ({
 };
 
 export const handleCreateCustomer = async ({
+  db,
   cusData,
   sb,
   org,
@@ -357,6 +371,7 @@ export const handleCreateCustomer = async ({
   getDetails = true,
   createDefaultProducts = true,
 }: {
+  db: DrizzleCli;
   cusData: CreateCustomer;
   sb: SupabaseClient;
   org: Organization;
@@ -373,6 +388,7 @@ export const handleCreateCustomer = async ({
   let createdCustomer;
   if (newCus.id === null) {
     createdCustomer = await handleIdIsNull({
+      db,
       sb,
       org,
       env,
@@ -383,6 +399,7 @@ export const handleCreateCustomer = async ({
     });
   } else {
     createdCustomer = await handleCreateCustomerWithId({
+      db,
       sb,
       org,
       env,
@@ -399,6 +416,7 @@ export const handleCreateCustomer = async ({
 export const handlePostCustomerRequest = async (req: any, res: any) => {
   const logger = req.logtail;
   try {
+    const { db, sb } = req;
     const data = req.body;
     const expand = parseCusExpand(req.query.expand);
 
@@ -413,7 +431,8 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
     let org = await OrgService.getFromReq(req);
     let features = await FeatureService.getFromReq(req);
     let customer = await getOrCreateCustomer({
-      sb: req.sb,
+      db,
+      sb,
       org,
       env: req.env,
       customerId: data.id,
@@ -451,7 +470,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
       error.code === ErrCode.DuplicateCustomerId
     ) {
       logger.warn(
-        `POST /customers: ${error.message} (org: ${req.minOrg.slug})`
+        `POST /customers: ${error.message} (org: ${req.minOrg.slug})`,
       );
       res.status(error.statusCode).json({
         message: error.message,

@@ -19,7 +19,7 @@ import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { differenceInMinutes, subDays } from "date-fns";
 import { getStripeSubs, getUsageBasedSub } from "../stripeSubUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
 import { getRelatedCusEnt } from "@/internal/customers/prices/cusPriceUtils.js";

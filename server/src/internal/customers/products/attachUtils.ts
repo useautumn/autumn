@@ -34,7 +34,7 @@ import { getExistingCusProducts } from "../add-product/handleExistingProduct.js"
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { Decimal } from "decimal.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -152,6 +152,7 @@ const getProducts = async ({
 };
 
 const getCustomerAndProducts = async ({
+  db,
   sb,
   org,
   features,
@@ -166,6 +167,7 @@ const getCustomerAndProducts = async ({
   entityId,
   entityData,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   features: Feature[];
@@ -181,6 +183,7 @@ const getCustomerAndProducts = async ({
 }) => {
   const [customer, products] = await Promise.all([
     getOrCreateCustomer({
+      db,
       sb,
       org,
       features,
@@ -313,6 +316,7 @@ export const getFullCusProductData = async ({
 }) => {
   // 1. Get customer, product, org & features
   const { customer, products, cusProducts } = await getCustomerAndProducts({
+    db,
     org,
     features,
     sb,

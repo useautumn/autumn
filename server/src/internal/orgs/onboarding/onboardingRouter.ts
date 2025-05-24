@@ -11,7 +11,7 @@ import { chatResults } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 
 export const onboardingRouter = Router();
@@ -99,7 +99,7 @@ onboardingRouter.post("", async (req: Request, res: any) =>
         });
 
         await PriceService.insert({
-          sb,
+          db,
           data: prices,
         });
       }

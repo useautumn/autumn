@@ -17,13 +17,13 @@ import { assert, expect } from "chai";
 import { Decimal } from "decimal.js";
 import { compareMainProduct } from "../../utils/compare.js";
 import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";
-import { getPriceForOverage } from "@/internal/prices/priceUtils.js";
+import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
 
 const ASSERT_INVOICE_AMOUNT = true;
 
 // SECOND, UPGRADE TO GPU PRO MONTHLY
 describe(`${chalk.yellowBright(
-  "usage3: upgrade from GPU starter monthly to GPU pro monthly"
+  "usage3: upgrade from GPU starter monthly to GPU pro monthly",
 )}`, () => {
   const customerId = "usage3";
   let testClockId = "";
@@ -116,7 +116,7 @@ describe(`${chalk.yellowBright(
     const invoices = res!.invoices;
 
     let invoiceIndex = invoices.findIndex((invoice: any) =>
-      invoice.product_ids.includes(advanceProducts.gpuSystemStarter.id)
+      invoice.product_ids.includes(advanceProducts.gpuSystemStarter.id),
     );
 
     // console.log("Total usage: ", totalCreditsUsed);
@@ -148,7 +148,7 @@ describe(`${chalk.yellowBright(
     const { allowed, balanceObj }: any = await AutumnCli.entitled(
       customerId,
       creditSystems.gpuCredits.id,
-      true
+      true,
     );
 
     let proAllowance =
@@ -157,7 +157,7 @@ describe(`${chalk.yellowBright(
       assert.equal(allowed, true);
       assert.equal(
         balanceObj.balance,
-        new Decimal(proAllowance).minus(totalCreditsUsed).toNumber()
+        new Decimal(proAllowance).minus(totalCreditsUsed).toNumber(),
       );
     } catch (error) {
       console.group();

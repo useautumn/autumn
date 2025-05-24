@@ -7,7 +7,7 @@ import { Decimal } from "decimal.js";
 import {
   getBillingType,
   getPriceForOverage,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
@@ -55,13 +55,13 @@ const addUsageToNextInvoice = async ({
       const amount = getPriceForOverage(item.price, item.overage);
 
       logger.info(
-        `   feature: ${item.feature.id}, overage: ${item.overage}, amount: ${amount}`
+        `   feature: ${item.feature.id}, overage: ${item.overage}, amount: ${amount}`,
       );
 
       let relatedSub = intervalToSub[interval];
       if (!relatedSub) {
         logger.error(
-          `No sub found for interval: ${interval}, for feature: ${item.feature.id}`
+          `No sub found for interval: ${interval}, for feature: ${item.feature.id}`,
         );
 
         // Invoice immediately?
@@ -156,7 +156,7 @@ const invoiceForUsageImmediately = async ({
   let newInvoice = false;
   if (attachParams.invoiceOnly && newSubs.length > 0) {
     invoice = await stripeCli.invoices.retrieve(
-      newSubs[0].latest_invoice as string
+      newSubs[0].latest_invoice as string,
     );
 
     if (invoice.status !== "draft") {
@@ -188,7 +188,7 @@ const invoiceForUsageImmediately = async ({
     } x ${Math.round(item.usage)}`;
 
     logger.info(
-      `🌟🌟🌟 (Bill remaining) created invoice item: ${description} -- ${amount}`
+      `🌟🌟🌟 (Bill remaining) created invoice item: ${description} -- ${amount}`,
     );
 
     let invoiceItem = {
@@ -226,7 +226,7 @@ const invoiceForUsageImmediately = async ({
       },
     });
     let index = curCusProduct.customer_entitlements.findIndex(
-      (ce) => ce.id === item.relatedCusEnt!.id
+      (ce) => ce.id === item.relatedCusEnt!.id,
     );
 
     curCusProduct.customer_entitlements[index] = {
@@ -238,7 +238,7 @@ const invoiceForUsageImmediately = async ({
   // Finalize and pay invoice
   const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
     invoice.id,
-    getInvoiceExpansion()
+    getInvoiceExpansion(),
   );
 
   let curProduct = curCusProduct.product;
@@ -384,7 +384,7 @@ export const billForRemainingUsages = async ({
     let stripeNow = Math.floor(Date.now() / 1000);
     if (sub.test_clock) {
       let stripeClock = await stripeCli.testHelpers.testClocks.retrieve(
-        sub.test_clock
+        sub.test_clock,
       );
       stripeNow = stripeClock.frozen_time;
     }

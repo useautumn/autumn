@@ -13,7 +13,6 @@ import {
   ErrCode,
   FullProduct,
   TierInfinite,
-  Product,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -163,13 +162,14 @@ export const haveDifferentRecurringIntervals = (prices: Price[]) => {
 // Get price options
 export const getEntOptions = (
   optionsList: FeatureOptions[],
-  entitlement: Entitlement | EntitlementWithFeature
+  entitlement: Entitlement | EntitlementWithFeature,
 ) => {
   if (!entitlement) {
     return null;
   }
   const options = optionsList.find(
-    (options) => options.internal_feature_id === entitlement.internal_feature_id
+    (options) =>
+      options.internal_feature_id === entitlement.internal_feature_id,
   );
   return options;
 };
@@ -177,7 +177,7 @@ export const getEntOptions = (
 export const getPriceEntitlement = (
   price: Price,
   entitlements: EntitlementWithFeature[],
-  allowFeatureMatch = false
+  allowFeatureMatch = false,
 ) => {
   let config = price.config as UsagePriceConfig;
 
@@ -203,12 +203,12 @@ export const getPriceEntitlement = (
 
 export const getPriceOptions = (
   price: Price,
-  optionsList: FeatureOptions[]
+  optionsList: FeatureOptions[],
 ) => {
   let config = price.config as UsagePriceConfig;
 
   const options = optionsList.find(
-    (options) => options.internal_feature_id === config.internal_feature_id
+    (options) => options.internal_feature_id === config.internal_feature_id,
   );
 
   return options;
@@ -237,7 +237,7 @@ export const pricesAreSame = (price1: Price, price2: Price) => {
 
 export function compareBillingIntervals(
   a: BillingInterval | null,
-  b: BillingInterval | null
+  b: BillingInterval | null,
 ): number {
   if (a == null) {
     return 1;
@@ -320,7 +320,7 @@ export const getPriceForOverage = (price: Price, overage: number) => {
   let amount = 0;
   let billingUnits = usageConfig.billing_units || 1;
   let remainingUsage = new Decimal(
-    Math.ceil(new Decimal(overage).div(billingUnits).toNumber())
+    Math.ceil(new Decimal(overage).div(billingUnits).toNumber()),
   )
     .mul(billingUnits)
     .toNumber();
@@ -366,7 +366,7 @@ export const roundPriceAmounts = (price: Price) => {
     const config = price.config as UsagePriceConfig;
     for (let i = 0; i < config.usage_tiers.length; i++) {
       config.usage_tiers[i].amount = Number(
-        config.usage_tiers[i].amount.toFixed(10)
+        config.usage_tiers[i].amount.toFixed(10),
       );
     }
 
@@ -376,7 +376,7 @@ export const roundPriceAmounts = (price: Price) => {
 
 export const priceIsOneOffAndTiered = (
   price: Price,
-  relatedEnt: EntitlementWithFeature
+  relatedEnt: EntitlementWithFeature,
 ) => {
   let config = price.config as UsagePriceConfig;
   if (config.type == PriceType.Fixed) {
@@ -394,7 +394,7 @@ export const priceIsOneOffAndTiered = (
 
 export const getProductForPrice = (price: Price, products: FullProduct[]) => {
   return products.find(
-    (product) => product.internal_id === price.internal_product_id
+    (product) => product.internal_id === price.internal_product_id,
   );
 };
 

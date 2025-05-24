@@ -22,7 +22,7 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 import { MigrationService } from "../MigrationService.js";
 import { constructMigrationError } from "../migrationUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { FeatureOptions } from "@autumn/shared";
 
 export const migrateCustomer = async ({
@@ -66,7 +66,7 @@ export const migrateCustomer = async ({
     });
 
     let curCusProduct = await cusProducts.find(
-      (cp: FullCusProduct) => cp.product.internal_id == fromProduct.internal_id
+      (cp: FullCusProduct) => cp.product.internal_id == fromProduct.internal_id,
     );
 
     let attachParams: AttachParams = {
@@ -85,7 +85,7 @@ export const migrateCustomer = async ({
     // Get prepaid prices
     let prepaidPrices = toProduct.prices.filter(
       (price: Price) =>
-        getBillingType(price.config!) === BillingType.UsageInAdvance
+        getBillingType(price.config!) === BillingType.UsageInAdvance,
     );
 
     for (const prepaidPrice of prepaidPrices) {
@@ -93,7 +93,7 @@ export const migrateCustomer = async ({
 
       let newPrepaid = curCusProduct.options.find(
         (option: FeatureOptions) =>
-          option.internal_feature_id === config.internal_feature_id
+          option.internal_feature_id === config.internal_feature_id,
       );
 
       if (!newPrepaid) {
@@ -125,7 +125,7 @@ export const migrateCustomer = async ({
     return true;
   } catch (error: any) {
     logger.error(
-      `Migration failed for customer ${customer.id}, job id: ${migrationJob.id}`
+      `Migration failed for customer ${customer.id}, job id: ${migrationJob.id}`,
     );
     logger.error(error);
     if (error instanceof RecaseError) {

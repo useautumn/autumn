@@ -14,7 +14,6 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 
-import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
   handleVersionProduct,
@@ -219,18 +218,18 @@ export const handleUpdateProduct = async (req: any, res: any) => {
     }
 
     if (notNullish(prices)) {
-      await handleNewPrices({
-        sb,
-        newPrices: prices,
-        curPrices: fullProduct.prices,
-        entitlements,
-        internalProductId: fullProduct.internal_id,
-        isCustom: false,
-        features,
-        product: fullProduct,
-        env,
-        org,
-      });
+      // await handleNewPrices({
+      //   sb,
+      //   newPrices: prices,
+      //   curPrices: fullProduct.prices,
+      //   entitlements,
+      //   internalProductId: fullProduct.internal_id,
+      //   isCustom: false,
+      //   features,
+      //   product: fullProduct,
+      //   env,
+      //   org,
+      // });
     }
 
     res.status(200).json({ message: "Product updated" });
