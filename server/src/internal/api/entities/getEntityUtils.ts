@@ -63,13 +63,13 @@ export const getEntityResponse = async ({
   }
 
   let entities = customer.entities.filter((e: Entity) =>
-    entityIds.includes(e.id)
+    entityIds.includes(e.id),
   );
 
   let entityCusProducts = customer.customer_products.filter(
     (p: FullCusProduct) =>
       entities.some((e: Entity) => e.internal_id == p.internal_entity_id) ||
-      nullish(p.internal_entity_id)
+      nullish(p.internal_entity_id),
   );
 
   let subs = customer.subscriptions || [];
@@ -87,8 +87,8 @@ export const getEntityResponse = async ({
 
     let entitySubs = subs.filter((s: Subscription) =>
       entityCusProducts.some((p: FullCusProduct) =>
-        p.subscription_ids?.includes(s.stripe_id || "")
-      )
+        p.subscription_ids?.includes(s.stripe_id || ""),
+      ),
     );
 
     let products = await getCusProductsResponse({

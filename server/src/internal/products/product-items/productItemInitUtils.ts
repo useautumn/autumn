@@ -16,6 +16,7 @@ import { isFeatureItem } from "./getItemType.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const updateDbPricesAndEnts = async ({
+  db,
   sb,
   newPrices,
   newEnts,
@@ -24,6 +25,7 @@ const updateDbPricesAndEnts = async ({
   deletedPrices,
   deletedEnts,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   newPrices: Price[];
   newEnts: Entitlement[];
@@ -35,7 +37,7 @@ const updateDbPricesAndEnts = async ({
   // 1. Create new ents
   await Promise.all([
     EntitlementService.insert({
-      sb,
+      db,
       data: newEnts,
     }),
     EntitlementService.upsert({
@@ -105,6 +107,7 @@ const updateDbPricesAndEnts = async ({
 };
 
 const handleCustomProductItems = async ({
+  db,
   sb,
   newPrices,
   newEnts,
@@ -114,6 +117,7 @@ const handleCustomProductItems = async ({
   sameEnts,
   features,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   newPrices: Price[];
   newEnts: Entitlement[];
@@ -124,7 +128,7 @@ const handleCustomProductItems = async ({
   features: Feature[];
 }) => {
   await EntitlementService.insert({
-    sb,
+    db,
     data: [...newEnts, ...updatedEnts],
   });
 
@@ -268,6 +272,7 @@ export const handleNewProductItems = async ({
 
   if ((isCustom || newVersion) && saveToDb) {
     return handleCustomProductItems({
+      db,
       sb,
       newPrices,
       newEnts,
@@ -281,6 +286,7 @@ export const handleNewProductItems = async ({
 
   if (saveToDb) {
     await updateDbPricesAndEnts({
+      db,
       sb,
       newPrices,
       newEnts,

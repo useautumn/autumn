@@ -1,68 +1,27 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { Entitlement, ErrCode } from "@autumn/shared";
+import {
+  EntInsertSchema,
+  Entitlement,
+  entitlements,
+  ErrCode,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes/build/cjs/status-codes.js";
 
 export class EntitlementService {
-  static async getInFeatureIds({
-    sb,
-
-    internalFeatureIds,
-  }: {
-    sb: SupabaseClient;
-
-    internalFeatureIds: string[];
-  }) {
-    const { data, error } = await sb
-      .from("entitlements")
-      .select("*")
-      .in("internal_feature_id", internalFeatureIds);
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-  static async getByOrg({
-    sb,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    orgId: string;
-    env: string;
-  }) {
-    const { data, error } = await sb
-      .from("entitlements")
-      .select("*, feature:features!inner(*)")
-      .eq("feature.org_id", orgId)
-      .eq("feature.env", env);
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
   static async insert({
-    sb,
+    db,
     data,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     data: Entitlement[] | Entitlement;
   }) {
-    const { error } = await sb.from("entitlements").insert(data);
-
-    if (error) {
-      throw new RecaseError({
-        message: "Failed to create entitlement(s)",
-        code: ErrCode.CreateEntitlementFailed,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
+    if (Array.isArray(data) && data.length == 0) {
+      return;
     }
+
+    return await db.insert(entitlements).values(data as any); // DRIZZLE TYPE REFACTOR
   }
 
   static async upsert({
@@ -135,7 +94,7 @@ export class EntitlementService {
 
   static async deleteEntitlementByProductId(
     sb: SupabaseClient,
-    internalProductId: string
+    internalProductId: string,
   ) {
     await sb
       .from("entitlements")
@@ -242,3 +201,46 @@ export class EntitlementService {
     return data;
   }
 }
+
+// static async getInFeatureIds({
+//   sb,
+
+//   internalFeatureIds,
+// }: {
+//   sb: SupabaseClient;
+
+//   internalFeatureIds: string[];
+// }) {
+//   const { data, error } = await sb
+//     .from("entitlements")
+//     .select("*")
+//     .in("internal_feature_id", internalFeatureIds);
+
+//   if (error) {
+//     throw error;
+//   }
+
+//   return data;
+// }
+
+// static async getByOrg({
+//   sb,
+//   orgId,
+//   env,
+// }: {
+//   sb: SupabaseClient;
+//   orgId: string;
+//   env: string;
+// }) {
+//   const { data, error } = await sb
+//     .from("entitlements")
+//     .select("*, feature:features!inner(*)")
+//     .eq("feature.org_id", orgId)
+//     .eq("feature.env", env);
+
+//   if (error) {
+//     throw error;
+//   }
+
+//   return data;
+// }

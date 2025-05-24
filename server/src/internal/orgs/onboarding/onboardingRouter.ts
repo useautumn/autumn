@@ -94,7 +94,7 @@ onboardingRouter.post("", async (req: Request, res: any) =>
         ]);
 
         await EntitlementService.insert({
-          sb,
+          db,
           data: ents,
         });
 

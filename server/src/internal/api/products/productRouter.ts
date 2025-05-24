@@ -18,8 +18,6 @@ import { handleGetProduct } from "./handleGetProduct.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
 
 import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
-import { getProductResponse } from "@/internal/products/productV2Utils.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const productApiRouter = Router();
 

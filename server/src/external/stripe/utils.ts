@@ -46,7 +46,7 @@ export const calculateMetered1Price = ({
 }) => {
   const allowance = product.entitlements.metered1.allowance;
   const usagePrice = product.prices.find(
-    (p: any) => p.config.feature_id === metered1Feature.id
+    (p: any) => p.config.feature_id === metered1Feature.id,
   );
 
   const usageConfig = usagePrice.config as UsagePriceConfig;

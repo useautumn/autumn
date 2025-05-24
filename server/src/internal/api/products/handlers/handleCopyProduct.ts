@@ -12,12 +12,12 @@ export const handleCopyProduct = async (req: any, res: any) =>
     res,
     action: "Copy Product",
     handler: async (req, res) => {
+      let { db, sb, logtail: logger } = req;
+
       const { productId: fromProductId } = req.params;
-      const sb = req.sb;
       const orgId = req.orgId;
       const fromEnv = req.env;
-      const { db, env: toEnv, id: toId, name: toName } = req.body;
-      let { logtail: logger } = req;
+      const { env: toEnv, id: toId, name: toName } = req.body;
 
       if (!toEnv || !toId || !toName) {
         throw new RecaseError({
@@ -101,13 +101,15 @@ export const handleCopyProduct = async (req: any, res: any) =>
 
       // // 2. Copy product
       await copyProduct({
+        db,
         sb,
         product: fromFullProduct,
         toOrgId: orgId,
         toId,
         toName,
         toEnv: toEnv,
-        features: toFeatures,
+        toFeatures,
+        fromFeatures,
       });
 
       // 2. Get product from sandbox

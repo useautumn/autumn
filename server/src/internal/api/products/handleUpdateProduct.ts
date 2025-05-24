@@ -13,7 +13,7 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
+
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
@@ -206,16 +206,16 @@ export const handleUpdateProduct = async (req: any, res: any) => {
 
     // 1. Handle changing of entitlements
     if (notNullish(entitlements)) {
-      await handleNewEntitlements({
-        sb,
-        newEnts: entitlements,
-        curEnts: fullProduct.entitlements,
-        features,
-        orgId,
-        internalProductId: fullProduct.internal_id,
-        isCustom: false,
-        prices,
-      });
+      // await handleNewEntitlements({
+      //   sb,
+      //   newEnts: entitlements,
+      //   curEnts: fullProduct.entitlements,
+      //   features,
+      //   orgId,
+      //   internalProductId: fullProduct.internal_id,
+      //   isCustom: false,
+      //   prices,
+      // });
     }
 
     if (notNullish(prices)) {
