@@ -18,8 +18,10 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { migrateCustomer } from "./migrateCustomer.js";
 import { sendMigrationEmail } from "./sendMigrationEmail.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const migrateCustomers = async ({
+  db,
   sb,
   migrationJob,
   fromProduct,
@@ -28,6 +30,7 @@ export const migrateCustomers = async ({
   customers,
   features,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   migrationJob: MigrationJob;
   fromProduct: FullProduct;
@@ -62,14 +65,14 @@ export const migrateCustomers = async ({
   for (let price of toProduct.prices) {
     batchCreate.push(
       createStripePriceIFNotExist({
-        sb,
+        db,
         stripeCli,
         price,
         entitlements: toProduct.entitlements,
         product: toProduct,
         org,
         logger,
-      })
+      }),
     );
   }
 
@@ -93,7 +96,7 @@ export const migrateCustomers = async ({
           fromProduct,
           toProduct,
           features,
-        })
+        }),
       );
     }
 
@@ -103,7 +106,7 @@ export const migrateCustomers = async ({
     logger.info(
       `Job: ${migrationJob.id} - Migrated ${i + batchCustomers.length}/${
         customers.length
-      }  customers, ${numPassed} passed, ${numFailed} failed`
+      }  customers, ${numPassed} passed, ${numFailed} failed`,
     );
 
     // Get current number of customers migrated
@@ -150,7 +153,7 @@ export const migrateCustomers = async ({
 
     migrationDetails.num_errors = errors!.length;
     migrationDetails.failed_customers = errors!.map(
-      (e: any) => `${e.customer.id} - ${e.customer.name}`
+      (e: any) => `${e.customer.id} - ${e.customer.name}`,
     );
   } catch (error) {
     migrationDetails.failed_to_get_errors = true;

@@ -5,7 +5,7 @@ import {
   getProductForPrice,
   pricesOnlyOneOff,
   priceToAmountOrTiers,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 
 import RecaseError from "@/utils/errorUtils.js";
 import chalk from "chalk";
@@ -17,7 +17,7 @@ import {
   subToAutumnInterval,
 } from "@/external/stripe/utils.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
-import { getPriceAmount } from "../../prices/priceUtils.js";
+import { getPriceAmount } from "../../products/prices/priceUtils.js";
 import {
   APIVersion,
   AttachScenario,
@@ -43,7 +43,7 @@ import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSu
 import {
   getAlignedIntervalUnix,
   getNextStartOfMonthUnix,
-} from "@/internal/prices/billingIntervalUtils.js";
+} from "@/internal/products/prices/billingIntervalUtils.js";
 import { SuccessCode } from "@autumn/shared";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 

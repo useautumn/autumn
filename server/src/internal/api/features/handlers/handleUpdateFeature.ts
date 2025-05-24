@@ -9,7 +9,7 @@ import {
   validateCreditSystem,
 } from "@/internal/features/featureUtils.js";
 import { validateMeteredConfig } from "@/internal/features/featureUtils.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
@@ -91,8 +91,8 @@ const handleFeatureIdChanged = async ({
   for (let price of prices) {
     priceUpdate.push(
       PriceService.update({
-        sb,
-        priceId: price.id!,
+        db,
+        id: price.id!,
         update: {
           config: {
             ...price.config,
@@ -234,8 +234,8 @@ const handleFeatureUsageTypeChanged = async ({
 
       batchPriceUpdate.push(
         PriceService.update({
-          sb,
-          priceId: price.id!,
+          db,
+          id: price.id!,
           update: {
             config: {
               ...priceConfig,

@@ -20,7 +20,7 @@ import {
   getPriceEntitlement,
   getPriceForOverage,
   getProductForPrice,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 
 import { AttachParams } from "@/internal/customers/products/AttachParams.js";
 import { getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";

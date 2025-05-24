@@ -3,7 +3,6 @@ import { Router } from "express";
 import { eventsRouter } from "./events/eventRouter.js";
 import { cusRouter } from "./customers/cusRouter.js";
 import { productApiRouter } from "./products/productRouter.js";
-import { priceRouter } from "./prices/priceRouter.js";
 
 import { featureApiRouter } from "./features/featureApiRouter.js";
 import { entitledRouter } from "./entitled/entitledRouter.js";
@@ -13,13 +12,14 @@ import { usageRouter } from "./events/usageRouter.js";
 import { invoiceRouter } from "./customers/invoiceRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
 import { migrationRouter } from "./migrations/migrationRouter.js";
-import rewardRouter from "./rewards/rewardRouter.js";
 
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";
-import expireRouter from "./customers/products/expireRouter.js";
 import { componentRouter } from "./components/componentRouter.js";
 import { analyticsMiddleware } from "@/middleware/analyticsMiddleware.js";
+
+import rewardRouter from "./rewards/rewardRouter.js";
+import expireRouter from "./customers/products/expireRouter.js";
 
 const apiRouter = Router();
 
@@ -39,8 +39,6 @@ apiRouter.use("/products", productApiRouter);
 apiRouter.use("/components", componentRouter);
 apiRouter.use("/rewards", rewardRouter);
 apiRouter.use("/features", featureApiRouter);
-
-apiRouter.use("/prices", priceRouter);
 
 apiRouter.use("/usage", usageRouter);
 apiRouter.use("/entities", entityRouter);

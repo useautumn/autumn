@@ -19,7 +19,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import RecaseError from "@/utils/errorUtils.js";
-import { getEntOptions } from "@/internal/prices/priceUtils.js";
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
 import { InsertCusProductParams } from "../products/AttachParams.js";
@@ -119,8 +119,8 @@ export const initCusProduct = ({
     status: subscriptionStatus
       ? subscriptionStatus
       : isFuture
-      ? CusProductStatus.Scheduled
-      : CusProductStatus.Active,
+        ? CusProductStatus.Scheduled
+        : CusProductStatus.Active,
 
     processor: {
       type: ProcessorType.Stripe,
@@ -215,7 +215,7 @@ export const expireOrDeleteCusProduct = async ({
         cp.status === CusProductStatus.Scheduled &&
         (internalEntityId
           ? cp.internal_entity_id === internalEntityId
-          : nullish(cp.internal_entity_id))
+          : nullish(cp.internal_entity_id)),
     );
 
     if (curScheduledProduct) {

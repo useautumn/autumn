@@ -24,7 +24,7 @@ import {
   getBillingInterval,
   getBillingType,
   pricesAreSame,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { ProductService } from "./ProductService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -38,7 +38,7 @@ import {
 } from "./entitlements/entitlementUtils.js";
 import { Decimal } from "decimal.js";
 import { generateId } from "@/utils/genUtils.js";
-import { PriceService } from "../prices/PriceService.js";
+import { PriceService } from "./prices/PriceService.js";
 import { EntitlementService } from "./entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
@@ -445,7 +445,7 @@ export const copyProduct = async ({
   });
 
   await PriceService.insert({
-    sb,
+    db,
     data: newPrices,
   });
 
@@ -478,12 +478,14 @@ export const isOneOff = (prices: Price[]) => {
 };
 
 export const initProductInStripe = async ({
+  db,
   sb,
   org,
   env,
   logger,
   product,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
@@ -507,7 +509,7 @@ export const initProductInStripe = async ({
   for (const price of product.prices) {
     batchPriceUpdate.push(
       createStripePriceIFNotExist({
-        sb,
+        db,
         org,
         stripeCli,
         price,

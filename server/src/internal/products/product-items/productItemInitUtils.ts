@@ -7,7 +7,7 @@ import {
   ProductItem,
 } from "@autumn/shared";
 import { itemToPriceAndEnt } from "./mapFromItem.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { EntitlementService } from "../entitlements/EntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { validateProductItems } from "./validateProductItems.js";
@@ -49,23 +49,23 @@ const updateDbPricesAndEnts = async ({
   // 2. Create new prices
   await Promise.all([
     PriceService.insert({
-      sb,
+      db,
       data: newPrices,
     }),
     PriceService.upsert({
-      sb,
+      db,
       data: updatedPrices,
     }),
-    PriceService.deleteByIds({
-      sb,
-      priceIds: deletedPrices.map((price) => price.id!),
+    PriceService.deleteInIds({
+      db,
+      ids: deletedPrices.map((price) => price.id!),
     }),
   ]);
 
   // Check if any custom prices use this entitlement...
   let deletedEntIds = deletedEnts.map((ent) => ent.id!);
-  let customPrices = await PriceService.getInIds({
-    sb,
+  let customPrices = await PriceService.getCustomInEntIds({
+    db,
     entitlementIds: deletedEntIds,
   });
 
@@ -133,7 +133,7 @@ const handleCustomProductItems = async ({
   });
 
   await PriceService.insert({
-    sb,
+    db,
     data: [...newPrices, ...updatedPrices],
   });
 

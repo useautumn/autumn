@@ -30,10 +30,12 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const eventsRouter = Router();
 
 const getEventAndCustomer = async ({
+  db,
   sb,
   org,
   env,
@@ -45,6 +47,7 @@ const getEventAndCustomer = async ({
   entityId,
   entityData,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   features: Feature[];
@@ -68,6 +71,7 @@ const getEventAndCustomer = async ({
 
   // 2. Check if customer ID is valid
   customer = await getOrCreateCustomer({
+    db,
     sb,
     org,
     env,
@@ -131,7 +135,7 @@ const getAffectedFeatures = async ({
         creditSystemContainsFeature({
           creditSystem: cs,
           meteredFeatureId: f.id,
-        })
+        }),
       )
     );
   });
@@ -156,11 +160,12 @@ export const handleEventSent = async ({
     });
   }
 
-  const { sb, pg, orgId, env } = req;
+  const { sb, env, db } = req;
 
   const org = await OrgService.getFromReq(req);
   const features = await FeatureService.getFromReq(req);
   const { customer, event } = await getEventAndCustomer({
+    db,
     sb,
     org,
     env,

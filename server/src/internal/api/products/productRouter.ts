@@ -40,7 +40,7 @@ productApiRouter.post("/:productId/copy", handleCopyProduct);
 
 productApiRouter.post("/all/init_stripe", async (req: any, res) => {
   try {
-    const { sb, orgId, env, logtail: logger } = req;
+    const { sb, orgId, env, logtail: logger, db } = req;
 
     const [fullProducts, org] = await Promise.all([
       ProductService.getFullProducts({
@@ -82,7 +82,7 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
       for (const price of batch) {
         batchPriceUpdate.push(
           createStripePriceIFNotExist({
-            sb,
+            db,
             org,
             stripeCli: stripeCli,
             price,

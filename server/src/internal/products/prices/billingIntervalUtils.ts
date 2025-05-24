@@ -3,7 +3,6 @@ import {
   addMonths,
   addYears,
   differenceInSeconds,
-  format,
   getDate,
   getHours,
   getMinutes,
@@ -21,7 +20,7 @@ import { UTCDate } from "@date-fns/utc";
 
 export const subtractBillingIntervalUnix = (
   unixTimestamp: number,
-  interval: BillingInterval
+  interval: BillingInterval,
 ) => {
   const date = new UTCDate(unixTimestamp);
   let subtractedDate = date;
@@ -46,7 +45,7 @@ export const subtractBillingIntervalUnix = (
 
 export const addBillingIntervalUnix = (
   unixTimestamp: number,
-  interval: BillingInterval
+  interval: BillingInterval,
 ) => {
   const date = new UTCDate(unixTimestamp);
   let addedDate = date;
@@ -82,7 +81,7 @@ export const getNextStartOfMonthUnix = (interval: BillingInterval) => {
 
 export const getAlignedIntervalUnix = (
   alignWithUnix: number,
-  interval: BillingInterval
+  interval: BillingInterval,
 ) => {
   const nextCycleAnchor = alignWithUnix;
   let nextCycleAnchorUnix = nextCycleAnchor;
@@ -93,7 +92,7 @@ export const getAlignedIntervalUnix = (
   while (true) {
     const subtractedUnix = subtractBillingIntervalUnix(
       nextCycleAnchorUnix,
-      interval
+      interval,
     );
 
     if (subtractedUnix < Date.now()) {
@@ -112,7 +111,7 @@ export const getAlignedIntervalUnix = (
   if (
     differenceInSeconds(
       new Date(naturalBillingDate),
-      new Date(nextCycleAnchorUnix)
+      new Date(nextCycleAnchorUnix),
     ) < 60
   ) {
     billingCycleAnchorUnix = undefined;
@@ -150,7 +149,7 @@ export const subtractFromUnixTillAligned = ({
   const lastDayOfMonth = new UTCDate(
     alignedDate.getFullYear(),
     alignedDate.getMonth() + 1,
-    0
+    0,
   ).getDate();
 
   // Apply target day (capped to last day of month) and time components
@@ -161,44 +160,3 @@ export const subtractFromUnixTillAligned = ({
 
   return getTime(alignedDate);
 };
-
-// export const subtractFromUnixTillAligned = ({
-//   targetUnix,
-//   originalUnix,
-// }: {
-//   targetUnix: number;
-//   originalUnix: number;
-// }) => {
-//   console.log(
-//     "Subtracting from unix till aligned",
-//     format(new Date(targetUnix), "dd MMM yyyy HH:mm:ss"),
-//     format(new Date(originalUnix), "dd MMM yyyy HH:mm:ss")
-//   );
-
-//   // 1. Deduct months till unix is less than now
-//   // 1. Get day of unix
-//   const targetDate = new Date(targetUnix);
-//   const originalDate = new Date(originalUnix);
-
-//   // Get target date components
-//   const targetDay = targetDate.getDate();
-//   const targetHours = targetDate.getHours();
-//   const targetMinutes = targetDate.getMinutes();
-//   const targetSeconds = targetDate.getSeconds();
-
-//   // Create new date with original year/month but target day/time
-//   const alignedUnix = new Date(originalDate);
-//   // Eg jan to feb?
-
-//   const lastDayOfMonth = new Date(
-//     alignedUnix.getFullYear(),
-//     alignedUnix.getMonth() + 1,
-//     0
-//   ).getDate();
-//   alignedUnix.setDate(Math.min(targetDay, lastDayOfMonth));
-//   alignedUnix.setHours(targetHours);
-//   alignedUnix.setMinutes(targetMinutes);
-//   alignedUnix.setSeconds(targetSeconds);
-
-//   return alignedUnix.getTime();
-// };

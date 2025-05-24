@@ -25,14 +25,17 @@ import {
   notNullish,
   nullish,
 } from "@/utils/genUtils.js";
-import { getBillingType, getEntOptions } from "@/internal/prices/priceUtils.js";
+import {
+  getBillingType,
+  getEntOptions,
+} from "@/internal/products/prices/priceUtils.js";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
 import {
   getAlignedIntervalUnix,
   subtractFromUnixTillAligned,
-} from "@/internal/prices/billingIntervalUtils.js";
+} from "@/internal/products/prices/billingIntervalUtils.js";
 import { format } from "date-fns";
 import { UTCDate } from "@date-fns/utc";
 import {
@@ -52,7 +55,7 @@ export const initCusEntEntities = ({
   resetBalance?: number | null;
 }) => {
   let newEntities: Record<string, EntityBalance> | null = notNullish(
-    entitlement.entity_feature_id
+    entitlement.entity_feature_id,
   )
     ? {}
     : null;
@@ -132,7 +135,7 @@ const initCusEntNextResetAt = ({
 
   nextResetAtCalculated = getNextEntitlementReset(
     nextResetAtCalculated,
-    resetInterval
+    resetInterval,
   ).getTime();
 
   // If anchorToUnix, align next reset at to anchorToUnix...

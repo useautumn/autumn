@@ -28,6 +28,7 @@ import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { isPriceItem } from "@/internal/products/product-items/getItemType.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const isAddProductFlow = ({
   curCusProduct,
@@ -81,11 +82,11 @@ const formatMessage = ({
 }) => {
   let totalAmount = baseLineItems.reduce(
     (acc: number, item: any) => acc + item.amount,
-    0
+    0,
   );
   totalAmount += usageLineItems.reduce(
     (acc: number, item: any) => acc + item.amount,
-    0
+    0,
   );
 
   let addString = org.config.bill_upgrade_immediately
@@ -117,12 +118,14 @@ const formatMessage = ({
 };
 
 const createStripeProductAndPrices = async ({
+  db,
   sb,
   org,
   env,
   product,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
@@ -145,14 +148,14 @@ const createStripeProductAndPrices = async ({
     if (!price.config?.stripe_price_id) {
       batchPriceUpdates.push(
         createStripePriceIFNotExist({
-          sb,
+          db,
           stripeCli,
           price,
           entitlements: product.entitlements,
           product,
           org,
           logger,
-        })
+        }),
       );
     }
   }
@@ -161,6 +164,7 @@ const createStripeProductAndPrices = async ({
 };
 
 export const getUpgradePreview = async ({
+  db,
   sb,
   customer,
   org,
@@ -170,6 +174,7 @@ export const getUpgradePreview = async ({
   features,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   customer: Customer;
   org: Organization;
@@ -181,6 +186,7 @@ export const getUpgradePreview = async ({
 }) => {
   // Create stripe product / prices if not exist
   await createStripeProductAndPrices({
+    db,
     sb,
     org,
     env,
@@ -236,12 +242,12 @@ export const getUpgradePreview = async ({
 
   let totalAmount = baseLineItems.reduce(
     (acc: number, item: any) => acc + item.amount,
-    0
+    0,
   );
 
   totalAmount += usageLineItems.reduce(
     (acc: number, item: any) => acc + item.amount,
-    0
+    0,
   );
 
   let items = [...baseLineItems, ...usageLineItems].map((item) => {

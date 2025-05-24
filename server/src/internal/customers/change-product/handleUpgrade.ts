@@ -42,7 +42,7 @@ import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSu
 import {
   addBillingIntervalUnix,
   subtractBillingIntervalUnix,
-} from "@/internal/prices/billingIntervalUtils.js";
+} from "@/internal/products/prices/billingIntervalUtils.js";
 
 import { differenceInSeconds } from "date-fns";
 import { SuccessCode } from "@autumn/shared";
@@ -95,7 +95,7 @@ export const handleStripeSubUpdate = async ({
     let stripePriceExists = curPrices.some(
       (p) =>
         p.config!.stripe_price_id === item.price.id ||
-        (p.config as UsagePriceConfig).stripe_product_id === item.price.product
+        (p.config as UsagePriceConfig).stripe_product_id === item.price.product,
     );
 
     let stripeProdExists =
@@ -156,7 +156,7 @@ export const handleStripeSubUpdate = async ({
       let now = Date.now();
       if (schedule.test_clock) {
         let testClock = await stripeCli.testHelpers.testClocks.retrieve(
-          schedule.test_clock as string
+          schedule.test_clock as string,
         );
         now = testClock.frozen_time * 1000;
       }
@@ -206,13 +206,13 @@ export const handleStripeSubUpdate = async ({
     let nextCycleAnchorUnix = nextCycleAnchor;
     const naturalBillingDate = addBillingIntervalUnix(
       Date.now(),
-      itemSet.interval
+      itemSet.interval,
     );
 
     while (true) {
       const subtractedUnix = subtractBillingIntervalUnix(
         nextCycleAnchorUnix,
-        itemSet.interval
+        itemSet.interval,
       );
 
       if (subtractedUnix < Date.now()) {
@@ -226,7 +226,7 @@ export const handleStripeSubUpdate = async ({
     if (
       differenceInSeconds(
         new Date(naturalBillingDate),
-        new Date(nextCycleAnchorUnix)
+        new Date(nextCycleAnchorUnix),
       ) < 60
     ) {
       billingCycleAnchorUnix = undefined;
@@ -306,7 +306,7 @@ const handleOnlyEntsChanged = async ({
         product_ids: attachParams.products.map((p) => p.id),
         code: SuccessCode.FeaturesUpdated,
         message: `Successfully updated features for customer ${attachParams.customer.id} on product ${attachParams.products[0].name}`,
-      })
+      }),
     );
   } else {
     res.status(200).json({
@@ -362,7 +362,7 @@ export const handleUpgrade = async ({
   }
 
   logger.info(
-    `Upgrading ${curFullProduct.name} to ${product.name} for ${customer.id}`
+    `Upgrading ${curFullProduct.name} to ${product.name} for ${customer.id}`,
   );
 
   const stripeCli = createStripeCli({ org, env: customer.env });
@@ -393,11 +393,11 @@ export const handleUpgrade = async ({
   if (trialToTrial || trialToPaid || toFreeProduct || paidToFreeProduct) {
     if (trialToTrial) {
       logger.info(
-        `Upgrading from trial to trial, cancelling and starting new subscription`
+        `Upgrading from trial to trial, cancelling and starting new subscription`,
       );
     } else if (toFreeProduct) {
       logger.info(
-        `switching to free product, cancelling (if needed) and adding free product`
+        `switching to free product, cancelling (if needed) and adding free product`,
       );
     }
 
@@ -457,14 +457,14 @@ export const handleUpgrade = async ({
   });
 
   logger.info(
-    "2.1. Remove old subscription ID from old cus product and expire"
+    "2.1. Remove old subscription ID from old cus product and expire",
   );
   await CusProductService.update({
     sb: req.sb,
     cusProductId: curCusProduct.id,
     updates: {
       subscription_ids: curCusProduct.subscription_ids!.filter(
-        (subId) => subId !== subUpdate.id
+        (subId) => subId !== subUpdate.id,
       ),
       processor: {
         ...curCusProduct.processor,
@@ -543,10 +543,10 @@ export const handleUpgrade = async ({
           code: updateSameProduct
             ? SuccessCode.UpdatedSameProduct
             : newVersion
-            ? SuccessCode.UpgradedToNewVersion
-            : SuccessCode.UpgradedToNewProduct,
+              ? SuccessCode.UpgradedToNewVersion
+              : SuccessCode.UpgradedToNewProduct,
           message: `Successfully attached ${product.name} to ${customer.name} -- upgraded from ${curFullProduct.name}`,
-        })
+        }),
       );
     } else {
       res.status(200).json({

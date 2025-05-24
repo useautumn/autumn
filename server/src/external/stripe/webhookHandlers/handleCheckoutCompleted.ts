@@ -21,14 +21,14 @@ import {
   getPriceEntitlement,
   priceIsOneOffAndTiered,
   pricesOnlyOneOff,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 import {
   attachToInsertParams,
   getPricesForProduct,
 } from "@/internal/products/productUtils.js";
 import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 import { createStripeSub } from "../stripeSubUtils/createStripeSub.js";
-import { getAlignedIntervalUnix } from "@/internal/prices/billingIntervalUtils.js";
+import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { JobName } from "@/queue/JobName.js";
@@ -48,7 +48,7 @@ export const itemMetasToOptions = async ({
   const usageInAdvanceExists = attachParams.prices.some(
     (price) =>
       getBillingType(price.config as UsagePriceConfig) ==
-      BillingType.UsageInAdvance
+      BillingType.UsageInAdvance,
   );
 
   if (!usageInAdvanceExists) {
@@ -56,7 +56,7 @@ export const itemMetasToOptions = async ({
   }
 
   const response = await stripeCli.checkout.sessions.listLineItems(
-    checkoutSession.id
+    checkoutSession.id,
   );
 
   const lineItems: Stripe.LineItem[] = response.data;
@@ -71,7 +71,7 @@ export const itemMetasToOptions = async ({
     const lineItem = lineItems.find(
       (li: any) =>
         li.price.id == config.stripe_price_id ||
-        li.price.product == config.stripe_product_id
+        li.price.product == config.stripe_product_id,
     );
 
     let quantity = 0;
@@ -86,7 +86,7 @@ export const itemMetasToOptions = async ({
     }
 
     const index = attachParams.optionsList.findIndex(
-      (feature) => feature.internal_feature_id == config.internal_feature_id
+      (feature) => feature.internal_feature_id == config.internal_feature_id,
     );
 
     if (index == -1) {
@@ -143,7 +143,7 @@ export const handleCheckoutSessionCompleted = async ({
 
   console.log(
     "Handling checkout.completed: autumn metadata:",
-    checkoutSession.metadata?.autumn_metadata_id
+    checkoutSession.metadata?.autumn_metadata_id,
   );
 
   // Get product by stripe subscription ID
@@ -159,14 +159,14 @@ export const handleCheckoutSessionCompleted = async ({
 
     if (activeCusProducts && activeCusProducts.length > 0) {
       console.log(
-        "   ✅ checkout.completed: subscription already exists, skipping"
+        "   ✅ checkout.completed: subscription already exists, skipping",
       );
       return;
     }
 
     // Check if any prices are in arrear prorated
     const subscription = await stripeCli.subscriptions.retrieve(
-      checkoutSession.subscription as string
+      checkoutSession.subscription as string,
     );
 
     checkoutSub = subscription;
@@ -194,7 +194,7 @@ export const handleCheckoutSessionCompleted = async ({
       let arrearProratedPrice = attachParams.prices.find(
         (p) =>
           (p.config! as UsagePriceConfig).stripe_placeholder_price_id ==
-          stripePriceId
+          stripePriceId,
       );
 
       if (arrearProratedPrice) {
@@ -209,7 +209,7 @@ export const handleCheckoutSessionCompleted = async ({
       let arrearPrice = attachParams.prices.find(
         (p) =>
           p.config!.stripe_price_id == stripePriceId &&
-          getBillingType(p.config!) == BillingType.UsageInArrear
+          getBillingType(p.config!) == BillingType.UsageInArrear,
       );
 
       if (arrearPrice && attachParams.internalEntityId) {
@@ -230,7 +230,7 @@ export const handleCheckoutSessionCompleted = async ({
     const firstSetStart = checkoutSub?.current_period_end;
     if (!firstSetStart) {
       console.error(
-        `checkout.completed: first set start not found for subscription: ${checkoutSession.subscription}`
+        `checkout.completed: first set start not found for subscription: ${checkoutSession.subscription}`,
       );
       return;
     }
@@ -238,7 +238,7 @@ export const handleCheckoutSessionCompleted = async ({
     for (const itemSet of remainingSets) {
       let finalItems = itemSet.items.filter((item: any) => {
         let price = attachParams.prices.find(
-          (p) => p.config!.stripe_price_id == item.price
+          (p) => p.config!.stripe_price_id == item.price,
         );
 
         if (!price) {
@@ -264,7 +264,7 @@ export const handleCheckoutSessionCompleted = async ({
                 product: p,
                 org,
                 interval: itemSet.interval,
-              })
+              }),
             )
           : finalItems;
 
@@ -275,7 +275,7 @@ export const handleCheckoutSessionCompleted = async ({
       // Handle billing cycle anchor...
       const billingCycleAnchorUnix = getAlignedIntervalUnix(
         firstSetStart * 1000,
-        itemSet.interval
+        itemSet.interval,
       );
 
       const subscription = (await createStripeSub({
@@ -366,7 +366,7 @@ export const handleCheckoutSessionCompleted = async ({
       });
     } catch (error) {
       logger.error(
-        `checkout.completed: failed to trigger checkout reward check`
+        `checkout.completed: failed to trigger checkout reward check`,
       );
       logger.error(error);
     }

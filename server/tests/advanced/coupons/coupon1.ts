@@ -1,7 +1,7 @@
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
-import { getPriceForOverage } from "@/internal/prices/priceUtils.js";
+import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
 import { Customer } from "@autumn/shared";
 import { expect } from "chai";
 import chalk from "chalk";
@@ -65,7 +65,7 @@ describe(
       await completeCheckoutForm(
         res.checkout_url,
         undefined,
-        rewards.rolloverAll.id
+        rewards.rolloverAll.id,
       );
 
       await timeout(20000);
@@ -88,7 +88,7 @@ describe(
 
       try {
         expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(
-          rewards.rolloverAll.id
+          rewards.rolloverAll.id,
         );
 
         // Expect amount to be original amount - pro price
@@ -97,7 +97,7 @@ describe(
         console.error("--------------------------------");
         console.error(
           "Expected stripe cus to have coupon",
-          rewards.rolloverAll
+          rewards.rolloverAll,
         );
         console.error("Actual stripe cus discount", cusDiscount);
         throw error;
@@ -116,7 +116,7 @@ describe(
       // Price
       const price = getPriceForOverage(
         products.proWithOverage.prices[1],
-        -(products.proWithOverage.entitlements.metered1.allowance! - usage)
+        -(products.proWithOverage.entitlements.metered1.allowance! - usage),
       );
 
       couponAmount =
@@ -140,7 +140,7 @@ describe(
 
       try {
         expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(
-          rewards.rolloverAll.id
+          rewards.rolloverAll.id,
         );
         expect(cusDiscount.coupon?.amount_off).to.equal(couponAmount * 100);
       } catch (error) {
@@ -180,5 +180,5 @@ describe(
         throw error;
       }
     });
-  }
+  },
 );

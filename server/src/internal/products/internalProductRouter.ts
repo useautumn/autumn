@@ -175,7 +175,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
     });
 
     prices = prices.sort((a: any, b: any) => {
-      return b.name.localeCompare(a.name);
+      return b.id.localeCompare(a.id);
     });
 
     let productV2 = mapToProductV2({ product, features });

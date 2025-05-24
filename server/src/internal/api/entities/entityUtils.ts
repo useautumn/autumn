@@ -1,7 +1,10 @@
 import { submitUsageToStripe } from "@/external/stripe/stripeMeterUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-import { getBillingType, roundUsage } from "@/internal/prices/priceUtils.js";
+import {
+  getBillingType,
+  roundUsage,
+} from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
@@ -30,7 +33,7 @@ export const getLinkedCusEnt = ({
 }) => {
   // Get linked cus ent...
   let linkedCusEnt = cusEnts.find(
-    (e: any) => e.entitlement.feature.id === linkedFeature.id
+    (e: any) => e.entitlement.feature.id === linkedFeature.id,
   );
 
   if (!linkedCusEnt) {
@@ -110,7 +113,7 @@ export const removeEntityFromCusEnt = async ({
 
   let entitlement = cusEnt.entitlement;
   console.log(
-    `Linked cus ent: ${entitlement.feature.id}, isLinked: ${isLinked}`
+    `Linked cus ent: ${entitlement.feature.id}, isLinked: ${isLinked}`,
   );
 
   // Delete cus ent ids
@@ -154,7 +157,7 @@ export const removeEntityFromCusEnt = async ({
   });
 
   logger.info(
-    `Feature: ${entitlement.feature.id}, customer: ${cusEnt.customer_id}, deleted entities from cus ent`
+    `Feature: ${entitlement.feature.id}, customer: ${cusEnt.customer_id}, deleted entities from cus ent`,
   );
 };
 

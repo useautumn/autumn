@@ -21,7 +21,7 @@ import Stripe from "stripe";
 
 import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
 
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { billForRemainingUsages } from "@/internal/customers/change-product/billRemainingUsages.js";
 import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
 
@@ -48,7 +48,7 @@ const handleCusProductDeleted = async ({
     cusProduct.customer.org_id !== org.id
   ) {
     console.log(
-      "   ⚠️ customer product not found / env mismatch / org mismatch"
+      "   ⚠️ customer product not found / env mismatch / org mismatch",
     );
     return;
   }
@@ -57,16 +57,16 @@ const handleCusProductDeleted = async ({
     let customer = cusProduct.customer;
     let usagePrices = cusProduct.customer_prices.filter(
       (cp: FullCustomerPrice) =>
-        getBillingType(cp.price.config!) === BillingType.UsageInArrear
+        getBillingType(cp.price.config!) === BillingType.UsageInArrear,
     );
 
     if (usagePrices.length > 0) {
       // Create invoice for remaining usage charges
       logger.info(
-        `Customer ${customer.name} (${customer.id}), Entity: ${cusProduct.internal_entity_id}`
+        `Customer ${customer.name} (${customer.id}), Entity: ${cusProduct.internal_entity_id}`,
       );
       logger.info(
-        `Product ${cusProduct.product.name} subscription deleted, billing for remaining usages`
+        `Product ${cusProduct.product.name} subscription deleted, billing for remaining usages`,
       );
       await billForRemainingUsages({
         sb,
@@ -93,7 +93,7 @@ const handleCusProductDeleted = async ({
 
   if (cusProduct.status === CusProductStatus.Expired) {
     console.log(
-      `   ⚠️ customer product already expired, skipping: ${cusProduct.product.name} (${cusProduct.id})`
+      `   ⚠️ customer product already expired, skipping: ${cusProduct.product.name} (${cusProduct.id})`,
     );
     return;
   }
@@ -104,7 +104,7 @@ const handleCusProductDeleted = async ({
     !prematurelyCanceled
   ) {
     console.log(
-      `   ⚠️ Cus product ${cusProduct.product.name} (${cusProduct.id}) has scheduled_ids and not prematurely canceled: removing subscription_id from cus product`
+      `   ⚠️ Cus product ${cusProduct.product.name} (${cusProduct.id}) has scheduled_ids and not prematurely canceled: removing subscription_id from cus product`,
     );
 
     // Remove subscription_id from cus product
@@ -113,7 +113,7 @@ const handleCusProductDeleted = async ({
       cusProductId: cusProduct.id,
       updates: {
         subscription_ids: cusProduct.subscription_ids?.filter(
-          (id) => id !== subscription.id
+          (id) => id !== subscription.id,
         ),
       },
     });
@@ -215,7 +215,7 @@ export const handleSubscriptionDeleted = async ({
 
   if (activeCusProducts.length === 0) {
     console.log(
-      `   ⚠️ no customer products found with stripe sub id: ${subscription.id}`
+      `   ⚠️ no customer products found with stripe sub id: ${subscription.id}`,
     );
 
     if (subscription.livemode) {
@@ -243,7 +243,7 @@ export const handleSubscriptionDeleted = async ({
         org,
         sb,
         prematurelyCanceled,
-      })
+      }),
     );
   }
 

@@ -1,6 +1,6 @@
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import {
   AppEnv,
   BillingType,
@@ -68,7 +68,7 @@ export const handleInvoiceFinalized = async ({
     }
 
     let prices = activeProducts.flatMap((cp) =>
-      cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price)
+      cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),
     );
 
     let invoiceItems = await getInvoiceItems({

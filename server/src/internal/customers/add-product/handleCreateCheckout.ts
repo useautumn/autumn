@@ -1,6 +1,6 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
 
-import { pricesContainRecurring } from "@/internal/prices/priceUtils.js";
+import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
 
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
@@ -10,7 +10,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
@@ -65,7 +65,7 @@ export const handleCreateCheckout = async ({
 
   if (attachParams.billingAnchor) {
     billingCycleAnchorUnixSeconds = Math.floor(
-      attachParams.billingAnchor / 1000
+      attachParams.billingAnchor / 1000,
     );
   }
 
@@ -125,7 +125,7 @@ export const handleCreateCheckout = async ({
         }, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
         product_ids: attachParams.products.map((p) => p.id),
         customer_id: customer.id || customer.internal_id,
-      })
+      }),
     );
   } else {
     res.status(200).json({

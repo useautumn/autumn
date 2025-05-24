@@ -19,14 +19,14 @@ import {
 } from "date-fns";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 
 const STRIPE_TEST_CLOCK_TIMING = 30000; // 30s
 
 export const completeCheckoutForm = async (
   url: string,
   overrideQuantity?: number,
-  promoCode?: string
+  promoCode?: string,
 ) => {
   const browser = await puppeteer.launch({
     headless: false,
@@ -108,7 +108,7 @@ export const deleteAllStripeProducts = async ({
             active: false,
           });
         }
-      })
+      }),
     );
     console.log("Deleted", i, "of", stripeProds.data.length);
   }
@@ -126,7 +126,9 @@ export const deleteAllStripeTestClocks = async ({
   for (let i = 0; i < stripeTestClocks.data.length; i += batchSize) {
     const batch = stripeTestClocks.data.slice(i, i + batchSize);
     await Promise.all(
-      batch.map(async (clock) => stripeCli.testHelpers.testClocks.del(clock.id))
+      batch.map(async (clock) =>
+        stripeCli.testHelpers.testClocks.del(clock.id),
+      ),
     );
   }
 };
@@ -149,7 +151,7 @@ export const deleteStripeProduct = async ({
     const config = price.config as any;
     if (config.stripe_price_id) {
       const stripePrice = await stripeCli.prices.retrieve(
-        config.stripe_price_id
+        config.stripe_price_id,
       );
 
       await stripeCli.prices.update(config.stripe_price_id, {
@@ -252,7 +254,7 @@ export const advanceTestClock = async ({
   });
 
   await timeout(
-    waitForSeconds ? waitForSeconds * 1000 : STRIPE_TEST_CLOCK_TIMING
+    waitForSeconds ? waitForSeconds * 1000 : STRIPE_TEST_CLOCK_TIMING,
   );
 };
 
@@ -295,7 +297,7 @@ export const advanceClockForInvoice = async ({
 
   console.log(
     "   - advanceClockForInvoice (1): ",
-    format(advanceTo, "dd MMM yyyy HH:mm:ss")
+    format(advanceTo, "dd MMM yyyy HH:mm:ss"),
   );
 
   if (waitForMeterUpdate) {
@@ -315,7 +317,7 @@ export const advanceClockForInvoice = async ({
 
   console.log(
     "   - advanceClockForInvoice (2): ",
-    format(advanceTo2, "dd MMM yyyy HH:mm:ss")
+    format(advanceTo2, "dd MMM yyyy HH:mm:ss"),
   );
 
   await timeout(STRIPE_TEST_CLOCK_TIMING);
@@ -337,7 +339,7 @@ export const advanceMonths = async ({
     (advanceTo = addMonths(advanceTo, 1)), 10;
     console.log(
       "   - Advancing to: ",
-      format(advanceTo, "dd MMM yyyy HH:mm:ss")
+      format(advanceTo, "dd MMM yyyy HH:mm:ss"),
     );
 
     try {
@@ -378,7 +380,7 @@ export const checkBillingMeterEventSummary = async ({
       start_time: Math.round(startTime.getTime() / 1000),
       end_time: Math.round(endTime.getTime() / 1000),
       customer: stripeCustomerId,
-    }
+    },
   );
 
   if (event.data.length === 0) {
@@ -427,7 +429,7 @@ export const getDiscount = async ({
   customer: Customer;
 }) => {
   const stripeCustomer: any = await stripeCli.customers.retrieve(
-    customer.processor!.id
+    customer.processor!.id,
   );
   return stripeCustomer.discount;
 };

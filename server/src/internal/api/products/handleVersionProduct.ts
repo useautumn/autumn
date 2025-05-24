@@ -1,12 +1,8 @@
-import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import {
-  constructProduct,
-  isFreeProduct,
-} from "@/internal/products/productUtils.js";
+import { constructProduct } from "@/internal/products/productUtils.js";
 import {
   AppEnv,
   CreateProductSchema,
@@ -85,19 +81,19 @@ export const handleVersionProduct = async ({
   // });
 
   await Promise.all([
-    handleNewPrices({
-      sb,
-      newPrices: prices,
-      curPrices: latestProduct.prices,
-      internalProductId: newProduct.internal_id,
-      isCustom: false,
-      org,
-      env,
-      entitlements,
-      features,
-      product: newProduct,
-      newVersion: true,
-    }),
+    // handleNewPrices({
+    //   sb,
+    //   newPrices: prices,
+    //   curPrices: latestProduct.prices,
+    //   internalProductId: newProduct.internal_id,
+    //   isCustom: false,
+    //   org,
+    //   env,
+    //   entitlements,
+    //   features,
+    //   product: newProduct,
+    //   newVersion: true,
+    // }),
     handleNewFreeTrial({
       sb,
       newFreeTrial: freeTrial,

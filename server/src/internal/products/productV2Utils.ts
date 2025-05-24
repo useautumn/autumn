@@ -11,7 +11,7 @@ import {
   ProductV2,
 } from "@autumn/shared";
 import { getEntRelatedPrice } from "./entitlements/entitlementUtils.js";
-import { getPriceEntitlement } from "../prices/priceUtils.js";
+import { getPriceEntitlement } from "./prices/priceUtils.js";
 import { toProductItem } from "./product-items/mapToItem.js";
 import {
   getItemFeatureType,

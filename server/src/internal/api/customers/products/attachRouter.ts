@@ -22,7 +22,7 @@ import {
   getPriceEntitlement,
   getProductForPrice,
   priceIsOneOffAndTiered,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 
 import { getFullCusProductData } from "@/internal/customers/products/attachUtils.js";
 import {
@@ -219,7 +219,7 @@ export const createStripePrices = async ({
 
     batchPriceUpdates.push(
       createStripePriceIFNotExist({
-        sb: req.sb,
+        db: req.db,
         stripeCli,
         price,
         entitlements,

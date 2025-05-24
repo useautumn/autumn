@@ -201,7 +201,7 @@ const getCusEntsAndFeatures = async ({
 }) => {
   let { customer_id, feature_id, customer_data, entity_id } = req.body;
 
-  let { sb, env } = req;
+  let { sb, env, db } = req;
 
   // 1. Get org and features
   const startTime = Date.now();
@@ -218,6 +218,7 @@ const getCusEntsAndFeatures = async ({
   const { feature, creditSystems, allFeatures } = featureRes;
 
   const customer = await getOrCreateCustomer({
+    db,
     sb,
     org: req.org,
     env,

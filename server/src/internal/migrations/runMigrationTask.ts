@@ -64,6 +64,7 @@ export const runMigrationTask = async ({
 
     // STEP 2: MIGRATE CUSTOMERS..
     await migrateCustomers({
+      db,
       sb,
       migrationJob,
       fromProduct,

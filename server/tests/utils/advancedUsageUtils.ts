@@ -1,4 +1,4 @@
-import { getPriceForOverage } from "@/internal/prices/priceUtils.js";
+import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
 import assert from "assert";
 import { expect } from "chai";
 import { Decimal } from "decimal.js";
@@ -14,10 +14,10 @@ const CREDIT_MULTIPLIER = 100000;
 export const getCreditsUsed = (
   creditSystem: Feature,
   meteredFeatureId: string,
-  value: number
+  value: number,
 ) => {
   let schemaItem = creditSystem.config.schema.find(
-    (item: any) => item.metered_feature_id === meteredFeatureId
+    (item: any) => item.metered_feature_id === meteredFeatureId,
   );
 
   return new Decimal(value).mul(schemaItem.credit_amount).toNumber();
@@ -38,14 +38,14 @@ export const checkCreditBalance = async ({
   const { allowed, balanceObj }: any = await AutumnCli.entitled(
     customerId,
     featureId,
-    true
+    true,
   );
 
   try {
     assert.equal(allowed, true);
     assert.equal(
       balanceObj.balance,
-      new Decimal(originalAllowance).minus(totalCreditsUsed).toNumber()
+      new Decimal(originalAllowance).minus(totalCreditsUsed).toNumber(),
     );
   } catch (error) {
     console.group();
@@ -53,7 +53,7 @@ export const checkCreditBalance = async ({
     console.log("   - Original allowance: ", originalAllowance);
     console.log(
       "   - Expected balance: ",
-      originalAllowance - totalCreditsUsed
+      originalAllowance - totalCreditsUsed,
     );
     console.log("   - Actual balance: ", balanceObj.balance);
     console.groupEnd();
@@ -77,7 +77,7 @@ export const checkUsageInvoiceAmount = async ({
   includeBase?: boolean;
 }) => {
   const featureEntitlement: any = Object.values(product.entitlements).find(
-    (entitlement: any) => entitlement.feature_id === featureId
+    (entitlement: any) => entitlement.feature_id === featureId,
   );
 
   let meteredPrice = product.prices[product.prices.length - 1];
@@ -119,7 +119,7 @@ export const checkUsageInvoiceAmount = async ({
     console.log("- Base price: ", basePrice);
     console.log("- Overage price: ", overagePrice);
     console.log(
-      `Expected to find invoice with total of ${totalPrice} and product id ${product.id}`
+      `Expected to find invoice with total of ${totalPrice} and product id ${product.id}`,
     );
     // console.log("Instead got: ", invoices[invoiceIndex || 0].total);
     console.log("Last 3 invoices", invoices.slice(-3));
@@ -148,7 +148,7 @@ export const sendGPUEvents = async ({
     let creditsUsed = getCreditsUsed(
       creditSystems.gpuCredits,
       gpuId,
-      randomVal
+      randomVal,
     );
 
     totalCreditsUsed = new Decimal(totalCreditsUsed)
@@ -160,7 +160,7 @@ export const sendGPUEvents = async ({
         customerId: customerId,
         eventName: gpuId,
         properties: { value: randomVal, ...groupObj },
-      })
+      }),
     );
   }
 
