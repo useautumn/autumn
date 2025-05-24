@@ -1,12 +1,12 @@
 import { z } from "zod";
 import {
-  Infinite,
   PriceTierSchema,
   ProductItemFeatureType,
   ProductItemInterval,
   ProductItemType,
   UsageModel,
-} from "../productItemModels.js";
+} from "./productItemModels.js";
+import { Infinite } from "../../productModels/productEnums.js";
 
 export const ProductItemResponseSchema = z.object({
   // Feature stuff

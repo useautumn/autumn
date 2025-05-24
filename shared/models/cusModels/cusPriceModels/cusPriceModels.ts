@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { PriceSchema } from "../../productModels/priceModels.js";
+import { PriceSchema } from "../../productModels/priceModels/priceModels.js";
 
 export const CustomerPriceSchema = z.object({
   id: z.string(),

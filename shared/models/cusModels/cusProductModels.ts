@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { ProcessorType } from "../genModels.js";
+import { ProcessorType } from "../genModels/genEnums.js";
 import { ProductSchema } from "../productModels/productModels.js";
 import { CustomerPriceSchema } from "./cusPriceModels/cusPriceModels.js";
-import { PriceSchema } from "../productModels/priceModels.js";
+import { PriceSchema } from "../productModels/priceModels/priceModels.js";
 import { CustomerEntitlementSchema } from "./cusEntModels/cusEntitlementModels.js";
-import { EntitlementSchema } from "../productModels/entitlementModels.js";
+import { EntitlementSchema } from "../productModels/entModels/entModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
 import { CustomerSchema } from "./cusModels.js";
-import { FreeTrialSchema } from "../productModels/freeTrialModels.js";
+import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
 
 export const FeatureOptionsSchema = z.object({
   internal_feature_id: z.string().optional(),
@@ -93,7 +93,7 @@ export const FullCusProductSchema = CusProductSchema.extend({
   customer_prices: z.array(
     CustomerPriceSchema.extend({
       price: PriceSchema,
-    })
+    }),
   ),
 
   customer_entitlements: z.array(
@@ -101,7 +101,7 @@ export const FullCusProductSchema = CusProductSchema.extend({
       entitlement: EntitlementSchema.extend({
         feature: FeatureSchema,
       }),
-    })
+    }),
   ),
 
   customer: CustomerSchema,

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { ProductItemSchema } from "./productItemModels.js";
-import { FreeTrialSchema } from "./freeTrialModels.js";
+import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
+import { ProductItemSchema } from "./productItemModels/productItemModels.js";
 
 export const ProductV2Schema = z.object({
   internal_id: z.string().nullish(),
