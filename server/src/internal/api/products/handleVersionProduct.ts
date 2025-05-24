@@ -1,6 +1,6 @@
 import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
+
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
@@ -72,17 +72,17 @@ export const handleVersionProduct = async ({
   await ProductService.create({ sb, product: newProduct });
 
   // Create new prices, entitlements and free trials
-  await handleNewEntitlements({
-    sb,
-    newEnts: entitlements,
-    curEnts: latestProduct.entitlements,
-    features: features,
-    internalProductId: newProduct.internal_id,
-    orgId: org.id,
-    isCustom: false,
-    prices,
-    newVersion: true,
-  });
+  // await handleNewEntitlements({
+  //   sb,
+  //   newEnts: entitlements,
+  //   curEnts: latestProduct.entitlements,
+  //   features: features,
+  //   internalProductId: newProduct.internal_id,
+  //   orgId: org.id,
+  //   isCustom: false,
+  //   prices,
+  //   newVersion: true,
+  // });
 
   await Promise.all([
     handleNewPrices({

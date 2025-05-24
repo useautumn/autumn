@@ -24,7 +24,7 @@ export const handleGetEntity = async (req: any, res: any) =>
         reqApiVersion: req.apiVersion,
       });
 
-      const start = performance.now();
+      // const start = performance.now();
       let { entities, customer, fullEntities, invoices } =
         await getEntityResponse({
           sb,
@@ -36,8 +36,8 @@ export const handleGetEntity = async (req: any, res: any) =>
           entityId,
           apiVersion,
         });
-      const end = performance.now();
-      logger.info(`getEntityResponse took ${(end - start).toFixed(2)}ms`);
+      // const end = performance.now();
+      // logger.info(`getEntityResponse took ${(end - start).toFixed(2)}ms`);
 
       let entity = entities[0];
       let withInvoices = expand.includes(EntityExpand.Invoices);
@@ -51,7 +51,7 @@ export const handleGetEntity = async (req: any, res: any) =>
                 logger,
               })
             : undefined,
-        })
+        }),
       );
     },
   });

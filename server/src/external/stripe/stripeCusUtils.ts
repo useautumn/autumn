@@ -124,7 +124,7 @@ export const getCusPaymentMethod = async ({
   const stripeCli = createStripeCli({ org, env });
 
   const stripeCustomer = (await stripeCli.customers.retrieve(
-    stripeId
+    stripeId,
   )) as Stripe.Customer;
 
   let paymentMethodId = stripeCustomer.invoice_settings?.default_payment_method;
@@ -281,7 +281,7 @@ export const deleteAllStripeCustomers = async ({
     let batch = stripeCustomers.data.slice(i, i + batchSize);
     await Promise.all(batch.map((c) => stripeCli.customers.del(c.id)));
     console.log(
-      `Deleted ${i + batch.length}/${stripeCustomers.data.length} customers`
+      `Deleted ${i + batch.length}/${stripeCustomers.data.length} customers`,
     );
   }
 };

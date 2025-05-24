@@ -20,7 +20,7 @@ export const routeHandler = async ({
         if (error.code === ErrCode.EntityNotFound) {
           req.logger.warn(`${error.message}, org: ${req.minOrg?.slug}`);
           return res.status(404).json({
-            error: error.message,
+            message: error.message,
             code: error.code,
           });
         }

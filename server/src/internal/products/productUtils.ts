@@ -46,6 +46,7 @@ import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
 import { mapToProductItems } from "./productV2Utils.js";
 import { itemsAreSame } from "./product-items/productItemUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const sortProductsByPrice = (products: FullProduct[]) => {
   products.sort((a, b) => {
@@ -310,21 +311,25 @@ export const attachToInsertParams = (
 
 // COPY PRODUCT
 export const copyProduct = async ({
+  db,
   sb,
   product,
   toOrgId,
   toId,
   toName,
   toEnv,
-  features,
+  toFeatures,
+  fromFeatures,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   product: FullProduct;
   toOrgId: string;
   toEnv: AppEnv;
   toId: string;
   toName: string;
-  features: Feature[];
+  toFeatures: Feature[];
+  fromFeatures: Feature[];
 }) => {
   const newProduct = {
     ...product,
@@ -338,9 +343,17 @@ export const copyProduct = async ({
 
   const newEntitlements: Entitlement[] = [];
   const newEntIds: Record<string, string> = {};
+
   for (const entitlement of product.entitlements) {
-    let feature = features.find((f) => f.id === entitlement.feature_id);
-    if (!feature) {
+    // 1. Get from feature
+    let fromFeature = fromFeatures.find(
+      (f) => f.internal_id === entitlement.internal_feature_id,
+    );
+
+    // 2. Get to feature
+    let toFeature = toFeatures.find((f) => f.id === fromFeature?.id);
+
+    if (!toFeature) {
       throw new RecaseError({
         message: `Feature ${entitlement.feature_id} not found`,
         code: ErrCode.FeatureNotFound,
@@ -356,7 +369,7 @@ export const copyProduct = async ({
         org_id: toOrgId,
         created_at: Date.now(),
         internal_product_id: newProduct.internal_id,
-        internal_feature_id: feature.internal_id,
+        internal_feature_id: toFeature.internal_id,
       }),
     );
 
@@ -377,8 +390,13 @@ export const copyProduct = async ({
     config.stripe_price_id = undefined;
 
     if (config.type === PriceType.Usage) {
-      let feature = features.find((f) => f.id === config.feature_id);
-      if (!feature) {
+      let fromFeature = fromFeatures.find(
+        (f) => f.internal_id === config.internal_feature_id,
+      );
+
+      let toFeature = toFeatures.find((f) => f.id === fromFeature?.id);
+
+      if (!toFeature) {
         throw new RecaseError({
           message: `Feature ${config.feature_id} not found`,
           code: ErrCode.FeatureNotFound,
@@ -386,8 +404,8 @@ export const copyProduct = async ({
         });
       }
 
-      config.internal_feature_id = feature.internal_id!;
-      config.feature_id = feature.id;
+      config.internal_feature_id = toFeature.internal_id!;
+      config.feature_id = toFeature.id;
 
       // Update entitlement id
       let entitlementId = newEntIds[price.entitlement_id!];
@@ -422,7 +440,7 @@ export const copyProduct = async ({
   });
 
   await EntitlementService.insert({
-    sb,
+    db,
     data: newEntitlements,
   });
 

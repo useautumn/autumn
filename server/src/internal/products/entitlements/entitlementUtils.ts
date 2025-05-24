@@ -44,7 +44,7 @@ export const entIntervalToTrialDuration = (interval: EntInterval) => {
 
 export const applyTrialToEntitlement = (
   entitlement: EntitlementWithFeature,
-  freeTrial: FreeTrial | null
+  freeTrial: FreeTrial | null,
 ) => {
   if (!freeTrial) return false;
 
@@ -65,7 +65,7 @@ export const applyTrialToEntitlement = (
 
 export const addTrialToNextResetAt = (
   nextResetAt: number,
-  freeTrial: FreeTrial | null
+  freeTrial: FreeTrial | null,
 ) => {
   if (!freeTrial) return nextResetAt;
 
@@ -78,7 +78,7 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
   // 1. Check if they have same internal_feature_id
   if (ent1.internal_feature_id !== ent2.internal_feature_id) {
     console.log(
-      `Internal feature ID different: ${ent1.internal_feature_id} !== ${ent2.internal_feature_id}`
+      `Internal feature ID different: ${ent1.internal_feature_id} !== ${ent2.internal_feature_id}`,
     );
     return false;
   }
@@ -86,7 +86,7 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
   // 2. Check if they have same allowance type
   if (ent1.allowance_type !== ent2.allowance_type) {
     console.log(
-      `Allowance type different: ${ent1.allowance_type} !== ${ent2.allowance_type}`
+      `Allowance type different: ${ent1.allowance_type} !== ${ent2.allowance_type}`,
     );
     return false;
   }
@@ -121,7 +121,7 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
       "Differences:",
       Object.values(diffs)
         .filter((d) => d.condition)
-        .map((d) => d.message)
+        .map((d) => d.message),
     );
   }
   return !entsAreDiff;
@@ -325,130 +325,11 @@ export const initEntitlement = ({
 
   return newEnt;
 };
-
-export const handleNewEntitlements = async ({
-  sb,
-  newEnts,
-  curEnts,
-  features,
-  orgId,
-  internalProductId,
-  isCustom = false,
-  prices,
-  newVersion = false,
-}: {
-  sb: SupabaseClient;
-  newEnts: Entitlement[] | CreateEntitlement[];
-  curEnts: Entitlement[];
-  features: Feature[];
-  internalProductId: string;
-  orgId: string;
-  isCustom: boolean;
-  prices: Price[];
-  newVersion?: boolean;
-}) => {
-  // Add internal_feature_id to newEnts
-  for (const ent of newEnts) {
-    const feature = features.find((f) => f.id === ent.feature_id);
-    if (feature) {
-      ent.internal_feature_id = feature.internal_id;
-    }
-  }
-
-  const idToEnt: { [key: string]: Entitlement } = {};
-  for (const ent of curEnts) {
-    idToEnt[ent.id!] = ent;
-  }
-
-  // 1. Deleted entitlements: filter out entitlements that are not in newEnts
-  const removedEnts: Entitlement[] = curEnts.filter(
-    (ent) => !newEnts.some((e) => e.id === ent.id)
-  );
-
-  const createdEnts: Entitlement[] = [];
-  const updatedEnts: Entitlement[] = [];
-
-  for (let newEnt of newEnts) {
-    // Validate entitlement
-    const relatedPrice = getEntRelatedPrice(newEnt as Entitlement, prices);
-    validateEntitlement({ ent: newEnt, features, relatedPrice });
-
-    // 1. Handle new entitlement
-    if (!newEnt.id) {
-      createdEnts.push(
-        initEntitlement({
-          ent: newEnt as CreateEntitlement,
-          features,
-          orgId,
-          internalProductId,
-          isCustom,
-          prices,
-          curEnt: (newEnt.id && idToEnt[newEnt.id]) || undefined,
-        })
-      );
-    }
-
-    // 2. Handle updated entitlement
-    newEnt = newEnt as Entitlement;
-    let curEnt = idToEnt[newEnt.id!];
-
-    // 2a. If custom, create new entitlement and remove old one
-    if (
-      (curEnt && !entsAreSame(curEnt, newEnt) && isCustom) ||
-      (curEnt && newVersion)
-    ) {
-      createdEnts.push(
-        initEntitlement({
-          ent: CreateEntitlementSchema.parse(newEnt),
-          features,
-          orgId,
-          internalProductId,
-          isCustom,
-          prices,
-          curEnt,
-        })
-      );
-      removedEnts.push(curEnt);
-    }
-
-    // 2b. If not customm, update existing entitlement
-    if (curEnt && !entsAreSame(curEnt, newEnt) && !isCustom && !newVersion) {
-      updatedEnts.push(EntitlementSchema.parse(newEnt));
-    }
-  }
-
-  // 1. Update existing entitlements and delete removed ones
-  if (!isCustom && !newVersion) {
-    validateUpdatedEnts({ updatedEnts, prices });
-    validateRemovedEnts({ removedEnts, prices, isCustom });
-
-    await EntitlementService.upsert({ sb, data: updatedEnts });
-    await EntitlementService.deleteByIds({
-      sb,
-      entitlementIds: removedEnts.map((e) => e.id!),
-    });
-  }
-
-  // 2. Create new entitlements
-  await EntitlementService.insert({ sb, data: createdEnts });
-
-  if (isCustom) {
-    return [
-      ...createdEnts,
-      ...curEnts.filter((e) => !removedEnts.some((re) => re.id === e.id)),
-    ];
-  }
-
-  console.log(
-    `Successfully handled new entitlements. Created ${createdEnts.length}, updated ${updatedEnts.length}, removed ${removedEnts.length}`
-  );
-};
-
 // OTHERS
 export const getEntRelatedPrice = (
   entitlement: Entitlement,
   prices: Price[],
-  allowFeatureMatch = false
+  allowFeatureMatch = false,
 ) => {
   return prices.find((price) => {
     if (price.config?.type === PriceType.Fixed) {
@@ -472,9 +353,9 @@ export const getEntRelatedPrice = (
 
 export const getEntitlementsForProduct = (
   product: FullProduct,
-  entitlements: EntitlementWithFeature[]
+  entitlements: EntitlementWithFeature[],
 ) => {
   return entitlements.filter(
-    (ent) => ent.internal_product_id === product.internal_id
+    (ent) => ent.internal_product_id === product.internal_id,
   );
 };
