@@ -1,6 +1,5 @@
-import { deleteKey } from "@/external/unkeyUtils.js";
 import { withOrgAuth } from "@/middleware/authMiddleware.js";
-import { AppEnv, SuccessCode } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import { Router } from "express";
 import { ApiKeyService } from "./ApiKeyService.js";
 import { OrgService } from "../orgs/OrgService.js";
@@ -107,7 +106,7 @@ devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
         CacheManager.invalidate({
           action: CacheType.SecretKey,
           value: apiKey.hashed_key,
-        })
+        }),
       );
     }
     await Promise.all(batchInvalidate);

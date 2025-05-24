@@ -140,13 +140,11 @@ export class EntityService {
   static async getByInternalCustomerId({
     sb,
     internalCustomerId,
-    logger,
     inFeatureIds,
     isDeleted,
   }: {
     sb: SupabaseClient;
     internalCustomerId: string;
-    logger: any;
     inFeatureIds?: string[];
     isDeleted?: boolean;
   }) {

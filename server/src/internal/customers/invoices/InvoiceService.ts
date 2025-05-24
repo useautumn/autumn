@@ -5,18 +5,16 @@ import {
   InvoiceItem,
   InvoiceItemResponseSchema,
   InvoiceResponse,
-  InvoiceResponseSchema,
   InvoiceStatus,
   LoggerAction,
   Organization,
-  Price,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { formatUnixToDateTime, generateId } from "@/utils/genUtils.js";
-import { Autumn } from "@/external/autumn/autumnCli.js";
+import { generateId } from "@/utils/genUtils.js";
+// import { Autumn } from "@/external/autumn/autumnCli.js";
 import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils.js";
-
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
+import { Autumn } from "autumn-js";
 
 export const processInvoice = ({
   invoice,
@@ -38,7 +36,7 @@ export const processInvoice = ({
     items: withItems
       ? (invoice.items || []).map((i) => {
           let feature = features?.find(
-            (f) => f.internal_id === i.internal_feature_id
+            (f) => f.internal_id === i.internal_feature_id,
           );
 
           return InvoiceItemResponseSchema.parse({
@@ -212,12 +210,10 @@ export class InvoiceService {
       }
 
       const autumn = new Autumn();
-      await autumn.sendEvent({
-        customerId: org.id,
-        eventName: "revenue",
-        properties: {
-          value: stripeInvoice.total / 100,
-        },
+      await autumn.track({
+        customer_id: org.id,
+        event_name: "revenue",
+        value: Math.round(stripeInvoice.total / 100),
         customer_data: {
           name: org.slug,
         },

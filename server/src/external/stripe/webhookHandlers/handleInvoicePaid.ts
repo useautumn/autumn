@@ -98,12 +98,12 @@ const convertToChargeAutomatically = async ({
     logger.info(`Converting to charge automatically`);
     // 1. Get payment intent
     const paymentIntent = await stripeCli.paymentIntents.retrieve(
-      invoice.payment_intent as string
+      invoice.payment_intent as string,
     );
 
     // 2. Get payment method
     const paymentMethod = await stripeCli.paymentMethods.retrieve(
-      paymentIntent.payment_method as string
+      paymentIntent.payment_method as string,
     );
 
     await stripeCli.paymentMethods.attach(paymentMethod.id, {
@@ -119,7 +119,7 @@ const convertToChargeAutomatically = async ({
         });
       } catch (error) {
         logger.warn(
-          `Convert to charge automatically: error updating subscription ${sub.id}`
+          `Convert to charge automatically: error updating subscription ${sub.id}`,
         );
         logger.warn(error);
       }
@@ -153,9 +153,6 @@ export const handleInvoicePaid = async ({
   event: Stripe.Event;
 }) => {
   const logger = req.logtail;
-  // 1. Get total invoice discounts
-
-  // Fetch expanded invoice
   const stripeCli = createStripeCli({ org, env });
   const expandedInvoice = await getStripeExpandedInvoice({
     stripeCli,
@@ -183,19 +180,10 @@ export const handleInvoicePaid = async ({
     if (!activeCusProducts || activeCusProducts.length === 0) {
       // TODO: Send alert
       if (invoice.livemode) {
-        req.logger.warn(
-          `invoice.paid: customer product not found for invoice ${invoice.id}`
-        );
-        req.logger.warn(`Organization: ${org?.slug}`);
-        req.logger.warn(`Invoice subscription: ${invoice.subscription}`);
-        req.logger.warn(`Invoice customer: ${invoice.customer}`);
-      } else {
-        console.log(
-          `Skipping invoice.paid: customer product not found for invoice ${invoice.id} (${org.slug}) (non-livemode)`
+        logger.warn(
+          `invoice.paid: customer product not found for invoice ${invoice.id}`,
         );
       }
-
-      return;
     }
 
     if (org.config.convert_to_charge_automatically) {
@@ -218,7 +206,7 @@ export const handleInvoicePaid = async ({
       let invoiceItems = await getInvoiceItems({
         stripeInvoice: expandedInvoice,
         prices: activeCusProducts.flatMap((p) =>
-          p.customer_prices.map((cpr: FullCustomerPrice) => cpr.price)
+          p.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),
         ),
         logger,
       });
@@ -256,7 +244,7 @@ export const handleInvoicePaid = async ({
       sb,
       stripeInvoice: expandedInvoice,
       event,
-      logger: req.logger,
+      logger,
     });
   }
 };
@@ -332,7 +320,7 @@ const handleInvoicePaidDiscount = async ({
       const curAmount = discount.coupon.amount_off;
 
       const amountUsed = totalDiscountAmounts?.find(
-        (item) => item.discount === discount.id
+        (item) => item.discount === discount.id,
       )?.amount;
 
       const newAmount = new Decimal(curAmount!).sub(amountUsed!).toNumber();
@@ -362,12 +350,12 @@ const handleInvoicePaidDiscount = async ({
       if (expandedInvoice.subscription && curCoupon.duration == "forever") {
         try {
           await stripeCli.subscriptions.deleteDiscount(
-            expandedInvoice.subscription as string
+            expandedInvoice.subscription as string,
           );
           console.log("Deleting current discount from subscription");
         } catch (error: any) {
           logger.error(
-            `Failed to remove coupon from subscription ${expandedInvoice.subscription}`
+            `Failed to remove coupon from subscription ${expandedInvoice.subscription}`,
           );
           logger.error(error.message);
         }

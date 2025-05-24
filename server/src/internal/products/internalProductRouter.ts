@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { FeatureService } from "../features/FeatureService.js";
-import { entitlementRouter } from "./entitlementRouter.js";
 import { StatusCodes } from "http-status-codes";
 import { ProductService } from "./ProductService.js";
 import { ErrCode, UsageModel } from "@autumn/shared";
@@ -245,8 +244,6 @@ productRouter.get("/:productId/count", async (req: any, res) => {
     });
   }
 });
-
-productRouter.use(entitlementRouter);
 
 productRouter.post("/product_options", async (req: any, res: any) => {
   try {

@@ -5,7 +5,10 @@ import {
   createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
 import { encryptData } from "@/utils/encryptUtils.js";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError, {
+  handleFrontendReqError,
+  handleRequestError,
+} from "@/utils/errorUtils.js";
 import express from "express";
 import Stripe from "stripe";
 import { OrgService } from "./OrgService.js";
@@ -138,20 +141,12 @@ orgRouter.post("/stripe", async (req: any, res) => {
       message: "Stripe connected",
     });
   } catch (error: any) {
-    if (error instanceof RecaseError) {
-      error.print(req.logger);
-
-      res.status(error.statusCode).json({
-        message: error.message,
-        code: error.code,
-      });
-    } else {
-      console.error("Error connecting Stripe", error);
-      res.status(500).json({
-        error: "Error connecting Stripe",
-        message: error.message,
-      });
-    }
+    handleRequestError({
+      req,
+      error,
+      res,
+      action: "connect stripe",
+    });
   }
 });
 

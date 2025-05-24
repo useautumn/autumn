@@ -41,7 +41,7 @@ const updateDbPricesAndEnts = async ({
       data: newEnts,
     }),
     EntitlementService.upsert({
-      sb,
+      db,
       data: updatedEnts,
     }),
   ]);
@@ -71,9 +71,9 @@ const updateDbPricesAndEnts = async ({
 
   if (customPrices.length == 0) {
     // Update the entitlement to be custom...
-    await EntitlementService.deleteByIds({
-      sb,
-      entitlementIds: deletedEntIds,
+    await EntitlementService.deleteInIds({
+      db,
+      ids: deletedEntIds,
     });
   } else {
     let updateOrDelete: any = [];
@@ -85,8 +85,8 @@ const updateDbPricesAndEnts = async ({
       if (hasCustomPrice) {
         updateOrDelete.push(
           EntitlementService.update({
-            sb,
-            entitlementId: ent.id!,
+            db,
+            id: ent.id!,
             updates: {
               is_custom: true,
             },
@@ -94,9 +94,9 @@ const updateDbPricesAndEnts = async ({
         );
       } else {
         updateOrDelete.push(
-          EntitlementService.deleteByIds({
-            sb,
-            entitlementIds: [ent.id!],
+          EntitlementService.deleteInIds({
+            db,
+            ids: [ent.id!],
           }),
         );
       }

@@ -8,6 +8,7 @@ import type {
 
 import { Client } from "pg";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { PostHog } from "posthog-node";
 
 export interface ExtendedRequest extends ExpressRequest {
   sb: SupabaseClient;
@@ -23,6 +24,8 @@ export interface ExtendedRequest extends ExpressRequest {
   minOrg: MinOrg;
   org: Organization;
   features: Feature[];
+
+  posthog?: PostHog;
 }
 
 export interface ExtendedResponse extends ExpressResponse {}

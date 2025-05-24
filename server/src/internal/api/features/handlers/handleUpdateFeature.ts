@@ -71,11 +71,12 @@ const handleFeatureIdChanged = async ({
 
   // 2. Update all linked objects
   let batchUpdate = [];
+
   for (let entitlement of linkedEntitlements) {
     batchUpdate.push(
       EntitlementService.update({
-        sb,
-        entitlementId: entitlement.id!,
+        db,
+        id: entitlement.id!,
         updates: {
           entity_feature_id: newId,
         },
@@ -133,11 +134,12 @@ const handleFeatureIdChanged = async ({
 
   // 5. Update all linked entitlements
   let entitlementUpdate = [];
+
   for (let entitlement of entitlements) {
     entitlementUpdate.push(
       EntitlementService.update({
-        sb,
-        entitlementId: entitlement.id!,
+        db,
+        id: entitlement.id!,
         updates: {
           feature_id: newId,
         },
@@ -149,6 +151,7 @@ const handleFeatureIdChanged = async ({
 };
 
 const handleFeatureUsageTypeChanged = async ({
+  db,
   sb,
   orgId,
   env,
@@ -159,6 +162,7 @@ const handleFeatureUsageTypeChanged = async ({
   prices,
   creditSystems,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   orgId: string;
   env: AppEnv;
@@ -209,8 +213,8 @@ const handleFeatureUsageTypeChanged = async ({
       for (let entitlement of entitlements) {
         batchEntUpdate.push(
           EntitlementService.update({
-            sb,
-            entitlementId: entitlement.id!,
+            db,
+            id: entitlement.id!,
             updates: {
               interval: EntInterval.Lifetime,
             },
@@ -261,7 +265,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       let featureId = req.params.feature_id;
       let data = req.body;
-      let { logtail: logger } = req;
+      let { db, sb, orgId, env, logtail: logger } = req;
 
       // 1. Get feature by ID
       let features = await FeatureService.getFromReq(req);
@@ -312,10 +316,10 @@ export const handleUpdateFeature = async (req: any, res: any) =>
 
         if (isChangingId) {
           await handleFeatureIdChanged({
-            db: req.db,
-            sb: req.sb,
-            orgId: req.orgId,
-            env: req.env,
+            db,
+            sb,
+            orgId,
+            env,
             feature,
             linkedEntitlements,
             entitlements,
@@ -328,6 +332,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
 
         if (isChangingUsageType) {
           await handleFeatureUsageTypeChanged({
+            db: req.db,
             sb: req.sb,
             orgId: req.orgId,
             env: req.env,

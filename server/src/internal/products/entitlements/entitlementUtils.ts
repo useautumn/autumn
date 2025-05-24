@@ -295,7 +295,7 @@ export const initEntitlement = ({
   features: Feature[];
   orgId: string;
   isCustom?: boolean;
-  internalProductId?: string;
+  internalProductId: string;
 }) => {
   const parsedEnt = CreateEntitlementSchema.parse(ent);
 

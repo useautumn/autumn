@@ -21,6 +21,11 @@ import {
 } from "./external/logtail/logtailUtils.js";
 import { format } from "date-fns";
 
+if (!process.env.DATABASE_URL) {
+  console.error(`DATABASE_URL is not set`);
+  process.exit(1);
+}
+
 const init = async () => {
   const app = express();
 
@@ -29,9 +34,7 @@ const init = async () => {
   server.keepAliveTimeout = 120000; // 120 seconds
   server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
 
-  const pgClient = new pg.Client(
-    process.env.SUPABASE_CONNECTION_STRING || process.env.DATABASE_URL || "",
-  );
+  const pgClient = new pg.Client(process.env.DATABASE_URL || "");
 
   await pgClient.connect();
   await QueueManager.getInstance(); // initialize the queue manager
@@ -42,14 +45,15 @@ const init = async () => {
   const logtailAll = createLogtailAll();
   const { client, db } = initDrizzle();
 
-  app.use((req: any, res, next) => {
+  const posthog = createPosthogCli();
+
+  app.use((req: any, res: any, next: any) => {
     req.sb = supabaseClient;
     req.pg = pgClient;
     req.db = db;
-    req.logger = logger;
-    req.logtailAll = logtailAll;
 
-    // Log incoming request
+    req.logtailAll = logtailAll;
+    req.posthog = posthog;
 
     try {
       let headersClone = structuredClone(req.headers);
@@ -64,6 +68,7 @@ const init = async () => {
       });
 
       req.logtail = createLogtail();
+      req.logger = req.logtail;
     } catch (error) {
       req.logtail = logtailAll; // fallback
       console.error(`Error creating req.logtail`);
@@ -123,6 +128,8 @@ import cluster from "cluster";
 import os from "os";
 import { CacheManager } from "./external/caching/CacheManager.js";
 import { initDrizzle } from "./db/initDrizzle.js";
+import { PostHog } from "posthog-node";
+import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 
 if (process.env.NODE_ENV === "development") {
   init();
