@@ -16,8 +16,8 @@ export const handleCopyProduct = async (req: any, res: any) =>
       const sb = req.sb;
       const orgId = req.orgId;
       const fromEnv = req.env;
-      const { db, env: toEnv, id: toId, name: toName } = req.body;
-      let { logtail: logger } = req;
+      const { env: toEnv, id: toId, name: toName } = req.body;
+      let { db, logtail: logger } = req;
 
       if (!toEnv || !toId || !toName) {
         throw new RecaseError({
