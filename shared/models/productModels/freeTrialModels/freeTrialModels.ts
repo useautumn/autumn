@@ -1,11 +1,5 @@
 import { z } from "zod";
-
-export enum FreeTrialDuration {
-  Day = "day",
-  // Week = "week",
-  Month = "month",
-  Year = "year",
-}
+import { FreeTrialDuration } from "./freeTrialEnums.js";
 
 export const FreeTrialSchema = z.object({
   id: z.string(),

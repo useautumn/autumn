@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { UsagePriceConfigSchema } from "./usagePriceModels.js";
-import { FixedPriceConfigSchema } from "./fixedPriceModels.js";
+import { UsagePriceConfigSchema } from "./priceConfig/usagePriceConfig.js";
+import { FixedPriceConfigSchema } from "./priceConfig/fixedPriceConfig.js";
 
 export enum PriceType {
   Fixed = "fixed",

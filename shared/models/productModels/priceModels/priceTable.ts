@@ -7,16 +7,18 @@ import {
   jsonb,
   text,
 } from "drizzle-orm/pg-core";
-import { entitlements } from "../models/productModels/entModels/entTable.js";
-import { products } from "./productsTable.js";
+import { entitlements } from "../entModels/entTable.js";
+import { products } from "../productTable.js";
+import { FixedPriceConfig } from "./priceConfig/fixedPriceConfig.js";
+import { UsagePriceConfig } from "./priceConfig/usagePriceConfig.js";
 
 export const prices = pgTable(
   "prices",
   {
-    created_at: numeric("created_at").notNull(),
-    config: jsonb(),
-    org_id: text("org_id"),
-    internal_product_id: text("internal_product_id"),
+    created_at: numeric({ mode: "number" }).notNull(),
+    config: jsonb().$type<FixedPriceConfig | UsagePriceConfig>(),
+    org_id: text("org_id").notNull(),
+    internal_product_id: text("internal_product_id").notNull(),
     id: text().primaryKey().notNull(),
     name: text(),
     billing_type: text("billing_type"),

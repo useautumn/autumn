@@ -1,12 +1,9 @@
 import { z } from "zod";
-import { AppEnv } from "../genModels.js";
-import { ProductItemSchema } from "./productItemModels.js";
-import { FreeTrialResponseSchema, FreeTrialSchema } from "./freeTrialModels.js";
+import { AppEnv } from "../genModels/genEnums.js";
+import { FreeTrialResponseSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
 import { ProductItemResponseSchema } from "./productItemModels/prodItemResponseModels.js";
 
 export const ProductResponseSchema = z.object({
-  // internal_id: z.string(),
-  // autumn_id: z.string(),
   id: z.string(),
   name: z.string().nullable(),
   group: z.string().nullable(),

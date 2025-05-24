@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
   EntitlementSchema,
   EntitlementWithFeatureSchema,
-} from "../../productModels/entitlementModels.js";
+} from "../../productModels/entModels/entModels.js";
 import { FeatureSchema } from "../../featureModels/featureModels.js";
 
 export const EntityBalanceSchema = z.object({

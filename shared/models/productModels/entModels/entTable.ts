@@ -5,28 +5,32 @@ import {
   foreignKey,
   unique,
   text,
-  integer,
 } from "drizzle-orm/pg-core";
 
 import { features } from "../../featureModels/featureTable.js";
-import { products } from "../../../db/productsTable.js";
+import { products } from "../productTable.js";
 import { createInsertSchema } from "drizzle-zod";
+import { sql } from "drizzle-orm";
 
 export const entitlements = pgTable(
   "entitlements",
   {
-    internal_feature_id: text("internal_feature_id"),
-    org_id: text("org_id"),
-    internal_product_id: text("internal_product_id"),
-    allowance_type: text("allowance_type"),
+    id: text().primaryKey().notNull(),
+    created_at: numeric({ mode: "number" }).notNull(),
+    internal_feature_id: text().notNull(),
+    internal_product_id: text().notNull(),
+    is_custom: boolean().default(false),
+
+    allowance_type: text(),
     allowance: numeric({ mode: "number" }),
     interval: text(),
-    id: text().primaryKey().notNull(),
-    feature_id: text("feature_id"),
-    is_custom: boolean("is_custom").default(false),
+
     carry_from_previous: boolean("carry_from_previous").default(false),
-    entity_feature_id: text("entity_feature_id"),
-    created_at: numeric("created_at", { mode: "number" }).notNull(),
+    entity_feature_id: text("entity_feature_id").default(sql`null`),
+
+    // Optional fields
+    org_id: text("org_id"),
+    feature_id: text("feature_id"),
   },
   (table) => [
     foreignKey({

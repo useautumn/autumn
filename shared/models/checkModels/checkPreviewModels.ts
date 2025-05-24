@@ -1,6 +1,6 @@
-import { UsageModel } from "../productModels/productItemModels.js";
-import { Infinite } from "../productModels/productItemModels.js";
-import { ProductResponse } from "../productModels/productResponseModels.js";
+import { UsageModel } from "../productV2Models/productItemModels/productItemModels.js";
+import { Infinite } from "../productModels/productEnums.js";
+import { ProductResponse } from "../productV2Models/productResponseModels.js";
 
 export enum AttachScenario {
   // AlreadyAttached = "already_attached",

@@ -1,7 +1,7 @@
 import { z } from "zod";
+import { Infinite } from "../../productModels/productEnums.js";
 
 export const TierInfinite = "inf";
-export const Infinite = "inf";
 
 export enum ProductItemInterval {
   // None = "none",

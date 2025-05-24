@@ -13,10 +13,11 @@ import { MeteredConfig } from "./featureConfig/meteredConfig.js";
 import { CreditSystemConfig } from "./featureConfig/creditConfig.js";
 import { collatePgColumn } from "../../db/utils.js";
 
-interface FeatureDisplay {
+type FeatureDisplay = {
   singular: string;
   plural: string;
-}
+};
+
 export const features = pgTable(
   "features",
   {

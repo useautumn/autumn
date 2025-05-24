@@ -1,8 +1,6 @@
 import { z } from "zod";
-import { FeatureSchema } from "../featureModels/featureModels.js";
-import { FeatureType } from "../featureModels/featureEnums.js";
-import { EntInterval } from "../genModels.js";
-import { UsagePriceConfigSchema } from "./usagePriceModels.js";
+import { FeatureSchema } from "../../featureModels/featureModels.js";
+import { EntInterval } from "./entEnums.js";
 
 export enum AllowanceType {
   Fixed = "fixed",
@@ -12,21 +10,22 @@ export enum AllowanceType {
 
 export const EntitlementSchema = z.object({
   // Required fields - no .optional()
-  id: z.string().optional(),
-  org_id: z.string().optional(),
-  created_at: z.number().optional(),
-  is_custom: z.boolean().default(false).optional(),
-  internal_product_id: z.string().optional(),
+  id: z.string(),
+  created_at: z.number(),
+  internal_feature_id: z.string(),
+  internal_product_id: z.string(),
+  is_custom: z.boolean().default(false),
 
-  // Part of create entitlement
-  internal_feature_id: z.string().optional(),
-  feature_id: z.string().optional(),
   allowance_type: z.nativeEnum(AllowanceType).optional().nullable(),
   allowance: z.number().nullish(),
   interval: z.nativeEnum(EntInterval).optional().nullable(),
 
   carry_from_previous: z.boolean().default(false).optional(),
   entity_feature_id: z.string().nullish(),
+
+  // Part of create entitlement
+  org_id: z.string().optional(),
+  feature_id: z.string().optional(),
 });
 
 export const CreateEntitlementSchema = z.object({
@@ -38,18 +37,6 @@ export const CreateEntitlementSchema = z.object({
   interval: z.nativeEnum(EntInterval).nullish(),
   carry_from_previous: z.boolean().default(false),
   entity_feature_id: z.string().nullish(),
-});
-
-export const PublicEntitlementSchema = z.object({
-  feature: z.object({
-    id: z.string(),
-    type: z.nativeEnum(FeatureType),
-    name: z.string(),
-  }),
-  allowance_type: z.nativeEnum(AllowanceType).nullish(),
-  allowance: z.number().nullish(),
-  interval: z.nativeEnum(EntInterval).nullish(),
-  price: UsagePriceConfigSchema.nullish(),
 });
 
 export type CreateEntitlement = z.infer<typeof CreateEntitlementSchema>;
