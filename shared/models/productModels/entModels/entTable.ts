@@ -11,6 +11,7 @@ import { features } from "../../featureModels/featureTable.js";
 import { products } from "../productTable.js";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
+import { collatePgColumn } from "../../../db/utils.js";
 
 export const entitlements = pgTable(
   "entitlements",
@@ -50,3 +51,5 @@ export const entitlements = pgTable(
 );
 
 export const EntInsertSchema = createInsertSchema(entitlements);
+
+collatePgColumn(entitlements.id, "C");

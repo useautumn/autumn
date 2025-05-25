@@ -24,6 +24,7 @@ export * from "./models/productModels/entModels/entEnums.js";
 // 4. Free Trial Models
 export * from "./models/productModels/freeTrialModels/freeTrialEnums.js";
 export * from "./models/productModels/freeTrialModels/freeTrialModels.js";
+export * from "./models/productModels/freeTrialModels/freeTrialTable.js";
 
 // 4. Price Models
 export * from "./models/productModels/priceModels/priceEnums.js";

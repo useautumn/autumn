@@ -18,6 +18,7 @@ import {
   getTime,
 } from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const validateAndInitFreeTrial = ({
   freeTrial,
@@ -42,7 +43,7 @@ export const validateAndInitFreeTrial = ({
 
 export const freeTrialsAreSame = (
   ft1?: FreeTrial | null,
-  ft2?: FreeTrial | null
+  ft2?: FreeTrial | null,
 ) => {
   if (!ft1 && !ft2) return true;
   if (!ft1 || !ft2) return false;
@@ -74,7 +75,7 @@ export const freeTrialToStripeTimestamp = (freeTrial: FreeTrial | null) => {
     });
   }
 
-  trialEnd = addMinutes(trialEnd, 1);
+  trialEnd = addMinutes(trialEnd, 5);
 
   return Math.ceil(trialEnd.getTime() / 1000);
 };
@@ -187,13 +188,13 @@ export const getFreeTrialAfterFingerprint = async ({
 };
 
 export const handleNewFreeTrial = async ({
-  sb,
+  db,
   newFreeTrial,
   curFreeTrial,
   internalProductId,
   isCustom = false,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   newFreeTrial: FreeTrial | null;
   curFreeTrial: FreeTrial | null | undefined;
   internalProductId: string;
@@ -201,11 +202,10 @@ export const handleNewFreeTrial = async ({
 }) => {
   // If new free trial is null
   if (!newFreeTrial) {
-    // Delete if not custom and current free trial exists
     if (!isCustom && curFreeTrial) {
       await FreeTrialService.delete({
-        sb,
-        freeTrialId: curFreeTrial.id,
+        db,
+        id: curFreeTrial.id,
       });
     }
     return null;
@@ -223,14 +223,14 @@ export const handleNewFreeTrial = async ({
 
   if (isCustom && newFreeTrial) {
     await FreeTrialService.insert({
-      sb,
+      db,
       data: createdFreeTrial,
     });
   } else if (!isCustom) {
     createdFreeTrial.id = curFreeTrial?.id || createdFreeTrial.id;
 
     await FreeTrialService.upsert({
-      sb,
+      db,
       data: createdFreeTrial,
     });
   }

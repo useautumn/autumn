@@ -127,7 +127,7 @@ export const handleCreateProduct = async (req: Request, res: any) =>
 
       if (notNullish(freeTrial)) {
         await handleNewFreeTrial({
-          sb,
+          db,
           newFreeTrial: freeTrial,
           curFreeTrial: null,
           internalProductId: product.internal_id,

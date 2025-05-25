@@ -451,7 +451,7 @@ export const copyProduct = async ({
 
   if (product.free_trial) {
     await FreeTrialService.insert({
-      sb,
+      db,
       data: {
         ...product.free_trial,
         id: generateId("ft"),

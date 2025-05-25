@@ -5,6 +5,7 @@ import {
   numeric,
   pgTable,
   text,
+  unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { organizations } from "../orgModels/orgTable.js";
@@ -38,6 +39,12 @@ export const products = pgTable(
       foreignColumns: [organizations.id],
       name: "products_org_id_fkey",
     }).onDelete("cascade"),
+    unique("unique_product").on(
+      table.org_id,
+      table.id,
+      table.env,
+      table.version,
+    ),
   ],
 );
 
