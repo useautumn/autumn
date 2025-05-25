@@ -24,8 +24,10 @@ import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { billForRemainingUsages } from "@/internal/customers/change-product/billRemainingUsages.js";
 import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const handleCusProductDeleted = async ({
+  db,
   cusProduct,
   subscription,
   logger,
@@ -34,6 +36,7 @@ const handleCusProductDeleted = async ({
   sb,
   prematurelyCanceled,
 }: {
+  db: DrizzleCli;
   cusProduct: FullCusProduct;
   subscription: Stripe.Subscription;
   logger: any;
@@ -170,8 +173,8 @@ const handleCusProductDeleted = async ({
   });
 
   await activateDefaultProduct({
+    db,
     productGroup: cusProduct.product.group,
-    orgId: org.id,
     customer: cusProduct.customer,
     org,
     sb,
@@ -191,12 +194,14 @@ const handleCusProductDeleted = async ({
 };
 
 export const handleSubscriptionDeleted = async ({
+  db,
   sb,
   subscription,
   org,
   env,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   subscription: Stripe.Subscription;
   org: Organization;
@@ -236,6 +241,7 @@ export const handleSubscriptionDeleted = async ({
   for (const cusProduct of activeCusProducts) {
     batchUpdate.push(
       handleCusProductDeleted({
+        db,
         cusProduct,
         subscription,
         logger,

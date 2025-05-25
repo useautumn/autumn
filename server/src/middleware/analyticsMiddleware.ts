@@ -33,6 +33,7 @@ const handleResFinish = (req: any, res: any, logtailContext: any) => {
         distinctId: req.org?.id,
         event: `${req.method} ${req.originalUrl}`,
         properties: {
+          authType: req.auth,
           orgSlug: req.org?.slug,
           statusCode: res.statusCode,
           res: res.locals.responseBody,

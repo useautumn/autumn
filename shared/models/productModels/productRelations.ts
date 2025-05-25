@@ -8,8 +8,5 @@ export const productRelations = relations(products, ({ many, one }) => ({
   entitlements: many(entitlements),
   prices: many(prices),
 
-  freeTrial: one(freeTrials, {
-    fields: [products.internal_id],
-    references: [freeTrials.internal_product_id],
-  }),
+  free_trials: many(freeTrials),
 }));

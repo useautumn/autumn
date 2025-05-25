@@ -1,8 +1,3 @@
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
-import {
-  getBelowThresholdPrice,
-  handleBelowThresholdInvoicing,
-} from "./invoiceThresholdUtils.js";
 import {
   AllowanceType,
   AppEnv,
@@ -10,7 +5,6 @@ import {
   Customer,
   Feature,
   FeatureType,
-  FullCustomer,
   FullCustomerEntitlement,
   Organization,
 } from "@autumn/shared";
@@ -20,16 +14,14 @@ import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import { getFeatureBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { Decimal } from "decimal.js";
-import {
-  getGroupBalanceFromProperties,
-  initGroupBalancesForEvent,
-} from "@/internal/customers/entitlements/groupByUtils.js";
+
 import {
   deductAllowanceFromCusEnt,
   deductFromUsageBasedCusEnt,
 } from "./updateBalanceTask.js";
 import { JobName } from "@/queue/JobName.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // 2. Get deductions for each feature
 const getFeatureDeductions = ({
@@ -52,7 +44,7 @@ const getFeatureDeductions = ({
     let unlimitedExists = cusEnts.some(
       (cusEnt) =>
         cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
-        cusEnt.entitlement.internal_feature_id == feature.internal_id
+        cusEnt.entitlement.internal_feature_id == feature.internal_id,
     );
 
     if (unlimitedExists) {
@@ -139,7 +131,7 @@ const logUsageUpdate = ({
       org.slug
     } | Features: ${features.map((f) => f.id).join(", ")} | Set Usage: ${
       setUsage ? "true" : "false"
-    }`
+    }`,
   );
 
   console.log(
@@ -163,12 +155,13 @@ const logUsageUpdate = ({
       })`;
     }),
     "| Deductions:",
-    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`)
+    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`),
   );
 };
 
 // Main function to update customer balance
 export const updateUsage = async ({
+  db,
   sb,
   customerId,
   features,
@@ -180,6 +173,7 @@ export const updateUsage = async ({
   logger,
   entityId,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   customerId: string;
   features: Feature[];
@@ -245,6 +239,7 @@ export const updateUsage = async ({
         cusEnt,
         features,
         deductParams: {
+          db,
           sb,
           feature,
           env,
@@ -268,6 +263,7 @@ export const updateUsage = async ({
       toDeduct,
       cusEnts,
       deductParams: {
+        db,
         sb,
         feature,
         env,
@@ -288,10 +284,12 @@ export const updateUsage = async ({
 export const runUpdateUsageTask = async ({
   payload,
   logger,
+  db,
   sb,
 }: {
   payload: any;
   logger: any;
+  db: DrizzleCli;
   sb: SupabaseClient;
 }) => {
   try {
@@ -310,10 +308,11 @@ export const runUpdateUsageTask = async ({
 
     console.log("--------------------------------");
     console.log(
-      `HANDLING USAGE TASK FOR CUSTOMER (${customerId}), ORG: ${org.slug}`
+      `HANDLING USAGE TASK FOR CUSTOMER (${customerId}), ORG: ${org.slug}`,
     );
 
     const cusEnts: any = await updateUsage({
+      db,
       sb,
       customerId,
       features,

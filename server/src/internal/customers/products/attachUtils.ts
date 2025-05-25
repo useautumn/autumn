@@ -39,14 +39,14 @@ import { Decimal } from "decimal.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const getProducts = async ({
-  sb,
+  db,
   productId,
   productIds,
   orgId,
   env,
   version,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   productId?: string;
   productIds?: string[];
   orgId: string;
@@ -62,9 +62,9 @@ const getProducts = async ({
   }
 
   if (productId) {
-    const product = await ProductService.getFullProduct({
-      sb,
-      productId,
+    const product = await ProductService.getFull({
+      db,
+      idOrInternalId: productId,
       orgId,
       env,
       version,
@@ -92,8 +92,8 @@ const getProducts = async ({
       });
     }
 
-    const products = await ProductService.getFullProducts({
-      sb,
+    const products = await ProductService.listFull({
+      db,
       orgId,
       env,
       inIds: productIds,
@@ -200,7 +200,14 @@ const getCustomerAndProducts = async ({
       entityId,
       entityData,
     }),
-    getProducts({ sb, productId, productIds, orgId: org.id, env, version }),
+    getProducts({
+      db,
+      productId,
+      productIds,
+      orgId: org.id,
+      env,
+      version,
+    }),
   ]);
 
   let cusProducts = customer.customer_products;

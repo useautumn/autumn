@@ -21,20 +21,21 @@ import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleUpdateProductDetails = async ({
+  db,
   newProduct,
   curProduct,
   org,
   sb,
-  cusProductExists,
   rewardPrograms,
 }: {
+  db: DrizzleCli;
   curProduct: Product;
   newProduct: UpdateProduct;
   org: Organization;
   sb: SupabaseClient;
-  cusProductExists: boolean;
   rewardPrograms: RewardProgram[];
 }) => {
   // 1. Check if they're same
@@ -96,8 +97,8 @@ export const handleUpdateProductDetails = async ({
   console.log(`Updating product ${curProduct.id} (org: ${org.slug})`);
 
   // 2. Update product
-  await ProductService.update({
-    sb,
+  await ProductService.updateByInternalId({
+    db,
     internalId: curProduct.internal_id,
     update: {
       id: newProduct.id,
@@ -114,79 +115,6 @@ export const handleUpdateProductDetails = async ({
   curProduct.is_default = newProduct.is_default || curProduct.is_default;
 };
 
-export const handleUpdateProduct = async (req: any, res: any) => {
-  const { productId } = req.params;
-  const sb = req.sb;
-  const orgId = req.orgId;
-  const env = req.env;
-
-  const { prices, entitlements, free_trial } = req.body;
-
-  try {
-    const [features, org, fullProduct] = await Promise.all([
-      FeatureService.getFromReq(req),
-      OrgService.getFromReq(req),
-      ProductService.getFullProduct({
-        sb,
-        productId,
-        orgId,
-        env,
-      }),
-    ]);
-
-    if (!fullProduct) {
-      throw new RecaseError({
-        message: "Product not found",
-        code: ErrCode.ProductNotFound,
-        statusCode: 404,
-      });
-    }
-
-    const cusProductsCurVersion =
-      await CusProductService.getByInternalProductId(
-        sb,
-        fullProduct.internal_id,
-      );
-
-    let cusProductExists = cusProductsCurVersion.length > 0;
-
-    await handleUpdateProductDetails({
-      sb,
-      curProduct: fullProduct,
-      newProduct: UpdateProductSchema.parse(req.body),
-      org,
-      cusProductExists,
-      rewardPrograms: [],
-    });
-
-    let productHasChanged = productsAreDifferent({
-      product1: fullProduct,
-      product2: {
-        ...fullProduct,
-        prices: notNullish(prices) ? prices : fullProduct.prices,
-        entitlements: notNullish(entitlements)
-          ? entitlements
-          : fullProduct.entitlements,
-        free_trial:
-          free_trial !== undefined ? free_trial : fullProduct.free_trial,
-      },
-    });
-
-    if (cusProductExists && productHasChanged) {
-      // would've versioned product
-      return;
-    }
-
-    // Else update free trial, entitlements, prices
-
-    res.status(200).json({ message: "Product updated" });
-    return;
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "Update product" });
-  }
-};
-
-// Update product v2
 export const handleUpdateProductV2 = async (req: any, res: any) =>
   routeHandler({
     req,
@@ -202,9 +130,9 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
           sb,
           orgId,
         }),
-        ProductService.getFullProduct({
-          sb,
-          productId,
+        ProductService.getFull({
+          db,
+          idOrInternalId: productId,
           orgId,
           env,
         }),
@@ -235,11 +163,11 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       let cusProductExists = cusProductsCurVersion.length > 0;
 
       await handleUpdateProductDetails({
+        db,
         sb,
         curProduct: fullProduct,
         newProduct: UpdateProductSchema.parse(req.body),
         org,
-        cusProductExists,
         rewardPrograms,
       });
 

@@ -134,7 +134,7 @@ const createStripeProductAndPrices = async ({
 }) => {
   if (!product.processor?.id) {
     await checkStripeProductExists({
-      sb,
+      db,
       org,
       env,
       product,

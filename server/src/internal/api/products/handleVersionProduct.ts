@@ -64,7 +64,7 @@ export const handleVersionProductV2 = async ({
     env,
   });
 
-  await ProductService.create({ sb, product: newProduct });
+  await ProductService.insert({ db, product: newProduct });
 
   await handleNewProductItems({
     db,

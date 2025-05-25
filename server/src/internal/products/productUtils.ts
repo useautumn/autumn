@@ -176,15 +176,6 @@ export const isProductUpgrade = ({
   }
 };
 
-export const isSameBillingInterval = (
-  product1: FullProduct,
-  product2: FullProduct,
-) => {
-  return (
-    getBillingInterval(product1.prices) === getBillingInterval(product2.prices)
-  );
-};
-
 export const isFreeProduct = (prices: Price[]) => {
   if (prices.length === 0) {
     return true;
@@ -239,13 +230,13 @@ export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
 };
 
 export const checkStripeProductExists = async ({
-  sb,
+  db,
   org,
   env,
   product,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   product: FullProduct;
@@ -278,8 +269,8 @@ export const checkStripeProductExists = async ({
       name: product.name,
     });
 
-    await ProductService.update({
-      sb,
+    await ProductService.updateByInternalId({
+      db,
       internalId: product.internal_id,
       update: {
         processor: { id: stripeProduct.id, type: ProcessorType.Stripe },
@@ -431,8 +422,8 @@ export const copyProduct = async ({
     );
   }
 
-  await ProductService.create({
-    sb,
+  await ProductService.insert({
+    db,
     product: {
       ...ProductSchema.parse(newProduct),
       version: 1,
@@ -479,14 +470,12 @@ export const isOneOff = (prices: Price[]) => {
 
 export const initProductInStripe = async ({
   db,
-  sb,
   org,
   env,
   logger,
   product,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   logger: any;
@@ -494,7 +483,7 @@ export const initProductInStripe = async ({
 }) => {
   // 1.
   await checkStripeProductExists({
-    sb,
+    db,
     org,
     env,
     product,

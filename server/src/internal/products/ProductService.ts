@@ -1,345 +1,253 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, ErrCode, FullProduct, Price, Product } from "@autumn/shared";
+import {
+  AppEnv,
+  entitlements,
+  ErrCode,
+  features,
+  FreeTrial,
+  freeTrials,
+  FullProduct,
+  prices,
+  Product,
+  products,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 import { getLatestProducts, sortProductsByPrice } from "./productUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { and, desc, eq, exists, inArray, or, sql } from "drizzle-orm";
+
+const parseFreeTrials = ({
+  products,
+  product,
+}: {
+  products?: FullProduct[];
+  product?: FullProduct;
+}) => {
+  if (products) {
+    for (const prod of products) {
+      prod.free_trial =
+        prod.free_trials && prod.free_trials.length > 0
+          ? prod.free_trials[0]
+          : null;
+    }
+  } else if (product) {
+    product!.free_trial =
+      product!.free_trials && product!.free_trials.length > 0
+        ? product!.free_trials[0]
+        : null;
+  }
+  return product;
+};
 
 export class ProductService {
   // GET
-  static async getById({
-    sb,
-    productId,
-    orgId,
-    env,
-    version,
-  }: {
-    sb: SupabaseClient;
-    productId: string;
-    orgId: string;
-    env: AppEnv;
-    version?: number;
-  }) {
-    const query = sb
-      .from("products")
-      .select("*")
-      .eq("id", productId)
-      .eq("org_id", orgId)
-      .eq("env", env);
-
-    if (version) {
-      query.eq("version", version);
-    } else {
-      query.order("version", { ascending: false });
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    if (data.length === 0) {
-      return null;
-    }
-
-    return data[0];
-  }
-
   static async getByInternalId({
-    sb,
+    db,
     internalId,
-    orgId,
-    env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalId: string;
-    orgId: string;
-    env: AppEnv;
   }) {
-    const { data, error } = await sb
-      .from("products")
-      .select("*")
-      .eq("internal_id", internalId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
-
-    if (error) {
-      throw error;
-    }
-    return data;
+    return (await db.query.products.findFirst({
+      where: eq(products.internal_id, internalId),
+    })) as Product;
   }
 
-  static async getFullDefaultProducts({
-    sb,
+  static async listDefault({
+    db,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     orgId: string;
     env: AppEnv;
   }) {
-    const { data, error } = await sb
-      .from("products")
-      .select(
-        "*, prices(*), entitlements(*, feature:features(*)), free_trial:free_trials(*)",
-      )
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .eq("is_default", true)
-      .eq("prices.is_custom", false)
-      .eq("entitlements.is_custom", false)
-      .eq("free_trial.is_custom", false);
+    let prods = (await db.query.products.findMany({
+      where: and(
+        eq(products.org_id, orgId),
+        eq(products.env, env),
+        eq(products.is_default, true),
+      ),
+      with: {
+        entitlements: {
+          with: {
+            feature: true,
+          },
+          where: eq(entitlements.is_custom, false),
+        },
+        prices: { where: eq(prices.is_custom, false) },
+        free_trials: { where: eq(freeTrials.is_custom, false) },
+      },
+    })) as FullProduct[];
 
-    if (error) {
-      throw error;
-    }
+    parseFreeTrials({ products: prods });
 
-    for (const product of data) {
-      product.free_trial =
-        product.free_trial.length > 0 ? product.free_trial[0] : null;
-    }
+    let latestProducts = getLatestProducts(prods);
 
-    // Get latest version of each product
-    let latestProducts = getLatestProducts(data);
-
-    return latestProducts;
+    return latestProducts as FullProduct[];
   }
 
-  static async create({
-    sb,
-    product,
-  }: {
-    sb: SupabaseClient;
-    product: Product;
-  }) {
-    const { data, error } = await sb
-      .from("products")
-      .insert(product)
-      .select()
-      .single();
+  static async insert({ db, product }: { db: DrizzleCli; product: Product }) {
+    let prod = await db.insert(products).values(product).returning();
 
-    if (error) {
+    if (!prod || prod.length === 0) {
       throw new RecaseError({
         message: "Failed to create product",
         code: ErrCode.InternalError,
         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
       });
     }
 
-    return data;
+    return prod[0] as Product;
   }
 
-  static async getProductStrict({
-    sb,
-    productId,
+  static async get({
+    db,
+    id,
     orgId,
     env,
     version,
   }: {
-    sb: SupabaseClient;
-    productId: string;
+    db: DrizzleCli;
+    id: string;
     orgId: string;
     env: AppEnv;
     version?: number;
   }) {
-    const query = sb
-      .from("products")
-      .select("*")
-      .eq("id", productId)
-      .eq("org_id", orgId)
-      .eq("env", env);
+    let data = await db.query.products.findMany({
+      where: and(
+        eq(products.id, id),
+        eq(products.org_id, orgId),
+        eq(products.env, env),
+        version ? eq(products.version, version) : undefined,
+      ),
+      orderBy: [desc(products.version)],
+    });
 
-    if (version) {
-      query.eq("version", version);
-    } else {
-      query.order("version", { ascending: false });
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
       return null;
-      // throw new RecaseError({
-      //   message: `Product ${productId}${version ? ` (v${version})` : ""} not found`,
-      //   code: ErrCode.ProductNotFound,
-      //   statusCode: StatusCodes.NOT_FOUND,
-      // });
     }
 
     return data[0];
   }
 
-  static async getFullProducts({
-    sb,
+  static async listFull({
+    db,
     orgId,
     env,
     inIds,
     returnAll = false,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     orgId: string;
     env: AppEnv;
     inIds?: string[];
     returnAll?: boolean;
   }) {
-    const query = sb
-      .from("products")
-      .select(
-        `*,
-        entitlements (
-          *,
-          feature:features (*)
-        ),
-        prices(*),
-        free_trial:free_trials(*)
-      `,
-      )
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .eq("prices.is_custom", false)
-      .eq("entitlements.is_custom", false)
-      .eq("free_trial.is_custom", false)
-      .order("created_at", { ascending: false })
-      .order("id");
+    let data = (await db.query.products.findMany({
+      where: and(
+        eq(products.org_id, orgId),
+        eq(products.env, env),
+        inIds ? inArray(products.id, inIds) : undefined,
+      ),
+      with: {
+        entitlements: {
+          with: {
+            feature: true,
+          },
+          where: eq(entitlements.is_custom, false),
+        },
+        prices: { where: eq(prices.is_custom, false) },
+        free_trials: { where: eq(freeTrials.is_custom, false) },
+      },
+      orderBy: [desc(products.internal_id)],
+    })) as FullProduct[];
 
-    if (inIds) {
-      query.in("id", inIds);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    for (const product of data) {
-      product.free_trial =
-        product.free_trial.length > 0 ? product.free_trial[0] : null;
-    }
+    parseFreeTrials({ products: data });
 
     if (returnAll) {
-      return data as FullProduct[];
+      return data;
     }
 
-    // Get latest of each version
-    const versionCounts = data.reduce((acc: any, product: any) => {
-      if (!acc[product.id]) {
-        acc[product.id] = 1;
-      } else {
-        acc[product.id]++;
-      }
-      return acc;
-    }, {});
-    const latestProducts = data.reduce((acc: any, product: any) => {
-      if (!acc[product.id]) {
-        acc[product.id] = product;
-      } else if (product.version > acc[product.id].version) {
-        acc[product.id] = product;
-      }
-      return acc;
-    }, {});
+    const latestProducts = getLatestProducts(data);
 
-    return Object.values(latestProducts) as FullProduct[];
+    return latestProducts as FullProduct[];
   }
 
-  static async getFullProduct({
-    sb,
-    productId,
-    internalId,
+  static async getFull({
+    db,
+    idOrInternalId,
     orgId,
     env,
     version,
   }: {
-    sb: SupabaseClient;
-    productId?: string;
-    internalId?: string;
+    db: DrizzleCli;
+    idOrInternalId: string;
     orgId: string;
     env: AppEnv;
     version?: number;
   }) {
-    const query = sb.from("products").select(
-      ` *,
-        free_trial:free_trials(*),
-        entitlements (
-          *,
-          feature:features (id, name, type)
+    let data = (await db.query.products.findFirst({
+      where: and(
+        or(
+          eq(products.id, idOrInternalId),
+          eq(products.internal_id, idOrInternalId),
         ),
-        prices (*)
-      `,
-    );
+        eq(products.org_id, orgId),
+        eq(products.env, env),
+        version ? eq(products.version, version) : undefined,
+      ),
+      orderBy: [desc(products.version)],
+      with: {
+        entitlements: {
+          with: {
+            feature: true,
+          },
+          where: eq(entitlements.is_custom, false),
+        },
+        prices: { where: eq(prices.is_custom, false) },
+        free_trials: { where: eq(freeTrials.is_custom, false) },
+      },
+    })) as FullProduct;
 
-    if (productId) {
-      query.eq("id", productId);
-    } else if (internalId) {
-      query.eq("internal_id", internalId);
-    }
+    parseFreeTrials({ product: data });
 
-    query
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .eq("prices.is_custom", false)
-      .eq("entitlements.is_custom", false)
-      .eq("free_trial.is_custom", false);
-
-    if (version && productId) {
-      query.eq("version", version);
-    } else {
-      query.order("version", { ascending: false }).limit(1);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    if (data.length === 0) {
-      // Throw error?
+    if (!data) {
+      // return null;
       throw new RecaseError({
-        message: `Product ${productId}${
-          version ? ` (v${version})` : ""
-        } not found`,
+        message: `Product ${idOrInternalId} not found`,
         code: ErrCode.ProductNotFound,
         statusCode: StatusCodes.NOT_FOUND,
       });
     }
 
-    let product = data[0];
-
-    product.free_trial =
-      product.free_trial.length > 0 ? product.free_trial[0] : null;
-    return product;
+    return data as FullProduct;
   }
 
   static async getProductVersionCount({
-    sb,
+    db,
     productId,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     productId: string;
     orgId: string;
     env: AppEnv;
   }) {
-    const { data, error } = await sb
-      .from("products")
-      .select("version")
-      .eq("id", productId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .order("version", { ascending: false })
-      .limit(1);
-
-    if (error) {
-      throw error;
-    }
+    const data = await db.query.products.findMany({
+      columns: {
+        version: true,
+      },
+      limit: 1,
+      where: and(
+        eq(products.id, productId),
+        eq(products.org_id, orgId),
+        eq(products.env, env),
+      ),
+      orderBy: [desc(products.version)],
+    });
 
     if (data.length === 0) {
       throw new RecaseError({
@@ -352,109 +260,81 @@ export class ProductService {
     return data[0].version;
   }
 
-  static async getEntitlementsByProductId({
-    sb,
-    internalProductId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    internalProductId: string;
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const { data, error } = await sb
-      .from("entitlements")
-      .select("*, feature:features(id, name, type)")
-      .eq("internal_product_id", internalProductId)
-      .eq("org_id", orgId)
-      .eq("env", env);
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
   // UPDATES
-  static async update({
-    sb,
+  static async updateByInternalId({
+    db,
     internalId,
     update,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalId: string;
     update: any;
   }) {
-    const { data, error } = await sb
-      .from("products")
-      .update(update)
-      .eq("internal_id", internalId);
-
-    if (error) {
-      throw new RecaseError({
-        message: `Error updating product...please try again later.`,
-        code: ErrCode.InternalError,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
-    }
+    const data = await db
+      .update(products)
+      .set(update)
+      .where(eq(products.internal_id, internalId));
   }
 
   // DELETES
 
   static async deleteByInternalId({
-    sb,
+    db,
     internalId,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalId: string;
     orgId: string;
     env: AppEnv;
   }) {
-    const { data, error } = await sb
-      .from("products")
-      .delete()
-      .eq("internal_id", internalId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    await db
+      .delete(products)
+      .where(
+        and(
+          eq(products.internal_id, internalId),
+          eq(products.org_id, orgId),
+          eq(products.env, env),
+        ),
+      );
   }
 
   static async getByFeature({
-    sb,
+    db,
     internalFeatureId,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalFeatureId: string;
   }) {
-    const { data, error } = await sb.rpc("get_products_by_feature", {
-      p_internal_feature_id: internalFeatureId,
-    });
+    let fullProducts = (await db.query.products.findMany({
+      where: exists(
+        db
+          .select()
+          .from(entitlements)
+          .where(
+            and(
+              eq(entitlements.internal_product_id, products.internal_id),
+              eq(entitlements.internal_feature_id, internalFeatureId),
+            ),
+          ),
+      ),
+      with: {
+        entitlements: {
+          with: {
+            feature: true,
+          },
+        },
+        prices: { where: eq(prices.is_custom, false) },
+        free_trials: { where: eq(freeTrials.is_custom, false) },
+      },
+      orderBy: [desc(products.version)],
+    })) as FullProduct[];
 
-    if (error) {
-      throw error;
-    }
+    parseFreeTrials({ products: fullProducts });
 
-    if (!data) {
-      console.log(
-        "ProductService.getByFeature returning no data, error:",
-        error,
-      );
-      return [];
-    }
-    // Sort products by pricing
-    sortProductsByPrice(data);
+    let latestProducts = getLatestProducts(fullProducts);
 
-    return data;
+    return latestProducts;
   }
 }

@@ -23,6 +23,8 @@ import {
 import { getEntityResponse } from "./getEntityUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { orgToVersion } from "@/utils/versionUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 
 interface CreateEntityData {
   id: string;
@@ -154,7 +156,7 @@ export const logEntityToAction = ({
               entityToAction[id].replace.internal_id
             })`
           : ""
-      }`
+      }`,
     );
   }
 };
@@ -227,8 +229,8 @@ export const validateAndGetInputEntities = async ({
   logger.info("Existing entities:");
   logger.info(
     existingEntities.map(
-      (e: any) => `${e.id} - ${e.name}, deleted: ${e.deleted}`
-    )
+      (e: any) => `${e.id} - ${e.name}, deleted: ${e.deleted}`,
+    ),
   );
 
   let noIdEntities = existingEntities.filter((e: any) => !e.id);
@@ -266,6 +268,7 @@ export const validateAndGetInputEntities = async ({
 };
 
 export const createEntities = async ({
+  db,
   sb,
   env,
   org,
@@ -277,6 +280,7 @@ export const createEntities = async ({
   apiVersion,
   fromAutoCreate = false,
 }: {
+  db: DrizzleCli;
   sb: any;
   org: Organization;
   features: Feature[];
@@ -324,12 +328,12 @@ export const createEntities = async ({
     let product = cusProduct.product;
 
     let mainCusEnt = cusEnts.find(
-      (e: any) => e.entitlement.feature.id === feature_id
+      (e: any) => e.entitlement.feature.id === feature_id,
     );
 
     // Get linked features
     let linkedCusEnts = cusEnts.filter(
-      (e: any) => e.entitlement.entity_feature_id === feature.id
+      (e: any) => e.entitlement.entity_feature_id === feature.id,
     );
 
     if (linkedCusEnts.length > 0 && inputEntities.some((e: any) => !e.id)) {
@@ -342,18 +346,18 @@ export const createEntities = async ({
 
     // 1. Pay for new seats
     let replacedCount = Object.keys(entityToAction).filter(
-      (id) => entityToAction[id].action === "replace"
+      (id) => entityToAction[id].action === "replace",
     ).length;
 
     let newCount = Object.keys(entityToAction).filter(
-      (id) => entityToAction[id].action === "create"
+      (id) => entityToAction[id].action === "create",
     ).length;
 
     if (mainCusEnt) {
       if (fromAutoCreate) {
         let cusPrice = getRelatedCusPrice(
           mainCusEnt,
-          cusProduct.customer_prices || []
+          cusProduct.customer_prices || [],
         );
 
         if (cusPrice) {
@@ -371,6 +375,7 @@ export const createEntities = async ({
         mainCusEnt.balance - (newCount + replacedCount) + (unused || 0);
 
       await adjustAllowance({
+        db,
         sb,
         env,
         org,
@@ -480,49 +485,51 @@ export const createEntities = async ({
   return entities;
 };
 
-export const handlePostEntityRequest = async (req: any, res: any) => {
-  try {
-    // Create entity!
-    const { sb, pg, env, logtail: logger } = req;
+export const handlePostEntityRequest = async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "create entity",
+    handler: async (req: any, res: any) => {
+      const { sb, env, db, logtail: logger } = req;
 
-    const [org, features] = await Promise.all([
-      OrgService.getFromReq(req),
-      FeatureService.getFromReq(req),
-    ]);
+      const [org, features] = await Promise.all([
+        OrgService.getFromReq(req),
+        FeatureService.getFromReq(req),
+      ]);
 
-    let apiVersion = orgToVersion({
-      org,
-      reqApiVersion: req.apiVersion,
-    });
-
-    const entities = await createEntities({
-      sb,
-      org,
-      features,
-      logger,
-      env,
-      customerId: req.params.customer_id,
-      createEntityData: req.body,
-      withAutumnId: req.query.with_autumn_id === "true",
-      apiVersion,
-    });
-
-    logger.info(`  Created / replaced entities!`);
-
-    if (apiVersion < APIVersion.v1_2) {
-      res.status(200).json({
-        success: true,
+      let apiVersion = orgToVersion({
+        org,
+        reqApiVersion: req.apiVersion,
       });
-      return;
-    }
-    if (Array.isArray(req.body)) {
-      res.status(200).json({
-        list: entities,
+
+      const entities = await createEntities({
+        db,
+        sb,
+        org,
+        features,
+        logger,
+        env,
+        customerId: req.params.customer_id,
+        createEntityData: req.body,
+        withAutumnId: req.query.with_autumn_id === "true",
+        apiVersion,
       });
-    } else {
-      res.status(200).json(entities[0]);
-    }
-  } catch (error) {
-    handleRequestError({ error, req, res, action: "create entity" });
-  }
-};
+
+      logger.info(`  Created / replaced entities!`);
+
+      if (apiVersion < APIVersion.v1_2) {
+        res.status(200).json({
+          success: true,
+        });
+        return;
+      }
+      if (Array.isArray(req.body)) {
+        res.status(200).json({
+          list: entities,
+        });
+      } else {
+        res.status(200).json(entities[0]);
+      }
+    },
+  });

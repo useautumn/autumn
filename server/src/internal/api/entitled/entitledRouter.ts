@@ -296,7 +296,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       entity_id,
     } = req.body;
 
-    const { logtail: logger } = req;
+    const { logtail: logger, sb, db } = req;
 
     if (!customer_id) {
       throw new RecaseError({
@@ -348,8 +348,6 @@ entitledRouter.post("", async (req: any, res: any) => {
       quantity = floatQuantity;
     }
 
-    const { sb } = req;
-
     const { cusEnts, feature, creditSystems, org, cusProducts, allFeatures } =
       await getCusEntsAndFeatures({
         sb,
@@ -367,6 +365,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     // 2. If boolean, return true
     if (feature.type === FeatureType.Boolean) {
       return await getBooleanEntitledResult({
+        db,
         customer_id,
         res,
         cusEnts,
@@ -451,6 +450,7 @@ entitledRouter.post("", async (req: any, res: any) => {
 
       try {
         preview = await getCheckPreview({
+          db,
           allowed,
           balance: balanceObj?.balance,
           feature: featureToUse!,

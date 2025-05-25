@@ -44,11 +44,11 @@ export const handleProductCheck = async ({
       entityId: entity_id,
       entityData: entity_data,
     }),
-    ProductService.getFullProduct({
-      sb,
+    ProductService.getFull({
+      db,
       orgId,
       env,
-      productId: product_id,
+      idOrInternalId: product_id,
     }),
   ]);
 

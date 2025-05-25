@@ -102,6 +102,7 @@ describe(`${chalk.yellowBright(
     let subscriptionId = res.products[0].subscription_ids![0]!;
 
     checkSubscriptionContainsProducts({
+      db: this.db,
       sb: this.sb,
       org: this.org,
       env: this.env,

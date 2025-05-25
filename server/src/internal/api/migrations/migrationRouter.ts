@@ -18,24 +18,24 @@ migrationRouter.post("", async (req: any, res: any) => {
     res,
     action: "migrate",
     handler: async (req: any, res: any) => {
-      const { orgId, env, sb } = req;
+      const { orgId, env, sb, db } = req;
 
       const { from_product_id, from_version, to_product_id, to_version } =
         req.body;
 
-      let fromProduct = await ProductService.getFullProduct({
-        sb,
+      let fromProduct = await ProductService.getFull({
+        db,
         env,
         orgId,
-        productId: from_product_id,
+        idOrInternalId: from_product_id,
         version: from_version,
       });
 
-      let toProduct = await ProductService.getFullProduct({
-        sb,
+      let toProduct = await ProductService.getFull({
+        db,
         env,
         orgId,
-        productId: to_product_id,
+        idOrInternalId: to_product_id,
         version: to_version,
       });
 

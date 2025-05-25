@@ -172,7 +172,7 @@ const advanceAPThroughBalances = async ({
 };
 
 describe(`${chalk.yellowBright(
-  "arrear_prorated2: testing update in arrear prorated through /balances"
+  "arrear_prorated2: testing update in arrear prorated through /balances",
 )}`, () => {
   const customerId = "arrear-prorated-balances";
 
@@ -190,7 +190,7 @@ describe(`${chalk.yellowBright(
         org: this.org,
         env: this.env,
         sb: this.sb,
-      }
+      },
     );
 
     stripeCli = createStripeCli({
@@ -238,6 +238,7 @@ describe(`${chalk.yellowBright(
     stripeSub = await stripeCli.subscriptions.retrieve(subId);
 
     await checkSubscriptionContainsProducts({
+      db: this.db,
       sb: this.sb,
       org: this.org,
       env: this.env,

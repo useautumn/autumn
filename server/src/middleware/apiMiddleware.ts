@@ -1,7 +1,7 @@
 import { withOrgAuth } from "./authMiddleware.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
-import { ErrCode } from "@autumn/shared";
+import { AuthType, ErrCode } from "@autumn/shared";
 import { floatToVersion } from "@/utils/versionUtils.js";
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
@@ -72,6 +72,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
       };
       req.org = org;
       req.features = features;
+      req.auth = AuthType.SecretKey;
 
       next();
 

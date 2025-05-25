@@ -1,13 +1,14 @@
 import { z } from "zod";
 import { ProcessorType } from "../genModels/genEnums.js";
 import { ProductSchema } from "../productModels/productModels.js";
-import { CustomerPriceSchema } from "./cusPriceModels/cusPriceModels.js";
 import { PriceSchema } from "../productModels/priceModels/priceModels.js";
-import { CustomerEntitlementSchema } from "./cusEntModels/cusEntitlementModels.js";
+import { CustomerEntitlementSchema } from "./cusEntModels/cusEntModels.js";
 import { EntitlementSchema } from "../productModels/entModels/entModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
-import { CustomerSchema } from "./cusModels.js";
+import { CustomerSchema } from "../cusModels/cusModels.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
+
+import { CustomerPriceSchema } from "./cusPriceModels/cusPriceModels.js";
 
 export const FeatureOptionsSchema = z.object({
   internal_feature_id: z.string().optional(),
@@ -82,11 +83,6 @@ export const CusProductSchema = z.object({
 
 export type CusProduct = z.infer<typeof CusProductSchema>;
 
-export const CusProductWithProduct = CusProductSchema.extend({
-  product: ProductSchema,
-});
-
-export type CusProductWithProduct = z.infer<typeof CusProductWithProduct>;
 export type FeatureOptions = z.infer<typeof FeatureOptionsSchema>;
 
 export const FullCusProductSchema = CusProductSchema.extend({

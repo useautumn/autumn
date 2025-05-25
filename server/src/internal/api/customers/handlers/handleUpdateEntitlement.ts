@@ -16,21 +16,22 @@ import {
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const getCusOrgAndCusPrice = async ({
+  db,
   req,
   sb,
   cusEnt,
-  orgId,
 }: {
+  db: DrizzleCli;
   req: ExtendedRequest;
   sb: SupabaseClient;
   cusEnt: FullCustomerEntitlement;
-  orgId: string;
 }) => {
   const [cusPrice, customer, org] = await Promise.all([
     CusPriceService.getRelatedToCusEnt({
-      sb: sb,
+      db,
       cusEnt,
     }),
     CusService.getByInternalId({
@@ -45,6 +46,7 @@ const getCusOrgAndCusPrice = async ({
 
 export const handleUpdateEntitlement = async (req: any, res: any) => {
   try {
+    const { db, sb } = req;
     const { customer_entitlement_id } = req.params;
     const { balance, next_reset_at, entity_id } = req.body;
 
@@ -125,10 +127,10 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
     });
 
     const { cusPrice, customer, org } = await getCusOrgAndCusPrice({
+      db,
       req,
-      sb: req.sb,
+      sb,
       cusEnt,
-      orgId: req.orgId,
     });
 
     if (!cusPrice) {
@@ -137,6 +139,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
     }
 
     await adjustAllowance({
+      db,
       sb: req.sb,
       env: req.env,
       org: org,

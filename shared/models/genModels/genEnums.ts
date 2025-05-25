@@ -22,3 +22,9 @@ export enum Duration {
 export enum ProcessorType {
   Stripe = "stripe",
 }
+
+export enum AuthType {
+  SecretKey = "secret_key",
+  PublicKey = "public_key",
+  Frontend = "frontend",
+}

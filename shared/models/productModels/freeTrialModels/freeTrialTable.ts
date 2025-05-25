@@ -14,7 +14,7 @@ export const freeTrials = pgTable(
     created_at: numeric({ mode: "number" }).notNull(),
     internal_product_id: text("internal_product_id"),
     duration: text().default("day"),
-    length: numeric(),
+    length: numeric({ mode: "number" }),
     unique_fingerprint: boolean("unique_fingerprint"),
     is_custom: boolean("is_custom").default(false),
   },

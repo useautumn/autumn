@@ -18,15 +18,11 @@ import { handleGetProduct } from "./handleGetProduct.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
 
 import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
+import { handleListProducts } from "./handlers/handleListProducts.js";
 
 export const productApiRouter = Router();
 
-productApiRouter.get("", async (req: any, res) => {
-  try {
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "Get products" });
-  }
-});
+productApiRouter.get("", handleListProducts);
 
 productApiRouter.post("", handleCreateProduct);
 
@@ -43,8 +39,8 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
     const { sb, orgId, env, logtail: logger, db } = req;
 
     const [fullProducts, org] = await Promise.all([
-      ProductService.getFullProducts({
-        sb,
+      ProductService.listFull({
+        db,
         orgId,
         env,
       }),
@@ -62,7 +58,7 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
       const batch = fullProducts.slice(i, i + productBatchSize);
       const batchPromises = batch.map((product) =>
         checkStripeProductExists({
-          sb,
+          db,
           org,
           env,
           product,

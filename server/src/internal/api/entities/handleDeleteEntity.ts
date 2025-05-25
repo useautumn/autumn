@@ -10,19 +10,17 @@ import {
   getCusEntMasterBalance,
   getRelatedCusPrice,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
 import { removeEntityFromCusEnt } from "./entityUtils.js";
 import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-
-import { createStripeCli } from "@/external/stripe/utils.js";
-
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
 import { removeScheduledProduct } from "../customers/handlers/handleCusProductExpired.js";
 
 export const handleDeleteEntity = async (req: any, res: any) => {
   try {
-    const { orgId, env, logtail: logger, sb } = req;
+    const { orgId, env, db, logtail: logger, sb } = req;
     const { customer_id, entity_id } = req.params;
 
     await handleCustomerRaceCondition({
@@ -96,7 +94,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 
       let cusEnt = cusEnts.find(
         (e: any) =>
-          e.entitlement.feature.internal_id === entity.internal_feature_id
+          e.entitlement.feature.internal_id === entity.internal_feature_id,
       );
 
       if (!cusEnt) {
@@ -105,7 +103,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 
       let relatedCusPrice = getRelatedCusPrice(
         cusEnt,
-        cusProduct.customer_prices
+        cusProduct.customer_prices,
       );
 
       if (relatedCusPrice) {
@@ -120,6 +118,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       let newBalance = cusEnt.balance + 1 + (unused || 0);
 
       await adjustAllowance({
+        db,
         sb,
         env,
         org,
@@ -144,7 +143,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       for (const cusEnt of cusEnts) {
         let relatedCusPrice = getRelatedCusPrice(
           cusEnt,
-          cusProducts.flatMap((p: any) => p.customer_prices)
+          cusProducts.flatMap((p: any) => p.customer_prices),
         );
         await removeEntityFromCusEnt({
           sb,
@@ -194,7 +193,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 
       // Perform deduction on cus ent
       let updateCusEnt = cusEnts.find(
-        (e: any) => e.entitlement.feature.id === entity.feature_id
+        (e: any) => e.entitlement.feature.id === entity.feature_id,
       );
       if (updateCusEnt) {
         await CustomerEntitlementService.incrementBalance({

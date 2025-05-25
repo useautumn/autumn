@@ -4,8 +4,6 @@ import {
   AllowanceType,
   AppEnv,
   BillingType,
-  CusEntWithEntitlement,
-  CusProduct,
   CusProductStatus,
   Customer,
   EntInterval,
@@ -418,7 +416,7 @@ export const getUnlimitedAndUsageAllowed = ({
   cusEnts,
   internalFeatureId,
 }: {
-  cusEnts: FullCustomerEntitlement[] | CusEntWithEntitlement[];
+  cusEnts: FullCustomerEntitlement[];
   internalFeatureId: string;
 }) => {
   // Unlimited
@@ -489,7 +487,7 @@ export const cusEntsContainFeature = ({
   cusEnts,
   feature,
 }: {
-  cusEnts: FullCustomerEntitlement[] | CusEntWithEntitlement[];
+  cusEnts: FullCustomerEntitlement[];
   feature: Feature;
 }) => {
   return cusEnts.some(

@@ -64,7 +64,6 @@ export const initStripeCusAndProducts = async ({
     batchInit.push(
       initProductInStripe({
         db,
-        sb,
         org,
         env,
         logger,
@@ -101,13 +100,11 @@ export const createNewCustomer = async ({
   logger.info(`Org ID: ${org.id}`);
   logger.info(`Customer data: ${JSON.stringify(customer)}`);
 
-  const [defaultProds] = await Promise.all([
-    ProductService.getFullDefaultProducts({
-      sb,
-      orgId: org.id,
-      env,
-    }),
-  ]);
+  const defaultProds = await ProductService.listDefault({
+    db,
+    orgId: org.id,
+    env,
+  });
 
   const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
   const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));

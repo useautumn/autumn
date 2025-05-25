@@ -1,5 +1,5 @@
+import { FullCusProduct } from "../cusProductModels/cusProductModels.js";
 import { Customer } from "./cusModels.js";
-import { FullCusProduct } from "./cusProductModels.js";
 import { Entity } from "./entityModels/entityModels.js";
 import { Invoice } from "./invoiceModels/invoiceModels.js";
 

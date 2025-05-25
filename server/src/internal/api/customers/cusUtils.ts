@@ -28,6 +28,7 @@ import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEn
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { notNullish, nullish } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const updateCustomerDetails = async ({
   sb,
@@ -85,53 +86,13 @@ export const getCusByIdOrInternalId = async ({
   return customer;
 };
 
-export const attachDefaultProducts = async ({
-  sb,
-  orgId,
-  env,
-  customer,
-  nextResetAt,
-  org,
-}: {
-  sb: SupabaseClient;
-  orgId: string;
-  env: AppEnv;
-  customer: Customer;
-  org: Organization;
-  nextResetAt?: number;
-}) => {
-  const defaultProds = await ProductService.getFullDefaultProducts({
-    sb,
-    orgId,
-    env,
-  });
-
-  for (const product of defaultProds) {
-    await createFullCusProduct({
-      sb,
-      attachParams: {
-        org,
-        customer: customer,
-        product,
-        prices: product.prices,
-        entitlements: product.entitlements,
-        freeTrial: null, // TODO: Free trial not supported on default product yet
-        optionsList: [],
-        entities: [],
-        features: [],
-      },
-      nextResetAt,
-    });
-  }
-};
-
 const CusProductResultSchema = CusProductSchema.extend({
   customer: CustomerSchema,
   product: ProductSchema,
 });
 
 export const flipProductResults = (
-  cusProducts: z.infer<typeof CusProductResultSchema>[]
+  cusProducts: z.infer<typeof CusProductResultSchema>[],
 ) => {
   const customers = [];
 
@@ -169,7 +130,7 @@ export const getCusInvoices = async ({
       invoice: i,
       withItems,
       features,
-    })
+    }),
   );
 
   return processedInvoices;
@@ -239,7 +200,7 @@ export const getCusEntsInFeatures = async ({
 
   if (internalFeatureIds) {
     cusEnts = cusEnts.filter((cusEnt) =>
-      internalFeatureIds.includes(cusEnt.internal_feature_id)
+      internalFeatureIds.includes(cusEnt.internal_feature_id),
     );
   }
 
@@ -248,7 +209,7 @@ export const getCusEntsInFeatures = async ({
     cusEnts = cusEnts.filter(
       (cusEnt) =>
         nullish(cusEnt.customer_product.internal_entity_id) ||
-        cusEnt.customer_product.internal_entity_id === entity.internal_id
+        cusEnt.customer_product.internal_entity_id === entity.internal_id,
       // || cusEnt.entities
     );
   }

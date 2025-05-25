@@ -129,6 +129,7 @@ export const getOrCreateCustomer = async ({
     logger.info(`Auto creating entity ${entityId} for customer ${customerId}`);
 
     let newEntities = await createEntities({
+      db,
       sb,
       org,
       customerId,

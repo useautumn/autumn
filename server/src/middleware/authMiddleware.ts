@@ -1,4 +1,5 @@
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { AuthType } from "@autumn/shared";
 import { verifyToken } from "@clerk/express";
 import { NextFunction } from "express";
 
@@ -56,13 +57,14 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     req.user = tokenData!.user;
     req.org = org;
     req.features = features;
+    req.auth = AuthType.Frontend;
 
     next();
   } catch (error: any) {
     console.log(
       // `withOrgAuth error (${req.headers["authorization"]}):`,
       `(warning) clerk auth failed:`,
-      error?.message || error
+      error?.message || error,
     );
     res.status(401).json({ message: "Unauthorized" });
     return;

@@ -72,23 +72,19 @@ cusRouter.post("/search", async (req: any, res: any) => {
 });
 
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
-  const { sb, org, env } = req;
-  const { customer_id } = req.params;
-  const orgId = req.orgId;
-
   try {
-    // Get customer invoices
+    const { db, sb, org, features, env } = req;
+    const { customer_id } = req.params;
+    const orgId = req.orgId;
 
-    const [org, features, coupons, products, customer] = await Promise.all([
-      OrgService.getFromReq(req),
-      FeatureService.getFromReq(req),
+    const [coupons, products, customer] = await Promise.all([
       RewardService.getAll({
         sb,
         orgId: orgId,
         env,
       }),
 
-      ProductService.getFullProducts({ sb, orgId, env, returnAll: true }),
+      ProductService.listFull({ db, orgId, env, returnAll: true }),
       CusService.getByIdOrInternalId({
         sb,
         orgId,
@@ -294,12 +290,12 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
 cusRouter.get(
   "/:customer_id/product/:product_id",
   async (req: any, res: any) => {
-    const { sb, org, env } = req;
-    const { customer_id, product_id } = req.params;
-    const { version, customer_product_id, entity_id } = req.query;
-    const orgId = req.orgId;
-
     try {
+      const { sb, org, env, db } = req;
+      const { customer_id, product_id } = req.params;
+      const { version, customer_product_id, entity_id } = req.query;
+      const orgId = req.orgId;
+
       const customer = await CusService.getWithProducts({
         sb,
         orgId,
@@ -372,11 +368,11 @@ cusRouter.get(
           isCustom: cusProduct.is_custom,
         };
       } else {
-        product = await ProductService.getFullProduct({
-          sb,
+        product = await ProductService.getFull({
+          db,
           orgId,
           env,
-          productId: product_id,
+          idOrInternalId: product_id,
           version:
             version && Number.isInteger(parseInt(version))
               ? parseInt(version)
@@ -387,7 +383,7 @@ cusRouter.get(
       }
 
       let numVersions = await ProductService.getProductVersionCount({
-        sb,
+        db,
         orgId,
         env,
         productId: product_id,

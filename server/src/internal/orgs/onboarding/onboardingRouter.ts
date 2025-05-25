@@ -45,8 +45,8 @@ onboardingRouter.post("", async (req: Request, res: any) =>
         });
       }
 
-      let curProducts = await ProductService.getFullProducts({
-        sb,
+      let curProducts = await ProductService.listFull({
+        db,
         orgId: org.id,
         env: AppEnv.Sandbox,
       });
@@ -88,7 +88,7 @@ onboardingRouter.post("", async (req: Request, res: any) =>
           }),
           (async () => {
             for (const product of products) {
-              await ProductService.create({ sb, product });
+              await ProductService.insert({ db, product });
             }
           })(),
         ]);
