@@ -232,6 +232,7 @@ export const getUpgradePreview = async ({
 
   let usageLineItems =
     (await billForRemainingUsages({
+      db,
       logger: console,
       sb: null,
       attachParams,

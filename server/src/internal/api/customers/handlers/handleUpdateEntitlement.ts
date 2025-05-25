@@ -1,8 +1,12 @@
 import { handleRequestError } from "@/utils/errorUtils.js";
 
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, FullCustomerEntitlement, AppEnv } from "@autumn/shared";
+import {
+  ErrCode,
+  FullCustomerEntitlement,
+  FullCusEntWithProduct,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
@@ -70,8 +74,8 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
     }
 
     // Check if org owns the entitlement
-    const cusEnt: any = await CustomerEntitlementService.getByIdStrict({
-      sb: req.sb,
+    const cusEnt = await CusEntService.getStrict({
+      db,
       id: customer_entitlement_id,
       orgId: req.orgId,
       env: req.env,
@@ -111,12 +115,12 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       cusEnt,
       toDeduct: deducted,
       addAdjustment: true,
-      allowNegativeBalance: cusEnt.usage_allowed,
+      allowNegativeBalance: cusEnt.usage_allowed || false,
       entityId: entity_id,
     });
 
-    await CustomerEntitlementService.update({
-      sb: req.sb,
+    await CusEntService.update({
+      db,
       id: customer_entitlement_id,
       updates: {
         balance: newBalance,
@@ -144,7 +148,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       env: req.env,
       org: org,
       affectedFeature: cusEnt.entitlement.feature,
-      cusEnt,
+      cusEnt: cusEnt as FullCusEntWithProduct,
       cusPrices: [cusPrice],
       customer: customer,
       originalBalance: originalBalance!,

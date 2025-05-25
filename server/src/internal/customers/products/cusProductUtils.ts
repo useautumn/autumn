@@ -212,6 +212,7 @@ export const activateDefaultProduct = async ({
   }
 
   await createFullCusProduct({
+    db,
     sb,
     attachParams: {
       org,

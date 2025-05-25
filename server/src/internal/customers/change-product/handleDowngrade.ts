@@ -50,12 +50,12 @@ const scheduleStripeSubscription = async ({
   let subItems = items.filter(
     (item: any, index: number) =>
       index >= prices.length ||
-      prices[index].config!.interval !== BillingInterval.OneOff
+      prices[index].config!.interval !== BillingInterval.OneOff,
   );
   let oneOffItems = items.filter(
     (item: any, index: number) =>
       index < prices.length &&
-      prices[index].config!.interval === BillingInterval.OneOff
+      prices[index].config!.interval === BillingInterval.OneOff,
   );
 
   const newSubscriptionSchedule = await stripeCli.subscriptionSchedules.create({
@@ -102,7 +102,7 @@ export const getCusProductsWithStripeSubIds = async ({
   return cusProducts.filter(
     (cusProduct) =>
       cusProduct.subscription_ids?.includes(stripeSubId) &&
-      cusProduct.id !== curCusProductId
+      cusProduct.id !== curCusProductId,
   );
 };
 
@@ -124,7 +124,7 @@ export const handleDowngrade = async ({
     env: attachParams.customer.env,
   });
   logger.info(
-    `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
+    `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`,
   );
 
   const curSubscriptions = await getStripeSubs({
@@ -167,7 +167,7 @@ export const handleDowngrade = async ({
 
   for (const itemSet of itemSets) {
     let scheduleObj = schedules.find(
-      (schedule) => schedule.interval === itemSet.interval
+      (schedule) => schedule.interval === itemSet.interval,
     );
 
     if (scheduleObj) {
@@ -200,7 +200,7 @@ export const handleDowngrade = async ({
         ...otherSubItems.map((sub: any) => ({
           price: sub.price.id,
           quantity: sub.quantity,
-        }))
+        })),
       );
 
       let scheduleId = await scheduleStripeSubscription({
@@ -234,7 +234,7 @@ export const handleDowngrade = async ({
     cusProductId: curCusProduct.id,
     updates: {
       scheduled_ids: curCusProduct.scheduled_ids?.filter(
-        (id) => !scheduledIds.includes(id)
+        (id) => !scheduledIds.includes(id),
       ),
     },
   });
@@ -243,6 +243,7 @@ export const handleDowngrade = async ({
   logger.info("3. Inserting new full cus product (starts at period end)");
   const newProductFree = isFreeProduct(attachParams.prices);
   await createFullCusProduct({
+    db: req.db,
     sb: req.sb,
     attachParams: attachToInsertParams(attachParams, product),
     startsAt: latestPeriodEnd * 1000,
@@ -271,7 +272,7 @@ export const handleDowngrade = async ({
         product_ids: [product.id],
         customer_id:
           attachParams.customer.id || attachParams.customer.internal_id,
-      })
+      }),
     );
   } else {
     res.status(200).json({

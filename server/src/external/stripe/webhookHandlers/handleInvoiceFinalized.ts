@@ -1,28 +1,26 @@
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+
 import {
   AppEnv,
-  BillingType,
   CusProductStatus,
-  FullCusProduct,
   FullCustomerPrice,
   InvoiceStatus,
   Organization,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
-import { differenceInHours, format, subDays } from "date-fns";
+
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import {
   getStripeExpandedInvoice,
   updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleInvoiceFinalized = async ({
+  db,
   sb,
   org,
   invoice,
@@ -30,6 +28,7 @@ export const handleInvoiceFinalized = async ({
   event,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   invoice: Stripe.Invoice;

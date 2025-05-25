@@ -25,6 +25,7 @@ import { getStripeSubs } from "../stripeSubUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const handleOneOffInvoicePaid = async ({
   sb,
@@ -138,6 +139,7 @@ const convertToChargeAutomatically = async ({
 };
 
 export const handleInvoicePaid = async ({
+  db,
   req,
   sb,
   org,
@@ -145,6 +147,7 @@ export const handleInvoicePaid = async ({
   env,
   event,
 }: {
+  db: DrizzleCli;
   req: any;
   sb: SupabaseClient;
   org: Organization;

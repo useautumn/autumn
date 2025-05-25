@@ -1,5 +1,3 @@
-import { CustomerEntitlementService } from "./CusEntitlementService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import {
   AllowanceType,
   AppEnv,
@@ -25,76 +23,13 @@ import {
   getEntOptions,
 } from "@/internal/products/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import {
-  notNullish,
-  notNullOrUndefined,
-  nullish,
-  nullOrUndefined,
-} from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 
 import {
   getEntityBalance,
   getSummedEntityBalances,
 } from "./entBalanceUtils.js";
 import { Decimal } from "decimal.js";
-
-export const getBalanceForFeature = async ({
-  sb,
-  customerId,
-  orgId,
-  env,
-  featureId,
-}: {
-  sb: SupabaseClient;
-  customerId: string;
-  orgId: string;
-  env: string;
-  featureId: string;
-}) => {
-  const cusEnts = await CustomerEntitlementService.getActiveByFeatureAndCusId({
-    sb,
-    cusId: customerId,
-    featureId,
-    orgId,
-    env,
-  });
-
-  let data = {
-    feature_id: featureId,
-    balance: 0,
-    unlimited: false,
-  };
-
-  if (cusEnts.length == 0) {
-    return data;
-  }
-
-  if (cusEnts[0].entitlement.feature.type == FeatureType.Boolean) {
-    return {
-      feature_id: featureId,
-      balance: null,
-      unlimited: false,
-    };
-  }
-
-  for (const ent of cusEnts) {
-    if (ent.allowance_type == AllowanceType.Unlimited) {
-      return {
-        feature_id: featureId,
-        balance: null,
-        unlimited: true,
-      };
-    }
-
-    if (ent.allowance_type == AllowanceType.None) {
-      continue;
-    }
-
-    data.balance += ent.balance;
-  }
-
-  return data;
-};
 
 export const getCusEntMasterBalance = ({
   cusEnt,

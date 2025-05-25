@@ -35,6 +35,7 @@ import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 import { getPlaceholderItem } from "../stripePriceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -102,12 +103,14 @@ export const itemMetasToOptions = async ({
 };
 
 export const handleCheckoutSessionCompleted = async ({
+  db,
   sb,
   org,
   checkoutSession,
   env,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   checkoutSession: Stripe.Checkout.Session;
@@ -304,6 +307,7 @@ export const handleCheckoutSessionCompleted = async ({
     let pricesForProduct = getPricesForProduct(product, attachParams.prices);
     let isOneOff = pricesOnlyOneOff(pricesForProduct);
     await createFullCusProduct({
+      db,
       sb,
       attachParams: attachToInsertParams(attachParams, product),
       subscriptionId: !isOneOff

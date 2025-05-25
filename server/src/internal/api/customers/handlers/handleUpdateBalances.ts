@@ -17,7 +17,7 @@ import {
   getCusEntBalance,
   getUnlimitedAndUsageAllowed,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
@@ -208,8 +208,8 @@ export const handleUpdateBalances = async (req: any, res: any) => {
             return;
           }
 
-          await CustomerEntitlementService.update({
-            sb: req.sb,
+          await CusEntService.update({
+            db,
             id: cusEnt.id,
             updates: {
               unlimited: true,

@@ -9,7 +9,7 @@ import {
   getPriceForOverage,
 } from "@/internal/products/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
+import { CusEntService } from "../entitlements/CusEntitlementService.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { getInvoiceExpansion } from "@/external/stripe/stripeInvoiceUtils.js";
 
@@ -17,24 +17,26 @@ import { InvoiceService } from "../invoices/InvoiceService.js";
 import { stripeToAutumnInterval } from "@/external/stripe/utils.js";
 import { getResetBalancesUpdate } from "../entitlements/groupByUtils.js";
 import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // Add usage to end of cycle
 const addUsageToNextInvoice = async ({
+  db,
   intervalToInvoiceItems,
   intervalToSub,
   customer,
   org,
   logger,
-  sb,
   attachParams,
   curCusProduct,
 }: {
+  db: DrizzleCli;
   intervalToInvoiceItems: any;
   intervalToSub: any;
   customer: any;
   org: any;
   logger: any;
-  sb: SupabaseClient;
+
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
 }) => {
@@ -90,8 +92,8 @@ const addUsageToNextInvoice = async ({
       await stripeCli.invoiceItems.create(invoiceItem);
 
       // Update cus ent to 0
-      await CustomerEntitlementService.update({
-        sb,
+      await CusEntService.update({
+        db,
         id: item.relatedCusEnt!.id,
         updates: getResetBalancesUpdate({
           cusEnt: item.relatedCusEnt!,
@@ -121,6 +123,7 @@ const addUsageToNextInvoice = async ({
 };
 
 const invoiceForUsageImmediately = async ({
+  db,
   intervalToInvoiceItems,
   customer,
   org,
@@ -130,6 +133,7 @@ const invoiceForUsageImmediately = async ({
   attachParams,
   newSubs,
 }: {
+  db: DrizzleCli;
   intervalToInvoiceItems: any;
   customer: any;
   org: any;
@@ -218,8 +222,8 @@ const invoiceForUsageImmediately = async ({
       stripe_id: stripeInvoiceItem.id,
     });
 
-    await CustomerEntitlementService.update({
-      sb,
+    await CusEntService.update({
+      db,
       id: item.relatedCusEnt!.id,
       updates: {
         balance: 0,
@@ -310,6 +314,7 @@ const getRemainingUsagesPreview = async ({
 };
 
 export const billForRemainingUsages = async ({
+  db,
   logger,
   sb,
   attachParams,
@@ -318,6 +323,7 @@ export const billForRemainingUsages = async ({
   shouldPreview = false,
   bilImmediatelyOverride = false,
 }: {
+  db: DrizzleCli;
   logger: any;
   sb: any;
   attachParams: AttachParams;
@@ -409,6 +415,7 @@ export const billForRemainingUsages = async ({
 
   if (org.config?.bill_upgrade_immediately || bilImmediatelyOverride) {
     await invoiceForUsageImmediately({
+      db,
       intervalToInvoiceItems,
       customer,
       org,
@@ -420,12 +427,12 @@ export const billForRemainingUsages = async ({
     });
   } else {
     await addUsageToNextInvoice({
+      db,
       intervalToInvoiceItems,
       intervalToSub,
       customer,
       org,
       logger,
-      sb,
       attachParams,
       curCusProduct,
     });

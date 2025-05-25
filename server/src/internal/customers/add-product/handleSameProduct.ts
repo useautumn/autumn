@@ -15,14 +15,14 @@ import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { CusProductService } from "../products/CusProductService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
+
 import {
   getStripeSubs,
   getUsageBasedSub,
 } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
-import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
+import { CusEntService } from "../entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
 import { cancelFutureProductSchedule } from "../change-product/scheduleUtils.js";
 import {
@@ -33,6 +33,7 @@ import { fullCusProductToProduct } from "../products/cusProductUtils.js";
 
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getOptionsToUpdate = (
   oldOptionsList: any[],
@@ -57,12 +58,14 @@ export const getOptionsToUpdate = (
 };
 
 const updateFeatureQuantity = async ({
+  db,
   sb,
   org,
   customer,
   curCusProduct,
   optionsToUpdate,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   customer: Customer;
@@ -149,8 +152,8 @@ const updateFeatureQuantity = async ({
         balance: new Decimal(cusEnt?.balance || 0).plus(difference).toNumber(),
       };
 
-      await CustomerEntitlementService.update({
-        sb,
+      await CusEntService.update({
+        db,
         id: cusEnt.id,
         updates,
       });
@@ -209,6 +212,7 @@ export const hasEntitlementsChanged = ({
 };
 
 export const handleSameMainProduct = async ({
+  db,
   sb,
   curScheduledProduct,
   curMainProduct,
@@ -217,6 +221,7 @@ export const handleSameMainProduct = async ({
   req,
   res,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   curScheduledProduct: any;
   curMainProduct: FullCusProduct;
@@ -357,6 +362,7 @@ export const handleSameMainProduct = async ({
   // 2. Update quantities
   if (optionsToUpdate.length > 0) {
     await updateFeatureQuantity({
+      db,
       sb,
       org,
       customer,

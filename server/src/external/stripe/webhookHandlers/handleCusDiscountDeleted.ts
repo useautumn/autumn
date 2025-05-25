@@ -4,6 +4,7 @@ import { createStripeCli } from "../utils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { notNullish, timeout } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleDiscountCompleted = async ({
   sb,
@@ -24,7 +25,7 @@ export const handleDiscountCompleted = async ({
 
   if (!customer) {
     logger.warn(
-      `Checking discount completed: customer ${stripeCusId} not found`
+      `Checking discount completed: customer ${stripeCusId} not found`,
     );
     return;
   }
@@ -37,7 +38,7 @@ export const handleDiscountCompleted = async ({
 
   if (redemptions.length == 0) {
     logger.info(
-      `Checking discount completed: no redemptions available for customer ${customer.id}`
+      `Checking discount completed: no redemptions available for customer ${customer.id}`,
     );
     return;
   }
@@ -46,12 +47,12 @@ export const handleDiscountCompleted = async ({
   let reward = redemption.reward_program.reward;
 
   let stripeCus = (await stripeCli.customers.retrieve(
-    stripeCusId
+    stripeCusId,
   )) as Stripe.Customer;
 
   if (stripeCus && notNullish(stripeCus.discount)) {
     logger.info(
-      `Checking discount completed: stripe customer ${stripeCusId} already has a discount`
+      `Checking discount completed: stripe customer ${stripeCusId} already has a discount`,
     );
     return;
   }
@@ -69,13 +70,14 @@ export const handleDiscountCompleted = async ({
   });
 
   logger.info(
-    `Checking discount completed: applied reward ${reward.name} on customer ${customer.name} (${customer.id})`
+    `Checking discount completed: applied reward ${reward.name} on customer ${customer.name} (${customer.id})`,
   );
 
   logger.info(`Redemption ID: ${redemption.id}`);
 };
 
 export async function handleCusDiscountDeleted({
+  db,
   sb,
   org,
   discount,
@@ -83,6 +85,7 @@ export async function handleCusDiscountDeleted({
   logger,
   res,
 }: {
+  db: DrizzleCli;
   sb: any;
   org: any;
   discount: any;
@@ -128,12 +131,12 @@ export async function handleCusDiscountDeleted({
   });
 
   let stripeCus = (await stripeCli.customers.retrieve(
-    discount.customer
+    discount.customer,
   )) as Stripe.Customer;
 
   if (stripeCus && notNullish(stripeCus.discount)) {
     logger.info(
-      `discount.deleted: stripe customer ${discount.customer} already has a discount`
+      `discount.deleted: stripe customer ${discount.customer} already has a discount`,
     );
     return;
   }
@@ -159,7 +162,7 @@ export async function handleCusDiscountDeleted({
   });
 
   logger.info(
-    `discount.deleted: applied reward ${reward.name} on customer ${customer.name} (${customer.id})`
+    `discount.deleted: applied reward ${reward.name} on customer ${customer.name} (${customer.id})`,
   );
   logger.info(`Redemption ID: ${redemption.id}`);
 }

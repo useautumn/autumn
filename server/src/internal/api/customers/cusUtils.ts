@@ -18,8 +18,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { AppEnv } from "@autumn/shared";
 
 import { CusService } from "@/internal/customers/CusService.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 
 import { processFullCusProduct } from "@/internal/customers/products/cusProductUtils.js";
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
@@ -27,8 +25,7 @@ import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js"
 import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { nullish } from "@/utils/genUtils.js";
 
 export const updateCustomerDetails = async ({
   sb,

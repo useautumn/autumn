@@ -16,14 +16,17 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleSubCreated = async ({
+  db,
   sb,
   subscription,
   org,
   env,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   subscription: Stripe.Subscription;
   org: Organization;

@@ -1,5 +1,5 @@
 import { CusService } from "@/internal/customers/CusService.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
@@ -391,8 +391,8 @@ export const createEntities = async ({
         fromEntities: true,
       });
 
-      await CustomerEntitlementService.update({
-        sb,
+      await CusEntService.update({
+        db,
         id: mainCusEnt.id,
         updates: { balance: mainCusEnt.balance - newCount },
       });
@@ -426,8 +426,8 @@ export const createEntities = async ({
         }
       }
 
-      await CustomerEntitlementService.update({
-        sb,
+      await CusEntService.update({
+        db,
         id: linkedCusEnt.id,
         updates: { entities: newEntities },
       });

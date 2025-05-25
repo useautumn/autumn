@@ -163,8 +163,8 @@ export const handleExistingProduct = async ({
   invoiceOnly?: boolean;
   isCustom?: boolean;
 }): Promise<{ curCusProduct: FullCusProduct | null; done: boolean }> => {
-  const { sb, logtail: logger } = req;
-  const { customer, products, cusProducts } = attachParams;
+  const { db, sb, logtail: logger } = req;
+  const { products, cusProducts } = attachParams;
 
   if (products.length > 1) {
     return await handleExistingMultipleProducts({
@@ -210,6 +210,7 @@ export const handleExistingProduct = async ({
   // Case 3: Main product is same -- remove scheduled and update quantity
   if (curMainProduct?.product.id === product.id) {
     return await handleSameMainProduct({
+      db,
       sb,
       curMainProduct,
       curScheduledProduct,

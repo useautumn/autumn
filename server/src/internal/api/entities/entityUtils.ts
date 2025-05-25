@@ -1,6 +1,7 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { submitUsageToStripe } from "@/external/stripe/stripeMeterUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import {
   getBillingType,
   roundUsage,
@@ -83,7 +84,7 @@ export const isLinkedToEntity = ({
 };
 
 export const removeEntityFromCusEnt = async ({
-  sb,
+  db,
   cusEnt,
   entity,
   logger,
@@ -92,7 +93,7 @@ export const removeEntityFromCusEnt = async ({
   org,
   env,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   cusEnt: FullCustomerEntitlement;
   entity: Entity;
   logger: any;
@@ -148,8 +149,8 @@ export const removeEntityFromCusEnt = async ({
 
   delete newEntities[entity.id];
 
-  await CustomerEntitlementService.update({
-    sb,
+  await CusEntService.update({
+    db,
     id: cusEnt.id,
     updates: {
       entities: newEntities,

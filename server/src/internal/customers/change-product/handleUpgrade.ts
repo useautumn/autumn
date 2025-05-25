@@ -286,6 +286,7 @@ const handleOnlyEntsChanged = async ({
   });
 
   await createFullCusProduct({
+    db: req.db,
     sb: req.sb,
     attachParams: attachToInsertParams(attachParams, attachParams.products[0]),
     subscriptionIds: curCusProduct.subscription_ids || [],
@@ -449,6 +450,7 @@ export const handleUpgrade = async ({
 
   logger.info("2. Bill for remaining usages");
   await billForRemainingUsages({
+    db: req.db,
     sb: req.sb,
     attachParams,
     curCusProduct,
@@ -486,10 +488,11 @@ export const handleUpgrade = async ({
   logger.info("3. Creating new full cus product");
 
   await createFullCusProduct({
+    db: req.db,
     sb: req.sb,
     attachParams: attachToInsertParams(attachParams, products[0]),
     subscriptionIds: newSubIds,
-    // keepResetIntervals: true,
+
     anchorToUnix:
       newSubs.length > 0 ? newSubs[0].current_period_end * 1000 : undefined,
 

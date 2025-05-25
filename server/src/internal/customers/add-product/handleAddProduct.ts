@@ -48,6 +48,7 @@ import { SuccessCode } from "@autumn/shared";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
 import { getInvoiceItems } from "../invoices/invoiceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleBillNowPrices = async ({
   sb,
@@ -173,6 +174,7 @@ export const handleBillNowPrices = async ({
   for (const product of products) {
     batchInsert.push(
       createFullCusProduct({
+        db: req.db,
         sb,
         attachParams: attachToInsertParams(attachParams, product),
         subscriptionIds: subscriptions.map((s) => s.id),
@@ -417,6 +419,7 @@ export const handleOneOffPrices = async ({
   for (const product of products) {
     batchInsert.push(
       createFullCusProduct({
+        db: req.db,
         sb,
         attachParams: attachToInsertParams(attachParams, product),
         lastInvoiceId: stripeInvoice.id,
@@ -467,6 +470,7 @@ export const handleAddProduct = async ({
   disableMerge = false,
 }: {
   req: {
+    db: DrizzleCli;
     sb: SupabaseClient;
     logtail: any;
   };
@@ -531,6 +535,7 @@ export const handleAddProduct = async ({
   for (const product of products) {
     batchInsert.push(
       createFullCusProduct({
+        db: req.db,
         sb: req.sb,
         attachParams: attachToInsertParams(attachParams, product),
         subscriptionId: undefined,

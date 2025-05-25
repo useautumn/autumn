@@ -18,13 +18,14 @@ export const handleAddFreeProduct = async ({
 
   console.log(
     `Adding free product(s) ${products.map(
-      (product) => product.name
-    )} to customer ${customer.id}`
+      (product) => product.name,
+    )} to customer ${customer.id}`,
   );
 
   // 1. Just add product and entitlements
   for (const product of products) {
     await createFullCusProduct({
+      db: req.db,
       sb: req.sb,
       attachParams: attachToInsertParams(attachParams, product),
       subscriptionId: undefined,
@@ -43,7 +44,7 @@ export const handleAddFreeProduct = async ({
           .map((p) => p.name)
           .join(", ")}`,
         scenario: AttachScenario.New,
-      })
+      }),
     );
   } else {
     res.status(200).json({ success: true });
