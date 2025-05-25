@@ -32,7 +32,7 @@ export const getExistingCusProducts = async ({
 }: {
   product: Product;
   cusProducts: FullCusProduct[];
-  internalEntityId?: string;
+  internalEntityId?: string | null;
 }) => {
   if (!cusProducts || cusProducts.length === 0) {
     return {

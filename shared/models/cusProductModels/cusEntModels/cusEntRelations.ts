@@ -9,7 +9,7 @@ import { customerProducts } from "../cusProductTable.js";
 export const customerEntitlementsRelations = relations(
   customerEntitlements,
   ({ one, many }) => ({
-    customerProduct: one(customerProducts, {
+    customer_product: one(customerProducts, {
       fields: [customerEntitlements.customer_product_id],
       references: [customerProducts.id],
     }),

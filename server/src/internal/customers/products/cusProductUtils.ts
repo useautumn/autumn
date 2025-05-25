@@ -44,62 +44,12 @@ import {
   constructProductsUpdatedData,
 } from "@/external/svix/handleProductsUpdatedWebhook.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 
 export const isActiveStatus = (status: CusProductStatus) => {
   return (
     status === CusProductStatus.Active || status === CusProductStatus.PastDue
   );
-};
-
-// 1. Delete future product
-export const uncancelCurrentProduct = async ({
-  sb,
-  curCusProduct,
-  org,
-  env,
-  internalCustomerId,
-  productGroup,
-}: {
-  sb: SupabaseClient;
-  curCusProduct?: FullCusProduct;
-  org: Organization;
-  internalCustomerId: string;
-  productGroup: string;
-  env: AppEnv;
-}) => {
-  if (!curCusProduct) {
-    curCusProduct = await CusProductService.getCurrentProductByGroup({
-      sb,
-      internalCustomerId: internalCustomerId,
-      productGroup: productGroup,
-    });
-  }
-
-  const stripeCli = createStripeCli({
-    org,
-    env,
-  });
-
-  if (
-    curCusProduct &&
-    curCusProduct.subscription_ids &&
-    curCusProduct.subscription_ids.length > 0
-  ) {
-    const uncancelSub = async (subId: string) => {
-      await stripeCli.subscriptions.update(subId, {
-        cancel_at: null,
-      });
-    };
-
-    let subIds = curCusProduct.subscription_ids;
-    if (subIds && subIds.length > 0) {
-      const batchUncancel = [];
-      for (const subId of subIds) {
-        batchUncancel.push(uncancelSub(subId));
-      }
-      await Promise.all(batchUncancel);
-    }
-  }
 };
 
 // 1. Cancel cusProductSubscriptions
@@ -247,7 +197,7 @@ export const expireAndActivate = async ({
 }) => {
   // 1. Expire current product
   await CusProductService.update({
-    sb,
+    db,
     cusProductId: cusProduct.id,
     updates: { status: CusProductStatus.Expired, ended_at: Date.now() },
   });
@@ -263,6 +213,7 @@ export const expireAndActivate = async ({
 };
 
 export const activateFutureProduct = async ({
+  db,
   sb,
   cusProduct,
   subscription,
@@ -270,6 +221,7 @@ export const activateFutureProduct = async ({
   env,
   logger = console,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   cusProduct: FullCusProduct;
   subscription: Stripe.Subscription;
@@ -282,10 +234,15 @@ export const activateFutureProduct = async ({
     env,
   });
 
-  const futureProduct = await CusProductService.getFutureProduct({
-    sb,
+  let cusProducts = await CusProductService.list({
+    db,
     internalCustomerId: cusProduct.internal_customer_id,
-    productGroup: cusProduct.product.group,
+    inStatuses: [CusProductStatus.Scheduled],
+  });
+
+  let { curScheduledProduct: futureProduct } = await getExistingCusProducts({
+    product: cusProduct.product,
+    cusProducts,
   });
 
   if (!futureProduct) {
@@ -299,16 +256,16 @@ export const activateFutureProduct = async ({
 
     await deleteScheduledIds({
       stripeCli,
-      scheduledIds: futureProduct.scheduled_ids,
+      scheduledIds: futureProduct.scheduled_ids || [],
     });
     await CusProductService.delete({
-      sb,
+      db,
       cusProductId: futureProduct.id,
     });
     return false;
   } else {
     await CusProductService.update({
-      sb,
+      db,
       cusProductId: futureProduct.id,
       updates: { status: CusProductStatus.Active },
     });

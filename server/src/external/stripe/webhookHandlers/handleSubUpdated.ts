@@ -63,13 +63,11 @@ export const handleSubscriptionUpdated = async ({
 
   // Get cus products by stripe sub id
   const cusProducts = await CusProductService.getByStripeSubId({
-    sb,
+    db,
     stripeSubId: subscription.id,
     orgId: org.id,
     env,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-    withCusPrices: true,
-    withCusEnts: true,
   });
 
   if (cusProducts.length === 0) {
@@ -113,7 +111,7 @@ export const handleSubscriptionUpdated = async ({
 
   // 1. Fetch subscription
   const updatedCusProducts = await CusProductService.updateByStripeSubId({
-    sb,
+    db,
     stripeSubId: subscription.id,
     updates: {
       status: subStatusMap[subscription.status] || CusProductStatus.Unknown,
@@ -258,6 +256,7 @@ export const handleSubscriptionUpdated = async ({
           env,
         });
         await cancelFutureProductSchedule({
+          db,
           sb,
           org,
           stripeCli,
@@ -270,7 +269,7 @@ export const handleSubscriptionUpdated = async ({
         });
 
         await CusProductService.delete({
-          sb,
+          db,
           cusProductId: curScheduledProduct.id,
         });
       }

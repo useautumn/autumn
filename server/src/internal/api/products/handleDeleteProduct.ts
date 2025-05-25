@@ -29,10 +29,10 @@ export const handleDeleteProduct = (req: any, res: any) =>
         });
       }
 
-      let cusProducts = await CusProductService.getByInternalProductId(
-        sb,
-        product.internal_id,
-      );
+      let cusProducts = await CusProductService.getByInternalProductId({
+        db,
+        internalProductId: product.internal_id,
+      });
 
       if (cusProducts.length > 0) {
         throw new RecaseError({

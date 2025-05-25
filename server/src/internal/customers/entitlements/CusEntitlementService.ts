@@ -45,6 +45,10 @@ export class CusEntService {
     db: DrizzleCli;
     data: CustomerEntitlement[];
   }) {
+    if (Array.isArray(data) && data.length === 0) {
+      return;
+    }
+
     await db.insert(customerEntitlements).values(data as any); // DRIZZLE TYPE REFACTOR
   }
 

@@ -171,6 +171,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 
           if (cusProduct.status == CusProductStatus.Scheduled) {
             await removeScheduledProduct({
+              db,
               sb,
               cusProduct,
               cusProducts,

@@ -19,7 +19,7 @@ const printCusProducts = (cusProducts: FullCusProduct[]) => {
     console.log(`Product: ${cusProduct.product.name}`);
     for (let cusEnt of cusProduct.customer_entitlements) {
       console.log(
-        `Entitlement: ${cusEnt.entitlement.feature_id}, Balance: ${cusEnt.balance}`
+        `Entitlement: ${cusEnt.entitlement.feature_id}, Balance: ${cusEnt.balance}`,
       );
     }
 
@@ -96,7 +96,7 @@ export class CusService {
       trialsUsed = trialsUsed.filter(
         (trial: any, index: number, self: any) =>
           index ===
-          self.findIndex((t: any) => t.product_id === trial.product_id)
+          self.findIndex((t: any) => t.product_id === trial.product_id),
       );
     }
 
@@ -343,7 +343,7 @@ export class CusService {
       ), 
       
       entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
-      prices:customer_prices(*, price:prices(*))`
+      prices:customer_prices(*, price:prices(*))`,
       )
       .eq("env", env)
       .eq("org_id", orgId);
@@ -414,7 +414,7 @@ export class CusService {
         customerPrefix && {
           foreignTable: "customers",
           referencedTable: "customers",
-        }
+        },
       );
     }
 
@@ -425,7 +425,7 @@ export class CusService {
         customerPrefix && {
           foreignTable: "customers",
           referencedTable: "customers",
-        }
+        },
       );
     }
 
@@ -483,7 +483,7 @@ export class CusService {
         customer:customers!inner(*), product:products!inner(id, name, version)`,
         {
           count: "exact",
-        }
+        },
       )
       .eq("customer.org_id", orgId)
       .eq("customer.env", env)
@@ -598,7 +598,7 @@ export class CusService {
     orgId: string,
     env: AppEnv,
     page: number = 1,
-    pageSize: number = 50
+    pageSize: number = 50,
   ) {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -830,30 +830,3 @@ export class CusService {
     return data;
   }
 }
-
-// const query = sb
-//   .from("customers")
-//   .select(
-//     `
-//       *,
-//       customer_products:customer_products(*
-//         , customer_entitlements:customer_entitlements(*,
-//           entitlement:entitlements!inner(*,
-//             feature:features!inner(*)
-//           )
-//         )
-//         ${
-//           withPrices
-//             ? ", customer_prices:customer_prices(*, price:prices!inner(*))"
-//             : ""
-//         }
-//         ${withProduct ? ", product:products!inner(*)" : ""}
-//       )
-//     `
-//   )
-//   .eq("internal_id", internalCustomerId)
-//   .order("customer_products.created_at", {
-//     ascending: false,
-//     referencedTable: "customer_products",
-//   })
-//   .limit(15, { referencedTable: "customer_products" });

@@ -278,7 +278,7 @@ const handleOnlyEntsChanged = async ({
 
   // Remove subscription from previous cus product
   await CusProductService.update({
-    sb: req.sb,
+    db: req.db,
     cusProductId: curCusProduct.id,
     updates: {
       subscription_ids: [],
@@ -462,7 +462,7 @@ export const handleUpgrade = async ({
     "2.1. Remove old subscription ID from old cus product and expire",
   );
   await CusProductService.update({
-    sb: req.sb,
+    db: req.db,
     cusProductId: curCusProduct.id,
     updates: {
       subscription_ids: curCusProduct.subscription_ids!.filter(
