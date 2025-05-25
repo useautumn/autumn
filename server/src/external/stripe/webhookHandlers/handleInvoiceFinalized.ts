@@ -44,14 +44,13 @@ export const handleInvoiceFinalized = async ({
     });
 
     const activeProducts = await CusProductService.getByStripeSubId({
-      sb,
+      db,
       stripeSubId: invoice.subscription as string,
       orgId: org.id,
       env,
       inStatuses: [CusProductStatus.Active],
-      withCusPrices: true,
-      withCusEnts: true,
     });
+
     if (activeProducts.length === 0) {
       console.log("invoice.finalized: No active products found");
       return;

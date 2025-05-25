@@ -153,7 +153,7 @@ export const handleCheckoutSessionCompleted = async ({
   let checkoutSub;
   if (checkoutSession.subscription) {
     const activeCusProducts = await CusProductService.getByStripeSubId({
-      sb,
+      db,
       stripeSubId: checkoutSession.subscription as string,
       orgId: org.id,
       env,

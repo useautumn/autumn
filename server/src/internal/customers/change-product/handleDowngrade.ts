@@ -219,7 +219,7 @@ export const handleDowngrade = async ({
             scheduleId,
           ];
           await CusProductService.update({
-            sb: req.sb,
+            db: req.db,
             cusProductId: otherCusProduct.id,
             updates: { scheduled_ids: newScheduledIds },
           });
@@ -230,7 +230,7 @@ export const handleDowngrade = async ({
 
   // Remove scheduled ids from curCusProduct
   await CusProductService.update({
-    sb: req.sb,
+    db: req.db,
     cusProductId: curCusProduct.id,
     updates: {
       scheduled_ids: curCusProduct.scheduled_ids?.filter(
@@ -256,7 +256,7 @@ export const handleDowngrade = async ({
 
   // 5. Updating current cus product canceled_at...
   await CusProductService.update({
-    sb: req.sb,
+    db: req.db,
     cusProductId: curCusProduct.id,
     updates: {
       canceled_at: latestPeriodEnd * 1000,

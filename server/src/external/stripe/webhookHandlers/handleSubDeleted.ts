@@ -25,6 +25,7 @@ import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { billForRemainingUsages } from "@/internal/customers/change-product/billRemainingUsages.js";
 import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 
 const handleCusProductDeleted = async ({
   db,
@@ -113,7 +114,7 @@ const handleCusProductDeleted = async ({
 
     // Remove subscription_id from cus product
     await CusProductService.update({
-      sb,
+      db,
       cusProductId: cusProduct.id,
       updates: {
         subscription_ids: cusProduct.subscription_ids?.filter(
@@ -127,7 +128,7 @@ const handleCusProductDeleted = async ({
 
   // 1. Expire current product
   await CusProductService.update({
-    sb,
+    db,
     cusProductId: cusProduct.id,
     updates: {
       status: CusProductStatus.Expired,
@@ -153,6 +154,7 @@ const handleCusProductDeleted = async ({
   }
 
   const activatedFuture = await activateFutureProduct({
+    db,
     sb,
     cusProduct,
     subscription,
@@ -166,11 +168,16 @@ const handleCusProductDeleted = async ({
     return;
   }
 
-  // 2. Either activate future or default product
-  const currentProduct = await CusProductService.getCurrentProductByGroup({
-    sb,
+  // Double check customer's current cus product...
+  let cusProducts = await CusProductService.list({
+    db,
     internalCustomerId: cusProduct.customer.internal_id,
-    productGroup: cusProduct.product.group,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+  });
+
+  let { curMainProduct } = await getExistingCusProducts({
+    product: cusProduct.product,
+    cusProducts,
   });
 
   await activateDefaultProduct({
@@ -180,10 +187,8 @@ const handleCusProductDeleted = async ({
     org,
     sb,
     env,
-    curCusProduct: currentProduct,
+    curCusProduct: curMainProduct || undefined,
   });
-
-  // Cancel other subscriptions
 
   await cancelCusProductSubscriptions({
     sb,
@@ -211,12 +216,10 @@ export const handleSubscriptionDeleted = async ({
 }) => {
   console.log("Handling subscription.deleted: ", subscription.id);
   const activeCusProducts = await CusProductService.getByStripeSubId({
-    sb,
+    db,
     stripeSubId: subscription.id,
     orgId: org.id,
     env,
-    withCusEnts: true,
-    withCusPrices: true,
   });
 
   if (activeCusProducts.length === 0) {

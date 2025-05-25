@@ -163,7 +163,7 @@ export const updateOneTimeCusProduct = async ({
   }
 
   await CusProductService.update({
-    sb,
+    db,
     cusProductId: existingCusProduct.id,
     updates: {
       options: newOptionsList,

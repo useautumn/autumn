@@ -73,6 +73,7 @@ productRouter.get("/counts", async (req: any, res) => {
     let counts = await Promise.all(
       products.map(async (product) => {
         return CusProdReadService.getCounts({
+          db,
           sb,
           internalProductId: product.internal_id,
         });
@@ -179,7 +180,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
 
 productRouter.get("/:productId/count", async (req: any, res) => {
   try {
-    const { db, sb, orgId, env } = req;
+    const { db, orgId, env, sb } = req;
     const { productId } = req.params;
     const { version } = req.query;
 
@@ -203,7 +204,8 @@ productRouter.get("/:productId/count", async (req: any, res) => {
 
     // Get counts from postgres
     const counts = await CusProdReadService.getCounts({
-      sb: req.sb,
+      db,
+      sb,
       internalProductId: product.internal_id,
     });
 

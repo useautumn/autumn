@@ -161,7 +161,7 @@ const updateFeatureQuantity = async ({
   }
 
   await CusProductService.update({
-    sb,
+    db,
     cusProductId: curCusProduct.id,
     updates: { options: optionsToUpdate.map((o) => o.new) },
   });
@@ -319,6 +319,7 @@ export const handleSameMainProduct = async ({
 
   if (curScheduledProduct) {
     await cancelFutureProductSchedule({
+      db,
       sb,
       org,
       stripeCli,
@@ -331,7 +332,7 @@ export const handleSameMainProduct = async ({
 
     // Delete scheduled product
     await CusProductService.delete({
-      sb,
+      db,
       cusProductId: curScheduledProduct.id,
     });
 

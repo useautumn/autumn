@@ -86,6 +86,9 @@ export const ErrCode = {
   ProductAlreadyExists: "product_already_exists",
   ProductHasRewardPrograms: "product_has_reward_programs",
 
+  // Cus Product
+  CusProductNotFound: "cus_product_not_found",
+
   // Entitlements
   InvalidEntitlement: "invalid_entitlement",
   CreateEntitlementFailed: "create_entitlement_failed",

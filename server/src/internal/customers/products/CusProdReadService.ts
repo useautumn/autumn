@@ -1,159 +1,125 @@
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, ErrCode } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { customerProducts } from "@shared/models/cusProductModels/cusProductTable.js";
+import {
+  eq,
+  and,
+  isNotNull,
+  sql,
+  countDistinct,
+  count,
+  or,
+  inArray,
+} from "drizzle-orm";
+import { StatusCodes } from "http-status-codes";
+import RecaseError from "@/utils/errorUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Client } from "pg";
+import assert from "assert";
 
 export class CusProdReadService {
   static getCounts = async ({
-    sb,
+    db,
     internalProductId,
+    sb,
   }: {
+    db: DrizzleCli;
     sb: SupabaseClient;
     internalProductId: string;
   }) => {
-    let { data: result, error } = await sb.rpc("get_product_stats", {
-      p_internal_id: internalProductId,
-    });
+    let result = await db
+      .select({
+        active: countDistinct(
+          sql`CASE WHEN ${eq(customerProducts.status, CusProductStatus.Active)} THEN ${customerProducts.internal_customer_id} END`,
+        ).as("active"),
+        canceled: count(
+          sql`CASE WHEN ${isNotNull(customerProducts.canceled_at)} AND ${eq(customerProducts.status, CusProductStatus.Active)} THEN 1 END`,
+        ).as("canceled"),
+        custom: count(
+          sql`CASE WHEN ${eq(customerProducts.is_custom, true)} AND ${eq(customerProducts.status, CusProductStatus.Active)} THEN 1 END`,
+        ).as("custom"),
+        trialing: count(
+          sql`CASE WHEN ${isNotNull(customerProducts.trial_ends_at)} AND ${sql`${customerProducts.trial_ends_at} > (EXTRACT(EPOCH FROM NOW()) * 1000)::bigint`} AND ${eq(customerProducts.status, CusProductStatus.Active)} THEN 1 END`,
+        ).as("trialing"),
+        all: countDistinct(customerProducts.internal_customer_id).as("all"),
+      })
+      .from(customerProducts)
+      .where(eq(customerProducts.internal_product_id, internalProductId));
 
-    if (error) {
-      console.error("Error getting counts", error);
-      throw error;
-    }
+    // let { data, error } = await sb.rpc("get_product_stats", {
+    //   p_internal_id: internalProductId,
+    // });
 
-    return {
-      active: result.f1,
-      canceled: result.f2,
-      custom: result.f3,
-      trialing: result.f4,
-      all: result.f5,
-    };
+    // // Compare the results
+    // if (data) {
+    //   if (result[0].active !== data.f1) {
+    //     console.log(`Active count mismatch: ${result[0].active} vs ${data.f1}`);
+    //   }
+    //   if (result[0].canceled !== data.f2) {
+    //     console.log(
+    //       `Canceled count mismatch: ${result[0].canceled} vs ${data.f2}`,
+    //     );
+    //   }
+    //   if (result[0].custom !== data.f3) {
+    //     console.log(`Custom count mismatch: ${result[0].custom} vs ${data.f3}`);
+    //   }
+    //   if (result[0].trialing !== data.f4) {
+    //     console.log(
+    //       `Trialing count mismatch: ${result[0].trialing} vs ${data.f4}`,
+    //     );
+    //   }
+    //   if (result[0].all !== data.f5) {
+    //     console.log(`All count mismatch: ${result[0].all} vs ${data.f5}`);
+    //   }
+    // }
+
+    return result[0];
   };
-  // Get count of active cus products by product id
-  static async getCountByInternalProductId({
-    sb,
-    orgId,
-    env,
-    internalProductId,
-    inStatuses,
-  }: {
-    sb: SupabaseClient;
-    orgId: string;
-    env: string;
-    internalProductId: string;
-    inStatuses?: string[];
-  }) {
-    let query = sb
-      .from("customer_products")
-      .select("*, product:products!inner(*)", { count: "exact", head: true })
-      .eq("product.org_id", orgId)
-      .eq("product.env", env)
-      .eq("internal_product_id", internalProductId);
-
-    if (inStatuses) {
-      query = query.in("status", inStatuses);
-    }
-
-    const { count, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    return count || 0;
-  }
-
-  static async getCanceledCountByInternalProductId({
-    sb,
-    orgId,
-    env,
-    internalProductId,
-  }: {
-    sb: SupabaseClient;
-    orgId: string;
-    env: string;
-    internalProductId: string;
-  }) {
-    const { count, error } = await sb
-      .from("customer_products")
-      .select("*", { count: "exact", head: true })
-      .eq("internal_product_id", internalProductId)
-      .eq("status", CusProductStatus.Active)
-      .not("canceled_at", "is", null);
-
-    if (error) {
-      console.error("Error getting canceled count", error);
-      throw error;
-    }
-
-    return count || 0;
-  }
-
-  static async getCustomCountByInternalProductId({
-    sb,
-    internalProductId,
-  }: {
-    sb: SupabaseClient;
-    internalProductId: string;
-  }) {
-    const { count, error } = await sb
-      .from("customer_products")
-      .select("*", { count: "exact", head: true })
-      .eq("internal_product_id", internalProductId)
-      .eq("is_custom", true);
-
-    if (error) {
-      console.error("Error getting custom count", error);
-      throw error;
-    }
-
-    return count || 0;
-  }
-
-  static async getTrialingCount({
-    sb,
-    internalProductId,
-  }: {
-    sb: SupabaseClient;
-    internalProductId: string;
-  }) {
-    const { count, error } = await sb
-      .from("customer_products")
-      .select("*", { count: "exact", head: true })
-      .eq("internal_product_id", internalProductId)
-      .eq("status", CusProductStatus.Active)
-      .gt("trial_ends_at", Date.now());
-
-    if (error) {
-      console.error("Error getting trialing count", error);
-      throw error;
-    }
-
-    return count || 0;
-  }
-
-  static async getByFeature({
-    sb,
-    internalFeatureId,
-  }: {
-    sb: SupabaseClient;
-    internalFeatureId: string;
-  }) {
-    let { data, error } = await sb
-      .from("customer_products")
-      .select(
-        `*, 
-        customer_entitlements!inner(*, entitlement:entitlements!inner(*, feature:features!inner(*))), 
-        product:products!inner(*)`
-      )
-      .eq(
-        "customer_entitlements.entitlement.internal_feature_id",
-        internalFeatureId
-      )
-      .limit(1);
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
 }
+
+// let customQuery = db
+// .select({ count: countDistinct(customerProducts.internal_customer_id) })
+// .from(customerProducts)
+// .where(
+//   and(
+//     eq(customerProducts.internal_product_id, internalProductId),
+//     eq(customerProducts.is_custom, true),
+//     inArray(customerProducts.status, statuses),
+//   ),
+// )
+// .as("custom");
+
+// let trialingQuery = db
+// .select({ count: countDistinct(customerProducts.internal_customer_id) })
+// .from(customerProducts)
+// .where(
+//   and(
+//     eq(customerProducts.internal_product_id, internalProductId),
+//     isNotNull(customerProducts.trial_ends_at),
+//     sql`${customerProducts.trial_ends_at} > (EXTRACT(EPOCH FROM NOW()) * 1000)::bigint`,
+//     inArray(customerProducts.status, statuses),
+//   ),
+// )
+// .as("trialing");
+
+// let allQuery = db
+// .select({ count: countDistinct(customerProducts.internal_customer_id) })
+// .from(customerProducts)
+// .where(eq(customerProducts.internal_product_id, internalProductId))
+// .as("all");
+
+// let { data: result, error } = await sb.rpc("get_product_stats", {
+//   p_internal_id: internalProductId,
+// });
+
+// if (error) {
+//   console.error("Error getting counts", error);
+//   throw error;
+// }
+
+// return {
+//   active: result.f1,
+//   canceled: result.f2,
+//   custom: result.f3,
+//   trialing: result.f4,
+//   all: result.f5,
+// };

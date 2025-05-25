@@ -119,7 +119,7 @@ describe(chalk.yellowBright("Top ups"), () => {
   });
 });
 
-describe.skip(chalk.yellowBright("Testing o1 message top up"), () => {
+describe(chalk.yellowBright("Testing o1 message top up"), () => {
   let customerId = "alex-o1-top-up-customer";
   let o1TopUpQuantity = Math.floor(Math.random() * 15);
   let billingUnits = alexProducts.o1TopUps.prices[0].config.billing_units;

@@ -41,6 +41,7 @@ import {
 import { constructProductsUpdatedData } from "@/external/svix/handleProductsUpdatedWebhook.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "../entitlements/CusEntitlementService.js";
+import { CusPriceService } from "../prices/CusPriceService.js";
 export const initCusPrice = ({
   price,
   customer,
@@ -148,57 +149,39 @@ export const initCusProduct = ({
 
 export const insertFullCusProduct = async ({
   db,
-  sb,
   cusProd,
   cusEnts,
   cusPrices,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   cusProd: CusProduct;
   cusEnts: CustomerEntitlement[];
   cusPrices: CustomerPrice[];
 }) => {
-  const { error: prodError } = await sb
-    .from("customer_products")
-    .insert(cusProd);
-
-  if (prodError) {
-    console.log("Error inserting customer product: ", prodError);
-    throw new RecaseError({
-      message: "Error inserting customer product",
-      code: ErrCode.InternalError,
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-    });
-  }
+  await CusProductService.insert({
+    db,
+    data: cusProd,
+  });
 
   await CusEntService.insert({
     db,
     data: cusEnts,
   });
 
-  const { error: priceError } = await sb
-    .from("customer_prices")
-    .insert(cusPrices);
-
-  if (priceError) {
-    console.log("Error inserting customer prices: ", priceError);
-    throw new RecaseError({
-      message: "Error inserting customer prices",
-      code: ErrCode.InternalError,
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-    });
-  }
+  await CusPriceService.insert({
+    db,
+    data: cusPrices,
+  });
 };
 
 export const expireOrDeleteCusProduct = async ({
-  sb,
+  db,
   startsAt,
   product,
   cusProducts,
   internalEntityId,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   startsAt?: number;
   product: FullProduct;
   cusProducts?: FullCusProduct[];
@@ -217,7 +200,7 @@ export const expireOrDeleteCusProduct = async ({
 
     if (curScheduledProduct) {
       await CusProductService.delete({
-        sb,
+        db,
         cusProductId: curScheduledProduct.id,
       });
     }
@@ -230,7 +213,7 @@ export const expireOrDeleteCusProduct = async ({
 
     if (curMainProduct) {
       await CusProductService.update({
-        sb,
+        db,
         cusProductId: curMainProduct.id,
         updates: {
           status: CusProductStatus.Expired,
@@ -405,6 +388,7 @@ export const createFullCusProduct = async ({
 
   // 2. create customer prices
   const cusPrices: CustomerPrice[] = [];
+
   for (const price of prices) {
     const cusPrice: CustomerPrice = initCusPrice({
       price,
@@ -447,7 +431,7 @@ export const createFullCusProduct = async ({
   // Expire previous product if not one off
   if (!isOneOff(prices) && !product.is_add_on) {
     await expireOrDeleteCusProduct({
-      sb,
+      db,
       startsAt,
       product,
       cusProducts: attachParams.cusProducts,
@@ -457,7 +441,6 @@ export const createFullCusProduct = async ({
 
   await insertFullCusProduct({
     db,
-    sb,
     cusProd,
     cusEnts: deductedCusEnts,
     cusPrices,

@@ -24,7 +24,7 @@ export const customerEntitlements = pgTable(
     internal_feature_id: text().notNull(),
 
     unlimited: boolean("unlimited").default(false),
-    balance: numeric({ mode: "number" }),
+    balance: numeric({ mode: "number" }).notNull().default(0),
     created_at: numeric({ mode: "number" }).notNull(),
     next_reset_at: numeric({ mode: "number" }),
     usage_allowed: boolean("usage_allowed").default(false),

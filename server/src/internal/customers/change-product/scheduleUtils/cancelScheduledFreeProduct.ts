@@ -7,6 +7,7 @@ import { ItemSet } from "@/utils/models/ItemSet.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { updateScheduledSubWithNewItems } from "./updateScheduleWithNewItems.js";
 import { CusProductService } from "../../products/CusProductService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getOtherCusProductsOnSub = async ({
   cusProducts,
@@ -23,7 +24,7 @@ export const getOtherCusProductsOnSub = async ({
     if (
       cusProduct.id === curMainProduct.id ||
       !curMainSubIds?.some((subId) =>
-        cusProduct?.subscription_ids?.includes(subId)
+        cusProduct?.subscription_ids?.includes(subId),
       )
     ) {
       continue;
@@ -46,6 +47,7 @@ export const getOtherCusProductsOnSub = async ({
 
 // If other cus products on schedule, add cur main product regular items to schedule...
 export const addCurMainProductToSchedule = async ({
+  db,
   sb,
   org,
   env,
@@ -55,6 +57,7 @@ export const addCurMainProductToSchedule = async ({
   curMainProduct,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
@@ -75,7 +78,7 @@ export const addCurMainProductToSchedule = async ({
     const { schedule, interval } = scheduleObj;
 
     let oldItemSet = oldItemSets.find(
-      (itemSet) => itemSet.interval === interval
+      (itemSet) => itemSet.interval === interval,
     );
 
     await updateScheduledSubWithNewItems({
@@ -91,7 +94,7 @@ export const addCurMainProductToSchedule = async ({
 
     // Put back schedule id into curMainProduct
     await CusProductService.update({
-      sb,
+      db,
       cusProductId: curMainProduct!.id,
       updates: {
         scheduled_ids: [...(curMainProduct!.scheduled_ids || []), schedule.id],
@@ -99,7 +102,7 @@ export const addCurMainProductToSchedule = async ({
     });
 
     logger.info(
-      `✅ Added old items for product ${curMainProduct.product.name} to schedule: ${schedule.id}`
+      `✅ Added old items for product ${curMainProduct.product.name} to schedule: ${schedule.id}`,
     );
   }
 };

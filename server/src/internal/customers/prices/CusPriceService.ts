@@ -1,5 +1,9 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { FullCustomerEntitlement, FullCustomerPrice } from "@autumn/shared";
+import {
+  CustomerPrice,
+  FullCustomerEntitlement,
+  FullCustomerPrice,
+} from "@autumn/shared";
 import { customerPrices } from "@shared/models/cusProductModels/cusPriceModels/cusPriceTable.js";
 
 import { eq } from "drizzle-orm";
@@ -24,5 +28,19 @@ export class CusPriceService {
     ) as FullCustomerPrice | undefined;
 
     return matchingCustomerPrice || null;
+  }
+
+  static async insert({
+    db,
+    data,
+  }: {
+    db: DrizzleCli;
+    data: CustomerPrice[] | CustomerPrice;
+  }) {
+    if (Array.isArray(data) && data.length == 0) {
+      return;
+    }
+
+    await db.insert(customerPrices).values(data as any);
   }
 }

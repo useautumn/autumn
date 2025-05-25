@@ -47,7 +47,9 @@ export * from "./models/productV2Models/productItemModels/prodItemResponseModels
 
 // CUS PRODUCT MODELS
 export * from "./models/cusProductModels/cusProductModels.js";
+export * from "./models/cusProductModels/cusProductEnums.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntModels.js";
+export * from "./models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 
 // 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable.js";

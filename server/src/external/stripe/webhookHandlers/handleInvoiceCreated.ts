@@ -326,14 +326,22 @@ export const sendUsageAndReset = async ({
   logger: any;
   pg: Client;
 }) => {
-  // Get cus ents
-  const cusProductWithEntsAndPrices = await CusProductService.getEntsAndPrices({
-    sb,
-    cusProductId: activeProduct.id,
+  const fullCusProduct = await CusProductService.get({
+    db,
+    id: activeProduct.id,
+    orgId: org.id,
+    env,
   });
 
-  const cusEnts = cusProductWithEntsAndPrices.customer_entitlements;
-  const cusPrices = cusProductWithEntsAndPrices.customer_prices;
+  if (!fullCusProduct) {
+    logger.warn(
+      `sendUsageAndReset: no full cus product found for active product ${activeProduct.id}`,
+    );
+    return;
+  }
+
+  const cusEnts = fullCusProduct.customer_entitlements;
+  const cusPrices = fullCusProduct.customer_prices;
 
   const stripeCli = createStripeCli({ org, env });
   const customer = activeProduct.customer;
@@ -461,7 +469,7 @@ export const handleInvoiceCreated = async ({
 
   if (invoice.subscription) {
     const activeProducts = await CusProductService.getByStripeSubId({
-      sb,
+      db,
       stripeSubId: invoice.subscription as string,
       orgId: org.id,
       env,
@@ -532,7 +540,7 @@ export const handleInvoiceCreated = async ({
 
     const stripeSubs = await getStripeSubs({
       stripeCli: createStripeCli({ org, env }),
-      subIds: activeProducts.map((p) => p.subscription_ids).flat(),
+      subIds: activeProducts.map((p) => p.subscription_ids || []).flat(),
     });
 
     for (const activeProduct of activeProducts) {

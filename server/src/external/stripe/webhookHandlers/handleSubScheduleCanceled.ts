@@ -24,7 +24,7 @@ export const handleSubscriptionScheduleCanceled = async ({
   logger: any;
 }) => {
   const cusProductsOnSchedule = await CusProductService.getByScheduleId({
-    sb,
+    db,
     scheduleId: schedule.id,
     orgId: org.id,
     env,
@@ -51,7 +51,7 @@ export const handleSubscriptionScheduleCanceled = async ({
         (id: string) => id !== schedule.id,
       );
 
-      for (const id of otherScheduledIds) {
+      for (const id of otherScheduledIds || []) {
         try {
           await stripeCli.subscriptionSchedules.cancel(id);
           console.log("   - Cancelled scheduled id", id);
@@ -61,13 +61,13 @@ export const handleSubscriptionScheduleCanceled = async ({
       }
 
       await CusProductService.delete({
-        sb,
+        db,
         cusProductId: cusProduct.id,
       });
     } else {
       // Here -> Should do something different, maybe... reactivate future product?
       await CusProductService.update({
-        sb,
+        db,
         cusProductId: cusProduct.id,
         updates: {
           scheduled_ids: cusProduct.scheduled_ids?.filter(

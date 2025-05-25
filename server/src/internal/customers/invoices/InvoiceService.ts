@@ -147,7 +147,7 @@ export class InvoiceService {
     sb: SupabaseClient;
     stripeInvoice: Stripe.Invoice;
     internalCustomerId: string;
-    internalEntityId?: string;
+    internalEntityId?: string | null;
     productIds: string[];
     internalProductIds: string[];
     status?: InvoiceStatus | null;

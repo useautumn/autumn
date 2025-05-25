@@ -28,24 +28,18 @@ export const handleUpdateProductDetails = async ({
   newProduct,
   curProduct,
   org,
-  sb,
   rewardPrograms,
 }: {
   db: DrizzleCli;
   curProduct: Product;
   newProduct: UpdateProduct;
   org: Organization;
-  sb: SupabaseClient;
   rewardPrograms: RewardProgram[];
 }) => {
-  // 1. Check if they're same
-  // console.log("New product: ", newProduct);
-  // throw new Error("test");
-
-  let customersOnAllVersions = await CusProductService.getByProductId(
-    sb,
-    curProduct.id,
-  );
+  let customersOnAllVersions = await CusProductService.getByProductId({
+    db,
+    productId: curProduct.id,
+  });
 
   const productsAreSame = (prod1: Product, prod2: UpdateProduct) => {
     if (notNullish(prod2.id) && prod1.id != prod2.id) {
@@ -153,18 +147,17 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       }
 
       // 1. Update product details
-      // Get reward programs using product id
+
       const cusProductsCurVersion =
-        await CusProductService.getByInternalProductId(
-          sb,
-          fullProduct.internal_id,
-        );
+        await CusProductService.getByInternalProductId({
+          db,
+          internalProductId: fullProduct.internal_id,
+        });
 
       let cusProductExists = cusProductsCurVersion.length > 0;
 
       await handleUpdateProductDetails({
         db,
-        sb,
         curProduct: fullProduct,
         newProduct: UpdateProductSchema.parse(req.body),
         org,

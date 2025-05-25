@@ -4,6 +4,7 @@ import { customers } from "../cusModels/cusTable.js";
 import { products } from "../productModels/productTable.js";
 import { freeTrials } from "../productModels/freeTrialModels/freeTrialTable.js";
 import { customerEntitlements } from "./cusEntModels/cusEntTable.js";
+import { customerPrices } from "./cusPriceModels/cusPriceTable.js";
 
 export const customerProductsRelations = relations(
   customerProducts,
@@ -21,5 +22,6 @@ export const customerProductsRelations = relations(
       references: [freeTrials.id],
     }),
     customer_entitlements: many(customerEntitlements),
+    customer_prices: many(customerPrices),
   }),
 );

@@ -1,5 +1,6 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
@@ -18,11 +19,13 @@ import {
   Organization,
   AppEnv,
   FullCustomer,
+  Customer,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
 export const removeScheduledProduct = async ({
+  db,
   sb,
   cusProduct,
   cusProducts,
@@ -31,6 +34,7 @@ export const removeScheduledProduct = async ({
   logger,
   renewCurProduct = true,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   cusProduct: FullCusProduct;
   cusProducts: FullCusProduct[];
@@ -46,6 +50,7 @@ export const removeScheduledProduct = async ({
 
   // 1. Cancel future product schedule
   await cancelFutureProductSchedule({
+    db,
     sb,
     org,
     cusProducts,
@@ -59,7 +64,7 @@ export const removeScheduledProduct = async ({
 
   // 2. Delete scheduled product
   await CusProductService.delete({
-    sb,
+    db,
     cusProductId: cusProduct.id,
   });
   return;
@@ -83,7 +88,7 @@ export const expireCusProduct = async ({
   org: Organization;
   env: AppEnv;
   logger: any;
-  customer: FullCustomer;
+  customer: Customer;
   expireImmediately: boolean;
 }) => {
   logger.info("--------------------------------");
@@ -101,6 +106,7 @@ export const expireCusProduct = async ({
 
   if (cusProduct.status == CusProductStatus.Scheduled) {
     await removeScheduledProduct({
+      db,
       sb,
       cusProduct,
       cusProducts,
@@ -114,10 +120,14 @@ export const expireCusProduct = async ({
   // 1. If main product, can't expire if there's scheduled product
   let isMain = !cusProduct.product.is_add_on;
   if (isMain) {
-    const futureProduct = await CusProductService.getFutureProduct({
-      sb,
+    let cusProducts = await CusProductService.list({
+      db,
       internalCustomerId: customer.internal_id,
-      productGroup: cusProduct.product.group,
+    });
+
+    let { curScheduledProduct: futureProduct } = await getExistingCusProducts({
+      product: cusProduct.product,
+      cusProducts,
     });
 
     if (futureProduct) {
@@ -141,7 +151,7 @@ export const expireCusProduct = async ({
 
     if (isOneOff(cusProduct.customer_prices.map((p) => p.price))) {
       await CusProductService.update({
-        sb,
+        db,
         cusProductId: cusProduct.id,
         updates: { status: CusProductStatus.Expired },
       });
@@ -159,7 +169,7 @@ export const expireCusProduct = async ({
     });
 
     await CusProductService.update({
-      sb,
+      db,
       cusProductId: cusProduct.id,
       updates: {
         status: CusProductStatus.Expired,
@@ -199,15 +209,21 @@ export const handleCusProductExpired = async (req: any, res: any) => {
     const org = await OrgService.getFromReq(req);
     const customerProductId = req.params.customer_product_id;
 
-    // See if customer owns product
-    let cusProduct = await CusProductService.getByIdStrict({
-      sb: req.sb,
+    let cusProduct = await CusProductService.get({
+      db,
       id: customerProductId,
       orgId: req.orgId,
       env: req.env,
-      withProduct: true,
-      withPrices: true,
+      withCustomer: true,
     });
+
+    if (!cusProduct) {
+      throw new RecaseError({
+        message: `Cus product not found: ${customerProductId}`,
+        code: ErrCode.CusProductNotFound,
+        statusCode: 404,
+      });
+    }
 
     const cusProducts = await CusService.getFullCusProducts({
       sb: req.sb,

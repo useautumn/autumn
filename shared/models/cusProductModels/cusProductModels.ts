@@ -7,8 +7,9 @@ import { EntitlementSchema } from "../productModels/entModels/entModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
 import { CustomerSchema } from "../cusModels/cusModels.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
-
 import { CustomerPriceSchema } from "./cusPriceModels/cusPriceModels.js";
+import { CollectionMethod } from "./cusProductEnums.js";
+import { CusProductStatus } from "./cusProductEnums.js";
 
 export const FeatureOptionsSchema = z.object({
   internal_feature_id: z.string().optional(),
@@ -22,11 +23,6 @@ export const FeatureOptionsSchema = z.object({
   usage_quantity: z.number().nullish(),
 });
 
-export enum CollectionMethod {
-  ChargeAutomatically = "charge_automatically",
-  SendInvoice = "send_invoice",
-}
-
 export const BillingCycleAnchorConfig = z.object({
   month: z.number(),
   day: z.number(),
@@ -34,15 +30,6 @@ export const BillingCycleAnchorConfig = z.object({
   minute: z.number(),
   second: z.number(),
 });
-
-export enum CusProductStatus {
-  Scheduled = "scheduled",
-  Active = "active",
-  PastDue = "past_due",
-  Expired = "expired",
-  Unknown = "unknown",
-  Trialing = "trialing",
-}
 
 export const CusProductSchema = z.object({
   id: z.string(),
@@ -81,10 +68,6 @@ export const CusProductSchema = z.object({
   quantity: z.number().default(1),
 });
 
-export type CusProduct = z.infer<typeof CusProductSchema>;
-
-export type FeatureOptions = z.infer<typeof FeatureOptionsSchema>;
-
 export const FullCusProductSchema = CusProductSchema.extend({
   customer_prices: z.array(
     CustomerPriceSchema.extend({
@@ -106,4 +89,6 @@ export const FullCusProductSchema = CusProductSchema.extend({
   is_custom: z.boolean().default(false),
 });
 
+export type CusProduct = z.infer<typeof CusProductSchema>;
+export type FeatureOptions = z.infer<typeof FeatureOptionsSchema>;
 export type FullCusProduct = z.infer<typeof FullCusProductSchema>;

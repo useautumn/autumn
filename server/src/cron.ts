@@ -1,7 +1,9 @@
 import {
   AllowanceType,
+  AppEnv,
   EntInterval,
   FullCusEntWithProduct,
+  Organization,
 } from "@autumn/shared";
 import { CusEntService } from "./internal/customers/entitlements/CusEntitlementService.js";
 import { createSupabaseClient } from "./external/supabaseUtils.js";
@@ -28,11 +30,11 @@ import { isEqual } from "lodash-es";
 dotenv.config();
 
 const checkSubAnchor = async ({
-  sb,
+  db,
   cusEnt,
   nextResetAt,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   cusEnt: FullCusEntWithProduct;
   nextResetAt: number;
 }) => {
@@ -51,16 +53,16 @@ const checkSubAnchor = async ({
 
   // 1. Get the customer product
   const cusProduct = await CusProductService.getByIdForReset({
-    sb,
+    db,
     id: cusEnt.customer_product_id,
   });
 
   // Get org and env
-  const env = cusProduct.product.env;
-  const org = cusProduct.product.org;
+  const env = cusProduct.product.env as AppEnv;
+  const org = cusProduct.product.org as Organization;
 
   const stripeCli = createStripeCli({ org, env });
-  if (cusProduct.subscription_ids.length == 0) {
+  if (!cusProduct.subscription_ids || cusProduct.subscription_ids.length == 0) {
     return nextResetAt;
   }
 
@@ -180,7 +182,7 @@ const resetCustomerEntitlement = async ({
 
     try {
       nextResetAt = await checkSubAnchor({
-        sb,
+        db,
         cusEnt,
         nextResetAt,
       });

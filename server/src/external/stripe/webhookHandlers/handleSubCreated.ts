@@ -35,7 +35,7 @@ export const handleSubCreated = async ({
 }) => {
   if (subscription.schedule) {
     const cusProds = await CusProductService.getByStripeScheduledId({
-      sb,
+      db,
       stripeScheduledId: subscription.schedule as string,
       orgId: org.id,
       env,
@@ -145,12 +145,10 @@ export const handleSubCreated = async ({
 
   // Get cus prods for sub
   let cusProds = await CusProductService.getByStripeSubId({
-    sb,
+    db,
     stripeSubId: subscription.id,
     orgId: org.id,
     env,
-    withCusEnts: true,
-    withCusPrices: true,
   });
 
   let stripeCli = createStripeCli({ org, env });
