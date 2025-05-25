@@ -97,20 +97,20 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 };
 
 export const getObjectsUsingFeature = async ({
-  sb,
+  db,
   orgId,
   env,
   allFeatures,
   feature,
 }: {
-  sb: any;
+  db: DrizzleCli;
   orgId: string;
   env: any;
   allFeatures: Feature[];
   feature: Feature;
 }) => {
-  let products = await ProductService.getFullProducts({
-    sb,
+  let products = await ProductService.listFull({
+    db,
     orgId,
     env,
   });

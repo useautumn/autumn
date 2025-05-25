@@ -5,10 +5,9 @@ import {
 import { orgToVersion } from "@/utils/versionUtils.js";
 import {
   APIVersion,
-  CusEntWithEntitlement,
   Feature,
   FullCusProduct,
-  FullProduct,
+  FullCustomerEntitlement,
   Organization,
   ProductItem,
   SuccessCode,
@@ -16,8 +15,10 @@ import {
 } from "@autumn/shared";
 import { getCheckPreview } from "./getCheckPreview.js";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getBooleanEntitledResult = async ({
+  db,
   sb,
   customer_id,
   cusEnts,
@@ -29,9 +30,10 @@ export const getBooleanEntitledResult = async ({
   cusProducts,
   allFeatures,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   customer_id: string;
-  cusEnts: CusEntWithEntitlement[];
+  cusEnts: FullCustomerEntitlement[];
   org: Organization;
   res: any;
   feature: Feature;
@@ -52,6 +54,7 @@ export const getBooleanEntitledResult = async ({
       allowed,
       preview: withPreview
         ? await getCheckPreview({
+            db,
             sb,
             allowed,
             balance: undefined,

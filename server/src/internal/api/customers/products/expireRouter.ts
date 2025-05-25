@@ -14,7 +14,7 @@ expireRouter.post("", async (req, res) =>
     res,
     action: "expire",
     handler: async (req, res) => {
-      let { sb, orgId, env, logtail: logger } = req;
+      let { db, sb, orgId, env, logtail: logger } = req;
       let { customer_id, product_id, entity_id, cancel_immediately } = req.body;
 
       let expireImmediately = cancel_immediately || false;
@@ -44,7 +44,7 @@ expireRouter.post("", async (req, res) =>
       let cusProductsToExpire = cusProducts.filter(
         (cusProduct: FullCusProduct) =>
           cusProduct.product.id == product_id &&
-          (entity_id ? cusProduct.entity_id == entity_id : true)
+          (entity_id ? cusProduct.entity_id == entity_id : true),
       );
 
       if (cusProductsToExpire.length == 0) {
@@ -56,6 +56,7 @@ expireRouter.post("", async (req, res) =>
 
       for (const cusProduct of cusProductsToExpire) {
         await expireCusProduct({
+          db,
           sb,
           cusProduct,
           cusProducts,
@@ -73,7 +74,7 @@ expireRouter.post("", async (req, res) =>
         product_id: product_id,
       });
     },
-  })
+  }),
 );
 
 export default expireRouter;

@@ -36,9 +36,9 @@ export const handleCopyProduct = async (req: any, res: any) =>
       }
 
       // 1. Check if product exists in live already...
-      const toProduct = await ProductService.getProductStrict({
-        sb,
-        productId: toId,
+      const toProduct = await ProductService.get({
+        db,
+        id: toId,
         orgId,
         env: toEnv,
       });
@@ -53,9 +53,9 @@ export const handleCopyProduct = async (req: any, res: any) =>
 
       // 1. Get sandbox product
       const [fromFullProduct, fromFeatures, toFeatures] = await Promise.all([
-        ProductService.getFullProduct({
-          sb,
-          productId: fromProductId,
+        ProductService.getFull({
+          db,
+          idOrInternalId: fromProductId,
           orgId,
           env: fromEnv,
         }),

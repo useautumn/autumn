@@ -66,7 +66,8 @@ export const FullProductSchema = ProductSchema.extend({
       feature: FeatureSchema,
     }),
   ),
-  free_trial: FreeTrialSchema.optional(),
+  free_trial: FreeTrialSchema.nullish(),
+  free_trials: z.array(FreeTrialSchema).nullish(),
 });
 
 export type Product = z.infer<typeof ProductSchema>;

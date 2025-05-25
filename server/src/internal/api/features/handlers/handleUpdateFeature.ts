@@ -292,7 +292,7 @@ export const handleUpdateFeature = async (req: any, res: any) =>
       if (isChangingType || isChangingId || isChangingUsageType) {
         let { entitlements, prices, creditSystems, linkedEntitlements } =
           await getObjectsUsingFeature({
-            sb: req.sb,
+            db,
             orgId: req.orgId,
             env: req.env,
             allFeatures: features,

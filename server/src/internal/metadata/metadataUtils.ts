@@ -1,16 +1,4 @@
-import {
-  AutumnMetadata,
-  EntitlementWithFeature,
-  Price,
-  PricesInput,
-  FullProduct,
-  Customer,
-  Organization,
-  AppEnv,
-  FeatureOptions,
-  CusProduct,
-  FullCusProduct,
-} from "@autumn/shared";
+import { AutumnMetadata } from "@autumn/shared";
 
 import { generateId } from "@/utils/genUtils.js";
 import { addDays } from "date-fns";
@@ -49,7 +37,7 @@ export const createCheckoutMetadata = async ({
 
 export const getMetadataFromCheckoutSession = async (
   checkoutSession: Stripe.Checkout.Session,
-  sb: SupabaseClient
+  sb: SupabaseClient,
 ) => {
   const metadataId = checkoutSession.metadata?.autumn_metadata_id;
 

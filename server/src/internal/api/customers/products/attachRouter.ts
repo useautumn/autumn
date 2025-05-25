@@ -186,7 +186,7 @@ export const checkStripeConnections = async ({
   for (const product of products) {
     batchProductUpdates.push(
       checkStripeProductExists({
-        sb: req.sb,
+        db: req.db,
         org,
         env,
         product,
@@ -436,7 +436,6 @@ attachRouter.post("/attach", async (req: any, res) => {
         res,
         attachParams,
         curCusProduct,
-        isCustom,
       });
       return;
     }

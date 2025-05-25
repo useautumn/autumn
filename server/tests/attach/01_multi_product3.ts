@@ -105,11 +105,12 @@ describe("Multi Product 3: premium1->starter1, premium2->starter2, then premium2
     expect(starter1?.scheduled_ids![0]).to.equal(starter2?.scheduled_ids![0]);
 
     const stripeSchedule = await stripeCli.subscriptionSchedules.retrieve(
-      starter1?.scheduled_ids![0]!
+      starter1?.scheduled_ids![0]!,
     );
 
     // console.log(stripeSchedule);
     checkScheduleContainsProducts({
+      db: this.db,
       schedule: stripeSchedule,
       productIds: [
         attachProducts.starterGroup1.id,
@@ -154,6 +155,7 @@ describe("Multi Product 3: premium1->starter1, premium2->starter2, then premium2
     });
 
     checkScheduleContainsProducts({
+      db: this.db,
       scheduleId: starterGroup2?.scheduled_ids![0],
       productIds: [attachProducts.starterGroup2.id],
       sb: this.sb,

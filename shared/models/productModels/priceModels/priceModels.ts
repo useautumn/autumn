@@ -26,7 +26,7 @@ export const PriceSchema = z.object({
   is_custom: z.boolean().optional(),
 
   // name: z.string().optional(),
-  config: FixedPriceConfigSchema.or(UsagePriceConfigSchema).optional(),
+  config: FixedPriceConfigSchema.or(UsagePriceConfigSchema),
   entitlement_id: z.string().nullish(),
 });
 

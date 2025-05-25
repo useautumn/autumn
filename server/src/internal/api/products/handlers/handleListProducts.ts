@@ -11,15 +11,18 @@ export const handleListProducts = async (req: any, res: any) =>
     res,
     action: "List products",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-      const [org, features, products] = await Promise.all([
-        OrgService.getFromReq(req),
+      const { db, orgId, env } = req;
+
+      const [features, products] = await Promise.all([
         FeatureService.getFromReq(req),
-        ProductService.getFullProducts({
-          sb: req.sb,
-          orgId: req.orgId,
-          env: req.env,
+        ProductService.listFull({
+          db,
+          orgId,
+          env,
         }),
       ]);
+
+      console.log("Products", products);
 
       let prods = products.map((p) =>
         getProductResponse({ product: p, features }),

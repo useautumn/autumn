@@ -32,15 +32,15 @@ export const runMigrationTask = async ({
 
     // Get from and to products
     let [fromProduct, toProduct] = await Promise.all([
-      ProductService.getFullProduct({
-        sb,
-        internalId: migrationJob.from_internal_product_id,
+      ProductService.getFull({
+        db,
+        idOrInternalId: migrationJob.from_internal_product_id,
         orgId,
         env,
       }),
-      ProductService.getFullProduct({
-        sb,
-        internalId: migrationJob.to_internal_product_id,
+      ProductService.getFull({
+        db,
+        idOrInternalId: migrationJob.to_internal_product_id,
         orgId,
         env,
       }),

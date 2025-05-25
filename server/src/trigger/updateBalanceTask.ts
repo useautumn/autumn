@@ -1,11 +1,9 @@
 import {
   AllowanceType,
   AppEnv,
-  CusEntWithEntitlement,
   CusProductStatus,
   Event,
   Feature,
-  FullCustomer,
   FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
@@ -33,10 +31,12 @@ import {
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { entityFeatureIdExists } from "@/internal/api/entities/entityUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
 
 type DeductParams = {
+  db: DrizzleCli;
   sb: SupabaseClient;
   env: AppEnv;
   org: Organization;
@@ -57,7 +57,7 @@ const getFeatureDeductions = ({
   features: Feature[];
 }) => {
   const meteredFeatures = features.filter(
-    (feature) => feature.type === FeatureType.Metered
+    (feature) => feature.type === FeatureType.Metered,
   );
   const featureDeductions = [];
   for (const feature of features) {
@@ -76,7 +76,7 @@ const getFeatureDeductions = ({
     let unlimitedExists = cusEnts.some(
       (cusEnt) =>
         cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
-        cusEnt.entitlement.internal_feature_id == feature.internal_id
+        cusEnt.entitlement.internal_feature_id == feature.internal_id,
     );
 
     if (unlimitedExists || !deduction) {
@@ -132,7 +132,7 @@ export const logBalanceUpdate = ({
   console.log(
     `   - Customer: ${customer.id} (${customer.env}) | Org: ${
       org.slug
-    } | Features: ${features.map((f) => f.id).join(", ")}`
+    } | Features: ${features.map((f) => f.id).join(", ")}`,
   );
   console.log("   - Properties:", properties);
   console.log(
@@ -142,7 +142,7 @@ export const logBalanceUpdate = ({
 
       if (notNullish(cusEnt.entitlement.entity_feature_id)) {
         console.log(
-          `   - Entity feature ID found for feature: ${cusEnt.feature_id}`
+          `   - Entity feature ID found for feature: ${cusEnt.feature_id}`,
         );
 
         if (notNullish(entityId)) {
@@ -169,7 +169,7 @@ export const logBalanceUpdate = ({
       })`;
     }),
     "| Deductions:",
-    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`)
+    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`),
   );
 };
 
@@ -308,7 +308,7 @@ export const deductAllowanceFromCusEnt = async ({
   entityId?: string | null;
   setZeroAdjustment?: boolean;
 }) => {
-  const { sb, feature, env, org, cusPrices, customer } = deductParams;
+  const { db, sb, feature, env, org, cusPrices, customer } = deductParams;
 
   if (toDeduct == 0) {
     return 0;
@@ -354,6 +354,7 @@ export const deductAllowanceFromCusEnt = async ({
   });
 
   await adjustAllowance({
+    db,
     sb,
     env,
     org,
@@ -411,42 +412,22 @@ export const deductFromUsageBasedCusEnt = async ({
   entityId?: string | null;
   setZeroAdjustment?: boolean;
 }) => {
-  const { sb, feature, env, org, cusPrices, customer, properties } =
-    deductParams;
+  const { db, sb, feature, env, org, cusPrices, customer } = deductParams;
 
   // Deduct from usage-based price
   const usageBasedEnt = cusEnts.find(
-    (cusEnt: CusEntWithEntitlement) =>
+    (cusEnt: FullCustomerEntitlement) =>
       cusEnt.usage_allowed &&
-      cusEnt.entitlement.internal_feature_id == feature.internal_id
+      cusEnt.entitlement.internal_feature_id == feature.internal_id,
   );
 
   if (!usageBasedEnt) {
     console.log(
-      `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no usage-based entitlement found`
+      `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no usage-based entitlement found`,
     );
     return;
   }
 
-  // // Group by value
-  // let { groupVal, balance } = getGroupBalanceFromProperties({
-  //   properties,
-  //   feature,
-  //   cusEnt: usageBasedEnt,
-  // });
-
-  // if (groupVal && nullOrUndefined(balance)) {
-  //   console.log(
-  //     `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no group balance found`
-  //   );
-  //   return;
-  // }
-
-  // let usageBasedEntBalance = new Decimal(balance!);
-  // let newBalance = usageBasedEntBalance.minus(toDeduct).toNumber();
-  // console.log("DEDUCTING USAGE-BASED ENTITLEMENT");
-  // console.log("OLD BALANCE", usageBasedEnt.balance);
-  // console.log("TO DEDUCT", toDeduct);
   let { newBalance, newEntities, deducted } = performDeductionOnCusEnt({
     cusEnt: usageBasedEnt,
     toDeduct,
@@ -454,9 +435,6 @@ export const deductFromUsageBasedCusEnt = async ({
     allowNegativeBalance: true,
     setZeroAdjustment,
   });
-
-  // console.log("NEW BALANCE", newBalance);
-  // console.log("DEDUCTED", deducted);
 
   let oldGrpBalance = getTotalNegativeBalance({
     cusEnt: usageBasedEnt,
@@ -491,6 +469,7 @@ export const deductFromUsageBasedCusEnt = async ({
   //   .toNumber();
 
   await adjustAllowance({
+    db,
     sb,
     env,
     affectedFeature: feature,
@@ -506,6 +485,7 @@ export const deductFromUsageBasedCusEnt = async ({
 
 // Main function to update customer balance
 export const updateCustomerBalance = async ({
+  db,
   sb,
   customerId,
   entityId,
@@ -515,6 +495,7 @@ export const updateCustomerBalance = async ({
   env,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   customerId: string;
   entityId: string;
@@ -583,6 +564,7 @@ export const updateCustomerBalance = async ({
         cusEnt,
         features,
         deductParams: {
+          db,
           sb,
           feature,
           env,
@@ -605,6 +587,7 @@ export const updateCustomerBalance = async ({
       toDeduct,
       cusEnts,
       deductParams: {
+        db,
         sb,
         feature,
         env,
@@ -624,10 +607,12 @@ export const updateCustomerBalance = async ({
 export const runUpdateBalanceTask = async ({
   payload,
   logger,
+  db,
   sb,
 }: {
   payload: any;
   logger: any;
+  db: DrizzleCli;
   sb: SupabaseClient;
 }) => {
   try {
@@ -636,10 +621,11 @@ export const runUpdateBalanceTask = async ({
 
     console.log("--------------------------------");
     console.log(
-      `UPDATING BALANCE FOR CUSTOMER (${customerId}), ORG: ${org.slug}`
+      `UPDATING BALANCE FOR CUSTOMER (${customerId}), ORG: ${org.slug}`,
     );
 
     const cusEnts: any = await updateCustomerBalance({
+      db,
       sb,
       customerId,
       features,

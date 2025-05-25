@@ -43,6 +43,7 @@ import {
   addProductsUpdatedWebhookTask,
   constructProductsUpdatedData,
 } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const isActiveStatus = (status: CusProductStatus) => {
   return (
@@ -173,16 +174,16 @@ export const cancelCusProductSubscriptions = async ({
 };
 
 export const activateDefaultProduct = async ({
+  db,
   productGroup,
-  orgId,
   customer,
   org,
   sb,
   env,
   curCusProduct,
 }: {
+  db: DrizzleCli;
   productGroup: string;
-  orgId: string;
   customer: Customer;
   org: Organization;
   sb: SupabaseClient;
@@ -190,8 +191,8 @@ export const activateDefaultProduct = async ({
   curCusProduct?: FullCusProduct;
 }) => {
   // 1. Expire current product
-  const defaultProducts = await ProductService.getFullDefaultProducts({
-    sb,
+  const defaultProducts = await ProductService.listDefault({
+    db,
     orgId: org.id,
     env,
   });
@@ -231,11 +232,13 @@ export const activateDefaultProduct = async ({
 };
 
 export const expireAndActivate = async ({
+  db,
   sb,
   env,
   cusProduct,
   org,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   env: AppEnv;
   cusProduct: FullCusProduct;
@@ -249,8 +252,8 @@ export const expireAndActivate = async ({
   });
 
   await activateDefaultProduct({
+    db,
     productGroup: cusProduct.product.group,
-    orgId: org.id,
     customer: cusProduct.customer,
     org,
     sb,

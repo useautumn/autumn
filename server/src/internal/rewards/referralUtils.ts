@@ -19,6 +19,7 @@ import { CusProductService } from "../customers/products/CusProductService.js";
 import { ProductService } from "../products/ProductService.js";
 import { createFullCusProduct } from "../customers/add-product/createFullCusProduct.js";
 import { InsertCusProductParams } from "../customers/products/AttachParams.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const generateReferralCode = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -52,7 +53,7 @@ export const triggerRedemption = async ({
   redemption: RewardRedemption;
 }) => {
   logger.info(
-    `Triggering redemption ${redemption.id} for referral code ${referralCode.code}`
+    `Triggering redemption ${redemption.id} for referral code ${referralCode.code}`,
   );
 
   let applyToCustomer = await CusService.getByInternalId({
@@ -75,7 +76,7 @@ export const triggerRedemption = async ({
 
   let stripeCusId = applyToCustomer.processor.id;
   let stripeCus = (await stripeCli.customers.retrieve(
-    stripeCusId
+    stripeCusId,
   )) as Stripe.Customer;
 
   let applied = false;
@@ -104,6 +105,7 @@ export const triggerRedemption = async ({
 
 export const triggerFreeProduct = async ({
   sb,
+  db,
   referralCode,
   redeemer,
   redemption,
@@ -113,6 +115,7 @@ export const triggerFreeProduct = async ({
   logger,
 }: {
   sb: any;
+  db: DrizzleCli;
   referralCode: ReferralCode;
   redeemer: Customer;
   redemption: RewardRedemption;
@@ -122,7 +125,7 @@ export const triggerFreeProduct = async ({
   logger: any;
 }) => {
   logger.info(`Triggering free product reward`);
-  let { product_ids, received_by } = rewardProgram;
+  let { received_by } = rewardProgram;
 
   let addToRedeemer = received_by === RewardReceivedBy.All;
   let addToReferrer =
@@ -130,9 +133,9 @@ export const triggerFreeProduct = async ({
     received_by === RewardReceivedBy.All;
 
   let productId = rewardProgram.reward.free_product_id!;
-  let fullProduct = await ProductService.getFullProduct({
-    sb,
-    productId,
+  let fullProduct = await ProductService.getFull({
+    db,
+    idOrInternalId: productId,
     orgId: org.id,
     env,
   });

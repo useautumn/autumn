@@ -42,13 +42,21 @@ export const constructPrice = ({
   fixedConfig?: FixedPriceConfig;
   usageConfig?: UsagePriceConfig;
 }) => {
+  if (!usageConfig && !fixedConfig) {
+    throw new RecaseError({
+      message: "Usage config or fixed config must be provided",
+      code: ErrCode.InvalidRequest,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
   let newPrice: Price = {
     id: generateId("pr"),
     org_id: orgId,
     internal_product_id: internalProductId,
     created_at: Date.now(),
     is_custom: isCustom,
-    config: usageConfig || fixedConfig,
+    config: (usageConfig || fixedConfig)!,
     entitlement_id: entitlementId,
   };
 

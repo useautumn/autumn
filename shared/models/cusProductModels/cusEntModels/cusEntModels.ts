@@ -1,16 +1,14 @@
 import { z } from "zod";
-import {
-  EntitlementSchema,
-  EntitlementWithFeatureSchema,
-} from "../../productModels/entModels/entModels.js";
-import { FeatureSchema } from "../../featureModels/featureModels.js";
+import { EntitlementWithFeatureSchema } from "../../productModels/entModels/entModels.js";
 
 export const EntityBalanceSchema = z.object({
   id: z.string(),
   balance: z.number(),
   adjustment: z.number(),
 });
+
 export type EntityBalance = z.infer<typeof EntityBalanceSchema>;
+
 export const CustomerEntitlementSchema = z.object({
   // Foreign keys
   id: z.string(),
@@ -39,25 +37,7 @@ export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({
   entitlement: EntitlementWithFeatureSchema,
 });
 
-export const CusEntWithEntitlementSchema = CustomerEntitlementSchema.extend({
-  entitlement: EntitlementSchema,
-});
-
-export const CusEntWithFeatureSchema = CustomerEntitlementSchema.extend({
-  feature: FeatureSchema,
-});
-
-export const CusEntWithFeatureAndEntitlementSchema =
-  CusEntWithFeatureSchema.extend({
-    entitlement: EntitlementSchema,
-  });
-
-export type CusEntWithFeatureAndEntitlement = z.infer<
-  typeof CusEntWithFeatureAndEntitlementSchema
->;
 export type CustomerEntitlement = z.infer<typeof CustomerEntitlementSchema>;
-export type CusEntWithEntitlement = z.infer<typeof CusEntWithEntitlementSchema>;
-export type CusEntWithFeature = z.infer<typeof CusEntWithFeatureSchema>;
 
 export type FullCustomerEntitlement = z.infer<
   typeof FullCustomerEntitlementSchema

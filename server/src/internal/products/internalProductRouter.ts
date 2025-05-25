@@ -18,34 +18,14 @@ import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 
 export const productRouter = Router({ mergeParams: true });
 
-productRouter.get("/", async (req: any, res) => {
-  try {
-    let sb = req.sb;
-    let products = await ProductService.getFullProducts({
-      sb,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    res.status(200).send(products);
-  } catch (error) {
-    handleFrontendReqError({
-      error,
-      req,
-      res,
-      action: "Get products (internal)",
-    });
-  }
-});
-
 productRouter.get("/data", async (req: any, res) => {
   try {
-    let { sb } = req;
+    let { db, sb } = req;
 
     const [products, features, org, coupons, rewardPrograms] =
       await Promise.all([
-        ProductService.getFullProducts({
-          sb,
+        ProductService.listFull({
+          db,
           orgId: req.orgId,
           env: req.env,
           returnAll: true,
@@ -82,9 +62,9 @@ productRouter.get("/data", async (req: any, res) => {
 
 productRouter.get("/counts", async (req: any, res) => {
   try {
-    let { sb, orgId, env } = req;
-    let products = await ProductService.getFullProducts({
-      sb,
+    let { db, sb } = req;
+    let products = await ProductService.listFull({
+      db,
       orgId: req.orgId,
       env: req.env,
       returnAll: true,
@@ -99,12 +79,6 @@ productRouter.get("/counts", async (req: any, res) => {
       }),
     );
 
-    // let result: { [key: string]: any } = {};
-
-    // for (let i = 0; i < products.length; i++) {
-    //   result[products[i].internal_id] = counts[i];
-    // }
-    // Group by ID
     let result: { [key: string]: any } = {};
     for (let i = 0; i < products.length; i++) {
       if (!result[products[i].id]) {
@@ -130,15 +104,13 @@ productRouter.get("/:productId/data", async (req: any, res) => {
   try {
     const { productId } = req.params;
     const { version } = req.query;
-    const sb = req.sb;
-    const orgId = req.orgId;
-    const env = req.env;
+    const { sb, db, orgId, env } = req;
 
     const [product, features, org, numVersions, existingMigrations] =
       await Promise.all([
-        ProductService.getFullProduct({
-          sb,
-          productId,
+        ProductService.getFull({
+          db,
+          idOrInternalId: productId,
           orgId,
           env,
           version: version ? parseInt(version) : undefined,
@@ -146,7 +118,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
         ProductService.getProductVersionCount({
-          sb,
+          db,
           productId,
           orgId,
           env,
@@ -207,14 +179,15 @@ productRouter.get("/:productId/data", async (req: any, res) => {
 
 productRouter.get("/:productId/count", async (req: any, res) => {
   try {
+    const { db, sb, orgId, env } = req;
     const { productId } = req.params;
     const { version } = req.query;
 
-    const product = await ProductService.getProductStrict({
-      sb: req.sb,
-      productId,
-      orgId: req.orgId,
-      env: req.env,
+    const product = await ProductService.get({
+      db,
+      id: productId,
+      orgId,
+      env,
       version: version ? parseInt(version) : undefined,
     });
 

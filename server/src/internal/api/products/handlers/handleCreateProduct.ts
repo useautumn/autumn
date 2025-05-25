@@ -27,7 +27,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 
 const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
   let { free_trial, items } = req.body;
-  let { orgId, env, sb } = req;
+  let { orgId, env, db } = req;
 
   let productData = CreateProductSchema.parse(req.body);
 
@@ -39,9 +39,9 @@ const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
 
   const [features, existingProduct] = await Promise.all([
     FeatureService.getFromReq(req),
-    ProductService.getProductStrict({
-      sb,
-      productId: productData.id,
+    ProductService.get({
+      db,
+      id: productData.id,
       orgId,
       env,
     }),
@@ -108,7 +108,7 @@ export const handleCreateProduct = async (req: Request, res: any) =>
         env,
       });
 
-      let product = await ProductService.create({ sb, product: newProduct });
+      let product = await ProductService.insert({ db, product: newProduct });
 
       if (notNullish(items)) {
         await handleNewProductItems({

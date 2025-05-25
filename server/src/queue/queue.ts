@@ -147,6 +147,7 @@ const initWorker = ({
 
         try {
           await runTriggerCheckoutReward({
+            db,
             payload: job.data,
             sb,
             logger: logtail,
@@ -181,9 +182,15 @@ const initWorker = ({
             payload: job.data,
             logger: logtail,
             sb,
+            db,
           });
         } else if (job.name === JobName.UpdateUsage) {
-          await runUpdateUsageTask({ payload: job.data, logger: logtail, sb });
+          await runUpdateUsageTask({
+            payload: job.data,
+            logger: logtail,
+            sb,
+            db,
+          });
         }
       } catch (error) {
         console.error("Error processing job:", error);

@@ -40,12 +40,14 @@ import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js"
 import RecaseError from "@/utils/errorUtils.js";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
 };
 
 export const adjustAllowance = async ({
+  db,
   sb,
   env,
   org,
@@ -60,6 +62,7 @@ export const adjustAllowance = async ({
   replacedCount,
   fromEntities = false,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   env: AppEnv;
   affectedFeature: Feature;
@@ -189,10 +192,8 @@ export const adjustAllowance = async ({
 
         if (!product) {
           product = await ProductService.getByInternalId({
-            sb,
+            db,
             internalId: cusProduct.internal_product_id,
-            orgId: org.id,
-            env,
           });
         }
 

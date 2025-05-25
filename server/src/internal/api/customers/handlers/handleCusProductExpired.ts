@@ -1,3 +1,4 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -65,6 +66,7 @@ export const removeScheduledProduct = async ({
 };
 
 export const expireCusProduct = async ({
+  db,
   sb,
   cusProduct, // cus product to expire
   cusProducts, // other cus products
@@ -74,6 +76,7 @@ export const expireCusProduct = async ({
   customer,
   expireImmediately = true,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   cusProduct: FullCusProduct;
   cusProducts: FullCusProduct[];
@@ -87,11 +90,11 @@ export const expireCusProduct = async ({
   logger.info(
     `🔔 Expiring cutomer product (${
       expireImmediately ? "immediately" : "end of cycle"
-    })`
+    })`,
   );
   logger.info(`Customer: ${customer.id} (${env}), Org: ${org.id}`);
   logger.info(
-    `Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`
+    `Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`,
   );
 
   // If current product is scheduled
@@ -178,6 +181,7 @@ export const expireCusProduct = async ({
 
   if (!cancelled) {
     await expireAndActivate({
+      db,
       sb,
       env,
       cusProduct,
@@ -190,6 +194,8 @@ export const expireCusProduct = async ({
 
 export const handleCusProductExpired = async (req: any, res: any) => {
   try {
+    const { db, sb, logtail: logger } = req;
+
     const org = await OrgService.getFromReq(req);
     const customerProductId = req.params.customer_product_id;
 
@@ -212,7 +218,8 @@ export const handleCusProductExpired = async (req: any, res: any) => {
     });
 
     await expireCusProduct({
-      sb: req.sb,
+      db,
+      sb,
       cusProduct,
       cusProducts,
       org,

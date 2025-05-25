@@ -1,3 +1,4 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { fullCusProductToProduct } from "@/internal/customers/products/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
@@ -17,6 +18,7 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getCheckPreview = async ({
+  db,
   sb,
   allowed,
   balance,
@@ -25,6 +27,7 @@ export const getCheckPreview = async ({
   raw = false,
   allFeatures,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   allowed: boolean;
   balance?: number;
@@ -49,7 +52,7 @@ export const getCheckPreview = async ({
     cusOwnedProducts.length > 0 ? cusOwnedProducts[0] : null;
 
   let products: FullProduct[] = await ProductService.getByFeature({
-    sb,
+    db,
     internalFeatureId: feature.internal_id!,
   });
 

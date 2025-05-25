@@ -161,17 +161,17 @@ const advanceAPThroughBalances = async ({
   let nextMonthUsagePrice = Math.max(-balance * pricePerSeat, 0);
 
   let expectedInvoiceTotal = Number(
-    (accruedPrice + basePrice + nextMonthUsagePrice).toFixed(2)
+    (accruedPrice + basePrice + nextMonthUsagePrice).toFixed(2),
   );
   console.log(
-    `Invoice total = ${accruedPrice} (Accrued) + ${nextMonthUsagePrice} (Next month usage) + ${basePrice} (Base) = ${expectedInvoiceTotal}`
+    `Invoice total = ${accruedPrice} (Accrued) + ${nextMonthUsagePrice} (Next month usage) + ${basePrice} (Base) = ${expectedInvoiceTotal}`,
   );
 
   expect(expectedInvoiceTotal).to.lte(
-    new Decimal(invoice.total).plus(0.01).toNumber()
+    new Decimal(invoice.total).plus(0.01).toNumber(),
   );
   expect(expectedInvoiceTotal).to.gte(
-    new Decimal(invoice.total).minus(0.01).toNumber()
+    new Decimal(invoice.total).minus(0.01).toNumber(),
   );
 
   return {
@@ -181,7 +181,7 @@ const advanceAPThroughBalances = async ({
 };
 
 describe(`${chalk.yellowBright(
-  "arrear_prorated3: Testing through /usage"
+  "arrear_prorated3: Testing through /usage",
 )}`, () => {
   const customerId = "arrear_prorated3";
 
@@ -199,7 +199,7 @@ describe(`${chalk.yellowBright(
         org: this.org,
         env: this.env,
         sb: this.sb,
-      }
+      },
     );
 
     stripeCli = createStripeCli({
@@ -229,6 +229,7 @@ describe(`${chalk.yellowBright(
     stripeSub = await stripeCli.subscriptions.retrieve(subId);
 
     await checkSubscriptionContainsProducts({
+      db: this.db,
       sb: this.sb,
       org: this.org,
       env: this.env,
