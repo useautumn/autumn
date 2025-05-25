@@ -185,6 +185,7 @@ export const handleSubscriptionUpdated = async ({
           continue;
         }
         await createFullCusProduct({
+          db,
           sb,
           attachParams: {
             customer: updatedCusProducts[0].customer,

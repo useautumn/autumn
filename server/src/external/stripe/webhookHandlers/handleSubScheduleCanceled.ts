@@ -6,14 +6,17 @@ import { CusProductStatus, Organization } from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { createStripeCli } from "../utils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleSubscriptionScheduleCanceled = async ({
+  db,
   sb,
   schedule,
   env,
   org,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   schedule: Stripe.SubscriptionSchedule;
   org: Organization;
@@ -36,7 +39,7 @@ export const handleSubscriptionScheduleCanceled = async ({
   console.log(
     "   - Found",
     cusProductsOnSchedule.length,
-    "cus products on schedule"
+    "cus products on schedule",
   );
   for (const cusProduct of cusProductsOnSchedule) {
     console.log("   - Cus product", cusProduct.product.name, cusProduct.status);
@@ -45,7 +48,7 @@ export const handleSubscriptionScheduleCanceled = async ({
 
     if (cusProduct.status === CusProductStatus.Scheduled) {
       let otherScheduledIds = cusProduct.scheduled_ids?.filter(
-        (id: string) => id !== schedule.id
+        (id: string) => id !== schedule.id,
       );
 
       for (const id of otherScheduledIds) {
@@ -68,7 +71,7 @@ export const handleSubscriptionScheduleCanceled = async ({
         cusProductId: cusProduct.id,
         updates: {
           scheduled_ids: cusProduct.scheduled_ids?.filter(
-            (id: string) => id !== schedule.id
+            (id: string) => id !== schedule.id,
           ),
         },
       });
@@ -91,7 +94,7 @@ export const handleSubscriptionScheduleCanceled = async ({
   } catch (error) {
     logger.error(
       `handleSubScheduleCanceled: failed to delete from subscriptions table`,
-      error
+      error,
     );
   }
 };

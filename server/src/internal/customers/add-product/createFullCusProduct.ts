@@ -39,6 +39,8 @@ import {
   getExistingUsages,
 } from "../entitlements/cusEntUtils/getExistingUsage.js";
 import { constructProductsUpdatedData } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusEntService } from "../entitlements/CusEntitlementService.js";
 export const initCusPrice = ({
   price,
   customer,
@@ -145,11 +147,13 @@ export const initCusProduct = ({
 };
 
 export const insertFullCusProduct = async ({
+  db,
   sb,
   cusProd,
   cusEnts,
   cusPrices,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   cusProd: CusProduct;
   cusEnts: CustomerEntitlement[];
@@ -168,17 +172,10 @@ export const insertFullCusProduct = async ({
     });
   }
 
-  const { error: entError } = await sb
-    .from("customer_entitlements")
-    .insert(cusEnts);
-  if (entError) {
-    console.log("Error inserting customer entitlements: ", entError);
-    throw new RecaseError({
-      message: "Error inserting customer entitlements",
-      code: ErrCode.InternalError,
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-    });
-  }
+  await CusEntService.insert({
+    db,
+    data: cusEnts,
+  });
 
   const { error: priceError } = await sb
     .from("customer_prices")
@@ -273,6 +270,7 @@ export const getExistingCusProduct = async ({
 };
 
 export const createFullCusProduct = async ({
+  db,
   sb,
   attachParams,
   startsAt,
@@ -294,6 +292,7 @@ export const createFullCusProduct = async ({
   scenario = "default",
   sendWebhook = true,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   attachParams: InsertCusProductParams;
 
@@ -357,6 +356,7 @@ export const createFullCusProduct = async ({
   ) {
     await updateOneTimeCusProduct({
       sb,
+      db,
       attachParams,
       logger,
     });
@@ -371,16 +371,6 @@ export const createFullCusProduct = async ({
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
     const relatedPrice = getEntRelatedPrice(entitlement, prices);
-
-    // let existingCusEnt: FullCustomerEntitlement | undefined =
-    //   curCusProduct?.customer_entitlements.find(
-    //     (ce) =>
-    //       ce.entitlement.internal_feature_id === entitlement.internal_feature_id
-    //   );
-
-    // if (freeTrial && existingCusEnt) {
-    //   existingCusEnt = undefined;
-    // }
 
     const cusEnt: any = initCusEntitlement({
       entitlement,
@@ -466,6 +456,7 @@ export const createFullCusProduct = async ({
   }
 
   await insertFullCusProduct({
+    db,
     sb,
     cusProd,
     cusEnts: deductedCusEnts,

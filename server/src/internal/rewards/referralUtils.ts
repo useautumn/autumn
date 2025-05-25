@@ -5,7 +5,6 @@ import {
   FullRewardProgram,
   ReferralCode,
   Reward,
-  RewardProgram,
   RewardReceivedBy,
   RewardRedemption,
 } from "@autumn/shared";
@@ -15,7 +14,6 @@ import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js"
 import { createStripeCli } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
-import { CusProductService } from "../customers/products/CusProductService.js";
 import { ProductService } from "../products/ProductService.js";
 import { createFullCusProduct } from "../customers/add-product/createFullCusProduct.js";
 import { InsertCusProductParams } from "../customers/products/AttachParams.js";
@@ -186,6 +184,7 @@ export const triggerFreeProduct = async ({
     });
 
     await createFullCusProduct({
+      db,
       sb,
       attachParams: redeemerAttachParams,
     });
@@ -194,6 +193,7 @@ export const triggerFreeProduct = async ({
 
   if (addToReferrer) {
     await createFullCusProduct({
+      db,
       sb,
       attachParams: {
         ...attachParams,

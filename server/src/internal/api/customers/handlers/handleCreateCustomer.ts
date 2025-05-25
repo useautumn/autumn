@@ -164,6 +164,7 @@ export const createNewCustomer = async ({
 
     await handleAddProduct({
       req: {
+        db,
         sb,
         logtail: logger,
       },
@@ -187,6 +188,7 @@ export const createNewCustomer = async ({
 
   for (const product of freeProds) {
     await createFullCusProduct({
+      db,
       sb,
       attachParams: {
         org,

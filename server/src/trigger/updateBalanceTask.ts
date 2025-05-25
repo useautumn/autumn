@@ -8,7 +8,7 @@ import {
   FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Customer, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
@@ -347,8 +347,8 @@ export const deductAllowanceFromCusEnt = async ({
     updates.adjustment = 0;
   }
 
-  await CustomerEntitlementService.update({
-    sb,
+  await CusEntService.update({
+    db,
     id: cusEnt.id,
     updates,
   });
@@ -456,17 +456,11 @@ export const deductFromUsageBasedCusEnt = async ({
     updates.adjustment = 0;
   }
 
-  await CustomerEntitlementService.update({
-    sb,
+  await CusEntService.update({
+    db,
     id: usageBasedEnt.id,
     updates,
   });
-
-  // const totalNegativeBalance = getTotalNegativeBalance(usageBasedEnt);
-  // const originalGrpBalance = Math.max(totalNegativeBalance, balance!);
-  // const newGrpBalance = new Decimal(originalGrpBalance)
-  //   .minus(toDeduct)
-  //   .toNumber();
 
   await adjustAllowance({
     db,

@@ -72,6 +72,7 @@ const handleCusProductDeleted = async ({
         `Product ${cusProduct.product.name} subscription deleted, billing for remaining usages`,
       );
       await billForRemainingUsages({
+        db,
         sb,
         curCusProduct: cusProduct,
         logger,

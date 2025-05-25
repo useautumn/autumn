@@ -20,7 +20,7 @@ import { createStripeCli } from "../utils.js";
 import { differenceInMinutes, subDays } from "date-fns";
 import { getStripeSubs, getUsageBasedSub } from "../stripeSubUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
 import { getRelatedCusEnt } from "@/internal/customers/prices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -36,6 +36,7 @@ import { getInvoiceItemForUsage } from "../stripePriceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const handleInArrearProrated = async ({
+  db,
   sb,
   cusEnts,
   cusPrice,
@@ -47,6 +48,7 @@ const handleInArrearProrated = async ({
   pg,
   logger,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   cusEnts: FullCustomerEntitlement[];
   cusPrice: FullCustomerPrice;
@@ -131,8 +133,8 @@ const handleInArrearProrated = async ({
     console.log("New entities: ", newEntities);
     console.log("Cus ent ID: ", linkedCusEnt.id);
 
-    let updated = await CustomerEntitlementService.update({
-      sb,
+    let updated = await CusEntService.update({
+      db,
       id: linkedCusEnt.id,
       updates: {
         entities: newEntities,
@@ -168,6 +170,7 @@ const handleInArrearProrated = async ({
 };
 
 const handleUsageInArrear = async ({
+  db,
   sb,
   invoice,
   customer,
@@ -178,6 +181,7 @@ const handleUsageInArrear = async ({
   logger,
   activeProduct,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   invoice: Stripe.Invoice;
   customer: Customer;
@@ -277,12 +281,6 @@ const handleUsageInArrear = async ({
     });
   }
 
-  // let invoiceCreatedStr = formatUnixToDateTime(invoice.created * 1000);
-  // let usageTimestampStr = formatUnixToDateTime(usageTimestamp * 1000);
-  // logger.info(
-  //   `Invoice created: ${invoiceCreatedStr}, Usage timestamp: ${usageTimestampStr}`
-  // );
-
   if (relatedCusEnt.entitlement.interval == EntInterval.Lifetime) {
     return;
   }
@@ -293,8 +291,8 @@ const handleUsageInArrear = async ({
     allowance: ent.interval == EntInterval.Lifetime ? 0 : ent.allowance!,
   });
 
-  await CustomerEntitlementService.update({
-    sb,
+  await CusEntService.update({
+    db,
     id: relatedCusEnt.id,
     updates: {
       ...resetBalancesUpdate,
@@ -308,6 +306,7 @@ const handleUsageInArrear = async ({
 };
 
 export const sendUsageAndReset = async ({
+  db,
   sb,
   activeProduct,
   org,
@@ -317,6 +316,7 @@ export const sendUsageAndReset = async ({
   logger,
   pg,
 }: {
+  db: DrizzleCli;
   sb: SupabaseClient;
   activeProduct: FullCusProduct;
   org: Organization;
@@ -384,6 +384,7 @@ export const sendUsageAndReset = async ({
       logger.info(`   - Feature: ${relatedCusEnt.entitlement.feature.id}`);
 
       await handleUsageInArrear({
+        db,
         sb,
         invoice,
         customer,
@@ -398,6 +399,7 @@ export const sendUsageAndReset = async ({
 
     if (billingType == BillingType.InArrearProrated) {
       await handleInArrearProrated({
+        db,
         sb,
         cusEnts,
         cusPrice,
@@ -535,6 +537,7 @@ export const handleInvoiceCreated = async ({
 
     for (const activeProduct of activeProducts) {
       await sendUsageAndReset({
+        db,
         sb,
         activeProduct,
         org,

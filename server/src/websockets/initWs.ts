@@ -4,8 +4,6 @@ import http from "http";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { AppEnv, ErrCode } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { getBalanceForFeature } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { getCusBalances } from "@/internal/customers/entitlements/getCusBalances.js";
 
 export enum SbChannelEvent {
   BalanceUpdated = "balance_updated",
@@ -17,7 +15,7 @@ interface RouteInfo {
   callback: (
     ws: WebSocket,
     req: http.IncomingMessage,
-    params: Record<string, string>
+    params: Record<string, string>,
   ) => Promise<void>;
 }
 
@@ -68,7 +66,7 @@ class WebSocketRouter {
     callback: (
       ws: WebSocket,
       req: any,
-      params: Record<string, string>
+      params: Record<string, string>,
     ) => Promise<void>;
   }) {
     const paramNames: string[] = [];
@@ -86,7 +84,7 @@ class WebSocketRouter {
   constructor(server: http.Server) {
     this.wss = new WebSocketServer({ server });
     this.wss.on("connection", (ws, req) =>
-      this.handleConnection(ws as any, req as any)
+      this.handleConnection(ws as any, req as any),
     );
   }
 
@@ -192,16 +190,6 @@ const handleRealtimeBalance = async (ws: WebSocket, req: any, params: any) => {
 
     const channel = `${org.id}_${env}_${params.customer_id}`;
 
-    const curBalance = await getBalanceForFeature({
-      sb,
-      customerId: params.customer_id,
-      orgId: org.id,
-      env,
-      featureId: params.feature_id,
-    });
-
-    ws.send(JSON.stringify({ data: curBalance, error: null }));
-
     sb.channel(channel)
       .on(
         "broadcast",
@@ -211,21 +199,13 @@ const handleRealtimeBalance = async (ws: WebSocket, req: any, params: any) => {
             return;
           }
 
-          const newBalance = await getBalanceForFeature({
-            sb,
-            customerId: params.customer_id,
-            orgId: org.id,
-            env,
-            featureId: params.feature_id,
-          });
-
-          ws.send(
-            JSON.stringify({
-              data: newBalance,
-              error: null,
-            })
-          );
-        }
+          // ws.send(
+          //   JSON.stringify({
+          //     data: newBalance,
+          //     error: null,
+          //   })
+          // );
+        },
       )
       .subscribe();
   } catch (error) {
@@ -234,7 +214,7 @@ const handleRealtimeBalance = async (ws: WebSocket, req: any, params: any) => {
       JSON.stringify({
         data: null,
         error: "Error getting feature balance",
-      })
+      }),
     );
   }
 };

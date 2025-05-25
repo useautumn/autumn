@@ -1,11 +1,9 @@
 import {
   AllowanceType,
-  CusProductSchema,
   EntInterval,
-  FullCustomerEntitlement,
-  FullCustomerEntitlementSchema,
+  FullCusEntWithProduct,
 } from "@autumn/shared";
-import { CustomerEntitlementService } from "./internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "./internal/customers/entitlements/CusEntitlementService.js";
 import { createSupabaseClient } from "./external/supabaseUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
@@ -22,20 +20,12 @@ import {
 import { getResetBalancesUpdate } from "./internal/customers/entitlements/groupByUtils.js";
 import { CusProductService } from "./internal/customers/products/CusProductService.js";
 import { createStripeCli } from "./external/stripe/utils.js";
-import { TZDate } from "@date-fns/tz";
 import { UTCDate } from "@date-fns/utc";
+import { DrizzleCli, initDrizzle } from "./db/initDrizzle.js";
+
+import { isEqual } from "lodash-es";
 
 dotenv.config();
-
-const FullCustomerEntitlementWithProduct = FullCustomerEntitlementSchema.extend(
-  {
-    customer_product: CusProductSchema,
-  },
-);
-
-type FullCustomerEntitlementWithProduct = z.infer<
-  typeof FullCustomerEntitlementWithProduct
->;
 
 const checkSubAnchor = async ({
   sb,
@@ -43,7 +33,7 @@ const checkSubAnchor = async ({
   nextResetAt,
 }: {
   sb: SupabaseClient;
-  cusEnt: FullCustomerEntitlementWithProduct;
+  cusEnt: FullCusEntWithProduct;
   nextResetAt: number;
 }) => {
   let nextResetAtDate = new UTCDate(nextResetAt);
@@ -101,10 +91,12 @@ const checkSubAnchor = async ({
 
 const resetCustomerEntitlement = async ({
   sb,
+  db,
   cusEnt,
 }: {
   sb: SupabaseClient;
-  cusEnt: FullCustomerEntitlementWithProduct;
+  db: DrizzleCli;
+  cusEnt: FullCusEntWithProduct;
 }) => {
   try {
     if (cusEnt.usage_allowed) {
@@ -140,8 +132,8 @@ const resetCustomerEntitlement = async ({
     // Handle if entitlement changed to unlimited...
     let entitlement = cusEnt.entitlement;
     if (entitlement.allowance_type === AllowanceType.Unlimited) {
-      await CustomerEntitlementService.update({
-        sb,
+      await CusEntService.update({
+        db,
         id: cusEnt.id,
         updates: {
           unlimited: true,
@@ -160,8 +152,8 @@ const resetCustomerEntitlement = async ({
     }
 
     if (entitlement.interval === EntInterval.Lifetime) {
-      await CustomerEntitlementService.update({
-        sb,
+      await CusEntService.update({
+        db,
         id: cusEnt.id,
         updates: {
           next_reset_at: null,
@@ -197,11 +189,10 @@ const resetCustomerEntitlement = async ({
       console.log(error);
     }
 
-    await CustomerEntitlementService.update({
-      sb,
+    await CusEntService.update({
+      db,
       id: cusEnt.id,
       updates: {
-        // balance: resetBalance,
         ...resetBalanceUpdate,
         next_reset_at: nextResetAt,
         adjustment: 0,
@@ -233,22 +224,22 @@ export const cronTask = async () => {
   );
   // 1. Query customer_entitlements for all customers with reset_interval < now
   const sb = createSupabaseClient();
-  let cusEntitlements: FullCustomerEntitlement[] = [];
+  const { db, client } = initDrizzle();
+
   try {
-    cusEntitlements = await CustomerEntitlementService.getActiveResetPassed({
-      sb,
-      // customDateUnix: new Date("2025-04-30 14:00:00").getTime(),
-    });
+    let cusEnts: FullCusEntWithProduct[] =
+      await CusEntService.getActiveResetPassed({ db });
 
     const batchSize = 20;
-    for (let i = 0; i < cusEntitlements.length; i += batchSize) {
-      const batch = cusEntitlements.slice(i, i + batchSize);
+    for (let i = 0; i < cusEnts.length; i += batchSize) {
+      const batch = cusEnts.slice(i, i + batchSize);
       const batchResets = [];
       for (const cusEnt of batch) {
         batchResets.push(
           resetCustomerEntitlement({
             sb,
-            cusEnt: cusEnt as FullCustomerEntitlementWithProduct,
+            db,
+            cusEnt: cusEnt as FullCusEntWithProduct,
           }),
         );
       }
@@ -265,6 +256,8 @@ export const cronTask = async () => {
     console.error("Error getting entitlements for reset:", error);
     return;
   }
+
+  await client.end();
 };
 
 const job = new CronJob(

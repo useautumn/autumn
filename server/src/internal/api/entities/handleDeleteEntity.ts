@@ -13,7 +13,7 @@ import {
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
 import { removeEntityFromCusEnt } from "./entityUtils.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
 import { removeScheduledProduct } from "../customers/handlers/handleCusProductExpired.js";
@@ -146,7 +146,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
           cusProducts.flatMap((p: any) => p.customer_prices),
         );
         await removeEntityFromCusEnt({
-          sb,
+          db,
           cusEnt,
           entity,
           logger,
@@ -196,8 +196,8 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         (e: any) => e.entitlement.feature.id === entity.feature_id,
       );
       if (updateCusEnt) {
-        await CustomerEntitlementService.incrementBalance({
-          pg: req.pg,
+        await CusEntService.increment({
+          db,
           id: updateCusEnt.id,
           amount: 1,
         });

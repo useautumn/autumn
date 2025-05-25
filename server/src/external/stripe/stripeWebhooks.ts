@@ -75,6 +75,7 @@ stripeWebhookRouter.post(
       switch (event.type) {
         case "customer.subscription.created":
           await handleSubCreated({
+            db,
             sb: request.sb,
             org,
             subscription: event.data.object,
@@ -111,6 +112,7 @@ stripeWebhookRouter.post(
         case "checkout.session.completed":
           const checkoutSession = event.data.object;
           await handleCheckoutSessionCompleted({
+            db,
             sb: request.sb,
             checkoutSession,
             org,
@@ -123,6 +125,7 @@ stripeWebhookRouter.post(
         case "invoice.paid":
           const invoice = event.data.object;
           await handleInvoicePaid({
+            db,
             sb: request.sb,
             org,
             invoice,
@@ -148,6 +151,7 @@ stripeWebhookRouter.post(
         case "invoice.finalized":
           const finalizedInvoice = event.data.object;
           await handleInvoiceFinalized({
+            db,
             sb: request.sb,
             org,
             invoice: finalizedInvoice,
@@ -159,6 +163,7 @@ stripeWebhookRouter.post(
         case "subscription_schedule.canceled":
           const canceledSchedule = event.data.object;
           await handleSubscriptionScheduleCanceled({
+            db,
             sb: request.sb,
             org,
             env,
@@ -169,6 +174,7 @@ stripeWebhookRouter.post(
 
         case "customer.discount.deleted":
           await handleCusDiscountDeleted({
+            db,
             sb: request.sb,
             org,
             discount: event.data.object,
