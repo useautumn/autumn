@@ -13,16 +13,16 @@ import { products } from "../productTable.js";
 import { FixedPriceConfig } from "./priceConfig/fixedPriceConfig.js";
 import { UsagePriceConfig } from "./priceConfig/usagePriceConfig.js";
 import { sql } from "drizzle-orm";
+import { collatePgColumn } from "../../../db/utils.js";
 
 export const prices = pgTable(
   "prices",
   {
-    created_at: numeric({ mode: "number" }).notNull(),
-    config: jsonb().$type<FixedPriceConfig | UsagePriceConfig>(),
+    id: text().primaryKey().notNull(),
     org_id: text("org_id").notNull(),
     internal_product_id: text("internal_product_id").notNull(),
-    id: text().primaryKey().notNull(),
-    name: text(),
+    config: jsonb().$type<FixedPriceConfig | UsagePriceConfig>(),
+    created_at: numeric({ mode: "number" }).notNull(),
     billing_type: text("billing_type"),
     is_custom: boolean("is_custom").default(false),
     entitlement_id: text("entitlement_id").default(sql`null`),
@@ -43,3 +43,5 @@ export const prices = pgTable(
     unique("prices_id_key").on(table.id),
   ],
 );
+
+collatePgColumn(prices.id, "C");

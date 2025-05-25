@@ -416,7 +416,7 @@ export const getFullCusProductData = async ({
   });
 
   const freeTrial = await handleNewFreeTrial({
-    sb,
+    db,
     curFreeTrial: product!.free_trial,
     newFreeTrial: freeTrialInput || null,
     internalProductId: product!.internal_id,

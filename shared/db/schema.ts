@@ -7,6 +7,7 @@ import { features } from "../models/featureModels/featureTable.js";
 import { products } from "../models/productModels/productTable.js";
 import { prices } from "../models/productModels/priceModels/priceTable.js";
 import { entitlements } from "../models/productModels/entModels/entTable.js";
+import { freeTrials } from "../models/productModels/freeTrialModels/freeTrialTable.js";
 
 // Others
 import { apiKeys } from "./apiKeysTable.js";
@@ -16,6 +17,7 @@ import { customers } from "./cusTable.js";
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { apiKeysRelations } from "./relations.js";
 import { featureRelations } from "../models/featureModels/featureRelations.js";
+import { freeTrialRelations } from "../models/productModels/freeTrialModels/freeTrialRelations.js";
 
 // Product Relations
 import { entitlementsRelations } from "../models/productModels/entModels/entRelations.js";
@@ -29,16 +31,18 @@ const relations = {
   featureRelations,
   priceRelations,
   productRelations,
+  freeTrialRelations,
 };
 
 export const schemas = {
   apiKeys,
   organizations,
   chatResults,
+  freeTrials,
   entitlements,
+  prices,
   features,
   products,
-  prices,
   customers,
   ...relations,
 };

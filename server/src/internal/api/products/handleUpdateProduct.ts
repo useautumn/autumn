@@ -15,14 +15,8 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import {
-  handleVersionProduct,
-  handleVersionProductV2,
-} from "./handleVersionProduct.js";
-import {
-  productsAreDifferent,
-  productsAreDifferent2,
-} from "@/internal/products/productUtils.js";
+import { handleVersionProductV2 } from "./handleVersionProduct.js";
+import { productsAreDifferent } from "@/internal/products/productUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
@@ -179,58 +173,11 @@ export const handleUpdateProduct = async (req: any, res: any) => {
     });
 
     if (cusProductExists && productHasChanged) {
-      await handleVersionProduct({
-        req,
-        res,
-        sb,
-        latestProduct: fullProduct,
-        org,
-        env,
-        prices,
-        entitlements,
-        freeTrial: free_trial,
-      });
+      // would've versioned product
       return;
     }
 
-    if (free_trial !== undefined) {
-      await handleNewFreeTrial({
-        sb,
-        curFreeTrial: fullProduct.free_trial,
-        newFreeTrial: free_trial,
-        internalProductId: fullProduct.internal_id,
-        isCustom: false,
-      });
-    }
-
-    // 1. Handle changing of entitlements
-    if (notNullish(entitlements)) {
-      // await handleNewEntitlements({
-      //   sb,
-      //   newEnts: entitlements,
-      //   curEnts: fullProduct.entitlements,
-      //   features,
-      //   orgId,
-      //   internalProductId: fullProduct.internal_id,
-      //   isCustom: false,
-      //   prices,
-      // });
-    }
-
-    if (notNullish(prices)) {
-      // await handleNewPrices({
-      //   sb,
-      //   newPrices: prices,
-      //   curPrices: fullProduct.prices,
-      //   entitlements,
-      //   internalProductId: fullProduct.internal_id,
-      //   isCustom: false,
-      //   features,
-      //   product: fullProduct,
-      //   env,
-      //   org,
-      // });
-    }
+    // Else update free trial, entitlements, prices
 
     res.status(200).json({ message: "Product updated" });
     return;
@@ -334,7 +281,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
       if (free_trial !== undefined) {
         await handleNewFreeTrial({
-          sb,
+          db,
           curFreeTrial: fullProduct.free_trial,
           newFreeTrial: free_trial,
           internalProductId: fullProduct.internal_id,
