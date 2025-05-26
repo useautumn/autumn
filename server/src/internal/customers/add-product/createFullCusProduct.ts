@@ -224,22 +224,28 @@ export const expireOrDeleteCusProduct = async ({
 };
 
 export const getExistingCusProduct = async ({
-  sb,
+  db,
   cusProducts,
   product,
   internalCustomerId,
   internalEntityId,
 }: {
-  sb?: SupabaseClient;
+  db: DrizzleCli;
+
   cusProducts?: FullCusProduct[];
   product: FullProduct;
   internalCustomerId: string;
   internalEntityId?: string;
 }) => {
   if (!cusProducts) {
-    cusProducts = await CusService.getFullCusProducts({
-      sb: sb as SupabaseClient,
+    cusProducts = await CusProductService.list({
+      db,
       internalCustomerId,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
     });
   }
 
@@ -317,7 +323,7 @@ export const createFullCusProduct = async ({
   let curCusProduct;
   try {
     curCusProduct = await getExistingCusProduct({
-      sb,
+      db,
       cusProducts: attachParams.cusProducts,
       product,
       internalCustomerId: customer.internal_id,

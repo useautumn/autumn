@@ -539,17 +539,20 @@ export const isTrialing = (cusProduct: FullCusProduct) => {
 };
 
 export const getMainCusProduct = async ({
-  sb,
+  db,
   internalCustomerId,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   internalCustomerId: string;
 }) => {
-  let cusProducts = await CusService.getFullCusProducts({
-    sb,
+  let cusProducts = await CusProductService.list({
+    db,
     internalCustomerId,
-    withPrices: true,
-    withProduct: true,
+    inStatuses: [
+      CusProductStatus.Active,
+      CusProductStatus.PastDue,
+      CusProductStatus.Scheduled,
+    ],
   });
 
   let mainCusProduct = cusProducts.find(

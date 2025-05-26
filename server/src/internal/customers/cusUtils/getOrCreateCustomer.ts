@@ -14,7 +14,7 @@ import {
   Organization,
 } from "@autumn/shared";
 
-import { createEntities } from "@/internal/api/entities/handleCreateEntity.js";
+import { createEntities } from "@/internal/api/entities/handlers/handleCreateEntity.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -87,12 +87,11 @@ export const getOrCreateCustomer = async ({
         org,
         env,
         logger,
-        getDetails: false,
       });
 
       customer = await CusService.getWithProducts({
         sb,
-        idOrInternalId: customerId || customer.internal_id,
+        idOrInternalId: customerId || customer!.internal_id,
         orgId: org.id,
         env,
         inStatuses,
@@ -119,7 +118,7 @@ export const getOrCreateCustomer = async ({
   }
 
   customer = await updateCustomerDetails({
-    sb,
+    db,
     customer,
     customerData,
     logger,

@@ -105,7 +105,7 @@ const getEventAndCustomer = async ({
     timestamp: eventTimestamp,
   };
 
-  await EventService.insertEvent(sb, newEvent);
+  await EventService.insert({ db, event: newEvent });
 
   return { customer, event: newEvent };
 };

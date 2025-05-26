@@ -17,7 +17,7 @@ import chalk from "chalk";
 
 describe(
   chalk.yellowBright(
-    "Multi Product 4: double downgrade, double upgrade (back)"
+    "Multi Product 4: double downgrade, double upgrade (back)",
   ),
   () => {
     let customerId = "multi-double-downgrade-upgrade";
@@ -79,10 +79,9 @@ describe(
 
       // Check that schedule contains premium group 1, and starter group 2...
 
-      let cusProducts = await CusService.getFullCusProducts({
-        sb: this.sb,
+      const cusProducts = await CusProductService.list({
+        db: this.db,
         internalCustomerId: customer!.internal_id,
-        withProduct: true,
       });
 
       // 1. Check that premium group 1 is active, and had scheduled_ids
@@ -99,7 +98,7 @@ describe(
       expect(premiumGroup1!.scheduled_ids!.length).to.equal(1);
       expect(starterGroup2!.scheduled_ids!.length).to.equal(1);
       expect(premiumGroup1!.scheduled_ids![0]).to.equal(
-        starterGroup2!.scheduled_ids![0]
+        starterGroup2!.scheduled_ids![0],
       );
 
       // 2. Check that there's no starter group 1
@@ -122,10 +121,9 @@ describe(
 
       await timeout(5000);
 
-      let cusProducts = await CusService.getFullCusProducts({
-        sb: this.sb,
+      const cusProducts = await CusProductService.list({
+        db: this.db,
         internalCustomerId: customer!.internal_id,
-        withProduct: true,
       });
 
       let premiumGroup2 = searchCusProducts({
@@ -166,5 +164,5 @@ describe(
     //     productId: attachProducts.premiumGroup2.id,
     //   });
     // });
-  }
+  },
 );

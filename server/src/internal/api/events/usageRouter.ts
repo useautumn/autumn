@@ -116,7 +116,7 @@ const createAndInsertEvent = async ({
     set_usage: set_usage || false,
   };
 
-  await EventService.insertEvent(req.sb, newEvent);
+  await EventService.insert({ db: req.db, event: newEvent });
 
   return newEvent;
 };

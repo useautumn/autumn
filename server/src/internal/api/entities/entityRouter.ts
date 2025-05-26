@@ -1,13 +1,13 @@
 import { Router } from "express";
 
-import { handleDeleteEntity } from "./handleDeleteEntity.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { EntityService } from "./EntityService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
-import { handleGetEntity } from "./handleGetEntity.js";
-import { handlePostEntityRequest } from "./handleCreateEntity.js";
+import { handleGetEntity } from "./handlers/handleGetEntity.js";
+import { handlePostEntityRequest } from "./handlers/handleCreateEntity.js";
+import { handleDeleteEntity } from "./handlers/handleDeleteEntity.js";
 
 export const entityRouter = Router({ mergeParams: true });
 
@@ -19,14 +19,14 @@ entityRouter.get("", (req, res) =>
     action: "listEntities",
     handler: async (req, res) => {
       const customerId = req.params.customer_id as string;
-      let { orgId, env, sb, logtail: logger } = req;
+      let { orgId, env } = req;
 
-      let customer = await CusService.getById({
-        id: customerId,
+      let customer = await CusService.getWithProducts({
+        sb: req.sb,
+        idOrInternalId: customerId,
         orgId,
         env,
-        sb,
-        logger,
+        withEntities: true,
       });
 
       if (!customer) {
@@ -36,18 +36,11 @@ entityRouter.get("", (req, res) =>
         });
       }
 
-      const entities = await EntityService.get({
-        orgId,
-        env,
-        sb,
-        internalCustomerId: customer.internal_id,
-      });
-
       res.status(200).json({
-        data: entities,
+        data: customer.entities,
       });
     },
-  })
+  }),
 );
 
 // 1. Create entity

@@ -1,5 +1,6 @@
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { toPricecnProduct } from "@/internal/products/pricecn/pricecnUtils.js";
@@ -29,12 +30,11 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
           if (!customerId) {
             return null;
           }
-          return await CusService.getById({
-            sb,
+          return await CusService.get({
+            db,
             orgId,
             env,
-            id: customerId,
-            logger,
+            idOrInternalId: customerId,
           });
         })(),
       ]);
@@ -57,11 +57,9 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
       let cusProducts: FullCusProduct[] | null = null;
 
       if (customer) {
-        cusProducts = await CusService.getFullCusProducts({
-          sb,
+        cusProducts = await CusProductService.list({
+          db,
           internalCustomerId: customer.internal_id,
-          withProduct: true,
-          withPrices: true,
           inStatuses: [
             CusProductStatus.Active,
             CusProductStatus.PastDue,

@@ -1,133 +1,102 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
-import { getAPIKeyCache } from "@/external/caching/cacheUtils.js";
-import { sbWithRetry } from "@/external/supabaseUtils.js";
 import { getApiVersion } from "@/utils/versionUtils.js";
 
-import { ApiKey, AppEnv, ErrCode, OrgConfigSchema } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+import {
+  ApiKey,
+  apiKeys,
+  AppEnv,
+  Feature,
+  features,
+  Organization,
+  OrgConfigSchema,
+} from "@autumn/shared";
+
+import { desc, and, eq } from "drizzle-orm";
 
 export class ApiKeyService {
   static async verifyAndFetch({
-    sb,
+    db,
+    secretKey,
     hashedKey,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
+    secretKey: string;
     hashedKey: string;
     env: AppEnv;
   }) {
-    const { data, error } = await sb.rpc("verify_api_key", {
-      p_hashed_key: hashedKey,
-      p_env: env,
+    let data = await db.query.apiKeys.findFirst({
+      where: eq(apiKeys.hashed_key, hashedKey),
+      with: {
+        org: {
+          with: {
+            features: {
+              where: eq(features.env, env),
+            },
+          },
+        },
+      },
     });
 
-    if (error) {
-      throw error;
-    }
-
-    if (!data.success || !data.organization) {
-      console.warn(`(warning) failed to verify secret key: ${data.error}`);
+    if (!data || !data.org) {
+      console.warn(`verify secret key ${secretKey} returned null`);
       return null;
     }
 
-    let org = structuredClone(data.organization);
+    let org = structuredClone(data.org) as Organization & {
+      features?: Feature[];
+    };
+
     delete org.features;
 
-    // Add org config and api version
     org.config = OrgConfigSchema.parse(org.config || {});
     org.api_version = getApiVersion({
-      createdAt: org.created_at,
+      createdAt: org.created_at!,
     });
 
-    return {
+    let result = {
       org,
-      features: data.organization?.features || [],
+      features: (data.org.features || []) as Feature[],
       env,
     };
+
+    console.log("result", result);
+    return result;
   }
 
-  static async getByOrg(sb: SupabaseClient, orgId: string, env: AppEnv) {
-    const { data, error } = await sb
-      .from("api_keys")
-      .select("*")
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .order("created_at", {
-        ascending: false,
-      })
-      .order("id");
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-  static async insert(sb: SupabaseClient, apiKey: ApiKey) {
-    await sb.from("api_keys").insert(apiKey);
-  }
-
-  static async deleteStrict(sb: SupabaseClient, id: string, orgId: string) {
-    const { data, error } = await sb
-      .from("api_keys")
-      .delete()
-      .eq("id", id)
-      .eq("org_id", orgId)
-      .select();
-
-    if (error) {
-      throw new Error("Failed to delete API key");
-    }
-
-    return data;
-  }
-
-  static async getByHashedKey({
-    sb,
-    hashedKey,
-    logger,
+  static async getByOrg({
+    db,
+    orgId,
+    env,
   }: {
-    sb: SupabaseClient;
-    hashedKey: string;
-    logger: any;
+    db: DrizzleCli;
+    orgId: string;
+    env: AppEnv;
   }) {
-    const { data, error } = await sbWithRetry({
-      query: async () => {
-        return await sb
-          .from("api_keys")
-          .select("*")
-          .eq("hashed_key", hashedKey)
-          .single();
-      },
-      logger: logger,
+    return await db.query.apiKeys.findMany({
+      where: and(eq(apiKeys.org_id, orgId), eq(apiKeys.env, env)),
+      orderBy: [desc(apiKeys.id)],
     });
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-
-      throw error;
-    }
-
-    return data;
+  }
+  static async insert({ db, apiKey }: { db: DrizzleCli; apiKey: ApiKey }) {
+    await db.insert(apiKeys).values(apiKey);
   }
 
-  static async update({
-    sb,
-    update,
-    keyId,
+  static async delete({
+    db,
+    id,
+    orgId,
   }: {
-    sb: SupabaseClient;
-    update: any;
-    keyId: string;
+    db: DrizzleCli;
+    id: string;
+    orgId: string;
   }) {
-    const { error } = await sb.from("api_keys").update(update).eq("id", keyId);
-
-    if (error) {
-      throw error;
-    }
+    return await db
+      .delete(apiKeys)
+      .where(and(eq(apiKeys.id, id), eq(apiKeys.org_id, orgId)))
+      .returning();
   }
 }
 
@@ -145,3 +114,32 @@ export class CachedKeyService {
     }
   }
 }
+
+// const { data, error } = await sb.rpc("verify_api_key", {
+//   p_hashed_key: hashedKey,
+//   p_env: env,
+// });
+
+// if (error) {
+//   throw error;
+// }
+
+// if (!data.success || !data.organization) {
+//   console.warn(`(warning) failed to verify secret key: ${data.error}`);
+//   return null;
+// }
+
+// let org = structuredClone(data.organization);
+// delete org.features;
+
+// // Add org config and api version
+// org.config = OrgConfigSchema.parse(org.config || {});
+// org.api_version = getApiVersion({
+//   createdAt: org.created_at,
+// });
+
+// return {
+//   org,
+//   features: data.organization?.features || [],
+//   env,
+// };

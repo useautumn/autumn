@@ -26,14 +26,15 @@ import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEn
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { nullish } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const updateCustomerDetails = async ({
-  sb,
+  db,
   customer,
   customerData,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   customer: any;
   customerData?: CustomerData;
   logger: any;
@@ -49,36 +50,12 @@ export const updateCustomerDetails = async ({
   if (Object.keys(updates).length > 0) {
     logger.info(`Updating customer details`, { updates });
     await CusService.update({
-      sb,
+      db,
       internalCusId: customer.internal_id,
       update: updates,
     });
     customer = { ...customer, ...updates };
   }
-
-  return customer;
-};
-
-export const getCusByIdOrInternalId = async ({
-  sb,
-  idOrInternalId,
-  orgId,
-  env,
-  isFull = false,
-}: {
-  sb: SupabaseClient;
-  idOrInternalId: string;
-  orgId: string;
-  env: AppEnv;
-  isFull?: boolean;
-}) => {
-  const customer = await CusService.getByIdOrInternalId({
-    sb,
-    orgId,
-    env,
-    idOrInternalId,
-    isFull,
-  });
 
   return customer;
 };
@@ -216,7 +193,7 @@ export const getCusEntsInFeatures = async ({
   return { cusEnts, cusPrices };
 };
 
-export const parseCusExpand = (expand: string): CusExpand[] => {
+export const parseCusExpand = (expand?: string): CusExpand[] => {
   if (expand) {
     let options = expand.split(",");
     let result: CusExpand[] = [];

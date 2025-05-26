@@ -26,6 +26,7 @@ export interface ExtendedRequest extends ExpressRequest {
   features: Feature[];
 
   posthog?: PostHog;
+  apiVersion?: number;
 }
 
 export interface ExtendedResponse extends ExpressResponse {}

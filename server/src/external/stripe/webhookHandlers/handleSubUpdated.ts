@@ -149,11 +149,9 @@ export const handleSubscriptionUpdated = async ({
         env,
       });
 
-      let cusProducts = await CusService.getFullCusProducts({
-        sb,
+      let cusProducts = await CusProductService.list({
+        db,
         internalCustomerId: updatedCusProducts[0].customer.internal_id,
-        withProduct: true,
-        withPrices: true,
         inStatuses: [CusProductStatus.Scheduled],
       });
 
@@ -232,11 +230,10 @@ export const handleSubscriptionUpdated = async ({
 
     if (uncanceled && updatedCusProducts.length > 0) {
       let customer = updatedCusProducts[0].customer;
-      let allCusProducts = await CusService.getFullCusProducts({
-        sb,
+
+      let allCusProducts = await CusProductService.list({
+        db,
         internalCustomerId: customer.internal_id,
-        withProduct: true,
-        withPrices: true,
         inStatuses: [
           CusProductStatus.Active,
           CusProductStatus.PastDue,

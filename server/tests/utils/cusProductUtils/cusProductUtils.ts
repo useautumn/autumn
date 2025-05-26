@@ -1,11 +1,6 @@
 import { Autumn } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import {
-  AppEnv,
-  CusProductStatus,
-  FullCusProduct,
-  FullCustomerEntitlement,
-} from "@autumn/shared";
+import { AppEnv, CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getMainCusProduct = async ({
@@ -19,24 +14,19 @@ export const getMainCusProduct = async ({
   orgId: string;
   env: AppEnv;
 }) => {
-  let customer = await CusService.getById({
+  let customer = await CusService.getWithProducts({
     sb,
-    id: customerId,
-    orgId: orgId,
-    env: env,
-    logger: console,
-  });
-
-  let cusProducts = await CusService.getFullCusProducts({
-    sb,
-    internalCustomerId: customer.internal_id!,
-    withProduct: true,
-    withPrices: true,
+    idOrInternalId: customerId,
+    orgId,
+    env,
+    withEntities: true,
     inStatuses: [CusProductStatus.Active],
   });
 
+  let cusProducts = customer.customer_products;
+
   let mainCusProduct = cusProducts.find(
-    (cusProduct: FullCusProduct) => !cusProduct.product.is_add_on
+    (cusProduct: FullCusProduct) => !cusProduct.product.is_add_on,
   );
 
   return mainCusProduct || null;

@@ -87,8 +87,8 @@ const handleInArrearProrated = async ({
     `Handling invoice.created for in arrear prorated, feature: ${feature.id}`,
   );
 
-  let deletedEntities = await EntityService.getByInternalCustomerId({
-    sb,
+  let deletedEntities = await EntityService.list({
+    db,
     internalCustomerId: customer.internal_id!,
     inFeatureIds: [feature.internal_id!],
     isDeleted: true,
@@ -149,7 +149,7 @@ const handleInArrearProrated = async ({
   }
 
   await EntityService.deleteInInternalIds({
-    sb,
+    db,
     internalIds: deletedEntities.map((e) => e.internal_id!),
     orgId: org.id,
     env,
@@ -501,7 +501,7 @@ export const handleInvoiceCreated = async ({
       try {
         let stripeCli = createStripeCli({ org, env });
         let entity = await EntityService.getByInternalId({
-          sb,
+          db,
           internalId: internalEntityId,
           orgId: org.id,
           env,

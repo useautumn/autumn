@@ -25,12 +25,10 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 const getCusOrgAndCusPrice = async ({
   db,
   req,
-  sb,
   cusEnt,
 }: {
   db: DrizzleCli;
   req: ExtendedRequest;
-  sb: SupabaseClient;
   cusEnt: FullCustomerEntitlement;
 }) => {
   const [cusPrice, customer, org] = await Promise.all([
@@ -39,7 +37,7 @@ const getCusOrgAndCusPrice = async ({
       cusEnt,
     }),
     CusService.getByInternalId({
-      sb: sb,
+      db,
       internalId: cusEnt.internal_customer_id,
     }),
     OrgService.getFromReq(req),
@@ -133,11 +131,12 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
     const { cusPrice, customer, org } = await getCusOrgAndCusPrice({
       db,
       req,
-      sb,
       cusEnt,
     });
 
-    if (!cusPrice) {
+    console.log("Customer", customer);
+
+    if (!cusPrice || !customer) {
       res.status(200).json({ success: true });
       return;
     }

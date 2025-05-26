@@ -6,15 +6,16 @@ import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const createStripeCusIfNotExists = async ({
-  sb,
+  db,
   org,
   env,
   customer,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   customer: Customer;
@@ -41,7 +42,7 @@ export const createStripeCusIfNotExists = async ({
     });
 
     await CusService.update({
-      sb,
+      db,
       internalCusId: customer.internal_id,
       update: {
         processor: {

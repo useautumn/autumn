@@ -86,6 +86,7 @@ export const migrateCustomers = async ({
     for (let customer of batchCustomers) {
       batchPromises.push(
         migrateCustomer({
+          db,
           migrationJob,
           sb,
           customer,
