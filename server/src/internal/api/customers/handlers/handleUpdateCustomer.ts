@@ -9,22 +9,25 @@ import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../getCustomerDetails.js";
 import { parseCusExpand } from "../cusUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { ExtendedResponse } from "@/utils/models/Request.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const handleUpdateCustomer = async (req: any, res: any) =>
   routeHandler({
     req,
     res,
     action: "POST/customers/:customer_id",
-    handler: async (req, res) => {
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+      const { orgId, env, db, org } = req;
       const customerId = req.params.customer_id;
-      const [originalCustomer, org, features] = await Promise.all([
-        CusService.getByIdOrInternalId({
-          sb: req.sb,
+      const [originalCustomer, features] = await Promise.all([
+        CusService.get({
+          db,
           idOrInternalId: customerId,
-          orgId: req.orgId,
-          env: req.env,
+          orgId,
+          env,
         }),
-        OrgService.getFromReq(req),
+
         FeatureService.getFromReq(req),
       ]);
 
@@ -48,12 +51,11 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 
       if (notNullish(newCusData.id) && originalCustomer.id !== newCusData.id) {
         // Fetch for existing customer
-        const existingCustomer = await CusService.getById({
-          sb: req.sb,
-          id: newCusData.id,
+        const existingCustomer = await CusService.get({
+          db: req.db,
+          idOrInternalId: newCusData.id,
           orgId: req.orgId,
           env: req.env,
-          logger: req.logtail,
         });
 
         if (existingCustomer) {
@@ -95,12 +97,12 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         const stripeCli = createStripeCli({ org, env: req.env });
         await stripeCli.customers.update(
           originalCustomer.processor.id,
-          stripeUpdate as any
+          stripeUpdate as any,
         );
       }
 
       await CusService.update({
-        sb: req.sb,
+        db: req.db,
         internalCusId: originalCustomer.internal_id,
         update: {
           ...newCusData,
@@ -127,7 +129,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         env: req.env,
         logger: req.logtail,
         cusProducts: finalCustomer.customer_products,
-        expand: parseCusExpand(req.query.expand),
+        expand: parseCusExpand(req.query.expand as string),
         features,
         reqApiVersion: req.apiVersion,
       });

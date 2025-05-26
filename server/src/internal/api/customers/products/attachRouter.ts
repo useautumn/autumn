@@ -164,7 +164,7 @@ export const checkStripeConnections = async ({
   if (attachParams.invoiceOnly && !customer.email) {
     customer.email = `${customer.id}@invoices.useautumn.com`;
     await CusService.update({
-      sb: req.sb,
+      db: req.db,
       internalCusId: customer.internal_id,
       update: {
         email: customer.email,
@@ -172,11 +172,9 @@ export const checkStripeConnections = async ({
     });
   }
 
-  const stripeCli = createStripeCli({ org, env });
-
   const batchProductUpdates = [
     createStripeCusIfNotExists({
-      sb: req.sb,
+      db: req.db,
       org,
       env,
       customer,

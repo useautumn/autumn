@@ -5,15 +5,16 @@ import {
   jsonb,
   foreignKey,
   unique,
+  index,
 } from "drizzle-orm/pg-core";
-
-import { organizations } from "../models/orgModels/orgTable.js";
+import { organizations } from "../orgModels/orgTable.js";
+import { collatePgColumn, sqlNow } from "../../db/utils.js";
 
 export const apiKeys = pgTable(
   "api_keys",
   {
     id: text().primaryKey().notNull(),
-    created_at: numeric("created_at").notNull(),
+    created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
     name: text(),
     prefix: text(),
     org_id: text("org_id"),
@@ -29,7 +30,8 @@ export const apiKeys = pgTable(
       name: "api_keys_org_id_fkey",
     }).onDelete("cascade"),
     unique("api_keys_hashed_key_key").on(table.hashed_key),
+    // index("api_keys_hashed_key_key").on(table.hashed_key),
   ],
 );
 
-export type ApiKey = typeof apiKeys.$inferSelect;
+collatePgColumn(apiKeys.id, "C");

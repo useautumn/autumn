@@ -6,76 +6,6 @@ import Stripe from "stripe";
 import { notNullish, timeout } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
-export const handleDiscountCompleted = async ({
-  sb,
-  stripeCusId,
-  stripeCli,
-  logger,
-}: {
-  sb: SupabaseClient;
-  stripeCusId: string;
-  stripeCli: Stripe;
-  logger: any;
-}) => {
-  logger.info(`Checking discount completed`);
-  let customer = await CusService.getByStripeId({
-    sb,
-    stripeId: stripeCusId,
-  });
-
-  if (!customer) {
-    logger.warn(
-      `Checking discount completed: customer ${stripeCusId} not found`,
-    );
-    return;
-  }
-
-  // Check if any redemptions available, and apply to customer if so
-  let redemptions = await RewardRedemptionService.getUnappliedRedemptions({
-    sb,
-    internalCustomerId: customer.internal_id,
-  });
-
-  if (redemptions.length == 0) {
-    logger.info(
-      `Checking discount completed: no redemptions available for customer ${customer.id}`,
-    );
-    return;
-  }
-
-  let redemption = redemptions[0];
-  let reward = redemption.reward_program.reward;
-
-  let stripeCus = (await stripeCli.customers.retrieve(
-    stripeCusId,
-  )) as Stripe.Customer;
-
-  if (stripeCus && notNullish(stripeCus.discount)) {
-    logger.info(
-      `Checking discount completed: stripe customer ${stripeCusId} already has a discount`,
-    );
-    return;
-  }
-
-  await stripeCli.customers.update(stripeCusId, {
-    coupon: reward.internal_id,
-  });
-
-  await RewardRedemptionService.update({
-    sb,
-    id: redemption.id,
-    updates: {
-      applied: true,
-    },
-  });
-
-  logger.info(
-    `Checking discount completed: applied reward ${reward.name} on customer ${customer.name} (${customer.id})`,
-  );
-
-  logger.info(`Redemption ID: ${redemption.id}`);
-};
-
 export async function handleCusDiscountDeleted({
   db,
   sb,
@@ -94,7 +24,7 @@ export async function handleCusDiscountDeleted({
   res: any;
 }) {
   let customer = await CusService.getByStripeId({
-    sb,
+    db,
     stripeId: discount.customer,
   });
 

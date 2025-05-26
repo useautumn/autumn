@@ -1,5 +1,5 @@
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { EntityService } from "./EntityService.js";
+import { EntityService } from "../EntityService.js";
 import { StatusCodes } from "http-status-codes";
 import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -12,11 +12,11 @@ import {
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
-import { removeEntityFromCusEnt } from "./entityUtils.js";
+import { removeEntityFromCusEnt } from "../entityUtils.js";
 import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
-import { removeScheduledProduct } from "../customers/handlers/handleCusProductExpired.js";
+import { removeScheduledProduct } from "../../customers/handlers/handleCusProductExpired.js";
 
 export const handleDeleteEntity = async (req: any, res: any) => {
   try {
@@ -32,12 +32,17 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       logger,
     });
 
-    const customer = await CusService.getById({
+    const customer = await CusService.getWithProducts({
       sb: req.sb,
-      id: customer_id,
+      idOrInternalId: customer_id,
       orgId: req.orgId,
       env: req.env,
-      logger,
+      withEntities: true,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
     });
 
     if (!customer) {
@@ -48,12 +53,8 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       });
     }
 
-    const existingEntities = await EntityService.get({
-      sb: req.sb,
-      internalCustomerId: customer.internal_id,
-      orgId: req.orgId,
-      env: req.env,
-    });
+    const existingEntities = customer.entities;
+    const cusProducts = customer.customer_products;
 
     const entity = existingEntities.find((e: any) => e.id === entity_id);
 
@@ -70,19 +71,6 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         statusCode: StatusCodes.BAD_REQUEST,
       });
     }
-
-    const cusProducts = await CusService.getFullCusProducts({
-      sb: req.sb,
-      internalCustomerId: entity.internal_customer_id,
-      withProduct: true,
-      withPrices: true,
-      logger,
-      inStatuses: [
-        CusProductStatus.Active,
-        CusProductStatus.PastDue,
-        CusProductStatus.Scheduled,
-      ],
-    });
 
     const org = await OrgService.getFromReq(req);
 
@@ -205,14 +193,14 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       }
 
       await EntityService.deleteInInternalIds({
-        sb,
+        db,
         internalIds: [entity.internal_id],
         orgId: req.orgId,
         env: req.env,
       });
     } else {
       await EntityService.update({
-        sb,
+        db,
         internalId: entity.internal_id,
         update: {
           deleted: true,

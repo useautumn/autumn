@@ -12,12 +12,11 @@ export const handleCreateBillingPortal = async (req: any, res: any) => {
 
     const [org, customer] = await Promise.all([
       OrgService.getFromReq(req),
-      CusService.getById({
-        sb: req.sb,
-        id: customerId,
+      CusService.get({
+        db: req.db,
+        idOrInternalId: customerId,
         orgId: req.orgId,
         env: req.env,
-        logger: req.logtail,
       }),
     ]);
 

@@ -35,7 +35,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const initStripeCusAndProducts = async ({
   db,
-  sb,
   org,
   env,
   customer,
@@ -43,7 +42,6 @@ export const initStripeCusAndProducts = async ({
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   customer: Customer;
@@ -52,7 +50,7 @@ export const initStripeCusAndProducts = async ({
 }) => {
   const batchInit = [
     createStripeCusIfNotExists({
-      sb,
+      db,
       org,
       env,
       customer,
@@ -142,10 +140,17 @@ export const createNewCustomer = async ({
     }
   }
 
-  const newCustomer = await CusService.createCustomer({
-    sb,
-    customer: customerData,
+  const newCustomer = await CusService.insert({
+    db,
+    data: customerData,
   });
+
+  if (!newCustomer) {
+    throw new RecaseError({
+      code: ErrCode.InternalError,
+      message: "CusService.insert returned null",
+    });
+  }
 
   if (!createDefaultProducts) {
     return newCustomer;
@@ -154,7 +159,6 @@ export const createNewCustomer = async ({
   if (nonFreeProds.length > 0) {
     await initStripeCusAndProducts({
       db,
-      sb,
       org,
       env,
       customer: newCustomer,
@@ -244,7 +248,7 @@ const handleIdIsNull = async ({
   // 2. Check if email already exists
 
   let existingCustomers = await CusService.getByEmail({
-    sb,
+    db,
     email: newCus.email,
     orgId: org.id,
     env,
@@ -302,12 +306,11 @@ export const handleCreateCustomerWithId = async ({
   createDefaultProducts?: boolean;
 }) => {
   // 1. Get by ID
-  let existingCustomer = await CusService.getById({
-    sb,
-    id: newCus.id!,
+  let existingCustomer = await CusService.get({
+    db,
+    idOrInternalId: newCus.id!,
     orgId: org.id,
     env,
-    logger,
   });
 
   if (existingCustomer) {
@@ -320,7 +323,7 @@ export const handleCreateCustomerWithId = async ({
   // 2. Check if email exists
   if (notNullish(newCus.email) && newCus.email !== "") {
     let cusWithEmail = await CusService.getByEmail({
-      sb,
+      db,
       email: newCus.email!,
       orgId: org.id,
       env,
@@ -332,7 +335,7 @@ export const handleCreateCustomerWithId = async ({
       );
 
       let updatedCustomer = await CusService.update({
-        sb,
+        db,
         internalCusId: cusWithEmail[0].internal_id,
         update: {
           id: newCus.id!,
@@ -365,9 +368,7 @@ export const handleCreateCustomer = async ({
   org,
   env,
   logger,
-  params = {},
   processor,
-  getDetails = true,
   createDefaultProducts = true,
 }: {
   db: DrizzleCli;
@@ -376,9 +377,7 @@ export const handleCreateCustomer = async ({
   org: Organization;
   env: AppEnv;
   logger: any;
-  params?: any;
   processor?: any;
-  getDetails?: boolean;
   createDefaultProducts?: boolean;
 }) => {
   const newCus = CreateCustomerSchema.parse(cusData);

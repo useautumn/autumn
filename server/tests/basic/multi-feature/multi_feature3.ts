@@ -84,7 +84,7 @@ export const getLifetimeAndUsageCusEnts = async ({
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "multi-feature/multi_feature3: Testing lifetime + pay per use, advance test clock"
+  "multi-feature/multi_feature3: Testing lifetime + pay per use, advance test clock",
 )}`, () => {
   let autumn: Autumn;
   let customerId = "multiFeature3Customer";

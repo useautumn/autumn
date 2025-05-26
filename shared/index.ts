@@ -45,36 +45,46 @@ export * from "./models/productV2Models/productResponseModels.js";
 export * from "./models/productV2Models/productItemModels/productItemModels.js";
 export * from "./models/productV2Models/productItemModels/prodItemResponseModels.js";
 
-// CUS PRODUCT MODELS
+// 7. Cus Product Models
 export * from "./models/cusProductModels/cusProductModels.js";
 export * from "./models/cusProductModels/cusProductEnums.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntModels.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+export * from "./models/cusProductModels/cusPriceModels/cusPriceModels.js";
+export * from "./models/cusProductModels/cusPriceModels/cusPriceTable.js";
+
+// 8. Customer Models
+export * from "./models/cusModels/cusModels.js";
+export * from "./models/cusModels/cusTable.js";
+export * from "./models/cusModels/fullCusModel.js";
+export * from "./models/cusModels/cusExpand.js";
+export * from "./models/cusModels/invoiceModels/invoiceResponseModels.js";
+
+export * from "./models/cusModels/entityModels/entityModels.js";
+export * from "./models/cusModels/entityModels/entityTable.js";
+export * from "./models/cusModels/entityModels/entityExpand.js";
+export * from "./models/cusModels/entityModels/entityResModels.js";
 
 // 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable.js";
 export * from "./models/chatResultModels/chatResultFeature.js";
 
-// Gen Models
-
-// Dev Models
-export * from "./models/devModels/apiKeyModels.js";
-
-// Event Models
+// 5. Others: events, apiKeys
 export * from "./models/eventModels/eventModels.js";
+export * from "./models/eventModels/eventTable.js";
 
-// Metadata Models
-export * from "./models/metadataModels.js";
+export * from "./models/devModels/apiKeyModels.js";
+export * from "./models/devModels/apiKeyTable.js";
 
-// Customer Models
-export * from "./models/cusModels/cusModels.js";
+export * from "./models/otherModels/metadataModels.js";
+export * from "./models/otherModels/metadataTable.js";
 
-export * from "./models/cusProductModels/cusPriceModels/cusPriceModels.js";
+export * from "./models/subModels/subModels.js";
+export * from "./models/subModels/subTable.js";
+
 export * from "./models/cusModels/invoiceModels/invoiceModels.js";
 export * from "./models/cusModels/cusResponseModels.js";
 
-// Entity Models
-export * from "./models/cusModels/entityModels/entityModels.js";
 export * from "./models/migrationModels/migrationModels.js";
 
 // Product Models
@@ -82,29 +92,13 @@ export * from "./models/productModels/freeTrialModels/freeTrialModels.js";
 export * from "./models/rewardModels/rewardModels.js";
 export * from "./models/rewardModels/rewardProgramModels.js";
 export * from "./models/rewardModels/referralModels/referralModels.js";
-export * from "./models/subModels/subModels.js";
-export * from "./models/productV2Models/productV2Models.js";
-export * from "./models/productV2Models/productResponseModels.js";
-export * from "./models/cusModels/fullCusModel.js";
-export * from "./models/cusModels/entityModels/entityResModels.js";
 
 // Utils
 export * from "./utils/displayUtils.js";
-
-// Cus Expand
-export * from "./models/cusModels/cusExpand.js";
-export * from "./models/cusModels/entityModels/entityExpand.js";
-export * from "./models/cusModels/invoiceModels/invoiceResponseModels.js";
-
-// Check Models
 export * from "./models/checkModels/checkPreviewModels.js";
 
 // Reward Models
 export * from "./models/rewardModels/rewardResponseModels.js";
-
-// Org Models
-// export * from "./models/orgModels/orgModels.js";
-
 export * from "./models/chatResultModels/chatResultFeature.js";
 
 // ENUMS

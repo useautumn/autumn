@@ -8,7 +8,7 @@ import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionServ
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { ErrCode, RewardTriggerEvent } from "@autumn/shared";
+import { Customer, ErrCode, RewardTriggerEvent } from "@autumn/shared";
 import express from "express";
 import { ReferralCode, RewardRedemption } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -34,12 +34,11 @@ referralRouter.post("/code", (req, res) =>
         errorIfNotFound: true,
       });
 
-      let customer = await CusService.getById({
-        sb: req.sb,
+      let customer = await CusService.get({
+        db: req.db,
         orgId,
         env,
-        id: customerId,
-        logger,
+        idOrInternalId: customerId,
       });
 
       if (!customer) {
@@ -85,7 +84,7 @@ referralRouter.post("/code", (req, res) =>
         created_at: referralCode.created_at,
       });
     },
-  })
+  }),
 );
 
 referralRouter.post("/redeem", (req, res) =>
@@ -100,12 +99,11 @@ referralRouter.post("/redeem", (req, res) =>
 
       // 1. Get redeemed by customer, and referral code
       let [customer, referralCode, org] = await Promise.all([
-        CusService.getById({
-          sb: req.sb,
+        CusService.get({
+          db: req.db,
           orgId,
           env,
-          id: customerId,
-          logger,
+          idOrInternalId: customerId,
         }),
         RewardProgramService.getReferralCode({
           sb: req.sb,
@@ -156,9 +154,17 @@ referralRouter.post("/redeem", (req, res) =>
 
       // Don't let customer redeem their own code
       let codeCustomer = await CusService.getByInternalId({
-        sb: req.sb,
+        db: req.db,
         internalId: referralCode.internal_customer_id,
       });
+
+      if (!codeCustomer) {
+        throw new RecaseError({
+          message: "Referral code customer not found",
+          statusCode: 404,
+          code: ErrCode.CustomerNotFound,
+        });
+      }
 
       if (
         codeCustomer.id === customer.id ||
@@ -198,6 +204,7 @@ referralRouter.post("/redeem", (req, res) =>
         referralCode.reward_program.when === RewardTriggerEvent.CustomerCreation
       ) {
         redemption = await triggerRedemption({
+          db: req.db,
           sb: req.sb,
           referralCode,
           org,
@@ -217,7 +224,7 @@ referralRouter.post("/redeem", (req, res) =>
         reward_id: reward_program.reward.id,
       });
     },
-  })
+  }),
 );
 
 export const redemptionRouter = express.Router();
@@ -241,5 +248,5 @@ redemptionRouter.get("/:redemptionId", (req, res) =>
 
       res.status(200).json(redemption);
     },
-  })
+  }),
 );

@@ -4,7 +4,7 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { EntityService } from "./EntityService.js";
+import { EntityService } from "../EntityService.js";
 import {
   APIVersion,
   AppEnv,
@@ -20,7 +20,7 @@ import {
   getCusEntMasterBalance,
   getRelatedCusPrice,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { getEntityResponse } from "./getEntityUtils.js";
+import { getEntityResponse } from "../getEntityUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -441,8 +441,8 @@ export const createEntities = async ({
 
     // Create and add to customer entitlement?
     if (action === "create") {
-      let newEntity = await EntityService.insert({
-        sb,
+      let results = await EntityService.insert({
+        db,
         data: constructEntity({
           inputEntity: entity,
           feature,
@@ -452,10 +452,10 @@ export const createEntities = async ({
         }),
       });
 
-      newEntities.push(newEntity);
+      newEntities.push(results[0]);
     } else if (action === "replace") {
       let updatedEntity = await EntityService.update({
-        sb,
+        db,
         internalId: replace.internal_id,
         update: {
           id: entity.id,

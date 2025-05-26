@@ -225,12 +225,14 @@ export const handleCusProductExpired = async (req: any, res: any) => {
       });
     }
 
-    const cusProducts = await CusService.getFullCusProducts({
-      sb: req.sb,
+    const cusProducts = await CusProductService.list({
+      db,
       internalCustomerId: cusProduct.customer.internal_id,
-      withPrices: true,
-      withProduct: true,
-      logger: req.logtail,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
     });
 
     await expireCusProduct({

@@ -82,11 +82,14 @@ describe("Multi Product 3: premium1->starter1, premium2->starter2, then premium2
     });
 
     // Check if scheduled id is the same
-    const cusProducts = await CusService.getFullCusProducts({
-      sb: this.sb,
+    const cusProducts = await CusProductService.list({
+      db: this.db,
       internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
     });
 
     // 1. Pro group 1:
@@ -142,11 +145,9 @@ describe("Multi Product 3: premium1->starter1, premium2->starter2, then premium2
       cusRes,
     });
 
-    const cusProducts = await CusService.getFullCusProducts({
-      sb: this.sb,
+    const cusProducts = await CusProductService.list({
+      db: this.db,
       internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
     });
 
     const starterGroup2 = searchCusProducts({

@@ -2,6 +2,7 @@ import {
   AppEnv,
   CusProductStatus,
   Customer,
+  ErrCode,
   FullRewardProgram,
   ReferralCode,
   Reward,
@@ -18,6 +19,9 @@ import { ProductService } from "../products/ProductService.js";
 import { createFullCusProduct } from "../customers/add-product/createFullCusProduct.js";
 import { InsertCusProductParams } from "../customers/products/AttachParams.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductService } from "../customers/products/CusProductService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
 
 export const generateReferralCode = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -34,6 +38,7 @@ export const generateReferralCode = () => {
 
 // Trigger reward
 export const triggerRedemption = async ({
+  db,
   sb,
   referralCode,
   org,
@@ -42,6 +47,7 @@ export const triggerRedemption = async ({
   reward,
   redemption,
 }: {
+  db: DrizzleCli;
   sb: any;
   org: any;
   env: AppEnv;
@@ -55,9 +61,17 @@ export const triggerRedemption = async ({
   );
 
   let applyToCustomer = await CusService.getByInternalId({
-    sb,
+    db,
     internalId: referralCode.internal_customer_id,
   });
+
+  if (!applyToCustomer) {
+    throw new RecaseError({
+      message: `Customer ${referralCode.internal_customer_id} not found`,
+      code: ErrCode.CustomerNotFound,
+      statusCode: StatusCodes.NOT_FOUND,
+    });
+  }
 
   let stripeCli = createStripeCli({
     org,
@@ -65,7 +79,7 @@ export const triggerRedemption = async ({
   });
 
   await createStripeCusIfNotExists({
-    sb,
+    db,
     customer: applyToCustomer,
     org,
     env,
@@ -139,26 +153,29 @@ export const triggerFreeProduct = async ({
   });
 
   let referrer = await CusService.getByInternalId({
-    sb,
+    db,
     internalId: referralCode.internal_customer_id,
   });
+
+  if (!referrer) {
+    throw new RecaseError({
+      message: `Referrer ${referralCode.internal_customer_id} not found`,
+      code: ErrCode.CustomerNotFound,
+      statusCode: StatusCodes.NOT_FOUND,
+    });
+  }
+
   logger.info(`Referrer: ${referrer.name} (${referrer.id})`);
 
   let [redeemerCusProducts, referrerCusProducts] = await Promise.all([
-    CusService.getFullCusProducts({
-      sb,
+    CusProductService.list({
+      db,
       internalCustomerId: redeemer.internal_id,
-      logger,
-      withProduct: true,
-      withPrices: true,
       inStatuses: [CusProductStatus.Active],
     }),
-    CusService.getFullCusProducts({
-      sb,
+    CusProductService.list({
+      db,
       internalCustomerId: referrer.internal_id,
-      logger,
-      withProduct: true,
-      withPrices: true,
       inStatuses: [CusProductStatus.Active],
     }),
   ]);

@@ -13,7 +13,7 @@ export const getFeatureName = ({
     return "";
   }
 
-  let featureName = feature.name;
+  let featureName = feature.name || "";
 
   if (feature.display) {
     if (plural) {
@@ -35,7 +35,7 @@ export const getFeatureNameWithCapital = ({
 }: {
   feature: Feature;
 }) => {
-  if (feature.name.length > 0) {
+  if (feature.name && feature.name.length > 0) {
     return `${feature.name.charAt(0).toUpperCase()}${feature.name.slice(1)}`;
   }
 

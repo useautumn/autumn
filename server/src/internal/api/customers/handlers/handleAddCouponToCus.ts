@@ -4,22 +4,22 @@ import { RewardService } from "@/internal/rewards/RewardService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { ErrCode } from "@autumn/shared";
+import { StatusCodes } from "http-status-codes";
 
 export const handleAddCouponToCus = async (req: any, res: any) => {
   try {
     const { customer_id, coupon_id } = req.params;
-    const { orgId, env, sb, logtail: logger } = req;
+    const { db, orgId, env, sb, logtail: logger } = req;
 
     const [org, customer, coupon] = await Promise.all([
       OrgService.getFromReq(req),
-      CusService.getById({
-        sb: req.sb,
-        id: customer_id,
-        orgId: req.orgId,
-        env: req.env,
-        logger,
+      CusService.get({
+        db,
+        idOrInternalId: customer_id,
+        orgId,
+        env,
       }),
-
       RewardService.getByInternalId({
         sb: req.sb,
         internalId: coupon_id,
@@ -28,10 +28,18 @@ export const handleAddCouponToCus = async (req: any, res: any) => {
       }),
     ]);
 
+    if (!customer) {
+      throw new RecaseError({
+        message: `Customer ${customer_id} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
     const stripeCli = createStripeCli({ org, env });
 
     await createStripeCusIfNotExists({
-      sb,
+      db,
       org,
       env,
       customer,

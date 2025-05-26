@@ -1,8 +1,8 @@
 import { routeHandler } from "@/utils/routerUtils.js";
 import { EntityExpand, EntityResponseSchema } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { parseEntityExpand } from "./entityUtils.js";
-import { getEntityResponse } from "./getEntityUtils.js";
+import { parseEntityExpand } from "../entityUtils.js";
+import { getEntityResponse } from "../getEntityUtils.js";
 import { invoicesToResponse } from "@/internal/customers/invoices/invoiceUtils.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 

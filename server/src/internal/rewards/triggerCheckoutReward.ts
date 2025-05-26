@@ -101,6 +101,7 @@ export const runTriggerCheckoutReward = async ({
         });
       } else {
         await triggerRedemption({
+          db,
           sb,
           referralCode,
           org,

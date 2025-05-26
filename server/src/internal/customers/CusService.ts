@@ -4,6 +4,7 @@ import {
   CusExpand,
   CusProductStatus,
   Customer,
+  customers,
   EntityExpand,
   FullCusProduct,
 } from "@autumn/shared";
@@ -13,6 +14,8 @@ import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
 import { flipProductResults } from "../api/customers/cusUtils.js";
 import { sbWithRetry } from "@/external/supabaseUtils.js";
+import { and, eq, or, sql } from "drizzle-orm";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const printCusProducts = (cusProducts: FullCusProduct[]) => {
   for (let cusProduct of cusProducts) {
@@ -111,282 +114,99 @@ export class CusService {
     };
   }
 
-  static async getById({
-    sb,
-    id,
+  static async get({
+    db,
+    idOrInternalId,
     orgId,
     env,
-    logger,
   }: {
-    sb: SupabaseClient;
-    id: string;
+    db: DrizzleCli;
+    idOrInternalId: string;
     orgId: string;
     env: AppEnv;
-    logger: any;
   }) {
-    const { data, error } = await sbWithRetry({
-      query: async () =>
-        sb
-          .from("customers")
-          .select()
-          .eq("id", id)
-          .eq("org_id", orgId)
-          .eq("env", env),
-      retries: 3,
-      logger,
+    const customer = await db.query.customers.findFirst({
+      where: and(
+        or(
+          eq(customers.id, idOrInternalId),
+          eq(customers.internal_id, idOrInternalId),
+        ),
+        eq(customers.org_id, orgId),
+        eq(customers.env, env),
+      ),
     });
 
-    if (error) {
-      throw new RecaseError({
-        code: ErrCode.InternalError,
-        message: "Failed to get customer by ID",
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
-    }
-
-    if (data.length === 0) {
+    if (!customer) {
       return null;
     }
 
-    return data[0];
+    return customer as Customer;
   }
 
   static async getByEmail({
-    sb,
+    db,
     email,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     email: string;
     orgId: string;
     env: AppEnv;
   }) {
-    const { data, error } = await sb
-      .from("customers")
-      .select()
-      .eq("email", email)
-      .eq("org_id", orgId)
-      .eq("env", env);
+    const customer = await db.query.customers.findMany({
+      where: and(
+        eq(customers.email, email),
+        eq(customers.org_id, orgId),
+        eq(customers.env, env),
+      ),
+    });
 
-    if (error) {
-      throw new RecaseError({
-        code: ErrCode.InternalError,
-        message: "Failed to get customer by email",
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
-    }
-
-    return data;
-  }
-
-  static async getByIdOrEmail({
-    sb,
-    idOrEmail,
-    orgId,
-    env,
-    isFull = false,
-  }: {
-    sb: SupabaseClient;
-    idOrEmail: string;
-    orgId: string;
-    env: AppEnv;
-    isFull?: boolean;
-  }) {
-    let query = "*";
-    if (isFull) {
-      query = `*, 
-      products:customer_products(
-        *, product:products(*), 
-        customer_prices:customer_prices(
-          *, price:prices(*)
-        ),
-        customer_entitlements:customer_entitlements(
-          *, entitlement:entitlements(*, feature:features(*))
-        ),
-        free_trial:free_trials(*)
-      ), 
-      
-      entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
-      prices:customer_prices(*, price:prices(*))`;
-    }
-
-    const { data, error } = await sb
-      .from("customers")
-      .select(query as "*")
-      .or(`id.eq.${idOrEmail},email.eq.${idOrEmail}`)
-      .eq("org_id", orgId)
-      .eq("env", env);
-
-    if (error) {
-      throw error;
-    }
-
-    if (data.length === 0) {
-      return null;
-    } else if (data.length > 1) {
-      throw new RecaseError({
-        code: ErrCode.DuplicateCustomerId,
-        message: `Multiple customers found for ${idOrEmail}`,
-        statusCode: StatusCodes.BAD_REQUEST,
-      });
-    }
-
-    return data[0];
-  }
-
-  static async getByIdOrInternalId({
-    sb,
-    idOrInternalId,
-    orgId,
-    env,
-    isFull = false,
-  }: {
-    sb: SupabaseClient;
-    idOrInternalId: string;
-    orgId: string;
-    env: AppEnv;
-    isFull?: boolean;
-  }) {
-    let query = "*";
-    if (isFull) {
-      query = `*, 
-        products:customer_products(
-          *, product:products(*), 
-          customer_prices:customer_prices(
-            *, price:prices(*)
-          ),
-          customer_entitlements:customer_entitlements(
-            *, entitlement:entitlements(*, feature:features(*))
-          ),
-          free_trial:free_trials(*)
-        ), 
-        
-        entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
-        prices:customer_prices(*, price:prices(*))`;
-    }
-
-    const { data, error } = await sb
-      .from("customers")
-      .select(query as "*")
-      .or(`id.eq.${idOrInternalId},internal_id.eq.${idOrInternalId}`)
-      .eq("org_id", orgId)
-      .eq("env", env);
-
-    if (error) {
-      throw error;
-    }
-
-    if (data.length === 0) {
-      return null;
-    } else if (data.length > 1) {
-      // 1. Return where id is equal to idOrInternalId
-      const customer = data.find((c) => c.id === idOrInternalId);
-      if (customer) {
-        return customer;
-      } else {
-        return data[0];
-      }
-    }
-
-    return data[0];
+    return customer as Customer[];
   }
 
   static async getByInternalId({
-    sb,
+    db,
     internalId,
+    errorIfNotFound = true,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalId: string;
+    errorIfNotFound?: boolean;
   }) {
-    const { data, error } = await sb
-      .from("customers")
-      .select()
-      .eq("internal_id", internalId)
-      .single();
+    const customer = await db.query.customers.findFirst({
+      where: eq(customers.internal_id, internalId),
+    });
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async getFullCustomer({
-    sb,
-    env,
-    orgId,
-    customerId,
-    internalCustomerId,
-  }: {
-    sb: SupabaseClient;
-    orgId: string;
-    env: AppEnv;
-    customerId?: string;
-    internalCustomerId?: string;
-  }) {
-    let query = sb
-      .from("customers")
-      .select(
-        `*, 
-      products:customer_products(
-        *, product:products(*), 
-        customer_prices:customer_prices(
-          *, price:prices(*)
-        ),
-        customer_entitlements:customer_entitlements(
-          *, entitlement:entitlements(*, feature:features(*))
-        ),
-        free_trial:free_trials(*)
-      ), 
-      
-      entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*))), 
-      prices:customer_prices(*, price:prices(*))`,
-      )
-      .eq("env", env)
-      .eq("org_id", orgId);
-
-    if (customerId) {
-      query.eq("id", customerId);
-    } else if (internalCustomerId) {
-      query.eq("internal_id", internalCustomerId);
-    }
-
-    const { data, error } = await query.single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async getByStripeId({
-    sb,
-    stripeId,
-  }: {
-    sb: SupabaseClient;
-    stripeId: string;
-  }) {
-    const { data, error } = await sb
-      .from("customers")
-      .select()
-      .eq("processor->>id", stripeId);
-
-    if (error) {
-      throw error;
-    }
-
-    if (data.length === 0) {
+    if (errorIfNotFound && !customer) {
+      throw new RecaseError({
+        message: `Customer ${internalId} not found`,
+        statusCode: 404,
+        code: ErrCode.CustomerNotFound,
+      });
+    } else if (!customer) {
       return null;
     }
 
-    return data[0];
+    return customer as Customer;
+  }
+
+  static async getByStripeId({
+    db,
+    stripeId,
+  }: {
+    db: DrizzleCli;
+    stripeId: string;
+  }) {
+    const customer = await db.query.customers.findFirst({
+      where: eq(sql`processor->>'id'`, stripeId),
+    });
+
+    if (!customer) {
+      return null;
+    }
+
+    return customer as Customer;
   }
 
   //search customers
@@ -593,47 +413,18 @@ export class CusService {
     return { data, count: totalCount };
   }
 
-  static async getCustomers(
-    sb: SupabaseClient,
-    orgId: string,
-    env: AppEnv,
-    page: number = 1,
-    pageSize: number = 50,
-  ) {
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-
-    const { data, count, error } = await sb
-      .from("customers")
-      .select("*", { count: "exact" })
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .order("created_at", { ascending: false })
-      .order("name", { ascending: true })
-      .order("internal_id", { ascending: true })
-      .range(from, to);
-
-    if (error) {
-      throw error;
-    }
-
-    return { data, count };
-  }
-
-  static async createCustomer({
-    sb,
-    customer,
-  }: {
-    sb: SupabaseClient;
-    customer: Customer;
-  }) {
-    const { data, error } = await sb
-      .from("customers")
-      .insert(customer)
-      .select()
-      .single();
-
-    if (error) {
+  static async insert({ db, data }: { db: DrizzleCli; data: Customer }) {
+    try {
+      const results = await db
+        .insert(customers)
+        .values(data as any)
+        .returning();
+      if (results && results.length > 0) {
+        return results[0] as Customer;
+      } else {
+        return null;
+      }
+    } catch (error: any) {
       if (error.code === "23505") {
         throw new RecaseError({
           code: ErrCode.DuplicateCustomerId,
@@ -644,189 +435,102 @@ export class CusService {
       }
       throw error;
     }
+    // const { data, error } = await sb
+    //   .from("customers")
+    //   .insert(customer)
+    //   .select()
+    //   .single();
 
-    return data;
+    // if (error) {
+    //   if (error.code === "23505") {
+    //     throw new RecaseError({
+    //       code: ErrCode.DuplicateCustomerId,
+    //       message: "Customer ID already exists",
+    //       statusCode: StatusCodes.BAD_REQUEST,
+    //       data: error,
+    //     });
+    //   }
+    //   throw error;
+    // }
+
+    // return data;
   }
 
   static async update({
-    sb,
+    db,
     internalCusId,
     update,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalCusId: string;
     update: any;
   }) {
-    const { data, error } = await sb
-      .from("customers")
-      .update(update)
-      .eq("internal_id", internalCusId)
-      .select()
-      .single();
+    try {
+      const results = await db
+        .update(customers)
+        .set(update)
+        .where(eq(customers.internal_id, internalCusId))
+        .returning();
 
-    if (error) {
-      if (error.code == "2305") {
-        throw new RecaseError({
-          message: `Customer ${internalCusId} already exists`,
-          code: ErrCode.DuplicateCustomerId,
-          statusCode: StatusCodes.BAD_REQUEST,
-        });
+      if (results && results.length > 0) {
+        return results[0] as Customer;
+      } else {
+        return null;
       }
-      throw new RecaseError({
-        message: `Error updating customer...please try again later.`,
-        code: ErrCode.InternalError,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
-    }
-
-    return data;
-  }
-
-  static async deleteCustomerStrict({
-    sb,
-    customerId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    customerId: string;
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const { error } = await sb
-      .from("customers")
-      .delete()
-      .eq("id", customerId)
-      .eq("org_id", orgId)
-      .eq("env", env);
-
-    if (error) {
+    } catch (error) {
       throw error;
     }
   }
 
   static async deleteByInternalId({
-    sb,
+    db,
     internalId,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalId: string;
     orgId: string;
     env: AppEnv;
   }) {
-    const { error } = await sb
-      .from("customers")
-      .delete()
-      .eq("internal_id", internalId)
-      .eq("org_id", orgId)
-      .eq("env", env);
+    const results = await db
+      .delete(customers)
+      .where(
+        and(
+          eq(customers.internal_id, internalId),
+          eq(customers.org_id, orgId),
+          eq(customers.env, env),
+        ),
+      )
+      .returning();
 
-    if (error) {
-      throw error;
-    }
-  }
-
-  // ENTITLEMENTS
-
-  // Get active products
-  static async getFullCusProducts({
-    sb,
-    internalCustomerId,
-    withPrices = false,
-    withProduct = false,
-    inStatuses,
-    productGroup,
-    logger,
-  }: {
-    sb: SupabaseClient;
-    internalCustomerId: string;
-    withProduct?: boolean;
-    withPrices?: boolean;
-    inStatuses?: CusProductStatus[];
-    productGroup?: string;
-    logger?: any;
-  }) {
-    const selectQuery = [
-      "*",
-      withProduct ? "product:products!inner(*)" : "",
-      withPrices
-        ? "customer_prices:customer_prices(*, price:prices!inner(*))"
-        : "",
-      `customer_entitlements:customer_entitlements(*, 
-          entitlement:entitlements(*, 
-            feature:features!inner(*)
-          )
-      )`,
-      `free_trial:free_trials(*)`,
-    ]
-      .filter(Boolean)
-      .join(", ");
-
-    const query = sb
-      .from("customer_products")
-      .select(selectQuery)
-      .eq("internal_customer_id", internalCustomerId);
-
-    if (inStatuses) {
-      query.in("status", inStatuses);
-    }
-
-    if (productGroup) {
-      query.eq("product.group", productGroup);
-    }
-
-    // query.limit(100);
-    // TODO: Limit 100 cus products? (for one time add ons...)
-    // SORT by created_at?
-
-    const { data, error } = await sbWithRetry({
-      query: async () => await query,
-      logger,
-    });
-
-    if (error) {
-      console.log("CusService.getFullCusProducts failed", error);
-      throw error;
-    }
-
-    // for (const cusProduct of data) {
-    //   // console.log("Free trial", cusProduct.free_trial);
-    //   // let freeTrial = cusProduct.free_trial;
-    //   // if (freeTrial && freeTrial.length > 0) {
-    //   //   cusProduct.free_trial = freeTrial[0];
-    //   // } else {
-    //   //   cusProduct.free_trial = null;
-    //   // }
-    // }
-    return data as any;
-  }
-
-  // Get in IDs
-  static async getInIds({
-    sb,
-    cusIds,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    cusIds: string[];
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const { data, error } = await sb
-      .from("customers")
-      .select("*")
-      .in("id", cusIds)
-      .eq("org_id", orgId)
-      .eq("env", env);
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return results;
   }
 }
+
+// static async getCustomers(
+//   sb: SupabaseClient,
+//   orgId: string,
+//   env: AppEnv,
+//   page: number = 1,
+//   pageSize: number = 50,
+// ) {
+//   const from = (page - 1) * pageSize;
+//   const to = from + pageSize - 1;
+
+//   const { data, count, error } = await sb
+//     .from("customers")
+//     .select("*", { count: "exact" })
+//     .eq("org_id", orgId)
+//     .eq("env", env)
+//     .order("created_at", { ascending: false })
+//     .order("name", { ascending: true })
+//     .order("internal_id", { ascending: true })
+//     .range(from, to);
+
+//   if (error) {
+//     throw error;
+//   }
+
+//   return { data, count };
+// }

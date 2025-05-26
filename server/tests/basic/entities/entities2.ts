@@ -32,90 +32,6 @@ import {
 } from "@/internal/products/product-items/productItemUtils.js";
 import { createProduct } from "tests/utils/productUtils.js";
 
-// Check balance and stripe quantity
-const checkEntAndStripeQuantity = async ({
-  sb,
-  autumn,
-  stripeCli,
-  featureId,
-  customerId,
-  expectedBalance,
-  expectedUsage,
-  expectedStripeQuantity,
-}: {
-  sb: SupabaseClient;
-  autumn: Autumn;
-  stripeCli: Stripe;
-  featureId: string;
-  customerId: string;
-  expectedBalance: number;
-  expectedUsage?: number;
-  expectedStripeQuantity: number;
-}) => {
-  let { customer, entitlements, products } = await autumn.customers.get(
-    customerId
-  );
-
-  let cusProducts = await CusService.getFullCusProducts({
-    sb,
-    internalCustomerId: customer.internal_id,
-    withPrices: true,
-    withProduct: true,
-    inStatuses: [CusProductStatus.Active],
-  });
-
-  let entitlement = entitlements.find((e: any) => e.feature_id == featureId);
-
-  expect(entitlement.balance).to.equal(expectedBalance);
-  if (expectedUsage) {
-    expect(entitlement.used).to.equal(
-      expectedUsage,
-      `Get customer ${customerId} returned incorrect "used" for feature ${featureId}`
-    );
-  }
-
-  if (products.length == 0) {
-    assert.fail(`Get customer ${customerId} returned no products`);
-  }
-
-  // 2. Get stripe quantity
-  let mainProduct = products[0];
-
-  if (mainProduct.subscription_ids.length == 0) {
-    assert.fail(`Get customer ${customerId} returned no subscriptions`);
-  }
-
-  let price = getFeaturePrice({
-    product: mainProduct,
-    featureId: featureId,
-    cusProducts,
-  });
-
-  if (!price) {
-    assert.fail(
-      `Get customer ${customerId} returned no price for feature ${featureId}`
-    );
-  }
-
-  let stripeSub = await stripeCli.subscriptions.retrieve(
-    mainProduct.subscription_ids[0]
-  );
-  let subItem = stripeSub.items.data.find(
-    (item: any) => item.price.id == price.config!.stripe_price_id
-  );
-
-  if (!subItem) {
-    assert.fail(
-      `Get customer ${customerId} returned no sub item for feature ${featureId}`
-    );
-  }
-
-  expect(subItem.quantity).to.equal(
-    expectedStripeQuantity,
-    `Get customer ${customerId} returned incorrect stripe quantity for feature ${featureId}`
-  );
-};
-
 // UNCOMMENT FROM HERE
 let entity2Pro = {
   id: "entity2Pro",
@@ -146,7 +62,7 @@ let entity2Pro = {
 };
 
 describe(`${chalk.yellowBright(
-  "entities2: Testing entities with prorate_unused: true"
+  "entities2: Testing entities with prorate_unused: true",
 )}`, () => {
   let customerId = "entity2";
   let autumn: Autumn;

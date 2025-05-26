@@ -18,14 +18,19 @@ import {
   BillingType,
   UsagePriceConfig,
   Feature,
+  ErrCode,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { MigrationService } from "../MigrationService.js";
 import { constructMigrationError } from "../migrationUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { FeatureOptions } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { StatusCodes } from "http-status-codes";
 
 export const migrateCustomer = async ({
+  db,
   migrationJob,
   sb,
   customer,
@@ -37,6 +42,7 @@ export const migrateCustomer = async ({
   toProduct,
   features,
 }: {
+  db: DrizzleCli;
   migrationJob: MigrationJob;
   sb: SupabaseClient;
   customer: Customer;
@@ -49,25 +55,27 @@ export const migrateCustomer = async ({
   features: Feature[];
 }) => {
   try {
-    // await new Promise((resolve) => setTimeout(resolve, 5000));
-    let cusProducts = await CusService.getFullCusProducts({
-      sb,
+    let cusProducts = await CusProductService.list({
+      db,
       internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
       inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     });
 
-    let entities = await EntityService.get({
-      sb,
-      orgId,
-      env,
+    let entities = await EntityService.list({
+      db,
       internalCustomerId: customer.internal_id,
     });
 
-    let curCusProduct = await cusProducts.find(
+    let curCusProduct = cusProducts.find(
       (cp: FullCusProduct) => cp.product.internal_id == fromProduct.internal_id,
     );
+
+    if (!curCusProduct) {
+      logger.error(
+        `Customer ${customer.id} does not have a ${fromProduct.internal_id} cus product, skipping migration`,
+      );
+      return false;
+    }
 
     let attachParams: AttachParams = {
       org,

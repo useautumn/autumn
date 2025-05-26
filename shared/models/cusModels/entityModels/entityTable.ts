@@ -13,12 +13,12 @@ import { organizations } from "../../orgModels/orgTable.js";
 export const entities = pgTable(
   "entities",
   {
-    internal_id: text("internal_id").primaryKey().notNull(),
-    org_id: text("org_id"),
-    env: text(),
-    internal_customer_id: text("internal_customer_id"),
-    created_at: numeric("created_at").notNull(),
     id: text(),
+    org_id: text("org_id"),
+    created_at: numeric({ mode: "number" }).notNull(),
+    internal_id: text("internal_id").primaryKey().notNull(),
+    internal_customer_id: text("internal_customer_id").notNull(),
+    env: text(),
     name: text(),
     deleted: boolean().default(false).notNull(),
     internal_feature_id: text("internal_feature_id"),

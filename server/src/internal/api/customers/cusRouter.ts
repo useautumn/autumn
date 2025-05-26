@@ -44,18 +44,6 @@ cusRouter.post("/all/search", async (req: any, res: any) => {
   }
 });
 
-cusRouter.get("", async (req: any, res: any) => {
-  try {
-    const customers = await CusService.getCustomers(req.sb, req.orgId, req.env);
-
-    res.status(200).json({ customers });
-  } catch (error) {
-    res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: ErrorMessages.InternalError });
-  }
-});
-
 cusRouter.post("", handlePostCustomerRequest);
 
 // BY CUSTOMER ID
@@ -87,12 +75,11 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 
     const [org, customer] = await Promise.all([
       OrgService.getFromReq(req),
-      CusService.getById({
-        sb: req.sb,
-        id: customerId,
+      CusService.get({
+        db: req.db,
+        idOrInternalId: customerId,
         orgId: req.orgId,
         env: req.env,
-        logger: req.logtail,
       }),
     ]);
 

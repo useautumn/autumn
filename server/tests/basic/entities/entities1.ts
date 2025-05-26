@@ -17,10 +17,12 @@ import { compareMainProduct } from "../../utils/compare.js";
 import { assert, expect } from "chai";
 
 import chalk from "chalk";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 
 // Check balance and stripe quantity
 const checkEntAndStripeQuantity = async ({
-  sb,
+  db,
   autumn,
   stripeCli,
   featureId,
@@ -29,7 +31,7 @@ const checkEntAndStripeQuantity = async ({
   expectedUsage,
   expectedStripeQuantity,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   autumn: Autumn;
   stripeCli: Stripe;
   featureId: string;
@@ -38,15 +40,12 @@ const checkEntAndStripeQuantity = async ({
   expectedUsage?: number;
   expectedStripeQuantity: number;
 }) => {
-  let { customer, entitlements, products } = await autumn.customers.get(
-    customerId
-  );
+  let { customer, entitlements, products } =
+    await autumn.customers.get(customerId);
 
-  let cusProducts = await CusService.getFullCusProducts({
-    sb,
+  let cusProducts = await CusProductService.list({
+    db,
     internalCustomerId: customer.internal_id,
-    withPrices: true,
-    withProduct: true,
     inStatuses: [CusProductStatus.Active],
   });
 
@@ -56,7 +55,7 @@ const checkEntAndStripeQuantity = async ({
   if (expectedUsage) {
     expect(entitlement.used).to.equal(
       expectedUsage,
-      `Get customer ${customerId} returned incorrect "used" for feature ${featureId}`
+      `Get customer ${customerId} returned incorrect "used" for feature ${featureId}`,
     );
   }
 
@@ -79,26 +78,26 @@ const checkEntAndStripeQuantity = async ({
 
   if (!price) {
     assert.fail(
-      `Get customer ${customerId} returned no price for feature ${featureId}`
+      `Get customer ${customerId} returned no price for feature ${featureId}`,
     );
   }
 
   let stripeSub = await stripeCli.subscriptions.retrieve(
-    mainProduct.subscription_ids[0]
+    mainProduct.subscription_ids[0],
   );
   let subItem = stripeSub.items.data.find(
-    (item: any) => item.price.id == price.config!.stripe_price_id
+    (item: any) => item.price.id == price.config!.stripe_price_id,
   );
 
   if (!subItem) {
     assert.fail(
-      `Get customer ${customerId} returned no sub item for feature ${featureId}`
+      `Get customer ${customerId} returned no sub item for feature ${featureId}`,
     );
   }
 
   expect(subItem.quantity).to.equal(
     expectedStripeQuantity,
-    `Get customer ${customerId} returned incorrect stripe quantity for feature ${featureId}`
+    `Get customer ${customerId} returned incorrect stripe quantity for feature ${featureId}`,
   );
 };
 
@@ -206,7 +205,7 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
 
     // Check balance and stripe quantity
     await checkEntAndStripeQuantity({
-      sb: this.sb,
+      db: this.db,
       autumn,
       stripeCli,
       featureId: features.seats.id,
@@ -261,7 +260,7 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
 
     let { invoices } = cusRes;
     expect(invoices[0].total).to.equal(
-      usageTiers[0].amount * newEntities.length
+      usageTiers[0].amount * newEntities.length,
     );
   });
 
@@ -269,7 +268,7 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
     await this.autumn.entities.delete(customerId, newEntities[0].id);
 
     await checkEntAndStripeQuantity({
-      sb: this.sb,
+      db: this.db,
       autumn,
       stripeCli,
       featureId: features.seats.id,
@@ -281,7 +280,7 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
 
     await this.autumn.entities.delete(customerId, newEntities[1].id);
     await checkEntAndStripeQuantity({
-      sb: this.sb,
+      db: this.db,
       autumn,
       stripeCli,
       featureId: features.seats.id,
@@ -315,7 +314,7 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
 
     let totalSeats = newEntities2.length + 2;
     await checkEntAndStripeQuantity({
-      sb: this.sb,
+      db: this.db,
       autumn,
       stripeCli,
       featureId: features.seats.id,
@@ -345,7 +344,7 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
     expect(entities).to.have.lengthOf(totalSeats);
 
     await checkEntAndStripeQuantity({
-      sb: this.sb,
+      db: this.db,
       autumn,
       stripeCli,
       featureId: features.seats.id,

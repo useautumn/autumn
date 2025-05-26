@@ -18,12 +18,13 @@ import { customerProducts } from "../models/cusProductModels/cusProductTable.js"
 import { customerPrices } from "../models/cusProductModels/cusPriceModels/cusPriceTable.js";
 import { customerEntitlements } from "../models/cusProductModels/cusEntModels/cusEntTable.js";
 
-// Others
-import { apiKeys } from "./apiKeysTable.js";
+// Other Tables
+import { apiKeys } from "../models/devModels/apiKeyTable.js";
+import { metadata } from "../models/otherModels/metadataTable.js";
+import { subscriptions } from "../models/subModels/subTable.js";
 
 /* RELATIONS */
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
-import { apiKeysRelations } from "./relations.js";
 import { featureRelations } from "../models/featureModels/featureRelations.js";
 
 // Customer Relations
@@ -40,10 +41,10 @@ import { freeTrialRelations } from "../models/productModels/freeTrialModels/free
 import { customerProductsRelations } from "../models/cusProductModels/cusProductRelations.js";
 import { customerPricesRelations } from "../models/cusProductModels/cusPriceModels/cusPriceRelations.js";
 import { customerEntitlementsRelations } from "../models/cusProductModels/cusEntModels/cusEntRelations.js";
+import { apiKeyRelations } from "../models/devModels/apiKeyRelations.js";
 
 const relations = {
   organizationsRelations,
-  apiKeysRelations,
   entitlementsRelations,
   featureRelations,
   priceRelations,
@@ -56,10 +57,10 @@ const relations = {
   // Customer Relations
   customersRelations,
   entitiesRelations,
+  apiKeyRelations,
 };
 
 export const schemas = {
-  apiKeys,
   organizations,
   chatResults,
   freeTrials,
@@ -71,20 +72,14 @@ export const schemas = {
   customerPrices,
   customerEntitlements,
 
-  // Customer Relations
+  // Customer
   customers,
   entities,
 
-  ...relations,
-};
-
-export {
+  // Other Tables
   apiKeys,
-  organizations,
-  customers,
-  chatResults,
-  prices,
-  entitlements,
-  features,
-  products,
+  metadata,
+  subscriptions,
+
+  ...relations,
 };

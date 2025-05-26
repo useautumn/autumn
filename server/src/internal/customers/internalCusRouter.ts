@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { CusService } from "./CusService.js";
 import { ProductService } from "../products/ProductService.js";
-import { InvoiceService } from "./invoices/InvoiceService.js";
+
 import { FeatureService } from "../features/FeatureService.js";
 import {
+  CusExpand,
   CusProductStatus,
   ErrCode,
+  FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
 } from "@autumn/shared";
@@ -13,8 +15,7 @@ import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { RewardService } from "../rewards/RewardService.js";
 import { EventService } from "../api/events/EventService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { OrgService } from "../orgs/OrgService.js";
-import { EntityService } from "../api/entities/EntityService.js";
+
 import { getCusEntMasterBalance } from "./entitlements/cusEntUtils.js";
 import { getLatestProducts } from "../products/productUtils.js";
 import { getProductVersionCounts } from "../products/productUtils.js";
@@ -29,21 +30,21 @@ import { StatusCodes } from "http-status-codes";
 
 export const cusRouter = Router();
 
-cusRouter.get("", async (req: any, res: any) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const { data: customers, count } = await CusService.getCustomers(
-      req.sb,
-      req.orgId,
-      req.env,
-      page,
-    );
+// cusRouter.get("", async (req: any, res: any) => {
+//   try {
+//     const page = parseInt(req.query.page as string) || 1;
+//     const { data: customers, count } = await CusService.getCustomers(
+//       req.sb,
+//       req.orgId,
+//       req.env,
+//       page,
+//     );
 
-    res.status(200).json({ customers, totalCount: count });
-  } catch (error) {
-    handleFrontendReqError({ req, error, res, action: "get customers" });
-  }
-});
+//     res.status(200).json({ customers, totalCount: count });
+//   } catch (error) {
+//     handleFrontendReqError({ req, error, res, action: "get customers" });
+//   }
+// });
 
 cusRouter.post("/search", async (req: any, res: any) => {
   const { pg, sb, orgId, env } = req;
@@ -85,12 +86,13 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       }),
 
       ProductService.listFull({ db, orgId, env, returnAll: true }),
-      CusService.getByIdOrInternalId({
+      CusService.getWithProducts({
         sb,
         orgId,
         env,
         idOrInternalId: customer_id,
-        isFull: true,
+        withEntities: true,
+        expand: [CusExpand.Invoices],
       }),
     ]);
 
@@ -102,36 +104,28 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       });
     }
 
-    const [invoices, entities, events] = await Promise.all([
-      InvoiceService.getByInternalCustomerId({
-        sb,
-        internalCustomerId: customer.internal_id,
-        limit: 10,
-      }),
-      EntityService.getByInternalCustomerId({
-        sb,
-        internalCustomerId: customer.internal_id,
-      }),
-      EventService.getByCustomerId({
-        sb,
-        internalCustomerId: customer.internal_id,
-        env,
-        orgId: orgId,
-        limit: 10,
-        fields: [
-          "id",
-          "event_name",
-          "value",
-          "timestamp",
-          "idempotency_key",
-          "properties",
-          "set_usage",
-          "entity_id",
-        ],
-      }),
-    ]);
+    let invoices = customer.invoices;
+    let entities = customer.entities;
+    const events = await EventService.getByCustomerId({
+      db,
+      internalCustomerId: customer.internal_id,
+      env,
+      orgId: orgId,
+      limit: 10,
+    });
+
+    console.log("events", events);
 
     let fullCustomer = customer as any;
+    let cusProducts = fullCustomer.customer_products;
+    fullCustomer.products = fullCustomer.customer_products;
+    fullCustomer.entitlements = cusProducts.flatMap(
+      (product: FullCusProduct) => product.customer_entitlements,
+    );
+    fullCustomer.prices = cusProducts.flatMap(
+      (product: FullCusProduct) => product.customer_prices,
+    );
+
     for (const product of fullCustomer.products) {
       product.entitlements = product.customer_entitlements.map(
         (cusEnt: FullCustomerEntitlement) => {
@@ -161,18 +155,13 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       }
     }
 
-    // PROCESSING
-    // 1. Invoice product ids sorted
     for (const invoice of invoices) {
       invoice.product_ids = invoice.product_ids.sort();
       invoice.internal_product_ids = invoice.internal_product_ids.sort();
     }
 
-    // For each cus ent, show full entitlement?
-    // Order full customer entitlements by created_at descending, then id
     fullCustomer.entitlements = fullCustomer.entitlements.sort(
       (a: any, b: any) => {
-        // Sort by cusProduct created_at
         const productA = fullCustomer.products.find(
           (p: any) => p.id === a.customer_product_id,
         );
@@ -180,7 +169,6 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
           (p: any) => p.id === b.customer_product_id,
         );
 
-        // new Date(productB.created_at).getTime() - new Date(productA.created_at).getTime() || productA.id.localeCompare(productB.id) ||
         return (
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime() ||
           b.id.localeCompare(a.id)
@@ -220,16 +208,15 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
 cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
   try {
-    const { sb, org, env } = req;
+    const { sb, org, env, db } = req;
     const { customer_id } = req.params;
     const orgId = req.orgId;
 
-    let internalCustomer = await CusService.getByIdOrInternalId({
-      sb,
+    let internalCustomer = await CusService.get({
+      db,
       orgId,
       env,
       idOrInternalId: customer_id,
-      isFull: true,
     });
 
     if (!internalCustomer) {

@@ -58,7 +58,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
   let logger = req.logtail;
   try {
     const { valid, data } = await verifyKey({
-      sb: req.sb,
+      db: req.db,
       key: apiKey,
     });
 
