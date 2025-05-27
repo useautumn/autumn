@@ -30,19 +30,8 @@ export default function AutumnProviderStep({ number }: { number: number }) {
       number={number}
       description={
         <p>
-          The{" "}
-          <span className="font-mono text-red-500">
-            <a
-              href="https://docs.useautumn.com/api-reference/attach/post"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              /attach
-            </a>
-            <ArrowUpRightFromSquare size={12} className="inline ml-1" />
-          </span>{" "}
-          endpoint will return a Stripe Checkout URL. Once paid, the user will
-          be granted access to the features you defined above.
+          Wrap your root layout with the AutumnProvider component, and pass in
+          your backend URL.
         </p>
       }
     >

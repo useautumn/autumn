@@ -164,19 +164,12 @@ export default function MountHandler({ number }: { number: number }) {
       number={number}
       description={
         <p>
-          The{" "}
-          <span className="font-mono text-red-500">
-            <a
-              href="https://docs.useautumn.com/api-reference/attach/post"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              /attach
-            </a>
-            <ArrowUpRightFromSquare size={12} className="inline ml-1" />
-          </span>{" "}
-          endpoint will return a Stripe Checkout URL. Once paid, the user will
-          be granted access to the features you defined above.
+          This creates routes in the /api/autumn/* path, used by Autumn&apos;s
+          React library. The handler takes in an identify function that returns
+          a customerId.
+          <br />
+          <br />
+          This example shows the customerId being resolved from better-auth.
         </p>
       }
     >
