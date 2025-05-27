@@ -370,8 +370,6 @@ export const checkBillingMeterEventSummary = async ({
   stripeMeterId: string;
   stripeCustomerId: string;
 }) => {
-  const sb = createSupabaseClient();
-
   let endTime = addMonths(startTime, 1);
   const event = await stripeCli.billing.meters.listEventSummaries(
     stripeMeterId,

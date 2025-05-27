@@ -8,6 +8,7 @@ import {
   FullCusProduct,
   FullCustomerEntitlement,
   Organization,
+  Subscription,
 } from "@autumn/shared";
 import Stripe from "stripe";
 import { fullCusProductToCusPrices } from "../products/cusProductUtils.js";
@@ -24,7 +25,7 @@ export const getCusProductsResponse = async ({
 }: {
   cusProducts: FullCusProduct[];
   entities: Entity[];
-  subs: Stripe.Subscription[];
+  subs: (Stripe.Subscription | Subscription)[];
   org: Organization;
   apiVersion: number;
 }) => {
@@ -63,7 +64,7 @@ export const getCusFeaturesResponse = async ({
   });
 
   let features = cusEnts.map(
-    (cusEnt: FullCustomerEntitlement) => cusEnt.entitlement.feature
+    (cusEnt: FullCustomerEntitlement) => cusEnt.entitlement.feature,
   );
 
   let entList: any = balances.map((b) => {

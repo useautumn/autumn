@@ -159,14 +159,14 @@ export const getCusPaymentMethod = async ({
 
 // 2. Create a payment method and attach to customer
 export const attachPmToCus = async ({
-  sb,
+  db,
   customer,
   org,
   env,
   willFail = false,
   testClockId,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   customer: Customer;
   org: Organization;
   env: AppEnv;
@@ -184,15 +184,17 @@ export const attachPmToCus = async ({
       testClockId,
     });
 
-    await sb
-      .from("customers")
-      .update({
+    await CusService.update({
+      db,
+      internalCusId: customer.internal_id,
+      update: {
         processor: {
           id: stripeCustomer.id,
-          type: "stripe",
+          type: ProcessorType.Stripe,
         },
-      })
-      .eq("internal_id", customer.internal_id);
+      },
+    });
+
     stripeCusId = stripeCustomer.id;
     customer.processor = {
       id: stripeCustomer.id,

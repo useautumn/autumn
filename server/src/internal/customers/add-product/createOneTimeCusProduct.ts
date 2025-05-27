@@ -21,7 +21,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const updateOneOffExistingEntitlement = async ({
   db,
-  sb,
   cusEnt,
   entitlement,
   org,
@@ -31,7 +30,6 @@ const updateOneOffExistingEntitlement = async ({
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   cusEnt: FullCustomerEntitlement;
   entitlement: EntitlementWithFeature;
   org: Organization;
@@ -79,12 +77,10 @@ const updateOneOffExistingEntitlement = async ({
 
 export const updateOneTimeCusProduct = async ({
   db,
-  sb,
   attachParams,
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   attachParams: InsertCusProductParams;
   logger: any;
 }) => {
@@ -112,7 +108,6 @@ export const updateOneTimeCusProduct = async ({
     if (existingCusEnt) {
       await updateOneOffExistingEntitlement({
         db,
-        sb,
         cusEnt: existingCusEnt,
         entitlement,
         org: attachParams.org,

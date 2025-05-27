@@ -1,17 +1,16 @@
+import Stripe from "stripe";
 import { AutumnMetadata } from "@autumn/shared";
-
 import { generateId } from "@/utils/genUtils.js";
 import { addDays } from "date-fns";
 import { MetadataService } from "./MetadataService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
-import Stripe from "stripe";
 import { AttachParams } from "../customers/products/AttachParams.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const createCheckoutMetadata = async ({
-  sb,
+  db,
   attachParams,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   attachParams: AttachParams;
 }) => {
   const metaId = generateId("meta");
@@ -30,14 +29,14 @@ export const createCheckoutMetadata = async ({
     },
   };
 
-  await MetadataService.insert(sb, metadata);
+  await MetadataService.insert({ db, data: metadata });
 
   return metaId;
 };
 
 export const getMetadataFromCheckoutSession = async (
   checkoutSession: Stripe.Checkout.Session,
-  sb: SupabaseClient,
+  db: DrizzleCli,
 ) => {
   const metadataId = checkoutSession.metadata?.autumn_metadata_id;
 
@@ -45,7 +44,10 @@ export const getMetadataFromCheckoutSession = async (
     return null;
   }
 
-  const metadata = await MetadataService.getById(sb, metadataId);
+  const metadata = await MetadataService.get({
+    db,
+    id: metadataId,
+  });
 
   if (!metadata) {
     return null;

@@ -18,15 +18,12 @@ import {
   FullCusProduct,
   Organization,
   AppEnv,
-  FullCustomer,
   Customer,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
 export const removeScheduledProduct = async ({
   db,
-  sb,
   cusProduct,
   cusProducts,
   org,
@@ -35,7 +32,6 @@ export const removeScheduledProduct = async ({
   renewCurProduct = true,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   cusProduct: FullCusProduct;
   cusProducts: FullCusProduct[];
   org: Organization;
@@ -51,7 +47,6 @@ export const removeScheduledProduct = async ({
   // 1. Cancel future product schedule
   await cancelFutureProductSchedule({
     db,
-    sb,
     org,
     cusProducts,
     product: fullProduct,
@@ -72,7 +67,6 @@ export const removeScheduledProduct = async ({
 
 export const expireCusProduct = async ({
   db,
-  sb,
   cusProduct, // cus product to expire
   cusProducts, // other cus products
   org,
@@ -82,7 +76,6 @@ export const expireCusProduct = async ({
   expireImmediately = true,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   cusProduct: FullCusProduct;
   cusProducts: FullCusProduct[];
   org: Organization;
@@ -107,7 +100,6 @@ export const expireCusProduct = async ({
   if (cusProduct.status == CusProductStatus.Scheduled) {
     await removeScheduledProduct({
       db,
-      sb,
       cusProduct,
       cusProducts,
       org,
@@ -142,7 +134,6 @@ export const expireCusProduct = async ({
   // 2. If expire at cycle end, just cancel subscriptions
   if (!expireImmediately) {
     await cancelCusProductSubscriptions({
-      sb,
       cusProduct,
       org,
       env,
@@ -162,7 +153,6 @@ export const expireCusProduct = async ({
 
   if (cusProduct.product.is_add_on) {
     await cancelCusProductSubscriptions({
-      sb,
       cusProduct,
       org,
       env,
@@ -183,7 +173,6 @@ export const expireCusProduct = async ({
   // For regular products
   // 1. Cancel stripe subscriptions
   const cancelled = await cancelCusProductSubscriptions({
-    sb,
     cusProduct,
     org,
     env,
@@ -192,7 +181,6 @@ export const expireCusProduct = async ({
   if (!cancelled) {
     await expireAndActivate({
       db,
-      sb,
       env,
       cusProduct,
       org,
@@ -204,7 +192,7 @@ export const expireCusProduct = async ({
 
 export const handleCusProductExpired = async (req: any, res: any) => {
   try {
-    const { db, sb, logtail: logger } = req;
+    const { db, logtail: logger } = req;
 
     const org = await OrgService.getFromReq(req);
     const customerProductId = req.params.customer_product_id;
@@ -237,7 +225,6 @@ export const handleCusProductExpired = async (req: any, res: any) => {
 
     await expireCusProduct({
       db,
-      sb,
       cusProduct,
       cusProducts,
       org,

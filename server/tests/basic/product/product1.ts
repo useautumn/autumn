@@ -13,7 +13,7 @@ import {
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "product1: Testing create and update product"
+  "product1: Testing create and update product",
 )}`, () => {
   let autumn: Autumn;
 
@@ -104,13 +104,13 @@ describe(`${chalk.yellowBright(
     });
 
     let metered1Ent = product.entitlements.find(
-      (ent: any) => ent.id === items[1].entitlement_id
+      (ent: any) => ent.id === items[1].entitlement_id,
     );
 
     assert.equal(metered1Ent.allowance, 200);
 
     let price = product.prices.find(
-      (price: any) => price.id === items[3].price_id
+      (price: any) => price.id === items[3].price_id,
     );
 
     assert.equal(price.config.amount, 20);
@@ -119,7 +119,7 @@ describe(`${chalk.yellowBright(
 });
 
 describe(`${chalk.yellowBright(
-  "product1: Testing attach and update product"
+  "product1: Testing attach and update product",
 )}`, () => {
   let autumn: Autumn;
   let customerId = "product-1-customer";
@@ -129,7 +129,7 @@ describe(`${chalk.yellowBright(
 
     await initCustomer({
       customerId,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,

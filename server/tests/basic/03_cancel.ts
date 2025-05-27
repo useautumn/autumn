@@ -19,7 +19,7 @@ import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { addDays, addMonths } from "date-fns";
 
 describe(`${chalk.yellowBright(
-  "03_cancel: Testing cancel (at period end and now)"
+  "03_cancel: Testing cancel (at period end and now)",
 )}`, () => {
   const customerId = "cancelCustomer";
 
@@ -32,7 +32,7 @@ describe(`${chalk.yellowBright(
         name: "Test Customer",
         email: "test@test.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });
@@ -61,7 +61,7 @@ describe(`${chalk.yellowBright(
     const cusRes: any = await AutumnCli.getCustomer(customerId);
 
     const proProduct = cusRes.products.find(
-      (p: any) => p.id === products.pro.id
+      (p: any) => p.id === products.pro.id,
     );
 
     for (const subId of proProduct.subscription_ids) {
@@ -84,7 +84,7 @@ describe(`${chalk.yellowBright(
     });
 
     const proProduct = cusRes.products.find(
-      (p: any) => p.id === products.pro.id
+      (p: any) => p.id === products.pro.id,
     );
     expect(proProduct.canceled_at).to.not.equal(null);
     expect(proProduct.status).to.equal(CusProductStatus.Active);
@@ -98,7 +98,7 @@ describe(`${chalk.yellowBright(
 
     const cusRes: any = await AutumnCli.getCustomer(customerId);
     const proProduct = cusRes.products.find(
-      (p: any) => p.id === products.pro.id
+      (p: any) => p.id === products.pro.id,
     );
 
     for (const subId of proProduct.subscription_ids) {
@@ -133,7 +133,7 @@ describe(`${chalk.yellowBright(
 });
 
 describe(`${chalk.yellowBright(
-  "03_cancel: Testing subscription past_due"
+  "03_cancel: Testing subscription past_due",
 )}`, () => {
   const customerId = "03_cancel_past_due";
 
@@ -154,7 +154,7 @@ describe(`${chalk.yellowBright(
         name: "Test Customer",
         email: "test@test.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,

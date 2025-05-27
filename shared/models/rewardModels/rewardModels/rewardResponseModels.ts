@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { CouponDurationType, RewardType } from "./rewardModels.js";
+import { RewardType } from "./rewardEnums.js";
+import { CouponDurationType } from "./rewardEnums.js";
 
 export const DiscountResponseSchema = z.object({
   id: z.string(), // either from Autumn or Stripe

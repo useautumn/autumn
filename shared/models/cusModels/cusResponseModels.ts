@@ -2,8 +2,8 @@ import { z } from "zod";
 import { AppEnv } from "../genModels/genEnums.js";
 import { EntInterval } from "../productModels/entModels/entEnums.js";
 import { InvoiceResponseSchema } from "./invoiceModels/invoiceResponseModels.js";
-import { RewardResponseSchema } from "../rewardModels/rewardResponseModels.js";
 import { CusProductStatus } from "../cusProductModels/cusProductEnums.js";
+import { RewardResponseSchema } from "../rewardModels/rewardModels/rewardResponseModels.js";
 
 export const CusProductResponseSchema = z.object({
   id: z.string(),

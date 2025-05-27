@@ -119,7 +119,7 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
 
     const { testClockId: testClockId1 } = await initCustomerWithTestClock({
       customerId,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });

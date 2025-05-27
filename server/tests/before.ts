@@ -15,12 +15,15 @@ const DEFAULT_ENV = AppEnv.Sandbox;
 
 export const setupBefore = async (instance: any) => {
   const sb = createSupabaseClient();
-  const org = await OrgService.getBySlug({ sb, slug: ORG_SLUG });
+  const { db, client } = initDrizzle();
+
+  const org = await OrgService.getBySlug({ db, slug: ORG_SLUG });
+  if (!org) {
+    throw new Error("Org not found");
+  }
   const env = DEFAULT_ENV;
   const autumnSecretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!;
   const autumn = new Autumn(autumnSecretKey);
-
-  const { db, client } = initDrizzle();
 
   const autumnJs = new AutumnJS({
     secretKey: autumnSecretKey,

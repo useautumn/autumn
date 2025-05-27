@@ -17,7 +17,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const updateDbPricesAndEnts = async ({
   db,
-  sb,
   newPrices,
   newEnts,
   updatedPrices,
@@ -26,7 +25,6 @@ const updateDbPricesAndEnts = async ({
   deletedEnts,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   newPrices: Price[];
   newEnts: Entitlement[];
   updatedPrices: Price[];
@@ -108,7 +106,6 @@ const updateDbPricesAndEnts = async ({
 
 const handleCustomProductItems = async ({
   db,
-  sb,
   newPrices,
   newEnts,
   updatedPrices,
@@ -118,7 +115,6 @@ const handleCustomProductItems = async ({
   features,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   newPrices: Price[];
   newEnts: Entitlement[];
   updatedPrices: Price[];
@@ -148,7 +144,6 @@ const handleCustomProductItems = async ({
 
 export const handleNewProductItems = async ({
   db,
-  sb,
   curPrices,
   curEnts,
   newItems,
@@ -160,7 +155,6 @@ export const handleNewProductItems = async ({
   saveToDb = true,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   curPrices: Price[];
   curEnts: Entitlement[];
   newItems: ProductItem[];
@@ -273,7 +267,6 @@ export const handleNewProductItems = async ({
   if ((isCustom || newVersion) && saveToDb) {
     return handleCustomProductItems({
       db,
-      sb,
       newPrices,
       newEnts,
       updatedPrices,
@@ -287,7 +280,6 @@ export const handleNewProductItems = async ({
   if (saveToDb) {
     await updateDbPricesAndEnts({
       db,
-      sb,
       newPrices,
       newEnts,
       updatedPrices,

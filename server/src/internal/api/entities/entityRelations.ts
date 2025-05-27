@@ -1,7 +1,5 @@
-import { entities } from "@shared/models/cusModels/entityModels/entityTable.js";
-import { customers } from "@shared/models/cusModels/cusTable.js";
-import { features } from "@shared/models/featureModels/featureTable.js";
-import { organizations } from "@shared/models/orgModels/orgTable.js";
+import { entities, customers, features, organizations } from "@autumn/shared";
+
 import { relations } from "drizzle-orm";
 
 export const entityRelations = relations(entities, ({ one }) => ({

@@ -62,7 +62,7 @@ export class ApiKeyService {
       env,
     };
 
-    console.log("result", result);
+    // console.log("result", result);
     return result;
   }
 
@@ -80,6 +80,7 @@ export class ApiKeyService {
       orderBy: [desc(apiKeys.id)],
     });
   }
+
   static async insert({ db, apiKey }: { db: DrizzleCli; apiKey: ApiKey }) {
     await db.insert(apiKeys).values(apiKey);
   }

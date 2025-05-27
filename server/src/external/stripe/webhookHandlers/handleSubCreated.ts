@@ -20,14 +20,12 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleSubCreated = async ({
   db,
-  sb,
   subscription,
   org,
   env,
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   subscription: Stripe.Subscription;
   org: Organization;
   env: AppEnv;
@@ -48,13 +46,13 @@ export const handleSubCreated = async ({
 
     // Update autumn sub
     let autumnSub = await SubService.getFromScheduleId({
-      sb,
+      db,
       scheduleId: subscription.schedule as string,
     });
 
     if (autumnSub) {
       await SubService.updateFromScheduleId({
-        sb,
+        db,
         scheduleId: subscription.schedule as string,
         updates: {
           stripe_id: subscription.id,
@@ -74,7 +72,7 @@ export const handleSubCreated = async ({
       }
 
       await SubService.createSub({
-        sb,
+        db,
         sub: {
           id: generateId("sub"),
           created_at: Date.now(),
@@ -102,13 +100,13 @@ export const handleSubCreated = async ({
       subIds.push(subscription.id);
 
       const updateCusProd = async () => {
-        await sb
-          .from("customer_products")
-          .update({
+        await CusProductService.update({
+          db,
+          cusProductId: cusProd.id,
+          updates: {
             subscription_ids: subIds,
-            // status: CusProductStatus.Active,
-          })
-          .eq("id", cusProd.id);
+          },
+        });
 
         // Fetch latest invoice?
         const stripeCli = createStripeCli({ org, env });
@@ -126,7 +124,7 @@ export const handleSubCreated = async ({
         });
 
         await InvoiceService.createInvoiceFromStripe({
-          sb,
+          db,
           stripeInvoice: invoice,
           internalCustomerId: cusProd.internal_customer_id,
           internalEntityId: cusProd.internal_entity_id,

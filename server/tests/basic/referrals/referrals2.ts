@@ -18,7 +18,7 @@ import { initCustomer } from "tests/utils/init.js";
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "referrals2: Testing referrals (immediate redemption)"
+  "referrals2: Testing referrals (immediate redemption)",
 )}`, () => {
   let mainCustomerId = "main-referral-2";
   let redeemers = ["referral2-r1", "referral2-r2", "referral2-r3"];
@@ -38,7 +38,7 @@ describe(`${chalk.yellowBright(
     const { testClockId: testClockId1, customer } =
       await initCustomerWithTestClock({
         customerId: mainCustomerId,
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
       });
@@ -50,11 +50,11 @@ describe(`${chalk.yellowBright(
       batchCreate.push(
         initCustomer({
           customerId: redeemer,
-          sb: this.sb,
+          db: this.db,
           org: this.org,
           env: this.env,
           attachPm: true,
-        })
+        }),
       );
     }
 
@@ -109,7 +109,7 @@ describe(`${chalk.yellowBright(
 
     // Check stripe customer
     let stripeCus = (await stripeCli.customers.retrieve(
-      mainCustomer.processor?.id
+      mainCustomer.processor?.id,
     )) as Stripe.Customer;
 
     assert.notEqual(stripeCus.discount, null);
@@ -141,7 +141,7 @@ describe(`${chalk.yellowBright(
   it("customer should have discount for second purchase", async function () {
     // 2. Check that customer has another discount
     let stripeCus = (await stripeCli.customers.retrieve(
-      mainCustomer.processor?.id
+      mainCustomer.processor?.id,
     )) as Stripe.Customer;
 
     assert.notEqual(stripeCus.discount, null);

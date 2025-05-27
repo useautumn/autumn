@@ -1,14 +1,12 @@
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
 import { createStripeCli } from "../utils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { notNullish, timeout } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export async function handleCusDiscountDeleted({
   db,
-  sb,
   org,
   discount,
   env,
@@ -16,7 +14,6 @@ export async function handleCusDiscountDeleted({
   res,
 }: {
   db: DrizzleCli;
-  sb: any;
   org: any;
   discount: any;
   env: any;
@@ -40,14 +37,11 @@ export async function handleCusDiscountDeleted({
 
   // Check if any redemptions available, and apply to customer if so
   let redemptions = await RewardRedemptionService.getUnappliedRedemptions({
-    sb,
+    db,
     internalCustomerId: customer.internal_id,
   });
 
   if (redemptions.length == 0) {
-    // logger.info(
-    //   `discount.deleted: no redemptions available for customer ${customer.id}`
-    // );
     return;
   }
 
@@ -84,7 +78,7 @@ export async function handleCusDiscountDeleted({
   });
 
   await RewardRedemptionService.update({
-    sb,
+    db,
     id: redemption.id,
     updates: {
       applied: true,

@@ -20,7 +20,7 @@ import { removeScheduledProduct } from "../../customers/handlers/handleCusProduc
 
 export const handleDeleteEntity = async (req: any, res: any) => {
   try {
-    const { orgId, env, db, logtail: logger, sb } = req;
+    const { orgId, env, db, logtail: logger } = req;
     const { customer_id, entity_id } = req.params;
 
     await handleCustomerRaceCondition({
@@ -32,8 +32,8 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       logger,
     });
 
-    const customer = await CusService.getWithProducts({
-      sb: req.sb,
+    const customer = await CusService.getFull({
+      db,
       idOrInternalId: customer_id,
       orgId: req.orgId,
       env: req.env,
@@ -107,7 +107,6 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 
       await adjustAllowance({
         db,
-        sb,
         env,
         org,
         cusPrices: cusProducts.flatMap((p: any) => p.customer_prices),
@@ -160,7 +159,6 @@ export const handleDeleteEntity = async (req: any, res: any) => {
           if (cusProduct.status == CusProductStatus.Scheduled) {
             await removeScheduledProduct({
               db,
-              sb,
               cusProduct,
               cusProducts,
               org,

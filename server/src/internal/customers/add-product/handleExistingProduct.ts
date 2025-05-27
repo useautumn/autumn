@@ -163,7 +163,7 @@ export const handleExistingProduct = async ({
   invoiceOnly?: boolean;
   isCustom?: boolean;
 }): Promise<{ curCusProduct: FullCusProduct | null; done: boolean }> => {
-  const { db, sb, logtail: logger } = req;
+  const { db, logtail: logger } = req;
   const { products, cusProducts } = attachParams;
 
   if (products.length > 1) {
@@ -211,7 +211,6 @@ export const handleExistingProduct = async ({
   if (curMainProduct?.product.id === product.id) {
     return await handleSameMainProduct({
       db,
-      sb,
       curMainProduct,
       curScheduledProduct,
       attachParams,
@@ -225,7 +224,7 @@ export const handleExistingProduct = async ({
 
   if (curSameProduct && product.is_add_on) {
     return await handleSameAddOnProduct({
-      sb,
+      db,
       curSameProduct,
       curMainProduct: curMainProduct || null,
       attachParams,

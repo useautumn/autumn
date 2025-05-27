@@ -95,8 +95,8 @@ export const handleCreateProduct = async (req: Request, res: any) =>
     res,
     action: "POST /products",
     handler: async (req, res) => {
-      let { free_trial, items } = req.body;
-      let { logtail: logger, orgId, env, sb, db } = req;
+      let { items } = req.body;
+      let { logtail: logger, orgId, env, db } = req;
 
       let { features, freeTrial, productData } = await validateCreateProduct({
         req,
@@ -113,7 +113,6 @@ export const handleCreateProduct = async (req: Request, res: any) =>
       if (notNullish(items)) {
         await handleNewProductItems({
           db,
-          sb,
           product,
           features,
           curPrices: [],

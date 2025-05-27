@@ -14,14 +14,15 @@ import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingInter
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleCreateCheckout = async ({
-  sb,
+  db,
   req,
   res,
   attachParams,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   req: any;
   res: any;
   attachParams: AttachParams;
@@ -55,7 +56,7 @@ export const handleCreateCheckout = async ({
 
   // Insert metadata
   const metaId = await createCheckoutMetadata({
-    sb,
+    db,
     attachParams,
   });
 
@@ -84,8 +85,6 @@ export const handleCreateCheckout = async ({
   let allowPromotionCodes = notNullish(checkoutParams.discounts)
     ? undefined
     : checkoutParams.allow_promotion_codes || true;
-
-  console.log("Items: ", items);
 
   const checkout = await stripeCli.checkout.sessions.create({
     customer: customer.processor.id,
@@ -134,31 +133,3 @@ export const handleCreateCheckout = async ({
   }
   return;
 };
-
-// OLD BILLING CYCLE ANCHOR LOGIC
-// const nextBillingDateUnix = addBillingIntervalUnix(
-//   Date.now(),
-//   itemSets[0].interval
-// );
-// console.log(
-//   "Next billing date",
-//   format(new Date(nextBillingDateUnix), "dd MMM yyyy HH:mm:ss")
-// );
-// console.log(
-//   "Target unix",
-//   format(new Date(attachParams.billingAnchor), "dd MMM yyyy HH:mm:ss")
-// );
-
-// billingCycleAnchorUnixSeconds = subtractFromUnixTillAligned({
-//   targetUnix: attachParams.billingAnchor,
-//   originalUnix: nextBillingDateUnix,
-// });
-
-// console.log(
-//   "Billing cycle anchor",
-//   format(new Date(billingCycleAnchorUnixSeconds), "dd MMM yyyy HH:mm:ss")
-// );
-
-// billingCycleAnchorUnixSeconds = Math.floor(
-//   billingCycleAnchorUnixSeconds / 1000
-// );

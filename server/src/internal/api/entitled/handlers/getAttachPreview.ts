@@ -29,7 +29,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getAttachPreview = async ({
   db,
-  sb,
   customer,
   org,
   env,
@@ -40,7 +39,6 @@ export const getAttachPreview = async ({
   shouldFormat = true,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   customer: FullCustomer;
   org: Organization;
   env: AppEnv;
@@ -172,7 +170,6 @@ export const getAttachPreview = async ({
   if (isUpgrade) {
     return await getUpgradePreview({
       db,
-      sb,
       customer,
       org,
       env,

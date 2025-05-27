@@ -9,6 +9,7 @@ import {
   ErrCode,
   Feature,
   FullCustomer,
+  Invoice,
   InvoiceResponse,
   Organization,
   ProductSchema,
@@ -80,21 +81,20 @@ export const flipProductResults = (
 };
 
 export const getCusInvoices = async ({
-  sb,
+  db,
   internalCustomerId,
   limit = 10,
   withItems = false,
   features,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   internalCustomerId: string;
   limit?: number;
   withItems?: boolean;
   features?: Feature[];
 }): Promise<InvoiceResponse[]> => {
-  // Get customer invoices
-  const invoices = await InvoiceService.getByInternalCustomerId({
-    sb,
+  const invoices = await InvoiceService.list({
+    db,
     internalCustomerId,
     limit,
   });
@@ -148,13 +148,11 @@ export const processFullCusProducts = ({
 
 // IMPORTANT FUNCTION
 export const getCusEntsInFeatures = async ({
-  sb,
   customer,
   internalFeatureIds,
   logger,
   reverseOrder = false,
 }: {
-  sb: SupabaseClient;
   customer: FullCustomer;
   internalFeatureIds?: string[];
   logger: any;

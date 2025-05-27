@@ -4,8 +4,7 @@ import { QueueManager } from "./QueueManager.js";
 import { createLogtail } from "@/external/logtail/logtailUtils.js";
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import { JobName } from "./JobName.js";
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
@@ -68,14 +67,12 @@ const initWorker = ({
   queue,
   useBackup,
   logtail,
-  sb,
   db,
 }: {
   id: number;
   queue: Queue;
   useBackup: boolean;
   logtail: any;
-  sb: SupabaseClient;
   db: DrizzleCli;
 }) => {
   let worker = new Worker(
@@ -95,7 +92,6 @@ const initWorker = ({
           db,
           payload: job.data,
           logger: logtail,
-          sb,
         });
         return;
       }
@@ -118,12 +114,14 @@ const initWorker = ({
         try {
           await sendProductsUpdatedWebhook({
             db,
-            sb,
             logger: logtail,
             data: job.data,
           });
         } catch (error) {
-          console.error("Error processing job:", error);
+          console.error(
+            "Error processing sendProductsUpdatedWebhook job:",
+            error,
+          );
         } finally {
           await releaseLock({ customerId: lockKey, useBackup });
         }
@@ -149,7 +147,6 @@ const initWorker = ({
           await runTriggerCheckoutReward({
             db,
             payload: job.data,
-            sb,
             logger: logtail,
           });
         } catch (error) {
@@ -181,14 +178,12 @@ const initWorker = ({
           await runUpdateBalanceTask({
             payload: job.data,
             logger: logtail,
-            sb,
             db,
           });
         } else if (job.name === JobName.UpdateUsage) {
           await runUpdateUsageTask({
             payload: job.data,
             logger: logtail,
-            sb,
             db,
           });
         }
@@ -241,7 +236,6 @@ export const initWorkers = async () => {
   const backupQueue = await QueueManager.getQueue({ useBackup: true });
   await CacheManager.getInstance();
   const logtail = createLogtail();
-  const sb = createSupabaseClient();
   const { db, client } = initDrizzle();
 
   for (let i = 0; i < NUM_WORKERS; i++) {
@@ -251,7 +245,6 @@ export const initWorkers = async () => {
         queue: mainQueue,
         useBackup: false,
         logtail,
-        sb,
         db,
       }),
     );
@@ -261,7 +254,6 @@ export const initWorkers = async () => {
         queue: backupQueue,
         useBackup: true,
         logtail,
-        sb,
         db,
       }),
     );

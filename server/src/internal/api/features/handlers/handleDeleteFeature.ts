@@ -12,7 +12,7 @@ export const handleDeleteFeature = async (req: any, res: any) =>
     res,
     action: "Delete feature",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-      const { db, sb, orgId, env } = req;
+      const { db, orgId } = req;
 
       let { featureId } = req.params;
       let features = await FeatureService.getFromReq(req);

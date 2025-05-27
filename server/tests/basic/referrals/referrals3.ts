@@ -17,7 +17,7 @@ import { compareProductEntitlements } from "tests/utils/compare.js";
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "referrals3: Testing free product referrals"
+  "referrals3: Testing free product referrals",
 )}`, () => {
   let mainCustomerId = "main-referral-3";
   let redeemers = ["referral3-r1", "referral3-r2", "referral3-r3"];
@@ -37,7 +37,7 @@ describe(`${chalk.yellowBright(
     const { testClockId: testClockId1, customer } =
       await initCustomerWithTestClock({
         customerId: mainCustomerId,
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
         fingerprint: "main-referral-3",
@@ -55,11 +55,11 @@ describe(`${chalk.yellowBright(
       batchCreate.push(
         initCustomer({
           customerId: redeemer,
-          sb: this.sb,
+          db: this.db,
           org: this.org,
           env: this.env,
           attachPm: true,
-        })
+        }),
       );
     }
 

@@ -54,14 +54,12 @@ export const isActiveStatus = (status: CusProductStatus) => {
 
 // 1. Cancel cusProductSubscriptions
 export const cancelCusProductSubscriptions = async ({
-  sb,
   cusProduct,
   org,
   env,
   excludeIds,
   expireImmediately = true,
 }: {
-  sb: SupabaseClient;
   cusProduct: FullCusProduct;
   org: Organization;
   env: AppEnv;
@@ -128,7 +126,6 @@ export const activateDefaultProduct = async ({
   productGroup,
   customer,
   org,
-  sb,
   env,
   curCusProduct,
 }: {
@@ -136,7 +133,6 @@ export const activateDefaultProduct = async ({
   productGroup: string;
   customer: Customer;
   org: Organization;
-  sb: SupabaseClient;
   env: AppEnv;
   curCusProduct?: FullCusProduct;
 }) => {
@@ -163,7 +159,6 @@ export const activateDefaultProduct = async ({
 
   await createFullCusProduct({
     db,
-    sb,
     attachParams: {
       org,
       customer,
@@ -184,13 +179,11 @@ export const activateDefaultProduct = async ({
 
 export const expireAndActivate = async ({
   db,
-  sb,
   env,
   cusProduct,
   org,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   env: AppEnv;
   cusProduct: FullCusProduct;
   org: Organization;
@@ -207,14 +200,12 @@ export const expireAndActivate = async ({
     productGroup: cusProduct.product.group,
     customer: cusProduct.customer,
     org,
-    sb,
     env,
   });
 };
 
 export const activateFutureProduct = async ({
   db,
-  sb,
   cusProduct,
   subscription,
   org,
@@ -222,7 +213,6 @@ export const activateFutureProduct = async ({
   logger = console,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   cusProduct: FullCusProduct;
   subscription: Stripe.Subscription;
   org: Organization;

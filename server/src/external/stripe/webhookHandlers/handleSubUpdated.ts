@@ -16,7 +16,6 @@ import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 import {
   getWebhookLock,
@@ -29,7 +28,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleSubscriptionUpdated = async ({
   db,
-  sb,
   org,
   subscription,
   previousAttributes,
@@ -37,7 +35,6 @@ export const handleSubscriptionUpdated = async ({
   logger,
 }: {
   db: DrizzleCli;
-  sb: any;
   org: Organization;
   env: AppEnv;
   subscription: any;
@@ -182,7 +179,6 @@ export const handleSubscriptionUpdated = async ({
         }
         await createFullCusProduct({
           db,
-          sb,
           attachParams: {
             customer: updatedCusProducts[0].customer,
             product,
@@ -254,7 +250,6 @@ export const handleSubscriptionUpdated = async ({
         });
         await cancelFutureProductSchedule({
           db,
-          sb,
           org,
           stripeCli,
           cusProducts: allCusProducts,
@@ -299,7 +294,7 @@ export const handleSubscriptionUpdated = async ({
 
   try {
     await SubService.updateFromStripe({
-      sb,
+      db,
       stripeSub: fullSub,
     });
   } catch (error) {

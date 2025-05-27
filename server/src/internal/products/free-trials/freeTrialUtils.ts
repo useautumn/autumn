@@ -19,6 +19,7 @@ import {
 } from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 
 export const validateAndInitFreeTrial = ({
   freeTrial,
@@ -86,23 +87,19 @@ export const freeTrialToNumDays = (freeTrial: FreeTrial | null) => {
 };
 
 export const trialFingerprintExists = async ({
-  sb,
+  db,
   freeTrialId,
   fingerprint,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   freeTrialId: string;
-  fingerprint: string | null;
+  fingerprint: string;
 }) => {
-  const { data, error } = await sb
-    .from("customer_products")
-    .select("*, customer:customers!inner(*)")
-    .eq("free_trial_id", freeTrialId)
-    .eq("customer.fingerprint", fingerprint);
-
-  if (error) {
-    throw error;
-  }
+  const data = await CusProductService.getByFingerprint({
+    db,
+    freeTrialId,
+    fingerprint,
+  });
 
   if (data && data.length > 0) {
     return true;
@@ -112,23 +109,19 @@ export const trialFingerprintExists = async ({
 };
 
 export const trialWithCustomerExists = async ({
-  sb,
+  db,
   internalCustomerId,
   freeTrialId,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   internalCustomerId: string;
   freeTrialId: string;
 }) => {
-  const { data, error } = await sb
-    .from("customer_products")
-    .select("*, customer:customers!inner(*)")
-    .eq("internal_customer_id", internalCustomerId)
-    .eq("free_trial_id", freeTrialId);
-
-  if (error) {
-    throw error;
-  }
+  const data = await CusProductService.getByFingerprint({
+    db,
+    freeTrialId,
+    fingerprint: internalCustomerId,
+  });
 
   if (data && data.length > 0) {
     return true;
@@ -138,13 +131,13 @@ export const trialWithCustomerExists = async ({
 };
 
 export const getFreeTrialAfterFingerprint = async ({
-  sb,
+  db,
   freeTrial,
   fingerprint,
   internalCustomerId,
   multipleAllowed,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   freeTrial: FreeTrial | null | undefined;
   fingerprint: string | null | undefined;
   internalCustomerId: string;
@@ -159,7 +152,7 @@ export const getFreeTrialAfterFingerprint = async ({
   let uniqueFreeTrial: FreeTrial | null = freeTrial;
   if (uniqueFreeTrial.unique_fingerprint && fingerprint) {
     let exists = await trialFingerprintExists({
-      sb,
+      db,
       fingerprint,
       freeTrialId: uniqueFreeTrial.id,
     });
@@ -173,7 +166,7 @@ export const getFreeTrialAfterFingerprint = async ({
   if (uniqueFreeTrial) {
     // Check if same customer exists
     let exists = await trialWithCustomerExists({
-      sb,
+      db,
       internalCustomerId,
       freeTrialId: uniqueFreeTrial.id,
     });

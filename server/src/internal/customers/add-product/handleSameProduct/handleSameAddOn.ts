@@ -5,15 +5,16 @@ import { FullCusProduct, ErrCode } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { AttachParams } from "../../products/AttachParams.js";
 import { getOptionsToUpdate } from "../handleSameProduct.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleSameAddOnProduct = async ({
-  sb,
+  db,
   curSameProduct,
   curMainProduct,
   attachParams,
   res,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   curSameProduct: FullCusProduct;
   curMainProduct: FullCusProduct | null;
   attachParams: AttachParams;

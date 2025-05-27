@@ -162,7 +162,6 @@ const logUsageUpdate = ({
 // Main function to update customer balance
 export const updateUsage = async ({
   db,
-  sb,
   customerId,
   features,
   org,
@@ -174,7 +173,6 @@ export const updateUsage = async ({
   entityId,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   customerId: string;
   features: Feature[];
   org: Organization;
@@ -185,8 +183,8 @@ export const updateUsage = async ({
   logger: any;
   entityId?: string;
 }) => {
-  const customer = await CusService.getWithProducts({
-    sb,
+  const customer = await CusService.getFull({
+    db,
     idOrInternalId: customerId,
     orgId: org.id,
     env,
@@ -195,7 +193,6 @@ export const updateUsage = async ({
   });
 
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
-    sb,
     customer,
     internalFeatureIds: features.map((f) => f.internal_id!),
     logger,
@@ -240,7 +237,6 @@ export const updateUsage = async ({
         features,
         deductParams: {
           db,
-          sb,
           feature,
           env,
           org,
@@ -264,7 +260,6 @@ export const updateUsage = async ({
       cusEnts,
       deductParams: {
         db,
-        sb,
         feature,
         env,
         org,
@@ -285,12 +280,10 @@ export const runUpdateUsageTask = async ({
   payload,
   logger,
   db,
-  sb,
 }: {
   payload: any;
   logger: any;
   db: DrizzleCli;
-  sb: SupabaseClient;
 }) => {
   try {
     // 1. Update customer balance
@@ -313,7 +306,6 @@ export const runUpdateUsageTask = async ({
 
     const cusEnts: any = await updateUsage({
       db,
-      sb,
       customerId,
       features,
       value,

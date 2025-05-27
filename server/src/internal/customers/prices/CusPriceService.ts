@@ -4,7 +4,7 @@ import {
   FullCustomerEntitlement,
   FullCustomerPrice,
 } from "@autumn/shared";
-import { customerPrices } from "@shared/models/cusProductModels/cusPriceModels/cusPriceTable.js";
+import { customerPrices } from "@autumn/shared";
 
 import { eq } from "drizzle-orm";
 
@@ -42,5 +42,22 @@ export class CusPriceService {
     }
 
     await db.insert(customerPrices).values(data as any);
+  }
+
+  static async getByCustomerProductId({
+    db,
+    customerProductId,
+  }: {
+    db: DrizzleCli;
+    customerProductId: string;
+  }) {
+    const data = await db.query.customerPrices.findMany({
+      where: eq(customerPrices.customer_product_id, customerProductId),
+      with: {
+        price: true,
+      },
+    });
+
+    return data as FullCustomerPrice[];
   }
 }

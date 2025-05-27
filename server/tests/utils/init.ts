@@ -6,13 +6,11 @@ import {
   BillWhen,
   CouponDurationType,
   CreateFreeTrial,
-  DiscountType,
   EntInterval,
   Entitlement,
   Feature,
   FeatureType,
   FeatureUsageType,
-  FreeTrial,
   FreeTrialDuration,
   Organization,
   PriceType,
@@ -25,7 +23,8 @@ import {
 import { getAxiosInstance } from "./setup.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { attachPmToCus } from "@/external/stripe/stripeCusUtils.js";
-import { generateId, notNullish } from "@/utils/genUtils.js";
+import { generateId } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const keyToTitle = (key: string) => {
   return key
@@ -295,7 +294,7 @@ export const initCustomer = async ({
   customer_data,
   customerId,
   attachPm = false,
-  sb,
+  db,
   org,
   env,
   testClockId,
@@ -308,7 +307,7 @@ export const initCustomer = async ({
   };
   customerId?: string;
   attachPm?: boolean;
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   testClockId?: string;
@@ -344,7 +343,7 @@ export const initCustomer = async ({
         customer: data.customer,
         org: org,
         env: env,
-        sb: sb,
+        db: db,
         testClockId: testClockId,
       });
     }

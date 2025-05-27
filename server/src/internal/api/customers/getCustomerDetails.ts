@@ -36,10 +36,11 @@ import { getCusInvoices, processFullCusProducts } from "./cusUtils.js";
 import { invoicesToResponse } from "@/internal/customers/invoices/invoiceUtils.js";
 import Stripe from "stripe";
 import { orgToVersion } from "@/utils/versionUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const sumValues = (
   entList: CusEntResponse[],
-  key: keyof CusEntResponse
+  key: keyof CusEntResponse,
 ) => {
   return entList.reduce((acc, curr) => {
     if (curr[key]) {
@@ -122,9 +123,9 @@ export const featuresToObject = ({
 };
 
 export const getCustomerDetails = async ({
+  db,
   customer,
   features,
-  sb,
   org,
   env,
   params = {},
@@ -133,9 +134,9 @@ export const getCustomerDetails = async ({
   expand,
   reqApiVersion,
 }: {
+  db: DrizzleCli;
   customer: FullCustomer;
   features: Feature[];
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   params?: any;
@@ -166,7 +167,7 @@ export const getCustomerDetails = async ({
   });
 
   let subIds = cusProducts.flatMap(
-    (cp: FullCusProduct) => cp.subscription_ids || []
+    (cp: FullCusProduct) => cp.subscription_ids || [],
   );
 
   if (org.config.api_version >= BREAK_API_VERSION && org.stripe_connected) {
@@ -225,7 +226,7 @@ export const getCustomerDetails = async ({
 
       const [stripeCus, subsResult] = await Promise.all([
         stripeCli.customers.retrieve(
-          customer.processor?.id!
+          customer.processor?.id!,
         ) as Promise<Stripe.Customer>,
         !subs
           ? getStripeSubs({
@@ -241,7 +242,7 @@ export const getCustomerDetails = async ({
       }
 
       let stripeDiscounts: Stripe.Discount[] = subs?.flatMap(
-        (s) => s.discounts
+        (s) => s.discounts,
       ) as Stripe.Discount[];
 
       if (stripeCus.discount) {
@@ -313,7 +314,7 @@ export const getCustomerDetails = async ({
     let withItems = org.config.api_version >= BREAK_API_VERSION;
 
     const processedInvoices = await getCusInvoices({
-      sb,
+      db,
       internalCustomerId: customer.internal_id,
       limit: 20,
       withItems,

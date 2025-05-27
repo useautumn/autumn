@@ -13,11 +13,12 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // Get payment method
 
 export const createStripeSub = async ({
-  sb,
+  db,
   stripeCli,
   customer,
   org,
@@ -27,7 +28,7 @@ export const createStripeSub = async ({
   itemSet,
   shouldPreview = false,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   stripeCli: Stripe;
   customer: Customer;
   freeTrial: FreeTrial | null;
@@ -55,11 +56,11 @@ export const createStripeSub = async ({
   const { items, prices, interval, subMeta, usageFeatures } = itemSet;
   let subItems = items.filter(
     (i: any, index: number) =>
-      prices[index].config!.interval !== BillingInterval.OneOff
+      prices[index].config!.interval !== BillingInterval.OneOff,
   );
   let invoiceItems = items.filter(
     (i: any, index: number) =>
-      prices[index].config!.interval === BillingInterval.OneOff
+      prices[index].config!.interval === BillingInterval.OneOff,
   );
 
   if (shouldPreview) {
@@ -93,7 +94,7 @@ export const createStripeSub = async ({
 
     // Store
     await SubService.createSub({
-      sb,
+      db,
       sub: {
         id: generateId("sub"),
         stripe_id: subscription.id,

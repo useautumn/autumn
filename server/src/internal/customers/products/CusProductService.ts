@@ -1,28 +1,19 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
   CusProduct,
   CusProductStatus,
+  customers,
   ErrCode,
   FullCusProduct,
-  Organization,
   products,
 } from "@autumn/shared";
-import { customerProducts } from "@shared/models/cusProductModels/cusProductTable.js";
-import { SupabaseClient } from "@supabase/supabase-js";
-import {
-  and,
-  arrayContained,
-  arrayContains,
-  eq,
-  inArray,
-  or,
-  sql,
-} from "drizzle-orm";
+
+import { customerProducts } from "@autumn/shared";
+
+import { and, arrayContains, eq, inArray, or, sql } from "drizzle-orm";
 
 export const ACTIVE_STATUSES = [
   CusProductStatus.Active,
@@ -368,13 +359,11 @@ export class CusProductService {
   }
 
   static async getByScheduleId({
-    // sb,
     db,
     scheduleId,
     orgId,
     env,
   }: {
-    // sb: SupabaseClient;
     db: DrizzleCli;
     scheduleId: string;
     orgId: string;
@@ -412,20 +401,6 @@ export class CusProductService {
       orgId,
       env,
     });
-
-    // const { data, error } = await sb
-    //   .from("customer_products")
-    //   .select("*, product:products!inner(*), customer:customers!inner(*)")
-    //   // .eq("processor->>subscription_schedule_id", scheduleId)
-    //   .contains("scheduled_ids", [scheduleId])
-    //   .eq("customer.org_id", orgId)
-    //   .eq("customer.env", env);
-
-    // if (error) {
-    //   throw error;
-    // }
-
-    // return data;
   }
 
   static async update({
@@ -482,36 +457,6 @@ export class CusProductService {
     })) as FullCusProduct[];
 
     return fullUpdated as FullCusProduct[];
-
-    // const query = sb
-    //   .from("customer_products")
-    //   .update(updates)
-    //   // .eq("status", CusProductStatus.Active)
-    //   // .eq("processor->>subscription_id", stripeSubId)
-    //   .or(
-    //     `processor->>'subscription_id'.eq.'${stripeSubId}', subscription_ids.cs.{${stripeSubId}}`,
-    //   );
-
-    // const { data: updated, error } = await query.select(
-    //   `*,
-    //   product:products!inner(*),
-    //   customer:customers!inner(*),
-    //   customer_entitlements:customer_entitlements!inner(
-    //     *, entitlement:entitlements!inner(
-    //       *, feature:features!inner(*)
-    //     )
-    //   ),
-    //   customer_prices:customer_prices(
-    //     *, price:prices(*)
-    //   )
-    //   `,
-    // );
-
-    // if (error) {
-    //   throw error;
-    // }
-
-    // return updated;
   }
 
   static async delete({
@@ -526,53 +471,58 @@ export class CusProductService {
       .where(eq(customerProducts.id, cusProductId))
       .returning();
   }
+
+  static async getByFingerprint({
+    db,
+    freeTrialId,
+    fingerprint,
+  }: {
+    db: DrizzleCli;
+    freeTrialId: string;
+    fingerprint: string;
+  }) {
+    let data = await db
+      .select()
+      .from(customerProducts)
+      .innerJoin(
+        customers,
+        eq(customerProducts.internal_customer_id, customers.internal_id),
+      )
+      .where(
+        and(
+          eq(customers.fingerprint, fingerprint),
+          eq(customerProducts.free_trial_id, freeTrialId),
+        ),
+      );
+
+    return data;
+
+    // const { data, error } = await sb
+    //   .from("customer_products")
+    //   .select("*, customer:customers!inner(*)")
+    //   .eq("free_trial_id", freeTrialId)
+    //   .eq("customer.fingerprint", fingerprint);
+  }
+
+  static async getByTrialAndCustomer({
+    db,
+    freeTrialId,
+    internalCustomerId,
+  }: {
+    db: DrizzleCli;
+    freeTrialId: string;
+    internalCustomerId: string;
+  }) {
+    let data = await db.query.customerProducts.findMany({
+      where: and(
+        eq(customerProducts.free_trial_id, freeTrialId),
+        eq(customerProducts.internal_customer_id, internalCustomerId),
+      ),
+      with: {
+        customer: true,
+      },
+    });
+
+    return data;
+  }
 }
-
-// static async getByStripeSubId({
-//   sb,
-//   stripeSubId,
-//   orgId,
-//   env,
-//   inStatuses,
-//   withCusEnts = false,
-//   withCusPrices = false,
-// }: {
-//   sb: SupabaseClient;
-//   stripeSubId: string;
-//   orgId: string;
-//   env: AppEnv;
-//   inStatuses?: string[];
-//   withCusEnts?: boolean;
-//   withCusPrices?: boolean;
-// }) {
-//   const query = sb
-//     .from("customer_products")
-//     .select(
-//       `*, product:products(*), customer:customers!inner(*)${
-//         withCusEnts
-//           ? ", customer_entitlements:customer_entitlements(*, entitlement:entitlements!inner(*, feature:features!inner(*)))"
-//           : ""
-//       }${
-//         withCusPrices
-//           ? ", customer_prices:customer_prices(*, price:prices!inner(*))"
-//           : ""
-//       }` as "*",
-//     )
-//     .or(
-//       `processor->>'subscription_id'.eq.'${stripeSubId}', subscription_ids.cs.{${stripeSubId}}`,
-//     )
-//     .eq("customer.org_id", orgId)
-//     .eq("customer.env", env);
-
-//   if (inStatuses) {
-//     query.in("status", inStatuses);
-//   }
-
-//   const { data, error } = await query;
-
-//   if (error) {
-//     throw error;
-//   }
-
-//   return data;
-// }

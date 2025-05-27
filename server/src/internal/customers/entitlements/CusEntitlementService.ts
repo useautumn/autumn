@@ -12,20 +12,18 @@ import {
   FullCusEntWithProduct,
   FullCustomerEntitlement,
 } from "@autumn/shared";
-import { customerEntitlements } from "@shared/models/cusProductModels/cusEntModels/cusEntTable.js";
+import { customerEntitlements } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
 import { eq, lt, and, sql } from "drizzle-orm";
-import { customerProducts } from "@shared/models/cusProductModels/cusProductTable.js";
+import { customerProducts } from "@autumn/shared";
 
 export class CusEntService {
   static async getByFeature({
-    // sb,
     db,
     internalFeatureId,
   }: {
-    // sb: SupabaseClient;
     db: DrizzleCli;
     internalFeatureId: string;
   }) {
@@ -172,86 +170,3 @@ export class CusEntService {
     return data;
   }
 }
-
-// static async getActiveResetPassed({
-//   sb,
-//   customDateUnix,
-// }: {
-//   sb: SupabaseClient;
-//   customDateUnix?: number;
-// }) {
-//   const { data, error } = await sb
-//     .from("customer_entitlements")
-//     .select(
-//       "*, customer_product:customer_products!inner(*), entitlement:entitlements(*)",
-//     )
-//     .eq("customer_product.status", "active")
-//     .lt("next_reset_at", customDateUnix ? customDateUnix : Date.now());
-
-//   if (error) {
-//     throw error;
-//   }
-
-//   return data;
-// }
-
-// static async update({
-//   sb,
-//   id,
-//   updates,
-// }: {
-//   sb: SupabaseClient;
-//   id: string;
-//   updates: Partial<CustomerEntitlement>;
-// }) {
-//   const { data, error } = await sb
-//     .from("customer_entitlements")
-//     .update(updates)
-//     .eq("id", id)
-//     .select();
-
-//   if (error) {
-//     throw error;
-//   }
-
-//   return data;
-// }
-
-// static async getByIdStrict({
-//   sb,
-//   id,
-//   orgId,
-//   env,
-//   withCusProduct = false,
-// }: {
-//   sb: SupabaseClient;
-//   id: string;
-//   orgId: string;
-//   env: string;
-//   withCusProduct?: boolean;
-// }) {
-//   let selectQuery = `*, entitlement:entitlements!inner(*, feature:features!inner(*)), customer:customers!inner(*)${
-//     withCusProduct ? ", customer_product:customer_products!inner(*)" : ""
-//   }`;
-
-//   const { data, error } = await sb
-//     .from("customer_entitlements")
-//     .select(selectQuery as "*") // hack to kill generic string error
-//     .eq("id", id)
-//     .eq("customer.org_id", orgId)
-//     .eq("customer.env", env)
-//     .single();
-
-//   if (error) {
-//     if (error.code === "PGRST116") {
-//       throw new RecaseError({
-//         message: "Customer entitlement not found",
-//         code: ErrCode.CustomerEntitlementNotFound,
-//         statusCode: StatusCodes.NOT_FOUND,
-//       });
-//     }
-//     throw error;
-//   }
-
-//   return data as FullCustomerEntitlement;
-// }

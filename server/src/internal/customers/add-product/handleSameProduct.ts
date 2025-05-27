@@ -59,14 +59,12 @@ export const getOptionsToUpdate = (
 
 const updateFeatureQuantity = async ({
   db,
-  sb,
   org,
   customer,
   curCusProduct,
   optionsToUpdate,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   customer: Customer;
   curCusProduct: FullCusProduct;
@@ -85,7 +83,7 @@ const updateFeatureQuantity = async ({
   for (const options of optionsToUpdate) {
     const { new: newOptions, old: oldOptions } = options;
     const subToUpdate = await getUsageBasedSub({
-      sb: sb,
+      db,
       stripeCli: stripeCli,
       subIds: curCusProduct.subscription_ids || [],
       feature: {
@@ -213,7 +211,6 @@ export const hasEntitlementsChanged = ({
 
 export const handleSameMainProduct = async ({
   db,
-  sb,
   curScheduledProduct,
   curMainProduct,
   attachParams,
@@ -222,7 +219,6 @@ export const handleSameMainProduct = async ({
   res,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   curScheduledProduct: any;
   curMainProduct: FullCusProduct;
   attachParams: AttachParams;
@@ -320,7 +316,6 @@ export const handleSameMainProduct = async ({
   if (curScheduledProduct) {
     await cancelFutureProductSchedule({
       db,
-      sb,
       org,
       stripeCli,
       cusProducts: attachParams.cusProducts!,
@@ -364,7 +359,6 @@ export const handleSameMainProduct = async ({
   if (optionsToUpdate.length > 0) {
     await updateFeatureQuantity({
       db,
-      sb,
       org,
       customer,
       curCusProduct: curMainProduct,

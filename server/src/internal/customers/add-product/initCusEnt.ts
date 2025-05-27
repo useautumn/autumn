@@ -339,7 +339,7 @@ export const initCusEntitlement = ({
     unlimited: isBooleanFeature
       ? null
       : entitlement.allowance_type === AllowanceType.Unlimited,
-    balance: newBalance,
+    balance: newBalance || 0,
     entities: newEntities,
     usage_allowed: usageAllowed,
     next_reset_at: nextResetAtValue,

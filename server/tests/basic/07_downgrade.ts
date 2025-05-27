@@ -16,7 +16,7 @@ import { setupBefore } from "tests/before.js";
 export const getCusProduct = async (
   sb: SupabaseClient,
   internalCustomerId: string,
-  productId: string
+  productId: string,
 ) => {
   const { data, error } = await sb
     .from("customer_products")
@@ -33,7 +33,7 @@ export const getCusProduct = async (
 };
 
 describe(`${chalk.yellowBright(
-  "07_downgrade: testing downgrade (paid to paid)"
+  "07_downgrade: testing downgrade (paid to paid)",
 )}`, () => {
   let customer: Customer;
   let customerId = "downgrade";
@@ -50,7 +50,7 @@ describe(`${chalk.yellowBright(
 
     customer = await initCustomer({
       customerId,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -93,7 +93,7 @@ describe(`${chalk.yellowBright(
 
     const resPro = resProducts.find(
       (p: any) =>
-        p.id === products.pro.id && p.status === CusProductStatus.Scheduled
+        p.id === products.pro.id && p.status === CusProductStatus.Scheduled,
     );
     assert.isNotNull(resPro);
   });
@@ -109,7 +109,7 @@ describe(`${chalk.yellowBright(
     const res = await AutumnCli.getCustomer(customerId);
     const resPro = res.products.find(
       (p: any) =>
-        p.id === products.pro.id && p.status === CusProductStatus.Scheduled
+        p.id === products.pro.id && p.status === CusProductStatus.Scheduled,
     );
     assert.isUndefined(resPro);
 
@@ -167,7 +167,7 @@ describe(`${chalk.yellowBright("07_downgrade: testing expire button")}`, () => {
         customerId,
         org: this.org,
         env: this.env,
-        sb: this.sb,
+        db: this.db,
       });
 
     customer = customer_;
@@ -185,7 +185,7 @@ describe(`${chalk.yellowBright("07_downgrade: testing expire button")}`, () => {
     const customerProduct = await getCusProduct(
       this.sb,
       customer.internal_id,
-      products.premium.id
+      products.premium.id,
     );
 
     await AutumnCli.expire(customerProduct.id);
@@ -223,7 +223,7 @@ describe(`${chalk.yellowBright("07_downgrade: testing expire button")}`, () => {
     const customerProduct = await getCusProduct(
       this.sb,
       customer.internal_id,
-      products.pro.id
+      products.pro.id,
     );
     await AutumnCli.expire(customerProduct.id);
     await timeout(5000);
@@ -247,11 +247,11 @@ describe(`${chalk.yellowBright("07_downgrade: testing expire button")}`, () => {
     const premiumCusProduct = await getCusProduct(
       this.sb,
       customer.internal_id,
-      products.premium.id
+      products.premium.id,
     );
 
     const stripeSub = await stripeCli.subscriptions.retrieve(
-      premiumCusProduct.processor.subscription_id
+      premiumCusProduct.processor.subscription_id,
     );
 
     // Check that canceled is null

@@ -33,7 +33,6 @@ export const cancelScheduledProductIfExists = async ({
     // 1. Cancel future product schedule
     await cancelFutureProductSchedule({
       db: req.db,
-      sb: req.sb,
       org,
       cusProducts: attachParams.cusProducts!,
       product: curScheduledProduct.product as any,

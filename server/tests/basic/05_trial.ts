@@ -46,7 +46,7 @@ describe(`${chalk.yellowBright("05_trial: Testing free trials")}`, () => {
           email: "test@test.com",
           fingerprint: "fp1",
         },
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
       });
@@ -123,7 +123,7 @@ describe(`${chalk.yellowBright("05_trial: Testing free trials")}`, () => {
       try {
         assert.equal(
           invoices[0].amount,
-          products.proWithTrial.prices[0].amount
+          products.proWithTrial.prices[0].amount,
         );
       } catch (error) {
         console.group();
@@ -131,7 +131,7 @@ describe(`${chalk.yellowBright("05_trial: Testing free trials")}`, () => {
         console.log("GET customer, balances failed");
         console.log(
           "Expected invoice amount:",
-          products.proWithTrial.prices[0].amount
+          products.proWithTrial.prices[0].amount,
         );
         console.log("Customer invoices received:", invoices);
         console.groupEnd();
@@ -147,7 +147,7 @@ describe(`${chalk.yellowBright("05_trial: Testing free trials")}`, () => {
           email: "test2@test.com",
           fingerprint: "fp1",
         },
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
         attachPm: true,
@@ -174,7 +174,7 @@ describe(`${chalk.yellowBright("05_trial: Testing free trials")}`, () => {
       try {
         assert.equal(
           invoices[0].amount,
-          products.proWithTrial.prices[0].amount
+          products.proWithTrial.prices[0].amount,
         );
       } catch (error) {
         console.group();
@@ -182,7 +182,7 @@ describe(`${chalk.yellowBright("05_trial: Testing free trials")}`, () => {
         console.log("GET customer, balances failed");
         console.log(
           "Expected invoice amount:",
-          products.proWithTrial.prices[0].amount
+          products.proWithTrial.prices[0].amount,
         );
         console.log("Customer invoices received:", invoices);
         console.groupEnd();

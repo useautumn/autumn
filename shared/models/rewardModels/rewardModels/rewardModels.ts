@@ -1,28 +1,5 @@
 import { z } from "zod";
-
-export enum RewardCategory {
-  FreeProduct = "free_product",
-  Discount = "discount",
-}
-
-export enum CouponDurationType {
-  Months = "months",
-  OneOff = "one_off",
-  Forever = "forever",
-}
-
-export enum DiscountType {
-  Percentage = "percentage",
-  Fixed = "fixed",
-}
-
-export enum RewardType {
-  // Coupon = "coupon",
-  // Reward = "reward",
-  PercentageDiscount = "percentage_discount",
-  FixedDiscount = "fixed_discount",
-  FreeProduct = "free_product",
-}
+import { CouponDurationType, RewardType } from "./rewardEnums.js";
 
 const PromoCodeSchema = z.object({
   code: z.string(),
@@ -42,17 +19,11 @@ const RewardSchema = z.object({
 
   promo_codes: z.array(PromoCodeSchema),
   id: z.string(),
-
-  // discount_type: z.nativeEnum(DiscountType),
   type: z.nativeEnum(RewardType),
 
-  // For free product coupons
   free_product_id: z.string().nullish(),
-
-  // For discount type coupons
   discount_config: DiscountConfigSchema.nullish(),
 
-  // EXTRA
   internal_id: z.string(),
   org_id: z.string(),
   env: z.string(),
@@ -63,16 +34,12 @@ export const CreateRewardSchema = z.object({
   name: z.string(),
   promo_codes: z.array(PromoCodeSchema),
   id: z.string().nullish(),
-
   type: z.nativeEnum(RewardType).nullish(),
-
-  // For discount type coupons
   discount_config: DiscountConfigSchema.nullish(),
-
-  // For free product coupons
   free_product_id: z.string().nullish(),
 });
 
+export type PromoCode = z.infer<typeof PromoCodeSchema>;
 export type CreateReward = z.infer<typeof CreateRewardSchema>;
 export type Reward = z.infer<typeof RewardSchema>;
 export type DiscountConfig = z.infer<typeof DiscountConfigSchema>;

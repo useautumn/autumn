@@ -85,7 +85,7 @@ export const verifyBearerPublishableKey = async (
       : AppEnv.Live;
 
     const data = await verifyPublicKey({
-      sb: req.sb,
+      db: req.db,
       pkey,
       env,
     });

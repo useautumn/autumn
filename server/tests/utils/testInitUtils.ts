@@ -2,18 +2,19 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { AppEnv, Organization } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { initCustomer } from "./init.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const initCustomerWithTestClock = async ({
   customerId,
   org,
   env,
-  sb,
+  db,
   fingerprint,
 }: {
   customerId: string;
   org: Organization;
   env: AppEnv;
-  sb: SupabaseClient;
+  db: DrizzleCli;
   fingerprint?: string;
 }) => {
   const stripeCli = createStripeCli({ org: org, env: env });
@@ -28,7 +29,7 @@ export const initCustomerWithTestClock = async ({
       email: "test@test.com",
       fingerprint,
     },
-    sb: sb,
+    db: db,
     org: org,
     env: env,
     testClockId: testClock.id,

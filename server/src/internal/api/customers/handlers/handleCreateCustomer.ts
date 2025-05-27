@@ -75,7 +75,6 @@ export const initStripeCusAndProducts = async ({
 
 export const createNewCustomer = async ({
   db,
-  sb,
   org,
   env,
   customer,
@@ -85,7 +84,6 @@ export const createNewCustomer = async ({
   createDefaultProducts = true,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   customer: CreateCustomer;
@@ -169,7 +167,6 @@ export const createNewCustomer = async ({
     await handleAddProduct({
       req: {
         db,
-        sb,
         logtail: logger,
       },
       res: {},
@@ -193,7 +190,6 @@ export const createNewCustomer = async ({
   for (const product of freeProds) {
     await createFullCusProduct({
       db,
-      sb,
       attachParams: {
         org,
         customer: newCustomer,
@@ -219,7 +215,6 @@ export const createNewCustomer = async ({
 
 const handleIdIsNull = async ({
   db,
-  sb,
   org,
   env,
   newCus,
@@ -228,7 +223,6 @@ const handleIdIsNull = async ({
   createDefaultProducts,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   newCus: CreateCustomer;
@@ -273,7 +267,6 @@ const handleIdIsNull = async ({
 
   const createdCustomer = await createNewCustomer({
     db,
-    sb,
     org,
     env,
     customer: newCus,
@@ -288,7 +281,6 @@ const handleIdIsNull = async ({
 // CAN ALSO USE DURING MIGRATION...
 export const handleCreateCustomerWithId = async ({
   db,
-  sb,
   org,
   env,
   logger,
@@ -297,7 +289,6 @@ export const handleCreateCustomerWithId = async ({
   createDefaultProducts = true,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   logger: any;
@@ -351,7 +342,6 @@ export const handleCreateCustomerWithId = async ({
   // 2. Handle email step...
   return await createNewCustomer({
     db,
-    sb,
     org,
     env,
     customer: newCus,
@@ -364,7 +354,6 @@ export const handleCreateCustomerWithId = async ({
 export const handleCreateCustomer = async ({
   db,
   cusData,
-  sb,
   org,
   env,
   logger,
@@ -373,7 +362,6 @@ export const handleCreateCustomer = async ({
 }: {
   db: DrizzleCli;
   cusData: CreateCustomer;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   logger: any;
@@ -387,7 +375,6 @@ export const handleCreateCustomer = async ({
   if (newCus.id === null) {
     createdCustomer = await handleIdIsNull({
       db,
-      sb,
       org,
       env,
       newCus,
@@ -398,7 +385,6 @@ export const handleCreateCustomer = async ({
   } else {
     createdCustomer = await handleCreateCustomerWithId({
       db,
-      sb,
       org,
       env,
       logger,
@@ -414,7 +400,7 @@ export const handleCreateCustomer = async ({
 export const handlePostCustomerRequest = async (req: any, res: any) => {
   const logger = req.logtail;
   try {
-    const { db, sb } = req;
+    const { db } = req;
     const data = req.body;
     const expand = parseCusExpand(req.query.expand);
 
@@ -430,7 +416,6 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
     let features = await FeatureService.getFromReq(req);
     let customer = await getOrCreateCustomer({
       db,
-      sb,
       org,
       env: req.env,
       customerId: data.id,
@@ -449,8 +434,8 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
     });
 
     let cusDetails = await getCustomerDetails({
+      db,
       customer,
-      sb: req.sb,
       org,
       env: req.env,
       params: req.query,

@@ -25,22 +25,18 @@ export class FreeTrialService {
   }
 
   static async update({
-    sb,
+    db,
     freeTrialId,
     update,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     freeTrialId: string;
     update: Partial<FreeTrial>;
   }) {
-    const { error } = await sb
-      .from("free_trials")
-      .update(update)
-      .eq("id", freeTrialId);
-
-    if (error) {
-      throw error;
-    }
+    await db
+      .update(freeTrials)
+      .set(update)
+      .where(eq(freeTrials.id, freeTrialId));
   }
 
   static async delete({ db, id }: { db: DrizzleCli; id: string }) {

@@ -37,7 +37,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const handleInArrearProrated = async ({
   db,
-  sb,
   cusEnts,
   cusPrice,
   customer,
@@ -45,11 +44,10 @@ const handleInArrearProrated = async ({
   env,
   invoice,
   usageSub,
-  pg,
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
+
   cusEnts: FullCustomerEntitlement[];
   cusPrice: FullCustomerPrice;
   customer: Customer;
@@ -57,7 +55,6 @@ const handleInArrearProrated = async ({
   env: AppEnv;
   invoice: Stripe.Invoice;
   usageSub: Stripe.Subscription;
-  pg: any;
   logger: any;
 }) => {
   const cusEnt = getRelatedCusEnt({
@@ -163,15 +160,16 @@ const handleInArrearProrated = async ({
   // Increase balance
   if (notNullish(cusEnt.balance)) {
     logger.info(`Incrementing balance for cus ent: ${cusEnt.id}`);
-    await pg.query(
-      `UPDATE customer_entitlements SET balance = balance + ${deletedEntities.length} WHERE id = '${cusEnt.id}'`,
-    );
+    await CusEntService.increment({
+      db,
+      id: cusEnt.id,
+      amount: deletedEntities.length,
+    });
   }
 };
 
 const handleUsageInArrear = async ({
   db,
-  sb,
   invoice,
   customer,
   relatedCusEnt,
@@ -182,7 +180,6 @@ const handleUsageInArrear = async ({
   activeProduct,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   invoice: Stripe.Invoice;
   customer: Customer;
   relatedCusEnt: FullCustomerEntitlement;
@@ -307,24 +304,20 @@ const handleUsageInArrear = async ({
 
 export const sendUsageAndReset = async ({
   db,
-  sb,
   activeProduct,
   org,
   env,
   invoice,
   stripeSubs,
   logger,
-  pg,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   activeProduct: FullCusProduct;
   org: Organization;
   env: AppEnv;
   invoice: Stripe.Invoice;
   stripeSubs: Stripe.Subscription[];
   logger: any;
-  pg: Client;
 }) => {
   const fullCusProduct = await CusProductService.get({
     db,
@@ -367,7 +360,7 @@ export const sendUsageAndReset = async ({
     }
 
     let usageBasedSub = await getUsageBasedSub({
-      sb: sb,
+      db,
       stripeCli,
       subIds: activeProduct.subscription_ids || [],
       feature: relatedCusEnt.entitlement.feature,
@@ -393,7 +386,6 @@ export const sendUsageAndReset = async ({
 
       await handleUsageInArrear({
         db,
-        sb,
         invoice,
         customer,
         relatedCusEnt,
@@ -408,7 +400,6 @@ export const sendUsageAndReset = async ({
     if (billingType == BillingType.InArrearProrated) {
       await handleInArrearProrated({
         db,
-        sb,
         cusEnts,
         cusPrice,
         customer,
@@ -417,7 +408,6 @@ export const sendUsageAndReset = async ({
         invoice,
         usageSub: usageBasedSub,
         logger,
-        pg,
       });
     }
   }
@@ -444,16 +434,12 @@ const invoiceCusProductCreatedDifference = ({
 
 export const handleInvoiceCreated = async ({
   db,
-  pg,
-  sb,
   org,
   invoice,
   env,
   event,
 }: {
   db: DrizzleCli;
-  pg: Client;
-  sb: SupabaseClient;
   org: Organization;
   invoice: Stripe.Invoice;
   env: AppEnv;
@@ -546,14 +532,12 @@ export const handleInvoiceCreated = async ({
     for (const activeProduct of activeProducts) {
       await sendUsageAndReset({
         db,
-        sb,
         activeProduct,
         org,
         env,
         stripeSubs,
         invoice,
         logger,
-        pg,
       });
     }
   }

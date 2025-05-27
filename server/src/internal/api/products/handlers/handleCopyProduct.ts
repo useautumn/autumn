@@ -12,7 +12,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
     res,
     action: "Copy Product",
     handler: async (req, res) => {
-      let { db, sb, logtail: logger } = req;
+      let { db, logtail: logger } = req;
 
       const { productId: fromProductId } = req.params;
       const orgId = req.orgId;
@@ -102,7 +102,6 @@ export const handleCopyProduct = async (req: any, res: any) =>
       // // 2. Copy product
       await copyProduct({
         db,
-        sb,
         product: fromFullProduct,
         toOrgId: orgId,
         toId,

@@ -18,7 +18,6 @@ import { validateProductItems } from "@/internal/products/product-items/validate
 export const handleVersionProductV2 = async ({
   req,
   res,
-  sb,
   latestProduct,
   org,
   env,
@@ -27,7 +26,6 @@ export const handleVersionProductV2 = async ({
 }: {
   req: any;
   res: any;
-  sb: SupabaseClient;
   latestProduct: FullProduct;
   org: Organization;
   env: AppEnv;
@@ -68,7 +66,6 @@ export const handleVersionProductV2 = async ({
 
   await handleNewProductItems({
     db,
-    sb,
     curPrices: latestProduct.prices,
     curEnts: latestProduct.entitlements,
     newItems: items,

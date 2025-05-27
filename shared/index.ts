@@ -47,9 +47,11 @@ export * from "./models/productV2Models/productItemModels/prodItemResponseModels
 
 // 7. Cus Product Models
 export * from "./models/cusProductModels/cusProductModels.js";
+export * from "./models/cusProductModels/cusProductTable.js";
 export * from "./models/cusProductModels/cusProductEnums.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntModels.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntWithProduct.js";
+export * from "./models/cusProductModels/cusEntModels/cusEntTable.js";
 export * from "./models/cusProductModels/cusPriceModels/cusPriceModels.js";
 export * from "./models/cusProductModels/cusPriceModels/cusPriceTable.js";
 
@@ -59,6 +61,8 @@ export * from "./models/cusModels/cusTable.js";
 export * from "./models/cusModels/fullCusModel.js";
 export * from "./models/cusModels/cusExpand.js";
 export * from "./models/cusModels/invoiceModels/invoiceResponseModels.js";
+export * from "./models/cusModels/invoiceModels/invoiceTable.js";
+export * from "./models/cusModels/cusResponseModels.js";
 
 export * from "./models/cusModels/entityModels/entityModels.js";
 export * from "./models/cusModels/entityModels/entityTable.js";
@@ -68,6 +72,19 @@ export * from "./models/cusModels/entityModels/entityResModels.js";
 // 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable.js";
 export * from "./models/chatResultModels/chatResultFeature.js";
+
+// Reward Models
+export * from "./models/rewardModels/rewardModels/rewardModels.js";
+export * from "./models/rewardModels/rewardModels/rewardEnums.js";
+export * from "./models/rewardModels/rewardModels/rewardTable.js";
+export * from "./models/rewardModels/rewardModels/rewardResponseModels.js";
+
+export * from "./models/rewardModels/rewardProgramModels/rewardProgramModels.js";
+export * from "./models/rewardModels/rewardProgramModels/rewardProgramEnums.js";
+export * from "./models/rewardModels/rewardProgramModels/rewardProgramTable.js";
+export * from "./models/rewardModels/referralModels/referralModels.js";
+export * from "./models/rewardModels/referralModels/rewardRedemptionTable.js";
+export * from "./models/rewardModels/referralModels/referralCodeTable.js";
 
 // 5. Others: events, apiKeys
 export * from "./models/eventModels/eventModels.js";
@@ -83,22 +100,14 @@ export * from "./models/subModels/subModels.js";
 export * from "./models/subModels/subTable.js";
 
 export * from "./models/cusModels/invoiceModels/invoiceModels.js";
-export * from "./models/cusModels/cusResponseModels.js";
 
 export * from "./models/migrationModels/migrationModels.js";
-
-// Product Models
-export * from "./models/productModels/freeTrialModels/freeTrialModels.js";
-export * from "./models/rewardModels/rewardModels.js";
-export * from "./models/rewardModels/rewardProgramModels.js";
-export * from "./models/rewardModels/referralModels/referralModels.js";
+export * from "./models/migrationModels/migrationJobTable.js";
+export * from "./models/migrationModels/migrationErrorTable.js";
 
 // Utils
 export * from "./utils/displayUtils.js";
 export * from "./models/checkModels/checkPreviewModels.js";
-
-// Reward Models
-export * from "./models/rewardModels/rewardResponseModels.js";
 export * from "./models/chatResultModels/chatResultFeature.js";
 
 // ENUMS

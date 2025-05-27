@@ -21,7 +21,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getOrCreateCustomer = async ({
   db,
-  sb,
   org,
   features,
   customerId,
@@ -42,7 +41,6 @@ export const getOrCreateCustomer = async ({
   entityData,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   features: Feature[];
   env: AppEnv;
@@ -59,8 +57,8 @@ export const getOrCreateCustomer = async ({
   let customer;
 
   if (!skipGet) {
-    customer = await CusService.getWithProducts({
-      sb,
+    customer = await CusService.getFull({
+      db,
       idOrInternalId: customerId,
       orgId: org.id,
       env,
@@ -68,6 +66,7 @@ export const getOrCreateCustomer = async ({
       withEntities,
       entityId,
       expand,
+      allowNotFound: true,
     });
   }
 
@@ -83,14 +82,13 @@ export const getOrCreateCustomer = async ({
           fingerprint: customerData?.fingerprint,
           metadata: customerData?.metadata || {},
         },
-        sb,
         org,
         env,
         logger,
       });
 
-      customer = await CusService.getWithProducts({
-        sb,
+      customer = await CusService.getFull({
+        db,
         idOrInternalId: customerId || customer!.internal_id,
         orgId: org.id,
         env,
@@ -101,8 +99,8 @@ export const getOrCreateCustomer = async ({
       });
     } catch (error: any) {
       if (error?.data?.code == "23505") {
-        customer = await CusService.getWithProducts({
-          sb,
+        customer = await CusService.getFull({
+          db,
           idOrInternalId: customerId,
           orgId: org.id,
           env,
@@ -129,7 +127,6 @@ export const getOrCreateCustomer = async ({
 
     let newEntities = await createEntities({
       db,
-      sb,
       org,
       customerId,
       createEntityData: {

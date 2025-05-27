@@ -11,7 +11,7 @@ export const handleDeleteProduct = (req: any, res: any) =>
     res,
     action: "delete product",
     handler: async () => {
-      const { db, orgId, env, sb } = req;
+      const { db, orgId, env } = req;
       const { productId } = req.params;
 
       const product = await ProductService.get({

@@ -22,6 +22,17 @@ import { customerEntitlements } from "../models/cusProductModels/cusEntModels/cu
 import { apiKeys } from "../models/devModels/apiKeyTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
 import { subscriptions } from "../models/subModels/subTable.js";
+import { invoices } from "../models/cusModels/invoiceModels/invoiceTable.js";
+
+// Reward Tables
+import { rewards } from "../models/rewardModels/rewardModels/rewardTable.js";
+import { rewardPrograms } from "../models/rewardModels/rewardProgramModels/rewardProgramTable.js";
+import { referralCodes } from "../models/rewardModels/referralModels/referralCodeTable.js";
+import { rewardRedemptions } from "../models/rewardModels/referralModels/rewardRedemptionTable.js";
+
+// Migration Tables
+import { migrationJobs } from "../models/migrationModels/migrationJobTable.js";
+import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
 
 /* RELATIONS */
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
@@ -43,6 +54,14 @@ import { customerPricesRelations } from "../models/cusProductModels/cusPriceMode
 import { customerEntitlementsRelations } from "../models/cusProductModels/cusEntModels/cusEntRelations.js";
 import { apiKeyRelations } from "../models/devModels/apiKeyRelations.js";
 
+// Reward Relations
+import { rewardProgramRelations } from "../models/rewardModels/rewardProgramModels/rewardProgramRelations.js";
+import { referralCodeRelations } from "../models/rewardModels/referralModels/referralCodeRelations.js";
+import { rewardRedemptionRelations } from "../models/rewardModels/referralModels/rewardRedemptionRelations.js";
+
+// Migration Relations
+import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
+
 const relations = {
   organizationsRelations,
   entitlementsRelations,
@@ -58,6 +77,14 @@ const relations = {
   customersRelations,
   entitiesRelations,
   apiKeyRelations,
+
+  // Reward Relations
+  rewardProgramRelations,
+  referralCodeRelations,
+  rewardRedemptionRelations,
+
+  // Migration Relations
+  migrationErrorRelations,
 };
 
 export const schemas = {
@@ -71,6 +98,7 @@ export const schemas = {
   customerProducts,
   customerPrices,
   customerEntitlements,
+  invoices,
 
   // Customer
   customers,
@@ -80,6 +108,16 @@ export const schemas = {
   apiKeys,
   metadata,
   subscriptions,
+
+  // Reward Tables
+  rewards,
+  rewardPrograms,
+  referralCodes,
+  rewardRedemptions,
+
+  // Migration Tables
+  migrationJobs,
+  migrationErrors,
 
   ...relations,
 };

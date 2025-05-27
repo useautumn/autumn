@@ -47,6 +47,7 @@ import {
 import { differenceInSeconds } from "date-fns";
 import { SuccessCode } from "@autumn/shared";
 import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export enum ProrationBehavior {
   Immediately = "immediately",
@@ -56,7 +57,7 @@ export enum ProrationBehavior {
 
 // UPGRADE FUNCTIONS
 export const handleStripeSubUpdate = async ({
-  sb,
+  db,
   stripeCli,
   curCusProduct,
   attachParams,
@@ -67,7 +68,7 @@ export const handleStripeSubUpdate = async ({
   prorationBehavior = ProrationBehavior.Immediately,
   shouldPreview = false,
 }: {
-  sb: any;
+  db: DrizzleCli;
   stripeCli: Stripe;
   curCusProduct: FullCusProduct;
   attachParams: AttachParams;
@@ -120,7 +121,7 @@ export const handleStripeSubUpdate = async ({
   // 3. Update current subscription
   let newSubs = [];
   const subUpdateRes = await updateStripeSubscription({
-    sb,
+    db,
     stripeCli,
     subscriptionId: firstSub.id,
     trialEnd,
@@ -178,7 +179,7 @@ export const handleStripeSubUpdate = async ({
         stripeCli,
         cusProducts: [curCusProduct, attachParams.curScheduledProduct],
         itemSet,
-        sb,
+        db,
         org: attachParams.org,
         env: attachParams.customer.env,
       });
@@ -187,7 +188,7 @@ export const handleStripeSubUpdate = async ({
 
   // what's happening here...
   await attachParamsToInvoice({
-    sb,
+    db,
     attachParams,
     invoiceId: subUpdate.latest_invoice as string,
     logger,
@@ -233,7 +234,7 @@ export const handleStripeSubUpdate = async ({
     }
 
     const newSub = (await createStripeSub({
-      sb,
+      db,
       stripeCli,
       customer: attachParams.customer,
       org: attachParams.org,
@@ -287,7 +288,6 @@ const handleOnlyEntsChanged = async ({
 
   await createFullCusProduct({
     db: req.db,
-    sb: req.sb,
     attachParams: attachToInsertParams(attachParams, attachParams.products[0]),
     subscriptionIds: curCusProduct.subscription_ids || [],
     disableFreeTrial: false,
@@ -330,7 +330,9 @@ export const handleUpgrade = async ({
   newVersion = false,
   updateSameProduct = false,
 }: {
-  req: any;
+  req: {
+    db: DrizzleCli;
+  } & any;
   res: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
@@ -437,7 +439,7 @@ export const handleUpgrade = async ({
     remainingExistingSubIds,
     newSubs,
   }: any = await handleStripeSubUpdate({
-    sb: req.sb,
+    db: req.db,
     curCusProduct,
     stripeCli,
     attachParams,
@@ -451,7 +453,6 @@ export const handleUpgrade = async ({
   logger.info("2. Bill for remaining usages");
   await billForRemainingUsages({
     db: req.db,
-    sb: req.sb,
     attachParams,
     curCusProduct,
     newSubs,
@@ -489,7 +490,6 @@ export const handleUpgrade = async ({
 
   await createFullCusProduct({
     db: req.db,
-    sb: req.sb,
     attachParams: attachToInsertParams(attachParams, products[0]),
     subscriptionIds: newSubIds,
 
@@ -521,7 +521,7 @@ export const handleUpgrade = async ({
       });
 
       await InvoiceService.createInvoiceFromStripe({
-        sb: req.sb,
+        db: req.db,
         stripeInvoice,
         internalCustomerId: customer.internal_id,
         internalEntityId: attachParams.internalEntityId,

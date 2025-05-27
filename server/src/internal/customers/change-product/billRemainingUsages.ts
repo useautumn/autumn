@@ -128,7 +128,6 @@ const invoiceForUsageImmediately = async ({
   customer,
   org,
   logger,
-  sb,
   curCusProduct,
   attachParams,
   newSubs,
@@ -138,7 +137,6 @@ const invoiceForUsageImmediately = async ({
   customer: any;
   org: any;
   logger: any;
-  sb: SupabaseClient;
   curCusProduct: FullCusProduct;
   attachParams: AttachParams;
   newSubs: Stripe.Subscription[];
@@ -249,7 +247,7 @@ const invoiceForUsageImmediately = async ({
 
   if (newInvoice) {
     await InvoiceService.createInvoiceFromStripe({
-      sb,
+      db,
       stripeInvoice: finalizedInvoice,
       internalCustomerId: customer.internal_id,
       internalEntityId: curCusProduct.internal_entity_id || undefined,
@@ -276,8 +274,8 @@ const invoiceForUsageImmediately = async ({
   } else {
     // Update invoice
     await InvoiceService.updateByStripeId({
-      sb,
-      stripeInvoiceId: invoice.id,
+      db,
+      stripeId: invoice.id,
       updates: {
         total: Number((finalizedInvoice.total / 100).toFixed(2)),
       },
@@ -316,7 +314,6 @@ const getRemainingUsagesPreview = async ({
 export const billForRemainingUsages = async ({
   db,
   logger,
-  sb,
   attachParams,
   curCusProduct,
   newSubs,
@@ -325,7 +322,6 @@ export const billForRemainingUsages = async ({
 }: {
   db: DrizzleCli;
   logger: any;
-  sb: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
   newSubs: Stripe.Subscription[];
@@ -420,7 +416,6 @@ export const billForRemainingUsages = async ({
       customer,
       org,
       logger,
-      sb,
       curCusProduct,
       attachParams,
       newSubs,

@@ -37,7 +37,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 type DeductParams = {
   db: DrizzleCli;
-  sb: SupabaseClient;
   env: AppEnv;
   org: Organization;
   cusPrices: FullCustomerPrice[];
@@ -308,7 +307,7 @@ export const deductAllowanceFromCusEnt = async ({
   entityId?: string | null;
   setZeroAdjustment?: boolean;
 }) => {
-  const { db, sb, feature, env, org, cusPrices, customer } = deductParams;
+  const { db, feature, env, org, cusPrices, customer } = deductParams;
 
   if (toDeduct == 0) {
     return 0;
@@ -355,7 +354,6 @@ export const deductAllowanceFromCusEnt = async ({
 
   await adjustAllowance({
     db,
-    sb,
     env,
     org,
     cusPrices: cusPrices as any,
@@ -412,7 +410,7 @@ export const deductFromUsageBasedCusEnt = async ({
   entityId?: string | null;
   setZeroAdjustment?: boolean;
 }) => {
-  const { db, sb, feature, env, org, cusPrices, customer } = deductParams;
+  const { db, feature, env, org, cusPrices, customer } = deductParams;
 
   // Deduct from usage-based price
   const usageBasedEnt = cusEnts.find(
@@ -464,7 +462,6 @@ export const deductFromUsageBasedCusEnt = async ({
 
   await adjustAllowance({
     db,
-    sb,
     env,
     affectedFeature: feature,
     org,
@@ -480,7 +477,6 @@ export const deductFromUsageBasedCusEnt = async ({
 // Main function to update customer balance
 export const updateCustomerBalance = async ({
   db,
-  sb,
   customerId,
   entityId,
   event,
@@ -490,7 +486,6 @@ export const updateCustomerBalance = async ({
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   customerId: string;
   entityId: string;
   event: Event;
@@ -501,8 +496,8 @@ export const updateCustomerBalance = async ({
 }) => {
   const startTime = performance.now();
   console.log("REVERSE DEDUCTION ORDER", org.config.reverse_deduction_order);
-  const customer = await CusService.getWithProducts({
-    sb,
+  const customer = await CusService.getFull({
+    db,
     idOrInternalId: customerId,
     orgId: org.id,
     env,
@@ -511,7 +506,6 @@ export const updateCustomerBalance = async ({
   });
 
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
-    sb,
     customer,
     internalFeatureIds: features.map((f) => f.internal_id!),
     logger,
@@ -559,7 +553,6 @@ export const updateCustomerBalance = async ({
         features,
         deductParams: {
           db,
-          sb,
           feature,
           env,
           org,
@@ -582,7 +575,6 @@ export const updateCustomerBalance = async ({
       cusEnts,
       deductParams: {
         db,
-        sb,
         feature,
         env,
         org,
@@ -602,12 +594,10 @@ export const runUpdateBalanceTask = async ({
   payload,
   logger,
   db,
-  sb,
 }: {
   payload: any;
   logger: any;
   db: DrizzleCli;
-  sb: SupabaseClient;
 }) => {
   try {
     // 1. Update customer balance
@@ -620,7 +610,6 @@ export const runUpdateBalanceTask = async ({
 
     const cusEnts: any = await updateCustomerBalance({
       db,
-      sb,
       customerId,
       features,
       event,

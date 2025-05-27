@@ -104,20 +104,18 @@ export const itemMetasToOptions = async ({
 
 export const handleCheckoutSessionCompleted = async ({
   db,
-  sb,
   org,
   checkoutSession,
   env,
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   checkoutSession: Stripe.Checkout.Session;
   env: AppEnv;
   logger: any;
 }) => {
-  const metadata = await getMetadataFromCheckoutSession(checkoutSession, sb);
+  const metadata = await getMetadataFromCheckoutSession(checkoutSession, db);
   if (!metadata) {
     console.log("checkout.completed: metadata not found, skipping");
     return;
@@ -176,7 +174,7 @@ export const handleCheckoutSessionCompleted = async ({
 
     // 1. Insert sub into db
     await SubService.createSub({
-      sb,
+      db,
       sub: {
         id: generateId("sub"),
         created_at: Date.now(),
@@ -282,7 +280,7 @@ export const handleCheckoutSessionCompleted = async ({
       );
 
       const subscription = (await createStripeSub({
-        sb,
+        db,
         stripeCli,
         customer: attachParams.customer,
         org,
@@ -308,7 +306,6 @@ export const handleCheckoutSessionCompleted = async ({
     let isOneOff = pricesOnlyOneOff(pricesForProduct);
     await createFullCusProduct({
       db,
-      sb,
       attachParams: attachToInsertParams(attachParams, product),
       subscriptionId: !isOneOff
         ? (checkoutSession.subscription as string)
@@ -339,7 +336,7 @@ export const handleCheckoutSessionCompleted = async ({
       });
 
       await InvoiceService.createInvoiceFromStripe({
-        sb,
+        db,
         org,
         stripeInvoice: invoice,
         internalCustomerId: attachParams.customer.internal_id,

@@ -1,151 +1,134 @@
-import { generateId } from "@/utils/genUtils.js";
-import { AppEnv, Reward } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { AppEnv, ErrCode, Reward, rewards } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { and, desc, eq, or } from "drizzle-orm";
 
 export class RewardService {
+  static async get({
+    db,
+    idOrInternalId,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    idOrInternalId: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    let result = await db.query.rewards.findFirst({
+      where: and(
+        or(
+          eq(rewards.id, idOrInternalId),
+          eq(rewards.internal_id, idOrInternalId),
+        ),
+        eq(rewards.org_id, orgId),
+        eq(rewards.env, env),
+      ),
+    });
+
+    if (!result) {
+      return null;
+    }
+
+    return result as Reward;
+  }
+
   static async insert({
-    sb,
+    db,
     data,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     data: Reward | Reward[];
   }) {
-    const { data: insertedData, error } = await sb
-      .from("rewards")
-      .insert(data)
-      .select();
-
-    if (error) {
-      throw error;
-    }
-    return insertedData;
+    let results = await db.insert(rewards).values(data as Reward);
+    return results as Reward[];
   }
 
-  static async getAll({
-    sb,
+  static async list({
+    db,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     orgId: string;
     env: AppEnv;
   }) {
-    const { data, error } = await sb
-      .from("rewards")
-      .select()
-      .eq("org_id", orgId)
-      .eq("env", env);
+    let results = await db.query.rewards.findMany({
+      where: and(eq(rewards.org_id, orgId), eq(rewards.env, env)),
+      orderBy: [desc(rewards.internal_id)],
+    });
 
-    if (error) {
-      throw error;
-    }
-    return data;
+    return results as Reward[];
   }
 
-  static async deleteStrict({
-    sb,
+  static async delete({
+    db,
     internalId,
     env,
     orgId,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalId: string;
     env: AppEnv;
     orgId: string;
   }) {
-    const { error } = await sb
-      .from("rewards")
-      .delete()
-      .eq("internal_id", internalId)
-      .eq("env", env)
-      .eq("org_id", orgId);
-    if (error) {
-      throw error;
-    }
-  }
-
-  static async getById({
-    sb,
-    id,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    id: string;
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const { data, error } = await sb
-      .from("rewards")
-      .select()
-      .eq("id", id)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
-
-    if (error) {
-      if (error.code == "PGRST116") {
-        return null;
-      }
-      throw error;
-    }
-    return data;
-  }
-
-  static async getByInternalId({
-    sb,
-    internalId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    internalId: string;
-    orgId: string;
-    env: AppEnv;
-  }) {
-    const { data, error } = await sb
-      .from("rewards")
-      .select()
-      .eq("internal_id", internalId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
-
-    if (error) {
-      if (error.code == "PGRST116") {
-        return null;
-      }
-      throw error;
-    }
-    return data;
+    await db
+      .delete(rewards)
+      .where(
+        and(
+          eq(rewards.internal_id, internalId),
+          eq(rewards.env, env),
+          eq(rewards.org_id, orgId),
+        ),
+      );
   }
 
   static async update({
-    sb,
+    db,
     internalId,
     env,
     orgId,
     update,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalId: string;
     env: AppEnv;
     orgId: string;
     update: Partial<Reward>;
   }) {
-    const { data, error } = await sb
-      .from("rewards")
-      .update(update)
-      .eq("internal_id", internalId)
-      .eq("env", env)
-      .eq("org_id", orgId)
-      .select()
-      .single();
+    let result = await db
+      .update(rewards)
+      .set(update)
+      .where(
+        and(
+          eq(rewards.internal_id, internalId),
+          eq(rewards.env, env),
+          eq(rewards.org_id, orgId),
+        ),
+      )
+      .returning();
 
-    if (error) {
-      throw error;
+    if (result.length === 0) {
+      throw new RecaseError({
+        message: `Reward ${internalId} not found`,
+        code: ErrCode.InvalidRequest,
+      });
     }
 
-    return data;
+    return result[0] as Reward;
+  }
+
+  static async deleteByOrgId({
+    db,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    await db
+      .delete(rewards)
+      .where(and(eq(rewards.org_id, orgId), eq(rewards.env, env)));
   }
 }

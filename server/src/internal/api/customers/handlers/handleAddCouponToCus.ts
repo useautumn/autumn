@@ -10,7 +10,7 @@ import { StatusCodes } from "http-status-codes";
 export const handleAddCouponToCus = async (req: any, res: any) => {
   try {
     const { customer_id, coupon_id } = req.params;
-    const { db, orgId, env, sb, logtail: logger } = req;
+    const { db, orgId, env, logtail: logger } = req;
 
     const [org, customer, coupon] = await Promise.all([
       OrgService.getFromReq(req),
@@ -20,9 +20,9 @@ export const handleAddCouponToCus = async (req: any, res: any) => {
         orgId,
         env,
       }),
-      RewardService.getByInternalId({
-        sb: req.sb,
-        internalId: coupon_id,
+      RewardService.get({
+        db,
+        idOrInternalId: coupon_id,
         orgId: req.orgId,
         env: req.env,
       }),
@@ -32,6 +32,14 @@ export const handleAddCouponToCus = async (req: any, res: any) => {
       throw new RecaseError({
         message: `Customer ${customer_id} not found`,
         code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
+    }
+
+    if (!coupon) {
+      throw new RecaseError({
+        message: `Coupon ${coupon_id} not found`,
+        code: ErrCode.RewardNotFound,
         statusCode: StatusCodes.NOT_FOUND,
       });
     }

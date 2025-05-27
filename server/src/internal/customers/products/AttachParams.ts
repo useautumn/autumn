@@ -50,6 +50,8 @@ export type AttachParams = {
   checkoutSessionParams?: any;
   apiVersion?: number;
   scenario?: AttachScenario;
+
+  fromMigration?: boolean;
 };
 
 export type InsertCusProductParams = {
@@ -80,6 +82,7 @@ export type InsertCusProductParams = {
 
   entityId?: string;
   internalEntityId?: string;
+  fromMigration?: boolean;
 };
 
 export const AttachResultSchema = z.object({

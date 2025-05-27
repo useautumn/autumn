@@ -15,13 +15,13 @@ const monthlyQuantity = 2;
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "01_product: Testing attach -- free, pro & one-time / monthly add on"
+  "01_product: Testing attach -- free, pro & one-time / monthly add on",
 )}`, () => {
   let customerId = "attach1";
   before(async function () {
     await initCustomer({
       customerId,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });
@@ -44,18 +44,18 @@ describe(`${chalk.yellowBright(
 
       const entitled: any = await AutumnCli.entitled(
         customerId,
-        features.metered1.id
+        features.metered1.id,
       );
 
       const metered1Balance = entitled!.balances.find(
-        (balance: any) => balance.feature_id === features.metered1.id
+        (balance: any) => balance.feature_id === features.metered1.id,
       );
 
       try {
         expect(entitled!.allowed).to.be.true;
         expect(metered1Balance).to.exist;
         expect(metered1Balance!.balance).to.equal(
-          expectedEntitlement.allowance
+          expectedEntitlement.allowance,
         );
         expect(metered1Balance!.unlimited).to.not.exist;
       } catch (error) {
@@ -72,7 +72,7 @@ describe(`${chalk.yellowBright(
     it("GET /entitled -- boolean1", async function () {
       const entitled = await AutumnCli.entitled(
         customerId,
-        features.boolean1.id
+        features.boolean1.id,
       );
 
       expect(entitled!.allowed).to.be.false;
@@ -111,11 +111,11 @@ describe(`${chalk.yellowBright(
 
         const res: any = await AutumnCli.entitled(
           customerId,
-          entitlement.feature_id!
+          entitlement.feature_id!,
         );
 
         const entBalance = res!.balances.find(
-          (b: any) => b.feature_id === entitlement.feature_id
+          (b: any) => b.feature_id === entitlement.feature_id,
         );
 
         try {
@@ -182,7 +182,7 @@ describe(`${chalk.yellowBright(
         (e: any) =>
           e.feature_id === features.metered1.id &&
           e.interval ==
-            products.oneTimeAddOnMetered1.entitlements.metered1.interval
+            products.oneTimeAddOnMetered1.entitlements.metered1.interval,
       );
 
       const expectedAmt =
@@ -201,7 +201,7 @@ describe(`${chalk.yellowBright(
         console.log("GET customer, balances failed");
         console.log(
           "Add on entitlement:",
-          products.oneTimeAddOnMetered1.entitlements.metered1
+          products.oneTimeAddOnMetered1.entitlements.metered1,
         );
         console.log("Customer entitlements:", cusRes.entitlements);
 
@@ -214,7 +214,7 @@ describe(`${chalk.yellowBright(
     it("GET /entitled -- checking entitled for metered1", async function () {
       const res: any = await AutumnCli.entitled(
         customerId,
-        features.metered1.id
+        features.metered1.id,
       );
 
       expect(res!.allowed).to.be.true;
@@ -223,7 +223,7 @@ describe(`${chalk.yellowBright(
       const proMetered1Amt = products.pro.entitlements.metered1.allowance;
 
       const addOnBalance = res!.balances.find(
-        (b: any) => b.feature_id === features.metered1.id
+        (b: any) => b.feature_id === features.metered1.id,
       );
 
       expect(res!.allowed).to.be.true;
@@ -231,7 +231,7 @@ describe(`${chalk.yellowBright(
         proMetered1Amt! +
           (oneTimeOverrideQuantity || oneTimeQuantity) *
             oneTimeBillingUnits *
-            oneTimePurchaseCount
+            oneTimePurchaseCount,
       );
     });
   });
@@ -266,18 +266,18 @@ describe(`${chalk.yellowBright(
         (e: any) =>
           e.feature_id === features.metered1.id &&
           e.interval ==
-            products.monthlyAddOnMetered1.entitlements.metered1.interval
+            products.monthlyAddOnMetered1.entitlements.metered1.interval,
       );
 
       try {
         assert.equal(
           monthlyMetered1Balance!.balance,
-          proMetered1! + monthlyQuantity * monthlyBillingUnits
+          proMetered1! + monthlyQuantity * monthlyBillingUnits,
         );
 
         assert.equal(cusRes.add_ons.length, 2);
         const monthlyAddOnId = cusRes.add_ons.find(
-          (a: any) => a.id === products.monthlyAddOnMetered1.id
+          (a: any) => a.id === products.monthlyAddOnMetered1.id,
         );
 
         assert.exists(monthlyAddOnId);
@@ -288,7 +288,7 @@ describe(`${chalk.yellowBright(
         console.log("GET customer, balances failed");
         console.log(
           "Add on entitlement:",
-          products.monthlyAddOnMetered1.entitlements.metered1
+          products.monthlyAddOnMetered1.entitlements.metered1,
         );
         console.log("Customer entitlements:", cusRes.entitlements);
 
@@ -301,11 +301,11 @@ describe(`${chalk.yellowBright(
     it("GET /entitled -- checking entitlements (monthly add on)", async function () {
       const res: any = await AutumnCli.entitled(
         customerId,
-        features.metered1.id
+        features.metered1.id,
       );
 
       const metered1Balance = res!.balances.find(
-        (b: any) => b.feature_id === features.metered1.id
+        (b: any) => b.feature_id === features.metered1.id,
       );
 
       const proMetered1Amt = products.pro.entitlements.metered1.allowance;
@@ -318,7 +318,7 @@ describe(`${chalk.yellowBright(
 
       try {
         expect(metered1Balance!.balance).to.equal(
-          proMetered1Amt! + monthlyAddOnMetered1Amt + oneTimeAddOnMetered1Amt
+          proMetered1Amt! + monthlyAddOnMetered1Amt + oneTimeAddOnMetered1Amt,
         );
       } catch (error) {
         console.group();

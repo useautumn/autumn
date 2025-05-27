@@ -1,5 +1,3 @@
-import { SupabaseClient } from "@supabase/supabase-js";
-
 import { AppEnv } from "@autumn/shared";
 import Stripe from "stripe";
 import { CusProductStatus, Organization } from "@autumn/shared";
@@ -10,14 +8,12 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleSubscriptionScheduleCanceled = async ({
   db,
-  sb,
   schedule,
   env,
   org,
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   schedule: Stripe.SubscriptionSchedule;
   org: Organization;
   env: AppEnv;
@@ -81,13 +77,13 @@ export const handleSubscriptionScheduleCanceled = async ({
   // Delete from subscriptions
   try {
     let autumnSub = await SubService.getFromScheduleId({
-      sb,
+      db,
       scheduleId: schedule.id,
     });
 
     if (autumnSub && !autumnSub.stripe_id) {
       await SubService.deleteFromScheduleId({
-        sb,
+        db,
         scheduleId: schedule.id,
       });
     }

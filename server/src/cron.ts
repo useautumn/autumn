@@ -26,6 +26,7 @@ import { UTCDate } from "@date-fns/utc";
 import { DrizzleCli, initDrizzle } from "./db/initDrizzle.js";
 
 import { isEqual } from "lodash-es";
+import { CusPriceService } from "./internal/customers/prices/CusPriceService.js";
 
 dotenv.config();
 
@@ -92,11 +93,9 @@ const checkSubAnchor = async ({
 };
 
 const resetCustomerEntitlement = async ({
-  sb,
   db,
   cusEnt,
 }: {
-  sb: SupabaseClient;
   db: DrizzleCli;
   cusEnt: FullCusEntWithProduct;
 }) => {
@@ -106,15 +105,10 @@ const resetCustomerEntitlement = async ({
     }
 
     // Fetch related price
-    const { data: cusPrices, error: cusPricesError } = await sb
-      .from("customer_prices")
-      .select("*, price:prices!inner(*)")
-      .eq("customer_product_id", cusEnt.customer_product_id);
-
-    if (cusPricesError) {
-      console.log("Error fetching customer prices:", cusPricesError);
-      throw new Error("Error fetching customer prices");
-    }
+    const cusPrices = await CusPriceService.getByCustomerProductId({
+      db,
+      customerProductId: cusEnt.customer_product_id,
+    });
 
     // 2. Quantity is from prices...
     const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
@@ -178,6 +172,7 @@ const resetCustomerEntitlement = async ({
 
     let resetBalanceUpdate = getResetBalancesUpdate({
       cusEnt,
+      allowance: resetBalance || undefined,
     });
 
     try {
@@ -224,8 +219,7 @@ export const cronTask = async () => {
     "\n----------------------------------\nRUNNING RESET CRON:",
     format(new UTCDate(), "yyyy-MM-dd HH:mm:ss"),
   );
-  // 1. Query customer_entitlements for all customers with reset_interval < now
-  const sb = createSupabaseClient();
+
   const { db, client } = initDrizzle();
 
   try {
@@ -239,7 +233,6 @@ export const cronTask = async () => {
       for (const cusEnt of batch) {
         batchResets.push(
           resetCustomerEntitlement({
-            sb,
             db,
             cusEnt: cusEnt as FullCusEntWithProduct,
           }),

@@ -17,6 +17,8 @@ import {
 } from "../utils/init.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { initDrizzle } from "@/db/initDrizzle.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const alexFeatures = {
   chatMessage: initFeature({
@@ -421,16 +423,19 @@ before(async function () {
   try {
     this.env = AppEnv.Sandbox;
     this.sb = createSupabaseClient();
+    const { db, client } = initDrizzle();
+    this.db = db;
+    this.client = client;
     this.org = await OrgService.getBySlug({
-      sb: this.sb,
+      db: this.db,
       slug: orgSlug,
     });
 
-    let { data: dbFeatures, error } = await this.sb
-      .from("features")
-      .select("*")
-      .eq("org_id", this.org.id)
-      .eq("env", this.env);
+    let dbFeatures = await FeatureService.list({
+      db: this.db,
+      orgId: this.org.id,
+      env: this.env,
+    });
 
     for (const featureId in alexFeatures) {
       let feature = alexFeatures[featureId as keyof typeof alexFeatures];
@@ -451,4 +456,8 @@ before(async function () {
   } catch (error) {
     console.error(error);
   }
+});
+
+after(async function () {
+  await this.client.end();
 });

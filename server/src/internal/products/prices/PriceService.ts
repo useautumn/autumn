@@ -20,6 +20,10 @@ export class PriceService {
   }
 
   static async getInIds({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+    if (!ids || ids.length === 0) {
+      return [];
+    }
+
     return (await db.query.prices.findMany({
       where: inArray(prices.id, ids),
       with: {

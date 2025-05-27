@@ -3,15 +3,12 @@ import {
   AppEnv,
   entitlements,
   ErrCode,
-  features,
-  FreeTrial,
   freeTrials,
   FullProduct,
   prices,
   Product,
   products,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 import { getLatestProducts, sortProductsByPrice } from "./productUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -41,7 +38,44 @@ const parseFreeTrials = ({
 };
 
 export class ProductService {
-  // GET
+  static async getByFeature({
+    db,
+    internalFeatureId,
+  }: {
+    db: DrizzleCli;
+    internalFeatureId: string;
+  }) {
+    let fullProducts = (await db.query.products.findMany({
+      where: exists(
+        db
+          .select()
+          .from(entitlements)
+          .where(
+            and(
+              eq(entitlements.internal_product_id, products.internal_id),
+              eq(entitlements.internal_feature_id, internalFeatureId),
+            ),
+          ),
+      ),
+      with: {
+        entitlements: {
+          with: {
+            feature: true,
+          },
+        },
+        prices: { where: eq(prices.is_custom, false) },
+        free_trials: { where: eq(freeTrials.is_custom, false) },
+      },
+      orderBy: [desc(products.version)],
+    })) as FullProduct[];
+
+    parseFreeTrials({ products: fullProducts });
+
+    let latestProducts = getLatestProducts(fullProducts);
+
+    return latestProducts;
+  }
+
   static async getByInternalId({
     db,
     internalId,
@@ -300,41 +334,17 @@ export class ProductService {
       );
   }
 
-  static async getByFeature({
+  static async deleteByOrgId({
     db,
-    internalFeatureId,
+    orgId,
+    env,
   }: {
     db: DrizzleCli;
-    internalFeatureId: string;
+    orgId: string;
+    env: AppEnv;
   }) {
-    let fullProducts = (await db.query.products.findMany({
-      where: exists(
-        db
-          .select()
-          .from(entitlements)
-          .where(
-            and(
-              eq(entitlements.internal_product_id, products.internal_id),
-              eq(entitlements.internal_feature_id, internalFeatureId),
-            ),
-          ),
-      ),
-      with: {
-        entitlements: {
-          with: {
-            feature: true,
-          },
-        },
-        prices: { where: eq(prices.is_custom, false) },
-        free_trials: { where: eq(freeTrials.is_custom, false) },
-      },
-      orderBy: [desc(products.version)],
-    })) as FullProduct[];
-
-    parseFreeTrials({ products: fullProducts });
-
-    let latestProducts = getLatestProducts(fullProducts);
-
-    return latestProducts;
+    await db
+      .delete(products)
+      .where(and(eq(products.org_id, orgId), eq(products.env, env)));
   }
 }

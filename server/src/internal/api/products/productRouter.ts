@@ -36,7 +36,7 @@ productApiRouter.post("/:productId/copy", handleCopyProduct);
 
 productApiRouter.post("/all/init_stripe", async (req: any, res) => {
   try {
-    const { sb, orgId, env, logtail: logger, db } = req;
+    const { orgId, env, logtail: logger, db } = req;
 
     const [fullProducts, org] = await Promise.all([
       ProductService.listFull({

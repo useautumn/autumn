@@ -46,48 +46,22 @@ export const cusRouter = Router();
 //   }
 // });
 
-cusRouter.post("/search", async (req: any, res: any) => {
-  const { pg, sb, orgId, env } = req;
-  const { search, page, filters } = req.body;
-
-  const pageInt = parseInt(page as string) || 1;
-  const cleanedQuery = search ? search.trim().toLowerCase() : "";
-
-  try {
-    const { data: customers, count } = await CusService.searchCustomers({
-      sb,
-      pg,
-      orgId: orgId,
-      env,
-      search: cleanedQuery,
-      pageNumber: pageInt,
-      filters,
-    });
-
-    // console.log("customers", customers);
-    res.status(200).json({ customers, totalCount: count });
-  } catch (error) {
-    // handleRequestError({ req, error, res, action: "search customers" });
-    handleFrontendReqError({ req, error, res, action: "search customers" });
-  }
-});
-
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
   try {
-    const { db, sb, org, features, env } = req;
+    const { db, org, features, env } = req;
     const { customer_id } = req.params;
     const orgId = req.orgId;
 
     const [coupons, products, customer] = await Promise.all([
-      RewardService.getAll({
-        sb,
+      RewardService.list({
+        db,
         orgId: orgId,
         env,
       }),
 
       ProductService.listFull({ db, orgId, env, returnAll: true }),
-      CusService.getWithProducts({
-        sb,
+      CusService.getFull({
+        db,
         orgId,
         env,
         idOrInternalId: customer_id,
@@ -113,8 +87,6 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       orgId: orgId,
       limit: 10,
     });
-
-    console.log("events", events);
 
     let fullCustomer = customer as any;
     let cusProducts = fullCustomer.customer_products;
@@ -155,7 +127,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       }
     }
 
-    for (const invoice of invoices) {
+    for (const invoice of invoices || []) {
       invoice.product_ids = invoice.product_ids.sort();
       invoice.internal_product_ids = invoice.internal_product_ids.sort();
     }
@@ -208,7 +180,7 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
 
 cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
   try {
-    const { sb, org, env, db } = req;
+    const { env, db } = req;
     const { customer_id } = req.params;
     const orgId = req.orgId;
 
@@ -230,13 +202,13 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
     // Get all redemptions for this customer
     let [referred, redeemed] = await Promise.all([
       RewardRedemptionService.getByReferrer({
-        sb,
+        db,
         internalCustomerId: internalCustomer.internal_id,
         withCustomer: true,
         limit: 100,
       }),
       RewardRedemptionService.getByCustomer({
-        sb,
+        db,
         internalCustomerId: internalCustomer.internal_id,
         withReferralCode: true,
         limit: 100,
@@ -248,16 +220,18 @@ cusRouter.get("/:customer_id/referrals", async (req: any, res: any) => {
     );
 
     let redeemedCustomers = await CusReadService.getInInternalIds({
-      sb,
+      db,
       internalIds: redeemedCustomerIds,
     });
 
     for (const redemption of redeemed) {
-      redemption.referral_code.customer = redeemedCustomers.find(
-        (customer: any) =>
-          customer.internal_id ===
-          redemption.referral_code.internal_customer_id,
-      );
+      if (redemption.referral_code) {
+        redemption.referral_code.customer = redeemedCustomers.find(
+          (customer: any) =>
+            customer.internal_id ===
+            redemption.referral_code!.internal_customer_id,
+        );
+      }
     }
 
     res.status(200).send({
@@ -278,13 +252,13 @@ cusRouter.get(
   "/:customer_id/product/:product_id",
   async (req: any, res: any) => {
     try {
-      const { sb, org, env, db } = req;
+      const { org, env, db } = req;
       const { customer_id, product_id } = req.params;
       const { version, customer_product_id, entity_id } = req.query;
       const orgId = req.orgId;
 
-      const customer = await CusService.getWithProducts({
-        sb,
+      const customer = await CusService.getFull({
+        db,
         orgId,
         env,
         idOrInternalId: customer_id,

@@ -1,29 +1,14 @@
-import { CusProductStatus, ErrCode } from "@autumn/shared";
+import { CusProductStatus } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { customerProducts } from "@shared/models/cusProductModels/cusProductTable.js";
-import {
-  eq,
-  and,
-  isNotNull,
-  sql,
-  countDistinct,
-  count,
-  or,
-  inArray,
-} from "drizzle-orm";
-import { StatusCodes } from "http-status-codes";
-import RecaseError from "@/utils/errorUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
-import assert from "assert";
+import { customerProducts } from "@autumn/shared";
+import { eq, isNotNull, sql, countDistinct, count } from "drizzle-orm";
 
 export class CusProdReadService {
   static getCounts = async ({
     db,
     internalProductId,
-    sb,
   }: {
     db: DrizzleCli;
-    sb: SupabaseClient;
     internalProductId: string;
   }) => {
     let result = await db
@@ -75,51 +60,3 @@ export class CusProdReadService {
     return result[0];
   };
 }
-
-// let customQuery = db
-// .select({ count: countDistinct(customerProducts.internal_customer_id) })
-// .from(customerProducts)
-// .where(
-//   and(
-//     eq(customerProducts.internal_product_id, internalProductId),
-//     eq(customerProducts.is_custom, true),
-//     inArray(customerProducts.status, statuses),
-//   ),
-// )
-// .as("custom");
-
-// let trialingQuery = db
-// .select({ count: countDistinct(customerProducts.internal_customer_id) })
-// .from(customerProducts)
-// .where(
-//   and(
-//     eq(customerProducts.internal_product_id, internalProductId),
-//     isNotNull(customerProducts.trial_ends_at),
-//     sql`${customerProducts.trial_ends_at} > (EXTRACT(EPOCH FROM NOW()) * 1000)::bigint`,
-//     inArray(customerProducts.status, statuses),
-//   ),
-// )
-// .as("trialing");
-
-// let allQuery = db
-// .select({ count: countDistinct(customerProducts.internal_customer_id) })
-// .from(customerProducts)
-// .where(eq(customerProducts.internal_product_id, internalProductId))
-// .as("all");
-
-// let { data: result, error } = await sb.rpc("get_product_stats", {
-//   p_internal_id: internalProductId,
-// });
-
-// if (error) {
-//   console.error("Error getting counts", error);
-//   throw error;
-// }
-
-// return {
-//   active: result.f1,
-//   canceled: result.f2,
-//   custom: result.f3,
-//   trialing: result.f4,
-//   all: result.f5,
-// };

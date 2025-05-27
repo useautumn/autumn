@@ -37,12 +37,11 @@ const getCusFeatureAndOrg = async ({
   customerData: any;
 }) => {
   // 1. Get customer
-  const { db, sb } = req;
+  const { db } = req;
   let { org, features } = await getOrgAndFeatures({ req });
   let [customer] = await Promise.all([
     getOrCreateCustomer({
       db,
-      sb,
       org,
       env: req.env,
       customerId,

@@ -34,7 +34,7 @@ describe(
           customerId,
           org: this.org,
           env: this.env,
-          sb: this.sb,
+          db: this.db,
         });
       testClockId = testClockId1;
       customer = customer1;

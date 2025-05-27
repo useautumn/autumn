@@ -1,257 +1,268 @@
+import { and, arrayContains, count, eq, inArray } from "drizzle-orm";
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, RewardProgram, RewardTriggerEvent } from "@autumn/shared";
+import {
+  ErrCode,
+  Reward,
+  RewardProgram,
+  rewardPrograms,
+  RewardTriggerEvent,
+} from "@autumn/shared";
 import { ReferralCode } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { referralCodes, rewardRedemptions } from "@autumn/shared";
 
 export class RewardProgramService {
-  static async get({ sb, internalId }: { sb: any; internalId: string }) {
-    const { data, error } = await sb
-      .from("reward_programs")
-      .select("*, reward:rewards!inner(*)")
-      .eq("internal_id", internalId);
-
-    if (error) {
-      throw error;
-    }
-
-    return data[0];
-  }
-
-  static async getById({
-    sb,
+  static async get({
+    db,
     id,
     orgId,
     env,
     errorIfNotFound = false,
   }: {
-    sb: any;
+    db: DrizzleCli;
     id: string;
     orgId: string;
     env: string;
     errorIfNotFound?: boolean;
   }) {
-    const { data, error } = await sb
-      .from("reward_programs")
-      .select()
-      .eq("id", id)
-      .eq("org_id", orgId)
-      .eq("env", env);
+    let result = await db.query.rewardPrograms.findFirst({
+      where: and(
+        eq(rewardPrograms.id, id),
+        eq(rewardPrograms.org_id, orgId),
+        eq(rewardPrograms.env, env),
+      ),
+    });
 
-    if (error) {
-      throw error;
-    }
-
-    if (data.length === 0) {
+    if (!result) {
       if (errorIfNotFound) {
         throw new RecaseError({
-          message: "Referral not found",
-          code: ErrCode.ReferralNotFound,
+          message: "Reward program not found",
+          code: ErrCode.RewardNotFound,
         });
       }
 
       return null;
     }
 
-    return data[0];
+    return result as RewardProgram;
   }
 
-  static async getAll({
-    sb,
+  static async list({
+    db,
     orgId,
     env,
   }: {
-    sb: any;
+    db: DrizzleCli;
     orgId: string;
     env: string;
   }) {
-    const { data, error } = await sb
-      .from("reward_programs")
-      .select()
-      .eq("org_id", orgId)
-      .eq("env", env);
+    let result = await db.query.rewardPrograms.findMany({
+      where: and(eq(rewardPrograms.org_id, orgId), eq(rewardPrograms.env, env)),
+    });
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return result as RewardProgram[];
   }
 
   static async getByProductId({
-    sb,
+    db,
     productIds,
     orgId,
     env,
   }: {
-    sb: any;
+    db: DrizzleCli;
     productIds: string[];
     orgId: string;
     env: string;
   }) {
-    const { data, error } = await sb
-      .from("reward_programs")
-      .select("*")
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .eq("when", RewardTriggerEvent.Checkout)
-      .contains("product_ids", productIds);
+    let result = await db.query.rewardPrograms.findMany({
+      where: and(
+        eq(rewardPrograms.org_id, orgId),
+        eq(rewardPrograms.env, env),
+        eq(rewardPrograms.when, RewardTriggerEvent.Checkout),
+        arrayContains(rewardPrograms.product_ids, productIds),
+      ),
+    });
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async create({
-    sb,
-    data,
-  }: {
-    sb: any;
-
-    data: RewardProgram | RewardProgram[];
-  }) {
-    const { data: insertedData, error } = await sb
-      .from("reward_programs")
-      .insert(data)
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return insertedData;
-  }
-
-  static async deleteById({
-    sb,
-    id,
-    orgId,
-    env,
-  }: {
-    sb: any;
-    id: string;
-    orgId: string;
-    env: string;
-  }) {
-    const { data, error } = await sb
-      .from("reward_programs")
-      .delete()
-      .eq("id", id)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  // REFERRAL CODE FUNCTIONS
-  static async getReferralCode({
-    sb,
-    orgId,
-    env,
-    code,
-    withRewardProgram = false,
-  }: {
-    sb: any;
-    orgId: string;
-    env: string;
-    code: string;
-    withRewardProgram?: boolean;
-  }) {
-    const { data, error } = await sb
-      .from("referral_codes")
-      .select(
-        withRewardProgram
-          ? "*, reward_program:reward_programs!inner(*, reward:rewards!inner(*))"
-          : "*"
-      )
-      .eq("code", code)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return result as RewardProgram[];
   }
 
   static async getCodeByCustomerAndRewardProgram({
-    sb,
+    db,
     orgId,
     env,
     internalCustomerId,
     internalRewardProgramId,
   }: {
-    sb: any;
+    db: DrizzleCli;
     orgId: string;
     env: string;
     internalCustomerId: string;
     internalRewardProgramId: string;
   }) {
-    const { data, error } = await sb
-      .from("referral_codes")
-      .select("*")
-      .eq("internal_customer_id", internalCustomerId)
-      .eq("internal_reward_program_id", internalRewardProgramId)
-      .eq("org_id", orgId)
-      .eq("env", env);
+    let result = await db.query.referralCodes.findFirst({
+      where: and(
+        eq(referralCodes.internal_customer_id, internalCustomerId),
+        eq(referralCodes.internal_reward_program_id, internalRewardProgramId),
+        eq(referralCodes.org_id, orgId),
+        eq(referralCodes.env, env),
+      ),
+    });
 
-    if (error) {
-      throw error;
-    }
-
-    if (data.length === 0) {
+    if (!result) {
       return null;
     }
 
-    return data[0];
+    return result as ReferralCode;
+  }
+
+  static async create({
+    db,
+    data,
+  }: {
+    db: DrizzleCli;
+    data: RewardProgram | RewardProgram[];
+  }) {
+    let result = await db
+      .insert(rewardPrograms)
+      .values(data as any)
+      .returning();
+
+    if (result.length === 0) {
+      throw new RecaseError({
+        message: "Failed to create reward program",
+        code: ErrCode.InsertRewardProgramFailed,
+      });
+    }
+
+    return result[0] as RewardProgram;
+  }
+
+  static async delete({
+    db,
+    id,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    id: string;
+    orgId: string;
+    env: string;
+  }) {
+    let result = await db
+      .delete(rewardPrograms)
+      .where(
+        and(
+          eq(rewardPrograms.id, id),
+          eq(rewardPrograms.org_id, orgId),
+          eq(rewardPrograms.env, env),
+        ),
+      )
+      .returning();
+
+    if (result.length === 0) {
+      throw new RecaseError({
+        message: "Reward program not found",
+        code: ErrCode.RewardNotFound,
+      });
+    }
+
+    return result[0] as RewardProgram;
+  }
+
+  // REFERRAL CODE FUNCTIONS
+  static async getReferralCode({
+    db,
+    orgId,
+    env,
+    code,
+    withRewardProgram = false,
+  }: {
+    db: DrizzleCli;
+    orgId: string;
+    env: string;
+    code: string;
+    withRewardProgram?: boolean;
+  }) {
+    let result = await db.query.referralCodes.findFirst({
+      where: and(
+        eq(referralCodes.code, code),
+        eq(referralCodes.org_id, orgId),
+        eq(referralCodes.env, env),
+      ),
+      with: withRewardProgram
+        ? {
+            reward_program: {
+              with: {
+                reward: true,
+              },
+            },
+          }
+        : undefined,
+    });
+
+    if (!result) {
+      throw new RecaseError({
+        message: "Referral code not found",
+        code: ErrCode.ReferralCodeNotFound,
+        statusCode: 404,
+      });
+    }
+
+    return result as ReferralCode & {
+      reward_program: RewardProgram & {
+        reward: Reward;
+      };
+    };
   }
 
   static async createReferralCode({
-    sb,
+    db,
     data,
   }: {
-    sb: any;
+    db: DrizzleCli;
     data: ReferralCode;
   }) {
-    const { data: insertedData, error } = await sb
-      .from("referral_codes")
-      .insert(data)
-      .select()
-      .single();
+    let result = await db.insert(referralCodes).values(data).returning();
 
-    if (error) {
-      throw error;
+    if (result.length === 0) {
+      throw new RecaseError({
+        message: "Failed to create referral code",
+        code: ErrCode.InsertReferralCodeFailed,
+      });
     }
 
-    return insertedData;
+    return result[0] as ReferralCode;
   }
 
   static async getCodeRedemptionCount({
-    sb,
+    db,
     referralCodeId,
   }: {
-    sb: any;
+    db: DrizzleCli;
     referralCodeId: string;
   }) {
-    const { data, error, count } = await sb
-      .from("reward_redemptions")
-      .select("*, reward_program:reward_programs!inner(*)", { count: "exact" })
-      .eq("referral_code_id", referralCodeId)
-      .eq("triggered", true);
+    let result = await db
+      .select({ count: count() })
+      .from(rewardRedemptions)
+      .where(
+        and(
+          eq(rewardRedemptions.referral_code_id, referralCodeId),
+          eq(rewardRedemptions.triggered, true),
+        ),
+      );
 
-    if (error) {
-      throw error;
-    }
+    return result[0].count;
 
-    return count;
+    // const { data, error, count } = await sb
+    //   .from("reward_redemptions")
+    //   .select("*, reward_program:reward_programs!inner(*)", { count: "exact" })
+    //   .eq("referral_code_id", referralCodeId)
+    //   .eq("triggered", true);
+
+    // if (error) {
+    //   throw error;
+    // }
+
+    // return count;
   }
 }

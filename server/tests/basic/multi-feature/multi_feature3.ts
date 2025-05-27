@@ -27,6 +27,7 @@ import { timeout } from "@/utils/genUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import { addDays, addMonths } from "date-fns";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // Scenario 1: prepaid + pay per use monthly -> prepaid + pay per use monthly
 let pro = {
@@ -51,31 +52,31 @@ let pro = {
 
 export const getLifetimeAndUsageCusEnts = async ({
   customerId,
-  sb,
+  db,
   orgId,
   env,
   featureId,
 }: {
   customerId: string;
-  sb: SupabaseClient;
+  db: DrizzleCli;
   orgId: string;
   env: AppEnv;
   featureId: string;
 }) => {
   let mainCusProduct = await getMainCusProduct({
     customerId,
-    sb,
+    db,
     orgId,
     env,
   });
 
   let lifetimeCusEnt = getLifetimeFreeCusEnt({
-    cusProduct: mainCusProduct,
+    cusProduct: mainCusProduct!,
     featureId,
   });
 
   let usageCusEnt = getUsageCusEnt({
-    cusProduct: mainCusProduct,
+    cusProduct: mainCusProduct!,
     featureId,
   });
 
@@ -98,7 +99,7 @@ describe(`${chalk.yellowBright(
     let { customer, testClockId: _testClockId } =
       await initCustomerWithTestClock({
         customerId,
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
       });
@@ -121,7 +122,7 @@ describe(`${chalk.yellowBright(
 
     let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
       customerId,
-      sb: this.sb,
+      db: this.db,
       orgId: this.org.id,
       env: this.env,
       featureId: features.metered1.id,
@@ -149,7 +150,7 @@ describe(`${chalk.yellowBright(
 
     let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
       customerId,
-      sb: this.sb,
+      db: this.db,
       orgId: this.org.id,
       env: this.env,
       featureId: features.metered1.id,
@@ -169,7 +170,7 @@ describe(`${chalk.yellowBright(
 
     let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
       customerId,
-      sb: this.sb,
+      db: this.db,
       orgId: this.org.id,
       env: this.env,
       featureId: features.metered1.id,

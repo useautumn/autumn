@@ -21,7 +21,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleInvoiceFinalized = async ({
   db,
-  sb,
   org,
   invoice,
   env,
@@ -29,7 +28,6 @@ export const handleInvoiceFinalized = async ({
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   invoice: Stripe.Invoice;
   env: AppEnv;
@@ -57,7 +55,7 @@ export const handleInvoiceFinalized = async ({
     }
 
     const updated = await updateInvoiceIfExists({
-      sb,
+      db,
       invoice,
     });
 
@@ -76,7 +74,7 @@ export const handleInvoiceFinalized = async ({
     });
 
     await InvoiceService.createInvoiceFromStripe({
-      sb,
+      db,
       stripeInvoice: expandedInvoice,
       internalCustomerId: activeProducts[0].internal_customer_id,
       productIds: activeProducts.map((p) => p.product.id),

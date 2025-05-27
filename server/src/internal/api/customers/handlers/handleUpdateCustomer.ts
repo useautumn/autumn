@@ -113,8 +113,8 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
         },
       });
 
-      let finalCustomer = await CusService.getWithProducts({
-        sb: req.sb,
+      let finalCustomer = await CusService.getFull({
+        db,
         idOrInternalId: originalCustomer.internal_id,
         orgId: req.orgId,
         env: req.env,
@@ -123,7 +123,7 @@ export const handleUpdateCustomer = async (req: any, res: any) =>
 
       // res.status(200).json({ customer: updatedCustomer });
       let customerDetails = await getCustomerDetails({
-        sb: req.sb,
+        db,
         customer: finalCustomer,
         org,
         env: req.env,

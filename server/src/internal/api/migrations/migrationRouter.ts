@@ -9,6 +9,7 @@ import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 
 export const migrationRouter = express.Router();
 
@@ -17,8 +18,8 @@ migrationRouter.post("", async (req: any, res: any) => {
     req,
     res,
     action: "migrate",
-    handler: async (req: any, res: any) => {
-      const { orgId, env, sb, db } = req;
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+      const { orgId, env, db } = req;
 
       const { from_product_id, from_version, to_product_id, to_version } =
         req.body;
@@ -74,7 +75,7 @@ migrationRouter.post("", async (req: any, res: any) => {
       });
 
       await MigrationService.createJob({
-        sb,
+        db,
         data: migrationJob,
       });
 

@@ -27,7 +27,7 @@ describe(
 
     before(async function () {
       customer = await initCustomer({
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
         customer_data: {

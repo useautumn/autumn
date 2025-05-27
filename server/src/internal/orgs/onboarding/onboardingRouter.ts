@@ -22,7 +22,7 @@ onboardingRouter.post("", async (req: Request, res: any) =>
     res,
     action: "onboarding",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-      const { db, sb, logtail: logger, org } = req;
+      const { db, logtail: logger, org } = req;
       const { token } = req.body;
 
       if (!token) {
@@ -73,7 +73,6 @@ onboardingRouter.post("", async (req: Request, res: any) =>
 
         let { products, prices, ents } = await parseChatProducts({
           db,
-          sb,
           logger,
           orgId: org.id,
           features: [...curFeatures, ...backendFeatures],

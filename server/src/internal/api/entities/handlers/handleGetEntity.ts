@@ -16,7 +16,7 @@ export const handleGetEntity = async (req: any, res: any) =>
       const customerId = req.params.customer_id as string;
       const expand = parseEntityExpand(req.query.expand);
 
-      let { orgId, env, sb, logtail: logger } = req;
+      let { orgId, env, db, logtail: logger } = req;
 
       let org = await OrgService.getFromReq(req);
       let apiVersion = orgToVersion({
@@ -27,7 +27,7 @@ export const handleGetEntity = async (req: any, res: any) =>
       // const start = performance.now();
       let { entities, customer, fullEntities, invoices } =
         await getEntityResponse({
-          sb,
+          db,
           entityIds: [entityId],
           org,
           env,
@@ -47,7 +47,7 @@ export const handleGetEntity = async (req: any, res: any) =>
           ...entity,
           invoices: withInvoices
             ? invoicesToResponse({
-                invoices,
+                invoices: invoices || [],
                 logger,
               })
             : undefined,
