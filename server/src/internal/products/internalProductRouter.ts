@@ -57,6 +57,7 @@ productRouter.get("/data", async (req: any, res) => {
         RewardProgramService.getAll({ sb, orgId: req.orgId, env: req.env }),
       ]);
 
+    console.log(features);
     res.status(200).json({
       products: getLatestProducts(products).map((product) => {
         return mapToProductV2({ product, features });
