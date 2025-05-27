@@ -95,7 +95,11 @@ function OnboardingView() {
         {productData && (
           <>
             <ProductList data={productData} mutate={productMutate} />
-            <CreateSecretKey apiKey={apiKey} setApiKey={setApiKey} number={2} />
+            <ConnectStripeStep
+              mutate={productMutate}
+              productData={productData}
+              number={2}
+            />
             <SampleApp data={productData} mutate={productMutate} number={3} />
             <IntegrationGuideStep
               number={4}
@@ -105,9 +109,9 @@ function OnboardingView() {
 
             {showIntegrationSteps && (
               <div className="flex flex-col animate-in fade-in-0 duration-500">
-                <ConnectStripeStep
-                  mutate={productMutate}
-                  productData={productData}
+                <CreateSecretKey
+                  apiKey={apiKey}
+                  setApiKey={setApiKey}
                   number={5}
                 />
                 <Install number={6} />
