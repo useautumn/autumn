@@ -40,7 +40,7 @@ export default function IntegrationGuideStep({
         {showIntegrationSteps && (
           <div className="bg-zinc-50 border border-zinc-200 rounded-md p-4 shadow-sm">
             <div className="flex items-start">
-              <AlertTriangle className="h-5 w-5 text-t3 mr-3 flex-shrink-0" />
+              {/* <AlertTriangle className="h-5 w-5 text-t3 mr-3 flex-shrink-0" /> */}
               <div>
                 <p className="text-sm text-t3">
                   This guide is for React & Node.js. Read our{" "}

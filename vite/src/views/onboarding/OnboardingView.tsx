@@ -1,23 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { toast } from "sonner";
-import { useOrganization, useOrganizationList } from "@clerk/clerk-react";
+import { useAuth, useOrganization } from "@clerk/clerk-react";
 import { useSearchParams } from "react-router";
 import Step from "@/components/general/OnboardingStep";
-import { AppEnv } from "@autumn/shared";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import {
-  AlertTriangle,
-  ArrowUpRightFromSquare,
-  Book,
-  Code,
-} from "lucide-react";
-import { CreateOrgStep } from "./onboarding-steps/CreateOrg";
+import { Book } from "lucide-react";
 import { ConnectStripeStep } from "./onboarding-steps/ConnectStripe";
-import { CreateProductStep } from "./onboarding-steps/CreateProduct";
 import { CreateSecretKey } from "./onboarding-steps/CreateSecretKey";
 import AttachProduct from "./onboarding-steps/AttachProduct";
 import CheckAccessStep from "./onboarding-steps/CheckAccess";
@@ -27,10 +18,10 @@ import { ProductList } from "./onboarding-steps/ProductList";
 import { useCreateOrg } from "./hooks/useCreateOrg";
 import EnvStep from "./onboarding-steps/Env";
 import MountHandler from "./onboarding-steps/MountHandler";
-import { Button } from "@/components/ui/button";
-import AutumnProvider from "./onboarding-steps/AutumnProvider";
 import { SampleApp } from "./onboarding-steps/SampleApp";
 import IntegrationGuideStep from "./onboarding-steps/IntegrationGuide";
+import AutumnProviderStep from "./onboarding-steps/AutumnProvider";
+import { AutumnProvider } from "autumn-js/react";
 
 function OnboardingView() {
   const env = useEnv();
@@ -45,6 +36,7 @@ function OnboardingView() {
   const axiosInstance = useAxiosInstance();
   const token = searchParams.get("token");
   const [loading, setLoading] = useState(true);
+  const { getToken } = useAuth();
 
   const {
     data: productData,
@@ -100,7 +92,18 @@ function OnboardingView() {
               productData={productData}
               number={2}
             />
-            <SampleApp data={productData} mutate={productMutate} number={3} />
+            <AutumnProvider
+              backendUrl={`${import.meta.env.VITE_PUBLIC_BACKEND_URL}/demo`}
+              includeCredentials={false}
+              getBearerToken={async () => {
+                const token = await getToken({
+                  template: "custom_template",
+                });
+                return token;
+              }}
+            >
+              <SampleApp data={productData} mutate={productMutate} number={3} />
+            </AutumnProvider>
             <IntegrationGuideStep
               number={4}
               showIntegrationSteps={showIntegrationSteps}
@@ -120,7 +123,7 @@ function OnboardingView() {
 
                 <MountHandler number={8} />
 
-                <AutumnProvider number={9} />
+                <AutumnProviderStep number={9} />
 
                 <AttachProduct
                   products={productData.products}

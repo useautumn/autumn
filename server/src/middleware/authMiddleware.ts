@@ -62,7 +62,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     console.log(
       // `withOrgAuth error (${req.headers["authorization"]}):`,
       `(warning) clerk auth failed:`,
-      error?.message || error
+      error?.message || error,
     );
     res.status(401).json({ message: "Unauthorized" });
     return;
