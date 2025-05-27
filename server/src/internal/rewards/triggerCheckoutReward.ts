@@ -7,12 +7,10 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 export const runTriggerCheckoutReward = async ({
   db,
-  sb,
   payload,
   logger,
 }: {
   db: DrizzleCli;
-  sb: any;
   payload: any;
   logger: any;
 }) => {
@@ -27,7 +25,7 @@ export const runTriggerCheckoutReward = async ({
 
     // 1. Check if redemption exists
     let redemptions = await RewardRedemptionService.getByCustomer({
-      sb,
+      db,
       internalCustomerId: customer.internal_id, // customer that redeemed code
       withRewardProgram: true,
       triggered: false,
@@ -75,7 +73,7 @@ export const runTriggerCheckoutReward = async ({
 
       // Get redemption count
       let redemptionCount = await RewardProgramService.getCodeRedemptionCount({
-        sb,
+        db,
         referralCodeId: referralCode.id,
       });
 
@@ -90,7 +88,6 @@ export const runTriggerCheckoutReward = async ({
       if (rewardCat === RewardCategory.FreeProduct) {
         await triggerFreeProduct({
           db,
-          sb,
           referralCode,
           redeemer: customer,
           rewardProgram: reward_program,
@@ -102,7 +99,6 @@ export const runTriggerCheckoutReward = async ({
       } else {
         await triggerRedemption({
           db,
-          sb,
           referralCode,
           org,
           env,

@@ -41,11 +41,7 @@ export class FeatureService {
       orgId: req.orgId,
       env: req.env,
     });
-    // const features = await FeatureService.getFeatures({
-    //   sb: req.sb,
-    //   orgId: req.orgId,
-    //   env: req.env,
-    // });
+
     return features as Feature[];
   }
 
@@ -178,5 +174,19 @@ export class FeatureService {
       env,
     });
     return deletedFeatures[0] as Feature;
+  }
+
+  static async deleteByOrgId({
+    db,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    await db
+      .delete(features)
+      .where(and(eq(features.org_id, orgId), eq(features.env, env)));
   }
 }

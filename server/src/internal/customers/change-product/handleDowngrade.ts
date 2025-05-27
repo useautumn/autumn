@@ -24,15 +24,16 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { SuccessCode } from "@autumn/shared";
 import { cancelCurSubs } from "./handleDowngrade/cancelCurSubs.js";
 import { getScheduleIdsFromCusProducts } from "./scheduleUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const scheduleStripeSubscription = async ({
-  sb,
+  db,
   attachParams,
   stripeCli,
   itemSet,
   endOfBillingPeriod,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   attachParams: AttachParams;
   stripeCli: Stripe;
   itemSet: ItemSet;
@@ -73,7 +74,7 @@ const scheduleStripeSubscription = async ({
   });
 
   await SubService.createSub({
-    sb: sb,
+    db,
     sub: {
       id: generateId("sub"),
       stripe_id: null,
@@ -177,7 +178,7 @@ export const handleDowngrade = async ({
         stripeCli,
         cusProducts: [curCusProduct, attachParams.curScheduledProduct],
         itemSet: itemSet,
-        sb: req.sb,
+        db: req.db,
         org: attachParams.org,
         env: attachParams.customer.env,
       });
@@ -204,11 +205,11 @@ export const handleDowngrade = async ({
       );
 
       let scheduleId = await scheduleStripeSubscription({
+        db: req.db,
         attachParams,
         stripeCli,
         itemSet,
         endOfBillingPeriod: latestPeriodEnd,
-        sb: req.sb,
       });
       scheduledIds.push(scheduleId);
 
@@ -244,7 +245,6 @@ export const handleDowngrade = async ({
   const newProductFree = isFreeProduct(attachParams.prices);
   await createFullCusProduct({
     db: req.db,
-    sb: req.sb,
     attachParams: attachToInsertParams(attachParams, product),
     startsAt: latestPeriodEnd * 1000,
     subscriptionScheduleIds: scheduledIds,
@@ -280,9 +280,3 @@ export const handleDowngrade = async ({
     });
   }
 };
-
-// await removePreviousScheduledProducts({
-//   sb: req.sb,
-//   stripeCli,
-//   attachParams,
-// });

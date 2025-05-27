@@ -3,7 +3,7 @@ import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementS
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { EntityService } from "../EntityService.js";
 import {
   APIVersion,
@@ -162,7 +162,7 @@ export const logEntityToAction = ({
 };
 
 export const validateAndGetInputEntities = async ({
-  sb,
+  db,
   orgId,
   features,
   customerId,
@@ -170,7 +170,7 @@ export const validateAndGetInputEntities = async ({
   env,
   logger,
 }: {
-  sb: any;
+  db: DrizzleCli;
   orgId: string;
   features: Feature[];
   customerId: string;
@@ -179,8 +179,8 @@ export const validateAndGetInputEntities = async ({
   logger: any;
 }) => {
   // 1. Get customer, features and orgs
-  let customer = await CusService.getWithProducts({
-    sb,
+  let customer = await CusService.getFull({
+    db,
     idOrInternalId: customerId,
     orgId,
     env,
@@ -269,7 +269,6 @@ export const validateAndGetInputEntities = async ({
 
 export const createEntities = async ({
   db,
-  sb,
   env,
   org,
   features,
@@ -281,7 +280,6 @@ export const createEntities = async ({
   fromAutoCreate = false,
 }: {
   db: DrizzleCli;
-  sb: any;
   org: Organization;
   features: Feature[];
   env: AppEnv;
@@ -300,7 +298,7 @@ export const createEntities = async ({
     cusProducts,
     existingEntities,
   } = await validateAndGetInputEntities({
-    sb,
+    db,
     customerId,
     orgId: org.id,
     env,
@@ -370,13 +368,14 @@ export const createEntities = async ({
         entities: existingEntities,
       });
 
-      const originalBalance = mainCusEnt.balance + (unused || 0);
+      let mainCusEntBalance = mainCusEnt.balance || 0;
+      const originalBalance = mainCusEntBalance + (unused || 0);
       const newBalance =
-        mainCusEnt.balance - (newCount + replacedCount) + (unused || 0);
+        mainCusEntBalance - (newCount + replacedCount) + (unused || 0);
 
       await adjustAllowance({
         db,
-        sb,
+
         env,
         org,
         cusPrices: cusProducts.flatMap((p: any) => p.customer_prices),
@@ -394,7 +393,7 @@ export const createEntities = async ({
       await CusEntService.update({
         db,
         id: mainCusEnt.id,
-        updates: { balance: mainCusEnt.balance - newCount },
+        updates: { balance: mainCusEntBalance - newCount },
       });
 
       // await pg.query(
@@ -413,15 +412,15 @@ export const createEntities = async ({
         if (entityAction.action === "create") {
           newEntities[entity.id] = {
             id: entity.id,
-            balance: allowance,
+            balance: allowance!,
             adjustment: 0,
           };
         } else if (entityAction.action === "replace") {
           let tmp = newEntities[entityAction.replace.id];
           delete newEntities[entityAction.replace.id];
           newEntities[entity.id] = {
-            id: entity.id,
             ...tmp,
+            id: entity.id,
           };
         }
       }
@@ -473,7 +472,7 @@ export const createEntities = async ({
   }
 
   let { entities } = await getEntityResponse({
-    sb,
+    db,
     entityIds: inputEntities.map((e: any) => e.id),
     org,
     env,
@@ -491,7 +490,7 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
     res,
     action: "create entity",
     handler: async (req: any, res: any) => {
-      const { sb, env, db, logtail: logger } = req;
+      const { env, db, logtail: logger } = req;
 
       const [org, features] = await Promise.all([
         OrgService.getFromReq(req),
@@ -505,7 +504,6 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
 
       const entities = await createEntities({
         db,
-        sb,
         org,
         features,
         logger,

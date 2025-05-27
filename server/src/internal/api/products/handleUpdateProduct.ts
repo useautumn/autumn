@@ -116,14 +116,11 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
     action: "Update product",
     handler: async () => {
       const { productId } = req.params;
-      const { sb, orgId, env, logtail: logger, db } = req;
+      const { orgId, env, logtail: logger, db } = req;
 
       const [features, org, fullProduct, rewardPrograms] = await Promise.all([
         FeatureService.getFromReq(req),
-        OrgService.getFullOrg({
-          sb,
-          orgId,
-        }),
+        OrgService.getFromReq(req),
         ProductService.getFull({
           db,
           idOrInternalId: productId,
@@ -131,7 +128,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
           env,
         }),
         RewardProgramService.getByProductId({
-          sb,
+          db,
           productIds: [productId],
           orgId,
           env,
@@ -176,7 +173,6 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         await handleVersionProductV2({
           req,
           res,
-          sb,
           latestProduct: fullProduct,
           org,
           env,
@@ -190,7 +186,6 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
       await handleNewProductItems({
         db,
-        sb,
         curPrices: fullProduct.prices,
         curEnts: fullProduct.entitlements,
         newItems: items,

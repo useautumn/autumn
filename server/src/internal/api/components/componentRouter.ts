@@ -19,7 +19,7 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
     res,
     action: "get pricing table",
     handler: async () => {
-      const { sb, orgId, env, db, logtail: logger } = req;
+      const { orgId, env, db } = req;
       let customerId = req.query.customer_id;
 
       const [org, features, products, customer] = await Promise.all([

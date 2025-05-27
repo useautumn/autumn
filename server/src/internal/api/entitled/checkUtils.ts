@@ -19,7 +19,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getBooleanEntitledResult = async ({
   db,
-  sb,
   customer_id,
   cusEnts,
   org,
@@ -31,7 +30,6 @@ export const getBooleanEntitledResult = async ({
   allFeatures,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   customer_id: string;
   cusEnts: FullCustomerEntitlement[];
   org: Organization;
@@ -55,7 +53,6 @@ export const getBooleanEntitledResult = async ({
       preview: withPreview
         ? await getCheckPreview({
             db,
-            sb,
             allowed,
             balance: undefined,
             feature,

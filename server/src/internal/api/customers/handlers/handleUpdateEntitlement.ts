@@ -48,7 +48,7 @@ const getCusOrgAndCusPrice = async ({
 
 export const handleUpdateEntitlement = async (req: any, res: any) => {
   try {
-    const { db, sb } = req;
+    const { db } = req;
     const { customer_entitlement_id } = req.params;
     const { balance, next_reset_at, entity_id } = req.body;
 
@@ -134,8 +134,6 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       cusEnt,
     });
 
-    console.log("Customer", customer);
-
     if (!cusPrice || !customer) {
       res.status(200).json({ success: true });
       return;
@@ -143,7 +141,7 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
 
     await adjustAllowance({
       db,
-      sb: req.sb,
+
       env: req.env,
       org: org,
       affectedFeature: cusEnt.entitlement.feature,

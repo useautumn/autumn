@@ -19,7 +19,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getCheckPreview = async ({
   db,
-  sb,
   allowed,
   balance,
   feature,
@@ -28,7 +27,6 @@ export const getCheckPreview = async ({
   allFeatures,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   allowed: boolean;
   balance?: number;
   feature: Feature;

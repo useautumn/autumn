@@ -21,20 +21,13 @@ entityRouter.get("", (req, res) =>
       const customerId = req.params.customer_id as string;
       let { orgId, env } = req;
 
-      let customer = await CusService.getWithProducts({
-        sb: req.sb,
+      let customer = await CusService.getFull({
+        db: req.db,
         idOrInternalId: customerId,
         orgId,
         env,
         withEntities: true,
       });
-
-      if (!customer) {
-        throw new RecaseError({
-          message: `Customer ${customerId} not found`,
-          code: ErrCode.CustomerNotFound,
-        });
-      }
 
       res.status(200).json({
         data: customer.entities,

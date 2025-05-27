@@ -1,7 +1,6 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { constructProduct } from "@/internal/products/productUtils.js";
-import { generateId } from "@/utils/genUtils.js";
 import {
   AppEnv,
   CreateProductSchema,
@@ -12,19 +11,15 @@ import {
   Product,
   ProductV2,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { z } from "zod";
 
 export const parseChatProducts = async ({
   db,
-  sb,
   logger,
   features,
   orgId,
   chatProducts,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   logger: any;
   features: Feature[];
   orgId: string;
@@ -46,7 +41,6 @@ export const parseChatProducts = async ({
 
     let { prices, entitlements } = await handleNewProductItems({
       db,
-      sb,
       curPrices: [],
       curEnts: [],
       newItems: product.items,

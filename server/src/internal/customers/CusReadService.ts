@@ -1,22 +1,19 @@
-import { SupabaseClient } from "@supabase/supabase-js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { Customer, customers } from "@autumn/shared";
+import { inArray } from "drizzle-orm";
 
 export class CusReadService {
   static async getInInternalIds({
-    sb,
+    db,
     internalIds,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalIds: string[];
   }) {
-    const { data, error } = await sb
-      .from("customers")
-      .select("*")
-      .in("internal_id", internalIds);
+    const data = await db.query.customers.findMany({
+      where: inArray(customers.internal_id, internalIds),
+    });
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return data as Customer[];
   }
 }

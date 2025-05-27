@@ -11,10 +11,13 @@ import {
 } from "@autumn/shared";
 import Stripe from "stripe";
 import { generateId } from "@/utils/genUtils.js";
-// import { Autumn } from "@/external/autumn/autumnCli.js";
+
 import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { Autumn } from "autumn-js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { invoices } from "@autumn/shared";
+import { and, desc, eq } from "drizzle-orm";
 
 export const processInvoice = ({
   invoice,
@@ -52,88 +55,49 @@ export const processInvoice = ({
 };
 
 export class InvoiceService {
-  static async getByInternalCustomerId({
-    sb,
+  static async list({
+    db,
     internalCustomerId,
     internalEntityId,
     limit = 100,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalCustomerId: string;
     internalEntityId?: string;
     limit?: number;
   }) {
-    let query = sb
-      .from("invoices")
-      .select("*")
-      .eq("internal_customer_id", internalCustomerId);
-
-    if (internalEntityId) {
-      query = query.eq("internal_entity_id", internalEntityId);
-    }
-
-    query = query.order("created_at", { ascending: false }).limit(limit);
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return (await db.query.invoices.findMany({
+      where: and(
+        eq(invoices.internal_customer_id, internalCustomerId),
+        internalEntityId
+          ? eq(invoices.internal_entity_id, internalEntityId)
+          : undefined,
+      ),
+      orderBy: [desc(invoices.created_at)],
+      limit,
+    })) as Invoice[];
   }
 
-  static async createInvoice({
-    sb,
-    invoice,
+  static async getByStripeId({
+    db,
+    stripeId,
   }: {
-    sb: SupabaseClient;
-    invoice: Invoice;
+    db: DrizzleCli;
+    stripeId: string;
   }) {
-    const { error } = await sb.from("invoices").insert(invoice);
-    if (error) {
-      throw error;
-    }
-  }
+    const invoice = await db.query.invoices.findFirst({
+      where: eq(invoices.stripe_id, stripeId),
+    });
 
-  static async getById({ sb, id }: { sb: SupabaseClient; id: string }) {
-    const { data, error } = await sb
-      .from("invoices")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      throw error;
+    if (!invoice) {
+      return null;
     }
 
-    return data;
-  }
-
-  static async getInvoiceByStripeId({
-    sb,
-    stripeInvoiceId,
-  }: {
-    sb: SupabaseClient;
-    stripeInvoiceId: string;
-  }) {
-    const { data, error } = await sb
-      .from("invoices")
-      .select("*")
-      .eq("stripe_id", stripeInvoiceId)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-      throw error;
-    }
-    return data;
+    return invoice as Invoice;
   }
 
   static async createInvoiceFromStripe({
-    sb,
+    db,
     stripeInvoice,
     internalCustomerId,
     internalEntityId,
@@ -144,7 +108,7 @@ export class InvoiceService {
     sendRevenueEvent = true,
     items = [],
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     stripeInvoice: Stripe.Invoice;
     internalCustomerId: string;
     internalEntityId?: string | null;
@@ -188,17 +152,16 @@ export class InvoiceService {
       items: items,
     };
 
-    const { error } = await sb.from("invoices").insert(invoice);
-
-    if (error) {
+    try {
+      await db.insert(invoices).values(invoice as any);
+    } catch (error: any) {
       if (error.code == "23505") {
         console.log("   🧐 Invoice already exists");
-
-        // Update invoice status
         return;
+      } else {
+        console.error("   ❌ Error inserting Stripe invoice: ", error);
+        throw error;
       }
-      console.log("   ❌ Error inserting Stripe invoice: ", error);
-      return;
     }
 
     console.log("   ✅ Created invoice from stripe");
@@ -225,21 +188,24 @@ export class InvoiceService {
   }
 
   static async updateByStripeId({
-    sb,
-    stripeInvoiceId,
+    db,
+    stripeId,
     updates,
   }: {
-    sb: SupabaseClient;
-    stripeInvoiceId: string;
+    db: DrizzleCli;
+    stripeId: string;
     updates: Partial<Invoice>;
   }) {
-    const { error } = await sb
-      .from("invoices")
-      .update(updates)
-      .eq("stripe_id", stripeInvoiceId);
+    const results = await db
+      .update(invoices)
+      .set(updates as any)
+      .where(eq(invoices.stripe_id, stripeId))
+      .returning();
 
-    if (error) {
-      throw error;
+    if (results.length === 0) {
+      return null;
     }
+
+    return results[0] as Invoice;
   }
 }

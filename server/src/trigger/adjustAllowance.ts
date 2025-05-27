@@ -48,7 +48,6 @@ type CusEntWithCusProduct = FullCustomerEntitlement & {
 
 export const adjustAllowance = async ({
   db,
-  sb,
   env,
   org,
   affectedFeature,
@@ -63,7 +62,6 @@ export const adjustAllowance = async ({
   fromEntities = false,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   env: AppEnv;
   affectedFeature: Feature;
   org: Organization;
@@ -115,7 +113,7 @@ export const adjustAllowance = async ({
   let stripeCli = createStripeCli({ org, env });
 
   let sub = await getUsageBasedSub({
-    sb: sb,
+    db,
     stripeCli,
     subIds: cusProduct.subscription_ids!,
     feature: affectedFeature,
@@ -256,7 +254,7 @@ export const adjustAllowance = async ({
         } catch (error) {}
 
         await InvoiceService.createInvoiceFromStripe({
-          sb,
+          db,
           stripeInvoice: latestInvoice,
           internalCustomerId: customer.internal_id,
           internalEntityId: cusProduct.internal_entity_id || undefined,

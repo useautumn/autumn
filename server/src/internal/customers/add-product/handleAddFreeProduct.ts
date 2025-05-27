@@ -26,7 +26,7 @@ export const handleAddFreeProduct = async ({
   for (const product of products) {
     await createFullCusProduct({
       db: req.db,
-      sb: req.sb,
+
       attachParams: attachToInsertParams(attachParams, product),
       subscriptionId: undefined,
       billLaterOnly: false,

@@ -119,14 +119,12 @@ const formatMessage = ({
 
 const createStripeProductAndPrices = async ({
   db,
-  sb,
   org,
   env,
   product,
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   product: FullProduct;
@@ -165,7 +163,6 @@ const createStripeProductAndPrices = async ({
 
 export const getUpgradePreview = async ({
   db,
-  sb,
   customer,
   org,
   env,
@@ -175,7 +172,6 @@ export const getUpgradePreview = async ({
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   customer: Customer;
   org: Organization;
   env: AppEnv;
@@ -187,7 +183,6 @@ export const getUpgradePreview = async ({
   // Create stripe product / prices if not exist
   await createStripeProductAndPrices({
     db,
-    sb,
     org,
     env,
     product,
@@ -213,7 +208,7 @@ export const getUpgradePreview = async ({
   };
 
   let updatePreview = (await handleStripeSubUpdate({
-    sb: null,
+    db,
     stripeCli,
     curCusProduct: curMainProduct,
     attachParams,
@@ -234,7 +229,6 @@ export const getUpgradePreview = async ({
     (await billForRemainingUsages({
       db,
       logger: console,
-      sb: null,
       attachParams,
       curCusProduct: curMainProduct,
       newSubs: stripeSubs,

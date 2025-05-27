@@ -1,13 +1,13 @@
+import Stripe from "stripe";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { FullCusProduct, Organization } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { AppEnv } from "autumn-js";
-import Stripe from "stripe";
 import { getFilteredScheduleItems } from "./getFilteredScheduleItems.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const updateScheduledSubWithNewItems = async ({
-  sb,
+  db,
   scheduleObj,
   newItems,
   cusProducts,
@@ -16,7 +16,7 @@ export const updateScheduledSubWithNewItems = async ({
   org,
   env,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   scheduleObj: any;
   newItems: any[];
   cusProducts: (FullCusProduct | null | undefined)[];
@@ -40,7 +40,7 @@ export const updateScheduledSubWithNewItems = async ({
     .concat(
       ...newItems.map((item: any) => ({
         price: item.price,
-      }))
+      })),
     );
 
   await stripeCli.subscriptionSchedules.update(schedule.id, {
@@ -55,7 +55,7 @@ export const updateScheduledSubWithNewItems = async ({
   // Update sub schedule ID
   if (itemSet) {
     await SubService.addUsageFeatures({
-      sb,
+      db,
       scheduleId: scheduleObj.schedule.id,
       usageFeatures: itemSet.usageFeatures,
       orgId: org.id,

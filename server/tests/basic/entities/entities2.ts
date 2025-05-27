@@ -31,6 +31,7 @@ import {
   constructFeaturePriceItem,
 } from "@/internal/products/product-items/productItemUtils.js";
 import { createProduct } from "tests/utils/productUtils.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 
 // UNCOMMENT FROM HERE
 let entity2Pro = {
@@ -76,7 +77,7 @@ describe(`${chalk.yellowBright(
 
     const { testClockId: testClockId1 } = await initCustomerWithTestClock({
       customerId,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });
@@ -88,21 +89,19 @@ describe(`${chalk.yellowBright(
 
     testClockId = testClockId1;
 
-    // await this.sb
-    //   .from("organizations")
-    //   .update({
-    //     config: {
-    //       ...this.org.config,
-    //       prorate_unused: true,
-    //     },
-    //   })
-    //   .eq("id", this.org.id);
+    await OrgService.update({
+      db: this.db,
+      orgId: this.org.id,
+      updates: {
+        config: { ...this.org.config, prorate_unused: true },
+      },
+    });
 
-    // await CacheManager.invalidate({
-    //   action: CacheType.SecretKey,
-    //   value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
-    // });
-    // await CacheManager.disconnect();
+    await CacheManager.invalidate({
+      action: CacheType.SecretKey,
+      value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
+    });
+    await CacheManager.disconnect();
   });
 
   it("should create entity, then attach pro product", async function () {
@@ -124,18 +123,17 @@ describe(`${chalk.yellowBright(
   });
 
   after(async function () {
-    // await this.sb
-    //   .from("organizations")
-    //   .update({
-    //     config: {
-    //       ...this.org.config,
-    //       prorate_unused: true,
-    //     },
-    //   })
-    //   .eq("id", this.org.id);
-    // void CacheManager.invalidate({
-    //   action: CacheType.SecretKey,
-    //   value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
-    // });
+    await OrgService.update({
+      db: this.db,
+      orgId: this.org.id,
+      updates: {
+        config: { ...this.org.config, prorate_unused: false },
+      },
+    });
+
+    void CacheManager.invalidate({
+      action: CacheType.SecretKey,
+      value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
+    });
   });
 });

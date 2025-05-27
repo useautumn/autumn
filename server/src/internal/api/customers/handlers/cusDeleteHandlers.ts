@@ -1,18 +1,16 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+
 import RecaseError from "@/utils/errorUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { AppEnv, ErrCode, MinOrg, Organization } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { AppEnv, ErrCode, Organization } from "@autumn/shared";
 import chalk from "chalk";
 import { StatusCodes } from "http-status-codes";
 
 export const deleteCusById = async ({
   db,
-  sb,
   org,
   customerId,
   env,
@@ -20,7 +18,6 @@ export const deleteCusById = async ({
   deleteInStripe = false,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   customerId: string;
   env: AppEnv;
@@ -86,11 +83,10 @@ export const handleDeleteCustomer = async (req: any, res: any) =>
     res,
     action: "delete customer",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-      const { env, logtail: logger, db, sb, org } = req;
+      const { env, logtail: logger, db, org } = req;
 
       const data = await deleteCusById({
         db,
-        sb,
         org,
         customerId: req.params.customer_id,
         env,

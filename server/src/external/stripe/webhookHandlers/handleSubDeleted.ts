@@ -34,7 +34,6 @@ const handleCusProductDeleted = async ({
   logger,
   env,
   org,
-  sb,
   prematurelyCanceled,
 }: {
   db: DrizzleCli;
@@ -43,7 +42,6 @@ const handleCusProductDeleted = async ({
   logger: any;
   env: AppEnv;
   org: Organization;
-  sb: SupabaseClient;
   prematurelyCanceled: boolean;
 }) => {
   if (
@@ -74,7 +72,6 @@ const handleCusProductDeleted = async ({
       );
       await billForRemainingUsages({
         db,
-        sb,
         curCusProduct: cusProduct,
         logger,
         attachParams: {
@@ -155,7 +152,6 @@ const handleCusProductDeleted = async ({
 
   const activatedFuture = await activateFutureProduct({
     db,
-    sb,
     cusProduct,
     subscription,
     org,
@@ -185,13 +181,11 @@ const handleCusProductDeleted = async ({
     productGroup: cusProduct.product.group,
     customer: cusProduct.customer,
     org,
-    sb,
     env,
     curCusProduct: curMainProduct || undefined,
   });
 
   await cancelCusProductSubscriptions({
-    sb,
     cusProduct,
     org,
     env,
@@ -201,14 +195,12 @@ const handleCusProductDeleted = async ({
 
 export const handleSubscriptionDeleted = async ({
   db,
-  sb,
   subscription,
   org,
   env,
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   subscription: Stripe.Subscription;
   org: Organization;
   env: AppEnv;
@@ -251,7 +243,6 @@ export const handleSubscriptionDeleted = async ({
         logger,
         env,
         org,
-        sb,
         prematurelyCanceled,
       }),
     );

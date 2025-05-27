@@ -1,153 +1,117 @@
 import {
   AppEnv,
-  MigrationCustomerStatus,
+  migrationErrors,
+  MigrationJob,
   MigrationJobStep,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { migrationJobs } from "@autumn/shared";
+import RecaseError from "@/utils/errorUtils.js";
+import { ErrCode } from "@autumn/shared";
+import { and, eq, ne } from "drizzle-orm";
 
 export class MigrationService {
-  static async createJob({ sb, data }: { sb: SupabaseClient; data: any }) {
-    let { data: insertedData, error } = await sb
-      .from("migration_jobs")
-      .insert(data)
-      .select()
-      .single();
+  static async createJob({ db, data }: { db: DrizzleCli; data: MigrationJob }) {
+    let result = await db.insert(migrationJobs).values(data).returning();
 
-    if (error) {
-      throw error;
+    if (result.length === 0) {
+      throw new RecaseError({
+        message: "Failed to create migration job",
+        code: ErrCode.InsertMigrationJobFailed,
+      });
     }
 
-    return insertedData;
+    return result[0];
   }
 
   static async updateJob({
-    sb,
+    db,
     migrationJobId,
     updates,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     migrationJobId: string;
     updates: any;
   }) {
-    let { data: updatedData, error } = await sb
-      .from("migration_jobs")
-      .update({
+    let results = await db
+      .update(migrationJobs)
+      .set({
         ...updates,
         updated_at: Date.now(),
       })
-      .eq("id", migrationJobId)
-      .select()
-      .single();
+      .where(eq(migrationJobs.id, migrationJobId))
+      .returning();
 
-    if (error) {
-      throw error;
+    if (results.length === 0) {
+      return null;
     }
 
-    return updatedData;
+    return results[0];
   }
 
-  static async getJob({ sb, id }: { sb: SupabaseClient; id: string }) {
-    let { data: job, error } = await sb
-      .from("migration_jobs")
-      .select("*")
-      .eq("id", id)
-      .single();
+  static async getJob({ db, id }: { db: DrizzleCli; id: string }) {
+    let job = await db.query.migrationJobs.findFirst({
+      where: eq(migrationJobs.id, id),
+    });
 
-    if (error) {
-      throw error;
+    if (!job) {
+      throw new RecaseError({
+        message: `Migration job ${id} not found`,
+        code: ErrCode.MigrationJobNotFound,
+      });
     }
 
-    return job;
+    return job as MigrationJob;
   }
 
   static async getExistingJobs({
-    sb,
+    db,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     orgId: string;
     env: AppEnv;
   }) {
-    let { data: jobs, error } = await sb
-      .from("migration_jobs")
-      .select("*")
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .neq("current_step", MigrationJobStep.Failed)
-      .neq("current_step", MigrationJobStep.Finished);
+    let jobs = await db.query.migrationJobs.findMany({
+      where: and(
+        eq(migrationJobs.org_id, orgId),
+        eq(migrationJobs.env, env),
+        ne(migrationJobs.current_step, MigrationJobStep.Failed),
+        ne(migrationJobs.current_step, MigrationJobStep.Finished),
+      ),
+    });
 
-    if (error) {
-      throw error;
-    }
-
-    return jobs;
-  }
-  static async insertCustomers({
-    sb,
-    data,
-  }: {
-    sb: SupabaseClient;
-    data: any;
-  }) {
-    let { error } = await sb.from("migration_customers").insert(data);
-
-    if (error) {
-      throw error;
-    }
-
-    return;
+    return jobs as MigrationJob[];
   }
 
-  static getBatch = async ({
-    sb,
-    migrationJobId,
-    batchSize = 10,
-  }: {
-    sb: SupabaseClient;
-    migrationJobId: string;
-    batchSize?: number;
-  }) => {
-    let { data: migrationCustomers, error } = await sb
-      .from("migration_customers")
-      .select("*")
-      .eq("migration_job_id", migrationJobId)
-      .eq("status", MigrationCustomerStatus.Pending)
-      .order("internal_customer_id")
-      .limit(batchSize);
+  static async insertError({ db, data }: { db: DrizzleCli; data: any }) {
+    let result = await db.insert(migrationErrors).values(data).returning();
 
-    if (error) {
-      throw error;
+    if (result.length === 0) {
+      throw new RecaseError({
+        message: "Failed to insert migration error",
+        code: ErrCode.InsertMigrationErrorFailed,
+      });
     }
 
-    return migrationCustomers;
-  };
-
-  static async insertError({ sb, data }: { sb: SupabaseClient; data: any }) {
-    let { error } = await sb.from("migration_errors").insert(data);
-
-    if (error) {
-      throw error;
-    }
-
-    return;
+    return result[0];
   }
 
   static async getErrors({
-    sb,
+    db,
     migrationJobId,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     migrationJobId: string;
   }) {
-    let { data: errors, error } = await sb
-      .from("migration_errors")
-      .select("*, customer:customers(*)")
-      .eq("migration_job_id", migrationJobId);
-
-    if (error) {
-      throw error;
-    }
+    let errors = await db.query.migrationErrors.findMany({
+      where: eq(migrationErrors.migration_job_id, migrationJobId),
+      with: {
+        customer: true,
+      },
+    });
 
     return errors;
   }

@@ -20,7 +20,7 @@ export const handleProductCheck = async ({
     with_preview,
     entity_data,
   } = req.body;
-  const { orgId, sb, env, logtail: logger, db } = req;
+  const { orgId, env, logtail: logger, db } = req;
 
   let { org, features } = await getOrgAndFeatures({ req });
 
@@ -28,7 +28,6 @@ export const handleProductCheck = async ({
   let [customer, product] = await Promise.all([
     getOrCreateCustomer({
       db,
-      sb,
       org,
       env,
       customerId: customer_id,
@@ -80,7 +79,6 @@ export const handleProductCheck = async ({
             product: product!,
             cusProducts,
             features,
-            sb,
             logger,
             shouldFormat: with_preview == "formatted",
           })
@@ -116,7 +114,6 @@ export const handleProductCheck = async ({
           product: product!,
           cusProducts,
           features,
-          sb,
           logger,
         })
       : undefined,

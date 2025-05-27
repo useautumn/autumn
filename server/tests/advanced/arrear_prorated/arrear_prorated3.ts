@@ -198,7 +198,7 @@ describe(`${chalk.yellowBright(
         customerId,
         org: this.org,
         env: this.env,
-        sb: this.sb,
+        db: this.db,
       },
     );
 
@@ -230,7 +230,6 @@ describe(`${chalk.yellowBright(
 
     await checkSubscriptionContainsProducts({
       db: this.db,
-      sb: this.sb,
       org: this.org,
       env: this.env,
       subscriptionId: subId,

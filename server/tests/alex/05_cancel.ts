@@ -40,7 +40,7 @@ describe(chalk.yellowBright("05_cancel"), () => {
           name: "Alex Cancel Customer",
           email: "alex-cancel-customer@test.com",
         },
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
         attachPm: true,
@@ -134,7 +134,7 @@ describe(chalk.yellowBright("05_cancel"), () => {
           customerId,
           org: this.org,
           env: this.env,
-          sb: this.sb,
+          db: this.db,
         });
       testClockId = testClockId_;
       customer = customer_;

@@ -48,7 +48,6 @@ export const getOtherCusProductsOnSub = async ({
 // If other cus products on schedule, add cur main product regular items to schedule...
 export const addCurMainProductToSchedule = async ({
   db,
-  sb,
   org,
   env,
   stripeCli,
@@ -58,7 +57,6 @@ export const addCurMainProductToSchedule = async ({
   logger,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   stripeCli: Stripe;
@@ -87,7 +85,7 @@ export const addCurMainProductToSchedule = async ({
       cusProducts: [],
       stripeCli: stripeCli,
       itemSet: null,
-      sb: sb,
+      db,
       org: org,
       env: env,
     });

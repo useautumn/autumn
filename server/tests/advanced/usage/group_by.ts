@@ -15,7 +15,7 @@ import chalk from "chalk";
 
 const PRECISION = 12;
 describe.skip(`${chalk.yellowBright(
-  "Testing group by -- regular metered1 feature"
+  "Testing group by -- regular metered1 feature",
 )}`, () => {
   let customerId = "group-by-basic-metered";
   before(async function () {
@@ -26,7 +26,7 @@ describe.skip(`${chalk.yellowBright(
         email: "group-by-basic-metered@example.com",
       },
       attachPm: true,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });
@@ -71,7 +71,7 @@ describe.skip(`${chalk.yellowBright(
               [groupProperty]: user == "null" ? null : user,
               value: randomVal,
             },
-          })
+          }),
         );
       }
 
@@ -88,7 +88,7 @@ describe.skip(`${chalk.yellowBright(
         customerId,
         features.metered1.id,
         true,
-        user == "null" ? undefined : user
+        user == "null" ? undefined : user,
       );
 
       let expectedBalance = new Decimal(metered1Allowance)
@@ -109,7 +109,7 @@ describe.skip(`${chalk.yellowBright(
       });
       const entitlements = res.entitlements;
       const metered1 = entitlements.find(
-        (e: any) => e.feature_id === features.metered1.id
+        (e: any) => e.feature_id === features.metered1.id,
       );
       expect(metered1.balance).to.equal(expectedBalance);
     }
@@ -118,7 +118,7 @@ describe.skip(`${chalk.yellowBright(
 
 // TO ADD SUPPORT FOR IN THE FUTURE
 describe.skip(`${chalk.yellowBright(
-  "Testing group by -- advanced GPU usage"
+  "Testing group by -- advanced GPU usage",
 )}`, () => {
   let customerId = "group-by-advanced-gpu-usage-metered";
   before(async function () {
@@ -129,7 +129,7 @@ describe.skip(`${chalk.yellowBright(
         email: "group-by-advanced-gpu-usage@example.com",
       },
       attachPm: true,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });
@@ -175,7 +175,7 @@ describe.skip(`${chalk.yellowBright(
         customerId,
         creditSystems.gpuCredits.id,
         true,
-        user == "null" ? undefined : user
+        user == "null" ? undefined : user,
       );
 
       let expectedCreditAllowance = new Decimal(creditAllowance)

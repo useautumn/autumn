@@ -23,7 +23,7 @@ const rewardRouter = express.Router();
 
 rewardRouter.post("", async (req: any, res: any) => {
   try {
-    const { db, sb, orgId, env, logtail: logger } = req;
+    const { db, orgId, env, logtail: logger } = req;
     const rewardBody = req.body;
     const rewardData = CreateRewardSchema.parse(rewardBody);
 
@@ -90,7 +90,7 @@ rewardRouter.post("", async (req: any, res: any) => {
     }
 
     const insertedCoupon = await RewardService.insert({
-      sb: req.sb,
+      db,
       data: newReward,
     });
     console.log("✅ Reward successfully inserted into db");
@@ -109,22 +109,37 @@ rewardRouter.post("", async (req: any, res: any) => {
 rewardRouter.delete("/:id", async (req: any, res: any) => {
   try {
     const { id } = req.params;
-    const { orgId, env } = req;
+    const { orgId, env, db } = req;
+
     const org = await OrgService.getFromReq(req);
     const stripeCli = createStripeCli({
       org,
       env,
     });
 
+    let reward = await RewardService.get({
+      db,
+      idOrInternalId: id,
+      orgId,
+      env,
+    });
+
+    if (!reward) {
+      throw new RecaseError({
+        message: `Reward ${id} not found`,
+        code: ErrCode.InvalidRequest,
+      });
+    }
+
     try {
-      await stripeCli.coupons.del(id);
+      await stripeCli.coupons.del(reward.id);
     } catch (error: any) {
       console.log(`Failed to delete coupon from stripe: ${error.message}`);
     }
 
-    await RewardService.deleteStrict({
-      sb: req.sb,
-      internalId: id,
+    await RewardService.delete({
+      db,
+      internalId: reward.internal_id,
       env,
       orgId,
     });
@@ -155,9 +170,9 @@ rewardRouter.post("/:internalId", async (req: any, res: any) => {
       env,
     });
 
-    const reward = await RewardService.getByInternalId({
-      sb: req.sb,
-      internalId,
+    const reward = await RewardService.get({
+      db,
+      idOrInternalId: internalId,
       orgId,
       env,
     });
@@ -189,8 +204,8 @@ rewardRouter.post("/:internalId", async (req: any, res: any) => {
 
     // 3. Update coupon in db
     const updatedCoupon = await RewardService.update({
-      sb: req.sb,
-      internalId,
+      db,
+      internalId: reward.internal_id,
       env,
       orgId,
       update: rewardBody,

@@ -22,7 +22,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const migrateCustomers = async ({
   db,
-  sb,
   migrationJob,
   fromProduct,
   toProduct,
@@ -31,7 +30,6 @@ export const migrateCustomers = async ({
   features,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   migrationJob: MigrationJob;
   fromProduct: FullProduct;
   toProduct: FullProduct;
@@ -39,10 +37,8 @@ export const migrateCustomers = async ({
   customers: Customer[];
   features: Feature[];
 }) => {
-  // console.log(`Migrating ${customers.length} customers`);
-  // return;
   await MigrationService.updateJob({
-    sb,
+    db,
     migrationJobId: migrationJob.id,
     updates: {
       current_step: MigrationJobStep.MigrateCustomers,
@@ -52,8 +48,8 @@ export const migrateCustomers = async ({
   let batchCount = 0;
   let { org_id: orgId, env } = migrationJob;
 
-  let org = await OrgService.getFullOrg({
-    sb,
+  let org = await OrgService.get({
+    db,
     orgId,
   });
 
@@ -88,7 +84,6 @@ export const migrateCustomers = async ({
         migrateCustomer({
           db,
           migrationJob,
-          sb,
           customer,
           org,
           logger,
@@ -112,7 +107,7 @@ export const migrateCustomers = async ({
 
     // Get current number of customers migrated
     let curMigrationJob = await MigrationService.getJob({
-      sb,
+      db,
       id: migrationJob.id,
     });
     let curSucceeded =
@@ -123,7 +118,7 @@ export const migrateCustomers = async ({
       0;
 
     await MigrationService.updateJob({
-      sb,
+      db,
       migrationJobId: migrationJob.id,
       updates: {
         step_details: {
@@ -148,7 +143,7 @@ export const migrateCustomers = async ({
   let migrationDetails: any = {};
   try {
     let errors = await MigrationService.getErrors({
-      sb,
+      db,
       migrationJobId: migrationJob.id,
     });
 
@@ -164,12 +159,12 @@ export const migrateCustomers = async ({
   }
 
   let curMigrationJob = await MigrationService.getJob({
-    sb,
+    db,
     id: migrationJob.id,
   });
 
   await MigrationService.updateJob({
-    sb,
+    db,
     migrationJobId: migrationJob.id,
     updates: {
       current_step: MigrationJobStep.Finished,
@@ -181,7 +176,7 @@ export const migrateCustomers = async ({
   });
 
   await sendMigrationEmail({
-    sb,
+    db,
     migrationJobId: migrationJob.id,
     org,
   });

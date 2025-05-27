@@ -65,7 +65,6 @@ export const getScheduleIdsFromCusProducts = ({
 // CANCELLING FUTURE PRODUCT
 export const cancelFutureProductSchedule = async ({
   db,
-  sb,
   org,
   stripeCli,
   cusProducts,
@@ -79,7 +78,6 @@ export const cancelFutureProductSchedule = async ({
   sendWebhook = true,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   stripeCli: Stripe;
   cusProducts: FullCusProduct[];
@@ -169,7 +167,7 @@ export const cancelFutureProductSchedule = async ({
         cusProducts: [curMainProduct, curScheduledProduct],
         stripeCli: stripeCli,
         itemSet: null,
-        sb: sb,
+        db,
         org: org,
         env: env,
       });
@@ -256,7 +254,6 @@ export const cancelFutureProductSchedule = async ({
     if (otherCusProductsWithSameSub.length > 0) {
       await addCurMainProductToSchedule({
         db,
-        sb,
         org,
         env,
         stripeCli,

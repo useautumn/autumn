@@ -24,6 +24,7 @@ import {
 } from "@/internal/products/product-items/productItemUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { timeout } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // Scenario 1: prepaid + pay per use monthly -> prepaid + pay per use monthly
 let pro = {
@@ -73,31 +74,31 @@ let premium = {
 
 export const getLifetimeAndUsageCusEnts = async ({
   customerId,
-  sb,
+  db,
   orgId,
   env,
   featureId,
 }: {
   customerId: string;
-  sb: SupabaseClient;
+  db: DrizzleCli;
   orgId: string;
   env: AppEnv;
   featureId: string;
 }) => {
   let mainCusProduct = await getMainCusProduct({
     customerId,
-    sb,
+    db,
     orgId,
     env,
   });
 
   let lifetimeCusEnt = getLifetimeFreeCusEnt({
-    cusProduct: mainCusProduct,
+    cusProduct: mainCusProduct!,
     featureId,
   });
 
   let usageCusEnt = getUsageCusEnt({
-    cusProduct: mainCusProduct,
+    cusProduct: mainCusProduct!,
     featureId,
   });
 
@@ -106,7 +107,7 @@ export const getLifetimeAndUsageCusEnts = async ({
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "multi-feature/multi_feature2: Testing lifetime + pay per use -> pay per use"
+  "multi-feature/multi_feature2: Testing lifetime + pay per use -> pay per use",
 )}`, () => {
   let autumn: Autumn;
   let customerId = "multiFeature2Customer";
@@ -118,7 +119,7 @@ describe(`${chalk.yellowBright(
 
     await initCustomer({
       customerId,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -145,7 +146,7 @@ describe(`${chalk.yellowBright(
 
     let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
       customerId,
-      sb: this.sb,
+      db: this.db,
       orgId: this.org.id,
       env: this.env,
       featureId: features.metered1.id,
@@ -171,14 +172,14 @@ describe(`${chalk.yellowBright(
 
     let { lifetimeCusEnt, usageCusEnt } = await getLifetimeAndUsageCusEnts({
       customerId,
-      sb: this.sb,
+      db: this.db,
       orgId: this.org.id,
       env: this.env,
       featureId: features.metered1.id,
     });
 
     expect(lifetimeCusEnt?.balance).to.equal(
-      (pro.items.lifetime.included_usage as number) - value
+      (pro.items.lifetime.included_usage as number) - value,
     );
     expect(usageCusEnt?.balance).to.equal(pro.items.payPerUse.included_usage);
   });
@@ -201,7 +202,7 @@ describe(`${chalk.yellowBright(
     let { lifetimeCusEnt, usageCusEnt: newUsageCusEnt } =
       await getLifetimeAndUsageCusEnts({
         customerId,
-        sb: this.sb,
+        db: this.db,
         orgId: this.org.id,
         env: this.env,
         featureId: features.metered1.id,
@@ -218,7 +219,7 @@ describe(`${chalk.yellowBright(
     expect(lifetimeCusEnt).to.not.exist;
 
     expect(newUsageCusEnt?.balance).to.equal(
-      premium.items.payPerUse.included_usage
+      premium.items.payPerUse.included_usage,
     );
   });
 });

@@ -1,3 +1,4 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
   getCusFeaturesResponse,
@@ -20,7 +21,7 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getEntityResponse = async ({
-  sb,
+  db,
   entityIds,
   org,
   env,
@@ -30,7 +31,7 @@ export const getEntityResponse = async ({
   withAutumnId = false,
   apiVersion,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   entityIds: string[];
   org: Organization;
   env: AppEnv;
@@ -40,25 +41,17 @@ export const getEntityResponse = async ({
   withAutumnId?: boolean;
   apiVersion: number;
 }) => {
-  let customer = await CusService.getWithProducts({
+  let customer = await CusService.getFull({
+    db,
     idOrInternalId: customerId,
     orgId: org.id,
     env,
-    sb,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     withEntities: true,
     withSubs: true,
     expand,
     entityId,
   });
-
-  if (!customer) {
-    throw new RecaseError({
-      message: `Customer ${customerId} not found`,
-      code: ErrCode.CustomerNotFound,
-      statusCode: 400,
-    });
-  }
 
   let entities = customer.entities.filter((e: Entity) =>
     entityIds.includes(e.id),

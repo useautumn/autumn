@@ -14,7 +14,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
     action: "get customer",
     handler: async () => {
       let customerId = req.params.customer_id;
-      let { orgId, env } = req;
+      let { orgId, env, db } = req;
       let { expand } = req.query;
 
       let expandArray = parseCusExpand(expand);
@@ -22,8 +22,8 @@ export const handleGetCustomer = async (req: any, res: any) =>
       const [features, org, customer] = await Promise.all([
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
-        CusService.getWithProducts({
-          sb: req.sb,
+        CusService.getFull({
+          db,
           idOrInternalId: customerId,
           orgId: orgId,
           env: env,
@@ -34,6 +34,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
           ],
           withEntities: true,
           expand: expandArray,
+          allowNotFound: true,
         }),
       ]);
 
@@ -49,8 +50,8 @@ export const handleGetCustomer = async (req: any, res: any) =>
       }
 
       let cusData = await getCustomerDetails({
+        db,
         customer,
-        sb: req.sb,
         org,
         env: req.env,
         logger: req.logtail,

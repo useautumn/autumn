@@ -303,7 +303,6 @@ export const attachToInsertParams = (
 // COPY PRODUCT
 export const copyProduct = async ({
   db,
-  sb,
   product,
   toOrgId,
   toId,
@@ -313,7 +312,6 @@ export const copyProduct = async ({
   fromFeatures,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   product: FullProduct;
   toOrgId: string;
   toEnv: AppEnv;

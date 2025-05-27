@@ -273,10 +273,8 @@ attachRouter.post("/attach", async (req: any, res) => {
       checkout_session_params,
     } = req.body;
 
-    const { orgId, env } = req;
+    const { env } = req;
     const logger = req.logtail;
-
-    const sb = req.sb;
 
     let itemsInput: ProductItem[] = items || [];
 
@@ -307,7 +305,6 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // Get curCusProducts too...
     const attachParams: AttachParams = await getFullCusProductData({
-      sb,
       db: req.db,
       customerId: customer_id,
       productId: product_id,
@@ -418,7 +415,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     if (useCheckout && !newProductsFree && !invoiceOnly) {
       logger.info("SCENARIO 2: USING CHECKOUT");
       await handleCreateCheckout({
-        sb,
+        db: req.db,
         req,
         res,
         attachParams,

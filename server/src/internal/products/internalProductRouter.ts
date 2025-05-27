@@ -20,7 +20,7 @@ export const productRouter = Router({ mergeParams: true });
 
 productRouter.get("/data", async (req: any, res) => {
   try {
-    let { db, sb } = req;
+    let { db } = req;
 
     const [products, features, org, coupons, rewardPrograms] =
       await Promise.all([
@@ -32,8 +32,8 @@ productRouter.get("/data", async (req: any, res) => {
         }),
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
-        RewardService.getAll({ sb, orgId: req.orgId, env: req.env }),
-        RewardProgramService.getAll({ sb, orgId: req.orgId, env: req.env }),
+        RewardService.list({ db, orgId: req.orgId, env: req.env }),
+        RewardProgramService.list({ db, orgId: req.orgId, env: req.env }),
       ]);
 
     res.status(200).json({
@@ -62,7 +62,7 @@ productRouter.get("/data", async (req: any, res) => {
 
 productRouter.get("/counts", async (req: any, res) => {
   try {
-    let { db, sb } = req;
+    let { db } = req;
     let products = await ProductService.listFull({
       db,
       orgId: req.orgId,
@@ -74,7 +74,6 @@ productRouter.get("/counts", async (req: any, res) => {
       products.map(async (product) => {
         return CusProdReadService.getCounts({
           db,
-          sb,
           internalProductId: product.internal_id,
         });
       }),
@@ -99,13 +98,11 @@ productRouter.get("/counts", async (req: any, res) => {
   }
 });
 
-// Get stripe products
-
 productRouter.get("/:productId/data", async (req: any, res) => {
   try {
     const { productId } = req.params;
     const { version } = req.query;
-    const { sb, db, orgId, env } = req;
+    const { db, orgId, env } = req;
 
     const [product, features, org, numVersions, existingMigrations] =
       await Promise.all([
@@ -125,7 +122,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
           env,
         }),
         MigrationService.getExistingJobs({
-          sb,
+          db,
           orgId,
           env,
         }),
@@ -180,7 +177,7 @@ productRouter.get("/:productId/data", async (req: any, res) => {
 
 productRouter.get("/:productId/count", async (req: any, res) => {
   try {
-    const { db, orgId, env, sb } = req;
+    const { db, orgId, env } = req;
     const { productId } = req.params;
     const { version } = req.query;
 
@@ -205,7 +202,6 @@ productRouter.get("/:productId/count", async (req: any, res) => {
     // Get counts from postgres
     const counts = await CusProdReadService.getCounts({
       db,
-      sb,
       internalProductId: product.internal_id,
     });
 

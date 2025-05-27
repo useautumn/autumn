@@ -260,7 +260,6 @@ export const getExistingCusProduct = async ({
 
 export const createFullCusProduct = async ({
   db,
-  sb,
   attachParams,
   startsAt,
   subscriptionId,
@@ -282,7 +281,6 @@ export const createFullCusProduct = async ({
   sendWebhook = true,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   attachParams: InsertCusProductParams;
 
   startsAt?: number;
@@ -344,7 +342,6 @@ export const createFullCusProduct = async ({
     !attachParams.isCustom
   ) {
     await updateOneTimeCusProduct({
-      sb,
       db,
       attachParams,
       logger,
@@ -453,7 +450,7 @@ export const createFullCusProduct = async ({
   });
 
   try {
-    if (sendWebhook) {
+    if (sendWebhook && !attachParams.fromMigration) {
       await addTaskToQueue({
         jobName: JobName.SendProductsUpdatedWebhook,
         payload: constructProductsUpdatedData({
@@ -461,7 +458,6 @@ export const createFullCusProduct = async ({
           org,
           env: customer.env,
           customerId: customer.id || null,
-
           product: isDowngrade ? curCusProduct!.product : product,
           prices: isDowngrade
             ? curCusProduct!.customer_prices.map((cp) => cp.price)
@@ -469,7 +465,6 @@ export const createFullCusProduct = async ({
           entitlements: isDowngrade
             ? curCusProduct!.customer_entitlements.map((ce) => ce.entitlement)
             : entitlements,
-
           freeTrial,
           scenario,
         }),

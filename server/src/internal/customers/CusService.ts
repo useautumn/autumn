@@ -5,36 +5,23 @@ import {
   CusProductStatus,
   Customer,
   customers,
+  Entity,
   EntityExpand,
   FullCusProduct,
+  FullCustomer,
 } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
 import { flipProductResults } from "../api/customers/cusUtils.js";
-import { sbWithRetry } from "@/external/supabaseUtils.js";
 import { and, eq, or, sql } from "drizzle-orm";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-
-const printCusProducts = (cusProducts: FullCusProduct[]) => {
-  for (let cusProduct of cusProducts) {
-    console.log(`Product: ${cusProduct.product.name}`);
-    for (let cusEnt of cusProduct.customer_entitlements) {
-      console.log(
-        `Entitlement: ${cusEnt.entitlement.feature_id}, Balance: ${cusEnt.balance}`,
-      );
-    }
-
-    for (let cusPrice of cusProduct.customer_prices) {
-      console.log(`cusPrice:`, cusPrice.id, cusPrice.price.id);
-    }
-  }
-};
+import { getFullCusQuery } from "./getFullCusQuery.js";
 
 export class CusService {
-  static async getWithProducts({
-    sb,
+  static async getFull({
+    db,
     idOrInternalId,
     orgId,
     env,
@@ -47,8 +34,9 @@ export class CusService {
     entityId,
     expand,
     withSubs = false,
+    allowNotFound = false,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     idOrInternalId: string;
     orgId: string;
     env: AppEnv;
@@ -57,34 +45,42 @@ export class CusService {
     entityId?: string;
     expand?: (CusExpand | EntityExpand)[];
     withSubs?: boolean;
-  }) {
-    const { data, error } = await sb.rpc("get_cus_with_products", {
-      p_cus_id: idOrInternalId,
-      p_org_id: orgId,
-      p_env: env,
-      p_statuses: inStatuses,
-      p_with_entities: withEntities,
-      p_entity_id: entityId,
-      p_with_trials_used: expand?.includes(CusExpand.TrialsUsed),
-      p_with_subs: withSubs,
-      p_with_invoices: expand?.includes(CusExpand.Invoices),
-    });
+    allowNotFound?: boolean;
+  }): Promise<FullCustomer> {
+    const includeInvoices = expand?.includes(CusExpand.Invoices) || false;
+    const withTrialsUsed = expand?.includes(CusExpand.TrialsUsed) || false;
 
-    if (error) {
-      throw error;
+    const query = getFullCusQuery(
+      idOrInternalId,
+      orgId,
+      env,
+      inStatuses,
+      includeInvoices,
+      withEntities,
+      withTrialsUsed,
+      withSubs,
+      entityId,
+    );
+
+    let result = await db.execute(query);
+
+    if (!result || result.length == 0) {
+      if (allowNotFound) {
+        // @ts-ignore
+        return null;
+      }
+
+      throw new RecaseError({
+        message: `Customer ${idOrInternalId} not found`,
+        code: ErrCode.CustomerNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
     }
 
-    if (!data || !data.customer) {
-      return null;
-    }
+    let data = result[0];
+    data.created_at = Number(data.created_at);
 
-    let { customer, products, entities, entity } = data;
-
-    if (!products) {
-      products = [];
-    }
-
-    for (let product of products) {
+    for (const product of data.customer_products as FullCusProduct[]) {
       if (!product.customer_prices) {
         product.customer_prices = [];
       }
@@ -94,24 +90,11 @@ export class CusService {
       }
     }
 
-    let trialsUsed = data.trials_used;
-    if (trialsUsed) {
-      trialsUsed = trialsUsed.filter(
-        (trial: any, index: number, self: any) =>
-          index ===
-          self.findIndex((t: any) => t.product_id === trial.product_id),
-      );
-    }
+    // data.invoices = data.invoices || [];
+    // data.subscriptions = data.subscriptions || [];
+    // data.trials_used = data.trials_used || [];
 
-    return {
-      ...customer,
-      customer_products: products,
-      entities: entities,
-      entity: entity,
-      trials_used: trialsUsed,
-      subscriptions: data.subscriptions,
-      invoices: data.invoices,
-    };
+    return data as FullCustomer;
   }
 
   static async get({
@@ -240,8 +223,9 @@ export class CusService {
 
     if (lastItem) {
       query.or(
-        `"created_at".lt.${lastItem.created_at},` +
-          `and("created_at".eq.${lastItem.created_at},"internal_id".gt.${lastItem.internal_id})`,
+        `"internal_id".lt.${lastItem.internal_id}`,
+        // `"created_at".lt.${lastItem.created_at},` +
+        //   `and("created_at".eq.${lastItem.created_at},"internal_id".gt.${lastItem.internal_id})`,
         customerPrefix && {
           foreignTable: "customers",
           referencedTable: "customers",
@@ -249,27 +233,13 @@ export class CusService {
       );
     }
 
-    // if (pageNumber) {
-    //   const from = (pageNumber - 1) * pageSize;
-    //   const to = from + pageSize - 1;
-    //   query.range(from, to);
-    // } else if (lastItem) {
-    //   query.or(
-    //     `"created_at".lt.${lastItem.created_at},` +
-    //       `and("created_at".eq.${lastItem.created_at},"internal_id".gt.${lastItem.internal_id})`,
-    //     customerPrefix && {
-    //       foreignTable: "customers",
-    //       referencedTable: "customers",
-    //     }
-    //   );
-    // }
-
     if (customerPrefix) {
-      query.order(`customer(created_at)`, { ascending: false });
+      query.order(`customer(internal_id)`, { ascending: false });
     } else {
-      query
-        .order("created_at", { ascending: false })
-        .order("internal_id", { ascending: true });
+      query.order("internal_id", { ascending: false });
+      // query
+      //   .order("created_at", { ascending: false })
+      //   .order("internal_id", { ascending: true });
     }
 
     query.limit(pageSize);
@@ -413,6 +383,8 @@ export class CusService {
     return { data, count: totalCount };
   }
 
+  // End of search customers
+
   static async insert({ db, data }: { db: DrizzleCli; data: Customer }) {
     try {
       const results = await db
@@ -435,25 +407,6 @@ export class CusService {
       }
       throw error;
     }
-    // const { data, error } = await sb
-    //   .from("customers")
-    //   .insert(customer)
-    //   .select()
-    //   .single();
-
-    // if (error) {
-    //   if (error.code === "23505") {
-    //     throw new RecaseError({
-    //       code: ErrCode.DuplicateCustomerId,
-    //       message: "Customer ID already exists",
-    //       statusCode: StatusCodes.BAD_REQUEST,
-    //       data: error,
-    //     });
-    //   }
-    //   throw error;
-    // }
-
-    // return data;
   }
 
   static async update({
@@ -506,31 +459,210 @@ export class CusService {
 
     return results;
   }
+
+  static async deleteByOrgId({
+    db,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    const results = await db
+      .delete(customers)
+      .where(and(eq(customers.org_id, orgId), eq(customers.env, env)))
+      .returning();
+
+    return results;
+  }
 }
 
-// static async getCustomers(
-//   sb: SupabaseClient,
-//   orgId: string,
-//   env: AppEnv,
-//   page: number = 1,
-//   pageSize: number = 50,
-// ) {
-//   const from = (page - 1) * pageSize;
-//   const to = from + pageSize - 1;
+// static async getWithProductsDrizzle({
+//   db,
+//   idOrInternalId,
+//   orgId,
+//   env,
+//   inStatuses = [
+//     CusProductStatus.Active,
+//     CusProductStatus.PastDue,
+//     CusProductStatus.Scheduled,
+//   ],
+//   withEntities = false,
+//   entityId,
+//   expand,
+//   withSubs = false,
+// }: {
+//   db: DrizzleCli;
+//   idOrInternalId: string;
+//   orgId: string;
+//   env: AppEnv;
+//   inStatuses?: CusProductStatus[];
+//   withEntities?: boolean;
+//   entityId?: string;
+//   expand?: (CusExpand | EntityExpand)[];
+//   withSubs?: boolean;
+// }) {
+//   // 1. Call RPC function
+//   let data: {
+//     customer: Customer | null;
+//     products: FullCusProduct[] | null;
+//     entities: Entity[] | null;
+//     entity: Entity | null;
+//     trials_used: any[] | null;
+//     subscriptions: any[] | null;
+//     invoices: any[] | null;
+//   };
 
-//   const { data, count, error } = await sb
-//     .from("customers")
-//     .select("*", { count: "exact" })
-//     .eq("org_id", orgId)
-//     .eq("env", env)
-//     .order("created_at", { ascending: false })
-//     .order("name", { ascending: true })
-//     .order("internal_id", { ascending: true })
-//     .range(from, to);
+//   try {
+//     const result = await db.execute(sql`
+//       SELECT * FROM get_cus_with_products(
+//         p_cus_id => ${idOrInternalId}::text,
+//         p_org_id => ${orgId}::text,
+//         p_env => ${env}::text,
+//         p_statuses => ARRAY[${sql.join(
+//           inStatuses.map((status) => sql`${status}`),
+//           sql`, `,
+//         )}]::text[],
+//         p_with_entities => ${withEntities}::boolean,
+//         p_entity_id => ${entityId || null}::text,
+//         p_with_trials_used => ${expand?.includes(CusExpand.TrialsUsed) || false}::boolean,
+//         p_with_subs => ${withSubs}::boolean,
+//         p_with_invoices => ${expand?.includes(CusExpand.Invoices) || false}::boolean
+//       )
+//     `);
+
+//     if (!result || result.length == 0 || !result[0].get_cus_with_products) {
+//       throw new RecaseError({
+//         message: "Calling get_cus_with_products RPC returned wrong shape",
+//         code: ErrCode.GetCusWithProductsFailed,
+//         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+//         data: result,
+//       });
+//     }
+
+//     data = result[0].get_cus_with_products as any;
+//   } catch (error) {
+//     throw error;
+//   }
+
+//   if (!data || !data.customer) {
+//     return null;
+//   }
+
+//   let { customer, products, entities, entity } = data;
+
+//   if (!products) {
+//     products = [];
+//   }
+
+//   for (let product of products) {
+//     if (!product.customer_prices) {
+//       product.customer_prices = [];
+//     }
+
+//     if (!product.customer_entitlements) {
+//       product.customer_entitlements = [];
+//     }
+//   }
+
+//   let trialsUsed = data.trials_used;
+//   if (trialsUsed) {
+//     trialsUsed = trialsUsed.filter(
+//       (trial: any, index: number, self: any) =>
+//         index ===
+//         self.findIndex((t: any) => t.product_id === trial.product_id),
+//     );
+//   }
+
+//   return {
+//     ...customer,
+//     customer_products: products,
+//     entities: entities,
+//     entity: entity,
+//     trials_used: trialsUsed,
+//     subscriptions: data.subscriptions,
+//     invoices: data.invoices,
+//   } as FullCustomer;
+// }
+
+// static async getWithProducts({
+//   sb,
+//   idOrInternalId,
+//   orgId,
+//   env,
+//   inStatuses = [
+//     CusProductStatus.Active,
+//     CusProductStatus.PastDue,
+//     CusProductStatus.Scheduled,
+//   ],
+//   withEntities = false,
+//   entityId,
+//   expand,
+//   withSubs = false,
+// }: {
+//   sb: SupabaseClient;
+//   idOrInternalId: string;
+//   orgId: string;
+//   env: AppEnv;
+//   inStatuses?: CusProductStatus[];
+//   withEntities?: boolean;
+//   entityId?: string;
+//   expand?: (CusExpand | EntityExpand)[];
+//   withSubs?: boolean;
+// }) {
+//   const { data, error } = await sb.rpc("get_cus_with_products", {
+//     p_cus_id: idOrInternalId,
+//     p_org_id: orgId,
+//     p_env: env,
+//     p_statuses: inStatuses,
+//     p_with_entities: withEntities,
+//     p_entity_id: entityId,
+//     p_with_trials_used: expand?.includes(CusExpand.TrialsUsed),
+//     p_with_subs: withSubs,
+//     p_with_invoices: expand?.includes(CusExpand.Invoices),
+//   });
 
 //   if (error) {
 //     throw error;
 //   }
 
-//   return { data, count };
+//   if (!data || !data.customer) {
+//     return null;
+//   }
+
+//   let { customer, products, entities, entity } = data;
+
+//   if (!products) {
+//     products = [];
+//   }
+
+//   for (let product of products) {
+//     if (!product.customer_prices) {
+//       product.customer_prices = [];
+//     }
+
+//     if (!product.customer_entitlements) {
+//       product.customer_entitlements = [];
+//     }
+//   }
+
+//   let trialsUsed = data.trials_used;
+//   if (trialsUsed) {
+//     trialsUsed = trialsUsed.filter(
+//       (trial: any, index: number, self: any) =>
+//         index ===
+//         self.findIndex((t: any) => t.product_id === trial.product_id),
+//     );
+//   }
+
+//   return {
+//     ...customer,
+//     customer_products: products,
+//     entities: entities,
+//     entity: entity,
+//     trials_used: trialsUsed,
+//     subscriptions: data.subscriptions,
+//     invoices: data.invoices,
+//   };
 // }

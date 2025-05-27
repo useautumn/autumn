@@ -25,7 +25,7 @@ function CustomersView({ env }: { env: AppEnv }) {
   const [searchParams] = useSearchParams();
 
   const [searchQuery, setSearchQuery] = React.useState(
-    searchParams.get("q") || ""
+    searchParams.get("q") || "",
   );
 
   const [filters, setFilters] = React.useState<any>({
@@ -214,8 +214,7 @@ function CustomersView({ env }: { env: AppEnv }) {
               <div className="h-10 flex items-center border-r pr-4 gap-2">
                 <FilterButton />
                 <p className="text-t2 px-1 rounded-md bg-stone-200 text-sm h-fit">
-                  <span className="">{data?.totalCount || 0} </span>
-                  {/* {data?.totalCount === 1 || "Customer" : "Customers"} */}
+                  {data?.totalCount}
                 </p>
               </div>
             </div>

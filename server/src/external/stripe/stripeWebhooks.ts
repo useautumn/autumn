@@ -27,10 +27,11 @@ stripeWebhookRouter.post(
     let event;
 
     const { orgId, env } = request.params;
+    const { db } = request;
 
     let org: Organization;
     try {
-      org = await OrgService.getFullOrg({ sb: request.sb, orgId });
+      org = await OrgService.get({ db: request.db, orgId });
     } catch (error) {
       console.log(`Org ${orgId} not found`);
       response.status(200).send(`Org ${orgId} not found`);
@@ -69,14 +70,11 @@ stripeWebhookRouter.post(
       } | ID: ${event?.id}`,
     );
 
-    const { db, pg, sb } = request;
-
     try {
       switch (event.type) {
         case "customer.subscription.created":
           await handleSubCreated({
             db,
-            sb: request.sb,
             org,
             subscription: event.data.object,
             env,
@@ -88,7 +86,6 @@ stripeWebhookRouter.post(
           const subscription = event.data.object;
           await handleSubscriptionUpdated({
             db,
-            sb: request.sb,
             org,
             subscription,
             previousAttributes: event.data.previous_attributes,
@@ -101,7 +98,6 @@ stripeWebhookRouter.post(
           const deletedSubscription = event.data.object;
           await handleSubscriptionDeleted({
             db,
-            sb: request.sb,
             subscription: deletedSubscription,
             org,
             env,
@@ -113,7 +109,6 @@ stripeWebhookRouter.post(
           const checkoutSession = event.data.object;
           await handleCheckoutSessionCompleted({
             db,
-            sb: request.sb,
             checkoutSession,
             org,
             env,
@@ -126,7 +121,6 @@ stripeWebhookRouter.post(
           const invoice = event.data.object;
           await handleInvoicePaid({
             db,
-            sb: request.sb,
             org,
             invoice,
             env,
@@ -139,12 +133,10 @@ stripeWebhookRouter.post(
           const createdInvoice = event.data.object;
           await handleInvoiceCreated({
             db,
-            sb,
             org,
             invoice: createdInvoice,
             env,
             event,
-            pg,
           });
           break;
 
@@ -152,7 +144,6 @@ stripeWebhookRouter.post(
           const finalizedInvoice = event.data.object;
           await handleInvoiceFinalized({
             db,
-            sb: request.sb,
             org,
             invoice: finalizedInvoice,
             env,
@@ -164,7 +155,6 @@ stripeWebhookRouter.post(
           const canceledSchedule = event.data.object;
           await handleSubscriptionScheduleCanceled({
             db,
-            sb: request.sb,
             org,
             env,
             schedule: canceledSchedule,
@@ -175,7 +165,6 @@ stripeWebhookRouter.post(
         case "customer.discount.deleted":
           await handleCusDiscountDeleted({
             db,
-            sb: request.sb,
             org,
             discount: event.data.object,
             env,

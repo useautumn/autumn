@@ -39,7 +39,7 @@ describe(`${chalk.yellowBright(
       customerId,
       org: this.org,
       env: this.env,
-      sb: this.sb,
+      db: this.db,
     });
 
     testClockId = insertedTestClockId;
@@ -101,9 +101,8 @@ describe(`${chalk.yellowBright(
     const stripeCli = createStripeCli({ org: this.org, env: this.env });
     let subscriptionId = res.products[0].subscription_ids![0]!;
 
-    checkSubscriptionContainsProducts({
+    await checkSubscriptionContainsProducts({
       db: this.db,
-      sb: this.sb,
       org: this.org,
       env: this.env,
       subscriptionId,

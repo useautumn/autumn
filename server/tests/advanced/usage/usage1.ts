@@ -26,7 +26,7 @@ describe(`${chalk.yellowBright("usage1: Pro with overage")}`, () => {
         customerId,
         org: this.org,
         env: this.env,
-        sb: this.sb,
+        db: this.db,
       });
 
     customer = customer_;
@@ -60,7 +60,7 @@ describe(`${chalk.yellowBright("usage1: Pro with overage")}`, () => {
         AutumnCli.sendEvent({
           customerId: customerId,
           eventName: features.metered1.eventName,
-        })
+        }),
       );
     }
 
@@ -74,7 +74,7 @@ describe(`${chalk.yellowBright("usage1: Pro with overage")}`, () => {
     expect(res!.allowed).to.be.true;
 
     const balance = res!.balances.find(
-      (balance: any) => balance.feature_id === features.metered1.id
+      (balance: any) => balance.feature_id === features.metered1.id,
     );
 
     const proOverageAmt =
@@ -120,13 +120,13 @@ describe(`${chalk.yellowBright("usage1: Pro with overage")}`, () => {
 
       const invoice2 = invoices[0];
       expect(invoice2.total).to.equal(
-        price + products.proWithOverage.prices[0].config.amount
+        price + products.proWithOverage.prices[0].config.amount,
       );
     } catch (error) {
       console.group();
       console.log(
         "Expected invoices[0] to have total of: ",
-        price + products.proWithOverage.prices[0].config.amount
+        price + products.proWithOverage.prices[0].config.amount,
       );
       console.log("Invoices", invoices);
       console.group();

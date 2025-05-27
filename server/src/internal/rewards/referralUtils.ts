@@ -39,7 +39,6 @@ export const generateReferralCode = () => {
 // Trigger reward
 export const triggerRedemption = async ({
   db,
-  sb,
   referralCode,
   org,
   env,
@@ -48,7 +47,6 @@ export const triggerRedemption = async ({
   redemption,
 }: {
   db: DrizzleCli;
-  sb: any;
   org: any;
   env: AppEnv;
   logger: any;
@@ -102,7 +100,7 @@ export const triggerRedemption = async ({
   }
 
   let updatedRedemption = await RewardRedemptionService.update({
-    sb,
+    db,
     id: redemption.id,
     updates: {
       applied,
@@ -116,7 +114,6 @@ export const triggerRedemption = async ({
 };
 
 export const triggerFreeProduct = async ({
-  sb,
   db,
   referralCode,
   redeemer,
@@ -126,7 +123,6 @@ export const triggerFreeProduct = async ({
   env,
   logger,
 }: {
-  sb: any;
   db: DrizzleCli;
   referralCode: ReferralCode;
   redeemer: Customer;
@@ -202,7 +198,6 @@ export const triggerFreeProduct = async ({
 
     await createFullCusProduct({
       db,
-      sb,
       attachParams: redeemerAttachParams,
     });
     logger.info(`✅ Added ${fullProduct.name} to redeemer`);
@@ -211,7 +206,6 @@ export const triggerFreeProduct = async ({
   if (addToReferrer) {
     await createFullCusProduct({
       db,
-      sb,
       attachParams: {
         ...attachParams,
         customer: referrer,
@@ -222,7 +216,7 @@ export const triggerFreeProduct = async ({
   }
 
   await RewardRedemptionService.update({
-    sb,
+    db,
     id: redemption.id,
     updates: {
       triggered: true,

@@ -1,48 +1,23 @@
-import { AutumnMetadata } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { AutumnMetadata, metadata } from "@autumn/shared";
+import { eq } from "drizzle-orm";
 
 export class MetadataService {
-  static async insert(sb: SupabaseClient, metadata: AutumnMetadata) {
-    const { data, error } = await sb.from("metadata").insert(metadata);
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+  static async insert({ db, data }: { db: DrizzleCli; data: AutumnMetadata }) {
+    await db.insert(metadata).values(data);
   }
 
-  static async getMetadata(sb: SupabaseClient, id: string) {
-    const { data, error } = await sb
-      .from("metadata")
-      .select("*")
-      .eq("id", id)
-      .single();
+  static async get({ db, id }: { db: DrizzleCli; id: string }) {
+    const data = await db
+      .select()
+      .from(metadata)
+      .where(eq(metadata.id, id))
+      .limit(1);
 
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-      throw error;
+    if (data.length === 0) {
+      return null;
     }
 
-    return data;
-  }
-
-  static async getById(sb: SupabaseClient, id: string) {
-    const { data, error } = await sb
-      .from("metadata")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-      throw error;
-    }
-
-    return data;
+    return data[0] as AutumnMetadata;
   }
 }

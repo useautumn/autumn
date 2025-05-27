@@ -196,12 +196,11 @@ const getCusEntsAndFeatures = async ({
   logger,
 }: {
   req: any;
-  sb: SupabaseClient;
   logger: any;
 }) => {
   let { customer_id, feature_id, customer_data, entity_id } = req.body;
 
-  let { sb, env, db } = req;
+  let { env, db } = req;
 
   // 1. Get org and features
   const startTime = Date.now();
@@ -219,7 +218,6 @@ const getCusEntsAndFeatures = async ({
 
   const customer = await getOrCreateCustomer({
     db,
-    sb,
     org: req.org,
     env,
     customerId: customer_id,
@@ -296,7 +294,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       entity_id,
     } = req.body;
 
-    const { logtail: logger, sb, db } = req;
+    const { logtail: logger, db } = req;
 
     if (!customer_id) {
       throw new RecaseError({
@@ -350,7 +348,6 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     const { cusEnts, feature, creditSystems, org, cusProducts, allFeatures } =
       await getCusEntsAndFeatures({
-        sb,
         req,
         logger: req.logtail,
       });
@@ -375,7 +372,6 @@ entitledRouter.post("", async (req: any, res: any) => {
         withPreview: req.body.with_preview,
         cusProducts,
         allFeatures,
-        sb,
       });
     }
 
@@ -454,7 +450,6 @@ entitledRouter.post("", async (req: any, res: any) => {
           allowed,
           balance: balanceObj?.balance,
           feature: featureToUse!,
-          sb,
           cusProducts,
           raw: req.body.with_preview === "raw",
           allFeatures,

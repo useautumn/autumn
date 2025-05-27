@@ -18,7 +18,6 @@ import {
   BillingType,
   UsagePriceConfig,
   Feature,
-  ErrCode,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { MigrationService } from "../MigrationService.js";
@@ -27,12 +26,10 @@ import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { FeatureOptions } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { StatusCodes } from "http-status-codes";
 
 export const migrateCustomer = async ({
   db,
   migrationJob,
-  sb,
   customer,
   org,
   logger,
@@ -44,7 +41,6 @@ export const migrateCustomer = async ({
 }: {
   db: DrizzleCli;
   migrationJob: MigrationJob;
-  sb: SupabaseClient;
   customer: Customer;
   org: Organization;
   env: AppEnv;
@@ -88,6 +84,7 @@ export const migrateCustomer = async ({
       optionsList: curCusProduct.options,
       entities,
       cusProducts,
+      fromMigration: true,
     };
 
     // Get prepaid prices
@@ -115,7 +112,7 @@ export const migrateCustomer = async ({
 
     await handleUpgrade({
       req: {
-        sb,
+        db,
         orgId,
         env,
         logtail: logger,
@@ -145,7 +142,7 @@ export const migrateCustomer = async ({
     }
 
     await MigrationService.insertError({
-      sb,
+      db,
       data: constructMigrationError({
         migrationJobId: migrationJob.id,
         internalCustomerId: customer.internal_id,

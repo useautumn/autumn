@@ -25,6 +25,7 @@ import {
 } from "./utils/init.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { initDrizzle } from "@/db/initDrizzle.js";
 
 export const features: Record<string, Feature & { eventName: string }> = {
   boolean1: initFeature({
@@ -849,12 +850,17 @@ export const referralPrograms = {
 
 const ORG_SLUG = "unit-test-org";
 const DEFAULT_ENV = AppEnv.Sandbox;
+
 before(async function () {
   try {
     this.env = AppEnv.Sandbox;
     this.sb = createSupabaseClient();
+    let { db, client } = initDrizzle();
+    this.db = db;
+    this.client = client;
+
     this.org = await OrgService.getBySlug({
-      sb: this.sb,
+      db: this.db,
       slug: ORG_SLUG,
     });
 
@@ -890,26 +896,6 @@ before(async function () {
   }
 });
 
-// before(async function () {
-//   console.log("Running setup");
-//   this.timeout(20000);
-
-//   this.org = await clearOrg({ orgSlug: ORG_SLUG, env: DEFAULT_ENV });
-//   this.env = DEFAULT_ENV;
-//   this.sb = createSupabaseClient();
-//   this.stripeCli = createStripeCli({
-//     org: this.org,
-//     env: this.env,
-//   });
-
-//   await setupOrg({
-//     orgId: this.org.id,
-//     env: DEFAULT_ENV,
-//     features: { ...features, ...creditSystems } as any,
-//     products: { ...products, ...advanceProducts } as any,
-//   });
-
-//   this.customerId = "123";
-
-//   console.log("--------------------------------");
-// });
+after(async function () {
+  await this.client?.end();
+});

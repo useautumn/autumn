@@ -22,7 +22,7 @@ export const CustomerEntitlementSchema = z.object({
 
   // Balance fields
   unlimited: z.boolean().nullish(),
-  balance: z.number().nullable(),
+  balance: z.number().default(0),
 
   usage_allowed: z.boolean().nullable(),
   next_reset_at: z.number().nullable(),

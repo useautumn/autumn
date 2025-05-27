@@ -1,23 +1,37 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { RewardRedemption, RewardTriggerEvent } from "@autumn/shared";
+import {
+  customers,
+  ErrCode,
+  referralCodes,
+  rewardPrograms,
+  RewardRedemption,
+  rewardRedemptions,
+  rewards,
+  RewardTriggerEvent,
+} from "@autumn/shared";
+import { and, eq } from "drizzle-orm";
 
 export class RewardRedemptionService {
-  static async getById({ sb, id }: { sb: any; id: string }) {
-    const { data, error } = await sb
-      .from("reward_redemptions")
-      .select("*")
-      .eq("id", id)
-      .single();
+  static async getById({ db, id }: { db: DrizzleCli; id: string }) {
+    const data = await db.query.rewardRedemptions.findFirst({
+      where: eq(rewardRedemptions.id, id),
+    });
 
-    if (error) {
-      throw error;
+    if (!data) {
+      throw new RecaseError({
+        code: ErrCode.RewardRedemptionNotFound,
+        message: `Reward redemption ${id} not found`,
+        statusCode: 404,
+      });
     }
 
     return data;
   }
 
   static async getByCustomer({
-    sb,
+    db,
     internalCustomerId,
     triggered,
     withReferralCode = false,
@@ -26,7 +40,7 @@ export class RewardRedemptionService {
     triggerWhen,
     limit,
   }: {
-    sb: any;
+    db: DrizzleCli;
     internalCustomerId: string;
     triggered?: boolean;
     withReferralCode?: boolean;
@@ -35,164 +49,210 @@ export class RewardRedemptionService {
     triggerWhen?: RewardTriggerEvent;
     limit?: number;
   }) {
-    let query = sb
-      .from("reward_redemptions")
-      .select(
-        `
-      *
-      ${
-        withRewardProgram
-          ? ", reward_program:reward_programs!inner(*, reward:rewards!inner(*))"
-          : ""
-      }
-      ${withReferralCode ? ", referral_code:referral_codes!inner(*)" : ""}
-      `
-      )
-      .eq("internal_customer_id", internalCustomerId);
+    const data = await db.query.rewardRedemptions.findMany({
+      where: and(
+        eq(rewardRedemptions.internal_customer_id, internalCustomerId),
+        internalRewardProgramId
+          ? eq(
+              rewardRedemptions.internal_reward_program_id,
+              internalRewardProgramId,
+            )
+          : undefined,
+        triggered ? eq(rewardRedemptions.triggered, triggered) : undefined,
+      ),
+      with: {
+        reward_program: {
+          with: {
+            reward: true,
+          },
+        },
+        referral_code: true,
+      },
+      limit: limit ?? 100,
+    });
 
-    if (notNullish(internalRewardProgramId)) {
-      query = query.eq("internal_reward_program_id", internalRewardProgramId);
-    }
+    return data as any;
 
-    if (notNullish(triggered)) {
-      query = query.eq("triggered", triggered);
-    }
+    // let query = sb
+    //   .from("reward_redemptions")
+    //   .select(
+    //     `
+    //   *
+    //   ${
+    //     withRewardProgram
+    //       ? ", reward_program:reward_programs!inner(*, reward:rewards!inner(*))"
+    //       : ""
+    //   }
+    //   ${withReferralCode ? ", referral_code:referral_codes!inner(*)" : ""}
+    //   `,
+    //   )
+    //   .eq("internal_customer_id", internalCustomerId);
 
-    if (notNullish(limit)) {
-      query = query.limit(limit);
-    }
+    // if (notNullish(internalRewardProgramId)) {
+    //   query = query.eq("internal_reward_program_id", internalRewardProgramId);
+    // }
 
-    const { data, error } = await query;
+    // if (notNullish(triggered)) {
+    //   query = query.eq("triggered", triggered);
+    // }
 
-    if (error) {
-      throw error;
-    }
+    // if (notNullish(limit)) {
+    //   query = query.limit(limit);
+    // }
 
-    return data;
+    // const { data, error } = await query;
+
+    // if (error) {
+    //   throw error;
+    // }
+
+    // return data;
   }
 
   static async getByReferrer({
-    sb,
+    db,
     internalCustomerId,
     withCustomer = false,
     limit = 100,
   }: {
-    sb: any;
+    db: DrizzleCli;
     internalCustomerId: string;
     withCustomer?: boolean;
     limit?: number;
   }) {
-    const { data, error } = await sb
-      .from("reward_redemptions")
-      .select(
-        `
-      *, referral_code:referral_codes!inner(*)
-      ${withCustomer ? ", customer:customers!inner(*)" : ""}
-      `
+    const data = await db
+      .select()
+      .from(rewardRedemptions)
+      .innerJoin(
+        referralCodes,
+        eq(rewardRedemptions.referral_code_id, referralCodes.id),
       )
-      .eq("referral_code.internal_customer_id", internalCustomerId)
+      .innerJoin(
+        customers,
+        eq(rewardRedemptions.internal_customer_id, customers.internal_id),
+      )
+
+      .where(eq(referralCodes.internal_customer_id, internalCustomerId))
       .limit(limit);
 
-    if (error) {
-      throw error;
-    }
+    let processed = data.map((d) => ({
+      ...d.reward_redemptions,
+      referral_code: d.referral_codes,
+      customer: d.customers,
+    }));
 
-    return data;
-  }
+    return processed;
 
-  static async getByCodeAndCustomer({
-    sb,
-    orgId,
-    env,
-    code,
-    internalCustomerId,
-  }: {
-    sb: any;
-    orgId: string;
-    env: string;
-    code: string;
-    internalCustomerId: string;
-  }) {
-    const { data, error } = await sb
-      .from("reward_redemptions")
-      .select("*")
-      .eq("code", code)
-      .eq("internal_customer_id", internalCustomerId);
+    // const { data, error } = await sb
+    //   .from("reward_redemptions")
+    //   .select(
+    //     `
+    //   *, referral_code:referral_codes!inner(*)
+    //   ${withCustomer ? ", customer:customers!inner(*)" : ""}
+    //   `,
+    //   )
+    //   .eq("referral_code.internal_customer_id", internalCustomerId)
+    //   .limit(limit);
 
-    if (error) {
-      throw error;
-    }
+    // if (error) {
+    //   throw error;
+    // }
 
-    if (data.length === 0) {
-      return null;
-    }
-
-    return data[0];
+    // return data;
   }
 
   static async insert({
-    sb,
+    db,
     rewardRedemption,
   }: {
-    sb: any;
+    db: DrizzleCli;
     rewardRedemption: RewardRedemption;
   }) {
-    const { data, error } = await sb
-      .from("reward_redemptions")
-      .insert(rewardRedemption)
-      .select()
-      .single();
+    const data = await db
+      .insert(rewardRedemptions)
+      .values(rewardRedemption)
+      .returning();
 
-    if (error) {
-      throw error;
+    if (data.length === 0) {
+      throw new RecaseError({
+        code: ErrCode.InsertRewardRedemptionFailed,
+        message: `Failed to insert reward redemption`,
+        statusCode: 500,
+      });
     }
 
-    return data;
+    return data[0] as RewardRedemption;
   }
 
   static async update({
-    sb,
+    db,
     id,
     updates,
   }: {
-    sb: any;
+    db: DrizzleCli;
     id: string;
     updates: any;
   }) {
-    const { data, error } = await sb
-      .from("reward_redemptions")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
+    const data = await db
+      .update(rewardRedemptions)
+      .set(updates)
+      .where(eq(rewardRedemptions.id, id))
+      .returning();
 
-    if (error) {
-      throw error;
+    if (data.length === 0) {
+      throw new RecaseError({
+        code: "REWARD_REDEMPTION_NOT_FOUND",
+        message: `Reward redemption ${id} not found`,
+      });
     }
 
-    return data;
+    return data[0] as RewardRedemption;
   }
 
   static async getUnappliedRedemptions({
-    sb,
+    db,
     internalCustomerId,
   }: {
-    sb: any;
+    db: DrizzleCli;
     internalCustomerId: string;
   }) {
-    const { data, error } = await sb
-      .from("reward_redemptions")
-      .select(
-        "*, referral_code:referral_codes!inner(*), reward_program:reward_programs!inner(*, reward:rewards!inner(*))"
+    const data = await db
+      .select()
+      .from(rewardRedemptions)
+      .innerJoin(
+        referralCodes,
+        eq(rewardRedemptions.referral_code_id, referralCodes.id),
       )
-      .eq("referral_code.internal_customer_id", internalCustomerId)
-      .eq("triggered", true)
-      .eq("applied", false);
+      .innerJoin(
+        rewardPrograms,
+        eq(
+          rewardRedemptions.internal_reward_program_id,
+          rewardPrograms.internal_id,
+        ),
+      )
+      .innerJoin(
+        rewards,
+        eq(rewards.internal_id, rewardPrograms.internal_reward_id),
+      )
+      .where(
+        and(
+          eq(referralCodes.internal_customer_id, internalCustomerId),
+          eq(rewardRedemptions.triggered, true),
+          eq(rewardRedemptions.applied, false),
+        ),
+      );
 
-    if (error) {
-      throw error;
-    }
+    if (data.length == 0) return [];
 
-    return data;
+    let processed = data.map((d) => ({
+      ...d.reward_redemptions,
+      referral_code: d.referral_codes,
+      reward_program: {
+        ...d.reward_programs,
+        reward: d.rewards,
+      },
+    }));
+
+    return processed;
   }
 }

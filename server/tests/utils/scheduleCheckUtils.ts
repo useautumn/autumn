@@ -1,13 +1,12 @@
 import { ProductService } from "@/internal/products/ProductService.js";
-import { AppEnv, FullProduct, Organization } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { AppEnv, Organization } from "@autumn/shared";
 import { expect } from "chai";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+
 export const checkScheduleContainsProducts = async ({
   db,
-  sb,
   org,
   env,
   scheduleId,
@@ -15,7 +14,6 @@ export const checkScheduleContainsProducts = async ({
   productIds,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   scheduleId?: string;
@@ -55,14 +53,12 @@ export const checkScheduleContainsProducts = async ({
 
 export const checkSubscriptionContainsProducts = async ({
   db,
-  sb,
   org,
   env,
   subscriptionId,
   productIds,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   subscriptionId: string;

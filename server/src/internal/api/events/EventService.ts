@@ -80,24 +80,5 @@ export class EventService {
       )
       .orderBy(desc(events.timestamp))
       .limit(limit);
-    // const { data, error } = await sb
-    //   .from("events")
-    //   .select(fields ? fields.join(",") : "*")
-    //   .eq("internal_customer_id", internalCustomerId)
-    //   .eq("org_id", orgId)
-    //   .eq("env", env)
-    //   .order("timestamp", { ascending: false })
-    //   .limit(limit);
-
-    // if (error) {
-    //   throw new RecaseError({
-    //     message: "Failed to get events",
-    //     code: ErrCode.InternalError,
-    //     data: error,
-    //     statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-    //   });
-    // }
-
-    // return data;
   }
 }

@@ -11,12 +11,10 @@ export const runMigrationTask = async ({
   db,
   payload,
   logger,
-  sb,
 }: {
   db: DrizzleCli;
   payload: any;
   logger: any;
-  sb: any;
 }) => {
   const { migrationJobId } = payload;
 
@@ -24,7 +22,7 @@ export const runMigrationTask = async ({
     logger.info(`Running migration task, ID: ${migrationJobId}`);
 
     const migrationJob = await MigrationService.getJob({
-      sb,
+      db,
       id: migrationJobId,
     });
 
@@ -48,7 +46,7 @@ export const runMigrationTask = async ({
 
     // STEP 1: GET ALL CUSTOMERS AND INSERT INTO MIGRATIONS...
     let customers = await getMigrationCustomers({
-      sb,
+      db,
       migrationJobId,
       fromProduct,
       logger,
@@ -65,7 +63,6 @@ export const runMigrationTask = async ({
     // STEP 2: MIGRATE CUSTOMERS..
     await migrateCustomers({
       db,
-      sb,
       migrationJob,
       fromProduct,
       toProduct,
@@ -79,7 +76,7 @@ export const runMigrationTask = async ({
     logger.error(`Migration failed: ${migrationJobId}`);
     logger.error(error);
     await MigrationService.updateJob({
-      sb,
+      db,
       migrationJobId,
       updates: {
         current_step: MigrationJobStep.Failed,

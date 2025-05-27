@@ -1,9 +1,7 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
-import { Entity } from "@shared/models/cusModels/entityModels/entityModels.js";
-import { entities } from "@shared/models/cusModels/entityModels/entityTable.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { Entity, entities } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 
 export class EntityService {

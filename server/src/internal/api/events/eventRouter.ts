@@ -36,7 +36,6 @@ export const eventsRouter = Router();
 
 const getEventAndCustomer = async ({
   db,
-  sb,
   org,
   env,
   features,
@@ -48,7 +47,6 @@ const getEventAndCustomer = async ({
   entityData,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   org: Organization;
   features: Feature[];
   env: AppEnv;
@@ -72,7 +70,6 @@ const getEventAndCustomer = async ({
   // 2. Check if customer ID is valid
   customer = await getOrCreateCustomer({
     db,
-    sb,
     org,
     env,
     customerId: customer_id,
@@ -160,13 +157,12 @@ export const handleEventSent = async ({
     });
   }
 
-  const { sb, env, db } = req;
+  const { env, db } = req;
 
   const org = await OrgService.getFromReq(req);
   const features = await FeatureService.getFromReq(req);
   const { customer, event } = await getEventAndCustomer({
     db,
-    sb,
     org,
     env,
     customer_id,

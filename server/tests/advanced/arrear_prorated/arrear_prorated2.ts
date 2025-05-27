@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { advanceProducts, features } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
-import { advanceMonths, advanceTestClock } from "tests/utils/stripeUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { addDays, addMonths, format } from "date-fns";
@@ -189,7 +189,7 @@ describe(`${chalk.yellowBright(
         customerId,
         org: this.org,
         env: this.env,
-        sb: this.sb,
+        db: this.db,
       },
     );
 
@@ -200,7 +200,6 @@ describe(`${chalk.yellowBright(
 
     testClockId = createdTestClockId;
 
-    // Update org config
     await this.sb
       .from("organizations")
       .update({
@@ -239,7 +238,6 @@ describe(`${chalk.yellowBright(
 
     await checkSubscriptionContainsProducts({
       db: this.db,
-      sb: this.sb,
       org: this.org,
       env: this.env,
       subscriptionId: subId,

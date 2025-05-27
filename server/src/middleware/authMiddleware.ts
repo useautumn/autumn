@@ -43,7 +43,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     let tokenOrg = tokenData!.org as any;
 
     let { org, features } = await OrgService.getWithFeatures({
-      sb: req.sb,
+      db: req.db,
       orgId: tokenOrg.id,
       env: req.env,
     });

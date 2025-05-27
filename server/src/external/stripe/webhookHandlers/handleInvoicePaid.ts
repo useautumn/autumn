@@ -28,19 +28,19 @@ import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const handleOneOffInvoicePaid = async ({
-  sb,
+  db,
   stripeInvoice,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   stripeInvoice: Stripe.Invoice;
   event: Stripe.Event;
   logger: any;
 }) => {
   // Search for invoice
-  const invoice = await InvoiceService.getInvoiceByStripeId({
-    sb,
-    stripeInvoiceId: stripeInvoice.id,
+  const invoice = await InvoiceService.getByStripeId({
+    db,
+    stripeId: stripeInvoice.id,
   });
 
   if (!invoice) {
@@ -50,8 +50,8 @@ const handleOneOffInvoicePaid = async ({
 
   // Update invoice status
   await InvoiceService.updateByStripeId({
-    sb,
-    stripeInvoiceId: stripeInvoice.id,
+    db,
+    stripeId: stripeInvoice.id,
     updates: {
       status: stripeInvoice.status as InvoiceStatus,
       hosted_invoice_url: stripeInvoice.hosted_invoice_url,
@@ -66,14 +66,12 @@ const handleOneOffInvoicePaid = async ({
 };
 
 const convertToChargeAutomatically = async ({
-  sb,
   org,
   env,
   invoice,
   activeCusProducts,
   logger,
 }: {
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   invoice: Stripe.Invoice;
@@ -141,7 +139,6 @@ const convertToChargeAutomatically = async ({
 export const handleInvoicePaid = async ({
   db,
   req,
-  sb,
   org,
   invoice,
   env,
@@ -149,7 +146,6 @@ export const handleInvoicePaid = async ({
 }: {
   db: DrizzleCli;
   req: any;
-  sb: SupabaseClient;
   org: Organization;
   invoice: Stripe.Invoice;
   env: AppEnv;
@@ -163,7 +159,7 @@ export const handleInvoicePaid = async ({
   });
 
   await handleInvoicePaidDiscount({
-    sb,
+    db,
     expandedInvoice,
     org,
     env,
@@ -186,11 +182,11 @@ export const handleInvoicePaid = async ({
           `invoice.paid: customer product not found for invoice ${invoice.id}`,
         );
       }
+      return;
     }
 
     if (org.config.convert_to_charge_automatically) {
       await convertToChargeAutomatically({
-        sb,
         org,
         env,
         invoice,
@@ -200,7 +196,7 @@ export const handleInvoicePaid = async ({
     }
 
     let updated = await updateInvoiceIfExists({
-      sb,
+      db,
       invoice,
     });
 
@@ -212,8 +208,9 @@ export const handleInvoicePaid = async ({
         ),
         logger,
       });
+
       await InvoiceService.createInvoiceFromStripe({
-        sb,
+        db,
         stripeInvoice: expandedInvoice,
         internalCustomerId: activeCusProducts[0].internal_customer_id,
         internalEntityId: activeCusProducts[0].internal_entity_id,
@@ -243,7 +240,7 @@ export const handleInvoicePaid = async ({
     }
   } else {
     await handleOneOffInvoicePaid({
-      sb,
+      db,
       stripeInvoice: expandedInvoice,
       event,
       logger,
@@ -252,13 +249,13 @@ export const handleInvoicePaid = async ({
 };
 
 const handleInvoicePaidDiscount = async ({
-  sb,
+  db,
   expandedInvoice,
   org,
   env,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   expandedInvoice: Stripe.Invoice;
   org: Organization;
   env: AppEnv;
@@ -293,9 +290,9 @@ const handleInvoicePaidDiscount = async ({
 
       // 1. Fetch coupon from Autumn
       logger.info(`Fetching coupon from Autumn DB: ${couponId}`);
-      const autumnReward: Reward | null = await RewardService.getById({
-        sb,
-        id: couponId,
+      const autumnReward: Reward | null = await RewardService.get({
+        db,
+        idOrInternalId: couponId,
         orgId: org.id,
         env,
       });

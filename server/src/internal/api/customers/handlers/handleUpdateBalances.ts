@@ -23,8 +23,8 @@ import { notNullish } from "@/utils/genUtils.js";
 const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
   // 1. Get customer
   const [customer, features, org] = await Promise.all([
-    CusService.getWithProducts({
-      sb: req.sb,
+    CusService.getFull({
+      db: req.db,
       idOrInternalId: customerId,
       orgId: req.orgId,
       env: req.env,
@@ -49,7 +49,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
   try {
     const logger = req.logtail;
     const cusId = req.params.customer_id;
-    const { sb, env, db } = req;
+    const { env, db } = req;
     const { balances } = req.body;
 
     if (!Array.isArray(balances)) {
@@ -77,7 +77,6 @@ export const handleUpdateBalances = async (req: any, res: any) => {
     // Can't update feature -> credit system here...
 
     const { cusEnts, cusPrices } = await getCusEntsInFeatures({
-      sb: req.sb,
       customer,
       internalFeatureIds: featuresToUpdate.map((f) => f.internal_id!),
       logger: req.logtail,
@@ -232,7 +231,6 @@ export const handleUpdateBalances = async (req: any, res: any) => {
             toDeduct,
             deductParams: {
               db,
-              sb,
               feature: featureDeduction.feature!,
               env: req.env,
               org,
@@ -256,7 +254,6 @@ export const handleUpdateBalances = async (req: any, res: any) => {
           cusEnts,
           deductParams: {
             db,
-            sb,
             feature: featureDeduction.feature!,
             env,
             org,
