@@ -13,7 +13,7 @@ export default function EnvStep({ number }: { number: number }) {
       number={number}
       description={
         <>
-          <span>Add the Autumn secret key to your .env file.</span>
+          <span>Paste the secret key into your .env file.</span>
         </>
       }
     >
