@@ -2,7 +2,7 @@ import Step from "@/components/general/OnboardingStep";
 import CodeBlock from "../components/CodeBlock";
 import { ArrowUpRightFromSquare } from "lucide-react";
 
-let react = () => {
+const react = () => {
   return `import { AutumnProvider } from "autumn-js/react";
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
 `;
 };
 
-export default function AutumnProvider({ number }: { number: number }) {
+export default function AutumnProviderStep({ number }: { number: number }) {
   return (
     <Step
       title="Set up <AutumnProvider />"

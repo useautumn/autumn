@@ -87,7 +87,7 @@ export const PricingTable = ({
         {products.some((p) => p.priceAnnual) && (
           <div
             className={cn(
-              products.some((p) => p.recommendedText) && !uniform && "mb-8"
+              products.some((p) => p.recommendedText) && !uniform && "mb-8",
             )}
           >
             <AnnualSwitch isAnnual={isAnnual} setIsAnnual={setIsAnnual} />
@@ -95,8 +95,8 @@ export const PricingTable = ({
         )}
         <div
           className={cn(
-            "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-none lg:auto-cols-[minmax(200px,1fr)] lg:grid-flow-col gap-4 w-full",
-            className
+            "grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] auto-rows-fr gap-4 w-full",
+            className,
           )}
         >
           {children}
@@ -148,7 +148,7 @@ export const PricingCard = ({
         recommendedText &&
           !uniform &&
           "shadow-xl border-primary/30 lg:-translate-y-6 lg:h-[calc(100%+48px)] relative",
-        className
+        className,
       )}
     >
       {recommendedText && !uniform && (
@@ -157,7 +157,7 @@ export const PricingCard = ({
       <div
         className={cn(
           "px-6",
-          recommendedText && !uniform && "lg:translate-y-6"
+          recommendedText && !uniform && "lg:translate-y-6",
         )}
       >
         <div className="flex flex-col gap-2 ">
@@ -261,7 +261,7 @@ export const PricingCardButton = React.forwardRef<
     <Button
       className={cn(
         "w-full py-3 px-4 rounded-md group overflow-hidden relative transition-all duration-300 hover:brightness-90",
-        className
+        className,
       )}
       variant={recommended ? "default" : "secondary"}
       ref={ref}

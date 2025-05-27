@@ -1,28 +1,19 @@
 import { Button } from "@/components/ui/button";
 import Step from "@/components/general/OnboardingStep";
-import { FeaturesContext } from "@/views/features/FeaturesContext";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
+
 import { useEnv } from "@/utils/envUtils";
-import { ManageProduct } from "@/views/products/product/ManageProduct";
-import { ProductContext } from "@/views/products/product/ProductContext";
-import { ProductsContext } from "@/views/products/ProductsContext";
-import { ProductsTable } from "@/views/products/ProductsTable";
-import { Product, products, ProductV2 } from "@autumn/shared";
+
 import {
   DialogHeader,
   DialogContent,
   DialogTrigger,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
-import { AddProductButton } from "@/views/customers/customer/add-product/AddProductButton";
-import { ProductService } from "@/services/products/ProductService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
+
 import { toast } from "sonner";
-import CreateProduct from "@/views/products/CreateProduct";
+
 import { useSearchParams } from "react-router";
 import { PricingTable } from "@/components/autumn/pricing-table";
 import { useAutumn, useCustomer } from "autumn-js/react";
@@ -37,6 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
+import PaywallDialog from "@/components/autumn/paywall-dialog";
 
 export const SampleApp = ({
   data,
@@ -61,16 +53,15 @@ export const SampleApp = ({
   const [showCheckSnippet, setShowCheckSnippet] = useState(true);
   const [showTrackSnippet, setShowTrackSnippet] = useState(true);
   const [showCustomerSnippet, setShowCustomerSnippet] = useState(true);
-  const [showCustomerAPI, setShowCustomerAPI] = useState(false);
   const [lastUsedFeature, setLastUsedFeature] = useState<any>({
-    featureId: data.features[0].id,
+    featureId: data.features?.[0]?.id,
     value: 1,
   });
 
-  if (!data.products) return null;
-
   const { customer } = useCustomer();
   const { openBillingPortal } = useAutumn();
+
+  if (!data.products) return null;
 
   return (
     <Step
@@ -92,14 +83,16 @@ export const SampleApp = ({
                 Show Sample App
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto w-full h-full">
+            <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto w-full h-full flex flex-col">
               <div>
                 <DialogHeader className="flex flex-row items-center justify-between h-12">
                   <DialogTitle>Sample App</DialogTitle>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowCodeSection(!showCodeSection)}
+                    onClick={() => {
+                      setShowCodeSection(!showCodeSection);
+                    }}
                     className="self-start bg-zinc-800 text-white mr-7"
                   >
                     <Code size={16} className="mr-2" />
@@ -122,9 +115,9 @@ export const SampleApp = ({
                   </span>
                 </div>
               </div>
-              <div className="flex gap-6 p-4">
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-3">
+              <div className="flex gap-6 ">
+                <div className="flex flex-col gap-3 w-full pr-10">
+                  <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <h3 className="text-md font-medium">
                         Available Features
@@ -158,8 +151,8 @@ export const SampleApp = ({
                   </div>
 
                   {/* Products List */}
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-end justify-between">
                       <h3 className="text-md font-medium">Billing</h3>
                       {customer?.stripe_id && (
                         <Button
@@ -173,7 +166,7 @@ export const SampleApp = ({
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2 w-full">
                       <PricingTable />
                     </div>
                   </div>
@@ -417,7 +410,7 @@ const FeatureUsageItem = ({
   onFeatureUsed: (feature: any) => void;
 }) => {
   const { check, track } = useAutumn();
-  const { customer, refetch } = useCustomer();
+  const { refetch } = useCustomer();
   const [trackValue, setTrackValue] = useState<number | string>(1);
 
   if (feature.type === "boolean") {
@@ -472,8 +465,9 @@ const FeatureUsageItem = ({
                 featureId: customerFeature.id,
                 value: Number(trackValue),
               });
-              let { data: checkResponse } = await check({
+              const { data: checkResponse } = await check({
                 featureId: customerFeature.id,
+                dialog: PaywallDialog,
               });
               onCheckData(checkResponse);
 

@@ -48,6 +48,7 @@ const init = async () => {
     req.db = db;
     req.logger = logger;
     req.logtailAll = logtailAll;
+    req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
 
     // Log incoming request
 
@@ -79,10 +80,6 @@ const init = async () => {
 
   app.use(cors());
 
-  app.use((req: any, res: any, next: any) => {
-    req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
-    next();
-  });
   app.use("/webhooks", webhooksRouter);
 
   app.use((req: any, res, next) => {
