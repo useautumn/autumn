@@ -8,6 +8,7 @@ import { EntityService } from "../EntityService.js";
 import {
   APIVersion,
   AppEnv,
+  CustomerData,
   CusProductStatus,
   Entity,
   ErrCode,
@@ -25,6 +26,7 @@ import { StatusCodes } from "http-status-codes";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 
 interface CreateEntityData {
   id: string;
@@ -163,30 +165,43 @@ export const logEntityToAction = ({
 
 export const validateAndGetInputEntities = async ({
   db,
-  orgId,
+  org,
   features,
   customerId,
+  customerData,
   createEntityData,
   env,
   logger,
 }: {
   db: DrizzleCli;
-  orgId: string;
+  org: Organization;
   features: Feature[];
   customerId: string;
+  customerData?: CustomerData;
   env: AppEnv;
   createEntityData: CreateEntityData[] | CreateEntityData;
   logger: any;
 }) => {
   // 1. Get customer, features and orgs
-  let customer = await CusService.getFull({
+  let customer = await getOrCreateCustomer({
     db,
-    idOrInternalId: customerId,
-    orgId,
+    org,
     env,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    customerId,
+    customerData,
+    logger,
+    features,
     withEntities: true,
   });
+
+  // CusService.getFull({
+  //   db,
+  //   idOrInternalId: customerId,
+  //   orgId,
+  //   env,
+  //   inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+  //   withEntities: true,
+  // });
 
   if (!customer) {
     throw new RecaseError({
@@ -274,6 +289,7 @@ export const createEntities = async ({
   features,
   logger,
   customerId,
+  customerData,
   createEntityData,
   withAutumnId = false,
   apiVersion,
@@ -281,6 +297,7 @@ export const createEntities = async ({
 }: {
   db: DrizzleCli;
   org: Organization;
+  customerData?: CustomerData;
   features: Feature[];
   env: AppEnv;
   logger: any;
@@ -300,7 +317,8 @@ export const createEntities = async ({
   } = await validateAndGetInputEntities({
     db,
     customerId,
-    orgId: org.id,
+    org,
+    customerData,
     env,
     logger,
     createEntityData,
@@ -502,6 +520,11 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
         reqApiVersion: req.apiVersion,
       });
 
+      let customerData =
+        Array.isArray(req.body) && req.body.length > 0
+          ? req.body[0].customer_data
+          : req.body.customer_data;
+
       const entities = await createEntities({
         db,
         org,
@@ -510,6 +533,7 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
         env,
         customerId: req.params.customer_id,
         createEntityData: req.body,
+        customerData,
         withAutumnId: req.query.with_autumn_id === "true",
         apiVersion,
       });
