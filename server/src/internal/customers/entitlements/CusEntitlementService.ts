@@ -1,447 +1,172 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
+  AppEnv,
+  CusProduct,
   CusProductStatus,
+  Customer,
   CustomerEntitlement,
+  entitlements,
   ErrCode,
+  features,
+  FullCusEntWithProduct,
   FullCustomerEntitlement,
 } from "@autumn/shared";
+import { customerEntitlements } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
+import { eq, lt, and, sql } from "drizzle-orm";
+import { customerProducts } from "@autumn/shared";
 
-export class CustomerEntitlementService {
+export class CusEntService {
   static async getByFeature({
-    sb,
+    db,
     internalFeatureId,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalFeatureId: string;
   }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select("*, entitlement:entitlements!inner(*, feature:features!inner(*))")
-      .eq("entitlement.feature.internal_id", internalFeatureId)
+    const data = await db
+      .select()
+      .from(customerEntitlements)
+      .where(eq(customerEntitlements.internal_feature_id, internalFeatureId))
       .limit(10);
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return data as FullCustomerEntitlement[];
   }
-  static async getCustomerAndEnts({
-    sb,
-    customerId,
-    orgId,
-    env,
-    inStatuses = [CusProductStatus.Active],
+
+  static async insert({
+    db,
+    data,
   }: {
-    sb: SupabaseClient;
-    customerId: string;
-    orgId: string;
-    env: string;
-    inStatuses?: string[];
+    db: DrizzleCli;
+    data: CustomerEntitlement[];
   }) {
-    const { data, error } = await sb
-      .from("customers")
-      .select(
-        `*, 
-        customer_products:customer_products!inner(*), 
-        customer_entitlements:customer_entitlements(*, entitlement:entitlements(*, feature:features(*)))`
-      )
-      .eq("id", customerId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .in("customer_products.status", inStatuses)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-      throw new RecaseError({
-        message: "Failed to getCustomerAndEnts (Supabase)",
-        code: ErrCode.InternalError,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
+    if (Array.isArray(data) && data.length === 0) {
+      return;
     }
 
-    return data;
-  }
-
-  static async getCusEntsOptimized({
-    sb,
-    customerId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    customerId: string;
-    orgId: string;
-    env: string;
-  }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select(
-        `*, 
-          entitlement:entitlements!inner(*),
-          customer:customers!inner(*),
-          customer_product:customer_products!inner(*)
-        `
-      )
-      .eq("customer.id", customerId)
-      .eq("customer.org_id", orgId)
-      .eq("customer.env", env)
-      .eq("customer_product.status", "active");
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async createMany({
-    sb,
-    customerEntitlements,
-  }: {
-    sb: SupabaseClient;
-    customerEntitlements: CustomerEntitlement[];
-  }) {
-    const { error } = await sb
-      .from("customer_entitlements")
-      .insert(customerEntitlements);
-
-    if (error) {
-      throw error;
-    }
-  }
-
-  static async createCustomerEntitlement({
-    sb,
-    customerEntitlement,
-  }: {
-    sb: SupabaseClient;
-    customerEntitlement: CustomerEntitlement;
-  }) {
-    const { error } = await sb
-      .from("customer_entitlements")
-      .insert(customerEntitlement);
-
-    if (error) {
-      throw error;
-    }
-
-    return customerEntitlement;
-  }
-
-  static async getEntitlementsForReset(sb: SupabaseClient) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select("*, entitlement:entitlements(*)")
-      .lt("next_reset_at", Date.now());
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async getActiveByInternalCustomerId({
-    sb,
-    internalCustomerId,
-  }: {
-    sb: SupabaseClient;
-    internalCustomerId: string;
-  }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select(
-        `*, 
-        entitlement:entitlements!inner(
-          *, feature:features!inner(*)
-        ), 
-        customer_product:customer_products!inner(
-          *, product:products!inner(*)
-        )`
-      )
-      .eq("internal_customer_id", internalCustomerId)
-      .eq("customer_product.status", "active");
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async getCustomerEntitlements({
-    sb,
-    orgId,
-    customerId,
-  }: {
-    sb: SupabaseClient;
-    orgId: string;
-    customerId: string;
-  }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select("*, entitlement:entitlements(*)")
-      .eq("org_id", orgId)
-      .eq("customer_id", customerId);
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async getActiveByCustomerId({
-    sb,
-    customerId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    customerId: string;
-    orgId: string;
-    env: string;
-  }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select(
-        `*, 
-          customer:customers!inner(*), 
-          entitlement:entitlements!inner(
-            *, feature:features!inner(*)
-          ), 
-          customer_product:customer_products!inner(
-            *, product:products!inner(*)
-          )
-        `
-      )
-      .eq("customer.id", customerId)
-      .eq("customer.org_id", orgId)
-      .eq("customer.env", env)
-      .eq("customer_product.status", "active");
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async getActiveByFeatureAndCusId({
-    sb,
-    cusId,
-    featureId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    cusId: string;
-    featureId: string;
-    orgId: string;
-    env: string;
-  }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select(
-        "*, customer_product:customer_products!inner(*), entitlement:entitlements!inner(*, feature:features(*)), customer:customers(*)"
-      )
-      .eq("customer_id", cusId)
-      .eq("customer.org_id", orgId)
-      .eq("customer.env", env)
-      .eq("entitlement.feature_id", featureId)
-      .eq("customer_product.status", "active");
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async getActiveByFeatureId({
-    sb,
-    internalCustomerId,
-    internalFeatureId,
-  }: {
-    sb: SupabaseClient;
-    internalCustomerId: string;
-    internalFeatureId: string;
-  }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select("*, customer_product:customer_products!inner(*)")
-      .eq("internal_customer_id", internalCustomerId)
-      .eq("internal_feature_id", internalFeatureId)
-      .eq("customer_product.status", "active");
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async getActiveInFeatureIds({
-    sb,
-    internalCustomerId,
-    internalFeatureIds,
-  }: {
-    sb: SupabaseClient;
-    internalCustomerId: string;
-    internalFeatureIds: string[];
-  }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select(
-        "*, customer_product:customer_products!inner(*), entitlement:entitlements(*, feature:features(*))"
-      )
-      .eq("internal_customer_id", internalCustomerId)
-      .in("internal_feature_id", internalFeatureIds)
-      .eq("customer_product.status", "active");
-
-    if (error) {
-      throw new RecaseError({
-        message: "Error getting customer entitlements",
-        code: ErrCode.InternalError,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
-    }
-
-    return data;
+    await db.insert(customerEntitlements).values(data as any); // DRIZZLE TYPE REFACTOR
   }
 
   static async getActiveResetPassed({
-    sb,
+    db,
     customDateUnix,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     customDateUnix?: number;
   }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select(
-        "*, customer_product:customer_products!inner(*), entitlement:entitlements(*)"
+    const data = await db
+      .select()
+      .from(customerEntitlements)
+      .innerJoin(
+        customerProducts,
+        eq(customerEntitlements.customer_product_id, customerProducts.id),
       )
-      .eq("customer_product.status", "active")
-      .lt("next_reset_at", customDateUnix ? customDateUnix : Date.now());
+      .innerJoin(
+        entitlements,
+        eq(customerEntitlements.entitlement_id, entitlements.id),
+      )
+      .innerJoin(
+        features,
+        eq(entitlements.internal_feature_id, features.internal_id),
+      )
+      .where(
+        and(
+          eq(customerProducts.status, CusProductStatus.Active),
+          lt(customerEntitlements.next_reset_at, customDateUnix ?? Date.now()),
+        ),
+      );
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return data.map((item) => ({
+      ...item.customer_entitlements,
+      entitlement: {
+        ...item.entitlements,
+        feature: item.features,
+      },
+      customer_product: item.customer_products,
+    })) as FullCusEntWithProduct[];
   }
 
   static async update({
-    sb,
+    db,
     id,
     updates,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     id: string;
     updates: Partial<CustomerEntitlement>;
   }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .update(updates)
-      .eq("id", id)
-      .select();
-
-    if (error) {
-      throw error;
-    }
+    const data = await db
+      .update(customerEntitlements)
+      .set(updates as any)
+      .where(eq(customerEntitlements.id, id))
+      .returning();
 
     return data;
   }
 
-  static async getByIdStrict({
-    sb,
+  static async getStrict({
+    db,
     id,
     orgId,
     env,
-    withCusProduct = false,
+    withCusProduct,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     id: string;
     orgId: string;
-    env: string;
+    env: AppEnv;
     withCusProduct?: boolean;
   }) {
-    let selectQuery = `*, entitlement:entitlements!inner(*, feature:features!inner(*)), customer:customers!inner(*)${
-      withCusProduct ? ", customer_product:customer_products!inner(*)" : ""
-    }`;
+    const data = await db.query.customerEntitlements.findFirst({
+      where: eq(customerEntitlements.id, id),
+      with: {
+        entitlement: {
+          with: {
+            feature: true,
+          },
+        },
+        customer_product: withCusProduct || undefined,
+        customer: true,
+      },
+    });
 
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select(selectQuery as "*") // hack to kill generic string error
-      .eq("id", id)
-      .eq("customer.org_id", orgId)
-      .eq("customer.env", env)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        throw new RecaseError({
-          message: "Customer entitlement not found",
-          code: ErrCode.CustomerEntitlementNotFound,
-          statusCode: StatusCodes.NOT_FOUND,
-        });
-      }
-      throw error;
+    if (
+      !data ||
+      !data.customer ||
+      data.customer.org_id !== orgId ||
+      data.customer.env !== env
+    ) {
+      throw new RecaseError({
+        message: "Customer entitlement not found",
+        code: ErrCode.CustomerEntitlementNotFound,
+        statusCode: StatusCodes.NOT_FOUND,
+      });
     }
 
-    return data as FullCustomerEntitlement;
+    return data as FullCustomerEntitlement & {
+      customer: Customer;
+      customer_product?: CusProduct;
+    };
   }
 
-  static async getByCusProductId({
-    sb,
-    cusProductId,
-  }: {
-    sb: SupabaseClient;
-    cusProductId: string;
-  }) {
-    const { data, error } = await sb
-      .from("customer_entitlements")
-      .select("*, entitlement:entitlements!inner(*)")
-      .eq("customer_product_id", cusProductId);
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async incrementBalance({
-    pg,
+  static async increment({
+    db,
     id,
     amount,
   }: {
-    pg: Client;
+    db: DrizzleCli;
     id: string;
     amount: number;
   }) {
-    try {
-      const result = await pg.query(
-        `UPDATE customer_entitlements SET balance = balance + $1 WHERE id = $2`,
-        [amount, id]
-      );
-    } catch (error) {
-      throw new RecaseError({
-        message: "Failed to increase balance for customer entitlement",
-        code: ErrCode.InternalError,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
-    }
+    const data = await db
+      .update(customerEntitlements)
+      .set({ balance: sql`${customerEntitlements.balance} + ${amount}` })
+      .where(eq(customerEntitlements.id, id))
+      .returning();
+
+    return data;
   }
 }

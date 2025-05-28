@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { CusProductStatus } from "./cusProductModels.js";
-import { AppEnv, EntInterval } from "../genModels.js";
+import { AppEnv } from "../genModels/genEnums.js";
+import { EntInterval } from "../productModels/entModels/entEnums.js";
 import { InvoiceResponseSchema } from "./invoiceModels/invoiceResponseModels.js";
-import { RewardResponseSchema } from "../rewardModels/rewardResponseModels.js";
+import { CusProductStatus } from "../cusProductModels/cusProductEnums.js";
+import { RewardResponseSchema } from "../rewardModels/rewardModels/rewardResponseModels.js";
 
 export const CusProductResponseSchema = z.object({
   id: z.string(),
@@ -48,7 +49,7 @@ export const CusEntResponseV2Schema = z.object({
         usage: z.number().nullish(),
         included_usage: z.number().nullish(),
         next_reset_at: z.number().nullish(),
-      })
+      }),
     )
     .nullish(),
 });

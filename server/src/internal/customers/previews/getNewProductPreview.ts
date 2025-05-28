@@ -61,7 +61,7 @@ export const getNewProductPreview = async ({
     sortedItems
       .filter((i) => isPriceItem(i))
       .reduce((sum, i) => sum + i.price!, 0)
-      .toFixed(2)
+      .toFixed(2),
   );
 
   let type = "Subscribe to";
@@ -71,7 +71,7 @@ export const getNewProductPreview = async ({
   let title = `${type} ${product.name}`;
   let message = `By clicking confirm, you will ${type.toLowerCase()} ${
     product.name
-  } and the following amount will be charged:\n`;
+  } and the following amount will be charged:`;
 
   let options = getOptions({
     prodItems: productV2.items,

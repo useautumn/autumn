@@ -22,12 +22,14 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 import { MigrationService } from "../MigrationService.js";
 import { constructMigrationError } from "../migrationUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { FeatureOptions } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 
 export const migrateCustomer = async ({
+  db,
   migrationJob,
-  sb,
   customer,
   org,
   logger,
@@ -37,8 +39,8 @@ export const migrateCustomer = async ({
   toProduct,
   features,
 }: {
+  db: DrizzleCli;
   migrationJob: MigrationJob;
-  sb: SupabaseClient;
   customer: Customer;
   org: Organization;
   env: AppEnv;
@@ -49,25 +51,27 @@ export const migrateCustomer = async ({
   features: Feature[];
 }) => {
   try {
-    // await new Promise((resolve) => setTimeout(resolve, 5000));
-    let cusProducts = await CusService.getFullCusProducts({
-      sb,
+    let cusProducts = await CusProductService.list({
+      db,
       internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
       inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     });
 
-    let entities = await EntityService.get({
-      sb,
-      orgId,
-      env,
+    let entities = await EntityService.list({
+      db,
       internalCustomerId: customer.internal_id,
     });
 
-    let curCusProduct = await cusProducts.find(
-      (cp: FullCusProduct) => cp.product.internal_id == fromProduct.internal_id
+    let curCusProduct = cusProducts.find(
+      (cp: FullCusProduct) => cp.product.internal_id == fromProduct.internal_id,
     );
+
+    if (!curCusProduct) {
+      logger.error(
+        `Customer ${customer.id} does not have a ${fromProduct.internal_id} cus product, skipping migration`,
+      );
+      return false;
+    }
 
     let attachParams: AttachParams = {
       org,
@@ -80,12 +84,13 @@ export const migrateCustomer = async ({
       optionsList: curCusProduct.options,
       entities,
       cusProducts,
+      fromMigration: true,
     };
 
     // Get prepaid prices
     let prepaidPrices = toProduct.prices.filter(
       (price: Price) =>
-        getBillingType(price.config!) === BillingType.UsageInAdvance
+        getBillingType(price.config!) === BillingType.UsageInAdvance,
     );
 
     for (const prepaidPrice of prepaidPrices) {
@@ -93,7 +98,7 @@ export const migrateCustomer = async ({
 
       let newPrepaid = curCusProduct.options.find(
         (option: FeatureOptions) =>
-          option.internal_feature_id === config.internal_feature_id
+          option.internal_feature_id === config.internal_feature_id,
       );
 
       if (!newPrepaid) {
@@ -107,7 +112,7 @@ export const migrateCustomer = async ({
 
     await handleUpgrade({
       req: {
-        sb,
+        db,
         orgId,
         env,
         logtail: logger,
@@ -125,7 +130,7 @@ export const migrateCustomer = async ({
     return true;
   } catch (error: any) {
     logger.error(
-      `Migration failed for customer ${customer.id}, job id: ${migrationJob.id}`
+      `Migration failed for customer ${customer.id}, job id: ${migrationJob.id}`,
     );
     logger.error(error);
     if (error instanceof RecaseError) {
@@ -137,7 +142,7 @@ export const migrateCustomer = async ({
     }
 
     await MigrationService.insertError({
-      sb,
+      db,
       data: constructMigrationError({
         migrationJobId: migrationJob.id,
         internalCustomerId: customer.internal_id,

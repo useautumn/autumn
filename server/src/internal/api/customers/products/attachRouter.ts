@@ -22,7 +22,7 @@ import {
   getPriceEntitlement,
   getProductForPrice,
   priceIsOneOffAndTiered,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 
 import { getFullCusProductData } from "@/internal/customers/products/attachUtils.js";
 import {
@@ -38,18 +38,17 @@ import {
   nullOrUndefined,
 } from "@/utils/genUtils.js";
 import chalk from "chalk";
-import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
-import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
-import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-
-import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
-
-import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 
 import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
+
+import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
+import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
+import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
+import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
+import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 
 export const attachRouter = Router();
 
@@ -149,7 +148,7 @@ export const checkStripeConnections = async ({
   req: any;
   attachParams: AttachParams;
 }) => {
-  const { org, customer, products, prices, entitlements } = attachParams;
+  const { org, customer, products } = attachParams;
   const logger = req.logtail;
   const env = customer.env;
 
@@ -165,7 +164,7 @@ export const checkStripeConnections = async ({
   if (attachParams.invoiceOnly && !customer.email) {
     customer.email = `${customer.id}@invoices.useautumn.com`;
     await CusService.update({
-      sb: req.sb,
+      db: req.db,
       internalCusId: customer.internal_id,
       update: {
         email: customer.email,
@@ -173,11 +172,9 @@ export const checkStripeConnections = async ({
     });
   }
 
-  const stripeCli = createStripeCli({ org, env });
-
   const batchProductUpdates = [
     createStripeCusIfNotExists({
-      sb: req.sb,
+      db: req.db,
       org,
       env,
       customer,
@@ -187,7 +184,7 @@ export const checkStripeConnections = async ({
   for (const product of products) {
     batchProductUpdates.push(
       checkStripeProductExists({
-        sb: req.sb,
+        db: req.db,
         org,
         env,
         product,
@@ -220,7 +217,7 @@ export const createStripePrices = async ({
 
     batchPriceUpdates.push(
       createStripePriceIFNotExist({
-        sb: req.sb,
+        db: req.db,
         stripeCli,
         price,
         entitlements,
@@ -276,10 +273,8 @@ attachRouter.post("/attach", async (req: any, res) => {
       checkout_session_params,
     } = req.body;
 
-    const { orgId, env } = req;
+    const { env } = req;
     const logger = req.logtail;
-
-    const sb = req.sb;
 
     let itemsInput: ProductItem[] = items || [];
 
@@ -310,7 +305,6 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // Get curCusProducts too...
     const attachParams: AttachParams = await getFullCusProductData({
-      sb,
       db: req.db,
       customerId: customer_id,
       productId: product_id,
@@ -421,7 +415,7 @@ attachRouter.post("/attach", async (req: any, res) => {
     if (useCheckout && !newProductsFree && !invoiceOnly) {
       logger.info("SCENARIO 2: USING CHECKOUT");
       await handleCreateCheckout({
-        sb,
+        db: req.db,
         req,
         res,
         attachParams,
@@ -437,7 +431,6 @@ attachRouter.post("/attach", async (req: any, res) => {
         res,
         attachParams,
         curCusProduct,
-        isCustom,
       });
       return;
     }

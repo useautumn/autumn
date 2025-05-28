@@ -14,13 +14,12 @@ import {
   Price,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { differenceInMinutes, subDays } from "date-fns";
 import { getStripeSubs, getUsageBasedSub } from "../stripeSubUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
 import { getRelatedCusEnt } from "@/internal/customers/prices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -30,12 +29,14 @@ import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { Client } from "pg";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { getFeatureName } from "@/internal/features/displayUtils.js";
+import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 import { submitUsageToStripe } from "../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../stripePriceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getFullStripeInvoice } from "../stripeInvoiceUtils.js";
 
 const handleInArrearProrated = async ({
-  sb,
+  db,
   cusEnts,
   cusPrice,
   customer,
@@ -43,10 +44,10 @@ const handleInArrearProrated = async ({
   env,
   invoice,
   usageSub,
-  pg,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
+
   cusEnts: FullCustomerEntitlement[];
   cusPrice: FullCustomerPrice;
   customer: Customer;
@@ -54,7 +55,6 @@ const handleInArrearProrated = async ({
   env: AppEnv;
   invoice: Stripe.Invoice;
   usageSub: Stripe.Subscription;
-  pg: any;
   logger: any;
 }) => {
   const cusEnt = getRelatedCusEnt({
@@ -81,15 +81,14 @@ const handleInArrearProrated = async ({
 
   let feature = cusEnt.entitlement.feature;
   logger.info(
-    `Handling invoice.created for in arrear prorated, feature: ${feature.id}`
+    `Handling invoice.created for in arrear prorated, feature: ${feature.id}`,
   );
 
-  let deletedEntities = await EntityService.getByInternalCustomerId({
-    sb,
+  let deletedEntities = await EntityService.list({
+    db,
     internalCustomerId: customer.internal_id!,
     inFeatureIds: [feature.internal_id!],
     isDeleted: true,
-    logger,
   });
 
   if (deletedEntities.length == 0) {
@@ -98,12 +97,12 @@ const handleInArrearProrated = async ({
   }
 
   logger.info(
-    `✨ Handling in arrear prorated, customer ${customer.name}, org: ${org.slug}`
+    `✨ Handling in arrear prorated, customer ${customer.name}, org: ${org.slug}`,
   );
 
   logger.info(
     `Deleting entities, feature ${feature.id}, customer ${customer.id}, org ${org.slug}`,
-    deletedEntities
+    deletedEntities,
   );
 
   // Get linked cus ents
@@ -117,7 +116,7 @@ const handleInArrearProrated = async ({
     }
 
     logger.info(
-      `Linked cus ent: ${linkedCusEnt.feature_id}, isLinked: ${isLinked}`
+      `Linked cus ent: ${linkedCusEnt.feature_id}, isLinked: ${isLinked}`,
     );
 
     // Delete cus ent ids
@@ -131,8 +130,8 @@ const handleInArrearProrated = async ({
     console.log("New entities: ", newEntities);
     console.log("Cus ent ID: ", linkedCusEnt.id);
 
-    let updated = await CustomerEntitlementService.update({
-      sb,
+    let updated = await CusEntService.update({
+      db,
       id: linkedCusEnt.id,
       updates: {
         entities: newEntities,
@@ -141,13 +140,13 @@ const handleInArrearProrated = async ({
     console.log(`Updated ${updated.length} cus ents`);
 
     logger.info(
-      `Feature: ${feature.id}, customer: ${customer.id}, deleted entities from cus ent`
+      `Feature: ${feature.id}, customer: ${customer.id}, deleted entities from cus ent`,
     );
     linkedCusEnt.entities = newEntities;
   }
 
   await EntityService.deleteInInternalIds({
-    sb,
+    db,
     internalIds: deletedEntities.map((e) => e.internal_id!),
     orgId: org.id,
     env,
@@ -155,20 +154,22 @@ const handleInArrearProrated = async ({
   logger.info(
     `Feature: ${feature.id}, Deleted ${
       deletedEntities.length
-    }, entities: ${deletedEntities.map((e) => `${e.id}`).join(", ")}`
+    }, entities: ${deletedEntities.map((e) => `${e.id}`).join(", ")}`,
   );
 
   // Increase balance
   if (notNullish(cusEnt.balance)) {
     logger.info(`Incrementing balance for cus ent: ${cusEnt.id}`);
-    await pg.query(
-      `UPDATE customer_entitlements SET balance = balance + ${deletedEntities.length} WHERE id = '${cusEnt.id}'`
-    );
+    await CusEntService.increment({
+      db,
+      id: cusEnt.id,
+      amount: deletedEntities.length,
+    });
   }
 };
 
 const handleUsageInArrear = async ({
-  sb,
+  db,
   invoice,
   customer,
   relatedCusEnt,
@@ -178,7 +179,7 @@ const handleUsageInArrear = async ({
   logger,
   activeProduct,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   invoice: Stripe.Invoice;
   customer: Customer;
   relatedCusEnt: FullCustomerEntitlement;
@@ -237,7 +238,7 @@ const handleUsageInArrear = async ({
     billingUnits;
 
   const usageTimestamp = Math.round(
-    subDays(new Date(invoice.created * 1000), 1).getTime() / 1000
+    subDays(new Date(invoice.created * 1000), 1).getTime() / 1000,
   );
 
   let feature = relatedCusEnt.entitlement.feature;
@@ -261,7 +262,7 @@ const handleUsageInArrear = async ({
   } else {
     if (!config.stripe_meter_id) {
       logger.warn(
-        `Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`
+        `Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`,
       );
       return;
     }
@@ -277,12 +278,6 @@ const handleUsageInArrear = async ({
     });
   }
 
-  // let invoiceCreatedStr = formatUnixToDateTime(invoice.created * 1000);
-  // let usageTimestampStr = formatUnixToDateTime(usageTimestamp * 1000);
-  // logger.info(
-  //   `Invoice created: ${invoiceCreatedStr}, Usage timestamp: ${usageTimestampStr}`
-  // );
-
   if (relatedCusEnt.entitlement.interval == EntInterval.Lifetime) {
     return;
   }
@@ -293,8 +288,8 @@ const handleUsageInArrear = async ({
     allowance: ent.interval == EntInterval.Lifetime ? 0 : ent.allowance!,
   });
 
-  await CustomerEntitlementService.update({
-    sb,
+  await CusEntService.update({
+    db,
     id: relatedCusEnt.id,
     updates: {
       ...resetBalancesUpdate,
@@ -308,32 +303,38 @@ const handleUsageInArrear = async ({
 };
 
 export const sendUsageAndReset = async ({
-  sb,
+  db,
   activeProduct,
   org,
   env,
   invoice,
   stripeSubs,
   logger,
-  pg,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   activeProduct: FullCusProduct;
   org: Organization;
   env: AppEnv;
   invoice: Stripe.Invoice;
   stripeSubs: Stripe.Subscription[];
   logger: any;
-  pg: Client;
 }) => {
-  // Get cus ents
-  const cusProductWithEntsAndPrices = await CusProductService.getEntsAndPrices({
-    sb,
-    cusProductId: activeProduct.id,
+  const fullCusProduct = await CusProductService.get({
+    db,
+    id: activeProduct.id,
+    orgId: org.id,
+    env,
   });
 
-  const cusEnts = cusProductWithEntsAndPrices.customer_entitlements;
-  const cusPrices = cusProductWithEntsAndPrices.customer_prices;
+  if (!fullCusProduct) {
+    logger.warn(
+      `sendUsageAndReset: no full cus product found for active product ${activeProduct.id}`,
+    );
+    return;
+  }
+
+  const cusEnts = fullCusProduct.customer_entitlements;
+  const cusPrices = fullCusProduct.customer_prices;
 
   const stripeCli = createStripeCli({ org, env });
   const customer = activeProduct.customer;
@@ -359,7 +360,7 @@ export const sendUsageAndReset = async ({
     }
 
     let usageBasedSub = await getUsageBasedSub({
-      sb: sb,
+      db,
       stripeCli,
       subIds: activeProduct.subscription_ids || [],
       feature: relatedCusEnt.entitlement.feature,
@@ -378,13 +379,13 @@ export const sendUsageAndReset = async ({
 
     if (billingType == BillingType.UsageInArrear) {
       logger.info(
-        `✨ Handling end of period usage for customer ${customer.name}, org: ${org.slug}`
+        `✨ Handling end of period usage for customer ${customer.name}, org: ${org.slug}`,
       );
 
       logger.info(`   - Feature: ${relatedCusEnt.entitlement.feature.id}`);
 
       await handleUsageInArrear({
-        sb,
+        db,
         invoice,
         customer,
         relatedCusEnt,
@@ -398,7 +399,7 @@ export const sendUsageAndReset = async ({
 
     if (billingType == BillingType.InArrearProrated) {
       await handleInArrearProrated({
-        sb,
+        db,
         cusEnts,
         cusPrice,
         customer,
@@ -407,7 +408,6 @@ export const sendUsageAndReset = async ({
         invoice,
         usageSub: usageBasedSub,
         logger,
-        pg,
       });
     }
   }
@@ -426,38 +426,38 @@ const invoiceCusProductCreatedDifference = ({
     Math.abs(
       differenceInMinutes(
         new Date(cusProduct.created_at),
-        new Date(invoice.created * 1000)
-      )
+        new Date(invoice.created * 1000),
+      ),
     ) < minutes
   );
 };
 
 export const handleInvoiceCreated = async ({
-  pg,
-  sb,
+  db,
   org,
-  invoice,
+  data,
   env,
-  event,
 }: {
-  pg: Client;
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
-  invoice: Stripe.Invoice;
+  data: Stripe.Invoice;
   env: AppEnv;
-  event: Stripe.Event;
 }) => {
+  const stripeCli = createStripeCli({ org, env });
+  const invoice = await getFullStripeInvoice({
+    stripeCli,
+    stripeId: data.id,
+  });
+
   const logger = createLogtailWithContext({
     org: org,
     invoice: invoice,
     action: LoggerAction.StripeWebhookInvoiceCreated,
   });
 
-  // Get stripe subscriptions
-
   if (invoice.subscription) {
     const activeProducts = await CusProductService.getByStripeSubId({
-      sb,
+      db,
       stripeSubId: invoice.subscription as string,
       orgId: org.id,
       env,
@@ -470,34 +470,33 @@ export const handleInvoiceCreated = async ({
 
     if (activeProducts.length == 0) {
       logger.warn(
-        `Stripe invoice.created -- no active products found (${org.slug})`
+        `Stripe invoice.created -- no active products found (${org.slug})`,
       );
       return;
     }
 
     let internalEntityId = activeProducts.find(
-      (p) => p.internal_entity_id
+      (p) => p.internal_entity_id,
     )?.internal_entity_id;
 
-    let features = await FeatureService.getFeatures({
-      sb,
+    let features = await FeatureService.list({
+      db,
       orgId: org.id,
       env,
     });
 
     if (internalEntityId) {
-      // Add memo to invoice
       try {
         let stripeCli = createStripeCli({ org, env });
         let entity = await EntityService.getByInternalId({
-          sb,
+          db,
           internalId: internalEntityId,
           orgId: org.id,
           env,
         });
 
         let feature = features.find(
-          (f) => f.internal_id == entity?.internal_feature_id
+          (f) => f.internal_id == entity?.internal_feature_id,
         );
 
         let entDetails = "";
@@ -509,7 +508,7 @@ export const handleInvoiceCreated = async ({
           entDetails = `${entity.id}`;
         }
 
-        if (entDetails) {
+        if (entDetails && feature) {
           await stripeCli.invoices.update(invoice.id, {
             description: `${getFeatureName({
               feature,
@@ -529,19 +528,18 @@ export const handleInvoiceCreated = async ({
 
     const stripeSubs = await getStripeSubs({
       stripeCli: createStripeCli({ org, env }),
-      subIds: activeProducts.map((p) => p.subscription_ids).flat(),
+      subIds: activeProducts.map((p) => p.subscription_ids || []).flat(),
     });
 
     for (const activeProduct of activeProducts) {
       await sendUsageAndReset({
-        sb,
+        db,
         activeProduct,
         org,
         env,
         stripeSubs,
         invoice,
         logger,
-        pg,
       });
     }
   }

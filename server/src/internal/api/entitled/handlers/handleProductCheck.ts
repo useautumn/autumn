@@ -1,20 +1,10 @@
+import { CusProductStatus, FullCusProduct, SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-
-import {
-  CusProductStatus,
-  Entity,
-  FullCusProduct,
-  FullProduct,
-  SuccessCode,
-} from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getAttachPreview } from "./getAttachPreview.js";
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
+import { getProductResponse } from "@/internal/products/productV2Utils.js";
 
 export const handleProductCheck = async ({
   req,
@@ -31,14 +21,14 @@ export const handleProductCheck = async ({
     with_preview,
     entity_data,
   } = req.body;
-  const { orgId, sb, env, logtail: logger } = req;
+  const { orgId, env, logtail: logger, db } = req;
 
   let { org, features } = await getOrgAndFeatures({ req });
 
   // 1. Get customer and org
   let [customer, product] = await Promise.all([
     getOrCreateCustomer({
-      sb,
+      db,
       org,
       env,
       customerId: customer_id,
@@ -54,11 +44,11 @@ export const handleProductCheck = async ({
       entityId: entity_id,
       entityData: entity_data,
     }),
-    ProductService.getFullProduct({
-      sb,
+    ProductService.getFull({
+      db,
       orgId,
       env,
-      productId: product_id,
+      idOrInternalId: product_id,
     }),
   ]);
 
@@ -66,13 +56,37 @@ export const handleProductCheck = async ({
   if (customer.entity) {
     cusProducts = cusProducts.filter(
       (cusProduct: FullCusProduct) =>
-        cusProduct.internal_entity_id == customer.entity.internal_id
+        cusProduct.internal_entity_id == customer.entity.internal_id,
     );
   }
 
   let cusProduct: FullCusProduct | undefined = cusProducts.find(
-    (cusProduct: FullCusProduct) => cusProduct.product.id === product_id
+    (cusProduct: FullCusProduct) => cusProduct.product.id === product_id,
   );
+
+  let preview = with_preview
+    ? await getAttachPreview({
+        db,
+        customer,
+        org,
+        env,
+        product: product!,
+        cusProducts,
+        features,
+        logger,
+        shouldFormat: with_preview == "formatted",
+      })
+    : undefined;
+
+  if (preview) {
+    preview = {
+      ...preview,
+      product: getProductResponse({
+        product: product!,
+        features,
+      }),
+    };
+  }
 
   if (!cusProduct) {
     res.status(200).json({
@@ -81,19 +95,7 @@ export const handleProductCheck = async ({
       product_id,
       allowed: false,
 
-      preview: with_preview
-        ? await getAttachPreview({
-            customer,
-            org,
-            env,
-            product: product!,
-            cusProducts,
-            features,
-            sb,
-            logger,
-            shouldFormat: with_preview == "formatted",
-          })
-        : undefined,
+      preview,
     });
     return;
   }
@@ -113,21 +115,10 @@ export const handleProductCheck = async ({
     status: notNullish(cusProduct.canceled_at)
       ? "canceled"
       : onTrial
-      ? "trialing"
-      : cusProduct.status,
+        ? "trialing"
+        : cusProduct.status,
 
-    preview: with_preview
-      ? await getAttachPreview({
-          customer,
-          org,
-          env,
-          product: product!,
-          cusProducts,
-          features,
-          sb,
-          logger,
-        })
-      : undefined,
+    preview,
   });
 
   return;

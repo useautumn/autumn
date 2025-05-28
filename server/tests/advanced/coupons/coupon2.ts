@@ -1,7 +1,7 @@
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
-import { getPriceForOverage } from "@/internal/prices/priceUtils.js";
+import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
 import { Customer } from "@autumn/shared";
 import { expect } from "chai";
 import chalk from "chalk";
@@ -34,7 +34,7 @@ describe(
           customerId,
           org: this.org,
           env: this.env,
-          sb: this.sb,
+          db: this.db,
         });
       testClockId = testClockId1;
       customer = customer1;
@@ -60,7 +60,7 @@ describe(
       await completeCheckoutForm(
         res.checkout_url,
         undefined,
-        rewards.rolloverUsage.id
+        rewards.rolloverUsage.id,
       );
 
       await timeout(10000);
@@ -84,7 +84,7 @@ describe(
 
       try {
         expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(
-          rewards.rolloverUsage.id
+          rewards.rolloverUsage.id,
         );
 
         // Expect amount to be original amount - pro price
@@ -93,7 +93,7 @@ describe(
         logger.error("--------------------------------");
         logger.error(
           "Expected stripe cus to have coupon",
-          rewards.rolloverUsage
+          rewards.rolloverUsage,
         );
         logger.error("Actual stripe cus discount", cusDiscount);
         throw error;
@@ -113,7 +113,7 @@ describe(
       // Price
       const price = getPriceForOverage(
         products.proWithOverage.prices[1],
-        -(products.proWithOverage.entitlements.metered1.allowance! - usage)
+        -(products.proWithOverage.entitlements.metered1.allowance! - usage),
       );
 
       couponAmount = couponAmount - price;
@@ -128,7 +128,7 @@ describe(
     it("should have $0 invoice and correct new coupon amount", async () => {
       const cusRes = await AutumnCli.getCustomer(customerId);
       expect(cusRes.invoices[0].total).to.equal(
-        getFixedPriceAmount(products.proWithOverage)
+        getFixedPriceAmount(products.proWithOverage),
       );
 
       const cusDiscount = await getDiscount({
@@ -138,7 +138,7 @@ describe(
 
       try {
         expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(
-          rewards.rolloverUsage.id
+          rewards.rolloverUsage.id,
         );
         expect(cusDiscount.coupon?.amount_off).to.equal(couponAmount * 100);
       } catch (error) {
@@ -146,11 +146,11 @@ describe(
         logger.error("coupon2, cycle 1 failed");
         logger.error(
           "Expected stripe cus to have coupon",
-          rewards.rolloverUsage
+          rewards.rolloverUsage,
         );
         logger.error("Actual stripe cus discount", cusDiscount);
         throw error;
       }
     });
-  }
+  },
 );

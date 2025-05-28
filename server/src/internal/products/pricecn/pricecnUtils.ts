@@ -16,7 +16,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { numberWithCommas } from "tests/utils/general/numberUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
-import { getFeatureName } from "@/internal/features/displayUtils.js";
+import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 
 export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
   items.sort((a, b) => {
@@ -175,8 +175,8 @@ export const featureToPricecnItem = ({
     item.included_usage == Infinite
       ? "Unlimited "
       : nullish(item.included_usage) || item.included_usage == 0
-      ? ""
-      : `${numberWithCommas(item.included_usage!)} `;
+        ? ""
+        : `${numberWithCommas(item.included_usage!)} `;
 
   return {
     primaryText: `${includedUsageTxt}${featureName}`,
@@ -287,8 +287,8 @@ export const toPricecnProduct = ({
     buttonText = isCanceled
       ? "Renew"
       : isTrialing
-      ? "Trialing"
-      : "Current Plan";
+        ? "Trialing"
+        : "Current Plan";
   } else if (isScheduled) {
     buttonText = "Scheduled";
   }

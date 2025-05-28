@@ -11,18 +11,12 @@ export const handleDeleteProduct = (req: any, res: any) =>
     res,
     action: "delete product",
     handler: async () => {
+      const { db, orgId, env } = req;
       const { productId } = req.params;
-      const sb = req.sb;
-      const orgId = req.orgId;
-      const env = req.env;
 
-      console.log("Org ID", orgId);
-      console.log("Product ID", productId);
-      console.log("Env", env);
-
-      const product = await ProductService.getProductStrict({
-        sb,
-        productId,
+      const product = await ProductService.get({
+        db,
+        id: productId,
         orgId,
         env,
       });
@@ -35,10 +29,10 @@ export const handleDeleteProduct = (req: any, res: any) =>
         });
       }
 
-      let cusProducts = await CusProductService.getByInternalProductId(
-        sb,
-        product.internal_id,
-      );
+      let cusProducts = await CusProductService.getByInternalProductId({
+        db,
+        internalProductId: product.internal_id,
+      });
 
       if (cusProducts.length > 0) {
         throw new RecaseError({
@@ -50,7 +44,7 @@ export const handleDeleteProduct = (req: any, res: any) =>
 
       // 2. Delete prices, entitlements, and product
       await ProductService.deleteByInternalId({
-        sb,
+        db,
         internalId: product.internal_id,
         orgId,
         env,

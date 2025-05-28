@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { Request } from "@/utils/models/Request.js";
 
 import { eq } from "drizzle-orm";
 import { routeHandler } from "@/utils/routerUtils.js";
@@ -12,7 +11,8 @@ import { chatResults } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 
 export const onboardingRouter = Router();
 
@@ -21,8 +21,8 @@ onboardingRouter.post("", async (req: Request, res: any) =>
     req,
     res,
     action: "onboarding",
-    handler: async (req: Request, res: any) => {
-      const { db, sb, logtail: logger, org } = req;
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+      const { db, logtail: logger, org } = req;
       const { token } = req.body;
 
       if (!token) {
@@ -45,8 +45,8 @@ onboardingRouter.post("", async (req: Request, res: any) =>
         });
       }
 
-      let curProducts = await ProductService.getFullProducts({
-        sb,
+      let curProducts = await ProductService.listFull({
+        db,
         orgId: org.id,
         env: AppEnv.Sandbox,
       });
@@ -73,7 +73,6 @@ onboardingRouter.post("", async (req: Request, res: any) =>
 
         let { products, prices, ents } = await parseChatProducts({
           db,
-          sb,
           logger,
           orgId: org.id,
           features: [...curFeatures, ...backendFeatures],
@@ -88,18 +87,18 @@ onboardingRouter.post("", async (req: Request, res: any) =>
           }),
           (async () => {
             for (const product of products) {
-              await ProductService.create({ sb, product });
+              await ProductService.insert({ db, product });
             }
           })(),
         ]);
 
         await EntitlementService.insert({
-          sb,
+          db,
           data: ents,
         });
 
         await PriceService.insert({
-          sb,
+          db,
           data: prices,
         });
       }

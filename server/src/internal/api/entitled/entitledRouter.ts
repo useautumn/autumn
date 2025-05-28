@@ -20,7 +20,6 @@ import { StatusCodes } from "http-status-codes";
 
 import { handleEventSent } from "../events/eventRouter.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -196,12 +195,11 @@ const getCusEntsAndFeatures = async ({
   logger,
 }: {
   req: any;
-  sb: SupabaseClient;
   logger: any;
 }) => {
   let { customer_id, feature_id, customer_data, entity_id } = req.body;
 
-  let { sb, env } = req;
+  let { env, db } = req;
 
   // 1. Get org and features
   const startTime = Date.now();
@@ -218,7 +216,7 @@ const getCusEntsAndFeatures = async ({
   const { feature, creditSystems, allFeatures } = featureRes;
 
   const customer = await getOrCreateCustomer({
-    sb,
+    db,
     org: req.org,
     env,
     customerId: customer_id,
@@ -295,7 +293,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       entity_id,
     } = req.body;
 
-    const { logtail: logger } = req;
+    const { logtail: logger, db } = req;
 
     if (!customer_id) {
       throw new RecaseError({
@@ -347,11 +345,8 @@ entitledRouter.post("", async (req: any, res: any) => {
       quantity = floatQuantity;
     }
 
-    const { sb } = req;
-
     const { cusEnts, feature, creditSystems, org, cusProducts, allFeatures } =
       await getCusEntsAndFeatures({
-        sb,
         req,
         logger: req.logtail,
       });
@@ -366,6 +361,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     // 2. If boolean, return true
     if (feature.type === FeatureType.Boolean) {
       return await getBooleanEntitledResult({
+        db,
         customer_id,
         res,
         cusEnts,
@@ -375,7 +371,6 @@ entitledRouter.post("", async (req: any, res: any) => {
         withPreview: req.body.with_preview,
         cusProducts,
         allFeatures,
-        sb,
       });
     }
 
@@ -450,10 +445,10 @@ entitledRouter.post("", async (req: any, res: any) => {
 
       try {
         preview = await getCheckPreview({
+          db,
           allowed,
           balance: balanceObj?.balance,
           feature: featureToUse!,
-          sb,
           cusProducts,
           raw: req.body.with_preview === "raw",
           allFeatures,
@@ -490,66 +485,3 @@ entitledRouter.post("", async (req: any, res: any) => {
     handleRequestError({ req, error, res, action: "Failed to GET entitled" });
   }
 });
-
-// const batchQuery = [
-//   CustomerEntitlementService.getCustomerAndEnts({
-//     sb,
-//     customerId: customer_id,
-//     orgId,
-//     env,
-//     inStatuses: org.config?.include_past_due
-//       ? [CusProductStatus.Active, CusProductStatus.PastDue]
-//       : [CusProductStatus.Active],
-//   }).then((result) => {
-//     timings.cusEnts = Date.now() - startParallel;
-//     return result;
-//   }),
-//   getFeaturesAndCreditSystems2({
-//     sb,
-//     orgId,
-//     env,
-//     featureId: feature_id,
-//   }).then((result) => {
-//     timings.features = Date.now() - startParallel;
-//     return result;
-//   }),
-// ];
-
-// const getCusEntsActiveInFeatureIds = ({
-//   cusWithEnts,
-//   features,
-// }: {
-//   cusWithEnts: CusWithEnts;
-//   features: Feature[];
-// }) => {
-//   const internalFeatureIds = features.map((feature) => feature.internal_id);
-//   const cusEnts = cusWithEnts.customer_entitlements;
-
-//   if (
-//     cusWithEnts.customer_products.length === 0 ||
-//     cusWithEnts.customer_entitlements.length == 0
-//   ) {
-//     return [];
-//   }
-
-//   const activeCusEnts = cusEnts
-//     .filter((cusEnt) => {
-//       return (
-//         internalFeatureIds.includes(cusEnt.internal_feature_id) &&
-//         cusWithEnts.customer_products.some(
-//           (product) => product.id === cusEnt.customer_product_id
-//         )
-//       );
-//     })
-//     .map((ent) => {
-//       return {
-//         ...ent,
-//         customer_product: cusWithEnts.customer_products.find(
-//           (cusProduct) => cusProduct.id === ent.customer_product_id
-//         ),
-//       };
-//     });
-
-//   // no need to sort?
-//   return activeCusEnts;
-// };

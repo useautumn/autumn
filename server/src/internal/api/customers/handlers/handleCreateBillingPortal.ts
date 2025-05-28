@@ -3,7 +3,6 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { ErrCode, APIVersion } from "@autumn/shared";
-import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
 export const handleCreateBillingPortal = async (req: any, res: any) => {
@@ -13,12 +12,11 @@ export const handleCreateBillingPortal = async (req: any, res: any) => {
 
     const [org, customer] = await Promise.all([
       OrgService.getFromReq(req),
-      CusService.getById({
-        sb: req.sb,
-        id: customerId,
+      CusService.get({
+        db: req.db,
+        idOrInternalId: customerId,
         orgId: req.orgId,
         env: req.env,
-        logger: req.logtail,
       }),
     ]);
 

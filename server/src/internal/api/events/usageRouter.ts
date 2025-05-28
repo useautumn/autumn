@@ -37,10 +37,11 @@ const getCusFeatureAndOrg = async ({
   customerData: any;
 }) => {
   // 1. Get customer
+  const { db } = req;
   let { org, features } = await getOrgAndFeatures({ req });
   let [customer] = await Promise.all([
     getOrCreateCustomer({
-      sb: req.sb,
+      db,
       org,
       env: req.env,
       customerId,
@@ -61,7 +62,7 @@ const getCusFeatureAndOrg = async ({
       creditSystemContainsFeature({
         creditSystem: f,
         meteredFeatureId: featureId,
-      })
+      }),
   );
 
   if (!feature) {
@@ -114,7 +115,7 @@ const createAndInsertEvent = async ({
     set_usage: set_usage || false,
   };
 
-  await EventService.insertEvent(req.sb, newEvent);
+  await EventService.insert({ db: req.db, event: newEvent });
 
   return newEvent;
 };

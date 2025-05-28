@@ -6,13 +6,11 @@ import {
   BillWhen,
   CouponDurationType,
   CreateFreeTrial,
-  DiscountType,
   EntInterval,
   Entitlement,
   Feature,
   FeatureType,
   FeatureUsageType,
-  FreeTrial,
   FreeTrialDuration,
   Organization,
   PriceType,
@@ -21,10 +19,12 @@ import {
   RewardTriggerEvent,
   RewardType,
 } from "@autumn/shared";
+
 import { getAxiosInstance } from "./setup.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { attachPmToCus } from "@/external/stripe/stripeCusUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { generateId } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const keyToTitle = (key: string) => {
   return key
@@ -124,7 +124,7 @@ export const initEntitlement = ({
     return {
       feature_id: feature.id,
       internal_feature_id: feature.internal_id,
-    };
+    } as Entitlement;
   }
 
   const isUnlimitedOrNone =
@@ -138,7 +138,9 @@ export const initEntitlement = ({
     interval: isUnlimitedOrNone ? null : interval,
     entity_feature_id: entityFeatureId,
     carry_from_previous: carryFromPrevious,
-  };
+    created_at: Date.now(),
+    id: generateId("ent"),
+  } as Entitlement;
 };
 
 export const initPrice = ({
@@ -292,7 +294,7 @@ export const initCustomer = async ({
   customer_data,
   customerId,
   attachPm = false,
-  sb,
+  db,
   org,
   env,
   testClockId,
@@ -305,7 +307,7 @@ export const initCustomer = async ({
   };
   customerId?: string;
   attachPm?: boolean;
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   testClockId?: string;
@@ -341,7 +343,7 @@ export const initCustomer = async ({
         customer: data.customer,
         org: org,
         env: env,
-        sb: sb,
+        db: db,
         testClockId: testClockId,
       });
     }

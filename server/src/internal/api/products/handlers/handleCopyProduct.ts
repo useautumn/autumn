@@ -12,12 +12,12 @@ export const handleCopyProduct = async (req: any, res: any) =>
     res,
     action: "Copy Product",
     handler: async (req, res) => {
+      let { db, logtail: logger } = req;
+
       const { productId: fromProductId } = req.params;
-      const sb = req.sb;
       const orgId = req.orgId;
       const fromEnv = req.env;
       const { env: toEnv, id: toId, name: toName } = req.body;
-      let { db, logtail: logger } = req;
 
       if (!toEnv || !toId || !toName) {
         throw new RecaseError({
@@ -36,9 +36,9 @@ export const handleCopyProduct = async (req: any, res: any) =>
       }
 
       // 1. Check if product exists in live already...
-      const toProduct = await ProductService.getProductStrict({
-        sb,
-        productId: toId,
+      const toProduct = await ProductService.get({
+        db,
+        id: toId,
         orgId,
         env: toEnv,
       });
@@ -53,19 +53,19 @@ export const handleCopyProduct = async (req: any, res: any) =>
 
       // 1. Get sandbox product
       const [fromFullProduct, fromFeatures, toFeatures] = await Promise.all([
-        ProductService.getFullProduct({
-          sb,
-          productId: fromProductId,
+        ProductService.getFull({
+          db,
+          idOrInternalId: fromProductId,
           orgId,
           env: fromEnv,
         }),
-        FeatureService.getFeatures({
-          sb,
+        FeatureService.list({
+          db,
           orgId,
           env: fromEnv,
         }),
-        FeatureService.getFeatures({
-          sb,
+        FeatureService.list({
+          db,
           orgId,
           env: toEnv,
         }),
@@ -101,13 +101,14 @@ export const handleCopyProduct = async (req: any, res: any) =>
 
       // // 2. Copy product
       await copyProduct({
-        sb,
+        db,
         product: fromFullProduct,
         toOrgId: orgId,
         toId,
         toName,
         toEnv: toEnv,
-        features: toFeatures,
+        toFeatures,
+        fromFeatures,
       });
 
       // 2. Get product from sandbox

@@ -15,9 +15,10 @@ import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import {
   getBillingType,
   getPriceEntitlement,
-} from "@/internal/prices/priceUtils.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
+} from "@/internal/products/prices/priceUtils.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { Decimal } from "decimal.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const prepaidToStripeTiers = (
   price: Price,
@@ -57,7 +58,7 @@ export const prepaidToStripeTiers = (
 };
 
 export const createStripePrepaid = async ({
-  sb,
+  db,
   price,
   product,
   org,
@@ -65,7 +66,7 @@ export const createStripePrepaid = async ({
   curStripeProd,
   stripeCli,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   price: Price;
   product: Product;
   org: Organization;
@@ -148,8 +149,8 @@ export const createStripePrepaid = async ({
   // New config
   price.config = config;
   await PriceService.update({
-    sb,
-    priceId: price.id!,
+    db,
+    id: price.id!,
     update: { config },
   });
 };

@@ -24,15 +24,16 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { SuccessCode } from "@autumn/shared";
 import { cancelCurSubs } from "./handleDowngrade/cancelCurSubs.js";
 import { getScheduleIdsFromCusProducts } from "./scheduleUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const scheduleStripeSubscription = async ({
-  sb,
+  db,
   attachParams,
   stripeCli,
   itemSet,
   endOfBillingPeriod,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   attachParams: AttachParams;
   stripeCli: Stripe;
   itemSet: ItemSet;
@@ -50,12 +51,12 @@ const scheduleStripeSubscription = async ({
   let subItems = items.filter(
     (item: any, index: number) =>
       index >= prices.length ||
-      prices[index].config!.interval !== BillingInterval.OneOff
+      prices[index].config!.interval !== BillingInterval.OneOff,
   );
   let oneOffItems = items.filter(
     (item: any, index: number) =>
       index < prices.length &&
-      prices[index].config!.interval === BillingInterval.OneOff
+      prices[index].config!.interval === BillingInterval.OneOff,
   );
 
   const newSubscriptionSchedule = await stripeCli.subscriptionSchedules.create({
@@ -73,7 +74,7 @@ const scheduleStripeSubscription = async ({
   });
 
   await SubService.createSub({
-    sb: sb,
+    db,
     sub: {
       id: generateId("sub"),
       stripe_id: null,
@@ -102,7 +103,7 @@ export const getCusProductsWithStripeSubIds = async ({
   return cusProducts.filter(
     (cusProduct) =>
       cusProduct.subscription_ids?.includes(stripeSubId) &&
-      cusProduct.id !== curCusProductId
+      cusProduct.id !== curCusProductId,
   );
 };
 
@@ -124,7 +125,7 @@ export const handleDowngrade = async ({
     env: attachParams.customer.env,
   });
   logger.info(
-    `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`
+    `Handling downgrade from ${curCusProduct.product.name} to ${product.name}`,
   );
 
   const curSubscriptions = await getStripeSubs({
@@ -167,7 +168,7 @@ export const handleDowngrade = async ({
 
   for (const itemSet of itemSets) {
     let scheduleObj = schedules.find(
-      (schedule) => schedule.interval === itemSet.interval
+      (schedule) => schedule.interval === itemSet.interval,
     );
 
     if (scheduleObj) {
@@ -177,7 +178,7 @@ export const handleDowngrade = async ({
         stripeCli,
         cusProducts: [curCusProduct, attachParams.curScheduledProduct],
         itemSet: itemSet,
-        sb: req.sb,
+        db: req.db,
         org: attachParams.org,
         env: attachParams.customer.env,
       });
@@ -200,15 +201,15 @@ export const handleDowngrade = async ({
         ...otherSubItems.map((sub: any) => ({
           price: sub.price.id,
           quantity: sub.quantity,
-        }))
+        })),
       );
 
       let scheduleId = await scheduleStripeSubscription({
+        db: req.db,
         attachParams,
         stripeCli,
         itemSet,
         endOfBillingPeriod: latestPeriodEnd,
-        sb: req.sb,
       });
       scheduledIds.push(scheduleId);
 
@@ -219,7 +220,7 @@ export const handleDowngrade = async ({
             scheduleId,
           ];
           await CusProductService.update({
-            sb: req.sb,
+            db: req.db,
             cusProductId: otherCusProduct.id,
             updates: { scheduled_ids: newScheduledIds },
           });
@@ -230,11 +231,11 @@ export const handleDowngrade = async ({
 
   // Remove scheduled ids from curCusProduct
   await CusProductService.update({
-    sb: req.sb,
+    db: req.db,
     cusProductId: curCusProduct.id,
     updates: {
       scheduled_ids: curCusProduct.scheduled_ids?.filter(
-        (id) => !scheduledIds.includes(id)
+        (id) => !scheduledIds.includes(id),
       ),
     },
   });
@@ -243,7 +244,7 @@ export const handleDowngrade = async ({
   logger.info("3. Inserting new full cus product (starts at period end)");
   const newProductFree = isFreeProduct(attachParams.prices);
   await createFullCusProduct({
-    sb: req.sb,
+    db: req.db,
     attachParams: attachToInsertParams(attachParams, product),
     startsAt: latestPeriodEnd * 1000,
     subscriptionScheduleIds: scheduledIds,
@@ -255,7 +256,7 @@ export const handleDowngrade = async ({
 
   // 5. Updating current cus product canceled_at...
   await CusProductService.update({
-    sb: req.sb,
+    db: req.db,
     cusProductId: curCusProduct.id,
     updates: {
       canceled_at: latestPeriodEnd * 1000,
@@ -271,7 +272,7 @@ export const handleDowngrade = async ({
         product_ids: [product.id],
         customer_id:
           attachParams.customer.id || attachParams.customer.internal_id,
-      })
+      }),
     );
   } else {
     res.status(200).json({
@@ -279,9 +280,3 @@ export const handleDowngrade = async ({
     });
   }
 };
-
-// await removePreviousScheduledProducts({
-//   sb: req.sb,
-//   stripeCli,
-//   attachParams,
-// });

@@ -29,7 +29,7 @@ const checkEntitledOnProduct = async ({
       AutumnCli.sendEvent({
         customerId: customerId,
         eventName: features.metered1.eventName,
-      })
+      }),
     );
   }
 
@@ -41,7 +41,7 @@ const checkEntitledOnProduct = async ({
   const { allowed, balanceObj }: any = await AutumnCli.entitled(
     customerId,
     features.metered1.id,
-    true
+    true,
   );
 
   try {
@@ -69,7 +69,7 @@ const checkEntitledOnProduct = async ({
       AutumnCli.sendEvent({
         customerId: customerId,
         eventName: features.metered1.eventName,
-      })
+      }),
     );
   }
   await Promise.all(batchUpdates2);
@@ -101,7 +101,7 @@ const checkEntitledOnProduct = async ({
 // TODO: Add test case for unlimited feature
 
 describe(`${chalk.yellowBright(
-  "04_entitled: Testing /events and /entitled, for pro, one time top up"
+  "04_entitled: Testing /events and /entitled, for pro, one time top up",
 )}`, () => {
   const customerId = "entitledCustomer";
 
@@ -117,7 +117,7 @@ describe(`${chalk.yellowBright(
         name: customerId,
         email: `test@test.com`,
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -175,7 +175,7 @@ describe(`${chalk.yellowBright(
 });
 
 describe(`${chalk.yellowBright(
-  "04_entitled: Testing /entitled & /events, for pro with overage"
+  "04_entitled: Testing /entitled & /events, for pro with overage",
 )}`, () => {
   const customerId = "entitledCustomerUsageBased";
 
@@ -186,7 +186,7 @@ describe(`${chalk.yellowBright(
         name: customerId,
         email: "test@test.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -215,7 +215,7 @@ describe(`${chalk.yellowBright(
     const { allowed, balanceObj }: any = await AutumnCli.entitled(
       customerId,
       features.metered1.id,
-      true
+      true,
     );
 
     expect(allowed).to.be.true;
@@ -228,7 +228,7 @@ describe(`${chalk.yellowBright(
         AutumnCli.sendEvent({
           customerId: customerId,
           eventName: features.metered1.eventName,
-        })
+        }),
       );
     }
 

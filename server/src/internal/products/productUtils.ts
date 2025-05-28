@@ -24,7 +24,7 @@ import {
   getBillingInterval,
   getBillingType,
   pricesAreSame,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { ProductService } from "./ProductService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -38,7 +38,7 @@ import {
 } from "./entitlements/entitlementUtils.js";
 import { Decimal } from "decimal.js";
 import { generateId } from "@/utils/genUtils.js";
-import { PriceService } from "../prices/PriceService.js";
+import { PriceService } from "./prices/PriceService.js";
 import { EntitlementService } from "./entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
@@ -46,6 +46,7 @@ import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
 import { mapToProductItems } from "./productV2Utils.js";
 import { itemsAreSame } from "./product-items/productItemUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const sortProductsByPrice = (products: FullProduct[]) => {
   products.sort((a, b) => {
@@ -175,15 +176,6 @@ export const isProductUpgrade = ({
   }
 };
 
-export const isSameBillingInterval = (
-  product1: FullProduct,
-  product2: FullProduct,
-) => {
-  return (
-    getBillingInterval(product1.prices) === getBillingInterval(product2.prices)
-  );
-};
-
 export const isFreeProduct = (prices: Price[]) => {
   if (prices.length === 0) {
     return true;
@@ -238,13 +230,13 @@ export const getOptionsFromPrices = (prices: Price[], features: Feature[]) => {
 };
 
 export const checkStripeProductExists = async ({
-  sb,
+  db,
   org,
   env,
   product,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   product: FullProduct;
@@ -277,8 +269,8 @@ export const checkStripeProductExists = async ({
       name: product.name,
     });
 
-    await ProductService.update({
-      sb,
+    await ProductService.updateByInternalId({
+      db,
       internalId: product.internal_id,
       update: {
         processor: { id: stripeProduct.id, type: ProcessorType.Stripe },
@@ -310,21 +302,23 @@ export const attachToInsertParams = (
 
 // COPY PRODUCT
 export const copyProduct = async ({
-  sb,
+  db,
   product,
   toOrgId,
   toId,
   toName,
   toEnv,
-  features,
+  toFeatures,
+  fromFeatures,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   product: FullProduct;
   toOrgId: string;
   toEnv: AppEnv;
   toId: string;
   toName: string;
-  features: Feature[];
+  toFeatures: Feature[];
+  fromFeatures: Feature[];
 }) => {
   const newProduct = {
     ...product,
@@ -338,9 +332,17 @@ export const copyProduct = async ({
 
   const newEntitlements: Entitlement[] = [];
   const newEntIds: Record<string, string> = {};
+
   for (const entitlement of product.entitlements) {
-    let feature = features.find((f) => f.id === entitlement.feature_id);
-    if (!feature) {
+    // 1. Get from feature
+    let fromFeature = fromFeatures.find(
+      (f) => f.internal_id === entitlement.internal_feature_id,
+    );
+
+    // 2. Get to feature
+    let toFeature = toFeatures.find((f) => f.id === fromFeature?.id);
+
+    if (!toFeature) {
       throw new RecaseError({
         message: `Feature ${entitlement.feature_id} not found`,
         code: ErrCode.FeatureNotFound,
@@ -356,7 +358,7 @@ export const copyProduct = async ({
         org_id: toOrgId,
         created_at: Date.now(),
         internal_product_id: newProduct.internal_id,
-        internal_feature_id: feature.internal_id,
+        internal_feature_id: toFeature.internal_id,
       }),
     );
 
@@ -377,8 +379,13 @@ export const copyProduct = async ({
     config.stripe_price_id = undefined;
 
     if (config.type === PriceType.Usage) {
-      let feature = features.find((f) => f.id === config.feature_id);
-      if (!feature) {
+      let fromFeature = fromFeatures.find(
+        (f) => f.internal_id === config.internal_feature_id,
+      );
+
+      let toFeature = toFeatures.find((f) => f.id === fromFeature?.id);
+
+      if (!toFeature) {
         throw new RecaseError({
           message: `Feature ${config.feature_id} not found`,
           code: ErrCode.FeatureNotFound,
@@ -386,8 +393,8 @@ export const copyProduct = async ({
         });
       }
 
-      config.internal_feature_id = feature.internal_id!;
-      config.feature_id = feature.id;
+      config.internal_feature_id = toFeature.internal_id!;
+      config.feature_id = toFeature.id;
 
       // Update entitlement id
       let entitlementId = newEntIds[price.entitlement_id!];
@@ -413,8 +420,8 @@ export const copyProduct = async ({
     );
   }
 
-  await ProductService.create({
-    sb,
+  await ProductService.insert({
+    db,
     product: {
       ...ProductSchema.parse(newProduct),
       version: 1,
@@ -422,18 +429,18 @@ export const copyProduct = async ({
   });
 
   await EntitlementService.insert({
-    sb,
+    db,
     data: newEntitlements,
   });
 
   await PriceService.insert({
-    sb,
+    db,
     data: newPrices,
   });
 
   if (product.free_trial) {
     await FreeTrialService.insert({
-      sb,
+      db,
       data: {
         ...product.free_trial,
         id: generateId("ft"),
@@ -460,13 +467,13 @@ export const isOneOff = (prices: Price[]) => {
 };
 
 export const initProductInStripe = async ({
-  sb,
+  db,
   org,
   env,
   logger,
   product,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   logger: any;
@@ -474,7 +481,7 @@ export const initProductInStripe = async ({
 }) => {
   // 1.
   await checkStripeProductExists({
-    sb,
+    db,
     org,
     env,
     product,
@@ -489,7 +496,7 @@ export const initProductInStripe = async ({
   for (const price of product.prices) {
     batchPriceUpdate.push(
       createStripePriceIFNotExist({
-        sb,
+        db,
         org,
         stripeCli,
         price,

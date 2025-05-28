@@ -2,7 +2,7 @@ import {
   getBillingType,
   getPriceEntitlement,
   priceIsOneOffAndTiered,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 import {
   Price,
   EntitlementWithFeature,
@@ -23,6 +23,8 @@ import {
   createStripeArrearProrated,
   createStripeMeteredPrice,
 } from "./createStripeArrearProrated.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 
 export const checkCurStripePrice = async ({
   price,
@@ -77,7 +79,7 @@ export const checkCurStripePrice = async ({
 };
 
 export const createStripePriceIFNotExist = async ({
-  sb,
+  db,
   stripeCli,
   price,
   entitlements,
@@ -87,7 +89,7 @@ export const createStripePriceIFNotExist = async ({
   internalEntityId,
   useCheckout = false,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   stripeCli: Stripe;
   price: Price;
   entitlements: EntitlementWithFeature[];
@@ -122,12 +124,11 @@ export const createStripePriceIFNotExist = async ({
     if (!stripePrice) {
       logger.info("Creating stripe fixed price");
       await createStripeFixedPrice({
-        sb,
+        db,
         stripeCli,
         price,
         product,
         org,
-        curStripePrice: stripePrice,
       });
     }
   }
@@ -137,7 +138,7 @@ export const createStripePriceIFNotExist = async ({
     if (isOneOffAndTiered && !stripeProd) {
       logger.info(`Creating stripe one off tiered product`);
       await createStripeOneOffTieredProduct({
-        sb,
+        db,
         stripeCli,
         price,
         entitlements,
@@ -148,7 +149,7 @@ export const createStripePriceIFNotExist = async ({
     if (!isOneOffAndTiered && !stripePrice) {
       logger.info(`Creating stripe prepaid price`);
       await createStripePrepaid({
-        sb,
+        db,
         stripeCli,
         price,
         entitlements,
@@ -163,7 +164,7 @@ export const createStripePriceIFNotExist = async ({
     if (!stripePrice) {
       logger.info(`Creating stripe in arrear prorated product`);
       await createStripeArrearProrated({
-        sb,
+        db,
         stripeCli,
         price,
         entitlements,
@@ -174,7 +175,7 @@ export const createStripePriceIFNotExist = async ({
     } else if (!config.stripe_placeholder_price_id) {
       logger.info(`Creating stripe placeholder price`);
       let placeholderPrice = await createStripeMeteredPrice({
-        sb,
+        db,
         stripeCli,
         price,
         entitlements,
@@ -182,18 +183,17 @@ export const createStripePriceIFNotExist = async ({
         org,
       });
       config.stripe_placeholder_price_id = placeholderPrice.id;
-      await sb
-        .from("prices")
-        .update({
-          config,
-        })
-        .eq("id", price.id);
+      await PriceService.update({
+        db,
+        id: price.id!,
+        update: { config },
+      });
     }
   }
 
   if (billingType == BillingType.UsageInArrear) {
     await createStripeInArrearPrice({
-      sb,
+      db,
       stripeCli,
       price,
       entitlements,

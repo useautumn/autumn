@@ -6,28 +6,28 @@ import {
 import {
   AppEnv,
   AttachScenario,
-  CheckProductFormattedPreview,
+  CheckProductPreview,
   Customer,
   Feature,
   FullCusProduct,
   FullProduct,
   Organization,
-  UsageModel,
 } from "@autumn/shared";
 import { AttachParams } from "../products/AttachParams.js";
 import { handleStripeSubUpdate } from "../change-product/handleUpgrade.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import Stripe from "stripe";
+
 import { billForRemainingUsages } from "../change-product/billRemainingUsages.js";
-import { logger } from "@trigger.dev/sdk/v3";
+
 import { formatCurrency, itemsToHtml } from "./previewUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { isPriceItem } from "@/internal/products/product-items/getItemType.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const isAddProductFlow = ({
   curCusProduct,
@@ -81,49 +81,30 @@ const formatMessage = ({
 }) => {
   let totalAmount = baseLineItems.reduce(
     (acc: number, item: any) => acc + item.amount,
-    0
+    0,
   );
   totalAmount += usageLineItems.reduce(
     (acc: number, item: any) => acc + item.amount,
-    0
+    0,
   );
 
   let addString = org.config.bill_upgrade_immediately
     ? "will be charged to your card immediately"
     : "will be added to your next bill";
 
-  // ${formatCurrency({
-  //   amount: totalAmount,
-  //   defaultCurrency: org.default_currency,
-  // })}
-
-  let message = `By clicking confirm, you will upgrade your plan to ${product.name} and the following amount ${addString}:\n`;
-
-  // for (let item of baseLineItems) {
-  //   message += `\n${item.description}: ${formatCurrency({
-  //     amount: item.amount,
-  //     defaultCurrency: org.default_currency,
-  //   })}`;
-  // }
-
-  // for (let item of usageLineItems) {
-  //   message += `\n${item.description}: ${formatCurrency({
-  //     amount: item.amount,
-  //     defaultCurrency: org.default_currency,
-  //   })}`;
-  // }
+  let message = `By clicking confirm, you will upgrade your plan to ${product.name} and the following amount ${addString}:`;
 
   return { message };
 };
 
 const createStripeProductAndPrices = async ({
-  sb,
+  db,
   org,
   env,
   product,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   product: FullProduct;
@@ -131,7 +112,7 @@ const createStripeProductAndPrices = async ({
 }) => {
   if (!product.processor?.id) {
     await checkStripeProductExists({
-      sb,
+      db,
       org,
       env,
       product,
@@ -145,14 +126,14 @@ const createStripeProductAndPrices = async ({
     if (!price.config?.stripe_price_id) {
       batchPriceUpdates.push(
         createStripePriceIFNotExist({
-          sb,
+          db,
           stripeCli,
           price,
           entitlements: product.entitlements,
           product,
           org,
           logger,
-        })
+        }),
       );
     }
   }
@@ -161,7 +142,7 @@ const createStripeProductAndPrices = async ({
 };
 
 export const getUpgradePreview = async ({
-  sb,
+  db,
   customer,
   org,
   env,
@@ -170,7 +151,7 @@ export const getUpgradePreview = async ({
   features,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   customer: Customer;
   org: Organization;
   env: AppEnv;
@@ -181,7 +162,7 @@ export const getUpgradePreview = async ({
 }) => {
   // Create stripe product / prices if not exist
   await createStripeProductAndPrices({
-    sb,
+    db,
     org,
     env,
     product,
@@ -207,7 +188,7 @@ export const getUpgradePreview = async ({
   };
 
   let updatePreview = (await handleStripeSubUpdate({
-    sb: null,
+    db,
     stripeCli,
     curCusProduct: curMainProduct,
     attachParams,
@@ -226,8 +207,8 @@ export const getUpgradePreview = async ({
 
   let usageLineItems =
     (await billForRemainingUsages({
+      db,
       logger: console,
-      sb: null,
       attachParams,
       curCusProduct: curMainProduct,
       newSubs: stripeSubs,
@@ -236,12 +217,12 @@ export const getUpgradePreview = async ({
 
   let totalAmount = baseLineItems.reduce(
     (acc: number, item: any) => acc + item.amount,
-    0
+    0,
   );
 
   totalAmount += usageLineItems.reduce(
     (acc: number, item: any) => acc + item.amount,
-    0
+    0,
   );
 
   let items = [...baseLineItems, ...usageLineItems].map((item) => {
@@ -286,7 +267,7 @@ export const getUpgradePreview = async ({
     dueToday = 0;
     dueNextCycle = Number((proratedAmount + regularAmount).toFixed(2));
   }
-  const result: CheckProductFormattedPreview = {
+  const result: CheckProductPreview = {
     title: `Upgrade to ${product.name}`,
     message: formattedMessage.message,
 

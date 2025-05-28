@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { advanceProducts, features } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
-import { advanceMonths, advanceTestClock } from "tests/utils/stripeUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { addDays, addMonths, format } from "date-fns";
@@ -12,6 +12,7 @@ import Stripe from "stripe";
 import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";
 import { Decimal } from "decimal.js";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 
 const advanceAPThroughBalances = async ({
   stripeSub,
@@ -146,10 +147,11 @@ const advanceAPThroughBalances = async ({
 
   let advanceTo = addDays(addMonths(new Date(), 1), 2);
   let advanceToStart = startingFrom ? new Date(startingFrom) : new Date();
+
   await advanceTestClock({
     stripeCli,
     testClockId,
-    numberOfDays: 2,
+    numberOfHours: hoursToFinalizeInvoice,
     startingFrom: addMonths(advanceToStart, 1),
   });
 
@@ -161,17 +163,17 @@ const advanceAPThroughBalances = async ({
   let nextMonthUsagePrice = Math.max(-balance * pricePerSeat, 0);
 
   let expectedInvoiceTotal = Number(
-    (accruedPrice + basePrice + nextMonthUsagePrice).toFixed(2)
+    (accruedPrice + basePrice + nextMonthUsagePrice).toFixed(2),
   );
   console.log(
-    `Invoice total = ${accruedPrice} (Accrued) + ${nextMonthUsagePrice} (Next month usage) + ${basePrice} (Base) = ${expectedInvoiceTotal}`
+    `Invoice total = ${accruedPrice} (Accrued) + ${nextMonthUsagePrice} (Next month usage) + ${basePrice} (Base) = ${expectedInvoiceTotal}`,
   );
 
   expect(expectedInvoiceTotal).to.lte(
-    new Decimal(invoice.total).plus(0.01).toNumber()
+    new Decimal(invoice.total).plus(0.01).toNumber(),
   );
   expect(expectedInvoiceTotal).to.gte(
-    new Decimal(invoice.total).minus(0.01).toNumber()
+    new Decimal(invoice.total).minus(0.01).toNumber(),
   );
 
   return {
@@ -181,7 +183,7 @@ const advanceAPThroughBalances = async ({
 };
 
 describe(`${chalk.yellowBright(
-  "arrear_prorated3: Testing through /usage"
+  "arrear_prorated3: Testing through /usage",
 )}`, () => {
   const customerId = "arrear_prorated3";
 
@@ -198,8 +200,8 @@ describe(`${chalk.yellowBright(
         customerId,
         org: this.org,
         env: this.env,
-        sb: this.sb,
-      }
+        db: this.db,
+      },
     );
 
     stripeCli = createStripeCli({
@@ -229,7 +231,7 @@ describe(`${chalk.yellowBright(
     stripeSub = await stripeCli.subscriptions.retrieve(subId);
 
     await checkSubscriptionContainsProducts({
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       subscriptionId: subId,
@@ -255,7 +257,11 @@ describe(`${chalk.yellowBright(
   });
 
   it("arrear_prorated3: should run second cycle and have correct invoice / balance", async () => {
-    console.log(`   Advanced to ${format(new Date(advancedTo), "yyyy-MM-dd")}`);
+    if (advancedTo) {
+      console.log(
+        `   Advanced to ${format(new Date(advancedTo), "yyyy-MM-dd")}`,
+      );
+    }
 
     let newStripeSub = await stripeCli.subscriptions.retrieve(subId);
     await advanceAPThroughBalances({

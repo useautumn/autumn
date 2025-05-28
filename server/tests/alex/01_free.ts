@@ -14,7 +14,7 @@ describe(chalk.yellowBright("Free customer"), () => {
         // name: null,
         // email: null,
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });

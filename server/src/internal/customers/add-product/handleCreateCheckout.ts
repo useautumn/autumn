@@ -1,6 +1,6 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
 
-import { pricesContainRecurring } from "@/internal/prices/priceUtils.js";
+import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
 
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
@@ -10,18 +10,19 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleCreateCheckout = async ({
-  sb,
+  db,
   req,
   res,
   attachParams,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   req: any;
   res: any;
   attachParams: AttachParams;
@@ -55,7 +56,7 @@ export const handleCreateCheckout = async ({
 
   // Insert metadata
   const metaId = await createCheckoutMetadata({
-    sb,
+    db,
     attachParams,
   });
 
@@ -65,7 +66,7 @@ export const handleCreateCheckout = async ({
 
   if (attachParams.billingAnchor) {
     billingCycleAnchorUnixSeconds = Math.floor(
-      attachParams.billingAnchor / 1000
+      attachParams.billingAnchor / 1000,
     );
   }
 
@@ -84,8 +85,6 @@ export const handleCreateCheckout = async ({
   let allowPromotionCodes = notNullish(checkoutParams.discounts)
     ? undefined
     : checkoutParams.allow_promotion_codes || true;
-
-  console.log("Items: ", items);
 
   const checkout = await stripeCli.checkout.sessions.create({
     customer: customer.processor.id,
@@ -125,7 +124,7 @@ export const handleCreateCheckout = async ({
         }, product(s) ${attachParams.products.map((p) => p.name).join(", ")}`,
         product_ids: attachParams.products.map((p) => p.id),
         customer_id: customer.id || customer.internal_id,
-      })
+      }),
     );
   } else {
     res.status(200).json({
@@ -134,31 +133,3 @@ export const handleCreateCheckout = async ({
   }
   return;
 };
-
-// OLD BILLING CYCLE ANCHOR LOGIC
-// const nextBillingDateUnix = addBillingIntervalUnix(
-//   Date.now(),
-//   itemSets[0].interval
-// );
-// console.log(
-//   "Next billing date",
-//   format(new Date(nextBillingDateUnix), "dd MMM yyyy HH:mm:ss")
-// );
-// console.log(
-//   "Target unix",
-//   format(new Date(attachParams.billingAnchor), "dd MMM yyyy HH:mm:ss")
-// );
-
-// billingCycleAnchorUnixSeconds = subtractFromUnixTillAligned({
-//   targetUnix: attachParams.billingAnchor,
-//   originalUnix: nextBillingDateUnix,
-// });
-
-// console.log(
-//   "Billing cycle anchor",
-//   format(new Date(billingCycleAnchorUnixSeconds), "dd MMM yyyy HH:mm:ss")
-// );
-
-// billingCycleAnchorUnixSeconds = Math.floor(
-//   billingCycleAnchorUnixSeconds / 1000
-// );

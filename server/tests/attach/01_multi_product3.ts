@@ -29,7 +29,7 @@ describe("Multi Product 3: premium1->starter1, premium2->starter2, then premium2
   let stripeCli: Stripe;
   before(async function () {
     customer = await initCustomer({
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       customer_data: {
         id: customerId,
@@ -82,11 +82,14 @@ describe("Multi Product 3: premium1->starter1, premium2->starter2, then premium2
     });
 
     // Check if scheduled id is the same
-    const cusProducts = await CusService.getFullCusProducts({
-      sb: this.sb,
+    const cusProducts = await CusProductService.list({
+      db: this.db,
       internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
     });
 
     // 1. Pro group 1:
@@ -105,17 +108,17 @@ describe("Multi Product 3: premium1->starter1, premium2->starter2, then premium2
     expect(starter1?.scheduled_ids![0]).to.equal(starter2?.scheduled_ids![0]);
 
     const stripeSchedule = await stripeCli.subscriptionSchedules.retrieve(
-      starter1?.scheduled_ids![0]!
+      starter1?.scheduled_ids![0]!,
     );
 
     // console.log(stripeSchedule);
     checkScheduleContainsProducts({
+      db: this.db,
       schedule: stripeSchedule,
       productIds: [
         attachProducts.starterGroup1.id,
         attachProducts.starterGroup2.id,
       ],
-      sb: this.sb,
       org: this.org,
       env: this.env,
     });
@@ -141,11 +144,9 @@ describe("Multi Product 3: premium1->starter1, premium2->starter2, then premium2
       cusRes,
     });
 
-    const cusProducts = await CusService.getFullCusProducts({
-      sb: this.sb,
+    const cusProducts = await CusProductService.list({
+      db: this.db,
       internalCustomerId: customer.internal_id,
-      withProduct: true,
-      withPrices: true,
     });
 
     const starterGroup2 = searchCusProducts({
@@ -154,9 +155,9 @@ describe("Multi Product 3: premium1->starter1, premium2->starter2, then premium2
     });
 
     checkScheduleContainsProducts({
+      db: this.db,
       scheduleId: starterGroup2?.scheduled_ids![0],
       productIds: [attachProducts.starterGroup2.id],
-      sb: this.sb,
       org: this.org,
       env: this.env,
     });

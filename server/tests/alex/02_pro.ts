@@ -18,7 +18,7 @@ describe(chalk.yellowBright("Pro entitlements"), () => {
         // name: "Alex Pro Customer",
         email: "alex-pro-customer@test.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });

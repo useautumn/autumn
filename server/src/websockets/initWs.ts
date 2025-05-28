@@ -4,8 +4,6 @@ import http from "http";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { AppEnv, ErrCode } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { getBalanceForFeature } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { getCusBalances } from "@/internal/customers/entitlements/getCusBalances.js";
 
 export enum SbChannelEvent {
   BalanceUpdated = "balance_updated",
@@ -17,7 +15,7 @@ interface RouteInfo {
   callback: (
     ws: WebSocket,
     req: http.IncomingMessage,
-    params: Record<string, string>
+    params: Record<string, string>,
   ) => Promise<void>;
 }
 
@@ -39,21 +37,12 @@ const getPkey = async (req: any) => {
   }
 
   const env = pkey.startsWith("am_pk_test_") ? AppEnv.Sandbox : AppEnv.Live;
-  const sb = createSupabaseClient();
-  const org = await OrgService.getFromPkeyWithFeatures({ sb, pkey, env });
 
-  if (!org) {
-    return {
-      error: ErrCode.OrgNotFound,
-      fallback: false,
-      statusCode: 401,
-    };
-  }
-
-  req.env = env;
-  req.org = org;
-
-  return { env, org };
+  return {
+    error: ErrCode.OrgNotFound,
+    fallback: false,
+    statusCode: 401,
+  };
 };
 
 class WebSocketRouter {
@@ -68,7 +57,7 @@ class WebSocketRouter {
     callback: (
       ws: WebSocket,
       req: any,
-      params: Record<string, string>
+      params: Record<string, string>,
     ) => Promise<void>;
   }) {
     const paramNames: string[] = [];
@@ -86,7 +75,7 @@ class WebSocketRouter {
   constructor(server: http.Server) {
     this.wss = new WebSocketServer({ server });
     this.wss.on("connection", (ws, req) =>
-      this.handleConnection(ws as any, req as any)
+      this.handleConnection(ws as any, req as any),
     );
   }
 
@@ -94,8 +83,6 @@ class WebSocketRouter {
     const path = req.url;
 
     try {
-      const { env, org } = await getPkey(req);
-      req.sb = createSupabaseClient();
     } catch (error) {
       console.log("Failed to get org from pkey");
       ws.close(1000, "Invalid publishable key");
@@ -130,111 +117,14 @@ export const initWs = (server: http.Server) => {
   wsRouter.on({
     route: "/:customer_id/entitlements",
     callback: async (ws, req, params) => {
-      await handleRealtimeBalances(ws, req, params);
+      console.log("entitlements", params);
     },
   });
 
   wsRouter.on({
     route: "/:customer_id/entitlements/:feature_id",
     callback: async (ws, req, params) => {
-      await handleRealtimeBalance(ws, req, params);
+      console.log("entitlement", params);
     },
   });
-};
-
-const handleRealtimeBalances = async (ws: WebSocket, req: any, params: any) => {
-  // try {
-  //   const { org, env, sb } = req;
-  //   // 1. Get all customer balances
-  //   const balances = await getCusBalances({
-  //     sb,
-  //     customerId: params.customer_id,
-  //     orgId: org.id,
-  //     env,
-  //   });
-  //   ws.send(JSON.stringify({ data: balances, error: null }));
-  //   const channel = `${org.id}_${env}_${params.customer_id}`;
-  //   sb.channel(channel)
-  //     .on(
-  //       "broadcast",
-  //       { event: SbChannelEvent.BalanceUpdated },
-  //       async (payload: any) => {
-  //         const data = payload.payload;
-  //         console.log("Received balance update event from supabase:", data);
-  //         const newBalances = await getCusBalances({
-  //           customerId: params.customer_id,
-  //           orgId: org.id,
-  //           env,
-  //         });
-  //         ws.send(
-  //           JSON.stringify({
-  //             data: newBalances,
-  //             error: null,
-  //           })
-  //         );
-  //       }
-  //     )
-  //     .subscribe();
-  // } catch (error) {
-  //   console.log("Error getting customer balances", error);
-  //   ws.send(
-  //     JSON.stringify({
-  //       data: null,
-  //       error: "Error getting customer balances",
-  //     })
-  //   );
-  // }
-};
-
-const handleRealtimeBalance = async (ws: WebSocket, req: any, params: any) => {
-  try {
-    const { org, env, sb } = req;
-
-    const channel = `${org.id}_${env}_${params.customer_id}`;
-
-    const curBalance = await getBalanceForFeature({
-      sb,
-      customerId: params.customer_id,
-      orgId: org.id,
-      env,
-      featureId: params.feature_id,
-    });
-
-    ws.send(JSON.stringify({ data: curBalance, error: null }));
-
-    sb.channel(channel)
-      .on(
-        "broadcast",
-        { event: SbChannelEvent.BalanceUpdated },
-        async (payload: any) => {
-          if (payload.payload.feature_id !== params.feature_id) {
-            return;
-          }
-
-          const newBalance = await getBalanceForFeature({
-            sb,
-            customerId: params.customer_id,
-            orgId: org.id,
-            env,
-            featureId: params.feature_id,
-          });
-
-          ws.send(
-            JSON.stringify({
-              data: newBalance,
-              error: null,
-            })
-          );
-        }
-      )
-      .subscribe();
-  } catch (error) {
-    console.log("Error getting feature balance", error);
-    ws.send(
-      JSON.stringify({
-        data: null,
-        error: "Error getting feature balance",
-      })
-    );
-  }
 };

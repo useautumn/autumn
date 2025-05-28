@@ -1,4 +1,6 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
@@ -16,13 +18,12 @@ import {
   FullCusProduct,
   Organization,
   AppEnv,
-  FullCustomer,
+  Customer,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
 
 export const removeScheduledProduct = async ({
-  sb,
+  db,
   cusProduct,
   cusProducts,
   org,
@@ -30,7 +31,7 @@ export const removeScheduledProduct = async ({
   logger,
   renewCurProduct = true,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   cusProduct: FullCusProduct;
   cusProducts: FullCusProduct[];
   org: Organization;
@@ -45,7 +46,7 @@ export const removeScheduledProduct = async ({
 
   // 1. Cancel future product schedule
   await cancelFutureProductSchedule({
-    sb,
+    db,
     org,
     cusProducts,
     product: fullProduct,
@@ -58,14 +59,14 @@ export const removeScheduledProduct = async ({
 
   // 2. Delete scheduled product
   await CusProductService.delete({
-    sb,
+    db,
     cusProductId: cusProduct.id,
   });
   return;
 };
 
 export const expireCusProduct = async ({
-  sb,
+  db,
   cusProduct, // cus product to expire
   cusProducts, // other cus products
   org,
@@ -74,31 +75,31 @@ export const expireCusProduct = async ({
   customer,
   expireImmediately = true,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   cusProduct: FullCusProduct;
   cusProducts: FullCusProduct[];
   org: Organization;
   env: AppEnv;
   logger: any;
-  customer: FullCustomer;
+  customer: Customer;
   expireImmediately: boolean;
 }) => {
   logger.info("--------------------------------");
   logger.info(
     `🔔 Expiring cutomer product (${
       expireImmediately ? "immediately" : "end of cycle"
-    })`
+    })`,
   );
   logger.info(`Customer: ${customer.id} (${env}), Org: ${org.id}`);
   logger.info(
-    `Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`
+    `Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`,
   );
 
   // If current product is scheduled
 
   if (cusProduct.status == CusProductStatus.Scheduled) {
     await removeScheduledProduct({
-      sb,
+      db,
       cusProduct,
       cusProducts,
       org,
@@ -111,10 +112,14 @@ export const expireCusProduct = async ({
   // 1. If main product, can't expire if there's scheduled product
   let isMain = !cusProduct.product.is_add_on;
   if (isMain) {
-    const futureProduct = await CusProductService.getFutureProduct({
-      sb,
+    let cusProducts = await CusProductService.list({
+      db,
       internalCustomerId: customer.internal_id,
-      productGroup: cusProduct.product.group,
+    });
+
+    let { curScheduledProduct: futureProduct } = await getExistingCusProducts({
+      product: cusProduct.product,
+      cusProducts,
     });
 
     if (futureProduct) {
@@ -129,7 +134,6 @@ export const expireCusProduct = async ({
   // 2. If expire at cycle end, just cancel subscriptions
   if (!expireImmediately) {
     await cancelCusProductSubscriptions({
-      sb,
       cusProduct,
       org,
       env,
@@ -138,7 +142,7 @@ export const expireCusProduct = async ({
 
     if (isOneOff(cusProduct.customer_prices.map((p) => p.price))) {
       await CusProductService.update({
-        sb,
+        db,
         cusProductId: cusProduct.id,
         updates: { status: CusProductStatus.Expired },
       });
@@ -149,14 +153,13 @@ export const expireCusProduct = async ({
 
   if (cusProduct.product.is_add_on) {
     await cancelCusProductSubscriptions({
-      sb,
       cusProduct,
       org,
       env,
     });
 
     await CusProductService.update({
-      sb,
+      db,
       cusProductId: cusProduct.id,
       updates: {
         status: CusProductStatus.Expired,
@@ -170,7 +173,6 @@ export const expireCusProduct = async ({
   // For regular products
   // 1. Cancel stripe subscriptions
   const cancelled = await cancelCusProductSubscriptions({
-    sb,
     cusProduct,
     org,
     env,
@@ -178,7 +180,7 @@ export const expireCusProduct = async ({
 
   if (!cancelled) {
     await expireAndActivate({
-      sb,
+      db,
       env,
       cusProduct,
       org,
@@ -190,29 +192,39 @@ export const expireCusProduct = async ({
 
 export const handleCusProductExpired = async (req: any, res: any) => {
   try {
+    const { db, logtail: logger } = req;
+
     const org = await OrgService.getFromReq(req);
     const customerProductId = req.params.customer_product_id;
 
-    // See if customer owns product
-    let cusProduct = await CusProductService.getByIdStrict({
-      sb: req.sb,
+    let cusProduct = await CusProductService.get({
+      db,
       id: customerProductId,
       orgId: req.orgId,
       env: req.env,
-      withProduct: true,
-      withPrices: true,
+      withCustomer: true,
     });
 
-    const cusProducts = await CusService.getFullCusProducts({
-      sb: req.sb,
+    if (!cusProduct) {
+      throw new RecaseError({
+        message: `Cus product not found: ${customerProductId}`,
+        code: ErrCode.CusProductNotFound,
+        statusCode: 404,
+      });
+    }
+
+    const cusProducts = await CusProductService.list({
+      db,
       internalCustomerId: cusProduct.customer.internal_id,
-      withPrices: true,
-      withProduct: true,
-      logger: req.logtail,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
     });
 
     await expireCusProduct({
-      sb: req.sb,
+      db,
       cusProduct,
       cusProducts,
       org,

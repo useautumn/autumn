@@ -5,7 +5,6 @@ import {
   Feature,
   FeatureType,
   FullProduct,
-  organizations,
   Price,
   PriceType,
   RewardProgram,
@@ -27,6 +26,10 @@ import { CacheType } from "@/external/caching/cacheActions.js";
 import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { eq } from "drizzle-orm";
+import { CusService } from "@/internal/customers/CusService.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { RewardService } from "@/internal/rewards/RewardService.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const getAxiosInstance = (
   apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!,
@@ -72,7 +75,8 @@ export const clearOrg = async ({
   }
 
   const sb = createSupabaseClient();
-  const org = await OrgService.getBySlug({ sb, slug: orgSlug });
+  const { db, client } = initDrizzle();
+  const org = await OrgService.getBySlug({ db, slug: orgSlug });
 
   await Promise.all([
     CacheManager.invalidate({
@@ -98,17 +102,7 @@ export const clearOrg = async ({
   const orgId = org.id;
 
   // 1. Delete all customers
-  const { data: customers, error: customerError } = await sb
-    .from("customers")
-    .delete()
-    .eq("org_id", orgId)
-    .eq("env", env)
-    .select("*");
-
-  if (customerError) {
-    console.error("Error deleting customers:", customerError);
-  }
-
+  await CusService.deleteByOrgId({ db, orgId, env });
   console.log("   ✅ Deleted customers");
 
   const stripeCli = createStripeCli({ org, env: env! });
@@ -141,15 +135,7 @@ export const clearOrg = async ({
   console.log("   ✅ Deleted Stripe customers");
 
   // 2. Delete all products
-  const { data: products, error: productError } = await sb
-    .from("products")
-    .delete()
-    .eq("org_id", orgId)
-    .eq("env", env)
-    .select("*, prices(*)");
-  if (productError) {
-    console.error("Error deleting products:", productError);
-  }
+  await ProductService.deleteByOrgId({ db, orgId, env });
 
   console.log("   ✅ Deleted products");
 
@@ -196,12 +182,7 @@ export const clearOrg = async ({
   // Batch delete coupons
 
   const batchDeleteCoupons = [];
-  const { data: coupons, error: couponError } = await sb
-    .from("rewards")
-    .delete()
-    .eq("org_id", orgId)
-    .eq("env", env)
-    .select();
+  await RewardService.deleteByOrgId({ db, orgId, env });
 
   const stripeCoupons = await stripeCli.coupons.list({
     limit: 100,
@@ -213,17 +194,11 @@ export const clearOrg = async ({
   await Promise.all(batchDeleteCoupons);
   console.log("   ✅ Deleted Stripe coupons");
 
-  const { error: featureError } = await sb
-    .from("features")
-    .delete()
-    .eq("org_id", orgId)
-    .eq("env", env);
-
-  if (featureError) {
-    console.error("Error deleting features:", featureError);
-  }
+  await FeatureService.deleteByOrgId({ db, orgId, env });
 
   console.log(`✅ Cleared org ${orgSlug} (${env})`);
+
+  await client.end();
   return org;
 };
 

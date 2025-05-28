@@ -25,21 +25,22 @@ import { getStripeSubs } from "../stripeSubUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const handleOneOffInvoicePaid = async ({
-  sb,
+  db,
   stripeInvoice,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   stripeInvoice: Stripe.Invoice;
   event: Stripe.Event;
   logger: any;
 }) => {
   // Search for invoice
-  const invoice = await InvoiceService.getInvoiceByStripeId({
-    sb,
-    stripeInvoiceId: stripeInvoice.id,
+  const invoice = await InvoiceService.getByStripeId({
+    db,
+    stripeId: stripeInvoice.id,
   });
 
   if (!invoice) {
@@ -49,8 +50,8 @@ const handleOneOffInvoicePaid = async ({
 
   // Update invoice status
   await InvoiceService.updateByStripeId({
-    sb,
-    stripeInvoiceId: stripeInvoice.id,
+    db,
+    stripeId: stripeInvoice.id,
     updates: {
       status: stripeInvoice.status as InvoiceStatus,
       hosted_invoice_url: stripeInvoice.hosted_invoice_url,
@@ -65,14 +66,12 @@ const handleOneOffInvoicePaid = async ({
 };
 
 const convertToChargeAutomatically = async ({
-  sb,
   org,
   env,
   invoice,
   activeCusProducts,
   logger,
 }: {
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   invoice: Stripe.Invoice;
@@ -98,12 +97,12 @@ const convertToChargeAutomatically = async ({
     logger.info(`Converting to charge automatically`);
     // 1. Get payment intent
     const paymentIntent = await stripeCli.paymentIntents.retrieve(
-      invoice.payment_intent as string
+      invoice.payment_intent as string,
     );
 
     // 2. Get payment method
     const paymentMethod = await stripeCli.paymentMethods.retrieve(
-      paymentIntent.payment_method as string
+      paymentIntent.payment_method as string,
     );
 
     await stripeCli.paymentMethods.attach(paymentMethod.id, {
@@ -119,7 +118,7 @@ const convertToChargeAutomatically = async ({
         });
       } catch (error) {
         logger.warn(
-          `Convert to charge automatically: error updating subscription ${sub.id}`
+          `Convert to charge automatically: error updating subscription ${sub.id}`,
         );
         logger.warn(error);
       }
@@ -138,33 +137,30 @@ const convertToChargeAutomatically = async ({
 };
 
 export const handleInvoicePaid = async ({
+  db,
   req,
-  sb,
   org,
-  invoice,
+  invoiceData,
   env,
   event,
 }: {
+  db: DrizzleCli;
   req: any;
-  sb: SupabaseClient;
   org: Organization;
-  invoice: Stripe.Invoice;
+  invoiceData: Stripe.Invoice;
   env: AppEnv;
   event: Stripe.Event;
 }) => {
   const logger = req.logtail;
-  // 1. Get total invoice discounts
-
-  // Fetch expanded invoice
   const stripeCli = createStripeCli({ org, env });
-  const expandedInvoice = await getStripeExpandedInvoice({
+  const invoice = await getStripeExpandedInvoice({
     stripeCli,
-    stripeInvoiceId: invoice.id,
+    stripeInvoiceId: invoiceData.id,
   });
 
   await handleInvoicePaidDiscount({
-    sb,
-    expandedInvoice,
+    db,
+    expandedInvoice: invoice,
     org,
     env,
     logger,
@@ -173,34 +169,24 @@ export const handleInvoicePaid = async ({
   if (invoice.subscription) {
     // Get customer product
     const activeCusProducts = await CusProductService.getByStripeSubId({
-      sb,
+      db,
       stripeSubId: invoice.subscription as string,
       orgId: org.id,
       env,
-      withCusPrices: true,
     });
 
     if (!activeCusProducts || activeCusProducts.length === 0) {
       // TODO: Send alert
       if (invoice.livemode) {
-        req.logger.warn(
-          `invoice.paid: customer product not found for invoice ${invoice.id}`
-        );
-        req.logger.warn(`Organization: ${org?.slug}`);
-        req.logger.warn(`Invoice subscription: ${invoice.subscription}`);
-        req.logger.warn(`Invoice customer: ${invoice.customer}`);
-      } else {
-        console.log(
-          `Skipping invoice.paid: customer product not found for invoice ${invoice.id} (${org.slug}) (non-livemode)`
+        logger.warn(
+          `invoice.paid: customer product not found for invoice ${invoice.id}`,
         );
       }
-
       return;
     }
 
     if (org.config.convert_to_charge_automatically) {
       await convertToChargeAutomatically({
-        sb,
         org,
         env,
         invoice,
@@ -210,21 +196,22 @@ export const handleInvoicePaid = async ({
     }
 
     let updated = await updateInvoiceIfExists({
-      sb,
+      db,
       invoice,
     });
 
     if (!updated) {
       let invoiceItems = await getInvoiceItems({
-        stripeInvoice: expandedInvoice,
+        stripeInvoice: invoice,
         prices: activeCusProducts.flatMap((p) =>
-          p.customer_prices.map((cpr: FullCustomerPrice) => cpr.price)
+          p.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),
         ),
         logger,
       });
+
       await InvoiceService.createInvoiceFromStripe({
-        sb,
-        stripeInvoice: expandedInvoice,
+        db,
+        stripeInvoice: invoice,
         internalCustomerId: activeCusProducts[0].internal_customer_id,
         internalEntityId: activeCusProducts[0].internal_entity_id,
         productIds: activeCusProducts.map((p) => p.product_id),
@@ -253,22 +240,22 @@ export const handleInvoicePaid = async ({
     }
   } else {
     await handleOneOffInvoicePaid({
-      sb,
-      stripeInvoice: expandedInvoice,
+      db,
+      stripeInvoice: invoice,
       event,
-      logger: req.logger,
+      logger,
     });
   }
 };
 
 const handleInvoicePaidDiscount = async ({
-  sb,
+  db,
   expandedInvoice,
   org,
   env,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   expandedInvoice: Stripe.Invoice;
   org: Organization;
   env: AppEnv;
@@ -303,9 +290,9 @@ const handleInvoicePaidDiscount = async ({
 
       // 1. Fetch coupon from Autumn
       logger.info(`Fetching coupon from Autumn DB: ${couponId}`);
-      const autumnReward: Reward | null = await RewardService.getById({
-        sb,
-        id: couponId,
+      const autumnReward: Reward | null = await RewardService.get({
+        db,
+        idOrInternalId: couponId,
         orgId: org.id,
         env,
       });
@@ -332,7 +319,7 @@ const handleInvoicePaidDiscount = async ({
       const curAmount = discount.coupon.amount_off;
 
       const amountUsed = totalDiscountAmounts?.find(
-        (item) => item.discount === discount.id
+        (item) => item.discount === discount.id,
       )?.amount;
 
       const newAmount = new Decimal(curAmount!).sub(amountUsed!).toNumber();
@@ -362,12 +349,12 @@ const handleInvoicePaidDiscount = async ({
       if (expandedInvoice.subscription && curCoupon.duration == "forever") {
         try {
           await stripeCli.subscriptions.deleteDiscount(
-            expandedInvoice.subscription as string
+            expandedInvoice.subscription as string,
           );
           console.log("Deleting current discount from subscription");
         } catch (error: any) {
           logger.error(
-            `Failed to remove coupon from subscription ${expandedInvoice.subscription}`
+            `Failed to remove coupon from subscription ${expandedInvoice.subscription}`,
           );
           logger.error(error.message);
         }

@@ -11,7 +11,7 @@ import { Feature, Organization, ProductItem, ProductV2 } from "@autumn/shared";
 import { formatCurrency, formatTiers } from "./previewUtils.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { getFeatureNameWithCapital } from "@/internal/features/displayUtils.js";
+import { getFeatureNameWithCapital } from "@/internal/features/utils/displayUtils.js";
 
 export const getProductChargeText = ({
   product,
@@ -31,12 +31,12 @@ export const getProductChargeText = ({
       formatCurrency({
         amount: total,
         defaultCurrency: org.default_currency,
-      })
+      }),
     );
   }
 
   let prepaidPrices = product.items.filter(
-    (i) => isFeaturePriceItem(i) && i.usage_model == "prepaid"
+    (i) => isFeaturePriceItem(i) && i.usage_model == "prepaid",
   );
 
   let prepaidStrings = prepaidPrices.map((i) => {
@@ -79,8 +79,8 @@ export const getItemDescription = ({
       prices.length == 1
         ? product.name
         : notNullish(item.interval)
-        ? "Subscription"
-        : "One-time";
+          ? "Subscription"
+          : "One-time";
 
     return baseName;
   } else {

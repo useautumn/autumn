@@ -14,7 +14,7 @@ export const checkKeyValid = async (apiKey: string) => {
 export const createWebhookEndpoint = async (
   apiKey: string,
   env: AppEnv,
-  orgId: string
+  orgId: string,
 ) => {
   const stripe = new Stripe(apiKey);
 

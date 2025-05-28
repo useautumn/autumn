@@ -1,16 +1,14 @@
 import {
   AllowanceType,
   AppEnv,
-  CusEntWithEntitlement,
   CusProductStatus,
   Event,
   Feature,
-  FullCustomer,
   FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { Customer, FeatureType } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
@@ -33,11 +31,12 @@ import {
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { entityFeatureIdExists } from "@/internal/api/entities/entityUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
 
 type DeductParams = {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   env: AppEnv;
   org: Organization;
   cusPrices: FullCustomerPrice[];
@@ -57,7 +56,7 @@ const getFeatureDeductions = ({
   features: Feature[];
 }) => {
   const meteredFeatures = features.filter(
-    (feature) => feature.type === FeatureType.Metered
+    (feature) => feature.type === FeatureType.Metered,
   );
   const featureDeductions = [];
   for (const feature of features) {
@@ -76,7 +75,7 @@ const getFeatureDeductions = ({
     let unlimitedExists = cusEnts.some(
       (cusEnt) =>
         cusEnt.entitlement.allowance_type === AllowanceType.Unlimited &&
-        cusEnt.entitlement.internal_feature_id == feature.internal_id
+        cusEnt.entitlement.internal_feature_id == feature.internal_id,
     );
 
     if (unlimitedExists || !deduction) {
@@ -132,7 +131,7 @@ export const logBalanceUpdate = ({
   console.log(
     `   - Customer: ${customer.id} (${customer.env}) | Org: ${
       org.slug
-    } | Features: ${features.map((f) => f.id).join(", ")}`
+    } | Features: ${features.map((f) => f.id).join(", ")}`,
   );
   console.log("   - Properties:", properties);
   console.log(
@@ -142,7 +141,7 @@ export const logBalanceUpdate = ({
 
       if (notNullish(cusEnt.entitlement.entity_feature_id)) {
         console.log(
-          `   - Entity feature ID found for feature: ${cusEnt.feature_id}`
+          `   - Entity feature ID found for feature: ${cusEnt.feature_id}`,
         );
 
         if (notNullish(entityId)) {
@@ -169,7 +168,7 @@ export const logBalanceUpdate = ({
       })`;
     }),
     "| Deductions:",
-    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`)
+    featureDeductions.map((f: any) => `${f.feature.id}: ${f.deduction}`),
   );
 };
 
@@ -308,7 +307,7 @@ export const deductAllowanceFromCusEnt = async ({
   entityId?: string | null;
   setZeroAdjustment?: boolean;
 }) => {
-  const { sb, feature, env, org, cusPrices, customer } = deductParams;
+  const { db, feature, env, org, cusPrices, customer } = deductParams;
 
   if (toDeduct == 0) {
     return 0;
@@ -347,14 +346,14 @@ export const deductAllowanceFromCusEnt = async ({
     updates.adjustment = 0;
   }
 
-  await CustomerEntitlementService.update({
-    sb,
+  await CusEntService.update({
+    db,
     id: cusEnt.id,
     updates,
   });
 
   await adjustAllowance({
-    sb,
+    db,
     env,
     org,
     cusPrices: cusPrices as any,
@@ -411,42 +410,22 @@ export const deductFromUsageBasedCusEnt = async ({
   entityId?: string | null;
   setZeroAdjustment?: boolean;
 }) => {
-  const { sb, feature, env, org, cusPrices, customer, properties } =
-    deductParams;
+  const { db, feature, env, org, cusPrices, customer } = deductParams;
 
   // Deduct from usage-based price
   const usageBasedEnt = cusEnts.find(
-    (cusEnt: CusEntWithEntitlement) =>
+    (cusEnt: FullCustomerEntitlement) =>
       cusEnt.usage_allowed &&
-      cusEnt.entitlement.internal_feature_id == feature.internal_id
+      cusEnt.entitlement.internal_feature_id == feature.internal_id,
   );
 
   if (!usageBasedEnt) {
     console.log(
-      `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no usage-based entitlement found`
+      `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no usage-based entitlement found`,
     );
     return;
   }
 
-  // // Group by value
-  // let { groupVal, balance } = getGroupBalanceFromProperties({
-  //   properties,
-  //   feature,
-  //   cusEnt: usageBasedEnt,
-  // });
-
-  // if (groupVal && nullOrUndefined(balance)) {
-  //   console.log(
-  //     `   - Feature ${feature.id}, To deduct: ${toDeduct} -> no group balance found`
-  //   );
-  //   return;
-  // }
-
-  // let usageBasedEntBalance = new Decimal(balance!);
-  // let newBalance = usageBasedEntBalance.minus(toDeduct).toNumber();
-  // console.log("DEDUCTING USAGE-BASED ENTITLEMENT");
-  // console.log("OLD BALANCE", usageBasedEnt.balance);
-  // console.log("TO DEDUCT", toDeduct);
   let { newBalance, newEntities, deducted } = performDeductionOnCusEnt({
     cusEnt: usageBasedEnt,
     toDeduct,
@@ -454,9 +433,6 @@ export const deductFromUsageBasedCusEnt = async ({
     allowNegativeBalance: true,
     setZeroAdjustment,
   });
-
-  // console.log("NEW BALANCE", newBalance);
-  // console.log("DEDUCTED", deducted);
 
   let oldGrpBalance = getTotalNegativeBalance({
     cusEnt: usageBasedEnt,
@@ -478,20 +454,14 @@ export const deductFromUsageBasedCusEnt = async ({
     updates.adjustment = 0;
   }
 
-  await CustomerEntitlementService.update({
-    sb,
+  await CusEntService.update({
+    db,
     id: usageBasedEnt.id,
     updates,
   });
 
-  // const totalNegativeBalance = getTotalNegativeBalance(usageBasedEnt);
-  // const originalGrpBalance = Math.max(totalNegativeBalance, balance!);
-  // const newGrpBalance = new Decimal(originalGrpBalance)
-  //   .minus(toDeduct)
-  //   .toNumber();
-
   await adjustAllowance({
-    sb,
+    db,
     env,
     affectedFeature: feature,
     org,
@@ -506,7 +476,7 @@ export const deductFromUsageBasedCusEnt = async ({
 
 // Main function to update customer balance
 export const updateCustomerBalance = async ({
-  sb,
+  db,
   customerId,
   entityId,
   event,
@@ -515,7 +485,7 @@ export const updateCustomerBalance = async ({
   env,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   customerId: string;
   entityId: string;
   event: Event;
@@ -526,8 +496,8 @@ export const updateCustomerBalance = async ({
 }) => {
   const startTime = performance.now();
   console.log("REVERSE DEDUCTION ORDER", org.config.reverse_deduction_order);
-  const customer = await CusService.getWithProducts({
-    sb,
+  const customer = await CusService.getFull({
+    db,
     idOrInternalId: customerId,
     orgId: org.id,
     env,
@@ -536,7 +506,6 @@ export const updateCustomerBalance = async ({
   });
 
   const { cusEnts, cusPrices } = await getCusEntsInFeatures({
-    sb,
     customer,
     internalFeatureIds: features.map((f) => f.internal_id!),
     logger,
@@ -583,7 +552,7 @@ export const updateCustomerBalance = async ({
         cusEnt,
         features,
         deductParams: {
-          sb,
+          db,
           feature,
           env,
           org,
@@ -605,7 +574,7 @@ export const updateCustomerBalance = async ({
       toDeduct,
       cusEnts,
       deductParams: {
-        sb,
+        db,
         feature,
         env,
         org,
@@ -624,11 +593,11 @@ export const updateCustomerBalance = async ({
 export const runUpdateBalanceTask = async ({
   payload,
   logger,
-  sb,
+  db,
 }: {
   payload: any;
   logger: any;
-  sb: SupabaseClient;
+  db: DrizzleCli;
 }) => {
   try {
     // 1. Update customer balance
@@ -636,11 +605,11 @@ export const runUpdateBalanceTask = async ({
 
     console.log("--------------------------------");
     console.log(
-      `UPDATING BALANCE FOR CUSTOMER (${customerId}), ORG: ${org.slug}`
+      `UPDATING BALANCE FOR CUSTOMER (${customerId}), ORG: ${org.slug}`,
     );
 
     const cusEnts: any = await updateCustomerBalance({
-      sb,
+      db,
       customerId,
       features,
       event,

@@ -1,5 +1,6 @@
-import { PriceService } from "@/internal/prices/PriceService.js";
-import { getPriceEntitlement } from "@/internal/prices/priceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import {
   EntitlementWithFeature,
   Price,
@@ -10,13 +11,13 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
 export const createStripeOneOffTieredProduct = async ({
-  sb,
+  db,
   stripeCli,
   price,
   entitlements,
   product,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   stripeCli: Stripe;
   price: Price;
   entitlements: EntitlementWithFeature[];
@@ -35,8 +36,8 @@ export const createStripeOneOffTieredProduct = async ({
   config.stripe_product_id = stripeProduct.id;
 
   await PriceService.update({
-    sb,
-    priceId: price.id!,
+    db,
+    id: price.id!,
     update: { config },
   });
 };

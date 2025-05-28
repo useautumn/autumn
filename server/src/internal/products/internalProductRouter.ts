@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { FeatureService } from "../features/FeatureService.js";
-import { entitlementRouter } from "./entitlementRouter.js";
 import { StatusCodes } from "http-status-codes";
 import { ProductService } from "./ProductService.js";
 import { ErrCode, UsageModel } from "@autumn/shared";
@@ -19,42 +18,22 @@ import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 
 export const productRouter = Router({ mergeParams: true });
 
-productRouter.get("/", async (req: any, res) => {
-  try {
-    let sb = req.sb;
-    let products = await ProductService.getFullProducts({
-      sb,
-      orgId: req.orgId,
-      env: req.env,
-    });
-
-    res.status(200).send(products);
-  } catch (error) {
-    handleFrontendReqError({
-      error,
-      req,
-      res,
-      action: "Get products (internal)",
-    });
-  }
-});
-
 productRouter.get("/data", async (req: any, res) => {
   try {
-    let { sb } = req;
+    let { db } = req;
 
     const [products, features, org, coupons, rewardPrograms] =
       await Promise.all([
-        ProductService.getFullProducts({
-          sb,
+        ProductService.listFull({
+          db,
           orgId: req.orgId,
           env: req.env,
           returnAll: true,
         }),
         FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
-        RewardService.getAll({ sb, orgId: req.orgId, env: req.env }),
-        RewardProgramService.getAll({ sb, orgId: req.orgId, env: req.env }),
+        RewardService.list({ db, orgId: req.orgId, env: req.env }),
+        RewardProgramService.list({ db, orgId: req.orgId, env: req.env }),
       ]);
 
     res.status(200).json({
@@ -83,9 +62,9 @@ productRouter.get("/data", async (req: any, res) => {
 
 productRouter.get("/counts", async (req: any, res) => {
   try {
-    let { sb, orgId, env } = req;
-    let products = await ProductService.getFullProducts({
-      sb,
+    let { db } = req;
+    let products = await ProductService.listFull({
+      db,
       orgId: req.orgId,
       env: req.env,
       returnAll: true,
@@ -94,18 +73,12 @@ productRouter.get("/counts", async (req: any, res) => {
     let counts = await Promise.all(
       products.map(async (product) => {
         return CusProdReadService.getCounts({
-          sb,
+          db,
           internalProductId: product.internal_id,
         });
       }),
     );
 
-    // let result: { [key: string]: any } = {};
-
-    // for (let i = 0; i < products.length; i++) {
-    //   result[products[i].internal_id] = counts[i];
-    // }
-    // Group by ID
     let result: { [key: string]: any } = {};
     for (let i = 0; i < products.length; i++) {
       if (!result[products[i].id]) {
@@ -125,39 +98,31 @@ productRouter.get("/counts", async (req: any, res) => {
   }
 });
 
-// Get stripe products
-
 productRouter.get("/:productId/data", async (req: any, res) => {
   try {
     const { productId } = req.params;
     const { version } = req.query;
-    const sb = req.sb;
-    const orgId = req.orgId;
-    const env = req.env;
+    const { db, orgId, env } = req;
 
     const [product, features, org, numVersions, existingMigrations] =
       await Promise.all([
-        ProductService.getFullProduct({
-          sb,
-          productId,
+        ProductService.getFull({
+          db,
+          idOrInternalId: productId,
           orgId,
           env,
           version: version ? parseInt(version) : undefined,
         }),
-        FeatureService.getFeatures({
-          sb,
-          orgId,
-          env,
-        }),
+        FeatureService.getFromReq(req),
         OrgService.getFromReq(req),
         ProductService.getProductVersionCount({
-          sb,
+          db,
           productId,
           orgId,
           env,
         }),
         MigrationService.getExistingJobs({
-          sb,
+          db,
           orgId,
           env,
         }),
@@ -212,14 +177,15 @@ productRouter.get("/:productId/data", async (req: any, res) => {
 
 productRouter.get("/:productId/count", async (req: any, res) => {
   try {
+    const { db, orgId, env } = req;
     const { productId } = req.params;
     const { version } = req.query;
 
-    const product = await ProductService.getProductStrict({
-      sb: req.sb,
-      productId,
-      orgId: req.orgId,
-      env: req.env,
+    const product = await ProductService.get({
+      db,
+      id: productId,
+      orgId,
+      env,
       version: version ? parseInt(version) : undefined,
     });
 
@@ -235,7 +201,7 @@ productRouter.get("/:productId/count", async (req: any, res) => {
 
     // Get counts from postgres
     const counts = await CusProdReadService.getCounts({
-      sb: req.sb,
+      db,
       internalProductId: product.internal_id,
     });
 
@@ -249,8 +215,6 @@ productRouter.get("/:productId/count", async (req: any, res) => {
     });
   }
 });
-
-productRouter.use(entitlementRouter);
 
 productRouter.post("/product_options", async (req: any, res: any) => {
   try {

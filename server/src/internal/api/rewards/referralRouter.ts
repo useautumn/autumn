@@ -8,7 +8,7 @@ import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionServ
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { ErrCode, RewardTriggerEvent } from "@autumn/shared";
+import { Customer, ErrCode, RewardTriggerEvent } from "@autumn/shared";
 import express from "express";
 import { ReferralCode, RewardRedemption } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -23,24 +23,24 @@ referralRouter.post("/code", (req, res) =>
     res,
     action: "get referral code",
     handler: async (req: any, res: any) => {
-      const { orgId, env, logtail: logger } = req;
+      const { orgId, env, logtail: logger, db } = req;
       const { program_id: rewardProgramId, customer_id: customerId } = req.body;
 
-      let rewardProgram = await RewardProgramService.getById({
-        sb: req.sb,
-        id: rewardProgramId,
-        orgId,
-        env,
-        errorIfNotFound: true,
-      });
-
-      let customer = await CusService.getById({
-        sb: req.sb,
-        orgId,
-        env,
-        id: customerId,
-        logger,
-      });
+      let [rewardProgram, customer] = await Promise.all([
+        RewardProgramService.get({
+          db,
+          id: rewardProgramId,
+          orgId,
+          env,
+          errorIfNotFound: true,
+        }),
+        CusService.get({
+          db: req.db,
+          orgId,
+          env,
+          idOrInternalId: customerId,
+        }),
+      ]);
 
       if (!customer) {
         throw new RecaseError({
@@ -50,10 +50,18 @@ referralRouter.post("/code", (req, res) =>
         });
       }
 
+      if (!rewardProgram) {
+        throw new RecaseError({
+          message: "Reward program not found",
+          statusCode: 404,
+          code: ErrCode.RewardProgramNotFound,
+        });
+      }
+
       // Get referral code by customer and reward trigger
       let referralCode =
         await RewardProgramService.getCodeByCustomerAndRewardProgram({
-          sb: req.sb,
+          db,
           orgId,
           env,
           internalCustomerId: customer.internal_id,
@@ -73,8 +81,8 @@ referralRouter.post("/code", (req, res) =>
           created_at: Date.now(),
         };
 
-        await RewardProgramService.createReferralCode({
-          sb: req.sb,
+        referralCode = await RewardProgramService.createReferralCode({
+          db,
           data: referralCode,
         });
       }
@@ -85,7 +93,7 @@ referralRouter.post("/code", (req, res) =>
         created_at: referralCode.created_at,
       });
     },
-  })
+  }),
 );
 
 referralRouter.post("/redeem", (req, res) =>
@@ -94,21 +102,20 @@ referralRouter.post("/redeem", (req, res) =>
     res,
     action: "redeem referral code",
     handler: async (req: any, res: any) => {
-      const { orgId, env, logtail: logger } = req;
+      const { orgId, env, logtail: logger, db } = req;
       // const { referral_id: rewardTriggerId } = req.params;
       const { code, customer_id: customerId } = req.body;
 
       // 1. Get redeemed by customer, and referral code
       let [customer, referralCode, org] = await Promise.all([
-        CusService.getById({
-          sb: req.sb,
+        CusService.get({
+          db,
           orgId,
           env,
-          id: customerId,
-          logger,
+          idOrInternalId: customerId,
         }),
         RewardProgramService.getReferralCode({
-          sb: req.sb,
+          db,
           orgId,
           env,
           code,
@@ -127,11 +134,14 @@ referralRouter.post("/redeem", (req, res) =>
 
       // 2. Check that code has not reached max redemptions
       let redemptionCount = await RewardProgramService.getCodeRedemptionCount({
-        sb: req.sb,
+        db,
         referralCodeId: referralCode.id,
       });
 
-      if (redemptionCount >= referralCode.reward_program.max_redemptions) {
+      if (
+        referralCode.reward_program.max_redemptions &&
+        redemptionCount >= referralCode.reward_program.max_redemptions
+      ) {
         throw new RecaseError({
           message: "Referral code has reached max redemptions",
           statusCode: 400,
@@ -141,7 +151,7 @@ referralRouter.post("/redeem", (req, res) =>
 
       // 3. Check that customer has not already redeemed a code in this referral program
       let existingRedemptions = await RewardRedemptionService.getByCustomer({
-        sb: req.sb,
+        db,
         internalCustomerId: customer.internal_id,
         internalRewardProgramId: referralCode.internal_reward_program_id,
       });
@@ -156,9 +166,17 @@ referralRouter.post("/redeem", (req, res) =>
 
       // Don't let customer redeem their own code
       let codeCustomer = await CusService.getByInternalId({
-        sb: req.sb,
+        db: req.db,
         internalId: referralCode.internal_customer_id,
       });
+
+      if (!codeCustomer) {
+        throw new RecaseError({
+          message: "Referral code customer not found",
+          statusCode: 404,
+          code: ErrCode.CustomerNotFound,
+        });
+      }
 
       if (
         codeCustomer.id === customer.id ||
@@ -187,7 +205,7 @@ referralRouter.post("/redeem", (req, res) =>
       };
 
       redemption = await RewardRedemptionService.insert({
-        sb: req.sb,
+        db,
         rewardRedemption: redemption,
       });
 
@@ -198,7 +216,7 @@ referralRouter.post("/redeem", (req, res) =>
         referralCode.reward_program.when === RewardTriggerEvent.CustomerCreation
       ) {
         redemption = await triggerRedemption({
-          sb: req.sb,
+          db: req.db,
           referralCode,
           org,
           env,
@@ -217,7 +235,7 @@ referralRouter.post("/redeem", (req, res) =>
         reward_id: reward_program.reward.id,
       });
     },
-  })
+  }),
 );
 
 export const redemptionRouter = express.Router();
@@ -228,18 +246,15 @@ redemptionRouter.get("/:redemptionId", (req, res) =>
     res,
     action: "get redemption by id",
     handler: async (req: any, res: any) => {
-      const { orgId, env, logtail: logger } = req;
+      const { db } = req;
       const { redemptionId } = req.params;
 
       let redemption = await RewardRedemptionService.getById({
-        sb: req.sb,
+        db,
         id: redemptionId,
       });
 
-      // logger.info("Returning redemption");
-      // logger.info(redemption);
-
       res.status(200).json(redemption);
     },
-  })
+  }),
 );

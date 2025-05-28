@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AppEnv } from "../genModels.js";
+import { AppEnv } from "../genModels/genEnums.js";
 
 export const SubscriptionSchema = z.object({
   id: z.string(),

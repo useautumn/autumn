@@ -2,7 +2,6 @@
 
 import { z } from "zod";
 import { OrgConfigSchema } from "../models/orgModels/orgConfig.js";
-import { APIVersion } from "../models/apiVersionEnum.js";
 
 export const MinOrgSchema = z.object({
   id: z.string(),

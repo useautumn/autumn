@@ -1,10 +1,12 @@
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
+  getProductResponse,
   mapToProductItems,
   mapToProductV2,
 } from "@/internal/products/productV2Utils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ErrCode, ProductResponseSchema } from "@autumn/shared";
 import { ProductItemResponseSchema } from "@autumn/shared";
@@ -14,14 +16,12 @@ export const handleGetProduct = async (req: any, res: any) =>
   routeHandler({
     req,
     res,
-    action: "get /products/:productId",
-    handler: async () => {
+    action: "get product",
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
       const { productId } = req.params;
-      let { schemaVersion } = req.query;
+      let { schemaVersion } = req.query as { schemaVersion: string };
 
-      const sb = req.sb;
-      const orgId = req.orgId;
-      const env = req.env;
+      const { db, orgId, env } = req;
 
       if (!productId) {
         throw new RecaseError({
@@ -31,11 +31,11 @@ export const handleGetProduct = async (req: any, res: any) =>
       }
 
       let [product, features] = await Promise.all([
-        ProductService.getFullProduct({
-          sb,
+        ProductService.getFull({
+          db,
           orgId,
           env,
-          productId,
+          idOrInternalId: productId,
         }),
         FeatureService.getFromReq(req),
       ]);
@@ -48,26 +48,16 @@ export const handleGetProduct = async (req: any, res: any) =>
         });
       }
 
-      schemaVersion = schemaVersion ? parseInt(schemaVersion) : 2;
+      let schemaVersionInt = schemaVersion ? parseInt(schemaVersion) : 2;
 
-      if (schemaVersion == 1) {
+      if (schemaVersionInt == 1) {
         res.status(200).json(product);
       } else {
         res.status(200).json(
-          ProductResponseSchema.parse({
-            ...product,
-            name: product.name || null,
-            group: product.group || null,
-            // autumn_id: product.internal_id,
-            items: mapToProductItems({
-              prices: product.prices,
-              entitlements: product.entitlements,
-              features: features,
-            }).map((item) => {
-              // console.log(item);
-              return ProductItemResponseSchema.parse(item);
-            }),
-          })
+          getProductResponse({
+            product,
+            features,
+          }),
         );
       }
     },

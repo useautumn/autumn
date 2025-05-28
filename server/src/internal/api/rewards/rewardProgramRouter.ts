@@ -18,7 +18,7 @@ rewardProgramRouter.post("", (req, res) =>
     res,
     action: "create reward trigger",
     handler: async (req: any, res: any) => {
-      const { orgId, env } = req;
+      const { orgId, env, db } = req;
       const rewardProgram = constructRewardProgram({
         rewardProgramData: CreateRewardProgram.parse(req.body),
         orgId,
@@ -38,7 +38,7 @@ rewardProgramRouter.post("", (req, res) =>
       }
 
       let createdRewardProgram = await RewardProgramService.create({
-        sb: req.sb,
+        db,
         data: rewardProgram,
       });
 
@@ -46,7 +46,7 @@ rewardProgramRouter.post("", (req, res) =>
 
       return res.status(200).json(createdRewardProgram);
     },
-  })
+  }),
 );
 
 rewardProgramRouter.delete("/:id", (req, res) =>
@@ -55,11 +55,11 @@ rewardProgramRouter.delete("/:id", (req, res) =>
     res,
     action: "delete reward scheme",
     handler: async (req: any, res: any) => {
-      const { orgId, env } = req;
+      const { orgId, env, db } = req;
       const { id } = req.params;
 
-      let rewardProgram = await RewardProgramService.deleteById({
-        sb: req.sb,
+      let rewardProgram = await RewardProgramService.delete({
+        db,
         id,
         orgId,
         env,
@@ -67,5 +67,5 @@ rewardProgramRouter.delete("/:id", (req, res) =>
 
       return res.status(200).json(rewardProgram);
     },
-  })
+  }),
 );

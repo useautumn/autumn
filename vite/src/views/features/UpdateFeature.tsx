@@ -38,7 +38,7 @@ export default function UpdateFeature({
       originalFeature.current = selectedFeature;
     }
   }, [open]);
-  
+
   useEffect(() => {
     if (open) {
       setEventNameInput("");
@@ -60,7 +60,7 @@ export default function UpdateFeature({
 
   const handleUpdateFeature = async () => {
     setUpdateLoading(true);
-    let originalId = originalFeature.current.id;
+    const originalId = originalFeature.current.id;
 
     try {
       await FeatureService.updateFeature(axiosInstance, originalId, {

@@ -18,7 +18,7 @@ import { initCustomer } from "tests/utils/init.js";
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "referrals1: Testing referrals (on checkout)"
+  "referrals1: Testing referrals (on checkout)",
 )}`, () => {
   let mainCustomerId = "main-referral-1";
   let alternateCustomerId = "alternate-referral-1";
@@ -39,7 +39,7 @@ describe(`${chalk.yellowBright(
     const { testClockId: testClockId1, customer } =
       await initCustomerWithTestClock({
         customerId: mainCustomerId,
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
         fingerprint: "main-referral-1",
@@ -57,11 +57,11 @@ describe(`${chalk.yellowBright(
       batchCreate.push(
         initCustomer({
           customerId: redeemer,
-          sb: this.sb,
+          db: this.db,
           org: this.org,
           env: this.env,
           attachPm: true,
-        })
+        }),
       );
     }
 
@@ -73,10 +73,10 @@ describe(`${chalk.yellowBright(
           email: "alternate-referral-1@example.com",
           fingerprint: "main-referral-1",
         },
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
-      })
+      }),
     );
     await Promise.all(batchCreate);
   });
@@ -116,7 +116,7 @@ describe(`${chalk.yellowBright(
         code: referralCode.code,
       });
       assert.fail(
-        "Own customer (same fingerprint) should not be able to redeem code"
+        "Own customer (same fingerprint) should not be able to redeem code",
       );
     } catch (error) {
       assert.instanceOf(error, AutumnError);
@@ -177,7 +177,7 @@ describe(`${chalk.yellowBright(
 
       // Check stripe customer
       let stripeCus = (await stripeCli.customers.retrieve(
-        mainCustomer.processor?.id
+        mainCustomer.processor?.id,
       )) as Stripe.Customer;
 
       assert.notEqual(stripeCus.discount, null);
@@ -186,7 +186,7 @@ describe(`${chalk.yellowBright(
 
   let curTime = new Date();
   it("customer should have discount for first purchase", async function () {
-    curTime = addHours(addDays(curTime, 7), 4);
+    curTime = addDays(addDays(curTime, 7), 4);
     await advanceTestClock({
       testClockId,
       advanceTo: curTime.getTime(),
@@ -203,7 +203,7 @@ describe(`${chalk.yellowBright(
   it("customer should have discount for second purchase", async function () {
     // 2. Check that customer has another discount
     let stripeCus = (await stripeCli.customers.retrieve(
-      mainCustomer.processor?.id
+      mainCustomer.processor?.id,
     )) as Stripe.Customer;
 
     assert.notEqual(stripeCus.discount, null);
@@ -216,8 +216,8 @@ describe(`${chalk.yellowBright(
       stripeCli,
     });
 
-    // 3. Advance test clock to 1 month + 7 days from start (trigger new invoice)
-    curTime = addDays(curTime, 8);
+    // 3. Advance test clock to 1 month + 12 days from start (trigger new invoice)
+    curTime = addDays(curTime, 12);
     await advanceTestClock({
       testClockId,
       advanceTo: curTime.getTime(),

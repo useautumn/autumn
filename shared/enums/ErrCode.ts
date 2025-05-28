@@ -86,6 +86,9 @@ export const ErrCode = {
   ProductAlreadyExists: "product_already_exists",
   ProductHasRewardPrograms: "product_has_reward_programs",
 
+  // Cus Product
+  CusProductNotFound: "cus_product_not_found",
+
   // Entitlements
   InvalidEntitlement: "invalid_entitlement",
   CreateEntitlementFailed: "create_entitlement_failed",
@@ -130,4 +133,23 @@ export const ErrCode = {
 
   // Entity
   EntityIdRequired: "entity_id_required",
+
+  // Subscription
+  InsertSubscriptionFailed: "insert_subscription_failed",
+  UpdateSubscriptionFailed: "update_subscription_failed",
+
+  // Rewards
+  RewardNotFound: "reward_not_found",
+  RewardProgramNotFound: "reward_program_not_found",
+  InsertRewardProgramFailed: "insert_reward_program_failed",
+  InsertReferralCodeFailed: "insert_referral_code_failed",
+  ReferralCodeNotFound: "referral_code_not_found",
+  UpdateRewardRedemptionFailed: "update_reward_redemption_failed",
+  RewardRedemptionNotFound: "reward_redemption_not_found",
+  InsertRewardRedemptionFailed: "insert_reward_redemption_failed",
+
+  // Migration
+  InsertMigrationJobFailed: "insert_migration_job_failed",
+  InsertMigrationErrorFailed: "insert_migration_error_failed",
+  MigrationJobNotFound: "migration_job_not_found",
 };

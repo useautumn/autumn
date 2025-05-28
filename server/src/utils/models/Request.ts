@@ -1,6 +1,5 @@
 import { AppEnv, Feature, MinOrg, Organization } from "@autumn/shared";
 import { Logtail } from "@logtail/node";
-import { SupabaseClient } from "@supabase/supabase-js";
 import type {
   Request as ExpressRequest,
   Response as ExpressResponse,
@@ -8,9 +7,9 @@ import type {
 
 import { Client } from "pg";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { PostHog } from "posthog-node";
 
-export interface Request extends ExpressRequest {
-  sb: SupabaseClient;
+export interface ExtendedRequest extends ExpressRequest {
   pg: Client;
   db: DrizzleCli;
 
@@ -23,6 +22,9 @@ export interface Request extends ExpressRequest {
   minOrg: MinOrg;
   org: Organization;
   features: Feature[];
+
+  posthog?: PostHog;
+  apiVersion?: number;
 }
 
-export interface Response extends ExpressResponse {}
+export interface ExtendedResponse extends ExpressResponse {}

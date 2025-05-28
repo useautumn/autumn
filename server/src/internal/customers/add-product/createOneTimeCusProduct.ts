@@ -6,20 +6,21 @@ import {
   CusProductStatus,
   EntitlementWithFeature,
   FeatureOptions,
-  FeatureType,
   FullCustomerEntitlement,
   Organization,
   Price,
 } from "@autumn/shared";
-import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
+import { CusEntService } from "../entitlements/CusEntitlementService.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 import { CusProductService } from "../products/CusProductService.js";
-import { getEntOptions } from "@/internal/prices/priceUtils.js";
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { getResetBalance } from "../entitlements/cusEntUtils.js";
 import { nullish } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+
 const updateOneOffExistingEntitlement = async ({
-  sb,
+  db,
   cusEnt,
   entitlement,
   org,
@@ -28,7 +29,7 @@ const updateOneOffExistingEntitlement = async ({
   relatedPrice,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   cusEnt: FullCustomerEntitlement;
   entitlement: EntitlementWithFeature;
   org: Organization;
@@ -42,8 +43,8 @@ const updateOneOffExistingEntitlement = async ({
   }
 
   //  Fetch to get latest entitlement
-  const updatedCusEnt = await CustomerEntitlementService.getByIdStrict({
-    sb,
+  const updatedCusEnt = await CusEntService.getStrict({
+    db,
     id: cusEnt.id,
     orgId: org.id,
     env: env,
@@ -57,14 +58,14 @@ const updateOneOffExistingEntitlement = async ({
 
   if (nullish(resetBalance)) {
     logger.warn(
-      "Tried updating one off entitlement, no reset balance, entitlement: "
+      "Tried updating one off entitlement, no reset balance, entitlement: ",
     );
     logger.warn(entitlement);
     return;
   }
 
-  await CustomerEntitlementService.update({
-    sb,
+  await CusEntService.update({
+    db,
     id: updatedCusEnt.id,
     updates: {
       balance: updatedCusEnt.balance! + resetBalance!,
@@ -75,11 +76,11 @@ const updateOneOffExistingEntitlement = async ({
 };
 
 export const updateOneTimeCusProduct = async ({
-  sb,
+  db,
   attachParams,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   attachParams: InsertCusProductParams;
   logger: any;
 }) => {
@@ -90,7 +91,7 @@ export const updateOneTimeCusProduct = async ({
   let existingCusProduct = attachParams.cusProducts?.find(
     (cp) =>
       cp.product.internal_id === attachParams.product.internal_id &&
-      cp.status === CusProductStatus.Active
+      cp.status === CusProductStatus.Active,
   )!;
 
   let existingCusEnts = existingCusProduct.customer_entitlements;
@@ -98,7 +99,7 @@ export const updateOneTimeCusProduct = async ({
   // 3. Update existing entitlements
   for (const entitlement of attachParams.entitlements) {
     const existingCusEnt = existingCusEnts.find(
-      (ce) => ce.internal_feature_id === entitlement.internal_feature_id
+      (ce) => ce.internal_feature_id === entitlement.internal_feature_id,
     );
 
     let relatedPrice = getEntRelatedPrice(entitlement, attachParams.prices);
@@ -106,7 +107,7 @@ export const updateOneTimeCusProduct = async ({
 
     if (existingCusEnt) {
       await updateOneOffExistingEntitlement({
-        sb,
+        db,
         cusEnt: existingCusEnt,
         entitlement,
         org: attachParams.org,
@@ -129,9 +130,10 @@ export const updateOneTimeCusProduct = async ({
         entities: attachParams.entities || [],
       });
 
-      await CustomerEntitlementService.createMany({
-        sb,
-        customerEntitlements: [newCusEnt as any],
+      console.log("Inserting new cus ent");
+      await CusEntService.insert({
+        db,
+        data: [newCusEnt as any],
       });
     }
   }
@@ -142,7 +144,7 @@ export const updateOneTimeCusProduct = async ({
   for (const curOptions of existingCusProduct.options) {
     // Find the option in the new options list
     const newOptionIndex = newOptionsList.findIndex(
-      (o) => o.internal_feature_id === curOptions.internal_feature_id
+      (o) => o.internal_feature_id === curOptions.internal_feature_id,
     );
 
     if (newOptionIndex !== -1) {
@@ -155,43 +157,8 @@ export const updateOneTimeCusProduct = async ({
     }
   }
 
-  // // Handle adding quantity to base entitlements if cus product purchased multiple times.
-  // for (const entitlement of attachParams.entitlements) {
-  //   const relatedPrice = getEntRelatedPrice(entitlement, attachParams.prices);
-  //   const feature = entitlement.feature;
-
-  //   if (relatedPrice || feature.type == FeatureType.Boolean || entitlement.allowance_type === AllowanceType.Unlimited) {
-  //     continue;
-  //   }
-
-  //   const newOptionIndex = newOptionsList.findIndex(
-  //     (o) => o.internal_feature_id === entitlement.internal_feature_id
-  //   );
-
-  //   if (newOptionIndex === -1) {
-  //     // Get existing option
-  //     const existingOption = existingCusProduct.options.find(
-  //       (o) => o.internal_feature_id === entitlement.internal_feature_id
-  //     );
-
-  //     if (existingOption) {
-  //       newOptionsList.push({
-  //         feature_id: entitlement.feature.id,
-  //         quantity: (existingOption?.quantity || 0) + 1,
-  //         internal_feature_id: entitlement.internal_feature_id,
-  //       });
-  //     } else {
-  //       newOptionsList.push({
-  //         feature_id: entitlement.feature.id,
-  //         quantity: 2,
-  //         internal_feature_id: entitlement.internal_feature_id,
-  //       });
-  //     }
-  //   }
-  // }
-
   await CusProductService.update({
-    sb,
+    db,
     cusProductId: existingCusProduct.id,
     updates: {
       options: newOptionsList,

@@ -23,7 +23,7 @@ import { Decimal } from "decimal.js";
 
 // FOURTH, TEST GPU STARTER ANNUAL UPGRADE TO GPU PRO
 describe(`${chalk.yellowBright(
-  "multi_interval2: GPU starter annual upgrade to GPU pro annual"
+  "multi_interval2: GPU starter annual upgrade to GPU pro annual",
 )}`, () => {
   const customerId = "multi_interval2";
   let testClockId = "";
@@ -37,7 +37,7 @@ describe(`${chalk.yellowBright(
         customerId,
         org: this.org,
         env: this.env,
-        sb: this.sb,
+        db: this.db,
       });
 
     testClockId = insertedTestClockId;
@@ -119,7 +119,7 @@ describe(`${chalk.yellowBright(
     const invoices = res!.invoices;
 
     let invoiceIndex = invoices.findIndex((invoice: any) =>
-      invoice.product_ids.includes(advanceProducts.gpuStarterAnnual.id)
+      invoice.product_ids.includes(advanceProducts.gpuStarterAnnual.id),
     );
 
     await checkUsageInvoiceAmount({
@@ -178,7 +178,7 @@ describe(`${chalk.yellowBright(
     let roundedFirst = Math.ceil(
       new Decimal(totalCreditsUsed)
         .div(usagePrice?.config?.billing_units!)
-        .toNumber()
+        .toNumber(),
     );
     let roundedTotalCreditsUsed = new Decimal(roundedFirst)
       .mul(usagePrice?.config?.billing_units!)

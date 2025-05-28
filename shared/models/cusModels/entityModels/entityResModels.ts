@@ -1,4 +1,4 @@
-import { AppEnv } from "../../genModels.js";
+import { AppEnv } from "../../genModels/genEnums.js";
 import {
   CusProductResponseSchema,
   CusEntResponseV2Schema,

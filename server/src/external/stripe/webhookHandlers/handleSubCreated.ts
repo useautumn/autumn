@@ -14,25 +14,33 @@ import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js"
 import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getFullStripeSub } from "../stripeSubUtils.js";
 
 export const handleSubCreated = async ({
-  sb,
-  subscription,
+  db,
+  subData,
   org,
   env,
   logger,
 }: {
-  sb: SupabaseClient;
-  subscription: Stripe.Subscription;
+  db: DrizzleCli;
+  subData: Stripe.Subscription;
   org: Organization;
   env: AppEnv;
   logger: any;
 }) => {
+  const stripeCli = createStripeCli({ org, env });
+  const subscription = await getFullStripeSub({
+    stripeCli,
+    stripeId: subData.id,
+  });
+
   if (subscription.schedule) {
     const cusProds = await CusProductService.getByStripeScheduledId({
-      sb,
+      db,
       stripeScheduledId: subscription.schedule as string,
       orgId: org.id,
       env,
@@ -45,13 +53,13 @@ export const handleSubCreated = async ({
 
     // Update autumn sub
     let autumnSub = await SubService.getFromScheduleId({
-      sb,
+      db,
       scheduleId: subscription.schedule as string,
     });
 
     if (autumnSub) {
       await SubService.updateFromScheduleId({
-        sb,
+        db,
         scheduleId: subscription.schedule as string,
         updates: {
           stripe_id: subscription.id,
@@ -64,14 +72,14 @@ export const handleSubCreated = async ({
       try {
         subUsageFeatures = JSON.parse(subscription.metadata?.usage_features);
         subUsageFeatures = subUsageFeatures.map(
-          (feature: any) => feature.internal_id
+          (feature: any) => feature.internal_id,
         );
       } catch (error) {
         console.log("Error parsing usage features", error);
       }
 
       await SubService.createSub({
-        sb,
+        db,
         sub: {
           id: generateId("sub"),
           created_at: Date.now(),
@@ -88,7 +96,7 @@ export const handleSubCreated = async ({
 
     console.log(
       "Handling subscription.created for scheduled cus products:",
-      cusProds.length
+      cusProds.length,
     );
 
     let batchUpdate = [];
@@ -99,13 +107,13 @@ export const handleSubCreated = async ({
       subIds.push(subscription.id);
 
       const updateCusProd = async () => {
-        await sb
-          .from("customer_products")
-          .update({
+        await CusProductService.update({
+          db,
+          cusProductId: cusProd.id,
+          updates: {
             subscription_ids: subIds,
-            // status: CusProductStatus.Active,
-          })
-          .eq("id", cusProd.id);
+          },
+        });
 
         // Fetch latest invoice?
         const stripeCli = createStripeCli({ org, env });
@@ -117,13 +125,13 @@ export const handleSubCreated = async ({
         let invoiceItems = await getInvoiceItems({
           stripeInvoice: invoice,
           prices: cusProd.customer_prices.map(
-            (cpr: FullCustomerPrice) => cpr.price
+            (cpr: FullCustomerPrice) => cpr.price,
           ),
           logger,
         });
 
         await InvoiceService.createInvoiceFromStripe({
-          sb,
+          db,
           stripeInvoice: invoice,
           internalCustomerId: cusProd.internal_customer_id,
           internalEntityId: cusProd.internal_entity_id,
@@ -142,15 +150,12 @@ export const handleSubCreated = async ({
 
   // Get cus prods for sub
   let cusProds = await CusProductService.getByStripeSubId({
-    sb,
+    db,
     stripeSubId: subscription.id,
     orgId: org.id,
     env,
-    withCusEnts: true,
-    withCusPrices: true,
   });
 
-  let stripeCli = createStripeCli({ org, env });
   let handleInArrearWithEntity = async (cusProd: FullCusProduct) => {
     if (!cusProd.internal_entity_id) {
       return;
@@ -160,7 +165,7 @@ export const handleSubCreated = async ({
       .map((cp) => cp.price)
       .filter(
         (p: Price) =>
-          getBillingType(p.config as any) == BillingType.UsageInArrear
+          getBillingType(p.config as any) == BillingType.UsageInArrear,
       );
 
     if (arrearPrices.length == 0) {
@@ -170,7 +175,7 @@ export const handleSubCreated = async ({
     let itemsToDelete = [];
     for (const arrearPrice of arrearPrices) {
       let subItem = subscription.items.data.find(
-        (i) => i.price.id == arrearPrice.config?.stripe_price_id
+        (i) => i.price.id == arrearPrice.config?.stripe_price_id,
       );
 
       if (!subItem) {
@@ -189,12 +194,12 @@ export const handleSubCreated = async ({
           items: itemsToDelete,
         });
         console.log(
-          `sub.created, cus product with entity: deleted ${itemsToDelete.length} items`
+          `sub.created, cus product with entity: deleted ${itemsToDelete.length} items`,
         );
       } catch (error) {
         logger.error(
           `sub.created, cus product with entity: failed to delete items`,
-          error
+          error,
         );
       }
     }

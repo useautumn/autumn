@@ -9,6 +9,7 @@ import {
   ErrCode,
   Feature,
   FullCustomer,
+  Invoice,
   InvoiceResponse,
   Organization,
   ProductSchema,
@@ -18,8 +19,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { AppEnv } from "@autumn/shared";
 
 import { CusService } from "@/internal/customers/CusService.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 
 import { processFullCusProduct } from "@/internal/customers/products/cusProductUtils.js";
 import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
@@ -27,15 +26,16 @@ import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js"
 import { sortCusEntsForDeduction } from "@/internal/customers/entitlements/cusEntUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
-import { notNullish, nullish } from "@/utils/genUtils.js";
+import { nullish } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const updateCustomerDetails = async ({
-  sb,
+  db,
   customer,
   customerData,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   customer: any;
   customerData?: CustomerData;
   logger: any;
@@ -51,7 +51,7 @@ export const updateCustomerDetails = async ({
   if (Object.keys(updates).length > 0) {
     logger.info(`Updating customer details`, { updates });
     await CusService.update({
-      sb,
+      db,
       internalCusId: customer.internal_id,
       update: updates,
     });
@@ -61,77 +61,13 @@ export const updateCustomerDetails = async ({
   return customer;
 };
 
-export const getCusByIdOrInternalId = async ({
-  sb,
-  idOrInternalId,
-  orgId,
-  env,
-  isFull = false,
-}: {
-  sb: SupabaseClient;
-  idOrInternalId: string;
-  orgId: string;
-  env: AppEnv;
-  isFull?: boolean;
-}) => {
-  const customer = await CusService.getByIdOrInternalId({
-    sb,
-    orgId,
-    env,
-    idOrInternalId,
-    isFull,
-  });
-
-  return customer;
-};
-
-export const attachDefaultProducts = async ({
-  sb,
-  orgId,
-  env,
-  customer,
-  nextResetAt,
-  org,
-}: {
-  sb: SupabaseClient;
-  orgId: string;
-  env: AppEnv;
-  customer: Customer;
-  org: Organization;
-  nextResetAt?: number;
-}) => {
-  const defaultProds = await ProductService.getFullDefaultProducts({
-    sb,
-    orgId,
-    env,
-  });
-
-  for (const product of defaultProds) {
-    await createFullCusProduct({
-      sb,
-      attachParams: {
-        org,
-        customer: customer,
-        product,
-        prices: product.prices,
-        entitlements: product.entitlements,
-        freeTrial: null, // TODO: Free trial not supported on default product yet
-        optionsList: [],
-        entities: [],
-        features: [],
-      },
-      nextResetAt,
-    });
-  }
-};
-
 const CusProductResultSchema = CusProductSchema.extend({
   customer: CustomerSchema,
   product: ProductSchema,
 });
 
 export const flipProductResults = (
-  cusProducts: z.infer<typeof CusProductResultSchema>[]
+  cusProducts: z.infer<typeof CusProductResultSchema>[],
 ) => {
   const customers = [];
 
@@ -145,21 +81,20 @@ export const flipProductResults = (
 };
 
 export const getCusInvoices = async ({
-  sb,
+  db,
   internalCustomerId,
   limit = 10,
   withItems = false,
   features,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   internalCustomerId: string;
   limit?: number;
   withItems?: boolean;
   features?: Feature[];
 }): Promise<InvoiceResponse[]> => {
-  // Get customer invoices
-  const invoices = await InvoiceService.getByInternalCustomerId({
-    sb,
+  const invoices = await InvoiceService.list({
+    db,
     internalCustomerId,
     limit,
   });
@@ -169,7 +104,7 @@ export const getCusInvoices = async ({
       invoice: i,
       withItems,
       features,
-    })
+    }),
   );
 
   return processedInvoices;
@@ -213,13 +148,11 @@ export const processFullCusProducts = ({
 
 // IMPORTANT FUNCTION
 export const getCusEntsInFeatures = async ({
-  sb,
   customer,
   internalFeatureIds,
   logger,
   reverseOrder = false,
 }: {
-  sb: SupabaseClient;
   customer: FullCustomer;
   internalFeatureIds?: string[];
   logger: any;
@@ -239,7 +172,7 @@ export const getCusEntsInFeatures = async ({
 
   if (internalFeatureIds) {
     cusEnts = cusEnts.filter((cusEnt) =>
-      internalFeatureIds.includes(cusEnt.internal_feature_id)
+      internalFeatureIds.includes(cusEnt.internal_feature_id),
     );
   }
 
@@ -248,7 +181,7 @@ export const getCusEntsInFeatures = async ({
     cusEnts = cusEnts.filter(
       (cusEnt) =>
         nullish(cusEnt.customer_product.internal_entity_id) ||
-        cusEnt.customer_product.internal_entity_id === entity.internal_id
+        cusEnt.customer_product.internal_entity_id === entity.internal_id,
       // || cusEnt.entities
     );
   }
@@ -258,7 +191,7 @@ export const getCusEntsInFeatures = async ({
   return { cusEnts, cusPrices };
 };
 
-export const parseCusExpand = (expand: string): CusExpand[] => {
+export const parseCusExpand = (expand?: string): CusExpand[] => {
   if (expand) {
     let options = expand.split(",");
     let result: CusExpand[] = [];

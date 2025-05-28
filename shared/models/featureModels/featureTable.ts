@@ -7,24 +7,32 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { organizations } from "../orgModels/orgTable.js";
 import { MeteredConfig } from "./featureConfig/meteredConfig.js";
 import { CreditSystemConfig } from "./featureConfig/creditConfig.js";
 import { collatePgColumn } from "../../db/utils.js";
 
+type FeatureDisplay = {
+  singular: string;
+  plural: string;
+};
+
 export const features = pgTable(
   "features",
   {
     internal_id: text("internal_id").primaryKey().notNull(),
-    org_id: text("org_id"),
+    org_id: text("org_id").notNull(),
+    created_at: numeric({ mode: "number" }),
+    env: text(),
+
     id: text().notNull(),
     name: text(),
-    type: text(),
-    created_at: numeric({ mode: "number" }),
+    type: text().notNull(),
     config: jsonb().$type<MeteredConfig | CreditSystemConfig>(),
-    env: text().default("live"),
-    display: jsonb(),
+    display: jsonb()
+      .default(sql`null`)
+      .$type<FeatureDisplay>(),
   },
   (table) => [
     foreignKey({

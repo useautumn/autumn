@@ -13,9 +13,10 @@ import { getCusPaymentMethod } from "./stripeCusUtils.js";
 import { createStripeCli } from "./utils.js";
 import RecaseError, { isPaymentDeclined } from "@/utils/errorUtils.js";
 import { isStripeCardDeclined } from "./stripeCardUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
+// For API calls
 export const getStripeExpandedInvoice = async ({
   stripeCli,
   stripeInvoiceId,
@@ -24,6 +25,20 @@ export const getStripeExpandedInvoice = async ({
   stripeInvoiceId: string;
 }) => {
   const invoice = await stripeCli.invoices.retrieve(stripeInvoiceId, {
+    expand: ["discounts", "discounts.coupon"],
+  });
+  return invoice;
+};
+
+// For webhooks
+export const getFullStripeInvoice = async ({
+  stripeCli,
+  stripeId,
+}: {
+  stripeCli: Stripe;
+  stripeId: string;
+}) => {
+  const invoice = await stripeCli.invoices.retrieve(stripeId, {
     expand: ["discounts", "discounts.coupon"],
   });
   return invoice;
@@ -72,7 +87,7 @@ export const payForInvoice = async ({
     };
   } catch (error: any) {
     logger.error(
-      `   ❌ Stripe error: Failed to pay invoice: ${error?.message || error}`
+      `   ❌ Stripe error: Failed to pay invoice: ${error?.message || error}`,
     );
 
     if (isStripeCardDeclined(error)) {
@@ -97,22 +112,22 @@ export const payForInvoice = async ({
 };
 
 export const updateInvoiceIfExists = async ({
-  sb,
+  db,
   invoice,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   invoice: Stripe.Invoice;
 }) => {
   // TODO: Can optimize this function...
-  const existingInvoice = await InvoiceService.getInvoiceByStripeId({
-    sb,
-    stripeInvoiceId: invoice.id,
+  const existingInvoice = await InvoiceService.getByStripeId({
+    db,
+    stripeId: invoice.id,
   });
 
   if (existingInvoice) {
     await InvoiceService.updateByStripeId({
-      sb,
-      stripeInvoiceId: invoice.id,
+      db,
+      stripeId: invoice.id,
       updates: {
         status: invoice.status as InvoiceStatus,
         hosted_invoice_url: invoice.hosted_invoice_url,
@@ -148,7 +163,7 @@ export const getInvoiceDiscounts = ({
     let autumnDiscounts = expandedInvoice.discounts.map((discount: any) => {
       const amountOff = discount.coupon.amount_off;
       const amountUsed = totalDiscountAmounts?.find(
-        (item) => item.discount === discount.id
+        (item) => item.discount === discount.id,
       )?.amount;
 
       let autumnDiscount: InvoiceDiscount = {

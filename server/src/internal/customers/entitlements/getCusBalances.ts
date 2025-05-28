@@ -8,7 +8,7 @@ import {
   FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
-import { getEntOptions } from "@/internal/prices/priceUtils.js";
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 
 import { notNullOrUndefined } from "@/utils/genUtils.js";
 
@@ -71,7 +71,7 @@ export const getCusBalances = async ({
 }) => {
   const data: Record<string, any> = {};
   const features = cusEntsWithCusProduct.map(
-    (cusEnt) => cusEnt.entitlement.feature
+    (cusEnt) => cusEnt.entitlement.feature,
   );
 
   for (const cusEnt of cusEntsWithCusProduct) {

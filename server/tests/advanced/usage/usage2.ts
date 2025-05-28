@@ -32,8 +32,8 @@ describe(`${chalk.yellowBright("usage2: GPU starter monthly")}`, () => {
         customerId,
         org: this.org,
         env: this.env,
-        sb: this.sb,
-      }
+        db: this.db,
+      },
     );
 
     testClockId = createdTestClockId;
@@ -78,7 +78,7 @@ describe(`${chalk.yellowBright("usage2: GPU starter monthly")}`, () => {
       let creditsUsed = getCreditsUsed(
         creditSystems.gpuCredits,
         gpuId,
-        randomVal
+        randomVal,
       );
 
       totalCreditsUsed = new Decimal(totalCreditsUsed)
@@ -90,7 +90,7 @@ describe(`${chalk.yellowBright("usage2: GPU starter monthly")}`, () => {
           customerId: customerId,
           eventName: gpuId,
           properties: { value: randomVal },
-        })
+        }),
       );
     }
 
@@ -101,7 +101,7 @@ describe(`${chalk.yellowBright("usage2: GPU starter monthly")}`, () => {
     const { allowed, balanceObj }: any = await AutumnCli.entitled(
       customerId,
       creditSystems.gpuCredits.id,
-      true
+      true,
     );
 
     let creditAllowance =
@@ -110,7 +110,7 @@ describe(`${chalk.yellowBright("usage2: GPU starter monthly")}`, () => {
     try {
       expect(allowed).to.be.true;
       expect(balanceObj!.balance).to.equal(
-        new Decimal(creditAllowance).minus(totalCreditsUsed).toNumber()
+        new Decimal(creditAllowance).minus(totalCreditsUsed).toNumber(),
       );
       console.log("   - Total credits used: ", totalCreditsUsed);
       console.log("   - Balance: ", balanceObj!.balance);
@@ -149,7 +149,7 @@ describe(`${chalk.yellowBright("usage2: GPU starter monthly")}`, () => {
       const { allowed, balanceObj }: any = await AutumnCli.entitled(
         customerId,
         creditSystems.gpuCredits.id,
-        true
+        true,
       );
 
       let allowance =

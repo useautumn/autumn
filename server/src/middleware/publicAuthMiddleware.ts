@@ -1,5 +1,5 @@
 import { verifyPublicKey } from "@/internal/dev/api-keys/publicKeyUtils.js";
-import { AppEnv, ErrCode } from "@autumn/shared";
+import { AppEnv, AuthType, ErrCode } from "@autumn/shared";
 
 const allowedEndpoints = [
   {
@@ -55,7 +55,7 @@ export const verifyBearerPublishableKey = async (
   pkey: string,
   req: any,
   res: any,
-  next: any
+  next: any,
 ) => {
   try {
     if (
@@ -85,7 +85,7 @@ export const verifyBearerPublishableKey = async (
       : AppEnv.Live;
 
     const data = await verifyPublicKey({
-      sb: req.sb,
+      db: req.db,
       pkey,
       env,
     });
@@ -109,6 +109,7 @@ export const verifyBearerPublishableKey = async (
     req.isPublic = true;
     req.org = org;
     req.features = features;
+    req.auth = AuthType.SecretKey;
 
     console.log("Public request from:", org.slug);
     next();

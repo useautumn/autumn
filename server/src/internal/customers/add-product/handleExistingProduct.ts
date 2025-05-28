@@ -20,7 +20,7 @@ import chalk from "chalk";
 
 import { handleSameMainProduct } from "@/internal/customers/add-product/handleSameProduct.js";
 
-import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
+import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import { handleSameAddOnProduct } from "./handleSameProduct/handleSameAddOn.js";
@@ -32,7 +32,7 @@ export const getExistingCusProducts = async ({
 }: {
   product: Product;
   cusProducts: FullCusProduct[];
-  internalEntityId?: string;
+  internalEntityId?: string | null;
 }) => {
   if (!cusProducts || cusProducts.length === 0) {
     return {
@@ -63,7 +63,7 @@ export const getExistingCusProducts = async ({
       cp.product.internal_id === product.internal_id &&
       (internalEntityId
         ? cp.internal_entity_id === internalEntityId
-        : nullish(cp.internal_entity_id))
+        : nullish(cp.internal_entity_id)),
   );
 
   const curScheduledProduct = cusProducts!.find(
@@ -73,7 +73,7 @@ export const getExistingCusProducts = async ({
       !cp.product.is_add_on &&
       (internalEntityId
         ? cp.internal_entity_id === internalEntityId
-        : nullish(cp.internal_entity_id))
+        : nullish(cp.internal_entity_id)),
   );
 
   return { curMainProduct, curSameProduct, curScheduledProduct };
@@ -90,8 +90,8 @@ const handleExistingMultipleProducts = async ({
   if (
     products.every((p) =>
       p.prices.every(
-        (price) => price.config?.interval === BillingInterval.OneOff
-      )
+        (price) => price.config?.interval === BillingInterval.OneOff,
+      ),
     )
   ) {
     return { curCusProduct: null, done: false };
@@ -163,8 +163,8 @@ export const handleExistingProduct = async ({
   invoiceOnly?: boolean;
   isCustom?: boolean;
 }): Promise<{ curCusProduct: FullCusProduct | null; done: boolean }> => {
-  const { sb, logtail: logger } = req;
-  const { customer, products, cusProducts } = attachParams;
+  const { db, logtail: logger } = req;
+  const { products, cusProducts } = attachParams;
 
   if (products.length > 1) {
     return await handleExistingMultipleProducts({
@@ -187,12 +187,12 @@ export const handleExistingProduct = async ({
 
   logger.info(
     `Checking existing product | curMain: ${chalk.yellow(
-      curMainProduct?.product.name || "None"
+      curMainProduct?.product.name || "None",
     )} | curSame: ${chalk.yellow(
-      curSameProduct?.product.name || "None"
+      curSameProduct?.product.name || "None",
     )} | curScheduled: ${chalk.yellow(
-      curScheduledProduct?.product.name || "None"
-    )}`
+      curScheduledProduct?.product.name || "None",
+    )}`,
   );
 
   attachParams.curCusProduct = curMainProduct;
@@ -210,7 +210,7 @@ export const handleExistingProduct = async ({
   // Case 3: Main product is same -- remove scheduled and update quantity
   if (curMainProduct?.product.id === product.id) {
     return await handleSameMainProduct({
-      sb,
+      db,
       curMainProduct,
       curScheduledProduct,
       attachParams,
@@ -224,7 +224,7 @@ export const handleExistingProduct = async ({
 
   if (curSameProduct && product.is_add_on) {
     return await handleSameAddOnProduct({
-      sb,
+      db,
       curSameProduct,
       curMainProduct: curMainProduct || null,
       attachParams,
@@ -250,7 +250,7 @@ export const handleExistingProduct = async ({
         prices2: attachParams.prices,
       }) &&
       isFreeProduct(
-        curMainProduct?.customer_prices.map((cp: any) => cp.price) || []
+        curMainProduct?.customer_prices.map((cp: any) => cp.price) || [],
       );
 
     let isAddOn = product.is_add_on;
@@ -269,7 +269,7 @@ export const handleExistingProduct = async ({
   if (
     (curMainProduct &&
       isFreeProduct(
-        curMainProduct.customer_prices.map((cp: any) => cp.price)
+        curMainProduct.customer_prices.map((cp: any) => cp.price),
       )) ||
     attachParams.products[0].is_add_on
   ) {

@@ -28,11 +28,11 @@ export const cancelScheduledProductIfExists = async ({
 
   if (curScheduledProduct) {
     logger.info(
-      `Change product: cancelling future scheduled product: ${curScheduledProduct.product.name}`
+      `Change product: cancelling future scheduled product: ${curScheduledProduct.product.name}`,
     );
     // 1. Cancel future product schedule
     await cancelFutureProductSchedule({
-      sb: req.sb,
+      db: req.db,
       org,
       cusProducts: attachParams.cusProducts!,
       product: curScheduledProduct.product as any,
@@ -44,7 +44,7 @@ export const cancelScheduledProductIfExists = async ({
 
     // 2. Delete scheduled product
     await CusProductService.delete({
-      sb: req.sb,
+      db: req.db,
       cusProductId: curScheduledProduct.id,
     });
   }

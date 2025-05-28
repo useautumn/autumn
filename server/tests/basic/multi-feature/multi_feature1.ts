@@ -17,6 +17,7 @@ import { getPrepaidCusEnt } from "tests/utils/cusProductUtils/cusEntSearchUtils.
 import { constructFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { timeout } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // Scenario 1: prepaid + pay per use monthly -> prepaid + pay per use monthly
 let pro = {
@@ -70,31 +71,31 @@ let premium = {
 
 export const getPrepaidAndUsageCusEnts = async ({
   customerId,
-  sb,
+  db,
   orgId,
   env,
   featureId,
 }: {
   customerId: string;
-  sb: SupabaseClient;
+  db: DrizzleCli;
   orgId: string;
   env: AppEnv;
   featureId: string;
 }) => {
   let mainCusProduct = await getMainCusProduct({
     customerId,
-    sb,
+    db,
     orgId,
     env,
   });
 
   let prepaidCusEnt = getPrepaidCusEnt({
-    cusProduct: mainCusProduct,
+    cusProduct: mainCusProduct!,
     featureId,
   });
 
   let usageCusEnt = getUsageCusEnt({
-    cusProduct: mainCusProduct,
+    cusProduct: mainCusProduct!,
     featureId,
   });
 
@@ -103,7 +104,7 @@ export const getPrepaidAndUsageCusEnts = async ({
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "multi-feature/multi_feature1: Testing prepaid + pay per use -> prepaid + pay per use"
+  "multi-feature/multi_feature1: Testing prepaid + pay per use -> prepaid + pay per use",
 )}`, () => {
   let autumn: Autumn;
   let customerId = "multiFeature1Customer";
@@ -127,7 +128,7 @@ describe(`${chalk.yellowBright(
 
     await initCustomer({
       customerId,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -155,14 +156,14 @@ describe(`${chalk.yellowBright(
 
     let { prepaidCusEnt, usageCusEnt } = await getPrepaidAndUsageCusEnts({
       customerId,
-      sb: this.sb,
+      db: this.db,
       orgId: this.org.id,
       env: this.env,
       featureId: features.metered1.id,
     });
 
     expect(prepaidCusEnt?.balance).to.equal(
-      prepaidQuantity + pro.items.prepaid.included_usage
+      prepaidQuantity + pro.items.prepaid.included_usage,
     );
 
     expect(usageCusEnt?.balance).to.equal(pro.items.payPerUse.included_usage);
@@ -183,7 +184,7 @@ describe(`${chalk.yellowBright(
 
     let { prepaidCusEnt, usageCusEnt } = await getPrepaidAndUsageCusEnts({
       customerId,
-      sb: this.sb,
+      db: this.db,
       orgId: this.org.id,
       env: this.env,
       featureId: features.metered1.id,
@@ -207,7 +208,7 @@ describe(`${chalk.yellowBright(
 
     let { usageCusEnt } = await getPrepaidAndUsageCusEnts({
       customerId,
-      sb: this.sb,
+      db: this.db,
       orgId: this.org.id,
       env: this.env,
       featureId: features.metered1.id,
@@ -224,7 +225,7 @@ describe(`${chalk.yellowBright(
     let { prepaidCusEnt, usageCusEnt: newUsageCusEnt } =
       await getPrepaidAndUsageCusEnts({
         customerId,
-        sb: this.sb,
+        db: this.db,
         orgId: this.org.id,
         env: this.env,
         featureId: features.metered1.id,

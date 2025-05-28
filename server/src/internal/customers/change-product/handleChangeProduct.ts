@@ -15,18 +15,15 @@ export const handleChangeProduct = async ({
   res,
   attachParams,
   curCusProduct,
-  isCustom,
 }: {
   req: any;
   res: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
-  isCustom: boolean;
 }) => {
   // Get subscription
   const curProduct = curCusProduct.product;
-  const { org, customer, products, prices, entitlements, optionsList } =
-    attachParams;
+  const { org, customer, products } = attachParams;
 
   // Can only upgrade once for now
   if (products.length > 1) {
@@ -54,11 +51,9 @@ export const handleChangeProduct = async ({
     logger,
   });
 
-  let product = products[0];
-
-  const curFullProduct = await ProductService.getFullProduct({
-    sb: req.sb,
-    productId: curProduct.id,
+  const curFullProduct = await ProductService.getFull({
+    db: req.db,
+    idOrInternalId: curProduct.id,
     orgId: org.id,
     env: customer.env,
   });

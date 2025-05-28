@@ -1,10 +1,4 @@
-import {
-  AggregateType,
-  Feature,
-  FeatureType,
-  MeteredConfig,
-} from "@autumn/shared";
-import { toast } from "sonner";
+import { Feature, FeatureType, MeteredConfig } from "@autumn/shared";
 
 export const validateFeature = (feature: Feature) => {
   if (feature.type === FeatureType.Metered) {

@@ -5,17 +5,11 @@ import {
   AggregateType,
   CreditSystemConfig,
   Feature,
-  FeatureType,
-  AppEnv,
   FeatureUsageType,
   Organization,
 } from "@autumn/shared";
-import { EntitlementService } from "../products/entitlements/EntitlementService.js";
-import { PriceService } from "../prices/PriceService.js";
 import { FeatureService } from "./FeatureService.js";
-import { generateId, keyToTitle } from "@/utils/genUtils.js";
 import { StatusCodes } from "http-status-codes";
-import { logger } from "@trigger.dev/sdk/v3";
 import { generateFeatureDisplay } from "@/external/llm/llmUtils.js";
 import { ProductService } from "../products/ProductService.js";
 import { getCreditSystemsFromFeature } from "./creditSystemUtils.js";
@@ -103,20 +97,20 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 };
 
 export const getObjectsUsingFeature = async ({
-  sb,
+  db,
   orgId,
   env,
   allFeatures,
   feature,
 }: {
-  sb: any;
+  db: DrizzleCli;
   orgId: string;
   env: any;
   allFeatures: Feature[];
   feature: Feature;
 }) => {
-  let products = await ProductService.getFullProducts({
-    sb,
+  let products = await ProductService.listFull({
+    db,
     orgId,
     env,
   });
@@ -144,13 +138,11 @@ export const getObjectsUsingFeature = async ({
 
 export const runSaveFeatureDisplayTask = async ({
   db,
-  sb,
   feature,
   org,
   logger,
 }: {
   db: DrizzleCli;
-  sb: any;
   feature: Feature;
   org: Organization;
   logger: any;
@@ -162,10 +154,10 @@ export const runSaveFeatureDisplayTask = async ({
     );
     display = await generateFeatureDisplay(feature);
     logger.info(`Result: ${JSON.stringify(display)}`);
+
     await FeatureService.update({
       db,
-      sb,
-      internalFeatureId: feature.internal_id!,
+      internalId: feature.internal_id!,
       updates: {
         display,
       },

@@ -5,13 +5,11 @@ import { CacheType } from "@/external/caching/cacheActions.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const clearOrgCache = async ({
-  // sb,
   db,
   orgId,
   env,
   logger = console,
 }: {
-  // sb: SupabaseClient;
   db: DrizzleCli;
   orgId: string;
   env?: AppEnv;

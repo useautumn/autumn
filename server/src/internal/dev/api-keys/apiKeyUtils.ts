@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { ApiKeyService, CachedKeyService } from "../ApiKeyService.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
 import { getAPIKeyCache } from "@/external/caching/cacheUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 function generateApiKey(length = 32, prefix = "") {
   try {
@@ -31,14 +32,14 @@ export const hashApiKey = (apiKey: string) => {
 };
 
 export const createKey = async ({
-  sb,
+  db,
   env,
   name,
   orgId,
   prefix,
   meta,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   env: AppEnv;
   name: string;
   orgId: string;
@@ -60,16 +61,16 @@ export const createKey = async ({
     meta,
   };
 
-  await ApiKeyService.insert(sb, apiKeyData);
+  await ApiKeyService.insert({ db, apiKey: apiKeyData });
 
   return apiKey;
 };
 
 export const verifyKey = async ({
-  sb,
+  db,
   key,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   key: string;
 }) => {
   const hashedKey = hashApiKey(key);
@@ -78,7 +79,13 @@ export const verifyKey = async ({
   const data = await getAPIKeyCache({
     action: CacheType.SecretKey,
     key: hashedKey,
-    fn: async () => await ApiKeyService.verifyAndFetch({ sb, hashedKey, env }),
+    fn: async () =>
+      await ApiKeyService.verifyAndFetch({
+        db,
+        secretKey: key,
+        hashedKey,
+        env,
+      }),
   });
 
   if (!data) {
@@ -92,35 +99,4 @@ export const verifyKey = async ({
     valid: true,
     data: data,
   };
-};
-
-export const migrateKey = async ({
-  sb,
-  keyId,
-  meta,
-  apiKey,
-}: {
-  sb: SupabaseClient;
-  keyId: string;
-  meta: any;
-  apiKey: string;
-}) => {
-  try {
-    const hashedKey = hashApiKey(apiKey);
-
-    await ApiKeyService.update({
-      sb,
-      update: {
-        id: keyId,
-        hashed_key: hashedKey,
-        meta,
-      },
-      keyId,
-    });
-
-    console.log(`MIGRATED KEY FOR ${keyId}, ${meta.org_slug}`);
-  } catch (error) {
-    console.log(`ERROR: FAILED TO MIGRATE KEY FOR ${keyId}, ${meta.org_slug}`);
-    console.log(error);
-  }
 };

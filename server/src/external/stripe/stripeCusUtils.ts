@@ -6,15 +6,16 @@ import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const createStripeCusIfNotExists = async ({
-  sb,
+  db,
   org,
   env,
   customer,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   customer: Customer;
@@ -41,7 +42,7 @@ export const createStripeCusIfNotExists = async ({
     });
 
     await CusService.update({
-      sb,
+      db,
       internalCusId: customer.internal_id,
       update: {
         processor: {
@@ -124,7 +125,7 @@ export const getCusPaymentMethod = async ({
   const stripeCli = createStripeCli({ org, env });
 
   const stripeCustomer = (await stripeCli.customers.retrieve(
-    stripeId
+    stripeId,
   )) as Stripe.Customer;
 
   let paymentMethodId = stripeCustomer.invoice_settings?.default_payment_method;
@@ -158,14 +159,14 @@ export const getCusPaymentMethod = async ({
 
 // 2. Create a payment method and attach to customer
 export const attachPmToCus = async ({
-  sb,
+  db,
   customer,
   org,
   env,
   willFail = false,
   testClockId,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   customer: Customer;
   org: Organization;
   env: AppEnv;
@@ -183,15 +184,17 @@ export const attachPmToCus = async ({
       testClockId,
     });
 
-    await sb
-      .from("customers")
-      .update({
+    await CusService.update({
+      db,
+      internalCusId: customer.internal_id,
+      update: {
         processor: {
           id: stripeCustomer.id,
-          type: "stripe",
+          type: ProcessorType.Stripe,
         },
-      })
-      .eq("internal_id", customer.internal_id);
+      },
+    });
+
     stripeCusId = stripeCustomer.id;
     customer.processor = {
       id: stripeCustomer.id,
@@ -281,7 +284,7 @@ export const deleteAllStripeCustomers = async ({
     let batch = stripeCustomers.data.slice(i, i + batchSize);
     await Promise.all(batch.map((c) => stripeCli.customers.del(c.id)));
     console.log(
-      `Deleted ${i + batch.length}/${stripeCustomers.data.length} customers`
+      `Deleted ${i + batch.length}/${stripeCustomers.data.length} customers`,
     );
   }
 };

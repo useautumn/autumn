@@ -7,8 +7,9 @@ import { constructMigrationJob } from "@/internal/migrations/migrationUtils.js";
 import { MigrationService } from "@/internal/migrations/MigrationService.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
+import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 
 export const migrationRouter = express.Router();
 
@@ -17,25 +18,25 @@ migrationRouter.post("", async (req: any, res: any) => {
     req,
     res,
     action: "migrate",
-    handler: async (req: any, res: any) => {
-      const { orgId, env, sb } = req;
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+      const { orgId, env, db } = req;
 
       const { from_product_id, from_version, to_product_id, to_version } =
         req.body;
 
-      let fromProduct = await ProductService.getFullProduct({
-        sb,
+      let fromProduct = await ProductService.getFull({
+        db,
         env,
         orgId,
-        productId: from_product_id,
+        idOrInternalId: from_product_id,
         version: from_version,
       });
 
-      let toProduct = await ProductService.getFullProduct({
-        sb,
+      let toProduct = await ProductService.getFull({
+        db,
         env,
         orgId,
-        productId: to_product_id,
+        idOrInternalId: to_product_id,
         version: to_version,
       });
 
@@ -74,7 +75,7 @@ migrationRouter.post("", async (req: any, res: any) => {
       });
 
       await MigrationService.createJob({
-        sb,
+        db,
         data: migrationJob,
       });
 

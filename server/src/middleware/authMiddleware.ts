@@ -1,4 +1,5 @@
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { AuthType } from "@autumn/shared";
 import { verifyToken } from "@clerk/express";
 import { NextFunction } from "express";
 
@@ -42,7 +43,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     let tokenOrg = tokenData!.org as any;
 
     let { org, features } = await OrgService.getWithFeatures({
-      sb: req.sb,
+      db: req.db,
       orgId: tokenOrg.id,
       env: req.env,
     });
@@ -56,6 +57,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     req.user = tokenData!.user;
     req.org = org;
     req.features = features;
+    req.auth = AuthType.Frontend;
 
     next();
   } catch (error: any) {

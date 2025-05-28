@@ -5,15 +5,16 @@ import { getMigrationCustomers } from "./migrationSteps/getMigrationCustomers.js
 import { migrateCustomers } from "./migrationSteps/migrateCustomers.js";
 import { MigrationJobStep } from "@autumn/shared";
 import { FeatureService } from "../features/FeatureService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const runMigrationTask = async ({
+  db,
   payload,
   logger,
-  sb,
 }: {
+  db: DrizzleCli;
   payload: any;
   logger: any;
-  sb: any;
 }) => {
   const { migrationJobId } = payload;
 
@@ -21,7 +22,7 @@ export const runMigrationTask = async ({
     logger.info(`Running migration task, ID: ${migrationJobId}`);
 
     const migrationJob = await MigrationService.getJob({
-      sb,
+      db,
       id: migrationJobId,
     });
 
@@ -29,15 +30,15 @@ export const runMigrationTask = async ({
 
     // Get from and to products
     let [fromProduct, toProduct] = await Promise.all([
-      ProductService.getFullProduct({
-        sb,
-        internalId: migrationJob.from_internal_product_id,
+      ProductService.getFull({
+        db,
+        idOrInternalId: migrationJob.from_internal_product_id,
         orgId,
         env,
       }),
-      ProductService.getFullProduct({
-        sb,
-        internalId: migrationJob.to_internal_product_id,
+      ProductService.getFull({
+        db,
+        idOrInternalId: migrationJob.to_internal_product_id,
         orgId,
         env,
       }),
@@ -45,14 +46,14 @@ export const runMigrationTask = async ({
 
     // STEP 1: GET ALL CUSTOMERS AND INSERT INTO MIGRATIONS...
     let customers = await getMigrationCustomers({
-      sb,
+      db,
       migrationJobId,
       fromProduct,
       logger,
     });
 
-    let features = await FeatureService.getFeatures({
-      sb,
+    let features = await FeatureService.list({
+      db,
       orgId,
       env,
     });
@@ -61,7 +62,7 @@ export const runMigrationTask = async ({
 
     // STEP 2: MIGRATE CUSTOMERS..
     await migrateCustomers({
-      sb,
+      db,
       migrationJob,
       fromProduct,
       toProduct,
@@ -75,7 +76,7 @@ export const runMigrationTask = async ({
     logger.error(`Migration failed: ${migrationJobId}`);
     logger.error(error);
     await MigrationService.updateJob({
-      sb,
+      db,
       migrationJobId,
       updates: {
         current_step: MigrationJobStep.Failed,

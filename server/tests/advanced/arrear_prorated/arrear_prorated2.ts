@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { advanceProducts, features } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
-import { advanceMonths, advanceTestClock } from "tests/utils/stripeUtils.js";
+import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { addDays, addMonths, format } from "date-fns";
@@ -172,7 +172,7 @@ const advanceAPThroughBalances = async ({
 };
 
 describe(`${chalk.yellowBright(
-  "arrear_prorated2: testing update in arrear prorated through /balances"
+  "arrear_prorated2: testing update in arrear prorated through /balances",
 )}`, () => {
   const customerId = "arrear-prorated-balances";
 
@@ -189,8 +189,8 @@ describe(`${chalk.yellowBright(
         customerId,
         org: this.org,
         env: this.env,
-        sb: this.sb,
-      }
+        db: this.db,
+      },
     );
 
     stripeCli = createStripeCli({
@@ -200,7 +200,6 @@ describe(`${chalk.yellowBright(
 
     testClockId = createdTestClockId;
 
-    // Update org config
     await this.sb
       .from("organizations")
       .update({
@@ -238,7 +237,7 @@ describe(`${chalk.yellowBright(
     stripeSub = await stripeCli.subscriptions.retrieve(subId);
 
     await checkSubscriptionContainsProducts({
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       subscriptionId: subId,

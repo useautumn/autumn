@@ -1,8 +1,12 @@
 import { handleRequestError } from "@/utils/errorUtils.js";
 
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode, FullCustomerEntitlement, AppEnv } from "@autumn/shared";
+import {
+  ErrCode,
+  FullCustomerEntitlement,
+  FullCusEntWithProduct,
+} from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
@@ -15,39 +19,36 @@ import {
   getCusEntMasterBalance,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
 import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const getCusOrgAndCusPrice = async ({
-  sb,
+  db,
+  req,
   cusEnt,
-  orgId,
-  env,
-  logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
+  req: ExtendedRequest;
   cusEnt: FullCustomerEntitlement;
-  orgId: string;
-  env: AppEnv;
-  logger: any;
 }) => {
   const [cusPrice, customer, org] = await Promise.all([
     CusPriceService.getRelatedToCusEnt({
-      sb: sb,
+      db,
       cusEnt,
     }),
     CusService.getByInternalId({
-      sb: sb,
+      db,
       internalId: cusEnt.internal_customer_id,
     }),
-    OrgService.getFullOrg({
-      sb: sb,
-      orgId: orgId,
-    }),
+    OrgService.getFromReq(req),
   ]);
 
   return { cusPrice, customer, org };
 };
+
 export const handleUpdateEntitlement = async (req: any, res: any) => {
   try {
+    const { db } = req;
     const { customer_entitlement_id } = req.params;
     const { balance, next_reset_at, entity_id } = req.body;
 
@@ -71,8 +72,8 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
     }
 
     // Check if org owns the entitlement
-    const cusEnt: any = await CustomerEntitlementService.getByIdStrict({
-      sb: req.sb,
+    const cusEnt = await CusEntService.getStrict({
+      db,
       id: customer_entitlement_id,
       orgId: req.orgId,
       env: req.env,
@@ -112,12 +113,12 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       cusEnt,
       toDeduct: deducted,
       addAdjustment: true,
-      allowNegativeBalance: cusEnt.usage_allowed,
+      allowNegativeBalance: cusEnt.usage_allowed || false,
       entityId: entity_id,
     });
 
-    await CustomerEntitlementService.update({
-      sb: req.sb,
+    await CusEntService.update({
+      db,
       id: customer_entitlement_id,
       updates: {
         balance: newBalance,
@@ -128,24 +129,23 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
     });
 
     const { cusPrice, customer, org } = await getCusOrgAndCusPrice({
-      sb: req.sb,
+      db,
+      req,
       cusEnt,
-      orgId: req.orgId,
-      env: req.env,
-      logger: req.logtail,
     });
 
-    if (!cusPrice) {
+    if (!cusPrice || !customer) {
       res.status(200).json({ success: true });
       return;
     }
 
     await adjustAllowance({
-      sb: req.sb,
+      db,
+
       env: req.env,
       org: org,
       affectedFeature: cusEnt.entitlement.feature,
-      cusEnt,
+      cusEnt: cusEnt as FullCusEntWithProduct,
       cusPrices: [cusPrice],
       customer: customer,
       originalBalance: originalBalance!,
