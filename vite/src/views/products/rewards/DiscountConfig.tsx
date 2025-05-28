@@ -42,7 +42,7 @@ export const DiscountConfig = ({
 }) => {
   const { org } = useProductsContext();
 
-  let config = reward.discount_config!;
+  const config = reward.discount_config!;
   const setConfig = (key: any, value: any) => {
     setReward({
       ...reward,
@@ -51,7 +51,7 @@ export const DiscountConfig = ({
   };
 
   return (
-    <div className="flex flex-col gap-4 w-[400px]">
+    <div className="flex flex-col gap-4 w-full">
       <div className="flex items-center gap-2">
         <div className="w-6/12">
           <FieldLabel>Amount</FieldLabel>
@@ -92,28 +92,39 @@ export const DiscountConfig = ({
                 <SelectValue placeholder="Select a duration" />
               </SelectTrigger>
               <SelectContent>
-                {Object.values(CouponDurationType).map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {keyToTitle(type)}
-                  </SelectItem>
-                ))}
+                {Object.values(CouponDurationType)
+                  .filter((type) => {
+                    if (
+                      reward.type == RewardType.InvoiceCredits &&
+                      type == CouponDurationType.OneOff
+                    ) {
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {keyToTitle(type)}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </div>
         </div>
       </div>
 
-      {config.duration_type === CouponDurationType.OneOff && (
-        <div className="w-full ml-1 flex items-center gap-2">
-          <Checkbox
-            checked={config.should_rollover}
-            onCheckedChange={(checked) =>
-              setConfig("should_rollover", checked === true)
-            }
-          />
-          <p className="text-sm text-t3">Rollover credits to next invoice</p>
-        </div>
-      )}
+      {/* {config.duration_type !== CouponDurationType.OneOff &&
+        reward.type === RewardType.FixedDiscount && (
+          <div className="w-full ml-1 flex items-center gap-2">
+            <Checkbox
+              checked={config.should_rollover}
+              onCheckedChange={(checked) =>
+                setConfig("should_rollover", checked === true)
+              }
+            />
+            <p className="text-sm text-t3">Rollover credits to next invoice</p>
+          </div>
+        )} */}
 
       <div className="">
         {/* <p className="text-t2 mb-2 text-t3">Products</p> */}
@@ -135,7 +146,7 @@ const ProductPriceSelector = ({
   const { products, features, org } = useProductsContext();
   const [open, setOpen] = useState(false);
 
-  let config = reward.discount_config!;
+  const config = reward.discount_config!;
   const setConfig = (key: any, value: any) => {
     setReward({
       ...reward,
@@ -161,7 +172,7 @@ const ProductPriceSelector = ({
   const getPriceText = (priceId: string) => {
     let product: any = null;
     product = products.find((p: any) =>
-      p.prices?.find((p: any) => p.id === priceId)
+      p.prices?.find((p: any) => p.id === priceId),
     );
     const price = product?.prices?.find((p: any) => p.id === priceId);
 
@@ -175,7 +186,7 @@ const ProductPriceSelector = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50 max-w-[400px]"
+          className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50"
         >
           {config.apply_to_all ? (
             "All Products"
@@ -192,7 +203,7 @@ const ProductPriceSelector = ({
                     {formatProductItemText({
                       item: products
                         .find((p: any) =>
-                          p.items.find((i: any) => i.price_id === priceId)
+                          p.items.find((i: any) => i.price_id === priceId),
                         )
                         .items.find((i: any) => i.price_id === priceId),
                       org,

@@ -4,8 +4,8 @@ export enum RewardCategory {
 }
 
 export enum CouponDurationType {
-  Months = "months",
   OneOff = "one_off",
+  Months = "months",
   Forever = "forever",
 }
 
@@ -18,4 +18,5 @@ export enum RewardType {
   PercentageDiscount = "percentage_discount",
   FixedDiscount = "fixed_discount",
   FreeProduct = "free_product",
+  InvoiceCredits = "invoice_credits",
 }

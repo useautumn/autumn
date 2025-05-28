@@ -361,7 +361,6 @@ export const initReward = ({
   discountValue,
   durationType = CouponDurationType.OneOff,
   durationValue = 0,
-  rollover = false,
   onlyUsagePrices = false,
   productIds,
   applyToAll = false,
@@ -372,7 +371,6 @@ export const initReward = ({
   discountValue?: number;
   durationType?: CouponDurationType;
   durationValue?: number;
-  rollover?: boolean;
   onlyUsagePrices?: boolean;
   productIds?: string[];
   applyToAll?: boolean;
@@ -380,7 +378,8 @@ export const initReward = ({
 }): any => {
   if (
     type == RewardType.PercentageDiscount ||
-    type == RewardType.FixedDiscount
+    type == RewardType.FixedDiscount ||
+    type == RewardType.InvoiceCredits
   ) {
     return {
       id,
@@ -394,7 +393,6 @@ export const initReward = ({
         discount_value: discountValue,
         duration_type: durationType,
         duration_value: durationValue,
-        should_rollover: rollover,
         apply_to_all: applyToAll,
       },
     };

@@ -15,8 +15,9 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { createStripeCli } from "../utils.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { Decimal } from "decimal.js";
-import { generateId, nullish } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, generateId, nullish } from "@/utils/genUtils.js";
 import {
+  getFullStripeInvoice,
   getInvoiceDiscounts,
   getStripeExpandedInvoice,
   updateInvoiceIfExists,
@@ -26,6 +27,9 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { addDays } from "date-fns";
+import { deleteCouponFromCus } from "../stripeCouponUtils/deleteCouponFromCus.js";
+import { handleInvoicePaidDiscount } from "./handleInvoicePaidDiscount.js";
 
 const handleOneOffInvoicePaid = async ({
   db,
@@ -153,9 +157,9 @@ export const handleInvoicePaid = async ({
 }) => {
   const logger = req.logtail;
   const stripeCli = createStripeCli({ org, env });
-  const invoice = await getStripeExpandedInvoice({
+  const invoice = await getFullStripeInvoice({
     stripeCli,
-    stripeInvoiceId: invoiceData.id,
+    stripeId: invoiceData.id,
   });
 
   await handleInvoicePaidDiscount({
@@ -245,123 +249,5 @@ export const handleInvoicePaid = async ({
       event,
       logger,
     });
-  }
-};
-
-const handleInvoicePaidDiscount = async ({
-  db,
-  expandedInvoice,
-  org,
-  env,
-  logger,
-}: {
-  db: DrizzleCli;
-  expandedInvoice: Stripe.Invoice;
-  org: Organization;
-  env: AppEnv;
-  logger: any;
-}) => {
-  // Handle coupon
-  const stripeCli = createStripeCli({ org, env });
-  if (expandedInvoice.discounts.length === 0) {
-    return;
-  }
-
-  try {
-    const totalDiscountAmounts = expandedInvoice.total_discount_amounts;
-
-    // Log coupon information for debugging
-    for (const discount of expandedInvoice.discounts) {
-      if (typeof discount === "string") {
-        continue;
-      }
-
-      const curCoupon = discount.coupon;
-
-      if (!curCoupon) {
-        continue;
-      }
-      // console.log("Cur coupon:", curCoupon);
-      const rollSuffixIndex = curCoupon.id.indexOf("_roll_");
-      const couponId =
-        rollSuffixIndex !== -1
-          ? curCoupon.id.substring(0, rollSuffixIndex)
-          : curCoupon.id;
-
-      // 1. Fetch coupon from Autumn
-      logger.info(`Fetching coupon from Autumn DB: ${couponId}`);
-      const autumnReward: Reward | null = await RewardService.get({
-        db,
-        idOrInternalId: couponId,
-        orgId: org.id,
-        env,
-      });
-
-      if (
-        !autumnReward ||
-        autumnReward.type !== RewardType.FixedDiscount ||
-        !(
-          autumnReward.discount_config?.duration_type ===
-            CouponDurationType.OneOff &&
-          autumnReward.discount_config?.should_rollover
-        )
-      ) {
-        continue;
-      }
-
-      // Get ID of coupon
-      const originalCoupon = await stripeCli.coupons.retrieve(couponId, {
-        expand: ["applies_to"],
-      });
-
-      // 1. New amount:
-      // const autumnDiscountConfig = autumnReward.discount_config!;
-      const curAmount = discount.coupon.amount_off;
-
-      const amountUsed = totalDiscountAmounts?.find(
-        (item) => item.discount === discount.id,
-      )?.amount;
-
-      const newAmount = new Decimal(curAmount!).sub(amountUsed!).toNumber();
-
-      if (newAmount <= 0) {
-        console.log("Credits used up, no need to create new coupon");
-        continue;
-      }
-
-      console.log(`Updating coupon amount from ${curAmount} to ${newAmount}`);
-
-      const newCoupon = await stripeCli.coupons.create({
-        id: `${couponId}_${generateId("roll")}`,
-        name: discount.coupon.name as string,
-        amount_off: newAmount,
-        currency: expandedInvoice.currency,
-        duration: "once",
-        applies_to: originalCoupon.applies_to,
-      });
-
-      await stripeCli.customers.update(expandedInvoice.customer as string, {
-        coupon: newCoupon.id,
-      });
-
-      await stripeCli.coupons.del(newCoupon.id);
-
-      if (expandedInvoice.subscription && curCoupon.duration == "forever") {
-        try {
-          await stripeCli.subscriptions.deleteDiscount(
-            expandedInvoice.subscription as string,
-          );
-          console.log("Deleting current discount from subscription");
-        } catch (error: any) {
-          logger.error(
-            `Failed to remove coupon from subscription ${expandedInvoice.subscription}`,
-          );
-          logger.error(error.message);
-        }
-      }
-    }
-  } catch (error) {
-    logger.error("invoice.paid: error updating coupon");
-    logger.error(error);
   }
 };

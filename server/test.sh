@@ -5,10 +5,10 @@ MOCHA_CMD="npx mocha --parallel --timeout 10000000 --ignore tests/00_setup.ts"
 # TEST PARALLEL
 if [ "$1" == "basic-parallel" ]; then
     MOCHA_PARALLEL=true $MOCHA_SETUP && $MOCHA_CMD  \
-    'tests/basic/referrals/*.ts' 'tests/attach/**/*.ts' \
-    # tests/basic/*.ts \
-    # tests/basic/multi-feature/*.ts \
-    # tests/basic/entities/*.ts \
+    tests/basic/*.ts \
+    tests/basic/multi-feature/*.ts \
+    tests/basic/entities/*.ts \
+    # 'tests/basic/referrals/*.ts' 'tests/attach/**/*.ts' \
     # && $MOCHA_CMD \
     # 'tests/basic/referrals/*.ts' 'tests/attach/**/*.ts' \
 

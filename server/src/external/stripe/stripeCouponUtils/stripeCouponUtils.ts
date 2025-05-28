@@ -15,14 +15,11 @@ import { Stripe } from "stripe";
 
 const couponToStripeDuration = (coupon: Reward) => {
   let discountConfig = coupon.discount_config;
-  if (
-    discountConfig!.duration_type === CouponDurationType.OneOff &&
-    discountConfig!.should_rollover
-  ) {
-    return {
-      duration: "forever",
-    };
-  }
+  // if (coupon.type == RewardType.InvoiceCredits) {
+  //   return {
+  //     duration: "forever",
+  //   };
+  // }
 
   switch (discountConfig!.duration_type) {
     case CouponDurationType.Forever:
@@ -53,7 +50,10 @@ const couponToStripeValue = ({
     return {
       percent_off: discountConfig!.discount_value,
     };
-  } else if (reward.type === RewardType.FixedDiscount) {
+  } else if (
+    reward.type === RewardType.FixedDiscount ||
+    reward.type === RewardType.InvoiceCredits
+  ) {
     return {
       amount_off: Math.round(discountConfig!.discount_value * 100),
       currency: org.default_currency,
@@ -95,7 +95,7 @@ export const createStripeCoupon = async ({
   for (const promoCode of reward.promo_codes) {
     try {
       const stripePromoCode = await stripeCli.promotionCodes.retrieve(
-        promoCode.code
+        promoCode.code,
       );
       throw new RecaseError({
         message: `Promo code ${promoCode.code} already exists in Stripe`,

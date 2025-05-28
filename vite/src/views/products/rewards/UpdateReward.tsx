@@ -53,7 +53,7 @@ function UpdateReward({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
+      <DialogContent className="w-[500px]">
         <DialogTitle>Update Reward</DialogTitle>
         <WarningBox>
           Existing customers with this coupon will not be affected

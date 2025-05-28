@@ -112,10 +112,10 @@ export const RewardConfig = ({
               const freeAddOns = products
                 .filter((product: FullProduct) => product.is_add_on)
                 .filter((product: FullProduct) =>
-                  isFreeProduct(product.prices)
+                  isFreeProduct(product.prices),
                 );
 
-              let empty = freeAddOns.length === 0;
+              const empty = freeAddOns.length === 0;
               return (
                 <>
                   <SelectTrigger disabled={empty}>
