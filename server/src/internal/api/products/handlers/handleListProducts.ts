@@ -22,8 +22,6 @@ export const handleListProducts = async (req: any, res: any) =>
         }),
       ]);
 
-      console.log("Products", products);
-
       let prods = products.map((p) =>
         getProductResponse({ product: p, features }),
       );

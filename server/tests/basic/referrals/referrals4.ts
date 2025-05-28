@@ -16,6 +16,7 @@ import { initCustomer } from "tests/utils/init.js";
 import { compareProductEntitlements } from "tests/utils/compare.js";
 import { addDays, addHours } from "date-fns";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
@@ -97,7 +98,10 @@ describe(`${chalk.yellowBright(
   });
 
   it("should be triggered after trial ends", async function () {
-    let advanceTo = addDays(addDays(new Date(), 7), 4).getTime();
+    let advanceTo = addHours(
+      addDays(new Date(), 7),
+      hoursToFinalizeInvoice,
+    ).getTime();
     await advanceTestClock({
       stripeCli,
       testClockId,

@@ -188,7 +188,7 @@ const buildInvoicesCTE = (hasEntityCTE: boolean) => {
     customer_invoices AS (
       SELECT 
         COALESCE(
-          json_agg(row_to_json(i)) FILTER (WHERE i.id IS NOT NULL),
+          json_agg(row_to_json(i) ORDER BY i.created_at DESC) FILTER (WHERE i.id IS NOT NULL),
           '[]'::json
         ) AS invoices
       FROM invoices i

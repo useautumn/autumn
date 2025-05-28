@@ -799,16 +799,16 @@ export const entityProducts = {
 export const rewards = {
   rolloverAll: initReward({
     id: "rolloverAll",
-    type: RewardType.FixedDiscount,
+    type: RewardType.InvoiceCredits,
     discountValue: 1000,
-    rollover: true,
+    durationType: CouponDurationType.Forever,
     applyToAll: true,
   }),
   rolloverUsage: initReward({
     id: "rolloverUsage",
-    type: RewardType.FixedDiscount,
+    type: RewardType.InvoiceCredits,
     discountValue: 1000,
-    rollover: true,
+    durationType: CouponDurationType.Forever,
     onlyUsagePrices: true,
     productIds: [products.proWithOverage.id],
   }),

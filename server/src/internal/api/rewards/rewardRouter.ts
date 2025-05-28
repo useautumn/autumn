@@ -9,7 +9,7 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils.js";
+import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
@@ -190,7 +190,12 @@ rewardRouter.post("/:internalId", async (req: any, res: any) => {
     });
 
     // 1. Delete old prices from stripe
-    await stripeCli.coupons.del(reward.id);
+    try {
+      await stripeCli.coupons.del(reward.id);
+      await stripeCli.coupons.del(reward.internal_id);
+    } catch (error) {
+      // console.log(`Failed to delete coupon from stripe: ${error.message}`);
+    }
 
     let rewardCat = getRewardCat(rewardBody);
     if (rewardCat == RewardCategory.Discount) {
