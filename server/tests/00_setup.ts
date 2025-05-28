@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { AppEnv } from "@autumn/shared";
 import { clearOrg, setupOrg } from "tests/utils/setup.js";
@@ -12,6 +15,7 @@ import {
   entityProducts,
   referralPrograms,
 } from "./global.js";
+import { initDrizzle } from "@/db/initDrizzle.js";
 
 const ORG_SLUG = "unit-test-org";
 const DEFAULT_ENV = AppEnv.Sandbox;
@@ -22,6 +26,11 @@ describe("Initialize org for tests", () => {
     this.org = await clearOrg({ orgSlug: ORG_SLUG, env: DEFAULT_ENV });
     this.env = DEFAULT_ENV;
     this.sb = createSupabaseClient();
+    let { db, client } = initDrizzle();
+
+    this.db = db;
+    this.client = client;
+
     await setupOrg({
       orgId: this.org.id,
       env: DEFAULT_ENV,
@@ -40,3 +49,7 @@ describe("Initialize org for tests", () => {
     console.log("--------------------------------");
   });
 });
+
+// after(async function () {
+//   await this.client.end();
+// });

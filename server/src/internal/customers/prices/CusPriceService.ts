@@ -1,72 +1,63 @@
-import RecaseError from "@/utils/errorUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
-  CustomerEntitlement,
-  ErrCode,
+  CustomerPrice,
   FullCustomerEntitlement,
+  FullCustomerPrice,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { StatusCodes } from "http-status-codes";
+import { customerPrices } from "@autumn/shared";
+
+import { eq } from "drizzle-orm";
 
 export class CusPriceService {
-  static async getByCusProductId({
-    sb,
-    customerProductId,
-  }: {
-    sb: SupabaseClient;
-    customerProductId: string;
-  }) {
-    const { data, error } = await sb
-      .from("customer_prices")
-      .select("*, price:prices(*)")
-      .eq("customer_product_id", customerProductId);
-
-    if (error) {
-      throw new RecaseError({
-        message: "Error getting customer prices",
-        code: ErrCode.GetCusPriceFailed,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
-    }
-
-    return data;
-  }
-
   static async getRelatedToCusEnt({
-    sb,
+    db,
     cusEnt,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     cusEnt: FullCustomerEntitlement;
   }) {
-    const { data, error } = await sb
-      .from("customer_prices")
-      .select("*, price:prices!inner(*)")
-      .eq("customer_product_id", cusEnt.customer_product_id)
-      .eq("price.entitlement_id", cusEnt.entitlement.id);
-    // .eq(
-    //   "price.config->>internal_feature_id",
-    //   cusEnt.entitlement.internal_feature_id
-    // );
+    const customerPricesData = await db.query.customerPrices.findMany({
+      where: eq(customerPrices.customer_product_id, cusEnt.customer_product_id),
+      with: {
+        price: true,
+      },
+    });
 
-    if (error) {
-      throw new RecaseError({
-        message: "Error getting customer prices",
-        code: ErrCode.GetCusPriceFailed,
-        statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-        data: error,
-      });
+    const matchingCustomerPrice = customerPricesData.find(
+      (cp) => cp.price?.entitlement_id === cusEnt.entitlement.id,
+    ) as FullCustomerPrice | undefined;
+
+    return matchingCustomerPrice || null;
+  }
+
+  static async insert({
+    db,
+    data,
+  }: {
+    db: DrizzleCli;
+    data: CustomerPrice[] | CustomerPrice;
+  }) {
+    if (Array.isArray(data) && data.length == 0) {
+      return;
     }
 
-    if (data.length === 0) {
-      return null;
-      throw new RecaseError({
-        message: `No customer price found for usage based entitlement ${cusEnt.entitlement.internal_feature_id}`,
-        code: ErrCode.CusPriceNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
+    await db.insert(customerPrices).values(data as any);
+  }
 
-    return data[0];
+  static async getByCustomerProductId({
+    db,
+    customerProductId,
+  }: {
+    db: DrizzleCli;
+    customerProductId: string;
+  }) {
+    const data = await db.query.customerPrices.findMany({
+      where: eq(customerPrices.customer_product_id, customerProductId),
+      with: {
+        price: true,
+      },
+    });
+
+    return data as FullCustomerPrice[];
   }
 }

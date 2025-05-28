@@ -1,11 +1,10 @@
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
   getCusFeaturesResponse,
   getCusProductsResponse,
 } from "@/internal/customers/cusUtils/cusResponseUtils.js";
-import { SubService } from "@/internal/subscriptions/SubService.js";
+
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import {
@@ -22,7 +21,7 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getEntityResponse = async ({
-  sb,
+  db,
   entityIds,
   org,
   env,
@@ -32,7 +31,7 @@ export const getEntityResponse = async ({
   withAutumnId = false,
   apiVersion,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   entityIds: string[];
   org: Organization;
   env: AppEnv;
@@ -42,11 +41,11 @@ export const getEntityResponse = async ({
   withAutumnId?: boolean;
   apiVersion: number;
 }) => {
-  let customer = await CusService.getWithProducts({
+  let customer = await CusService.getFull({
+    db,
     idOrInternalId: customerId,
     orgId: org.id,
     env,
-    sb,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     withEntities: true,
     withSubs: true,
@@ -54,22 +53,14 @@ export const getEntityResponse = async ({
     entityId,
   });
 
-  if (!customer) {
-    throw new RecaseError({
-      message: `Customer ${customerId} not found`,
-      code: ErrCode.CustomerNotFound,
-      statusCode: 400,
-    });
-  }
-
   let entities = customer.entities.filter((e: Entity) =>
-    entityIds.includes(e.id)
+    entityIds.includes(e.id),
   );
 
   let entityCusProducts = customer.customer_products.filter(
     (p: FullCusProduct) =>
       entities.some((e: Entity) => e.internal_id == p.internal_entity_id) ||
-      nullish(p.internal_entity_id)
+      nullish(p.internal_entity_id),
   );
 
   let subs = customer.subscriptions || [];
@@ -87,8 +78,8 @@ export const getEntityResponse = async ({
 
     let entitySubs = subs.filter((s: Subscription) =>
       entityCusProducts.some((p: FullCusProduct) =>
-        p.subscription_ids?.includes(s.stripe_id || "")
-      )
+        p.subscription_ids?.includes(s.stripe_id || ""),
+      ),
     );
 
     let products = await getCusProductsResponse({

@@ -34,7 +34,7 @@ describe(`${chalk.yellowBright("multi_interval1: GPU starter annual")}`, () => {
         customerId,
         org: this.org,
         env: this.env,
-        sb: this.sb,
+        db: this.db,
       });
 
     testClockId = insertedTestClockId;
@@ -99,7 +99,7 @@ describe(`${chalk.yellowBright("multi_interval1: GPU starter annual")}`, () => {
     const invoices = res!.invoices;
 
     let invoiceIndex = invoices.findIndex((invoice: any) =>
-      invoice.product_ids.includes(advanceProducts.gpuStarterAnnual.id)
+      invoice.product_ids.includes(advanceProducts.gpuStarterAnnual.id),
     );
 
     await checkUsageInvoiceAmount({
@@ -172,7 +172,7 @@ describe(`${chalk.yellowBright("multi_interval1: GPU starter annual")}`, () => {
       assert.exists(eventSummary);
       assert.equal(
         eventSummary?.aggregated_value,
-        Math.round(totalCreditsUsed)
+        Math.round(totalCreditsUsed),
       );
       assert.equal(invoices.length, 13 + 2);
     } catch (error) {

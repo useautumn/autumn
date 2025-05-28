@@ -29,7 +29,7 @@ describe(`${chalk.yellowBright("06_upgrade: Testing upgrades")}`, () => {
         name: "Test Customer",
         email: "test@test.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -69,7 +69,7 @@ describe(`${chalk.yellowBright("06_upgrade: Testing upgrades")}`, () => {
     } catch (error: any) {
       assert.equal(
         error.message,
-        "Either payment method not found, or force_checkout is true: unable to perform upgrade / downgrade"
+        "Either payment method not found, or force_checkout is true: unable to perform upgrade / downgrade",
       );
       assert.equal(error.code, "invalid_request");
     }
@@ -98,13 +98,13 @@ describe(`${chalk.yellowBright("06_upgrade: Testing upgrades")}`, () => {
       try {
         assert.equal(
           error.message,
-          "Either payment method not found, or force_checkout is true: unable to perform upgrade / downgrade"
+          "Either payment method not found, or force_checkout is true: unable to perform upgrade / downgrade",
         );
         assert.equal(error.code, "invalid_request");
       } catch (error) {
         console.group();
         console.log(
-          "Expected recase error for force checkout / no payment method"
+          "Expected recase error for force checkout / no payment method",
         );
         console.log("Got:", error);
         console.groupEnd();
@@ -117,7 +117,7 @@ describe(`${chalk.yellowBright("06_upgrade: Testing upgrades")}`, () => {
   it("should attach successful payment method", async function () {
     this.timeout(30000);
     await attachPmToCus({
-      sb: this.sb,
+      db: this.db,
       customer: customer,
       org: this.org,
       env: this.env,
@@ -145,7 +145,7 @@ describe(`${chalk.yellowBright("06_upgrade: Testing upgrades")}`, () => {
 });
 
 describe(`${chalk.yellowBright(
-  "06_upgrade: Testing upgrade (paid to trial)"
+  "06_upgrade: Testing upgrade (paid to trial)",
 )}`, () => {
   const customerId = "paid_to_trial";
   let testClockId: string;
@@ -167,7 +167,7 @@ describe(`${chalk.yellowBright(
         name: "Paid to trial customer",
         email: "paid@trial.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -198,7 +198,7 @@ describe(`${chalk.yellowBright(
 });
 
 describe(`${chalk.yellowBright(
-  "06_upgrade: Testing upgrade (trial to paid)"
+  "06_upgrade: Testing upgrade (trial to paid)",
 )}`, () => {
   const customerId = "trial_to_paid";
   let testClockId: string;
@@ -219,7 +219,7 @@ describe(`${chalk.yellowBright(
         name: "Trial to paid customer",
         email: "trial@paid.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -256,7 +256,7 @@ describe(`${chalk.yellowBright(
     await timeout(10000);
 
     console.log(
-      `   ${chalk.greenBright("Advanced 3 days and attached premium")}`
+      `   ${chalk.greenBright("Advanced 3 days and attached premium")}`,
     );
   });
 
@@ -304,7 +304,7 @@ describe(`${chalk.yellowBright("Testing upgrade (trial to trial)")}`, () => {
         name: "Trial to trial customer",
         email: "trial@trial.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -342,7 +342,7 @@ describe(`${chalk.yellowBright("Testing upgrade (trial to trial)")}`, () => {
     });
 
     console.log(
-      `   ${chalk.greenBright("Advanced 3 days and attached premium")}`
+      `   ${chalk.greenBright("Advanced 3 days and attached premium")}`,
     );
   });
 

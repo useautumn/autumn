@@ -19,6 +19,8 @@ import { entityRouter } from "../entities/entityRouter.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
 import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";
 import { handleGetCustomer } from "./handlers/handleGetCustomer.js";
+import { CusSearchService } from "@/internal/customers/CusSearchService.js";
+import assert from "assert";
 
 export const cusRouter = Router();
 
@@ -26,33 +28,24 @@ cusRouter.post("/all/search", async (req: any, res: any) => {
   try {
     const { search, page_size = 50, page = 1, last_item, filters } = req.body;
 
-    const { data: customers, count } = await CusService.searchCustomers({
-      sb: req.sb,
+    const searchStart1 = Date.now();
+    const searchStart2 = Date.now();
+    const { data: customers, count } = await CusSearchService.search({
+      db: req.db,
       orgId: req.orgId,
       env: req.env,
       search,
       filters,
       lastItem: last_item,
-      pg: req.pg,
       pageNumber: page,
       pageSize: page_size,
     });
 
-    res.status(200).json({ customers, totalCount: count });
+    // let totalCount = Number(count) + page_size * (page - 1);
+
+    res.status(200).json({ customers, totalCount: Number(count) });
   } catch (error) {
     handleRequestError({ req, error, res, action: "search customers" });
-  }
-});
-
-cusRouter.get("", async (req: any, res: any) => {
-  try {
-    const customers = await CusService.getCustomers(req.sb, req.orgId, req.env);
-
-    res.status(200).json({ customers });
-  } catch (error) {
-    res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ error: ErrorMessages.InternalError });
   }
 });
 
@@ -87,12 +80,11 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
 
     const [org, customer] = await Promise.all([
       OrgService.getFromReq(req),
-      CusService.getById({
-        sb: req.sb,
-        id: customerId,
+      CusService.get({
+        db: req.db,
+        idOrInternalId: customerId,
         orgId: req.orgId,
         env: req.env,
-        logger: req.logtail,
       }),
     ]);
 

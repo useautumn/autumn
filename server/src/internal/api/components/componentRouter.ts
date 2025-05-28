@@ -1,5 +1,6 @@
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { toPricecnProduct } from "@/internal/products/pricecn/pricecnUtils.js";
@@ -18,23 +19,22 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
     res,
     action: "get pricing table",
     handler: async () => {
-      const { sb, orgId, env, logtail: logger } = req;
+      const { orgId, env, db } = req;
       let customerId = req.query.customer_id;
 
       const [org, features, products, customer] = await Promise.all([
         OrgService.getFromReq(req),
-        FeatureService.getFeatures({ sb, orgId, env }),
-        ProductService.getFullProducts({ sb, orgId, env }),
+        FeatureService.getFromReq(req),
+        ProductService.listFull({ db, orgId, env }),
         (async () => {
           if (!customerId) {
             return null;
           }
-          return await CusService.getById({
-            sb,
+          return await CusService.get({
+            db,
             orgId,
             env,
-            id: customerId,
-            logger,
+            idOrInternalId: customerId,
           });
         })(),
       ]);
@@ -57,11 +57,9 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
       let cusProducts: FullCusProduct[] | null = null;
 
       if (customer) {
-        cusProducts = await CusService.getFullCusProducts({
-          sb,
+        cusProducts = await CusProductService.list({
+          db,
           internalCustomerId: customer.internal_id,
-          withProduct: true,
-          withPrices: true,
           inStatuses: [
             CusProductStatus.Active,
             CusProductStatus.PastDue,
@@ -92,12 +90,12 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
             curMainProduct,
             curScheduledProduct,
           });
-        })
+        }),
       );
 
       res.status(200).json({
         list: pricecnProds,
       });
     },
-  })
+  }),
 );

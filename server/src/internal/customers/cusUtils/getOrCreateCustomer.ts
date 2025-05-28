@@ -14,12 +14,13 @@ import {
   Organization,
 } from "@autumn/shared";
 
-import { createEntities } from "@/internal/api/entities/handleCreateEntity.js";
+import { createEntities } from "@/internal/api/entities/handlers/handleCreateEntity.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getOrCreateCustomer = async ({
-  sb,
+  db,
   org,
   features,
   customerId,
@@ -39,7 +40,7 @@ export const getOrCreateCustomer = async ({
   entityId,
   entityData,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   features: Feature[];
   env: AppEnv;
@@ -56,8 +57,8 @@ export const getOrCreateCustomer = async ({
   let customer;
 
   if (!skipGet) {
-    customer = await CusService.getWithProducts({
-      sb,
+    customer = await CusService.getFull({
+      db,
       idOrInternalId: customerId,
       orgId: org.id,
       env,
@@ -65,6 +66,7 @@ export const getOrCreateCustomer = async ({
       withEntities,
       entityId,
       expand,
+      allowNotFound: true,
     });
   }
 
@@ -72,6 +74,7 @@ export const getOrCreateCustomer = async ({
     logger.info(`no customer found, creating new`, { customerData });
     try {
       customer = await handleCreateCustomer({
+        db,
         cusData: {
           id: customerId,
           name: customerData?.name,
@@ -79,16 +82,14 @@ export const getOrCreateCustomer = async ({
           fingerprint: customerData?.fingerprint,
           metadata: customerData?.metadata || {},
         },
-        sb,
         org,
         env,
         logger,
-        getDetails: false,
       });
 
-      customer = await CusService.getWithProducts({
-        sb,
-        idOrInternalId: customerId || customer.internal_id,
+      customer = await CusService.getFull({
+        db,
+        idOrInternalId: customerId || customer!.internal_id,
         orgId: org.id,
         env,
         inStatuses,
@@ -98,8 +99,8 @@ export const getOrCreateCustomer = async ({
       });
     } catch (error: any) {
       if (error?.data?.code == "23505") {
-        customer = await CusService.getWithProducts({
-          sb,
+        customer = await CusService.getFull({
+          db,
           idOrInternalId: customerId,
           orgId: org.id,
           env,
@@ -115,7 +116,7 @@ export const getOrCreateCustomer = async ({
   }
 
   customer = await updateCustomerDetails({
-    sb,
+    db,
     customer,
     customerData,
     logger,
@@ -125,7 +126,7 @@ export const getOrCreateCustomer = async ({
     logger.info(`Auto creating entity ${entityId} for customer ${customerId}`);
 
     let newEntities = await createEntities({
-      sb,
+      db,
       org,
       customerId,
       createEntityData: {

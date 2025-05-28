@@ -42,14 +42,14 @@ function CreateCustomer() {
         fingerprint: fields.fingerprint ? fields.fingerprint : undefined,
       });
 
-      let customer = data.customer || data;
+      const customer = data.customer || data;
       if (customer) {
         navigateTo(
           `/customers/${
             customer.id || customer.autumn_id || customer.internal_id
           }`,
           navigate,
-          env
+          env,
         );
       }
       toast.success("Customer created successfully");

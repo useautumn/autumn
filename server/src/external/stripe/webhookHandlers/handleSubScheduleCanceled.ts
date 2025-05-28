@@ -1,27 +1,26 @@
-import { SupabaseClient } from "@supabase/supabase-js";
-
 import { AppEnv } from "@autumn/shared";
 import Stripe from "stripe";
 import { CusProductStatus, Organization } from "@autumn/shared";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { createStripeCli } from "../utils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleSubscriptionScheduleCanceled = async ({
-  sb,
+  db,
   schedule,
   env,
   org,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   schedule: Stripe.SubscriptionSchedule;
   org: Organization;
   env: AppEnv;
   logger: any;
 }) => {
   const cusProductsOnSchedule = await CusProductService.getByScheduleId({
-    sb,
+    db,
     scheduleId: schedule.id,
     orgId: org.id,
     env,
@@ -36,7 +35,7 @@ export const handleSubscriptionScheduleCanceled = async ({
   console.log(
     "   - Found",
     cusProductsOnSchedule.length,
-    "cus products on schedule"
+    "cus products on schedule",
   );
   for (const cusProduct of cusProductsOnSchedule) {
     console.log("   - Cus product", cusProduct.product.name, cusProduct.status);
@@ -45,10 +44,10 @@ export const handleSubscriptionScheduleCanceled = async ({
 
     if (cusProduct.status === CusProductStatus.Scheduled) {
       let otherScheduledIds = cusProduct.scheduled_ids?.filter(
-        (id: string) => id !== schedule.id
+        (id: string) => id !== schedule.id,
       );
 
-      for (const id of otherScheduledIds) {
+      for (const id of otherScheduledIds || []) {
         try {
           await stripeCli.subscriptionSchedules.cancel(id);
           console.log("   - Cancelled scheduled id", id);
@@ -58,17 +57,17 @@ export const handleSubscriptionScheduleCanceled = async ({
       }
 
       await CusProductService.delete({
-        sb,
+        db,
         cusProductId: cusProduct.id,
       });
     } else {
       // Here -> Should do something different, maybe... reactivate future product?
       await CusProductService.update({
-        sb,
+        db,
         cusProductId: cusProduct.id,
         updates: {
           scheduled_ids: cusProduct.scheduled_ids?.filter(
-            (id: string) => id !== schedule.id
+            (id: string) => id !== schedule.id,
           ),
         },
       });
@@ -78,20 +77,20 @@ export const handleSubscriptionScheduleCanceled = async ({
   // Delete from subscriptions
   try {
     let autumnSub = await SubService.getFromScheduleId({
-      sb,
+      db,
       scheduleId: schedule.id,
     });
 
     if (autumnSub && !autumnSub.stripe_id) {
       await SubService.deleteFromScheduleId({
-        sb,
+        db,
         scheduleId: schedule.id,
       });
     }
   } catch (error) {
     logger.error(
       `handleSubScheduleCanceled: failed to delete from subscriptions table`,
-      error
+      error,
     );
   }
 };

@@ -17,7 +17,6 @@ import {
   ProductItem,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -34,19 +33,19 @@ import { getExistingCusProducts } from "../add-product/handleExistingProduct.js"
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { Decimal } from "decimal.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const getProducts = async ({
-  sb,
+  db,
   productId,
   productIds,
   orgId,
   env,
   version,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   productId?: string;
   productIds?: string[];
   orgId: string;
@@ -62,9 +61,9 @@ const getProducts = async ({
   }
 
   if (productId) {
-    const product = await ProductService.getFullProduct({
-      sb,
-      productId,
+    const product = await ProductService.getFull({
+      db,
+      idOrInternalId: productId,
       orgId,
       env,
       version,
@@ -92,8 +91,8 @@ const getProducts = async ({
       });
     }
 
-    const products = await ProductService.getFullProducts({
-      sb,
+    const products = await ProductService.listFull({
+      db,
       orgId,
       env,
       inIds: productIds,
@@ -152,7 +151,7 @@ const getProducts = async ({
 };
 
 const getCustomerAndProducts = async ({
-  sb,
+  db,
   org,
   features,
   customerId,
@@ -166,7 +165,7 @@ const getCustomerAndProducts = async ({
   entityId,
   entityData,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   features: Feature[];
   customerData?: CustomerData;
@@ -181,7 +180,7 @@ const getCustomerAndProducts = async ({
 }) => {
   const [customer, products] = await Promise.all([
     getOrCreateCustomer({
-      sb,
+      db,
       org,
       features,
       env,
@@ -197,7 +196,14 @@ const getCustomerAndProducts = async ({
       entityId,
       entityData,
     }),
-    getProducts({ sb, productId, productIds, orgId: org.id, env, version }),
+    getProducts({
+      db,
+      productId,
+      productIds,
+      orgId: org.id,
+      env,
+      version,
+    }),
   ]);
 
   let cusProducts = customer.customer_products;
@@ -278,7 +284,6 @@ export const getFullCusProductData = async ({
   db,
   org,
   features,
-  sb,
   customerId,
   customerData,
   productId,
@@ -296,7 +301,6 @@ export const getFullCusProductData = async ({
   db: DrizzleCli;
   org: Organization;
   features: Feature[];
-  sb: SupabaseClient;
   customerId: string;
   customerData?: Customer;
   productId?: string;
@@ -313,9 +317,9 @@ export const getFullCusProductData = async ({
 }) => {
   // 1. Get customer, product, org & features
   const { customer, products, cusProducts } = await getCustomerAndProducts({
+    db,
     org,
     features,
-    sb,
     customerId,
     customerData,
     productId,
@@ -333,7 +337,7 @@ export const getFullCusProductData = async ({
     let freeTrialProduct = products.find((p) => notNullish(p.free_trial));
     if (freeTrialProduct) {
       freeTrial = await getFreeTrialAfterFingerprint({
-        sb,
+        db,
         freeTrial: freeTrialProduct.free_trial,
         fingerprint: customer.fingerprint,
         internalCustomerId: customer.internal_id,
@@ -401,7 +405,6 @@ export const getFullCusProductData = async ({
 
   let { prices, entitlements } = await handleNewProductItems({
     db,
-    sb,
     curPrices,
     curEnts,
     newItems: itemsInput,
@@ -412,7 +415,7 @@ export const getFullCusProductData = async ({
   });
 
   const freeTrial = await handleNewFreeTrial({
-    sb,
+    db,
     curFreeTrial: product!.free_trial,
     newFreeTrial: freeTrialInput || null,
     internalProductId: product!.internal_id,
@@ -420,7 +423,7 @@ export const getFullCusProductData = async ({
   });
 
   const uniqueFreeTrial = await getFreeTrialAfterFingerprint({
-    sb,
+    db,
     freeTrial: freeTrial,
     fingerprint: customer.fingerprint,
     internalCustomerId: customer.internal_id,

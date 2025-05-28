@@ -18,7 +18,7 @@ describe(chalk.yellowBright("Premium plan"), () => {
         name: "Alex Premium Customer",
         email: "alex-premium-customer@test.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       // attachPm: true,

@@ -1,18 +1,19 @@
 import { ProductService } from "@/internal/products/ProductService.js";
-import { AppEnv, FullProduct, Organization } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { AppEnv, Organization } from "@autumn/shared";
 import { expect } from "chai";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+
 export const checkScheduleContainsProducts = async ({
-  sb,
+  db,
   org,
   env,
   scheduleId,
   schedule,
   productIds,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   scheduleId?: string;
@@ -30,9 +31,9 @@ export const checkScheduleContainsProducts = async ({
 
   let priceCount = 0;
   for (const productId of productIds) {
-    let product = await ProductService.getFullProduct({
-      productId: productId,
-      sb: sb,
+    let product = await ProductService.getFull({
+      db,
+      idOrInternalId: productId,
       orgId: org.id,
       env: env,
     });
@@ -40,8 +41,8 @@ export const checkScheduleContainsProducts = async ({
     for (const price of product.prices) {
       expect(
         schedule!.phases[0].items.some(
-          (item) => item.price === price.config.stripe_price_id
-        )
+          (item) => item.price === price.config!.stripe_price_id,
+        ),
       ).to.be.true;
       priceCount++;
     }
@@ -51,13 +52,13 @@ export const checkScheduleContainsProducts = async ({
 };
 
 export const checkSubscriptionContainsProducts = async ({
-  sb,
+  db,
   org,
   env,
   subscriptionId,
   productIds,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   subscriptionId: string;
@@ -68,9 +69,9 @@ export const checkSubscriptionContainsProducts = async ({
 
   let totalPriceCount = 0;
   for (const productId of productIds) {
-    let product = await ProductService.getFullProduct({
-      productId: productId,
-      sb: sb,
+    let product = await ProductService.getFull({
+      db,
+      idOrInternalId: productId,
       orgId: org.id,
       env: env,
     });
@@ -80,18 +81,18 @@ export const checkSubscriptionContainsProducts = async ({
       try {
         expect(
           sub.items.data.some(
-            (item) => item.price.id === price.config.stripe_price_id
-          )
+            (item) => item.price.id === price.config.stripe_price_id,
+          ),
         ).to.be.true;
       } catch (error) {
         console.log("Stripe sub prices not matching product prices");
         console.log(
           "Prices:",
-          product.prices.map((p: any) => p.config.stripe_price_id)
+          product.prices.map((p: any) => p.config.stripe_price_id),
         );
         console.log(
           "Sub items:",
-          sub.items.data.map((i: any) => i.price.id)
+          sub.items.data.map((i: any) => i.price.id),
         );
         throw error;
       }

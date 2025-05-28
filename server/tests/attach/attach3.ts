@@ -31,7 +31,7 @@ describe(`${chalk.yellowBright("attach3: Multi attach, all one off")}`, () => {
   before(async function () {
     await initCustomer({
       customerId,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });
@@ -76,7 +76,7 @@ describe(`${chalk.yellowBright("attach3: Multi attach, all one off")}`, () => {
     const metered2Amount = metered2Tiers[0].amount;
 
     let numBillingUnits = new Decimal(options[0].quantity).div(
-      oneTimeProducts.oneTimeMetered2.prices[0].config.billing_units
+      oneTimeProducts.oneTimeMetered2.prices[0].config.billing_units,
     );
 
     // console.log("Num billing units: ", numBillingUnits);
@@ -85,7 +85,7 @@ describe(`${chalk.yellowBright("attach3: Multi attach, all one off")}`, () => {
       new Decimal(metered2Amount)
         .mul(numBillingUnits)
         .add(metered1Amount)
-        .toNumber()
+        .toNumber(),
     );
   });
 });

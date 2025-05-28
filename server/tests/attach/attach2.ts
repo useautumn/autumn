@@ -8,7 +8,7 @@ import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
 import { compareMainProduct } from "tests/utils/compare.js";
 
 describe(`${chalk.yellowBright(
-  "attach2: Testing monthly with one time prepaid, quantity = 0"
+  "attach2: Testing monthly with one time prepaid, quantity = 0",
 )}`, () => {
   let customerId = "attach2";
 
@@ -25,7 +25,7 @@ describe(`${chalk.yellowBright(
   before(async function () {
     await initCustomer({
       customerId,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });

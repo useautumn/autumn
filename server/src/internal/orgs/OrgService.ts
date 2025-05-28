@@ -1,5 +1,12 @@
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, ErrCode, Organization, OrgConfigSchema } from "@autumn/shared";
+import {
+  AppEnv,
+  ErrCode,
+  Feature,
+  features,
+  Organization,
+  OrgConfigSchema,
+} from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getApiVersion } from "@/utils/versionUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
@@ -8,6 +15,23 @@ import { eq } from "drizzle-orm";
 import { organizations, apiKeys } from "@autumn/shared";
 
 export class OrgService {
+  static async getFromReq(req: any) {
+    if (req.org) {
+      let org = structuredClone(req.org);
+      let config = org.config || {};
+      let apiVersion = getApiVersion({
+        createdAt: org.created_at,
+      });
+      return {
+        ...org,
+        config: OrgConfigSchema.parse(config),
+        api_version: apiVersion,
+      };
+    }
+
+    return await this.get({ db: req.db, orgId: req.orgId });
+  }
+
   // Drizzle get
   static async get({ db, orgId }: { db: DrizzleCli; orgId: string }) {
     const result = await db.query.organizations.findFirst({
@@ -55,152 +79,76 @@ export class OrgService {
   }
 
   static async getWithFeatures({
-    sb,
+    db,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     orgId: string;
     env: AppEnv;
   }) {
-    const { data, error } = await sb
-      .from("organizations")
-      .select("*, features(*)")
-      .eq("id", orgId)
-      .eq("features.env", env)
-      .single();
+    const result = (await db.query.organizations.findFirst({
+      where: eq(organizations.id, orgId),
+      with: {
+        features: {
+          where: eq(features.env, env),
+        },
+      },
+    })) as Organization & {
+      features: Feature[];
+    };
 
-    if (error) {
-      throw new Error("Error getting orgs from supabase");
+    if (!result) {
+      throw new RecaseError({
+        message: `Organization ${orgId} not found`,
+        code: ErrCode.OrgNotFound,
+        statusCode: 404,
+      });
     }
 
-    let org = structuredClone(data);
-    delete org.features;
-    return { org, features: data.features || [] };
-  }
-
-  static async getOrgs({ sb }: { sb: SupabaseClient }) {
-    const { data, error } = await sb.from("organizations").select("*");
-    if (error) {
-      throw new Error("Error getting orgs from supabase");
-    }
-    return data;
+    let org = structuredClone(result);
+    delete (org as any).features;
+    return { org, features: result.features || [] };
   }
 
   static async getFromPkeyWithFeatures({
-    sb,
+    db,
     pkey,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     pkey: string;
     env: AppEnv;
   }) {
-    let fieldName = env === AppEnv.Sandbox ? "test_pkey" : "live_pkey";
-    const { data, error } = await sb
-      .from("organizations")
-      .select("*, features(*)")
-      .eq(fieldName, pkey)
-      .eq("features.env", env)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-
-      throw new RecaseError({
-        message: "Error getting org from supabase",
-        code: ErrCode.OrgNotFound,
-        statusCode: 404,
-        data: error,
-      });
-    }
-
-    return data;
-  }
-
-  static async getFromReq(req: any) {
-    if (req.org) {
-      let org = structuredClone(req.org);
-      let config = org.config || {};
-      let apiVersion = getApiVersion({
-        createdAt: org.created_at,
-      });
-      return {
-        ...org,
-        config: OrgConfigSchema.parse(config),
-        api_version: apiVersion,
-      };
-    }
-
-    return await this.getFullOrg({
-      sb: req.sb,
-      orgId: req.orgId,
-    });
-  }
-
-  static async getFullOrg({
-    sb,
-    orgId,
-  }: {
-    sb: SupabaseClient;
-    orgId: string;
-  }) {
-    const { data, error } = await sb
-      .from("organizations")
-      .select("*")
-      .eq("id", orgId)
-      .select()
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        throw new RecaseError({
-          message: "Failed to get org from supabase",
-          code: ErrCode.OrgNotFound,
-          statusCode: 404,
-          data: error,
-        });
-      } else {
-        throw error;
-      }
-    }
-
-    let config = data.config || {};
-    let apiVersion = getApiVersion({
-      createdAt: data.created_at,
+    let org = await db.query.organizations.findFirst({
+      where:
+        env === AppEnv.Sandbox
+          ? eq(organizations.test_pkey, pkey)
+          : eq(organizations.live_pkey, pkey),
+      with: {
+        features: {
+          where: eq(features.env, env),
+        },
+      },
     });
 
-    return {
-      ...data,
-      config: OrgConfigSchema.parse(config),
-      api_version: apiVersion,
+    return org as Organization & {
+      features: Feature[];
     };
   }
 
-  static async getBySlug({ sb, slug }: { sb: SupabaseClient; slug: string }) {
-    const { data, error } = await sb
-      .from("organizations")
-      .select("*")
-      .eq("slug", slug)
-      .select()
-      .single();
+  static async getBySlug({ db, slug }: { db: DrizzleCli; slug: string }) {
+    const result = await db.query.organizations.findFirst({
+      where: eq(organizations.slug, slug),
+    });
 
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-
-      throw new RecaseError({
-        message: "Failed to get org from supabase",
-        code: ErrCode.OrgNotFound,
-        statusCode: 404,
-      });
+    if (!result) {
+      return null;
     }
 
-    return data;
+    return result as Organization;
   }
+
   static async insert({ db, org }: { db: DrizzleCli; org: any }) {
     await db.insert(organizations).values(org);
   }

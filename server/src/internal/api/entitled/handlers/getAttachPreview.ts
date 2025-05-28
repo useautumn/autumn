@@ -15,6 +15,7 @@ import {
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import {
   AppEnv,
+  BillingType,
   Customer,
   Feature,
   FullCusProduct,
@@ -22,12 +23,13 @@ import {
   FullProduct,
   Organization,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 
-import { AttachScenario, CheckProductFormattedPreview } from "@autumn/shared";
+import { AttachScenario, CheckProductPreview } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 
 export const getAttachPreview = async ({
-  sb,
+  db,
   customer,
   org,
   env,
@@ -37,7 +39,7 @@ export const getAttachPreview = async ({
   logger,
   shouldFormat = true,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   customer: FullCustomer;
   org: Organization;
   env: AppEnv;
@@ -47,20 +49,14 @@ export const getAttachPreview = async ({
   logger: any;
   shouldFormat?: boolean;
 }) => {
-  let paymentMethod: any;
-  try {
+  let paymentMethod: any = null;
+  if (customer.processor?.id) {
     paymentMethod = await getCusPaymentMethod({
       org,
       env: customer.env,
       stripeId: customer.processor?.id,
       errorIfNone: false,
     });
-
-    if (!paymentMethod) {
-      return null;
-    }
-  } catch (error) {
-    return null;
   }
 
   let { curMainProduct, curScheduledProduct, curSameProduct }: any =
@@ -75,9 +71,7 @@ export const getAttachPreview = async ({
   });
 
   if (curScheduledProduct?.product.id === product.id) {
-    // title: "Scheduled product already exists",
-    // message: "You already have this product scheduled to start soon.",
-    let result: CheckProductFormattedPreview = {
+    let result: CheckProductPreview = {
       title: "Scheduled product already exists",
       message: "You already have this product scheduled to start soon.",
       scenario: AttachScenario.Scheduled,
@@ -92,9 +86,7 @@ export const getAttachPreview = async ({
     return result;
   } else if (curSameProduct) {
     if (!product.is_add_on && !curScheduledProduct && !isOneOff(curPrices)) {
-      // title: "Product already attached",
-      // message: "You already have this product attached.",
-      let result: CheckProductFormattedPreview = {
+      let result: CheckProductPreview = {
         title: "Product already attached",
         message: "You already have this product attached.",
         scenario: AttachScenario.Active,
@@ -113,11 +105,19 @@ export const getAttachPreview = async ({
   }
 
   // Case 1: No / free main product
+  let prodContainsPrepaid = product.prices.some(
+    (p) => getBillingType(p.config) == BillingType.UsageInAdvance,
+  );
+
   if (!curMainProduct || product.is_add_on) {
     // 1a. If both are free, no context
     if (isFreeProduct(product.prices)) {
       return null;
     } else {
+      if (!prodContainsPrepaid && !paymentMethod) {
+        return null;
+      }
+
       return await getNewProductPreview({
         org,
         product,
@@ -129,6 +129,7 @@ export const getAttachPreview = async ({
   // Case 2: current and new are same products
   if (curMainProduct?.product.id === product.id) {
     // 2a. If there's a scheduled product
+
     if (curScheduledProduct) {
       let scheduledProduct = fullCusProductToProduct(curScheduledProduct);
       let scheduledStart = formatUnixToDate(curScheduledProduct?.starts_at);
@@ -145,7 +146,7 @@ export const getAttachPreview = async ({
 
       // Get
 
-      let result: CheckProductFormattedPreview = {
+      let result: CheckProductPreview = {
         title: `Renew subscription to ${curMainProduct.product.name}`,
         message,
         scenario: AttachScenario.Renew,
@@ -168,7 +169,7 @@ export const getAttachPreview = async ({
 
   if (isUpgrade) {
     return await getUpgradePreview({
-      sb,
+      db,
       customer,
       org,
       env,

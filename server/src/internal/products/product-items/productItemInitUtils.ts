@@ -7,7 +7,7 @@ import {
   ProductItem,
 } from "@autumn/shared";
 import { itemToPriceAndEnt } from "./mapFromItem.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { EntitlementService } from "../entitlements/EntitlementService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { validateProductItems } from "./validateProductItems.js";
@@ -16,7 +16,7 @@ import { isFeatureItem } from "./getItemType.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const updateDbPricesAndEnts = async ({
-  sb,
+  db,
   newPrices,
   newEnts,
   updatedPrices,
@@ -24,7 +24,7 @@ const updateDbPricesAndEnts = async ({
   deletedPrices,
   deletedEnts,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   newPrices: Price[];
   newEnts: Entitlement[];
   updatedPrices: Price[];
@@ -35,11 +35,11 @@ const updateDbPricesAndEnts = async ({
   // 1. Create new ents
   await Promise.all([
     EntitlementService.insert({
-      sb,
+      db,
       data: newEnts,
     }),
     EntitlementService.upsert({
-      sb,
+      db,
       data: updatedEnts,
     }),
   ]);
@@ -47,31 +47,31 @@ const updateDbPricesAndEnts = async ({
   // 2. Create new prices
   await Promise.all([
     PriceService.insert({
-      sb,
+      db,
       data: newPrices,
     }),
     PriceService.upsert({
-      sb,
+      db,
       data: updatedPrices,
     }),
-    PriceService.deleteByIds({
-      sb,
-      priceIds: deletedPrices.map((price) => price.id!),
+    PriceService.deleteInIds({
+      db,
+      ids: deletedPrices.map((price) => price.id!),
     }),
   ]);
 
   // Check if any custom prices use this entitlement...
   let deletedEntIds = deletedEnts.map((ent) => ent.id!);
-  let customPrices = await PriceService.getInIds({
-    sb,
+  let customPrices = await PriceService.getCustomInEntIds({
+    db,
     entitlementIds: deletedEntIds,
   });
 
   if (customPrices.length == 0) {
     // Update the entitlement to be custom...
-    await EntitlementService.deleteByIds({
-      sb,
-      entitlementIds: deletedEntIds,
+    await EntitlementService.deleteInIds({
+      db,
+      ids: deletedEntIds,
     });
   } else {
     let updateOrDelete: any = [];
@@ -83,8 +83,8 @@ const updateDbPricesAndEnts = async ({
       if (hasCustomPrice) {
         updateOrDelete.push(
           EntitlementService.update({
-            sb,
-            entitlementId: ent.id!,
+            db,
+            id: ent.id!,
             updates: {
               is_custom: true,
             },
@@ -92,9 +92,9 @@ const updateDbPricesAndEnts = async ({
         );
       } else {
         updateOrDelete.push(
-          EntitlementService.deleteByIds({
-            sb,
-            entitlementIds: [ent.id!],
+          EntitlementService.deleteInIds({
+            db,
+            ids: [ent.id!],
           }),
         );
       }
@@ -105,7 +105,7 @@ const updateDbPricesAndEnts = async ({
 };
 
 const handleCustomProductItems = async ({
-  sb,
+  db,
   newPrices,
   newEnts,
   updatedPrices,
@@ -114,7 +114,7 @@ const handleCustomProductItems = async ({
   sameEnts,
   features,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   newPrices: Price[];
   newEnts: Entitlement[];
   updatedPrices: Price[];
@@ -124,12 +124,12 @@ const handleCustomProductItems = async ({
   features: Feature[];
 }) => {
   await EntitlementService.insert({
-    sb,
+    db,
     data: [...newEnts, ...updatedEnts],
   });
 
   await PriceService.insert({
-    sb,
+    db,
     data: [...newPrices, ...updatedPrices],
   });
 
@@ -144,7 +144,6 @@ const handleCustomProductItems = async ({
 
 export const handleNewProductItems = async ({
   db,
-  sb,
   curPrices,
   curEnts,
   newItems,
@@ -156,7 +155,6 @@ export const handleNewProductItems = async ({
   saveToDb = true,
 }: {
   db: DrizzleCli;
-  sb: SupabaseClient;
   curPrices: Price[];
   curEnts: Entitlement[];
   newItems: ProductItem[];
@@ -268,7 +266,7 @@ export const handleNewProductItems = async ({
 
   if ((isCustom || newVersion) && saveToDb) {
     return handleCustomProductItems({
-      sb,
+      db,
       newPrices,
       newEnts,
       updatedPrices,
@@ -281,7 +279,7 @@ export const handleNewProductItems = async ({
 
   if (saveToDb) {
     await updateDbPricesAndEnts({
-      sb,
+      db,
       newPrices,
       newEnts,
       updatedPrices,

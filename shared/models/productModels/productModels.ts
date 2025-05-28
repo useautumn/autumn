@@ -1,11 +1,8 @@
 import { z } from "zod";
-import { PriceSchema } from "./priceModels.js";
-import {
-  EntitlementSchema,
-  PublicEntitlementSchema,
-} from "./entitlementModels.js";
+import { PriceSchema } from "./priceModels/priceModels.js";
+import { EntitlementSchema } from "./entModels/entModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
-import { FreeTrialSchema } from "./freeTrialModels.js";
+import { FreeTrialSchema } from "./freeTrialModels/freeTrialModels.js";
 
 export const ProductSchema = z.object({
   id: z.string(),
@@ -69,25 +66,12 @@ export const FullProductSchema = ProductSchema.extend({
       feature: FeatureSchema,
     }),
   ),
-  free_trial: FreeTrialSchema.optional(),
-});
-
-export const PublicProductSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  is_add_on: z.boolean(),
-  is_default: z.boolean(),
-  group: z.string(),
   free_trial: FreeTrialSchema.nullish(),
-  entitlements: z.array(PublicEntitlementSchema),
-  fixed_prices: z.array(PriceSchema),
-  usage_prices: z.array(PriceSchema),
+  free_trials: z.array(FreeTrialSchema).nullish(),
 });
 
 export type Product = z.infer<typeof ProductSchema>;
 export type FrontendProduct = z.infer<typeof FrontendProductSchema>;
 export type FullProduct = z.infer<typeof FullProductSchema>;
 export type CreateProduct = z.infer<typeof CreateProductSchema>;
-export type PublicProduct = z.infer<typeof PublicProductSchema>;
-
 export type UpdateProduct = z.infer<typeof UpdateProductSchema>;

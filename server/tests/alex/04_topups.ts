@@ -2,7 +2,12 @@ import { compareMainProduct } from "tests/utils/compare.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { initCustomer } from "tests/utils/init.js";
 import { alexFeatures, alexProducts } from "./init.js";
-import { AllowanceType, CusProductStatus, EntInterval } from "@autumn/shared";
+import {
+  AllowanceType,
+  CusProductStatus,
+  EntInterval,
+  Entitlement,
+} from "@autumn/shared";
 import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { expect } from "chai";
@@ -21,7 +26,7 @@ describe(chalk.yellowBright("Top ups"), () => {
         name: "Alex Top Up Customer",
         email: "alex-top-up-customer@test.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -60,14 +65,14 @@ describe(chalk.yellowBright("Top ups"), () => {
     const cusRes = await AutumnCli.getCustomer(customerId);
     // Get product
     const product = cusRes.add_ons.find(
-      (p: any) => p.id === alexProducts.topUpMessages.id
+      (p: any) => p.id === alexProducts.topUpMessages.id,
     );
     expect(product).to.exist;
     expect(product.status).to.equal(CusProductStatus.Active);
 
     // Check quantity is correct
     let cusEnt = cusRes.entitlements.find(
-      (e: any) => e.feature_id === alexFeatures.topUpMessage.id
+      (e: any) => e.feature_id === alexFeatures.topUpMessage.id,
     );
 
     expect(cusEnt).to.exist;
@@ -81,7 +86,7 @@ describe(chalk.yellowBright("Top ups"), () => {
     const { allowed, balanceObj }: any = await AutumnCli.entitled(
       customerId,
       alexFeatures.topUpMessage.id,
-      true
+      true,
     );
     leftoverBalance = balanceObj.balance;
 
@@ -97,24 +102,24 @@ describe(chalk.yellowBright("Top ups"), () => {
     const cusRes = await AutumnCli.getCustomer(customerId);
     // Get product
     const product = cusRes.add_ons.find(
-      (p: any) => p.id === alexProducts.topUpMessages.id
+      (p: any) => p.id === alexProducts.topUpMessages.id,
     );
     expect(product).to.exist;
     expect(product.status).to.equal(CusProductStatus.Active);
 
     // Check quantity is correct
     let cusEnt = cusRes.entitlements.find(
-      (e: any) => e.feature_id === alexFeatures.topUpMessage.id
+      (e: any) => e.feature_id === alexFeatures.topUpMessage.id,
     );
     expect(cusEnt).to.exist;
     expect(cusEnt.balance).to.equal(
-      leftoverBalance + overrideQuantity * billingUnits
+      leftoverBalance + overrideQuantity * billingUnits,
     );
     expect(cusEnt.interval).to.equal(prodEnt.interval);
   });
 });
 
-describe.skip(chalk.yellowBright("Testing o1 message top up"), () => {
+describe(chalk.yellowBright("Testing o1 message top up"), () => {
   let customerId = "alex-o1-top-up-customer";
   let o1TopUpQuantity = Math.floor(Math.random() * 15);
   let billingUnits = alexProducts.o1TopUps.prices[0].config.billing_units;
@@ -127,7 +132,7 @@ describe.skip(chalk.yellowBright("Testing o1 message top up"), () => {
         name: "Alex O1 Top Up Customer",
         email: "alex-o1-top-up-customer@test.com",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -161,7 +166,7 @@ describe.skip(chalk.yellowBright("Testing o1 message top up"), () => {
     const cusRes = await AutumnCli.getCustomer(customerId);
     // Get product
     const product = cusRes.add_ons.find(
-      (p: any) => p.id === alexProducts.o1TopUps.id
+      (p: any) => p.id === alexProducts.o1TopUps.id,
     );
 
     expect(product).to.exist;
@@ -187,7 +192,7 @@ describe.skip(chalk.yellowBright("Testing o1 message top up"), () => {
           feature_id: alexFeatures.o1Message.id,
           allowance,
           allowance_type: AllowanceType.Fixed,
-        }, // manual entitlement because in advance pricing
+        } as Entitlement, // manual entitlement because in advance pricing
       ],
     });
   });

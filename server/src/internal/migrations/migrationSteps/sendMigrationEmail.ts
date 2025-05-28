@@ -1,20 +1,19 @@
-import { SupabaseClient } from "@supabase/supabase-js";
 import { MigrationService } from "../MigrationService.js";
 import { sendTextEmail } from "@/external/resend/resendUtils.js";
 import { MigrationJobStep, Organization } from "@autumn/shared";
-import { createClerkCli } from "@/external/clerkUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const sendMigrationEmail = async ({
-  sb,
+  db,
   migrationJobId,
   org,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   migrationJobId: string;
   org: Organization;
 }) => {
   let migrationJob = await MigrationService.getJob({
-    sb,
+    db,
     id: migrationJobId,
   });
 

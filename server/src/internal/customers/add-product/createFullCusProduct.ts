@@ -9,17 +9,12 @@ import {
   CollectionMethod,
   FullCusProduct,
   LoggerAction,
-  FullCustomerEntitlement,
 } from "@autumn/shared";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 
 import { Customer } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { ErrCode } from "@/errors/errCodes.js";
-import { StatusCodes } from "http-status-codes";
-import RecaseError from "@/utils/errorUtils.js";
-import { getEntOptions } from "@/internal/prices/priceUtils.js";
+import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
 import { InsertCusProductParams } from "../products/AttachParams.js";
@@ -39,6 +34,9 @@ import {
   getExistingUsages,
 } from "../entitlements/cusEntUtils/getExistingUsage.js";
 import { constructProductsUpdatedData } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusEntService } from "../entitlements/CusEntitlementService.js";
+import { CusPriceService } from "../prices/CusPriceService.js";
 export const initCusPrice = ({
   price,
   customer,
@@ -119,8 +117,8 @@ export const initCusProduct = ({
     status: subscriptionStatus
       ? subscriptionStatus
       : isFuture
-      ? CusProductStatus.Scheduled
-      : CusProductStatus.Active,
+        ? CusProductStatus.Scheduled
+        : CusProductStatus.Active,
 
     processor: {
       type: ProcessorType.Stripe,
@@ -145,63 +143,40 @@ export const initCusProduct = ({
 };
 
 export const insertFullCusProduct = async ({
-  sb,
+  db,
   cusProd,
   cusEnts,
   cusPrices,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   cusProd: CusProduct;
   cusEnts: CustomerEntitlement[];
   cusPrices: CustomerPrice[];
 }) => {
-  const { error: prodError } = await sb
-    .from("customer_products")
-    .insert(cusProd);
+  await CusProductService.insert({
+    db,
+    data: cusProd,
+  });
 
-  if (prodError) {
-    console.log("Error inserting customer product: ", prodError);
-    throw new RecaseError({
-      message: "Error inserting customer product",
-      code: ErrCode.InternalError,
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-    });
-  }
+  await CusEntService.insert({
+    db,
+    data: cusEnts,
+  });
 
-  const { error: entError } = await sb
-    .from("customer_entitlements")
-    .insert(cusEnts);
-  if (entError) {
-    console.log("Error inserting customer entitlements: ", entError);
-    throw new RecaseError({
-      message: "Error inserting customer entitlements",
-      code: ErrCode.InternalError,
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-    });
-  }
-
-  const { error: priceError } = await sb
-    .from("customer_prices")
-    .insert(cusPrices);
-
-  if (priceError) {
-    console.log("Error inserting customer prices: ", priceError);
-    throw new RecaseError({
-      message: "Error inserting customer prices",
-      code: ErrCode.InternalError,
-      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-    });
-  }
+  await CusPriceService.insert({
+    db,
+    data: cusPrices,
+  });
 };
 
 export const expireOrDeleteCusProduct = async ({
-  sb,
+  db,
   startsAt,
   product,
   cusProducts,
   internalEntityId,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   startsAt?: number;
   product: FullProduct;
   cusProducts?: FullCusProduct[];
@@ -215,12 +190,12 @@ export const expireOrDeleteCusProduct = async ({
         cp.status === CusProductStatus.Scheduled &&
         (internalEntityId
           ? cp.internal_entity_id === internalEntityId
-          : nullish(cp.internal_entity_id))
+          : nullish(cp.internal_entity_id)),
     );
 
     if (curScheduledProduct) {
       await CusProductService.delete({
-        sb,
+        db,
         cusProductId: curScheduledProduct.id,
       });
     }
@@ -233,7 +208,7 @@ export const expireOrDeleteCusProduct = async ({
 
     if (curMainProduct) {
       await CusProductService.update({
-        sb,
+        db,
         cusProductId: curMainProduct.id,
         updates: {
           status: CusProductStatus.Expired,
@@ -244,22 +219,28 @@ export const expireOrDeleteCusProduct = async ({
 };
 
 export const getExistingCusProduct = async ({
-  sb,
+  db,
   cusProducts,
   product,
   internalCustomerId,
   internalEntityId,
 }: {
-  sb?: SupabaseClient;
+  db: DrizzleCli;
+
   cusProducts?: FullCusProduct[];
   product: FullProduct;
   internalCustomerId: string;
   internalEntityId?: string;
 }) => {
   if (!cusProducts) {
-    cusProducts = await CusService.getFullCusProducts({
-      sb: sb as SupabaseClient,
+    cusProducts = await CusProductService.list({
+      db,
       internalCustomerId,
+      inStatuses: [
+        CusProductStatus.Active,
+        CusProductStatus.PastDue,
+        CusProductStatus.Scheduled,
+      ],
     });
   }
 
@@ -273,7 +254,7 @@ export const getExistingCusProduct = async ({
 };
 
 export const createFullCusProduct = async ({
-  sb,
+  db,
   attachParams,
   startsAt,
   subscriptionId,
@@ -294,7 +275,7 @@ export const createFullCusProduct = async ({
   scenario = "default",
   sendWebhook = true,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   attachParams: InsertCusProductParams;
 
   startsAt?: number;
@@ -335,7 +316,7 @@ export const createFullCusProduct = async ({
   let curCusProduct;
   try {
     curCusProduct = await getExistingCusProduct({
-      sb,
+      db,
       cusProducts: attachParams.cusProducts,
       product,
       internalCustomerId: customer.internal_id,
@@ -356,7 +337,7 @@ export const createFullCusProduct = async ({
     !attachParams.isCustom
   ) {
     await updateOneTimeCusProduct({
-      sb,
+      db,
       attachParams,
       logger,
     });
@@ -371,16 +352,6 @@ export const createFullCusProduct = async ({
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
     const relatedPrice = getEntRelatedPrice(entitlement, prices);
-
-    // let existingCusEnt: FullCustomerEntitlement | undefined =
-    //   curCusProduct?.customer_entitlements.find(
-    //     (ce) =>
-    //       ce.entitlement.internal_feature_id === entitlement.internal_feature_id
-    //   );
-
-    // if (freeTrial && existingCusEnt) {
-    //   existingCusEnt = undefined;
-    // }
 
     const cusEnt: any = initCusEntitlement({
       entitlement,
@@ -415,6 +386,7 @@ export const createFullCusProduct = async ({
 
   // 2. create customer prices
   const cusPrices: CustomerPrice[] = [];
+
   for (const price of prices) {
     const cusPrice: CustomerPrice = initCusPrice({
       price,
@@ -457,7 +429,7 @@ export const createFullCusProduct = async ({
   // Expire previous product if not one off
   if (!isOneOff(prices) && !product.is_add_on) {
     await expireOrDeleteCusProduct({
-      sb,
+      db,
       startsAt,
       product,
       cusProducts: attachParams.cusProducts,
@@ -466,14 +438,14 @@ export const createFullCusProduct = async ({
   }
 
   await insertFullCusProduct({
-    sb,
+    db,
     cusProd,
     cusEnts: deductedCusEnts,
     cusPrices,
   });
 
   try {
-    if (sendWebhook) {
+    if (sendWebhook && !attachParams.fromMigration) {
       await addTaskToQueue({
         jobName: JobName.SendProductsUpdatedWebhook,
         payload: constructProductsUpdatedData({
@@ -481,7 +453,6 @@ export const createFullCusProduct = async ({
           org,
           env: customer.env,
           customerId: customer.id || null,
-
           product: isDowngrade ? curCusProduct!.product : product,
           prices: isDowngrade
             ? curCusProduct!.customer_prices.map((cp) => cp.price)
@@ -489,7 +460,6 @@ export const createFullCusProduct = async ({
           entitlements: isDowngrade
             ? curCusProduct!.customer_entitlements.map((ce) => ce.entitlement)
             : entitlements,
-
           freeTrial,
           scenario,
         }),

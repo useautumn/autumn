@@ -1,7 +1,11 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { submitUsageToStripe } from "@/external/stripe/stripeMeterUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
-import { getBillingType, roundUsage } from "@/internal/prices/priceUtils.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import {
+  getBillingType,
+  roundUsage,
+} from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
@@ -30,7 +34,7 @@ export const getLinkedCusEnt = ({
 }) => {
   // Get linked cus ent...
   let linkedCusEnt = cusEnts.find(
-    (e: any) => e.entitlement.feature.id === linkedFeature.id
+    (e: any) => e.entitlement.feature.id === linkedFeature.id,
   );
 
   if (!linkedCusEnt) {
@@ -80,7 +84,7 @@ export const isLinkedToEntity = ({
 };
 
 export const removeEntityFromCusEnt = async ({
-  sb,
+  db,
   cusEnt,
   entity,
   logger,
@@ -89,7 +93,7 @@ export const removeEntityFromCusEnt = async ({
   org,
   env,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   cusEnt: FullCustomerEntitlement;
   entity: Entity;
   logger: any;
@@ -110,7 +114,7 @@ export const removeEntityFromCusEnt = async ({
 
   let entitlement = cusEnt.entitlement;
   console.log(
-    `Linked cus ent: ${entitlement.feature.id}, isLinked: ${isLinked}`
+    `Linked cus ent: ${entitlement.feature.id}, isLinked: ${isLinked}`,
   );
 
   // Delete cus ent ids
@@ -145,8 +149,8 @@ export const removeEntityFromCusEnt = async ({
 
   delete newEntities[entity.id];
 
-  await CustomerEntitlementService.update({
-    sb,
+  await CusEntService.update({
+    db,
     id: cusEnt.id,
     updates: {
       entities: newEntities,
@@ -154,7 +158,7 @@ export const removeEntityFromCusEnt = async ({
   });
 
   logger.info(
-    `Feature: ${entitlement.feature.id}, customer: ${cusEnt.customer_id}, deleted entities from cus ent`
+    `Feature: ${entitlement.feature.id}, customer: ${cusEnt.customer_id}, deleted entities from cus ent`,
   );
 };
 

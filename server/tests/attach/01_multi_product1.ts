@@ -15,54 +15,59 @@ FLOW:
 2. Upgrade pro group 1 -> premium group 1
 3. Upgrade pro group 2 -> premium group 2
 */
-describe(chalk.yellowBright("01_multi_product1: Testing multi product attach, and upgrade"), () => {
-  let customerId = "multi-product-attach-upgrade";
-  before(async function () {
-    this.customer = await initCustomer({
-      sb: this.sb,
-      org: this.org,
-      customer_data: {
-        id: customerId,
-        name: customerId,
-        email: "multi-product-attach-upgrade@example.com",
-      },
-      env: this.env,
-      attachPm: true,
-    });
-  });
-
-  it("should attach pro group 1 and pro group 2", async function () {
-    await AutumnCli.attach({
-      customerId: customerId,
-      productIds: [attachProducts.proGroup1.id, attachProducts.proGroup2.id],
+describe(
+  chalk.yellowBright(
+    "01_multi_product1: Testing multi product attach, and upgrade",
+  ),
+  () => {
+    let customerId = "multi-product-attach-upgrade";
+    before(async function () {
+      this.customer = await initCustomer({
+        db: this.db,
+        org: this.org,
+        customer_data: {
+          id: customerId,
+          name: customerId,
+          email: "multi-product-attach-upgrade@example.com",
+        },
+        env: this.env,
+        attachPm: true,
+      });
     });
 
-    let cusRes = await AutumnCli.getCustomer(customerId);
-    compareMainProduct({ sent: attachProducts.proGroup1, cusRes });
-    compareMainProduct({ sent: attachProducts.proGroup2, cusRes });
-  });
+    it("should attach pro group 1 and pro group 2", async function () {
+      await AutumnCli.attach({
+        customerId: customerId,
+        productIds: [attachProducts.proGroup1.id, attachProducts.proGroup2.id],
+      });
 
-  it("should upgrade to premium group 1", async function () {
-    await AutumnCli.attach({
-      customerId: customerId,
-      productId: attachProducts.premiumGroup1.id,
+      let cusRes = await AutumnCli.getCustomer(customerId);
+      compareMainProduct({ sent: attachProducts.proGroup1, cusRes });
+      compareMainProduct({ sent: attachProducts.proGroup2, cusRes });
     });
 
-    // 1. Compare main product
-    const cusRes = await AutumnCli.getCustomer(customerId);
-    compareMainProduct({ sent: attachProducts.premiumGroup1, cusRes });
+    it("should upgrade to premium group 1", async function () {
+      await AutumnCli.attach({
+        customerId: customerId,
+        productId: attachProducts.premiumGroup1.id,
+      });
 
-    // 2. Check latest invoice
-  });
+      // 1. Compare main product
+      const cusRes = await AutumnCli.getCustomer(customerId);
+      compareMainProduct({ sent: attachProducts.premiumGroup1, cusRes });
 
-  it("should upgrade to premium group 2", async function () {
-    await AutumnCli.attach({
-      customerId: customerId,
-      productId: attachProducts.premiumGroup2.id,
+      // 2. Check latest invoice
     });
 
-    // 1. Compare main product
-    const cusRes = await AutumnCli.getCustomer(customerId);
-    compareMainProduct({ sent: attachProducts.premiumGroup2, cusRes });
-  });
-});
+    it("should upgrade to premium group 2", async function () {
+      await AutumnCli.attach({
+        customerId: customerId,
+        productId: attachProducts.premiumGroup2.id,
+      });
+
+      // 1. Compare main product
+      const cusRes = await AutumnCli.getCustomer(customerId);
+      compareMainProduct({ sent: attachProducts.premiumGroup2, cusRes });
+    });
+  },
+);

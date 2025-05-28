@@ -10,8 +10,18 @@ import {
 import { differenceInSeconds } from "date-fns";
 import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { stripeToAutumnInterval } from "./utils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+
+export const getFullStripeSub = async ({
+  stripeCli,
+  stripeId,
+}: {
+  stripeCli: Stripe;
+  stripeId: string;
+}) => {
+  return await stripeCli.subscriptions.retrieve(stripeId);
+};
 
 export const getStripeSubs = async ({
   stripeCli,
@@ -34,7 +44,7 @@ export const getStripeSubs = async ({
     } catch (error: any) {
       console.log(
         `(warning) getStripeSubs: Failed to get sub ${subId}`,
-        error.message
+        error.message,
       );
       return null;
     }
@@ -86,13 +96,13 @@ export const deleteScheduledIds = async ({
 
 // Get in advance sub
 export const getUsageBasedSub = async ({
-  sb,
+  db,
   stripeCli,
   subIds,
   feature,
   stripeSubs,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   stripeCli: Stripe;
   subIds: string[];
   feature: Feature;
@@ -111,7 +121,7 @@ export const getUsageBasedSub = async ({
   let finalSubIds = subs.map((sub) => sub.id);
 
   let autumnSubs = await SubService.getInStripeIds({
-    sb,
+    db,
     ids: finalSubIds,
   });
 
@@ -122,7 +132,7 @@ export const getUsageBasedSub = async ({
     let autumnSub = autumnSubs?.find((sub) => sub.stripe_id == stripeSub.id);
     if (autumnSub) {
       let containsFeature = autumnSub.usage_features.includes(
-        feature.internal_id
+        feature.internal_id!,
       );
       if (containsFeature) {
         return stripeSub;
@@ -138,7 +148,7 @@ export const getUsageBasedSub = async ({
     if (
       !usageFeatures ||
       usageFeatures.find(
-        (feat: any) => feat.internal_id == feature.internal_id
+        (feat: any) => feat.internal_id == feature.internal_id,
       ) === undefined
     ) {
       continue;
@@ -168,14 +178,15 @@ export const getSubItemsForCusProduct = async ({
       prices.some(
         (p) =>
           p.config?.stripe_price_id == item.price.id ||
-          (p.config as UsagePriceConfig).stripe_product_id == item.price.product
+          (p.config as UsagePriceConfig).stripe_product_id ==
+            item.price.product,
       )
     ) {
       subItems.push(item);
     }
   }
   let otherSubItems = stripeSub.items.data.filter(
-    (item) => !subItems.some((i) => i.id == item.id)
+    (item) => !subItems.some((i) => i.id == item.id),
   );
 
   return { subItems, otherSubItems };
@@ -191,9 +202,8 @@ export const getStripeSchedules = async ({
   const batchGet = [];
   const getStripeSchedule = async (scheduleId: string) => {
     try {
-      const schedule = await stripeCli.subscriptionSchedules.retrieve(
-        scheduleId
-      );
+      const schedule =
+        await stripeCli.subscriptionSchedules.retrieve(scheduleId);
 
       const batchPricesGet = [];
       for (const item of schedule.phases[0].items) {

@@ -1,6 +1,8 @@
 import { config } from "dotenv";
 config();
 
+import cluster from "cluster";
+import os from "os";
 import mainRouter from "./internal/mainRouter.js";
 import express from "express";
 import cors from "cors";
@@ -8,9 +10,6 @@ import chalk from "chalk";
 import { apiRouter } from "./internal/api/apiRouter.js";
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 
-import pg from "pg";
-
-import http from "http";
 import { initLogger } from "./errors/logger.js";
 import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
@@ -20,6 +19,16 @@ import {
   createLogtailAll,
 } from "./external/logtail/logtailUtils.js";
 import { format } from "date-fns";
+import { CacheManager } from "./external/caching/CacheManager.js";
+import { initDrizzle } from "./db/initDrizzle.js";
+import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
+import pg from "pg";
+import http from "http";
+
+if (!process.env.DATABASE_URL) {
+  console.error(`DATABASE_URL is not set`);
+  process.exit(1);
+}
 
 const init = async () => {
   const app = express();
@@ -29,10 +38,7 @@ const init = async () => {
   server.keepAliveTimeout = 120000; // 120 seconds
   server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
 
-  const pgClient = new pg.Client(
-    process.env.SUPABASE_CONNECTION_STRING || process.env.DATABASE_URL || "",
-  );
-
+  const pgClient = new pg.Client(process.env.DATABASE_URL || "");
   await pgClient.connect();
   await QueueManager.getInstance(); // initialize the queue manager
   await CacheManager.getInstance();
@@ -42,7 +48,9 @@ const init = async () => {
   const logtailAll = createLogtailAll();
   const { client, db } = initDrizzle();
 
-  app.use((req: any, res, next) => {
+  const posthog = createPosthogCli();
+
+  app.use((req: any, res: any, next: any) => {
     req.sb = supabaseClient;
     req.pg = pgClient;
     req.db = db;
@@ -50,7 +58,8 @@ const init = async () => {
     req.logtailAll = logtailAll;
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
 
-    // Log incoming request
+    req.logtailAll = logtailAll;
+    req.posthog = posthog;
 
     try {
       let headersClone = structuredClone(req.headers);
@@ -65,6 +74,7 @@ const init = async () => {
       });
 
       req.logtail = createLogtail();
+      req.logger = req.logtail;
     } catch (error) {
       req.logtail = logtailAll; // fallback
       console.error(`Error creating req.logtail`);
@@ -115,11 +125,6 @@ const init = async () => {
     console.log(`Server running on port ${PORT}`);
   });
 };
-
-import cluster from "cluster";
-import os from "os";
-import { CacheManager } from "./external/caching/CacheManager.js";
-import { initDrizzle } from "./db/initDrizzle.js";
 
 if (process.env.NODE_ENV === "development") {
   init();

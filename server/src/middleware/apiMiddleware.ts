@@ -1,12 +1,8 @@
 import { withOrgAuth } from "./authMiddleware.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
-import { ErrCode } from "@autumn/shared";
+import { AuthType, ErrCode } from "@autumn/shared";
 import { floatToVersion } from "@/utils/versionUtils.js";
-
-// const parseVersion = (version: string) => {
-
-// };
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
   const authHeader =
@@ -62,7 +58,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
   let logger = req.logtail;
   try {
     const { valid, data } = await verifyKey({
-      sb: req.sb,
+      db: req.db,
       key: apiKey,
     });
 
@@ -76,6 +72,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
       };
       req.org = org;
       req.features = features;
+      req.auth = AuthType.SecretKey;
 
       next();
 
@@ -112,7 +109,7 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
     const { error, fallback, statusCode } = await verifySecretKey(
       req,
       res,
-      next
+      next,
     );
 
     if (!error) {

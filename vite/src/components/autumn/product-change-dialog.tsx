@@ -13,13 +13,13 @@ import {
 } from "@/components/pricing/pricing-dialog";
 
 import { getProductChangeTexts } from "@/lib/autumn/get-product-change-texts";
-import { type CheckProductFormattedPreview } from "autumn-js";
+import { type CheckProductPreview } from "autumn-js";
 import { useAutumn } from "autumn-js/react";
 
 export interface ProductChangeDialogProps {
   open: boolean;
   setOpen: (open: boolean) => void;
-  preview: CheckProductFormattedPreview;
+  preview: CheckProductPreview;
   onClick: (options?: any) => Promise<void>;
 }
 

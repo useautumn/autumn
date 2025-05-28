@@ -21,7 +21,7 @@ import { getRelatedCusPrice } from "@/internal/customers/entitlements/cusEntUtil
 import {
   getBillingType,
   getPriceForOverage,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 
 import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
@@ -40,13 +40,14 @@ import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js"
 import RecaseError from "@/utils/errorUtils.js";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
 };
 
 export const adjustAllowance = async ({
-  sb,
+  db,
   env,
   org,
   affectedFeature,
@@ -60,7 +61,7 @@ export const adjustAllowance = async ({
   replacedCount,
   fromEntities = false,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   env: AppEnv;
   affectedFeature: Feature;
   org: Organization;
@@ -101,20 +102,18 @@ export const adjustAllowance = async ({
   logger.info(
     `   - Balance: ${originalBalance} -> ${newBalance}${
       replacedCount ? ` (replaced ${replacedCount})` : ""
-    }`
+    }`,
   );
 
   if (!cusProduct) {
-    logger.error(
-      "❗️ Error: can't adjust allowance, no customer product found"
-    );
+    logger.error("❗️ Error: can't adjust allowance, no customer product found");
     return;
   }
 
   let stripeCli = createStripeCli({ org, env });
 
   let sub = await getUsageBasedSub({
-    sb: sb,
+    db,
     stripeCli,
     subIds: cusProduct.subscription_ids!,
     feature: affectedFeature,
@@ -129,7 +128,7 @@ export const adjustAllowance = async ({
   let config = cusPrice.price.config as UsagePriceConfig;
 
   let subItem = sub.items.data.find(
-    (item) => item.price.id === config.stripe_price_id
+    (item) => item.price.id === config.stripe_price_id,
   );
 
   if (!subItem) {
@@ -153,7 +152,7 @@ export const adjustAllowance = async ({
     .toNumber();
 
   logger.info(
-    `   - New quantity = ${paidUsage} (paid) + ${cusEnt.entitlement.allowance} (allowance) = ${quantity} `
+    `   - New quantity = ${paidUsage} (paid) + ${cusEnt.entitlement.allowance} (allowance) = ${quantity} `,
   );
 
   let prorationBehaviour = org.config.bill_upgrade_immediately
@@ -191,10 +190,8 @@ export const adjustAllowance = async ({
 
         if (!product) {
           product = await ProductService.getByInternalId({
-            sb,
+            db,
             internalId: cusProduct.internal_product_id,
-            orgId: org.id,
-            env,
           });
         }
 
@@ -257,7 +254,7 @@ export const adjustAllowance = async ({
         } catch (error) {}
 
         await InvoiceService.createInvoiceFromStripe({
-          sb,
+          db,
           stripeInvoice: latestInvoice,
           internalCustomerId: customer.internal_id,
           internalEntityId: cusProduct.internal_entity_id || undefined,
@@ -274,7 +271,7 @@ export const adjustAllowance = async ({
     quantity = 0;
     logger.warn("❗️ Warning: quantity is negative, setting to 0");
     logger.warn(
-      `❗️ Allowance: ${cusEnt.entitlement.allowance}, New Balance: ${newBalance}`
+      `❗️ Allowance: ${cusEnt.entitlement.allowance}, New Balance: ${newBalance}`,
     );
   }
 
@@ -294,7 +291,7 @@ export const adjustAllowance = async ({
       });
     } else {
       logger.error(
-        `❗️ adjustAllowance: Error updating subscription item (from event)`
+        `❗️ adjustAllowance: Error updating subscription item (from event)`,
       );
       logger.error(error);
     }

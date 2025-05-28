@@ -42,11 +42,12 @@ import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSu
 import {
   addBillingIntervalUnix,
   subtractBillingIntervalUnix,
-} from "@/internal/prices/billingIntervalUtils.js";
+} from "@/internal/products/prices/billingIntervalUtils.js";
 
 import { differenceInSeconds } from "date-fns";
 import { SuccessCode } from "@autumn/shared";
 import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export enum ProrationBehavior {
   Immediately = "immediately",
@@ -56,7 +57,7 @@ export enum ProrationBehavior {
 
 // UPGRADE FUNCTIONS
 export const handleStripeSubUpdate = async ({
-  sb,
+  db,
   stripeCli,
   curCusProduct,
   attachParams,
@@ -67,7 +68,7 @@ export const handleStripeSubUpdate = async ({
   prorationBehavior = ProrationBehavior.Immediately,
   shouldPreview = false,
 }: {
-  sb: any;
+  db: DrizzleCli;
   stripeCli: Stripe;
   curCusProduct: FullCusProduct;
   attachParams: AttachParams;
@@ -95,7 +96,7 @@ export const handleStripeSubUpdate = async ({
     let stripePriceExists = curPrices.some(
       (p) =>
         p.config!.stripe_price_id === item.price.id ||
-        (p.config as UsagePriceConfig).stripe_product_id === item.price.product
+        (p.config as UsagePriceConfig).stripe_product_id === item.price.product,
     );
 
     let stripeProdExists =
@@ -120,7 +121,7 @@ export const handleStripeSubUpdate = async ({
   // 3. Update current subscription
   let newSubs = [];
   const subUpdateRes = await updateStripeSubscription({
-    sb,
+    db,
     stripeCli,
     subscriptionId: firstSub.id,
     trialEnd,
@@ -156,7 +157,7 @@ export const handleStripeSubUpdate = async ({
       let now = Date.now();
       if (schedule.test_clock) {
         let testClock = await stripeCli.testHelpers.testClocks.retrieve(
-          schedule.test_clock as string
+          schedule.test_clock as string,
         );
         now = testClock.frozen_time * 1000;
       }
@@ -178,7 +179,7 @@ export const handleStripeSubUpdate = async ({
         stripeCli,
         cusProducts: [curCusProduct, attachParams.curScheduledProduct],
         itemSet,
-        sb,
+        db,
         org: attachParams.org,
         env: attachParams.customer.env,
       });
@@ -187,7 +188,7 @@ export const handleStripeSubUpdate = async ({
 
   // what's happening here...
   await attachParamsToInvoice({
-    sb,
+    db,
     attachParams,
     invoiceId: subUpdate.latest_invoice as string,
     logger,
@@ -206,13 +207,13 @@ export const handleStripeSubUpdate = async ({
     let nextCycleAnchorUnix = nextCycleAnchor;
     const naturalBillingDate = addBillingIntervalUnix(
       Date.now(),
-      itemSet.interval
+      itemSet.interval,
     );
 
     while (true) {
       const subtractedUnix = subtractBillingIntervalUnix(
         nextCycleAnchorUnix,
-        itemSet.interval
+        itemSet.interval,
       );
 
       if (subtractedUnix < Date.now()) {
@@ -226,14 +227,14 @@ export const handleStripeSubUpdate = async ({
     if (
       differenceInSeconds(
         new Date(naturalBillingDate),
-        new Date(nextCycleAnchorUnix)
+        new Date(nextCycleAnchorUnix),
       ) < 60
     ) {
       billingCycleAnchorUnix = undefined;
     }
 
     const newSub = (await createStripeSub({
-      sb,
+      db,
       stripeCli,
       customer: attachParams.customer,
       org: attachParams.org,
@@ -278,7 +279,7 @@ const handleOnlyEntsChanged = async ({
 
   // Remove subscription from previous cus product
   await CusProductService.update({
-    sb: req.sb,
+    db: req.db,
     cusProductId: curCusProduct.id,
     updates: {
       subscription_ids: [],
@@ -286,7 +287,7 @@ const handleOnlyEntsChanged = async ({
   });
 
   await createFullCusProduct({
-    sb: req.sb,
+    db: req.db,
     attachParams: attachToInsertParams(attachParams, attachParams.products[0]),
     subscriptionIds: curCusProduct.subscription_ids || [],
     disableFreeTrial: false,
@@ -306,7 +307,7 @@ const handleOnlyEntsChanged = async ({
         product_ids: attachParams.products.map((p) => p.id),
         code: SuccessCode.FeaturesUpdated,
         message: `Successfully updated features for customer ${attachParams.customer.id} on product ${attachParams.products[0].name}`,
-      })
+      }),
     );
   } else {
     res.status(200).json({
@@ -329,7 +330,9 @@ export const handleUpgrade = async ({
   newVersion = false,
   updateSameProduct = false,
 }: {
-  req: any;
+  req: {
+    db: DrizzleCli;
+  } & any;
   res: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
@@ -362,7 +365,7 @@ export const handleUpgrade = async ({
   }
 
   logger.info(
-    `Upgrading ${curFullProduct.name} to ${product.name} for ${customer.id}`
+    `Upgrading ${curFullProduct.name} to ${product.name} for ${customer.id}`,
   );
 
   const stripeCli = createStripeCli({ org, env: customer.env });
@@ -393,11 +396,11 @@ export const handleUpgrade = async ({
   if (trialToTrial || trialToPaid || toFreeProduct || paidToFreeProduct) {
     if (trialToTrial) {
       logger.info(
-        `Upgrading from trial to trial, cancelling and starting new subscription`
+        `Upgrading from trial to trial, cancelling and starting new subscription`,
       );
     } else if (toFreeProduct) {
       logger.info(
-        `switching to free product, cancelling (if needed) and adding free product`
+        `switching to free product, cancelling (if needed) and adding free product`,
       );
     }
 
@@ -436,7 +439,7 @@ export const handleUpgrade = async ({
     remainingExistingSubIds,
     newSubs,
   }: any = await handleStripeSubUpdate({
-    sb: req.sb,
+    db: req.db,
     curCusProduct,
     stripeCli,
     attachParams,
@@ -449,7 +452,7 @@ export const handleUpgrade = async ({
 
   logger.info("2. Bill for remaining usages");
   await billForRemainingUsages({
-    sb: req.sb,
+    db: req.db,
     attachParams,
     curCusProduct,
     newSubs,
@@ -457,14 +460,14 @@ export const handleUpgrade = async ({
   });
 
   logger.info(
-    "2.1. Remove old subscription ID from old cus product and expire"
+    "2.1. Remove old subscription ID from old cus product and expire",
   );
   await CusProductService.update({
-    sb: req.sb,
+    db: req.db,
     cusProductId: curCusProduct.id,
     updates: {
       subscription_ids: curCusProduct.subscription_ids!.filter(
-        (subId) => subId !== subUpdate.id
+        (subId) => subId !== subUpdate.id,
       ),
       processor: {
         ...curCusProduct.processor,
@@ -486,10 +489,10 @@ export const handleUpgrade = async ({
   logger.info("3. Creating new full cus product");
 
   await createFullCusProduct({
-    sb: req.sb,
+    db: req.db,
     attachParams: attachToInsertParams(attachParams, products[0]),
     subscriptionIds: newSubIds,
-    // keepResetIntervals: true,
+
     anchorToUnix:
       newSubs.length > 0 ? newSubs[0].current_period_end * 1000 : undefined,
 
@@ -518,7 +521,7 @@ export const handleUpgrade = async ({
       });
 
       await InvoiceService.createInvoiceFromStripe({
-        sb: req.sb,
+        db: req.db,
         stripeInvoice,
         internalCustomerId: customer.internal_id,
         internalEntityId: attachParams.internalEntityId,
@@ -543,10 +546,10 @@ export const handleUpgrade = async ({
           code: updateSameProduct
             ? SuccessCode.UpdatedSameProduct
             : newVersion
-            ? SuccessCode.UpgradedToNewVersion
-            : SuccessCode.UpgradedToNewProduct,
+              ? SuccessCode.UpgradedToNewVersion
+              : SuccessCode.UpgradedToNewProduct,
           message: `Successfully attached ${product.name} to ${customer.name} -- upgraded from ${curFullProduct.name}`,
-        })
+        }),
       );
     } else {
       res.status(200).json({

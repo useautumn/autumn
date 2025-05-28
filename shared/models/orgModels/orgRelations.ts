@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { apiKeys } from "../../db/apiKeysTable.js";
+import { apiKeys } from "../devModels/apiKeyTable.js";
 import { features } from "../featureModels/featureTable.js";
 import { organizations } from "./orgTable.js";
 

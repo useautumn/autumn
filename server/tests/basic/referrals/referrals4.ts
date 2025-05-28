@@ -19,7 +19,7 @@ import { advanceTestClock } from "tests/utils/stripeUtils.js";
 
 // UNCOMMENT FROM HERE
 describe(`${chalk.yellowBright(
-  "referrals4: Testing free product referrals with trial"
+  "referrals4: Testing free product referrals with trial",
 )}`, () => {
   let mainCustomerId = "main-referral-4";
   // let redeemers = ["referral4-r1", "referral4-r2"];
@@ -41,7 +41,7 @@ describe(`${chalk.yellowBright(
 
     await initCustomer({
       customerId: mainCustomerId,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -55,7 +55,7 @@ describe(`${chalk.yellowBright(
     let { testClockId: testClockId1, customer } =
       await initCustomerWithTestClock({
         customerId: redeemerId,
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
       });
@@ -97,7 +97,7 @@ describe(`${chalk.yellowBright(
   });
 
   it("should be triggered after trial ends", async function () {
-    let advanceTo = addHours(addDays(new Date(), 7), 2).getTime();
+    let advanceTo = addDays(addDays(new Date(), 7), 4).getTime();
     await advanceTestClock({
       stripeCli,
       testClockId,

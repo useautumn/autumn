@@ -11,6 +11,7 @@ import {
   FullCustomerPrice,
   FullProduct,
   Organization,
+  Product,
 } from "@autumn/shared";
 import Stripe from "stripe";
 import {
@@ -34,6 +35,7 @@ import {
   addProductsUpdatedWebhookTask,
   constructProductsUpdatedData,
 } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getPricesForCusProduct = ({
   cusProduct,
@@ -62,7 +64,7 @@ export const getScheduleIdsFromCusProducts = ({
 
 // CANCELLING FUTURE PRODUCT
 export const cancelFutureProductSchedule = async ({
-  sb,
+  db,
   org,
   stripeCli,
   cusProducts,
@@ -75,16 +77,16 @@ export const cancelFutureProductSchedule = async ({
   renewCurProduct = true,
   sendWebhook = true,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   stripeCli: Stripe;
   cusProducts: FullCusProduct[];
-  product: FullProduct;
+  product: Product;
   includeOldItems?: boolean;
   logger: any;
   inIntervals?: string[];
   env: AppEnv;
-  internalEntityId?: string;
+  internalEntityId?: string | null;
   renewCurProduct?: boolean;
   sendWebhook?: boolean;
 }) => {
@@ -145,7 +147,7 @@ export const cancelFutureProductSchedule = async ({
 
     // 1. Remove cur scheduled product items from schedule
     const activeCusProducts = cusProducts.filter((cusProduct) =>
-      isActiveStatus(cusProduct?.status)
+      isActiveStatus(cusProduct?.status),
     );
     const filteredScheduleItems = getFilteredScheduleItems({
       scheduleObj,
@@ -156,7 +158,7 @@ export const cancelFutureProductSchedule = async ({
     // 2. If any items left, update schedule with cur main product!
     if (filteredScheduleItems.length > 0) {
       let oldItemSet = oldItemSets.find(
-        (itemSet) => itemSet.interval === interval
+        (itemSet) => itemSet.interval === interval,
       );
 
       await updateScheduledSubWithNewItems({
@@ -165,7 +167,7 @@ export const cancelFutureProductSchedule = async ({
         cusProducts: [curMainProduct, curScheduledProduct],
         stripeCli: stripeCli,
         itemSet: null,
-        sb: sb,
+        db,
         org: org,
         env: env,
       });
@@ -173,7 +175,7 @@ export const cancelFutureProductSchedule = async ({
       // Put back schedule id into curMainProduct
       if (includeOldItems && renewCurProduct) {
         await CusProductService.update({
-          sb,
+          db,
           cusProductId: curMainProduct!.id,
           updates: {
             scheduled_ids: [
@@ -185,11 +187,11 @@ export const cancelFutureProductSchedule = async ({
       } else {
         // Remove schedule id from curMainProduct
         await CusProductService.update({
-          sb,
+          db,
           cusProductId: curMainProduct!.id,
           updates: {
             scheduled_ids: curMainProduct!.scheduled_ids?.filter(
-              (id) => id !== schedule.id
+              (id) => id !== schedule.id,
             ),
           },
         });
@@ -205,14 +207,14 @@ export const cancelFutureProductSchedule = async ({
         await stripeCli.subscriptionSchedules.cancel(schedule.id);
       } catch (error: any) {
         logger.warn(
-          `❌ Error cancelling schedule: ${schedule.id}, ${error.message}`
+          `❌ Error cancelling schedule: ${schedule.id}, ${error.message}`,
         );
       }
 
       const subWithSameInterval = curSubs.find(
         (sub) =>
           sub.items.data.length > 0 &&
-          sub.items.data[0]?.price?.recurring?.interval === interval
+          sub.items.data[0]?.price?.recurring?.interval === interval,
       );
 
       if (subWithSameInterval && renewCurProduct) {
@@ -220,7 +222,7 @@ export const cancelFutureProductSchedule = async ({
           cancel_at: null,
         });
         await CusProductService.update({
-          sb,
+          db,
           cusProductId: curMainProduct!.id,
           updates: {
             canceled_at: null,
@@ -251,7 +253,7 @@ export const cancelFutureProductSchedule = async ({
 
     if (otherCusProductsWithSameSub.length > 0) {
       await addCurMainProductToSchedule({
-        sb,
+        db,
         org,
         env,
         stripeCli,
@@ -265,7 +267,7 @@ export const cancelFutureProductSchedule = async ({
     // 99% of cases!
     else {
       logger.info(
-        "No other cus products with same sub, uncanceling current main product"
+        "No other cus products with same sub, uncanceling current main product",
       );
 
       if (curMainSubIds && curMainSubIds.length > 0) {
@@ -276,7 +278,7 @@ export const cancelFutureProductSchedule = async ({
         }
 
         await CusProductService.update({
-          sb,
+          db,
           cusProductId: curMainProduct!.id,
           updates: {
             canceled_at: null,
@@ -286,10 +288,10 @@ export const cancelFutureProductSchedule = async ({
         try {
           let product = curMainProduct.product;
           let prices = curMainProduct.customer_prices.map(
-            (cp: FullCustomerPrice) => cp.price
+            (cp: FullCustomerPrice) => cp.price,
           );
           let entitlements = curMainProduct.customer_entitlements.map(
-            (ce: FullCustomerEntitlement) => ce.entitlement
+            (ce: FullCustomerEntitlement) => ce.entitlement,
           );
 
           if (sendWebhook) {
@@ -308,7 +310,7 @@ export const cancelFutureProductSchedule = async ({
           }
         } catch (error) {
           logger.error(
-            `❌ Error sending products updated webhook from cancelFutureProductSchedule: ${error}`
+            `❌ Error sending products updated webhook from cancelFutureProductSchedule: ${error}`,
           );
         }
       }

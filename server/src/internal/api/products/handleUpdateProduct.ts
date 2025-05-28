@@ -13,43 +13,33 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { handleNewEntitlements } from "@/internal/products/entitlements/entitlementUtils.js";
-import { handleNewPrices } from "@/internal/prices/priceInitUtils.js";
+
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import {
-  handleVersionProduct,
-  handleVersionProductV2,
-} from "./handleVersionProduct.js";
+import { handleVersionProductV2 } from "./handleVersionProduct.js";
 import { productsAreDifferent } from "@/internal/products/productUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
-import { Request, Response } from "@/utils/models/Request.js";
+import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleUpdateProductDetails = async ({
+  db,
   newProduct,
   curProduct,
   org,
-  sb,
-  cusProductExists,
   rewardPrograms,
 }: {
+  db: DrizzleCli;
   curProduct: Product;
   newProduct: UpdateProduct;
   org: Organization;
-  sb: SupabaseClient;
-  cusProductExists: boolean;
   rewardPrograms: RewardProgram[];
 }) => {
-  // 1. Check if they're same
-  // console.log("New product: ", newProduct);
-  // throw new Error("test");
-
-  let customersOnAllVersions = await CusProductService.getByProductId(
-    sb,
-    curProduct.id,
-  );
+  let customersOnAllVersions = await CusProductService.getByProductId({
+    db,
+    productId: curProduct.id,
+  });
 
   const productsAreSame = (prod1: Product, prod2: UpdateProduct) => {
     if (notNullish(prod2.id) && prod1.id != prod2.id) {
@@ -101,8 +91,8 @@ export const handleUpdateProductDetails = async ({
   console.log(`Updating product ${curProduct.id} (org: ${org.slug})`);
 
   // 2. Update product
-  await ProductService.update({
-    sb,
+  await ProductService.updateByInternalId({
+    db,
     internalId: curProduct.internal_id,
     update: {
       id: newProduct.id,
@@ -119,129 +109,6 @@ export const handleUpdateProductDetails = async ({
   curProduct.is_default = newProduct.is_default || curProduct.is_default;
 };
 
-export const handleUpdateProduct = async (req: any, res: any) => {
-  const { productId } = req.params;
-  const sb = req.sb;
-  const orgId = req.orgId;
-  const env = req.env;
-
-  const { prices, entitlements, free_trial } = req.body;
-
-  try {
-    const [features, org, fullProduct] = await Promise.all([
-      FeatureService.getFromReq(req),
-      OrgService.getFullOrg({
-        sb,
-        orgId,
-      }),
-      ProductService.getFullProduct({
-        sb,
-        productId,
-        orgId,
-        env,
-      }),
-    ]);
-
-    if (!fullProduct) {
-      throw new RecaseError({
-        message: "Product not found",
-        code: ErrCode.ProductNotFound,
-        statusCode: 404,
-      });
-    }
-
-    const cusProductsCurVersion =
-      await CusProductService.getByInternalProductId(
-        sb,
-        fullProduct.internal_id,
-      );
-
-    let cusProductExists = cusProductsCurVersion.length > 0;
-
-    await handleUpdateProductDetails({
-      sb,
-      curProduct: fullProduct,
-      newProduct: UpdateProductSchema.parse(req.body),
-      org,
-      cusProductExists,
-      rewardPrograms: [],
-    });
-
-    let productHasChanged = productsAreDifferent({
-      product1: fullProduct,
-      product2: {
-        ...fullProduct,
-        prices: notNullish(prices) ? prices : fullProduct.prices,
-        entitlements: notNullish(entitlements)
-          ? entitlements
-          : fullProduct.entitlements,
-        free_trial:
-          free_trial !== undefined ? free_trial : fullProduct.free_trial,
-      },
-    });
-
-    if (cusProductExists && productHasChanged) {
-      await handleVersionProduct({
-        req,
-        res,
-        sb,
-        latestProduct: fullProduct,
-        org,
-        env,
-        prices,
-        entitlements,
-        freeTrial: free_trial,
-      });
-      return;
-    }
-
-    if (free_trial !== undefined) {
-      await handleNewFreeTrial({
-        sb,
-        curFreeTrial: fullProduct.free_trial,
-        newFreeTrial: free_trial,
-        internalProductId: fullProduct.internal_id,
-        isCustom: false,
-      });
-    }
-
-    // 1. Handle changing of entitlements
-    if (notNullish(entitlements)) {
-      await handleNewEntitlements({
-        sb,
-        newEnts: entitlements,
-        curEnts: fullProduct.entitlements,
-        features,
-        orgId,
-        internalProductId: fullProduct.internal_id,
-        isCustom: false,
-        prices,
-      });
-    }
-
-    if (notNullish(prices)) {
-      await handleNewPrices({
-        sb,
-        newPrices: prices,
-        curPrices: fullProduct.prices,
-        entitlements,
-        internalProductId: fullProduct.internal_id,
-        isCustom: false,
-        features,
-        product: fullProduct,
-        env,
-        org,
-      });
-    }
-
-    res.status(200).json({ message: "Product updated" });
-    return;
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "Update product" });
-  }
-};
-
-// Update product v2
 export const handleUpdateProductV2 = async (req: any, res: any) =>
   routeHandler({
     req,
@@ -249,22 +116,19 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
     action: "Update product",
     handler: async () => {
       const { productId } = req.params;
-      const { sb, orgId, env, logtail: logger, db } = req;
+      const { orgId, env, logtail: logger, db } = req;
 
       const [features, org, fullProduct, rewardPrograms] = await Promise.all([
         FeatureService.getFromReq(req),
-        OrgService.getFullOrg({
-          sb,
-          orgId,
-        }),
-        ProductService.getFullProduct({
-          sb,
-          productId,
+        OrgService.getFromReq(req),
+        ProductService.getFull({
+          db,
+          idOrInternalId: productId,
           orgId,
           env,
         }),
         RewardProgramService.getByProductId({
-          sb,
+          db,
           productIds: [productId],
           orgId,
           env,
@@ -280,30 +144,35 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
       }
 
       // 1. Update product details
-      // Get reward programs using product id
+
       const cusProductsCurVersion =
-        await CusProductService.getByInternalProductId(
-          sb,
-          fullProduct.internal_id,
-        );
+        await CusProductService.getByInternalProductId({
+          db,
+          internalProductId: fullProduct.internal_id,
+        });
 
       let cusProductExists = cusProductsCurVersion.length > 0;
 
       await handleUpdateProductDetails({
-        sb,
+        db,
         curProduct: fullProduct,
         newProduct: UpdateProductSchema.parse(req.body),
         org,
-        cusProductExists,
         rewardPrograms,
       });
 
       let itemsExist = notNullish(req.body.items);
+
+      // let itemsDifferent = productsAreDifferent2(
+      //   req.body,
+      //   fullProduct,
+      //   features,
+      // );
+
       if (cusProductExists && itemsExist) {
         await handleVersionProductV2({
           req,
           res,
-          sb,
           latestProduct: fullProduct,
           org,
           env,
@@ -317,7 +186,6 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
       await handleNewProductItems({
         db,
-        sb,
         curPrices: fullProduct.prices,
         curEnts: fullProduct.entitlements,
         newItems: items,
@@ -329,7 +197,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
       if (free_trial !== undefined) {
         await handleNewFreeTrial({
-          sb,
+          db,
           curFreeTrial: fullProduct.free_trial,
           newFreeTrial: free_trial,
           internalProductId: fullProduct.internal_id,

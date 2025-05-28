@@ -14,7 +14,7 @@ import { timeout } from "tests/utils/genUtils.js";
 
 describe(
   chalk.yellowBright(
-    "06_switch: Testing upgrades / downgrades from pro <-> premium"
+    "06_switch: Testing upgrades / downgrades from pro <-> premium",
   ),
   () => {
     let customerId = "alex-upgrade-downgrade-customer";
@@ -29,7 +29,7 @@ describe(
       });
       const { testClockId: newTestClockId } = await initCustomerWithTestClock({
         customerId,
-        sb: this.sb,
+        db: this.db,
         org: this.org,
         env: this.env,
         fingerprint,
@@ -87,7 +87,7 @@ describe(
         });
 
         let proProduct = cusRes.products.find(
-          (p: any) => p.id === alexProducts.pro.id
+          (p: any) => p.id === alexProducts.pro.id,
         );
 
         expect(proProduct.status).to.equal(CusProductStatus.Scheduled);
@@ -151,7 +151,7 @@ describe(
         expect(lastInvoice.total).to.be.lessThan(proratedAmount * 1.1);
       });
     });
-  }
+  },
 );
 
 // Also, downgrade and cancel pro
@@ -168,7 +168,7 @@ describe(chalk.yellowBright("06_switch: Testing fingerprint"), () => {
         fingerprint,
       },
       attachPm: true,
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
     });

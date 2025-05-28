@@ -15,14 +15,14 @@ import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { CusProductService } from "../products/CusProductService.js";
 import { SupabaseClient } from "@supabase/supabase-js";
-import { pricesOnlyOneOff } from "@/internal/prices/priceUtils.js";
+
 import {
   getStripeSubs,
   getUsageBasedSub,
 } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
-import { CustomerEntitlementService } from "../entitlements/CusEntitlementService.js";
+import { CusEntService } from "../entitlements/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
 import { cancelFutureProductSchedule } from "../change-product/scheduleUtils.js";
 import {
@@ -33,16 +33,17 @@ import { fullCusProductToProduct } from "../products/cusProductUtils.js";
 
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getOptionsToUpdate = (
   oldOptionsList: any[],
-  newOptionsList: any[]
+  newOptionsList: any[],
 ) => {
   let optionsToUpdate = [];
   for (const newOptions of newOptionsList) {
     let internalFeatureId = newOptions.internal_feature_id;
     let existingOptions = oldOptionsList.find(
-      (o: any) => o.internal_feature_id === internalFeatureId
+      (o: any) => o.internal_feature_id === internalFeatureId,
     );
 
     if (existingOptions?.quantity !== newOptions.quantity) {
@@ -57,13 +58,13 @@ export const getOptionsToUpdate = (
 };
 
 const updateFeatureQuantity = async ({
-  sb,
+  db,
   org,
   customer,
   curCusProduct,
   optionsToUpdate,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   customer: Customer;
   curCusProduct: FullCusProduct;
@@ -82,7 +83,7 @@ const updateFeatureQuantity = async ({
   for (const options of optionsToUpdate) {
     const { new: newOptions, old: oldOptions } = options;
     const subToUpdate = await getUsageBasedSub({
-      sb: sb,
+      db,
       stripeCli: stripeCli,
       subIds: curCusProduct.subscription_ids || [],
       feature: {
@@ -105,13 +106,14 @@ const updateFeatureQuantity = async ({
     const relatedPrice = curCusProduct.customer_prices.find(
       (cusPrice: FullCustomerPrice) =>
         (cusPrice.price.config as UsagePriceConfig).internal_feature_id ==
-        newOptions.internal_feature_id
+        newOptions.internal_feature_id,
     );
 
     let config = relatedPrice?.price.config as UsagePriceConfig;
 
     let subItem = subToUpdate?.items.data.find(
-      (item: Stripe.SubscriptionItem) => item.price.id == config.stripe_price_id
+      (item: Stripe.SubscriptionItem) =>
+        item.price.id == config.stripe_price_id,
     );
 
     if (!subItem) {
@@ -123,7 +125,7 @@ const updateFeatureQuantity = async ({
       });
 
       console.log(
-        `   ✅ Successfully created subscription item for feature ${newOptions.feature_id}: ${newOptions.quantity}`
+        `   ✅ Successfully created subscription item for feature ${newOptions.feature_id}: ${newOptions.quantity}`,
       );
     } else {
       // Update quantity
@@ -131,7 +133,7 @@ const updateFeatureQuantity = async ({
         quantity: newOptions.quantity,
       });
       console.log(
-        `   ✅ Successfully updated subscription item for feature ${newOptions.feature_id}: ${newOptions.quantity}`
+        `   ✅ Successfully updated subscription item for feature ${newOptions.feature_id}: ${newOptions.quantity}`,
       );
     }
 
@@ -139,7 +141,8 @@ const updateFeatureQuantity = async ({
     let difference = newOptions.quantity - oldOptions.quantity;
     let cusEnt = curCusProduct.customer_entitlements.find(
       (cusEnt: FullCustomerEntitlement) =>
-        cusEnt.entitlement.internal_feature_id == newOptions.internal_feature_id
+        cusEnt.entitlement.internal_feature_id ==
+        newOptions.internal_feature_id,
     );
 
     if (cusEnt) {
@@ -147,8 +150,8 @@ const updateFeatureQuantity = async ({
         balance: new Decimal(cusEnt?.balance || 0).plus(difference).toNumber(),
       };
 
-      await CustomerEntitlementService.update({
-        sb,
+      await CusEntService.update({
+        db,
         id: cusEnt.id,
         updates,
       });
@@ -156,7 +159,7 @@ const updateFeatureQuantity = async ({
   }
 
   await CusProductService.update({
-    sb,
+    db,
     cusProductId: curCusProduct.id,
     updates: { options: optionsToUpdate.map((o) => o.new) },
   });
@@ -207,7 +210,7 @@ export const hasEntitlementsChanged = ({
 };
 
 export const handleSameMainProduct = async ({
-  sb,
+  db,
   curScheduledProduct,
   curMainProduct,
   attachParams,
@@ -215,7 +218,7 @@ export const handleSameMainProduct = async ({
   req,
   res,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   curScheduledProduct: any;
   curMainProduct: FullCusProduct;
   attachParams: AttachParams;
@@ -230,7 +233,7 @@ export const handleSameMainProduct = async ({
 
   const optionsToUpdate = getOptionsToUpdate(
     curMainProduct.options,
-    newOptionsList
+    newOptionsList,
   );
 
   // If new version
@@ -262,7 +265,7 @@ export const handleSameMainProduct = async ({
 
     let entitlementsChanged = hasEntitlementsChanged({
       oldEntitlements: curMainProduct.customer_entitlements.map(
-        (e) => e.entitlement
+        (e) => e.entitlement,
       ),
       newEntitlements: attachParams.entitlements,
     });
@@ -270,7 +273,7 @@ export const handleSameMainProduct = async ({
     if (pricesChanged || entitlementsChanged) {
       logger.info(`SCENARIO 0: UPDATE SAME PRODUCT (CUSTOM)`);
       logger.info(
-        `Prices changed: ${pricesChanged}, Entitlements changed: ${entitlementsChanged}`
+        `Prices changed: ${pricesChanged}, Entitlements changed: ${entitlementsChanged}`,
       );
 
       attachParams.isCustom = true;
@@ -312,7 +315,7 @@ export const handleSameMainProduct = async ({
 
   if (curScheduledProduct) {
     await cancelFutureProductSchedule({
-      sb,
+      db,
       org,
       stripeCli,
       cusProducts: attachParams.cusProducts!,
@@ -324,12 +327,12 @@ export const handleSameMainProduct = async ({
 
     // Delete scheduled product
     await CusProductService.delete({
-      sb,
+      db,
       cusProductId: curScheduledProduct.id,
     });
 
     messages.push(
-      `Removed scheduled product ${curScheduledProduct.product.name}`
+      `Removed scheduled product ${curScheduledProduct.product.name}`,
     );
   } else if (isCanceled) {
     for (const subId of curMainProduct.subscription_ids || []) {
@@ -341,21 +344,21 @@ export const handleSameMainProduct = async ({
     let entities = attachParams.entities;
     let entity = curMainProduct.internal_entity_id
       ? entities.find(
-          (e) => e.internal_id === curMainProduct.internal_entity_id
+          (e) => e.internal_id === curMainProduct.internal_entity_id,
         )
       : undefined;
 
     messages.push(
       `Successfully renewed product ${product.name}${
         entity ? ` for entity ${entity.name || entity.id}` : ""
-      }`
+      }`,
     );
   }
 
   // 2. Update quantities
   if (optionsToUpdate.length > 0) {
     await updateFeatureQuantity({
-      sb,
+      db,
       org,
       customer,
       curCusProduct: curMainProduct,
@@ -365,7 +368,7 @@ export const handleSameMainProduct = async ({
     for (const option of optionsToUpdate) {
       const { new: newOption, old: oldOption } = option;
       messages.push(
-        `Successfully updated quantity for ${newOption.feature_id} from ${oldOption.quantity} to ${newOption.quantity}`
+        `Successfully updated quantity for ${newOption.feature_id} from ${oldOption.quantity} to ${newOption.quantity}`,
       );
     }
   }
@@ -379,7 +382,7 @@ export const handleSameMainProduct = async ({
       message: `Successfully renewed product ${products
         .map((p) => p.name)
         .join(", ")}`,
-    })
+    }),
   );
 
   return {

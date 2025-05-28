@@ -1,22 +1,23 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
 import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+
 import RecaseError from "@/utils/errorUtils.js";
+import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { AppEnv, ErrCode, MinOrg, Organization } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { AppEnv, ErrCode, Organization } from "@autumn/shared";
 import chalk from "chalk";
 import { StatusCodes } from "http-status-codes";
 
 export const deleteCusById = async ({
-  sb,
+  db,
   org,
   customerId,
   env,
   logger,
   deleteInStripe = false,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   customerId: string;
   env: AppEnv;
@@ -24,12 +25,12 @@ export const deleteCusById = async ({
   deleteInStripe?: boolean;
 }) => {
   console.log(
-    `${chalk.yellow("deleteCusById")}: ${customerId}, ${org.id}, ${env}`
+    `${chalk.yellow("deleteCusById")}: ${customerId}, ${org.id}, ${env}`,
   );
   const orgId = org.id;
 
-  const customer = await CusService.getByIdOrInternalId({
-    sb,
+  const customer = await CusService.get({
+    db,
     idOrInternalId: customerId,
     orgId,
     env,
@@ -58,13 +59,13 @@ export const deleteCusById = async ({
         `Couldn't delete ${chalk.yellow("stripe customer")} ${
           customer.processor.id
         }`,
-        error?.message || error
+        error?.message || error,
       );
     }
   }
 
   await CusService.deleteByInternalId({
-    sb: sb,
+    db,
     internalId: customer.internal_id,
     orgId,
     env: env,
@@ -81,13 +82,15 @@ export const handleDeleteCustomer = async (req: any, res: any) =>
     req,
     res,
     action: "delete customer",
-    handler: async () => {
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+      const { env, logtail: logger, db, org } = req;
+
       const data = await deleteCusById({
-        sb: req.sb,
-        org: req.org,
+        db,
+        org,
         customerId: req.params.customer_id,
-        env: req.env,
-        logger: req.logtail,
+        env,
+        logger,
         deleteInStripe: req.query.delete_in_stripe === "true",
       });
 

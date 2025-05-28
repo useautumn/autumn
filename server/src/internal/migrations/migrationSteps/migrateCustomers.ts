@@ -18,9 +18,10 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { migrateCustomer } from "./migrateCustomer.js";
 import { sendMigrationEmail } from "./sendMigrationEmail.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const migrateCustomers = async ({
-  sb,
+  db,
   migrationJob,
   fromProduct,
   toProduct,
@@ -28,7 +29,7 @@ export const migrateCustomers = async ({
   customers,
   features,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   migrationJob: MigrationJob;
   fromProduct: FullProduct;
   toProduct: FullProduct;
@@ -36,10 +37,8 @@ export const migrateCustomers = async ({
   customers: Customer[];
   features: Feature[];
 }) => {
-  // console.log(`Migrating ${customers.length} customers`);
-  // return;
   await MigrationService.updateJob({
-    sb,
+    db,
     migrationJobId: migrationJob.id,
     updates: {
       current_step: MigrationJobStep.MigrateCustomers,
@@ -49,8 +48,8 @@ export const migrateCustomers = async ({
   let batchCount = 0;
   let { org_id: orgId, env } = migrationJob;
 
-  let org = await OrgService.getFullOrg({
-    sb,
+  let org = await OrgService.get({
+    db,
     orgId,
   });
 
@@ -62,14 +61,14 @@ export const migrateCustomers = async ({
   for (let price of toProduct.prices) {
     batchCreate.push(
       createStripePriceIFNotExist({
-        sb,
+        db,
         stripeCli,
         price,
         entitlements: toProduct.entitlements,
         product: toProduct,
         org,
         logger,
-      })
+      }),
     );
   }
 
@@ -83,8 +82,8 @@ export const migrateCustomers = async ({
     for (let customer of batchCustomers) {
       batchPromises.push(
         migrateCustomer({
+          db,
           migrationJob,
-          sb,
           customer,
           org,
           logger,
@@ -93,7 +92,7 @@ export const migrateCustomers = async ({
           fromProduct,
           toProduct,
           features,
-        })
+        }),
       );
     }
 
@@ -103,12 +102,12 @@ export const migrateCustomers = async ({
     logger.info(
       `Job: ${migrationJob.id} - Migrated ${i + batchCustomers.length}/${
         customers.length
-      }  customers, ${numPassed} passed, ${numFailed} failed`
+      }  customers, ${numPassed} passed, ${numFailed} failed`,
     );
 
     // Get current number of customers migrated
     let curMigrationJob = await MigrationService.getJob({
-      sb,
+      db,
       id: migrationJob.id,
     });
     let curSucceeded =
@@ -119,7 +118,7 @@ export const migrateCustomers = async ({
       0;
 
     await MigrationService.updateJob({
-      sb,
+      db,
       migrationJobId: migrationJob.id,
       updates: {
         step_details: {
@@ -144,13 +143,13 @@ export const migrateCustomers = async ({
   let migrationDetails: any = {};
   try {
     let errors = await MigrationService.getErrors({
-      sb,
+      db,
       migrationJobId: migrationJob.id,
     });
 
     migrationDetails.num_errors = errors!.length;
     migrationDetails.failed_customers = errors!.map(
-      (e: any) => `${e.customer.id} - ${e.customer.name}`
+      (e: any) => `${e.customer.id} - ${e.customer.name}`,
     );
   } catch (error) {
     migrationDetails.failed_to_get_errors = true;
@@ -160,12 +159,12 @@ export const migrateCustomers = async ({
   }
 
   let curMigrationJob = await MigrationService.getJob({
-    sb,
+    db,
     id: migrationJob.id,
   });
 
   await MigrationService.updateJob({
-    sb,
+    db,
     migrationJobId: migrationJob.id,
     updates: {
       current_step: MigrationJobStep.Finished,
@@ -177,7 +176,7 @@ export const migrateCustomers = async ({
   });
 
   await sendMigrationEmail({
-    sb,
+    db,
     migrationJobId: migrationJob.id,
     org,
   });

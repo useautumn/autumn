@@ -3,7 +3,7 @@ import { handleRequestError } from "@/utils/errorUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { CusProductStatus, ErrCode } from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getCusEntsInFeatures } from "../cusUtils.js";
 import { Decimal } from "decimal.js";
@@ -13,20 +13,18 @@ import {
 } from "@/trigger/updateBalanceTask.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-import { initGroupBalancesFromUpdateBalances } from "@/internal/customers/entitlements/groupByUtils.js";
-
 import {
   getCusEntBalance,
   getUnlimitedAndUsageAllowed,
 } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 const getCusFeaturesAndOrg = async (req: any, customerId: string) => {
   // 1. Get customer
   const [customer, features, org] = await Promise.all([
-    CusService.getWithProducts({
-      sb: req.sb,
+    CusService.getFull({
+      db: req.db,
       idOrInternalId: customerId,
       orgId: req.orgId,
       env: req.env,
@@ -51,7 +49,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
   try {
     const logger = req.logtail;
     const cusId = req.params.customer_id;
-    const { sb, env } = req;
+    const { env, db } = req;
     const { balances } = req.body;
 
     if (!Array.isArray(balances)) {
@@ -65,7 +63,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
     const { customer, features, org } = await getCusFeaturesAndOrg(req, cusId);
 
     const featuresToUpdate = features.filter((f: any) =>
-      balances.map((b: any) => b.feature_id).includes(f.id)
+      balances.map((b: any) => b.feature_id).includes(f.id),
     );
 
     if (featuresToUpdate.length === 0) {
@@ -79,28 +77,20 @@ export const handleUpdateBalances = async (req: any, res: any) => {
     // Can't update feature -> credit system here...
 
     const { cusEnts, cusPrices } = await getCusEntsInFeatures({
-      sb: req.sb,
       customer,
       internalFeatureIds: featuresToUpdate.map((f) => f.internal_id!),
       logger: req.logtail,
     });
 
-    // // Initialize balances
-    // await initGroupBalancesFromUpdateBalances({
-    //   sb: req.sb,
-    //   cusEnts,
-    //   features: featuresToUpdate,
-    //   updates: balances,
-    // });
-
     logger.info("--------------------------------");
     logger.info(
-      `REQUEST: UPDATE BALANCES FOR CUSTOMER ${customer.id}, ORG: ${req.minOrg.slug}`
+      `REQUEST: UPDATE BALANCES FOR CUSTOMER ${customer.id}, ORG: ${req.minOrg.slug}`,
     );
     logger.info(
       `Features to update: ${balances.map(
-        (b: any) => `${b.feature_id} - ${b.unlimited ? "unlimited" : b.balance}`
-      )}`
+        (b: any) =>
+          `${b.feature_id} - ${b.unlimited ? "unlimited" : b.balance}`,
+      )}`,
     );
 
     // Get deductions for each feature
@@ -201,23 +191,24 @@ export const handleUpdateBalances = async (req: any, res: any) => {
             ? cusEnts.find(
                 (cusEnt) =>
                   cusEnt.internal_feature_id === feature!.internal_id! &&
-                  cusEnt.entitlement.interval === interval
+                  cusEnt.entitlement.interval === interval,
               )
             : cusEnts.find(
-                (cusEnt) => cusEnt.internal_feature_id === feature!.internal_id!
+                (cusEnt) =>
+                  cusEnt.internal_feature_id === feature!.internal_id!,
               );
 
           if (!cusEnt) {
             logger.warn(
               `No active cus ent to set unlimited balance for feature: ${
                 feature!.id
-              }`
+              }`,
             );
             return;
           }
 
-          await CustomerEntitlementService.update({
-            sb: req.sb,
+          await CusEntService.update({
+            db,
             id: cusEnt.id,
             updates: {
               unlimited: true,
@@ -239,7 +230,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
           toDeduct = await deductAllowanceFromCusEnt({
             toDeduct,
             deductParams: {
-              sb: req.sb,
+              db,
               feature: featureDeduction.feature!,
               env: req.env,
               org,
@@ -262,7 +253,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
           toDeduct,
           cusEnts,
           deductParams: {
-            sb,
+            db,
             feature: featureDeduction.feature!,
             env,
             org,

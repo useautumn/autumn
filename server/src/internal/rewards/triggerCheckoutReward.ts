@@ -4,12 +4,13 @@ import { triggerFreeProduct, triggerRedemption } from "./referralUtils.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { getRewardCat } from "./rewardUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 export const runTriggerCheckoutReward = async ({
-  sb,
+  db,
   payload,
   logger,
 }: {
-  sb: any;
+  db: DrizzleCli;
   payload: any;
   logger: any;
 }) => {
@@ -24,7 +25,7 @@ export const runTriggerCheckoutReward = async ({
 
     // 1. Check if redemption exists
     let redemptions = await RewardRedemptionService.getByCustomer({
-      sb,
+      db,
       internalCustomerId: customer.internal_id, // customer that redeemed code
       withRewardProgram: true,
       triggered: false,
@@ -46,13 +47,13 @@ export const runTriggerCheckoutReward = async ({
       logger.info(`--------------------------------`);
       logger.info(`CHECKING FOR CHECKOUT REWARD, ORG: ${org.slug}`);
       logger.info(
-        `Redeemed by: ${customer.name} (${customer.id}) for referral program: ${reward_program.id}`
+        `Redeemed by: ${customer.name} (${customer.id}) for referral program: ${reward_program.id}`,
       );
       logger.info(`Referral code: ${referralCode.code} (${referralCode.id})`);
 
       if (!reward_program.product_ids.includes(product.id)) {
         logger.info(
-          `Product ${product.name} (${product.id}) not included in referral program, skipping`
+          `Product ${product.name} (${product.id}) not included in referral program, skipping`,
         );
         return;
       }
@@ -72,13 +73,13 @@ export const runTriggerCheckoutReward = async ({
 
       // Get redemption count
       let redemptionCount = await RewardProgramService.getCodeRedemptionCount({
-        sb,
+        db,
         referralCodeId: referralCode.id,
       });
 
       if (redemptionCount >= reward_program.max_redemptions) {
         logger.info(
-          `Max redemptions reached, not triggering latest redemption`
+          `Max redemptions reached, not triggering latest redemption`,
         );
         return;
       }
@@ -86,7 +87,7 @@ export const runTriggerCheckoutReward = async ({
       let rewardCat = getRewardCat(reward);
       if (rewardCat === RewardCategory.FreeProduct) {
         await triggerFreeProduct({
-          sb,
+          db,
           referralCode,
           redeemer: customer,
           rewardProgram: reward_program,
@@ -97,7 +98,7 @@ export const runTriggerCheckoutReward = async ({
         });
       } else {
         await triggerRedemption({
-          sb,
+          db,
           referralCode,
           org,
           env,

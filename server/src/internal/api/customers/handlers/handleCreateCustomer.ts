@@ -20,7 +20,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { getNextStartOfMonthUnix } from "@/internal/prices/billingIntervalUtils.js";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
   initProductInStripe,
@@ -31,16 +31,17 @@ import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js"
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { parseCusExpand } from "../cusUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const initStripeCusAndProducts = async ({
-  sb,
+  db,
   org,
   env,
   customer,
   products,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   customer: Customer;
@@ -49,7 +50,7 @@ export const initStripeCusAndProducts = async ({
 }) => {
   const batchInit = [
     createStripeCusIfNotExists({
-      sb,
+      db,
       org,
       env,
       customer,
@@ -60,12 +61,12 @@ export const initStripeCusAndProducts = async ({
   for (const product of products) {
     batchInit.push(
       initProductInStripe({
-        sb,
+        db,
         org,
         env,
         logger,
         product,
-      })
+      }),
     );
   }
 
@@ -73,7 +74,7 @@ export const initStripeCusAndProducts = async ({
 };
 
 export const createNewCustomer = async ({
-  sb,
+  db,
   org,
   env,
   customer,
@@ -82,7 +83,7 @@ export const createNewCustomer = async ({
   logger,
   createDefaultProducts = true,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   customer: CreateCustomer;
@@ -95,13 +96,11 @@ export const createNewCustomer = async ({
   logger.info(`Org ID: ${org.id}`);
   logger.info(`Customer data: ${JSON.stringify(customer)}`);
 
-  const [defaultProds] = await Promise.all([
-    ProductService.getFullDefaultProducts({
-      sb,
-      orgId: org.id,
-      env,
-    }),
-  ]);
+  const defaultProds = await ProductService.listDefault({
+    db,
+    orgId: org.id,
+    env,
+  });
 
   const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
   const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
@@ -139,10 +138,17 @@ export const createNewCustomer = async ({
     }
   }
 
-  const newCustomer = await CusService.createCustomer({
-    sb,
-    customer: customerData,
+  const newCustomer = await CusService.insert({
+    db,
+    data: customerData,
   });
+
+  if (!newCustomer) {
+    throw new RecaseError({
+      code: ErrCode.InternalError,
+      message: "CusService.insert returned null",
+    });
+  }
 
   if (!createDefaultProducts) {
     return newCustomer;
@@ -150,7 +156,7 @@ export const createNewCustomer = async ({
 
   if (nonFreeProds.length > 0) {
     await initStripeCusAndProducts({
-      sb,
+      db,
       org,
       env,
       customer: newCustomer,
@@ -160,7 +166,7 @@ export const createNewCustomer = async ({
 
     await handleAddProduct({
       req: {
-        sb,
+        db,
         logtail: logger,
       },
       res: {},
@@ -183,7 +189,7 @@ export const createNewCustomer = async ({
 
   for (const product of freeProds) {
     await createFullCusProduct({
-      sb,
+      db,
       attachParams: {
         org,
         customer: newCustomer,
@@ -208,7 +214,7 @@ export const createNewCustomer = async ({
 };
 
 const handleIdIsNull = async ({
-  sb,
+  db,
   org,
   env,
   newCus,
@@ -216,7 +222,7 @@ const handleIdIsNull = async ({
   processor,
   createDefaultProducts,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   newCus: CreateCustomer;
@@ -236,7 +242,7 @@ const handleIdIsNull = async ({
   // 2. Check if email already exists
 
   let existingCustomers = await CusService.getByEmail({
-    sb,
+    db,
     email: newCus.email,
     orgId: org.id,
     env,
@@ -246,7 +252,7 @@ const handleIdIsNull = async ({
     for (const existingCustomer of existingCustomers) {
       if (existingCustomer.id === null) {
         logger.info(
-          `Create customer by email: ${newCus.email} already exists, skipping...`
+          `Create customer by email: ${newCus.email} already exists, skipping...`,
         );
         return existingCustomer;
       }
@@ -260,7 +266,7 @@ const handleIdIsNull = async ({
   }
 
   const createdCustomer = await createNewCustomer({
-    sb,
+    db,
     org,
     env,
     customer: newCus,
@@ -274,7 +280,7 @@ const handleIdIsNull = async ({
 
 // CAN ALSO USE DURING MIGRATION...
 export const handleCreateCustomerWithId = async ({
-  sb,
+  db,
   org,
   env,
   logger,
@@ -282,7 +288,7 @@ export const handleCreateCustomerWithId = async ({
   processor,
   createDefaultProducts = true,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   logger: any;
@@ -291,17 +297,16 @@ export const handleCreateCustomerWithId = async ({
   createDefaultProducts?: boolean;
 }) => {
   // 1. Get by ID
-  let existingCustomer = await CusService.getById({
-    sb,
-    id: newCus.id!,
+  let existingCustomer = await CusService.get({
+    db,
+    idOrInternalId: newCus.id!,
     orgId: org.id,
     env,
-    logger,
   });
 
   if (existingCustomer) {
     logger.info(
-      `POST /customers, existing customer found: ${existingCustomer.id} (org: ${org.slug})`
+      `POST /customers, existing customer found: ${existingCustomer.id} (org: ${org.slug})`,
     );
     return existingCustomer;
   }
@@ -309,7 +314,7 @@ export const handleCreateCustomerWithId = async ({
   // 2. Check if email exists
   if (notNullish(newCus.email) && newCus.email !== "") {
     let cusWithEmail = await CusService.getByEmail({
-      sb,
+      db,
       email: newCus.email!,
       orgId: org.id,
       env,
@@ -317,11 +322,11 @@ export const handleCreateCustomerWithId = async ({
 
     if (cusWithEmail.length === 1 && cusWithEmail[0].id === null) {
       logger.info(
-        `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${org.slug})`
+        `POST /customers, email ${newCus.email} and ID null found, updating ID to ${newCus.id} (org: ${org.slug})`,
       );
 
       let updatedCustomer = await CusService.update({
-        sb,
+        db,
         internalCusId: cusWithEmail[0].internal_id,
         update: {
           id: newCus.id!,
@@ -336,7 +341,7 @@ export const handleCreateCustomerWithId = async ({
 
   // 2. Handle email step...
   return await createNewCustomer({
-    sb,
+    db,
     org,
     env,
     customer: newCus,
@@ -347,24 +352,20 @@ export const handleCreateCustomerWithId = async ({
 };
 
 export const handleCreateCustomer = async ({
+  db,
   cusData,
-  sb,
   org,
   env,
   logger,
-  params = {},
   processor,
-  getDetails = true,
   createDefaultProducts = true,
 }: {
+  db: DrizzleCli;
   cusData: CreateCustomer;
-  sb: SupabaseClient;
   org: Organization;
   env: AppEnv;
   logger: any;
-  params?: any;
   processor?: any;
-  getDetails?: boolean;
   createDefaultProducts?: boolean;
 }) => {
   const newCus = CreateCustomerSchema.parse(cusData);
@@ -373,7 +374,7 @@ export const handleCreateCustomer = async ({
   let createdCustomer;
   if (newCus.id === null) {
     createdCustomer = await handleIdIsNull({
-      sb,
+      db,
       org,
       env,
       newCus,
@@ -383,7 +384,7 @@ export const handleCreateCustomer = async ({
     });
   } else {
     createdCustomer = await handleCreateCustomerWithId({
-      sb,
+      db,
       org,
       env,
       logger,
@@ -399,6 +400,7 @@ export const handleCreateCustomer = async ({
 export const handlePostCustomerRequest = async (req: any, res: any) => {
   const logger = req.logtail;
   try {
+    const { db } = req;
     const data = req.body;
     const expand = parseCusExpand(req.query.expand);
 
@@ -413,7 +415,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
     let org = await OrgService.getFromReq(req);
     let features = await FeatureService.getFromReq(req);
     let customer = await getOrCreateCustomer({
-      sb: req.sb,
+      db,
       org,
       env: req.env,
       customerId: data.id,
@@ -432,8 +434,8 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
     });
 
     let cusDetails = await getCustomerDetails({
+      db,
       customer,
-      sb: req.sb,
       org,
       env: req.env,
       params: req.query,
@@ -451,7 +453,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
       error.code === ErrCode.DuplicateCustomerId
     ) {
       logger.warn(
-        `POST /customers: ${error.message} (org: ${req.minOrg.slug})`
+        `POST /customers: ${error.message} (org: ${req.minOrg.slug})`,
       );
       res.status(error.statusCode).json({
         message: error.message,

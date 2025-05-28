@@ -18,6 +18,8 @@ import {
   getTime,
 } from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 
 export const validateAndInitFreeTrial = ({
   freeTrial,
@@ -42,7 +44,7 @@ export const validateAndInitFreeTrial = ({
 
 export const freeTrialsAreSame = (
   ft1?: FreeTrial | null,
-  ft2?: FreeTrial | null
+  ft2?: FreeTrial | null,
 ) => {
   if (!ft1 && !ft2) return true;
   if (!ft1 || !ft2) return false;
@@ -74,7 +76,7 @@ export const freeTrialToStripeTimestamp = (freeTrial: FreeTrial | null) => {
     });
   }
 
-  trialEnd = addMinutes(trialEnd, 1);
+  trialEnd = addMinutes(trialEnd, 5);
 
   return Math.ceil(trialEnd.getTime() / 1000);
 };
@@ -85,23 +87,19 @@ export const freeTrialToNumDays = (freeTrial: FreeTrial | null) => {
 };
 
 export const trialFingerprintExists = async ({
-  sb,
+  db,
   freeTrialId,
   fingerprint,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   freeTrialId: string;
-  fingerprint: string | null;
+  fingerprint: string;
 }) => {
-  const { data, error } = await sb
-    .from("customer_products")
-    .select("*, customer:customers!inner(*)")
-    .eq("free_trial_id", freeTrialId)
-    .eq("customer.fingerprint", fingerprint);
-
-  if (error) {
-    throw error;
-  }
+  const data = await CusProductService.getByFingerprint({
+    db,
+    freeTrialId,
+    fingerprint,
+  });
 
   if (data && data.length > 0) {
     return true;
@@ -111,23 +109,19 @@ export const trialFingerprintExists = async ({
 };
 
 export const trialWithCustomerExists = async ({
-  sb,
+  db,
   internalCustomerId,
   freeTrialId,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   internalCustomerId: string;
   freeTrialId: string;
 }) => {
-  const { data, error } = await sb
-    .from("customer_products")
-    .select("*, customer:customers!inner(*)")
-    .eq("internal_customer_id", internalCustomerId)
-    .eq("free_trial_id", freeTrialId);
-
-  if (error) {
-    throw error;
-  }
+  const data = await CusProductService.getByFingerprint({
+    db,
+    freeTrialId,
+    fingerprint: internalCustomerId,
+  });
 
   if (data && data.length > 0) {
     return true;
@@ -137,13 +131,13 @@ export const trialWithCustomerExists = async ({
 };
 
 export const getFreeTrialAfterFingerprint = async ({
-  sb,
+  db,
   freeTrial,
   fingerprint,
   internalCustomerId,
   multipleAllowed,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   freeTrial: FreeTrial | null | undefined;
   fingerprint: string | null | undefined;
   internalCustomerId: string;
@@ -158,7 +152,7 @@ export const getFreeTrialAfterFingerprint = async ({
   let uniqueFreeTrial: FreeTrial | null = freeTrial;
   if (uniqueFreeTrial.unique_fingerprint && fingerprint) {
     let exists = await trialFingerprintExists({
-      sb,
+      db,
       fingerprint,
       freeTrialId: uniqueFreeTrial.id,
     });
@@ -172,7 +166,7 @@ export const getFreeTrialAfterFingerprint = async ({
   if (uniqueFreeTrial) {
     // Check if same customer exists
     let exists = await trialWithCustomerExists({
-      sb,
+      db,
       internalCustomerId,
       freeTrialId: uniqueFreeTrial.id,
     });
@@ -187,13 +181,13 @@ export const getFreeTrialAfterFingerprint = async ({
 };
 
 export const handleNewFreeTrial = async ({
-  sb,
+  db,
   newFreeTrial,
   curFreeTrial,
   internalProductId,
   isCustom = false,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   newFreeTrial: FreeTrial | null;
   curFreeTrial: FreeTrial | null | undefined;
   internalProductId: string;
@@ -201,11 +195,10 @@ export const handleNewFreeTrial = async ({
 }) => {
   // If new free trial is null
   if (!newFreeTrial) {
-    // Delete if not custom and current free trial exists
     if (!isCustom && curFreeTrial) {
       await FreeTrialService.delete({
-        sb,
-        freeTrialId: curFreeTrial.id,
+        db,
+        id: curFreeTrial.id,
       });
     }
     return null;
@@ -223,14 +216,14 @@ export const handleNewFreeTrial = async ({
 
   if (isCustom && newFreeTrial) {
     await FreeTrialService.insert({
-      sb,
+      db,
       data: createdFreeTrial,
     });
   } else if (!isCustom) {
     createdFreeTrial.id = curFreeTrial?.id || createdFreeTrial.id;
 
     await FreeTrialService.upsert({
-      sb,
+      db,
       data: createdFreeTrial,
     });
   }

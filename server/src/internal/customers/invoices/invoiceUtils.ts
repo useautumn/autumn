@@ -1,26 +1,19 @@
-import { SupabaseClient } from "@supabase/supabase-js";
+import Stripe from "stripe";
 import { AttachParams } from "../products/AttachParams.js";
 import { InvoiceService, processInvoice } from "./InvoiceService.js";
-import Stripe from "stripe";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
-import {
-  Feature,
-  Invoice,
-  InvoiceItem,
-  Price,
-  PriceType,
-  UsagePriceConfig,
-} from "@autumn/shared";
+import { Invoice, InvoiceItem, Price, UsagePriceConfig } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const attachParamsToInvoice = async ({
-  sb,
+  db,
   attachParams,
   invoiceId,
   stripeInvoice,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   attachParams: AttachParams;
   invoiceId: string;
   stripeInvoice?: Stripe.Invoice;
@@ -40,15 +33,15 @@ export const attachParamsToInvoice = async ({
     }
 
     // Create or update
-    let invoice = await InvoiceService.getInvoiceByStripeId({
-      sb,
-      stripeInvoiceId: invoiceId,
+    let invoice = await InvoiceService.getByStripeId({
+      db,
+      stripeId: invoiceId,
     });
 
     if (invoice) {
       await InvoiceService.updateByStripeId({
-        sb,
-        stripeInvoiceId: invoiceId,
+        db,
+        stripeId: invoiceId,
         updates: {
           product_ids: attachParams.products.map((p) => p.id),
           internal_product_ids: attachParams.products.map((p) => p.internal_id),
@@ -56,7 +49,7 @@ export const attachParamsToInvoice = async ({
       });
     } else {
       await InvoiceService.createInvoiceFromStripe({
-        sb,
+        db,
         stripeInvoice,
         internalCustomerId: attachParams.customer.internal_id,
         internalEntityId: attachParams.internalEntityId,
@@ -83,38 +76,8 @@ export const invoicesToResponse = ({
       invoice: i,
       withItems: false,
       features: [],
-    })
+    }),
   );
-};
-
-export const getInvoicesForResponse = async ({
-  sb,
-
-  internalCustomerId,
-  internalEntityId,
-  limit = 20,
-}: {
-  sb: SupabaseClient;
-  internalCustomerId: string;
-  internalEntityId?: string;
-  limit?: number;
-}) => {
-  let invoices = await InvoiceService.getByInternalCustomerId({
-    sb,
-    internalCustomerId,
-    internalEntityId,
-    limit,
-  });
-
-  const processedInvoices = invoices.map((i) =>
-    processInvoice({
-      invoice: i,
-      withItems: false,
-      features: [],
-    })
-  );
-
-  return processedInvoices;
 };
 
 export const getInvoiceItems = async ({
@@ -134,7 +97,7 @@ export const getInvoiceItems = async ({
         (p) =>
           p.config?.stripe_price_id === line.price?.id ||
           (p.config as UsagePriceConfig)?.stripe_product_id ===
-            line.price?.product
+            line.price?.product,
       );
 
       if (!price) {
@@ -154,7 +117,7 @@ export const getInvoiceItems = async ({
   } catch (error) {
     logger.error(
       `Failed to get invoice items for invoice ${stripeInvoice.id}`,
-      error
+      error,
     );
     return [];
   }

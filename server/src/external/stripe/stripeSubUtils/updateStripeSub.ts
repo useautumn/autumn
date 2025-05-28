@@ -14,9 +14,10 @@ import { getStripeProrationBehavior } from "../stripeSubUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const updateStripeSubscription = async ({
-  sb,
+  db,
   org,
   customer,
   stripeCli,
@@ -28,7 +29,7 @@ export const updateStripeSubscription = async ({
   itemSet,
   shouldPreview,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
   customer: Customer;
   stripeCli: Stripe;
@@ -57,7 +58,7 @@ export const updateStripeSubscription = async ({
   let { items, prices, subMeta } = itemSet;
   let subItems = items.filter(
     (i: any, index: number) =>
-      i.deleted || prices[index].config!.interval !== BillingInterval.OneOff
+      i.deleted || prices[index].config!.interval !== BillingInterval.OneOff,
   );
 
   let subInvoiceItems = items.filter((i: any, index: number) => {
@@ -105,7 +106,7 @@ export const updateStripeSubscription = async ({
 
     // Upsert sub
     await SubService.addUsageFeatures({
-      sb,
+      db,
       stripeId: subscriptionId,
       usageFeatures: itemSet.usageFeatures,
       orgId: org.id,

@@ -18,45 +18,11 @@ import { handleGetProduct } from "./handleGetProduct.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
 
 import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
-import { getProductResponse } from "@/internal/products/productV2Utils.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
+import { handleListProducts } from "./handlers/handleListProducts.js";
 
 export const productApiRouter = Router();
 
-productApiRouter.get("", async (req: any, res) => {
-  try {
-    const [org, features, products] = await Promise.all([
-      OrgService.getFromReq(req),
-      FeatureService.getFeatures({
-        sb: req.sb,
-        orgId: req.orgId,
-        env: req.env,
-      }),
-      ProductService.getFullProducts({
-        sb: req.sb,
-        orgId: req.orgId,
-        env: req.env,
-      }),
-    ]);
-
-    let prods = products.map((p) =>
-      getProductResponse({ product: p, features }),
-    );
-
-    if (req.query.v1_schema === "true") {
-      res.status(200).json({
-        list: products,
-      });
-      return;
-    }
-
-    res.status(200).json({
-      list: prods,
-    });
-  } catch (error) {
-    handleRequestError({ req, error, res, action: "Get products" });
-  }
-});
+productApiRouter.get("", handleListProducts);
 
 productApiRouter.post("", handleCreateProduct);
 
@@ -70,11 +36,11 @@ productApiRouter.post("/:productId/copy", handleCopyProduct);
 
 productApiRouter.post("/all/init_stripe", async (req: any, res) => {
   try {
-    const { sb, orgId, env, logtail: logger } = req;
+    const { orgId, env, logtail: logger, db } = req;
 
     const [fullProducts, org] = await Promise.all([
-      ProductService.getFullProducts({
-        sb,
+      ProductService.listFull({
+        db,
         orgId,
         env,
       }),
@@ -92,7 +58,7 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
       const batch = fullProducts.slice(i, i + productBatchSize);
       const batchPromises = batch.map((product) =>
         checkStripeProductExists({
-          sb,
+          db,
           org,
           env,
           product,
@@ -112,7 +78,7 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
       for (const price of batch) {
         batchPriceUpdate.push(
           createStripePriceIFNotExist({
-            sb,
+            db,
             org,
             stripeCli: stripeCli,
             price,

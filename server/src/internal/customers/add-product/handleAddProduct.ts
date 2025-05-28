@@ -5,19 +5,18 @@ import {
   getProductForPrice,
   pricesOnlyOneOff,
   priceToAmountOrTiers,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 
 import RecaseError from "@/utils/errorUtils.js";
 import chalk from "chalk";
 
-import { SupabaseClient } from "@supabase/supabase-js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import {
   createStripeCli,
   subToAutumnInterval,
 } from "@/external/stripe/utils.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
-import { getPriceAmount } from "../../prices/priceUtils.js";
+import { getPriceAmount } from "../../products/prices/priceUtils.js";
 import {
   APIVersion,
   AttachScenario,
@@ -43,14 +42,14 @@ import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSu
 import {
   getAlignedIntervalUnix,
   getNextStartOfMonthUnix,
-} from "@/internal/prices/billingIntervalUtils.js";
+} from "@/internal/products/prices/billingIntervalUtils.js";
 import { SuccessCode } from "@autumn/shared";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
 import { getInvoiceItems } from "../invoices/invoiceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleBillNowPrices = async ({
-  sb,
   attachParams,
   res,
   req,
@@ -59,7 +58,6 @@ export const handleBillNowPrices = async ({
   shouldPreview = false,
   disableMerge = false,
 }: {
-  sb: any;
   attachParams: AttachParams;
   res: any;
   req: any;
@@ -127,7 +125,7 @@ export const handleBillNowPrices = async ({
       }
 
       subscription = await createStripeSub({
-        sb,
+        db: req.db,
         stripeCli,
         customer,
         org,
@@ -155,7 +153,7 @@ export const handleBillNowPrices = async ({
         error.code === ErrCode.StripeGetPaymentMethodFailed
       ) {
         await handleCreateCheckout({
-          sb,
+          db: req.db,
           res,
           attachParams,
           req,
@@ -173,7 +171,7 @@ export const handleBillNowPrices = async ({
   for (const product of products) {
     batchInsert.push(
       createFullCusProduct({
-        sb,
+        db: req.db,
         attachParams: attachToInsertParams(attachParams, product),
         subscriptionIds: subscriptions.map((s) => s.id),
         subscriptionId:
@@ -204,7 +202,7 @@ export const handleBillNowPrices = async ({
     });
 
     await InvoiceService.createInvoiceFromStripe({
-      sb,
+      db: req.db,
       stripeInvoice: invoice,
       internalCustomerId: customer.internal_id,
       internalEntityId: attachParams.internalEntityId,
@@ -258,14 +256,12 @@ export const handleBillNowPrices = async ({
 
 export const handleOneOffPrices = async ({
   req,
-  sb,
   attachParams,
   res,
   fromRequest = true,
   shouldPreview = false,
 }: {
   req: any;
-  sb: any;
   attachParams: AttachParams;
   res: any;
   fromRequest?: boolean;
@@ -394,12 +390,11 @@ export const handleOneOffPrices = async ({
       logger,
     });
 
-    console.log("Error code: ", error?.code);
     if (!paid) {
       await stripeCli.invoices.voidInvoice(stripeInvoice.id);
       if (fromRequest && org.config.checkout_on_failed_payment) {
         await handleCreateCheckout({
-          sb,
+          db: req.db,
           req,
           res,
           attachParams,
@@ -417,7 +412,8 @@ export const handleOneOffPrices = async ({
   for (const product of products) {
     batchInsert.push(
       createFullCusProduct({
-        sb,
+        db: req.db,
+
         attachParams: attachToInsertParams(attachParams, product),
         lastInvoiceId: stripeInvoice.id,
       }),
@@ -427,7 +423,7 @@ export const handleOneOffPrices = async ({
 
   logger.info("   5. Creating invoice from stripe");
   await InvoiceService.createInvoiceFromStripe({
-    sb,
+    db: req.db,
     stripeInvoice: stripeInvoice,
     internalCustomerId: customer.internal_id,
     internalEntityId: attachParams.internalEntityId,
@@ -467,7 +463,7 @@ export const handleAddProduct = async ({
   disableMerge = false,
 }: {
   req: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     logtail: any;
   };
   res: any;
@@ -499,7 +495,6 @@ export const handleAddProduct = async ({
   // 1. Handle one-off payment products
   if (pricesOnlyOneOff(prices)) {
     await handleOneOffPrices({
-      sb: req.sb,
       req,
       res,
       attachParams,
@@ -512,7 +507,6 @@ export const handleAddProduct = async ({
   // 2. Get one-off + fixed cycle prices
   if (prices.length > 0) {
     await handleBillNowPrices({
-      sb: req.sb,
       attachParams,
       req,
       res,
@@ -531,7 +525,7 @@ export const handleAddProduct = async ({
   for (const product of products) {
     batchInsert.push(
       createFullCusProduct({
-        sb: req.sb,
+        db: req.db,
         attachParams: attachToInsertParams(attachParams, product),
         subscriptionId: undefined,
         billLaterOnly: true,

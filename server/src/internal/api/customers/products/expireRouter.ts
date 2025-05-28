@@ -14,20 +14,21 @@ expireRouter.post("", async (req, res) =>
     res,
     action: "expire",
     handler: async (req, res) => {
-      let { sb, orgId, env, logtail: logger } = req;
+      let { db, orgId, env, logtail: logger } = req;
       let { customer_id, product_id, entity_id, cancel_immediately } = req.body;
 
       let expireImmediately = cancel_immediately || false;
 
       let [customer, org] = await Promise.all([
-        CusService.getWithProducts({
-          sb,
+        CusService.getFull({
+          db,
           orgId,
           idOrInternalId: customer_id,
           env,
           withEntities: true,
           entityId: entity_id,
           inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+          allowNotFound: false,
         }),
         OrgService.getFromReq(req),
       ]);
@@ -44,7 +45,7 @@ expireRouter.post("", async (req, res) =>
       let cusProductsToExpire = cusProducts.filter(
         (cusProduct: FullCusProduct) =>
           cusProduct.product.id == product_id &&
-          (entity_id ? cusProduct.entity_id == entity_id : true)
+          (entity_id ? cusProduct.entity_id == entity_id : true),
       );
 
       if (cusProductsToExpire.length == 0) {
@@ -56,7 +57,7 @@ expireRouter.post("", async (req, res) =>
 
       for (const cusProduct of cusProductsToExpire) {
         await expireCusProduct({
-          sb,
+          db,
           cusProduct,
           cusProducts,
           org,
@@ -73,7 +74,7 @@ expireRouter.post("", async (req, res) =>
         product_id: product_id,
       });
     },
-  })
+  }),
 );
 
 export default expireRouter;

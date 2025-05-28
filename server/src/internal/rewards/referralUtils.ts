@@ -2,10 +2,10 @@ import {
   AppEnv,
   CusProductStatus,
   Customer,
+  ErrCode,
   FullRewardProgram,
   ReferralCode,
   Reward,
-  RewardProgram,
   RewardReceivedBy,
   RewardRedemption,
 } from "@autumn/shared";
@@ -15,10 +15,13 @@ import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js"
 import { createStripeCli } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
-import { CusProductService } from "../customers/products/CusProductService.js";
 import { ProductService } from "../products/ProductService.js";
 import { createFullCusProduct } from "../customers/add-product/createFullCusProduct.js";
 import { InsertCusProductParams } from "../customers/products/AttachParams.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductService } from "../customers/products/CusProductService.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
 
 export const generateReferralCode = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -35,7 +38,7 @@ export const generateReferralCode = () => {
 
 // Trigger reward
 export const triggerRedemption = async ({
-  sb,
+  db,
   referralCode,
   org,
   env,
@@ -43,7 +46,7 @@ export const triggerRedemption = async ({
   reward,
   redemption,
 }: {
-  sb: any;
+  db: DrizzleCli;
   org: any;
   env: AppEnv;
   logger: any;
@@ -52,13 +55,21 @@ export const triggerRedemption = async ({
   redemption: RewardRedemption;
 }) => {
   logger.info(
-    `Triggering redemption ${redemption.id} for referral code ${referralCode.code}`
+    `Triggering redemption ${redemption.id} for referral code ${referralCode.code}`,
   );
 
   let applyToCustomer = await CusService.getByInternalId({
-    sb,
+    db,
     internalId: referralCode.internal_customer_id,
   });
+
+  if (!applyToCustomer) {
+    throw new RecaseError({
+      message: `Customer ${referralCode.internal_customer_id} not found`,
+      code: ErrCode.CustomerNotFound,
+      statusCode: StatusCodes.NOT_FOUND,
+    });
+  }
 
   let stripeCli = createStripeCli({
     org,
@@ -66,7 +77,7 @@ export const triggerRedemption = async ({
   });
 
   await createStripeCusIfNotExists({
-    sb,
+    db,
     customer: applyToCustomer,
     org,
     env,
@@ -75,7 +86,7 @@ export const triggerRedemption = async ({
 
   let stripeCusId = applyToCustomer.processor.id;
   let stripeCus = (await stripeCli.customers.retrieve(
-    stripeCusId
+    stripeCusId,
   )) as Stripe.Customer;
 
   let applied = false;
@@ -89,7 +100,7 @@ export const triggerRedemption = async ({
   }
 
   let updatedRedemption = await RewardRedemptionService.update({
-    sb,
+    db,
     id: redemption.id,
     updates: {
       applied,
@@ -103,7 +114,7 @@ export const triggerRedemption = async ({
 };
 
 export const triggerFreeProduct = async ({
-  sb,
+  db,
   referralCode,
   redeemer,
   redemption,
@@ -112,7 +123,7 @@ export const triggerFreeProduct = async ({
   env,
   logger,
 }: {
-  sb: any;
+  db: DrizzleCli;
   referralCode: ReferralCode;
   redeemer: Customer;
   redemption: RewardRedemption;
@@ -122,7 +133,7 @@ export const triggerFreeProduct = async ({
   logger: any;
 }) => {
   logger.info(`Triggering free product reward`);
-  let { product_ids, received_by } = rewardProgram;
+  let { received_by } = rewardProgram;
 
   let addToRedeemer = received_by === RewardReceivedBy.All;
   let addToReferrer =
@@ -130,34 +141,37 @@ export const triggerFreeProduct = async ({
     received_by === RewardReceivedBy.All;
 
   let productId = rewardProgram.reward.free_product_id!;
-  let fullProduct = await ProductService.getFullProduct({
-    sb,
-    productId,
+  let fullProduct = await ProductService.getFull({
+    db,
+    idOrInternalId: productId,
     orgId: org.id,
     env,
   });
 
   let referrer = await CusService.getByInternalId({
-    sb,
+    db,
     internalId: referralCode.internal_customer_id,
   });
+
+  if (!referrer) {
+    throw new RecaseError({
+      message: `Referrer ${referralCode.internal_customer_id} not found`,
+      code: ErrCode.CustomerNotFound,
+      statusCode: StatusCodes.NOT_FOUND,
+    });
+  }
+
   logger.info(`Referrer: ${referrer.name} (${referrer.id})`);
 
   let [redeemerCusProducts, referrerCusProducts] = await Promise.all([
-    CusService.getFullCusProducts({
-      sb,
+    CusProductService.list({
+      db,
       internalCustomerId: redeemer.internal_id,
-      logger,
-      withProduct: true,
-      withPrices: true,
       inStatuses: [CusProductStatus.Active],
     }),
-    CusService.getFullCusProducts({
-      sb,
+    CusProductService.list({
+      db,
       internalCustomerId: referrer.internal_id,
-      logger,
-      withProduct: true,
-      withPrices: true,
       inStatuses: [CusProductStatus.Active],
     }),
   ]);
@@ -183,7 +197,7 @@ export const triggerFreeProduct = async ({
     });
 
     await createFullCusProduct({
-      sb,
+      db,
       attachParams: redeemerAttachParams,
     });
     logger.info(`✅ Added ${fullProduct.name} to redeemer`);
@@ -191,7 +205,7 @@ export const triggerFreeProduct = async ({
 
   if (addToReferrer) {
     await createFullCusProduct({
-      sb,
+      db,
       attachParams: {
         ...attachParams,
         customer: referrer,
@@ -202,7 +216,7 @@ export const triggerFreeProduct = async ({
   }
 
   await RewardRedemptionService.update({
-    sb,
+    db,
     id: redemption.id,
     updates: {
       triggered: true,

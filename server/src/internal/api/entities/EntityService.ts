@@ -1,264 +1,118 @@
-import { SupabaseClient } from "@supabase/supabase-js";
-import { env } from "process";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { ErrCode } from "@autumn/shared";
+import { Entity, entities } from "@autumn/shared";
+import { and, eq, inArray } from "drizzle-orm";
 
 export class EntityService {
-  static async getById({
-    sb,
-    entityId,
-    internalCustomerId,
-    orgId,
-    env,
-    errorIfNotFound = true,
-  }: {
-    sb: SupabaseClient;
-    entityId: string;
-    internalCustomerId?: string;
-    orgId: string;
-    env: string;
-    errorIfNotFound?: boolean;
-  }) {
-    const { data, error } = await sb
-      .from("entities")
-      .select("*")
-      .eq("id", entityId)
-      .eq("internal_customer_id", internalCustomerId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
+  static async insert({ db, data }: { db: DrizzleCli; data: any }) {
+    const results = await db
+      .insert(entities)
+      .values(data as any)
+      .returning();
 
-    if (error) {
-      if (
-        !errorIfNotFound &&
-        error.code === "PGRST116" &&
-        error.details.includes("0 rows")
-      ) {
-        return null;
-      }
-
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async insert({ sb, data }: { sb: SupabaseClient; data: any }) {
-    const { error } = await sb.from("entities").insert(data);
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return results as Entity[];
   }
 
   static async getByInternalId({
-    sb,
+    db,
     internalId,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalId: string;
     orgId: string;
     env: string;
   }) {
-    const { data, error } = await sb
-      .from("entities")
-      .select("*")
-      .eq("internal_id", internalId)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .single();
-
-    if (error) {
-      throw error;
+    let entity = await db.query.entities.findFirst({
+      where: (entities, { eq, and }) =>
+        and(
+          eq(entities.internal_id, internalId),
+          eq(entities.org_id, orgId),
+          eq(entities.env, env),
+        ),
+    });
+    if (!entity) {
+      throw new RecaseError({
+        message: `Entity not found for internal ID ${internalId}`,
+        code: ErrCode.EntityNotFound,
+        statusCode: 404,
+      });
     }
 
-    return data;
+    return entity as Entity;
   }
 
-  static async get({
-    sb,
-    orgId,
-    internalFeatureId,
+  static async list({
+    db,
     internalCustomerId,
-    env,
+    inFeatureIds,
+    isDeleted,
   }: {
-    sb: SupabaseClient;
-    orgId: string;
-    env: string;
-    internalFeatureId?: string;
-    internalCustomerId?: string;
+    db: DrizzleCli;
+    internalCustomerId: string;
+    inFeatureIds?: string[];
+    isDeleted?: boolean;
   }) {
-    let query = sb
-      .from("entities")
-      .select("*")
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .eq("internal_customer_id", internalCustomerId);
-
-    if (internalFeatureId) {
-      query = query.eq("internal_feature_id", internalFeatureId);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return (await db.query.entities.findMany({
+      where: (entities, { eq }) =>
+        and(
+          eq(entities.internal_customer_id, internalCustomerId),
+          inFeatureIds
+            ? inArray(entities.internal_feature_id, inFeatureIds)
+            : undefined,
+          isDeleted ? eq(entities.deleted, isDeleted) : undefined,
+        ),
+    })) as Entity[];
   }
 
   static async update({
-    sb,
+    db,
     internalId,
     update,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalId: string;
     update: any;
   }) {
-    const { data, error } = await sb
-      .from("entities")
-      .update(update)
-      .eq("internal_id", internalId)
-      .select()
-      .single();
+    const results = await db
+      .update(entities)
+      .set(update)
+      .where(eq(entities.internal_id, internalId))
+      .returning();
 
-    if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
-
-      throw error;
+    if (results.length === 0) {
+      throw new RecaseError({
+        message: `Entity not found for internal ID ${internalId}`,
+        code: ErrCode.EntityNotFound,
+        statusCode: 404,
+      });
     }
 
-    return data;
-  }
-
-  static async getByInternalCustomerId({
-    sb,
-    internalCustomerId,
-    logger,
-    inFeatureIds,
-    isDeleted,
-  }: {
-    sb: SupabaseClient;
-    internalCustomerId: string;
-    logger: any;
-    inFeatureIds?: string[];
-    isDeleted?: boolean;
-  }) {
-    let query = sb
-      .from("entities")
-      .select("*")
-      .eq("internal_customer_id", internalCustomerId);
-
-    if (inFeatureIds) {
-      query = query.in("internal_feature_id", inFeatureIds);
-    }
-
-    if (isDeleted) {
-      query = query.eq("deleted", true);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async getByCustomerId({
-    sb,
-    customerId,
-    logger,
-    inFeatureIds,
-    isDeleted,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    customerId: string;
-    logger: any;
-    inFeatureIds?: string[];
-    isDeleted?: boolean;
-    orgId: string;
-    env: string;
-  }) {
-    let query = sb
-      .from("entities")
-      .select("*")
-      .eq("customer_id", customerId)
-      .eq("org_id", orgId)
-      .eq("env", env);
-
-    if (inFeatureIds) {
-      query = query.in("internal_feature_id", inFeatureIds);
-    }
-
-    if (isDeleted) {
-      query = query.eq("deleted", true);
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+    return results[0] as Entity;
   }
 
   static async deleteInInternalIds({
-    sb,
+    db,
     internalIds,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     internalIds: string[];
     orgId: string;
     env: string;
   }) {
-    const { error } = await sb
-      .from("entities")
-      .delete()
-      .in("internal_id", internalIds)
-      .eq("org_id", orgId)
-      .eq("env", env);
-
-    if (error) {
-      throw error;
-    }
-  }
-
-  static async deleteByInternalFeatureId({
-    sb,
-    internalFeatureIds,
-    internalCustomerId,
-    orgId,
-    env,
-  }: {
-    sb: SupabaseClient;
-    internalFeatureIds: string[];
-    internalCustomerId: string;
-    orgId: string;
-    env: string;
-  }) {
-    const { error } = await sb
-      .from("entities")
-      .delete()
-      .in("internal_feature_id", internalFeatureIds)
-      .eq("org_id", orgId)
-      .eq("env", env)
-      .eq("internal_customer_id", internalCustomerId);
-
-    if (error) {
-      throw error;
-    }
+    const results = await db
+      .delete(entities)
+      .where(
+        and(
+          inArray(entities.internal_id, internalIds),
+          eq(entities.org_id, orgId),
+          eq(entities.env, env),
+        ),
+      )
+      .returning();
   }
 }

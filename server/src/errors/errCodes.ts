@@ -44,6 +44,7 @@ export const ErrCode = {
   AttachProductToCustomerFailed: "attach_product_to_customer_failed",
   MultipleProductsFound: "multiple_products_found",
   MultipleCustomersFound: "multiple_customers_found",
+  GetCusWithProductsFailed: "get_cus_with_products_failed",
 
   // Product
   InvalidProduct: "invalid_product",

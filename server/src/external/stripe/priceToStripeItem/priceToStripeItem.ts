@@ -1,7 +1,7 @@
 import {
   getBillingType,
   priceIsOneOffAndTiered,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 import {

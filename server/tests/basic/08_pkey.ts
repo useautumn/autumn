@@ -25,7 +25,7 @@ describe(`${chalk.yellowBright("Testing pkey")}`, () => {
         email: "test@test.com",
         fingerprint: "fp1",
       },
-      sb: this.sb,
+      db: this.db,
       org: this.org,
       env: this.env,
       attachPm: true,
@@ -124,11 +124,11 @@ describe(`${chalk.yellowBright("Testing pkey")}`, () => {
 
     assert.equal(data.allowed, true);
     const metered1Balance = data.balances.find(
-      (b: any) => b.feature_id === features.metered1.id
+      (b: any) => b.feature_id === features.metered1.id,
     );
     assert.equal(
       metered1Balance.balance,
-      products.pro.entitlements.metered1.allowance
+      products.pro.entitlements.metered1.allowance,
     );
   });
 
@@ -141,11 +141,11 @@ describe(`${chalk.yellowBright("Testing pkey")}`, () => {
 
     assert.equal(data.allowed, true);
     const metered1Balance = data.balances.find(
-      (b: any) => b.feature_id === features.metered1.id
+      (b: any) => b.feature_id === features.metered1.id,
     );
     assert.equal(
       metered1Balance.balance,
-      products.pro.entitlements.metered1.allowance
+      products.pro.entitlements.metered1.allowance,
     );
   });
 

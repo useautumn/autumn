@@ -1,7 +1,7 @@
 import {
   getBillingType,
   getPriceEntitlement,
-} from "@/internal/prices/priceUtils.js";
+} from "@/internal/products/prices/priceUtils.js";
 import {
   Price,
   UsagePriceConfig,
@@ -16,17 +16,18 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import { priceToInArrearTiers } from "./createStripeInArrear.js";
-import { PriceService } from "@/internal/prices/PriceService.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const createStripeMeteredPrice = async ({
-  sb,
+  db,
   stripeCli,
   price,
   entitlements,
   product,
   org,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   stripeCli: Stripe;
   price: Price;
   entitlements: EntitlementWithFeature[];
@@ -137,7 +138,7 @@ export const arrearProratedToStripeTiers = (
 };
 
 export const createStripeArrearProrated = async ({
-  sb,
+  db,
   price,
   product,
   org,
@@ -145,7 +146,7 @@ export const createStripeArrearProrated = async ({
   curStripeProd,
   stripeCli,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   price: Price;
   product: Product;
   org: Organization;
@@ -208,7 +209,7 @@ export const createStripeArrearProrated = async ({
   // CREATE PLACEHOLDER PRICE FOR INARREAR PRORATED PRICING
   if (billingType == BillingType.InArrearProrated) {
     let placeholderPrice = await createStripeMeteredPrice({
-      sb,
+      db,
       stripeCli,
       price,
       entitlements,
@@ -220,8 +221,8 @@ export const createStripeArrearProrated = async ({
 
   price.config = config;
   await PriceService.update({
-    sb,
-    priceId: price.id!,
+    db,
+    id: price.id!,
     update: { config },
   });
 };

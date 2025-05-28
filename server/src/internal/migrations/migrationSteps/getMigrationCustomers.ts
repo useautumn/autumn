@@ -6,13 +6,15 @@ import {
 } from "@autumn/shared";
 import { MigrationService } from "../MigrationService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { customerProducts } from "@autumn/shared";
+import { and, asc, eq, gt, inArray } from "drizzle-orm";
 
 const getAllCustomersOnProduct = async ({
-  sb,
+  db,
   internalProductId,
 }: {
-  sb: any; // Replace 'any' with your actual Supabase client type
+  db: DrizzleCli;
   internalProductId: string;
 }) => {
   let allData: any[] = [];
@@ -20,22 +22,24 @@ const getAllCustomersOnProduct = async ({
   let lastId: string | null = null;
 
   while (true) {
-    let query = sb
-      .from("customer_products")
-      .select("*, customer:customers!inner(*)")
-      .eq("internal_product_id", internalProductId)
-      .in("status", [CusProductStatus.Active, CusProductStatus.PastDue])
-      .order("id", { ascending: true })
-      .limit(PAGE_SIZE);
-
-    if (lastId) {
-      query = query.gt("id", lastId);
-    }
-
-    const { data, error } = await query;
-
-    // If query error
-    if (error) {
+    let data;
+    try {
+      data = await db.query.customerProducts.findMany({
+        where: and(
+          eq(customerProducts.internal_product_id, internalProductId),
+          inArray(customerProducts.status, [
+            CusProductStatus.Active,
+            CusProductStatus.PastDue,
+          ]),
+          lastId ? gt(customerProducts.id, lastId) : undefined,
+        ),
+        with: {
+          customer: true,
+        },
+        orderBy: [asc(customerProducts.id)],
+        limit: PAGE_SIZE,
+      });
+    } catch (error) {
       throw new RecaseError({
         message: "Error getting customers on product",
         code: ErrCode.GetCusProductsFailed,
@@ -47,7 +51,7 @@ const getAllCustomersOnProduct = async ({
 
     let filtered = data.reduce((acc: any[], curr: any) => {
       const existingIndex = acc.findIndex(
-        (item) => item.customer.id === curr.customer.id
+        (item) => item.customer.id === curr.customer.id,
       );
       if (existingIndex === -1) {
         acc.push(curr);
@@ -69,44 +73,44 @@ const getAllCustomersOnProduct = async ({
 };
 
 export const getMigrationCustomers = async ({
-  sb,
+  db,
   migrationJobId,
   fromProduct,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   migrationJobId: string;
   fromProduct: Product;
   logger: any;
 }) => {
   await MigrationService.updateJob({
-    sb,
+    db,
     migrationJobId,
     updates: {
       current_step: MigrationJobStep.GetCustomers,
     },
   });
 
-  let { cusProducts, error } = await getAllCustomersOnProduct({
-    sb,
+  let { cusProducts } = await getAllCustomersOnProduct({
+    db,
     internalProductId: fromProduct.internal_id,
   });
 
   let totalCount = cusProducts.length;
   let canceledCount = cusProducts.filter(
-    (cusProd) => cusProd.canceled_at !== null
+    (cusProd) => cusProd.canceled_at !== null,
   ).length;
 
   let customCount = cusProducts.filter((cusProd) => cusProd.is_custom).length;
 
   let filteredCusProducts = cusProducts.filter(
-    (cusProd) => cusProd.canceled_at === null && !cusProd.is_custom
+    (cusProd) => cusProd.canceled_at === null && !cusProd.is_custom,
   );
 
   let customers = filteredCusProducts.map((cusProd) => cusProd.customer);
 
   await MigrationService.updateJob({
-    sb,
+    db,
     migrationJobId,
     updates: {
       step_details: {

@@ -23,11 +23,11 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { constructProduct } from "@/internal/products/productUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { Request } from "@/utils/models/Request.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
-const validateCreateProduct = async ({ req }: { req: Request }) => {
+const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
   let { free_trial, items } = req.body;
-  let { orgId, env, sb } = req;
+  let { orgId, env, db } = req;
 
   let productData = CreateProductSchema.parse(req.body);
 
@@ -38,14 +38,10 @@ const validateCreateProduct = async ({ req }: { req: Request }) => {
   }
 
   const [features, existingProduct] = await Promise.all([
-    FeatureService.getFeatures({
-      sb,
-      orgId,
-      env,
-    }),
-    ProductService.getProductStrict({
-      sb,
-      productId: productData.id,
+    FeatureService.getFromReq(req),
+    ProductService.get({
+      db,
+      id: productData.id,
       orgId,
       env,
     }),
@@ -99,8 +95,8 @@ export const handleCreateProduct = async (req: Request, res: any) =>
     res,
     action: "POST /products",
     handler: async (req, res) => {
-      let { free_trial, items } = req.body;
-      let { logtail: logger, orgId, env, sb, db } = req;
+      let { items } = req.body;
+      let { logtail: logger, orgId, env, db } = req;
 
       let { features, freeTrial, productData } = await validateCreateProduct({
         req,
@@ -112,12 +108,11 @@ export const handleCreateProduct = async (req: Request, res: any) =>
         env,
       });
 
-      let product = await ProductService.create({ sb, product: newProduct });
+      let product = await ProductService.insert({ db, product: newProduct });
 
       if (notNullish(items)) {
         await handleNewProductItems({
           db,
-          sb,
           product,
           features,
           curPrices: [],
@@ -131,7 +126,7 @@ export const handleCreateProduct = async (req: Request, res: any) =>
 
       if (notNullish(freeTrial)) {
         await handleNewFreeTrial({
-          sb,
+          db,
           newFreeTrial: freeTrial,
           curFreeTrial: null,
           internalProductId: product.internal_id,

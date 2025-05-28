@@ -1,31 +1,26 @@
 import {
   AppEnv,
   CusProductStatus,
-  CusResponseSchema,
   Entitlement,
+  ErrCode,
   FreeTrial,
   FullProduct,
   Organization,
   Price,
   Product,
-  ProductResponseSchema,
 } from "@autumn/shared";
 
 import { sendSvixEvent } from "./svixUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import { getCustomerDetails } from "@/internal/api/customers/getCustomerDetails.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { z } from "zod";
+
 import { getProductResponse } from "@/internal/products/productV2Utils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
-
-const ProductsUpdatedWebhookSchema = z.object({
-  scenario: z.string(),
-  product: ProductResponseSchema,
-  customer: CusResponseSchema,
-});
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const addProductsUpdatedWebhookTask = async ({
   internalCustomerId,
@@ -114,11 +109,11 @@ export const constructProductsUpdatedData = ({
 };
 
 export const sendProductsUpdatedWebhook = async ({
-  sb,
+  db,
   logger,
   data,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   logger: any;
   data: {
     internalCustomerId: string;
@@ -131,8 +126,8 @@ export const sendProductsUpdatedWebhook = async ({
 }) => {
   const { org, env, product, scenario } = data;
 
-  let customer = await CusService.getWithProducts({
-    sb,
+  let customer = await CusService.getFull({
+    db,
     idOrInternalId: data.customerId || data.internalCustomerId,
     orgId: data.org.id,
     env: data.env,
@@ -143,17 +138,17 @@ export const sendProductsUpdatedWebhook = async ({
     ],
   });
 
-  const features = await FeatureService.getFeatures({
-    sb,
+  const features = await FeatureService.list({
+    db,
     orgId: org.id,
     env,
   });
 
   const cusDetails = await getCustomerDetails({
+    db,
     customer: customer,
     org,
     env,
-    sb,
     features,
     logger,
     cusProducts: customer.customer_products,

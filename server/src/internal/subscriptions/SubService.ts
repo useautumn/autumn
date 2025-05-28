@@ -1,38 +1,34 @@
-import { SupabaseClient } from "@supabase/supabase-js";
-import { AppEnv, Subscription } from "@autumn/shared";
+import { AppEnv, ErrCode, Subscription, subscriptions } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import Stripe from "stripe";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { and, eq, inArray } from "drizzle-orm";
 
 export class SubService {
-  static async createSub({
-    sb,
-    sub,
-  }: {
-    sb: SupabaseClient;
-    sub: Subscription;
-  }) {
-    let { data, error } = await sb
-      .from("subscriptions")
-      .insert(sub)
-      .select()
-      .single();
+  static async createSub({ db, sub }: { db: DrizzleCli; sub: Subscription }) {
+    let data = await db.insert(subscriptions).values(sub).returning();
 
-    if (error) {
-      throw error;
+    if (data.length === 0) {
+      throw new RecaseError({
+        code: ErrCode.InsertSubscriptionFailed,
+        message: "Failed to create subscription",
+        statusCode: 500,
+      });
     }
 
-    return data;
+    return data[0] as Subscription;
   }
 
   static async addUsageFeatures({
-    sb,
+    db,
     stripeId,
     scheduleId,
     usageFeatures,
     orgId,
     env,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     stripeId?: string;
     scheduleId?: string;
     usageFeatures: string[];
@@ -43,24 +39,21 @@ export class SubService {
       throw new Error("Either stripeId or scheduleId must be provided");
     }
 
-    let query = sb.from("subscriptions").select("*");
-    if (stripeId) {
-      query = query.eq("stripe_id", stripeId);
-    } else if (scheduleId) {
-      query = query.eq("stripe_schedule_id", scheduleId);
-    }
-
-    let { data, error: curSubsError } = await query;
-
-    if (curSubsError || !data) {
-      throw curSubsError;
-    }
+    let data = await db
+      .select()
+      .from(subscriptions)
+      .where(
+        and(
+          stripeId ? eq(subscriptions.stripe_id, stripeId) : undefined,
+          scheduleId
+            ? eq(subscriptions.stripe_schedule_id, scheduleId)
+            : undefined,
+        ),
+      );
 
     if (data.length == 0) {
-      // throw new Error("Subscription not found");
-      // From old plan
       return await SubService.createSub({
-        sb,
+        db,
         sub: {
           id: generateId("sub"),
           created_at: Date.now(),
@@ -76,171 +69,109 @@ export class SubService {
     }
 
     let curSub = data[0];
-    let { data: updatedSub, error } = await sb
-      .from("subscriptions")
-      .update({
+    let updateResult = await db
+      .update(subscriptions)
+      .set({
         usage_features: [
-          ...new Set([...curSub.usage_features, ...usageFeatures]),
+          ...new Set([...(curSub.usage_features || []), ...usageFeatures]),
         ],
       })
-      .eq("id", curSub.id)
-      .select()
-      .single();
+      .where(eq(subscriptions.id, curSub.id))
+      .returning();
 
-    if (error) {
-      throw error;
+    if (updateResult.length === 0) {
+      throw new RecaseError({
+        code: ErrCode.UpdateSubscriptionFailed,
+        message: "Failed to update subscription",
+        statusCode: 500,
+      });
     }
 
-    return updatedSub;
+    return updateResult[0] as Subscription;
   }
 
   static async updateFromStripe({
-    sb,
+    db,
     stripeSub,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     stripeSub: Stripe.Subscription;
   }) {
-    let { data, error } = await sb
-      .from("subscriptions")
-      .update({
+    let results = await db
+      .update(subscriptions)
+      .set({
         current_period_start: stripeSub.current_period_start,
         current_period_end: stripeSub.current_period_end,
       })
-      .eq("stripe_id", stripeSub.id)
-      .select()
-      .single();
+      .where(eq(subscriptions.stripe_id, stripeSub.id))
+      .returning();
 
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async updateFromStripeId({
-    sb,
-    stripeId,
-    updates,
-  }: {
-    sb: SupabaseClient;
-    stripeId: string;
-    updates: any;
-  }) {
-    let { data, error } = await sb
-      .from("subscriptions")
-      .update(updates)
-      .eq("stripe_id", stripeId)
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
-  }
-
-  static async getFromScheduleId({
-    sb,
-    scheduleId,
-  }: {
-    sb: SupabaseClient;
-    scheduleId: string;
-  }) {
-    let { data, error } = await sb
-      .from("subscriptions")
-      .select("*")
-      .eq("stripe_schedule_id", scheduleId);
-
-    if (error || !data) {
-      throw error;
-    }
-
-    if (data.length == 0) {
+    if (results.length === 0) {
       return null;
     }
 
-    return data[0];
+    return results[0] as Subscription;
   }
 
-  static async deleteFromStripeId({
-    sb,
-    stripeId,
+  static async getFromScheduleId({
+    db,
+    scheduleId,
   }: {
-    sb: SupabaseClient;
-    stripeId: string;
+    db: DrizzleCli;
+    scheduleId: string;
   }) {
-    let { error } = await sb
-      .from("subscriptions")
-      .delete()
-      .eq("stripe_id", stripeId);
+    let data = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.stripe_schedule_id, scheduleId));
 
-    if (error) {
-      throw error;
+    if (data.length === 0) {
+      return null;
     }
 
-    return;
+    return data[0] as Subscription;
   }
 
   static async deleteFromScheduleId({
-    sb,
+    db,
     scheduleId,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     scheduleId: string;
   }) {
-    let { error } = await sb
-      .from("subscriptions")
-      .delete()
-      .eq("stripe_schedule_id", scheduleId);
-
-    if (error) {
-      throw error;
-    }
+    await db
+      .delete(subscriptions)
+      .where(eq(subscriptions.stripe_schedule_id, scheduleId));
 
     return;
   }
 
   static async updateFromScheduleId({
-    sb,
+    db,
     scheduleId,
     updates,
   }: {
-    sb: SupabaseClient;
+    db: DrizzleCli;
     scheduleId: string;
     updates: any;
   }) {
-    let { data: updatedSub, error } = await sb
-      .from("subscriptions")
-      .update(updates)
-      .eq("stripe_schedule_id", scheduleId)
-      .select()
-      .single();
+    let results = await db
+      .update(subscriptions)
+      .set(updates)
+      .where(eq(subscriptions.stripe_schedule_id, scheduleId))
+      .returning();
 
-    if (error) {
-      throw error;
+    if (results.length === 0) {
+      return null;
     }
 
-    return updatedSub;
+    return results[0] as Subscription;
   }
 
-  static async getInStripeIds({
-    sb,
-    ids,
-  }: {
-    sb: SupabaseClient;
-    ids: string[];
-  }) {
-    let { data, error } = await sb
-      .from("subscriptions")
-      .select("*")
-      .in("stripe_id", ids);
-
-    if (error) {
-      throw error;
-    }
-
-    return data;
+  static async getInStripeIds({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+    return (await db
+      .select()
+      .from(subscriptions)
+      .where(inArray(subscriptions.stripe_id, ids))) as Subscription[];
   }
 }

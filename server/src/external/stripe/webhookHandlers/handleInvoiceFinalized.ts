@@ -1,42 +1,44 @@
-import { CustomerEntitlementService } from "@/internal/customers/entitlements/CusEntitlementService.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { getBillingType } from "@/internal/prices/priceUtils.js";
+
 import {
   AppEnv,
-  BillingType,
   CusProductStatus,
-  FullCusProduct,
   FullCustomerPrice,
   InvoiceStatus,
   Organization,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
-import { differenceInHours, format, subDays } from "date-fns";
+
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import {
+  getFullStripeInvoice,
   getStripeExpandedInvoice,
   updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleInvoiceFinalized = async ({
-  sb,
+  db,
   org,
-  invoice,
+  data,
   env,
-  event,
   logger,
 }: {
-  sb: SupabaseClient;
+  db: DrizzleCli;
   org: Organization;
-  invoice: Stripe.Invoice;
+  data: Stripe.Invoice;
   env: AppEnv;
-  event: Stripe.Event;
   logger: any;
 }) => {
+  const stripeCli = createStripeCli({ org, env });
+  const invoice = await getFullStripeInvoice({
+    stripeCli,
+    stripeId: data.id,
+  });
+
   if (invoice.subscription) {
     const stripeCli = createStripeCli({ org, env });
     const expandedInvoice = await getStripeExpandedInvoice({
@@ -45,21 +47,20 @@ export const handleInvoiceFinalized = async ({
     });
 
     const activeProducts = await CusProductService.getByStripeSubId({
-      sb,
+      db,
       stripeSubId: invoice.subscription as string,
       orgId: org.id,
       env,
       inStatuses: [CusProductStatus.Active],
-      withCusPrices: true,
-      withCusEnts: true,
     });
+
     if (activeProducts.length === 0) {
       console.log("invoice.finalized: No active products found");
       return;
     }
 
     const updated = await updateInvoiceIfExists({
-      sb,
+      db,
       invoice,
     });
 
@@ -68,7 +69,7 @@ export const handleInvoiceFinalized = async ({
     }
 
     let prices = activeProducts.flatMap((cp) =>
-      cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price)
+      cp.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),
     );
 
     let invoiceItems = await getInvoiceItems({
@@ -78,7 +79,7 @@ export const handleInvoiceFinalized = async ({
     });
 
     await InvoiceService.createInvoiceFromStripe({
-      sb,
+      db,
       stripeInvoice: expandedInvoice,
       internalCustomerId: activeProducts[0].internal_customer_id,
       productIds: activeProducts.map((p) => p.product.id),
