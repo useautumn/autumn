@@ -22,6 +22,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 
 const STRIPE_TEST_CLOCK_TIMING = 30000; // 30s
+// const STRIPE_TEST_CLOCK_TIMING = 40000; // 30s
 
 export const completeCheckoutForm = async (
   url: string,
@@ -37,8 +38,8 @@ export const completeCheckoutForm = async (
 
   await page.goto(url);
 
-  await page.waitForSelector("#payment-method-accordion-item-title-card");
-  await page.click("#payment-method-accordion-item-title-card");
+  // await page.waitForSelector("#payment-method-accordion-item-title-card");
+  // await page.click("#payment-method-accordion-item-title-card");
 
   await page.waitForSelector("#cardNumber");
   await page.type("#cardNumber", "4242424242424242");
@@ -310,7 +311,8 @@ export const advanceClockForInvoice = async ({
     await timeout(STRIPE_TEST_CLOCK_TIMING);
   }
 
-  const advanceTo2 = addHours(new Date(advanceTo), 2).getTime();
+  // const advanceTo2 = addHours(new Date(advanceTo), 30).getTime();
+  const advanceTo2 = addDays(new Date(advanceTo), 4).getTime();
   await stripeCli.testHelpers.testClocks.advance(testClockId, {
     frozen_time: Math.floor(advanceTo2 / 1000),
   });

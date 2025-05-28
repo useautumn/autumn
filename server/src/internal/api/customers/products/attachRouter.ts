@@ -148,7 +148,7 @@ export const checkStripeConnections = async ({
   req: any;
   attachParams: AttachParams;
 }) => {
-  const { org, customer, products, prices, entitlements } = attachParams;
+  const { org, customer, products } = attachParams;
   const logger = req.logtail;
   const env = customer.env;
 

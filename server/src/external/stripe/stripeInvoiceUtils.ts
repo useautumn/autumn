@@ -13,10 +13,10 @@ import { getCusPaymentMethod } from "./stripeCusUtils.js";
 import { createStripeCli } from "./utils.js";
 import RecaseError, { isPaymentDeclined } from "@/utils/errorUtils.js";
 import { isStripeCardDeclined } from "./stripeCardUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
+// For API calls
 export const getStripeExpandedInvoice = async ({
   stripeCli,
   stripeInvoiceId,
@@ -25,6 +25,20 @@ export const getStripeExpandedInvoice = async ({
   stripeInvoiceId: string;
 }) => {
   const invoice = await stripeCli.invoices.retrieve(stripeInvoiceId, {
+    expand: ["discounts", "discounts.coupon"],
+  });
+  return invoice;
+};
+
+// For webhooks
+export const getFullStripeInvoice = async ({
+  stripeCli,
+  stripeId,
+}: {
+  stripeCli: Stripe;
+  stripeId: string;
+}) => {
+  const invoice = await stripeCli.invoices.retrieve(stripeId, {
     expand: ["discounts", "discounts.coupon"],
   });
   return invoice;

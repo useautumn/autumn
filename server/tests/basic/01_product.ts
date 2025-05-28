@@ -145,7 +145,7 @@ describe(`${chalk.yellowBright(
   const monthlyBillingUnits =
     products.monthlyAddOnMetered1.prices[0].config.billing_units;
 
-  describe.skip("One time add on (force checkout)", () => {
+  describe("One time add on (force checkout)", () => {
     // PURCHASE ONE TIME ADD ON
 
     it("POST /attach -- attaching one time add on (force checkout) [no quantity passed in]", async function () {
@@ -239,7 +239,7 @@ describe(`${chalk.yellowBright(
   });
 
   // PURCHASE MONTHLY ADD ON
-  describe.skip("Monthly add on", () => {
+  describe("Monthly add on", () => {
     it("POST /attach -- attaching monthly add on", async function () {
       await AutumnCli.attach({
         customerId: customerId,

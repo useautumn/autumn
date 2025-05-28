@@ -15,7 +15,7 @@ export enum AttachScenario {
   Expired = "expired",
 }
 
-export interface CheckProductFormattedPreview {
+export interface CheckProductPreview {
   title: string;
   message: string;
   scenario: AttachScenario;
@@ -36,6 +36,7 @@ export interface CheckProductFormattedPreview {
     feature_id: string;
     feature_name: string;
     billing_units: number;
+    included_usage: number;
     price?: number;
     tiers?: {
       to: number | typeof Infinite;
@@ -52,6 +53,8 @@ export interface CheckProductFormattedPreview {
     price: number;
     currency: string;
   };
+
+  product?: ProductResponse;
 }
 
 export enum FeaturePreviewScenario {

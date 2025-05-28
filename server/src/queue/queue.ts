@@ -129,6 +129,7 @@ const initWorker = ({
 
       // TRIGGER CHECKOUT REWARD
       if (job.name == JobName.TriggerCheckoutReward) {
+        console.log("Triggering checkout reward check");
         let lockKey = `reward_trigger:${job.data.customer?.internal_id}`;
         if (
           !(await acquireLock({

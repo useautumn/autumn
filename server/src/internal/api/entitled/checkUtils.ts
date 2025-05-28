@@ -92,6 +92,7 @@ export const getOptions = ({
         feature_id: i.feature_id,
         feature_name: features.find((f) => f.id == i.feature_id)?.name,
         billing_units: i.billing_units,
+        included_usage: i.included_usage || 0,
         ...priceData,
       };
     });

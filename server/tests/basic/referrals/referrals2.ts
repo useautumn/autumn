@@ -124,7 +124,7 @@ describe(`${chalk.yellowBright(
 
     await timeout(3000);
 
-    curTime = addHours(addDays(curTime, 7), 2);
+    curTime = addDays(addDays(curTime, 7), 1);
     await advanceTestClock({
       testClockId,
       advanceTo: curTime.getTime(),

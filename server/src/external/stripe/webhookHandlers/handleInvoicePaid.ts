@@ -140,27 +140,27 @@ export const handleInvoicePaid = async ({
   db,
   req,
   org,
-  invoice,
+  invoiceData,
   env,
   event,
 }: {
   db: DrizzleCli;
   req: any;
   org: Organization;
-  invoice: Stripe.Invoice;
+  invoiceData: Stripe.Invoice;
   env: AppEnv;
   event: Stripe.Event;
 }) => {
   const logger = req.logtail;
   const stripeCli = createStripeCli({ org, env });
-  const expandedInvoice = await getStripeExpandedInvoice({
+  const invoice = await getStripeExpandedInvoice({
     stripeCli,
-    stripeInvoiceId: invoice.id,
+    stripeInvoiceId: invoiceData.id,
   });
 
   await handleInvoicePaidDiscount({
     db,
-    expandedInvoice,
+    expandedInvoice: invoice,
     org,
     env,
     logger,
@@ -202,7 +202,7 @@ export const handleInvoicePaid = async ({
 
     if (!updated) {
       let invoiceItems = await getInvoiceItems({
-        stripeInvoice: expandedInvoice,
+        stripeInvoice: invoice,
         prices: activeCusProducts.flatMap((p) =>
           p.customer_prices.map((cpr: FullCustomerPrice) => cpr.price),
         ),
@@ -211,7 +211,7 @@ export const handleInvoicePaid = async ({
 
       await InvoiceService.createInvoiceFromStripe({
         db,
-        stripeInvoice: expandedInvoice,
+        stripeInvoice: invoice,
         internalCustomerId: activeCusProducts[0].internal_customer_id,
         internalEntityId: activeCusProducts[0].internal_entity_id,
         productIds: activeCusProducts.map((p) => p.product_id),
@@ -241,7 +241,7 @@ export const handleInvoicePaid = async ({
   } else {
     await handleOneOffInvoicePaid({
       db,
-      stripeInvoice: expandedInvoice,
+      stripeInvoice: invoice,
       event,
       logger,
     });

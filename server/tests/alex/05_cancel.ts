@@ -12,6 +12,7 @@ import { alexProducts } from "./init.js";
 import { timeout } from "tests/utils/genUtils.js";
 import chalk from "chalk";
 import { addDays, addHours } from "date-fns";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 
 // CANCEL AT
 const getProductFromCusRes = ({
@@ -163,7 +164,10 @@ describe(chalk.yellowBright("05_cancel"), () => {
       await advanceTestClock({
         stripeCli,
         testClockId,
-        advanceTo: addHours(addDays(new Date(), 7), 2).getTime(),
+        advanceTo: addHours(
+          addDays(new Date(), 7),
+          hoursToFinalizeInvoice,
+        ).getTime(),
       });
 
       await timeout(5000);

@@ -13,6 +13,7 @@ import { createStripeCli } from "../utils.js";
 
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import {
+  getFullStripeInvoice,
   getStripeExpandedInvoice,
   updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
@@ -22,18 +23,22 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 export const handleInvoiceFinalized = async ({
   db,
   org,
-  invoice,
+  data,
   env,
-  event,
   logger,
 }: {
   db: DrizzleCli;
   org: Organization;
-  invoice: Stripe.Invoice;
+  data: Stripe.Invoice;
   env: AppEnv;
-  event: Stripe.Event;
   logger: any;
 }) => {
+  const stripeCli = createStripeCli({ org, env });
+  const invoice = await getFullStripeInvoice({
+    stripeCli,
+    stripeId: data.id,
+  });
+
   if (invoice.subscription) {
     const stripeCli = createStripeCli({ org, env });
     const expandedInvoice = await getStripeExpandedInvoice({

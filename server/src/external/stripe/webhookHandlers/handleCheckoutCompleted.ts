@@ -354,7 +354,6 @@ export const handleCheckoutSessionCompleted = async ({
 
   for (const product of attachParams.products) {
     try {
-      console.log("Triggering checkout reward check for product: ", product.id);
       await addTaskToQueue({
         jobName: JobName.TriggerCheckoutReward,
         payload: {

@@ -76,7 +76,7 @@ stripeWebhookRouter.post(
           await handleSubCreated({
             db,
             org,
-            subscription: event.data.object,
+            subData: event.data.object,
             env,
             logger,
           });
@@ -122,7 +122,7 @@ stripeWebhookRouter.post(
           await handleInvoicePaid({
             db,
             org,
-            invoice,
+            invoiceData: invoice,
             env,
             event,
             req: request,
@@ -134,9 +134,8 @@ stripeWebhookRouter.post(
           await handleInvoiceCreated({
             db,
             org,
-            invoice: createdInvoice,
+            data: createdInvoice,
             env,
-            event,
           });
           break;
 
@@ -145,9 +144,8 @@ stripeWebhookRouter.post(
           await handleInvoiceFinalized({
             db,
             org,
-            invoice: finalizedInvoice,
+            data: finalizedInvoice,
             env,
-            event,
             logger,
           });
           break;

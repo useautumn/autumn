@@ -17,20 +17,27 @@ import { generateId } from "@/utils/genUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getFullStripeSub } from "../stripeSubUtils.js";
 
 export const handleSubCreated = async ({
   db,
-  subscription,
+  subData,
   org,
   env,
   logger,
 }: {
   db: DrizzleCli;
-  subscription: Stripe.Subscription;
+  subData: Stripe.Subscription;
   org: Organization;
   env: AppEnv;
   logger: any;
 }) => {
+  const stripeCli = createStripeCli({ org, env });
+  const subscription = await getFullStripeSub({
+    stripeCli,
+    stripeId: subData.id,
+  });
+
   if (subscription.schedule) {
     const cusProds = await CusProductService.getByStripeScheduledId({
       db,
@@ -149,7 +156,6 @@ export const handleSubCreated = async ({
     env,
   });
 
-  let stripeCli = createStripeCli({ org, env });
   let handleInArrearWithEntity = async (cusProd: FullCusProduct) => {
     if (!cusProd.internal_entity_id) {
       return;

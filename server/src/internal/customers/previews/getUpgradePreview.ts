@@ -6,23 +6,22 @@ import {
 import {
   AppEnv,
   AttachScenario,
-  CheckProductFormattedPreview,
+  CheckProductPreview,
   Customer,
   Feature,
   FullCusProduct,
   FullProduct,
   Organization,
-  UsageModel,
 } from "@autumn/shared";
 import { AttachParams } from "../products/AttachParams.js";
 import { handleStripeSubUpdate } from "../change-product/handleUpgrade.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import Stripe from "stripe";
+
 import { billForRemainingUsages } from "../change-product/billRemainingUsages.js";
-import { logger } from "@trigger.dev/sdk/v3";
+
 import { formatCurrency, itemsToHtml } from "./previewUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
@@ -93,26 +92,7 @@ const formatMessage = ({
     ? "will be charged to your card immediately"
     : "will be added to your next bill";
 
-  // ${formatCurrency({
-  //   amount: totalAmount,
-  //   defaultCurrency: org.default_currency,
-  // })}
-
-  let message = `By clicking confirm, you will upgrade your plan to ${product.name} and the following amount ${addString}:\n`;
-
-  // for (let item of baseLineItems) {
-  //   message += `\n${item.description}: ${formatCurrency({
-  //     amount: item.amount,
-  //     defaultCurrency: org.default_currency,
-  //   })}`;
-  // }
-
-  // for (let item of usageLineItems) {
-  //   message += `\n${item.description}: ${formatCurrency({
-  //     amount: item.amount,
-  //     defaultCurrency: org.default_currency,
-  //   })}`;
-  // }
+  let message = `By clicking confirm, you will upgrade your plan to ${product.name} and the following amount ${addString}:`;
 
   return { message };
 };
@@ -287,7 +267,7 @@ export const getUpgradePreview = async ({
     dueToday = 0;
     dueNextCycle = Number((proratedAmount + regularAmount).toFixed(2));
   }
-  const result: CheckProductFormattedPreview = {
+  const result: CheckProductPreview = {
     title: `Upgrade to ${product.name}`,
     message: formattedMessage.message,
 

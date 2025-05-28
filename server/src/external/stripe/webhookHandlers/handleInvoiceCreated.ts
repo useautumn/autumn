@@ -14,7 +14,6 @@ import {
   Price,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { differenceInMinutes, subDays } from "date-fns";
@@ -34,6 +33,7 @@ import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 import { submitUsageToStripe } from "../stripeMeterUtils.js";
 import { getInvoiceItemForUsage } from "../stripePriceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getFullStripeInvoice } from "../stripeInvoiceUtils.js";
 
 const handleInArrearProrated = async ({
   db,
@@ -435,23 +435,25 @@ const invoiceCusProductCreatedDifference = ({
 export const handleInvoiceCreated = async ({
   db,
   org,
-  invoice,
+  data,
   env,
-  event,
 }: {
   db: DrizzleCli;
   org: Organization;
-  invoice: Stripe.Invoice;
+  data: Stripe.Invoice;
   env: AppEnv;
-  event: Stripe.Event;
 }) => {
+  const stripeCli = createStripeCli({ org, env });
+  const invoice = await getFullStripeInvoice({
+    stripeCli,
+    stripeId: data.id,
+  });
+
   const logger = createLogtailWithContext({
     org: org,
     invoice: invoice,
     action: LoggerAction.StripeWebhookInvoiceCreated,
   });
-
-  // Get stripe subscriptions
 
   if (invoice.subscription) {
     const activeProducts = await CusProductService.getByStripeSubId({

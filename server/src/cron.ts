@@ -6,13 +6,12 @@ import {
   Organization,
 } from "@autumn/shared";
 import { CusEntService } from "./internal/customers/entitlements/CusEntitlementService.js";
-import { createSupabaseClient } from "./external/supabaseUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import dotenv from "dotenv";
 import { getEntOptions } from "./internal/products/prices/priceUtils.js";
 import { getNextResetAt } from "./utils/timeUtils.js";
 import chalk from "chalk";
-import { z } from "zod";
+
 import { format, getDate, getMonth, setDate } from "date-fns";
 import { CronJob } from "cron";
 import {
@@ -25,7 +24,6 @@ import { createStripeCli } from "./external/stripe/utils.js";
 import { UTCDate } from "@date-fns/utc";
 import { DrizzleCli, initDrizzle } from "./db/initDrizzle.js";
 
-import { isEqual } from "lodash-es";
 import { CusPriceService } from "./internal/customers/prices/CusPriceService.js";
 
 dotenv.config();
