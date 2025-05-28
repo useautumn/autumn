@@ -24,6 +24,13 @@ import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
 import CreateProduct from "@/views/products/CreateProduct";
 import { useSearchParams } from "react-router";
+import { Check } from "lucide-react";
+import { CreateFreeTrial } from "@/views/products/product/free-trial/CreateFreeTrial";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export const ProductList = ({
   data,
@@ -45,12 +52,16 @@ export const ProductList = ({
 
   return (
     <Step
-      title={token ? "Your products" : "Create your products"}
+      title={
+        token || data.products.length > 0
+          ? "Your products"
+          : "Create your products"
+      }
       number={1}
       description={
         <p>
-          Products define the features your customers can access and how much
-          they cost. Create your first product to get started ☝️.
+          Create your product tiers by defining the features your customers can
+          access and how much they cost.
         </p>
       }
     >
@@ -121,6 +132,7 @@ const EditProductDialog = ({
   const env = useEnv();
   const axiosInstance = useAxiosInstance();
   const [createProductLoading, setCreateProductLoading] = useState(false);
+  const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
 
   const updateProduct = async () => {
     setCreateProductLoading(true);
@@ -140,6 +152,19 @@ const EditProductDialog = ({
     setCreateProductLoading(false);
     setCreateProductLoading(false);
   };
+
+  const handleFreeTrialClick = () => {
+    if (product?.free_trial) {
+      // Delete the free trial
+      setProduct({ ...product, free_trial: null });
+    } else {
+      // Open the free trial modal
+      setFreeTrialModalOpen(true);
+    }
+  };
+
+  console.log(product);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="p-0 py-8 min-w-[500px] min-h-[300px] flex flex-col justify-between">
@@ -163,12 +188,84 @@ const EditProductDialog = ({
                 setFeatures,
               }}
             >
+              <CreateFreeTrial
+                open={freeTrialModalOpen}
+                setOpen={setFreeTrialModalOpen}
+              />
               <ManageProduct hideAdminHover={true} />
             </ProductContext.Provider>
           </FeaturesContext.Provider>
         </div>
         <DialogFooter>
-          <div className="flex justify-end gap-2 px-10">
+          <div className="flex justify-between items-center gap-2 px-10 w-full mt-6">
+            <div className="flex gap-2">
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={product?.is_add_on}
+                    onClick={() =>
+                      setProduct({
+                        ...product,
+                        is_default: !product?.is_default,
+                      })
+                    }
+                    className={`min-w-32 flex items-center gap-2 ${
+                      product?.is_default ? "bg-stone-100" : ""
+                    }`}
+                  >
+                    {product?.is_default && (
+                      <div className="w-3 h-3 bg-lime-500 rounded-full flex items-center justify-center">
+                        <Check className="w-2 h-2 text-white" />
+                      </div>
+                    )}
+                    Default
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  This product is enabled by default for all new users
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip delayDuration={200}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={product?.is_default}
+                    onClick={() =>
+                      setProduct({ ...product, is_add_on: !product?.is_add_on })
+                    }
+                    className={`min-w-32 flex items-center gap-2 ${
+                      product?.is_add_on ? "bg-stone-100" : ""
+                    }`}
+                  >
+                    {product?.is_add_on && (
+                      <div className="w-3 h-3 bg-lime-500 rounded-full flex items-center justify-center">
+                        <Check className="w-2 h-2 text-white" />
+                      </div>
+                    )}
+                    Add-on
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  This product is an add-on that can be bought together with
+                  your base products
+                </TooltipContent>
+              </Tooltip>
+              <Button
+                variant="outline"
+                onClick={handleFreeTrialClick}
+                className={`min-w-32 flex items-center gap-2 ${
+                  product?.free_trial ? "bg-stone-100" : ""
+                }`}
+              >
+                {product?.free_trial && (
+                  <div className="w-3 h-3 bg-lime-500 rounded-full flex items-center justify-center">
+                    <Check className="w-2 h-2 text-white" />
+                  </div>
+                )}
+                Free Trial
+              </Button>
+            </div>
             <Button
               isLoading={createProductLoading}
               variant="gradientPrimary"

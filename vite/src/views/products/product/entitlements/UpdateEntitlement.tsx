@@ -1,16 +1,7 @@
-import { Button } from "@/components/ui/button";
 import { EntitlementConfig } from "./EntitlementConfig";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useProductContext } from "../ProductContext";
-import { toast } from "sonner";
 import { getFeature } from "@/utils/product/entitlementUtils";
-import { useEffect, useState } from "react";
-import { getDefaultPriceConfig } from "@/utils/product/priceUtils";
 import { CreatePriceSchema, PriceType } from "@autumn/shared";
 
 export default function UpdateEntitlement({
@@ -42,7 +33,7 @@ export default function UpdateEntitlement({
           entitlement?.internal_feature_id !==
           selectedEntitlement?.internal_feature_id
         );
-      }
+      },
     );
 
     // Remove any prices associated with this entitlement
@@ -84,7 +75,7 @@ export default function UpdateEntitlement({
     // Check if the priceConfig exists in the product.prices array
     const priceExists = product.prices.some(
       (price: any) =>
-        price.config.internal_feature_id === priceConfig.internal_feature_id
+        price.config.internal_feature_id === priceConfig.internal_feature_id,
     );
 
     if (!priceExists) {
@@ -110,7 +101,7 @@ export default function UpdateEntitlement({
       //delete the price
       updatedPrices = product.prices.filter(
         (price: any) =>
-          price.config.internal_feature_id !== priceConfig.internal_feature_id
+          price.config.internal_feature_id !== priceConfig.internal_feature_id,
       );
     } else {
       updatedPrices = product.prices.map((price: any, index: number) => {
@@ -144,7 +135,7 @@ export default function UpdateEntitlement({
           setShowFeatureCreate={() => {}}
           selectedFeature={getFeature(
             selectedEntitlement?.internal_feature_id,
-            features
+            features,
           )}
           setSelectedFeature={() => {}}
           priceConfig={priceConfig}
