@@ -25,6 +25,8 @@ import RecaseError from "@/utils/errorUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const handleSubscriptionUpdated = async ({
   db,
@@ -49,6 +51,11 @@ export const handleSubscriptionUpdated = async ({
     env,
   });
   let fullSub = await stripeCli.subscriptions.retrieve(subscription.id);
+  let features = await FeatureService.list({
+    db,
+    orgId: org.id,
+    env,
+  });
 
   let subStatusMap: {
     [key: string]: CusProductStatus;
@@ -146,11 +153,16 @@ export const handleSubscriptionUpdated = async ({
         env,
       });
 
-      let cusProducts = await CusProductService.list({
+      let fullCus = await CusService.getFull({
         db,
-        internalCustomerId: updatedCusProducts[0].customer.internal_id,
+        idOrInternalId: updatedCusProducts[0].customer.id!,
+        orgId: org.id,
+        env,
+        withEntities: true,
         inStatuses: [CusProductStatus.Scheduled],
       });
+      let cusProducts = fullCus.customer_products;
+      let entities = fullCus.entities;
 
       // Default products to activate...
       let defaultProducts = allDefaultProducts.filter((p) =>
@@ -185,9 +197,9 @@ export const handleSubscriptionUpdated = async ({
             prices: product.prices,
             entitlements: product.entitlements,
             freeTrial: product.free_trial || null,
+            entities: entities,
             optionsList: [],
-            entities: [],
-            features: [],
+            features,
             org,
           },
           startsAt: fullSub.current_period_end * 1000,

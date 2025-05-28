@@ -20,7 +20,7 @@ import { CusProductService } from "../products/CusProductService.js";
 import { InsertCusProductParams } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
-import { CusService } from "../CusService.js";
+
 import { getExistingCusProducts } from "./handleExistingProduct.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { searchCusProducts } from "@/internal/customers/products/cusProductUtils.js";
@@ -29,14 +29,12 @@ import { initCusEntitlement } from "./initCusEnt.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
-import {
-  addExistingUsagesToCusEnts,
-  getExistingUsages,
-} from "../entitlements/cusEntUtils/getExistingUsage.js";
+import { addExistingUsagesToCusEnts } from "../entitlements/cusEntUtils/getExistingUsage.js";
 import { constructProductsUpdatedData } from "@/external/svix/handleProductsUpdatedWebhook.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "../entitlements/CusEntitlementService.js";
 import { CusPriceService } from "../prices/CusPriceService.js";
+
 export const initCusPrice = ({
   price,
   customer,
