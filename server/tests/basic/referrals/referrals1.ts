@@ -186,7 +186,7 @@ describe(`${chalk.yellowBright(
 
   let curTime = new Date();
   it("customer should have discount for first purchase", async function () {
-    curTime = addHours(addDays(curTime, 7), 4);
+    curTime = addDays(addDays(curTime, 7), 4);
     await advanceTestClock({
       testClockId,
       advanceTo: curTime.getTime(),
@@ -216,8 +216,8 @@ describe(`${chalk.yellowBright(
       stripeCli,
     });
 
-    // 3. Advance test clock to 1 month + 7 days from start (trigger new invoice)
-    curTime = addDays(curTime, 8);
+    // 3. Advance test clock to 1 month + 12 days from start (trigger new invoice)
+    curTime = addDays(curTime, 12);
     await advanceTestClock({
       testClockId,
       advanceTo: curTime.getTime(),

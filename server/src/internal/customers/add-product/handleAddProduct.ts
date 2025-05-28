@@ -10,7 +10,6 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import chalk from "chalk";
 
-import { SupabaseClient } from "@supabase/supabase-js";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import {
   createStripeCli,

@@ -2,7 +2,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { fullCusProductToProduct } from "@/internal/customers/products/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
-  isFreeProduct,
   isOneOff,
   isProductUpgrade,
   sortProductsByPrice,
@@ -15,7 +14,6 @@ import {
   FullCusProduct,
   FullProduct,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getCheckPreview = async ({
   db,

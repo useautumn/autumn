@@ -20,7 +20,6 @@ import { StatusCodes } from "http-status-codes";
 
 import { handleEventSent } from "../events/eventRouter.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";

@@ -4,6 +4,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { getAttachPreview } from "./getAttachPreview.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
+import { getProductResponse } from "@/internal/products/productV2Utils.js";
 
 export const handleProductCheck = async ({
   req,
@@ -63,6 +64,30 @@ export const handleProductCheck = async ({
     (cusProduct: FullCusProduct) => cusProduct.product.id === product_id,
   );
 
+  let preview = with_preview
+    ? await getAttachPreview({
+        db,
+        customer,
+        org,
+        env,
+        product: product!,
+        cusProducts,
+        features,
+        logger,
+        shouldFormat: with_preview == "formatted",
+      })
+    : undefined;
+
+  if (preview) {
+    preview = {
+      ...preview,
+      product: getProductResponse({
+        product: product!,
+        features,
+      }),
+    };
+  }
+
   if (!cusProduct) {
     res.status(200).json({
       customer_id,
@@ -70,19 +95,7 @@ export const handleProductCheck = async ({
       product_id,
       allowed: false,
 
-      preview: with_preview
-        ? await getAttachPreview({
-            db,
-            customer,
-            org,
-            env,
-            product: product!,
-            cusProducts,
-            features,
-            logger,
-            shouldFormat: with_preview == "formatted",
-          })
-        : undefined,
+      preview,
     });
     return;
   }
@@ -105,18 +118,7 @@ export const handleProductCheck = async ({
         ? "trialing"
         : cusProduct.status,
 
-    preview: with_preview
-      ? await getAttachPreview({
-          db,
-          customer,
-          org,
-          env,
-          product: product!,
-          cusProducts,
-          features,
-          logger,
-        })
-      : undefined,
+    preview,
   });
 
   return;

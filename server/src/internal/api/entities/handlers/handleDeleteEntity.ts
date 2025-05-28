@@ -103,7 +103,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         entities: existingEntities,
       });
 
-      let newBalance = cusEnt.balance + 1 + (unused || 0);
+      let newBalance = (cusEnt.balance || 0) + 1 + (unused || 0);
 
       await adjustAllowance({
         db,
@@ -113,7 +113,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         customer,
         affectedFeature: cusEnt.entitlement.feature,
         cusEnt: { ...cusEnt, customer_product: cusProduct },
-        originalBalance: cusEnt.balance + (unused || 0),
+        originalBalance: (cusEnt.balance || 0) + (unused || 0),
         newBalance,
         deduction: 1,
         product,

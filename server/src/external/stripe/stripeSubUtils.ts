@@ -13,6 +13,16 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import { stripeToAutumnInterval } from "./utils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
+export const getFullStripeSub = async ({
+  stripeCli,
+  stripeId,
+}: {
+  stripeCli: Stripe;
+  stripeId: string;
+}) => {
+  return await stripeCli.subscriptions.retrieve(stripeId);
+};
+
 export const getStripeSubs = async ({
   stripeCli,
   subIds,

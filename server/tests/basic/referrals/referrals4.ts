@@ -97,7 +97,7 @@ describe(`${chalk.yellowBright(
   });
 
   it("should be triggered after trial ends", async function () {
-    let advanceTo = addHours(addDays(new Date(), 7), 2).getTime();
+    let advanceTo = addDays(addDays(new Date(), 7), 4).getTime();
     await advanceTestClock({
       stripeCli,
       testClockId,

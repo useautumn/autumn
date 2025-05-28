@@ -9,16 +9,11 @@ import {
   CollectionMethod,
   FullCusProduct,
   LoggerAction,
-  FullCustomerEntitlement,
 } from "@autumn/shared";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 
 import { Customer } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { ErrCode } from "@/errors/errCodes.js";
-import { StatusCodes } from "http-status-codes";
-import RecaseError from "@/utils/errorUtils.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
 import { CusProductService } from "../products/CusProductService.js";
