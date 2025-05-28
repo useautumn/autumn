@@ -1,6 +1,8 @@
 import { config } from "dotenv";
 config();
 
+import cluster from "cluster";
+import os from "os";
 import mainRouter from "./internal/mainRouter.js";
 import express from "express";
 import cors from "cors";
@@ -8,9 +10,6 @@ import chalk from "chalk";
 import { apiRouter } from "./internal/api/apiRouter.js";
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 
-import pg from "pg";
-
-import http from "http";
 import { initLogger } from "./errors/logger.js";
 import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
@@ -20,6 +19,11 @@ import {
   createLogtailAll,
 } from "./external/logtail/logtailUtils.js";
 import { format } from "date-fns";
+import { CacheManager } from "./external/caching/CacheManager.js";
+import { initDrizzle } from "./db/initDrizzle.js";
+import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
+import pg from "pg";
+import http from "http";
 
 if (!process.env.DATABASE_URL) {
   console.error(`DATABASE_URL is not set`);
@@ -35,7 +39,6 @@ const init = async () => {
   server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
 
   const pgClient = new pg.Client(process.env.DATABASE_URL || "");
-
   await pgClient.connect();
   await QueueManager.getInstance(); // initialize the queue manager
   await CacheManager.getInstance();
@@ -51,6 +54,9 @@ const init = async () => {
     req.sb = supabaseClient;
     req.pg = pgClient;
     req.db = db;
+    req.logger = logger;
+    req.logtailAll = logtailAll;
+    req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
 
     req.logtailAll = logtailAll;
     req.posthog = posthog;
@@ -84,10 +90,6 @@ const init = async () => {
 
   app.use(cors());
 
-  app.use((req: any, res: any, next: any) => {
-    req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
-    next();
-  });
   app.use("/webhooks", webhooksRouter);
 
   app.use((req: any, res, next) => {
@@ -123,13 +125,6 @@ const init = async () => {
     console.log(`Server running on port ${PORT}`);
   });
 };
-
-import cluster from "cluster";
-import os from "os";
-import { CacheManager } from "./external/caching/CacheManager.js";
-import { initDrizzle } from "./db/initDrizzle.js";
-import { PostHog } from "posthog-node";
-import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 
 if (process.env.NODE_ENV === "development") {
   init();

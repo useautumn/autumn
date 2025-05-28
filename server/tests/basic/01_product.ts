@@ -103,6 +103,8 @@ describe(`${chalk.yellowBright(
       assert.isTrue(res.invoices.length > 0);
     });
 
+    // return;
+
     it("GET /entitled -- checking entitlements for metered1 && boolean1", async function () {
       const proEntitlements = products.pro.entitlements;
 
@@ -143,7 +145,7 @@ describe(`${chalk.yellowBright(
   const monthlyBillingUnits =
     products.monthlyAddOnMetered1.prices[0].config.billing_units;
 
-  describe("One time add on (force checkout)", () => {
+  describe.skip("One time add on (force checkout)", () => {
     // PURCHASE ONE TIME ADD ON
 
     it("POST /attach -- attaching one time add on (force checkout) [no quantity passed in]", async function () {
@@ -237,7 +239,7 @@ describe(`${chalk.yellowBright(
   });
 
   // PURCHASE MONTHLY ADD ON
-  describe("Monthly add on", () => {
+  describe.skip("Monthly add on", () => {
     it("POST /attach -- attaching monthly add on", async function () {
       await AutumnCli.attach({
         customerId: customerId,

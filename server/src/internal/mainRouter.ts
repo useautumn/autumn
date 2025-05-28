@@ -10,10 +10,11 @@ import { productRouter } from "./products/internalProductRouter.js";
 import { devRouter } from "./dev/devRouter.js";
 import { cusRouter } from "./customers/internalCusRouter.js";
 import { testRouter } from "./test/testRouter.js";
-import { autumnHandler } from "autumn-js/express";
 import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
-
 import { handlePostOrg } from "./orgs/handlers/handlePostOrg.js";
+import { Autumn } from "autumn-js";
+import { autumnHandler } from "autumn-js/express";
+import { parseAuthHeader } from "@/utils/authUtils.js";
 
 const mainRouter = Router();
 
@@ -46,6 +47,31 @@ mainRouter.use(
         customerData: {
           name: req.org?.slug,
           email: req.user?.email,
+        },
+      };
+    },
+  }),
+);
+
+mainRouter.use(
+  "/demo/api/autumn",
+  withOrgAuth,
+
+  autumnHandler({
+    autumn: (req: any) => {
+      let bearerToken = parseAuthHeader(req);
+
+      return new Autumn({
+        secretKey: bearerToken,
+        url: "http://localhost:8080/v1",
+      }) as any;
+    },
+    identify: async (req: any) => {
+      return {
+        customerId: "user_123",
+        customerData: {
+          name: "Demo User",
+          email: "demo@useautumn.com",
         },
       };
     },
