@@ -44,14 +44,14 @@ stripeWebhookRouter.post(
       return;
     }
 
-    const webhookSecret = getStripeWebhookSecret(org, env);
-    try {
-      event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
-    } catch (err: any) {
-      response.status(400).send(`Webhook Error: ${err.message}`);
-      return;
-    }
-    // event = JSON.parse(request.body);
+    // const webhookSecret = getStripeWebhookSecret(org, env);
+    // try {
+    //   event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
+    // } catch (err: any) {
+    //   response.status(400).send(`Webhook Error: ${err.message}`);
+    //   return;
+    // }
+    event = JSON.parse(request.body);
 
     const logger = createLogtailWithContext({
       action: LoggerAction.StripeWebhook,
