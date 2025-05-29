@@ -9,7 +9,6 @@ import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
-import { sendProductsUpdatedWebhook } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";

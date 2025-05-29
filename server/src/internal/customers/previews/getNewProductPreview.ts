@@ -1,4 +1,4 @@
-import { Feature, FullProduct, Organization } from "@autumn/shared";
+import { Feature, FullProduct, Organization, UsageModel } from "@autumn/shared";
 import { mapToProductV2 } from "@/internal/products/productV2Utils.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 
@@ -34,7 +34,7 @@ export const getNewProductPreview = async ({
   let sortedItems = sortProductItems(productV2.items, features);
 
   let lineItems = sortedItems
-    .filter((i) => !isFeatureItem(i))
+    .filter((i) => !isFeatureItem(i) && i.usage_model != UsageModel.Prepaid)
     .map((i, index) => {
       let pricecnPrice = getPricecnPrice({
         org,
@@ -53,7 +53,7 @@ export const getNewProductPreview = async ({
       return {
         description,
         price: `${pricecnPrice.primaryText} ${pricecnPrice.secondaryText}`,
-        usage_model: isFeaturePriceItem(i) ? i.usage_model : undefined,
+        // usage_model: isFeaturePriceItem(i) ? i.usage_model : undefined,
       };
     });
 

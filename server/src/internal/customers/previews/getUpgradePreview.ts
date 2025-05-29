@@ -1,17 +1,18 @@
 import {
   checkStripeProductExists,
-  isFreeProduct,
   isOneOff,
 } from "@/internal/products/productUtils.js";
 import {
   AppEnv,
   AttachScenario,
+  BillingType,
   CheckProductPreview,
   Customer,
   Feature,
   FullCusProduct,
   FullProduct,
   Organization,
+  PriceType,
 } from "@autumn/shared";
 import { AttachParams } from "../products/AttachParams.js";
 import { handleStripeSubUpdate } from "../change-product/handleUpgrade.js";
@@ -20,7 +21,7 @@ import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
 import { billForRemainingUsages } from "../change-product/billRemainingUsages.js";
 
-import { formatCurrency, itemsToHtml } from "./previewUtils.js";
+import { formatCurrency } from "./previewUtils.js";
 
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
@@ -28,6 +29,9 @@ import { isFeaturePriceItem } from "@/internal/products/product-items/productIte
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { isPriceItem } from "@/internal/products/product-items/getItemType.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { cusProductToPrices } from "../products/cusProductUtils.js";
+import { formatUnixToDateTime } from "@/utils/genUtils.js";
 
 export const isAddProductFlow = ({
   curCusProduct,
@@ -198,12 +202,48 @@ export const getUpgradePreview = async ({
     shouldPreview: true,
   })) as any;
 
-  let baseLineItems = updatePreview.lines.data.map((item: any) => {
-    return {
-      amount: item.amount / 100,
-      description: item.description,
-    };
-  });
+  let curPrices = cusProductToPrices(curMainProduct);
+  let allPrices = [...product.prices, ...curPrices];
+
+  let nextCycleAt = stripeSubs[0].current_period_end * 1000;
+
+  // Fetch next cycle at from annual upgrades...
+  for (const item of updatePreview.lines.data) {
+    if (item.period.end * 1000 > nextCycleAt) {
+      nextCycleAt = item.period.end * 1000;
+    }
+  }
+
+  let baseLineItems = updatePreview.lines.data
+    .filter((item: any) => {
+      let price = allPrices.find((p) => {
+        let config = p.config;
+
+        return (
+          config.stripe_price_id === item.price.id ||
+          config.stripe_product_id == item.price.product
+        );
+      });
+
+      if (!price) {
+        return true;
+      }
+
+      let isPrepaid =
+        getBillingType(price?.config!) === BillingType.UsageInAdvance;
+
+      if (isPrepaid) {
+        return false; // Don't show prepaid items in preview
+      }
+
+      return true;
+    })
+    .map((item: any) => {
+      return {
+        amount: item.amount / 100,
+        description: item.description,
+      };
+    });
 
   let usageLineItems =
     (await billForRemainingUsages({
@@ -267,6 +307,7 @@ export const getUpgradePreview = async ({
     dueToday = 0;
     dueNextCycle = Number((proratedAmount + regularAmount).toFixed(2));
   }
+
   const result: CheckProductPreview = {
     title: `Upgrade to ${product.name}`,
     message: formattedMessage.message,
@@ -275,12 +316,11 @@ export const getUpgradePreview = async ({
     product_id: product.id,
     product_name: product.name,
     recurring: !isOneOff(product.prices),
-    next_cycle_at: stripeSubs[0].current_period_end * 1000,
+    next_cycle_at: nextCycleAt,
     current_product_name: curMainProduct.product.name,
 
     items,
-    // amount_due: Number(totalAmount.toFixed(2)),
-    // total: totalAmount,
+
     options: options as any,
     due_today: {
       price: dueToday,

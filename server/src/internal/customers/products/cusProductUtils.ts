@@ -148,7 +148,7 @@ export const activateDefaultProduct = async ({
     curCusProduct &&
     curCusProduct.internal_product_id == defaultProd.internal_id
   ) {
-    console.log("   ❌ default product is already active");
+    // console.log("   ❌ default product is already active");
     return false;
   }
 
@@ -168,7 +168,7 @@ export const activateDefaultProduct = async ({
     scenario: AttachScenario.New,
   });
 
-  console.log(`   ✅ activated default product: ${defaultProd.group}`);
+  // console.log(`   ✅ activated default product: ${defaultProd.group}`);
   return true;
 };
 
@@ -313,6 +313,10 @@ export const fullCusProductToCusPrices = (
   }
 
   return cusPrices;
+};
+
+export const cusProductToPrices = (cusProduct: FullCusProduct) => {
+  return cusProduct.customer_prices.map((cp) => cp.price);
 };
 
 export const processFullCusProduct = ({

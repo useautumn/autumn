@@ -50,6 +50,16 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
     };
   }
 
+  if (newConfig.filters.length == 0) {
+    newConfig.filters = [
+      {
+        property: "",
+        operator: "",
+        value: [],
+      },
+    ];
+  }
+
   return newConfig as MeteredConfig;
 };
 

@@ -78,7 +78,13 @@ export const parseChatResultFeatures = ({
     } else if (type == FeatureType.Metered) {
       config = validateMeteredConfig({
         usage_type: feature.type as FeatureUsageType,
-        filters: [],
+        filters: [
+          {
+            property: "",
+            operator: "",
+            value: [],
+          },
+        ],
         aggregate: { type: AggregateType.Sum, property: "value" },
       });
     }

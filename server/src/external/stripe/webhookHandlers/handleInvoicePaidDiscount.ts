@@ -15,7 +15,7 @@ import {
 } from "../stripeCouponUtils/deleteCouponFromCus.js";
 import { createStripeCli } from "../utils.js";
 import { Decimal } from "decimal.js";
-import { formatUnixToDateTime, generateId } from "@/utils/genUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 import { addMonths } from "date-fns";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 

@@ -8,15 +8,22 @@ const createLogMethod = (pinoMethod: any, logtailMethod: any) => {
     let message = "";
     let mergedObj = {};
 
-    // Separate strings from objects
+    // Helper function to convert Error objects to plain objects
+
     const strings = args.filter((arg) => typeof arg === "string");
     const objects = args.filter(
-      (arg) => typeof arg === "object" && arg !== null,
+      (arg) => typeof arg !== "string" && arg !== null,
     );
 
-    // Use last string as message, or default
+    // Use last string as message, or use Error message if no strings provided
     if (strings.length > 0) {
       message = strings[strings.length - 1];
+    } else {
+      // If no string message but we have an Error object, use its stack trace
+      const errorObject = args.find((arg) => arg instanceof Error);
+      if (errorObject) {
+        message = errorObject.stack || errorObject.message || "Error occurred";
+      }
     }
 
     // Merge all objects

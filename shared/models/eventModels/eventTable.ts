@@ -30,7 +30,7 @@ export const events = pgTable(
 
     // Optional stuff...
     customer_id: text("customer_id").notNull(),
-    properties: jsonb(),
+    properties: jsonb().$type<Record<string, any>>(),
   },
   (table) => [
     foreignKey({

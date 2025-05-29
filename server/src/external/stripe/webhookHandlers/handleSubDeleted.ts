@@ -97,9 +97,6 @@ const handleCusProductDeleted = async ({
   }
 
   if (cusProduct.status === CusProductStatus.Expired) {
-    console.log(
-      `   ⚠️ customer product already expired, skipping: ${cusProduct.product.name} (${cusProduct.id})`,
-    );
     return;
   }
 

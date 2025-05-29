@@ -1,3 +1,6 @@
+import chalk from "chalk";
+import Stripe from "stripe";
+
 import { expect } from "chai";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { advanceProducts, features } from "tests/global.js";
@@ -6,8 +9,6 @@ import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { timeout } from "tests/utils/genUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { addDays, addMonths, format } from "date-fns";
-import chalk from "chalk";
-import Stripe from "stripe";
 
 import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import { checkSubscriptionContainsProducts } from "tests/utils/scheduleCheckUtils.js";

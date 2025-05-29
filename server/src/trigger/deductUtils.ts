@@ -21,9 +21,9 @@ export const getMeteredDeduction = (meteredFeature: Feature, event: Event) => {
 
   let value = notNullish(event.value)
     ? event.value
-    : notNullish(event.properties.value)
-    ? event.properties.value
-    : DEFAULT_VALUE;
+    : notNullish(event.properties?.value)
+      ? event.properties?.value
+      : DEFAULT_VALUE;
 
   let floatVal = parseFloat(value);
   if (isNaN(floatVal)) {
@@ -55,7 +55,7 @@ export const getCreditSystemDeduction = ({
   for (const schema of creditSystem.config.schema) {
     if (meteredFeatureIds.includes(schema.metered_feature_id)) {
       let meteredFeature = meteredFeatures.find(
-        (feature) => feature.id === schema.metered_feature_id
+        (feature) => feature.id === schema.metered_feature_id,
       );
 
       if (!meteredFeature) {
