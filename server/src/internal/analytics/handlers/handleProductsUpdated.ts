@@ -3,16 +3,12 @@ import {
   AppEnv,
   AuthType,
   CusProductStatus,
-  Entitlement,
-  FreeTrial,
   FullCusProduct,
   FullProduct,
   Organization,
-  Price,
-  Product,
 } from "@autumn/shared";
 
-import { sendSvixEvent } from "./svixUtils.js";
+import { sendSvixEvent } from "../../../external/svix/svixUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
 import { getCustomerDetails } from "@/internal/api/customers/getCustomerDetails.js";
@@ -63,7 +59,7 @@ export const addProductsUpdatedWebhookTask = async ({
 
   try {
     await addTaskToQueue({
-      jobName: JobName.SendProductsUpdatedWebhook,
+      jobName: JobName.HandleProductsUpdated,
       payload: {
         req: req ? parseReqForAction(req) : undefined,
         internalCustomerId,
@@ -90,7 +86,7 @@ export const addProductsUpdatedWebhookTask = async ({
   }
 };
 
-export const sendProductsUpdatedWebhook = async ({
+export const handleProductsUpdated = async ({
   db,
   logger,
   data,
@@ -120,6 +116,18 @@ export const sendProductsUpdatedWebhook = async ({
     scheduledCusProduct,
     deletedCusProduct,
   } = data;
+
+  if (!req) {
+    logger.warn("products.updated, no req object found, skipping", {
+      org_id: org.id,
+      org_slug: org.slug,
+      env,
+      internal_customer_id: data.internalCustomerId,
+      customer_id: data.customerId,
+      product_id: cusProduct.product.id,
+    });
+    return;
+  }
 
   // Product:
   let product = cusProduct.product;
@@ -172,6 +180,7 @@ export const sendProductsUpdatedWebhook = async ({
   });
 
   // 1. Log action to DB
+
   try {
     let action = constructAction({
       org,
@@ -191,9 +200,13 @@ export const sendProductsUpdatedWebhook = async ({
         body: req.body,
       },
     });
+
     await ActionService.insert(db, action);
-  } catch (error) {
-    logger.error("Failed to log action to DB", { error });
+  } catch (error: any) {
+    logger.error("Failed to log action to DB", {
+      message: error.message,
+      error: error,
+    });
   }
 
   // 2. Send Svix event

@@ -28,7 +28,7 @@ import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { addExistingUsagesToCusEnts } from "../entitlements/cusEntUtils/getExistingUsage.js";
-import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "../entitlements/CusEntitlementService.js";
 import { CusPriceService } from "../prices/CusPriceService.js";

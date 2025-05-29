@@ -10,7 +10,6 @@ import {
   UsagePriceConfig,
   RewardType,
 } from "@autumn/shared";
-import { logger } from "@trigger.dev/sdk/v3";
 import { Stripe } from "stripe";
 
 const couponToStripeDuration = (coupon: Reward) => {
@@ -66,11 +65,13 @@ export const createStripeCoupon = async ({
   stripeCli,
   org,
   prices,
+  logger,
 }: {
   reward: Reward;
   stripeCli: Stripe;
   org: Organization;
   prices: (Price & { product: Product })[];
+  logger: any;
 }) => {
   let discountConfig = reward.discount_config;
 

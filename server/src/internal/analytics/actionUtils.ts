@@ -1,3 +1,4 @@
+import { generateId } from "@/utils/genUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   Entity,
@@ -15,10 +16,9 @@ export const parseReqForAction = (
 ): Partial<ExtendedRequest> => {
   return {
     id: req.id,
-    auth_type: req.authType,
+    authType: req.authType,
+    originalUrl: req.originalUrl,
     method: req.method,
-    path: req.originalUrl,
-    request_id: req.id,
     body: req.body,
     timestamp: req.timestamp,
   } as Partial<ExtendedRequest>;
@@ -44,6 +44,7 @@ export const constructAction = ({
   let timestampVal = req.timestamp ? new Date(req.timestamp) : new Date();
 
   return {
+    id: generateId("act"),
     org_id: org.id,
     org_slug: org.slug,
     env,

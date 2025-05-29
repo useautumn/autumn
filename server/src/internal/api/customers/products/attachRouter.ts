@@ -305,6 +305,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // Get curCusProducts too...
     const attachParams: AttachParams = await getFullCusProductData({
+      req,
       db: req.db,
       customerId: customer_id,
       productId: product_id,

@@ -24,9 +24,6 @@ export const deleteCusById = async ({
   logger: any;
   deleteInStripe?: boolean;
 }) => {
-  console.log(
-    `${chalk.yellow("deleteCusById")}: ${customerId}, ${org.id}, ${env}`,
-  );
   const orgId = org.id;
 
   const customer = await CusService.get({

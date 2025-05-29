@@ -15,10 +15,9 @@ export const createCheckoutMetadata = async ({
 }) => {
   const metaId = generateId("meta");
 
-  let attachClone = structuredClone(attachParams);
-  if (attachClone.checkoutSessionParams) {
-    delete attachClone.checkoutSessionParams;
-  }
+  let { req, checkoutSessionParams, ...rest } = attachParams;
+
+  let attachClone = structuredClone(rest);
 
   const metadata: AutumnMetadata = {
     id: metaId,

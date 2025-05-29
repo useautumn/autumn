@@ -12,7 +12,7 @@ CREATE TABLE "actions" (
 	"auth_type" text NOT NULL,
 	"method" text NOT NULL,
 	"path" text NOT NULL,
-	"timestamp" timestamp DEFAULT now() NOT NULL,
+	"timestamp" timestamp with time zone DEFAULT now() NOT NULL,
 	"properties" jsonb,
 	CONSTRAINT "actions_request_id_unique" UNIQUE("request_id")
 );

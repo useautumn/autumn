@@ -5,7 +5,6 @@ import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js
 import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";

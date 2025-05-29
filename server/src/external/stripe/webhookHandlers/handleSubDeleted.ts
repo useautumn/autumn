@@ -23,7 +23,7 @@ import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
 
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { billForRemainingUsages } from "@/internal/customers/change-product/billRemainingUsages.js";
-import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";

@@ -7,6 +7,7 @@ import {
   EntityData,
   ErrCode,
   Event,
+  EventInsert,
   Feature,
   FeatureType,
   FullCustomer,
@@ -31,10 +32,12 @@ import { JobName } from "@/queue/JobName.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ActionRequest, ExtendedRequest } from "@/utils/models/Request.js";
 
 export const eventsRouter = Router();
 
 const getEventAndCustomer = async ({
+  req,
   db,
   org,
   env,
@@ -46,6 +49,7 @@ const getEventAndCustomer = async ({
   entityId,
   entityData,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   features: Feature[];
@@ -69,6 +73,7 @@ const getEventAndCustomer = async ({
 
   // 2. Check if customer ID is valid
   customer = await getOrCreateCustomer({
+    req,
     db,
     org,
     env,
@@ -92,19 +97,19 @@ const getEventAndCustomer = async ({
     }
   }
 
-  const newEvent: Event = {
+  const newEvent: EventInsert = {
     ...parsedEvent,
     properties: parsedEvent.properties || {},
     id: generateId("evt"),
     org_id: org.id,
     env: env,
     internal_customer_id: customer.internal_id,
-    timestamp: eventTimestamp,
+    created_at: eventTimestamp,
   };
 
-  await EventService.insert({ db, event: newEvent });
+  let event = await EventService.insert({ db, event: newEvent });
 
-  return { customer, event: newEvent };
+  return { customer, event };
 };
 
 const getAffectedFeatures = async ({
@@ -162,6 +167,7 @@ export const handleEventSent = async ({
   const org = await OrgService.getFromReq(req);
   const features = await FeatureService.getFromReq(req);
   const { customer, event } = await getEventAndCustomer({
+    req,
     db,
     org,
     env,

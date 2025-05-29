@@ -29,7 +29,7 @@ import {
   addCurMainProductToSchedule,
   getOtherCusProductsOnSub,
 } from "./scheduleUtils/cancelScheduledFreeProduct.js";
-import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 

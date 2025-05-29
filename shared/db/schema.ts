@@ -64,6 +64,7 @@ import { migrationErrorRelations } from "../models/migrationModels/migrationErro
 
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
+import { events } from "../models/eventModels/eventTable.js";
 
 // const relations = {
 //   organizationsRelations,
@@ -115,6 +116,7 @@ export {
   migrationJobs,
   migrationErrors,
   actions,
+  events,
 
   // Relations
   organizationsRelations,
