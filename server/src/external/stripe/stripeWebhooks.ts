@@ -33,7 +33,6 @@ stripeWebhookRouter.post(
     try {
       org = await OrgService.get({ db: request.db, orgId });
     } catch (error) {
-      console.log(`Org ${orgId} not found`);
       response.status(200).send(`Org ${orgId} not found`);
       return;
     }
@@ -52,6 +51,8 @@ stripeWebhookRouter.post(
       return;
     }
     // event = JSON.parse(request.body);
+
+    request.authType = "stripe";
 
     const logger = createLogtailWithContext({
       action: LoggerAction.StripeWebhook,
