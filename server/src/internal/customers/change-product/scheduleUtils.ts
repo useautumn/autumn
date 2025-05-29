@@ -31,10 +31,7 @@ import {
 } from "./scheduleUtils/cancelScheduledFreeProduct.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
-import {
-  addProductsUpdatedWebhookTask,
-  constructProductsUpdatedData,
-} from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getPricesForCusProduct = ({

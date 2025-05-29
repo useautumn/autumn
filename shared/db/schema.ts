@@ -62,32 +62,36 @@ import { rewardRedemptionRelations } from "../models/rewardModels/referralModels
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 
-const relations = {
-  organizationsRelations,
-  entitlementsRelations,
-  featureRelations,
-  priceRelations,
-  productRelations,
-  freeTrialRelations,
-  customerProductsRelations,
-  customerPricesRelations,
-  customerEntitlementsRelations,
+// Analytics Tables
+import { actions } from "../models/analyticsModels/actionTable.js";
 
-  // Customer Relations
-  customersRelations,
-  entitiesRelations,
-  apiKeyRelations,
+// const relations = {
+//   organizationsRelations,
+//   entitlementsRelations,
+//   featureRelations,
+//   priceRelations,
+//   productRelations,
+//   freeTrialRelations,
+//   customerProductsRelations,
+//   customerPricesRelations,
+//   customerEntitlementsRelations,
 
-  // Reward Relations
-  rewardProgramRelations,
-  referralCodeRelations,
-  rewardRedemptionRelations,
+//   // Customer Relations
+//   customersRelations,
+//   entitiesRelations,
+//   apiKeyRelations,
 
-  // Migration Relations
-  migrationErrorRelations,
-};
+//   // Reward Relations
+//   rewardProgramRelations,
+//   referralCodeRelations,
+//   rewardRedemptionRelations,
 
-export const schemas = {
+//   // Migration Relations
+//   migrationErrorRelations,
+// };
+
+export {
+  // Tables
   organizations,
   chatResults,
   freeTrials,
@@ -99,25 +103,34 @@ export const schemas = {
   customerPrices,
   customerEntitlements,
   invoices,
-
-  // Customer
   customers,
   entities,
-
-  // Other Tables
   apiKeys,
   metadata,
   subscriptions,
-
-  // Reward Tables
   rewards,
   rewardPrograms,
   referralCodes,
   rewardRedemptions,
-
-  // Migration Tables
   migrationJobs,
   migrationErrors,
+  actions,
 
-  ...relations,
+  // Relations
+  organizationsRelations,
+  entitlementsRelations,
+  featureRelations,
+  priceRelations,
+  productRelations,
+  freeTrialRelations,
+  customerProductsRelations,
+  customerPricesRelations,
+  customerEntitlementsRelations,
+  customersRelations,
+  entitiesRelations,
+  apiKeyRelations,
+  rewardProgramRelations,
+  referralCodeRelations,
+  rewardRedemptionRelations,
+  migrationErrorRelations,
 };

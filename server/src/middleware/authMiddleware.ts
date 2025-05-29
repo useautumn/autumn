@@ -57,7 +57,7 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
     req.user = tokenData!.user;
     req.org = org;
     req.features = features;
-    req.auth = AuthType.Frontend;
+    req.authType = AuthType.Dashboard;
 
     next();
   } catch (error: any) {
