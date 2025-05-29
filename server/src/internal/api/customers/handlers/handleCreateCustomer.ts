@@ -1,4 +1,3 @@
-import { handleRequestError } from "@/utils/errorUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
@@ -14,24 +13,20 @@ import {
   Organization,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { getCustomerDetails } from "../getCustomerDetails.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
   initProductInStripe,
   isFreeProduct,
 } from "@/internal/products/productUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
-import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { parseCusExpand } from "../cusUtils.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ActionRequest, ExtendedRequest } from "@/utils/models/Request.js";
+import { addCustomerCreatedTask } from "@/internal/analytics/handlers/handleCustomerCreated.js";
 
 export const initStripeCusAndProducts = async ({
   db,
@@ -74,6 +69,7 @@ export const initStripeCusAndProducts = async ({
 };
 
 export const createNewCustomer = async ({
+  req,
   db,
   org,
   env,
@@ -83,6 +79,7 @@ export const createNewCustomer = async ({
   logger,
   createDefaultProducts = true,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   env: AppEnv;
@@ -92,9 +89,9 @@ export const createNewCustomer = async ({
   logger: any;
   createDefaultProducts?: boolean;
 }) => {
-  logger.info(`Creating new customer: ${customer.id}`);
-  logger.info(`Org ID: ${org.id}`);
-  logger.info(`Customer data: ${JSON.stringify(customer)}`);
+  logger.info(
+    `Creating customer: ${customer.email || customer.id}, org: ${org.slug}`,
+  );
 
   const defaultProds = await ProductService.listDefault({
     db,
@@ -165,12 +162,10 @@ export const createNewCustomer = async ({
     });
 
     await handleAddProduct({
-      req: {
-        db,
-        logtail: logger,
-      },
+      req,
       res: {},
       attachParams: {
+        req,
         org,
         customer: newCustomer,
         products: nonFreeProds,
@@ -191,6 +186,7 @@ export const createNewCustomer = async ({
     await createFullCusProduct({
       db,
       attachParams: {
+        req,
         org,
         customer: newCustomer,
         product,
@@ -210,10 +206,18 @@ export const createNewCustomer = async ({
     });
   }
 
+  await addCustomerCreatedTask({
+    req,
+    internalCustomerId: newCustomer.internal_id,
+    org,
+    env,
+  });
+
   return newCustomer;
 };
 
 const handleIdIsNull = async ({
+  req,
   db,
   org,
   env,
@@ -222,6 +226,7 @@ const handleIdIsNull = async ({
   processor,
   createDefaultProducts,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   env: AppEnv;
@@ -266,6 +271,7 @@ const handleIdIsNull = async ({
   }
 
   const createdCustomer = await createNewCustomer({
+    req,
     db,
     org,
     env,
@@ -280,6 +286,7 @@ const handleIdIsNull = async ({
 
 // CAN ALSO USE DURING MIGRATION...
 export const handleCreateCustomerWithId = async ({
+  req,
   db,
   org,
   env,
@@ -288,6 +295,7 @@ export const handleCreateCustomerWithId = async ({
   processor,
   createDefaultProducts = true,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   env: AppEnv;
@@ -341,6 +349,7 @@ export const handleCreateCustomerWithId = async ({
 
   // 2. Handle email step...
   return await createNewCustomer({
+    req,
     db,
     org,
     env,
@@ -352,6 +361,7 @@ export const handleCreateCustomerWithId = async ({
 };
 
 export const handleCreateCustomer = async ({
+  req,
   db,
   cusData,
   org,
@@ -360,6 +370,7 @@ export const handleCreateCustomer = async ({
   processor,
   createDefaultProducts = true,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   cusData: CreateCustomer;
   org: Organization;
@@ -374,6 +385,7 @@ export const handleCreateCustomer = async ({
   let createdCustomer;
   if (newCus.id === null) {
     createdCustomer = await handleIdIsNull({
+      req,
       db,
       org,
       env,
@@ -384,6 +396,7 @@ export const handleCreateCustomer = async ({
     });
   } else {
     createdCustomer = await handleCreateCustomerWithId({
+      req,
       db,
       org,
       env,
@@ -395,72 +408,4 @@ export const handleCreateCustomer = async ({
   }
 
   return createdCustomer;
-};
-
-export const handlePostCustomerRequest = async (req: any, res: any) => {
-  const logger = req.logtail;
-  try {
-    const { db } = req;
-    const data = req.body;
-    const expand = parseCusExpand(req.query.expand);
-
-    if (!data.id && !data.email) {
-      throw new RecaseError({
-        message: "ID or email is required",
-        code: ErrCode.InvalidRequest,
-        statusCode: StatusCodes.BAD_REQUEST,
-      });
-    }
-
-    let org = await OrgService.getFromReq(req);
-    let features = await FeatureService.getFromReq(req);
-    let customer = await getOrCreateCustomer({
-      db,
-      org,
-      env: req.env,
-      customerId: data.id,
-      customerData: data,
-      logger,
-      inStatuses: [
-        CusProductStatus.Active,
-        CusProductStatus.PastDue,
-        CusProductStatus.Scheduled,
-      ],
-      expand,
-
-      features,
-      entityId: data.entity_id,
-      entityData: data.entity_data,
-    });
-
-    let cusDetails = await getCustomerDetails({
-      db,
-      customer,
-      org,
-      env: req.env,
-      params: req.query,
-      logger,
-      cusProducts: customer.customer_products,
-      expand,
-      features,
-      reqApiVersion: req.apiVersion,
-    });
-
-    res.status(200).json(cusDetails);
-  } catch (error: any) {
-    if (
-      error instanceof RecaseError &&
-      error.code === ErrCode.DuplicateCustomerId
-    ) {
-      logger.warn(
-        `POST /customers: ${error.message} (org: ${req.minOrg.slug})`,
-      );
-      res.status(error.statusCode).json({
-        message: error.message,
-        code: error.code,
-      });
-      return;
-    }
-    handleRequestError({ req, error, res, action: "create customer" });
-  }
 };

@@ -1,6 +1,6 @@
 {
-  "id": "42f1c163-41ed-4aaf-aee5-9a95876a9099",
-  "prevId": "d5ae1296-e8d6-4947-aed8-9553f86ccb63",
+  "id": "f1f27d42-50b5-4ec1-8b42-8a2607dc15ed",
+  "prevId": "b89d5375-4ef4-4cf1-b58b-540024d404a2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -143,15 +143,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "actions_request_id_unique": {
-          "name": "actions_request_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "request_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": true

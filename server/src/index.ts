@@ -24,7 +24,7 @@ import { initDrizzle } from "./db/initDrizzle.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import pg from "pg";
 import http from "http";
-import { generateId } from "@shared/utils/generateId.js";
+import { generateId } from "./utils/genUtils.js";
 
 if (!process.env.DATABASE_URL) {
   console.error(`DATABASE_URL is not set`);

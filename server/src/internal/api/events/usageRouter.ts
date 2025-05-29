@@ -4,6 +4,7 @@ import {
   Customer,
   ErrCode,
   Event,
+  EventInsert,
   FeatureType,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
@@ -41,6 +42,7 @@ const getCusFeatureAndOrg = async ({
   let { org, features } = await getOrgAndFeatures({ req });
   let [customer] = await Promise.all([
     getOrCreateCustomer({
+      req,
       db,
       org,
       env: req.env,
@@ -101,12 +103,14 @@ const createAndInsertEvent = async ({
     });
   }
 
-  const newEvent: Event = {
+  const newEvent: EventInsert = {
     id: generateId("evt"),
     org_id: req.orgId,
     env: req.env,
     internal_customer_id: customer.internal_id,
-    timestamp: Date.now(),
+    // timestamp: Date.now(),
+    created_at: Date.now(),
+
     idempotency_key: idempotencyKey,
     customer_id: customer.id,
     event_name: featureId,
@@ -115,9 +119,7 @@ const createAndInsertEvent = async ({
     set_usage: set_usage || false,
   };
 
-  await EventService.insert({ db: req.db, event: newEvent });
-
-  return newEvent;
+  return await EventService.insert({ db: req.db, event: newEvent });
 };
 
 export const handleUsageEvent = async ({

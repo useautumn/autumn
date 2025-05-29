@@ -1,6 +1,6 @@
 import { updateCustomerDetails } from "@/internal/api/customers/cusUtils.js";
 import { handleCreateCustomer } from "@/internal/api/customers/handlers/handleCreateCustomer.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import { CusService } from "../CusService.js";
 import {
   AppEnv,
@@ -18,8 +18,10 @@ import { createEntities } from "@/internal/api/entities/handlers/handleCreateEnt
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const getOrCreateCustomer = async ({
+  req,
   db,
   org,
   features,
@@ -40,6 +42,7 @@ export const getOrCreateCustomer = async ({
   entityId,
   entityData,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   features: Feature[];
@@ -71,9 +74,9 @@ export const getOrCreateCustomer = async ({
   }
 
   if (!customer) {
-    logger.info(`no customer found, creating new`, { customerData });
     try {
       customer = await handleCreateCustomer({
+        req,
         db,
         cusData: {
           id: customerId,
@@ -126,6 +129,7 @@ export const getOrCreateCustomer = async ({
     logger.info(`Auto creating entity ${entityId} for customer ${customerId}`);
 
     let newEntities = await createEntities({
+      req,
       db,
       org,
       customerId,

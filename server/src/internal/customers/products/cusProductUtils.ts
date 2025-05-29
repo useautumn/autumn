@@ -36,7 +36,7 @@ import { sortCusEntsForDeduction } from "../entitlements/cusEntUtils.js";
 import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
-import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";

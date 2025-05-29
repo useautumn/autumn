@@ -164,8 +164,6 @@ export class InvoiceService {
       }
     }
 
-    console.log("   ✅ Created invoice from stripe");
-
     // Send monthly_revenue event
     try {
       if (!stripeInvoice.livemode || !sendRevenueEvent) {

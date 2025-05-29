@@ -48,6 +48,7 @@ import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
 import { getInvoiceItems } from "../invoices/invoiceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const handleBillNowPrices = async ({
   attachParams,
@@ -462,10 +463,7 @@ export const handleAddProduct = async ({
   keepResetIntervals = false,
   disableMerge = false,
 }: {
-  req: {
-    db: DrizzleCli;
-    logtail: any;
-  };
+  req: ExtendedRequest;
   res: any;
   attachParams: AttachParams;
   fromRequest?: boolean;

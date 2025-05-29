@@ -50,7 +50,7 @@ function CreateUsagePrice({
   useEffect(() => {
     // find the entitlement with the feature_id, and console log the entitlements allowance
     const entitlement = product.entitlements.find(
-      (e: any) => e.feature_id == config.feature_id
+      (e: any) => e.feature_id == config.feature_id,
     );
     if (entitlement?.allowance_type == AllowanceType.Unlimited) {
       setSelectedEntitlementAllowance("unlimited");
@@ -110,7 +110,7 @@ function CreateUsagePrice({
         return false;
       }
       return true;
-    }
+    },
   );
 
   const getBillWhen = () => {
@@ -124,7 +124,6 @@ function CreateUsagePrice({
     const billWhenToType: any = {
       [BillWhen.StartOfPeriod]: "Prepaid",
       [BillWhen.EndOfPeriod]: "Pay per usage",
-      [BillWhen.BelowThreshold]: "Below threshold",
     };
 
     return billWhenToType[billWhen];
@@ -161,7 +160,7 @@ function CreateUsagePrice({
                   (entitlement: EntitlementWithFeature, index: number) => {
                     const feature = getFeature(
                       entitlement.internal_feature_id,
-                      features
+                      features,
                     );
                     if (!feature) return null;
                     return (
@@ -170,7 +169,7 @@ function CreateUsagePrice({
                         <span className="text-t3">{feature?.id}</span>
                       </SelectItem>
                     );
-                  }
+                  },
                 )
               )}
             </SelectContent>
@@ -204,7 +203,7 @@ function CreateUsagePrice({
       {/* Price */}
       <div className="flex gap-2 w-full">
         {[BillWhen.StartOfPeriod, BillWhen.EndOfPeriod].includes(
-          getBillWhen()
+          getBillWhen(),
         ) && (
           <div className="w-6/12">
             <FieldLabel>Interval</FieldLabel>
@@ -229,7 +228,7 @@ function CreateUsagePrice({
         )}
 
         {[BillWhen.StartOfPeriod, BillWhen.EndOfPeriod].includes(
-          getBillWhen()
+          getBillWhen(),
         ) && (
           <div className="w-6/12">
             <FieldLabel>Billing Units</FieldLabel>
@@ -292,7 +291,7 @@ function CreateUsagePrice({
               <div
                 className={cn(
                   "flex w-4/12 text-sm",
-                  tier.to == -1 && "bg-transparent"
+                  tier.to == -1 && "bg-transparent",
                 )}
               >
                 <UsageTierInput
@@ -392,7 +391,7 @@ export const UsageTierInput = ({
       <Input
         className={cn(
           "outline-none flex w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-          type === "amount" && "pr-8"
+          type === "amount" && "pr-8",
         )}
         value={value}
         onChange={onChange}

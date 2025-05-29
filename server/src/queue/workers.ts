@@ -9,58 +9,17 @@ import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutReward.js";
 import { runSaveFeatureDisplayTask } from "@/internal/features/featureUtils.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
-import { sendProductsUpdatedWebhook } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { sendProductsUpdatedWebhook } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
+import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
+import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 
 const NUM_WORKERS = 5;
 
-export const getRedisConnection = ({
-  useBackup = false,
-}: {
-  useBackup?: boolean;
-}) => {
-  let redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-
-  if (useBackup) {
-    redisUrl = process.env.REDIS_BACKUP_URL || "redis://localhost:6379";
-  }
-
-  return {
-    connection: {
-      url: redisUrl,
-      // enableOfflineQueue: false,
-    },
-  };
-};
-
-async function acquireLock({
-  customerId,
-  timeout = 30000,
-  useBackup = false,
-}: {
-  customerId: string;
-  timeout?: number;
-  useBackup?: boolean;
-}): Promise<boolean> {
-  // const redis = getRedisClient({ useBackup });
-  const redis = await QueueManager.getConnection({ useBackup });
-
-  const lockKey = `lock:customer:${customerId}`;
-  const acquired = await redis.set(lockKey, "1", "PX", timeout, "NX");
-  return acquired === "OK";
-}
-
-async function releaseLock({
-  customerId,
-  useBackup,
-}: {
-  customerId: string;
-  useBackup: boolean;
-}): Promise<void> {
-  const redis = await QueueManager.getConnection({ useBackup });
-  const lockKey = `lock:customer:${customerId}`;
-  await redis.del(lockKey);
-}
+const actionHandlers = [
+  JobName.HandleProductsUpdated,
+  JobName.HandleCustomerCreated,
+];
 
 const initWorker = ({
   id,
@@ -87,6 +46,7 @@ const initWorker = ({
         });
         return;
       }
+
       if (job.name == JobName.Migration) {
         await runMigrationTask({
           db,
@@ -96,44 +56,23 @@ const initWorker = ({
         return;
       }
 
-      if (job.name == JobName.SendProductsUpdatedWebhook) {
-        let lockKey = `${job.name}:${job.data.internalCustomerId}`;
-        if (
-          !(await acquireLock({
-            customerId: lockKey,
-            timeout: 10000,
-            useBackup,
-          }))
-        ) {
-          await queue.add(job.name, job.data, {
-            delay: 1000,
-          });
-          return;
-        }
-
-        try {
-          await sendProductsUpdatedWebhook({
-            db,
-            logger: logtail,
-            data: job.data,
-          });
-        } catch (error) {
-          console.error(
-            "Error processing sendProductsUpdatedWebhook job:",
-            error,
-          );
-        } finally {
-          await releaseLock({ customerId: lockKey, useBackup });
-        }
+      if (actionHandlers.includes(job.name as JobName)) {
+        await runActionHandlerTask({
+          queue,
+          job,
+          logger: logtail,
+          db,
+          useBackup,
+        });
+        return;
       }
 
       // TRIGGER CHECKOUT REWARD
       if (job.name == JobName.TriggerCheckoutReward) {
-        console.log("Triggering checkout reward check");
         let lockKey = `reward_trigger:${job.data.customer?.internal_id}`;
         if (
           !(await acquireLock({
-            customerId: lockKey,
+            lockKey,
             timeout: 10000,
             useBackup,
           }))
@@ -153,17 +92,18 @@ const initWorker = ({
         } catch (error) {
           console.error("Error processing job:", error);
         } finally {
-          await releaseLock({ customerId: lockKey, useBackup });
+          await releaseLock({ lockKey, useBackup });
         }
 
         return;
       }
 
+      // EVENT HANDLERS
       const { internalCustomerId } = job.data; // customerId is internal customer id
 
       while (
         !(await acquireLock({
-          customerId: internalCustomerId,
+          lockKey: `event:${internalCustomerId}`,
           timeout: 10000,
           useBackup,
         }))
@@ -191,7 +131,10 @@ const initWorker = ({
       } catch (error) {
         console.error("Error processing job:", error);
       } finally {
-        await releaseLock({ customerId: internalCustomerId, useBackup });
+        await releaseLock({
+          lockKey: `event:${internalCustomerId}`,
+          useBackup,
+        });
       }
     },
     {

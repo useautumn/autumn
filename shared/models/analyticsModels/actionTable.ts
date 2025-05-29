@@ -5,7 +5,6 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { generateId } from "../../utils/generateId.js";
 import { sql } from "drizzle-orm";
 import { ActionType, AuthType } from "./actionEnums.js";
 import { organizations } from "../orgModels/orgTable.js";
@@ -16,12 +15,9 @@ import { collatePgColumn } from "../../db/utils.js";
 export const actions = pgTable(
   "actions",
   {
-    id: text()
-      .primaryKey()
-      .notNull()
-      .$defaultFn(() => generateId("act")),
+    id: text().primaryKey().notNull(),
 
-    request_id: text("request_id").unique().notNull(),
+    request_id: text("request_id").notNull(),
 
     org_id: text("org_id").notNull(),
     org_slug: text("org_slug").notNull(),

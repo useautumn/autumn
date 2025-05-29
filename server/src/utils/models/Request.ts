@@ -38,4 +38,13 @@ export interface ExtendedRequest extends ExpressRequest {
   timestamp: number;
 }
 
+export interface ActionRequest {
+  id: string;
+  authType: AuthType;
+  method: string;
+  path: string;
+  body: any;
+  timestamp: number;
+}
+
 export interface ExtendedResponse extends ExpressResponse {}

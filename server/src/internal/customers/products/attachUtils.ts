@@ -36,6 +36,7 @@ import { handleNewProductItems } from "@/internal/products/product-items/product
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { Decimal } from "decimal.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ActionRequest, ExtendedRequest } from "@/utils/models/Request.js";
 
 const getProducts = async ({
   db,
@@ -151,6 +152,7 @@ const getProducts = async ({
 };
 
 const getCustomerAndProducts = async ({
+  req,
   db,
   org,
   features,
@@ -165,6 +167,7 @@ const getCustomerAndProducts = async ({
   entityId,
   entityData,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   features: Feature[];
@@ -180,6 +183,7 @@ const getCustomerAndProducts = async ({
 }) => {
   const [customer, products] = await Promise.all([
     getOrCreateCustomer({
+      req,
       db,
       org,
       features,
@@ -281,6 +285,7 @@ const mapOptionsList = ({
 };
 
 export const getFullCusProductData = async ({
+  req,
   db,
   org,
   features,
@@ -298,6 +303,7 @@ export const getFullCusProductData = async ({
   version,
   entityData,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   features: Feature[];
@@ -317,6 +323,7 @@ export const getFullCusProductData = async ({
 }) => {
   // 1. Get customer, product, org & features
   const { customer, products, cusProducts } = await getCustomerAndProducts({
+    req,
     db,
     org,
     features,
