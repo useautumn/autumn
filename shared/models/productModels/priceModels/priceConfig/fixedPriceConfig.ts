@@ -6,6 +6,7 @@ export const FixedPriceConfigSchema = z.object({
   amount: z.number().min(0),
   interval: z.nativeEnum(BillingInterval),
   stripe_price_id: z.string().nullish(),
+  stripe_product_id: z.null().or(z.undefined()),
 });
 
 export type FixedPriceConfig = z.infer<typeof FixedPriceConfigSchema>;

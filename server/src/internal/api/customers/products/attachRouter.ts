@@ -52,7 +52,7 @@ import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 
 export const attachRouter = Router();
 
-export const checkAddProductErrors = async ({
+export const handlePrepaidErrors = async ({
   attachParams,
   useCheckout = false,
 }: {
@@ -376,12 +376,6 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // 1. Check for normal errors (eg. options, different recurring intervals)
 
-    await checkAddProductErrors({
-      attachParams,
-      useCheckout,
-    });
-
-    // 2. Check for existing product and fetch
     const { curCusProduct, done } = await handleExistingProduct({
       req,
       res,
@@ -389,6 +383,11 @@ attachRouter.post("/attach", async (req: any, res) => {
       useCheckout,
       invoiceOnly,
       isCustom,
+    });
+
+    await handlePrepaidErrors({
+      attachParams,
+      useCheckout,
     });
 
     await handlePublicAttachErrors({

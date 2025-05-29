@@ -44,7 +44,7 @@ export const runActionHandlerTask = async ({
         break;
     }
   } catch (error) {
-    console.error("Error processing action handler job:", {
+    logger.error("Error processing action handler job:", {
       jobName: job.name,
       error,
       payload,

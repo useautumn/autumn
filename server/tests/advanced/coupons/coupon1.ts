@@ -1,16 +1,16 @@
-import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
+import chalk from "chalk";
+import Stripe from "stripe";
+import { Customer } from "@autumn/shared";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
 import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
-import { Customer } from "@autumn/shared";
 import { expect } from "chai";
-import chalk from "chalk";
 import { addHours, addMonths } from "date-fns";
-import Stripe from "stripe";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { features, products, rewards } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
+import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import { getFixedPriceAmount, timeout } from "tests/utils/genUtils.js";
+import { AutumnCli } from "tests/cli/AutumnCli.js";
+import { compareMainProduct } from "tests/utils/compare.js";
 
 import {
   advanceClockForInvoice,
@@ -18,12 +18,10 @@ import {
   completeCheckoutForm,
   getDiscount,
 } from "tests/utils/stripeUtils.js";
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 
 describe(
   chalk.yellow("coupon1 -- Testing one-off rollover, apply to all"),
   () => {
-    let logger: any;
     let customerId = "coupon1";
     let stripeCli: Stripe;
     let customer: Customer;
@@ -42,10 +40,6 @@ describe(
       testClockId = testClockId1;
       customer = customer1;
 
-      logger = createLogtailWithContext({
-        test: "coupon1",
-        customerId,
-      });
       stripeCli = createStripeCli({
         org: this.org,
         env: this.env,

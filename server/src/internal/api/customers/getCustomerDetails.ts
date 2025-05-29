@@ -188,6 +188,7 @@ export const getCustomerDetails = async ({
     subs,
     org,
     apiVersion,
+    entities: customer.entities,
   });
 
   if (apiVersion >= APIVersion.v1_1) {

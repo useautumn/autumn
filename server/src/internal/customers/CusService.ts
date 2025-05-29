@@ -20,6 +20,39 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 
 export class CusService {
+  // static async list({
+  //   db,
+  //   orgId,
+  //   env,
+
+  // }: {
+  //   db: DrizzleCli;
+  //   orgId: string;
+  //   env: AppEnv;
+
+  // }) {
+
+  //     const from = (page - 1) * pageSize;
+  //     const to = from + pageSize - 1;
+
+  //     const { data, count, error } = await sb
+  //       .from("customers")
+  //       .select("*", { count: "exact" })
+  //       .eq("org_id", orgId)
+  //       .eq("env", env)
+  //       .order("created_at", { ascending: false })
+  //       .order("name", { ascending: true })
+  //       .order("internal_id", { ascending: true })
+  //       .range(from, to);
+
+  //     if (error) {
+  //       throw error;
+  //     }
+
+  //     return { data, count };
+
+  // }
+
   static async getFull({
     db,
     idOrInternalId,

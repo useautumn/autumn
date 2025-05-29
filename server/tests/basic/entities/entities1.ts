@@ -1,11 +1,9 @@
 import { Autumn } from "@/external/autumn/autumnCli.js";
 import { setupBefore } from "tests/before.js";
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, organizations } from "@autumn/shared";
 import { getFeaturePrice, getUsagePriceTiers } from "tests/utils/genUtils.js";
 import { entityProducts, features } from "../../global.js";
 import { Stripe } from "stripe";
-import { CusService } from "@/internal/customers/CusService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { checkBalance } from "tests/utils/autumnUtils.js";
 import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
@@ -19,6 +17,7 @@ import { assert, expect } from "chai";
 import chalk from "chalk";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { eq } from "drizzle-orm";
 
 // Check balance and stripe quantity
 const checkEntAndStripeQuantity = async ({
@@ -127,15 +126,15 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
     testClockId = testClockId1;
 
     // Update org config
-    await this.sb
-      .from("organizations")
-      .update({
+    await this.db
+      .update(organizations)
+      .set({
         config: {
           ...this.org.config,
           prorate_unused: false,
         },
       })
-      .eq("id", this.org.id);
+      .where(eq(organizations.id, this.org.id));
 
     await CacheManager.invalidate({
       action: CacheType.SecretKey,
@@ -364,15 +363,16 @@ describe(`${chalk.yellowBright("entities1: Testing entities")}`, () => {
   });
 
   after(async function () {
-    await this.sb
-      .from("organizations")
-      .update({
+    await this.db
+      .update(organizations)
+      .set({
         config: {
           ...this.org.config,
           prorate_unused: true,
         },
       })
-      .eq("id", this.org.id);
+      .where(eq(organizations.id, this.org.id));
+
     void CacheManager.invalidate({
       action: CacheType.SecretKey,
       value: hashApiKey(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!),
