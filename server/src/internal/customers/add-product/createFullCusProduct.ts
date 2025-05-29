@@ -27,10 +27,8 @@ import { searchCusProducts } from "@/internal/customers/products/cusProductUtils
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { JobName } from "@/queue/JobName.js";
 import { addExistingUsagesToCusEnts } from "../entitlements/cusEntUtils/getExistingUsage.js";
-import { constructProductsUpdatedData } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "../entitlements/CusEntitlementService.js";
 import { CusPriceService } from "../prices/CusPriceService.js";
@@ -444,23 +442,22 @@ export const createFullCusProduct = async ({
 
   try {
     if (sendWebhook && !attachParams.fromMigration) {
-      await addTaskToQueue({
-        jobName: JobName.SendProductsUpdatedWebhook,
-        payload: constructProductsUpdatedData({
-          internalCustomerId: customer.internal_id,
-          org,
-          env: customer.env,
-          customerId: customer.id || null,
-          product: isDowngrade ? curCusProduct!.product : product,
-          prices: isDowngrade
-            ? curCusProduct!.customer_prices.map((cp) => cp.price)
-            : prices,
-          entitlements: isDowngrade
-            ? curCusProduct!.customer_entitlements.map((ce) => ce.entitlement)
-            : entitlements,
-          freeTrial,
-          scenario,
-        }),
+      await addProductsUpdatedWebhookTask({
+        req: attachParams.req,
+        internalCustomerId: customer.internal_id,
+        org,
+        env: customer.env,
+        customerId: customer.id || null,
+        product: isDowngrade ? curCusProduct!.product : product,
+        prices: isDowngrade
+          ? curCusProduct!.customer_prices.map((cp) => cp.price)
+          : prices,
+        entitlements: isDowngrade
+          ? curCusProduct!.customer_entitlements.map((ce) => ce.entitlement)
+          : entitlements,
+        freeTrial,
+        scenario,
+        logger,
       });
     }
   } catch (error) {

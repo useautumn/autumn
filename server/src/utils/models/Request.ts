@@ -1,4 +1,10 @@
-import { AppEnv, Feature, MinOrg, Organization } from "@autumn/shared";
+import {
+  AppEnv,
+  AuthType,
+  Feature,
+  MinOrg,
+  Organization,
+} from "@autumn/shared";
 import { Logtail } from "@logtail/node";
 import type {
   Request as ExpressRequest,
@@ -10,6 +16,9 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PostHog } from "posthog-node";
 
 export interface ExtendedRequest extends ExpressRequest {
+  id: string;
+  authType: AuthType;
+
   pg: Client;
   db: DrizzleCli;
 

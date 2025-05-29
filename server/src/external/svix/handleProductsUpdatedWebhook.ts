@@ -1,8 +1,8 @@
 import {
   AppEnv,
+  AuthType,
   CusProductStatus,
   Entitlement,
-  ErrCode,
   FreeTrial,
   FullProduct,
   Organization,
@@ -20,9 +20,19 @@ import { getProductResponse } from "@/internal/products/productV2Utils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import RecaseError from "@/utils/errorUtils.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
+
+interface ActionDetails {
+  reqId: string;
+  reqBody: any;
+  method: string;
+  path: string;
+  timestamp: number;
+  authType: AuthType;
+}
 
 export const addProductsUpdatedWebhookTask = async ({
+  req,
   internalCustomerId,
   org,
   env,
@@ -34,6 +44,7 @@ export const addProductsUpdatedWebhookTask = async ({
   scenario,
   logger,
 }: {
+  req?: ExtendedRequest;
   internalCustomerId: string;
   org: Organization;
   env: AppEnv;
@@ -46,19 +57,34 @@ export const addProductsUpdatedWebhookTask = async ({
   logger: any;
 }) => {
   try {
+    let fullProduct = {
+      ...product,
+      prices,
+      entitlements,
+      free_trial: freeTrial,
+    };
+
+    let actionDetails: ActionDetails = req
+      ? {
+          reqId: req.id,
+          reqBody: req.body,
+          method: req.method,
+          path: req.originalUrl,
+          timestamp: Date.now(),
+          authType: req.authType,
+        }
+      : undefined;
+
     await addTaskToQueue({
       jobName: JobName.SendProductsUpdatedWebhook,
-      payload: constructProductsUpdatedData({
+      payload: {
         internalCustomerId,
         org,
         env,
         customerId,
-        product,
-        prices,
-        entitlements,
-        freeTrial,
+        product: fullProduct,
         scenario,
-      }),
+      },
     });
   } catch (error) {
     logger.error("Failed to add products updated webhook task to queue", {
@@ -72,42 +98,6 @@ export const addProductsUpdatedWebhookTask = async ({
   }
 };
 
-export const constructProductsUpdatedData = ({
-  internalCustomerId,
-  org,
-  env,
-  customerId,
-  product,
-  prices,
-  entitlements,
-  freeTrial,
-  scenario,
-}: {
-  internalCustomerId: string;
-  org: Organization;
-  env: AppEnv;
-  customerId: string | null;
-  product: Product;
-  prices: Price[];
-  entitlements: Entitlement[];
-  freeTrial: FreeTrial | null;
-  scenario: string;
-}) => {
-  return {
-    internalCustomerId,
-    org,
-    env,
-    customerId,
-    product: {
-      ...product,
-      prices,
-      entitlements,
-      free_trial: freeTrial,
-    },
-    scenario,
-  };
-};
-
 export const sendProductsUpdatedWebhook = async ({
   db,
   logger,
@@ -116,6 +106,7 @@ export const sendProductsUpdatedWebhook = async ({
   db: DrizzleCli;
   logger: any;
   data: {
+    actionDetails: ActionDetails;
     internalCustomerId: string;
     org: Organization;
     env: AppEnv;

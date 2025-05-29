@@ -24,6 +24,7 @@ import { initDrizzle } from "./db/initDrizzle.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import pg from "pg";
 import http from "http";
+import { generateId } from "@shared/utils/generateId.js";
 
 if (!process.env.DATABASE_URL) {
   console.error(`DATABASE_URL is not set`);
@@ -46,7 +47,7 @@ const init = async () => {
   // await initWorkers();
   const supabaseClient = createSupabaseClient();
   const logtailAll = createLogtailAll();
-  const { client, db } = initDrizzle();
+  const { db } = initDrizzle();
 
   const posthog = createPosthogCli();
 
@@ -54,12 +55,15 @@ const init = async () => {
     req.sb = supabaseClient;
     req.pg = pgClient;
     req.db = db;
+
     req.logger = logger;
     req.logtailAll = logtailAll;
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
 
     req.logtailAll = logtailAll;
     req.posthog = posthog;
+
+    req.id = req.headers["rndr-id"] || generateId("local_req");
 
     try {
       let headersClone = structuredClone(req.headers);
