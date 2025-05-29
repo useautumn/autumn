@@ -12,6 +12,7 @@ import {
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   ErrCode,
   CusProductStatus,
@@ -23,6 +24,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 
 export const removeScheduledProduct = async ({
+  req,
   db,
   cusProduct,
   cusProducts,
@@ -31,6 +33,7 @@ export const removeScheduledProduct = async ({
   logger,
   renewCurProduct = true,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   cusProduct: FullCusProduct;
   cusProducts: FullCusProduct[];
@@ -46,6 +49,7 @@ export const removeScheduledProduct = async ({
 
   // 1. Cancel future product schedule
   await cancelFutureProductSchedule({
+    req,
     db,
     org,
     cusProducts,
@@ -66,6 +70,7 @@ export const removeScheduledProduct = async ({
 };
 
 export const expireCusProduct = async ({
+  req,
   db,
   cusProduct, // cus product to expire
   cusProducts, // other cus products
@@ -75,6 +80,7 @@ export const expireCusProduct = async ({
   customer,
   expireImmediately = true,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   cusProduct: FullCusProduct;
   cusProducts: FullCusProduct[];
@@ -99,6 +105,7 @@ export const expireCusProduct = async ({
 
   if (cusProduct.status == CusProductStatus.Scheduled) {
     await removeScheduledProduct({
+      req,
       db,
       cusProduct,
       cusProducts,
@@ -215,22 +222,24 @@ export const handleCusProductExpired = async (req: any, res: any) => {
 
     const cusProducts = await CusProductService.list({
       db,
-      internalCustomerId: cusProduct.customer.internal_id,
+      internalCustomerId: cusProduct.customer!.internal_id,
       inStatuses: [
         CusProductStatus.Active,
         CusProductStatus.PastDue,
         CusProductStatus.Scheduled,
       ],
+      withCustomer: true,
     });
 
     await expireCusProduct({
+      req,
       db,
       cusProduct,
       cusProducts,
       org,
       env: req.env,
       logger: req.logtail,
-      customer: cusProduct.customer,
+      customer: cusProduct.customer!,
       expireImmediately: true,
     });
 

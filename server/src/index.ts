@@ -64,6 +64,7 @@ const init = async () => {
     req.posthog = posthog;
 
     req.id = req.headers["rndr-id"] || generateId("local_req");
+    req.timestamp = Date.now();
 
     try {
       let headersClone = structuredClone(req.headers);

@@ -440,22 +440,30 @@ export const createFullCusProduct = async ({
     cusPrices,
   });
 
+  let fullCusProduct = {
+    ...cusProd,
+    product,
+    customer_entitlements: cusEnts.map((ce) => ({
+      ...ce,
+      entitlement: entitlements.find((e) => e.id === ce.entitlement_id)!,
+    })),
+    customer_prices: cusPrices.map((cp) => ({
+      ...cp,
+      price: prices.find((p) => p.id === cp.price_id)!,
+    })),
+  };
+
   try {
     if (sendWebhook && !attachParams.fromMigration) {
+      // Maybe send two for downgrade? (one for scheduled, one for active)
       await addProductsUpdatedWebhookTask({
         req: attachParams.req,
         internalCustomerId: customer.internal_id,
         org,
         env: customer.env,
         customerId: customer.id || null,
-        product: isDowngrade ? curCusProduct!.product : product,
-        prices: isDowngrade
-          ? curCusProduct!.customer_prices.map((cp) => cp.price)
-          : prices,
-        entitlements: isDowngrade
-          ? curCusProduct!.customer_entitlements.map((ce) => ce.entitlement)
-          : entitlements,
-        freeTrial,
+        cusProduct: isDowngrade ? curCusProduct! : fullCusProduct,
+        scheduledCusProduct: isDowngrade ? fullCusProduct : undefined,
         scenario,
         logger,
       });
@@ -464,15 +472,5 @@ export const createFullCusProduct = async ({
     logger.error("Failed to add products updated webhook task to queue");
   }
 
-  return {
-    ...cusProd,
-    customer_entitlements: cusEnts.map((ce) => ({
-      ...ce,
-      entitlement: entitlements.find((e) => e.id === ce.entitlement_id),
-    })),
-    customer_prices: cusPrices.map((cp) => ({
-      ...cp,
-      price: prices.find((p) => p.id === cp.price_id),
-    })),
-  };
+  return fullCusProduct;
 };

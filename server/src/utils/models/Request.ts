@@ -34,6 +34,8 @@ export interface ExtendedRequest extends ExpressRequest {
 
   posthog?: PostHog;
   apiVersion?: number;
+
+  timestamp: number;
 }
 
 export interface ExtendedResponse extends ExpressResponse {}
