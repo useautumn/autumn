@@ -49,7 +49,7 @@ export class EventService {
     env: string;
     limit?: number;
   }) {
-    return await db
+    let results = await db
       .select({
         id: events.id,
         event_name: events.event_name,
@@ -71,5 +71,7 @@ export class EventService {
       )
       .orderBy(desc(events.created_at))
       .limit(limit);
+
+    return results;
   }
 }
