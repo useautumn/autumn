@@ -8,6 +8,7 @@ import {
   foreignKey,
   unique,
   bigint,
+  timestamp,
 } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";
@@ -17,10 +18,11 @@ export const events = pgTable(
   {
     id: text().primaryKey().notNull(),
     org_id: text("org_id").notNull(),
+    org_slug: text("org_slug").notNull(),
     internal_customer_id: text("internal_customer_id"),
     env: text().notNull(),
     created_at: bigint({ mode: "number" }),
-    // timestamp: numeric({ mode: "number" }),
+    timestamp: timestamp({ mode: "date", withTimezone: true }),
 
     event_name: text("event_name").notNull(),
     idempotency_key: text("idempotency_key").default(sql`null`),
