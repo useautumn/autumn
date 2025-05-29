@@ -233,7 +233,7 @@ export const handleInvoicePaid = async ({
             customer: cusProd.customer,
             product: cusProd.product,
             org,
-            env: cusProd.customer.env,
+            env: cusProd.customer!.env,
             subId: cusProd.subscription_ids?.[0],
           },
         });

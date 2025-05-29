@@ -27,10 +27,8 @@ import { searchCusProducts } from "@/internal/customers/products/cusProductUtils
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { JobName } from "@/queue/JobName.js";
 import { addExistingUsagesToCusEnts } from "../entitlements/cusEntUtils/getExistingUsage.js";
-import { constructProductsUpdatedData } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "../entitlements/CusEntitlementService.js";
 import { CusPriceService } from "../prices/CusPriceService.js";
@@ -442,40 +440,37 @@ export const createFullCusProduct = async ({
     cusPrices,
   });
 
+  let fullCusProduct = {
+    ...cusProd,
+    product,
+    customer_entitlements: cusEnts.map((ce) => ({
+      ...ce,
+      entitlement: entitlements.find((e) => e.id === ce.entitlement_id)!,
+    })),
+    customer_prices: cusPrices.map((cp) => ({
+      ...cp,
+      price: prices.find((p) => p.id === cp.price_id)!,
+    })),
+  };
+
   try {
     if (sendWebhook && !attachParams.fromMigration) {
-      await addTaskToQueue({
-        jobName: JobName.SendProductsUpdatedWebhook,
-        payload: constructProductsUpdatedData({
-          internalCustomerId: customer.internal_id,
-          org,
-          env: customer.env,
-          customerId: customer.id || null,
-          product: isDowngrade ? curCusProduct!.product : product,
-          prices: isDowngrade
-            ? curCusProduct!.customer_prices.map((cp) => cp.price)
-            : prices,
-          entitlements: isDowngrade
-            ? curCusProduct!.customer_entitlements.map((ce) => ce.entitlement)
-            : entitlements,
-          freeTrial,
-          scenario,
-        }),
+      // Maybe send two for downgrade? (one for scheduled, one for active)
+      await addProductsUpdatedWebhookTask({
+        req: attachParams.req,
+        internalCustomerId: customer.internal_id,
+        org,
+        env: customer.env,
+        customerId: customer.id || null,
+        cusProduct: isDowngrade ? curCusProduct! : fullCusProduct,
+        scheduledCusProduct: isDowngrade ? fullCusProduct : undefined,
+        scenario,
+        logger,
       });
     }
   } catch (error) {
     logger.error("Failed to add products updated webhook task to queue");
   }
 
-  return {
-    ...cusProd,
-    customer_entitlements: cusEnts.map((ce) => ({
-      ...ce,
-      entitlement: entitlements.find((e) => e.id === ce.entitlement_id),
-    })),
-    customer_prices: cusPrices.map((cp) => ({
-      ...cp,
-      price: prices.find((p) => p.id === cp.price_id),
-    })),
-  };
+  return fullCusProduct;
 };

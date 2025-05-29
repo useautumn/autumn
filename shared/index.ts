@@ -1,5 +1,6 @@
 // Schemas
-export * from "./db/schema.js";
+import * as schemas from "./db/schema.js";
+export { schemas };
 
 // Gen Models
 export * from "./models/genModels/genEnums.js";
@@ -104,6 +105,10 @@ export * from "./models/cusModels/invoiceModels/invoiceModels.js";
 export * from "./models/migrationModels/migrationModels.js";
 export * from "./models/migrationModels/migrationJobTable.js";
 export * from "./models/migrationModels/migrationErrorTable.js";
+
+// ANALYTICS MODELS
+export * from "./models/analyticsModels/actionEnums.js";
+export * from "./models/analyticsModels/actionTable.js";
 
 // Utils
 export * from "./utils/displayUtils.js";

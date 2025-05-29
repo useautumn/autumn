@@ -36,15 +36,10 @@ import { sortCusEntsForDeduction } from "../entitlements/cusEntUtils.js";
 import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
-import { CusService } from "../CusService.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { JobName } from "@/queue/JobName.js";
-import {
-  addProductsUpdatedWebhookTask,
-  constructProductsUpdatedData,
-} from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const isActiveStatus = (status: CusProductStatus) => {
   return (
@@ -98,7 +93,7 @@ export const cancelCusProductSubscriptions = async ({
       }
 
       console.log(
-        `Cancelled stripe subscription ${subId}, org: ${org.slug}, product: ${cusProduct.product.name}, customer: ${cusProduct.customer.id}`,
+        `Cancelled stripe subscription ${subId}, org: ${org.slug}, product: ${cusProduct.product.name}, customer: ${cusProduct.customer!.id}`,
       );
     } catch (error: any) {
       if (error.code != "resource_missing") {
@@ -198,13 +193,14 @@ export const expireAndActivate = async ({
   await activateDefaultProduct({
     db,
     productGroup: cusProduct.product.group,
-    customer: cusProduct.customer,
+    customer: cusProduct.customer!,
     org,
     env,
   });
 };
 
 export const activateFutureProduct = async ({
+  req,
   db,
   cusProduct,
   subscription,
@@ -212,6 +208,7 @@ export const activateFutureProduct = async ({
   env,
   logger = console,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   cusProduct: FullCusProduct;
   subscription: Stripe.Subscription;
@@ -260,24 +257,14 @@ export const activateFutureProduct = async ({
       updates: { status: CusProductStatus.Active },
     });
 
-    let product = futureProduct.product;
-    let prices = futureProduct.customer_prices.map(
-      (cp: FullCustomerPrice) => cp.price,
-    );
-    let entitlements = futureProduct.customer_entitlements.map(
-      (ce: FullCustomerEntitlement) => ce.entitlement,
-    );
-
     await addProductsUpdatedWebhookTask({
+      req,
       internalCustomerId: cusProduct.internal_customer_id,
       org,
       env,
       customerId: null,
       scenario: AttachScenario.New,
-      product,
-      prices,
-      entitlements,
-      freeTrial: futureProduct.free_trial || null,
+      cusProduct: futureProduct,
       logger,
     });
 

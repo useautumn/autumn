@@ -133,7 +133,7 @@ export const updateInvoiceIfExists = async ({
         hosted_invoice_url: invoice.hosted_invoice_url,
       },
     });
-    console.log(`Updated invoice ${invoice.id} status: (${invoice.status})`);
+
     return true;
   }
 

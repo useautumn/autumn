@@ -315,6 +315,7 @@ export const handleSameMainProduct = async ({
 
   if (curScheduledProduct) {
     await cancelFutureProductSchedule({
+      req,
       db,
       org,
       stripeCli,
