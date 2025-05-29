@@ -1,8 +1,8 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { Action, actions } from "@autumn/shared";
+import { Action, ActionInsert, actions } from "@autumn/shared";
 
 export class ActionService {
-  static async create(db: DrizzleCli, data: Action | Action[]) {
+  static async insert(db: DrizzleCli, data: ActionInsert | ActionInsert[]) {
     const dataArray = Array.isArray(data) ? data : [data];
 
     await db.insert(actions).values(dataArray);

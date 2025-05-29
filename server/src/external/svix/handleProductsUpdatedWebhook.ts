@@ -1,9 +1,11 @@
 import {
+  ActionType,
   AppEnv,
   AuthType,
   CusProductStatus,
   Entitlement,
   FreeTrial,
+  FullCusProduct,
   FullProduct,
   Organization,
   Price,
@@ -21,68 +23,56 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { ActionService } from "@/internal/analytics/ActionService.js";
+import { constructAction } from "@/internal/analytics/actionUtils.js";
+import { parseReqForAction } from "@/internal/analytics/actionUtils.js";
 
 interface ActionDetails {
-  reqId: string;
-  reqBody: any;
+  request_id: string;
   method: string;
   path: string;
-  timestamp: number;
-  authType: AuthType;
+  timestamp: string;
+  auth_type: AuthType;
+  properties: any;
 }
 
 export const addProductsUpdatedWebhookTask = async ({
   req,
-  internalCustomerId,
   org,
   env,
   customerId,
-  product,
-  prices,
-  entitlements,
-  freeTrial,
+  internalCustomerId,
+  cusProduct,
+  scheduledCusProduct,
+  deletedCusProduct,
   scenario,
   logger,
 }: {
   req?: ExtendedRequest;
-  internalCustomerId: string;
   org: Organization;
   env: AppEnv;
   customerId: string | null;
-  product: Product;
-  prices: Price[];
-  entitlements: Entitlement[];
-  freeTrial: FreeTrial | null;
+  internalCustomerId: string;
+  cusProduct: FullCusProduct;
+  scheduledCusProduct?: FullCusProduct;
+  deletedCusProduct?: FullCusProduct;
   scenario: string;
   logger: any;
 }) => {
+  // Build action
+
   try {
-    let fullProduct = {
-      ...product,
-      prices,
-      entitlements,
-      free_trial: freeTrial,
-    };
-
-    let actionDetails: ActionDetails = req
-      ? {
-          reqId: req.id,
-          reqBody: req.body,
-          method: req.method,
-          path: req.originalUrl,
-          timestamp: Date.now(),
-          authType: req.authType,
-        }
-      : undefined;
-
     await addTaskToQueue({
       jobName: JobName.SendProductsUpdatedWebhook,
       payload: {
+        req: req ? parseReqForAction(req) : undefined,
         internalCustomerId,
         org,
         env,
         customerId,
-        product: fullProduct,
+        cusProduct,
+        scheduledCusProduct,
+        deletedCusProduct,
         scenario,
       },
     });
@@ -93,7 +83,9 @@ export const addProductsUpdatedWebhookTask = async ({
       org_id: org.id,
       env,
       internalCustomerId,
-      productId: product.id,
+      productId: cusProduct.product.id,
+      cusProductId: cusProduct.id,
+      // productId: product.id,
     });
   }
 };
@@ -106,6 +98,7 @@ export const sendProductsUpdatedWebhook = async ({
   db: DrizzleCli;
   logger: any;
   data: {
+    req: Partial<ExtendedRequest>;
     actionDetails: ActionDetails;
     internalCustomerId: string;
     org: Organization;
@@ -113,9 +106,35 @@ export const sendProductsUpdatedWebhook = async ({
     customerId: string;
     product: FullProduct;
     scenario: string;
+    cusProduct: FullCusProduct;
+    scheduledCusProduct?: FullCusProduct;
+    deletedCusProduct?: FullCusProduct;
   };
 }) => {
-  const { org, env, product, scenario } = data;
+  const {
+    req,
+    org,
+    env,
+    scenario,
+    cusProduct,
+    scheduledCusProduct,
+    deletedCusProduct,
+  } = data;
+
+  // Product:
+  let product = cusProduct.product;
+  let prices = cusProduct.customer_prices.map((cp) => cp.price);
+  let entitlements = cusProduct.customer_entitlements.map(
+    (ce) => ce.entitlement,
+  );
+  let freeTrial = cusProduct.free_trial;
+
+  let fullProduct: FullProduct = {
+    ...product,
+    prices,
+    entitlements,
+    free_trial: freeTrial || null,
+  };
 
   let customer = await CusService.getFull({
     db,
@@ -127,6 +146,7 @@ export const sendProductsUpdatedWebhook = async ({
       CusProductStatus.Scheduled,
       CusProductStatus.Expired,
     ],
+    entityId: cusProduct.internal_entity_id || undefined,
   });
 
   const features = await FeatureService.list({
@@ -147,10 +167,36 @@ export const sendProductsUpdatedWebhook = async ({
   });
 
   const productRes = getProductResponse({
-    product,
+    product: fullProduct,
     features,
   });
 
+  // 1. Log action to DB
+  try {
+    let action = constructAction({
+      org,
+      env,
+      customer,
+      entity: customer.entity,
+      type: ActionType.CustomerProductsUpdated,
+      req,
+      properties: {
+        product_id: product.id,
+        customer_product_id: cusProduct.id,
+        scenario,
+
+        deleted_product_id: deletedCusProduct?.product.id,
+        scheduled_product_id: scheduledCusProduct?.product.id,
+
+        body: req.body,
+      },
+    });
+    await ActionService.insert(db, action);
+  } catch (error) {
+    logger.error("Failed to log action to DB", { error });
+  }
+
+  // 2. Send Svix event
   const res = await sendSvixEvent({
     org,
     env,
@@ -161,15 +207,4 @@ export const sendProductsUpdatedWebhook = async ({
       updated_product: productRes,
     },
   });
-
-  // console.log("Svix event sent", res);
-  logger.info(
-    `customer.product.updated webhook sent for ${org.slug}, customer ${customer.id}`,
-    {
-      message_id: res.id,
-      customer_id: customer.id,
-      product_id: product.id,
-      scenario,
-    },
-  );
 };

@@ -26,8 +26,10 @@ import { billForRemainingUsages } from "@/internal/customers/change-product/bill
 import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 const handleCusProductDeleted = async ({
+  req,
   db,
   cusProduct,
   subscription,
@@ -36,6 +38,7 @@ const handleCusProductDeleted = async ({
   org,
   prematurelyCanceled,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   cusProduct: FullCusProduct;
   subscription: Stripe.Subscription;
@@ -46,8 +49,8 @@ const handleCusProductDeleted = async ({
 }) => {
   if (
     !cusProduct ||
-    cusProduct.customer.env !== env ||
-    cusProduct.customer.org_id !== org.id
+    cusProduct.customer!.env !== env ||
+    cusProduct.customer!.org_id !== org.id
   ) {
     console.log(
       "   ⚠️ customer product not found / env mismatch / org mismatch",
@@ -65,7 +68,7 @@ const handleCusProductDeleted = async ({
     if (usagePrices.length > 0) {
       // Create invoice for remaining usage charges
       logger.info(
-        `Customer ${customer.name} (${customer.id}), Entity: ${cusProduct.internal_entity_id}`,
+        `Customer ${customer!.name} (${customer!.id}), Entity: ${cusProduct.internal_entity_id}`,
       );
       logger.info(
         `Product ${cusProduct.product.name} subscription deleted, billing for remaining usages`,
@@ -75,7 +78,7 @@ const handleCusProductDeleted = async ({
         curCusProduct: cusProduct,
         logger,
         attachParams: {
-          customer: cusProduct.customer,
+          customer: cusProduct.customer!,
           org,
           invoiceOnly: false,
 
@@ -134,15 +137,13 @@ const handleCusProductDeleted = async ({
   });
 
   await addProductsUpdatedWebhookTask({
+    req,
     internalCustomerId: cusProduct.internal_customer_id,
     org,
     env,
     customerId: null,
     scenario: AttachScenario.Expired,
-    product: cusProduct.product,
-    prices: cusProduct.customer_prices.map((cp) => cp.price),
-    entitlements: cusProduct.customer_entitlements.map((ce) => ce.entitlement),
-    freeTrial: cusProduct.free_trial || null,
+    cusProduct,
     logger,
   });
 
@@ -151,6 +152,7 @@ const handleCusProductDeleted = async ({
   }
 
   const activatedFuture = await activateFutureProduct({
+    req,
     db,
     cusProduct,
     subscription,
@@ -167,7 +169,7 @@ const handleCusProductDeleted = async ({
   // Double check customer's current cus product...
   let cusProducts = await CusProductService.list({
     db,
-    internalCustomerId: cusProduct.customer.internal_id,
+    internalCustomerId: cusProduct.customer!.internal_id,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
   });
 
@@ -179,7 +181,7 @@ const handleCusProductDeleted = async ({
   await activateDefaultProduct({
     db,
     productGroup: cusProduct.product.group,
-    customer: cusProduct.customer,
+    customer: cusProduct.customer!,
     org,
     env,
     curCusProduct: curMainProduct || undefined,
@@ -194,12 +196,14 @@ const handleCusProductDeleted = async ({
 };
 
 export const handleSubscriptionDeleted = async ({
+  req,
   db,
   subscription,
   org,
   env,
   logger,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   subscription: Stripe.Subscription;
   org: Organization;
@@ -237,6 +241,7 @@ export const handleSubscriptionDeleted = async ({
   for (const cusProduct of activeCusProducts) {
     batchUpdate.push(
       handleCusProductDeleted({
+        req,
         db,
         cusProduct,
         subscription,

@@ -326,7 +326,7 @@ export const sendUsageAndReset = async ({
     env,
   });
 
-  if (!fullCusProduct) {
+  if (!fullCusProduct || !activeProduct.customer) {
     logger.warn(
       `sendUsageAndReset: no full cus product found for active product ${activeProduct.id}`,
     );

@@ -44,14 +44,14 @@ stripeWebhookRouter.post(
       return;
     }
 
-    // const webhookSecret = getStripeWebhookSecret(org, env);
-    // try {
-    //   event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
-    // } catch (err: any) {
-    //   response.status(400).send(`Webhook Error: ${err.message}`);
-    //   return;
-    // }
-    event = JSON.parse(request.body);
+    const webhookSecret = getStripeWebhookSecret(org, env);
+    try {
+      event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
+    } catch (err: any) {
+      response.status(400).send(`Webhook Error: ${err.message}`);
+      return;
+    }
+    // event = JSON.parse(request.body);
 
     const logger = createLogtailWithContext({
       action: LoggerAction.StripeWebhook,
@@ -85,6 +85,7 @@ stripeWebhookRouter.post(
         case "customer.subscription.updated":
           const subscription = event.data.object;
           await handleSubscriptionUpdated({
+            req: request,
             db,
             org,
             subscription,
@@ -97,6 +98,7 @@ stripeWebhookRouter.post(
         case "customer.subscription.deleted":
           const deletedSubscription = event.data.object;
           await handleSubscriptionDeleted({
+            req: request,
             db,
             subscription: deletedSubscription,
             org,

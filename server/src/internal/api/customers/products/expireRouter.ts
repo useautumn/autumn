@@ -57,6 +57,7 @@ expireRouter.post("", async (req, res) =>
 
       for (const cusProduct of cusProductsToExpire) {
         await expireCusProduct({
+          req,
           db,
           cusProduct,
           cusProducts,
