@@ -1,5 +1,3 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }],
-  "buildCommand": "npm ci --omit=optional && npm run build",
-  "installCommand": "npm ci --omit=optional"
+  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
 }
