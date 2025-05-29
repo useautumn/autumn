@@ -11,7 +11,9 @@
     }
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "db:generate": "NODE_OPTIONS='--import tsx' drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "NODE_OPTIONS='--import tsx' drizzle-kit migrate --config drizzle.config.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.43.1",
@@ -19,6 +21,7 @@
     "zod": "^3.25.23"
   },
   "devDependencies": {
+    "tsx": "^4.19.4",
     "typescript": "^5.7.2"
   }
 }

@@ -216,6 +216,7 @@ const getCusEntsAndFeatures = async ({
   const { feature, creditSystems, allFeatures } = featureRes;
 
   const customer = await getOrCreateCustomer({
+    req,
     db,
     org: req.org,
     env,

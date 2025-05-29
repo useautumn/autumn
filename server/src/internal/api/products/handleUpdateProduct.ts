@@ -6,21 +6,19 @@ import {
 } from "@autumn/shared";
 import { UpdateProduct } from "@autumn/shared";
 import { Product } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { ProductService } from "../../products/ProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import { handleVersionProductV2 } from "./handleVersionProduct.js";
-import { productsAreDifferent } from "@/internal/products/productUtils.js";
+
 import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
-import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleUpdateProductDetails = async ({

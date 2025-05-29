@@ -85,6 +85,7 @@ stripeWebhookRouter.post(
         case "customer.subscription.updated":
           const subscription = event.data.object;
           await handleSubscriptionUpdated({
+            req: request,
             db,
             org,
             subscription,
@@ -97,6 +98,7 @@ stripeWebhookRouter.post(
         case "customer.subscription.deleted":
           const deletedSubscription = event.data.object;
           await handleSubscriptionDeleted({
+            req: request,
             db,
             subscription: deletedSubscription,
             org,

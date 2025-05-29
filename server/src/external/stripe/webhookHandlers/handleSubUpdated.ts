@@ -23,12 +23,14 @@ import {
 } from "@/external/redis/stripeWebhookLocks.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { addProductsUpdatedWebhookTask } from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const handleSubscriptionUpdated = async ({
+  req,
   db,
   org,
   subscription,
@@ -36,6 +38,7 @@ export const handleSubscriptionUpdated = async ({
   env,
   logger,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   env: AppEnv;
@@ -155,7 +158,7 @@ export const handleSubscriptionUpdated = async ({
 
       let fullCus = await CusService.getFull({
         db,
-        idOrInternalId: updatedCusProducts[0].customer.id!,
+        idOrInternalId: updatedCusProducts[0].customer!.id!,
         orgId: org.id,
         env,
         withEntities: true,
@@ -181,6 +184,7 @@ export const handleSubscriptionUpdated = async ({
         );
       }
 
+      let scheduledCusProducts: FullCusProduct[] = [];
       for (let product of defaultProducts) {
         let alreadyScheduled = cusProducts.some(
           (cp: FullCusProduct) => cp.product.group == product.group,
@@ -189,10 +193,10 @@ export const handleSubscriptionUpdated = async ({
         if (alreadyScheduled) {
           continue;
         }
-        await createFullCusProduct({
+        let fullCusProduct = await createFullCusProduct({
           db,
           attachParams: {
-            customer: updatedCusProducts[0].customer,
+            customer: updatedCusProducts[0].customer!,
             product,
             prices: product.prices,
             entitlements: product.entitlements,
@@ -205,28 +209,26 @@ export const handleSubscriptionUpdated = async ({
           startsAt: fullSub.current_period_end * 1000,
           sendWebhook: false,
         });
+
+        if (fullCusProduct) {
+          scheduledCusProducts.push(fullCusProduct);
+        }
       }
 
       for (let cusProd of updatedCusProducts) {
         try {
-          let product = cusProd.product;
-          let prices = cusProd.customer_prices.map(
-            (cp: FullCustomerPrice) => cp.price,
-          );
-          let entitlements = cusProd.customer_entitlements.map(
-            (ce: FullCustomerEntitlement) => ce.entitlement,
-          );
           await addProductsUpdatedWebhookTask({
+            req,
             internalCustomerId: cusProd.internal_customer_id,
             org,
             env,
             customerId: null,
             logger,
             scenario: AttachScenario.Cancel,
-            product: product,
-            prices: prices,
-            entitlements: entitlements,
-            freeTrial: cusProd.free_trial || null,
+            cusProduct: cusProd,
+            scheduledCusProduct: scheduledCusProducts.find(
+              (cp) => cp.product.group === cusProd.product.group,
+            ),
           });
         } catch (error) {}
       }
@@ -241,7 +243,7 @@ export const handleSubscriptionUpdated = async ({
 
       let allCusProducts = await CusProductService.list({
         db,
-        internalCustomerId: customer.internal_id,
+        internalCustomerId: customer!.internal_id,
         inStatuses: [
           CusProductStatus.Active,
           CusProductStatus.PastDue,
@@ -254,6 +256,8 @@ export const handleSubscriptionUpdated = async ({
         cusProducts: allCusProducts,
       });
 
+      let deletedCusProducts: FullCusProduct[] = [];
+
       if (curScheduledProduct) {
         console.log("subscription.updated: uncanceled -> removing scheduled");
         let stripeCli = createStripeCli({
@@ -261,6 +265,7 @@ export const handleSubscriptionUpdated = async ({
           env,
         });
         await cancelFutureProductSchedule({
+          req,
           db,
           org,
           stripeCli,
@@ -276,28 +281,24 @@ export const handleSubscriptionUpdated = async ({
           db,
           cusProductId: curScheduledProduct.id,
         });
+
+        deletedCusProducts.push(curScheduledProduct);
       }
 
       try {
         for (let cusProd of updatedCusProducts) {
-          let product = cusProd.product;
-          let prices = cusProd.customer_prices.map(
-            (cp: FullCustomerPrice) => cp.price,
-          );
-          let entitlements = cusProd.customer_entitlements.map(
-            (ce: FullCustomerEntitlement) => ce.entitlement,
-          );
           await addProductsUpdatedWebhookTask({
+            req,
             internalCustomerId: cusProd.internal_customer_id,
             org,
             env,
             customerId: null,
             logger,
             scenario: AttachScenario.Renew,
-            product: product,
-            prices: prices,
-            entitlements: entitlements,
-            freeTrial: cusProd.free_trial || null,
+            cusProduct: cusProd,
+            deletedCusProduct: deletedCusProducts.find(
+              (cp) => cp.product.group === cusProd.product.group,
+            ),
           });
         }
       } catch (error) {}

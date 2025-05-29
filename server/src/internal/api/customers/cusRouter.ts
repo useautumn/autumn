@@ -14,7 +14,7 @@ import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
 import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
 import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
 import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
-import { handlePostCustomerRequest } from "./handlers/handleCreateCustomer.js";
+import { handlePostCustomerRequest } from "./handlers/handlePostCustomer.js";
 import { entityRouter } from "../entities/entityRouter.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
 import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";

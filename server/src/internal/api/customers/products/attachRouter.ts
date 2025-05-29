@@ -305,6 +305,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // Get curCusProducts too...
     const attachParams: AttachParams = await getFullCusProductData({
+      req,
       db: req.db,
       customerId: customer_id,
       productId: product_id,
@@ -329,6 +330,7 @@ attachRouter.post("/attach", async (req: any, res) => {
         reqApiVersion: req.apiVersion,
       }) || APIVersion.v1;
 
+    attachParams.req = req;
     attachParams.successUrl = successUrl;
     attachParams.invoiceOnly = invoiceOnly;
     attachParams.billingAnchor = billing_cycle_anchor;

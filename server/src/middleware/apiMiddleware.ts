@@ -72,7 +72,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
       };
       req.org = org;
       req.features = features;
-      req.auth = AuthType.SecretKey;
+      req.authType = AuthType.SecretKey;
 
       next();
 

@@ -29,13 +29,9 @@ import {
   addCurMainProductToSchedule,
   getOtherCusProductsOnSub,
 } from "./scheduleUtils/cancelScheduledFreeProduct.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { JobName } from "@/queue/JobName.js";
-import {
-  addProductsUpdatedWebhookTask,
-  constructProductsUpdatedData,
-} from "@/external/svix/handleProductsUpdatedWebhook.js";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const getPricesForCusProduct = ({
   cusProduct,
@@ -64,6 +60,7 @@ export const getScheduleIdsFromCusProducts = ({
 
 // CANCELLING FUTURE PRODUCT
 export const cancelFutureProductSchedule = async ({
+  req,
   db,
   org,
   stripeCli,
@@ -77,6 +74,7 @@ export const cancelFutureProductSchedule = async ({
   renewCurProduct = true,
   sendWebhook = true,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   stripeCli: Stripe;
@@ -119,7 +117,7 @@ export const cancelFutureProductSchedule = async ({
   let fullCurProduct = fullCusProductToProduct(curMainProduct);
   let oldItemSets = await getStripeSubItems({
     attachParams: {
-      customer: curMainProduct.customer,
+      customer: curMainProduct.customer!,
       org: org,
       products: [fullCurProduct],
       prices: fullCurProduct.prices,
@@ -286,25 +284,15 @@ export const cancelFutureProductSchedule = async ({
         });
 
         try {
-          let product = curMainProduct.product;
-          let prices = curMainProduct.customer_prices.map(
-            (cp: FullCustomerPrice) => cp.price,
-          );
-          let entitlements = curMainProduct.customer_entitlements.map(
-            (ce: FullCustomerEntitlement) => ce.entitlement,
-          );
-
           if (sendWebhook) {
             await addProductsUpdatedWebhookTask({
+              req,
               internalCustomerId: curMainProduct.internal_customer_id,
               org: org,
               env: env,
               customerId: null,
               scenario: AttachScenario.Renew,
-              product: product,
-              prices: prices,
-              entitlements: entitlements,
-              freeTrial: curMainProduct.free_trial || null,
+              cusProduct: curMainProduct,
               logger: logger,
             });
           }

@@ -7,5 +7,6 @@ export enum JobName {
   TriggerCheckoutReward = "trigger-checkout-reward",
   GenerateFeatureDisplay = "generate-feature-display",
 
-  SendProductsUpdatedWebhook = "send-products-updated-webhook",
+  HandleProductsUpdated = "handle-products-updated",
+  HandleCustomerCreated = "handle-customer-created",
 }

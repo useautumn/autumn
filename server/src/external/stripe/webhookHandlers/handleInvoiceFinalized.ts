@@ -55,7 +55,6 @@ export const handleInvoiceFinalized = async ({
     });
 
     if (activeProducts.length === 0) {
-      console.log("invoice.finalized: No active products found");
       return;
     }
 
