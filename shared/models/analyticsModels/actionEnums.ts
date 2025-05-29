@@ -3,6 +3,7 @@ export enum AuthType {
   PublicKey = "public_key",
   Dashboard = "dashboard",
   Stripe = "stripe",
+  Unknown = "unknown",
 }
 
 export enum ActionType {
