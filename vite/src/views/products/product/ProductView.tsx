@@ -123,6 +123,49 @@ function ProductView({ env }: { env: AppEnv }) {
         : `Save changes to product: ${product?.name}`,
   };
 
+  // Handle browser beforeunload event
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasChanges]);
+
+  // Intercept in-app navigation
+  useEffect(() => {
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = function (...args) {
+      if (hasChanges) {
+        const confirmed = window.confirm(
+          "You have unsaved changes. Click Update Product to save your changes.",
+        );
+        if (!confirmed) return;
+      }
+      return originalPushState.apply(this, args);
+    };
+
+    window.history.replaceState = function (...args) {
+      if (hasChanges) {
+        const confirmed = window.confirm(
+          "You have unsaved changes. Click Update Product to save your changes.",
+        );
+        if (!confirmed) return;
+      }
+      return originalReplaceState.apply(this, args);
+    };
+
+    return () => {
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
+  }, [hasChanges]);
+
   if (isLoading) return <LoadingScreen />;
 
   if (!product) {
