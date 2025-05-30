@@ -272,51 +272,6 @@ export const activateFutureProduct = async ({
 };
 
 // GET CUS ENTS FROM CUS PRODUCTS
-export const fullCusProductToCusEnts = (
-  cusProducts: FullCusProduct[],
-  inStatuses: CusProductStatus[] = [CusProductStatus.Active],
-  reverseOrder: boolean = false,
-) => {
-  const cusEnts: FullCustomerEntitlement[] = [];
-
-  for (const cusProduct of cusProducts) {
-    if (!inStatuses.includes(cusProduct.status)) {
-      continue;
-    }
-
-    cusEnts.push(
-      ...cusProduct.customer_entitlements.map((cusEnt) => ({
-        ...cusEnt,
-        customer_product: CusProductSchema.parse(cusProduct),
-      })),
-    );
-  }
-
-  sortCusEntsForDeduction(cusEnts, reverseOrder);
-
-  return cusEnts;
-};
-
-export const fullCusProductToCusPrices = (
-  cusProducts: FullCusProduct[],
-  inStatuses: CusProductStatus[] = [CusProductStatus.Active],
-) => {
-  const cusPrices: FullCustomerPrice[] = [];
-
-  for (const cusProduct of cusProducts) {
-    if (!inStatuses.includes(cusProduct.status)) {
-      continue;
-    }
-
-    cusPrices.push(...cusProduct.customer_prices);
-  }
-
-  return cusPrices;
-};
-
-export const cusProductToPrices = (cusProduct: FullCusProduct) => {
-  return cusProduct.customer_prices.map((cp) => cp.price);
-};
 
 export const processFullCusProduct = ({
   cusProduct,

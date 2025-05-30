@@ -11,10 +11,13 @@ import {
   Subscription,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { fullCusProductToCusPrices } from "../cusProducts/cusProductUtils.js";
-import { fullCusProductToCusEnts } from "../cusProducts/cusProductUtils.js";
+
 import { getCusBalances } from "../cusProducts/cusEnts/getCusBalances.js";
 import { featuresToObject } from "./getCustomerDetails.js";
+import {
+  cusProductToCusEnts,
+  cusProductToCusPrices,
+} from "../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const getCusProductsResponse = async ({
   cusProducts,
@@ -53,11 +56,11 @@ export const getCusFeaturesResponse = async ({
   entities: Entity[];
   entityId?: string;
 }) => {
-  let cusEnts = fullCusProductToCusEnts(cusProducts) as any;
+  let cusEnts = cusProductToCusEnts(cusProducts) as any;
 
   const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,
-    cusPrices: fullCusProductToCusPrices(cusProducts),
+    cusPrices: cusProductToCusPrices(cusProducts),
     entities,
     org,
     entityId,

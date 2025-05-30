@@ -2,10 +2,7 @@ import Stripe from "stripe";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getCusBalances } from "@/internal/customers/cusProducts/cusEnts/getCusBalances.js";
-import {
-  fullCusProductToCusEnts,
-  fullCusProductToCusPrices,
-} from "@/internal/customers/cusProducts/cusProductUtils.js";
+
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
   AppEnv,
@@ -31,6 +28,10 @@ import { invoicesToResponse } from "@/internal/customers/invoices/invoiceUtils.j
 
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import {
+  cusProductToCusEnts,
+  cusProductToCusPrices,
+} from "../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const sumValues = (
   entList: CusEntResponse[],
@@ -151,11 +152,11 @@ export const getCustomerDetails = async ({
     ? [CusProductStatus.Active, CusProductStatus.PastDue]
     : [CusProductStatus.Active];
 
-  let cusEnts = fullCusProductToCusEnts(cusProducts, inStatuses) as any;
+  let cusEnts = cusProductToCusEnts(cusProducts, inStatuses) as any;
 
   const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,
-    cusPrices: fullCusProductToCusPrices(cusProducts, inStatuses),
+    cusPrices: cusProductToCusPrices(cusProducts, inStatuses),
     entities: customer.entities,
     org,
   });
