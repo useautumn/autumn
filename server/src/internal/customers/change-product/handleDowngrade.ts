@@ -69,8 +69,7 @@ const scheduleStripeSubscription = async ({
     phases: [
       {
         items: subItems,
-        default_payment_method: paymentMethod as string,
-        // metadata: itemSet.subMeta,
+        default_payment_method: paymentMethod?.id,
         add_invoice_items: oneOffItems,
       },
     ],

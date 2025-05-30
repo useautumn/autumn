@@ -17,7 +17,7 @@ import {
 } from "../cusProducts/cusProductUtils.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 
-import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 
 import { getFilteredScheduleItems } from "./scheduleUtils/getFilteredScheduleItems.js";
@@ -86,7 +86,7 @@ export const cancelFutureProductSchedule = async ({
   sendWebhook?: boolean;
 }) => {
   // 1. Get main and scheduled products
-  const { curMainProduct, curScheduledProduct } = await getExistingCusProducts({
+  const { curMainProduct, curScheduledProduct } = getExistingCusProducts({
     product,
     cusProducts,
     internalEntityId,

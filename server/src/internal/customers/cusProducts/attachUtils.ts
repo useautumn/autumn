@@ -29,14 +29,14 @@ import {
 } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 import { StatusCodes } from "http-status-codes";
-import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { Decimal } from "decimal.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ActionRequest, ExtendedRequest } from "@/utils/models/Request.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 const getProducts = async ({
   db,
@@ -184,13 +184,8 @@ const getCustomerAndProducts = async ({
   const [customer, products] = await Promise.all([
     getOrCreateCustomer({
       req,
-      db,
-      org,
-      features,
-      env,
       customerId,
       customerData,
-      logger,
       inStatuses: [
         CusProductStatus.Active,
         CusProductStatus.Scheduled,
@@ -389,7 +384,7 @@ export const getFullCusProductData = async ({
   // Get cur main product
   const product = products[0];
 
-  const { curMainProduct } = await getExistingCusProducts({
+  const { curMainProduct } = getExistingCusProducts({
     product,
     cusProducts,
   });

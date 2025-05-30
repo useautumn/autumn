@@ -37,7 +37,7 @@ import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const isActiveStatus = (status: CusProductStatus) => {

@@ -4,18 +4,15 @@ import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
 
-import { OrgService } from "@/internal/orgs/OrgService.js";
-
 import { getOrCreateCustomer } from "../cusUtils/getOrCreateCustomer.js";
 import { parseCusExpand } from "../cusUtils/cusUtils.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const handlePostCustomerRequest = async (req: any, res: any) => {
   const logger = req.logtail;
   try {
-    const { db } = req;
     const data = req.body;
     const expand = parseCusExpand(req.query.expand);
+    const { db, org, features } = req;
 
     if (!data.id && !data.email) {
       throw new RecaseError({
@@ -25,16 +22,10 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
       });
     }
 
-    let org = await OrgService.getFromReq(req);
-    let features = await FeatureService.getFromReq(req);
     let customer = await getOrCreateCustomer({
       req,
-      db,
-      org,
-      env: req.env,
       customerId: data.id,
       customerData: data,
-      logger,
       inStatuses: [
         CusProductStatus.Active,
         CusProductStatus.PastDue,
@@ -42,7 +33,6 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
       ],
       expand,
 
-      features,
       entityId: data.entity_id,
       entityData: data.entity_data,
     });

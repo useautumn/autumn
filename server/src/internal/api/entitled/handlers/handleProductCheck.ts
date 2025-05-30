@@ -5,6 +5,7 @@ import { getAttachPreview } from "./getAttachPreview.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 import { getProductResponse } from "@/internal/products/productV2Utils.js";
+import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 
 export const handleProductCheck = async ({
   req,
@@ -29,18 +30,13 @@ export const handleProductCheck = async ({
   let [customer, product] = await Promise.all([
     getOrCreateCustomer({
       req,
-      db,
-      org,
-      env,
       customerId: customer_id,
       customerData: customer_data,
-      logger,
       inStatuses: [
         CusProductStatus.Active,
         CusProductStatus.PastDue,
         CusProductStatus.Scheduled,
       ],
-      features,
 
       entityId: entity_id,
       entityData: entity_data,

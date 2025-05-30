@@ -79,7 +79,7 @@ export const payForInvoice = async ({
 
   try {
     await stripeCli.invoices.pay(invoice.id, {
-      payment_method: paymentMethod as string,
+      payment_method: paymentMethod.id,
     });
     return {
       paid: true,

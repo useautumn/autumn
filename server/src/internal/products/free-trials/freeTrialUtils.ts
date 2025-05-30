@@ -43,8 +43,8 @@ export const validateAndInitFreeTrial = ({
 };
 
 export const freeTrialsAreSame = (
-  ft1?: FreeTrial | null,
-  ft2?: FreeTrial | null,
+  ft1?: FreeTrial | CreateFreeTrial | null,
+  ft2?: FreeTrial | CreateFreeTrial | null,
 ) => {
   if (!ft1 && !ft2) return true;
   if (!ft1 || !ft2) return false;
@@ -188,7 +188,7 @@ export const handleNewFreeTrial = async ({
   isCustom = false,
 }: {
   db: DrizzleCli;
-  newFreeTrial: FreeTrial | null;
+  newFreeTrial: CreateFreeTrial | null;
   curFreeTrial: FreeTrial | null | undefined;
   internalProductId: string;
   isCustom: boolean;

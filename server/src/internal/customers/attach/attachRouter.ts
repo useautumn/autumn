@@ -8,6 +8,7 @@ import {
   FeatureOptionsSchema,
   FullCusProduct,
   ProductItem,
+  ProductItemSchema,
 } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 import {
@@ -49,6 +50,9 @@ import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAdd
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
+import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
+import { AttachBodySchema } from "./models/AttachBody.js";
 
 export const attachRouter = Router();
 
@@ -247,203 +251,218 @@ export const customerHasPm = async ({
   return notNullOrUndefined(paymentMethod) ? true : false;
 };
 
-attachRouter.post("/attach", async (req: any, res) => {
-  try {
-    const {
-      customer_id,
-      product_id,
-      customer_data,
-      entity_id,
-      entity_data,
+const handleAttachNew = async (req: ExtendedRequest, res: ExtendedResponse) => {
+  const params = AttachBodySchema.parse(req.body);
+  await handleAttachRaceCondition({ req, res });
+};
 
-      is_custom,
-      // prices,
-      // entitlements,
-      items,
-      free_trial,
-      product_ids,
-      options,
-      force_checkout,
-      invoice_only,
-      success_url,
-      billing_cycle_anchor,
-      metadata,
-      version,
+attachRouter.post("", async (req: any, res: any) =>
+  routeHandler({
+    action: "attach",
+    req,
+    res,
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+      const params = AttachBodySchema.parse(req.body);
+      await handleAttachRaceCondition({ req, res });
 
-      checkout_session_params,
-    } = req.body;
+      const {
+        customer_id,
+        customer_data,
+        entity_id,
+        entity_data,
 
-    const { env } = req;
-    const logger = req.logtail;
+        product_id,
+        product_ids,
 
-    let itemsInput: ProductItem[] = items || [];
+        options,
 
-    const optionsListInput: FeatureOptions[] = options || [];
-    const invoiceOnly = invoice_only || false;
-    const successUrl = success_url || undefined;
-    const disableFreeTrial = free_trial === false || false;
+        is_custom,
+        items,
+        free_trial,
 
-    // PUBLIC STUFF
-    let forceCheckout = req.isPublic || force_checkout || false;
-    let isCustom = is_custom || false;
-    if (req.isPublic) {
-      isCustom = false;
-    }
+        version,
+        success_url,
+        force_checkout,
+        invoice_only,
+        metadata,
+        billing_cycle_anchor,
+        checkout_session_params,
+      } = req.body;
 
-    logger.info("--------------------------------");
-    let publicStr = req.isPublic ? "(Public) " : "";
-    logger.info(`${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`);
+      const { env } = req;
+      const logger = req.logtail;
 
-    await handleAttachRaceCondition({ req, res });
+      let itemsInput: ProductItem[] = items || [];
 
-    z.array(FeatureOptionsSchema).parse(optionsListInput);
+      const optionsListInput: FeatureOptions[] = options || [];
 
-    let [org, features] = await Promise.all([
-      OrgService.getFromReq(req),
-      FeatureService.getFromReq(req),
-    ]);
+      const invoiceOnly = invoice_only || false;
+      const successUrl = success_url || undefined;
+      const disableFreeTrial = free_trial === false || false;
 
-    // Get curCusProducts too...
-    const attachParams: AttachParams = await getFullCusProductData({
-      req,
-      db: req.db,
-      customerId: customer_id,
-      productId: product_id,
-      entityId: entity_id,
-      customerData: customer_data,
-      org,
-      features,
-      env,
-      itemsInput,
-      optionsListInput,
-      freeTrialInput: free_trial,
-      isCustom,
-      productIds: product_ids,
-      logger,
-      version,
-      entityData: entity_data,
-    });
+      // PUBLIC STUFF
+      let forceCheckout = req.isPublic || force_checkout || false;
+      let isCustom = is_custom || false;
+      if (req.isPublic) {
+        isCustom = false;
+      }
 
-    attachParams.apiVersion =
-      orgToVersion({
-        org,
-        reqApiVersion: req.apiVersion,
-      }) || APIVersion.v1;
+      logger.info("--------------------------------");
+      let publicStr = req.isPublic ? "(Public) " : "";
+      logger.info(
+        `${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`,
+      );
 
-    attachParams.req = req;
-    attachParams.successUrl = successUrl;
-    attachParams.invoiceOnly = invoiceOnly;
-    attachParams.billingAnchor = billing_cycle_anchor;
-    attachParams.metadata = metadata;
-    attachParams.isCustom = isCustom || false;
-    attachParams.disableFreeTrial = disableFreeTrial;
-    attachParams.checkoutSessionParams = checkout_session_params;
+      z.array(FeatureOptionsSchema).parse(optionsListInput);
 
-    logger.info(
-      `Customer: ${chalk.yellow(
-        `${attachParams.customer.id} (${attachParams.customer.name})`,
-      )}, Products: ${chalk.yellow(
-        attachParams.products.map((p) => p.id).join(", "),
-      )}`,
-    );
+      let [org, features] = await Promise.all([
+        OrgService.getFromReq(req),
+        FeatureService.getFromReq(req),
+      ]);
 
-    // 3. Check for stripe connection
-    await checkStripeConnections({ req, attachParams });
-    let hasPm = await customerHasPm({ attachParams });
-    const useCheckout = !hasPm || forceCheckout;
-    await createStripePrices({
-      attachParams,
-      useCheckout,
-      req,
-      logger,
-    });
-
-    logger.info(
-      `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(
-        forceCheckout,
-      )}`,
-    );
-    logger.info(
-      `Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
-        isCustom,
-      )}, Invoice Only: ${chalk.yellow(invoiceOnly)}`,
-      {
-        details: { hasPm, forceCheckout, useCheckout, isCustom, invoiceOnly },
-      },
-    );
-
-    // -------------------- ERROR CHECKING --------------------
-
-    // 1. Check for normal errors (eg. options, different recurring intervals)
-
-    const { curCusProduct, done } = await handleExistingProduct({
-      req,
-      res,
-      attachParams,
-      useCheckout,
-      invoiceOnly,
-      isCustom,
-    });
-
-    await handlePrepaidErrors({
-      attachParams,
-      useCheckout,
-    });
-
-    await handlePublicAttachErrors({
-      curCusProduct,
-      isPublic: req.isPublic,
-    });
-
-    if (done) return;
-
-    // // -------------------- ATTACH PRODUCT --------------------
-
-    // SCENARIO 1: Free product, no existing product
-    const newProductsFree = isFreeProduct(attachParams.prices);
-    const allAddOns = attachParams.products.every((p) => p.is_add_on);
-
-    if ((!curCusProduct && newProductsFree) || (allAddOns && newProductsFree)) {
-      logger.info("SCENARIO 1: FREE PRODUCT");
-      await handleAddFreeProduct({
+      // Get curCusProducts too...
+      const attachParams: AttachParams = await getFullCusProductData({
         req,
-        res,
-        attachParams,
-      });
-      return;
-    }
-
-    if (useCheckout && !newProductsFree && !invoiceOnly) {
-      logger.info("SCENARIO 2: USING CHECKOUT");
-      await handleCreateCheckout({
         db: req.db,
-        req,
-        res,
-        attachParams,
+        customerId: customer_id,
+        productId: product_id,
+        entityId: entity_id,
+        customerData: customer_data,
+        org,
+        features,
+        env,
+        itemsInput,
+        optionsListInput,
+        freeTrialInput: free_trial,
+        isCustom,
+        productIds: product_ids,
+        logger,
+        version,
+        entityData: entity_data,
       });
-      return;
-    }
 
-    // SCENARIO 4: Switching product
-    if (curCusProduct) {
-      logger.info("SCENARIO 3: SWITCHING PRODUCT");
-      await handleChangeProduct({
+      attachParams.apiVersion =
+        orgToVersion({
+          org,
+          reqApiVersion: req.apiVersion,
+        }) || APIVersion.v1;
+
+      attachParams.req = req;
+      attachParams.successUrl = successUrl;
+      attachParams.invoiceOnly = invoiceOnly;
+      attachParams.billingAnchor = billing_cycle_anchor;
+      attachParams.metadata = metadata;
+      attachParams.isCustom = isCustom || false;
+      attachParams.disableFreeTrial = disableFreeTrial;
+      attachParams.checkoutSessionParams = checkout_session_params;
+
+      logger.info(
+        `Customer: ${chalk.yellow(
+          `${attachParams.customer.id} (${attachParams.customer.name})`,
+        )}, Products: ${chalk.yellow(
+          attachParams.products.map((p) => p.id).join(", "),
+        )}`,
+      );
+
+      // 3. Check for stripe connection
+      await checkStripeConnections({ req, attachParams });
+      let hasPm = await customerHasPm({ attachParams });
+      const useCheckout = !hasPm || forceCheckout;
+      await createStripePrices({
+        attachParams,
+        useCheckout,
+        req,
+        logger,
+      });
+
+      logger.info(
+        `Has PM: ${chalk.yellow(hasPm)}, Force Checkout: ${chalk.yellow(
+          forceCheckout,
+        )}`,
+      );
+      logger.info(
+        `Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
+          isCustom,
+        )}, Invoice Only: ${chalk.yellow(invoiceOnly)}`,
+        {
+          details: { hasPm, forceCheckout, useCheckout, isCustom, invoiceOnly },
+        },
+      );
+
+      // -------------------- ERROR CHECKING --------------------
+
+      // 1. Check for normal errors (eg. options, different recurring intervals)
+
+      const { curCusProduct, done } = await handleExistingProduct({
         req,
         res,
         attachParams,
+        useCheckout,
+        invoiceOnly,
+        isCustom,
+      });
+
+      await handlePrepaidErrors({
+        attachParams,
+        useCheckout,
+      });
+
+      await handlePublicAttachErrors({
         curCusProduct,
+        isPublic: req.isPublic || false,
       });
-      return;
-    }
 
-    // SCENARIO 5: No existing product, not free product
-    logger.info("SCENARIO 4: ADDING PRODUCT");
-    await handleAddProduct({
-      req,
-      res,
-      attachParams,
-    });
-  } catch (error: any) {
-    handleRequestError({ req, res, error, action: "attach product" });
-  }
-});
+      if (done) return;
+
+      // // -------------------- ATTACH PRODUCT --------------------
+
+      // SCENARIO 1: Free product, no existing product
+      const newProductsFree = isFreeProduct(attachParams.prices);
+      const allAddOns = attachParams.products.every((p) => p.is_add_on);
+
+      if (
+        (!curCusProduct && newProductsFree) ||
+        (allAddOns && newProductsFree)
+      ) {
+        logger.info("SCENARIO 1: FREE PRODUCT");
+        await handleAddFreeProduct({
+          req,
+          res,
+          attachParams,
+        });
+        return;
+      }
+
+      if (useCheckout && !newProductsFree && !invoiceOnly) {
+        logger.info("SCENARIO 2: USING CHECKOUT");
+        await handleCreateCheckout({
+          db: req.db,
+          req,
+          res,
+          attachParams,
+        });
+        return;
+      }
+
+      // SCENARIO 4: Switching product
+      if (curCusProduct) {
+        logger.info("SCENARIO 3: SWITCHING PRODUCT");
+        await handleChangeProduct({
+          req,
+          res,
+          attachParams,
+          curCusProduct,
+        });
+        return;
+      }
+
+      // SCENARIO 5: No existing product, not free product
+      logger.info("SCENARIO 4: ADDING PRODUCT");
+      await handleAddProduct({
+        req,
+        res,
+        attachParams,
+      });
+    },
+  }),
+);

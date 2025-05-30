@@ -135,8 +135,6 @@ export const getCusPaymentMethod = async ({
       customer: stripeId,
     });
 
-    // const paymentMethods = res.data.filter((pm) => pm.type === "card" );
-
     const paymentMethods = res.data;
     paymentMethods.sort((a, b) => b.created - a.created);
 
@@ -151,10 +149,13 @@ export const getCusPaymentMethod = async ({
       return null;
     }
 
-    return paymentMethods[0].id;
+    return paymentMethods[0];
+  } else {
+    const paymentMethod = await stripeCli.paymentMethods.retrieve(
+      paymentMethodId as string,
+    );
+    return paymentMethod;
   }
-
-  return paymentMethodId;
 };
 
 // 2. Create a payment method and attach to customer

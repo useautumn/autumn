@@ -186,13 +186,8 @@ export const validateAndGetInputEntities = async ({
   // 1. Get customer, features and orgs
   let customer = await getOrCreateCustomer({
     req,
-    db,
-    org,
-    env,
     customerId,
     customerData,
-    logger,
-    features,
     withEntities: true,
   });
 

@@ -71,16 +71,11 @@ const getEventAndCustomer = async ({
   // 2. Check if customer ID is valid
   customer = await getOrCreateCustomer({
     req,
-    db,
-    org,
-    env,
     customerId: customer_id,
     customerData: customer_data,
-    logger,
     entityId,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
     entityData,
-    features,
   });
 
   // 3. Insert event

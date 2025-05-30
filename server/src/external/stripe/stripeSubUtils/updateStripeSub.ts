@@ -51,7 +51,7 @@ export const updateStripeSubscription = async ({
   let paymentMethodData = {};
   if (paymentMethod) {
     paymentMethodData = {
-      default_payment_method: paymentMethod as string,
+      default_payment_method: paymentMethod.id,
     };
   }
 
@@ -95,7 +95,7 @@ export const updateStripeSubscription = async ({
       items: subItems,
       proration_behavior: stripeProration,
       trial_end: trialEnd,
-      default_payment_method: paymentMethod as string,
+      default_payment_method: paymentMethod?.id,
       add_invoice_items: subInvoiceItems,
       ...((invoiceOnly && {
         collection_method: "send_invoice",

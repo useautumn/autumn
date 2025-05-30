@@ -1,6 +1,6 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {

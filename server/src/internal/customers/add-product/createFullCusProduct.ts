@@ -21,7 +21,7 @@ import { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 
-import { getExistingCusProducts } from "./handleExistingProduct.js";
+import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { searchCusProducts } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
@@ -196,7 +196,7 @@ export const expireOrDeleteCusProduct = async ({
       });
     }
   } else {
-    let { curMainProduct } = await getExistingCusProducts({
+    let { curMainProduct } = getExistingCusProducts({
       product,
       cusProducts: cusProducts as FullCusProduct[],
       internalEntityId,
@@ -240,7 +240,7 @@ export const getExistingCusProduct = async ({
     });
   }
 
-  const { curMainProduct } = await getExistingCusProducts({
+  const { curMainProduct } = getExistingCusProducts({
     product,
     cusProducts: cusProducts as FullCusProduct[],
     internalEntityId,

@@ -206,6 +206,22 @@ export class ProductService {
 
     const latestProducts = getLatestProducts(data);
 
+    if (inIds) {
+      let newProducts: FullProduct[] = [];
+      for (const id of inIds) {
+        const prod = latestProducts.find((prod) => prod.id === id);
+        if (!prod) {
+          throw new RecaseError({
+            message: `Product ${id} not found`,
+            code: ErrCode.ProductNotFound,
+            statusCode: StatusCodes.NOT_FOUND,
+          });
+        }
+        newProducts.push(prod);
+      }
+      return newProducts;
+    }
+
     return latestProducts as FullProduct[];
   }
 
