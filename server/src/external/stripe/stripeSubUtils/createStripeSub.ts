@@ -49,7 +49,7 @@ export const createStripeSub = async ({
   let paymentMethodData = {};
   if (paymentMethod) {
     paymentMethodData = {
-      default_payment_method: paymentMethod as string,
+      default_payment_method: paymentMethod.id,
     };
   }
 

@@ -1,4 +1,4 @@
-import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -74,7 +74,7 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
           let curMainProduct, curScheduledProduct;
 
           if (cusProducts) {
-            let res = await getExistingCusProducts({
+            let res = getExistingCusProducts({
               product: p,
               cusProducts: cusProducts,
             });

@@ -11,17 +11,17 @@ import {
   CreateEntitlementSchema,
   Feature,
   ErrCode,
-  EntitlementSchema,
   UsagePriceConfig,
   PriceType,
   Price,
   FullProduct,
   BillingType,
+  FullEntitlement,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import { addDays } from "date-fns";
-import { EntitlementService } from "./EntitlementService.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { features } from "process";
 
 export const entIntervalToTrialDuration = (interval: EntInterval) => {
   switch (interval) {
@@ -71,8 +71,6 @@ export const addTrialToNextResetAt = (
 
   return addDays(new Date(nextResetAt), freeTrial.length).getTime();
 };
-
-// HANDLING NEW ENTITLEMENTS
 
 export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
   // 1. Check if they have same internal_feature_id
@@ -135,196 +133,6 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
   // );
 };
 
-export const validateEntitlement = ({
-  ent,
-  features,
-  relatedPrice,
-}: {
-  ent: CreateEntitlement | Entitlement;
-  features: Feature[];
-  relatedPrice: Price | null | undefined;
-}) => {
-  const parsedEnt = CreateEntitlementSchema.parse(ent);
-
-  // 1. Check if feature exists
-  const feature = features.find((f) => f.id === parsedEnt.feature_id);
-  if (!feature) {
-    throw new RecaseError({
-      message: `Feature ${parsedEnt.feature_id} not found`,
-      code: ErrCode.FeatureNotFound,
-      statusCode: 400,
-    });
-  }
-
-  // 2. If feature is boolean, return
-  if (feature.type === FeatureType.Boolean) {
-    return;
-  }
-
-  if (!parsedEnt.allowance_type) {
-    throw new RecaseError({
-      code: ErrCode.InvalidEntitlement,
-      message: `Allowance type is required for feature ${parsedEnt.feature_id}`,
-      statusCode: 400,
-    });
-  }
-
-  if (parsedEnt.allowance_type == AllowanceType.Fixed) {
-    if (
-      !notNullOrUndefined(parsedEnt.allowance) ||
-      (typeof parsedEnt.allowance === "number" && parsedEnt.allowance < 0)
-    ) {
-      throw new RecaseError({
-        code: ErrCode.InvalidEntitlement,
-        message: `Allowance is required for feature ${parsedEnt.feature_id}`,
-        statusCode: 400,
-      });
-    }
-
-    if (!parsedEnt.interval) {
-      throw new RecaseError({
-        code: ErrCode.InvalidEntitlement,
-        message: `Interval is required for feature ${parsedEnt.feature_id}`,
-        statusCode: 400,
-      });
-    }
-  }
-
-  if (relatedPrice) {
-    // Don't allow unlimited allowance for usage-based prices
-    if (parsedEnt.allowance_type == AllowanceType.Unlimited) {
-      throw new RecaseError({
-        code: ErrCode.InvalidEntitlement,
-        message: `Unlimited allowance is not allowed for usage-based prices (${parsedEnt.feature_id})`,
-        statusCode: 400,
-      });
-    }
-
-    let config = relatedPrice.config as UsagePriceConfig;
-    let billingType = getBillingType(config);
-
-    if (billingType == BillingType.UsageInAdvance) {
-      if (parsedEnt.allowance! == 0) {
-        return;
-      }
-
-      let billingUnits = config.billing_units || 1;
-      let isMultipleOfBillingUnits =
-        (parsedEnt.allowance! as number) % billingUnits === 0;
-
-      if (
-        (parsedEnt.allowance! as number) < billingUnits ||
-        !isMultipleOfBillingUnits
-      ) {
-        throw new RecaseError({
-          code: ErrCode.InvalidEntitlement,
-          message: `Allowance for ${parsedEnt.feature_id} must be ≥ billing units and a multiple of billing units`,
-          statusCode: 400,
-        });
-      }
-    }
-  }
-};
-
-export const validateRemovedEnts = ({
-  removedEnts,
-  prices,
-  isCustom,
-}: {
-  removedEnts: Entitlement[];
-  prices: Price[];
-  isCustom: boolean;
-}) => {
-  for (const ent of removedEnts) {
-    const relatedPrice = getEntRelatedPrice(ent, prices);
-
-    if (relatedPrice) {
-      // If (isCustom, means it was either removed or updated, need to refresh stripe price...)
-      if (isCustom) {
-        relatedPrice.id = undefined;
-      } else {
-        throw new RecaseError({
-          code: ErrCode.InvalidEntitlement,
-          message: `Cannot remove entitlement with usage-based price (${ent.feature_id})`,
-          statusCode: 400,
-        });
-      }
-    }
-  }
-};
-
-export const validateUpdatedEnts = ({
-  updatedEnts,
-  prices,
-}: {
-  updatedEnts: Entitlement[];
-  prices: Price[];
-}) => {
-  for (const ent of updatedEnts) {
-    const relatedPrice = getEntRelatedPrice(ent, prices);
-    if (relatedPrice) {
-      let config = relatedPrice.config as UsagePriceConfig;
-      relatedPrice.config = {
-        ...config,
-        stripe_price_id: null,
-        stripe_placeholder_price_id: null,
-      };
-      // if (config.stripe_price_id) {
-      //   throw new RecaseError({
-      //     code: ErrCode.InvalidEntitlement,
-      //     message: `Stripe price already exists for ${ent.feature_id}`,
-      //     statusCode: 400,
-      //   });
-      // }
-    }
-  }
-};
-
-export const initEntitlement = ({
-  ent,
-  features,
-  orgId,
-  isCustom = false,
-  internalProductId,
-  curEnt,
-  prices,
-}: {
-  curEnt?: Entitlement;
-  prices: Price[];
-  ent: CreateEntitlement;
-  features: Feature[];
-  orgId: string;
-  isCustom?: boolean;
-  internalProductId: string;
-}) => {
-  const parsedEnt = CreateEntitlementSchema.parse(ent);
-
-  const feature = features.find((f) => f.id === parsedEnt.feature_id);
-  const newEnt: Entitlement = {
-    ...parsedEnt,
-
-    id: generateId("ent"),
-    is_custom: isCustom,
-    org_id: orgId,
-    created_at: Date.now(),
-    internal_product_id: internalProductId,
-  };
-
-  if (feature?.type === FeatureType.Boolean) {
-    newEnt.allowance = null;
-    newEnt.allowance_type = null;
-    newEnt.interval = null;
-  }
-
-  if (curEnt && !entsAreSame(curEnt, newEnt)) {
-    let relatedPrice = getEntRelatedPrice(curEnt, prices);
-    if (relatedPrice) {
-      relatedPrice.id = undefined;
-    }
-  }
-
-  return newEnt;
-};
 // OTHERS
 export const getEntRelatedPrice = (
   entitlement: Entitlement,
@@ -346,8 +154,6 @@ export const getEntRelatedPrice = (
     let productIdMatch =
       entitlement.internal_product_id == price.internal_product_id;
     return entIdMatch && productIdMatch;
-    // const config = price.config as UsagePriceConfig;
-    // return config.internal_feature_id === entitlement.internal_feature_id;
   });
 };
 
@@ -358,4 +164,29 @@ export const getEntitlementsForProduct = (
   return entitlements.filter(
     (ent) => ent.internal_product_id === product.internal_id,
   );
+};
+
+export const getEntsWithFeature = ({
+  ents,
+  features,
+}: {
+  ents: Entitlement[];
+  features: Feature[];
+}) => {
+  return ents.map((ent) => {
+    let feature = features.find(
+      (f) => f.internal_id === ent.internal_feature_id,
+    );
+    if (!feature) {
+      throw new RecaseError({
+        message: `Couldn't find feature ${ent.internal_feature_id} for entitlement ${ent.id}`,
+        code: ErrCode.FeatureNotFound,
+      });
+    }
+
+    return {
+      ...ent,
+      feature,
+    };
+  }) as FullEntitlement[];
 };

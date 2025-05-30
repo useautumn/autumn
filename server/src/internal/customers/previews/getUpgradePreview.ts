@@ -200,7 +200,7 @@ export const getUpgradePreview = async ({
     shouldPreview: true,
   })) as any;
 
-  let curPrices = cusProductToPrices(curMainProduct);
+  let curPrices = cusProductToPrices({ cusProduct: curMainProduct });
   let allPrices = [...product.prices, ...curPrices];
 
   let nextCycleAt = stripeSubs[0].current_period_end * 1000;

@@ -22,13 +22,8 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const getOrCreateCustomer = async ({
   req,
-  db,
-  org,
-  features,
   customerId,
   customerData,
-  env,
-  logger,
   inStatuses = [
     CusProductStatus.Active,
     CusProductStatus.PastDue,
@@ -43,13 +38,8 @@ export const getOrCreateCustomer = async ({
   entityData,
 }: {
   req: ExtendedRequest;
-  db: DrizzleCli;
-  org: Organization;
-  features: Feature[];
-  env: AppEnv;
   customerId: string;
   customerData?: CustomerData;
-  logger: any;
   inStatuses?: CusProductStatus[];
   skipGet?: boolean;
   withEntities?: boolean;
@@ -58,6 +48,8 @@ export const getOrCreateCustomer = async ({
   entityData?: EntityData;
 }): Promise<FullCustomer> => {
   let customer;
+
+  const { db, org, features, env, logtail: logger } = req;
 
   if (!skipGet) {
     customer = await CusService.getFull({

@@ -58,7 +58,6 @@ export type AttachParams = {
 export type InsertCusProductParams = {
   customer: Customer;
   org: Organization;
-
   product: FullProduct;
   prices: Price[];
   entitlements: EntitlementWithFeature[];
@@ -67,10 +66,8 @@ export type InsertCusProductParams = {
   optionsList: FeatureOptions[];
 
   successUrl?: string | undefined;
-  // remainingItemSets?: any[];
   itemSets?: any[];
 
-  // OTHERS
   curCusProduct?: FullCusProduct | undefined;
   cusProducts?: FullCusProduct[];
 

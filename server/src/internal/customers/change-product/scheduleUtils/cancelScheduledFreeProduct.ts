@@ -1,5 +1,5 @@
 import { AppEnv, FullCusProduct, Organization } from "@autumn/shared";
-import { getExistingCusProducts } from "../../add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
 import { getScheduleIdsFromCusProducts } from "../scheduleUtils.js";
 import Stripe from "stripe";

@@ -49,19 +49,27 @@ export const cusProductToCusEnts = (
   return cusEnts;
 };
 
-export const cusProductToPrices = (cusProduct: FullCusProduct) => {
+export const cusProductToPrices = ({
+  cusProduct,
+}: {
+  cusProduct: FullCusProduct;
+}) => {
   return cusProduct.customer_prices.map((cp) => cp.price);
 };
 
-export const cusProductToEnts = (cusProduct: FullCusProduct) => {
+export const cusProductToEnts = ({
+  cusProduct,
+}: {
+  cusProduct: FullCusProduct;
+}) => {
   return cusProduct.customer_entitlements.map((ce) => ce.entitlement);
 };
 
 export const cusProductToProduct = (cusProduct: FullCusProduct) => {
   return {
     ...cusProduct.product,
-    prices: cusProductToPrices(cusProduct),
-    entitlements: cusProductToEnts(cusProduct),
+    prices: cusProductToPrices({ cusProduct }),
+    entitlements: cusProductToEnts({ cusProduct }),
     free_trial: cusProduct.free_trial,
   } as FullProduct;
 };

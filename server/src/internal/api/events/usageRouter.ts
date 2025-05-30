@@ -22,6 +22,7 @@ import { creditSystemContainsFeature } from "@/internal/features/creditSystemUti
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 import { getEventTimestamp } from "./eventUtils.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 export const eventsRouter = Router();
 export const usageRouter = Router();
 
@@ -32,29 +33,24 @@ const getCusFeatureAndOrg = async ({
   entityId,
   customerData,
 }: {
-  req: any;
+  req: ExtendedRequest;
   customerId: string;
   featureId: string;
   entityId: string;
   customerData: any;
 }) => {
   // 1. Get customer
-  const { db } = req;
-  let { org, features } = await getOrgAndFeatures({ req });
+  const { org, features } = req;
+
   let [customer] = await Promise.all([
     getOrCreateCustomer({
       req,
-      db,
-      org,
-      env: req.env,
       customerId,
       customerData,
-      logger: req.logtail,
       inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 
       entityId,
       entityData: req.body.entity_data,
-      features,
     }),
   ]);
 

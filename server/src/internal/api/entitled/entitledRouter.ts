@@ -217,16 +217,11 @@ const getCusEntsAndFeatures = async ({
 
   const customer = await getOrCreateCustomer({
     req,
-    db,
-    org: req.org,
-    env,
     customerId: customer_id,
     customerData: customer_data,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-    logger,
     entityId: entity_id,
     entityData: req.body.entity_data,
-    features: allFeatures,
   });
 
   const duration = Date.now() - startTime;

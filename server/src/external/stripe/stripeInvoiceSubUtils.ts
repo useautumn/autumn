@@ -41,17 +41,17 @@ export const createStripeSubThroughInvoice = async ({
   let paymentMethodData = {};
   if (paymentMethod) {
     paymentMethodData = {
-      default_payment_method: paymentMethod as string,
+      default_payment_method: paymentMethod.id,
     };
   }
 
   let subItems = items.filter(
     (i: any, index: number) =>
-      prices[index].config!.interval !== BillingInterval.OneOff
+      prices[index].config!.interval !== BillingInterval.OneOff,
   );
   let invoiceItems = items.filter(
     (i: any, index: number) =>
-      prices[index].config!.interval === BillingInterval.OneOff
+      prices[index].config!.interval === BillingInterval.OneOff,
   );
 
   try {

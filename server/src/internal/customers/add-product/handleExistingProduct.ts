@@ -24,60 +24,7 @@ import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import { handleSameAddOnProduct } from "./handleSameProduct/handleSameAddOn.js";
-
-export const getExistingCusProducts = async ({
-  product,
-  cusProducts,
-  internalEntityId,
-}: {
-  product: Product;
-  cusProducts: FullCusProduct[];
-  internalEntityId?: string | null;
-}) => {
-  if (!cusProducts || cusProducts.length === 0) {
-    return {
-      curMainProduct: null,
-      curSameProduct: null,
-      curScheduledProduct: null,
-    };
-  }
-
-  let curMainProduct = cusProducts.find((cp: any) => {
-    let sameGroup = cp.product.group === product.group;
-    let isMain = !cp.product.is_add_on;
-    let isActive =
-      cp.status == CusProductStatus.Active ||
-      cp.status == CusProductStatus.PastDue;
-
-    let oneOff = isOneOff(cp.customer_prices.map((cp: any) => cp.price));
-
-    let sameEntity = internalEntityId
-      ? cp.internal_entity_id === internalEntityId
-      : nullish(cp.internal_entity_id);
-
-    return sameGroup && isMain && isActive && !oneOff && sameEntity;
-  });
-
-  const curSameProduct = cusProducts!.find(
-    (cp: any) =>
-      cp.product.internal_id === product.internal_id &&
-      (internalEntityId
-        ? cp.internal_entity_id === internalEntityId
-        : nullish(cp.internal_entity_id)),
-  );
-
-  const curScheduledProduct = cusProducts!.find(
-    (cp: any) =>
-      cp.status === CusProductStatus.Scheduled &&
-      cp.product.group === product.group &&
-      !cp.product.is_add_on &&
-      (internalEntityId
-        ? cp.internal_entity_id === internalEntityId
-        : nullish(cp.internal_entity_id)),
-  );
-
-  return { curMainProduct, curSameProduct, curScheduledProduct };
-};
+import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 
 const handleExistingMultipleProducts = async ({
   attachParams,
@@ -99,7 +46,7 @@ const handleExistingMultipleProducts = async ({
 
   for (const product of products) {
     let { curMainProduct, curSameProduct, curScheduledProduct }: any =
-      await getExistingCusProducts({
+      getExistingCusProducts({
         product,
         cusProducts: attachParams.cusProducts!,
       });

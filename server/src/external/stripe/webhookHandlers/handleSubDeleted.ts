@@ -25,7 +25,7 @@ import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { billForRemainingUsages } from "@/internal/customers/change-product/billRemainingUsages.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 
 const handleCusProductDeleted = async ({
@@ -170,7 +170,7 @@ const handleCusProductDeleted = async ({
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
   });
 
-  let { curMainProduct } = await getExistingCusProducts({
+  let { curMainProduct } = getExistingCusProducts({
     product: cusProduct.product,
     cusProducts,
   });

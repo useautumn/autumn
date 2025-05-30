@@ -23,6 +23,7 @@ export interface ExtendedRequest extends ExpressRequest {
   db: DrizzleCli;
 
   userId?: string;
+  isPublic?: boolean;
 
   logtail: Logtail;
   orgId: string;

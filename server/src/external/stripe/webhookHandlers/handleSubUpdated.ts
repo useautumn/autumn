@@ -14,7 +14,7 @@ import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
-import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import {
   getWebhookLock,
   releaseWebhookLock,
@@ -249,9 +249,10 @@ export const handleSubscriptionUpdated = async ({
         ],
       });
 
-      let { curScheduledProduct } = await getExistingCusProducts({
+      let { curScheduledProduct } = getExistingCusProducts({
         product: updatedCusProducts[0].product,
         cusProducts: allCusProducts,
+        internalEntityId: updatedCusProducts[0].internal_entity_id,
       });
 
       let deletedCusProducts: FullCusProduct[] = [];

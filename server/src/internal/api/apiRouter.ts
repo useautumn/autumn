@@ -6,7 +6,7 @@ import { productApiRouter } from "./products/productRouter.js";
 
 import { featureApiRouter } from "./features/featureApiRouter.js";
 import { entitledRouter } from "./entitled/entitledRouter.js";
-import { attachRouter } from "./customers/products/attachRouter.js";
+import { attachRouter } from "../customers/attach/attachRouter.js";
 import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { usageRouter } from "./events/usageRouter.js";
 import { invoiceRouter } from "./invoiceRouter.js";
@@ -50,7 +50,7 @@ apiRouter.use("/referrals", referralRouter);
 apiRouter.use("/redemptions", redemptionRouter);
 
 // Cus Product
-apiRouter.use(attachRouter);
+apiRouter.use("/attach", attachRouter);
 apiRouter.use("/cancel", expireRouter);
 apiRouter.use("/entitled", entitledRouter);
 apiRouter.use("/check", entitledRouter);

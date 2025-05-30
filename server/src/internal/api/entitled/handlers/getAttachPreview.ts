@@ -1,6 +1,6 @@
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 
-import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 
 import { getPricesForCusProduct } from "@/internal/customers/change-product/scheduleUtils.js";
 import { getDowngradePreview } from "@/internal/customers/previews/getDowngradePreview.js";
@@ -60,7 +60,7 @@ export const getAttachPreview = async ({
   }
 
   let { curMainProduct, curScheduledProduct, curSameProduct }: any =
-    await getExistingCusProducts({
+    getExistingCusProducts({
       product,
       cusProducts: cusProducts || [],
       internalEntityId: customer.entity?.internal_id,
@@ -81,6 +81,7 @@ export const getAttachPreview = async ({
       product_name: product.name,
       current_product_name: curMainProduct?.product?.name,
       next_cycle_at: curScheduledProduct.starts_at,
+      payment_method: paymentMethod,
     };
 
     return result;
@@ -94,6 +95,7 @@ export const getAttachPreview = async ({
         error_on_attach: true,
         product_id: product.id,
         product_name: product.name,
+        payment_method: paymentMethod,
       };
 
       return result;
@@ -153,6 +155,7 @@ export const getAttachPreview = async ({
         product_id: product.id,
         product_name: product.name,
         recurring: !isOneOff(product.prices),
+        payment_method: paymentMethod,
       };
 
       return result;
@@ -168,7 +171,7 @@ export const getAttachPreview = async ({
   });
 
   if (isUpgrade) {
-    return await getUpgradePreview({
+    let result = await getUpgradePreview({
       db,
       customer,
       org,
@@ -178,8 +181,13 @@ export const getAttachPreview = async ({
       logger,
       features,
     });
+
+    return {
+      ...result,
+      payment_method: paymentMethod,
+    };
   } else {
-    return await getDowngradePreview({
+    let result = await getDowngradePreview({
       customer,
       org,
       env,
@@ -187,5 +195,10 @@ export const getAttachPreview = async ({
       curMainProduct,
       curScheduledProduct,
     });
+
+    return {
+      ...result,
+      payment_method: paymentMethod,
+    };
   }
 };

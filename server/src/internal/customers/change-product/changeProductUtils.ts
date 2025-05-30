@@ -1,6 +1,6 @@
 import { Organization, FullProduct } from "@autumn/shared";
 import Stripe from "stripe";
-import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { AttachParams } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { cancelFutureProductSchedule } from "./scheduleUtils.js";
@@ -20,7 +20,7 @@ export const cancelScheduledProductIfExists = async ({
   curFullProduct: FullProduct;
   logger: any;
 }) => {
-  let { curScheduledProduct } = await getExistingCusProducts({
+  let { curScheduledProduct } = getExistingCusProducts({
     product: curFullProduct,
     cusProducts: attachParams.cusProducts!,
     internalEntityId: attachParams.internalEntityId,
