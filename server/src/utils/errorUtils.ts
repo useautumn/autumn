@@ -163,7 +163,12 @@ export const handleRequestError = ({
       logger.error(`Type: Unknown`);
       logger.error(error);
 
-      res.status(500).json({ message: "Internal server error" });
+      res
+        .status(500)
+        .json({
+          message: error.message || "Unknown error",
+          code: error.code || "unknown_error",
+        });
     }
     logger.error("--------------------------------");
   } catch (error) {

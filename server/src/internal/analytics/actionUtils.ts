@@ -58,7 +58,7 @@ export const constructAction = ({
     // Request info
     request_id: req.id || "",
     method: req.method || "",
-    path: req.originalUrl || "",
+    path: (req.originalUrl || "").split("?")[0],
     auth_type: req.authType || AuthType.Unknown,
 
     // Properties

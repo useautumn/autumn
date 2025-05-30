@@ -21,6 +21,7 @@ import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCu
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
+import { getEventTimestamp } from "./eventUtils.js";
 export const eventsRouter = Router();
 export const usageRouter = Router();
 
@@ -103,13 +104,17 @@ const createAndInsertEvent = async ({
     });
   }
 
+  const timestamp = getEventTimestamp(req.body.timestamp);
+
   const newEvent: EventInsert = {
     id: generateId("evt"),
     org_id: req.orgId,
+    org_slug: req.org.slug,
     env: req.env,
     internal_customer_id: customer.internal_id,
-    // timestamp: Date.now(),
-    created_at: Date.now(),
+
+    created_at: timestamp.getTime(),
+    timestamp: timestamp,
 
     idempotency_key: idempotencyKey,
     customer_id: customer.id,

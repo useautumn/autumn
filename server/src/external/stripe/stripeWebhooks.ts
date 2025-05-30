@@ -33,7 +33,6 @@ stripeWebhookRouter.post(
     try {
       org = await OrgService.get({ db: request.db, orgId });
     } catch (error) {
-      console.log(`Org ${orgId} not found`);
       response.status(200).send(`Org ${orgId} not found`);
       return;
     }
