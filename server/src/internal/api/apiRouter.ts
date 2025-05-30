@@ -1,7 +1,7 @@
 import { apiAuthMiddleware } from "@/middleware/apiMiddleware.js";
 import { Router } from "express";
 import { eventsRouter } from "./events/eventRouter.js";
-import { cusRouter } from "./customers/cusRouter.js";
+import { cusRouter } from "./cusRouter.js";
 import { productApiRouter } from "./products/productRouter.js";
 
 import { featureApiRouter } from "./features/featureApiRouter.js";
@@ -9,7 +9,7 @@ import { entitledRouter } from "./entitled/entitledRouter.js";
 import { attachRouter } from "./customers/products/attachRouter.js";
 import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { usageRouter } from "./events/usageRouter.js";
-import { invoiceRouter } from "./customers/invoiceRouter.js";
+import { invoiceRouter } from "./invoiceRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
 import { migrationRouter } from "./migrations/migrationRouter.js";
 

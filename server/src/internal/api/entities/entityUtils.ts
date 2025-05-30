@@ -1,7 +1,7 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { submitUsageToStripe } from "@/external/stripe/stripeMeterUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import {
   getBillingType,
   roundUsage,
@@ -22,8 +22,7 @@ import {
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { StatusCodes } from "http-status-codes/build/cjs/status-codes.js";
+import { StatusCodes } from "http-status-codes";
 
 export const getLinkedCusEnt = ({
   linkedFeature,

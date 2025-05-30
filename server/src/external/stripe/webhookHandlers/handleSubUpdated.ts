@@ -1,4 +1,3 @@
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
 import {
   AppEnv,
   AttachScenario,
@@ -6,12 +5,11 @@ import {
   CusProductStatus,
   ErrCode,
   FullCusProduct,
-  FullCustomerEntitlement,
-  FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
 
 import { createStripeCli } from "../utils.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";

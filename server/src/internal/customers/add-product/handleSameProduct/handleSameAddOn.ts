@@ -2,8 +2,7 @@ import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { FullCusProduct, ErrCode } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { AttachParams } from "../../products/AttachParams.js";
+import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { getOptionsToUpdate } from "../handleSameProduct.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -54,19 +53,4 @@ export const handleSameAddOnProduct = async ({
     done: false,
     curCusProduct: null,
   };
-
-  // if (optionsToUpdate.length === 0) {
-  //   throw new RecaseError({
-  //     message: `Customer already has add-on product ${product.name}, can't attach again`,
-  //     code: ErrCode.CustomerAlreadyHasProduct,
-  //     statusCode: 400,
-  //   });
-  // }
-
-  // throw new RecaseError({
-  //   message:
-  //     "Updating add on product quantity is feature flagged -- please contact hey@useautumn to enable it for this account!",
-  //   code: ErrCode.InternalError,
-  //   statusCode: 500,
-  // });
 };

@@ -14,11 +14,10 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { Client } from "pg";
-import { flipProductResults } from "../api/customers/cusUtils.js";
 import { and, eq, or, sql } from "drizzle-orm";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
-
+import { flipProductResults } from "./cusUtils/cusUtils.js";
 export class CusService {
   // static async list({
   //   db,

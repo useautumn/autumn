@@ -15,33 +15,15 @@ import {
 import { FeatureOptions } from "@autumn/shared";
 
 import { EntitlementWithFeature } from "@autumn/shared";
-import {
-  getRelatedCusPrice,
-  getResetBalance,
-} from "../entitlements/cusEntUtils.js";
-import {
-  formatUnixToDateTime,
-  generateId,
-  notNullish,
-  nullish,
-} from "@/utils/genUtils.js";
-import {
-  getBillingType,
-  getEntOptions,
-} from "@/internal/products/prices/priceUtils.js";
+import { getResetBalance } from "../cusProducts/cusEnts/cusEntUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getNextEntitlementReset } from "@/utils/timeUtils.js";
-import {
-  getAlignedIntervalUnix,
-  subtractFromUnixTillAligned,
-} from "@/internal/products/prices/billingIntervalUtils.js";
-import { format } from "date-fns";
+import { subtractFromUnixTillAligned } from "@/internal/products/prices/billingIntervalUtils.js";
 import { UTCDate } from "@date-fns/utc";
-import {
-  entitlementLinkedToEntity,
-  isLinkedToEntity,
-} from "@/internal/api/entities/entityUtils.js";
+import { entitlementLinkedToEntity } from "@/internal/api/entities/entityUtils.js";
 
 export const initCusEntEntities = ({
   entitlement,

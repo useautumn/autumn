@@ -3,7 +3,7 @@ import { AutumnMetadata } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { addDays } from "date-fns";
 import { MetadataService } from "./MetadataService.js";
-import { AttachParams } from "../customers/products/AttachParams.js";
+import { AttachParams } from "../customers/cusProducts/AttachParams.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const createCheckoutMetadata = async ({

@@ -2,13 +2,12 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   cancelCusProductSubscriptions,
   expireAndActivate,
   fullCusProductToProduct,
-} from "@/internal/customers/products/cusProductUtils.js";
+} from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";

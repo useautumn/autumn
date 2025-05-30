@@ -1,8 +1,8 @@
 import { Organization, FullProduct } from "@autumn/shared";
 import Stripe from "stripe";
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
-import { AttachParams } from "../products/AttachParams.js";
-import { CusProductService } from "../products/CusProductService.js";
+import { AttachParams } from "../cusProducts/AttachParams.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
 import { cancelFutureProductSchedule } from "./scheduleUtils.js";
 
 export const cancelScheduledProductIfExists = async ({

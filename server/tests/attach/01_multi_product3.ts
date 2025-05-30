@@ -1,4 +1,4 @@
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusProductStatus, Customer } from "@autumn/shared";
 import { expect } from "chai";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
@@ -9,11 +9,8 @@ import {
 } from "tests/utils/compare.js";
 import { initCustomer } from "tests/utils/init.js";
 import { searchCusProducts, timeout } from "tests/utils/genUtils.js";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { Stripe } from "stripe";
-import { ProductService } from "@/internal/products/ProductService.js";
 import { checkScheduleContainsProducts } from "tests/utils/scheduleCheckUtils.js";
 
 /* 

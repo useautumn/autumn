@@ -1,9 +1,9 @@
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   activateDefaultProduct,
   activateFutureProduct,
   cancelCusProductSubscriptions,
-} from "@/internal/customers/products/cusProductUtils.js";
+} from "@/internal/customers/cusProducts/cusProductUtils.js";
 
 import RecaseError from "@/utils/errorUtils.js";
 import {
@@ -16,7 +16,7 @@ import {
   FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import Stripe from "stripe";
 
 import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";

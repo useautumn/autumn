@@ -1,4 +1,4 @@
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
 import {
   AppEnv,
@@ -19,12 +19,12 @@ import { createStripeCli } from "../utils.js";
 import { differenceInMinutes, subDays } from "date-fns";
 import { getStripeSubs, getUsageBasedSub } from "../stripeSubUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
-import { getRelatedCusEnt } from "@/internal/customers/prices/cusPriceUtils.js";
+import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { getTotalNegativeBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
-import { getResetBalancesUpdate } from "@/internal/customers/entitlements/groupByUtils.js";
+import { getTotalNegativeBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { Client } from "pg";

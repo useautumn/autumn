@@ -1,5 +1,4 @@
-import { SupabaseClient } from "@supabase/supabase-js";
-import { InsertCusProductParams } from "../products/AttachParams.js";
+import { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import {
   AllowanceType,
   AppEnv,
@@ -10,12 +9,12 @@ import {
   Organization,
   Price,
 } from "@autumn/shared";
-import { CusEntService } from "../entitlements/CusEntitlementService.js";
+import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
-import { CusProductService } from "../products/CusProductService.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
-import { getResetBalance } from "../entitlements/cusEntUtils.js";
+import { getResetBalance } from "../cusProducts/cusEnts/cusEntUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 

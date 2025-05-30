@@ -21,7 +21,6 @@ import {
   getPriceOptions,
   getUsageTier,
 } from "@/internal/products/prices/priceUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { CusProductService } from "./CusProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
@@ -32,8 +31,8 @@ import {
   getStripeSubs,
   subIsPrematurelyCanceled,
 } from "@/external/stripe/stripeSubUtils.js";
-import { sortCusEntsForDeduction } from "../entitlements/cusEntUtils.js";
-import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
+import { sortCusEntsForDeduction } from "./cusEnts/cusEntUtils.js";
+import { getRelatedCusEnt } from "./cusPrices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";

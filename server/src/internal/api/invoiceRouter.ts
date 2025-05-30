@@ -13,7 +13,7 @@ invoiceRouter.get("/:stripe_invoice_id/stripe", async (req: any, res: any) => {
     const stripeCli = createStripeCli({ org, env: req.env });
 
     const stripeInvoice = await stripeCli.invoices.retrieve(
-      req.params.stripe_invoice_id
+      req.params.stripe_invoice_id,
     );
 
     res.status(200).json(stripeInvoice);

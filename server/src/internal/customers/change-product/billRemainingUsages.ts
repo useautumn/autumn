@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Stripe } from "stripe";
-import { AttachParams } from "../products/AttachParams.js";
+import { AttachParams } from "../cusProducts/AttachParams.js";
 import { FullCusProduct, InvoiceItem } from "@autumn/shared";
 import { BillingInterval, BillingType, UsagePriceConfig } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -9,14 +9,14 @@ import {
   getPriceForOverage,
 } from "@/internal/products/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusEntService } from "../entitlements/CusEntitlementService.js";
+import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { getInvoiceExpansion } from "@/external/stripe/stripeInvoiceUtils.js";
 
 import { InvoiceService } from "../invoices/InvoiceService.js";
 import { stripeToAutumnInterval } from "@/external/stripe/utils.js";
-import { getResetBalancesUpdate } from "../entitlements/groupByUtils.js";
-import { getRelatedCusEnt } from "../prices/cusPriceUtils.js";
+import { getResetBalancesUpdate } from "../cusProducts/cusEnts/groupByUtils.js";
+import { getRelatedCusEnt } from "../cusProducts/cusPrices/cusPriceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // Add usage to end of cycle

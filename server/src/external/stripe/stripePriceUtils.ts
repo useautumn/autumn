@@ -22,8 +22,8 @@ import {
   getProductForPrice,
 } from "@/internal/products/prices/priceUtils.js";
 
-import { AttachParams } from "@/internal/customers/products/AttachParams.js";
-import { getExistingUsageFromCusProducts } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { priceToStripeItem } from "./priceToStripeItem/priceToStripeItem.js";
 import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 import { notNullish } from "@/utils/genUtils.js";

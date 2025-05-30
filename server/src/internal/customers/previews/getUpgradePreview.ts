@@ -12,9 +12,8 @@ import {
   FullCusProduct,
   FullProduct,
   Organization,
-  PriceType,
 } from "@autumn/shared";
-import { AttachParams } from "../products/AttachParams.js";
+import { AttachParams } from "../cusProducts/AttachParams.js";
 import { handleStripeSubUpdate } from "../change-product/handleUpgrade.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
@@ -30,8 +29,7 @@ import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { isPriceItem } from "@/internal/products/product-items/getItemType.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { cusProductToPrices } from "../products/cusProductUtils.js";
-import { formatUnixToDateTime } from "@/utils/genUtils.js";
+import { cusProductToPrices } from "../cusProducts/cusProductUtils.js";
 
 export const isAddProductFlow = ({
   curCusProduct,

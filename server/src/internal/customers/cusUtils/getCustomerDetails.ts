@@ -1,40 +1,34 @@
+import Stripe from "stripe";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { getCusBalances } from "@/internal/customers/entitlements/getCusBalances.js";
+import { getCusBalances } from "@/internal/customers/cusProducts/cusEnts/getCusBalances.js";
 import {
   fullCusProductToCusEnts,
   fullCusProductToCusPrices,
-} from "@/internal/customers/products/cusProductUtils.js";
+} from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
-  Customer,
   AppEnv,
   CusProductStatus,
   FullCusProduct,
   APIVersion,
   CusResponseSchema,
   CustomerResponseSchema,
-  FullCustomerEntitlement,
   CusEntResponseSchema,
   FeatureType,
   Feature,
   Organization,
   CusEntResponse,
   CusEntResponseV2,
-  CusProductResponse,
   FullCustomer,
   CusExpand,
-  InvoiceResponse,
   RewardType,
   RewardResponse,
   CouponDurationType,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { EntityService } from "../entities/EntityService.js";
 import { getCusInvoices, processFullCusProducts } from "./cusUtils.js";
 import { invoicesToResponse } from "@/internal/customers/invoices/invoiceUtils.js";
-import Stripe from "stripe";
+
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 

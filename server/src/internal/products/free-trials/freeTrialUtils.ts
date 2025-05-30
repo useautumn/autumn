@@ -19,7 +19,7 @@ import {
 } from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
 export const validateAndInitFreeTrial = ({
   freeTrial,

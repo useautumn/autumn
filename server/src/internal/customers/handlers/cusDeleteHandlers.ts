@@ -1,12 +1,11 @@
+import chalk from "chalk";
+import RecaseError from "@/utils/errorUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { deleteStripeCustomer } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
-
-import RecaseError from "@/utils/errorUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { AppEnv, ErrCode, Organization } from "@autumn/shared";
-import chalk from "chalk";
 import { StatusCodes } from "http-status-codes";
 
 export const deleteCusById = async ({

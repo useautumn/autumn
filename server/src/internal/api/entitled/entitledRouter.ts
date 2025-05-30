@@ -13,7 +13,7 @@ import {
   cusEntsContainFeature,
   getFeatureBalance,
   getUnlimitedAndUsageAllowed,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";

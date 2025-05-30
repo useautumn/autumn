@@ -4,7 +4,7 @@ import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 
 import { FullCustomerEntitlement } from "@autumn/shared";
 
-import { getRelatedCusPrice } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { FullCusProduct } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 

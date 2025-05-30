@@ -7,9 +7,6 @@ import {
   AppEnv,
   AttachScenario,
   FullCusProduct,
-  FullCustomerEntitlement,
-  FullCustomerPrice,
-  FullProduct,
   Organization,
   Product,
 } from "@autumn/shared";
@@ -17,9 +14,9 @@ import Stripe from "stripe";
 import {
   fullCusProductToProduct,
   isActiveStatus,
-} from "../products/cusProductUtils.js";
-import { CusProductService } from "../products/CusProductService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+} from "../cusProducts/cusProductUtils.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
+
 import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 

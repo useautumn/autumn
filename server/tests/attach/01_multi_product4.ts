@@ -1,8 +1,8 @@
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { CusProductStatus } from "@autumn/shared";
+
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+
 import { expect } from "chai";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { attachProducts } from "tests/global.js";
