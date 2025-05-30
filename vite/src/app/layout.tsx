@@ -55,13 +55,13 @@ export function MainLayout() {
         <div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
           <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
             {env === AppEnv.Sandbox && (
-              <div className="w-full min-h-10 h-10 bg-orange-100 text-white text-sm flex items-center justify-center relative px-4">
-                <p className="font-medium text-orange-500 font-mono">
+              <div className="w-full min-h-10 h-10 bg-amber-100 text-white text-sm flex items-center justify-center relative px-4">
+                <p className="font-medium text-amber-500 font-mono">
                   You&apos;re in sandbox
                 </p>
                 <Button
                   variant="default"
-                  className="h-6 border border-orange-500 bg-transparent text-orange-500 hover:bg-orange-500 hover:text-white font-mono rounded-lg ml-auto absolute right-4"
+                  className="h-6 border border-amber-500 bg-transparent text-amber-500 hover:bg-amber-500 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
                   onClick={() => {
                     navigateTo("/onboarding", navigate, AppEnv.Sandbox);
                   }}
@@ -142,18 +142,20 @@ const MainContent = () => {
     <div className="w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3">
       <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
         {env === AppEnv.Sandbox && (
-          <div className="w-full min-h-10 h-10 bg-orange-100 text-sm flex items-center justify-center relative px-4 text-orange-500 ">
+          <div className="w-full min-h-10 h-10 bg-amber-100 text-sm flex items-center justify-center relative px-4 text-amber-500 ">
             <p className="font-medium font-mono">You&apos;re in sandbox</p>
-            <Button
-              variant="default"
-              className="h-6 border border-orange-500 bg-transparent text-orange-500 hover:bg-orange-500 hover:text-white font-mono rounded-lg ml-auto absolute right-4"
-              onClick={() => {
-                navigateTo("/onboarding", navigate, AppEnv.Sandbox);
-              }}
-            >
-              Onboarding
-              <ArrowUpRightFromSquare size={12} className="inline ml-1" />
-            </Button>
+            {!window.location.pathname.includes("/onboarding") && (
+              <Button
+                variant="default"
+                className="h-6 border border-amber-500 bg-transparent text-amber-500 hover:bg-amber-500 hover:text-white font-mono rounded-xs ml-auto absolute right-4"
+                onClick={() => {
+                  navigateTo("/onboarding", navigate, AppEnv.Sandbox);
+                }}
+              >
+                Onboarding
+                <ArrowUpRightFromSquare size={12} className="inline ml-1" />
+              </Button>
+            )}
           </div>
         )}
         <div
