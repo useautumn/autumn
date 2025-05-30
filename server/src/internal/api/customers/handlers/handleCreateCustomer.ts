@@ -151,6 +151,13 @@ export const createNewCustomer = async ({
     return newCustomer;
   }
 
+  await addCustomerCreatedTask({
+    req,
+    internalCustomerId: newCustomer.internal_id,
+    org,
+    env,
+  });
+
   if (nonFreeProds.length > 0) {
     await initStripeCusAndProducts({
       db,
@@ -205,13 +212,6 @@ export const createNewCustomer = async ({
       scenario: AttachScenario.New,
     });
   }
-
-  await addCustomerCreatedTask({
-    req,
-    internalCustomerId: newCustomer.internal_id,
-    org,
-    env,
-  });
 
   return newCustomer;
 };

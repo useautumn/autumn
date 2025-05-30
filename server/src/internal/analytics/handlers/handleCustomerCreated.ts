@@ -53,7 +53,9 @@ export const handleCustomerCreated = async ({
     customer,
     type: ActionType.CustomerCreated,
     req,
-    properties: {},
+    properties: {
+      body: data.req.body,
+    },
   });
 
   await ActionService.insert(db, action);

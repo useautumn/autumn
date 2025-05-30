@@ -5,7 +5,6 @@ import {
   Organization,
   AppEnv,
   Customer,
-  FullProduct,
   ActionInsert,
   ActionType,
   AuthType,
@@ -20,7 +19,7 @@ export const parseReqForAction = (
     originalUrl: req.originalUrl,
     method: req.method,
     body: req.body,
-    timestamp: req.timestamp,
+    timestamp: Date.now(),
   } as Partial<ExtendedRequest>;
 };
 
