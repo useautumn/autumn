@@ -38,8 +38,8 @@ export const ProductVersions = () => {
                     `${customer ? `/customers/${customer.id}` : "/products"}/${
                       product.id
                     }?version=${value}`,
-                    env
-                  )
+                    env,
+                  ),
                 );
               }}
             >
@@ -65,8 +65,8 @@ export const ProductVersions = () => {
                                 ? `/customers/${customer.id}`
                                 : "/products"
                             }/${product.id}?version=${version}`,
-                            env
-                          )
+                            env,
+                          ),
                         );
                       }}
                     >
@@ -76,7 +76,7 @@ export const ProductVersions = () => {
               </SelectContent>
             </Select>
           ) : (
-            <p className="text-xs text-t3 pr-2">None</p>
+            <p className="text-sm text-t3 pr-2">None</p>
           )}
         </div>
         {!customer && <CountAndMigrate />}

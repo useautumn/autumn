@@ -47,6 +47,7 @@ export const ProductList = ({
   const [product, setProduct] = useState<any>(data.products[0]);
   const [features, setFeatures] = useState<any[]>(data.features);
   const [open, setOpen] = useState(false);
+  const [originalProduct, setOriginalProduct] = useState<any>(null);
 
   if (!data.products) return null;
 
@@ -73,6 +74,7 @@ export const ProductList = ({
         mutate={mutate}
         open={open}
         setOpen={setOpen}
+        originalProduct={originalProduct}
       />
       <ProductsContext.Provider
         value={{
@@ -97,13 +99,17 @@ export const ProductList = ({
               />
             </>
           }
-          className="pr-0"
+          className="pr-0 border-l"
         />
 
         <ProductsTable
           products={data.products}
           onRowClick={(id) => {
-            setProduct(data.products.find((p: ProductV2) => p.id === id));
+            const selectedProduct = data.products.find(
+              (p: ProductV2) => p.id === id,
+            );
+            setProduct(selectedProduct);
+            setOriginalProduct(JSON.parse(JSON.stringify(selectedProduct)));
             setOpen(true);
           }}
         />
@@ -120,6 +126,8 @@ const EditProductDialog = ({
   mutate,
   open,
   setOpen,
+
+  originalProduct,
 }: {
   product: any;
   setProduct: (product: any) => void;
@@ -128,14 +136,30 @@ const EditProductDialog = ({
   mutate: () => Promise<void>;
   open: boolean;
   setOpen: (open: boolean) => void;
+  originalProduct: any;
 }) => {
   const env = useEnv();
   const axiosInstance = useAxiosInstance();
   const [createProductLoading, setCreateProductLoading] = useState(false);
   const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
 
+  // Store the original product state when modal opens
+  const handleOpenChange = async (newOpen: boolean) => {
+    if (!newOpen && open && product?.id) {
+      // Modal is being closed, check if there are changes
+      const hasChanges =
+        originalProduct &&
+        JSON.stringify(product) !== JSON.stringify(originalProduct);
+
+      if (hasChanges) {
+        // Only update if there are changes
+        updateProduct();
+      }
+    }
+    setOpen(newOpen);
+  };
+
   const updateProduct = async () => {
-    setCreateProductLoading(true);
     setCreateProductLoading(true);
     try {
       const res = await ProductService.updateProduct(
@@ -143,13 +167,12 @@ const EditProductDialog = ({
         product.id,
         product,
       );
-      toast.success("Product items successfully created");
+      toast.success("Product updated successfully");
       await mutate();
       setOpen(false);
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to update product"));
     }
-    setCreateProductLoading(false);
     setCreateProductLoading(false);
   };
 
@@ -163,10 +186,8 @@ const EditProductDialog = ({
     }
   };
 
-  console.log(product);
-
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="p-0 py-8 min-w-[500px] min-h-[300px] flex flex-col justify-between">
         <DialogTitle className="text-t2 font-semibold px-10 hidden">
           {/* Edit Product */}
