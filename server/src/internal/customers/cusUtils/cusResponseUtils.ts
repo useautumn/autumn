@@ -1,4 +1,4 @@
-import { processFullCusProducts } from "@/internal/api/customers/cusUtils.js";
+import { processFullCusProducts } from "./cusUtils.js";
 import {
   CusEntResponseSchema,
   CusProductResponse,
@@ -11,10 +11,13 @@ import {
   Subscription,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { fullCusProductToCusPrices } from "../products/cusProductUtils.js";
-import { fullCusProductToCusEnts } from "../products/cusProductUtils.js";
-import { getCusBalances } from "../entitlements/getCusBalances.js";
-import { featuresToObject } from "@/internal/api/customers/getCustomerDetails.js";
+
+import { getCusBalances } from "../cusProducts/cusEnts/getCusBalances.js";
+import { featuresToObject } from "./getCustomerDetails.js";
+import {
+  cusProductToCusEnts,
+  cusProductToCusPrices,
+} from "../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const getCusProductsResponse = async ({
   cusProducts,
@@ -53,11 +56,11 @@ export const getCusFeaturesResponse = async ({
   entities: Entity[];
   entityId?: string;
 }) => {
-  let cusEnts = fullCusProductToCusEnts(cusProducts) as any;
+  let cusEnts = cusProductToCusEnts(cusProducts) as any;
 
   const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,
-    cusPrices: fullCusProductToCusPrices(cusProducts),
+    cusPrices: cusProductToCusPrices(cusProducts),
     entities,
     org,
     entityId,

@@ -4,7 +4,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusProductStatus, ErrCode, FullCusProduct } from "@autumn/shared";
 import { Router } from "express";
-import { expireCusProduct } from "../handlers/handleCusProductExpired.js";
+import { expireCusProduct } from "../../../customers/handlers/handleCusProductExpired.js";
 
 const expireRouter = Router();
 
@@ -57,6 +57,7 @@ expireRouter.post("", async (req, res) =>
 
       for (const cusProduct of cusProductsToExpire) {
         await expireCusProduct({
+          req,
           db,
           cusProduct,
           cusProducts,

@@ -15,7 +15,7 @@ import {
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
 
-import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import chalk from "chalk";
 
 import { handleSameMainProduct } from "@/internal/customers/add-product/handleSameProduct.js";
@@ -180,6 +180,17 @@ export const handleExistingProduct = async ({
       cusProducts: cusProducts || [],
       internalEntityId: attachParams.internalEntityId,
     });
+
+  // Merge options
+  let curOptions = curMainProduct?.options || [];
+  let newOptions = attachParams.optionsList || [];
+
+  for (const option of curOptions) {
+    let newOption = newOptions.find((o) => o.feature_id === option.feature_id);
+    if (!newOption) {
+      newOptions.push(option);
+    }
+  }
 
   if (isOneOff(product.prices)) {
     return { curCusProduct: null, done: false };

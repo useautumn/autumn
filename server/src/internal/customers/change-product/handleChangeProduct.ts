@@ -2,7 +2,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { isProductUpgrade } from "@/internal/products/productUtils.js";
 import { ErrCode, FullCusProduct } from "@autumn/shared";
-import { AttachParams } from "../products/AttachParams.js";
+import { AttachParams } from "../cusProducts/AttachParams.js";
 import { handleUpgrade } from "./handleUpgrade.js";
 import { StatusCodes } from "http-status-codes";
 import { handleDowngrade } from "./handleDowngrade.js";

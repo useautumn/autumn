@@ -11,7 +11,7 @@ export const OrgConfigSchema = z.object({
   checkout_on_failed_payment: z.boolean().default(true),
   reverse_deduction_order: z.boolean().default(false),
 
-  include_past_due: z.boolean().default(false),
+  include_past_due: z.boolean().default(true),
   sync_status: z.boolean().default(true),
   merge_billing_cycles: z.boolean().default(true),
   multiple_trials: z.boolean().default(false),

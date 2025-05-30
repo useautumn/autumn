@@ -9,7 +9,6 @@ import {
 import { itemToPriceAndEnt } from "./mapFromItem.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { EntitlementService } from "../entitlements/EntitlementService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { validateProductItems } from "./validateProductItems.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { isFeatureItem } from "./getItemType.js";
@@ -248,13 +247,13 @@ export const handleNewProductItems = async ({
     }
   }
 
-  logger.info(
-    `Prices: new(${newPrices.length}), updated(${updatedPrices.length}), deleted(${deletedPrices.length})`,
-  );
+  // logger.info(
+  //   `Prices: new(${newPrices.length}), updated(${updatedPrices.length}), deleted(${deletedPrices.length})`,
+  // );
 
-  logger.info(
-    `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`,
-  );
+  // logger.info(
+  //   `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`,
+  // );
 
   if (newFeatures.length > 0 && saveToDb) {
     await FeatureService.insert({

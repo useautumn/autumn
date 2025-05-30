@@ -17,9 +17,9 @@ import Stripe from "stripe";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
 import { ProductService } from "../products/ProductService.js";
 import { createFullCusProduct } from "../customers/add-product/createFullCusProduct.js";
-import { InsertCusProductParams } from "../customers/products/AttachParams.js";
+import { InsertCusProductParams } from "../customers/cusProducts/AttachParams.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusProductService } from "../customers/products/CusProductService.js";
+import { CusProductService } from "../customers/cusProducts/CusProductService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 

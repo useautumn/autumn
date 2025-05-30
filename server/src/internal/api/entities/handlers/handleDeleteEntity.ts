@@ -9,14 +9,14 @@ import { handleCustomerRaceCondition } from "@/external/redis/redisUtils.js";
 import {
   getCusEntMasterBalance,
   getRelatedCusPrice,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { fullCusProductToCusEnts } from "@/internal/customers/products/cusProductUtils.js";
 import { removeEntityFromCusEnt } from "../entityUtils.js";
-import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
-import { removeScheduledProduct } from "../../customers/handlers/handleCusProductExpired.js";
+import { removeScheduledProduct } from "../../../customers/handlers/handleCusProductExpired.js";
+import { cusProductToCusEnts } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const handleDeleteEntity = async (req: any, res: any) => {
   try {
@@ -123,7 +123,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 
     if (!cusPriceExists || org.config.prorate_unused) {
       // Completely remove entity
-      let cusEnts = fullCusProductToCusEnts(cusProducts);
+      let cusEnts = cusProductToCusEnts(cusProducts);
 
       // TODO: Charge for unused feature IDs...
 
@@ -158,6 +158,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 
           if (cusProduct.status == CusProductStatus.Scheduled) {
             await removeScheduledProduct({
+              req,
               db,
               cusProduct,
               cusProducts,

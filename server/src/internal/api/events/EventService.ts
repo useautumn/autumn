@@ -1,4 +1,4 @@
-import { ErrCode, Event, Organization } from "@autumn/shared";
+import { ErrCode, EventInsert } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { events } from "@autumn/shared";
@@ -6,7 +6,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { and, eq, desc } from "drizzle-orm";
 
 export class EventService {
-  static async insert({ db, event }: { db: DrizzleCli; event: Event }) {
+  static async insert({ db, event }: { db: DrizzleCli; event: EventInsert }) {
     try {
       const results = await db
         .insert(events)
@@ -49,22 +49,13 @@ export class EventService {
     env: string;
     limit?: number;
   }) {
-    // [
-    //   "id",
-    //   "event_name",
-    //   "value",
-    //   "timestamp",
-    //   "idempotency_key",
-    //   "properties",
-    //   "set_usage",
-    //   "entity_id",
-    // ]
-    return await db
+    let results = await db
       .select({
         id: events.id,
         event_name: events.event_name,
         value: events.value,
-        timestamp: events.timestamp,
+        created_at: events.created_at,
+        // timestamp: events.timestamp,
         idempotency_key: events.idempotency_key,
         properties: events.properties,
         set_usage: events.set_usage,
@@ -78,7 +69,9 @@ export class EventService {
           eq(events.env, env),
         ),
       )
-      .orderBy(desc(events.timestamp))
+      .orderBy(desc(events.created_at))
       .limit(limit);
+
+    return results;
   }
 }

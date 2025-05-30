@@ -2,7 +2,7 @@ import { getPricesForCusProduct } from "../scheduleUtils.js";
 
 import { FullCusProduct } from "@autumn/shared";
 import { ScheduleObj } from "./ScheduleObj.js";
-import { fullCusProductToProduct } from "../../products/cusProductUtils.js";
+import { fullCusProductToProduct } from "../../cusProducts/cusProductUtils.js";
 export const getFilteredScheduleItems = ({
   // scheduleItems,
   scheduleObj,
@@ -33,10 +33,10 @@ export const getFilteredScheduleItems = ({
       curPrices.some(
         (price) =>
           price.config?.stripe_price_id === scheduleItem.price ||
-          price.config?.stripe_product_id === stripePrice?.product
+          price.config?.stripe_product_id === stripePrice?.product,
       ) ||
       products.some(
-        (product) => product.processor?.id === stripePrice?.product
+        (product) => product.processor?.id === stripePrice?.product,
       );
 
     return !inCurProduct;

@@ -36,7 +36,7 @@ elif [ "$1" == "alex" ]; then
 
 elif [ "$1" == "alex-custom" ]; then
     FILE_TO_TEST="$2"
-    npx mocha --timeout 10000000 "tests/alex/$FILE_TO_TEST.ts"
+    npx mocha --timeout 10000000 "tests/alex/$FILE_TO_TEST.ts" 
 elif [ "$1" == "custom" ]; then
     FILE_TO_TEST="$2"
     ARG3="$3"
@@ -54,3 +54,5 @@ fi
 
 
 # All advanced parallel
+
+

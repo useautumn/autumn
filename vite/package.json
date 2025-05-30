@@ -71,5 +71,13 @@
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
     "vite": "^6.2.0"
+  },
+
+
+  "resolutions": {
+    "@rollup/rollup-linux-x64-gnu": "npm:@rollup/rollup-linux-x64-musl"
+  },
+  "overrides": {
+    "@rollup/rollup-linux-x64-gnu": "npm:@rollup/rollup-linux-x64-musl"
   }
 }

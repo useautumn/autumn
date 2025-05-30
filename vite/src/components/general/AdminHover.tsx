@@ -1,10 +1,11 @@
 import { Check } from "lucide-react";
-import { useOrganization, useUser } from "@clerk/clerk-react";
+import { useAuth, useOrganization, useUser } from "@clerk/clerk-react";
 import { Tooltip, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 import { TooltipContent } from "../ui/tooltip";
 import { Copy } from "lucide-react";
 import { useState } from "react";
+import { notNullish } from "@/utils/genUtils";
 
 export const AdminHover = ({
   children,
@@ -16,8 +17,12 @@ export const AdminHover = ({
   hide?: boolean;
 }) => {
   const { isLoaded, user } = useUser();
+  const { actor } = useAuth();
+
   const email = user?.primaryEmailAddress?.emailAddress;
+
   const isAdmin =
+    notNullish(actor) ||
     email === "johnyeocx@gmail.com" ||
     email === "ayush@recaseai.com" ||
     email === "johnyeo10@gmail.com" ||

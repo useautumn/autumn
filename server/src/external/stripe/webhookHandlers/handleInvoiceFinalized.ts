@@ -1,5 +1,3 @@
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-
 import {
   AppEnv,
   CusProductStatus,
@@ -7,10 +5,10 @@ import {
   InvoiceStatus,
   Organization,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
-
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import {
   getFullStripeInvoice,
@@ -55,7 +53,6 @@ export const handleInvoiceFinalized = async ({
     });
 
     if (activeProducts.length === 0) {
-      console.log("invoice.finalized: No active products found");
       return;
     }
 

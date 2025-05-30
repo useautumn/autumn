@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { AttachParams } from "../products/AttachParams.js";
+import { AttachParams } from "../cusProducts/AttachParams.js";
 import { InvoiceService, processInvoice } from "./InvoiceService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";

@@ -1,12 +1,7 @@
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { CusProductStatus } from "@autumn/shared";
-import { expect } from "chai";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { attachProducts } from "tests/global.js";
 import { compareMainProduct } from "tests/utils/compare.js";
 import { initCustomer } from "tests/utils/init.js";
-import { timeout } from "tests/utils/genUtils.js";
-import { completeCheckoutForm } from "tests/utils/stripeUtils.js";
 import chalk from "chalk";
 
 /* 

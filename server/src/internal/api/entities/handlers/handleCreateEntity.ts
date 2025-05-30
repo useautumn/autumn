@@ -1,5 +1,4 @@
-import { CusService } from "@/internal/customers/CusService.js";
-import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
@@ -9,7 +8,6 @@ import {
   APIVersion,
   AppEnv,
   CustomerData,
-  CusProductStatus,
   Entity,
   ErrCode,
   Feature,
@@ -20,13 +18,14 @@ import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import {
   getCusEntMasterBalance,
   getRelatedCusPrice,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getEntityResponse } from "../getEntityUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 interface CreateEntityData {
   id: string;
@@ -164,6 +163,7 @@ export const logEntityToAction = ({
 };
 
 export const validateAndGetInputEntities = async ({
+  req,
   db,
   org,
   features,
@@ -173,6 +173,7 @@ export const validateAndGetInputEntities = async ({
   env,
   logger,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   features: Feature[];
@@ -184,6 +185,7 @@ export const validateAndGetInputEntities = async ({
 }) => {
   // 1. Get customer, features and orgs
   let customer = await getOrCreateCustomer({
+    req,
     db,
     org,
     env,
@@ -193,15 +195,6 @@ export const validateAndGetInputEntities = async ({
     features,
     withEntities: true,
   });
-
-  // CusService.getFull({
-  //   db,
-  //   idOrInternalId: customerId,
-  //   orgId,
-  //   env,
-  //   inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-  //   withEntities: true,
-  // });
 
   if (!customer) {
     throw new RecaseError({
@@ -229,6 +222,15 @@ export const validateAndGetInputEntities = async ({
 
   let feature_id = featureIds[0];
   let feature = features.find((f: any) => f.id === feature_id);
+
+  if (!feature_id) {
+    throw new RecaseError({
+      message:
+        "Feature ID is required to create entity. Did you forget to pass it into entity_data?",
+      code: ErrCode.InvalidInputs,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
 
   if (!feature) {
     throw new RecaseError({
@@ -283,6 +285,7 @@ export const validateAndGetInputEntities = async ({
 };
 
 export const createEntities = async ({
+  req,
   db,
   env,
   org,
@@ -295,6 +298,7 @@ export const createEntities = async ({
   apiVersion,
   fromAutoCreate = false,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   customerData?: CustomerData;
@@ -315,6 +319,7 @@ export const createEntities = async ({
     cusProducts,
     existingEntities,
   } = await validateAndGetInputEntities({
+    req,
     db,
     customerId,
     org,
@@ -526,6 +531,7 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
           : req.body.customer_data;
 
       const entities = await createEntities({
+        req,
         db,
         org,
         features,

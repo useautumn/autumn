@@ -24,13 +24,13 @@ import {
   priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
 
-import { getFullCusProductData } from "@/internal/customers/products/attachUtils.js";
+import { getFullCusProductData } from "@/internal/customers/cusProducts/attachUtils.js";
 import {
   checkStripeProductExists,
   isFreeProduct,
 } from "@/internal/products/productUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import {
   notNullish,
@@ -52,7 +52,7 @@ import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 
 export const attachRouter = Router();
 
-export const checkAddProductErrors = async ({
+export const handlePrepaidErrors = async ({
   attachParams,
   useCheckout = false,
 }: {
@@ -305,6 +305,7 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // Get curCusProducts too...
     const attachParams: AttachParams = await getFullCusProductData({
+      req,
       db: req.db,
       customerId: customer_id,
       productId: product_id,
@@ -329,6 +330,7 @@ attachRouter.post("/attach", async (req: any, res) => {
         reqApiVersion: req.apiVersion,
       }) || APIVersion.v1;
 
+    attachParams.req = req;
     attachParams.successUrl = successUrl;
     attachParams.invoiceOnly = invoiceOnly;
     attachParams.billingAnchor = billing_cycle_anchor;
@@ -374,12 +376,6 @@ attachRouter.post("/attach", async (req: any, res) => {
 
     // 1. Check for normal errors (eg. options, different recurring intervals)
 
-    await checkAddProductErrors({
-      attachParams,
-      useCheckout,
-    });
-
-    // 2. Check for existing product and fetch
     const { curCusProduct, done } = await handleExistingProduct({
       req,
       res,
@@ -387,6 +383,11 @@ attachRouter.post("/attach", async (req: any, res) => {
       useCheckout,
       invoiceOnly,
       isCustom,
+    });
+
+    await handlePrepaidErrors({
+      attachParams,
+      useCheckout,
     });
 
     await handlePublicAttachErrors({

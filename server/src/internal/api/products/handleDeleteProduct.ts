@@ -1,5 +1,5 @@
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+
 import { ProductService } from "@/internal/products/ProductService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";

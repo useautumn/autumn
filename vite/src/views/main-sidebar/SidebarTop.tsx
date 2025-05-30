@@ -18,6 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Check, ChevronLeft, ChevronRight, Copy } from "lucide-react";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export const SidebarTop = () => {
   const { isLoaded, user } = useUser();
@@ -49,45 +50,37 @@ export const SidebarTop = () => {
       <div
         className={cn(
           "flex items-center w-full",
-          state == "expanded" ? "justify-between" : "justify-center"
+          state == "expanded" ? "justify-between" : "justify-center",
         )}
       >
         {state == "expanded" && (
           <div className="flex flex-col">
             <div className="flex relative w-full h-7">
               {organization && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <OrganizationSwitcher
-                        appearance={{
-                          elements: {
-                            organizationSwitcherTrigger:
-                              "flex !pl- pr-1 max-w-[160px]",
-                          },
-                        }}
-                        hidePersonal={true}
-                        skipInvitationScreen={true}
-                        afterCreateOrganizationUrl="/sandbox/onboarding"
-                      />
-                    </TooltipTrigger>
-                    {isLoaded &&
-                      organization &&
-                      (primaryEmail === "johnyeocx@gmail.com" ||
-                        primaryEmail === "ayush@recaseai.com" ||
-                        primaryEmail == "johnyeo10@gmail.com") && (
-                        <TooltipContent
-                          className="bg-white/50 backdrop-blur-sm shadow-sm border-1 w-[250px]"
-                          align="start"
-                        >
-                          <div className="text-xs text-gray-500 flex flex-col gap-2">
-                            <CopyText text={organization?.id || ""} />
-                            <CopyText text={organization?.slug || ""} />
-                          </div>
-                        </TooltipContent>
-                      )}
-                  </Tooltip>
-                </TooltipProvider>
+                <AdminHover
+                  texts={[
+                    {
+                      key: "id",
+                      value: organization.id,
+                    },
+                    {
+                      key: "slug",
+                      value: organization.slug || "N/A",
+                    },
+                  ]}
+                >
+                  <OrganizationSwitcher
+                    appearance={{
+                      elements: {
+                        organizationSwitcherTrigger:
+                          "flex !pl- pr-1 max-w-[160px]",
+                      },
+                    }}
+                    hidePersonal={true}
+                    skipInvitationScreen={true}
+                    afterCreateOrganizationUrl="/sandbox/onboarding"
+                  />
+                </AdminHover>
               )}
             </div>
           </div>
@@ -96,7 +89,7 @@ export const SidebarTop = () => {
           size="sm"
           onClick={() => {
             setState((prev: string) =>
-              prev == "expanded" ? "collapsed" : "expanded"
+              prev == "expanded" ? "collapsed" : "expanded",
             );
           }}
           variant="ghost"

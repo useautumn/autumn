@@ -84,16 +84,14 @@ rewardRouter.post("", async (req: any, res: any) => {
         stripeCli,
         org,
         prices,
+        logger,
       });
-
-      console.log("✅ Reward successfully created in Stripe");
     }
 
     const insertedCoupon = await RewardService.insert({
       db,
       data: newReward,
     });
-    console.log("✅ Reward successfully inserted into db");
 
     res.status(200).json(insertedCoupon);
   } catch (error) {
@@ -161,7 +159,7 @@ rewardRouter.delete("/:id", async (req: any, res: any) => {
 rewardRouter.post("/:internalId", async (req: any, res: any) => {
   try {
     const { internalId } = req.params;
-    const { orgId, env, db } = req;
+    const { orgId, env, db, logtail: logger } = req;
     const rewardBody = req.body;
 
     const org = await OrgService.getFromReq(req);
@@ -204,6 +202,7 @@ rewardRouter.post("/:internalId", async (req: any, res: any) => {
         stripeCli,
         org,
         prices,
+        logger,
       });
     }
 

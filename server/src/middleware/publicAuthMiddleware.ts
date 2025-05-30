@@ -109,9 +109,8 @@ export const verifyBearerPublishableKey = async (
     req.isPublic = true;
     req.org = org;
     req.features = features;
-    req.auth = AuthType.SecretKey;
+    req.authType = AuthType.PublicKey;
 
-    console.log("Public request from:", org.slug);
     next();
     return {
       error: null,

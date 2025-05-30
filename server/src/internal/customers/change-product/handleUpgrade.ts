@@ -27,8 +27,11 @@ import Stripe from "stripe";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { handleAddProduct } from "../add-product/handleAddProduct.js";
 import { InvoiceService } from "../invoices/InvoiceService.js";
-import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
-import { CusProductService } from "../products/CusProductService.js";
+import {
+  AttachParams,
+  AttachResultSchema,
+} from "../cusProducts/AttachParams.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
 import {
   attachParamsToInvoice,
   getInvoiceItems,

@@ -4,9 +4,8 @@ import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
 import { getScheduleIdsFromCusProducts } from "../scheduleUtils.js";
 import Stripe from "stripe";
 import { ItemSet } from "@/utils/models/ItemSet.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { updateScheduledSubWithNewItems } from "./updateScheduleWithNewItems.js";
-import { CusProductService } from "../../products/CusProductService.js";
+import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getOtherCusProductsOnSub = async ({

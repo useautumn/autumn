@@ -15,7 +15,7 @@ if (!PUBLISHABLE_KEY) {
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
-      {process.env.NODE_ENV === "development2" ? (
+      {process.env.NODE_ENV === "development" ? (
         <App />
       ) : (
         <PostHogProvider

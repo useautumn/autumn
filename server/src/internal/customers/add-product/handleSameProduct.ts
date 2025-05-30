@@ -11,10 +11,12 @@ import {
   Price,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
+import {
+  AttachParams,
+  AttachResultSchema,
+} from "../cusProducts/AttachParams.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { CusProductService } from "../products/CusProductService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
 
 import {
   getStripeSubs,
@@ -22,14 +24,14 @@ import {
 } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
-import { CusEntService } from "../entitlements/CusEntitlementService.js";
+import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { Decimal } from "decimal.js";
 import { cancelFutureProductSchedule } from "../change-product/scheduleUtils.js";
 import {
   handleUpgrade,
   ProrationBehavior,
 } from "../change-product/handleUpgrade.js";
-import { fullCusProductToProduct } from "../products/cusProductUtils.js";
+import { fullCusProductToProduct } from "../cusProducts/cusProductUtils.js";
 
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
@@ -315,6 +317,7 @@ export const handleSameMainProduct = async ({
 
   if (curScheduledProduct) {
     await cancelFutureProductSchedule({
+      req,
       db,
       org,
       stripeCli,

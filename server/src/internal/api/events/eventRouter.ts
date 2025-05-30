@@ -6,7 +6,7 @@ import {
   CusProductStatus,
   EntityData,
   ErrCode,
-  Event,
+  EventInsert,
   Feature,
   FeatureType,
   FullCustomer,
@@ -17,10 +17,8 @@ import { generateId } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
 
-import { SupabaseClient } from "@supabase/supabase-js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-import { subDays } from "date-fns";
 import { handleUsageEvent } from "./usageRouter.js";
 import { StatusCodes } from "http-status-codes";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
@@ -29,12 +27,14 @@ import { creditSystemContainsFeature } from "@/internal/features/creditSystemUti
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
-import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
+import { getEventTimestamp } from "./eventUtils.js";
 
 export const eventsRouter = Router();
 
 const getEventAndCustomer = async ({
+  req,
   db,
   org,
   env,
@@ -46,6 +46,7 @@ const getEventAndCustomer = async ({
   entityId,
   entityData,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   features: Feature[];
@@ -69,6 +70,7 @@ const getEventAndCustomer = async ({
 
   // 2. Check if customer ID is valid
   customer = await getOrCreateCustomer({
+    req,
     db,
     org,
     env,
@@ -83,36 +85,31 @@ const getEventAndCustomer = async ({
 
   // 3. Insert event
   const parsedEvent = CreateEventSchema.parse(event_data);
+  const timestamp = getEventTimestamp(parsedEvent.timestamp);
 
-  let eventTimestamp = Date.now();
-  if (parsedEvent.timestamp) {
-    let thirtyDaysAgo = subDays(new Date(), 30).getTime();
-    if (parsedEvent.timestamp > thirtyDaysAgo) {
-      eventTimestamp = parsedEvent.timestamp;
-    }
-  }
-
-  const newEvent: Event = {
+  const newEvent: EventInsert = {
     ...parsedEvent,
     properties: parsedEvent.properties || {},
     id: generateId("evt"),
     org_id: org.id,
+    org_slug: org.slug,
     env: env,
     internal_customer_id: customer.internal_id,
-    timestamp: eventTimestamp,
+    created_at: timestamp.getTime(),
+    timestamp: timestamp,
   };
 
-  await EventService.insert({ db, event: newEvent });
+  let event = await EventService.insert({ db, event: newEvent });
 
-  return { customer, event: newEvent };
+  return { customer, event };
 };
 
 const getAffectedFeatures = async ({
   req,
-  event,
+  eventName,
 }: {
   req: any;
-  event: Event;
+  eventName: string;
 }) => {
   let features = await FeatureService.getFromReq(req);
 
@@ -120,7 +117,7 @@ const getAffectedFeatures = async ({
     return (
       feature.type == FeatureType.Metered &&
       feature.config.filters.some((filter: any) => {
-        return filter.value.includes(event.event_name);
+        return filter.value.includes(eventName);
       })
     );
   });
@@ -159,9 +156,26 @@ export const handleEventSent = async ({
 
   const { env, db } = req;
 
+  let eventName = event_data.event_name;
+
   const org = await OrgService.getFromReq(req);
   const features = await FeatureService.getFromReq(req);
+
+  const affectedFeatures = await getAffectedFeatures({
+    req,
+    eventName,
+  });
+
+  if (affectedFeatures.length == 0) {
+    throw new RecaseError({
+      message: `No features found for event_name ${event_data.event_name}`,
+      code: ErrCode.InvalidEventName,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
+
   const { customer, event } = await getEventAndCustomer({
+    req,
     db,
     org,
     env,
@@ -174,42 +188,44 @@ export const handleEventSent = async ({
     features,
   });
 
-  const affectedFeatures = await getAffectedFeatures({
-    req,
+  const payload = {
+    internalCustomerId: customer.internal_id,
+    customerId: customer.id,
+    entityId: event_data.entity_id,
+    features: affectedFeatures,
     event,
+    org,
+    env,
+  };
+
+  await addTaskToQueue({
+    jobName: JobName.UpdateBalance,
+    payload,
   });
 
-  if (affectedFeatures.length == 0) {
-    throw new RecaseError({
-      message: `No features found for event_name ${event.event_name}`,
-      code: ErrCode.InvalidEventName,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-  }
-
-  if (affectedFeatures.length > 0) {
-    const payload = {
-      internalCustomerId: customer.internal_id,
-      customerId: customer.id,
-      entityId: event_data.entity_id,
-      features: affectedFeatures,
-      event,
-      org,
-      env,
-    };
-
-    await addTaskToQueue({
-      jobName: JobName.UpdateBalance,
-      payload,
-    });
-
-    return { event, affectedFeatures, org };
-  }
+  return { event, affectedFeatures, org };
 };
 
 eventsRouter.post("", async (req: any, res: any) => {
   try {
     const body = req.body;
+
+    if (!body.event_name && !body.feature_id) {
+      throw new RecaseError({
+        message: "event_name or feature_id is required",
+        code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    if (!body.customer_id) {
+      throw new RecaseError({
+        message: "customer_id is required",
+        code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
     let { event, org }: any = await handleEventSent({
       req,
       customer_id: body.customer_id,

@@ -151,7 +151,8 @@ const advanceAPThroughBalances = async ({
   await advanceTestClock({
     stripeCli,
     testClockId,
-    numberOfHours: hoursToFinalizeInvoice,
+    // numberOfHours: hoursToFinalizeInvoice,
+    numberOfDays: 2,
     startingFrom: addMonths(advanceToStart, 1),
   });
 
