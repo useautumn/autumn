@@ -9,6 +9,9 @@ import { FreeTrialView } from "./free-trial/FreeTrialView";
 import { ProductProps } from "./ProductProps";
 import { ProductVersions } from "./ProductVersions";
 import { Badge } from "@/components/ui/badge";
+import { notNullish } from "@/utils/genUtils";
+import { AttachButton } from "@/views/customers/customer/product/components/AttachButton";
+import { CustomerProductBadge } from "@/views/customers/customer/product/components/CustomerProductBadge";
 
 export default function ProductSidebar() {
   const { product, org, setProduct, customer } = useProductContext();
@@ -21,49 +24,18 @@ export default function ProductSidebar() {
     setProduct({ ...product, free_trial: null });
   };
 
+  const isCustomerProductView = notNullish(customer);
+
   return (
     <div className="flex-col gap-4 h-full border-l py-6">
       <div className="flex items-center gap-2 justify-start px-4">
-        {customer && (
-          <Badge className="flex items-center gap-1 rounded-sm shadow-none w-full text-xs text-t2 bg-stone-100 border hover:bg-stone-100 truncate">
-            <span className="">
-              {product.isCustom ? (
-                <>
-                  Custom <span className="font-bold">{product.name}</span>{" "}
-                  version for
-                </>
-              ) : (
-                <>
-                  {product.isCustom ? "Custom" : "Product"}{" "}
-                  <span className="font-bold">{product.name}</span> for
-                </>
-              )}
-            </span>
-            <span className="truncate">
-              <span className="font-bold">
-                {customer.name || customer.id || customer.email}
-              </span>
-            </span>
-          </Badge>
-        )}
+        {isCustomerProductView && <CustomerProductBadge />}
       </div>
-      {/* <ToggleDisplayButton
-        show={showFreeTrial}
-        onClick={() => setShowFreeTrial(!showFreeTrial)}
-        disabled={product.free_trial}
-      >
-        <Gift size={14} />
-        Free trial
-      </ToggleDisplayButton> */}
+
       <Accordion
         type="multiple"
         className="w-full flex flex-col"
-        defaultValue={[
-          "properties",
-          // ...(product.free_trial ? ["free-trial"] : []),
-          "versions",
-          "free-trial",
-        ]}
+        defaultValue={["properties", "versions", "free-trial"]}
       >
         <div className="flex w-full border-b mt-[2px] p-4">
           <SideAccordion title="Properties" value="properties">
@@ -75,10 +47,12 @@ export default function ProductSidebar() {
             <ProductVersions />
           </SideAccordion>
         </div>
+
         <CreateFreeTrial
           open={freeTrialModalOpen}
           setOpen={setFreeTrialModalOpen}
         />
+
         <div className="flex w-full border-b p-4">
           <SideAccordion
             title="Free Trial"
@@ -104,7 +78,7 @@ export default function ProductSidebar() {
           </SideAccordion>
         </div>
         <div className="flex gap-2 px-4 py-6 w-full">
-          <AddProductButton />
+          {isCustomerProductView ? <AttachButton /> : <AddProductButton />}
         </div>
       </Accordion>
     </div>

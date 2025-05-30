@@ -29,7 +29,7 @@ import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { isPriceItem } from "@/internal/products/product-items/getItemType.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { cusProductToPrices } from "../cusProducts/cusProductUtils.js";
+import { cusProductToPrices } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const isAddProductFlow = ({
   curCusProduct,

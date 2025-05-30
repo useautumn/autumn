@@ -28,6 +28,7 @@ import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
 import { CusReadService } from "./CusReadService.js";
 import { StatusCodes } from "http-status-codes";
 import { getAttachPreview } from "../api/entitled/handlers/getAttachPreview.js";
+import { cusProductToProduct } from "./cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const cusRouter = Router();
 
@@ -237,14 +238,13 @@ cusRouter.get(
   "/:customer_id/product/:product_id",
   async (req: any, res: any) => {
     try {
-      const { env, db, features } = req;
+      const { org, env, db, features, logtail: logger } = req;
       const { customer_id, product_id } = req.params;
       const { version, customer_product_id, entity_id } = req.query;
-      const orgId = req.orgId;
 
       const customer = await CusService.getFull({
         db,
-        orgId,
+        orgId: org.id,
         env,
         idOrInternalId: customer_id,
         withEntities: true,
@@ -294,58 +294,50 @@ cusRouter.get(
         );
       }
 
-      // let productV1 = cusProductToPro;
-      let product;
+      let product = cusProduct
+        ? cusProductToProduct(cusProduct)
+        : await ProductService.getFull({
+            db,
+            orgId: org.id,
+            env,
+            idOrInternalId: product_id,
+            version:
+              version && Number.isInteger(parseInt(version))
+                ? parseInt(version)
+                : undefined,
+          });
 
-      if (cusProduct) {
-        let prices = cusProduct.customer_prices.map(
-          (price: any) => price.price,
-        );
-        let entitlements = cusProduct.customer_entitlements.map(
-          (ent: any) => ent.entitlement,
-        );
-        product = {
-          ...cusProduct.product,
-          items: mapToProductItems({ prices, entitlements, features }),
-          free_trial: cusProduct.free_trial,
-          options: cusProduct.options,
-          isActive: cusProduct.status === CusProductStatus.Active,
-          isCustom: cusProduct.is_custom,
-        };
-      } else {
-        product = await ProductService.getFull({
-          db,
-          orgId,
-          env,
-          idOrInternalId: product_id,
-          version:
-            version && Number.isInteger(parseInt(version))
-              ? parseInt(version)
-              : undefined,
-        });
-
-        product = mapToProductV2({ product, features });
-      }
+      let productV2 = mapToProductV2({ product, features });
 
       let numVersions = await ProductService.getProductVersionCount({
         db,
-        orgId,
+        orgId: org.id,
         env,
         productId: product_id,
       });
 
-      // const preview = await getAttachPreview({
-      //   db,
-      //   orgId,
-      //   env,
-      //   product,
-      //   customer,
-      //   features,
-      // });
+      const preview = await getAttachPreview({
+        db,
+        org,
+        env,
+        product,
+        customer,
+        cusProducts: customer.customer_products,
+        features,
+        logger,
+      });
 
       res.status(200).json({
         customer,
-        product,
+        preview,
+        product: cusProduct
+          ? {
+              ...productV2,
+              options: cusProduct.options,
+              isActive: cusProduct.status === CusProductStatus.Active,
+              isCustom: cusProduct.is_custom,
+            }
+          : productV2,
         features,
         numVersions,
         entities: customer.entities,
