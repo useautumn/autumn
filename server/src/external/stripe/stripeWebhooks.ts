@@ -1,5 +1,5 @@
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { LoggerAction, Organization } from "@autumn/shared";
+import { AuthType, LoggerAction, Organization } from "@autumn/shared";
 import express from "express";
 import stripe from "stripe";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
@@ -50,9 +50,15 @@ stripeWebhookRouter.post(
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
+
     // event = JSON.parse(request.body);
 
-    request.authType = "stripe";
+    try {
+      request.body = JSON.parse(request.body);
+      request.authType = AuthType.Stripe;
+    } catch (error) {
+      console.log("Error parsing body", error);
+    }
 
     const logger = createLogtailWithContext({
       action: LoggerAction.StripeWebhook,
