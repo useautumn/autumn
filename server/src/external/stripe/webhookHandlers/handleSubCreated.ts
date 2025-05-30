@@ -1,4 +1,4 @@
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   BillingType,
   FullCusProduct,
@@ -7,7 +7,6 @@ import {
   Price,
 } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";

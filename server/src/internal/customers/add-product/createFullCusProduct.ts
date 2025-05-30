@@ -16,22 +16,22 @@ import { Customer } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
-import { CusProductService } from "../products/CusProductService.js";
-import { InsertCusProductParams } from "../products/AttachParams.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
+import { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 
 import { getExistingCusProducts } from "./handleExistingProduct.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { searchCusProducts } from "@/internal/customers/products/cusProductUtils.js";
+import { searchCusProducts } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
-import { addExistingUsagesToCusEnts } from "../entitlements/cusEntUtils/getExistingUsage.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusEntService } from "../entitlements/CusEntitlementService.js";
-import { CusPriceService } from "../prices/CusPriceService.js";
+import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
+import { CusPriceService } from "../cusProducts/cusPrices/CusPriceService.js";
+import { addExistingUsagesToCusEnts } from "../cusProducts/cusEnts/cusEntUtils/getExistingUsage.js";
 
 export const initCusPrice = ({
   price,

@@ -1,4 +1,4 @@
-import { processFullCusProducts } from "@/internal/api/customers/cusUtils.js";
+import { processFullCusProducts } from "./cusUtils.js";
 import {
   CusEntResponseSchema,
   CusProductResponse,
@@ -11,10 +11,10 @@ import {
   Subscription,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { fullCusProductToCusPrices } from "../products/cusProductUtils.js";
-import { fullCusProductToCusEnts } from "../products/cusProductUtils.js";
-import { getCusBalances } from "../entitlements/getCusBalances.js";
-import { featuresToObject } from "@/internal/api/customers/getCustomerDetails.js";
+import { fullCusProductToCusPrices } from "../cusProducts/cusProductUtils.js";
+import { fullCusProductToCusEnts } from "../cusProducts/cusProductUtils.js";
+import { getCusBalances } from "../cusProducts/cusEnts/getCusBalances.js";
+import { featuresToObject } from "./getCustomerDetails.js";
 
 export const getCusProductsResponse = async ({
   cusProducts,

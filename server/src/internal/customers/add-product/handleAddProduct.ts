@@ -15,7 +15,10 @@ import {
   createStripeCli,
   subToAutumnInterval,
 } from "@/external/stripe/utils.js";
-import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
+import {
+  AttachParams,
+  AttachResultSchema,
+} from "../cusProducts/AttachParams.js";
 import { getPriceAmount } from "../../products/prices/priceUtils.js";
 import {
   APIVersion,

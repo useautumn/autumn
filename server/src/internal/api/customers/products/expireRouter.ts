@@ -4,7 +4,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CusProductStatus, ErrCode, FullCusProduct } from "@autumn/shared";
 import { Router } from "express";
-import { expireCusProduct } from "../handlers/handleCusProductExpired.js";
+import { expireCusProduct } from "../../../customers/handlers/handleCusProductExpired.js";
 
 const expireRouter = Router();
 

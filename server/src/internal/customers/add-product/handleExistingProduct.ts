@@ -15,7 +15,7 @@ import {
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
 
-import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import chalk from "chalk";
 
 import { handleSameMainProduct } from "@/internal/customers/add-product/handleSameProduct.js";

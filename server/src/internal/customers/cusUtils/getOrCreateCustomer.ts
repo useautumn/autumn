@@ -1,5 +1,5 @@
-import { updateCustomerDetails } from "@/internal/api/customers/cusUtils.js";
-import { handleCreateCustomer } from "@/internal/api/customers/handlers/handleCreateCustomer.js";
+import { updateCustomerDetails } from "./cusUtils.js";
+import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
 
 import { CusService } from "../CusService.js";
 import {

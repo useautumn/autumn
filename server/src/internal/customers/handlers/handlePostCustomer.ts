@@ -2,12 +2,12 @@ import { handleRequestError } from "@/utils/errorUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { getCustomerDetails } from "../getCustomerDetails.js";
+import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
 
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { parseCusExpand } from "../cusUtils.js";
+import { getOrCreateCustomer } from "../cusUtils/getOrCreateCustomer.js";
+import { parseCusExpand } from "../cusUtils/cusUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const handlePostCustomerRequest = async (req: any, res: any) => {

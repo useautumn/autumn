@@ -1,7 +1,10 @@
 import { APIVersion, AttachScenario } from "@autumn/shared";
 
 import { createFullCusProduct } from "./createFullCusProduct.js";
-import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
+import {
+  AttachParams,
+  AttachResultSchema,
+} from "../cusProducts/AttachParams.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { SuccessCode } from "@autumn/shared";
 

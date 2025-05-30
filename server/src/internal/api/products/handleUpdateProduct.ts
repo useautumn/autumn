@@ -13,7 +13,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
 
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { handleVersionProductV2 } from "./handleVersionProduct.js";
 
 import { routeHandler } from "@/utils/routerUtils.js";

@@ -24,13 +24,13 @@ import {
   priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
 
-import { getFullCusProductData } from "@/internal/customers/products/attachUtils.js";
+import { getFullCusProductData } from "@/internal/customers/cusProducts/attachUtils.js";
 import {
   checkStripeProductExists,
   isFreeProduct,
 } from "@/internal/products/productUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import {
   notNullish,

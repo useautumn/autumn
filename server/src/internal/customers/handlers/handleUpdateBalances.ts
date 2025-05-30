@@ -5,7 +5,7 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { getCusEntsInFeatures } from "../cusUtils.js";
+import { getCusEntsInFeatures } from "../cusUtils/cusUtils.js";
 import { Decimal } from "decimal.js";
 import {
   deductAllowanceFromCusEnt,
@@ -16,8 +16,8 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
   getCusEntBalance,
   getUnlimitedAndUsageAllowed,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
-import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 const getCusFeaturesAndOrg = async (req: any, customerId: string) => {

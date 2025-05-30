@@ -16,7 +16,7 @@ import { assert, expect } from "chai";
 
 import chalk from "chalk";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { eq } from "drizzle-orm";
 
 // Check balance and stripe quantity

@@ -8,7 +8,7 @@ import { OrgService } from "../orgs/OrgService.js";
 import { RewardService } from "../rewards/RewardService.js";
 import { getProductVersionCounts } from "./productUtils.js";
 import { getLatestProducts } from "./productUtils.js";
-import { CusProdReadService } from "../customers/products/CusProdReadService.js";
+import { CusProdReadService } from "../customers/cusProducts/CusProdReadService.js";
 import { MigrationService } from "../migrations/MigrationService.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { mapToProductV2 } from "./productV2Utils.js";

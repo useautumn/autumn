@@ -1,6 +1,9 @@
-import { CusProductService } from "../products/CusProductService.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
 import Stripe from "stripe";
-import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
+import {
+  AttachParams,
+  AttachResultSchema,
+} from "../cusProducts/AttachParams.js";
 import {
   getStripeSchedules,
   getStripeSubs,
@@ -20,7 +23,7 @@ import {
 import { generateId } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import { SuccessCode } from "@autumn/shared";
 import { cancelCurSubs } from "./handleDowngrade/cancelCurSubs.js";
 import { getScheduleIdsFromCusProducts } from "./scheduleUtils.js";

@@ -3,8 +3,7 @@ import {
   handleUpgrade,
   ProrationBehavior,
 } from "@/internal/customers/change-product/handleUpgrade.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   MigrationJob,
@@ -19,13 +18,12 @@ import {
   UsagePriceConfig,
   Feature,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { MigrationService } from "../MigrationService.js";
 import { constructMigrationError } from "../migrationUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { FeatureOptions } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
 export const migrateCustomer = async ({
   db,

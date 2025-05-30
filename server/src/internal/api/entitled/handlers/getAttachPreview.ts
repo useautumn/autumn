@@ -6,7 +6,7 @@ import { getPricesForCusProduct } from "@/internal/customers/change-product/sche
 import { getDowngradePreview } from "@/internal/customers/previews/getDowngradePreview.js";
 import { getNewProductPreview } from "@/internal/customers/previews/getNewProductPreview.js";
 import { getUpgradePreview } from "@/internal/customers/previews/getUpgradePreview.js";
-import { fullCusProductToProduct } from "@/internal/customers/products/cusProductUtils.js";
+import { fullCusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import {
   isFreeProduct,
   isOneOff,

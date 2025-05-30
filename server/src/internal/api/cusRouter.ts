@@ -2,23 +2,23 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 
 import { APIVersion } from "@autumn/shared";
 import { ErrCode } from "@autumn/shared";
-import { ErrorMessages } from "@/errors/errMessages.js";
+
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-import { CusService } from "../../customers/CusService.js";
+import { CusService } from "../customers/CusService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { handleDeleteCustomer } from "./handlers/cusDeleteHandlers.js";
-import { handleUpdateBalances } from "./handlers/handleUpdateBalances.js";
-import { handleUpdateEntitlement } from "./handlers/handleUpdateEntitlement.js";
-import { handleCusProductExpired } from "./handlers/handleCusProductExpired.js";
-import { handleAddCouponToCus } from "./handlers/handleAddCouponToCus.js";
-import { handlePostCustomerRequest } from "./handlers/handlePostCustomer.js";
-import { entityRouter } from "../entities/entityRouter.js";
-import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer.js";
-import { handleCreateBillingPortal } from "./handlers/handleCreateBillingPortal.js";
-import { handleGetCustomer } from "./handlers/handleGetCustomer.js";
+import { handleDeleteCustomer } from "../customers/handlers/cusDeleteHandlers.js";
+import { handleUpdateBalances } from "../customers/handlers/handleUpdateBalances.js";
+import { handleUpdateEntitlement } from "../customers/handlers/handleUpdateEntitlement.js";
+import { handleCusProductExpired } from "../customers/handlers/handleCusProductExpired.js";
+import { handleAddCouponToCus } from "../customers/handlers/handleAddCouponToCus.js";
+import { handlePostCustomerRequest } from "../customers/handlers/handlePostCustomer.js";
+import { entityRouter } from "./entities/entityRouter.js";
+import { handleUpdateCustomer } from "../customers/handlers/handleUpdateCustomer.js";
+import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
+import { handleGetCustomer } from "../customers/handlers/handleGetCustomer.js";
 import { CusSearchService } from "@/internal/customers/CusSearchService.js";
 import assert from "assert";
 

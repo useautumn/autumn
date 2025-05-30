@@ -5,7 +5,7 @@ import {
   FullCusEntWithProduct,
   Organization,
 } from "@autumn/shared";
-import { CusEntService } from "./internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "./internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
 import dotenv from "dotenv";
 import { getEntOptions } from "./internal/products/prices/priceUtils.js";
@@ -17,14 +17,14 @@ import { CronJob } from "cron";
 import {
   getRelatedCusPrice,
   getResetBalance,
-} from "./internal/customers/entitlements/cusEntUtils.js";
-import { getResetBalancesUpdate } from "./internal/customers/entitlements/groupByUtils.js";
-import { CusProductService } from "./internal/customers/products/CusProductService.js";
+} from "./internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getResetBalancesUpdate } from "./internal/customers/cusProducts/cusEnts/groupByUtils.js";
+import { CusProductService } from "./internal/customers/cusProducts/CusProductService.js";
 import { createStripeCli } from "./external/stripe/utils.js";
 import { UTCDate } from "@date-fns/utc";
 import { DrizzleCli, initDrizzle } from "./db/initDrizzle.js";
 
-import { CusPriceService } from "./internal/customers/prices/CusPriceService.js";
+import { CusPriceService } from "./internal/customers/cusProducts/cusPrices/CusPriceService.js";
 
 dotenv.config();
 
