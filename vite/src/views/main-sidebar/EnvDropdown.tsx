@@ -45,7 +45,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 
   return (
     <div
-      className="flex text-t2 text-xs flex gap-1 mt-2 mb-4"
+      className="flex text-t2 text-xs gap-1 mt-2 mb-4"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -53,23 +53,24 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
         {expanded ? (
           <DropdownMenuTrigger
             className={cn(
-              "ring-0 focus:ring-0 bg-white text-t2 rounded-sm w-full flex items-center bg-transparent h-8",
-              state != "expanded" && "!w-6 !h-6 p-0 items-center justify-center"
+              "ring-0 focus:ring-0 text-t2 rounded-sm w-full flex items-center bg-transparent h-8",
+              state != "expanded" &&
+                "!w-6 !h-6 p-0 items-center justify-center",
             )}
           >
             {state == "expanded" ? (
               <div
                 className={cn(
-                  "flex items-center justify-between -ml-1 pl-1 pr-3 h-6 border border-orange-500 rounded-md bg-orange-100 text-orange-600",
+                  "flex items-center justify-between -ml-1 pl-1 pr-3 h-6 border border-amber-500 rounded-xs bg-amber-100 text-amber-600",
                   env === AppEnv.Live &&
-                    "text-primary bg-purple-100 shadow-none border-primary font-medium"
+                    "text-primary bg-purple-100 shadow-none border-primary font-medium",
                 )}
               >
                 <div
                   className={cn(
                     "flex justify-center w-4 h-4 items-center rounded-sm transition-all duration-100",
                     state == "expanded" && "mr-2",
-                    isHovered && "translate-x-[-1px]"
+                    isHovered && "translate-x-[-1px]",
                   )}
                 >
                   {env === AppEnv.Sandbox ? (

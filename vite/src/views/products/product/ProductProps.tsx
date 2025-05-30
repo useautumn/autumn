@@ -74,7 +74,11 @@ export const ProductProps = () => {
             <p className="text-xs text-t3 font-medium text-center">Default</p>
             <Popover open={defaultOpen} onOpenChange={setDefaultOpen}>
               <PopoverTrigger asChild className="p-0 py-0.5 h-fit">
-                <Button variant="ghost" className="text-t2 px-2">
+                <Button
+                  variant="outline"
+                  className="text-t2 px-2"
+                  disabled={product.is_add_on}
+                >
                   {product.is_default ? (
                     <span className="text-lime-600">True</span>
                   ) : (
@@ -113,7 +117,11 @@ export const ProductProps = () => {
             <p className="text-xs text-t3 font-medium text-center">Add On</p>
             <Popover open={addOnOpen} onOpenChange={setAddOnOpen}>
               <PopoverTrigger asChild className="p-0 py-0.5 h-fit">
-                <Button variant="ghost" className="text-t2 px-2">
+                <Button
+                  variant="outline"
+                  className="text-t2 px-2"
+                  disabled={product.is_default}
+                >
                   {product.is_add_on ? (
                     <span className="text-lime-600">True</span>
                   ) : (
@@ -151,7 +159,7 @@ export const ProductProps = () => {
           <div className="flex items-center w-full justify-between h-4">
             <p className="text-xs text-t3 font-medium text-center">Group</p>
             <Button
-              variant="ghost"
+              variant="outline"
               className="text-t2 px-2 h-fit py-0.5"
               onClick={() => {
                 setTempGroup(product.group || "");
@@ -167,6 +175,10 @@ export const ProductProps = () => {
               <DialogHeader>
                 <DialogTitle>Edit Product Group</DialogTitle>
               </DialogHeader>
+              <p className="text-t3 text-sm">
+                Assign this product to a group. Customers can have active
+                subscriptions from multiple product groups at the same time.
+              </p>
               <div className="flex gap-4 py-4">
                 <Input
                   placeholder="Enter group name"

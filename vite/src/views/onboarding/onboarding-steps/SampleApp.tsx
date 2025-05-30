@@ -65,12 +65,12 @@ export const SampleApp = ({
 
   return (
     <Step
-      title={"Explore your sample app"}
+      title={"Explore your example app"}
       number={number}
       description={
         <p>
-          View the sample app that has been generated from your products and
-          features.
+          Learn how Autumn works by playing with the sample app, generated from
+          the products you set up.
         </p>
       }
     >
@@ -80,7 +80,7 @@ export const SampleApp = ({
             <DialogTrigger asChild>
               <Button variant="outline">
                 <ArrowUpRightFromSquare size={12} className="mr-2" />
-                Show Sample App
+                Show example app
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-[90vw] max-h-[90vh] overflow-y-auto w-full h-full flex flex-col">
@@ -158,7 +158,10 @@ export const SampleApp = ({
                         <Button
                           variant="outline"
                           onClick={async () => {
-                            await openBillingPortal();
+                            const { error } = await openBillingPortal();
+                            if (error) {
+                              toast.error(error.message);
+                            }
                           }}
                         >
                           Manage Billing
@@ -489,7 +492,7 @@ const FeatureUsageItem = ({
           <span className="text-sm text-t2">
             {customerFeature.unlimited
               ? "unlimited"
-              : `${customerFeature.usage}${customerFeature.included_usage > 0 && ` / ${customerFeature.included_usage}`}`}
+              : `${customerFeature.usage}${customerFeature.included_usage > 0 ? ` / ${customerFeature.included_usage}` : ""}`}
           </span>
         )}
       </div>

@@ -8,6 +8,7 @@ import { useAutumn, usePricingTable } from "autumn-js/react";
 import { useEnv } from "@/utils/envUtils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import ProductChangeDialog from "./product-change-dialog";
+import { toast } from "sonner";
 
 export const PricingTable = () => {
   const { attach } = useAutumn();
@@ -36,10 +37,13 @@ export const PricingTable = () => {
               key={product.id}
               buttonProps={{
                 onClick: async () => {
-                  await attach({
+                  const { data, error } = await attach({
                     productId: product.id,
                     dialog: ProductChangeDialog,
                   });
+                  if (error) {
+                    toast.error(error.message);
+                  }
                 },
               }}
             />
