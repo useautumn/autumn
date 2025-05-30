@@ -1,5 +1,5 @@
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { LoggerAction, Organization } from "@autumn/shared";
+import { AuthType, LoggerAction, Organization } from "@autumn/shared";
 import express from "express";
 import stripe from "stripe";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
@@ -33,7 +33,6 @@ stripeWebhookRouter.post(
     try {
       org = await OrgService.get({ db: request.db, orgId });
     } catch (error) {
-      console.log(`Org ${orgId} not found`);
       response.status(200).send(`Org ${orgId} not found`);
       return;
     }
@@ -51,7 +50,15 @@ stripeWebhookRouter.post(
       response.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
+
     // event = JSON.parse(request.body);
+
+    try {
+      request.body = JSON.parse(request.body);
+      request.authType = AuthType.Stripe;
+    } catch (error) {
+      console.log("Error parsing body", error);
+    }
 
     const logger = createLogtailWithContext({
       action: LoggerAction.StripeWebhook,
@@ -85,6 +92,7 @@ stripeWebhookRouter.post(
         case "customer.subscription.updated":
           const subscription = event.data.object;
           await handleSubscriptionUpdated({
+            req: request,
             db,
             org,
             subscription,
@@ -97,6 +105,7 @@ stripeWebhookRouter.post(
         case "customer.subscription.deleted":
           const deletedSubscription = event.data.object;
           await handleSubscriptionDeleted({
+            req: request,
             db,
             subscription: deletedSubscription,
             org,

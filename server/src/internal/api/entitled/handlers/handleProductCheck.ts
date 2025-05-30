@@ -28,6 +28,7 @@ export const handleProductCheck = async ({
   // 1. Get customer and org
   let [customer, product] = await Promise.all([
     getOrCreateCustomer({
+      req,
       db,
       org,
       env,

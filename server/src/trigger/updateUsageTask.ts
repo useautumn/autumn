@@ -8,11 +8,10 @@ import {
   FullCustomerEntitlement,
   Organization,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
+import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import { getFeatureBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { Decimal } from "decimal.js";
 
 import {

@@ -13,7 +13,7 @@ import {
   cusEntsContainFeature,
   getFeatureBalance,
   getUnlimitedAndUsageAllowed,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
@@ -216,6 +216,7 @@ const getCusEntsAndFeatures = async ({
   const { feature, creditSystems, allFeatures } = featureRes;
 
   const customer = await getOrCreateCustomer({
+    req,
     db,
     org: req.org,
     env,

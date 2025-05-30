@@ -12,6 +12,6 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ["dev.useautumn.com"],
+    allowedHosts: ["dev.useautumn.com", "client.dev.useautumn.com"],
   },
 });

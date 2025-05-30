@@ -2,7 +2,7 @@ import SmallSpinner from "@/components/general/SmallSpinner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { pricesOnlyOneOff } from "@/utils/product/priceUtils";
+import { isOneOffProduct } from "@/utils/product/priceUtils";
 import { MigrationJob, MigrationJobStep } from "@autumn/shared";
 import {
   TooltipProvider,
@@ -17,7 +17,7 @@ import { useProductContext } from "../ProductContext";
 import ConfirmMigrateDialog from "./ConfirmMigrateDialog";
 
 export const CountAndMigrate = () => {
-  let {
+  const {
     product,
     counts,
     numVersions,
@@ -27,15 +27,15 @@ export const CountAndMigrate = () => {
     mutateCount,
   } = useProductContext();
 
-  let env = useEnv();
-  let axiosInstance = useAxiosInstance({ env });
-  let [loading, setLoading] = useState(false);
-  let [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
+  const env = useEnv();
+  const axiosInstance = useAxiosInstance({ env });
+  const [loading, setLoading] = useState(false);
+  const [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
 
   const migrateCustomers = async () => {
     setLoading(true);
     try {
-      let { data } = await axiosInstance.post("/v1/migrations", {
+      const { data } = await axiosInstance.post("/v1/migrations", {
         from_product_id: product.id,
         from_version: version,
         to_product_id: product.id,
@@ -57,7 +57,7 @@ export const CountAndMigrate = () => {
   useEffect(() => {
     if (existingMigrations.length > 0) {
       // Run poll job on mutate
-      let pollInterval = setInterval(() => {
+      const pollInterval = setInterval(() => {
         mutate();
         mutateCount();
       }, 5000);
@@ -70,10 +70,10 @@ export const CountAndMigrate = () => {
   }
 
   const renderCurrentMigration = () => {
-    let migration: MigrationJob = existingMigrations[0];
+    const migration: MigrationJob = existingMigrations[0];
 
-    let getCusDetails = migration.step_details[MigrationJobStep.GetCustomers];
-    let migrateDetails =
+    const getCusDetails = migration.step_details[MigrationJobStep.GetCustomers];
+    const migrateDetails =
       migration.step_details[MigrationJobStep.MigrateCustomers];
 
     return (
@@ -129,11 +129,11 @@ export const CountAndMigrate = () => {
     );
   };
 
-  let fromIsOneOff = pricesOnlyOneOff(product.items);
+  const fromIsOneOff = isOneOffProduct(product.items);
 
-  let migrateCount = counts?.active - counts?.canceled - counts?.custom;
+  const migrateCount = counts?.active - counts?.canceled - counts?.custom;
 
-  let canMigrate =
+  const canMigrate =
     counts &&
     migrateCount > 0 &&
     !fromIsOneOff &&

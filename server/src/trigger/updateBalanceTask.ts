@@ -8,10 +8,9 @@ import {
   FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
-import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { Customer, FeatureType } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
+import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 import { Decimal } from "decimal.js";
 import { adjustAllowance } from "./adjustAllowance.js";
 import {
@@ -28,7 +27,7 @@ import {
 import {
   getCusEntMasterBalance,
   getTotalNegativeBalance,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { entityFeatureIdExists } from "@/internal/api/entities/entityUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";

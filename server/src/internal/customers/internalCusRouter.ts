@@ -16,7 +16,7 @@ import { RewardService } from "../rewards/RewardService.js";
 import { EventService } from "../api/events/EventService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 
-import { getCusEntMasterBalance } from "./entitlements/cusEntUtils.js";
+import { getCusEntMasterBalance } from "./cusProducts/cusEnts/cusEntUtils.js";
 import { getLatestProducts } from "../products/productUtils.js";
 import { getProductVersionCounts } from "../products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -27,24 +27,10 @@ import {
 import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
 import { CusReadService } from "./CusReadService.js";
 import { StatusCodes } from "http-status-codes";
+import { getAttachPreview } from "../api/entitled/handlers/getAttachPreview.js";
+import { cusProductToProduct } from "./cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const cusRouter = Router();
-
-// cusRouter.get("", async (req: any, res: any) => {
-//   try {
-//     const page = parseInt(req.query.page as string) || 1;
-//     const { data: customers, count } = await CusService.getCustomers(
-//       req.sb,
-//       req.orgId,
-//       req.env,
-//       page,
-//     );
-
-//     res.status(200).json({ customers, totalCount: count });
-//   } catch (error) {
-//     handleFrontendReqError({ req, error, res, action: "get customers" });
-//   }
-// });
 
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
   try {
@@ -252,14 +238,13 @@ cusRouter.get(
   "/:customer_id/product/:product_id",
   async (req: any, res: any) => {
     try {
-      const { org, env, db } = req;
+      const { org, env, db, features, logtail: logger } = req;
       const { customer_id, product_id } = req.params;
       const { version, customer_product_id, entity_id } = req.query;
-      const orgId = req.orgId;
 
       const customer = await CusService.getFull({
         db,
-        orgId,
+        orgId: org.id,
         env,
         idOrInternalId: customer_id,
         withEntities: true,
@@ -271,8 +256,6 @@ cusRouter.get(
           CusProductStatus.Expired,
         ],
       });
-
-      const features = await FeatureService.getFromReq(req);
 
       if (!customer) {
         throw new RecaseError({
@@ -311,50 +294,50 @@ cusRouter.get(
         );
       }
 
-      let product;
+      let product = cusProduct
+        ? cusProductToProduct(cusProduct)
+        : await ProductService.getFull({
+            db,
+            orgId: org.id,
+            env,
+            idOrInternalId: product_id,
+            version:
+              version && Number.isInteger(parseInt(version))
+                ? parseInt(version)
+                : undefined,
+          });
 
-      if (cusProduct) {
-        let prices = cusProduct.customer_prices.map(
-          (price: any) => price.price,
-        );
-        let entitlements = cusProduct.customer_entitlements.map(
-          (ent: any) => ent.entitlement,
-        );
-        product = {
-          ...cusProduct.product,
-          items: mapToProductItems({ prices, entitlements, features }),
-          free_trial: cusProduct.free_trial,
-          options: cusProduct.options,
-          isActive: cusProduct.status === CusProductStatus.Active,
-          isCustom: cusProduct.is_custom,
-        };
-      } else {
-        product = await ProductService.getFull({
-          db,
-          orgId,
-          env,
-          idOrInternalId: product_id,
-          version:
-            version && Number.isInteger(parseInt(version))
-              ? parseInt(version)
-              : undefined,
-        });
-
-        product = mapToProductV2({ product, features });
-      }
+      let productV2 = mapToProductV2({ product, features });
 
       let numVersions = await ProductService.getProductVersionCount({
         db,
-        orgId,
+        orgId: org.id,
         env,
         productId: product_id,
       });
 
-      // console.log("Product", product);
+      const preview = await getAttachPreview({
+        db,
+        org,
+        env,
+        product,
+        customer,
+        cusProducts: customer.customer_products,
+        features,
+        logger,
+      });
 
       res.status(200).json({
         customer,
-        product,
+        preview,
+        product: cusProduct
+          ? {
+              ...productV2,
+              options: cusProduct.options,
+              isActive: cusProduct.status === CusProductStatus.Active,
+              isCustom: cusProduct.is_custom,
+            }
+          : productV2,
         features,
         numVersions,
         entities: customer.entities,

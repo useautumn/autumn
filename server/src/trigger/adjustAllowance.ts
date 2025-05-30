@@ -15,9 +15,8 @@ import {
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 
-import { getRelatedCusPrice } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import {
   getBillingType,
   getPriceForOverage,
@@ -34,7 +33,7 @@ import {
   getInvoiceExpansion,
   payForInvoice,
 } from "@/external/stripe/stripeInvoiceUtils.js";
-import { isTrialing } from "@/internal/customers/products/cusProductUtils.js";
+import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import RecaseError from "@/utils/errorUtils.js";

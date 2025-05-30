@@ -27,11 +27,10 @@ import {
 } from "@/internal/products/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { ProductService } from "./ProductService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import {
   AttachParams,
   InsertCusProductParams,
-} from "../customers/products/AttachParams.js";
+} from "../customers/cusProducts/AttachParams.js";
 import {
   entsAreSame,
   getEntitlementsForProduct,

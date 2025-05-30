@@ -42,7 +42,7 @@ export const PricingConfig = ({
   };
 
   const [priceType, setPriceType] = useState(
-    priceConfig?.type || PriceType.Fixed
+    priceConfig?.type || PriceType.Fixed,
   );
 
   const [name, setName] = useState(priceConfig?.name || "");
@@ -50,19 +50,19 @@ export const PricingConfig = ({
   const [fixedConfig, setFixedConfig] = useState(
     priceConfig && priceConfig.type == PriceType.Fixed
       ? priceConfig
-      : defaultFixedConfig
+      : defaultFixedConfig,
   );
   const [usageConfig, setUsageConfig]: any = useState(
     priceConfig?.config && priceConfig.config.type == PriceType.Usage
       ? priceConfig.config
-      : defaultUsageConfig
+      : defaultUsageConfig,
   );
 
   const [originalPrice, _] = useState(priceConfig);
 
   useEffect(() => {
     setPriceConfig(
-      fixedConfig
+      fixedConfig,
       //   {
       //   ...originalPrice,
       //   name: name,
@@ -131,8 +131,7 @@ export const validateUsageConfig = (usageConfig: any) => {
     return null;
   }
 
-  if (bill_when === BillWhen.BelowThreshold) {
-  } else if (bill_when === BillWhen.StartOfPeriod) {
+  if (bill_when === BillWhen.StartOfPeriod) {
     if (!interval) {
       toast.error("Please fill out all fields");
       return null;
@@ -169,7 +168,7 @@ export const validateUsageConfig = (usageConfig: any) => {
       parseFloat(tier.to) < parseFloat(tier.from)
     ) {
       toast.error(
-        "Each tier's 'to' value must be greater than its 'from' value"
+        "Each tier's 'to' value must be greater than its 'from' value",
       );
       return null;
     }

@@ -7,6 +7,8 @@ import {
   jsonb,
   foreignKey,
   unique,
+  bigint,
+  timestamp,
 } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils.js";
 import { customers } from "../cusModels/cusTable.js";
@@ -16,9 +18,12 @@ export const events = pgTable(
   {
     id: text().primaryKey().notNull(),
     org_id: text("org_id").notNull(),
+    org_slug: text("org_slug").notNull(),
     internal_customer_id: text("internal_customer_id"),
     env: text().notNull(),
-    timestamp: numeric({ mode: "number" }).notNull().default(sqlNow),
+    created_at: bigint({ mode: "number" }),
+    timestamp: timestamp({ mode: "date", withTimezone: true }),
+
     event_name: text("event_name").notNull(),
     idempotency_key: text("idempotency_key").default(sql`null`),
     value: numeric({ mode: "number" }),
@@ -27,7 +32,7 @@ export const events = pgTable(
 
     // Optional stuff...
     customer_id: text("customer_id").notNull(),
-    properties: jsonb(),
+    properties: jsonb().$type<Record<string, any>>(),
   },
   (table) => [
     foreignKey({
@@ -44,3 +49,6 @@ export const events = pgTable(
     ),
   ],
 );
+
+export type Event = typeof events.$inferSelect;
+export type EventInsert = typeof events.$inferInsert;

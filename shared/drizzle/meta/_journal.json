@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1748516803655,
+      "tag": "0000_minor_gunslinger",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1748519767357,
+      "tag": "0001_complete_forgotten_one",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1748520847010,
+      "tag": "0002_foamy_tombstone",
+      "breakpoints": true
+    }
+  ]
+}

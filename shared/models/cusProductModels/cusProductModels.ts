@@ -83,7 +83,7 @@ export const FullCusProductSchema = CusProductSchema.extend({
     }),
   ),
 
-  customer: CustomerSchema,
+  customer: CustomerSchema.optional(),
   product: ProductSchema,
   free_trial: FreeTrialSchema.nullish(),
   is_custom: z.boolean().default(false),

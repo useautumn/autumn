@@ -1,4 +1,4 @@
-import { initWorkers } from "./queue/queue.js";
+import { initWorkers } from "./queue/workersInit.js";
 import { QueueManager } from "./queue/QueueManager.js";
 
 const init = async () => {

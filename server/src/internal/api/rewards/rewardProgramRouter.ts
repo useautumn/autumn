@@ -42,8 +42,6 @@ rewardProgramRouter.post("", (req, res) =>
         data: rewardProgram,
       });
 
-      console.log("✅ Successfully created reward scheme");
-
       return res.status(200).json(createdRewardProgram);
     },
   }),

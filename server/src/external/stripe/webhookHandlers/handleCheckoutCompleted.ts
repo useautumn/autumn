@@ -1,7 +1,7 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { Stripe } from "stripe";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtils.js";
 import {
   AppEnv,
@@ -12,7 +12,7 @@ import {
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { AttachParams } from "@/internal/customers/products/AttachParams.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { createStripeCli } from "../utils.js";
 import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 

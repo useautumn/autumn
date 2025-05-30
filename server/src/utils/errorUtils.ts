@@ -113,7 +113,7 @@ export const handleRequestError = ({
       logger.warn(
         `Request from ${
           req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
-        } for ${action}`
+        } for ${action}`,
       );
       error.print(logger);
       if (req.originalUrl.includes("/webhooks/stripe")) {
@@ -139,7 +139,7 @@ export const handleRequestError = ({
     logger.error(
       `Request from ${
         req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
-      } for ${action}`
+      } for ${action}`,
     );
 
     if (error instanceof Stripe.errors.StripeError) {
@@ -162,7 +162,13 @@ export const handleRequestError = ({
       logRequestBody(logger, req, "error");
       logger.error(`Type: Unknown`);
       logger.error(error);
-      res.status(500).json({ message: "Internal server error" });
+
+      res
+        .status(500)
+        .json({
+          message: error.message || "Unknown error",
+          code: error.code || "unknown_error",
+        });
     }
     logger.error("--------------------------------");
   } catch (error) {
@@ -198,7 +204,7 @@ export const handleFrontendReqError = ({
       error.statusCode == StatusCodes.NOT_FOUND
     ) {
       req.logtail.warn(
-        `(frontend) ${req.method} ${req.originalUrl}: not found`
+        `(frontend) ${req.method} ${req.originalUrl}: not found`,
       );
       res.status(404).json({
         message: error.message,
