@@ -4,13 +4,11 @@ import { FullCusProduct } from "@autumn/shared";
 import { ScheduleObj } from "./ScheduleObj.js";
 import { fullCusProductToProduct } from "../../cusProducts/cusProductUtils.js";
 export const getFilteredScheduleItems = ({
-  // scheduleItems,
   scheduleObj,
   cusProducts,
 }: {
-  // scheduleItems: any[];
   scheduleObj: ScheduleObj;
-  cusProducts: (FullCusProduct | null | undefined)[];
+  cusProducts: (FullCusProduct | undefined)[];
 }) => {
   const { schedule, interval, prices } = scheduleObj;
   let scheduleItems = schedule.phases[0].items;

@@ -17,7 +17,6 @@ import {
   addWeeks,
   format,
 } from "date-fns";
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 

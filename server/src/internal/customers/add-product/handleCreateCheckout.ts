@@ -19,17 +19,15 @@ import { notNullish } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleCreateCheckout = async ({
-  db,
   req,
   res,
   attachParams,
 }: {
-  db: DrizzleCli;
   req: any;
   res: any;
   attachParams: AttachParams;
 }) => {
-  const logger = req.logtail;
+  const { db, logtail: logger } = req;
 
   const { customer, org, freeTrial, successUrl } = attachParams;
 

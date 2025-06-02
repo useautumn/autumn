@@ -413,11 +413,6 @@ export const createEntities = async ({
         id: mainCusEnt.id,
         updates: { balance: mainCusEntBalance - newCount },
       });
-
-      // await pg.query(
-      //   `UPDATE customer_entitlements SET balance = balance - $1 WHERE id = $2`,
-      //   [newCount, mainCusEnt.id]
-      // );
     }
 
     for (const linkedCusEnt of linkedCusEnts) {

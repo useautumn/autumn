@@ -2,20 +2,17 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachBody } from "../models/AttachBody.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
+  CreateFreeTrial,
   CusProductStatus,
   Entitlement,
   ErrCode,
-  Feature,
   FullCustomer,
   FullProduct,
   Price,
 } from "@autumn/shared";
-import { AttachFlags } from "../models/AttachContext.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getOrCreateCustomer } from "../../cusUtils/getOrCreateCustomer.js";
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { mapOptionsList } from "./mapOptionsList.js";
 import {
@@ -27,15 +24,14 @@ import {
   cusProductToPrices,
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 
 const getProductsForAttach = async ({
   req,
   attachBody,
-  flags,
 }: {
   req: ExtendedRequest;
   attachBody: AttachBody;
-  flags: AttachFlags;
 }) => {
   const { product_id, product_ids } = attachBody;
 
@@ -76,11 +72,9 @@ const getProductsForAttach = async ({
 const getCustomerAndProducts = async ({
   req,
   attachBody,
-  flags,
 }: {
   req: ExtendedRequest;
   attachBody: AttachBody;
-  flags: AttachFlags;
 }) => {
   const [customer, products] = await Promise.all([
     getOrCreateCustomer({
@@ -96,7 +90,7 @@ const getCustomerAndProducts = async ({
       entityId: attachBody.entity_id,
       entityData: attachBody.entity_data,
     }),
-    getProductsForAttach({ req, attachBody, flags }),
+    getProductsForAttach({ req, attachBody }),
   ]);
 
   return { customer, products };
@@ -115,6 +109,11 @@ const getPricesAndEnts = async ({
 }) => {
   const { options: optionsInput, is_custom, items, free_trial } = attachBody;
   const { features, db, org, logtail: logger } = req;
+
+  const { curMainProduct, curSameProduct } = getExistingCusProducts({
+    product: products[0],
+    cusProducts: customer.customer_products,
+  });
 
   // Not custom
   if (!is_custom) {
@@ -138,19 +137,17 @@ const getPricesAndEnts = async ({
         optionsInput,
         features,
         prices,
+        // to check if it fails for multi prod attach...
+        curCusProduct: products[0].is_add_on ? curSameProduct : curMainProduct,
       }),
       prices,
       entitlements,
       freeTrial,
+      cusProducts: customer.customer_products,
     };
   }
 
   const product = products[0];
-
-  const { curMainProduct } = getExistingCusProducts({
-    product,
-    cusProducts: customer.customer_products,
-  });
 
   let curPrices: Price[] = product!.prices;
   let curEnts: Entitlement[] = product!.entitlements;
@@ -160,7 +157,12 @@ const getPricesAndEnts = async ({
     curEnts = cusProductToEnts({ cusProduct: curMainProduct });
   }
 
-  let { prices, entitlements } = await handleNewProductItems({
+  let {
+    prices,
+    entitlements: ents,
+    customPrices,
+    customEnts,
+  } = await handleNewProductItems({
     db,
     curPrices,
     curEnts,
@@ -174,7 +176,7 @@ const getPricesAndEnts = async ({
   const freeTrial = await handleNewFreeTrial({
     db,
     curFreeTrial: product!.free_trial,
-    newFreeTrial: free_trial || null,
+    newFreeTrial: (free_trial as CreateFreeTrial) || null,
     internalProductId: product!.internal_id,
     isCustom: true,
   });
@@ -192,36 +194,61 @@ const getPricesAndEnts = async ({
       optionsInput,
       features,
       prices,
+      curCusProduct: product.is_add_on ? curSameProduct : curMainProduct,
     }),
     prices,
-    entitlements,
+    entitlements: getEntsWithFeature({
+      ents,
+      features,
+    }),
     freeTrial: uniqueFreeTrial,
+    customPrices,
+    customEnts,
   };
 };
 
 export const processAttachBody = async ({
   req,
   attachBody,
-  flags,
 }: {
   req: ExtendedRequest;
   attachBody: AttachBody;
-  flags: AttachFlags;
 }) => {
   // 1. Get customer and products
   const { customer, products } = await getCustomerAndProducts({
     req,
     attachBody,
-    flags,
   });
 
-  const { optionsList, prices, entitlements, freeTrial } =
-    await getPricesAndEnts({
-      req,
-      attachBody,
-      customer,
-      products,
-    });
+  const {
+    optionsList,
+    prices,
+    entitlements,
+    freeTrial,
+    customPrices,
+    customEnts,
+  } = await getPricesAndEnts({
+    req,
+    attachBody,
+    customer,
+    products,
+  });
 
-  return { customer, products, optionsList, prices, entitlements, freeTrial };
+  if (attachBody.free_trial === false) {
+    throw new RecaseError({
+      message: "Free trial is not allowed",
+      code: ErrCode.InvalidRequest,
+    });
+  }
+
+  return {
+    customer,
+    products,
+    optionsList,
+    prices,
+    entitlements,
+    freeTrial,
+    customPrices,
+    customEnts,
+  };
 };

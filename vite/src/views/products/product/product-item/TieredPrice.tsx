@@ -1,12 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Minus, Pencil, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useProductContext } from "../ProductContext";
 import { useProductItemContext } from "./ProductItemContext";
 import { Feature, TierInfinite } from "@autumn/shared";
-import { SelectCycle } from "./components/SelectCycle";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 
 export default function TieredPrice({
@@ -16,11 +15,11 @@ export default function TieredPrice({
   show: any;
   setShow: (show: any) => void;
 }) {
-  let { features } = useProductContext();
-  let { item, setItem } = useProductItemContext();
+  const { features } = useProductContext();
+  const { item, setItem } = useProductItemContext();
 
-  let feature = features.find((f: Feature) => f.id == item.feature_id);
-  let featureName = feature?.name;
+  const feature = features.find((f: Feature) => f.id == item.feature_id);
+  const featureName = feature?.name;
 
   const [editBillingUnits, setEditBillingUnits] = useState(false);
 
@@ -99,7 +98,7 @@ export default function TieredPrice({
                   <div
                     className={cn(
                       "flex w-full text-sm",
-                      tier.to == -1 && "bg-transparent"
+                      tier.to == -1 && "bg-transparent",
                     )}
                   >
                     <UsageTierInput
@@ -158,7 +157,7 @@ export default function TieredPrice({
                       <span
                         className={cn(
                           "truncate",
-                          index == 0 && "border-b border-dotted border-t3"
+                          index == 0 && "border-b border-dotted border-t3",
                         )}
                       >
                         {item.billing_units == 1
@@ -225,7 +224,7 @@ export const UsageTierInput = ({
       <Input
         className={cn(
           "outline-none flex w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
-          type === "amount" && "pr-8"
+          type === "amount" && "pr-8",
         )}
         value={value}
         onChange={onChange}

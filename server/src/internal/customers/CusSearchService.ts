@@ -1,21 +1,8 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { Client } from "pg";
 import { AppEnv, customers, CusProductStatus } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import {
-  and,
-  desc,
-  eq,
-  ilike,
-  or,
-  count,
-  lt,
-  inArray,
-  isNotNull,
-  gt,
-  sql,
-} from "drizzle-orm";
+import { and, desc, eq, ilike, or, lt, isNotNull, gt, sql } from "drizzle-orm";
 import { customerProducts, products } from "@autumn/shared";
+
 const customerFields = {
   internal_id: customers.internal_id,
   id: customers.id,

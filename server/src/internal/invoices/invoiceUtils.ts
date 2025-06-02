@@ -1,12 +1,13 @@
 import Stripe from "stripe";
-import { AttachParams } from "../cusProducts/AttachParams.js";
+import { AttachParams } from "../customers/cusProducts/AttachParams.js";
 import { InvoiceService, processInvoice } from "./InvoiceService.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
 import { Invoice, InvoiceItem, Price, UsagePriceConfig } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 
-export const attachParamsToInvoice = async ({
+// Purpose of this function is to insert an invoice from attach params when sub is updated -> Correct product ID is set...
+export const insertInvoiceFromAttach = async ({
   db,
   attachParams,
   invoiceId,
@@ -21,13 +22,8 @@ export const attachParamsToInvoice = async ({
 }) => {
   try {
     if (!stripeInvoice) {
-      let stripeCli = createStripeCli({
-        org: attachParams.org,
-        env: attachParams.customer.env,
-      });
-
       stripeInvoice = await getStripeExpandedInvoice({
-        stripeCli,
+        stripeCli: attachParams.stripeCli,
         stripeInvoiceId: invoiceId,
       });
     }
@@ -36,6 +32,12 @@ export const attachParamsToInvoice = async ({
     let invoice = await InvoiceService.getByStripeId({
       db,
       stripeId: invoiceId,
+    });
+
+    let autumnInvoiceItems = await getInvoiceItems({
+      stripeInvoice,
+      prices: attachParams.prices,
+      logger,
     });
 
     if (invoice) {
@@ -56,6 +58,7 @@ export const attachParamsToInvoice = async ({
         org: attachParams.org,
         productIds: attachParams.products.map((p) => p.id),
         internalProductIds: attachParams.products.map((p) => p.internal_id),
+        items: autumnInvoiceItems,
       });
     }
   } catch (error) {
@@ -93,12 +96,10 @@ export const getInvoiceItems = async ({
 
   try {
     for (const line of stripeInvoice.lines.data) {
-      let price = prices.find(
-        (p) =>
-          p.config?.stripe_price_id === line.price?.id ||
-          (p.config as UsagePriceConfig)?.stripe_product_id ===
-            line.price?.product,
-      );
+      let price = findPriceInStripeItems({
+        prices,
+        subItem: line,
+      });
 
       if (!price) {
         continue;

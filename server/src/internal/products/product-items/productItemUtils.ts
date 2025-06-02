@@ -56,57 +56,6 @@ export const getItemFeatureType = ({
   return undefined;
 };
 
-export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
-  // Compare tiers
-  const compareTiers = (tiers1: any, tiers2: any) => {
-    if (!tiers1 && !tiers2) {
-      return true;
-    }
-
-    if (!tiers1 || !tiers2) {
-      return false;
-    }
-
-    if (tiers1.length !== tiers2.length) {
-      return false;
-    }
-
-    return tiers1.every(
-      (tier: any, index: number) =>
-        tier.amount === tiers2[index].amount && tier.to === tiers2[index].to
-    );
-  };
-  return (
-    item1.feature_id == item2.feature_id &&
-    item1.included_usage == item2.included_usage &&
-    item1.interval == item2.interval &&
-    item1.feature_type == item2.feature_type &&
-    item1.price == item2.price &&
-    compareTiers(item1.tiers, item2.tiers)
-  );
-};
-
-export const itemIsFixedPrice = (item: ProductItem) => {
-  return notNullish(item.price) && nullish(item.feature_id);
-};
-
-export const isFeaturePriceItem = (item: ProductItem) => {
-  return (
-    notNullish(item.feature_id) &&
-    (notNullish(item.price) || notNullish(item.tiers))
-  );
-};
-
-export const getItemType = (item: ProductItem) => {
-  if (isFeatureItem(item)) {
-    return ProductItemType.Feature;
-  } else if (isFeaturePriceItem(item)) {
-    return ProductItemType.FeaturePrice;
-  }
-
-  return ProductItemType.Price;
-};
-
 // FOR TESTS?
 export const constructFeatureItem = ({
   feature_id,

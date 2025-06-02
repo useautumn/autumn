@@ -306,8 +306,6 @@ export const createFullCusProduct = async ({
   let { customer, product, prices, entitlements, optionsList, freeTrial, org } =
     attachParams;
 
-  // 1. If one off
-
   // Try to get current cus product or set to null...
   let curCusProduct;
   try {
@@ -341,6 +339,9 @@ export const createFullCusProduct = async ({
   }
 
   const cusProdId = generateId("cus_prod");
+  console.log(
+    `Inserting cus product ${product.id} for ${customer.name}, cus product ID: ${cusProdId}`,
+  );
 
   // 1. create customer entitlements
   const cusEnts: CustomerEntitlement[] = [];

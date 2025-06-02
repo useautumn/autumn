@@ -10,10 +10,11 @@ import {
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { generateId } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, generateId } from "@/utils/genUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 
 // Get payment method
 
@@ -24,9 +25,10 @@ export const createStripeSub = async ({
   org,
   freeTrial,
   invoiceOnly = false,
-  billingCycleAnchorUnix,
+  anchorToUnix,
   itemSet,
   shouldPreview = false,
+  now,
 }: {
   db: DrizzleCli;
   stripeCli: Stripe;
@@ -34,14 +36,13 @@ export const createStripeSub = async ({
   freeTrial: FreeTrial | null;
   org: Organization;
   invoiceOnly?: boolean;
-  billingCycleAnchorUnix?: number;
-
+  anchorToUnix?: number;
   itemSet: ItemSet;
   shouldPreview?: boolean;
+  now?: number;
 }) => {
   let paymentMethod = await getCusPaymentMethod({
-    org,
-    env: customer.env,
+    stripeCli,
     stripeId: customer.processor.id,
     errorIfNone: !invoiceOnly, // throw error if no payment method and invoiceOnly is false
   });
@@ -53,7 +54,15 @@ export const createStripeSub = async ({
     };
   }
 
-  const { items, prices, interval, subMeta, usageFeatures } = itemSet;
+  const billingCycleAnchorUnix = anchorToUnix
+    ? getAlignedIntervalUnix({
+        alignWithUnix: anchorToUnix,
+        interval: itemSet.interval,
+        now,
+      })
+    : undefined;
+
+  const { items, prices, usageFeatures } = itemSet;
   let subItems = items.filter(
     (i: any, index: number) =>
       prices[index].config!.interval !== BillingInterval.OneOff,
@@ -68,7 +77,9 @@ export const createStripeSub = async ({
       subscription_details: {
         items: subItems as any,
         trial_end: freeTrialToStripeTimestamp(freeTrial),
-        billing_cycle_anchor: billingCycleAnchorUnix,
+        billing_cycle_anchor: billingCycleAnchorUnix
+          ? Math.floor(billingCycleAnchorUnix / 1000)
+          : undefined,
       },
       invoice_items: invoiceItems as any,
       customer: customer.processor.id,

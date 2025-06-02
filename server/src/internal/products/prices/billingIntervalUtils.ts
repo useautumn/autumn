@@ -79,13 +79,21 @@ export const getNextStartOfMonthUnix = (interval: BillingInterval) => {
   return twelveOClock.getTime();
 };
 
-export const getAlignedIntervalUnix = (
-  alignWithUnix: number,
-  interval: BillingInterval,
-) => {
+export const getAlignedIntervalUnix = ({
+  alignWithUnix,
+  interval,
+  now,
+}: {
+  alignWithUnix: number;
+  interval: BillingInterval;
+  now?: number;
+}) => {
   const nextCycleAnchor = alignWithUnix;
   let nextCycleAnchorUnix = nextCycleAnchor;
-  const naturalBillingDate = addBillingIntervalUnix(Date.now(), interval);
+  const naturalBillingDate = addBillingIntervalUnix(
+    now || Date.now(),
+    interval,
+  );
 
   const maxIterations = 10000;
   let iterations = 0;

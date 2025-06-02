@@ -26,16 +26,16 @@ import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
 import { handleAddProduct } from "../add-product/handleAddProduct.js";
-import { InvoiceService } from "../invoices/InvoiceService.js";
 import {
   AttachParams,
   AttachResultSchema,
 } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import {
-  attachParamsToInvoice,
   getInvoiceItems,
-} from "../invoices/invoiceUtils.js";
+  insertInvoiceFromAttach,
+} from "@/internal/invoices/invoiceUtils.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { updateScheduledSubWithNewItems } from "./scheduleUtils/updateScheduleWithNewItems.js";
 
 import { billForRemainingUsages } from "./billRemainingUsages.js";
@@ -49,8 +49,9 @@ import {
 
 import { differenceInSeconds } from "date-fns";
 import { SuccessCode } from "@autumn/shared";
-import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export enum ProrationBehavior {
   Immediately = "immediately",
@@ -180,7 +181,7 @@ export const handleStripeSubUpdate = async ({
         scheduleObj,
         newItems: itemSet.items,
         stripeCli,
-        cusProducts: [curCusProduct, attachParams.curScheduledProduct],
+        cusProductsForGroup: [curCusProduct],
         itemSet,
         db,
         org: attachParams.org,
@@ -189,8 +190,8 @@ export const handleStripeSubUpdate = async ({
     }
   }
 
-  // what's happening here...
-  await attachParamsToInvoice({
+  // 5. Insert invoice
+  await insertInvoiceFromAttach({
     db,
     attachParams,
     invoiceId: subUpdate.latest_invoice as string,
@@ -244,7 +245,7 @@ export const handleStripeSubUpdate = async ({
       itemSet,
       invoiceOnly: attachParams.invoiceOnly || false,
       freeTrial: attachParams.freeTrial,
-      billingCycleAnchorUnix,
+      anchorToUnix: billingCycleAnchorUnix,
     })) as Stripe.Subscription;
 
     newSubs.push(newSub);
@@ -333,9 +334,7 @@ export const handleUpgrade = async ({
   newVersion = false,
   updateSameProduct = false,
 }: {
-  req: {
-    db: DrizzleCli;
-  } & any;
+  req: ExtendedRequest;
   res: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;

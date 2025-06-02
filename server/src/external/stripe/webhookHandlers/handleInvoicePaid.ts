@@ -1,5 +1,4 @@
 import Stripe from "stripe";
-import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   AppEnv,
@@ -19,8 +18,9 @@ import {
 import { getStripeSubs } from "../stripeSubUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
-import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { handleInvoicePaidDiscount } from "./handleInvoicePaidDiscount.js";
 
 const handleOneOffInvoicePaid = async ({

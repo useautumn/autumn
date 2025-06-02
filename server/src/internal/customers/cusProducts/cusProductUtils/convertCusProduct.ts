@@ -4,8 +4,15 @@ import {
   FullCustomerEntitlement,
   FullCustomerPrice,
   FullProduct,
+  Product,
 } from "@autumn/shared";
 import { sortCusEntsForDeduction } from "../cusEnts/cusEntUtils.js";
+import {
+  getStripeSchedules,
+  getStripeSubs,
+} from "@/external/stripe/stripeSubUtils.js";
+import Stripe from "stripe";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const cusProductToCusPrices = (
   cusProducts: FullCusProduct[],
@@ -65,11 +72,36 @@ export const cusProductToEnts = ({
   return cusProduct.customer_entitlements.map((ce) => ce.entitlement);
 };
 
-export const cusProductToProduct = (cusProduct: FullCusProduct) => {
+export const cusProductToProduct = ({
+  cusProduct,
+}: {
+  cusProduct: FullCusProduct;
+}) => {
   return {
     ...cusProduct.product,
     prices: cusProductToPrices({ cusProduct }),
     entitlements: cusProductToEnts({ cusProduct }),
     free_trial: cusProduct.free_trial,
   } as FullProduct;
+};
+
+// Subs, schedules
+export const cusProductsToSchedules = ({
+  cusProducts,
+  stripeCli,
+}: {
+  cusProducts: (FullCusProduct | undefined)[];
+  stripeCli: Stripe;
+}) => {
+  let scheduleIds: string[] = [];
+  for (const cusProduct of cusProducts) {
+    if (cusProduct) {
+      scheduleIds.push(...(cusProduct.scheduled_ids || []));
+    }
+  }
+
+  return getStripeSchedules({
+    stripeCli,
+    scheduleIds,
+  });
 };

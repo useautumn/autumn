@@ -1,8 +1,6 @@
-import {
-  isFeaturePriceItem,
-  itemToPriceOrTiers,
-} from "@/internal/products/product-items/productItemUtils.js";
-import { orgToVersion } from "@/utils/versionUtils.js";
+import { itemToPriceOrTiers } from "@/internal/products/product-items/productItemUtils.js";
+import { isFeaturePriceItem } from "@/internal/products/product-items/getItemType.js";
+
 import {
   APIVersion,
   Feature,
@@ -14,7 +12,7 @@ import {
   UsageModel,
 } from "@autumn/shared";
 import { getCheckPreview } from "./getCheckPreview.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getBooleanEntitledResult = async ({

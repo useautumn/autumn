@@ -1,5 +1,5 @@
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
-import { Feature } from "@autumn/shared";
+import { CreateFeature, Feature } from "@autumn/shared";
 import { useState } from "react";
 import { CreditSystemRowToolbar } from "./CreditSystemRowToolbar";
 import { useFeaturesContext } from "../features/FeaturesContext";
@@ -10,12 +10,12 @@ import { AdminHover } from "@/components/general/AdminHover";
 export const CreditSystemsTable = () => {
   const { creditSystems } = useFeaturesContext();
   const [selectedCreditSystem, setSelectedCreditSystem] =
-    useState<Feature | null>(null);
+    useState<CreateFeature | null>(null);
   const [open, setOpen] = useState(false);
 
   const handleRowClick = (id: string) => {
     const creditSystem = creditSystems.find(
-      (creditSystem: Feature) => creditSystem.id === id
+      (creditSystem: Feature) => creditSystem.id === id,
     );
     if (!creditSystem) return;
     setSelectedCreditSystem(creditSystem);

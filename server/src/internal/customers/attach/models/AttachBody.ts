@@ -1,3 +1,4 @@
+import { notNullish } from "@/utils/genUtils.js";
 import {
   CreateFreeTrialSchema,
   FreeTrialSchema,
@@ -33,7 +34,7 @@ export const AttachBodySchema = z
     // Custom Product
     is_custom: z.boolean().default(false),
     items: z.array(ProductItemSchema).optional(),
-    free_trial: CreateFreeTrialSchema.optional(),
+    free_trial: CreateFreeTrialSchema.or(z.boolean()).optional(),
 
     // New Version
     version: z.number().optional(),
@@ -50,16 +51,32 @@ export const AttachBodySchema = z
     message: "Either product_id or product_ids should be provided, not both",
   })
   .refine(
-    (data) =>
-      data.product_ids &&
-      new Set(data.product_ids).size === data.product_ids.length,
+    (data) => {
+      if (
+        notNullish(data.product_ids) &&
+        new Set(data.product_ids).size !== data.product_ids!.length
+      ) {
+        return false;
+      }
+
+      return true;
+    },
     {
       message: "Can't pass in duplicate product_ids",
     },
   )
-  .refine((data) => !(data.product_ids && data.is_custom), {
-    message: "Can't pass in product_ids if is_custom is true",
-  })
+  .refine(
+    (data) => {
+      if (data.product_ids && data.is_custom) {
+        return false;
+      }
+
+      return true;
+    },
+    {
+      message: "Can't pass in product_ids if is_custom is true",
+    },
+  )
   .refine(
     (data) => {
       if (data.items && !data.is_custom) {

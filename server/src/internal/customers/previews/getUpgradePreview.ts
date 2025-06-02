@@ -10,6 +10,7 @@ import {
   Customer,
   Feature,
   FullCusProduct,
+  FullCustomer,
   FullProduct,
   Organization,
 } from "@autumn/shared";
@@ -24,12 +25,15 @@ import { formatCurrency } from "./previewUtils.js";
 
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
-import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
-import { isPriceItem } from "@/internal/products/product-items/getItemType.js";
+import {
+  isFeaturePriceItem,
+  isPriceItem,
+} from "@/internal/products/product-items/getItemType.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { cusProductToPrices } from "../cusProducts/cusProductUtils/convertCusProduct.js";
+import Stripe from "stripe";
 
 export const isAddProductFlow = ({
   curCusProduct,
@@ -145,6 +149,7 @@ const createStripeProductAndPrices = async ({
 
 export const getUpgradePreview = async ({
   db,
+  paymentMethod,
   customer,
   org,
   env,
@@ -153,8 +158,9 @@ export const getUpgradePreview = async ({
   features,
   logger,
 }: {
+  paymentMethod: Stripe.PaymentMethod | null | undefined;
   db: DrizzleCli;
-  customer: Customer;
+  customer: FullCustomer;
   org: Organization;
   env: AppEnv;
   product: FullProduct;
@@ -178,6 +184,9 @@ export const getUpgradePreview = async ({
   });
 
   let attachParams = {
+    stripeCli,
+    paymentMethod,
+
     org,
     customer,
     products: [product],
@@ -185,6 +194,7 @@ export const getUpgradePreview = async ({
     prices: product.prices,
     entitlements: product.entitlements,
     freeTrial: product.free_trial || null,
+    cusProducts: customer.customer_products,
     optionsList: [],
     entities: [],
   };

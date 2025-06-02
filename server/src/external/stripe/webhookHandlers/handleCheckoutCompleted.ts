@@ -14,7 +14,7 @@ import {
 } from "@autumn/shared";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { createStripeCli } from "../utils.js";
-import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 
 import {
   getBillingType,
@@ -33,9 +33,10 @@ import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
+import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { getPlaceholderItem } from "../stripePriceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -103,12 +104,14 @@ export const itemMetasToOptions = async ({
 };
 
 export const handleCheckoutSessionCompleted = async ({
+  req,
   db,
   org,
   checkoutSession,
   env,
   logger,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   checkoutSession: Stripe.Checkout.Session;
@@ -123,6 +126,8 @@ export const handleCheckoutSessionCompleted = async ({
 
   // Get options
   const attachParams: AttachParams = metadata.data;
+  attachParams.req = req;
+
   if (attachParams.org.id != org.id) {
     console.log("checkout.completed: org doesn't match, skipping");
     return;
@@ -273,12 +278,6 @@ export const handleCheckoutSessionCompleted = async ({
 
       const stripeCli = createStripeCli({ org, env });
 
-      // Handle billing cycle anchor...
-      const billingCycleAnchorUnix = getAlignedIntervalUnix(
-        firstSetStart * 1000,
-        itemSet.interval,
-      );
-
       const subscription = (await createStripeSub({
         db,
         stripeCli,
@@ -286,7 +285,7 @@ export const handleCheckoutSessionCompleted = async ({
         org,
         itemSet,
         freeTrial: attachParams.freeTrial, // add free trial to subscription...
-        billingCycleAnchorUnix,
+        anchorToUnix: firstSetStart * 1000,
       })) as Stripe.Subscription;
 
       otherSubscriptions.push(subscription.id);

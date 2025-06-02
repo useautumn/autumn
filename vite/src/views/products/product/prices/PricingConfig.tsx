@@ -1,13 +1,8 @@
 import { BillingInterval, BillWhen, PriceType } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import CreateFixedPrice from "./CreateFixedPrice";
-import CreateUsagePrice from "./CreateUsagePrice";
 import { toast } from "sonner";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { invalidNumber } from "@/utils/genUtils";
-import { Input } from "@/components/ui/input";
-import { validBillingInterval } from "@/utils/product/priceUtils";
 
 export const PricingConfig = ({
   priceConfig,

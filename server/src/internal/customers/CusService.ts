@@ -5,7 +5,6 @@ import {
   CusProductStatus,
   Customer,
   customers,
-  Entity,
   EntityExpand,
   FullCusProduct,
   FullCustomer,
@@ -13,45 +12,11 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
-import { Client } from "pg";
 import { and, eq, or, sql } from "drizzle-orm";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
 import { flipProductResults } from "./cusUtils/cusUtils.js";
 export class CusService {
-  // static async list({
-  //   db,
-  //   orgId,
-  //   env,
-
-  // }: {
-  //   db: DrizzleCli;
-  //   orgId: string;
-  //   env: AppEnv;
-
-  // }) {
-
-  //     const from = (page - 1) * pageSize;
-  //     const to = from + pageSize - 1;
-
-  //     const { data, count, error } = await sb
-  //       .from("customers")
-  //       .select("*", { count: "exact" })
-  //       .eq("org_id", orgId)
-  //       .eq("env", env)
-  //       .order("created_at", { ascending: false })
-  //       .order("name", { ascending: true })
-  //       .order("internal_id", { ascending: true })
-  //       .range(from, to);
-
-  //     if (error) {
-  //       throw error;
-  //     }
-
-  //     return { data, count };
-
-  // }
-
   static async getFull({
     db,
     idOrInternalId,
@@ -279,7 +244,6 @@ export class CusService {
 
   static async searchCustomersByProduct({
     sb,
-    pg,
     orgId,
     env,
     search,
@@ -289,7 +253,6 @@ export class CusService {
     pageNumber,
   }: {
     sb: SupabaseClient;
-    pg: Client;
     orgId: string;
     env: AppEnv;
     search: string;
@@ -351,7 +314,6 @@ export class CusService {
 
   static async searchCustomers({
     sb,
-    pg,
     orgId,
     env,
     search,
@@ -360,7 +322,6 @@ export class CusService {
     lastItem,
     pageNumber,
   }: {
-    pg: Client;
     sb: SupabaseClient;
     orgId: string;
     env: AppEnv;
@@ -373,7 +334,6 @@ export class CusService {
     if (filters.product_id || filters.status) {
       return await this.searchCustomersByProduct({
         sb,
-        pg,
         orgId,
         env,
         search,

@@ -27,7 +27,6 @@ import { getTotalNegativeBalance } from "@/internal/customers/cusProducts/cusEnt
 import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
-import { Client } from "pg";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 import { submitUsageToStripe } from "../stripeMeterUtils.js";

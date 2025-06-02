@@ -122,7 +122,7 @@ export const handleExistingProduct = async ({
   const product = products[0];
 
   let { curMainProduct, curSameProduct, curScheduledProduct }: any =
-    await getExistingCusProducts({
+    getExistingCusProducts({
       product,
       cusProducts: cusProducts || [],
       internalEntityId: attachParams.internalEntityId,

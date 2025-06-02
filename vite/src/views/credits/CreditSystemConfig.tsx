@@ -1,6 +1,11 @@
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
-import { CreditSchemaItem, Feature, FeatureType } from "@autumn/shared";
+import {
+  CreateFeature,
+  CreditSchemaItem,
+  Feature,
+  FeatureType,
+} from "@autumn/shared";
 
 import {
   Select,
@@ -20,8 +25,8 @@ function CreditSystemConfig({
   creditSystem,
   setCreditSystem,
 }: {
-  creditSystem: Feature;
-  setCreditSystem: (creditSystem: Feature) => void;
+  creditSystem: CreateFeature;
+  setCreditSystem: (creditSystem: CreateFeature) => void;
 }) {
   const { features } = useFeaturesContext();
   const [fields, setFields] = useState<any>(
@@ -33,7 +38,7 @@ function CreditSystemConfig({
       : {
           name: "",
           id: "",
-        }
+        },
   );
   const [idChanged, setIdChanged] = useState(creditSystem.name !== "");
   const [creditSystemConfig, setCreditSystemConfig] = useState<any>(
@@ -47,7 +52,7 @@ function CreditSystemConfig({
               credit_amount: 0,
             },
           ],
-        }
+        },
   );
 
   const handleSchemaChange = (index: number, key: string, value: any) => {
@@ -114,11 +119,9 @@ function CreditSystemConfig({
       </div>
 
       <div className="flex flex-col gap-2">
-        {/* <FieldLabel>Schema</FieldLabel> */}
         <div className="flex flex-col w-full">
           <div className="flex w-full gap-2">
             <FieldLabel className="w-full">Metered Feature</FieldLabel>
-            {/* <FieldLabel className="!mb-0 col-span-3">Metered Amount</FieldLabel> */}
             <FieldLabel className="w-full">Credit Amount</FieldLabel>
           </div>
 
@@ -144,8 +147,8 @@ function CreditSystemConfig({
                               !creditSystemConfig.schema.some(
                                 (schemaItem: CreditSchemaItem) =>
                                   feature.id != item.metered_feature_id &&
-                                  schemaItem.metered_feature_id === feature.id
-                              )
+                                  schemaItem.metered_feature_id === feature.id,
+                              ),
                           )
                           .map((feature: Feature) => (
                             <SelectItem key={feature.id} value={feature.id!}>
@@ -165,7 +168,7 @@ function CreditSystemConfig({
                         handleSchemaChange(
                           index,
                           "credit_amount",
-                          e.target.value
+                          e.target.value,
                         )
                       }
                     />
@@ -194,7 +197,7 @@ function CreditSystemConfig({
           disabled={
             creditSystemConfig.schema.length ==
             features.filter(
-              (feature: Feature) => feature.type === FeatureType.Metered
+              (feature: Feature) => feature.type === FeatureType.Metered,
             ).length
           }
         >

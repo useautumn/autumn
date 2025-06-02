@@ -1,5 +1,10 @@
 import { isOneOffProduct } from "@/utils/product/priceUtils";
-import { CheckProductPreview, FeatureOptions, ProductV2 } from "@autumn/shared";
+import {
+  AttachScenario,
+  CheckProductPreview,
+  FeatureOptions,
+  ProductV2,
+} from "@autumn/shared";
 import { useEffect, useRef, useState } from "react";
 
 type FrontendProduct = ProductV2 & {
@@ -7,12 +12,12 @@ type FrontendProduct = ProductV2 & {
   options: FeatureOptions[];
 };
 
-enum AttachCase {
-  AddOn,
-  OneOff,
-  Active,
-  Custom,
-  New,
+export enum AttachCase {
+  AddOn = "Add On",
+  OneOff = "One Off",
+  Active = "Active",
+  Custom = "Custom",
+  Checkout = "Checkout",
 }
 
 export const useAttachState = ({
@@ -67,7 +72,11 @@ export const useAttachState = ({
       return AttachCase.Custom;
     }
 
-    return AttachCase.New;
+    if (!preview || !preview.payment_method) {
+      return AttachCase.Checkout;
+    }
+
+    return preview.scenario;
   };
 
   const getButtonText = () => {
@@ -85,5 +94,6 @@ export const useAttachState = ({
     itemsChanged,
     buttonDisabled,
     buttonText: getButtonText(),
+    attachCase: getAttachCase(),
   };
 };

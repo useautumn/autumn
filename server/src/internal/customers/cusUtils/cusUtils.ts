@@ -15,13 +15,13 @@ import {
 
 import { CusService } from "@/internal/customers/CusService.js";
 import { processFullCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { processInvoice } from "@/internal/customers/invoices/InvoiceService.js";
-import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { sortCusEntsForDeduction } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { nullish } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { processInvoice } from "@/internal/invoices/InvoiceService.js";
 
 export const updateCustomerDetails = async ({
   db,

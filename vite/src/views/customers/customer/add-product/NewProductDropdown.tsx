@@ -35,7 +35,7 @@ function AddProduct() {
         (cp: any) =>
           cp.product_id === product.id &&
           !product.is_add_on &&
-          cp.status === "active"
+          cp.status === "active",
       ) && product.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
@@ -63,7 +63,7 @@ function AddProduct() {
         entityId ? `?entity_id=${entityId}` : ""
       }`,
       navigate,
-      env
+      env,
     );
   };
 

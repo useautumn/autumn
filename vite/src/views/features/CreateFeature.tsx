@@ -10,8 +10,7 @@ import {
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
-  Entitlement,
-  Feature,
+  CreateFeature as CreateFeatureType,
   FeatureType,
   FeatureUsageType,
 } from "@autumn/shared";
@@ -20,11 +19,9 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { FeatureService } from "@/services/FeatureService";
 import { FeatureConfig } from "./metered-features/FeatureConfig";
 import { getBackendErr } from "@/utils/genUtils";
-import { validateFeature } from "./featureUtils";
-
 import { useEnv } from "@/utils/envUtils";
 
-const defaultFeature = {
+const defaultFeature: CreateFeatureType = {
   type: FeatureType.Metered,
   config: {
     filters: [
@@ -48,7 +45,7 @@ export const CreateFeature = ({
 }: {
   isFromEntitlement: boolean;
   setShowFeatureCreate: (show: boolean) => void;
-  setSelectedFeature: (feature: Feature) => void;
+  setSelectedFeature: (feature: CreateFeatureType) => void;
   setOpen: (open: boolean) => void;
   open: boolean;
 }) => {
@@ -88,9 +85,6 @@ export const CreateFeature = ({
     }
 
     feature.config = updateConfig();
-    if (!validateFeature(feature)) {
-      return;
-    }
 
     setLoading(true);
     try {

@@ -10,13 +10,14 @@ import {
   Feature,
   FeatureType,
   AppEnv,
-  Product,
-  ProductItemFeatureType,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { isFeaturePriceItem } from "./productItemUtils.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-import { isFeatureItem, isPriceItem } from "./getItemType.js";
+import {
+  isFeatureItem,
+  isFeaturePriceItem,
+  isPriceItem,
+} from "./getItemType.js";
 import { itemToEntInterval } from "./itemIntervalUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
 const validateProductItem = ({
@@ -175,10 +176,6 @@ export const validateProductItems = ({
         itemToEntInterval(i) == entInterval
       );
     });
-
-    // console.log("Item", item);
-    // console.log("Ent interval", entInterval);
-    // console.log("Other item exists", notNullish(otherItem));
 
     if (!otherItem) {
       continue;

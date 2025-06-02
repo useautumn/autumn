@@ -7,15 +7,7 @@ import {
   ProductItemType,
 } from "@autumn/shared";
 import { notNullish, nullish } from "../genUtils";
-import { isFeatureItem } from "./getItemType";
-
-export const itemIsFixedPrice = (item: ProductItem) => {
-  return notNullish(item.price) && nullish(item.feature_id);
-};
-
-// export const itemIsFree = (item: ProductItem) => {
-//   return (nullish(item.amount) || item.amount === 0) && nullish(item.tiers);
-// };
+import { isFeatureItem, isPriceItem } from "./getItemType";
 
 export const itemIsUnlimited = (item: ProductItem) => {
   return item.included_usage == Infinite;
@@ -37,7 +29,7 @@ export const formatAmount = ({
 };
 
 export const getItemType = (item: ProductItem) => {
-  if (itemIsFixedPrice(item)) {
+  if (isPriceItem(item)) {
     return ProductItemType.Price;
   } else if (isFeatureItem(item)) {
     return ProductItemType.Feature;
@@ -67,7 +59,7 @@ export const getShowParams = (item: ProductItem | null) => {
 
   return {
     price: notNullish(item.price) || notNullish(item.tiers),
-    feature: !itemIsFixedPrice(item),
+    feature: !isPriceItem(item),
     allowance: true,
     perEntity: notNullish(item.entity_feature_id),
     cycle: true,

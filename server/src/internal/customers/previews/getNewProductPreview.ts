@@ -14,7 +14,6 @@ import {
 
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemDescription } from "./checkProductUtils.js";
-import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils.js";
 import { AttachScenario } from "@autumn/shared";
 
 export const getNewProductPreview = async ({

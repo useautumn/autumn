@@ -13,9 +13,7 @@ import {
   FullCustomerEntitlement,
 } from "@autumn/shared";
 import { customerEntitlements } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { StatusCodes } from "http-status-codes";
-import { Client } from "pg";
 import { eq, lt, and, sql } from "drizzle-orm";
 import { customerProducts } from "@autumn/shared";
 

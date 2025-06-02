@@ -42,10 +42,13 @@ export const validateAndInitFreeTrial = ({
   };
 };
 
-export const freeTrialsAreSame = (
-  ft1?: FreeTrial | CreateFreeTrial | null,
-  ft2?: FreeTrial | CreateFreeTrial | null,
-) => {
+export const freeTrialsAreSame = ({
+  ft1,
+  ft2,
+}: {
+  ft1?: FreeTrial | CreateFreeTrial | null;
+  ft2?: FreeTrial | CreateFreeTrial | null;
+}) => {
   if (!ft1 && !ft2) return true;
   if (!ft1 || !ft2) return false;
   return (
@@ -204,7 +207,7 @@ export const handleNewFreeTrial = async ({
     return null;
   }
 
-  if (freeTrialsAreSame(curFreeTrial, newFreeTrial)) {
+  if (freeTrialsAreSame({ ft1: curFreeTrial, ft2: newFreeTrial })) {
     return curFreeTrial;
   }
 

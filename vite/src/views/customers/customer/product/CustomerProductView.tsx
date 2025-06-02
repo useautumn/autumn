@@ -2,7 +2,13 @@
 
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { useState, useEffect, useRef } from "react";
-import { Entity, Feature, FeatureOptions, ProductV2 } from "@autumn/shared";
+import {
+  Customer,
+  Entity,
+  Feature,
+  FeatureOptions,
+  ProductV2,
+} from "@autumn/shared";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CustomToaster } from "@/components/general/CustomToaster";
@@ -162,88 +168,6 @@ export default function CustomerProductView() {
 
   const { customer } = data;
 
-  const handleCreateProduct = async (useInvoiceLatest?: boolean) => {
-    try {
-      const { data } = await ProductService.getRequiredOptions(axiosInstance, {
-        items: product.items,
-      });
-
-      if (data.options && data.options.length > 0) {
-        setRequiredOptions(data.options);
-        return;
-      }
-
-      // Continue with product creation if no required options
-      await createProduct(
-        useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,
-      );
-    } catch (error) {
-      toast.error(getBackendErr(error, "Error checking required options"));
-    }
-  };
-
-  const createProduct = async (useInvoiceLatest?: boolean) => {
-    try {
-      const isCustom = attachState.itemsChanged;
-
-      const { data } = await CusService.addProduct(axiosInstance, customer_id, {
-        product_id,
-        entity_id: entityId,
-        items: product.items,
-        free_trial: product.free_trial,
-        options: requiredOptions ? requiredOptions : options,
-        is_custom: isCustom,
-
-        invoice_only:
-          useInvoiceLatest !== undefined ? useInvoiceLatest : useInvoice,
-
-        version:
-          version && Number.isInteger(parseInt(version))
-            ? parseInt(version)
-            : product.version,
-      });
-
-      navigateTo(
-        `/customers/${customer_id}/${product_id}${getProductUrlParams({
-          version,
-          customer_product_id,
-          entity_id: entityId,
-        })}`,
-        navigation,
-        env,
-      );
-
-      toast.success(data.message || "Successfully attached product");
-
-      if (data.checkout_url) {
-        setUrl({
-          type: "checkout",
-          value: data.checkout_url,
-        });
-        setCheckoutDialogOpen(true);
-      }
-
-      if (data.invoice) {
-        window.open(getStripeInvoiceLink(data.invoice), "_blank");
-      }
-    } catch (error) {
-      console.log("Error creating product: ", error);
-      const errObj = getBackendErrObj(error);
-
-      if (errObj?.code === ErrCode.StripeConfigNotFound) {
-        toast.error(errObj?.message);
-        const redirectUrl = getRedirectUrl(`/customers/${customer_id}`, env);
-        navigateTo(
-          `/integrations/stripe?redirect=${redirectUrl}`,
-          navigation,
-          env,
-        );
-      } else {
-        toast.error(getBackendErr(error, "Error creating product"));
-      }
-    }
-  };
-
   return (
     <FeaturesContext.Provider
       value={{
@@ -262,8 +186,9 @@ export default function CustomerProductView() {
           setProduct,
           selectedEntitlementAllowance,
           setSelectedEntitlementAllowance,
-          customer,
-          handleCreateProduct,
+          customer: customer as Customer,
+          entities: data.entities as Entity[],
+
           setUseInvoice,
           entityId,
           setEntityId,
@@ -271,13 +196,6 @@ export default function CustomerProductView() {
         }}
       >
         <CustomToaster />
-
-        <RequiredOptionsModal
-          requiredOptions={requiredOptions}
-          createProduct={createProduct}
-          setRequiredOptions={setRequiredOptions}
-          product={product}
-        />
 
         <Dialog
           open={checkoutDialogOpen}

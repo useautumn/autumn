@@ -1,4 +1,3 @@
-import { SupabaseClient } from "@supabase/supabase-js";
 import { Stripe } from "stripe";
 import { AttachParams } from "../cusProducts/AttachParams.js";
 import { FullCusProduct, InvoiceItem } from "@autumn/shared";
@@ -8,16 +7,26 @@ import {
   getBillingType,
   getPriceForOverage,
 } from "@/internal/products/prices/priceUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import {
+  createStripeCli,
+  subToAutumnInterval,
+} from "@/external/stripe/utils.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
-import { getInvoiceExpansion } from "@/external/stripe/stripeInvoiceUtils.js";
 
-import { InvoiceService } from "../invoices/InvoiceService.js";
 import { stripeToAutumnInterval } from "@/external/stripe/utils.js";
 import { getResetBalancesUpdate } from "../cusProducts/cusEnts/groupByUtils.js";
-import { getRelatedCusEnt } from "../cusProducts/cusPrices/cusPriceUtils.js";
+import {
+  getCusPriceUsage,
+  getRelatedCusEnt,
+} from "../cusProducts/cusPrices/cusPriceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
+import {
+  AttachConfig,
+  ProrationBehavior,
+} from "../attach/models/AttachFlags.js";
+import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 
 // Add usage to end of cycle
 const addUsageToNextInvoice = async ({
@@ -156,6 +165,7 @@ const invoiceForUsageImmediately = async ({
 
   let invoice: Stripe.Invoice;
   let newInvoice = false;
+
   if (attachParams.invoiceOnly && newSubs.length > 0) {
     invoice = await stripeCli.invoices.retrieve(
       newSubs[0].latest_invoice as string,
@@ -187,7 +197,7 @@ const invoiceForUsageImmediately = async ({
     let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
     let description = `${curCusProduct.product.name} - ${
       item.feature.name
-    } x ${Math.round(item.usage)}`;
+    } x ${Math.round(item.usage)}`; // need to standardize...
 
     logger.info(
       `🌟🌟🌟 (Bill remaining) created invoice item: ${description} -- ${amount}`,
@@ -237,25 +247,8 @@ const invoiceForUsageImmediately = async ({
     };
   }
 
-  // Finalize and pay invoice
-  const finalizedInvoice = await stripeCli.invoices.finalizeInvoice(
-    invoice.id,
-    getInvoiceExpansion(),
-  );
-
-  let curProduct = curCusProduct.product;
-
   if (newInvoice) {
-    await InvoiceService.createInvoiceFromStripe({
-      db,
-      stripeInvoice: finalizedInvoice,
-      internalCustomerId: customer.internal_id,
-      internalEntityId: curCusProduct.internal_entity_id || undefined,
-      org: org,
-      productIds: [curProduct.id],
-      internalProductIds: [curProduct.internal_id],
-      items: autumnInvoiceItems,
-    });
+    await stripeCli.invoices.finalizeInvoice(invoice.id);
 
     const { paid, error } = await payForInvoice({
       fullOrg: org,
@@ -271,16 +264,14 @@ const invoiceForUsageImmediately = async ({
         paymentError: error,
       });
     }
-  } else {
-    // Update invoice
-    await InvoiceService.updateByStripeId({
-      db,
-      stripeId: invoice.id,
-      updates: {
-        total: Number((finalizedInvoice.total / 100).toFixed(2)),
-      },
-    });
   }
+
+  await insertInvoiceFromAttach({
+    db,
+    attachParams,
+    invoiceId: invoice.id,
+    logger,
+  });
 };
 
 const getRemainingUsagesPreview = async ({
@@ -317,64 +308,51 @@ export const billForRemainingUsages = async ({
   attachParams,
   curCusProduct,
   newSubs,
+  config,
   shouldPreview = false,
-  bilImmediatelyOverride = false,
 }: {
   db: DrizzleCli;
   logger: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
   newSubs: Stripe.Subscription[];
+  config: AttachConfig;
   shouldPreview?: boolean;
-  bilImmediatelyOverride?: boolean;
 }) => {
   const { customer_prices, customer_entitlements } = curCusProduct;
   const { customer, org } = attachParams;
 
   const intervalToSub: any = {};
+
   for (const sub of newSubs) {
-    let recurring = sub.items.data[0].price.recurring;
-    if (!recurring) {
-      continue;
-    }
-    const interval = stripeToAutumnInterval({
-      interval: recurring.interval,
-      intervalCount: recurring.interval_count,
-    });
+    const interval = subToAutumnInterval(sub);
     if (interval) {
       intervalToSub[interval] = sub;
     }
   }
 
-  // Get usage based prices
   const intervalToInvoiceItems: any = {};
   const stripeCli = createStripeCli({
     org: org,
     env: customer.env,
   });
+
   for (const cp of customer_prices) {
-    let config = cp.price.config! as UsagePriceConfig;
-    let relatedCusEnt = getRelatedCusEnt({
+    const config = cp.price.config! as UsagePriceConfig;
+    const relatedCusEnt = getRelatedCusEnt({
       cusPrice: cp,
       cusEnts: customer_entitlements,
     });
+    const billingType = getBillingType(config);
 
-    if (
-      getBillingType(config) !== BillingType.UsageInArrear ||
-      !relatedCusEnt ||
-      !relatedCusEnt.usage_allowed ||
-      !relatedCusEnt.balance ||
-      relatedCusEnt.balance > 0
-    ) {
-      continue;
-    }
+    if (billingType !== BillingType.UsageInArrear) continue;
+    const { usage, overage, roundedUsage } = getCusPriceUsage({
+      cusPrice: cp,
+      cusProduct: curCusProduct,
+      logger,
+    });
 
-    // Amount to bill?
-    let usage = new Decimal(relatedCusEnt?.entitlement.allowance!)
-      .minus(relatedCusEnt?.balance!)
-      .toNumber();
-
-    let overage = -relatedCusEnt?.balance!;
+    if (overage <= 0) continue; // no overage, no need to bill...
 
     let interval = config.interval as BillingInterval;
     if (!intervalToInvoiceItems[interval]) {
@@ -383,13 +361,10 @@ export const billForRemainingUsages = async ({
 
     let sub = intervalToSub[interval];
 
-    let stripeNow = Math.floor(Date.now() / 1000);
-    if (sub.test_clock) {
-      let stripeClock = await stripeCli.testHelpers.testClocks.retrieve(
-        sub.test_clock,
-      );
-      stripeNow = stripeClock.frozen_time;
-    }
+    const stripeNow = await getStripeNow({
+      stripeCli,
+      stripeSub: sub,
+    });
 
     intervalToInvoiceItems[interval].push({
       overage,
@@ -409,7 +384,7 @@ export const billForRemainingUsages = async ({
     });
   }
 
-  if (org.config?.bill_upgrade_immediately || bilImmediatelyOverride) {
+  if (config.proration == ProrationBehavior.Immediately) {
     await invoiceForUsageImmediately({
       db,
       intervalToInvoiceItems,
