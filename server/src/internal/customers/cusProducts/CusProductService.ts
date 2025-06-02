@@ -261,17 +261,11 @@ export class CusProductService {
     env: AppEnv;
     inStatuses?: string[];
   }) {
+    // sql`${customerProducts.subscription_ids} @> ${sql`ARRAY[${stripeSubId}]`}`,
     let data = await db.query.customerProducts.findMany({
       where: (table, { and, or, eq, sql, inArray }) =>
         and(
-          or(
-            eq(
-              sql`${customerProducts.processor}->>'subscription_id'`,
-              stripeSubId,
-            ),
-            sql`${customerProducts.subscription_ids} @> ${sql`ARRAY[${stripeSubId}]`}`,
-          ),
-
+          or(arrayContains(customerProducts.subscription_ids, [stripeSubId])),
           inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
         ),
 
@@ -428,18 +422,14 @@ export class CusProductService {
     stripeSubId: string;
     updates: Partial<CusProduct>;
   }) {
+    // eq(
+    //   sql`${customerProducts.processor}->>'subscription_id'`,
+    //   stripeSubId,
+    // ),
     let updated = await db
       .update(customerProducts)
       .set(updates as any)
-      .where(
-        or(
-          eq(
-            sql`${customerProducts.processor}->>'subscription_id'`,
-            stripeSubId,
-          ),
-          arrayContains(customerProducts.subscription_ids, [stripeSubId]),
-        ),
-      )
+      .where(arrayContains(customerProducts.subscription_ids, [stripeSubId]))
       .returning({
         id: customerProducts.id,
       });
@@ -496,12 +486,6 @@ export class CusProductService {
       );
 
     return data;
-
-    // const { data, error } = await sb
-    //   .from("customer_products")
-    //   .select("*, customer:customers!inner(*)")
-    //   .eq("free_trial_id", freeTrialId)
-    //   .eq("customer.fingerprint", fingerprint);
   }
 
   static async getByTrialAndCustomer({

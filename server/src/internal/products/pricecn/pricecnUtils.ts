@@ -11,11 +11,10 @@ import {
 } from "@autumn/shared";
 import { features } from "process";
 import { isPriceItem } from "../product-items/getItemType.js";
-import { isFeaturePriceItem } from "../product-items/productItemUtils.js";
+import { isFeaturePriceItem } from "../product-items/getItemType.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
+import { nullish } from "@/utils/genUtils.js";
 import { numberWithCommas } from "tests/utils/general/numberUtils.js";
-import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
 import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 
 export const sortProductItems = (items: ProductItem[], features: Feature[]) => {

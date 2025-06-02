@@ -46,8 +46,7 @@ const scheduleStripeSubscription = async ({
   const { items, prices, subMeta } = itemSet;
 
   const paymentMethod = await getCusPaymentMethod({
-    org,
-    env: customer.env,
+    stripeCli,
     stripeId: customer.processor.id,
   });
 

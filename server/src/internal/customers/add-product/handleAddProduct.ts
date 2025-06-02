@@ -30,7 +30,7 @@ import {
   PriceType,
   UsageModel,
 } from "@autumn/shared";
-import { InvoiceService } from "../invoices/InvoiceService.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import {
   getInvoiceExpansion,
   getStripeExpandedInvoice,
@@ -49,8 +49,7 @@ import {
 import { SuccessCode } from "@autumn/shared";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
-import { getInvoiceItems } from "../invoices/invoiceUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const handleBillNowPrices = async ({
@@ -118,10 +117,10 @@ export const handleBillNowPrices = async ({
       }
 
       if (attachParams.billingAnchor) {
-        billingCycleAnchorUnix = getAlignedIntervalUnix(
-          attachParams.billingAnchor,
-          itemSet.interval,
-        );
+        billingCycleAnchorUnix = getAlignedIntervalUnix({
+          alignWithUnix: attachParams.billingAnchor,
+          interval: itemSet.interval,
+        });
       }
 
       if (mergeWithSub) {
@@ -136,7 +135,7 @@ export const handleBillNowPrices = async ({
         freeTrial,
         invoiceOnly,
         itemSet,
-        billingCycleAnchorUnix,
+        anchorToUnix: billingCycleAnchorUnix,
         shouldPreview,
       });
 
@@ -157,10 +156,9 @@ export const handleBillNowPrices = async ({
         error.code === ErrCode.StripeGetPaymentMethodFailed
       ) {
         await handleCreateCheckout({
-          db: req.db,
+          req,
           res,
           attachParams,
-          req,
         });
         return;
       }
@@ -398,7 +396,6 @@ export const handleOneOffPrices = async ({
       await stripeCli.invoices.voidInvoice(stripeInvoice.id);
       if (fromRequest && org.config.checkout_on_failed_payment) {
         await handleCreateCheckout({
-          db: req.db,
           req,
           res,
           attachParams,

@@ -2,19 +2,19 @@ import RecaseError from "@/utils/errorUtils.js";
 import {
   Organization,
   Customer,
-  Price,
   ErrCode,
   BillingInterval,
 } from "@autumn/shared";
+
 import Stripe from "stripe";
 import { isStripeCardDeclined } from "../stripeCardUtils.js";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
 import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { getStripeProrationBehavior } from "../stripeSubUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 
 export const updateStripeSubscription = async ({
   db,
@@ -42,20 +42,13 @@ export const updateStripeSubscription = async ({
   shouldPreview?: boolean;
 }) => {
   let paymentMethod = await getCusPaymentMethod({
-    org,
-    env: customer.env,
+    stripeCli,
     stripeId: customer.processor.id,
     errorIfNone: !invoiceOnly, // throw error if no payment method and invoiceOnly is false
   });
 
-  let paymentMethodData = {};
-  if (paymentMethod) {
-    paymentMethodData = {
-      default_payment_method: paymentMethod.id,
-    };
-  }
+  let { items, prices } = itemSet;
 
-  let { items, prices, subMeta } = itemSet;
   let subItems = items.filter(
     (i: any, index: number) =>
       i.deleted || prices[index].config!.interval !== BillingInterval.OneOff,
@@ -69,14 +62,19 @@ export const updateStripeSubscription = async ({
     return false;
   });
 
+  // let billingCycleAnchor = anchorToUnix
+  //   ? getAlignedIntervalUnix({
+  //       alignWithUnix: anchorToUnix,
+  //       interval: BillingInterval.Month,
+  //     })
+  //   : undefined;
+
   let stripeProration = getStripeProrationBehavior({
     org,
     prorationBehavior,
   });
 
   if (shouldPreview) {
-    // console.log("Sub items: ", subItems);
-    // console.log("Sub invoice items: ", subInvoiceItems);
     let preview = await stripeCli.invoices.createPreview({
       subscription_details: {
         items: subItems,
@@ -115,15 +113,17 @@ export const updateStripeSubscription = async ({
 
     return sub;
   } catch (error: any) {
-    console.log("Error updating stripe subscription.", error.message);
+    logger.error("Update stripe subscription failed", {
+      message: error.message,
+      code: error.code,
+      data: error.code ? error : undefined,
+    });
 
     if (isStripeCardDeclined(error)) {
-      logger.info("Error");
-      logger.info(error);
       throw new RecaseError({
         code: ErrCode.StripeCardDeclined,
         message: `Card was declined, Stripe decline code: ${error.decline_code}, Code: ${error.code}`,
-        statusCode: 500,
+        statusCode: 400,
       });
     }
 

@@ -172,6 +172,8 @@ export const createNewCustomer = async ({
       req,
       res: {},
       attachParams: {
+        stripeCli: createStripeCli({ org, env }),
+        paymentMethod: null,
         req,
         org,
         customer: newCustomer,

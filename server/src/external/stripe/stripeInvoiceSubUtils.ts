@@ -32,8 +32,7 @@ export const createStripeSubThroughInvoice = async ({
   let paymentMethod;
   try {
     paymentMethod = await getCusPaymentMethod({
-      org,
-      env: customer.env,
+      stripeCli,
       stripeId: customer.processor.id,
     });
   } catch (error) {}

@@ -1,67 +1,102 @@
-import {
-  TooltipProvider,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useProductContext } from "@/views/products/product/ProductContext";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ProductActionState } from "@/utils/models";
-import { File, ShoppingCart, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
+import { AttachModal } from "./AttachModal";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
+import { toast } from "sonner";
+import { FeatureOptions, ProductV2 } from "@autumn/shared";
+
+const getAttachBody = ({
+  customerId,
+  attachState,
+  product,
+  entityId,
+  optionsInput,
+  useInvoice,
+  successUrl,
+}: {
+  customerId: string;
+  attachState: any;
+  product: ProductV2;
+  entityId: string;
+  optionsInput?: FeatureOptions[];
+  useInvoice?: boolean;
+  successUrl?: string;
+}) => {
+  const isCustom = attachState.itemsChanged;
+  const customData = attachState.itemsChanged
+    ? {
+        items: product.items,
+        free_trial: product.free_trial,
+      }
+    : {};
+
+  return {
+    customer_id: customerId,
+    product_id: product.id,
+    entity_id: entityId || undefined,
+    options: optionsInput
+      ? optionsInput.map((option) => ({
+          feature_id: option.feature_id,
+          quantity: option.quantity,
+        }))
+      : undefined,
+    is_custom: isCustom,
+    ...customData,
+    free_trial: isCustom ? product.free_trial || undefined : undefined,
+
+    invoice_only: useInvoice,
+    success_url: successUrl,
+  };
+};
 
 export const AttachButton = () => {
-  const { attachState, buttonDisabled } = useProductContext();
+  const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState<any>(null);
+  const { attachState, product, entityId, customer } = useProductContext();
+  const [buttonLoading, setButtonLoading] = useState(false);
+  const axios = useAxiosInstance();
   const { buttonText } = attachState;
-  // const [checkoutLoading, setCheckoutLoading] = useState(false);
-  // const [invoiceLoading, setInvoiceLoading] = useState(false);
-  // const [open, setOpen] = useState(false);
 
-  // const { handleCreateProduct, actionState, setUseInvoice } =
-  //   useProductContext();
+  const handleAttachClicked = async () => {
+    setButtonLoading(true);
+    try {
+      const res = await axios.post(
+        "/v1/attach/preview",
+        getAttachBody({
+          customerId: customer.id || customer.internal_id,
+          attachState,
+          product,
+          entityId,
+        }),
+      );
 
-  // const handleClick = async (e: any, isInvoice: boolean) => {
-  //   e.preventDefault();
-  //   e.stopPropagation();
+      setPreview(res.data.preview);
 
-  //   if (isInvoice) {
-  //     setInvoiceLoading(true);
-  //   } else {
-  //     setCheckoutLoading(true);
-  //   }
-  //   if (setUseInvoice) {
-  //     setUseInvoice(isInvoice);
-  //   }
-
-  //   await handleCreateProduct(isInvoice);
-
-  //   if (isInvoice) {
-  //     setInvoiceLoading(false);
-  //   } else {
-  //     setCheckoutLoading(false);
-  //   }
-  //   setOpen(false);
-  // };
-
-  // const [loading, setLoading] = useState(false);
+      setOpen(true);
+    } catch (error) {
+      toast.error(getBackendErr(error, "Failed to attach product"));
+    }
+    setButtonLoading(false);
+  };
 
   return (
-    <Button
-      onClick={() => {}}
-      variant="gradientPrimary"
-      className="w-full gap-2"
-      startIcon={<Upload size={12} />}
-      disabled={buttonDisabled}
-    >
-      {buttonText}
-    </Button>
+    <>
+      <AttachModal open={open} setOpen={setOpen} preview={preview} />
+      <Button
+        onClick={handleAttachClicked}
+        variant="gradientPrimary"
+        className="w-full gap-2"
+        startIcon={<Upload size={12} />}
+        disabled={attachState.buttonDisabled}
+        isLoading={buttonLoading}
+      >
+        {buttonText}
+      </Button>
+    </>
   );
 };
 

@@ -9,6 +9,7 @@ import {
   Feature,
   FixedPriceConfig,
   Organization,
+  ProductItem,
   Price,
   PriceSchema,
   PriceType,
@@ -42,10 +43,9 @@ import { EntitlementService } from "./entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { FreeTrialService } from "./free-trials/FreeTrialService.js";
-import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
-import { mapToProductItems } from "./productV2Utils.js";
-import { itemsAreSame } from "./product-items/productItemUtils.js";
+import { itemsAreSame } from "./product-items/compareItemUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { findSimilarItem } from "./product-items/compareItemUtils.js";
 
 export const sortProductsByPrice = (products: FullProduct[]) => {
   products.sort((a, b) => {
@@ -519,104 +519,102 @@ export const searchProductsByStripeId = async ({
   return products.find((p) => p.processor?.id === stripeId);
 };
 
-// PRODUCT CHANGES
-export const productsAreDifferent = ({
-  product1,
-  product2,
-}: {
-  product1: FullProduct;
-  product2: FullProduct;
-}) => {
-  // console.log("product1", product1);
-  // console.log("product2", product2);
-  for (const price of product1.prices) {
-    let newPrice = product2.prices.find((p) => p.id === price.id);
-    if (!newPrice) {
-      return true;
-    }
+// // PRODUCT CHANGES
+// export const productsAreDifferent = ({
+//   product1,
+//   product2,
+// }: {
+//   product1: FullProduct;
+//   product2: FullProduct;
+// }) => {
+//   // console.log("product1", product1);
+//   // console.log("product2", product2);
+//   for (const price of product1.prices) {
+//     let newPrice = product2.prices.find((p) => p.id === price.id);
+//     if (!newPrice) {
+//       return true;
+//     }
 
-    if (!pricesAreSame(price, newPrice)) {
-      return true;
-    }
-  }
+//     if (!pricesAreSame(price, newPrice)) {
+//       return true;
+//     }
+//   }
 
-  for (const price of product2.prices) {
-    let newPrice = product1.prices.find((p) => p.id === price.id);
-    if (!newPrice) {
-      return true;
-    }
+//   for (const price of product2.prices) {
+//     let newPrice = product1.prices.find((p) => p.id === price.id);
+//     if (!newPrice) {
+//       return true;
+//     }
 
-    if (!pricesAreSame(price, newPrice)) {
-      return true;
-    }
-  }
+//     if (!pricesAreSame(price, newPrice)) {
+//       return true;
+//     }
+//   }
 
-  for (const entitlement of product1.entitlements) {
-    let newEntitlement = product2.entitlements.find(
-      (e) => e.id === entitlement.id,
-    );
-    if (!newEntitlement) {
-      return true;
-    }
+//   for (const entitlement of product1.entitlements) {
+//     let newEntitlement = product2.entitlements.find(
+//       (e) => e.id === entitlement.id,
+//     );
+//     if (!newEntitlement) {
+//       return true;
+//     }
 
-    if (!entsAreSame(entitlement, newEntitlement)) {
-      return true;
-    }
-  }
+//     if (!entsAreSame(entitlement, newEntitlement)) {
+//       return true;
+//     }
+//   }
 
-  for (const entitlement of product2.entitlements) {
-    let newEntitlement = product1.entitlements.find(
-      (e) => e.id === entitlement.id,
-    );
-    if (!newEntitlement) {
-      return true;
-    }
+//   for (const entitlement of product2.entitlements) {
+//     let newEntitlement = product1.entitlements.find(
+//       (e) => e.id === entitlement.id,
+//     );
+//     if (!newEntitlement) {
+//       return true;
+//     }
 
-    if (!entsAreSame(entitlement, newEntitlement)) {
-      return true;
-    }
-  }
+//     if (!entsAreSame(entitlement, newEntitlement)) {
+//       return true;
+//     }
+//   }
 
-  if (!freeTrialsAreSame(product1.free_trial, product2.free_trial)) {
-    return true;
-  }
+//   if (!freeTrialsAreSame(product1.free_trial, product2.free_trial)) {
+//     return true;
+//   }
 
-  return false;
-};
+//   return false;
+// };
 
-export const productsAreDifferent2 = (
-  newProduct: ProductV2,
-  oldProduct: FullProduct,
-  features: Feature[],
-) => {
-  let newProductItems = newProduct.items;
-  let oldProductItems = mapToProductItems({
-    prices: oldProduct.prices,
-    entitlements: oldProduct.entitlements,
-    features,
-  });
+// export const productsAreSame = ({
+//   oldItems,
+//   newItems,
+//   features,
+// }: {
+//   oldItems: ProductItem[];
+//   newItems: ProductItem[];
+//   features: Feature[];
+// }) => {
+//   if (oldItems.length !== newItems.length) {
+//     return false;
+//   }
 
-  if (newProductItems.length !== oldProductItems.length) {
-    return true;
-  }
+//   for (const item of newItems) {
+//     // Find similar item
+//     let similarItem = findSimilarItem({
+//       item,
+//       items: oldItems,
+//     });
 
-  for (const item of newProductItems) {
-    let oldItem = oldProductItems.find(
-      (i) =>
-        i.price_id == item.price_id || i.entitlement_id == item.entitlement_id,
-    );
+//     if (!similarItem) {
+//       return false;
+//     }
 
-    if (!oldItem) {
-      return true;
-    }
-
-    if (!itemsAreSame(item, oldItem)) {
-      console.log("Items are different");
-      console.log("Item 1: ", item);
-      console.log("Item 2: ", oldItem);
-      return true;
-    }
-  }
-
-  return false;
-};
+//     if (
+//       !itemsAreSame({
+//         item1: item,
+//         item2: similarItem,
+//       })
+//     ) {
+//       return false;
+//     }
+//   }
+// };

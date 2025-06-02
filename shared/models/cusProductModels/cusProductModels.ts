@@ -12,15 +12,11 @@ import { CollectionMethod } from "./cusProductEnums.js";
 import { CusProductStatus } from "./cusProductEnums.js";
 
 export const FeatureOptionsSchema = z.object({
-  internal_feature_id: z.string().optional(),
   feature_id: z.string(),
+  quantity: z.number(), // same as prepaid
+
   adjustable_quantity: z.boolean().nullish(),
-
-  // Quantities
-  quantity: z.number().optional().nullable(), // same as prepaid
-  prepaid_quantity: z.number().nullish(),
-
-  usage_quantity: z.number().nullish(),
+  internal_feature_id: z.string().nullish(),
 });
 
 export const BillingCycleAnchorConfig = z.object({

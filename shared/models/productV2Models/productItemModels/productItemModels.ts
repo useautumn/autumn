@@ -49,7 +49,7 @@ export const ProductItemSchema = z.object({
   included_usage: z.union([z.number(), z.literal(Infinite)]).nullish(),
 
   interval: z.nativeEnum(ProductItemInterval).nullish(),
-  reset_interval: z.nativeEnum(ProductItemInterval).nullish(),
+  // reset_interval: z.nativeEnum(ProductItemInterval).nullish(),
 
   // Price config
   usage_model: z.nativeEnum(UsageModel).nullish(),

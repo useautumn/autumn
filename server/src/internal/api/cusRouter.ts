@@ -24,17 +24,6 @@ import assert from "assert";
 
 export const cusRouter = Router();
 
-// cusRouter.get("", async (req: any, res: any) => {
-//   try {
-//     const customers = await CusService.getCustomers(req.sb, req.orgId, req.env);
-
-//     res.status(200).json({ customers });
-//   } catch (error) {
-//     res
-//       .status(StatusCodes.INTERNAL_SERVER_ERROR)
-//       .json({ error: ErrorMessages.InternalError });
-//   }
-// });
 cusRouter.post("/all/search", async (req: any, res: any) => {
   try {
     const { search, page_size = 50, page = 1, last_item, filters } = req.body;

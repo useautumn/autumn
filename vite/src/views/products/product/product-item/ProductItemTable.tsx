@@ -13,7 +13,6 @@ import {
   formatAmount,
   getItemType,
   intervalIsNone,
-  itemIsFixedPrice,
 } from "@/utils/product/productItemUtils";
 
 import { useState } from "react";
@@ -23,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { DollarSign } from "lucide-react";
 import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { isFeatureItem } from "@/utils/product/getItemType";
+import { isFeatureItem, isPriceItem } from "@/utils/product/getItemType";
 import { notNullish } from "@/utils/genUtils";
 
 export const ProductItemTable = ({
@@ -144,7 +143,7 @@ export const ProductItemTable = ({
       },
     ];
 
-    if (!itemIsFixedPrice(item)) {
+    if (!isPriceItem(item)) {
       texts = texts.concat([
         {
           key: "Entitlement ID",

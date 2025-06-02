@@ -15,7 +15,8 @@ export const createCheckoutMetadata = async ({
 }) => {
   const metaId = generateId("meta");
 
-  let { req, checkoutSessionParams, ...rest } = attachParams;
+  let { req, checkoutSessionParams, stripeCli, paymentMethod, ...rest } =
+    attachParams;
 
   let attachClone = structuredClone(rest);
 

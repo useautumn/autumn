@@ -11,10 +11,10 @@ import { Organization } from "@autumn/shared";
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "./stripeCusUtils.js";
 import { createStripeCli } from "./utils.js";
-import RecaseError, { isPaymentDeclined } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { isStripeCardDeclined } from "./stripeCardUtils.js";
-import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 
 // For API calls
 export const getStripeExpandedInvoice = async ({
@@ -60,8 +60,7 @@ export const payForInvoice = async ({
   const stripeCli = createStripeCli({ org: fullOrg, env: env as AppEnv });
 
   const paymentMethod = await getCusPaymentMethod({
-    org: fullOrg,
-    env: env as AppEnv,
+    stripeCli,
     stripeId: customer.processor.id,
   });
 

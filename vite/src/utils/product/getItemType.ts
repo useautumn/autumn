@@ -8,3 +8,14 @@ export const isFeatureItem = (item: ProductItem) => {
     nullish(item.tiers)
   );
 };
+
+export const isPriceItem = (item: ProductItem) => {
+  return notNullish(item.price) && nullish(item.feature_id);
+};
+
+export const isFeaturePriceItem = (item: ProductItem) => {
+  return (
+    notNullish(item.feature_id) &&
+    (notNullish(item.price) || notNullish(item.tiers))
+  );
+};

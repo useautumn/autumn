@@ -7,6 +7,7 @@ import {
 
 import { Feature } from "@autumn/shared";
 import { getBillingType } from "../priceUtils.js";
+import Stripe from "stripe";
 
 export const findPrepaidPrice = ({
   prices,

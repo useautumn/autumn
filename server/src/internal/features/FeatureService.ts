@@ -1,15 +1,6 @@
-import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
-import {
-  AppEnv,
-  CreditSchemaItem,
-  Feature,
-  features,
-  FeatureType,
-} from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { Client } from "pg";
-import { creditSystemContainsFeature } from "./creditSystemUtils.js";
+import { AppEnv, Feature, features } from "@autumn/shared";
+import { ErrCode } from "@/errors/errCodes.js";
 import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { and, eq } from "drizzle-orm";

@@ -53,6 +53,12 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
         idOrInternalId: customer_id,
         withEntities: true,
         expand: [CusExpand.Invoices],
+        inStatuses: [
+          CusProductStatus.Active,
+          CusProductStatus.PastDue,
+          CusProductStatus.Scheduled,
+          CusProductStatus.Expired,
+        ],
       }),
     ]);
 
@@ -295,7 +301,7 @@ cusRouter.get(
       }
 
       let product = cusProduct
-        ? cusProductToProduct(cusProduct)
+        ? cusProductToProduct({ cusProduct })
         : await ProductService.getFull({
             db,
             orgId: org.id,
@@ -316,20 +322,20 @@ cusRouter.get(
         productId: product_id,
       });
 
-      const preview = await getAttachPreview({
-        db,
-        org,
-        env,
-        product,
-        customer,
-        cusProducts: customer.customer_products,
-        features,
-        logger,
-      });
+      // const preview = await getAttachPreview({
+      //   db,
+      //   org,
+      //   env,
+      //   product,
+      //   customer,
+      //   cusProducts: customer.customer_products,
+      //   features,
+      //   logger,
+      // });
 
       res.status(200).json({
         customer,
-        preview,
+        // preview,
         product: cusProduct
           ? {
               ...productV2,

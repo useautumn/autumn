@@ -10,6 +10,8 @@ import {
   Organization,
   Entitlement,
   EntitlementWithFeature,
+  Entity,
+  FeatureOptions,
 } from "@autumn/shared";
 
 import Stripe from "stripe";
@@ -69,12 +71,29 @@ export const getStripeSubItems = async ({
   isCheckout = false,
   carryExistingUsages = false,
 }: {
-  attachParams: AttachParams;
+  attachParams: {
+    products: FullProduct[];
+    prices: Price[];
+    entitlements: EntitlementWithFeature[];
+    optionsList: FeatureOptions[];
+    org: Organization;
+    internalEntityId?: string;
+    cusProducts?: FullCusProduct[];
+    entities: Entity[];
+  };
   isCheckout?: boolean;
   carryExistingUsages?: boolean;
 }) => {
-  const { products, prices, entitlements, optionsList, org, cusProducts } =
-    attachParams;
+  const {
+    products,
+    prices,
+    entitlements,
+    optionsList,
+    org,
+    internalEntityId,
+    cusProducts,
+    entities,
+  } = attachParams;
 
   prices.sort((a, b) => {
     // Put year prices first
@@ -120,10 +139,10 @@ export const getStripeSubItems = async ({
       const billingType = getBillingType(price.config!);
       let existingUsage = getExistingUsageFromCusProducts({
         entitlement: priceEnt,
-        cusProducts: attachParams.cusProducts,
-        entities: attachParams.entities,
+        cusProducts,
+        entities,
         carryExistingUsages,
-        internalEntityId: attachParams.internalEntityId,
+        internalEntityId,
       });
 
       if (

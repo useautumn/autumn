@@ -1,10 +1,9 @@
 import { AppEnv, Customer, Organization, ProcessorType } from "@autumn/shared";
-import stripe, { Stripe } from "stripe";
+import { Stripe } from "stripe";
 import { createStripeCli } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -112,17 +111,19 @@ export const deleteStripeCustomer = async ({
 };
 
 export const getCusPaymentMethod = async ({
-  org,
-  env,
+  stripeCli,
   stripeId,
   errorIfNone = false,
 }: {
-  org: Organization;
-  env: AppEnv;
-  stripeId: string;
+  stripeCli: Stripe;
+  stripeId?: string;
   errorIfNone?: boolean;
 }) => {
-  const stripeCli = createStripeCli({ org, env });
+  if (!stripeId) {
+    return null;
+  }
+
+  // const stripeCli = createStripeCli({ org, env });
 
   const stripeCustomer = (await stripeCli.customers.retrieve(
     stripeId,

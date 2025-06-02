@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import CreditSystemConfig from "./CreditSystemConfig";
-import { Feature } from "@autumn/shared";
+import { CreateFeature } from "@autumn/shared";
 import {
   Dialog,
   DialogContent,
@@ -22,8 +22,8 @@ function UpdateCreditSystem({
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  selectedCreditSystem: Feature;
-  setSelectedCreditSystem: (creditSystem: Feature) => void;
+  selectedCreditSystem: CreateFeature;
+  setSelectedCreditSystem: (creditSystem: CreateFeature) => void;
 }) {
   const [updateLoading, setUpdateLoading] = useState(false);
   const { env, mutate } = useFeaturesContext();
@@ -43,7 +43,7 @@ function UpdateCreditSystem({
         selectedCreditSystem.id,
         {
           ...selectedCreditSystem,
-        }
+        },
       );
       await mutate();
       setOpen(false);

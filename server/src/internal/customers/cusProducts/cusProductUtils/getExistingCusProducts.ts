@@ -17,9 +17,9 @@ export const getExistingCusProducts = ({
 }) => {
   if (!cusProducts || cusProducts.length === 0) {
     return {
-      curMainProduct: null,
-      curSameProduct: null,
-      curScheduledProduct: null,
+      curMainProduct: undefined,
+      curSameProduct: undefined,
+      curScheduledProduct: undefined,
     };
   }
 

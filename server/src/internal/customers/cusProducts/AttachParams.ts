@@ -11,10 +11,16 @@ import {
   Price,
   AttachScenario,
 } from "@autumn/shared";
+import Stripe from "stripe";
 
 import { z } from "zod";
 
+// Get misc
+
 export type AttachParams = {
+  stripeCli: Stripe;
+  paymentMethod: Stripe.PaymentMethod | null | undefined;
+
   org: Organization;
   customer: Customer;
   products: FullProduct[];
@@ -26,12 +32,14 @@ export type AttachParams = {
   optionsList: FeatureOptions[];
 
   successUrl?: string | undefined;
-  // remainingItemSets?: any[];
   itemSets?: any[];
-  cusProducts?: FullCusProduct[];
+  cusProducts: FullCusProduct[];
 
-  curCusProduct?: FullCusProduct | undefined;
-  curScheduledProduct?: FullCusProduct | undefined | null;
+  // Options to update
+  optionsToUpdate?: {
+    old: FeatureOptions;
+    new: FeatureOptions;
+  }[];
 
   // CONFIGS
   invoiceOnly?: boolean | undefined;
@@ -56,6 +64,8 @@ export type AttachParams = {
 };
 
 export type InsertCusProductParams = {
+  req?: any;
+
   customer: Customer;
   org: Organization;
   product: FullProduct;
@@ -81,7 +91,6 @@ export type InsertCusProductParams = {
   entityId?: string;
   internalEntityId?: string;
   fromMigration?: boolean;
-  req?: any;
 };
 
 export const AttachResultSchema = z.object({

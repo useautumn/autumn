@@ -25,7 +25,6 @@ import {
   priceIsOneOffAndTiered,
 } from "@/internal/products/prices/priceUtils.js";
 
-import { getFullCusProductData } from "@/internal/customers/cusProducts/attachUtils.js";
 import {
   checkStripeProductExists,
   isFreeProduct,
@@ -41,8 +40,6 @@ import {
 import chalk from "chalk";
 
 import { CusService } from "@/internal/customers/CusService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 
 import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
@@ -53,6 +50,14 @@ import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { AttachBodySchema } from "./models/AttachBody.js";
+import { processAttachBody } from "./attachUtils/processAttachBody.js";
+import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
+import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";
+import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
+import { getAttachConfig } from "./attachUtils/getAttachConfig.js";
+import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
+import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
+import { getAttachParams } from "./attachUtils/getAttachParams.js";
 
 export const attachRouter = Router();
 
@@ -243,66 +248,92 @@ export const customerHasPm = async ({
 }) => {
   // SCENARIO 3: No payment method, checkout required
   const paymentMethod = await getCusPaymentMethod({
-    org: attachParams.org,
-    env: attachParams.customer.env,
-    stripeId: attachParams.customer.processor.id,
+    stripeCli: createStripeCli({
+      org: attachParams.org,
+      env: attachParams.customer.env,
+    }),
+    stripeId: attachParams.customer.processor?.id,
   });
 
   return notNullOrUndefined(paymentMethod) ? true : false;
 };
 
-const handleAttachNew = async (req: ExtendedRequest, res: ExtendedResponse) => {
-  const params = AttachBodySchema.parse(req.body);
-  await handleAttachRaceCondition({ req, res });
-};
+const handleAttachNew = async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "attach",
+    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+      await handleAttachRaceCondition({ req, res });
 
-attachRouter.post("", async (req: any, res: any) =>
+      const attachBody = AttachBodySchema.parse(req.body);
+      const logger = req.logtail;
+
+      const { attachParams, customPrices, customEnts } = await getAttachParams({
+        req,
+        attachBody,
+      });
+
+      // Handle existing product
+      const branch = await getAttachBranch({
+        req,
+        attachBody,
+        attachParams,
+      });
+
+      const { flags, config } = await getAttachConfig({
+        req,
+        attachParams,
+        attachBody,
+        branch,
+      });
+
+      await handleAttachErrors({
+        attachParams,
+        attachBody,
+        branch,
+        flags,
+        config,
+      });
+
+      await checkStripeConnections({ req, attachParams });
+      await createStripePrices({
+        attachParams,
+        useCheckout: config.onlyCheckout,
+        req,
+        logger,
+      });
+      await insertCustomItems({
+        db: req.db,
+        customPrices: customPrices || [],
+        customEnts: customEnts || [],
+      });
+
+      await runAttachFunction({
+        req,
+        res,
+        attachParams,
+        branch,
+        attachBody,
+        config,
+      });
+    },
+  });
+
+const handleAttachOld = async (req: any, res: any) =>
   routeHandler({
     action: "attach",
     req,
     res,
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-      const params = AttachBodySchema.parse(req.body);
       await handleAttachRaceCondition({ req, res });
 
-      const {
-        customer_id,
-        customer_data,
-        entity_id,
-        entity_data,
-
-        product_id,
-        product_ids,
-
-        options,
-
-        is_custom,
-        items,
-        free_trial,
-
-        version,
-        success_url,
-        force_checkout,
-        invoice_only,
-        metadata,
-        billing_cycle_anchor,
-        checkout_session_params,
-      } = req.body;
-
-      const { env } = req;
+      const attachBody = AttachBodySchema.parse(req.body);
       const logger = req.logtail;
 
-      let itemsInput: ProductItem[] = items || [];
-
-      const optionsListInput: FeatureOptions[] = options || [];
-
-      const invoiceOnly = invoice_only || false;
-      const successUrl = success_url || undefined;
-      const disableFreeTrial = free_trial === false || false;
-
       // PUBLIC STUFF
-      let forceCheckout = req.isPublic || force_checkout || false;
-      let isCustom = is_custom || false;
+      let forceCheckout = req.isPublic || attachBody.force_checkout || false;
+      let isCustom = attachBody.is_custom || false;
       if (req.isPublic) {
         isCustom = false;
       }
@@ -313,48 +344,82 @@ attachRouter.post("", async (req: any, res: any) =>
         `${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`,
       );
 
-      z.array(FeatureOptionsSchema).parse(optionsListInput);
-
-      let [org, features] = await Promise.all([
-        OrgService.getFromReq(req),
-        FeatureService.getFromReq(req),
-      ]);
-
-      // Get curCusProducts too...
-      const attachParams: AttachParams = await getFullCusProductData({
+      const {
+        customer,
+        products,
+        optionsList,
+        prices,
+        entitlements,
+        freeTrial,
+      } = await processAttachBody({
         req,
-        db: req.db,
-        customerId: customer_id,
-        productId: product_id,
-        entityId: entity_id,
-        customerData: customer_data,
-        org,
-        features,
-        env,
-        itemsInput,
-        optionsListInput,
-        freeTrialInput: free_trial,
-        isCustom,
-        productIds: product_ids,
-        logger,
-        version,
-        entityData: entity_data,
+        attachBody,
       });
 
-      attachParams.apiVersion =
+      const apiVersion =
         orgToVersion({
-          org,
+          org: req.org,
           reqApiVersion: req.apiVersion,
         }) || APIVersion.v1;
 
-      attachParams.req = req;
-      attachParams.successUrl = successUrl;
-      attachParams.invoiceOnly = invoiceOnly;
-      attachParams.billingAnchor = billing_cycle_anchor;
-      attachParams.metadata = metadata;
-      attachParams.isCustom = isCustom || false;
-      attachParams.disableFreeTrial = disableFreeTrial;
-      attachParams.checkoutSessionParams = checkout_session_params;
+      const internalEntityId = attachBody.entity_id
+        ? customer.entities.find(
+            (e) =>
+              e.id === attachBody.entity_id ||
+              e.internal_id === attachBody.entity_id,
+          )?.internal_id
+        : undefined;
+
+      const stripeCli = createStripeCli({ org: req.org, env: req.env });
+      const paymentMethod = await getCusPaymentMethod({
+        stripeCli,
+        stripeId: customer.processor?.id,
+      });
+
+      const attachParams: AttachParams = {
+        stripeCli,
+        paymentMethod,
+
+        customer,
+        products,
+        optionsList,
+        prices,
+        entitlements,
+        freeTrial,
+
+        // From req
+        req,
+        org: req.org,
+        entities: customer.entities,
+        features: req.features,
+        internalEntityId,
+        cusProducts: customer.customer_products,
+
+        // Others
+        apiVersion,
+        successUrl: attachBody.success_url,
+        invoiceOnly: attachBody.invoice_only,
+        billingAnchor: attachBody.billing_cycle_anchor,
+        metadata: attachBody.metadata,
+        disableFreeTrial: attachBody.free_trial === false || false,
+        checkoutSessionParams: attachBody.checkout_session_params,
+        isCustom,
+      };
+
+      // attachParams.apiVersion =
+      //   orgToVersion({
+      //     org,
+      //     reqApiVersion: req.apiVersion,
+      //   }) || APIVersion.v1;
+
+      // attachParams.req = req;
+      // attachParams.successUrl = attachBody.success_url;
+      // attachParams.invoiceOnly = attachBody.invoice_only;
+      // attachParams.billingAnchor = attachBody.billing_cycle_anchor;
+      // attachParams.metadata = attachBody.metadata;
+      // attachParams.isCustom = isCustom || false;
+      // attachParams.disableFreeTrial = attachBody.free_trial === false || false;
+      // attachParams.checkoutSessionParams = checkout_session_params;
 
       logger.info(
         `Customer: ${chalk.yellow(
@@ -380,14 +445,14 @@ attachRouter.post("", async (req: any, res: any) =>
           forceCheckout,
         )}`,
       );
-      logger.info(
-        `Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
-          isCustom,
-        )}, Invoice Only: ${chalk.yellow(invoiceOnly)}`,
-        {
-          details: { hasPm, forceCheckout, useCheckout, isCustom, invoiceOnly },
-        },
-      );
+      // logger.info(
+      //   `Use Checkout: ${chalk.yellow(useCheckout)}, Is Custom: ${chalk.yellow(
+      //     isCustom,
+      //   )}, Invoice Only: ${chalk.yellow(invoiceOnly)}`,
+      //   {
+      //     details: { hasPm, forceCheckout, useCheckout, isCustom, invoiceOnly },
+      //   },
+      // );
 
       // -------------------- ERROR CHECKING --------------------
 
@@ -398,7 +463,7 @@ attachRouter.post("", async (req: any, res: any) =>
         res,
         attachParams,
         useCheckout,
-        invoiceOnly,
+        invoiceOnly: attachBody.invoice_only,
         isCustom,
       });
 
@@ -433,10 +498,9 @@ attachRouter.post("", async (req: any, res: any) =>
         return;
       }
 
-      if (useCheckout && !newProductsFree && !invoiceOnly) {
+      if (useCheckout && !newProductsFree && !attachParams.invoiceOnly) {
         logger.info("SCENARIO 2: USING CHECKOUT");
         await handleCreateCheckout({
-          db: req.db,
           req,
           res,
           attachParams,
@@ -464,5 +528,8 @@ attachRouter.post("", async (req: any, res: any) =>
         attachParams,
       });
     },
-  }),
-);
+  });
+
+attachRouter.post("", handleAttachNew);
+attachRouter.post("/preview", handleAttachPreview);
+// attachRouter.post("", handleAttachOld);

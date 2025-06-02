@@ -462,6 +462,10 @@ export const getTotalNegativeBalance = ({
     }
   }
 
+  if (totalNegative == 0) {
+    return Math.min(...Object.values(entities).map((e) => e.balance || 0));
+  }
+
   return totalNegative;
 };
 
@@ -553,12 +557,6 @@ export const getExistingUsageFromCusProducts = ({
   if (unused && unused > 0) {
     existingUsage -= unused;
   }
-
-  // if (!existingUsage && entitlement.allowance_type == AllowanceType.Fixed) {
-  //   let filteredEntities = entities.filter((e) => entityMatchesFeature({feature: entitlement.feature, entity: e}));
-  //   let newExistingUsage = -(entitlement.allowance! - filteredEntities.length);
-  //   existingUsage = Math.max(newExistingUsage, 0);
-  // }
 
   return existingUsage;
 };

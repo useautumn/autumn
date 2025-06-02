@@ -16,15 +16,13 @@ import {
   UsageModel,
   TierInfinite,
   UsagePriceConfig,
-  ProductItemFeatureType,
 } from "@autumn/shared";
-import { itemIsFixedPrice } from "./productItemUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { pricesAreSame } from "@/internal/products/prices/priceInitUtils.js";
 import { entsAreSame } from "../entitlements/entitlementUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { isFeatureItem } from "./getItemType.js";
+import { isFeatureItem, isPriceItem } from "./getItemType.js";
 import {
   itemToBillingInterval,
   itemToEntInterval,
@@ -275,7 +273,7 @@ export const itemToPriceAndEnt = ({
   let samePrice: Price | null = null;
   let sameEnt: Entitlement | null = null;
 
-  if (itemIsFixedPrice(item)) {
+  if (isPriceItem(item)) {
     let { price } = toPrice({
       item,
       orgId,

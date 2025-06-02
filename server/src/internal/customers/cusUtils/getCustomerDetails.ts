@@ -24,7 +24,6 @@ import {
   CouponDurationType,
 } from "@autumn/shared";
 import { getCusInvoices, processFullCusProducts } from "./cusUtils.js";
-import { invoicesToResponse } from "@/internal/customers/invoices/invoiceUtils.js";
 
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -32,6 +31,7 @@ import {
   cusProductToCusEnts,
   cusProductToCusPrices,
 } from "../cusProducts/cusProductUtils/convertCusProduct.js";
+import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
 
 export const sumValues = (
   entList: CusEntResponse[],

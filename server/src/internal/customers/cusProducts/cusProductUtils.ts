@@ -496,3 +496,33 @@ export const getMainCusProduct = async ({
 
   return mainCusProduct;
 };
+
+export const getCusProductsWithStripeSubId = ({
+  cusProducts,
+  stripeSubId,
+  curCusProductId,
+}: {
+  cusProducts: FullCusProduct[];
+  stripeSubId: string;
+  curCusProductId?: string;
+}) => {
+  return cusProducts.filter(
+    (cusProduct) =>
+      cusProduct.subscription_ids?.includes(stripeSubId) &&
+      cusProduct.id !== curCusProductId,
+  );
+};
+
+export const getFeatureQuantity = ({
+  cusProduct,
+  internalFeatureId,
+}: {
+  cusProduct: FullCusProduct;
+  internalFeatureId: string;
+}) => {
+  const options = cusProduct.options;
+  const option = options.find(
+    (o) => o.internal_feature_id == internalFeatureId,
+  );
+  return option?.quantity || 1;
+};

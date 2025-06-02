@@ -30,33 +30,6 @@ export class CusProdReadService {
       .from(customerProducts)
       .where(eq(customerProducts.internal_product_id, internalProductId));
 
-    // let { data, error } = await sb.rpc("get_product_stats", {
-    //   p_internal_id: internalProductId,
-    // });
-
-    // // Compare the results
-    // if (data) {
-    //   if (result[0].active !== data.f1) {
-    //     console.log(`Active count mismatch: ${result[0].active} vs ${data.f1}`);
-    //   }
-    //   if (result[0].canceled !== data.f2) {
-    //     console.log(
-    //       `Canceled count mismatch: ${result[0].canceled} vs ${data.f2}`,
-    //     );
-    //   }
-    //   if (result[0].custom !== data.f3) {
-    //     console.log(`Custom count mismatch: ${result[0].custom} vs ${data.f3}`);
-    //   }
-    //   if (result[0].trialing !== data.f4) {
-    //     console.log(
-    //       `Trialing count mismatch: ${result[0].trialing} vs ${data.f4}`,
-    //     );
-    //   }
-    //   if (result[0].all !== data.f5) {
-    //     console.log(`All count mismatch: ${result[0].all} vs ${data.f5}`);
-    //   }
-    // }
-
     return result[0];
   };
 }

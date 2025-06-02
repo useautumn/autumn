@@ -13,16 +13,15 @@ import { ProductItemConfig } from "./ProductItemConfig";
 import { ProductItemContext } from "./ProductItemContext";
 import { CreateFeature } from "@/views/features/CreateFeature";
 import {
-  Feature,
   ProductItemInterval,
   ProductItem,
-  ProductItemFeatureType,
+  CreateFeature as CreateFeatureType,
 } from "@autumn/shared";
+
 import { useProductContext } from "../ProductContext";
 
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
-
-export let defaultProductItem: ProductItem = {
+export const defaultProductItem: ProductItem = {
   feature_id: null,
 
   included_usage: null,
@@ -39,7 +38,7 @@ export let defaultProductItem: ProductItem = {
   reset_usage_when_enabled: true,
 };
 
-let defaultPriceItem: ProductItem = {
+const defaultPriceItem: ProductItem = {
   feature_id: null,
   included_usage: null,
 
@@ -61,7 +60,7 @@ export function CreateProductItem() {
   const [item, setItem] = useState<ProductItem>(defaultProductItem);
   const { features, product, setProduct, setFeatures } = useProductContext();
 
-  const setSelectedFeature = (feature: Feature) => {
+  const setSelectedFeature = (feature: CreateFeatureType) => {
     console.log("Setting selected feature", feature);
     setFeatures([...features, feature]);
     console.log("Made it here");
@@ -109,7 +108,7 @@ export function CreateProductItem() {
         </div>
         <DialogContent
           className={cn(
-            "translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit overflow-visible"
+            "translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit overflow-visible",
           )}
         >
           <DialogHeader>

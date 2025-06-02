@@ -25,6 +25,7 @@ import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import pg from "pg";
 import http from "http";
 import { generateId } from "./utils/genUtils.js";
+import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
 
 if (!process.env.DATABASE_URL) {
   console.error(`DATABASE_URL is not set`);
@@ -33,27 +34,24 @@ if (!process.env.DATABASE_URL) {
 
 const init = async () => {
   const app = express();
-
   const logger = initLogger();
   const server = http.createServer(app);
   server.keepAliveTimeout = 120000; // 120 seconds
   server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
 
-  const pgClient = new pg.Client(process.env.DATABASE_URL || "");
-  await pgClient.connect();
   await QueueManager.getInstance(); // initialize the queue manager
   await CacheManager.getInstance();
 
-  // await initWorkers();
   const supabaseClient = createSupabaseClient();
-  const logtailAll = createLogtailAll();
   const { db } = initDrizzle();
 
+  // Optional services
+  const logtailAll = createLogtailAll();
   const posthog = createPosthogCli();
+  subscribeToOrgUpdates({ db });
 
   app.use((req: any, res: any, next: any) => {
     req.sb = supabaseClient;
-    req.pg = pgClient;
     req.db = db;
 
     req.logger = logger;

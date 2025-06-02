@@ -45,6 +45,9 @@ export * from "./models/productV2Models/productV2Models.js";
 export * from "./models/productV2Models/productResponseModels.js";
 export * from "./models/productV2Models/productItemModels/productItemModels.js";
 export * from "./models/productV2Models/productItemModels/prodItemResponseModels.js";
+export * from "./models/productV2Models/productItemModels/featureItem.js";
+export * from "./models/productV2Models/productItemModels/featurePriceItem.js";
+export * from "./models/productV2Models/productItemModels/priceItem.js";
 
 // 7. Cus Product Models
 export * from "./models/cusProductModels/cusProductModels.js";
@@ -119,3 +122,4 @@ export * from "./models/chatResultModels/chatResultFeature.js";
 export * from "./enums/SuccessCode.js";
 export * from "./enums/ErrCode.js";
 export * from "./enums/LoggerAction.js";
+export * from "./enums/AttachErrCode.js";

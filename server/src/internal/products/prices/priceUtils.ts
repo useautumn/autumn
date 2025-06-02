@@ -309,26 +309,22 @@ export const getPriceAmount = ({
   return 0;
 };
 
-export const getPriceForOverage = (price: Price, overage: number) => {
+export const getPriceForOverage = (price: Price, overage?: number) => {
   let usageConfig = price.config as UsagePriceConfig;
   let billingType = getBillingType(usageConfig);
 
   if (
-    billingType !== BillingType.UsageInArrear &&
-    billingType !== BillingType.InArrearProrated &&
-    billingType !== BillingType.UsageInAdvance
+    billingType == BillingType.FixedCycle ||
+    billingType == BillingType.OneOff
   ) {
-    throw new RecaseError({
-      message: `getPriceForOverage not implemented for this billing type: ${billingType}`,
-      code: ErrCode.InvalidRequest,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
+    const config = price.config as FixedPriceConfig;
+    return config.amount;
   }
 
   let amount = 0;
   let billingUnits = usageConfig.billing_units || 1;
   let remainingUsage = new Decimal(
-    Math.ceil(new Decimal(overage).div(billingUnits).toNumber()),
+    Math.ceil(new Decimal(overage!).div(billingUnits).toNumber()),
   )
     .mul(billingUnits)
     .toNumber();

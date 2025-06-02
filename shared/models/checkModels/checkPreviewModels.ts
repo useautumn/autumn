@@ -5,6 +5,7 @@ import { ProductResponse } from "../productV2Models/productResponseModels.js";
 export enum AttachScenario {
   // AlreadyAttached = "already_attached",
   // AlreadyScheduled = "already_scheduled",
+
   Scheduled = "scheduled",
   Active = "active",
   New = "new",
@@ -55,6 +56,7 @@ export interface CheckProductPreview {
   };
 
   product?: ProductResponse;
+  payment_method?: any;
 }
 
 export enum FeaturePreviewScenario {

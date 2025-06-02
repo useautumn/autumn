@@ -27,6 +27,7 @@ import {
 import { AttachScenario, CheckProductPreview } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 
 export const getAttachPreview = async ({
   db,
@@ -49,11 +50,12 @@ export const getAttachPreview = async ({
   logger: any;
   shouldFormat?: boolean;
 }) => {
+  const stripeCli = createStripeCli({ org, env });
+
   let paymentMethod: any = null;
   if (customer.processor?.id) {
     paymentMethod = await getCusPaymentMethod({
-      org,
-      env: customer.env,
+      stripeCli,
       stripeId: customer.processor?.id,
       errorIfNone: false,
     });
@@ -174,6 +176,7 @@ export const getAttachPreview = async ({
     let result = await getUpgradePreview({
       db,
       customer,
+      paymentMethod,
       org,
       env,
       product,

@@ -11,7 +11,6 @@ import type {
   Response as ExpressResponse,
 } from "express";
 
-import { Client } from "pg";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PostHog } from "posthog-node";
 
@@ -19,7 +18,6 @@ export interface ExtendedRequest extends ExpressRequest {
   id: string;
   authType: AuthType;
 
-  pg: Client;
   db: DrizzleCli;
 
   userId?: string;

@@ -122,15 +122,15 @@ const handleCustomProductItems = async ({
   sameEnts: Entitlement[];
   features: Feature[];
 }) => {
-  await EntitlementService.insert({
-    db,
-    data: [...newEnts, ...updatedEnts],
-  });
+  // await EntitlementService.insert({
+  //   db,
+  //   data: [...newEnts, ...updatedEnts],
+  // });
 
-  await PriceService.insert({
-    db,
-    data: [...newPrices, ...updatedPrices],
-  });
+  // await PriceService.insert({
+  //   db,
+  //   data: [...newPrices, ...updatedPrices],
+  // });
 
   return {
     prices: [...newPrices, ...updatedPrices, ...samePrices],
@@ -138,6 +138,8 @@ const handleCustomProductItems = async ({
       ...ent,
       feature: features.find((f) => f.id == ent.feature_id),
     })),
+    customPrices: [...newPrices, ...updatedPrices],
+    customEnts: [...newEnts, ...updatedEnts],
   };
 };
 
@@ -169,6 +171,8 @@ export const handleNewProductItems = async ({
     return {
       prices: [],
       entitlements: [],
+      customPrices: [],
+      customEnts: [],
     };
   }
 
@@ -247,14 +251,6 @@ export const handleNewProductItems = async ({
     }
   }
 
-  // logger.info(
-  //   `Prices: new(${newPrices.length}), updated(${updatedPrices.length}), deleted(${deletedPrices.length})`,
-  // );
-
-  // logger.info(
-  //   `Ents: new(${newEnts.length}), updated(${updatedEnts.length}), deleted(${deletedEnts.length})`,
-  // );
-
   if (newFeatures.length > 0 && saveToDb) {
     await FeatureService.insert({
       db,
@@ -294,5 +290,7 @@ export const handleNewProductItems = async ({
       ...ent,
       feature: features.find((f) => f.id == ent.feature_id),
     })),
+    customPrices: [],
+    customEnts: [],
   };
 };

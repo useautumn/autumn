@@ -10,7 +10,7 @@ export const updateScheduledSubWithNewItems = async ({
   db,
   scheduleObj,
   newItems,
-  cusProducts,
+  cusProductsForGroup,
   stripeCli,
   itemSet,
   org,
@@ -19,7 +19,7 @@ export const updateScheduledSubWithNewItems = async ({
   db: DrizzleCli;
   scheduleObj: any;
   newItems: any[];
-  cusProducts: (FullCusProduct | null | undefined)[];
+  cusProductsForGroup: (FullCusProduct | undefined)[];
   stripeCli: Stripe;
   itemSet: ItemSet | null;
   org: Organization;
@@ -29,7 +29,7 @@ export const updateScheduledSubWithNewItems = async ({
 
   let filteredScheduleItems = getFilteredScheduleItems({
     scheduleObj,
-    cusProducts: cusProducts,
+    cusProducts: cusProductsForGroup,
   });
 
   // 2. Add new schedule items
@@ -43,14 +43,17 @@ export const updateScheduledSubWithNewItems = async ({
       })),
     );
 
-  await stripeCli.subscriptionSchedules.update(schedule.id, {
-    phases: [
-      {
-        items: newScheduleItems,
-        start_date: schedule.phases[0].start_date,
-      },
-    ],
-  });
+  const stripeSchedule = await stripeCli.subscriptionSchedules.update(
+    schedule.id,
+    {
+      phases: [
+        {
+          items: newScheduleItems,
+          start_date: schedule.phases[0].start_date,
+        },
+      ],
+    },
+  );
 
   // Update sub schedule ID
   if (itemSet) {
@@ -62,4 +65,6 @@ export const updateScheduledSubWithNewItems = async ({
       env: env,
     });
   }
+
+  return stripeSchedule;
 };
