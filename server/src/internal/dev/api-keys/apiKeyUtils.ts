@@ -74,6 +74,7 @@ export const verifyKey = async ({
   key: string;
 }) => {
   const hashedKey = hashApiKey(key);
+
   const env = key.startsWith("am_sk_test") ? AppEnv.Sandbox : AppEnv.Live;
 
   const data = await getAPIKeyCache({

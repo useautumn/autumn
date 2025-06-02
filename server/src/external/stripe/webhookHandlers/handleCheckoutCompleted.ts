@@ -36,6 +36,7 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 import { getPlaceholderItem } from "../stripePriceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const itemMetasToOptions = async ({
   checkoutSession,
@@ -103,12 +104,14 @@ export const itemMetasToOptions = async ({
 };
 
 export const handleCheckoutSessionCompleted = async ({
+  req,
   db,
   org,
   checkoutSession,
   env,
   logger,
 }: {
+  req: ExtendedRequest;
   db: DrizzleCli;
   org: Organization;
   checkoutSession: Stripe.Checkout.Session;
@@ -123,6 +126,7 @@ export const handleCheckoutSessionCompleted = async ({
 
   // Get options
   const attachParams: AttachParams = metadata.data;
+  attachParams.req = req;
   if (attachParams.org.id != org.id) {
     console.log("checkout.completed: org doesn't match, skipping");
     return;
