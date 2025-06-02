@@ -63,7 +63,10 @@ export * from "./models/cusModels/fullCusModel.js";
 export * from "./models/cusModels/cusExpand.js";
 export * from "./models/cusModels/invoiceModels/invoiceResponseModels.js";
 export * from "./models/cusModels/invoiceModels/invoiceTable.js";
+// Cus response
 export * from "./models/cusModels/cusResponseModels.js";
+export * from "./models/cusModels/cusResModels/cusProductResponse.js";
+export * from "./models/cusModels/cusResModels/cusFeatureResponse.js";
 
 export * from "./models/cusModels/entityModels/entityModels.js";
 export * from "./models/cusModels/entityModels/entityTable.js";

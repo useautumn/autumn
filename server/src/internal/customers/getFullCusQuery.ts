@@ -95,11 +95,12 @@ const buildEntitiesCTE = (withEntities: boolean) => {
     customer_entities AS (
       SELECT 
         COALESCE(
-          json_agg(row_to_json(e)) FILTER (WHERE e.id IS NOT NULL),
+          json_agg(row_to_json(e) ORDER BY e.internal_id DESC) FILTER (WHERE e.id IS NOT NULL),
           '[]'::json
         ) AS entities
       FROM entities e
       WHERE e.internal_customer_id = (SELECT internal_id FROM customer_record)
+      LIMIT 100
     )
   `;
 };

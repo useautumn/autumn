@@ -67,6 +67,12 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
         idOrInternalId: customer_id,
         withEntities: true,
         expand: [CusExpand.Invoices],
+        inStatuses: [
+          CusProductStatus.Active,
+          CusProductStatus.PastDue,
+          CusProductStatus.Scheduled,
+          CusProductStatus.Expired,
+        ],
       }),
     ]);
 

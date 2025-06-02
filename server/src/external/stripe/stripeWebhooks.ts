@@ -117,6 +117,7 @@ stripeWebhookRouter.post(
         case "checkout.session.completed":
           const checkoutSession = event.data.object;
           await handleCheckoutSessionCompleted({
+            req: request,
             db,
             checkoutSession,
             org,

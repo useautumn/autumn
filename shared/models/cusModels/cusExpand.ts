@@ -3,4 +3,5 @@ export enum CusExpand {
   TrialsUsed = "trials_used",
 
   Rewards = "rewards",
+  Entities = "entities",
 }
