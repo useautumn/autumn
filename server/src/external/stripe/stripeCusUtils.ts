@@ -7,6 +7,21 @@ import { StatusCodes } from "http-status-codes";
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
+export const getStripeCus = async ({
+  stripeCli,
+  stripeId,
+}: {
+  stripeCli: Stripe;
+  stripeId: string;
+}) => {
+  try {
+    const stripeCus = await stripeCli.customers.retrieve(stripeId);
+    return stripeCus as Stripe.Customer;
+  } catch (error) {
+    return undefined;
+  }
+};
+
 export const createStripeCusIfNotExists = async ({
   db,
   org,

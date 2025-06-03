@@ -33,6 +33,7 @@ import { FeaturesContext } from "@/views/features/FeaturesContext";
 import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 import { getItemType } from "@/utils/product/productItemUtils";
+import { sortProductItems } from "@/utils/productUtils";
 
 function ProductView({ env }: { env: AppEnv }) {
   const { product_id } = useParams();
@@ -255,7 +256,7 @@ function ProductView({ env }: { env: AppEnv }) {
                 <ManageProduct />
               </div>
             </div>
-            <div className="flex justify-end gap-2 p-10 w-full lg:hidden block">
+            <div className="flex justify-end gap-2 p-10 w-full lg:hidden">
               <div className="w-fit">
                 <AddProductButton />
               </div>
@@ -271,20 +272,3 @@ function ProductView({ env }: { env: AppEnv }) {
 }
 
 export default ProductView;
-
-const sortProductItems = (items: ProductItem[]) => {
-  const sortedItems = [...items].sort((a, b) => {
-    const typeA = getItemType(a);
-    const typeB = getItemType(b);
-
-    const typeOrder = {
-      [ProductItemType.Feature]: 0,
-      [ProductItemType.FeaturePrice]: 1,
-      [ProductItemType.Price]: 2,
-    };
-
-    return typeOrder[typeA] - typeOrder[typeB];
-  });
-
-  return sortedItems;
-};

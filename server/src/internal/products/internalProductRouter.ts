@@ -15,6 +15,7 @@ import { mapToProductV2 } from "./productV2Utils.js";
 import { isFeaturePriceItem } from "./product-items/getItemType.js";
 
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
+import { createOrgResponse } from "../orgs/orgUtils.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -42,15 +43,7 @@ productRouter.get("/data", async (req: any, res) => {
       }),
       versionCounts: getProductVersionCounts(products),
       features,
-      org: {
-        id: org.id,
-        name: org.name,
-        // test_pkey: org.test_pkey,
-        // live_pkey: org.live_pkey,
-        default_currency: org.default_currency,
-        stripe_connected: org.stripe_connected,
-      },
-      // coupons,
+      org: createOrgResponse(org),
       rewards: coupons,
       rewardPrograms,
     });

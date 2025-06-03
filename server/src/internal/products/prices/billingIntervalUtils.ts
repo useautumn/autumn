@@ -83,10 +83,12 @@ export const getAlignedIntervalUnix = ({
   alignWithUnix,
   interval,
   now,
+  alwaysReturn,
 }: {
   alignWithUnix: number;
   interval: BillingInterval;
   now?: number;
+  alwaysReturn?: boolean;
 }) => {
   const nextCycleAnchor = alignWithUnix;
   let nextCycleAnchorUnix = nextCycleAnchor;
@@ -122,7 +124,11 @@ export const getAlignedIntervalUnix = ({
       new Date(nextCycleAnchorUnix),
     ) < 60
   ) {
-    billingCycleAnchorUnix = undefined;
+    if (alwaysReturn) {
+      return naturalBillingDate;
+    } else {
+      billingCycleAnchorUnix = undefined;
+    }
   }
 
   return billingCycleAnchorUnix;

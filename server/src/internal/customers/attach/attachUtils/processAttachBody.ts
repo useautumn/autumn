@@ -25,6 +25,10 @@ import {
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
+import {
+  isMainProduct,
+  oneOffOrAddOn,
+} from "@/internal/products/productUtils/classifyProduct.js";
 
 const getProductsForAttach = async ({
   req,
@@ -132,13 +136,15 @@ const getPricesAndEnts = async ({
       });
     }
 
+    const prodIsMain = isMainProduct({ product: products[0], prices });
+
     return {
       optionsList: mapOptionsList({
         optionsInput,
         features,
         prices,
         // to check if it fails for multi prod attach...
-        curCusProduct: products[0].is_add_on ? curSameProduct : curMainProduct,
+        curCusProduct: prodIsMain ? curMainProduct : curSameProduct,
       }),
       prices,
       entitlements,
@@ -189,12 +195,14 @@ const getPricesAndEnts = async ({
     multipleAllowed: org.config.multiple_trials,
   });
 
+  const prodIsMain = isMainProduct({ product: products[0], prices });
+
   return {
     optionsList: mapOptionsList({
       optionsInput,
       features,
       prices,
-      curCusProduct: product.is_add_on ? curSameProduct : curMainProduct,
+      curCusProduct: prodIsMain ? curMainProduct : curSameProduct,
     }),
     prices,
     entitlements: getEntsWithFeature({

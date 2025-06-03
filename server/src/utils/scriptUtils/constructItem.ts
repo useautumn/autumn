@@ -1,14 +1,24 @@
 import { ProductItem, ProductItemInterval, UsageModel } from "@autumn/shared";
 
-export const constructPrepaidItem = ({ featureId }: { featureId: string }) => {
+export const constructPrepaidItem = ({
+  featureId,
+  price,
+  billingUnits = 100,
+  isOneOff = false,
+}: {
+  featureId: string;
+  price: number;
+  billingUnits?: number;
+  isOneOff?: boolean;
+}) => {
   let item: ProductItem = {
     feature_id: featureId,
     usage_model: UsageModel.Prepaid,
 
-    price: 100,
-    billing_units: 100,
+    price: price,
+    billing_units: billingUnits || 100,
 
-    interval: ProductItemInterval.Month,
+    interval: isOneOff ? null : ProductItemInterval.Month,
   };
 
   return item;
@@ -22,6 +32,7 @@ export const constructArrearItem = ({ featureId }: { featureId: string }) => {
     price: 0.1,
     billing_units: 1000,
     interval: ProductItemInterval.Month,
+    reset_usage_when_enabled: true,
   };
 
   return item;

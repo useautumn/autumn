@@ -6,8 +6,10 @@ import {
 import {
   AppEnv,
   BillingInterval,
+  CreateFreeTrialSchema,
   Feature,
   FeatureUsageType,
+  FreeTrialDuration,
   Product,
   ProductItem,
   ProductV2,
@@ -70,12 +72,14 @@ export const constructProduct = ({
   items,
   type,
   isAnnual = false,
+  trial = false,
 }: {
   items: ProductItem[];
-  type: "free" | "pro" | "premium";
+  type: "free" | "pro" | "premium" | "one_off";
   isAnnual?: boolean;
+  trial?: boolean;
 }) => {
-  let price = type == "pro" ? 20 : 50;
+  let price = type == "pro" ? 20 : type == "premium" ? 50 : 0;
 
   if (price) {
     items.push(
@@ -94,7 +98,13 @@ export const constructProduct = ({
     is_default: false,
     version: 1,
     group: "",
-    free_trial: null,
+    free_trial: trial
+      ? (CreateFreeTrialSchema.parse({
+          length: 7,
+          duration: FreeTrialDuration.Day,
+          unique_fingerprint: false,
+        }) as any)
+      : null,
   };
 
   return product;

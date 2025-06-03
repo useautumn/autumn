@@ -59,8 +59,14 @@ export const updateStripeSubs = async ({
 
   let trialEnd = config.disableTrial
     ? null
-    : freeTrialToStripeTimestamp(attachParams.freeTrial);
+    : freeTrialToStripeTimestamp({
+        freeTrial: attachParams.freeTrial,
+        now: attachParams.now,
+      });
 
+  // console.log("Now:", formatUnixToDateTime(attachParams.now));
+  // console.log("Free trial:", attachParams.freeTrial);
+  // console.log("Trial end:", formatUnixToDateTime(trialEnd * 1000));
   // 2. Update current subscription
   let newSubs: Stripe.Subscription[] = [];
   const subUpdateRes = await updateStripeSubscription({
@@ -97,8 +103,18 @@ export const updateStripeSubs = async ({
     logger,
   });
 
-  // OPTIMIZE GET STRIPE NOW?
-  // 4. Create subs for other intervals
+  // 4. Cancel other subscriptions
+  for (const sub of stripeSubs.slice(1)) {
+    logger.info(`1.4: canceling additional sub: ${sub.id}`);
+    await stripeCli.subscriptions.cancel(sub.id, {
+      prorate: true,
+      cancellation_details: {
+        comment: "autumn_upgrade",
+      },
+    });
+  }
+
+  // 5. Create subs for other intervals
   const now = await getStripeNow({ stripeCli, stripeSub: subUpdate });
   for (const itemSet of itemSets.slice(1)) {
     const newSub = (await createStripeSub({

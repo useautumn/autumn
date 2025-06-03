@@ -99,7 +99,7 @@ export const initCusProduct = ({
 
   let trialEnds = trialEndsAt;
   if (!trialEndsAt && freeTrial) {
-    trialEnds = freeTrialToStripeTimestamp(freeTrial)! * 1000;
+    trialEnds = freeTrialToStripeTimestamp({ freeTrial })! * 1000;
   }
 
   return {
@@ -270,6 +270,7 @@ export const createFullCusProduct = async ({
   isDowngrade = false,
   scenario = "default",
   sendWebhook = true,
+  logger,
 }: {
   db: DrizzleCli;
   attachParams: InsertCusProductParams;
@@ -293,15 +294,9 @@ export const createFullCusProduct = async ({
   isDowngrade?: boolean;
   scenario?: string;
   sendWebhook?: boolean;
+  logger: any;
 }) => {
   disableFreeTrial = attachParams.disableFreeTrial || disableFreeTrial;
-
-  const logger = createLogtailWithContext({
-    action: LoggerAction.CreateFullCusProduct,
-    org_slug: attachParams.org.slug,
-    org_id: attachParams.org.id,
-    attachParams,
-  });
 
   let { customer, product, prices, entitlements, optionsList, freeTrial, org } =
     attachParams;
@@ -368,8 +363,6 @@ export const createFullCusProduct = async ({
 
     cusEnts.push(cusEnt);
   }
-
-  // Perform deductions on new cus ents...
 
   let deductedCusEnts = addExistingUsagesToCusEnts({
     cusEnts: cusEnts,

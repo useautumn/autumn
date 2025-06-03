@@ -41,3 +41,36 @@ export const getFeatureNameWithCapital = ({
 
   return feature.name;
 };
+
+export const getSingularAndPlural = ({
+  feature,
+  capitalize = false,
+}: {
+  feature: Feature;
+  capitalize?: boolean;
+}) => {
+  return {
+    singular: getFeatureName({ feature, plural: false, capitalize }),
+    plural: getFeatureName({ feature, plural: true, capitalize }),
+  };
+};
+
+export const getFeatureInvoiceDescription = ({
+  feature,
+  usage,
+  billingUnits = 1,
+}: {
+  feature: Feature;
+  usage: number;
+  billingUnits?: number;
+}) => {
+  const { singular, plural } = getSingularAndPlural({ feature });
+
+  if (billingUnits == 1) {
+    if (usage == 1)
+      return `${usage} ${singular}`; // eg. 1 credit
+    else return `${usage} ${plural}`; // eg. 4 credits
+  } else {
+    return `${usage} x ${billingUnits} ${plural}`; // eg. 4 x 100 credits
+  }
+};

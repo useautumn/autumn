@@ -18,3 +18,9 @@ export const isFixedPrice = ({ price }: { price: Price }) => {
     billingType == BillingType.FixedCycle || billingType == BillingType.OneOff
   );
 };
+
+export const hasPrepaidPrice = ({ prices }: { prices: Price[] }) => {
+  return prices.some(
+    (price) => getBillingType(price.config) == BillingType.UsageInAdvance,
+  );
+};

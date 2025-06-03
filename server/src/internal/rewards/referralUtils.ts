@@ -199,6 +199,7 @@ export const triggerFreeProduct = async ({
     await createFullCusProduct({
       db,
       attachParams: redeemerAttachParams,
+      logger,
     });
     logger.info(`✅ Added ${fullProduct.name} to redeemer`);
   }
@@ -211,6 +212,7 @@ export const triggerFreeProduct = async ({
         customer: referrer,
         cusProducts: referrerCusProducts,
       },
+      logger,
     });
     logger.info(`✅ Added ${fullProduct.name} to referrer`);
   }

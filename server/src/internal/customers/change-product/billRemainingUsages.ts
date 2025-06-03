@@ -37,7 +37,6 @@ const addUsageToNextInvoice = async ({
   org,
   logger,
   attachParams,
-  curCusProduct,
 }: {
   db: DrizzleCli;
   intervalToInvoiceItems: any;
@@ -45,9 +44,7 @@ const addUsageToNextInvoice = async ({
   customer: any;
   org: any;
   logger: any;
-
   attachParams: AttachParams;
-  curCusProduct: FullCusProduct;
 }) => {
   for (const interval in intervalToInvoiceItems) {
     const itemsToInvoice = intervalToInvoiceItems[interval];
@@ -63,7 +60,7 @@ const addUsageToNextInvoice = async ({
     });
 
     for (const item of itemsToInvoice) {
-      const amount = getPriceForOverage(item.price, item.overage);
+      const { amount, description } = item;
 
       logger.info(
         `   feature: ${item.feature.id}, overage: ${item.overage}, amount: ${amount}`,
@@ -71,11 +68,6 @@ const addUsageToNextInvoice = async ({
 
       let relatedSub = intervalToSub[interval];
       if (!relatedSub) {
-        logger.error(
-          `No sub found for interval: ${interval}, for feature: ${item.feature.id}`,
-        );
-
-        // Invoice immediately?
         continue;
       }
 
@@ -83,9 +75,7 @@ const addUsageToNextInvoice = async ({
       let invoiceItem = {
         customer: customer.processor.id,
         currency: org.default_currency,
-        description: `${curCusProduct.product.name} - ${
-          item.feature.name
-        } x ${Math.round(item.usage)}`,
+        description,
         price_data: {
           product: (item.price.config! as UsagePriceConfig).stripe_product_id!,
           unit_amount: Math.round(amount * 100),
@@ -190,14 +180,10 @@ const invoiceForUsageImmediately = async ({
   let autumnInvoiceItems: InvoiceItem[] = [];
 
   for (const item of invoiceItems) {
-    const amount = getPriceForOverage(item.price, item.overage);
+    // const amount = getPriceForOverage(item.price, item.overage);
+    const { amount, description } = item;
     let config = item.price.config! as UsagePriceConfig;
-
-    // TO TEST
     let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
-    let description = `${curCusProduct.product.name} - ${
-      item.feature.name
-    } x ${Math.round(item.usage)}`; // need to standardize...
 
     logger.info(
       `🌟🌟🌟 (Bill remaining) created invoice item: ${description} -- ${amount}`,
@@ -207,7 +193,7 @@ const invoiceForUsageImmediately = async ({
       customer: customer.processor.id,
       invoice: invoice.id,
       currency: org.default_currency,
-      description: description,
+      description,
       price_data: {
         product: stripePrice.product as string,
         unit_amount: Math.round(amount * 100),
@@ -308,16 +294,16 @@ export const billForRemainingUsages = async ({
   attachParams,
   curCusProduct,
   newSubs,
-  config,
   shouldPreview = false,
+  billImmediately = false,
 }: {
   db: DrizzleCli;
   logger: any;
   attachParams: AttachParams;
   curCusProduct: FullCusProduct;
   newSubs: Stripe.Subscription[];
-  config: AttachConfig;
   shouldPreview?: boolean;
+  billImmediately?: boolean;
 }) => {
   const { customer_prices, customer_entitlements } = curCusProduct;
   const { customer, org } = attachParams;
@@ -346,7 +332,8 @@ export const billForRemainingUsages = async ({
     const billingType = getBillingType(config);
 
     if (billingType !== BillingType.UsageInArrear) continue;
-    const { usage, overage, roundedUsage } = getCusPriceUsage({
+
+    const { usage, overage, description, amount } = getCusPriceUsage({
       cusPrice: cp,
       cusProduct: curCusProduct,
       logger,
@@ -369,6 +356,9 @@ export const billForRemainingUsages = async ({
     intervalToInvoiceItems[interval].push({
       overage,
       usage,
+      description,
+      amount,
+
       feature: relatedCusEnt?.entitlement.feature,
       price: cp.price,
       relatedCusEnt,
@@ -384,7 +374,7 @@ export const billForRemainingUsages = async ({
     });
   }
 
-  if (config.proration == ProrationBehavior.Immediately) {
+  if (billImmediately) {
     await invoiceForUsageImmediately({
       db,
       intervalToInvoiceItems,
@@ -404,7 +394,6 @@ export const billForRemainingUsages = async ({
       org,
       logger,
       attachParams,
-      curCusProduct,
     });
   }
 };

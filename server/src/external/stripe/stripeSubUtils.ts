@@ -248,6 +248,21 @@ export const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
   );
 };
 
+export const autumnToStripeProrationBehavior = ({
+  prorationBehavior,
+}: {
+  prorationBehavior: ProrationBehavior;
+}) => {
+  switch (prorationBehavior) {
+    case ProrationBehavior.Immediately:
+      return "always_invoice";
+    case ProrationBehavior.NextBilling:
+      return "create_prorations";
+    case ProrationBehavior.None:
+      return "none";
+  }
+};
+
 export const getStripeProrationBehavior = ({
   org,
   prorationBehavior,

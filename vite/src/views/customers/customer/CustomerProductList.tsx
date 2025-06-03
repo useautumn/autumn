@@ -33,6 +33,7 @@ import { AdminHover } from "@/components/general/AdminHover";
 import AddProduct from "./add-product/NewProductDropdown";
 import { Item, Row } from "@/components/general/TableGrid";
 import { cn } from "@/lib/utils";
+import { CusProductStripeLink } from "./components/CusProductStripeLink";
 
 export const CustomerProductList = ({
   customer,
@@ -59,7 +60,7 @@ export const CustomerProductList = ({
             p.entitlements.some(
               (cusEnt: any) =>
                 cusEnt.entities &&
-                Object.keys(cusEnt.entities).includes(entity.internal_id)
+                Object.keys(cusEnt.entities).includes(entity.internal_id),
             )
           : true;
 
@@ -88,7 +89,7 @@ export const CustomerProductList = ({
               variant="ghost"
               className={cn(
                 "text-t3 text-xs font-normal p-0",
-                showExpired && "text-t1 hover:text-t1"
+                showExpired && "text-t1 hover:text-t1",
               )}
               size="sm"
               onClick={() => setShowExpired(!showExpired)}
@@ -119,8 +120,8 @@ export const CustomerProductList = ({
             key={cusProduct.id}
             className="grid-cols-12 pr-0"
             onClick={() => {
-              let entity = entities.find(
-                (e: any) => e.internal_id === cusProduct.internal_entity_id
+              const entity = entities.find(
+                (e: any) => e.internal_id === cusProduct.internal_entity_id,
               );
               navigateTo(
                 `/customers/${customer.id || customer.internal_id}/${
@@ -129,7 +130,7 @@ export const CustomerProductList = ({
                   entity ? `&entity_id=${entity.id || entity.internal_id}` : ""
                 }`,
                 navigate,
-                env
+                env,
               );
             }}
           >
@@ -188,30 +189,7 @@ export const CustomerProductList = ({
                     scheduled
                   </Badge>
                 )}
-                {cusProduct.subscription_ids &&
-                  cusProduct.subscription_ids.length > 0 && (
-                    <React.Fragment>
-                      {cusProduct.subscription_ids.map((subId: string) => {
-                        return (
-                          <Link
-                            key={subId}
-                            to={getStripeSubLink(subId, env)}
-                            target="_blank"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                            }}
-                          >
-                            <div className="flex justify-center items-center w-fit px-2 gap-2 h-6">
-                              <ArrowUpRightFromSquare
-                                size={12}
-                                className="text-[#665CFF]"
-                              />
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </React.Fragment>
-                  )}
+                <CusProductStripeLink cusProduct={cusProduct} />
               </div>
             </Item>
             <Item className="col-span-2 text-xs text-t3">
@@ -285,7 +263,7 @@ const UpdateStatusDropdownBtn = ({
             cusProduct.id,
             {
               status,
-            }
+            },
           );
           await cusMutate();
         } catch (error) {

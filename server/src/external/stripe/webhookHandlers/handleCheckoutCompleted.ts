@@ -316,6 +316,7 @@ export const handleCheckoutSessionCompleted = async ({
           : undefined
         : undefined,
       scenario: AttachScenario.New,
+      logger,
     });
   }
 

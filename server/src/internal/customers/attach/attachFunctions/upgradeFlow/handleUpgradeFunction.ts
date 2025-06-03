@@ -3,11 +3,11 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "../../../cusProducts/AttachParams.js";
-import { handleStripeSubUpdate } from "@/internal/customers/change-product/handleUpgrade.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { billForRemainingUsages } from "@/internal/customers/change-product/billRemainingUsages.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+
 import {
   APIVersion,
   AttachScenario,
@@ -15,15 +15,12 @@ import {
   ProcessorType,
   SuccessCode,
 } from "@autumn/shared";
+
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
-
-import { AttachConfig } from "../../models/AttachFlags.js";
-
+import { AttachConfig, ProrationBehavior } from "../../models/AttachFlags.js";
 import { updateStripeSubs } from "./updateStripeSubs.js";
-import Stripe from "stripe";
 
 export const handleUpgradeFunction = async ({
   req,
@@ -55,7 +52,7 @@ export const handleUpgradeFunction = async ({
     subIds: curCusProduct.subscription_ids,
   });
 
-  logger.info("1. Updating current subscription in Stripe");
+  logger.info("1. Updating current subscriptions in Stripe");
   let { newSubs } = await updateStripeSubs({
     db: req.db,
     curCusProduct,
@@ -72,11 +69,11 @@ export const handleUpgradeFunction = async ({
     attachParams,
     curCusProduct,
     newSubs,
-    config,
     logger,
+    billImmediately: config.proration === ProrationBehavior.Immediately,
   });
 
-  logger.info("3. Expiring old cus product & other subs");
+  logger.info("3. Expiring old cus product");
   await CusProductService.update({
     db: req.db,
     cusProductId: curCusProduct.id,
@@ -92,11 +89,6 @@ export const handleUpgradeFunction = async ({
     },
   });
 
-  // Cancel other subscriptions (since not updated)
-  for (const sub of stripeSubs.slice(1)) {
-    await stripeCli.subscriptions.cancel(sub.id);
-  }
-
   // Insert new cus product
   logger.info("4. Creating new cus product");
   await createFullCusProduct({
@@ -111,6 +103,7 @@ export const handleUpgradeFunction = async ({
     carryExistingUsages: carryUsage,
     carryOverTrial: true,
     scenario: AttachScenario.Upgrade,
+    logger,
   });
 
   // Insert invoices

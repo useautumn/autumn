@@ -50,8 +50,6 @@ export const getSubItemAmount = ({
       quantity,
     });
 
-    console.log("Tiered amount:", tieredAmount);
-
     return tieredAmount;
   }
 

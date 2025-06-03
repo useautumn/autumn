@@ -212,6 +212,7 @@ export const createNewCustomer = async ({
         ? getNextStartOfMonthUnix(BillingInterval.Month)
         : undefined,
       scenario: AttachScenario.New,
+      logger,
     });
   }
 

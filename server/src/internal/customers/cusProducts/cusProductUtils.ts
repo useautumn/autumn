@@ -122,6 +122,7 @@ export const activateDefaultProduct = async ({
   org,
   env,
   curCusProduct,
+  logger,
 }: {
   db: DrizzleCli;
   productGroup: string;
@@ -129,6 +130,7 @@ export const activateDefaultProduct = async ({
   org: Organization;
   env: AppEnv;
   curCusProduct?: FullCusProduct;
+  logger: any;
 }) => {
   // 1. Expire current product
   const defaultProducts = await ProductService.listDefault({
@@ -165,6 +167,7 @@ export const activateDefaultProduct = async ({
       features: [],
     },
     scenario: AttachScenario.New,
+    logger,
   });
 
   // console.log(`   ✅ activated default product: ${defaultProd.group}`);
@@ -176,11 +179,13 @@ export const expireAndActivate = async ({
   env,
   cusProduct,
   org,
+  logger,
 }: {
   db: DrizzleCli;
   env: AppEnv;
   cusProduct: FullCusProduct;
   org: Organization;
+  logger: any;
 }) => {
   // 1. Expire current product
   await CusProductService.update({
@@ -195,6 +200,7 @@ export const expireAndActivate = async ({
     customer: cusProduct.customer!,
     org,
     env,
+    logger,
   });
 };
 

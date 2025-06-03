@@ -1,7 +1,8 @@
 "use client";
 
+import ProductSidebar from "@/views/products/product/ProductSidebar";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   Customer,
   Entity,
@@ -14,16 +15,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { ManageProduct } from "@/views/products/product/ManageProduct";
 import { ProductContext } from "@/views/products/product/ProductContext";
-import { CusService } from "@/services/customers/CusService";
-import { toast } from "sonner";
-
-import {
-  BreadcrumbItem,
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbSeparator,
-  BreadcrumbLink,
-} from "@/components/ui/breadcrumb";
 
 import {
   Dialog,
@@ -33,26 +24,11 @@ import {
 } from "@/components/ui/dialog";
 
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
-
-import {
-  getBackendErr,
-  getBackendErrObj,
-  getRedirectUrl,
-  navigateTo,
-} from "@/utils/genUtils";
-
-import { ErrCode } from "@autumn/shared";
-import { AddProductButton } from "../add-product/AddProductButton";
 import ErrorScreen from "@/views/general/ErrorScreen";
-
-import { ProductService } from "@/services/products/ProductService";
-import RequiredOptionsModal from "./RequiredOptionsModal";
 import { ProductOptions } from "./ProductOptions";
-
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useEnv } from "@/utils/envUtils";
-import { getStripeInvoiceLink } from "@/utils/linkUtils";
-import ProductSidebar from "@/views/products/product/ProductSidebar";
+
 import { FeaturesContext } from "@/views/features/FeaturesContext";
 import { CustomerProductBreadcrumbs } from "./components/CustomerProductBreadcrumbs";
 import { useAttachState } from "./hooks/useAttachState";
@@ -122,12 +98,14 @@ export default function CustomerProductView() {
   const [url, setUrl] = useState<any>(null);
 
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
-  const [requiredOptions, setRequiredOptions] = useState<OptionValue[]>([]);
-  const [useInvoice, setUseInvoice] = useState(false);
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
     useState<"unlimited" | number>(0);
 
-  const attachState = useAttachState({ product, preview: data?.preview });
+  const attachState = useAttachState({
+    product,
+    setProduct,
+    preview: data?.preview,
+  });
 
   useEffect(() => {
     if (!data?.product || !data?.customer) return;
@@ -188,8 +166,6 @@ export default function CustomerProductView() {
           setSelectedEntitlementAllowance,
           customer: customer as Customer,
           entities: data.entities as Entity[],
-
-          setUseInvoice,
           entityId,
           setEntityId,
           attachState,

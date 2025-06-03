@@ -76,7 +76,7 @@ export const createStripeSub = async ({
     return await stripeCli.invoices.createPreview({
       subscription_details: {
         items: subItems as any,
-        trial_end: freeTrialToStripeTimestamp(freeTrial),
+        trial_end: freeTrialToStripeTimestamp({ freeTrial }),
         billing_cycle_anchor: billingCycleAnchorUnix
           ? Math.floor(billingCycleAnchorUnix / 1000)
           : undefined,
@@ -91,7 +91,7 @@ export const createStripeSub = async ({
       ...paymentMethodData,
       customer: customer.processor.id,
       items: subItems as any,
-      trial_end: freeTrialToStripeTimestamp(freeTrial),
+      trial_end: freeTrialToStripeTimestamp({ freeTrial }),
       payment_behavior: "error_if_incomplete",
       add_invoice_items: invoiceItems,
       collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",

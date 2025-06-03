@@ -17,6 +17,7 @@ export const handleAddFreeProduct = async ({
   res: any;
   attachParams: AttachParams;
 }) => {
+  const logger = req.logtail;
   const { customer, products } = attachParams;
 
   console.log(
@@ -29,10 +30,10 @@ export const handleAddFreeProduct = async ({
   for (const product of products) {
     await createFullCusProduct({
       db: req.db,
-
       attachParams: attachToInsertParams(attachParams, product),
       subscriptionId: undefined,
       billLaterOnly: false,
+      logger,
     });
   }
 

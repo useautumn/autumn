@@ -58,7 +58,7 @@ export const createStripeSubThroughInvoice = async ({
       // ...paymentMethodData,
       customer: customer.processor.id,
       items: subItems as any,
-      trial_end: freeTrialToStripeTimestamp(freeTrial),
+      trial_end: freeTrialToStripeTimestamp({ freeTrial }),
       metadata,
       add_invoice_items: invoiceItems,
       collection_method: "send_invoice",

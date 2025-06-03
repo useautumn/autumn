@@ -113,6 +113,12 @@ export * from "./models/migrationModels/migrationErrorTable.js";
 export * from "./models/analyticsModels/actionEnums.js";
 export * from "./models/analyticsModels/actionTable.js";
 
+// Attach Models
+export * from "./models/attachModels/attachPreviewModels.js";
+export * from "./models/attachModels/attachEnums/AttachBranch.js";
+export * from "./models/attachModels/attachEnums/AttachFunction.js";
+export * from "./models/attachModels/attachEnums/AttachConfig.js";
+
 // Utils
 export * from "./utils/displayUtils.js";
 export * from "./models/checkModels/checkPreviewModels.js";
