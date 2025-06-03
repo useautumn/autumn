@@ -22,12 +22,14 @@
     // "noEmit": true,
     "paths": {
       "@/*": ["src/*"],
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["../shared/*"],
+      "@scripts/*": ["scripts/*"]
     }
   },
   "include": [
     "src",
     "tests",
+    "scripts",
     "tests-old/utils.ts",
     "tests-old/global.ts",
     "../shared/db/allTables.ts",
