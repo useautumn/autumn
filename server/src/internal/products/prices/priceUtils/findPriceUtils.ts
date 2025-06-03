@@ -1,5 +1,6 @@
 import {
   BillingType,
+  ErrCode,
   Price,
   PriceType,
   UsagePriceConfig,
@@ -8,6 +9,7 @@ import {
 import { Feature } from "@autumn/shared";
 import { getBillingType } from "../priceUtils.js";
 import Stripe from "stripe";
+import RecaseError from "@/utils/errorUtils.js";
 
 export const findPrepaidPrice = ({
   prices,
@@ -27,5 +29,36 @@ export const findPrepaidPrice = ({
     if (internalFeatureId) {
       return config.internal_feature_id == internalFeatureId;
     } else return true;
+  });
+};
+
+export const findPriceForFeature = ({
+  prices,
+  feature,
+  internalFeatureId,
+}: {
+  prices: Price[];
+  feature?: Feature;
+  internalFeatureId?: string;
+}) => {
+  if (!feature && !internalFeatureId) {
+    throw new RecaseError({
+      message: "findPriceForFeature: No feature or internalFeatureId provided",
+      code: ErrCode.InternalError,
+    });
+  }
+
+  return prices.find((p: Price) => {
+    const config = p.config as UsagePriceConfig;
+
+    if (!config.internal_feature_id) {
+      return false;
+    }
+
+    if (internalFeatureId) {
+      return config.internal_feature_id == internalFeatureId;
+    } else {
+      return config.internal_feature_id == feature!.internal_id;
+    }
   });
 };

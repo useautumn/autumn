@@ -119,7 +119,10 @@ export const handleStripeSubUpdate = async ({
   // 2. Add trial to new subscription?
   let trialEnd;
   if (!disableFreeTrial) {
-    trialEnd = freeTrialToStripeTimestamp(attachParams.freeTrial);
+    trialEnd = freeTrialToStripeTimestamp({
+      freeTrial: attachParams.freeTrial,
+      now: attachParams.now,
+    });
   }
 
   // 3. Update current subscription
@@ -297,6 +300,7 @@ const handleOnlyEntsChanged = async ({
     disableFreeTrial: false,
     keepResetIntervals: true,
     carryExistingUsages,
+    logger,
   });
 
   logger.info("✅ Successfully updated entitlements for product");
@@ -502,6 +506,7 @@ export const handleUpgrade = async ({
     carryExistingUsages,
     carryOverTrial: true,
     scenario: AttachScenario.Upgrade,
+    logger,
   });
 
   // Create invoices

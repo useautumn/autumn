@@ -104,7 +104,7 @@ const initCusEntNextResetAt = ({
 
   // 4. Calculate next reset at...
   let nextResetAtCalculated = null;
-  let trialEndTimestamp = freeTrialToStripeTimestamp(freeTrial);
+  let trialEndTimestamp = freeTrialToStripeTimestamp({ freeTrial });
   if (
     freeTrial &&
     applyTrialToEntitlement(entitlement, freeTrial) &&

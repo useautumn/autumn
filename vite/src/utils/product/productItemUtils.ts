@@ -16,15 +16,17 @@ export const itemIsUnlimited = (item: ProductItem) => {
 export const formatAmount = ({
   defaultCurrency,
   amount,
+  maxFractionDigits = 6,
 }: {
   defaultCurrency: string;
   amount: number;
+  maxFractionDigits?: number;
 }) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: defaultCurrency,
     minimumFractionDigits: 0,
-    maximumFractionDigits: 6,
+    maximumFractionDigits: maxFractionDigits || 6,
   }).format(amount);
 };
 

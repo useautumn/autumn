@@ -74,7 +74,7 @@ export const handleCreateCheckout = async ({
     ? {
         trial_end:
           freeTrial && !attachParams.disableFreeTrial
-            ? freeTrialToStripeTimestamp(freeTrial)
+            ? freeTrialToStripeTimestamp({ freeTrial })
             : undefined,
         // metadata: subMeta,
         billing_cycle_anchor: billingCycleAnchorUnixSeconds,

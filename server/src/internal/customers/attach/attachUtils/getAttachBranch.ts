@@ -3,7 +3,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachBody } from "../models/AttachBody.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { AttachBranch } from "../models/AttachBranch.js";
+import { AttachBranch } from "@autumn/shared";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -21,6 +21,7 @@ import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { productsAreSame } from "@/internal/products/compareProductUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { isTrialing } from "../../cusProducts/cusProductUtils.js";
+import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
 
 const checkMultiProductErrors = async ({
   attachParams,
@@ -109,17 +110,18 @@ const checkSameCustom = async ({
 }) => {
   let product = attachParams.products[0];
 
-  let { itemsSame, freeTrialsSame, onlyEntsChanged } = productsAreSame({
-    v1Product1: {
-      ...product,
-      prices: attachParams.prices,
-      entitlements: attachParams.entitlements,
-      free_trial: attachParams.freeTrial,
-    },
-    v1Product2: cusProductToProduct({ cusProduct: curSameProduct }),
+  let { itemsSame, freeTrialsSame, onlyEntsChanged, newItems } =
+    productsAreSame({
+      newProductV1: {
+        ...product,
+        prices: attachParams.prices,
+        entitlements: attachParams.entitlements,
+        free_trial: attachParams.freeTrial,
+      },
+      curProductV1: cusProductToProduct({ cusProduct: curSameProduct }),
 
-    features: attachParams.features,
-  });
+      features: attachParams.features,
+    });
 
   if (itemsSame && freeTrialsSame) {
     throw new RecaseError({
@@ -137,8 +139,10 @@ const checkSameCustom = async ({
 
 const getSameProductBranch = async ({
   attachParams,
+  fromPreview,
 }: {
   attachParams: AttachParams;
+  fromPreview?: boolean;
 }) => {
   let product = attachParams.products[0];
 
@@ -199,6 +203,12 @@ const getSameProductBranch = async ({
     return AttachBranch.Renew;
   }
 
+  if (fromPreview) {
+    if (hasPrepaidPrice({ prices: attachParams.prices })) {
+      return AttachBranch.UpdatePrepaidQuantity;
+    }
+  }
+
   // Invalid, can't attach same product
   throw new RecaseError({
     message: `Product ${product.name} is already attached, can't attach again`,
@@ -243,10 +253,12 @@ export const getAttachBranch = async ({
   req,
   attachBody,
   attachParams,
+  fromPreview,
 }: {
   req: ExtendedRequest;
   attachBody: AttachBody;
   attachParams: AttachParams;
+  fromPreview?: boolean;
 }) => {
   // 1. Multi product
   if (notNullish(attachBody.product_ids)) {
@@ -266,7 +278,12 @@ export const getAttachBranch = async ({
 
   // 3. Same product
   if (curSameProduct) {
-    return await getSameProductBranch({ attachParams });
+    return await getSameProductBranch({ attachParams, fromPreview });
+  }
+
+  let product = attachParams.products[0];
+  if (product.is_add_on) {
+    return AttachBranch.AddOn;
   }
 
   // 4. Main product exists
@@ -274,12 +291,5 @@ export const getAttachBranch = async ({
     return getChangeProductBranch({ attachParams });
   }
 
-  // 5. New product!
-  let product = attachParams.products[0];
-
-  if (product.is_add_on) {
-    return AttachBranch.AddOn;
-  } else {
-    return AttachBranch.New;
-  }
+  return AttachBranch.New;
 };

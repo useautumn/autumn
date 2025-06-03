@@ -7,7 +7,6 @@ import {
   AttachScenario,
   BillingType,
   CheckProductPreview,
-  Customer,
   Feature,
   FullCusProduct,
   FullCustomer,

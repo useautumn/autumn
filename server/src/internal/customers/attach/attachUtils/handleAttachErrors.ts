@@ -2,7 +2,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { AttachBranch } from "../models/AttachBranch.js";
+import { AttachBranch } from "@autumn/shared";
 import { AttachBody } from "../models/AttachBody.js";
 import { AttachConfig, AttachFlags } from "../models/AttachFlags.js";
 import {

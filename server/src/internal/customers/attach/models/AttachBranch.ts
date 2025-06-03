@@ -1,23 +1,24 @@
-export enum AttachBranch {
-  MultiProduct = "multi_product",
-  OneOff = "one_off",
-  New = "new",
-  AddOn = "add_on",
+// export enum AttachBranch {
+//   MultiProduct = "multi_product",
 
-  // Same product
-  NewVersion = "new_version", //
-  SameCustomEnts = "same_custom_ents",
-  SameCustom = "same_custom",
+//   OneOff = "one_off",
 
-  UpdatePrepaidQuantity = "update_prepaid_quantity",
-  Renew = "renew",
+//   New = "new",
+//   AddOn = "add_on",
 
-  // Handle upgrades / downgrades
-  MainIsFree = "main_is_free",
-  MainIsTrial = "main_is_trial",
-  Upgrade = "upgrade",
-  Downgrade = "downgrade",
-}
+//   // Same product
+//   NewVersion = "new_version",
+//   SameCustomEnts = "same_custom_ents",
+//   SameCustom = "same_custom",
+//   UpdatePrepaidQuantity = "update_prepaid_quantity",
+//   Renew = "renew",
+
+//   // Handle upgrades / downgrades
+//   MainIsFree = "main_is_free",
+//   MainIsTrial = "main_is_trial",
+//   Upgrade = "upgrade",
+//   Downgrade = "downgrade",
+// }
 
 export enum AttachFunction {
   CreateCheckout = "create_checkout",

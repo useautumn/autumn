@@ -8,6 +8,22 @@ import {
 } from "@autumn/shared";
 import Stripe from "stripe";
 
+export const findSubItemForPrice = ({
+  price,
+  subItems,
+}: {
+  price: Price;
+  subItems: Stripe.SubscriptionItem[];
+}) => {
+  return subItems.find((si: Stripe.SubscriptionItem) => {
+    const config = price.config as UsagePriceConfig;
+    return (
+      config.stripe_price_id == si.price?.id ||
+      config.stripe_product_id == si.price?.product
+    );
+  });
+};
+
 export const findPriceInStripeItems = ({
   prices,
   subItem,

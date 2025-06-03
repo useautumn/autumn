@@ -19,6 +19,8 @@ import { z } from "zod";
 
 export type AttachParams = {
   stripeCli: Stripe;
+  stripeCus?: Stripe.Customer;
+  now?: number;
   paymentMethod: Stripe.PaymentMethod | null | undefined;
 
   org: Organization;

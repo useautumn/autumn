@@ -1,11 +1,12 @@
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { AttachConfig, AttachFlags } from "../models/AttachFlags.js";
-import { AttachBranch } from "../models/AttachBranch.js";
+import { AttachBranch } from "@autumn/shared";
 import { AttachBody } from "../models/AttachBody.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import { ProrationBehavior } from "../../change-product/handleUpgrade.js";
+import { AppEnv } from "@autumn/shared";
+import { Organization } from "@autumn/shared";
 
 export const getAttachConfig = async ({
   req,
@@ -40,8 +41,22 @@ export const getAttachConfig = async ({
       ? ProrationBehavior.Immediately
       : ProrationBehavior.NextBilling,
     disableTrial:
-      branch === AttachBranch.NewVersion || attachBody.free_trial === false,
+      branch === AttachBranch.NewVersion ||
+      branch == AttachBranch.Downgrade ||
+      attachBody.free_trial === false,
   };
 
   return { flags, config };
+};
+
+const webhookToConfig = ({ org, env }: { org: Organization; env: AppEnv }) => {
+  const config: AttachConfig = {
+    branch: AttachBranch.NewVersion, // not needed...
+    carryUsage: false, // not needed...
+    onlyCheckout: false,
+    proration: ProrationBehavior.Immediately,
+    disableTrial: false,
+  };
+
+  return config;
 };

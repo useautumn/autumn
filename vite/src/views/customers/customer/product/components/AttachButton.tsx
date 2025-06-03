@@ -41,7 +41,7 @@ const getAttachBody = ({
     options: optionsInput
       ? optionsInput.map((option) => ({
           feature_id: option.feature_id,
-          quantity: option.quantity,
+          quantity: option.quantity || 0,
         }))
       : undefined,
     is_custom: isCustom,
@@ -54,11 +54,13 @@ const getAttachBody = ({
 };
 
 export const AttachButton = () => {
-  const [open, setOpen] = useState(false);
-  const [preview, setPreview] = useState<any>(null);
-  const { attachState, product, entityId, customer } = useProductContext();
-  const [buttonLoading, setButtonLoading] = useState(false);
   const axios = useAxiosInstance();
+  const [open, setOpen] = useState(false);
+  const [buttonLoading, setButtonLoading] = useState(false);
+
+  const { attachState, product, entityId, customer } = useProductContext();
+  const { preview, setPreview } = attachState;
+
   const { buttonText } = attachState;
 
   const handleAttachClicked = async () => {
@@ -74,8 +76,7 @@ export const AttachButton = () => {
         }),
       );
 
-      setPreview(res.data.preview);
-
+      setPreview(res.data);
       setOpen(true);
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to attach product"));
@@ -85,7 +86,7 @@ export const AttachButton = () => {
 
   return (
     <>
-      <AttachModal open={open} setOpen={setOpen} preview={preview} />
+      <AttachModal open={open} setOpen={setOpen} />
       <Button
         onClick={handleAttachClicked}
         variant="gradientPrimary"

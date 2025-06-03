@@ -3,20 +3,19 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "../../cusProducts/AttachParams.js";
-import { AttachBranch, AttachFunction } from "../models/AttachBranch.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { nullish } from "@/utils/genUtils.js";
-import { handleUpgrade } from "../../change-product/handleUpgrade.js";
+import { AttachBranch, AttachFunction } from "@autumn/shared";
 import { handleUpgradeFunction } from "../attachFunctions/upgradeFlow/handleUpgradeFunction.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../../add-product/handleAddProduct.js";
 import { AttachBody } from "../models/AttachBody.js";
-import { AttachConfig, AttachFlags } from "../models/AttachFlags.js";
+import { AttachConfig } from "../models/AttachFlags.js";
 import { handleScheduleFunction } from "../attachFunctions/scheduleFlow/handleScheduleFunction.js";
 import { cancelFutureProductSchedule } from "../../change-product/scheduleUtils.js";
 import { handleEntsChangedFunction } from "../attachFunctions/updateEntsFlow/handleEntsChangedFunction.js";
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
 import { SuccessCode } from "@autumn/shared";
+import { attachParamToCusProducts } from "./convertAttachParams.js";
+import chalk from "chalk";
 
 /* 
 1. If from new version, free trial should just carry over
@@ -130,10 +129,23 @@ export const runAttachFunction = async ({
   const customer = attachParams.customer;
   const org = attachParams.org;
   const productIdsStr = attachParams.products.map((p) => p.id).join(", ");
+  const { curMainProduct, curSameProduct, curScheduledProduct } =
+    attachParamToCusProducts({
+      attachParams,
+    });
+
+  logger.info(`--------------------------------`);
   logger.info(
     `ATTACHING ${productIdsStr} to ${customer.name} (${customer.id || customer.email}), org: ${org.slug}`,
   );
-  logger.info(`Branch: ${branch}, Function: ${attachFunction}`);
+  logger.info(
+    `Branch: ${chalk.yellow(branch)}, Function: ${chalk.yellow(attachFunction)}`,
+    {
+      curMainProduct: curMainProduct?.product.id,
+      curSameProduct: curSameProduct?.product.id,
+      curScheduledProduct: curScheduledProduct?.product.id,
+    },
+  );
 
   // 1. Cancel future schedule before creating a new one...
   await cancelFutureProductSchedule({
@@ -208,6 +220,7 @@ export const runAttachFunction = async ({
       req,
       res,
       attachParams,
+      config,
     });
   }
 };

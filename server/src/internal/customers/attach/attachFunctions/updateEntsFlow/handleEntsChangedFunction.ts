@@ -42,6 +42,7 @@ export const handleEntsChangedFunction = async ({
     disableFreeTrial: false,
     keepResetIntervals: true,
     carryExistingUsages,
+    logger,
   });
 
   logger.info("✅ Successfully updated entitlements for product");

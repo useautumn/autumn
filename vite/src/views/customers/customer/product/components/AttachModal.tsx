@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -9,27 +8,17 @@ import {
 import { DialogContent } from "@/components/ui/dialog";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import {
+  AttachBranch,
   AttachScenario,
   CheckProductPreview,
   Entity,
   ErrCode,
-  FeatureOptions,
 } from "@autumn/shared";
 import { AttachCase } from "../hooks/useAttachState";
 
 import { useState } from "react";
-import {
-  ArrowRight,
-  ArrowUpRightFromSquare,
-  InfoIcon,
-  Link,
-  ArrowLeft,
-} from "lucide-react";
-import {
-  PriceItem,
-  TotalPrice,
-  QuantityInput,
-} from "@/components/pricing/attach-pricing-dialog";
+import { ArrowUpRightFromSquare, InfoIcon } from "lucide-react";
+import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import {
   getBackendErr,
   getBackendErrObj,
@@ -44,15 +33,16 @@ import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { AttachPreviewDetails } from "./AttachPreviewDetails";
 import { ToggleConfigButton } from "./ToggleConfigButton";
+import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { AttachInfo } from "./attach-preview/AttachInfo";
 
 export const AttachModal = ({
   open,
   setOpen,
-  preview,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
-  preview: CheckProductPreview;
 }) => {
   const { product, customer, entities, entityId, attachState } =
     useProductContext();
@@ -61,17 +51,7 @@ export const AttachModal = ({
   const env = useEnv();
   const axiosInstance = useAxiosInstance();
 
-  const { attachCase } = attachState;
-  const [optionsInput, setOptionsInput] = useState<
-    {
-      feature_id: string;
-      feature_name: string;
-      billing_units: number;
-      price?: number;
-      quantity?: number;
-    }[]
-  >(preview?.options || []);
-
+  const { preview, options, setOptions, flags } = attachState;
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
 
@@ -96,20 +76,26 @@ export const AttachModal = ({
     return cusId;
   };
 
-  const getAttachDescription = () => {
-    switch (attachCase) {
-      case AttachCase.Checkout:
-        return "This customer does not have a card on file.";
-      case AttachScenario.New:
-        return "Clicking confirm will create a new product for the customer.";
-      case AttachScenario.Upgrade:
-        return `The customer is upgrading from ${preview?.current_product_name} to ${product.name}. This will happen immediately.`;
-      default:
-        return "Attach the product to the customer.";
+  const invoiceAllowed = () => {
+    if (preview?.branch == AttachBranch.SameCustomEnts || flags.isFree) {
+      return false;
     }
+    if (preview?.branch == AttachBranch.Downgrade) {
+      return false;
+    }
+
+    return true;
   };
 
   const getButtonText = () => {
+    if (preview?.branch == AttachBranch.Downgrade) {
+      return "Confirm Downgrade";
+    }
+
+    if (preview?.branch == AttachBranch.SameCustomEnts || flags.isFree) {
+      return "Confirm";
+    }
+
     if (!preview?.payment_method) {
       return "Checkout Page";
     }
@@ -137,17 +123,16 @@ export const AttachModal = ({
       const { data } = await CusService.attach(axiosInstance, customer.id, {
         product_id: product.id,
         entity_id: entityId || undefined,
-        options: optionsInput
-          ? optionsInput.map((option) => ({
+        options: options
+          ? options.map((option: any) => ({
               feature_id: option.feature_id,
-              quantity: option.quantity,
+              quantity: option.quantity || 0,
             }))
           : undefined,
         is_custom: isCustom,
         ...customData,
 
         invoice_only: useInvoice,
-        free_trial: product.free_trial || undefined,
         success_url: `${import.meta.env.VITE_PUBLIC_FRONTEND_URL}${redirectUrl}`,
       });
 
@@ -184,11 +169,14 @@ export const AttachModal = ({
 
   const [configOpen, setConfigOpen] = useState(false);
 
+  const mainWidth = "w-lg";
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="w-fit gap-0 p-0 rounded-xs">
+      <DialogContent className="gap-0 p-0 rounded-xs">
         <div className="flex transition-all duration-300 ease-in-out">
-          <div className="p-6 pb-2 flex flex-col gap-4 w-md rounded-sm">
+          <div
+            className={`p-6 pb-2 flex flex-col gap-4 ${mainWidth} rounded-sm`}
+          >
             <DialogHeader>
               <DialogTitle className="text-t2 text-md">
                 Attach product
@@ -196,7 +184,7 @@ export const AttachModal = ({
             </DialogHeader>
 
             <div className="text-sm flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col">
                 <p className="text-t2 font-semibold mb-2">Details</p>
                 <PriceItem>
                   <span>Product</span>
@@ -208,23 +196,10 @@ export const AttachModal = ({
                 </PriceItem>
               </div>
 
-              {preview && (
-                <>
-                  <div className="h-px bg-zinc-200"></div>
-                  <AttachPreviewDetails
-                    options={optionsInput}
-                    setOptions={setOptionsInput}
-                    preview={preview}
-                  />
-                </>
-              )}
+              {preview && !flags.isFree && <AttachPreviewDetails />}
+              <AttachInfo />
             </div>
-            <div className="flex items-center p-2 bg-blue-50 border-1 border-blue-200 text-blue-400 rounded-xs">
-              <div className="min-w-6 flex">
-                <InfoIcon size={14} />
-              </div>
-              <p className="text-sm">{getAttachDescription()}</p>
-            </div>
+
             <div className="flex justify-end">
               <ToggleConfigButton
                 configOpen={configOpen}
@@ -243,20 +218,27 @@ export const AttachModal = ({
           </div>
         </div>
 
-        <DialogFooter className="bg-stone-100 flex items-center h-10 gap-0 border-t border-zinc-200">
-          <Button
-            variant="add"
-            className="!h-full text-t2"
-            endIcon={<ArrowUpRightFromSquare size={12} />}
-            disableStartIcon={true}
-            tabIndex={-1}
-            tooltipContent="This will enable the product for the customer immediately, and redirect you to Stripe to finalize the invoice"
-            isLoading={invoiceLoading}
-            disabled={invoiceLoading || checkoutLoading}
-            onClick={() => handleAttachClicked(true)}
-          >
-            Invoice Customer
-          </Button>
+        <DialogFooter
+          className={cn(
+            "bg-stone-100 flex items-center h-10 gap-0 border-t border-zinc-200",
+            mainWidth,
+          )}
+        >
+          {invoiceAllowed() && (
+            <Button
+              variant="add"
+              className="!h-full text-t2"
+              endIcon={<ArrowUpRightFromSquare size={12} />}
+              disableStartIcon={true}
+              tabIndex={-1}
+              tooltipContent="This will enable the product for the customer immediately, and redirect you to Stripe to finalize the invoice"
+              isLoading={invoiceLoading}
+              disabled={invoiceLoading || checkoutLoading}
+              onClick={() => handleAttachClicked(true)}
+            >
+              Invoice Customer
+            </Button>
+          )}
           <Button
             variant="add"
             className="!h-full"

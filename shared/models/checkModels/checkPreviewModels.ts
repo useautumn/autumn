@@ -16,6 +16,13 @@ export enum AttachScenario {
   Expired = "expired",
 }
 
+export interface PreviewItem {
+  price: string;
+  description: string;
+  usage_model?: UsageModel;
+  amount?: number;
+}
+
 export interface CheckProductPreview {
   title: string;
   message: string;

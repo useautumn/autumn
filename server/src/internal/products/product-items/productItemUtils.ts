@@ -16,20 +16,57 @@ import {
   billingToItemInterval,
   entToItemInterval,
 } from "./itemIntervalUtils.js";
+import {
+  calculateProrationAmount,
+  Proration,
+} from "@/internal/invoices/prorationUtils.js";
 
-export const itemToPriceOrTiers = (item: ProductItem) => {
+export const itemToPriceOrTiers = ({
+  item,
+  proration,
+  now,
+}: {
+  item: ProductItem;
+  proration?: Proration;
+  now?: number;
+}) => {
+  now = now || Date.now();
   if (item.price) {
     return {
-      price: item.price,
+      price: proration
+        ? calculateProrationAmount({
+            periodEnd: proration.end,
+            periodStart: proration.start,
+            now,
+            amount: item.price,
+          })
+        : item.price,
     };
   } else if (item.tiers) {
     if (item.tiers.length > 1) {
       return {
-        tiers: item.tiers,
+        tiers: item.tiers.map((tier) => ({
+          ...tier,
+          amount: proration
+            ? calculateProrationAmount({
+                periodEnd: proration.end,
+                periodStart: proration.start,
+                now,
+                amount: tier.amount,
+              })
+            : tier.amount,
+        })),
       };
     } else {
       return {
-        price: item.tiers[0].amount,
+        price: proration
+          ? calculateProrationAmount({
+              periodEnd: proration.end,
+              periodStart: proration.start,
+              now,
+              amount: item.tiers[0].amount,
+            })
+          : item.tiers[0].amount,
       };
     }
   }

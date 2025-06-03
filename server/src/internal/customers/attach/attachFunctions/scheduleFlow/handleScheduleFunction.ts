@@ -1,36 +1,20 @@
 import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
-import {
-  getStripeSchedules,
-  getStripeSubs,
-} from "@/external/stripe/stripeSubUtils.js";
-import { getCusProductsWithStripeSubIds } from "@/internal/customers/change-product/handleDowngrade.js";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
-import {
-  cancelFutureProductSchedule,
-  getScheduleIdsFromCusProducts,
-} from "@/internal/customers/change-product/scheduleUtils.js";
 import { updateScheduledSubWithNewItems } from "@/internal/customers/change-product/scheduleUtils/updateScheduleWithNewItems.js";
 import {
   AttachParams,
   AttachResultSchema,
 } from "@/internal/customers/cusProducts/AttachParams.js";
-import {
-  APIVersion,
-  AttachScenario,
-  FullCusProduct,
-  SuccessCode,
-} from "@autumn/shared";
-import {
-  handleNewScheduleForItemSet,
-  scheduleStripeSub,
-} from "./scheduleStripeSub.js";
+import { APIVersion, AttachScenario, SuccessCode } from "@autumn/shared";
+import { handleNewScheduleForItemSet } from "./scheduleStripeSub.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   attachToInsertParams,
   isFreeProduct,
 } from "@/internal/products/productUtils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+
 import { cusProductsToSchedules } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import Stripe from "stripe";
 import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
@@ -143,6 +127,7 @@ export const handleScheduleFunction = async ({
     disableFreeTrial: true,
     isDowngrade: true,
     scenario: newProductFree ? AttachScenario.Cancel : AttachScenario.Downgrade,
+    logger,
   });
 
   // 8. Updating current cus product canceled_at...

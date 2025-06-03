@@ -27,46 +27,43 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { getCusPaymentMethod } from "../stripeCusUtils.js";
+import { createStripeCli } from "../utils.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { webhookToAttachParams } from "../webhookUtils/webhookUtils.js";
 
 const handleCusProductDeleted = async ({
   req,
   db,
+  stripeCli,
   cusProduct,
   subscription,
   logger,
-  env,
-  org,
   prematurelyCanceled,
 }: {
   req: ExtendedRequest;
   db: DrizzleCli;
+  stripeCli: Stripe;
   cusProduct: FullCusProduct;
   subscription: Stripe.Subscription;
   logger: any;
-  env: AppEnv;
-  org: Organization;
   prematurelyCanceled: boolean;
 }) => {
-  if (
-    !cusProduct ||
-    cusProduct.customer!.env !== env ||
-    cusProduct.customer!.org_id !== org.id
-  ) {
-    console.log(
-      "   ⚠️ customer product not found / env mismatch / org mismatch",
-    );
-    return;
-  }
+  const { org, env } = req;
+  const paymentMethod = await getCusPaymentMethod({
+    stripeCli,
+    stripeId: cusProduct.customer!.processor?.id,
+  });
+
+  const customer = cusProduct.customer!;
 
   if (cusProduct.internal_entity_id) {
-    let customer = cusProduct.customer;
     let usagePrices = cusProduct.customer_prices.filter(
       (cp: FullCustomerPrice) =>
         getBillingType(cp.price.config!) === BillingType.UsageInArrear,
     );
 
     if (usagePrices.length > 0) {
-      // Create invoice for remaining usage charges
       logger.info(
         `Customer ${customer!.name} (${customer!.id}), Entity: ${cusProduct.internal_entity_id}`,
       );
@@ -77,20 +74,12 @@ const handleCusProductDeleted = async ({
         db,
         curCusProduct: cusProduct,
         logger,
-        attachParams: {
-          customer: cusProduct.customer!,
-          org,
-          invoiceOnly: false,
-
-          // PLACEHOLDERS
-          products: [],
-          prices: [],
-          entitlements: [],
-          features: [],
-          freeTrial: null,
-          optionsList: [],
-          entities: [],
-        },
+        attachParams: webhookToAttachParams({
+          req,
+          stripeCli,
+          paymentMethod,
+          cusProduct,
+        }),
         newSubs: [subscription],
       });
     }
@@ -182,6 +171,7 @@ const handleCusProductDeleted = async ({
     org,
     env,
     curCusProduct: curMainProduct || undefined,
+    logger,
   });
 
   await cancelCusProductSubscriptions({
@@ -215,19 +205,24 @@ export const handleSubscriptionDeleted = async ({
     env,
   });
 
+  const stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
   if (activeCusProducts.length === 0) {
-    console.log(
-      `   ⚠️ no customer products found with stripe sub id: ${subscription.id}`,
-    );
-
     if (subscription.livemode) {
-      throw new RecaseError({
-        message: `Stripe subscription.deleted (live): no customer products found, subscription: ${subscription.id}`,
-        code: ErrCode.NoActiveCusProducts,
-        statusCode: 200,
-      });
+      logger.warn(
+        `subscription.deleted: ${subscription.id} - no customer products found`,
+      );
+      return;
     }
+  }
 
+  if (subscription.cancellation_details?.comment === "autumn_upgrade") {
+    logger.info(
+      `sub.deleted: ${subscription.id} from autumn upgrade, skipping`,
+    );
     return;
   }
 
@@ -240,11 +235,10 @@ export const handleSubscriptionDeleted = async ({
       handleCusProductDeleted({
         req,
         db,
+        stripeCli,
         cusProduct,
         subscription,
         logger,
-        env,
-        org,
         prematurelyCanceled,
       }),
     );

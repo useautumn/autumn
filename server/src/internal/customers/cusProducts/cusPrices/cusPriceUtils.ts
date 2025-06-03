@@ -3,6 +3,7 @@ import {
   FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
+  getFeatureInvoiceDescription,
   Price,
   UsagePriceConfig,
 } from "@autumn/shared";
@@ -91,10 +92,16 @@ export const getCusPriceUsage = ({
 
   const amount = getPriceForOverage(cusPrice.price, -totalNegativeBalance);
 
+  const description = getFeatureInvoiceDescription({
+    feature: cusEnt.entitlement.feature,
+    usage,
+  });
+
   return {
     usage, // total usage
     overage: -totalNegativeBalance, // usage that's past the allowance
     roundedUsage: roundedQuantity, // usage rounded to the nearest billing unit
     amount,
+    description,
   };
 };

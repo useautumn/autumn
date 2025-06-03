@@ -1,81 +1,54 @@
-import { Feature, FullProduct, Organization, UsageModel } from "@autumn/shared";
-import { mapToProductV2 } from "@/internal/products/productV2Utils.js";
-import { isOneOff } from "@/internal/products/productUtils.js";
-
-import {
-  isFeatureItem,
-  isPriceItem,
-} from "@/internal/products/product-items/getItemType.js";
-import {
-  getPricecnPrice,
-  sortProductItems,
-} from "@/internal/products/pricecn/pricecnUtils.js";
+import { BillingInterval } from "@autumn/shared";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
-import { AttachScenario } from "@autumn/shared";
-import { getItemDescription } from "../../previews/checkProductUtils.js";
+import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
+import { AttachParams } from "../../cusProducts/AttachParams.js";
+import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
+import { mapToProductItems } from "@/internal/products/productV2Utils.js";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 
 export const getNewProductPreview = async ({
-  org,
-  product,
-  features,
+  attachParams,
+  now,
 }: {
-  org: Organization;
-  product: FullProduct;
-  features: Feature[];
+  attachParams: AttachParams;
+  now: number;
 }) => {
-  let productV2 = mapToProductV2({
-    product,
-    features,
+  const { org } = attachParams;
+  const newProduct = attachParamsToProduct({ attachParams });
+
+  let anchorToUnix = undefined;
+  if (org.config.anchor_start_of_month) {
+    anchorToUnix = getNextStartOfMonthUnix(BillingInterval.Month);
+  }
+
+  const items = getItemsForNewProduct({
+    newProduct,
+    attachParams,
+    now,
+    anchorToUnix,
   });
 
-  let sortedItems = sortProductItems(productV2.items, features);
-
-  let lineItems = sortedItems
-    .filter((i) => !isFeatureItem(i) && i.usage_model != UsageModel.Prepaid)
-    .map((i, index) => {
-      let pricecnPrice = getPricecnPrice({
-        org,
-        items: [i],
-        features,
-        isMainPrice: index == 0,
-      });
-
-      let description = getItemDescription({
-        item: i,
-        features,
-        product: productV2,
-        org,
-      });
-
-      return {
-        description,
-        price: `${pricecnPrice.primaryText} ${pricecnPrice.secondaryText}`,
-      };
-    });
-
-  let dueToday = Number(
-    sortedItems
-      .filter((i) => isPriceItem(i))
-      .reduce((sum, i) => sum + i.price!, 0)
-      .toFixed(2),
-  );
+  const dueTodayAmt = items.reduce((acc, item) => {
+    return acc + (item.amount ?? 0);
+  }, 0);
 
   let options = getOptions({
-    prodItems: productV2.items,
-    features,
+    prodItems: mapToProductItems({
+      prices: newProduct.prices,
+      entitlements: newProduct.entitlements,
+      features: attachParams.features,
+    }),
+    features: attachParams.features,
+    anchorToUnix,
   });
 
   return {
-    scenario: AttachScenario.New,
-    product_id: product.id,
-    product_name: product.name,
-    recurring: !isOneOff(product.prices),
-
-    items: lineItems,
-    options,
+    currency: attachParams.org.default_currency,
     due_today: {
-      price: dueToday,
-      currency: org.default_currency || "USD",
+      line_items: items,
+      total: dueTodayAmt,
     },
+
+    options,
   };
 };

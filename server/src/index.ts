@@ -108,11 +108,7 @@ const init = async () => {
 
     const methodColor: any = methodToColor[method] || chalk.gray;
 
-    console.log(
-      `${chalk.gray(format(new Date(), "dd MMM HH:mm:ss"))} ${methodColor(
-        method,
-      )} ${chalk.white(path)}`,
-    );
+    console.log(`${methodColor(method).padEnd(18)} ${path}`);
 
     next();
   });

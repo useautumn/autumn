@@ -53,11 +53,11 @@ export const notNullish = (value: any) => {
   return !nullish(value);
 };
 
-export const formatUnixToDateTime = (unixDate: number) => {
+export const formatUnixToDateTime = (unixDate?: number | null) => {
   if (!unixDate) {
-    return null;
+    return "undefined unix date";
   }
-  return format(new Date(unixDate), "yyyy MMM dd HH:mm:ss");
+  return format(new Date(unixDate), "dd MMM yyyy HH:mm:ss");
 };
 
 export const formatUnixToDate = (unixDate?: number) => {

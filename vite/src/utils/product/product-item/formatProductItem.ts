@@ -1,10 +1,14 @@
 import {
   Feature,
+  FeatureType,
+  Infinite,
   Organization,
   ProductItem,
   ProductItemType,
 } from "@autumn/shared";
 import { formatAmount, getItemType, intervalIsNone } from "../productItemUtils";
+import { getFeature } from "../entitlementUtils";
+import { notNullish } from "@/utils/genUtils";
 
 const getPaidFeatureString = ({
   item,
@@ -37,7 +41,7 @@ const getPaidFeatureString = ({
     })}`;
   }
 
-  let feature = features.find((f: Feature) => f.id == item.feature_id);
+  const feature = features.find((f: Feature) => f.id == item.feature_id);
 
   amountStr += ` per ${item.billing_units! > 1 ? item.billing_units : ""} ${
     feature?.name
@@ -61,8 +65,8 @@ const getFixedPriceString = ({
   item: ProductItem;
   org: Organization;
 }) => {
-  let currency = org?.default_currency || "USD";
-  let formattedAmount = formatAmount({
+  const currency = org?.default_currency || "USD";
+  const formattedAmount = formatAmount({
     defaultCurrency: currency,
     amount: item.price!,
   });
@@ -74,6 +78,26 @@ const getFixedPriceString = ({
   return `${formattedAmount}`;
 };
 
+export const getFeatureString = ({
+  item,
+  features,
+}: {
+  item: ProductItem;
+  features: Feature[];
+}) => {
+  const feature = features.find((f: Feature) => f.id == item.feature_id);
+
+  if (feature?.type === FeatureType.Boolean) {
+    return `${feature.name}`;
+  }
+
+  if (item.included_usage == Infinite) {
+    return `Unlimited ${feature?.name}`;
+  }
+
+  return `${item.included_usage ?? 0} ${feature?.name}${item.entity_feature_id ? ` per ${getFeature(item.entity_feature_id, features)?.name}` : ""}${notNullish(item.interval) ? ` per ${item.interval}` : ""}`;
+};
+
 export const formatProductItemText = ({
   item,
   org,
@@ -83,7 +107,7 @@ export const formatProductItemText = ({
   org: Organization;
   features: Feature[];
 }) => {
-  let itemType = getItemType(item);
+  const itemType = getItemType(item);
 
   if (itemType == ProductItemType.FeaturePrice) {
     return getPaidFeatureString({ item, org, features });

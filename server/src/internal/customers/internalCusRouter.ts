@@ -29,6 +29,7 @@ import { CusReadService } from "./CusReadService.js";
 import { StatusCodes } from "http-status-codes";
 import { getAttachPreview } from "../api/entitled/handlers/getAttachPreview.js";
 import { cusProductToProduct } from "./cusProducts/cusProductUtils/convertCusProduct.js";
+import { createOrgResponse } from "../orgs/orgUtils.js";
 
 export const cusRouter = Router();
 
@@ -347,6 +348,7 @@ cusRouter.get(
         features,
         numVersions,
         entities: customer.entities,
+        org: createOrgResponse(org),
       });
     } catch (error) {
       handleFrontendReqError({

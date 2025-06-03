@@ -36,10 +36,6 @@ mainRouter.use("/test", testRouter);
 mainRouter.use(
   "/api/autumn",
   withOrgAuth,
-  (req: any, res: any, next: any) => {
-    // console.log("Autumn middleware:", req.originalUrl);
-    next();
-  },
   autumnHandler({
     identify: async (req: any) => {
       return {

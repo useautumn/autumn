@@ -5,6 +5,11 @@ export const formatTimestamp = (timestamp: number | null | undefined) => {
   return format(new Date(timestamp), "MM/dd/yyyy");
 };
 
+export const formatUnixToDate = (unix: number | null | undefined) => {
+  if (!unix) return "";
+  return format(new Date(unix), "d MMM yyyy");
+};
+
 export const formatUnixToDateTime = (unix: number | null | undefined) => {
   if (!unix) return { date: "", time: "" };
   const date = format(new Date(unix), "d MMM");

@@ -11,6 +11,11 @@ export const getStripeSubLink = (subscriptionId: string, env: AppEnv) => {
     env == AppEnv.Live ? "" : "/test"
   }/subscriptions/${subscriptionId}`;
 };
+export const getStripeSubScheduleLink = (scheduledId: string, env: AppEnv) => {
+  return `https://dashboard.stripe.com${
+    env == AppEnv.Live ? "" : "/test"
+  }/subscription_schedules/${scheduledId}`;
+};
 
 export const getStripeInvoiceLink = (stripeInvoice: any) => {
   return `https://dashboard.stripe.com${

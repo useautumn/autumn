@@ -82,10 +82,12 @@ export class OrgService {
     db,
     orgId,
     env,
+    allowNotFound = false,
   }: {
     db: DrizzleCli;
     orgId: string;
     env: AppEnv;
+    allowNotFound?: boolean;
   }) {
     const result = (await db.query.organizations.findFirst({
       where: eq(organizations.id, orgId),
@@ -99,6 +101,10 @@ export class OrgService {
     };
 
     if (!result) {
+      if (allowNotFound) {
+        return null;
+      }
+
       throw new RecaseError({
         message: `Organization ${orgId} not found`,
         code: ErrCode.OrgNotFound,

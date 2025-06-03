@@ -1,15 +1,6 @@
 import { Router } from "express";
-import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { z } from "zod";
-import {
-  APIVersion,
-  BillingType,
-  FeatureOptions,
-  FeatureOptionsSchema,
-  FullCusProduct,
-  ProductItem,
-  ProductItemSchema,
-} from "@autumn/shared";
+import RecaseError from "@/utils/errorUtils.js";
+import { APIVersion, BillingType, FullCusProduct } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
 import {
   createStripeCusIfNotExists,
@@ -45,19 +36,13 @@ import { orgToVersion } from "@/utils/versionUtils.js";
 import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
 import { handleAddFreeProduct } from "@/internal/customers/add-product/handleAddFreeProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
-import { handleChangeProduct } from "@/internal/customers/change-product/handleChangeProduct.js";
 import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { AttachBodySchema } from "./models/AttachBody.js";
 import { processAttachBody } from "./attachUtils/processAttachBody.js";
-import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
-import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";
-import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
-import { getAttachConfig } from "./attachUtils/getAttachConfig.js";
-import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
-import { getAttachParams } from "./attachUtils/getAttachParams.js";
+import { handleAttach } from "./handleAttach.js";
 
 export const attachRouter = Router();
 
@@ -258,68 +243,6 @@ export const customerHasPm = async ({
   return notNullOrUndefined(paymentMethod) ? true : false;
 };
 
-const handleAttachNew = async (req: any, res: any) =>
-  routeHandler({
-    req,
-    res,
-    action: "attach",
-    handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
-      await handleAttachRaceCondition({ req, res });
-
-      const attachBody = AttachBodySchema.parse(req.body);
-      const logger = req.logtail;
-
-      const { attachParams, customPrices, customEnts } = await getAttachParams({
-        req,
-        attachBody,
-      });
-
-      // Handle existing product
-      const branch = await getAttachBranch({
-        req,
-        attachBody,
-        attachParams,
-      });
-
-      const { flags, config } = await getAttachConfig({
-        req,
-        attachParams,
-        attachBody,
-        branch,
-      });
-
-      await handleAttachErrors({
-        attachParams,
-        attachBody,
-        branch,
-        flags,
-        config,
-      });
-
-      await checkStripeConnections({ req, attachParams });
-      await createStripePrices({
-        attachParams,
-        useCheckout: config.onlyCheckout,
-        req,
-        logger,
-      });
-      await insertCustomItems({
-        db: req.db,
-        customPrices: customPrices || [],
-        customEnts: customEnts || [],
-      });
-
-      await runAttachFunction({
-        req,
-        res,
-        attachParams,
-        branch,
-        attachBody,
-        config,
-      });
-    },
-  });
-
 const handleAttachOld = async (req: any, res: any) =>
   routeHandler({
     action: "attach",
@@ -508,17 +431,17 @@ const handleAttachOld = async (req: any, res: any) =>
         return;
       }
 
-      // SCENARIO 4: Switching product
-      if (curCusProduct) {
-        logger.info("SCENARIO 3: SWITCHING PRODUCT");
-        await handleChangeProduct({
-          req,
-          res,
-          attachParams,
-          curCusProduct,
-        });
-        return;
-      }
+      // // SCENARIO 4: Switching product
+      // if (curCusProduct) {
+      //   logger.info("SCENARIO 3: SWITCHING PRODUCT");
+      //   await handleChangeProduct({
+      //     req,
+      //     res,
+      //     attachParams,
+      //     curCusProduct,
+      //   });
+      //   return;
+      // }
 
       // SCENARIO 5: No existing product, not free product
       logger.info("SCENARIO 4: ADDING PRODUCT");
@@ -530,6 +453,6 @@ const handleAttachOld = async (req: any, res: any) =>
     },
   });
 
-attachRouter.post("", handleAttachNew);
+attachRouter.post("", handleAttach);
 attachRouter.post("/preview", handleAttachPreview);
 // attachRouter.post("", handleAttachOld);

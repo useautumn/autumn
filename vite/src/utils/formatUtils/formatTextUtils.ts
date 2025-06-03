@@ -18,9 +18,17 @@ export const slugify = (text: string) => {
     .replace(/[^\w\s-]/g, "");
 };
 
-export const formatCurrency = (amount: number, currency: string = "USD") => {
+export const formatAmount = ({
+  amount,
+  currency,
+}: {
+  amount: number;
+  currency: string;
+}) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 10,
   }).format(amount);
 };

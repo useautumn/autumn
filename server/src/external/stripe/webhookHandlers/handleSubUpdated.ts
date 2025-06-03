@@ -206,6 +206,7 @@ export const handleSubscriptionUpdated = async ({
           },
           startsAt: fullSub.current_period_end * 1000,
           sendWebhook: false,
+          logger,
         });
 
         if (fullCusProduct) {

@@ -58,7 +58,15 @@ export const freeTrialsAreSame = ({
   );
 };
 
-export const freeTrialToStripeTimestamp = (freeTrial: FreeTrial | null) => {
+export const freeTrialToStripeTimestamp = ({
+  freeTrial,
+  now,
+}: {
+  freeTrial: FreeTrial | null | undefined;
+  now?: number | undefined;
+}) => {
+  now = now || Date.now();
+
   if (!freeTrial) return undefined;
 
   let duration = freeTrial.duration || FreeTrialDuration.Day;
@@ -66,11 +74,11 @@ export const freeTrialToStripeTimestamp = (freeTrial: FreeTrial | null) => {
 
   let trialEnd: Date;
   if (duration === FreeTrialDuration.Day) {
-    trialEnd = addDays(new Date(), length);
+    trialEnd = addDays(new Date(now), length);
   } else if (duration === FreeTrialDuration.Month) {
-    trialEnd = addMonths(new Date(), length);
+    trialEnd = addMonths(new Date(now), length);
   } else if (duration === FreeTrialDuration.Year) {
-    trialEnd = addYears(new Date(), length);
+    trialEnd = addYears(new Date(now), length);
   } else {
     throw new RecaseError({
       message: `Invalid free trial duration: ${duration}`,

@@ -1,39 +1,50 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 import {
+  autumnToStripeProrationBehavior,
   getStripeSubs,
   getUsageBasedSub,
 } from "@/external/stripe/stripeSubUtils.js";
+import { findSubItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { findPriceForFeature } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
-  Customer,
   ErrCode,
   Feature,
   FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
-  Organization,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { Stripe } from "stripe";
+import { AttachConfig } from "../../models/AttachFlags.js";
 
 export const updateFeatureQuantity = async ({
   db,
   stripeCli,
   cusProduct,
   optionsToUpdate,
+  config,
+  logger,
 }: {
   db: DrizzleCli;
   stripeCli: Stripe;
   cusProduct: FullCusProduct;
   optionsToUpdate: any[];
+  config: AttachConfig;
+  logger: any;
 }) => {
   const stripeSubs = await getStripeSubs({
     stripeCli: stripeCli,
     subIds: cusProduct.subscription_ids || [],
+  });
+
+  const prorationBehavior = autumnToStripeProrationBehavior({
+    prorationBehavior: config.proration,
   });
 
   for (const options of optionsToUpdate) {
@@ -57,44 +68,53 @@ export const updateFeatureQuantity = async ({
       });
     }
 
-    // Update subscription
-    // Get price
-    const relatedPrice = cusProduct.customer_prices.find(
-      (cusPrice: FullCustomerPrice) =>
-        (cusPrice.price.config as UsagePriceConfig).internal_feature_id ==
-        newOptions.internal_feature_id,
-    );
+    const curPrices = cusProductToPrices({ cusProduct });
+    const price = findPriceForFeature({
+      prices: curPrices,
+      internalFeatureId: newOptions.internal_feature_id,
+    });
 
-    let config = relatedPrice?.price.config as UsagePriceConfig;
+    if (!price) {
+      throw new RecaseError({
+        message: `updateFeatureQuantity: No price found for feature ${newOptions.feature_id}`,
+        code: ErrCode.PriceNotFound,
+      });
+    }
 
-    let subItem = subToUpdate?.items.data.find(
-      (item: Stripe.SubscriptionItem) =>
-        item.price.id == config.stripe_price_id,
-    );
+    let subItem = findSubItemForPrice({
+      price,
+      subItems: subToUpdate.items.data,
+    });
 
     if (!subItem) {
-      // Create new subscription item
       subItem = await stripeCli.subscriptionItems.create({
         subscription: subToUpdate.id,
-        price: config.stripe_price_id as string,
+        price: price.config.stripe_price_id as string,
         quantity: newOptions.quantity,
+        proration_behavior: prorationBehavior,
+        payment_behavior: "error_if_incomplete",
       });
 
-      console.log(
-        `   ✅ Successfully created subscription item for feature ${newOptions.feature_id}: ${newOptions.quantity}`,
+      logger.info(
+        `updateFeatureQuantity: Successfully created sub item for feature ${newOptions.feature_id}: ${newOptions.quantity}`,
       );
     } else {
-      // Update quantity
       await stripeCli.subscriptionItems.update(subItem.id, {
         quantity: newOptions.quantity,
+        proration_behavior: prorationBehavior,
+        payment_behavior: "error_if_incomplete",
       });
-      console.log(
-        `   ✅ Successfully updated subscription item for feature ${newOptions.feature_id}: ${newOptions.quantity}`,
+      logger.info(
+        `updateFeatureQuantity: Successfully updated sub item for feature ${newOptions.feature_id}: ${newOptions.quantity}`,
       );
     }
 
     // Update cus ent
-    let difference = newOptions.quantity - oldOptions.quantity;
+    const config = price.config as UsagePriceConfig;
+    let difference = new Decimal(newOptions.quantity)
+      .minus(new Decimal(oldOptions.quantity))
+      .mul(config.billing_units || 1);
+
     let cusEnt = cusProduct.customer_entitlements.find(
       (cusEnt: FullCustomerEntitlement) =>
         cusEnt.entitlement.internal_feature_id ==
@@ -102,14 +122,10 @@ export const updateFeatureQuantity = async ({
     );
 
     if (cusEnt) {
-      let updates: any = {
-        balance: new Decimal(cusEnt?.balance || 0).plus(difference).toNumber(),
-      };
-
-      await CusEntService.update({
+      await CusEntService.increment({
         db,
         id: cusEnt.id,
-        updates,
+        amount: difference.toNumber(),
       });
     }
   }

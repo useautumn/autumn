@@ -13,10 +13,10 @@ import {
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
+
 import {
   AppEnv,
   BillingType,
-  Customer,
   Feature,
   FullCusProduct,
   FullCustomer,

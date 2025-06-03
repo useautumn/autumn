@@ -4,8 +4,12 @@ import { processAttachBody } from "./processAttachBody.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import {
+  getCusPaymentMethod,
+  getStripeCus,
+} from "@/external/stripe/stripeCusUtils.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
+import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 
 export const getAttachParams = async ({
   req,
@@ -45,13 +49,32 @@ export const getAttachParams = async ({
     : undefined;
 
   const stripeCli = createStripeCli({ org, env });
-  const paymentMethod = await getCusPaymentMethod({
-    stripeCli,
-    stripeId: customer.processor?.id,
-  });
+  const [paymentMethod, { stripeCus, now }] = await Promise.all([
+    getCusPaymentMethod({
+      stripeCli,
+      stripeId: customer.processor?.id,
+    }),
+    (async () => {
+      try {
+        const stripeCus = await getStripeCus({
+          stripeCli,
+          stripeId: customer.processor?.id,
+        });
+        const now = await getStripeNow({
+          stripeCli,
+          stripeCus,
+        });
+        return { stripeCus, now };
+      } catch (error) {
+        return { stripeCus: undefined, now: undefined };
+      }
+    })(),
+  ]);
 
   const attachParams: AttachParams = {
     stripeCli,
+    stripeCus,
+    now,
     paymentMethod,
 
     customer,

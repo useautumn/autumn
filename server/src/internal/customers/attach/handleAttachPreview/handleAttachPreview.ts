@@ -8,9 +8,12 @@ import { ExtendedResponse } from "@/utils/models/Request.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachFunction } from "../models/AttachBranch.js";
 import { getNewProductPreview } from "./getNewProductPreview.js";
-import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
-import { CheckProductPreview } from "@autumn/shared";
 import { getUpgradeProductPreview } from "./getUpgradeProductPreview.js";
+import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
+import { getUpdateEntsPreview } from "./getUpdateEntsPreview.js";
+import { getDowngradeProductPreview } from "./getDowngradeProductPreview.js";
+import { attachParamToCusProducts } from "../attachUtils/convertAttachParams.js";
+import { cusProductToProduct } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const handleAttachPreview = (req: any, res: any) =>
   routeHandler({
@@ -30,6 +33,7 @@ export const handleAttachPreview = (req: any, res: any) =>
         req,
         attachBody,
         attachParams,
+        fromPreview: true,
       });
 
       const { flags, config } = await getAttachConfig({
@@ -48,31 +52,57 @@ export const handleAttachPreview = (req: any, res: any) =>
 
       console.log(`Branch: ${branch}, Function: ${func}`);
 
-      const { org, features } = attachParams;
-      const product = attachParamsToProduct({
-        attachParams,
-      });
+      const { stripeCli, stripeCus } = attachParams;
+      const now = await getStripeNow({ stripeCli, stripeCus });
 
       let preview: any = null;
+
+      if (func == AttachFunction.UpdateEnts) {
+        preview = await getUpdateEntsPreview({
+          req,
+          attachParams,
+          now,
+        });
+      }
 
       if (
         func == AttachFunction.AddProduct ||
         func == AttachFunction.CreateCheckout
       ) {
         preview = await getNewProductPreview({
-          org,
-          product,
-          features,
+          attachParams,
+          now,
         });
       }
 
-      if (func == AttachFunction.UpdateProduct) {
+      if (func == AttachFunction.ScheduleProduct) {
+        preview = await getDowngradeProductPreview({
+          attachParams,
+          now,
+        });
+      }
+
+      if (
+        func == AttachFunction.UpdateProduct ||
+        func == AttachFunction.UpdatePrepaidQuantity
+      ) {
         preview = await getUpgradeProductPreview({
           req,
           attachParams,
+          branch,
+          now,
         });
       }
 
-      res.status(200).json({ preview });
+      const { curMainProduct } = attachParamToCusProducts({ attachParams });
+      res.status(200).json({
+        branch,
+        ...preview,
+        current_product: curMainProduct
+          ? cusProductToProduct({
+              cusProduct: curMainProduct,
+            })
+          : null,
+      });
     },
   });

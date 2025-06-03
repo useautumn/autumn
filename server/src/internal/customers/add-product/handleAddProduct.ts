@@ -184,6 +184,7 @@ export const handleBillNowPrices = async ({
             : undefined,
         carryExistingUsages,
         scenario: AttachScenario.New,
+        logger,
       }),
     );
   }
@@ -414,9 +415,9 @@ export const handleOneOffPrices = async ({
     batchInsert.push(
       createFullCusProduct({
         db: req.db,
-
         attachParams: attachToInsertParams(attachParams, product),
         lastInvoiceId: stripeInvoice.id,
+        logger,
       }),
     );
   }
@@ -529,6 +530,7 @@ export const handleAddProduct = async ({
         billLaterOnly: true,
         carryExistingUsages,
         keepResetIntervals,
+        logger,
       }),
     );
   }
