@@ -15,7 +15,6 @@ import {
 import { z } from "zod";
 
 export type AttachParams = {
-  freeTrialIds: string[];
   org: Organization;
   customer: Customer;
   products: FullProduct[];

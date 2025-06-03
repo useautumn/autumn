@@ -5,9 +5,8 @@
   },
   "compilerOptions": {
     "target": "ES2020",
-    "moduleResolution": "NodeNext", // or "node16"/"nodenext"
-    "module": "NodeNext", // or "node16"/"nodenext"
-
+    "moduleResolution": "NodeNext",
+    "module": "NodeNext",
     "declaration": true,
     "rootDir": ".",
     "baseUrl": ".",
@@ -18,16 +17,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@/*": ["src/*"],
-      "@shared/*": ["../shared/*"],
-      "@scripts/*": ["scripts/*"]
+      "@/*": ["src/*"]
     }
   },
-  "include": ["src", "tests", "scripts"],
-  "references": [
-    {
-      "path": "../shared"
-    }
-  ],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

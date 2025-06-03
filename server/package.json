@@ -9,9 +9,10 @@
     "start": "tsx src/index.ts",
     "workers": "tsx watch src/workers.ts",
     "workers:start": "node --no-deprecation dist/src/workers.js",
-    "build": "tsc -b",
-    "prod": "tsc -b && tsc-alias && node dist/src/index.js",
-    "prod:build": "tsc -b && tsc-alias",
+    "build": "tsc -b tsconfig.build.json",
+    "prod": "tsc -b tsconfig.build.json && tsc-alias && node dist/src/index.js",
+    "prod:build": "tsc -b tsconfig.build.json && tsc-alias",
+    
     "prod:start": "node dist/src/index.js",
     "cron": "tsx src/cron.ts",
     "cron:start": "node --no-deprecation dist/src/cron.js",
