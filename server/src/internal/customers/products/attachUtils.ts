@@ -342,10 +342,12 @@ export const getFullCusProductData = async ({
   if (!isCustom) {
     let freeTrial = null;
     let freeTrialProduct = products.find((p) => notNullish(p.free_trial));
+
     if (freeTrialProduct) {
       freeTrial = await getFreeTrialAfterFingerprint({
         db,
         freeTrial: freeTrialProduct.free_trial,
+        productId: freeTrialProduct.id,
         fingerprint: customer.fingerprint,
         internalCustomerId: customer.internal_id,
         multipleAllowed: org.config.multiple_trials,
@@ -432,6 +434,7 @@ export const getFullCusProductData = async ({
   const uniqueFreeTrial = await getFreeTrialAfterFingerprint({
     db,
     freeTrial: freeTrial,
+    productId: product.id,
     fingerprint: customer.fingerprint,
     internalCustomerId: customer.internal_id,
     multipleAllowed: org.config.multiple_trials,
