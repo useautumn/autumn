@@ -62,6 +62,7 @@ export const CusProductSchema = z.object({
     .optional(),
 
   quantity: z.number().default(1),
+  api_version: z.number().nullish(),
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({

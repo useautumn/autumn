@@ -104,7 +104,6 @@ export default function CustomerProductView() {
   const attachState = useAttachState({
     product,
     setProduct,
-    preview: data?.preview,
   });
 
   useEffect(() => {
@@ -134,14 +133,10 @@ export default function CustomerProductView() {
     );
   }
 
-  if (isLoading) return <LoadingScreen />;
+  if (isLoading || !product) return <LoadingScreen />;
 
   if (!customer_id || !product_id) {
     return <div>Customer or product not found</div>;
-  }
-
-  if (!product) {
-    return <div>Product not found</div>;
   }
 
   const { customer } = data;

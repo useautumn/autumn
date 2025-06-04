@@ -12,4 +12,5 @@ export interface AttachConfig {
   branch: AttachBranch;
   proration: ProrationBehavior;
   disableTrial: boolean;
+  invoiceOnly: boolean;
 }
