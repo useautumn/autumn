@@ -2,7 +2,12 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { AttachBranch } from "@autumn/shared";
+import {
+  AttachBranch,
+  AttachErrCode,
+  entitlements,
+  UsagePriceConfig,
+} from "@autumn/shared";
 import { AttachBody } from "../models/AttachBody.js";
 import { AttachConfig, AttachFlags } from "../models/AttachFlags.js";
 import {
@@ -13,6 +18,14 @@ import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { BillingType } from "@autumn/shared";
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
+import { attachParamToCusProducts } from "./convertAttachParams.js";
+import {
+  cusProductsToCusEnts,
+  cusProductToPrices,
+} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { findPriceForFeature } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
+import { getResetBalance } from "../../cusProducts/cusEnts/cusEntUtils.js";
+import { Decimal } from "decimal.js";
 
 const handleNonCheckoutErrors = ({
   flags,
@@ -102,6 +115,64 @@ const handlePrepaidErrors = async ({
   }
 };
 
+const handleUpdateQuantityErrors = async ({
+  attachParams,
+}: {
+  attachParams: AttachParams;
+}) => {
+  const { curMainProduct, curSameProduct } = attachParamToCusProducts({
+    attachParams,
+  });
+
+  if (!curSameProduct && !curMainProduct) {
+    return;
+  }
+
+  const cusProduct = curSameProduct || curMainProduct!;
+  const cusEnts = cusProductsToCusEnts({ cusProducts: [cusProduct] });
+  const prices = cusProductToPrices({ cusProduct });
+
+  for (const option of attachParams.optionsList) {
+    const price = findPriceForFeature({
+      prices,
+      internalFeatureId: option.internal_feature_id!,
+    });
+
+    const totalQuantity =
+      option.quantity! * (price?.config as UsagePriceConfig).billing_units!;
+
+    const totalUsage = cusEnts
+      .reduce((acc, curr) => {
+        if (
+          curr.entitlement.internal_feature_id == option.internal_feature_id
+        ) {
+          const allowance = getResetBalance({
+            entitlement: curr.entitlement,
+            options: cusProduct.options.find(
+              (o) => o.internal_feature_id == option.internal_feature_id,
+            ),
+            relatedPrice: price,
+          });
+
+          const usage = new Decimal(allowance!).minus(curr.balance!);
+
+          return acc.plus(usage);
+        }
+
+        return acc;
+      }, new Decimal(0))
+      .toNumber();
+
+    if (totalUsage > totalQuantity) {
+      throw new RecaseError({
+        message: `Current usage for ${option.feature_id} is ${totalUsage}, can't update to ${totalQuantity}`,
+        code: AttachErrCode.InvalidOptions,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+  }
+};
+
 export const handleAttachErrors = async ({
   attachParams,
   attachBody,
@@ -158,5 +229,9 @@ export const handleAttachErrors = async ({
   await handlePrepaidErrors({
     attachParams,
     useCheckout: onlyCheckout,
+  });
+
+  await handleUpdateQuantityErrors({
+    attachParams,
   });
 };

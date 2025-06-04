@@ -6,20 +6,13 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { getAttachTotal } from "tests/utils/testAttachUtils/testAttachUtils.js";
 
-import { APIVersion, FeatureOptions, ProductV2 } from "@autumn/shared";
-import {
-  constructArrearItem,
-  constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { APIVersion, AppEnv, Organization } from "@autumn/shared";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
-import {
-  expectFeaturesCorrect,
-  expectInvoicesCorrect,
-  expectProductAttached,
-} from "tests/utils/expectUtils/expectProductAttached.js";
+import { runAttachTest } from "../utils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // UNCOMMENT FROM HERE
 let pro = constructProduct({
@@ -38,62 +31,23 @@ let growth = constructProduct({
   type: "growth",
 });
 
-const runAttachTest = async ({
-  autumn,
-  customerId,
-  product,
-  options,
-}: {
-  autumn: AutumnInt;
-  customerId: string;
-  product: ProductV2;
-  options?: FeatureOptions[];
-}) => {
-  const res = await autumn.attachPreview({
-    customerId,
-    productId: product.id,
-  });
-
-  const total = getAttachTotal({
-    preview: res,
-    options,
-  });
-
-  const res2 = await autumn.attach({
-    customerId,
-    productId: product.id,
-    options,
-  });
-
-  const customer = await autumn.customers.get(customerId);
-
-  expectProductAttached({
-    customer,
-    product,
-  });
-
-  expectInvoicesCorrect({
-    customer,
-    first: { productId: product.id, total },
-  });
-
-  expectFeaturesCorrect({
-    customer,
-    product,
-  });
-};
-
 describe(`${chalk.yellowBright("attach/upgrade1: Testing usage upgrades")}`, () => {
   let customerId = "upgrade1";
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
 
   let stripeCli: Stripe;
   let testClockId: string;
   let curUnix: number;
+  let db: DrizzleCli;
+  let org: Organization;
+  let env: AppEnv;
 
   before(async function () {
     await setupBefore(this);
-    const { autumnJs, db, org, env } = this;
+    const { autumnJs } = this;
+    db = this.db;
+    org = this.org;
+    env = this.env;
 
     stripeCli = this.stripeCli;
 
@@ -120,14 +74,19 @@ describe(`${chalk.yellowBright("attach/upgrade1: Testing usage upgrades")}`, () 
       autumn,
       customerId,
       product: pro,
+      stripeCli,
+      db,
+      org,
+      env,
     });
   });
 
   it("should attach premium product", async function () {
+    const wordsUsage = 100000;
     await autumn.track({
       customer_id: customerId,
       feature_id: TestFeature.Words,
-      value: 100000,
+      value: wordsUsage,
     });
 
     curUnix = await advanceTestClock({
@@ -141,14 +100,19 @@ describe(`${chalk.yellowBright("attach/upgrade1: Testing usage upgrades")}`, () 
       autumn,
       customerId,
       product: premium,
+      stripeCli,
+      db,
+      org,
+      env,
     });
   });
 
   it("should attach growth product", async function () {
+    const wordsUsage = 200000;
     await autumn.track({
       customer_id: customerId,
       feature_id: TestFeature.Words,
-      value: 200000,
+      value: wordsUsage,
     });
 
     curUnix = await advanceTestClock({
@@ -158,35 +122,45 @@ describe(`${chalk.yellowBright("attach/upgrade1: Testing usage upgrades")}`, () 
       waitForSeconds: 10,
     });
 
-    const res = await autumn.attachPreview({
+    await runAttachTest({
+      autumn,
       customerId,
-      productId: growth.id,
-    });
-
-    const total = getAttachTotal({
-      preview: res,
-    });
-
-    await autumn.attach({
-      customerId,
-      productId: growth.id,
-    });
-
-    const customer = await autumn.customers.get(customerId);
-
-    expectProductAttached({
-      customer,
       product: growth,
+      stripeCli,
+      db,
+      org,
+      env,
     });
 
-    expectInvoicesCorrect({
-      customer,
-      first: { productId: growth.id, total },
-    });
+    // const res = await autumn.attachPreview({
+    //   customerId,
+    //   productId: growth.id,
+    // });
 
-    expectFeaturesCorrect({
-      customer,
-      product: growth,
-    });
+    // const total = getAttachTotal({
+    //   preview: res,
+    // });
+
+    // await autumn.attach({
+    //   customerId,
+    //   productId: growth.id,
+    // });
+
+    // const customer = await autumn.customers.get(customerId);
+
+    // expectProductAttached({
+    //   customer,
+    //   product: growth,
+    // });
+
+    // expectInvoicesCorrect({
+    //   customer,
+    //   first: { productId: growth.id, total },
+    // });
+
+    // expectFeaturesCorrect({
+    //   customer,
+    //   product: growth,
+    // });
   });
 });

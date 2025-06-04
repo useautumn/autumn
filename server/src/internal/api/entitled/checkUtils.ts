@@ -117,6 +117,8 @@ export const getOptions = ({
       let actualPrice = itemToPriceOrTiers({
         item: i,
       });
+      console.log("Price data:", priceData);
+      console.log("Actual price:", actualPrice);
 
       if (freeTrial) {
         priceData = {

@@ -142,12 +142,7 @@ export const getUpgradeProductPreview = async ({
   let items = [...curPreviewItems, ...newPreviewItems];
 
   const dueTodayAmt = items
-    .reduce((acc, item) => {
-      // return acc + (item.amount ?? 0);
-      // console.log("acc", acc.toNumber());
-      // console.log("Adding", item.amount);
-      return acc.plus(item.amount ?? 0);
-    }, new Decimal(0))
+    .reduce((acc, item) => acc.plus(item.amount ?? 0), new Decimal(0))
     .toDecimalPlaces(2)
     .toNumber();
 

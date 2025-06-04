@@ -12,6 +12,7 @@ import {
   createUsageInvoiceItems,
   resetUsageBalances,
 } from "./createUsageInvoiceItems.js";
+import { formatUnixToDateTime } from "@/utils/genUtils.js";
 
 // UPGRADE FUNCTIONS
 
@@ -80,13 +81,10 @@ export const updateStripeSubs = async ({
   let newSubs: Stripe.Subscription[] = [];
   const subUpdateRes = await updateStripeSubscription({
     db,
-    stripeCli,
-    subscriptionId: firstSub.id,
+    attachParams,
+    curCusProduct,
+    config,
     trialEnd,
-    org: attachParams.org,
-    customer: attachParams.customer,
-    invoiceOnly: attachParams.invoiceOnly || false,
-    prorationBehavior: config.proration,
     logger,
     itemSet: firstItemSet,
     shouldPreview,

@@ -20,9 +20,10 @@ export const handleUpdateQuantityFunction = async ({
 }) => {
   // 2. Update quantities
   const optionsToUpdate = attachParams.optionsToUpdate!;
-
   const { customer } = attachParams;
   const { curSameProduct } = attachParamToCusProducts({ attachParams });
+
+  // Check balance of each option to update...?
 
   await updateFeatureQuantity({
     db: req.db,

@@ -1,6 +1,8 @@
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
+  BillingType,
   FullCusProduct,
   Price,
   prices,
@@ -34,16 +36,22 @@ export const findStripeItemForPrice = ({
 export const findPriceInStripeItems = ({
   prices,
   subItem,
+  billingType,
 }: {
   prices: Price[];
   subItem: Stripe.SubscriptionItem | Stripe.InvoiceLineItem;
+  billingType?: BillingType;
 }) => {
   return prices.find((p: Price) => {
     let config = p.config;
-    return (
+    let itemMatch =
       config.stripe_price_id == subItem.price?.id ||
-      config.stripe_product_id == subItem.price?.product
-    );
+      config.stripe_product_id == subItem.price?.product;
+
+    const priceBillingType = getBillingType(config);
+    let billingTypeMatch = billingType ? priceBillingType == billingType : true;
+
+    return itemMatch && billingTypeMatch;
   });
 };
 
@@ -60,4 +68,26 @@ export const subItemInCusProduct = ({
   let price = findPriceInStripeItems({ prices, subItem });
 
   return stripeProdId == subItem.price.product || notNullish(price);
+};
+
+export const isLicenseItem = ({
+  stripeItem,
+}: {
+  stripeItem:
+    | Stripe.SubscriptionItem
+    | Stripe.InvoiceLineItem
+    | Stripe.LineItem;
+}) => {
+  return stripeItem.price?.recurring?.usage_type == "licensed";
+};
+
+export const isMeteredItem = ({
+  stripeItem,
+}: {
+  stripeItem:
+    | Stripe.SubscriptionItem
+    | Stripe.InvoiceLineItem
+    | Stripe.LineItem;
+}) => {
+  return stripeItem.price?.recurring?.usage_type == "metered";
 };

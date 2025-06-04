@@ -7,13 +7,21 @@ import { getSubItemAmount } from "@/external/stripe/stripeSubUtils/getSubItemAmo
 import { Decimal } from "decimal.js";
 import { calculateProrationAmount } from "../prorationUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { BillingType, PreviewItem, UsageModel } from "@autumn/shared";
+import {
+  BillingType,
+  FeatureUsageType,
+  PreviewItem,
+  UsageModel,
+} from "@autumn/shared";
 import { priceToInvoiceDescription } from "../invoiceFormatUtils.js";
 import { formatUnixToDate, formatUnixToDateTime } from "@/utils/genUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
 import { getProration } from "./getItemsForNewProduct.js";
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
-import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
+import {
+  priceToFeature,
+  priceToUsageModel,
+} from "@/internal/products/prices/priceUtils/convertPrice.js";
 
 export const getItemsForCurProduct = ({
   stripeSubs,
@@ -40,6 +48,7 @@ export const getItemsForCurProduct = ({
 
       if (!price) continue;
       const billingType = getBillingType(price.config);
+
       if (billingType == BillingType.UsageInArrear) continue;
 
       const totalAmountCents = getSubItemAmount({ subItem: item });
@@ -73,10 +82,6 @@ export const getItemsForCurProduct = ({
 
         description = `Unused ${description} (from ${formatUnixToDate(now)})`;
 
-        // console.log("Item:", description);
-        // console.log("Period ends:", formatUnixToDateTime(periodEnd));
-        // console.log("Prorated amount: ", proratedAmount);
-        // console.log("--------------------------------");
         items.push({
           price: formatAmount({
             org: attachParams.org,

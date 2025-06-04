@@ -1,12 +1,8 @@
-import { notNullish } from "@/utils/genUtils.js";
-import {
-  CusProductStatus,
-  FeatureOptions,
-  Infinite,
-  ProductV2,
-} from "@autumn/shared";
+import { notNullish, nullish } from "@/utils/genUtils.js";
+import { CusProductStatus, ProductV2 } from "@autumn/shared";
 import { Customer } from "autumn-js";
 import { expect } from "chai";
+import { Decimal } from "decimal.js";
 
 export const expectProductAttached = ({
   customer,
@@ -52,15 +48,15 @@ export const expectInvoicesCorrect = ({
 
   if (first) {
     try {
-      expect(
-        invoices![0].total,
+      expect(invoices![0].total).to.equal(
+        first.total,
         `invoice total is correct: ${first.total}`,
-      ).to.equal(first.total);
+      );
 
-      expect(
-        invoices![0].product_ids,
+      expect(invoices![0].product_ids).to.include(
+        first.productId,
         `invoice includes product ${first.productId}`,
-      ).to.include(first.productId);
+      );
     } catch (error) {
       console.log(`invoice for ${first.productId}, ${first.total} not found`);
       throw error;
@@ -68,65 +64,32 @@ export const expectInvoicesCorrect = ({
   }
 
   if (second) {
+    const totalAmount = new Decimal(invoices![0].total)
+      .plus(invoices![1].total)
+      .toDecimalPlaces(2)
+      .toNumber();
+    // console.log("First invoice:", invoices![0].total, invoices![0].product_ids);
+    // console.log(
+    //   "Second invoice:",
+    //   invoices![1].total,
+    //   invoices![1].product_ids,
+    // );
     try {
       expect(
-        invoices![0].total == second.total ||
-          invoices![1].total == second.total,
-        `invoice total is correct: ${second.total}`,
+        totalAmount == second.total,
+        `first & second invoice total should sum to ${second.total}`,
       ).to.be.true;
       expect(
-        invoices![0].product_ids.includes(second.productId) ||
-          invoices![1].product_ids.includes(second.productId),
-        `invoices include product ${second.productId}`,
+        invoices![0].product_ids.includes(second.productId),
+        `invoice 1 includes product ${second.productId}`,
+      ).to.be.true;
+      expect(
+        invoices![1].product_ids.includes(second.productId),
+        `invoice 2 includes product ${second.productId}`,
       ).to.be.true;
     } catch (error) {
       console.log(`invoice for ${second.productId}, ${second.total} not found`);
       throw error;
     }
-  }
-};
-
-export const expectFeaturesCorrect = ({
-  customer,
-  product,
-  options,
-}: {
-  customer: Customer;
-  product: ProductV2;
-  options?: FeatureOptions[];
-}) => {
-  const items = product.items;
-
-  const featureIds = Array.from(
-    new Set(product.items.map((i) => i.feature_id)),
-  ).filter(notNullish);
-
-  for (const featureId of featureIds) {
-    let includedUsage: string | number = 0;
-    for (const item of items) {
-      if (item.feature_id !== featureId) continue;
-      if (item.included_usage == Infinite) {
-        includedUsage = Infinite;
-        break;
-      }
-
-      includedUsage += item.included_usage || 0;
-    }
-
-    for (const option of options || []) {
-      if (option.feature_id !== featureId) continue;
-      if (option.feature_id) {
-        (includedUsage as number) += option.quantity;
-      }
-    }
-
-    const feature = customer.features[featureId!];
-
-    expect(feature, `Feature ${featureId} exists`).to.exist;
-
-    expect(
-      feature?.included_usage,
-      `Feature ${featureId} included usage is correct`,
-    ).to.equal(includedUsage);
   }
 };

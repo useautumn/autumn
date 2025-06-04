@@ -7,9 +7,8 @@ import {
   getRelatedCusEnt,
 } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import {
+  cusProductsToCusEnts,
   cusProductsToCusPrices,
-  cusProductToCusEnts,
-  cusProductToEnts,
 } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { FullCusProduct, UsagePriceConfig, BillingType } from "@autumn/shared";
@@ -35,7 +34,7 @@ export const getUsageInvoiceItems = async ({
     cusProducts: [cusProduct],
   });
   // const ents = cusProductToEnts({ cusProduct });
-  const cusEnts = cusProductToCusEnts([cusProduct]);
+  const cusEnts = cusProductsToCusEnts({ cusProducts: [cusProduct] });
 
   const invoiceItems: any[] = [];
   const cusEntIds: string[] = [];

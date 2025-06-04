@@ -1,56 +1,49 @@
 import RecaseError from "@/utils/errorUtils.js";
 import {
-  Organization,
-  Customer,
   ErrCode,
   BillingInterval,
+  BillingType,
+  FeatureUsageType,
+  AttachConfig,
+  FullCusProduct,
 } from "@autumn/shared";
 
 import Stripe from "stripe";
-import { isStripeCardDeclined } from "../stripeCardUtils.js";
-import { getCusPaymentMethod } from "../stripeCusUtils.js";
 import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { getStripeProrationBehavior } from "../stripeSubUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { payForInvoice } from "../stripeInvoiceUtils.js";
-import { differenceInSeconds } from "date-fns";
+import { findPriceInStripeItems } from "./stripeSubItemUtils.js";
+import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPrice.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { createProrationInvoice } from "./updateStripeSub/createProrationinvoice.js";
 
 export const updateStripeSubscription = async ({
   db,
-  org,
-  customer,
-  stripeCli,
+  attachParams,
+  curCusProduct,
+  config,
   curSub,
-  subscriptionId,
   trialEnd,
-  invoiceOnly,
-  prorationBehavior,
   itemSet,
   shouldPreview,
   logger,
-  invoiceItems,
 }: {
   db: DrizzleCli;
-  org: Organization;
-  customer: Customer;
-  stripeCli: Stripe;
+  attachParams: AttachParams;
+  curCusProduct: FullCusProduct;
+  config: AttachConfig;
   curSub: Stripe.Subscription;
-  subscriptionId: string;
   trialEnd?: number | null;
-  invoiceOnly: boolean;
-  prorationBehavior?: ProrationBehavior;
   itemSet: ItemSet;
   shouldPreview?: boolean;
   logger: any;
-  invoiceItems?: Stripe.InvoiceItem[];
 }) => {
-  let paymentMethod = await getCusPaymentMethod({
-    stripeCli,
-    stripeId: customer.processor.id,
-    errorIfNone: !invoiceOnly, // throw error if no payment method and invoiceOnly is false
-  });
+  const { stripeCli, customer, org, features, paymentMethod } = attachParams;
+  const { invoiceOnly, proration } = config;
 
   let { items, prices } = itemSet;
 
@@ -67,19 +60,17 @@ export const updateStripeSubscription = async ({
     return false;
   });
 
-  let stripeProration = getStripeProrationBehavior({
-    org,
-    prorationBehavior,
-  });
-
   if (shouldPreview) {
     let preview = await stripeCli.invoices.createPreview({
       subscription_details: {
         items: subItems,
-        proration_behavior: stripeProration as any,
+        proration_behavior: getStripeProrationBehavior({
+          org,
+          prorationBehavior: proration,
+        }) as any,
         trial_end: trialEnd as any,
       },
-      subscription: subscriptionId,
+      subscription: curSub.id,
       invoice_items: subInvoiceItems,
       customer: customer.processor.id,
     });
@@ -93,12 +84,12 @@ export const updateStripeSubscription = async ({
   // 1. Update subscription
   let sub: Stripe.Subscription | null = null;
   try {
-    sub = await stripeCli.subscriptions.update(subscriptionId, {
+    sub = await stripeCli.subscriptions.update(curSub.id, {
       items: subItems,
       proration_behavior: "create_prorations",
       trial_end: trialEnd,
       default_payment_method: paymentMethod?.id,
-      add_invoice_items: [...subInvoiceItems, ...(invoiceItems || [])],
+      add_invoice_items: subInvoiceItems,
       ...((invoiceOnly && {
         collection_method: "send_invoice",
         days_until_due: 30,
@@ -114,7 +105,7 @@ export const updateStripeSubscription = async ({
   let invoice: Stripe.Invoice | null = null;
   const latestInvoice = sub.latest_invoice as Stripe.Invoice;
 
-  if (prorationBehavior === ProrationBehavior.Immediately) {
+  if (proration === ProrationBehavior.Immediately) {
     // If latest invoice is different, no need to create a new invoice
     if (latestInvoice.id != curSub.latest_invoice) {
       sub.latest_invoice = latestInvoice.id;
@@ -125,69 +116,19 @@ export const updateStripeSubscription = async ({
       };
     }
 
-    invoice = await stripeCli.invoices.create({
-      customer: customer.processor.id,
-      subscription: subscriptionId,
-      auto_advance: false,
+    invoice = await createProrationInvoice({
+      attachParams,
+      invoiceOnly,
+      curSub,
+      updatedSub: sub,
+      logger,
     });
-
-    if (!invoiceOnly) {
-      await stripeCli.invoices.finalizeInvoice(invoice.id, {
-        auto_advance: false,
-      });
-
-      try {
-        const { invoice: subInvoice } = await payForInvoice({
-          stripeCli,
-          paymentMethod,
-          invoiceId: invoice.id,
-          logger,
-          voidIfFailed: true,
-        });
-        invoice = subInvoice;
-      } catch (error: any) {
-        const prevItems = curSub.items.data.map((item) => {
-          return {
-            price: item.price.id,
-            quantity: item.quantity,
-          };
-        });
-
-        const deleteNewItems = sub.items.data
-          .filter(
-            (item) =>
-              !prevItems.some((prevItem) =>
-                curSub.items.data.some(
-                  (curItem) => curItem.price.id === item.price.id,
-                ),
-              ),
-          )
-          .map((item) => {
-            return {
-              id: item.id,
-              deleted: true,
-            };
-          });
-
-        await stripeCli.subscriptions.update(subscriptionId, {
-          items: [...prevItems, ...deleteNewItems],
-          proration_behavior: "none",
-        });
-
-        throw new RecaseError({
-          code: ErrCode.UpdateSubscriptionFailed,
-          message: `Failed to update subscription. ${error.message}`,
-          statusCode: 500,
-          data: `Stripe error: ${error.message}`,
-        });
-      }
-    }
   }
 
   // Upsert sub
   await SubService.addUsageFeatures({
     db,
-    stripeId: subscriptionId,
+    stripeId: curSub.id,
     usageFeatures: itemSet.usageFeatures,
     orgId: org.id,
     env: customer.env,
