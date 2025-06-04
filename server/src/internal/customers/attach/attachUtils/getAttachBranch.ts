@@ -231,6 +231,10 @@ const getChangeProductBranch = async ({
   }
 
   if (isTrialing(curMainProduct!)) {
+    if (isFreeProduct(attachParams.prices)) {
+      return AttachBranch.Downgrade;
+    }
+
     return AttachBranch.MainIsTrial;
   }
 

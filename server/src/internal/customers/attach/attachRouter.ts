@@ -6,7 +6,6 @@ import {
   createStripeCusIfNotExists,
   getCusPaymentMethod,
 } from "@/external/stripe/stripeCusUtils.js";
-import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
 
 import {
   getBillingType,
@@ -444,12 +443,12 @@ const handleAttachOld = async (req: any, res: any) =>
       // }
 
       // SCENARIO 5: No existing product, not free product
-      logger.info("SCENARIO 4: ADDING PRODUCT");
-      await handleAddProduct({
-        req,
-        res,
-        attachParams,
-      });
+      // logger.info("SCENARIO 4: ADDING PRODUCT");
+      // await handleAddProduct({
+      //   req,
+      //   res,
+      //   attachParams,
+      // });
     },
   });
 

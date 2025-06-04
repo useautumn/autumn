@@ -1,3 +1,4 @@
+import { FreeTrial } from "../productModels/freeTrialModels/freeTrialModels.js";
 import { AttachBranch } from "./attachEnums/AttachBranch.js";
 
 export interface PreviewLineItem {
@@ -18,4 +19,5 @@ export interface AttachPreview {
     line_items: PreviewLineItem[];
     due_at: number;
   };
+  free_trial?: FreeTrial | null;
 }

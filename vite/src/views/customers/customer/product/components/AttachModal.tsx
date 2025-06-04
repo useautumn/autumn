@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   Dialog,
   DialogFooter,
@@ -7,17 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import { DialogContent } from "@/components/ui/dialog";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import {
-  AttachBranch,
-  AttachScenario,
-  CheckProductPreview,
-  Entity,
-  ErrCode,
-} from "@autumn/shared";
-import { AttachCase } from "../hooks/useAttachState";
+import { AttachBranch, Entity, ErrCode } from "@autumn/shared";
 
-import { useState } from "react";
-import { ArrowUpRightFromSquare, InfoIcon } from "lucide-react";
+import { ArrowUpRightFromSquare } from "lucide-react";
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import {
   getBackendErr,
@@ -83,6 +76,9 @@ export const AttachModal = ({
     if (preview?.branch == AttachBranch.Downgrade) {
       return false;
     }
+    if (preview?.branch == AttachBranch.Renew) {
+      return false;
+    }
 
     return true;
   };
@@ -94,6 +90,10 @@ export const AttachModal = ({
 
     if (preview?.branch == AttachBranch.SameCustomEnts || flags.isFree) {
       return "Confirm";
+    }
+
+    if (flags.isCanceled) {
+      return "Renew Product";
     }
 
     if (!preview?.payment_method) {
@@ -114,7 +114,7 @@ export const AttachModal = ({
       const customData = attachState.itemsChanged
         ? {
             items: product.items,
-            free_trial: product.free_trial,
+            free_trial: product.free_trial || undefined,
           }
         : {};
 

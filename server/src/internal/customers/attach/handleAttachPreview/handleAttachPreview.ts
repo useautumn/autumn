@@ -6,7 +6,6 @@ import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
 import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
 import { ExtendedResponse } from "@/utils/models/Request.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachFunction } from "../models/AttachBranch.js";
 import { getNewProductPreview } from "./getNewProductPreview.js";
 import { getUpgradeProductPreview } from "./getUpgradeProductPreview.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
@@ -14,6 +13,7 @@ import { getUpdateEntsPreview } from "./getUpdateEntsPreview.js";
 import { getDowngradeProductPreview } from "./getDowngradeProductPreview.js";
 import { attachParamToCusProducts } from "../attachUtils/convertAttachParams.js";
 import { cusProductToProduct } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { AttachFunction } from "@autumn/shared";
 
 export const handleAttachPreview = (req: any, res: any) =>
   routeHandler({
@@ -67,7 +67,8 @@ export const handleAttachPreview = (req: any, res: any) =>
 
       if (
         func == AttachFunction.AddProduct ||
-        func == AttachFunction.CreateCheckout
+        func == AttachFunction.CreateCheckout ||
+        func == AttachFunction.OneOff
       ) {
         preview = await getNewProductPreview({
           attachParams,
@@ -94,7 +95,10 @@ export const handleAttachPreview = (req: any, res: any) =>
         });
       }
 
-      const { curMainProduct } = attachParamToCusProducts({ attachParams });
+      const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
+        attachParams,
+      });
+
       res.status(200).json({
         branch,
         ...preview,
@@ -103,6 +107,7 @@ export const handleAttachPreview = (req: any, res: any) =>
               cusProduct: curMainProduct,
             })
           : null,
+        scheduled_product: curScheduledProduct,
       });
     },
   });

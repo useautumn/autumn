@@ -257,7 +257,8 @@ export const cancelFutureProductSchedule = async ({
 
     // 99% of cases!
     else {
-      logger.info("Renewing current main product");
+      logger.info("cancelFutureProductSchedule: renewing main product");
+
       if (curMainSubIds && curMainSubIds.length > 0) {
         for (const subId of curMainSubIds) {
           await stripeCli.subscriptions.update(subId, {

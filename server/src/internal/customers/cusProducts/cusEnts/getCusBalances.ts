@@ -162,6 +162,7 @@ export const getCusBalances = async ({
         entitlement: ent,
         options: getEntOptions(cusProduct.options, ent),
         relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+        productQuantity: cusProduct.quantity || 1,
       });
     }
   }

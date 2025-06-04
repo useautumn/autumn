@@ -1,6 +1,7 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
   AppEnv,
+  AttachBranch,
   FeatureOptions,
   Organization,
   ProductV2,
@@ -13,6 +14,7 @@ import { notNullish, timeout } from "@/utils/genUtils.js";
 import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import Stripe from "stripe";
+import { expect } from "chai";
 
 export const runAttachTest = async ({
   autumn,
@@ -25,6 +27,8 @@ export const runAttachTest = async ({
   env,
   usage,
   waitForInvoice = 0,
+  isCanceled = false,
+  skipFeatureCheck = false,
 }: {
   autumn: AutumnInt;
   customerId: string;
@@ -39,14 +43,16 @@ export const runAttachTest = async ({
     value: number;
   }[];
   waitForInvoice?: number;
+  isCanceled?: boolean;
+  skipFeatureCheck?: boolean;
 }) => {
-  const res = await autumn.attachPreview({
+  const preview = await autumn.attachPreview({
     customerId,
     productId: product.id,
   });
 
   const total = getAttachTotal({
-    preview: res,
+    preview,
     options,
   });
 
@@ -61,6 +67,16 @@ export const runAttachTest = async ({
   }
 
   const customer = await autumn.customers.get(customerId);
+  const productCount = customer.products.reduce((acc: number, p: any) => {
+    if (product.group == p.group) {
+      return acc + 1;
+    } else return acc;
+  }, 0);
+
+  expect(
+    productCount,
+    `customer should only have 1 product (from this group: ${product.group})`,
+  ).to.equal(1);
 
   expectProductAttached({
     customer,
@@ -78,21 +94,40 @@ export const runAttachTest = async ({
     second: multiInterval ? { productId: product.id, total } : undefined,
   });
 
-  expectFeaturesCorrect({
-    customer,
-    product,
-    usage,
-    options,
-  });
+  if (!skipFeatureCheck) {
+    expectFeaturesCorrect({
+      customer,
+      product,
+      usage,
+      options,
+    });
+  }
 
+  const branch = preview.branch;
+  if (branch == AttachBranch.OneOff) {
+    return;
+  }
   await expectSubItemsCorrect({
     stripeCli,
     customerId,
-    productId: product.id,
+    product,
     db,
     org,
     env,
+    isCanceled,
   });
+
+  const stripeSubs = await stripeCli.subscriptions.list({
+    customer: customer.stripe_id,
+  });
+  if (multiInterval) {
+    expect(stripeSubs.data.length).to.equal(2, "should have 2 subscriptions");
+  } else {
+    expect(stripeSubs.data.length).to.equal(
+      1,
+      "should only have 1 subscription",
+    );
+  }
 };
 
 export const addPrefixToProducts = ({
@@ -105,6 +140,7 @@ export const addPrefixToProducts = ({
   for (const product of products) {
     product.id = `${prefix}_${product.id}`;
     product.name = `${prefix} ${product.name}`;
+    product.group = prefix;
   }
 
   return products;

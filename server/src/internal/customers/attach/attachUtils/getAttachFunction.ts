@@ -1,4 +1,3 @@
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import {
   AttachParams,
   AttachResultSchema,
@@ -6,38 +5,22 @@ import {
 import { AttachBranch, AttachFunction } from "@autumn/shared";
 import { handleUpgradeFunction } from "../attachFunctions/upgradeFlow/handleUpgradeFunction.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
-import { handleAddProduct } from "../../add-product/handleAddProduct.js";
+import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
 import { AttachBody } from "../models/AttachBody.js";
-import { AttachConfig } from "../models/AttachFlags.js";
+import { AttachConfig } from "@autumn/shared";
 import { handleScheduleFunction } from "../attachFunctions/scheduleFlow/handleScheduleFunction.js";
-import { cancelFutureProductSchedule } from "../../change-product/scheduleUtils.js";
 import { handleEntsChangedFunction } from "../attachFunctions/updateEntsFlow/handleEntsChangedFunction.js";
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
 import { SuccessCode } from "@autumn/shared";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
 import chalk from "chalk";
+import { deleteCurrentScheduledProduct } from "./deleteCurrentScheduledProduct.js";
+import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOneOffFunction.js";
 
 /* 
 1. If from new version, free trial should just carry over
 2. If from new version, can't update with trial...
 3. In migrateCustomer flow, if to free product, upgrade product still called... should be changed to add product...
-
-4. If main is trial should run this function:
-if (notNullish(curCusProduct.subscription_ids)) {
-    for (const subId of curCusProduct.subscription_ids!) {
-      try {
-        await stripeCli.subscriptions.cancel(subId);
-      } catch (error) {
-        throw new RecaseError({
-          message: `Handling upgrade (cur product on trial): failed to cancel subscription ${subId}`,
-          code: ErrCode.StripeCancelSubscriptionFailed,
-          statusCode: StatusCodes.BAD_REQUEST,
-          data: error,
-        });
-      }
-    }
-  }
-
 5. Migrate customer uses proration behaviour none
 */
 
@@ -66,6 +49,8 @@ export const getAttachFunction = async ({
 
   if (newScenario && onlyCheckout) {
     return AttachFunction.CreateCheckout;
+  } else if (branch == AttachBranch.OneOff) {
+    return AttachFunction.OneOff;
   } else if (newScenario) {
     return AttachFunction.AddProduct;
   }
@@ -118,6 +103,7 @@ export const runAttachFunction = async ({
   config: AttachConfig;
 }) => {
   const { logtail: logger } = req;
+  const { stripeCli } = attachParams;
 
   const attachFunction = await getAttachFunction({
     branch,
@@ -147,19 +133,29 @@ export const runAttachFunction = async ({
     },
   );
 
+  if (attachFunction == AttachFunction.OneOff) {
+    return await handleOneOffFunction({
+      req,
+      res,
+      attachParams,
+      config,
+    });
+  }
+
   // 1. Cancel future schedule before creating a new one...
-  await cancelFutureProductSchedule({
-    db: req.db,
-    stripeCli: attachParams.stripeCli,
-    cusProducts: attachParams.cusProducts,
-    product: attachParams.products[0],
-    internalEntityId: attachParams.internalEntityId,
-    org: attachParams.org,
-    logger,
-    env: attachParams.customer.env,
+  await deleteCurrentScheduledProduct({
     req,
-    sendWebhook: true,
+    org,
+    attachParams,
+    logger,
   });
+
+  // 2. If main is trial, cancel it...
+  if (branch == AttachBranch.MainIsTrial) {
+    for (const subId of curMainProduct?.subscription_ids || []) {
+      await stripeCli.subscriptions.cancel(subId);
+    }
+  }
 
   if (attachFunction == AttachFunction.Renew) {
     res.status(200).json(
@@ -187,6 +183,7 @@ export const runAttachFunction = async ({
       req,
       res,
       attachParams,
+      config,
     });
   }
 

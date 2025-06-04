@@ -7,9 +7,11 @@ import { Decimal } from "decimal.js";
 export const expectProductAttached = ({
   customer,
   product,
+  status,
 }: {
   customer: Customer;
   product: ProductV2;
+  status?: CusProductStatus;
 }) => {
   const cusProducts = customer.products;
   const productAttached = cusProducts.find((p) => p.id === product.id);
@@ -20,10 +22,18 @@ export const expectProductAttached = ({
   }
 
   expect(productAttached, `product ${product.id} is attached`).to.exist;
-  expect(
-    productAttached?.status,
-    `product ${product.id} is not expired`,
-  ).to.not.equal(CusProductStatus.Expired);
+
+  if (status) {
+    expect(productAttached?.status).to.equal(
+      status,
+      `product ${product.id} should have status ${status}`,
+    );
+  } else {
+    expect(
+      productAttached?.status,
+      `product ${product.id} is not expired`,
+    ).to.not.equal(CusProductStatus.Expired);
+  }
 };
 
 export const expectInvoicesCorrect = ({

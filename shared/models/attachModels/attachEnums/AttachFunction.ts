@@ -1,6 +1,7 @@
 export enum AttachFunction {
   CreateCheckout = "create_checkout",
   AddProduct = "add_product",
+  OneOff = "one_off",
   UpdateEnts = "update_ents", // only update entitlements
   UpdateProduct = "update_product", // update product
   ScheduleProduct = "schedule_product",

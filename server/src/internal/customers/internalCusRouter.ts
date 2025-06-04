@@ -2,7 +2,6 @@ import { Router } from "express";
 import { CusService } from "./CusService.js";
 import { ProductService } from "../products/ProductService.js";
 
-import { FeatureService } from "../features/FeatureService.js";
 import {
   CusExpand,
   CusProductStatus,
@@ -11,23 +10,19 @@ import {
   FullCustomerEntitlement,
   FullCustomerPrice,
 } from "@autumn/shared";
+
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { RewardService } from "../rewards/RewardService.js";
 import { EventService } from "../api/events/EventService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-
 import { getCusEntMasterBalance } from "./cusProducts/cusEnts/cusEntUtils.js";
 import { getLatestProducts } from "../products/productUtils.js";
 import { getProductVersionCounts } from "../products/productUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import {
-  mapToProductItems,
-  mapToProductV2,
-} from "../products/productV2Utils.js";
+import { mapToProductV2 } from "../products/productV2Utils.js";
 import { RewardRedemptionService } from "../rewards/RewardRedemptionService.js";
 import { CusReadService } from "./CusReadService.js";
 import { StatusCodes } from "http-status-codes";
-import { getAttachPreview } from "../api/entitled/handlers/getAttachPreview.js";
 import { cusProductToProduct } from "./cusProducts/cusProductUtils/convertCusProduct.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
 
@@ -323,17 +318,6 @@ cusRouter.get(
         productId: product_id,
       });
 
-      // const preview = await getAttachPreview({
-      //   db,
-      //   org,
-      //   env,
-      //   product,
-      //   customer,
-      //   cusProducts: customer.customer_products,
-      //   features,
-      //   logger,
-      // });
-
       res.status(200).json({
         customer,
         // preview,
@@ -343,6 +327,7 @@ cusRouter.get(
               options: cusProduct.options,
               isActive: cusProduct.status === CusProductStatus.Active,
               isCustom: cusProduct.is_custom,
+              isCanceled: cusProduct.canceled_at !== null,
             }
           : productV2,
         features,

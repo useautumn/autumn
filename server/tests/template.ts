@@ -6,7 +6,19 @@
 // import { DrizzleCli } from "@/db/initDrizzle.js";
 // import { setupBefore } from "tests/before.js";
 // import { createProducts } from "tests/utils/productUtils.js";
-// import { addPrefixToProducts } from "./utils.js";
+// import { addPrefixToProducts } from "../utils.js";
+// import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+
+// export let pro = constructProduct({
+//   items: [
+//     constructPrepaidItem({
+//       featureId: TestFeature.Users,
+//       price: 12,
+//       billingUnits: 1,
+//     }),
+//   ],
+//   type: "pro",
+// });
 
 // const testCase = "upgrade3";
 
@@ -28,6 +40,17 @@
 
 //     stripeCli = this.stripeCli;
 
+//     addPrefixToProducts({
+//       products: [free, pro, premium],
+//       prefix: testCase,
+//     });
+
+//     await createProducts({
+//       autumn,
+//       products: [pro, premium],
+//       customerId,
+//     });
+
 //     const { testClockId: testClockId1 } = await initCustomer({
 //       autumn: autumnJs,
 //       customerId,
@@ -35,16 +58,6 @@
 //       org,
 //       env,
 //       attachPm: "success",
-//     });
-
-//     addPrefixToProducts({
-//       products: [pro, proAnnual, premiumAnnual],
-//       prefix: testCase,
-//     });
-
-//     await createProducts({
-//       autumn,
-//       products: [pro, proAnnual, premiumAnnual],
 //     });
 
 //     testClockId = testClockId1!;
