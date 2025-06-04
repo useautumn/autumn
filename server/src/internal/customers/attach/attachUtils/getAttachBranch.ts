@@ -3,7 +3,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachBody } from "../models/AttachBody.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { AttachBranch } from "@autumn/shared";
+import { AttachBranch, AttachErrCode } from "@autumn/shared";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -17,9 +17,7 @@ import {
   cusProductToProduct,
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { FeatureOptions, FullCusProduct } from "@autumn/shared";
-import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { productsAreSame } from "@/internal/products/compareProductUtils.js";
-import { StatusCodes } from "http-status-codes";
 import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
 
@@ -212,7 +210,7 @@ const getSameProductBranch = async ({
   // Invalid, can't attach same product
   throw new RecaseError({
     message: `Product ${product.name} is already attached, can't attach again`,
-    code: ErrCode.InvalidRequest,
+    code: AttachErrCode.ProductAlreadyAttached,
   });
 };
 

@@ -17,6 +17,7 @@ import {
   subYears,
 } from "date-fns";
 import { UTCDate } from "@date-fns/utc";
+import { formatUnixToDate, formatUnixToDateTime } from "@/utils/genUtils.js";
 
 export const subtractBillingIntervalUnix = (
   unixTimestamp: number,
@@ -90,12 +91,15 @@ export const getAlignedIntervalUnix = ({
   now?: number;
   alwaysReturn?: boolean;
 }) => {
-  const nextCycleAnchor = alignWithUnix;
-  let nextCycleAnchorUnix = nextCycleAnchor;
-  const naturalBillingDate = addBillingIntervalUnix(
-    now || Date.now(),
-    interval,
-  );
+  let nextCycleAnchorUnix = alignWithUnix;
+
+  now = now || Date.now();
+
+  const naturalBillingDate = addBillingIntervalUnix(now, interval);
+
+  // console.log("Now:", formatUnixToDateTime(now));
+  // console.log("Anchoring to:", formatUnixToDateTime(alignWithUnix));
+  // console.log("Nat billing date:", formatUnixToDateTime(naturalBillingDate));
 
   const maxIterations = 10000;
   let iterations = 0;
@@ -105,7 +109,7 @@ export const getAlignedIntervalUnix = ({
       interval,
     );
 
-    if (subtractedUnix < Date.now()) {
+    if (subtractedUnix <= now) {
       break;
     }
 
@@ -118,6 +122,10 @@ export const getAlignedIntervalUnix = ({
   }
 
   let billingCycleAnchorUnix: number | undefined = nextCycleAnchorUnix;
+
+  // console.log("Next cycle anchor:", formatUnixToDateTime(nextCycleAnchorUnix));
+  // console.log("--------------------------------");
+
   if (
     differenceInSeconds(
       new Date(naturalBillingDate),

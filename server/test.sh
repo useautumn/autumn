@@ -39,9 +39,9 @@ elif [ "$1" == "custom" ]; then
     FILE_TO_TEST="$2"
     ARG3="$3"
     if [ "$ARG3" == "setup" ]; then
-        npx mocha --timeout 10000000 'tests/00_setup.ts'
+        npx mocha --bail --timeout 10000000 'tests/00_setup.ts'
     fi
-    npx mocha --timeout 10000000 "tests/$FILE_TO_TEST.ts"
+    npx mocha --bail --timeout 10000000 "tests/$FILE_TO_TEST.ts"
 else
     npx mocha --timeout 10000000 'tests/00_setup.ts' && npx mocha --timeout 10000000  \
     'tests/**/*.ts' \

@@ -36,11 +36,15 @@ export const cusProductsToCusPrices = ({
   return cusPrices;
 };
 
-export const cusProductToCusEnts = (
-  cusProducts: FullCusProduct[],
-  inStatuses: CusProductStatus[] = [CusProductStatus.Active],
-  reverseOrder: boolean = false,
-) => {
+export const cusProductsToCusEnts = ({
+  cusProducts,
+  inStatuses = [CusProductStatus.Active],
+  reverseOrder = false,
+}: {
+  cusProducts: FullCusProduct[];
+  inStatuses?: CusProductStatus[];
+  reverseOrder?: boolean;
+}) => {
   const cusEnts: FullCustomerEntitlement[] = [];
 
   for (const cusProduct of cusProducts) {

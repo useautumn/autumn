@@ -83,6 +83,7 @@ export const getProration = ({
     now,
     alwaysReturn: true,
   });
+
   let start = subtractBillingIntervalUnix(end!, interval);
 
   return {

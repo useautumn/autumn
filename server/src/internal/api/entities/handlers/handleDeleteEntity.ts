@@ -16,7 +16,7 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
 import { removeScheduledProduct } from "../../../customers/handlers/handleCusProductExpired.js";
-import { cusProductToCusEnts } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { cusProductsToCusEnts } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const handleDeleteEntity = async (req: any, res: any) => {
   try {
@@ -123,7 +123,7 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 
     if (!cusPriceExists || org.config.prorate_unused) {
       // Completely remove entity
-      let cusEnts = cusProductToCusEnts(cusProducts);
+      let cusEnts = cusProductsToCusEnts({ cusProducts });
 
       // TODO: Charge for unused feature IDs...
 

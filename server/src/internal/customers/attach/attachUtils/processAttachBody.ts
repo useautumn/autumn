@@ -25,10 +25,7 @@ import {
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
-import {
-  isMainProduct,
-  oneOffOrAddOn,
-} from "@/internal/products/productUtils/classifyProduct.js";
+import { isMainProduct } from "@/internal/products/productUtils/classifyProduct.js";
 
 const getProductsForAttach = async ({
   req,

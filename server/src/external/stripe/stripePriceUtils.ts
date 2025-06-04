@@ -50,16 +50,9 @@ export const billingIntervalToStripe = (interval: BillingInterval) => {
   }
 };
 
-// STRIPE TO SUB ITEMS
-
 export const getInvoiceItemForUsage = ({
   stripeInvoiceId,
   price,
-  // feature,
-  // totalUsage,
-  // overage,
-  // currency,
-
   currency,
   customer,
   cusProduct,

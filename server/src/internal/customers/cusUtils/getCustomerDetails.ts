@@ -28,8 +28,8 @@ import { getCusInvoices, processFullCusProducts } from "./cusUtils.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
+  cusProductsToCusEnts,
   cusProductsToCusPrices,
-  cusProductToCusEnts,
 } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
 
@@ -152,7 +152,7 @@ export const getCustomerDetails = async ({
     ? [CusProductStatus.Active, CusProductStatus.PastDue]
     : [CusProductStatus.Active];
 
-  let cusEnts = cusProductToCusEnts(cusProducts, inStatuses) as any;
+  let cusEnts = cusProductsToCusEnts({ cusProducts, inStatuses }) as any;
 
   const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,

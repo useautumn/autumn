@@ -14,13 +14,10 @@ import {
   FullCusProduct,
   Organization,
 } from "@autumn/shared";
-import { addPrefixToProducts, runAttachTest } from "./utils.js";
+import { addPrefixToProducts, runAttachTest } from "../utils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks, getDate } from "date-fns";
-import { CusService } from "@/internal/customers/CusService.js";
-import { expect } from "chai";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { expectSubAnchorsSame } from "tests/utils/expectUtils/expectSubUtils.js";
+
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 // Shared products for attach tests
@@ -45,6 +42,15 @@ export let premiumAnnual = constructProduct({
   isAnnual: true,
 });
 
+/**
+ * upgrade2:
+ * 1. Start with pro monthly plan (usage-based)
+ * 2. Upgrade to pro annual plan (usage-based)
+ * 3. Upgrade to premium annual plan (usage-based)
+ *
+ * Verifies subscription items and anchors are correct after each upgrade
+ */
+
 describe(`${chalk.yellowBright("attach/upgrade2: Testing usage upgrades with monthly -> annual")}`, () => {
   let customerId = "upgrade2";
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
@@ -52,7 +58,7 @@ describe(`${chalk.yellowBright("attach/upgrade2: Testing usage upgrades with mon
   let testClockId: string;
   let db: DrizzleCli, org: Organization, env: AppEnv;
 
-  const curUnix = new Date().getTime();
+  let curUnix = new Date().getTime();
 
   before(async function () {
     await setupBefore(this);
@@ -91,6 +97,10 @@ describe(`${chalk.yellowBright("attach/upgrade2: Testing usage upgrades with mon
       autumn,
       customerId,
       product: pro,
+      stripeCli,
+      db,
+      org,
+      env,
     });
   });
 
@@ -101,7 +111,7 @@ describe(`${chalk.yellowBright("attach/upgrade2: Testing usage upgrades with mon
       value: 100000,
     });
 
-    await advanceTestClock({
+    curUnix = await advanceTestClock({
       stripeCli,
       testClockId,
       advanceTo: addWeeks(curUnix, 2).getTime(),
@@ -111,18 +121,35 @@ describe(`${chalk.yellowBright("attach/upgrade2: Testing usage upgrades with mon
       autumn,
       customerId,
       product: proAnnual,
-    });
-
-    // Check that subs have same anchor day
-    await expectSubAnchorsSame({
       stripeCli,
-      customerId,
-      productId: proAnnual.id,
       db,
       org,
       env,
     });
+  });
 
-    // Check that sub items are correct
+  it("should attach premium annual product", async function () {
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Words,
+      value: 5000000,
+    });
+
+    await advanceTestClock({
+      stripeCli,
+      testClockId,
+      advanceTo: addWeeks(curUnix, 1).getTime(),
+      waitForSeconds: 10,
+    });
+
+    await runAttachTest({
+      autumn,
+      customerId,
+      product: premiumAnnual,
+      stripeCli,
+      db,
+      org,
+      env,
+    });
   });
 });

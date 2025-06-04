@@ -1,7 +1,9 @@
 import {
   BillingType,
   EntitlementWithFeature,
+  Feature,
   UsageModel,
+  UsagePriceConfig,
 } from "@autumn/shared";
 
 import { Price } from "@autumn/shared";
@@ -11,11 +13,24 @@ import { isFixedPrice } from "./usagePriceUtils.js";
 export const priceToFeature = ({
   price,
   ents,
+  features,
 }: {
   price: Price;
-  ents: EntitlementWithFeature[];
+  ents?: EntitlementWithFeature[];
+  features?: Feature[];
 }) => {
-  const ent = getPriceEntitlement(price, ents);
+  if (!features && !ents) {
+    throw new Error("priceToFeature requires either ents or features as arg");
+  }
+
+  if (features) {
+    return features.find(
+      (f) =>
+        f.internal_id == (price.config as UsagePriceConfig).internal_feature_id,
+    );
+  }
+
+  const ent = getPriceEntitlement(price, ents!);
   return ent.feature;
 };
 

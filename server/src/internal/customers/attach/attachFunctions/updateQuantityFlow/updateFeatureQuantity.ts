@@ -16,7 +16,6 @@ import {
   Feature,
   FullCusProduct,
   FullCustomerEntitlement,
-  FullCustomerPrice,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
