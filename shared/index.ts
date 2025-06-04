@@ -129,3 +129,4 @@ export * from "./enums/SuccessCode.js";
 export * from "./enums/ErrCode.js";
 export * from "./enums/LoggerAction.js";
 export * from "./enums/AttachErrCode.js";
+export * from "./enums/APIVersion.js";

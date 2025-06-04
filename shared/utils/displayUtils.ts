@@ -55,6 +55,10 @@ export const getSingularAndPlural = ({
   };
 };
 
+export const numberWithCommas = (x: number) => {
+  return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+
 export const getFeatureInvoiceDescription = ({
   feature,
   usage,
@@ -66,11 +70,12 @@ export const getFeatureInvoiceDescription = ({
 }) => {
   const { singular, plural } = getSingularAndPlural({ feature });
 
+  const usageStr = numberWithCommas(usage);
   if (billingUnits == 1) {
     if (usage == 1)
-      return `${usage} ${singular}`; // eg. 1 credit
-    else return `${usage} ${plural}`; // eg. 4 credits
+      return `${usageStr} ${singular}`; // eg. 1 credit
+    else return `${usageStr} ${plural}`; // eg. 4 credits
   } else {
-    return `${usage} x ${billingUnits} ${plural}`; // eg. 4 x 100 credits
+    return `${usageStr} x ${billingUnits} ${plural}`; // eg. 4 x 100 credits
   }
 };

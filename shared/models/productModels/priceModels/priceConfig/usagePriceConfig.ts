@@ -21,7 +21,7 @@ export const UsagePriceConfigSchema = z.object({
   internal_feature_id: z.string(),
   feature_id: z.string(),
   usage_tiers: z.array(UsageTierSchema),
-  interval: z.nativeEnum(BillingInterval).optional(),
+  interval: z.nativeEnum(BillingInterval),
 
   // For usage in arrear
   stripe_meter_id: z.string().nullish(),
