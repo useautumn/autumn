@@ -139,6 +139,7 @@ export const getCusBalances = async ({
 
     data[key].balance += balance || 0;
     data[key].adjustment += adjustment || 0;
+
     let total =
       (getResetBalance({
         entitlement: ent,
@@ -158,11 +159,13 @@ export const getCusBalances = async ({
         data[key].next_reset_at = cusEnt.next_reset_at;
       }
 
-      data[key].allowance += getResetBalance({
+      const resetBalance = getResetBalance({
         entitlement: ent,
         options: getEntOptions(cusProduct.options, ent),
         relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+        productQuantity: cusProduct.quantity || 1,
       });
+      data[key].allowance += resetBalance || 0;
     }
   }
 
