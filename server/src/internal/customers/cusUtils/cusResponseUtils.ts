@@ -15,8 +15,8 @@ import Stripe from "stripe";
 import { getCusBalances } from "../cusProducts/cusEnts/getCusBalances.js";
 import { featuresToObject } from "./getCustomerDetails.js";
 import {
+  cusProductsToCusPrices,
   cusProductToCusEnts,
-  cusProductToCusPrices,
 } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const getCusProductsResponse = async ({
@@ -60,7 +60,7 @@ export const getCusFeaturesResponse = async ({
 
   const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,
-    cusPrices: cusProductToCusPrices(cusProducts),
+    cusPrices: cusProductsToCusPrices({ cusProducts }),
     entities,
     org,
     entityId,

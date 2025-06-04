@@ -1,4 +1,13 @@
-import { CreateRewardProgram, ErrCode } from "@autumn/shared";
+import dotenv from "dotenv";
+dotenv.config();
+import { toSnakeCase } from "@/utils/genUtils.js";
+import {
+  APIVersion,
+  CreateRewardProgram,
+  CusExpand,
+  ErrCode,
+} from "@autumn/shared";
+import { TrackParams } from "autumn-js";
 
 export default class AutumnError extends Error {
   message: string;
@@ -15,19 +24,32 @@ export default class AutumnError extends Error {
   }
 }
 
-export class Autumn {
+export class AutumnInt {
   private apiKey: string;
   public headers: Record<string, string>;
   public baseUrl: string;
 
-  constructor(apiKey?: string, baseUrl?: string) {
-    this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
+  constructor({
+    apiKey,
+    baseUrl,
+    version,
+  }: {
+    apiKey?: string;
+    baseUrl?: string;
+    version?: string | APIVersion;
+  } = {}) {
+    // this.apiKey = apiKey || process.env.AUTUMN_API_KEY || "";
+    this.apiKey = apiKey || process.env.UNIT_TEST_AUTUMN_SECRET_KEY || "";
 
     this.headers = {
       Authorization: `Bearer ${this.apiKey}`,
       "Content-Type": "application/json",
     };
-    // this.baseUrl = "https://api.useautumn.com/v1";
+
+    if (version) {
+      this.headers["x-api-version"] = version.toString();
+    }
+
     this.baseUrl = baseUrl || "http://localhost:8080/v1";
   }
 
@@ -71,14 +93,14 @@ export class Autumn {
       deleteInStripe = false,
     }: {
       deleteInStripe?: boolean;
-    } = {}
+    } = {},
   ) {
     const response = await fetch(
       `${this.baseUrl}${path}?${deleteInStripe ? "delete_in_stripe=true" : ""}`,
       {
         method: "DELETE",
         headers: this.headers,
-      }
+      },
     );
 
     if (response.status != 200) {
@@ -134,7 +156,7 @@ export class Autumn {
     const data = await this.post(`/attach`, {
       customer_id: customerId,
       product_id: productId,
-      options,
+      options: toSnakeCase(options),
     });
 
     return data;
@@ -186,8 +208,25 @@ export class Autumn {
   }
 
   customers = {
-    get: async (customerId: string) => {
-      const data = await this.get(`/customers/${customerId}`);
+    get: async (
+      customerId: string,
+      params?: {
+        expand?: CusExpand[];
+      },
+    ) => {
+      const queryParams = new URLSearchParams();
+      const defaultParams = {
+        expand: [CusExpand.Invoices],
+      };
+
+      const finalParams = { ...defaultParams, ...params };
+      if (finalParams.expand) {
+        queryParams.append("expand", finalParams.expand.join(","));
+      }
+
+      const data = await this.get(
+        `/customers/${customerId}?${queryParams.toString()}`,
+      );
       return data;
     },
 
@@ -201,7 +240,7 @@ export class Autumn {
         deleteInStripe = false,
       }: {
         deleteInStripe?: boolean;
-      } = {}
+      } = {},
     ) => {
       const data = await this.delete(`/customers/${customerId}`, {
         deleteInStripe,
@@ -223,7 +262,7 @@ export class Autumn {
             id: string;
             name: string;
             featureId: string;
-          }[]
+          }[],
     ) => {
       let entities = Array.isArray(entity) ? entity : [entity];
       const data = await this.post(
@@ -234,7 +273,7 @@ export class Autumn {
             name: e.name,
             feature_id: e.featureId,
           };
-        })
+        }),
       );
 
       return data;
@@ -247,7 +286,7 @@ export class Autumn {
 
     delete: async (customerId: string, entityId: string) => {
       const data = await this.delete(
-        `/customers/${customerId}/entities/${entityId}`
+        `/customers/${customerId}/entities/${entityId}`,
       );
       return data;
     },
@@ -264,10 +303,10 @@ export class Autumn {
 
     get: async (
       productId: string,
-      { v1Schema = false }: { v1Schema?: boolean } = {}
+      { v1Schema = false }: { v1Schema?: boolean } = {},
     ) => {
       const data = await this.get(
-        `/products/${productId}?${v1Schema ? "schemaVersion=1" : ""}`
+        `/products/${productId}?${v1Schema ? "schemaVersion=1" : ""}`,
       );
       return data;
     },
@@ -353,6 +392,22 @@ export class Autumn {
       });
       return data;
     },
+  };
+
+  track = async (params: TrackParams) => {
+    const data = await this.post(`/track`, params);
+    return data;
+  };
+
+  attachPreview = async (params: {
+    customerId: string;
+    productId: string;
+    options?: any;
+  }) => {
+    const snakeCaseParams = toSnakeCase(params);
+
+    const data = await this.post(`/attach/preview`, snakeCaseParams);
+    return data;
   };
 
   initStripe = async () => {

@@ -2,7 +2,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
 import { updateScheduledSubWithNewItems } from "@/internal/customers/change-product/scheduleUtils/updateScheduleWithNewItems.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import { FullCusProduct } from "@autumn/shared";

@@ -18,7 +18,7 @@ import { handleStripeSubUpdate } from "../change-product/handleUpgrade.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
-import { billForRemainingUsages } from "../change-product/billRemainingUsages.js";
+// import { billForRemainingUsages } from "../change-product/billRemainingUsages.js";
 
 import { formatCurrency } from "./previewUtils.js";
 
@@ -252,15 +252,15 @@ export const getUpgradePreview = async ({
       };
     });
 
-  let usageLineItems =
-    (await billForRemainingUsages({
-      db,
-      logger: console,
-      attachParams,
-      curCusProduct: curMainProduct,
-      newSubs: stripeSubs,
-      shouldPreview: true,
-    })) || [];
+  // let usageLineItems =
+  //   (await billForRemainingUsages({
+  //     db,
+  //     logger: console,
+  //     attachParams,
+  //     curCusProduct: curMainProduct,
+  //     newSubs: stripeSubs,
+  //     shouldPreview: true,
+  //   })) || [];
 
   let totalAmount = baseLineItems.reduce(
     (acc: number, item: any) => acc + item.amount,

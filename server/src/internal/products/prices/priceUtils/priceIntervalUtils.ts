@@ -1,4 +1,5 @@
 import { BillingInterval, Price } from "@autumn/shared";
+import { nullish } from "@/utils/genUtils.js";
 
 const BillingIntervalOrder = [
   BillingInterval.Year,
@@ -16,6 +17,19 @@ const ReversedBillingIntervalOrder = [
   BillingInterval.Year,
 ];
 
+export function compareBillingIntervals(
+  a: BillingInterval | undefined,
+  b: BillingInterval | undefined,
+): number {
+  if (nullish(a)) {
+    return 1;
+  } else if (nullish(b)) {
+    return -1;
+  }
+
+  return BillingIntervalOrder.indexOf(a!) - BillingIntervalOrder.indexOf(b!);
+}
+
 export const getFirstInterval = ({ prices }: { prices: Price[] }) => {
   return BillingIntervalOrder.find((interval) =>
     prices.some((price) => price.config.interval === interval),
@@ -31,5 +45,11 @@ export const getLastInterval = ({ prices }: { prices: Price[] }) => {
 export const sortBillingIntervals = (intervals: BillingInterval[]) => {
   return intervals.sort((a, b) => {
     return BillingIntervalOrder.indexOf(a) - BillingIntervalOrder.indexOf(b);
+  });
+};
+
+export const sortPricesByInterval = (prices: Price[]) => {
+  return prices.sort((a, b) => {
+    return compareBillingIntervals(a.config.interval, b.config.interval);
   });
 };

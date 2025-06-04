@@ -9,14 +9,13 @@ import {
 } from "../cusProducts/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 
-import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleCreateCheckout = async ({
   req,

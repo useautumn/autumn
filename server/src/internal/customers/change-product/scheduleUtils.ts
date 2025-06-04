@@ -1,4 +1,3 @@
-import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import {
   getStripeSchedules,
   getStripeSubs,
@@ -29,8 +28,7 @@ import {
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { handleSameMainProduct } from "../add-product/handleSameProduct.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 
 export const getPricesForCusProduct = ({
   cusProduct,

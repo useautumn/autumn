@@ -1,4 +1,5 @@
 import {
+  BillingType,
   CusProductStatus,
   FullCusProduct,
   FullCustomerEntitlement,
@@ -13,11 +14,15 @@ import {
 } from "@/external/stripe/stripeSubUtils.js";
 import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 
-export const cusProductToCusPrices = (
-  cusProducts: FullCusProduct[],
-  inStatuses: CusProductStatus[] = [CusProductStatus.Active],
-) => {
+export const cusProductsToCusPrices = ({
+  cusProducts,
+  inStatuses = [CusProductStatus.Active],
+}: {
+  cusProducts: FullCusProduct[];
+  inStatuses?: CusProductStatus[];
+}) => {
   const cusPrices: FullCustomerPrice[] = [];
 
   for (const cusProduct of cusProducts) {
@@ -58,10 +63,18 @@ export const cusProductToCusEnts = (
 
 export const cusProductToPrices = ({
   cusProduct,
+  billingType,
 }: {
   cusProduct: FullCusProduct;
+  billingType?: BillingType;
 }) => {
-  return cusProduct.customer_prices.map((cp) => cp.price);
+  let prices = cusProduct.customer_prices.map((cp) => cp.price);
+
+  if (billingType) {
+    prices = prices.filter((p) => getBillingType(p.config) === billingType);
+  }
+
+  return prices;
 };
 
 export const cusProductToEnts = ({

@@ -1,18 +1,20 @@
 import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSub.js";
 import { updateStripeSubscription } from "@/external/stripe/stripeSubUtils/updateStripeSub.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { FullCusProduct } from "@autumn/shared";
-import { AttachConfig } from "../../models/AttachFlags.js";
+import { AttachConfig, FullCusProduct } from "@autumn/shared";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { updateCurSchedules } from "./updateCurSchedules.js";
-import { formatUnixToDateTime } from "@/utils/genUtils.js";
-import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import {
+  createUsageInvoiceItems,
+  resetUsageBalances,
+} from "./createUsageInvoiceItems.js";
 
 // UPGRADE FUNCTIONS
+
 export const updateStripeSubs = async ({
   db,
   stripeCli,
@@ -64,10 +66,17 @@ export const updateStripeSubs = async ({
         now: attachParams.now,
       });
 
-  // console.log("Now:", formatUnixToDateTime(attachParams.now));
-  // console.log("Free trial:", attachParams.freeTrial);
-  // console.log("Trial end:", formatUnixToDateTime(trialEnd * 1000));
-  // 2. Update current subscription
+  // 2. Create invoice items for remaining usages
+  const { cusEntIds } = await createUsageInvoiceItems({
+    db,
+    attachParams,
+    cusProduct: curCusProduct,
+    stripeSubs,
+    logger,
+  });
+
+  // 3. Update current subscription
+  logger.info("1.2: Updating current subscription");
   let newSubs: Stripe.Subscription[] = [];
   const subUpdateRes = await updateStripeSubscription({
     db,
@@ -81,6 +90,7 @@ export const updateStripeSubs = async ({
     logger,
     itemSet: firstItemSet,
     shouldPreview,
+    curSub: firstSub,
   });
 
   if (shouldPreview) {
@@ -90,10 +100,11 @@ export const updateStripeSubs = async ({
     };
   }
 
-  let subUpdate = subUpdateRes as Stripe.Subscription;
-  newSubs.push(subUpdate);
+  let { sub: subUpdate } = subUpdateRes;
+  subUpdate = subUpdate!;
+  newSubs.push(subUpdate!);
 
-  // 3. Update current sub schedules if exist...
+  // 4. Update current sub schedules if exist...
   await updateCurSchedules({
     db,
     stripeCli,
@@ -103,7 +114,7 @@ export const updateStripeSubs = async ({
     logger,
   });
 
-  // 4. Cancel other subscriptions
+  // 5. Cancel other subscriptions
   for (const sub of stripeSubs.slice(1)) {
     logger.info(`1.4: canceling additional sub: ${sub.id}`);
     await stripeCli.subscriptions.cancel(sub.id, {
@@ -114,10 +125,9 @@ export const updateStripeSubs = async ({
     });
   }
 
-  // 5. Create subs for other intervals
-  const now = await getStripeNow({ stripeCli, stripeSub: subUpdate });
+  // 6. Create subs for other intervals
   for (const itemSet of itemSets.slice(1)) {
-    const newSub = (await createStripeSub({
+    const newSub = await createStripeSub({
       db,
       stripeCli,
       customer: attachParams.customer,
@@ -126,14 +136,41 @@ export const updateStripeSubs = async ({
       invoiceOnly: attachParams.invoiceOnly || false,
       freeTrial: attachParams.freeTrial,
       anchorToUnix: subUpdate.current_period_end * 1000,
-      now,
-    })) as Stripe.Subscription;
+      now: attachParams.now,
+    });
 
-    newSubs.push(newSub);
+    newSubs.push(newSub as Stripe.Subscription);
   }
+
+  // 7. Update cus ents to reset usage
+  await resetUsageBalances({
+    db,
+    cusEntIds,
+    cusProduct: curCusProduct,
+  });
 
   return {
     newSubs,
     updatePreview: null,
+    invoice: subUpdateRes.invoice,
   };
 };
+
+// logger.info("1.1: Creating invoice items for usages");
+// const { invoiceItems, cusEntIds } = await createUsageInvoiceItems({
+//   db,
+//   attachParams,
+//   cusProduct: curCusProduct,
+//   stripeSubs,
+//   logger,
+// });
+
+// await createSubUpdateProrations({
+//   db,
+//   attachParams,
+//   config,
+//   curCusProduct,
+//   stripeSubs,
+//   itemSet: firstItemSet,
+//   logger,
+// });

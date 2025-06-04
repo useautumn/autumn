@@ -21,10 +21,8 @@ import {
 } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
 import {
-  compareBillingIntervals,
   getBillingInterval,
   getBillingType,
-  pricesAreSame,
 } from "@/internal/products/prices/priceUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { ProductService } from "./ProductService.js";
@@ -32,10 +30,7 @@ import {
   AttachParams,
   InsertCusProductParams,
 } from "../customers/cusProducts/AttachParams.js";
-import {
-  entsAreSame,
-  getEntitlementsForProduct,
-} from "./entitlements/entitlementUtils.js";
+import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
 import { Decimal } from "decimal.js";
 import { generateId } from "@/utils/genUtils.js";
 import { PriceService } from "./prices/PriceService.js";
@@ -43,9 +38,8 @@ import { EntitlementService } from "./entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { FreeTrialService } from "./free-trials/FreeTrialService.js";
-import { itemsAreSame } from "./product-items/compareItemUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { findSimilarItem } from "./product-items/compareItemUtils.js";
+import { compareBillingIntervals } from "./prices/priceUtils/priceIntervalUtils.js";
 
 export const sortProductsByPrice = (products: FullProduct[]) => {
   products.sort((a, b) => {
@@ -147,17 +141,9 @@ export const isProductUpgrade = ({
 
   // 2. Get total price for each product
   const getTotalPrice = (prices: Price[]) => {
-    // Get each product's price prorated to a year
     let totalPrice = new Decimal(0);
     for (const price of prices) {
-      // let interval = price.config?.interval;
-
-      // if (!interval || interval === BillingInterval.OneOff) {
-      //   continue;
-      // }
-
       if ("usage_tiers" in price.config!) {
-        // Just get total price for first tier
         totalPrice = totalPrice.plus(price.config!.usage_tiers[0].amount);
       } else {
         totalPrice = totalPrice.plus(price.config!.amount);
@@ -170,8 +156,7 @@ export const isProductUpgrade = ({
   if (billingInterval1 == billingInterval2) {
     return getTotalPrice(prices1) < getTotalPrice(prices2);
   } else {
-    // If billing interval is different, compare the billing intervals
-    return compareBillingIntervals(billingInterval1, billingInterval2) < 0;
+    return compareBillingIntervals(billingInterval1, billingInterval2) > 0;
   }
 };
 

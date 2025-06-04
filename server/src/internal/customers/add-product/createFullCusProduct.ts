@@ -9,6 +9,7 @@ import {
   CollectionMethod,
   FullCusProduct,
   LoggerAction,
+  APIVersion,
 } from "@autumn/shared";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 
@@ -74,6 +75,7 @@ export const initCusProduct = ({
   isCustom,
   entityId,
   internalEntityId,
+  apiVersion,
 }: {
   customer: Customer;
   product: FullProduct;
@@ -94,6 +96,7 @@ export const initCusProduct = ({
   isCustom?: boolean;
   entityId?: string;
   internalEntityId?: string;
+  apiVersion?: APIVersion;
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
 
@@ -135,6 +138,7 @@ export const initCusProduct = ({
     quantity: 1,
     internal_entity_id: internalEntityId,
     entity_id: entityId,
+    api_version: apiVersion,
   };
 };
 
@@ -334,7 +338,7 @@ export const createFullCusProduct = async ({
   }
 
   const cusProdId = generateId("cus_prod");
-  console.log(
+  logger.info(
     `Inserting cus product ${product.id} for ${customer.name}, cus product ID: ${cusProdId}`,
   );
 
@@ -414,6 +418,7 @@ export const createFullCusProduct = async ({
     isCustom: attachParams.isCustom || false,
     entityId: attachParams.entityId,
     internalEntityId: attachParams.internalEntityId,
+    apiVersion: attachParams.apiVersion,
   });
 
   // Expire previous product if not one off

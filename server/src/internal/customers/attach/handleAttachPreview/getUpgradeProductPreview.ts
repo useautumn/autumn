@@ -4,9 +4,7 @@ import {
   attachParamToCusProducts,
 } from "../attachUtils/convertAttachParams.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import {
   getFirstInterval,
   getLastInterval,
@@ -14,7 +12,7 @@ import {
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { getItemsForCurProduct } from "@/internal/invoices/previewItemUtils/getItemsForCurProduct.js";
-import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import Stripe from "stripe";
@@ -30,6 +28,7 @@ import {
   getAlignedIntervalUnix,
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { Decimal } from "decimal.js";
 
 const getNextCycleAt = ({
   prices,
@@ -142,9 +141,15 @@ export const getUpgradeProductPreview = async ({
 
   let items = [...curPreviewItems, ...newPreviewItems];
 
-  const dueTodayAmt = items.reduce((acc, item) => {
-    return acc + (item.amount ?? 0);
-  }, 0);
+  const dueTodayAmt = items
+    .reduce((acc, item) => {
+      // return acc + (item.amount ?? 0);
+      // console.log("acc", acc.toNumber());
+      // console.log("Adding", item.amount);
+      return acc.plus(item.amount ?? 0);
+    }, new Decimal(0))
+    .toDecimalPlaces(2)
+    .toNumber();
 
   let options = getOptions({
     prodItems: mapToProductItems({

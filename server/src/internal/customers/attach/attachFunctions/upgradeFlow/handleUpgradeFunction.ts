@@ -5,11 +5,11 @@ import {
 } from "../../../cusProducts/AttachParams.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { billForRemainingUsages } from "@/internal/customers/change-product/billRemainingUsages.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
 import {
   APIVersion,
+  AttachConfig,
   AttachScenario,
   CusProductStatus,
   ProcessorType,
@@ -19,7 +19,6 @@ import {
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
-import { AttachConfig, ProrationBehavior } from "../../models/AttachFlags.js";
 import { updateStripeSubs } from "./updateStripeSubs.js";
 
 export const handleUpgradeFunction = async ({
@@ -53,7 +52,7 @@ export const handleUpgradeFunction = async ({
   });
 
   logger.info("1. Updating current subscriptions in Stripe");
-  let { newSubs } = await updateStripeSubs({
+  let { newSubs, invoice } = await updateStripeSubs({
     db: req.db,
     curCusProduct,
     stripeCli,
@@ -61,16 +60,6 @@ export const handleUpgradeFunction = async ({
     stripeSubs,
     logger,
     config,
-  });
-
-  logger.info("2. Creating invoice for remaining usages");
-  await billForRemainingUsages({
-    db: req.db,
-    attachParams,
-    curCusProduct,
-    newSubs,
-    logger,
-    billImmediately: config.proration === ProrationBehavior.Immediately,
   });
 
   logger.info("3. Expiring old cus product");
@@ -110,7 +99,10 @@ export const handleUpgradeFunction = async ({
   logger.info("5. Inserting invoices");
   const batchInsertInvoice = [];
   for (const sub of newSubs) {
-    const invoiceId = sub.latest_invoice as string;
+    const invoiceId = sub.latest_invoice as string | null;
+    if (!invoiceId) {
+      continue;
+    }
 
     batchInsertInvoice.push(
       insertInvoiceFromAttach({
@@ -136,6 +128,7 @@ export const handleUpgradeFunction = async ({
           product_ids: products.map((p) => p.id),
           code: SuccessCode.UpgradedToNewProduct,
           message: `Successfully upgraded from ${curProductName} to ${product.name}`,
+          invoice: config.invoiceOnly ? invoice : undefined,
         }),
       );
     } else {

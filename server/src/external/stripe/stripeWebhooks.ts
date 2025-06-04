@@ -9,11 +9,10 @@ import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { getStripeWebhookSecret } from "@/internal/orgs/orgUtils.js";
 import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
-import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated.js";
+import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import chalk from "chalk";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
-import { format } from "date-fns";
 import { createLogtailWithContext } from "../logtail/logtailUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
@@ -142,7 +141,7 @@ stripeWebhookRouter.post(
           await handleCheckoutSessionCompleted({
             req: request,
             db,
-            checkoutSession,
+            data: checkoutSession,
             org,
             env,
             logger,

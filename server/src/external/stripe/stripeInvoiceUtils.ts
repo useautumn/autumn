@@ -45,68 +45,111 @@ export const getFullStripeInvoice = async ({
 };
 
 export const payForInvoice = async ({
-  fullOrg,
-  env,
-  customer,
-  invoice,
+  stripeCli,
+  paymentMethod,
+  invoiceId,
   logger,
+  errorOnFail = true,
+  voidIfFailed = false,
 }: {
-  fullOrg: Organization;
-  env: AppEnv;
-  customer: Customer;
-  invoice: Stripe.Invoice;
+  stripeCli: Stripe;
+  paymentMethod?: Stripe.PaymentMethod | null;
+  invoiceId: string;
   logger: any;
+  errorOnFail?: boolean;
+  voidIfFailed?: boolean;
 }) => {
-  const stripeCli = createStripeCli({ org: fullOrg, env: env as AppEnv });
+  // const stripeCli = createStripeCli({ org: fullOrg, env: env as AppEnv });
 
-  const paymentMethod = await getCusPaymentMethod({
-    stripeCli,
-    stripeId: customer.processor.id,
-  });
+  // const paymentMethod = await getCusPaymentMethod({
+  //   stripeCli,
+  //   stripeId: customer.processor.id,
+  // });
 
+  // if (!paymentMethod) {
+  //   logger.warn("   ❌ No payment method found");
+  //   return {
+  //     paid: false,
+  //     error: new RecaseError({
+  //       message: "No payment method found",
+  //       code: ErrCode.CustomerHasNoPaymentMethod,
+  //       statusCode: 400,
+  //     }),
+  //   };
+  // }
   if (!paymentMethod) {
-    logger.warn("   ❌ No payment method found");
-    return {
-      paid: false,
-      error: new RecaseError({
+    if (errorOnFail) {
+      throw new RecaseError({
         message: "No payment method found",
         code: ErrCode.CustomerHasNoPaymentMethod,
         statusCode: 400,
-      }),
-    };
+      });
+    } else {
+      return {
+        paid: false,
+        error: new RecaseError({
+          message: "No payment method found",
+          code: ErrCode.CustomerHasNoPaymentMethod,
+          statusCode: 400,
+        }),
+        invoice: null,
+      };
+    }
   }
 
   try {
-    await stripeCli.invoices.pay(invoice.id, {
-      payment_method: paymentMethod.id,
+    const invoice = await stripeCli.invoices.pay(invoiceId, {
+      payment_method: paymentMethod?.id,
     });
     return {
       paid: true,
       error: null,
+      invoice,
     };
   } catch (error: any) {
     logger.error(
-      `   ❌ Stripe error: Failed to pay invoice: ${error?.message || error}`,
+      `❌ Stripe error: Failed to pay invoice: ${error?.message || error}`,
     );
 
-    if (isStripeCardDeclined(error)) {
+    if (voidIfFailed) {
+      try {
+        await stripeCli.invoices.voidInvoice(invoiceId);
+      } catch (error) {
+        logger.error(`Failed to void failed invoice: ${invoiceId}`);
+      }
+    }
+
+    if (errorOnFail) {
+      throw error;
+    } else {
       return {
         paid: false,
         error: new RecaseError({
-          message: `Payment declined: ${error.message}`,
-          code: ErrCode.StripeCardDeclined,
-          statusCode: 400,
+          message: `Failed to pay invoice: ${error?.message || error}`,
+          code: ErrCode.PayInvoiceFailed,
         }),
+        invoice: null,
       };
     }
 
-    return {
-      paid: false,
-      error: new RecaseError({
-        message: "Failed to pay invoice",
-        code: ErrCode.PayInvoiceFailed,
-      }),
-    };
+    // if (isStripeCardDeclined(error)) {
+    //   return {
+    //     paid: false,
+    //     error: new RecaseError({
+    //       message: `Payment declined: ${error.message}`,
+    //       code: ErrCode.StripeCardDeclined,
+    //       statusCode: 400,
+    //     }),
+    //   };
+    // }
+
+    // return {
+    //   paid: false,
+    //   error: new RecaseError({
+    //     message: "Failed to pay invoice",
+    //     code: ErrCode.PayInvoiceFailed,
+    //   }),
+    // };
   }
 };
 

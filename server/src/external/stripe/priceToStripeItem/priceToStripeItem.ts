@@ -13,7 +13,7 @@ import {
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { EntitlementWithFeature, Price } from "@autumn/shared";
+import { EntitlementWithFeature, Price, APIVersion } from "@autumn/shared";
 
 import {
   priceToOneOffAndTiered,
@@ -31,6 +31,7 @@ export const priceToStripeItem = ({
   isCheckout = false,
   existingUsage,
   withEntity = false,
+  apiVersion,
 }: {
   price: Price;
   relatedEnt: EntitlementWithFeature;
@@ -40,6 +41,7 @@ export const priceToStripeItem = ({
   isCheckout: boolean;
   existingUsage: number;
   withEntity: boolean;
+  apiVersion?: APIVersion;
 }) => {
   // TODO: Implement this
   const billingType = getBillingType(price.config!);
@@ -98,6 +100,10 @@ export const priceToStripeItem = ({
     const priceId = config.stripe_price_id;
 
     if (withEntity && !isCheckout) {
+      return null;
+    }
+
+    if (apiVersion === APIVersion.v1_4 && !isCheckout) {
       return null;
     }
 

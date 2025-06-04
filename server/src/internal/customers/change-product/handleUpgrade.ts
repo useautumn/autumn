@@ -1,5 +1,4 @@
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
-import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import {
   getStripeSchedules,
   getStripeSubs,
@@ -38,7 +37,7 @@ import {
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { updateScheduledSubWithNewItems } from "./scheduleUtils/updateScheduleWithNewItems.js";
 
-import { billForRemainingUsages } from "./billRemainingUsages.js";
+// import { billForRemainingUsages } from "./billRemainingUsages.js";
 import { updateStripeSubscription } from "@/external/stripe/stripeSubUtils/updateStripeSub.js";
 import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSub.js";
 
@@ -52,6 +51,7 @@ import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 
 export enum ProrationBehavior {
   Immediately = "immediately",
@@ -456,14 +456,14 @@ export const handleUpgrade = async ({
     prorationBehavior,
   });
 
-  logger.info("2. Bill for remaining usages");
-  await billForRemainingUsages({
-    db: req.db,
-    attachParams,
-    curCusProduct,
-    newSubs,
-    logger,
-  });
+  // logger.info("2. Bill for remaining usages");
+  // await billForRemainingUsages({
+  //   db: req.db,
+  //   attachParams,
+  //   curCusProduct,
+  //   newSubs,
+  //   logger,
+  // });
 
   logger.info(
     "2.1. Remove old subscription ID from old cus product and expire",

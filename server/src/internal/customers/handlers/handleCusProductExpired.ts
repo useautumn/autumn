@@ -144,6 +144,7 @@ export const expireCusProduct = async ({
       org,
       env,
       expireImmediately,
+      logger,
     });
 
     if (isOneOff(cusProduct.customer_prices.map((p) => p.price))) {
@@ -162,6 +163,7 @@ export const expireCusProduct = async ({
       cusProduct,
       org,
       env,
+      logger,
     });
 
     await CusProductService.update({
@@ -182,6 +184,7 @@ export const expireCusProduct = async ({
     cusProduct,
     org,
     env,
+    logger,
   });
 
   if (!cancelled) {
@@ -190,6 +193,7 @@ export const expireCusProduct = async ({
       env,
       cusProduct,
       org,
+      logger,
     });
   } // else will be handled by webhook
 

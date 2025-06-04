@@ -114,7 +114,16 @@ export class OrgService {
 
     let org = structuredClone(result);
     delete (org as any).features;
-    return { org, features: result.features || [] };
+    return {
+      org: {
+        ...org,
+        api_version: getApiVersion({
+          createdAt: org.created_at!,
+        }),
+        config: OrgConfigSchema.parse(org.config || {}),
+      },
+      features: result.features || [],
+    };
   }
 
   static async getFromPkeyWithFeatures({
