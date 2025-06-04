@@ -138,6 +138,8 @@ const handleUpdateQuantityErrors = async ({
       internalFeatureId: option.internal_feature_id!,
     });
 
+    if (!price) continue;
+
     const totalQuantity =
       option.quantity! * (price?.config as UsagePriceConfig).billing_units!;
 

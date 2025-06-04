@@ -10,6 +10,20 @@ import {
 } from "@autumn/shared";
 import Stripe from "stripe";
 
+const autumnStripePricesMatch = ({
+  stripePrice,
+  autumnPrice,
+}: {
+  stripePrice: Stripe.Price;
+  autumnPrice: Price;
+}) => {
+  const config = autumnPrice.config as UsagePriceConfig;
+  return (
+    config.stripe_price_id == stripePrice.id ||
+    config.stripe_product_id == stripePrice.product
+  );
+};
+
 export const findStripeItemForPrice = ({
   price,
   stripeItems,
@@ -53,6 +67,21 @@ export const findPriceInStripeItems = ({
 
     return itemMatch && billingTypeMatch;
   });
+};
+
+export const findStripePriceFromPrices = ({
+  stripePrices,
+  autumnPrice,
+}: {
+  stripePrices: Stripe.Price[];
+  autumnPrice: Price;
+}) => {
+  return stripePrices.find((p: Stripe.Price) =>
+    autumnStripePricesMatch({
+      stripePrice: p,
+      autumnPrice,
+    }),
+  );
 };
 
 export const subItemInCusProduct = ({

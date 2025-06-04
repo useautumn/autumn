@@ -6,14 +6,14 @@ import {
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { nullish } from "@/utils/genUtils.js";
 import {
   AppEnv,
-  BillingType,
   FullCusProduct,
   Organization,
+  ProductV2,
 } from "@autumn/shared";
 import { expect } from "chai";
 import { getDate } from "date-fns";
@@ -71,17 +71,19 @@ export const expectSubAnchorsSame = async ({
 export const expectSubItemsCorrect = async ({
   stripeCli,
   customerId,
-  productId,
+  product,
   db,
   org,
   env,
+  isCanceled = false,
 }: {
   stripeCli: Stripe;
   customerId: string;
-  productId: string;
+  product: ProductV2;
   db: DrizzleCli;
   org: Organization;
   env: AppEnv;
+  isCanceled?: boolean;
 }) => {
   const fullCus = await CusService.getFull({
     db,
@@ -90,14 +92,40 @@ export const expectSubItemsCorrect = async ({
     env,
   });
 
+  const productId = product.id;
   const cusProduct = fullCus.customer_products.find(
     (cp: FullCusProduct) => cp.product.id == productId,
   )!;
+
+  if (isCanceled) {
+    expect(cusProduct.canceled_at, "cus product should be canceled").to.exist;
+  } else {
+    expect(cusProduct.canceled_at, "cus product should not be canceled").to.not
+      .exist;
+  }
+
+  if (isFreeProductV2({ product })) {
+    expect(
+      cusProduct.subscription_ids,
+      `cus product should have no subs for free product: ${product.name}`,
+    ).to.be.empty;
+    return {
+      fullCus,
+    };
+  }
 
   const subs: Stripe.Subscription[] = await getStripeSubs({
     stripeCli,
     subIds: cusProduct?.subscription_ids,
   });
+
+  for (const sub of subs) {
+    if (isCanceled) {
+      expect(sub.canceled_at, "sub should be canceled").to.exist;
+    } else {
+      expect(sub.canceled_at, "sub should not be canceled").to.be.null;
+    }
+  }
 
   const subItems = subs.flatMap((sub) => sub.items.data);
   const prices = cusProductToPrices({ cusProduct });
@@ -122,7 +150,10 @@ export const expectSubItemsCorrect = async ({
       ).to.be.true;
       continue;
     } else {
-      expect(subItem).to.exist;
+      expect(
+        subItem,
+        `sub item for price: ${(price.config as any).internal_feature_id || price.config.interval} should exist`,
+      ).to.exist;
     }
   }
 
@@ -142,4 +173,8 @@ export const expectSubItemsCorrect = async ({
       `subscription anchors are the same`,
     );
   }
+
+  return {
+    fullCus,
+  };
 };

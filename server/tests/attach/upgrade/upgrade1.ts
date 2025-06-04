@@ -131,36 +131,5 @@ describe(`${chalk.yellowBright("attach/upgrade1: Testing usage upgrades")}`, () 
       org,
       env,
     });
-
-    // const res = await autumn.attachPreview({
-    //   customerId,
-    //   productId: growth.id,
-    // });
-
-    // const total = getAttachTotal({
-    //   preview: res,
-    // });
-
-    // await autumn.attach({
-    //   customerId,
-    //   productId: growth.id,
-    // });
-
-    // const customer = await autumn.customers.get(customerId);
-
-    // expectProductAttached({
-    //   customer,
-    //   product: growth,
-    // });
-
-    // expectInvoicesCorrect({
-    //   customer,
-    //   first: { productId: growth.id, total },
-    // });
-
-    // expectFeaturesCorrect({
-    //   customer,
-    //   product: growth,
-    // });
   });
 });

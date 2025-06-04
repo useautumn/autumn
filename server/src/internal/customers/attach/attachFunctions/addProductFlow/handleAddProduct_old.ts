@@ -8,9 +8,8 @@ import {
 } from "@/internal/products/prices/priceUtils.js";
 
 import RecaseError from "@/utils/errorUtils.js";
-import chalk from "chalk";
 
-import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
+import { createFullCusProduct } from "../../../add-product/createFullCusProduct.js";
 import {
   createStripeCli,
   subToAutumnInterval,
@@ -18,10 +17,11 @@ import {
 import {
   AttachParams,
   AttachResultSchema,
-} from "../cusProducts/AttachParams.js";
-import { getPriceAmount } from "../../products/prices/priceUtils.js";
+} from "../../../cusProducts/AttachParams.js";
+import { getPriceAmount } from "@/internal/products/prices/priceUtils.js";
 import {
   APIVersion,
+  AttachConfig,
   AttachScenario,
   BillingInterval,
   BillingType,
@@ -37,7 +37,7 @@ import {
   payForInvoice,
 } from "@/external/stripe/stripeInvoiceUtils.js";
 
-import { handleCreateCheckout } from "./handleCreateCheckout.js";
+import { handleCreateCheckout } from "../../../add-product/handleCreateCheckout.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import Stripe from "stripe";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
@@ -51,6 +51,7 @@ import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
 import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
 
 export const handleBillNowPrices = async ({
   attachParams,
@@ -459,37 +460,23 @@ export const handleAddProduct = async ({
   req,
   res,
   attachParams,
-  fromRequest = true,
-  carryExistingUsages = false,
-  keepResetIntervals = false,
+  config,
+  // fromRequest = true,
+  // carryExistingUsages = false,
+  // keepResetIntervals = false,
   disableMerge = false,
 }: {
   req: ExtendedRequest;
   res: any;
   attachParams: AttachParams;
-  fromRequest?: boolean;
-  carryExistingUsages?: boolean;
-  keepResetIntervals?: boolean;
+  config: AttachConfig;
+  // fromRequest?: boolean;
+  // carryExistingUsages?: boolean;
+  // keepResetIntervals?: boolean;
   disableMerge?: boolean;
 }) => {
   const logger = req.logtail;
   const { customer, products, prices } = attachParams;
-
-  for (const product of products) {
-    if (product.is_add_on) {
-      logger.info(
-        `Adding add-on ${chalk.yellowBright(
-          product.name,
-        )} to customer ${chalk.yellowBright(customer.id)}`,
-      );
-    } else {
-      logger.info(
-        `Adding product ${chalk.yellowBright(
-          product.name,
-        )} to customer ${chalk.yellowBright(customer.id)}`,
-      );
-    }
-  }
 
   // 1. Handle one-off payment products
   if (pricesOnlyOneOff(prices)) {
@@ -497,7 +484,7 @@ export const handleAddProduct = async ({
       req,
       res,
       attachParams,
-      fromRequest,
+      // fromRequest,
     });
 
     return;

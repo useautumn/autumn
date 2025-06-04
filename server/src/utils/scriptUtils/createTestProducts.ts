@@ -72,16 +72,20 @@ export const constructProduct = ({
   id,
   items,
   type,
+  interval,
   isAnnual = false,
   trial = false,
   excludeBase = false,
+  isDefault = true,
 }: {
   id?: string;
   items: ProductItem[];
   type: "free" | "pro" | "premium" | "growth" | "one_off";
+  interval?: BillingInterval;
   isAnnual?: boolean;
   trial?: boolean;
   excludeBase?: boolean;
+  isDefault?: boolean;
 }) => {
   let price = 0;
   if (type == "pro") {
@@ -96,17 +100,38 @@ export const constructProduct = ({
     items.push(
       constructPriceItem({
         price: isAnnual ? price * 10 : price,
-        interval: isAnnual ? BillingInterval.Year : BillingInterval.Month,
+        interval: isAnnual
+          ? BillingInterval.Year
+          : interval
+            ? interval
+            : BillingInterval.Month,
       }),
     );
   }
 
+  if (type == "one_off") {
+    items.push(
+      constructPriceItem({
+        price: 10,
+        interval: null,
+      }),
+    );
+  }
+
+  let id_ =
+    id ||
+    (isAnnual ? `${type}-annual` : interval ? `${type}-${interval}` : type);
+
   let product: ProductV2 = {
-    id: id || (isAnnual ? `${type}-annual` : type),
-    name: isAnnual ? `${keyToTitle(type)} (Annual)` : keyToTitle(type),
+    id: id_,
+    name: isAnnual
+      ? `${keyToTitle(type)} (Annual)`
+      : interval
+        ? `${keyToTitle(type)} (${interval})`
+        : keyToTitle(type),
     items,
     is_add_on: false,
-    is_default: type == "free",
+    is_default: type == "free" && isDefault,
     version: 1,
     group: "",
     free_trial: trial

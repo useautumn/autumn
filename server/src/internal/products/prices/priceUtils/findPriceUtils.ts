@@ -1,8 +1,10 @@
 import {
   BillingType,
   ErrCode,
+  FullProduct,
   Price,
   PriceType,
+  Product,
   UsagePriceConfig,
 } from "@autumn/shared";
 
@@ -94,4 +96,16 @@ export const findPriceFromStripeId = ({
 
     return idMatch && typeMatch;
   });
+};
+
+export const priceToProduct = ({
+  price,
+  products,
+}: {
+  price: Price;
+  products: FullProduct[];
+}) => {
+  return products.find(
+    (p: Product) => p.internal_id == price.internal_product_id,
+  );
 };

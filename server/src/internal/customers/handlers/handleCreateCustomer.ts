@@ -16,7 +16,7 @@ import { StatusCodes } from "http-status-codes";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { handleAddProduct } from "@/internal/customers/add-product/handleAddProduct.js";
+import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {

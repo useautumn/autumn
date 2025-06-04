@@ -45,6 +45,7 @@ export const getAttachConfig = async ({
       branch == AttachBranch.Downgrade ||
       attachBody.free_trial === false,
     invoiceOnly: flags.invoiceOnly,
+    disableMerge: org.config.merge_billing_cycles === false,
   };
 
   return { flags, config };
@@ -58,6 +59,7 @@ const webhookToConfig = ({ org, env }: { org: Organization; env: AppEnv }) => {
     proration: ProrationBehavior.Immediately,
     disableTrial: false,
     invoiceOnly: false,
+    disableMerge: false,
   };
 
   return config;

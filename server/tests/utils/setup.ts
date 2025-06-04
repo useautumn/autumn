@@ -228,8 +228,6 @@ export const setupOrg = async ({
   }
   await Promise.all(insertFeatures);
 
-  console.log("V2 features", Object.values(v2Features));
-
   await FeatureService.insert({
     db,
     data: Object.values(v2Features),
@@ -248,13 +246,10 @@ export const setupOrg = async ({
     },
   });
 
+  const newFeatures = (await FeatureService.list({ db, orgId, env })).filter(
+    (f) => Object.keys(features).includes(f.id),
+  );
   await client.end();
-
-  const { data: newFeatures } = await sb
-    .from("features")
-    .select("*")
-    .eq("org_id", orgId)
-    .eq("env", env);
 
   for (const feature of newFeatures!) {
     features[feature.id].internal_id = feature.internal_id;

@@ -24,7 +24,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import Stripe from "stripe";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
-import { handleAddProduct } from "../add-product/handleAddProduct.js";
+import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import {
   AttachParams,
   AttachResultSchema,

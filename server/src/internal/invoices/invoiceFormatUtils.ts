@@ -208,5 +208,10 @@ export const newPriceToInvoiceDescription = ({
     description = getFeatureNameWithCapital({ feature: ent.feature });
   }
 
+  if (billingType == BillingType.UsageInAdvance) {
+    const ent = getPriceEntitlement(price, ents);
+    description = formatPrepaidPrice({ price, ents, quantity: quantity! });
+  }
+
   return `${withProductPrefix ? `${product.name} - ` : ""}${description}`;
 };

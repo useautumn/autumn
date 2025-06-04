@@ -30,11 +30,19 @@ export const createProducts = async ({
   autumn,
   products,
   prefix,
+  customerId,
 }: {
   autumn: AutumnInt;
   products: any[];
   prefix?: string;
+  customerId?: string;
 }) => {
+  if (customerId) {
+    try {
+      await autumn.customers.delete(customerId);
+    } catch (error) {}
+  }
+
   const batchCreate = [];
   for (const product of products) {
     batchCreate.push(createProduct({ autumn, product, prefix }));

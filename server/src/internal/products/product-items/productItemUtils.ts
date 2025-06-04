@@ -123,7 +123,7 @@ export const constructPriceItem = ({
   interval,
 }: {
   price: number;
-  interval: BillingInterval;
+  interval: BillingInterval | null;
 }) => {
   let item: ProductItem = {
     price: price,

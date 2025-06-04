@@ -26,6 +26,8 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { handleSubCanceled } from "./handleSubUpdated/handleSubCanceled.js";
+import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
 
 export const handleSubscriptionUpdated = async ({
   req,
@@ -139,170 +141,19 @@ export const handleSubscriptionUpdated = async ({
   }
 
   if (org.config.sync_status) {
-    let isCanceled =
-      nullish(previousAttributes?.canceled_at) &&
-      !nullish(subscription.canceled_at);
+    await handleSubCanceled({
+      req,
+      previousAttributes,
+      sub: fullSub,
+      updatedCusProducts,
+    });
 
-    let comment = subscription.cancellation_details?.comment;
-    let isAutumnDowngrade = comment === "autumn_downgrade";
-
-    // CANCELED CASE
-    if (isCanceled && updatedCusProducts.length > 0 && !isAutumnDowngrade) {
-      let allDefaultProducts = await ProductService.listDefault({
-        db,
-        orgId: org.id,
-        env,
-      });
-
-      let fullCus = await CusService.getFull({
-        db,
-        idOrInternalId: updatedCusProducts[0].customer!.id!,
-        orgId: org.id,
-        env,
-        withEntities: true,
-        inStatuses: [CusProductStatus.Scheduled],
-      });
-      let cusProducts = fullCus.customer_products;
-      let entities = fullCus.entities;
-
-      // Default products to activate...
-      let defaultProducts = allDefaultProducts.filter((p) =>
-        updatedCusProducts.some(
-          (cp: FullCusProduct) => cp.product.group == p.group,
-        ),
-      );
-
-      if (defaultProducts.length > 0) {
-        console.log(
-          `subscription.updated: canceled -> attempting to schedule default products: ${defaultProducts
-            .map((p) => p.name)
-            .join(", ")}, period end: ${formatUnixToDateTime(
-            fullSub.current_period_end * 1000,
-          )}`,
-        );
-      }
-
-      let scheduledCusProducts: FullCusProduct[] = [];
-      for (let product of defaultProducts) {
-        let alreadyScheduled = cusProducts.some(
-          (cp: FullCusProduct) => cp.product.group == product.group,
-        );
-
-        if (alreadyScheduled) {
-          continue;
-        }
-        let fullCusProduct = await createFullCusProduct({
-          db,
-          attachParams: {
-            customer: updatedCusProducts[0].customer!,
-            product,
-            prices: product.prices,
-            entitlements: product.entitlements,
-            freeTrial: product.free_trial || null,
-            entities: entities,
-            optionsList: [],
-            features,
-            org,
-          },
-          startsAt: fullSub.current_period_end * 1000,
-          sendWebhook: false,
-          logger,
-        });
-
-        if (fullCusProduct) {
-          scheduledCusProducts.push(fullCusProduct);
-        }
-      }
-
-      for (let cusProd of updatedCusProducts) {
-        try {
-          await addProductsUpdatedWebhookTask({
-            req,
-            internalCustomerId: cusProd.internal_customer_id,
-            org,
-            env,
-            customerId: null,
-            logger,
-            scenario: AttachScenario.Cancel,
-            cusProduct: cusProd,
-            scheduledCusProduct: scheduledCusProducts.find(
-              (cp) => cp.product.group === cusProd.product.group,
-            ),
-          });
-        } catch (error) {}
-      }
-    }
-
-    let uncanceled =
-      notNullish(previousAttributes?.canceled_at) &&
-      nullish(subscription.canceled_at);
-
-    if (uncanceled && updatedCusProducts.length > 0) {
-      let customer = updatedCusProducts[0].customer;
-
-      let allCusProducts = await CusProductService.list({
-        db,
-        internalCustomerId: customer!.internal_id,
-        inStatuses: [
-          CusProductStatus.Active,
-          CusProductStatus.PastDue,
-          CusProductStatus.Scheduled,
-        ],
-      });
-
-      let { curScheduledProduct } = getExistingCusProducts({
-        product: updatedCusProducts[0].product,
-        cusProducts: allCusProducts,
-        internalEntityId: updatedCusProducts[0].internal_entity_id,
-      });
-
-      let deletedCusProducts: FullCusProduct[] = [];
-
-      if (curScheduledProduct) {
-        console.log("subscription.updated: uncanceled -> removing scheduled");
-        let stripeCli = createStripeCli({
-          org,
-          env,
-        });
-        await cancelFutureProductSchedule({
-          req,
-          db,
-          org,
-          stripeCli,
-          cusProducts: allCusProducts,
-          product: updatedCusProducts[0].product,
-          internalEntityId: updatedCusProducts[0].internal_entity_id,
-          logger,
-          env,
-          sendWebhook: false,
-        });
-
-        await CusProductService.delete({
-          db,
-          cusProductId: curScheduledProduct.id,
-        });
-
-        deletedCusProducts.push(curScheduledProduct);
-      }
-
-      try {
-        for (let cusProd of updatedCusProducts) {
-          await addProductsUpdatedWebhookTask({
-            req,
-            internalCustomerId: cusProd.internal_customer_id,
-            org,
-            env,
-            customerId: null,
-            logger,
-            scenario: AttachScenario.Renew,
-            cusProduct: cusProd,
-            deletedCusProduct: deletedCusProducts.find(
-              (cp) => cp.product.group === cusProd.product.group,
-            ),
-          });
-        }
-      } catch (error) {}
-    }
+    await handleSubRenewed({
+      req,
+      prevAttributes: previousAttributes,
+      sub: fullSub,
+      updatedCusProducts,
+    });
   }
 
   try {

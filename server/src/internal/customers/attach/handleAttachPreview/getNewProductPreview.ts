@@ -5,6 +5,7 @@ import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 export const getNewProductPreview = async ({
   attachParams,
@@ -21,12 +22,32 @@ export const getNewProductPreview = async ({
     anchorToUnix = getNextStartOfMonthUnix(BillingInterval.Month);
   }
 
+  const freeTrial = attachParams.freeTrial;
   const items = getItemsForNewProduct({
     newProduct,
     attachParams,
     now,
     anchorToUnix,
+    freeTrial,
   });
+
+  let dueNextCycle = null;
+  if (freeTrial) {
+    let nextCycleItems = getItemsForNewProduct({
+      newProduct,
+      attachParams,
+      now,
+    });
+
+    dueNextCycle = {
+      line_items: nextCycleItems,
+      due_at:
+        freeTrialToStripeTimestamp({
+          freeTrial,
+          now,
+        })! * 1000,
+    };
+  }
 
   const dueTodayAmt = items.reduce((acc, item) => {
     return acc + (item.amount ?? 0);
@@ -48,7 +69,8 @@ export const getNewProductPreview = async ({
       line_items: items,
       total: dueTodayAmt,
     },
-
+    due_next_cycle: dueNextCycle,
+    free_trial: freeTrial,
     options,
   };
 };

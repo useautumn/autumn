@@ -13,4 +13,5 @@ export interface AttachConfig {
   proration: ProrationBehavior;
   disableTrial: boolean;
   invoiceOnly: boolean;
+  disableMerge: boolean;
 }

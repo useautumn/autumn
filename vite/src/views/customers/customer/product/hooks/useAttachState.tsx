@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 type FrontendProduct = ProductV2 & {
   isActive: boolean;
   options: FeatureOptions[];
+  isCanceled: boolean;
 };
 
 export enum AttachCase {
@@ -59,6 +60,10 @@ export const useAttachState = ({
     hasPrepaid: product ? productHasPrepaid(product.items) : false,
     isAddOn: product ? productIsAddOn(product) : false,
     isFree: product ? productIsFree(product) : false,
+    isCanceled: product ? product.isCanceled : false,
+    isOneOff: product
+      ? isOneOffProduct(product.items, product.is_add_on)
+      : false,
   });
 
   useEffect(() => {
@@ -72,6 +77,10 @@ export const useAttachState = ({
       hasPrepaid: product ? productHasPrepaid(product.items) : false,
       isAddOn: product ? productIsAddOn(product) : false,
       isFree: product ? productIsFree(product) : false,
+      isCanceled: product ? product.isCanceled : false,
+      isOneOff: product
+        ? isOneOffProduct(product.items, product.is_add_on)
+        : false,
     });
   };
 
@@ -105,7 +114,7 @@ export const useAttachState = ({
   }, [product]);
 
   const getButtonDisabled = () => {
-    if (product?.isActive && !itemsChanged) {
+    if (product?.isActive && !itemsChanged && !flags.isCanceled) {
       if (flags.hasPrepaid) {
         return false;
       }
@@ -140,19 +149,21 @@ export const useAttachState = ({
     if (itemsChanged) {
       return AttachCase.Custom;
     }
-
-    // if (!preview || !preview.payment_method) {
-    //   return AttachCase.Checkout;
-    // }
-
-    // return preview.scenario;
   };
 
   const getButtonText = () => {
     if (product?.isActive && !itemsChanged) {
+      if (flags.isOneOff) {
+        return "Attach Product";
+      }
+
       if (flags.hasPrepaid) {
         return "Update prepaid quantity";
       }
+    }
+
+    if (flags.isCanceled) {
+      return "Renew Product";
     }
 
     return "Attach Product";
