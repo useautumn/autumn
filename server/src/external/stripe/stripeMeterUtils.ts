@@ -34,7 +34,6 @@ export const submitUsageToStripe = async ({
   );
 
   await stripeCli.billing.meterEvents.create({
-    // event_name: price.id!,
     event_name: stripeMeter.event_name,
     payload: {
       stripe_customer_id: customer.processor.id,
@@ -44,6 +43,6 @@ export const submitUsageToStripe = async ({
   });
 
   logger.info(
-    `🌟🌟🌟 Submitted meter event for customer ${customer.id}, feature: ${feature.name}, usage: ${usage}`,
+    `🌟🌟🌟 Submitted meter event for customer ${customer.id}, feature: ${feature.name}, rounded usage: ${usage}`,
   );
 };

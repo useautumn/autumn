@@ -38,7 +38,7 @@ import {
 } from "@/external/stripe/stripeInvoiceUtils.js";
 
 import { handleCreateCheckout } from "./handleCreateCheckout.js";
-import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import Stripe from "stripe";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSub.js";

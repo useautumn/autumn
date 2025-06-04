@@ -2,7 +2,16 @@ import Stripe from "stripe";
 import { AttachParams } from "../customers/cusProducts/AttachParams.js";
 import { InvoiceService, processInvoice } from "./InvoiceService.js";
 import { getStripeExpandedInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
-import { Invoice, InvoiceItem, Price, UsagePriceConfig } from "@autumn/shared";
+import {
+  Customer,
+  FullProduct,
+  Invoice,
+  InvoiceIteProduct,
+  m,
+  Organization,
+  Price,
+  UsagePriceConfig,
+} from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 

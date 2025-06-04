@@ -12,8 +12,6 @@ if [ "$1" == "basic-parallel" ]; then
     # && $MOCHA_CMD \
     # 'tests/basic/referrals/*.ts' 'tests/attach/**/*.ts' \
 
-
-
 elif [ "$1" == "advanced-parallel" ]; then
     MOCHA_PARALLEL=true  \
     $MOCHA_SETUP \
@@ -53,6 +51,6 @@ fi
 
 
 
-# All advanced parallel
+
 
 

@@ -1,6 +1,6 @@
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { AttachConfig, AttachFlags } from "../models/AttachFlags.js";
-import { AttachBranch } from "@autumn/shared";
+import { AttachFlags } from "../models/AttachFlags.js";
+import { AttachConfig, AttachBranch } from "@autumn/shared";
 import { AttachBody } from "../models/AttachBody.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { nullish } from "@/utils/genUtils.js";
@@ -44,6 +44,7 @@ export const getAttachConfig = async ({
       branch === AttachBranch.NewVersion ||
       branch == AttachBranch.Downgrade ||
       attachBody.free_trial === false,
+    invoiceOnly: flags.invoiceOnly,
   };
 
   return { flags, config };
@@ -56,6 +57,7 @@ const webhookToConfig = ({ org, env }: { org: Organization; env: AppEnv }) => {
     onlyCheckout: false,
     proration: ProrationBehavior.Immediately,
     disableTrial: false,
+    invoiceOnly: false,
   };
 
   return config;

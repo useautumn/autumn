@@ -5,7 +5,7 @@ import {
   getStripeSubs,
   getUsageBasedSub,
 } from "@/external/stripe/stripeSubUtils.js";
-import { findSubItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
@@ -81,9 +81,9 @@ export const updateFeatureQuantity = async ({
       });
     }
 
-    let subItem = findSubItemForPrice({
+    let subItem = findStripeItemForPrice({
       price,
-      subItems: subToUpdate.items.data,
+      stripeItems: subToUpdate.items.data,
     });
 
     if (!subItem) {

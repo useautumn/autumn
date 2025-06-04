@@ -53,12 +53,14 @@ export const cancelCusProductSubscriptions = async ({
   env,
   excludeIds,
   expireImmediately = true,
+  logger,
 }: {
   cusProduct: FullCusProduct;
   org: Organization;
   env: AppEnv;
   excludeIds?: string[];
   expireImmediately?: boolean;
+  logger: any;
 }) => {
   // 1. Cancel all subscriptions
   const stripeCli = createStripeCli({
@@ -91,9 +93,7 @@ export const cancelCusProductSubscriptions = async ({
         });
       }
 
-      console.log(
-        `Cancelled stripe subscription ${subId}, org: ${org.slug}, product: ${cusProduct.product.name}, customer: ${cusProduct.customer!.id}`,
-      );
+      logger.info(`Cancelled stripe subscription ${subId}, org: ${org.slug}`);
     } catch (error: any) {
       if (error.code != "resource_missing") {
         console.log(

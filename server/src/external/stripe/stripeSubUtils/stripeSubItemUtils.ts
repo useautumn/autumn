@@ -8,20 +8,27 @@ import {
 } from "@autumn/shared";
 import Stripe from "stripe";
 
-export const findSubItemForPrice = ({
+export const findStripeItemForPrice = ({
   price,
-  subItems,
+  stripeItems,
 }: {
   price: Price;
-  subItems: Stripe.SubscriptionItem[];
+  stripeItems:
+    | Stripe.SubscriptionItem[]
+    | Stripe.InvoiceLineItem[]
+    | Stripe.LineItem[];
 }) => {
-  return subItems.find((si: Stripe.SubscriptionItem) => {
-    const config = price.config as UsagePriceConfig;
-    return (
-      config.stripe_price_id == si.price?.id ||
-      config.stripe_product_id == si.price?.product
-    );
-  });
+  return stripeItems.find(
+    (
+      si: Stripe.SubscriptionItem | Stripe.InvoiceLineItem | Stripe.LineItem,
+    ) => {
+      const config = price.config as UsagePriceConfig;
+      return (
+        config.stripe_price_id == si.price?.id ||
+        config.stripe_product_id == si.price?.product
+      );
+    },
+  );
 };
 
 export const findPriceInStripeItems = ({

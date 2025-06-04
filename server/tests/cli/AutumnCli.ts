@@ -1,10 +1,9 @@
-import { el } from "date-fns/locale";
-import { getAxiosInstance } from "../utils/setup.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, CreateReward } from "@autumn/shared";
+import { getAxiosInstance } from "../utils/setup.js";
+import { CreateReward } from "@autumn/shared";
+
 const handleAxiosError = (error: any) => {
   if (error.response.data) {
-    // console.log(error.response.data);
     throw new RecaseError({
       message: error.response.data.message,
       code: error.response.data.code,
@@ -37,7 +36,7 @@ export class AutumnCli {
     customerId: string,
     featureId: string,
     getBalance: boolean = false,
-    group?: string
+    group?: string,
   ) {
     try {
       const axiosInstance = getAxiosInstance();
@@ -51,7 +50,7 @@ export class AutumnCli {
         return {
           allowed: data.allowed,
           balanceObj: data.balances.find(
-            (b: any) => b.feature_id === featureId
+            (b: any) => b.feature_id === featureId,
           ),
         };
       } else {
@@ -151,7 +150,7 @@ export class AutumnCli {
         `/v1/customers/customer_products/${customerProductId}`,
         {
           status: "expired",
-        }
+        },
       );
 
       return data;
@@ -175,7 +174,7 @@ export class AutumnCli {
         `/v1/customers/${customerId}/customer_entitlements/${entitlementId}`,
         {
           balance,
-        }
+        },
       );
 
       return data;
@@ -197,7 +196,7 @@ export class AutumnCli {
         `/v1/customers/${customerId}/balances`,
         {
           balances,
-        }
+        },
       );
 
       return data;

@@ -5,7 +5,7 @@ import { Autumn as AutumnJS } from "autumn-js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { AppEnv } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { Autumn } from "@/external/autumn/autumnCli.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { after } from "mocha";
@@ -23,7 +23,7 @@ export const setupBefore = async (instance: any) => {
   }
   const env = DEFAULT_ENV;
   const autumnSecretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!;
-  const autumn = new Autumn(autumnSecretKey);
+  const autumn = new AutumnInt({ apiKey: autumnSecretKey });
 
   const autumnJs = new AutumnJS({
     secretKey: autumnSecretKey,

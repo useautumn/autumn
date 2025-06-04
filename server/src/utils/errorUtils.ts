@@ -148,6 +148,7 @@ export const handleRequestError = ({
       logger.error("Stripe error");
       logger.error("Request body:", getJsonBody(req.body));
       logger.error(error.message || error);
+      logger.error(error.stack);
       res.status(400).json({
         message: error.message,
         code: ErrCode.InvalidInputs,

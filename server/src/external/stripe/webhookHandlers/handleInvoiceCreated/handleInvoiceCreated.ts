@@ -5,34 +5,29 @@ import {
   BillingType,
   CusProductStatus,
   Customer,
-  EntInterval,
   FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
   LoggerAction,
   Organization,
-  Price,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import Stripe from "stripe";
-import { createStripeCli } from "../utils.js";
-import { differenceInMinutes, subDays } from "date-fns";
-import { getStripeSubs, getUsageBasedSub } from "../stripeSubUtils.js";
+import { createStripeCli } from "../../utils.js";
+
+import { getStripeSubs, getUsageBasedSub } from "../../stripeSubUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { Decimal } from "decimal.js";
+
 import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { getTotalNegativeBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { getResetBalancesUpdate } from "@/internal/customers/cusProducts/cusEnts/groupByUtils.js";
+
 import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
-import { submitUsageToStripe } from "../stripeMeterUtils.js";
-import { getInvoiceItemForUsage } from "../stripePriceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { getFullStripeInvoice } from "../stripeInvoiceUtils.js";
+import { getFullStripeInvoice } from "../../stripeInvoiceUtils.js";
+import { handleUsagePrices } from "./handleUsagePrices.js";
 
 const handleInArrearProrated = async ({
   db,
@@ -167,139 +162,10 @@ const handleInArrearProrated = async ({
   }
 };
 
-const handleUsageInArrear = async ({
-  db,
-  invoice,
-  customer,
-  relatedCusEnt,
-  stripeCli,
-  price,
-  usageSub,
-  logger,
-  activeProduct,
-}: {
-  db: DrizzleCli;
-  invoice: Stripe.Invoice;
-  customer: Customer;
-  relatedCusEnt: FullCustomerEntitlement;
-  stripeCli: Stripe;
-  price: Price;
-  usageSub: Stripe.Subscription;
-  logger: any;
-  activeProduct: FullCusProduct;
-}) => {
-  let invoiceCreatedRecently = invoiceCusProductCreatedDifference({
-    invoice,
-    cusProduct: activeProduct,
-    minutes: 10,
-  });
-
-  let invoiceFromUpgrade = invoice.billing_reason == "subscription_update";
-  if (invoiceCreatedRecently) {
-    logger.info("Invoice created recently, skipping");
-    return;
-  }
-
-  if (invoiceFromUpgrade) {
-    logger.info("Invoice is from upgrade, skipping");
-    return;
-  }
-
-  // For cancel at period end: invoice period start = sub period start (cur cycle), invoice period end = sub period end (a month later...)
-  // For cancel immediately: invoice period start = sub period start (cur cycle), invoice period end cancel immediately date
-  // For regular billing: invoice period end = sub period start (next cycle)
-  // For upgrade, bill_immediately: invoice period start = sub period start (cur cycle), invoice period end cancel immediately date
-
-  let allowance = relatedCusEnt.entitlement.allowance!;
-  let config = price.config as UsagePriceConfig;
-
-  // If relatedCusEnt's balance > 0 and next_reset_at is null, skip...
-  if (relatedCusEnt.balance! > 0 && !relatedCusEnt.next_reset_at) {
-    logger.info("Balance > 0 and next_reset_at is null, skipping");
-    return;
-  }
-
-  const totalNegativeBalance = getTotalNegativeBalance({
-    cusEnt: relatedCusEnt as any,
-    balance: relatedCusEnt.balance!,
-    entities: relatedCusEnt.entities!,
-    billingUnits: (price.config as UsagePriceConfig).billing_units || 1,
-  });
-
-  const totalQuantity = new Decimal(allowance)
-    .minus(totalNegativeBalance)
-    .toNumber();
-
-  const billingUnits = (price.config as UsagePriceConfig).billing_units || 1;
-
-  const roundedQuantity =
-    Math.ceil(new Decimal(totalQuantity).div(billingUnits).toNumber()) *
-    billingUnits;
-
-  const usageTimestamp = Math.round(
-    subDays(new Date(invoice.created * 1000), 1).getTime() / 1000,
-  );
-
-  let feature = relatedCusEnt.entitlement.feature;
-  if (activeProduct.internal_entity_id) {
-    let currency = invoice.currency;
-    let invoiceItem = getInvoiceItemForUsage({
-      stripeInvoiceId: invoice.id,
-      price,
-      overage: -totalNegativeBalance,
-      customer,
-      currency,
-      cusProduct: activeProduct,
-      feature,
-      totalUsage: totalQuantity,
-      logger,
-      periodStart: invoice.period_start,
-      periodEnd: invoice.period_end,
-    });
-
-    await stripeCli.invoiceItems.create(invoiceItem);
-  } else {
-    if (!config.stripe_meter_id) {
-      logger.warn(
-        `Price ${price.id} has no stripe meter id, skipping invoice.created for usage in arrear`,
-      );
-      return;
-    }
-
-    await submitUsageToStripe({
-      price,
-      stripeCli,
-      usage: roundedQuantity,
-      customer,
-      usageTimestamp,
-      feature: relatedCusEnt.entitlement.feature,
-      logger,
-    });
-  }
-
-  if (relatedCusEnt.entitlement.interval == EntInterval.Lifetime) {
-    return;
-  }
-
-  let ent = relatedCusEnt.entitlement;
-  let resetBalancesUpdate = getResetBalancesUpdate({
-    cusEnt: relatedCusEnt,
-    allowance: ent.interval == EntInterval.Lifetime ? 0 : ent.allowance!,
-  });
-
-  await CusEntService.update({
-    db,
-    id: relatedCusEnt.id,
-    updates: {
-      ...resetBalancesUpdate,
-      adjustment: 0,
-      next_reset_at: relatedCusEnt.next_reset_at
-        ? usageSub.current_period_end * 1000
-        : null, // TODO: check if this is correct
-    },
-  });
-  logger.info("✅ Successfully reset balance & adjustment");
-};
+// For cancel at period end: invoice period start = sub period start (cur cycle), invoice period end = sub period end (a month later...)
+// For cancel immediately: invoice period start = sub period start (cur cycle), invoice period end cancel immediately date
+// For regular billing: invoice period end = sub period start (next cycle)
+// For upgrade, bill_immediately: invoice period start = sub period start (cur cycle), invoice period end cancel immediately date
 
 export const sendUsageAndReset = async ({
   db,
@@ -318,25 +184,11 @@ export const sendUsageAndReset = async ({
   stripeSubs: Stripe.Subscription[];
   logger: any;
 }) => {
-  const fullCusProduct = await CusProductService.get({
-    db,
-    id: activeProduct.id,
-    orgId: org.id,
-    env,
-  });
-
-  if (!fullCusProduct || !activeProduct.customer) {
-    logger.warn(
-      `sendUsageAndReset: no full cus product found for active product ${activeProduct.id}`,
-    );
-    return;
-  }
-
-  const cusEnts = fullCusProduct.customer_entitlements;
-  const cusPrices = fullCusProduct.customer_prices;
-
   const stripeCli = createStripeCli({ org, env });
-  const customer = activeProduct.customer;
+
+  const cusEnts = activeProduct.customer_entitlements;
+  const cusPrices = activeProduct.customer_prices;
+  const customer = activeProduct.customer!;
 
   for (const cusPrice of cusPrices) {
     const price = cusPrice.price;
@@ -378,12 +230,10 @@ export const sendUsageAndReset = async ({
 
     if (billingType == BillingType.UsageInArrear) {
       logger.info(
-        `✨ Handling end of period usage for customer ${customer.name}, org: ${org.slug}`,
+        `✨ Handling usage prices for ${customer.name}, org: ${org.slug}`,
       );
 
-      logger.info(`   - Feature: ${relatedCusEnt.entitlement.feature.id}`);
-
-      await handleUsageInArrear({
+      await handleUsagePrices({
         db,
         invoice,
         customer,
@@ -410,25 +260,6 @@ export const sendUsageAndReset = async ({
       });
     }
   }
-};
-
-const invoiceCusProductCreatedDifference = ({
-  invoice,
-  cusProduct,
-  minutes = 60,
-}: {
-  invoice: Stripe.Invoice;
-  cusProduct: FullCusProduct;
-  minutes?: number;
-}) => {
-  return (
-    Math.abs(
-      differenceInMinutes(
-        new Date(cusProduct.created_at),
-        new Date(invoice.created * 1000),
-      ),
-    ) < minutes
-  );
 };
 
 export const handleInvoiceCreated = async ({

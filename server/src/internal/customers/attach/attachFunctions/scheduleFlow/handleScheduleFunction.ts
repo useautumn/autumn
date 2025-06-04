@@ -1,5 +1,4 @@
-import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
 import { updateScheduledSubWithNewItems } from "@/internal/customers/change-product/scheduleUtils/updateScheduleWithNewItems.js";
 import {
@@ -18,6 +17,7 @@ import { createFullCusProduct } from "@/internal/customers/add-product/createFul
 import { cusProductsToSchedules } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import Stripe from "stripe";
 import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 
 export const handleScheduleFunction = async ({
   req,

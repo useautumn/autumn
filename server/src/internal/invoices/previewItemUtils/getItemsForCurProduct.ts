@@ -100,14 +100,14 @@ export const getItemsForCurProduct = ({
         logger,
       });
 
-      if (!amount) continue;
+      if (!amount || amount <= 0) continue;
 
       items.push({
         price: formatAmount({
           org: attachParams.org,
           amount,
         }),
-        description: `${curCusProduct.product.name} - ${description}`,
+        description,
         amount,
       });
     }

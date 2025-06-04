@@ -13,6 +13,7 @@ export const initCustomer = async ({
   env,
   db,
   attachPm,
+  withTestClock = true,
 }: {
   autumn: Autumn;
   customerId: string;
@@ -21,6 +22,7 @@ export const initCustomer = async ({
   env: AppEnv;
   db: DrizzleCli;
   attachPm?: "success" | "fail";
+  withTestClock?: boolean;
 }) => {
   let customerData = {
     id: customerId,
@@ -46,11 +48,13 @@ export const initCustomer = async ({
 
     if (attachPm) {
       const stripeCli = createStripeCli({ org: org, env: env });
-      const testClock = await stripeCli.testHelpers.testClocks.create({
-        frozen_time: Math.floor(Date.now() / 1000),
-      });
+      if (withTestClock) {
+        const testClock = await stripeCli.testHelpers.testClocks.create({
+          frozen_time: Math.floor(Date.now() / 1000),
+        });
 
-      testClockId = testClock.id;
+        testClockId = testClock.id;
+      }
 
       await attachPmToCus({
         customer,
@@ -58,7 +62,7 @@ export const initCustomer = async ({
         env: env,
         db: db,
         willFail: attachPm === "fail",
-        testClockId: testClockId,
+        testClockId: testClockId || undefined,
       });
     }
 

@@ -243,29 +243,6 @@ export const pricesAreSame = (price1: Price, price2: Price) => {
   return true;
 };
 
-export function compareBillingIntervals(
-  a: BillingInterval | null,
-  b: BillingInterval | null,
-): number {
-  if (a == null) {
-    return 1;
-  }
-
-  if (b == null) {
-    return -1;
-  }
-
-  const priority = {
-    [BillingInterval.OneOff]: 0,
-    [BillingInterval.Month]: 1,
-    [BillingInterval.Quarter]: 2,
-    [BillingInterval.SemiAnnual]: 3,
-    [BillingInterval.Year]: 4,
-  };
-
-  return priority[a] - priority[b];
-}
-
 export const getUsageTier = (price: Price, quantity: number) => {
   let usageConfig = price.config as UsagePriceConfig;
   for (let i = 0; i < usageConfig.usage_tiers.length; i++) {

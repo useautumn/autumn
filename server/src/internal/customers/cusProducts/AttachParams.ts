@@ -10,6 +10,7 @@ import {
   Organization,
   Price,
   AttachScenario,
+  APIVersion,
 } from "@autumn/shared";
 import Stripe from "stripe";
 
@@ -93,6 +94,7 @@ export type InsertCusProductParams = {
   entityId?: string;
   internalEntityId?: string;
   fromMigration?: boolean;
+  apiVersion?: APIVersion;
 };
 
 export const AttachResultSchema = z.object({

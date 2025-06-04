@@ -69,19 +69,30 @@ export const initFeature = ({
 // }
 
 export const constructProduct = ({
+  id,
   items,
   type,
   isAnnual = false,
   trial = false,
+  excludeBase = false,
 }: {
+  id?: string;
   items: ProductItem[];
-  type: "free" | "pro" | "premium" | "one_off";
+  type: "free" | "pro" | "premium" | "growth" | "one_off";
   isAnnual?: boolean;
   trial?: boolean;
+  excludeBase?: boolean;
 }) => {
-  let price = type == "pro" ? 20 : type == "premium" ? 50 : 0;
+  let price = 0;
+  if (type == "pro") {
+    price = 20;
+  } else if (type == "premium") {
+    price = 50;
+  } else if (type == "growth") {
+    price = 100;
+  }
 
-  if (price) {
+  if (price && !excludeBase) {
     items.push(
       constructPriceItem({
         price: isAnnual ? price * 10 : price,
@@ -91,11 +102,11 @@ export const constructProduct = ({
   }
 
   let product: ProductV2 = {
-    id: isAnnual ? `${type}-annual` : type,
+    id: id || (isAnnual ? `${type}-annual` : type),
     name: isAnnual ? `${keyToTitle(type)} (Annual)` : keyToTitle(type),
     items,
     is_add_on: false,
-    is_default: false,
+    is_default: type == "free",
     version: 1,
     group: "",
     free_trial: trial

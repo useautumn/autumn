@@ -40,11 +40,13 @@ export const getCusPriceUsage = ({
   price,
   cusProduct,
   logger,
+  withProdPrefix = true,
 }: {
   cusPrice?: FullCustomerPrice;
   price?: Price;
   cusProduct: FullCusProduct;
   logger: any;
+  withProdPrefix?: boolean;
 }) => {
   if (!cusPrice) {
     cusPrice = cusProduct.customer_prices.find(
@@ -68,6 +70,8 @@ export const getCusPriceUsage = ({
   if (!cusEnt) {
     logger.warn(`No cusEnt found for cusPrice: ${cusPrice.id}`);
     return {
+      amount: 0,
+      description: "",
       usage: 0,
       overage: 0,
       roundedUsage: 0,
@@ -92,10 +96,14 @@ export const getCusPriceUsage = ({
 
   const amount = getPriceForOverage(cusPrice.price, -totalNegativeBalance);
 
-  const description = getFeatureInvoiceDescription({
+  let description = getFeatureInvoiceDescription({
     feature: cusEnt.entitlement.feature,
     usage,
   });
+
+  if (withProdPrefix) {
+    description = `${cusProduct.product.name} - ${description}`;
+  }
 
   return {
     usage, // total usage

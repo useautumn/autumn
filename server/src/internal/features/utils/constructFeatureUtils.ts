@@ -98,3 +98,41 @@ export const constructMeteredFeature = ({
 
   return newFeature;
 };
+
+export const constructCreditSystem = ({
+  featureId,
+  orgId,
+  env,
+  schema,
+}: {
+  featureId: string;
+  orgId: string;
+  env: AppEnv;
+  schema: {
+    metered_feature_id: string;
+    credit_cost: number;
+  }[];
+}) => {
+  const config = {
+    schema: schema.map((item) => ({
+      feature_amount: 1,
+      metered_feature_id: item.metered_feature_id,
+      credit_amount: item.credit_cost,
+    })),
+    usage_type: FeatureUsageType.Single,
+  };
+
+  let newFeature: Feature = {
+    internal_id: generateId("fe"),
+    org_id: orgId,
+    env,
+    created_at: Date.now(),
+
+    id: featureId,
+    name: keyToTitle(featureId),
+    type: FeatureType.CreditSystem,
+    config,
+  };
+
+  return newFeature;
+};

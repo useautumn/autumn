@@ -62,3 +62,36 @@ export const findPriceForFeature = ({
     }
   });
 };
+
+export const findPriceFromPlaceholderId = ({
+  prices,
+  placeholderId,
+}: {
+  prices: Price[];
+  placeholderId: string;
+}) => {
+  return prices.find((p: Price) => {
+    const config = p.config as UsagePriceConfig;
+    return config.stripe_placeholder_price_id == placeholderId;
+  });
+};
+
+export const findPriceFromStripeId = ({
+  prices,
+  stripePriceId,
+  billingType,
+}: {
+  prices: Price[];
+  stripePriceId: string;
+  billingType?: BillingType;
+}) => {
+  return prices.find((p: Price) => {
+    const config = p.config as UsagePriceConfig;
+    const idMatch = config.stripe_price_id == stripePriceId;
+    const typeMatch = billingType
+      ? getBillingType(config) == billingType
+      : true;
+
+    return idMatch && typeMatch;
+  });
+};

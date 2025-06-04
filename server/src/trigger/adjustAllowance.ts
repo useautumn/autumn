@@ -38,6 +38,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 
 type CusEntWithCusProduct = FullCustomerEntitlement & {
   customer_product: CusProduct;
@@ -108,6 +109,10 @@ export const adjustAllowance = async ({
   }
 
   let stripeCli = createStripeCli({ org, env });
+  let paymentMethod = await getCusPaymentMethod({
+    stripeCli,
+    stripeId: customer.processor.id,
+  });
 
   let sub = await getUsageBasedSub({
     db,
@@ -208,10 +213,9 @@ export const adjustAllowance = async ({
         });
 
         const { paid, error } = await payForInvoice({
-          fullOrg: org,
-          env,
-          customer,
-          invoice,
+          stripeCli,
+          paymentMethod,
+          invoiceId: invoice.id,
           logger,
         });
 

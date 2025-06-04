@@ -256,6 +256,8 @@ export const advanceTestClock = async ({
   await timeout(
     waitForSeconds ? waitForSeconds * 1000 : STRIPE_TEST_CLOCK_TIMING,
   );
+
+  return advanceTo;
 };
 
 export const waitForMeterUpdate = async () => {

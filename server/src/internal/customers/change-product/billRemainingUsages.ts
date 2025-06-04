@@ -2,9 +2,10 @@ import { Stripe } from "stripe";
 import { AttachParams } from "../cusProducts/AttachParams.js";
 import { FullCusProduct, InvoiceItem } from "@autumn/shared";
 import { BillingInterval, BillingType, UsagePriceConfig } from "@autumn/shared";
-import { Decimal } from "decimal.js";
+
 import {
   getBillingType,
+  getPriceEntitlement,
   getPriceForOverage,
 } from "@/internal/products/prices/priceUtils.js";
 import {
@@ -13,8 +14,6 @@ import {
 } from "@/external/stripe/utils.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
-
-import { stripeToAutumnInterval } from "@/external/stripe/utils.js";
 import { getResetBalancesUpdate } from "../cusProducts/cusEnts/groupByUtils.js";
 import {
   getCusPriceUsage,
@@ -22,11 +21,12 @@ import {
 } from "../cusProducts/cusPrices/cusPriceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
-import {
-  AttachConfig,
-  ProrationBehavior,
-} from "../attach/models/AttachFlags.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
+import {
+  cusProductsToCusPrices,
+  cusProductToEnts,
+} from "../cusProducts/cusProductUtils/convertCusProduct.js";
+import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
 
 // Add usage to end of cycle
 const addUsageToNextInvoice = async ({
@@ -146,8 +146,6 @@ const invoiceForUsageImmediately = async ({
     env: customer.env,
   });
 
-  await new Promise((resolve) => setTimeout(resolve, 5000));
-
   let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
   if (invoiceItems.length === 0) {
     return;
@@ -237,10 +235,9 @@ const invoiceForUsageImmediately = async ({
     await stripeCli.invoices.finalizeInvoice(invoice.id);
 
     const { paid, error } = await payForInvoice({
-      fullOrg: org,
-      env: customer.env,
-      customer,
-      invoice,
+      stripeCli,
+      paymentMethod: null,
+      invoiceId: invoice.id,
       logger,
     });
 
@@ -288,112 +285,112 @@ const getRemainingUsagesPreview = async ({
   return items;
 };
 
-export const billForRemainingUsages = async ({
-  db,
-  logger,
-  attachParams,
-  curCusProduct,
-  newSubs,
-  shouldPreview = false,
-  billImmediately = false,
-}: {
-  db: DrizzleCli;
-  logger: any;
-  attachParams: AttachParams;
-  curCusProduct: FullCusProduct;
-  newSubs: Stripe.Subscription[];
-  shouldPreview?: boolean;
-  billImmediately?: boolean;
-}) => {
-  const { customer_prices, customer_entitlements } = curCusProduct;
-  const { customer, org } = attachParams;
+// export const billForRemainingUsages = async ({
+//   db,
+//   logger,
+//   attachParams,
+//   curCusProduct,
+//   newSubs,
+//   shouldPreview = false,
+//   billImmediately = false,
+// }: {
+//   db: DrizzleCli;
+//   logger: any;
+//   attachParams: AttachParams;
+//   curCusProduct: FullCusProduct;
+//   newSubs: Stripe.Subscription[];
+//   shouldPreview?: boolean;
+//   billImmediately?: boolean;
+// }) => {
+//   const { customer_prices, customer_entitlements } = curCusProduct;
+//   const { customer, org } = attachParams;
 
-  const intervalToSub: any = {};
+//   const intervalToSub: any = {};
 
-  for (const sub of newSubs) {
-    const interval = subToAutumnInterval(sub);
-    if (interval) {
-      intervalToSub[interval] = sub;
-    }
-  }
+//   for (const sub of newSubs) {
+//     const interval = subToAutumnInterval(sub);
+//     if (interval) {
+//       intervalToSub[interval] = sub;
+//     }
+//   }
 
-  const intervalToInvoiceItems: any = {};
-  const stripeCli = createStripeCli({
-    org: org,
-    env: customer.env,
-  });
+//   const intervalToInvoiceItems: any = {};
+//   const stripeCli = createStripeCli({
+//     org: org,
+//     env: customer.env,
+//   });
 
-  for (const cp of customer_prices) {
-    const config = cp.price.config! as UsagePriceConfig;
-    const relatedCusEnt = getRelatedCusEnt({
-      cusPrice: cp,
-      cusEnts: customer_entitlements,
-    });
-    const billingType = getBillingType(config);
+//   for (const cp of customer_prices) {
+//     const config = cp.price.config! as UsagePriceConfig;
+//     const relatedCusEnt = getRelatedCusEnt({
+//       cusPrice: cp,
+//       cusEnts: customer_entitlements,
+//     });
+//     const billingType = getBillingType(config);
 
-    if (billingType !== BillingType.UsageInArrear) continue;
+//     if (billingType !== BillingType.UsageInArrear) continue;
 
-    const { usage, overage, description, amount } = getCusPriceUsage({
-      cusPrice: cp,
-      cusProduct: curCusProduct,
-      logger,
-    });
+//     const { usage, overage, description, amount } = getCusPriceUsage({
+//       cusPrice: cp,
+//       cusProduct: curCusProduct,
+//       logger,
+//     });
 
-    if (overage <= 0) continue; // no overage, no need to bill...
+//     if (overage <= 0) continue; // no overage, no need to bill...
 
-    let interval = config.interval as BillingInterval;
-    if (!intervalToInvoiceItems[interval]) {
-      intervalToInvoiceItems[interval] = [];
-    }
+//     let interval = config.interval as BillingInterval;
+//     if (!intervalToInvoiceItems[interval]) {
+//       intervalToInvoiceItems[interval] = [];
+//     }
 
-    let sub = intervalToSub[interval];
+//     let sub = intervalToSub[interval];
 
-    const stripeNow = await getStripeNow({
-      stripeCli,
-      stripeSub: sub,
-    });
+//     const stripeNow = await getStripeNow({
+//       stripeCli,
+//       stripeSub: sub,
+//     });
 
-    intervalToInvoiceItems[interval].push({
-      overage,
-      usage,
-      description,
-      amount,
+//     intervalToInvoiceItems[interval].push({
+//       overage,
+//       usage,
+//       description,
+//       amount,
 
-      feature: relatedCusEnt?.entitlement.feature,
-      price: cp.price,
-      relatedCusEnt,
-      periodStart: sub?.current_period_start,
-      periodEnd: stripeNow,
-    });
-  }
+//       feature: relatedCusEnt?.entitlement.feature,
+//       price: cp.price,
+//       relatedCusEnt,
+//       periodStart: sub?.current_period_start,
+//       periodEnd: stripeNow,
+//     });
+//   }
 
-  if (shouldPreview) {
-    return getRemainingUsagesPreview({
-      intervalToInvoiceItems,
-      curCusProduct,
-    });
-  }
+//   if (shouldPreview) {
+//     return getRemainingUsagesPreview({
+//       intervalToInvoiceItems,
+//       curCusProduct,
+//     });
+//   }
 
-  if (billImmediately) {
-    await invoiceForUsageImmediately({
-      db,
-      intervalToInvoiceItems,
-      customer,
-      org,
-      logger,
-      curCusProduct,
-      attachParams,
-      newSubs,
-    });
-  } else {
-    await addUsageToNextInvoice({
-      db,
-      intervalToInvoiceItems,
-      intervalToSub,
-      customer,
-      org,
-      logger,
-      attachParams,
-    });
-  }
-};
+//   if (billImmediately) {
+//     await invoiceForUsageImmediately({
+//       db,
+//       intervalToInvoiceItems,
+//       customer,
+//       org,
+//       logger,
+//       curCusProduct,
+//       attachParams,
+//       newSubs,
+//     });
+//   } else {
+//     await addUsageToNextInvoice({
+//       db,
+//       intervalToInvoiceItems,
+//       intervalToSub,
+//       customer,
+//       org,
+//       logger,
+//       attachParams,
+//     });
+//   }
+// };
