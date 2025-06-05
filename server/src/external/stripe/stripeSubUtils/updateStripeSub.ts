@@ -1,49 +1,40 @@
-import RecaseError from "@/utils/errorUtils.js";
-import {
-  ErrCode,
-  BillingInterval,
-  BillingType,
-  FeatureUsageType,
-  AttachConfig,
-  FullCusProduct,
-} from "@autumn/shared";
-
 import Stripe from "stripe";
+import { BillingInterval, AttachConfig } from "@autumn/shared";
 import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { getStripeProrationBehavior } from "../stripeSubUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { payForInvoice } from "../stripeInvoiceUtils.js";
-import { findPriceInStripeItems } from "./stripeSubItemUtils.js";
-import { priceToFeature } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { createProrationInvoice } from "./updateStripeSub/createProrationinvoice.js";
+import {
+  createUsageInvoiceItems,
+  resetUsageBalances,
+} from "@/internal/customers/attach/attachFunctions/upgradeFlow/createUsageInvoiceItems.js";
+import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 
 export const updateStripeSubscription = async ({
   db,
   attachParams,
-  curCusProduct,
   config,
-  curSub,
   trialEnd,
+  stripeSubs,
   itemSet,
-  shouldPreview,
   logger,
 }: {
   db: DrizzleCli;
   attachParams: AttachParams;
-  curCusProduct: FullCusProduct;
   config: AttachConfig;
-  curSub: Stripe.Subscription;
-  trialEnd?: number | null;
+  stripeSubs: Stripe.Subscription[];
+  trialEnd?: number;
   itemSet: ItemSet;
   shouldPreview?: boolean;
   logger: any;
 }) => {
-  const { stripeCli, customer, org, features, paymentMethod } = attachParams;
+  const { curMainProduct } = attachParamToCusProducts({ attachParams });
+  const { stripeCli, customer, org, paymentMethod } = attachParams;
   const { invoiceOnly, proration } = config;
+  const curSub = stripeSubs[0];
 
   let { items, prices } = itemSet;
 
@@ -60,33 +51,15 @@ export const updateStripeSubscription = async ({
     return false;
   });
 
-  if (shouldPreview) {
-    let preview = await stripeCli.invoices.createPreview({
-      subscription_details: {
-        items: subItems,
-        proration_behavior: getStripeProrationBehavior({
-          org,
-          prorationBehavior: proration,
-        }) as any,
-        trial_end: trialEnd as any,
-      },
-      subscription: curSub.id,
-      invoice_items: subInvoiceItems,
-      customer: customer.processor.id,
-    });
-    return {
-      preview,
-      sub: null,
-      invoice: null,
-    };
-  }
-
   // 1. Update subscription
   let sub: Stripe.Subscription | null = null;
+  let stripeProration =
+    proration == ProrationBehavior.None ? "none" : "create_prorations";
+
   try {
     sub = await stripeCli.subscriptions.update(curSub.id, {
       items: subItems,
-      proration_behavior: "create_prorations",
+      proration_behavior: stripeProration,
       trial_end: trialEnd,
       default_payment_method: paymentMethod?.id,
       add_invoice_items: subInvoiceItems,
@@ -101,12 +74,29 @@ export const updateStripeSubscription = async ({
     throw error;
   }
 
-  // 2. Try to pay invoice
-  let invoice: Stripe.Invoice | null = null;
   const latestInvoice = sub.latest_invoice as Stripe.Invoice;
+  if (proration == ProrationBehavior.None) {
+    return {
+      preview: null,
+      sub: {
+        ...sub,
+        latest_invoice: latestInvoice.id,
+      },
+      invoice: null,
+    };
+  }
+
+  // 3. Create invoice items for remaining usages
+  let invoice: Stripe.Invoice | null = null;
+  let { cusEntIds } = await createUsageInvoiceItems({
+    db,
+    attachParams,
+    cusProduct: curMainProduct!,
+    stripeSubs,
+    logger,
+  });
 
   if (proration === ProrationBehavior.Immediately) {
-    // If latest invoice is different, no need to create a new invoice
     if (latestInvoice.id != curSub.latest_invoice) {
       sub.latest_invoice = latestInvoice.id;
       return {
@@ -124,6 +114,12 @@ export const updateStripeSubscription = async ({
       logger,
     });
   }
+
+  await resetUsageBalances({
+    db,
+    cusEntIds,
+    cusProduct: curMainProduct!,
+  });
 
   // Upsert sub
   await SubService.addUsageFeatures({
@@ -146,3 +142,24 @@ export const updateStripeSubscription = async ({
     invoice,
   };
 };
+
+// if (shouldPreview) {
+//   let preview = await stripeCli.invoices.createPreview({
+//     subscription_details: {
+//       items: subItems,
+//       proration_behavior: getStripeProrationBehavior({
+//         org,
+//         prorationBehavior: proration,
+//       }) as any,
+//       trial_end: trialEnd as any,
+//     },
+//     subscription: curSub.id,
+//     invoice_items: subInvoiceItems,
+//     customer: customer.processor.id,
+//   });
+//   return {
+//     preview,
+//     sub: null,
+//     invoice: null,
+//   };
+// }

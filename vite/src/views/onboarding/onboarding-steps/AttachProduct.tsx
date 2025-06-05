@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { useState } from "react";
 
-let attachCodeNextjs = (productId: string, apiKey: string) => {
+const attachCodeNextjs = (productId: string, apiKey: string) => {
   return `// app/page.tsx
 
   import { useAutumn } from 'autumn-js/react';

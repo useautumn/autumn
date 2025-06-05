@@ -2,7 +2,6 @@ import {
   ErrCode,
   Feature,
   FullProduct,
-  Product,
   ProductItem,
   ProductV2,
 } from "@autumn/shared";
@@ -14,7 +13,6 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
 import {
-  isFeatureItem,
   isFeaturePriceItem,
   isPriceItem,
 } from "./product-items/getItemType.js";
@@ -63,14 +61,15 @@ export const productsAreSame = ({
     });
 
   let itemsSame = true;
+
   if (items1.length !== items2.length) {
     itemsSame = false;
   }
 
-  let priceChanged = false;
+  let pricesChanged = false;
 
   const newItems: ProductItem[] = [];
-
+  const removedItems: ProductItem[] = [];
   for (const item of items1) {
     let similarItem = findSimilarItem({
       item,
@@ -78,9 +77,8 @@ export const productsAreSame = ({
     });
 
     if (!similarItem) {
-      // price is different probs...
       if (isFeaturePriceItem(item) || isPriceItem(item)) {
-        priceChanged = true;
+        pricesChanged = true;
       }
 
       itemsSame = false;
@@ -89,18 +87,35 @@ export const productsAreSame = ({
       continue;
     }
 
-    if (
-      !itemsAreSame({
-        item1: item,
-        item2: similarItem!,
-      })
-    ) {
-      itemsSame = false;
+    const { same, pricesChanged: pricesChanged_ } = itemsAreSame({
+      item1: item,
+      item2: similarItem!,
+      features,
+    });
 
-      if (!isFeatureItem(item)) {
-        priceChanged = true;
-      }
+    if (!same) {
+      itemsSame = false;
       newItems.push(item);
+    }
+
+    if (pricesChanged_) {
+      pricesChanged = true;
+    }
+  }
+
+  for (const item of items2) {
+    let similarItem = findSimilarItem({
+      item,
+      items: items1,
+    });
+
+    if (!similarItem) {
+      itemsSame = false;
+      if (isFeaturePriceItem(item) || isPriceItem(item)) {
+        pricesChanged = true;
+      }
+
+      removedItems.push(item);
     }
   }
 
@@ -117,7 +132,8 @@ export const productsAreSame = ({
   return {
     itemsSame,
     freeTrialsSame,
-    onlyEntsChanged: !itemsSame && !priceChanged,
+    onlyEntsChanged: !pricesChanged,
     newItems,
+    removedItems,
   };
 };

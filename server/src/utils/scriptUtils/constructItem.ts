@@ -24,13 +24,23 @@ export const constructPrepaidItem = ({
   return item;
 };
 
-export const constructArrearItem = ({ featureId }: { featureId: string }) => {
+export const constructArrearItem = ({
+  featureId,
+  includedUsage = 10000,
+  price = 0.1,
+  billingUnits = 1000,
+}: {
+  featureId: string;
+  includedUsage?: number;
+  price?: number;
+  billingUnits?: number;
+}) => {
   let item: ProductItem = {
     feature_id: featureId,
     usage_model: UsageModel.PayPerUse,
-    included_usage: 10000,
-    price: 0.1,
-    billing_units: 1000,
+    included_usage: includedUsage,
+    price: price,
+    billing_units: billingUnits,
     interval: ProductItemInterval.Month,
     reset_usage_when_enabled: true,
   };

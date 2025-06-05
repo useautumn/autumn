@@ -1,9 +1,13 @@
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
-import { getFeatureString } from "@/utils/product/product-item/formatProductItem";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
+import {
+  getFeatureString,
+  getPaidFeatureString,
+} from "@/utils/product/product-item/formatProductItem";
 import { useProductContext } from "@/views/products/product/ProductContext";
 
 export const AttachNewItems = () => {
-  const { attachState, features } = useProductContext();
+  const { attachState, features, org } = useProductContext();
   const { preview } = attachState;
 
   if (preview?.new_items) {
@@ -11,9 +15,13 @@ export const AttachNewItems = () => {
       <div>
         <p className="text-t2 font-semibold mb-2">New items</p>
         {preview.new_items.map((item: any, index: number) => {
+          const str = isFeaturePriceItem(item)
+            ? getPaidFeatureString({ item, features, org })
+            : getFeatureString({ item, features });
+
           return (
             <PriceItem key={index}>
-              <span>{getFeatureString({ item, features })}</span>
+              <span>{str}</span>
             </PriceItem>
           );
         })}

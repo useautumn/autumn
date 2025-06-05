@@ -66,6 +66,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: premium -> pro -
       autumn,
       products: [proQuarter, pro],
       customerId,
+      db,
+      orgId: org.id,
+      env,
     });
 
     const { testClockId: testClockId1, customer: customer_ } =

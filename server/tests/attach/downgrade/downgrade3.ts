@@ -62,11 +62,14 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: premium -> pro -
       prefix: testCase,
     });
 
-    // await createProducts({
-    //   autumn,
-    //   products: [free, pro, premium],
-    //   customerId,
-    // });
+    await createProducts({
+      autumn,
+      products: [free, pro, premium],
+      customerId,
+      db,
+      orgId: org.id,
+      env,
+    });
 
     const { testClockId: testClockId1, customer: customer_ } =
       await initCustomer({
@@ -141,8 +144,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: premium -> pro -
 
   it("should renew premium", async function () {
     await autumn.attach({
-      customerId,
-      productId: premium.id,
+      customer_id: customerId,
+      product_id: premium.id,
     });
 
     const customer = await autumn.customers.get(customerId);

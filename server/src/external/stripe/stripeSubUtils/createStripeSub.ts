@@ -71,19 +71,19 @@ export const createStripeSub = async ({
       prices[index].config!.interval === BillingInterval.OneOff,
   );
 
-  if (shouldPreview) {
-    return await stripeCli.invoices.createPreview({
-      subscription_details: {
-        items: subItems as any,
-        trial_end: freeTrialToStripeTimestamp({ freeTrial }),
-        billing_cycle_anchor: billingCycleAnchorUnix
-          ? Math.floor(billingCycleAnchorUnix / 1000)
-          : undefined,
-      },
-      invoice_items: invoiceItems as any,
-      customer: customer.processor.id,
-    });
-  }
+  // if (shouldPreview) {
+  //   return await stripeCli.invoices.createPreview({
+  //     subscription_details: {
+  //       items: subItems as any,
+  //       trial_end: freeTrialToStripeTimestamp({ freeTrial }),
+  //       billing_cycle_anchor: billingCycleAnchorUnix
+  //         ? Math.floor(billingCycleAnchorUnix / 1000)
+  //         : undefined,
+  //     },
+  //     invoice_items: invoiceItems as any,
+  //     customer: customer.processor.id,
+  //   });
+  // }
 
   try {
     const subscription = await stripeCli.subscriptions.create({

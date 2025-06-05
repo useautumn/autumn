@@ -10,7 +10,7 @@ import { formatAmount, getItemType, intervalIsNone } from "../productItemUtils";
 import { getFeature } from "../entitlementUtils";
 import { notNullish } from "@/utils/genUtils";
 
-const getPaidFeatureString = ({
+export const getPaidFeatureString = ({
   item,
   org,
   features,

@@ -2,7 +2,7 @@
 
 import ProductSidebar from "@/views/products/product/ProductSidebar";
 import LoadingScreen from "@/views/general/LoadingScreen";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Customer,
   Entity,
@@ -31,7 +31,7 @@ import { useEnv } from "@/utils/envUtils";
 
 import { FeaturesContext } from "@/views/features/FeaturesContext";
 import { CustomerProductBreadcrumbs } from "./components/CustomerProductBreadcrumbs";
-import { useAttachState } from "./hooks/useAttachState";
+import { FrontendProduct, useAttachState } from "./hooks/useAttachState";
 
 interface OptionValue {
   feature_id: string;
@@ -57,20 +57,14 @@ function getProductUrlParams({
   return str ? `?${str}` : "";
 }
 
-type FrontendProduct = ProductV2 & {
-  isActive: boolean;
-  options: FeatureOptions[];
-};
-
 export default function CustomerProductView() {
   const { customer_id, product_id } = useParams();
   const [searchParams] = useSearchParams();
   const entityIdParam = searchParams.get("entity_id");
 
   const env = useEnv();
-  const axiosInstance = useAxiosInstance();
-  const navigation = useNavigate();
 
+  const initialProductRef = useRef<FrontendProduct | null>(null);
   const [product, setProduct] = useState<FrontendProduct | null>(null);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [options, setOptions] = useState<OptionValue[]>([]);
@@ -95,15 +89,13 @@ export default function CustomerProductView() {
     env,
   });
 
-  const [url, setUrl] = useState<any>(null);
-
-  const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
     useState<"unlimited" | number>(0);
 
   const attachState = useAttachState({
     product,
     setProduct,
+    initialProductRef,
   });
 
   useEffect(() => {
@@ -111,6 +103,7 @@ export default function CustomerProductView() {
 
     const product = data.product;
     setProduct(product);
+    initialProductRef.current = structuredClone(product);
 
     if (product.options) {
       setOptions(product.options);
@@ -164,27 +157,10 @@ export default function CustomerProductView() {
           entityId,
           setEntityId,
           attachState,
+          version,
         }}
       >
         <CustomToaster />
-
-        <Dialog
-          open={checkoutDialogOpen}
-          onOpenChange={() => {
-            setCheckoutDialogOpen(false);
-            setUrl(null);
-          }}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{url && keyToTitle(url.type)}</DialogTitle>
-            </DialogHeader>
-
-            {url && (
-              <CopyUrl url={url.value} isInvoice={url.type == "invoice"} />
-            )}
-          </DialogContent>
-        </Dialog>
 
         <div className="flex w-full">
           <div className="flex flex-col gap-4 w-full">

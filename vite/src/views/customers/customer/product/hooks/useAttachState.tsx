@@ -1,20 +1,16 @@
 import { isFeatureItem } from "@/utils/product/getItemType";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
 import { sortProductItems } from "@/utils/productUtils";
-import { useProductContext } from "@/views/products/product/ProductContext";
 import {
   AttachPreview,
-  AttachScenario,
-  BillingInterval,
-  CheckProductPreview,
   FeatureOptions,
   ProductItem,
   ProductV2,
   UsageModel,
 } from "@autumn/shared";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-type FrontendProduct = ProductV2 & {
+export type FrontendProduct = ProductV2 & {
   isActive: boolean;
   options: FeatureOptions[];
   isCanceled: boolean;
@@ -43,11 +39,12 @@ const productIsFree = (product: FrontendProduct) => {
 export const useAttachState = ({
   product,
   setProduct,
+  initialProductRef,
 }: {
   product: FrontendProduct | null;
   setProduct: (product: FrontendProduct) => void;
+  initialProductRef: React.RefObject<FrontendProduct | null>;
 }) => {
-  const initialProductRef = useRef<FrontendProduct | null>(null);
   const [preview, setPreview] = useState<AttachPreview | null>(null);
   const [options, setOptions] = useState<
     (FeatureOptions & {
@@ -55,7 +52,9 @@ export const useAttachState = ({
       billing_units: number;
     })[]
   >([]);
+
   const [itemsChanged, setItemsChanged] = useState(false);
+
   const [flags, setFlags] = useState({
     hasPrepaid: product ? productHasPrepaid(product.items) : false,
     isAddOn: product ? productIsAddOn(product) : false,
@@ -100,18 +99,23 @@ export const useAttachState = ({
 
     initFlags();
 
-    if (!initialProductRef.current) {
-      initialProductRef.current = structuredClone(sortedProduct);
-      setItemsChanged(false);
-      return;
-    }
-
     const hasItemsChanged =
       JSON.stringify(sortedProduct.items) !==
-      JSON.stringify(initialProductRef.current.items);
+      JSON.stringify(initialProductRef.current?.items || []);
+
+    console.log("Sorted product items", sortedProduct.items);
+    console.log("Initial product items", initialProductRef.current?.items);
+    console.log("Has items changed", hasItemsChanged);
 
     setItemsChanged(hasItemsChanged);
   }, [product]);
+
+  useEffect(() => {
+    console.log("Initial product ref", initialProductRef.current);
+    // // Reset the ref on component mount
+    // initialProductRef.current = null;
+    // setItemsChanged(false);
+  }, []);
 
   const getButtonDisabled = () => {
     if (product?.isActive && !itemsChanged && !flags.isCanceled) {

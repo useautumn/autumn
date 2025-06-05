@@ -41,13 +41,8 @@ export const getAttachParams = async ({
       reqApiVersion: req.apiVersion,
     }) || APIVersion.v1;
 
-  const internalEntityId = attachBody.entity_id
-    ? customer.entities.find(
-        (e) =>
-          e.id === attachBody.entity_id ||
-          e.internal_id === attachBody.entity_id,
-      )?.internal_id
-    : undefined;
+  const entityId = attachBody.entity_id;
+  const internalEntityId = entityId ? customer.entity.internal_id : undefined;
 
   const stripeCli = createStripeCli({ org, env });
   const [paymentMethod, { stripeCus, now }] = await Promise.all([

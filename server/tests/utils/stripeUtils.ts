@@ -20,7 +20,7 @@ import {
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 
-const STRIPE_TEST_CLOCK_TIMING = 30000; // 30s
+const STRIPE_TEST_CLOCK_TIMING = 20000; // 30s
 // const STRIPE_TEST_CLOCK_TIMING = 40000; // 30s
 
 export const completeCheckoutForm = async (
@@ -248,7 +248,7 @@ export const advanceTestClock = async ({
     advanceTo = addMinutes(addMonths(startingFrom, 1), 10).getTime();
   }
 
-  console.log("   - Advancing to: ", format(advanceTo, "yyyy MMM dd HH:mm:ss"));
+  console.log("   - Advancing to: ", format(advanceTo, "dd MMM yyyy HH:mm:ss"));
   await stripeCli.testHelpers.testClocks.advance(testClockId, {
     frozen_time: Math.floor(advanceTo / 1000),
   });

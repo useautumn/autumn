@@ -11,6 +11,7 @@ import {
   Price,
   AttachScenario,
   APIVersion,
+  FullCustomer,
 } from "@autumn/shared";
 import Stripe from "stripe";
 
@@ -25,7 +26,8 @@ export type AttachParams = {
   paymentMethod: Stripe.PaymentMethod | null | undefined;
 
   org: Organization;
-  customer: Customer;
+  // customer: Customer;
+  customer: FullCustomer;
   products: FullProduct[];
 
   prices: Price[];
@@ -69,7 +71,7 @@ export type AttachParams = {
 export type InsertCusProductParams = {
   req?: any;
 
-  customer: Customer;
+  customer: FullCustomer;
   org: Organization;
   product: FullProduct;
   prices: Price[];

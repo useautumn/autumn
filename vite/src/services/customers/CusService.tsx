@@ -10,9 +10,8 @@ export class CusService {
     await axios.delete(`/v1/customers/${customer_id}`);
   }
 
-  static async attach(axios: AxiosInstance, customer_id: string, data: any) {
+  static async attach(axios: AxiosInstance, data: any) {
     return await axios.post(`/v1/attach`, {
-      customer_id,
       ...data,
     });
   }

@@ -172,18 +172,21 @@ export class ProductService {
     env,
     inIds,
     returnAll = false,
+    version,
   }: {
     db: DrizzleCli;
     orgId: string;
     env: AppEnv;
     inIds?: string[];
     returnAll?: boolean;
+    version?: number;
   }) {
     let data = (await db.query.products.findMany({
       where: and(
         eq(products.org_id, orgId),
         eq(products.env, env),
         inIds ? inArray(products.id, inIds) : undefined,
+        version ? eq(products.version, version) : undefined,
       ),
       with: {
         entitlements: {
@@ -204,7 +207,7 @@ export class ProductService {
       return data;
     }
 
-    const latestProducts = getLatestProducts(data);
+    const latestProducts: FullProduct[] = getLatestProducts(data);
 
     if (inIds) {
       let newProducts: FullProduct[] = [];

@@ -8,7 +8,6 @@ import {
   FreeTrial,
   CollectionMethod,
   FullCusProduct,
-  LoggerAction,
   APIVersion,
 } from "@autumn/shared";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
@@ -278,7 +277,6 @@ export const createFullCusProduct = async ({
 }: {
   db: DrizzleCli;
   attachParams: InsertCusProductParams;
-
   startsAt?: number;
   subscriptionId?: string;
   nextResetAt?: number;
@@ -318,7 +316,6 @@ export const createFullCusProduct = async ({
   } catch (error) {}
 
   const existingCusProduct = searchCusProducts({
-    // productId: product.id,
     internalProductId: product.internal_id,
     cusProducts: attachParams.cusProducts!,
     status: CusProductStatus.Active,
@@ -397,6 +394,7 @@ export const createFullCusProduct = async ({
     trialEndsAt = curCusProduct.trial_ends_at || null;
   }
 
+  let entityId = customer.entity?.id;
   const cusProd = initCusProduct({
     cusProdId,
     customer,
@@ -416,8 +414,8 @@ export const createFullCusProduct = async ({
     subscriptionIds,
     subscriptionScheduleIds,
     isCustom: attachParams.isCustom || false,
-    entityId: attachParams.entityId,
     internalEntityId: attachParams.internalEntityId,
+    entityId,
     apiVersion: attachParams.apiVersion,
   });
 

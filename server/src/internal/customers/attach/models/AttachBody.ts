@@ -32,7 +32,7 @@ export const AttachBodySchema = z
     options: z.array(FeatureOptionsSchema).optional(),
 
     // Custom Product
-    is_custom: z.boolean().default(false),
+    is_custom: z.boolean().optional(),
     items: z.array(ProductItemSchema).optional(),
     free_trial: CreateFreeTrialSchema.or(z.boolean()).optional(),
 

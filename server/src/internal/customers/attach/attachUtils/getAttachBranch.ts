@@ -20,6 +20,7 @@ import { FeatureOptions, FullCusProduct } from "@autumn/shared";
 import { productsAreSame } from "@/internal/products/compareProductUtils.js";
 import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { attachParamToCusProducts } from "./convertAttachParams.js";
 
 const checkMultiProductErrors = async ({
   attachParams,
@@ -108,18 +109,17 @@ const checkSameCustom = async ({
 }) => {
   let product = attachParams.products[0];
 
-  let { itemsSame, freeTrialsSame, onlyEntsChanged, newItems } =
-    productsAreSame({
-      newProductV1: {
-        ...product,
-        prices: attachParams.prices,
-        entitlements: attachParams.entitlements,
-        free_trial: attachParams.freeTrial,
-      },
-      curProductV1: cusProductToProduct({ cusProduct: curSameProduct }),
+  let { itemsSame, freeTrialsSame, onlyEntsChanged } = productsAreSame({
+    newProductV1: {
+      ...product,
+      prices: attachParams.prices,
+      entitlements: attachParams.entitlements,
+      free_trial: attachParams.freeTrial,
+    },
+    curProductV1: cusProductToProduct({ cusProduct: curSameProduct }),
 
-      features: attachParams.features,
-    });
+    features: attachParams.features,
+  });
 
   if (itemsSame && freeTrialsSame) {
     throw new RecaseError({
@@ -144,9 +144,8 @@ const getSameProductBranch = async ({
 }) => {
   let product = attachParams.products[0];
 
-  let { curSameProduct, curScheduledProduct } = getExistingCusProducts({
-    product: attachParams.products[0],
-    cusProducts: attachParams.cusProducts!,
+  let { curSameProduct, curScheduledProduct } = attachParamToCusProducts({
+    attachParams,
   });
 
   curSameProduct = curSameProduct!;
@@ -273,9 +272,8 @@ export const getAttachBranch = async ({
     return AttachBranch.OneOff;
   }
 
-  const { curMainProduct, curSameProduct } = getExistingCusProducts({
-    product: attachParams.products[0],
-    cusProducts: attachParams.cusProducts!,
+  let { curSameProduct, curMainProduct } = attachParamToCusProducts({
+    attachParams,
   });
 
   // 3. Same product

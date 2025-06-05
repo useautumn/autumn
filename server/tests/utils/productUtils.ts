@@ -1,17 +1,45 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { Product, ProductV2 } from "@autumn/shared";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { AppEnv, Product, ProductV2 } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const createProduct = async ({
+  db,
+  orgId,
+  env,
   autumn,
   product,
   prefix,
 }: {
+  db: DrizzleCli;
+  orgId: string;
+  env: AppEnv;
   autumn: AutumnInt;
   product: any;
   prefix?: string;
 }) => {
   try {
-    await autumn.products.delete(product.id);
+    const products = await ProductService.listFull({
+      db,
+      orgId,
+      env,
+      returnAll: true,
+      inIds: [product.id],
+    });
+
+    const batchDelete = [];
+    for (const prod of products) {
+      batchDelete.push(
+        ProductService.deleteByInternalId({
+          db,
+          internalId: prod.internal_id,
+          orgId,
+          env,
+        }),
+      );
+    }
+
+    await Promise.all(batchDelete);
   } catch (error) {}
 
   let clone = structuredClone(product);
@@ -27,11 +55,17 @@ export const createProduct = async ({
   await autumn.products.create(clone);
 };
 export const createProducts = async ({
+  db,
+  orgId,
+  env,
   autumn,
   products,
   prefix,
   customerId,
 }: {
+  db: DrizzleCli;
+  orgId: string;
+  env: AppEnv;
   autumn: AutumnInt;
   products: any[];
   prefix?: string;
@@ -45,7 +79,9 @@ export const createProducts = async ({
 
   const batchCreate = [];
   for (const product of products) {
-    batchCreate.push(createProduct({ autumn, product, prefix }));
+    batchCreate.push(
+      createProduct({ db, orgId, env, autumn, product, prefix }),
+    );
   }
 
   await Promise.all(batchCreate);

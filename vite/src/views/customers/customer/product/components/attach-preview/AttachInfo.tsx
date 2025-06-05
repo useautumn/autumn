@@ -1,6 +1,13 @@
 import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
+import { notNullish } from "@/utils/genUtils";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import { AttachBranch } from "@autumn/shared";
+import {
+  AttachBranch,
+  FeatureType,
+  FeatureUsageType,
+  ProductItem,
+  ProductItemFeatureType,
+} from "@autumn/shared";
 import { InfoIcon } from "lucide-react";
 
 export const AttachInfo = () => {
@@ -26,6 +33,25 @@ export const AttachInfo = () => {
       } else {
         text += `.`;
       }
+      return text;
+    }
+
+    if (preview?.branch == AttachBranch.NewVersion) {
+      const usagePriceExists = product.items.some((item: ProductItem) => {
+        const priceExists = notNullish(item.tiers) || notNullish(item.price);
+        return (
+          item.feature_type === ProductItemFeatureType.SingleUse && priceExists
+        );
+      });
+
+      let text = `The customer is currently on ${currentProduct.name} v${currentProduct.version}. Switching to v${product.version} will update the customer's features immediately, and from ${formatUnixToDate(preview.due_next_cycle.due_at)} onwards they will pay any new prices`;
+
+      if (usagePriceExists) {
+        text += ` (including usage from the last cycle).`;
+      } else {
+        text += `.`;
+      }
+
       return text;
     }
 

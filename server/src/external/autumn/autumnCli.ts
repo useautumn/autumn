@@ -8,6 +8,7 @@ import {
   ErrCode,
 } from "@autumn/shared";
 import { TrackParams } from "autumn-js";
+import { AttachBody } from "@/internal/customers/attach/models/AttachBody.js";
 
 export default class AutumnError extends Error {
   message: string;
@@ -144,20 +145,13 @@ export class AutumnInt {
     return data;
   }
 
-  async attach({
-    customerId,
-    productId,
-    options,
-  }: {
-    customerId: string;
-    productId: string;
-    options?: any;
-  }) {
-    const data = await this.post(`/attach`, {
-      customer_id: customerId,
-      product_id: productId,
-      options: toSnakeCase(options),
-    });
+  async attach(params: AttachBody) {
+    // const data = await this.post(`/attach`, {
+    //   customer_id: customerId,
+    //   product_id: productId,
+    //   options: toSnakeCase(options),
+    // });
+    const data = await this.post(`/attach`, params);
 
     return data;
   }
@@ -399,14 +393,8 @@ export class AutumnInt {
     return data;
   };
 
-  attachPreview = async (params: {
-    customerId: string;
-    productId: string;
-    options?: any;
-  }) => {
-    const snakeCaseParams = toSnakeCase(params);
-
-    const data = await this.post(`/attach/preview`, snakeCaseParams);
+  attachPreview = async (params: AttachBody) => {
+    const data = await this.post(`/attach/preview`, params);
     return data;
   };
 

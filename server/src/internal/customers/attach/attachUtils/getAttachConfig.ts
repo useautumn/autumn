@@ -32,18 +32,30 @@ export const getAttachConfig = async ({
   const { isPublic, forceCheckout, invoiceOnly, isFree, noPaymentMethod } =
     flags;
 
+  let proration =
+    branch == AttachBranch.SameCustomEnts || branch == AttachBranch.NewVersion
+      ? ProrationBehavior.None
+      : org.config.bill_upgrade_immediately
+        ? ProrationBehavior.Immediately
+        : ProrationBehavior.NextBilling;
+
+  let carryUsage =
+    branch == AttachBranch.SameCustomEnts ||
+    branch == AttachBranch.SameCustom ||
+    branch == AttachBranch.NewVersion;
+
+  let disableTrial =
+    branch === AttachBranch.NewVersion ||
+    branch == AttachBranch.Downgrade ||
+    attachBody.free_trial === false;
+
   let config: AttachConfig = {
     branch,
     onlyCheckout:
       (isPublic || forceCheckout || noPaymentMethod) && !invoiceOnly && !isFree,
-    carryUsage: branch === AttachBranch.SameCustom, // If same custom (and new version?), carry over existing usages...
-    proration: org.config.bill_upgrade_immediately
-      ? ProrationBehavior.Immediately
-      : ProrationBehavior.NextBilling,
-    disableTrial:
-      branch === AttachBranch.NewVersion ||
-      branch == AttachBranch.Downgrade ||
-      attachBody.free_trial === false,
+    carryUsage,
+    proration,
+    disableTrial,
     invoiceOnly: flags.invoiceOnly,
     disableMerge: org.config.merge_billing_cycles === false,
   };
