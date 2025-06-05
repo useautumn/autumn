@@ -10,6 +10,7 @@ export const attachParamToCusProducts = ({
     getExistingCusProducts({
       product: attachParams.products[0],
       cusProducts: attachParams.cusProducts!,
+      internalEntityId: attachParams.internalEntityId,
     });
 
   return { curMainProduct, curSameProduct, curScheduledProduct };

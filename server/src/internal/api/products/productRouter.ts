@@ -5,10 +5,7 @@ import { Router } from "express";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-import {
-  checkStripeProductExists,
-  isProductUpgrade,
-} from "@/internal/products/productUtils.js";
+import { checkStripeProductExists } from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 

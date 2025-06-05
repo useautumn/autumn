@@ -11,7 +11,7 @@ export const PriceItem = ({
   return (
     <div
       className={cn(
-        "flex h-7 flex-col sm:flex-row text-muted-foreground pb-4 sm:pb-0 gap-1 justify-between sm:gap-2 sm:items-center  sm:whitespace-nowrap",
+        `flex h-7 flex-col sm:flex-row text-muted-foreground pb-4 sm:pb-0 gap-1 justify-between sm:gap-2 sm:items-center  sm:whitespace-nowrap`,
         className,
       )}
       {...props}

@@ -34,13 +34,14 @@ const getProductsForAttach = async ({
   req: ExtendedRequest;
   attachBody: AttachBody;
 }) => {
-  const { product_id, product_ids } = attachBody;
+  const { product_id, product_ids, version } = attachBody;
 
   let products = await ProductService.listFull({
     db: req.db,
     orgId: req.orgId,
     env: req.env,
     inIds: product_ids || [product_id!],
+    version,
   });
 
   if (notNullish(product_ids)) {
@@ -114,6 +115,7 @@ const getPricesAndEnts = async ({
   const { curMainProduct, curSameProduct } = getExistingCusProducts({
     product: products[0],
     cusProducts: customer.customer_products,
+    internalEntityId: customer.entity?.internal_id,
   });
 
   // Not custom

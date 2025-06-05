@@ -8,57 +8,15 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
 import { FeatureOptions, ProductV2 } from "@autumn/shared";
-
-const getAttachBody = ({
-  customerId,
-  attachState,
-  product,
-  entityId,
-  optionsInput,
-  useInvoice,
-  successUrl,
-}: {
-  customerId: string;
-  attachState: any;
-  product: ProductV2;
-  entityId: string;
-  optionsInput?: FeatureOptions[];
-  useInvoice?: boolean;
-  successUrl?: string;
-}) => {
-  const isCustom = attachState.itemsChanged;
-  const customData = attachState.itemsChanged
-    ? {
-        items: product.items,
-        free_trial: product.free_trial,
-      }
-    : {};
-
-  return {
-    customer_id: customerId,
-    product_id: product.id,
-    entity_id: entityId || undefined,
-    options: optionsInput
-      ? optionsInput.map((option) => ({
-          feature_id: option.feature_id,
-          quantity: option.quantity || 0,
-        }))
-      : undefined,
-    is_custom: isCustom,
-    ...customData,
-    free_trial: isCustom ? product.free_trial || undefined : undefined,
-
-    invoice_only: useInvoice,
-    success_url: successUrl,
-  };
-};
+import { getAttachBody } from "./attachProductUtils";
 
 export const AttachButton = () => {
   const axios = useAxiosInstance();
   const [open, setOpen] = useState(false);
   const [buttonLoading, setButtonLoading] = useState(false);
 
-  const { attachState, product, entityId, customer } = useProductContext();
+  const { attachState, product, entityId, customer, version } =
+    useProductContext();
   const { preview, setPreview } = attachState;
 
   const { buttonText } = attachState;
@@ -73,6 +31,7 @@ export const AttachButton = () => {
           attachState,
           product,
           entityId,
+          version,
         }),
       );
 

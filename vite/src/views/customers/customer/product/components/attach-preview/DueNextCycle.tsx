@@ -35,7 +35,7 @@ export const DueNextCycle = () => {
         return (
           <PriceItem key={description}>
             <span>{description}</span>
-            <span>{price}</span>
+            <span className="max-w-60 overflow-hidden truncate">{price}</span>
           </PriceItem>
         );
       })}

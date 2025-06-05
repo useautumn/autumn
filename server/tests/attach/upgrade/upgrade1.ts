@@ -13,6 +13,7 @@ import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
 import { runAttachTest } from "../utils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { addPrefixToProducts } from "../utils.js";
 
 // UNCOMMENT FROM HERE
 let pro = constructProduct({
@@ -33,7 +34,7 @@ let growth = constructProduct({
 
 describe(`${chalk.yellowBright("attach/upgrade1: Testing usage upgrades")}`, () => {
   let customerId = "upgrade1";
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
+  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 
   let stripeCli: Stripe;
   let testClockId: string;
@@ -51,6 +52,17 @@ describe(`${chalk.yellowBright("attach/upgrade1: Testing usage upgrades")}`, () 
 
     stripeCli = this.stripeCli;
 
+    addPrefixToProducts({
+      products: [pro, premium, growth],
+      prefix: customerId,
+    });
+
+    await createProducts({
+      autumn: autumnJs,
+      products: [pro, premium, growth],
+      customerId,
+    });
+
     const { testClockId: testClockId1 } = await initCustomer({
       autumn: autumnJs,
       customerId,
@@ -58,11 +70,6 @@ describe(`${chalk.yellowBright("attach/upgrade1: Testing usage upgrades")}`, () 
       org,
       env,
       attachPm: "success",
-    });
-
-    await createProducts({
-      autumn,
-      products: [pro, premium, growth],
     });
 
     testClockId = testClockId1!;

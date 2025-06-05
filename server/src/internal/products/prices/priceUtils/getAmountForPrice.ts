@@ -33,6 +33,9 @@ export const getAmountForQuantity = ({
   let amount = new Decimal(0);
   let remainingUsage = new Decimal(roundedQuantity);
 
+  // console.log("Getting amount for quantity:", roundedQuantity);
+  // console.log("Usage tiers:", config.usage_tiers);
+
   for (let i = 0; i < config.usage_tiers.length; i++) {
     let tier = config.usage_tiers[i];
 

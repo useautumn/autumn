@@ -39,13 +39,14 @@ export const getExistingCusProducts = ({
     return sameGroup && isMain && isActive && !oneOff && sameEntity;
   });
 
-  const curSameProduct = cusProducts!.find(
-    (cp: any) =>
-      cp.product.internal_id === product.internal_id &&
-      (internalEntityId
-        ? cp.internal_entity_id === internalEntityId
-        : nullish(cp.internal_entity_id)),
-  );
+  const curSameProduct = cusProducts!.find((cp: any) => {
+    const idMatch = cp.product.id === product.id;
+    const entityMatch = internalEntityId
+      ? cp.internal_entity_id === internalEntityId
+      : nullish(cp.internal_entity_id);
+
+    return idMatch && entityMatch;
+  });
 
   const curScheduledProduct = cusProducts!.find(
     (cp: any) =>

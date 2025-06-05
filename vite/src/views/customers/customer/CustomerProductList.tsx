@@ -24,11 +24,8 @@ import SmallSpinner from "@/components/general/SmallSpinner";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-import { Link } from "react-router";
-import { getStripeSubLink } from "@/utils/linkUtils";
-import React from "react";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
-import { ArrowUpRightFromSquare } from "lucide-react";
+
 import { AdminHover } from "@/components/general/AdminHover";
 import AddProduct from "./add-product/NewProductDropdown";
 import { Item, Row } from "@/components/general/TableGrid";

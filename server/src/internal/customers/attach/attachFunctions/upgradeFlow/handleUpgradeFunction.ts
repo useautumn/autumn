@@ -52,7 +52,7 @@ export const handleUpgradeFunction = async ({
   });
 
   logger.info("1. Updating current subscriptions in Stripe");
-  let { newSubs, invoice } = await updateStripeSubs({
+  let { newSubs, invoice, newInvoiceIds } = await updateStripeSubs({
     db: req.db,
     curCusProduct,
     stripeCli,
@@ -98,12 +98,7 @@ export const handleUpgradeFunction = async ({
   // Insert invoices
   logger.info("5. Inserting invoices");
   const batchInsertInvoice = [];
-  for (const sub of newSubs) {
-    const invoiceId = sub.latest_invoice as string | null;
-    if (!invoiceId) {
-      continue;
-    }
-
+  for (const invoiceId of newInvoiceIds || []) {
     batchInsertInvoice.push(
       insertInvoiceFromAttach({
         db: req.db,

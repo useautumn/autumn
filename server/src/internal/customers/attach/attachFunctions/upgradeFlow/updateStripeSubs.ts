@@ -12,7 +12,6 @@ import {
   createUsageInvoiceItems,
   resetUsageBalances,
 } from "./createUsageInvoiceItems.js";
-import { formatUnixToDateTime } from "@/utils/genUtils.js";
 
 // UPGRADE FUNCTIONS
 
@@ -61,46 +60,29 @@ export const updateStripeSubs = async ({
   }
 
   let trialEnd = config.disableTrial
-    ? null
+    ? undefined
     : freeTrialToStripeTimestamp({
         freeTrial: attachParams.freeTrial,
         now: attachParams.now,
       });
 
-  // 2. Create invoice items for remaining usages
-  const { cusEntIds } = await createUsageInvoiceItems({
-    db,
-    attachParams,
-    cusProduct: curCusProduct,
-    stripeSubs,
-    logger,
-  });
-
   // 3. Update current subscription
   logger.info("1.2: Updating current subscription");
-  let newSubs: Stripe.Subscription[] = [];
+
   const subUpdateRes = await updateStripeSubscription({
     db,
     attachParams,
-    curCusProduct,
     config,
     trialEnd,
     logger,
     itemSet: firstItemSet,
     shouldPreview,
-    curSub: firstSub,
+    stripeSubs,
   });
 
-  if (shouldPreview) {
-    return {
-      newSubs: [],
-      updatePreview: subUpdateRes,
-    };
-  }
-
-  let { sub: subUpdate } = subUpdateRes;
-  subUpdate = subUpdate!;
-  newSubs.push(subUpdate!);
+  let { sub: subUpdate, invoice } = subUpdateRes;
+  let newSubs = [subUpdate!];
+  let newInvoiceIds = invoice ? [invoice.id] : [];
 
   // 4. Update current sub schedules if exist...
   await updateCurSchedules({
@@ -133,24 +115,19 @@ export const updateStripeSubs = async ({
       itemSet,
       invoiceOnly: attachParams.invoiceOnly || false,
       freeTrial: attachParams.freeTrial,
-      anchorToUnix: subUpdate.current_period_end * 1000,
+      anchorToUnix: subUpdate!.current_period_end! * 1000,
       now: attachParams.now,
     });
 
     newSubs.push(newSub as Stripe.Subscription);
+    newInvoiceIds.push(newSub.latest_invoice as string);
   }
-
-  // 7. Update cus ents to reset usage
-  await resetUsageBalances({
-    db,
-    cusEntIds,
-    cusProduct: curCusProduct,
-  });
 
   return {
     newSubs,
     updatePreview: null,
     invoice: subUpdateRes.invoice,
+    newInvoiceIds,
   };
 };
 

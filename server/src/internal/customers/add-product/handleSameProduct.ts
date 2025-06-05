@@ -4,7 +4,6 @@ import {
   ErrCode,
   Feature,
   FullCusProduct,
-  FullCustomer,
   FullCustomerEntitlement,
   FullCustomerPrice,
   Organization,

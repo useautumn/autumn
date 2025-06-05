@@ -62,6 +62,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade from premium -> f
       autumn,
       products: [free, premium],
       customerId,
+      db,
+      orgId: org.id,
+      env,
     });
 
     const { testClockId: testClockId1 } = await initCustomer({

@@ -20,6 +20,44 @@ import { getDate } from "date-fns";
 
 import Stripe from "stripe";
 
+export const getSubsFromCusId = async ({
+  stripeCli,
+  customerId,
+  productId,
+  db,
+  org,
+  env,
+}: {
+  stripeCli: Stripe;
+  customerId: string;
+  productId: string;
+  db: DrizzleCli;
+  org: Organization;
+  env: AppEnv;
+}) => {
+  const fullCus = await CusService.getFull({
+    db,
+    idOrInternalId: customerId,
+    orgId: org.id,
+    env,
+  });
+
+  const cusProduct = fullCus.customer_products.find(
+    (cp: FullCusProduct) => cp.product.id == productId,
+  )!;
+
+  const subs: Stripe.Subscription[] = await getStripeSubs({
+    stripeCli,
+    subIds: cusProduct?.subscription_ids,
+  });
+
+  return {
+    fullCus,
+    cusProduct,
+    subs,
+  };
+};
+
 export const expectSubAnchorsSame = async ({
   stripeCli,
   customerId,

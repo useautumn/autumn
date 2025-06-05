@@ -30,7 +30,7 @@ export const getArrearItems = ({
       placeholderItems.push({
         price_data: {
           product: config.stripe_product_id!,
-          unit_amount: 0,
+          unit_amount: 1,
           currency: org.default_currency || "usd",
           recurring: {
             ...billingIntervalToStripe(interval),

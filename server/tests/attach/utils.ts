@@ -2,19 +2,33 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import {
   AppEnv,
   AttachBranch,
+  BillingInterval,
+  Customer,
   FeatureOptions,
   Organization,
+  ProductItem,
   ProductV2,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { getAttachTotal } from "tests/utils/testAttachUtils/testAttachUtils.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expectInvoicesCorrect } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
-import { notNullish, timeout } from "@/utils/genUtils.js";
-import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js";
+import { notNullish, nullish, timeout, toSnakeCase } from "@/utils/genUtils.js";
+import {
+  expectSubItemsCorrect,
+  getSubsFromCusId,
+} from "tests/utils/expectUtils/expectSubUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import Stripe from "stripe";
 import { expect } from "chai";
+import {
+  cusProductToEnts,
+  cusProductToPrices,
+} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/getAmountForPrice.js";
+import { Decimal } from "decimal.js";
 
 export const runAttachTest = async ({
   autumn,
@@ -47,8 +61,8 @@ export const runAttachTest = async ({
   skipFeatureCheck?: boolean;
 }) => {
   const preview = await autumn.attachPreview({
-    customerId,
-    productId: product.id,
+    customer_id: customerId,
+    product_id: product.id,
   });
 
   const total = getAttachTotal({
@@ -57,9 +71,9 @@ export const runAttachTest = async ({
   });
 
   await autumn.attach({
-    customerId,
-    productId: product.id,
-    options,
+    customer_id: customerId,
+    product_id: product.id,
+    options: toSnakeCase(options),
   });
 
   if (waitForInvoice) {
@@ -144,4 +158,97 @@ export const addPrefixToProducts = ({
   }
 
   return products;
+};
+
+export const replaceItems = ({
+  featureId,
+  interval,
+  newItem,
+  items,
+}: {
+  featureId?: string;
+  interval?: BillingInterval;
+  newItem: ProductItem;
+  items: ProductItem[];
+}) => {
+  let newItems = structuredClone(items);
+
+  let index;
+  if (featureId) {
+    index = newItems.findIndex((item) => item.feature_id == featureId);
+  }
+
+  if (interval) {
+    index = newItems.findIndex(
+      (item) => item.interval == (interval as any) && nullish(item.feature_id),
+    );
+  }
+
+  if (index == -1) {
+    throw new Error("Item not found");
+  }
+
+  newItems[index!] = newItem;
+
+  return newItems;
+};
+
+export const getExpectedInvoiceTotal = async ({
+  customerId,
+  productId,
+  usage,
+  stripeCli,
+  db,
+  org,
+  env,
+  onlyIncludeMonthly = false,
+}: {
+  customerId: string;
+  productId: string;
+  usage: {
+    featureId: string;
+    value: number;
+  }[];
+  stripeCli: Stripe;
+  db: DrizzleCli;
+  org: Organization;
+  env: AppEnv;
+  onlyIncludeMonthly?: boolean;
+}) => {
+  const { cusProduct } = await getSubsFromCusId({
+    stripeCli,
+    customerId,
+    productId,
+    db,
+    org,
+    env,
+  });
+
+  const prices = cusProductToPrices({ cusProduct });
+  const ents = cusProductToEnts({ cusProduct });
+
+  let total = new Decimal(0);
+  for (const price of prices) {
+    if (onlyIncludeMonthly && price.config.interval != BillingInterval.Month) {
+      continue;
+    }
+
+    const config = price.config as UsagePriceConfig;
+    const featureId = config.feature_id;
+    const ent = getPriceEntitlement(price, ents);
+
+    const usageAmount = usage.find((u) => u.featureId == featureId)?.value;
+
+    const overage =
+      usageAmount && ent.allowance ? usageAmount - ent.allowance : usageAmount;
+
+    const invoiceAmt = priceToInvoiceAmount({
+      price,
+      overage,
+    });
+
+    total = total.plus(invoiceAmt);
+  }
+
+  return total.toNumber();
 };

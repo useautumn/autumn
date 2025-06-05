@@ -12,7 +12,7 @@ export const DueToday = () => {
   const { preview, options, setOptions } = attachState;
 
   const dueToday = preview.due_today;
-  if (!dueToday) {
+  if (!dueToday || preview.branch == AttachBranch.NewVersion) {
     return null;
   }
 
@@ -54,7 +54,7 @@ export const DueToday = () => {
           return (
             <PriceItem key={description}>
               <span>{description}</span>
-              <span>{price}</span>
+              <span className="max-w-60 overflow-hidden truncate">{price}</span>
             </PriceItem>
           );
         })}

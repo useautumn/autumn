@@ -2,7 +2,6 @@ import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProduct
 import {
   getPriceEntitlement,
   getEntOptions,
-  getBillingType,
   getProductForPrice,
 } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -14,7 +13,6 @@ import {
   Organization,
   FullCusProduct,
   BillingInterval,
-  BillingType,
   Entity,
   APIVersion,
 } from "@autumn/shared";

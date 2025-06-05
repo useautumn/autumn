@@ -29,6 +29,7 @@ import { ToggleConfigButton } from "./ToggleConfigButton";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 import { AttachInfo } from "./attach-preview/AttachInfo";
+import { getAttachBody } from "./attachProductUtils";
 
 export const AttachModal = ({
   open,
@@ -37,7 +38,7 @@ export const AttachModal = ({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) => {
-  const { product, customer, entities, entityId, attachState } =
+  const { product, customer, entities, entityId, attachState, version } =
     useProductContext();
 
   const navigation = useNavigate();
@@ -120,21 +121,18 @@ export const AttachModal = ({
 
       const redirectUrl = getRedirectUrl(`/customers/${cusId}`, env);
 
-      const { data } = await CusService.attach(axiosInstance, customer.id, {
-        product_id: product.id,
-        entity_id: entityId || undefined,
-        options: options
-          ? options.map((option: any) => ({
-              feature_id: option.feature_id,
-              quantity: option.quantity || 0,
-            }))
-          : undefined,
-        is_custom: isCustom,
-        ...customData,
-
-        invoice_only: useInvoice,
-        success_url: `${import.meta.env.VITE_PUBLIC_FRONTEND_URL}${redirectUrl}`,
+      const attachBody = getAttachBody({
+        customerId: customer.id,
+        entityId,
+        product,
+        optionsInput: options,
+        attachState,
+        useInvoice,
+        successUrl: `${import.meta.env.VITE_PUBLIC_FRONTEND_URL}${redirectUrl}`,
+        version,
       });
+
+      const { data } = await CusService.attach(axiosInstance, attachBody);
 
       // 1. If checkout url, open checkout dialog
 

@@ -2,14 +2,18 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "../../cusProducts/AttachParams.js";
-import { AttachBranch, AttachFunction } from "@autumn/shared";
+import {
+  AttachBranch,
+  AttachFunction,
+  ProrationBehavior,
+} from "@autumn/shared";
 import { handleUpgradeFunction } from "../attachFunctions/upgradeFlow/handleUpgradeFunction.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
 import { AttachBody } from "../models/AttachBody.js";
 import { AttachConfig } from "@autumn/shared";
 import { handleScheduleFunction } from "../attachFunctions/scheduleFlow/handleScheduleFunction.js";
-import { handleEntsChangedFunction } from "../attachFunctions/updateEntsFlow/handleEntsChangedFunction.js";
+import { handleEntsChangedFunction } from "../attachFunctions/updateEntsFlow/handleUpdateEntsFunction.js";
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
 import { SuccessCode } from "@autumn/shared";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
@@ -124,6 +128,9 @@ export const runAttachFunction = async ({
   logger.info(
     `ATTACHING ${productIdsStr} to ${customer.name} (${customer.id || customer.email}), org: ${org.slug}`,
   );
+  if (customer.entity) {
+    logger.info(`Entity: ${customer.entity.name} (${customer.entity.id})`);
+  }
   logger.info(
     `Branch: ${chalk.yellow(branch)}, Function: ${chalk.yellow(attachFunction)}`,
     {
@@ -132,6 +139,10 @@ export const runAttachFunction = async ({
       curScheduledProduct: curScheduledProduct?.product.id,
     },
   );
+
+  // attachParams.billingAnchor = 1749902400000;
+  // config.proration = ProrationBehavior.None;
+  // config.carryUsage = true;
 
   if (attachFunction == AttachFunction.OneOff) {
     return await handleOneOffFunction({
@@ -192,6 +203,7 @@ export const runAttachFunction = async ({
       req,
       res,
       attachParams,
+      config,
     });
   }
 

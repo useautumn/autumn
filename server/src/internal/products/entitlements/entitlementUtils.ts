@@ -113,24 +113,16 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 
   let entsAreDiff = Object.values(diffs).some((d) => d.condition);
 
-  if (entsAreDiff) {
-    console.log("Entitlements different");
-    console.log(
-      "Differences:",
-      Object.values(diffs)
-        .filter((d) => d.condition)
-        .map((d) => d.message),
-    );
-  }
+  // if (entsAreDiff) {
+  //   console.log("Entitlements different");
+  //   console.log(
+  //     "Differences:",
+  //     Object.values(diffs)
+  //       .filter((d) => d.condition)
+  //       .map((d) => d.message),
+  //   );
+  // }
   return !entsAreDiff;
-  // return (
-  //   ent1.internal_feature_id === ent2.internal_feature_id &&
-  //   ent1.interval === ent2.interval &&
-  //   ent1.allowance_type === ent2.allowance_type &&
-  //   ent1.allowance === ent2.allowance &&
-  //   ent1.carry_from_previous === ent2.carry_from_previous &&
-  //   ent1.entity_feature_id === ent2.entity_feature_id
-  // );
 };
 
 // OTHERS
