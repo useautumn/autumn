@@ -165,7 +165,7 @@ export const getCusBalances = async ({
         relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
         productQuantity: cusProduct.quantity || 1,
       });
-      data[key].allowance += resetBalance || 0;
+      data[key].allowance += (resetBalance || 0) * count;
     }
   }
 
