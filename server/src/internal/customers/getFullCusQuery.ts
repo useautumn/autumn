@@ -25,10 +25,6 @@ const buildCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
   };
 
   const withCusEntitlements = () => {
-    // SELECT COALESCE(
-    //   json_agg(entitlement_data) FILTER (WHERE entitlement_data IS NOT NULL),
-    //   '[]'::json
-    // )
     return sql`
       SELECT json_agg(entitlement_data)
       FROM (
@@ -44,7 +40,15 @@ const buildCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
               JOIN features f ON e.internal_feature_id = f.internal_id
               WHERE e.id = ce.entitlement_id
             ) AS ent_with_feature
-          ) AS entitlement
+          ) AS entitlement,
+          (
+            SELECT COALESCE(
+              json_agg(row_to_json(r)) FILTER (WHERE r.id IS NOT NULL),
+              '[]'::json
+            )
+            FROM replaceables r
+            WHERE r.cus_ent_id = ce.id
+          ) AS replaceables
         FROM customer_entitlements ce
         WHERE ce.customer_product_id = cp.id
       ) AS entitlement_data

@@ -23,7 +23,7 @@ import {
   cusProductToEnts,
   cusProductToPrices,
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import { isMainProduct } from "@/internal/products/productUtils/classifyProduct.js";
 

@@ -1,5 +1,4 @@
 import {
-  ErrCode,
   Feature,
   FeatureItem,
   FeatureItemSchema,
@@ -14,7 +13,7 @@ import {
   isFeatureItem,
   isFeaturePriceItem,
   isPriceItem,
-} from "./getItemType.js";
+} from "./productItemUtils/getItemType.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { itemToFeature } from "./productItemUtils/convertItem.js";
 
@@ -196,7 +195,7 @@ export const itemsAreSame = ({
       features: features || [],
     });
 
-    if (feature?.config?.type === FeatureUsageType.Continuous) {
+    if (feature?.config?.usage_type === FeatureUsageType.Continuous) {
       pricesChanged = true;
     } else {
       pricesChanged = pricesChanged_;

@@ -10,6 +10,11 @@ import {
 import { isFixedPrice } from "./usagePriceUtils.js";
 import { getBillingType } from "../priceUtils.js";
 import { Decimal } from "decimal.js";
+import { nullish } from "@/utils/genUtils.js";
+import {
+  calculateProrationAmount,
+  Proration,
+} from "@/internal/invoices/prorationUtils.js";
 
 export const getAmountForQuantity = ({
   price,
@@ -65,28 +70,46 @@ export const priceToInvoiceAmount = ({
   price,
   overage,
   quantity,
+  proration,
+  now,
 }: {
   price: Price;
   overage?: number;
   quantity?: number;
+  proration?: Proration;
+  now?: number;
 }) => {
   // 1. If fixed price, just return amount
+
+  let amount = 0;
   if (isFixedPrice({ price })) {
-    return (price.config as FixedPriceConfig).amount;
+    amount = (price.config as FixedPriceConfig).amount;
   }
 
   const config = price.config as UsagePriceConfig;
   let billingType = getBillingType(config);
 
-  if (!quantity && !overage) {
+  if (!nullish(quantity) && !nullish(overage)) {
     throw new Error(
       `getAmountForPrice: quantity or overage is required, autumn price: ${price.id}`,
     );
   }
 
   if (billingType == BillingType.UsageInAdvance) {
-    return getAmountForQuantity({ price, quantity: quantity! });
+    amount = getAmountForQuantity({ price, quantity: quantity! });
   } else {
-    return getAmountForQuantity({ price, quantity: overage! });
+    amount = getAmountForQuantity({ price, quantity: overage! });
   }
+
+  if (proration) {
+    return calculateProrationAmount({
+      periodEnd: proration.end,
+      periodStart: proration.start,
+      now: now || Date.now(),
+      amount,
+      allowNegative: true,
+    });
+  }
+
+  return amount;
 };

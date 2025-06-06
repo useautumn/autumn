@@ -21,7 +21,7 @@ import {
 
 import { ProductService } from "@/internal/products/ProductService.js";
 import { constructProduct } from "@/internal/products/productUtils.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 

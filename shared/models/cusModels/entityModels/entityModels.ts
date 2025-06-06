@@ -14,10 +14,9 @@ export const EntitySchema = z.object({
 });
 
 export const CreateEntitySchema = z.object({
-  id: z.string(), // ID of entity
-  name: z.string(), // Name of entity
-  customer_id: z.string(), // Customer ID of entity
-  feature_id: z.string(), // Feature ID of entity
+  id: z.string(),
+  name: z.string().nullish(),
+  feature_id: z.string().nullish(),
 });
 
 export const EntityDataSchema = z.object({

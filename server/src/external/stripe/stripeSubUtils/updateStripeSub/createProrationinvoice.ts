@@ -71,7 +71,7 @@ export const createProrationInvoice = async ({
   try {
     const { invoice: subInvoice } = await payForInvoice({
       stripeCli,
-      paymentMethod,
+      paymentMethod: paymentMethod || null,
       invoiceId: invoice.id,
       logger,
       voidIfFailed: true,

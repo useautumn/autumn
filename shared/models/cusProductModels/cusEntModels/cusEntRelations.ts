@@ -5,6 +5,7 @@ import { customers } from "../../cusModels/cusTable.js";
 import { features } from "../../featureModels/featureTable.js";
 import { customerEntitlements } from "./cusEntTable.js";
 import { customerProducts } from "../cusProductTable.js";
+import { replaceables } from "./replaceableTable.js";
 
 export const customerEntitlementsRelations = relations(
   customerEntitlements,
@@ -25,5 +26,6 @@ export const customerEntitlementsRelations = relations(
       fields: [customerEntitlements.internal_feature_id],
       references: [features.internal_id],
     }),
+    replaceables: many(replaceables),
   }),
 );

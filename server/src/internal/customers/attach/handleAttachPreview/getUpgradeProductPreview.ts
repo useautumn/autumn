@@ -100,7 +100,7 @@ export const getUpgradeProductPreview = async ({
     expand: ["items.data.price.tiers"],
   });
 
-  let curPreviewItems = getItemsForCurProduct({
+  let curPreviewItems = await getItemsForCurProduct({
     stripeSubs,
     attachParams,
     now,

@@ -53,30 +53,12 @@ export const payForInvoice = async ({
   voidIfFailed = false,
 }: {
   stripeCli: Stripe;
-  paymentMethod?: Stripe.PaymentMethod | null;
+  paymentMethod: Stripe.PaymentMethod | null;
   invoiceId: string;
   logger: any;
   errorOnFail?: boolean;
   voidIfFailed?: boolean;
 }) => {
-  // const stripeCli = createStripeCli({ org: fullOrg, env: env as AppEnv });
-
-  // const paymentMethod = await getCusPaymentMethod({
-  //   stripeCli,
-  //   stripeId: customer.processor.id,
-  // });
-
-  // if (!paymentMethod) {
-  //   logger.warn("   ❌ No payment method found");
-  //   return {
-  //     paid: false,
-  //     error: new RecaseError({
-  //       message: "No payment method found",
-  //       code: ErrCode.CustomerHasNoPaymentMethod,
-  //       statusCode: 400,
-  //     }),
-  //   };
-  // }
   if (!paymentMethod) {
     if (errorOnFail) {
       throw new RecaseError({
@@ -95,6 +77,16 @@ export const payForInvoice = async ({
         invoice: null,
       };
     }
+  }
+
+  let invoice = await stripeCli.invoices.retrieve(invoiceId);
+  if (invoice.status == "paid") {
+    logger.info(`Invoice ${invoiceId} is already paid`);
+    return {
+      paid: true,
+      error: null,
+      invoice,
+    };
   }
 
   try {

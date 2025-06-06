@@ -7,8 +7,7 @@ import {
   ProductItem,
   ProductItemFeatureType,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { isBooleanFeatureItem } from "./getItemType.js";
+import { isBooleanFeatureItem } from "./productItemUtils/getItemType.js";
 import { validateFeatureId } from "@/internal/features/featureUtils.js";
 import {
   constructBooleanFeature,

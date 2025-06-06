@@ -21,7 +21,7 @@ import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProduct
 import {
   isFeaturePriceItem,
   isPriceItem,
-} from "@/internal/products/product-items/getItemType.js";
+} from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { addSubItemsToRemove } from "../attachFuncUtils.js";

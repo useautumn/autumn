@@ -8,21 +8,30 @@
 // import { createProducts } from "tests/utils/productUtils.js";
 // import { addPrefixToProducts } from "../utils.js";
 // import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+// import {
+//   constructArrearProratedItem,
+//   constructFeatureItem,
+// } from "@/utils/scriptUtils/constructItem.js";
+// import { TestFeature } from "tests/setup/v2Features.js";
 
 // export let pro = constructProduct({
 //   items: [
-//     constructPrepaidItem({
+//     constructArrearProratedItem({
 //       featureId: TestFeature.Users,
-//       price: 12,
-//       billingUnits: 1,
+//       pricePerUnit: 50,
+//     }),
+//     constructFeatureItem({
+//       featureId: TestFeature.Messages,
+//       includedUsage: 100,
+//       entityFeatureId: TestFeature.Users,
 //     }),
 //   ],
 //   type: "pro",
 // });
 
-// const testCase = "upgrade3";
+// const testCase = "entity1";
 
-// describe(`${chalk.yellowBright(`${testCase}: INSERT TEST NAME`)}`, () => {
+// describe(`${chalk.yellowBright(`${testCase}: Testing entities`)}`, () => {
 //   let customerId = testCase;
 //   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 //   let testClockId: string;
@@ -41,14 +50,17 @@
 //     stripeCli = this.stripeCli;
 
 //     addPrefixToProducts({
-//       products: [free, pro, premium],
+//       products: [pro],
 //       prefix: testCase,
 //     });
 
 //     await createProducts({
 //       autumn,
-//       products: [pro, premium],
+//       products: [pro],
 //       customerId,
+//       db,
+//       orgId: org.id,
+//       env,
 //     });
 
 //     const { testClockId: testClockId1 } = await initCustomer({

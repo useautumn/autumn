@@ -49,6 +49,7 @@ export const handleUpgradeFunction = async ({
   const stripeSubs = await getStripeSubs({
     stripeCli,
     subIds: curCusProduct.subscription_ids,
+    expand: ["items.data.price.tiers"],
   });
 
   logger.info("1. Updating current subscriptions in Stripe");

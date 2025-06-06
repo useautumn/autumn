@@ -12,6 +12,8 @@ import {
   resetUsageBalances,
 } from "@/internal/customers/attach/attachFunctions/upgradeFlow/createUsageInvoiceItems.js";
 import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import { getContUseInvoiceItems } from "@/internal/customers/attach/attachFunctions/upgradeFlow/getContUseInvoiceItems.js";
+import { createAndFilterContUseItems } from "@/internal/customers/attach/attachFunctions/upgradeFlow/createAndFilterContUseItems.js";
 
 export const updateStripeSubscription = async ({
   db,
@@ -75,6 +77,7 @@ export const updateStripeSubscription = async ({
   }
 
   const latestInvoice = sub.latest_invoice as Stripe.Invoice;
+
   if (proration == ProrationBehavior.None) {
     return {
       preview: null,
@@ -93,6 +96,14 @@ export const updateStripeSubscription = async ({
     attachParams,
     cusProduct: curMainProduct!,
     stripeSubs,
+    logger,
+  });
+
+  await createAndFilterContUseItems({
+    attachParams,
+    curMainProduct: curMainProduct!,
+    stripeSubs,
+    latestInvoice,
     logger,
   });
 

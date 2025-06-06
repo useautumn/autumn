@@ -1,4 +1,5 @@
 import { Feature } from "../models/featureModels/featureModels.js";
+import { Decimal } from "decimal.js";
 
 export const getFeatureName = ({
   feature,
@@ -59,23 +60,54 @@ export const numberWithCommas = (x: number) => {
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
 
+export const usageToFeatureName = ({
+  usage,
+  feature,
+}: {
+  usage: number;
+  feature: Feature;
+}) => {
+  const { singular, plural } = getSingularAndPlural({ feature });
+
+  if (usage == 1) {
+    return singular;
+  }
+
+  return plural;
+};
+
 export const getFeatureInvoiceDescription = ({
   feature,
   usage,
   billingUnits = 1,
+  prodName,
+  isPrepaid = false,
 }: {
   feature: Feature;
   usage: number;
-  billingUnits?: number;
+  billingUnits?: number | null;
+  prodName?: string;
+  isPrepaid?: boolean;
 }) => {
   const { singular, plural } = getSingularAndPlural({ feature });
 
   const usageStr = numberWithCommas(usage);
-  if (billingUnits == 1) {
-    if (usage == 1)
-      return `${usageStr} ${singular}`; // eg. 1 credit
-    else return `${usageStr} ${plural}`; // eg. 4 credits
+
+  let result = "";
+
+  if (isPrepaid && billingUnits && billingUnits > 1) {
+    result = `${usageStr} x ${billingUnits} ${plural}`; // eg. 4 x 100 credits
   } else {
-    return `${usageStr} x ${billingUnits} ${plural}`; // eg. 4 x 100 credits
+    if (usage == 1) {
+      result = `${usageStr} ${singular}`; // eg. 1 credit
+    } else {
+      result = `${usageStr} ${plural}`; // eg. 4 credits
+    }
   }
+
+  if (prodName) {
+    result = `${prodName} - ${result}`;
+  }
+
+  return result;
 };

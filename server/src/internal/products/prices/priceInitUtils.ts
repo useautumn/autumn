@@ -193,36 +193,36 @@ export const pricesAreSame = (
           (t) => `${t.to} (${t.amount})`,
         )} !== ${usageConfig2.usage_tiers.map((t) => `${t.to} (${t.amount})`)}`,
       },
-      // stripe_price_id: {
-      //   condition:
-      //     usageConfig1.stripe_price_id !== usageConfig2.stripe_price_id,
-      //   message: `Stripe price ID different: ${usageConfig1.stripe_price_id} !== ${usageConfig2.stripe_price_id}`,
-      // },
-      // stripe_placeholder_price_id: {
-      //   condition:
-      //     usageConfig1.stripe_placeholder_price_id !==
-      //     usageConfig2.stripe_placeholder_price_id,
-      //   message: `Stripe placeholder price ID different: ${usageConfig1.stripe_placeholder_price_id} !== ${usageConfig2.stripe_placeholder_price_id}`,
-      // },
-      // stripe_meter_id: {
-      //   condition:
-      //     usageConfig1.stripe_meter_id !== usageConfig2.stripe_meter_id,
-      //   message: `Stripe meter ID different: ${usageConfig1.stripe_meter_id} !== ${usageConfig2.stripe_meter_id}`,
-      // },
-      // stripe_product_id: {
-      //   condition:
-      //     usageConfig1.stripe_product_id !== usageConfig2.stripe_product_id,
-      //   message: `Stripe product ID different: ${usageConfig1.stripe_product_id} !== ${usageConfig2.stripe_product_id}`,
-      // },
     };
 
-    let pricesAreDiff = Object.values(diffs).some((d) => d.condition);
+    const prorationConfig1 = price1.proration_config;
+    const prorationConfig2 = price2.proration_config;
+
+    const prorationConfigDiff = {
+      on_increase: {
+        condition:
+          prorationConfig1?.on_increase != prorationConfig2?.on_increase,
+        message: `On increase different: ${prorationConfig1?.on_increase} != ${prorationConfig2?.on_increase}`,
+      },
+      on_decrease: {
+        condition:
+          prorationConfig1?.on_decrease != prorationConfig2?.on_decrease,
+        message: `On decrease different: ${prorationConfig1?.on_decrease} != ${prorationConfig2?.on_decrease}`,
+      },
+    };
+
+    let pricesAreDiff =
+      Object.values(diffs).some((d) => d.condition) ||
+      Object.values(prorationConfigDiff).some((d) => d.condition);
 
     if (pricesAreDiff && logDifferences) {
       console.log(`Usage price different: ${usageConfig1.feature_id}`);
       console.log(
         "Differences:",
         Object.values(diffs)
+          .filter((d) => d.condition)
+          .map((d) => d.message),
+        Object.values(prorationConfigDiff)
           .filter((d) => d.condition)
           .map((d) => d.message),
       );

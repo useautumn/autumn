@@ -20,6 +20,7 @@ import { SelectCycle } from "./SelectCycle";
 import MoreMenuButton, { MoreMenuPriceButton } from "../MoreMenuButton";
 
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { ProrationConfig } from "./ProrationConfig";
 
 export const ConfigWithFeature = ({
   show,
@@ -186,7 +187,8 @@ export const ConfigWithFeature = ({
                   </div>
                 </div>
               </div>
-              {/* </div> */}
+
+              <ProrationConfig />
             </div>
           </div>
         </div>

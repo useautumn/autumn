@@ -1,5 +1,5 @@
 import { itemToPriceOrTiers } from "@/internal/products/product-items/productItemUtils.js";
-import { isFeaturePriceItem } from "@/internal/products/product-items/getItemType.js";
+import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 
 import {
   APIVersion,

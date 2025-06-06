@@ -5,11 +5,11 @@ import {
 import {
   isFeatureItem,
   isPriceItem,
-} from "@/internal/products/product-items/getItemType.js";
+} from "@/internal/products/product-items/productItemUtils/getItemType.js";
 
 import { Feature, Organization, ProductItem, ProductV2 } from "@autumn/shared";
 import { formatCurrency, formatTiers } from "./previewUtils.js";
-import { isFeaturePriceItem } from "@/internal/products/product-items/getItemType.js";
+import { isFeaturePriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { getFeatureNameWithCapital } from "@/internal/features/utils/displayUtils.js";
 

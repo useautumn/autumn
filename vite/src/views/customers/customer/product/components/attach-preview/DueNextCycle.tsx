@@ -51,6 +51,7 @@ export const DueNextCycle = () => {
               )!,
               usage: quantity || 0,
               billingUnits: option.billing_units,
+              isPrepaid: true,
             });
 
             return (

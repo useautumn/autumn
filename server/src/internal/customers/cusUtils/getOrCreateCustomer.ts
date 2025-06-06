@@ -14,7 +14,7 @@ import {
   Organization,
 } from "@autumn/shared";
 
-import { createEntities } from "@/internal/api/entities/handlers/handleCreateEntity.js";
+import { createEntities } from "@/internal/entities/handlers/handleCreateEntity/handleCreateEntity.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -122,16 +122,12 @@ export const getOrCreateCustomer = async ({
 
     let newEntities = await createEntities({
       req,
-      db,
-      org,
       customerId,
       createEntityData: {
         id: entityId,
         name: entityData?.name,
         feature_id: entityData?.feature_id,
       },
-      features,
-      env,
       logger,
       fromAutoCreate: true,
     });

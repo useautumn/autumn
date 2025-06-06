@@ -8,10 +8,6 @@ import { AttachConfig, FullCusProduct } from "@autumn/shared";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { updateCurSchedules } from "./updateCurSchedules.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import {
-  createUsageInvoiceItems,
-  resetUsageBalances,
-} from "./createUsageInvoiceItems.js";
 
 // UPGRADE FUNCTIONS
 

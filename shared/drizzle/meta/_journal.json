@@ -22,6 +22,20 @@
       "when": 1748520847010,
       "tag": "0002_foamy_tombstone",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1749201302399,
+      "tag": "0003_yummy_la_nuit",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1749201355061,
+      "tag": "0004_broad_shocker",
+      "breakpoints": true
     }
   ]
 }

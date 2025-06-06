@@ -48,16 +48,19 @@ export * from "./models/productV2Models/productItemModels/prodItemResponseModels
 export * from "./models/productV2Models/productItemModels/featureItem.js";
 export * from "./models/productV2Models/productItemModels/featurePriceItem.js";
 export * from "./models/productV2Models/productItemModels/priceItem.js";
+export * from "./models/productV2Models/productItemModels/productItemEnums.js";
 
 // 7. Cus Product Models
 export * from "./models/cusProductModels/cusProductModels.js";
 export * from "./models/cusProductModels/cusProductTable.js";
 export * from "./models/cusProductModels/cusProductEnums.js";
+export * from "./models/cusProductModels/cusPriceModels/cusPriceModels.js";
+export * from "./models/cusProductModels/cusPriceModels/cusPriceTable.js";
+
 export * from "./models/cusProductModels/cusEntModels/cusEntModels.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntTable.js";
-export * from "./models/cusProductModels/cusPriceModels/cusPriceModels.js";
-export * from "./models/cusProductModels/cusPriceModels/cusPriceTable.js";
+export * from "./models/cusProductModels/cusEntModels/replaceableTable.js";
 
 // 8. Customer Models
 export * from "./models/cusModels/cusModels.js";

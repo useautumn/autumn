@@ -6,10 +6,10 @@ import {
   Product,
   ProductItem,
 } from "@autumn/shared";
-import { itemToPriceAndEnt } from "./mapFromItem.js";
+import { itemToPriceAndEnt } from "./itemToPriceAndEnt.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { EntitlementService } from "../entitlements/EntitlementService.js";
-import { validateProductItems } from "./validateProductItems.js";
+import { EntitlementService } from "../../entitlements/EntitlementService.js";
+import { validateProductItems } from "../validateProductItems.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { isFeatureItem } from "./getItemType.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -224,6 +224,7 @@ export const handleNewProductItems = async ({
         curEnt,
         isCustom,
         newVersion,
+        features,
       });
 
     if (newPrice) {
