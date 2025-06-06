@@ -1,12 +1,9 @@
+import chalk from "chalk";
 import {
   AttachParams,
   AttachResultSchema,
 } from "../../cusProducts/AttachParams.js";
-import {
-  AttachBranch,
-  AttachFunction,
-  ProrationBehavior,
-} from "@autumn/shared";
+import { AttachBranch, AttachFunction } from "@autumn/shared";
 import { handleUpgradeFunction } from "../attachFunctions/upgradeFlow/handleUpgradeFunction.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
@@ -16,10 +13,14 @@ import { handleScheduleFunction } from "../attachFunctions/scheduleFlow/handleSc
 import { handleEntsChangedFunction } from "../attachFunctions/updateEntsFlow/handleUpdateEntsFunction.js";
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
 import { SuccessCode } from "@autumn/shared";
-import { attachParamToCusProducts } from "./convertAttachParams.js";
-import chalk from "chalk";
+import {
+  attachParamsToProduct,
+  attachParamToCusProducts,
+} from "./convertAttachParams.js";
+
 import { deleteCurrentScheduledProduct } from "./deleteCurrentScheduledProduct.js";
 import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOneOffFunction.js";
+import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 
 /* 
 1. If from new version, free trial should just carry over
@@ -27,6 +28,23 @@ import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOn
 3. In migrateCustomer flow, if to free product, upgrade product still called... should be changed to add product...
 5. Migrate customer uses proration behaviour none
 */
+
+const intervalsAreSame = ({ attachParams }: { attachParams: AttachParams }) => {
+  let { curMainProduct, curSameProduct } = attachParamToCusProducts({
+    attachParams,
+  });
+
+  let curCusProduct = curMainProduct || curSameProduct;
+  let newProduct = attachParamsToProduct({ attachParams });
+  let curPrices = cusProductToPrices({ cusProduct: curCusProduct! });
+
+  let curIntervals = new Set(curPrices.map((p) => p.config.interval));
+  let newIntervals = new Set(newProduct.prices.map((p) => p.config.interval));
+  return (
+    curIntervals.size === newIntervals.size &&
+    [...curIntervals].every((interval) => newIntervals.has(interval))
+  );
+};
 
 export const getAttachFunction = async ({
   branch,
@@ -71,6 +89,11 @@ export const getAttachFunction = async ({
   ];
 
   if (updateScenarios.includes(branch)) {
+    // If all same interval
+    if (intervalsAreSame({ attachParams })) {
+      return AttachFunction.UpdateEnts;
+    }
+
     return AttachFunction.UpdateProduct;
   }
 

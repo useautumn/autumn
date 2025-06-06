@@ -57,14 +57,6 @@ export const handleAttachPreview = (req: any, res: any) =>
 
       let preview: any = null;
 
-      if (func == AttachFunction.UpdateEnts) {
-        preview = await getUpdateEntsPreview({
-          req,
-          attachParams,
-          now,
-        });
-      }
-
       if (
         func == AttachFunction.AddProduct ||
         func == AttachFunction.CreateCheckout ||
@@ -83,9 +75,18 @@ export const handleAttachPreview = (req: any, res: any) =>
         });
       }
 
+      // if (func == AttachFunction.UpdateEnts) {
+      //   preview = await getUpdateEntsPreview({
+      //     req,
+      //     attachParams,
+      //     now,
+      //   });
+      // }
+
       if (
         func == AttachFunction.UpdateProduct ||
-        func == AttachFunction.UpdatePrepaidQuantity
+        func == AttachFunction.UpdatePrepaidQuantity ||
+        func == AttachFunction.UpdateEnts
       ) {
         preview = await getUpgradeProductPreview({
           req,

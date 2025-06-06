@@ -145,6 +145,7 @@ const invoiceForUsageImmediately = async ({
     org: org,
     env: customer.env,
   });
+  const product = curCusProduct.product;
 
   let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
   if (invoiceItems.length === 0) {
@@ -181,7 +182,20 @@ const invoiceForUsageImmediately = async ({
     // const amount = getPriceForOverage(item.price, item.overage);
     const { amount, description } = item;
     let config = item.price.config! as UsagePriceConfig;
-    let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
+    // let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
+    let stripeProdId = config.stripe_product_id;
+    if (!stripeProdId) {
+      try {
+        let stripePrice = await stripeCli.prices.retrieve(
+          config.stripe_price_id!,
+        );
+        stripeProdId = stripePrice.product as string;
+      } catch (error) {}
+    }
+
+    if (!stripeProdId) {
+      stripeProdId = product.processor?.id;
+    }
 
     logger.info(
       `🌟🌟🌟 (Bill remaining) created invoice item: ${description} -- ${amount}`,
@@ -193,7 +207,7 @@ const invoiceForUsageImmediately = async ({
       currency: org.default_currency,
       description,
       price_data: {
-        product: stripePrice.product as string,
+        product: stripeProdId!,
         unit_amount: Math.round(amount * 100),
         currency: org.default_currency,
       },

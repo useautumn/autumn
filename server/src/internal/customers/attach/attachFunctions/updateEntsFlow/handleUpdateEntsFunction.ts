@@ -18,10 +18,7 @@ import {
 } from "@autumn/shared";
 import { productsAreSame } from "@/internal/products/compareProductUtils.js";
 import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import {
-  isFeaturePriceItem,
-  isPriceItem,
-} from "@/internal/products/product-items/productItemUtils/getItemType.js";
+import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { addSubItemsToRemove } from "../attachFuncUtils.js";
@@ -49,6 +46,7 @@ export const updateSubWithNewItems = async ({
   const stripeSubs = await getStripeSubs({
     stripeCli,
     subIds: curCusProduct.subscription_ids || [],
+    expand: ["items.data.price.tiers"],
   });
 
   const itemSets = await getStripeSubItems({ attachParams });
@@ -70,6 +68,7 @@ export const updateSubWithNewItems = async ({
       stripeSubs: [sub],
       itemSet,
       logger,
+      interval,
     });
 
     logger.info(`Updated sub ${sub.id}, interval ${interval}`);

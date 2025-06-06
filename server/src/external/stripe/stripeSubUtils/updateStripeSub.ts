@@ -23,6 +23,7 @@ export const updateStripeSubscription = async ({
   stripeSubs,
   itemSet,
   logger,
+  interval,
 }: {
   db: DrizzleCli;
   attachParams: AttachParams;
@@ -32,6 +33,7 @@ export const updateStripeSubscription = async ({
   itemSet: ItemSet;
   shouldPreview?: boolean;
   logger: any;
+  interval?: BillingInterval;
 }) => {
   const { curMainProduct } = attachParamToCusProducts({ attachParams });
   const { stripeCli, customer, org, paymentMethod } = attachParams;
@@ -103,7 +105,7 @@ export const updateStripeSubscription = async ({
     attachParams,
     curMainProduct: curMainProduct!,
     stripeSubs,
-    latestInvoice,
+    interval,
     logger,
   });
 
