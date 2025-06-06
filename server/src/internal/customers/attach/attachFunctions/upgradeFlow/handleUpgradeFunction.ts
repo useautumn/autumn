@@ -34,7 +34,7 @@ export const handleUpgradeFunction = async ({
 }) => {
   const logger = req.logtail;
   const { stripeCli, customer, products, cusProducts } = attachParams;
-  const { carryUsage, disableTrial, proration } = config;
+  const { carryUsage, disableTrial } = config;
 
   const product = products[0];
 

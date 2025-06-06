@@ -8,6 +8,9 @@ import { AttachConfig, FullCusProduct } from "@autumn/shared";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { updateCurSchedules } from "./updateCurSchedules.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { subToAutumnInterval } from "@/external/stripe/utils.js";
+import { addSubItemsToRemove } from "../attachFuncUtils.js";
+import { filterContUsageProrations } from "./createAndFilterContUseItems.js";
 
 // UPGRADE FUNCTIONS
 
@@ -93,6 +96,8 @@ export const updateStripeSubs = async ({
   // 5. Cancel other subscriptions
   for (const sub of stripeSubs.slice(1)) {
     logger.info(`1.4: canceling additional sub: ${sub.id}`);
+
+    // Filter out
     await stripeCli.subscriptions.cancel(sub.id, {
       prorate: true,
       cancellation_details: {
@@ -126,22 +131,3 @@ export const updateStripeSubs = async ({
     newInvoiceIds,
   };
 };
-
-// logger.info("1.1: Creating invoice items for usages");
-// const { invoiceItems, cusEntIds } = await createUsageInvoiceItems({
-//   db,
-//   attachParams,
-//   cusProduct: curCusProduct,
-//   stripeSubs,
-//   logger,
-// });
-
-// await createSubUpdateProrations({
-//   db,
-//   attachParams,
-//   config,
-//   curCusProduct,
-//   stripeSubs,
-//   itemSet: firstItemSet,
-//   logger,
-// });
