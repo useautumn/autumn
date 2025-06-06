@@ -10,8 +10,8 @@ import {
   CusProductStatus,
 } from "@autumn/shared";
 import { features } from "process";
-import { isPriceItem } from "../product-items/getItemType.js";
-import { isFeaturePriceItem } from "../product-items/getItemType.js";
+import { isPriceItem } from "../product-items/productItemUtils/getItemType.js";
+import { isFeaturePriceItem } from "../product-items/productItemUtils/getItemType.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import { numberWithCommas } from "tests/utils/general/numberUtils.js";

@@ -15,7 +15,7 @@ import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
 import {
   isFeaturePriceItem,
   isPriceItem,
-} from "./product-items/getItemType.js";
+} from "./product-items/productItemUtils/getItemType.js";
 
 export const productsAreSame = ({
   newProductV1,

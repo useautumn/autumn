@@ -11,6 +11,7 @@ import {
   features,
   FullCusEntWithProduct,
   FullCustomerEntitlement,
+  Replaceable,
 } from "@autumn/shared";
 import { customerEntitlements } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -84,6 +85,7 @@ export class CusEntService {
         feature: item.features,
       },
       customer_product: item.customer_products,
+      replaceables: [],
     })) as FullCusEntWithProduct[];
   }
 
@@ -126,6 +128,7 @@ export class CusEntService {
             feature: true,
           },
         },
+        replaceables: true,
         customer_product: withCusProduct || undefined,
         customer: true,
       },
@@ -147,6 +150,7 @@ export class CusEntService {
     return data as FullCustomerEntitlement & {
       customer: Customer;
       customer_product?: CusProduct;
+      replaceables?: Replaceable[];
     };
   }
 
@@ -162,6 +166,24 @@ export class CusEntService {
     const data = await db
       .update(customerEntitlements)
       .set({ balance: sql`${customerEntitlements.balance} + ${amount}` })
+      .where(eq(customerEntitlements.id, id))
+      .returning();
+
+    return data;
+  }
+
+  static async decrement({
+    db,
+    id,
+    amount,
+  }: {
+    db: DrizzleCli;
+    id: string;
+    amount: number;
+  }) {
+    const data = await db
+      .update(customerEntitlements)
+      .set({ balance: sql`${customerEntitlements.balance} - ${amount}` })
       .where(eq(customerEntitlements.id, id))
       .returning();
 

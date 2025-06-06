@@ -11,7 +11,7 @@ import {
 } from "@autumn/shared";
 
 import { FullProduct } from "@autumn/shared";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";

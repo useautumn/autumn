@@ -17,7 +17,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { handleVersionProductV2 } from "./handleVersionProduct.js";
 
 import { routeHandler } from "@/utils/routerUtils.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 

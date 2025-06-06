@@ -17,9 +17,10 @@ import {
   isFeatureItem,
   isFeaturePriceItem,
   isPriceItem,
-} from "./getItemType.js";
+} from "./productItemUtils/getItemType.js";
 import { itemToEntInterval } from "./itemIntervalUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
+
 const validateProductItem = ({
   item,
   features,

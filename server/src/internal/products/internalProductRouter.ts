@@ -12,7 +12,7 @@ import { CusProdReadService } from "../customers/cusProducts/CusProdReadService.
 import { MigrationService } from "../migrations/MigrationService.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { mapToProductV2 } from "./productV2Utils.js";
-import { isFeaturePriceItem } from "./product-items/getItemType.js";
+import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType.js";
 
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";

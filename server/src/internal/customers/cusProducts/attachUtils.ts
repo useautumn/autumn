@@ -32,7 +32,7 @@ import { StatusCodes } from "http-status-codes";
 import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { Decimal } from "decimal.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";

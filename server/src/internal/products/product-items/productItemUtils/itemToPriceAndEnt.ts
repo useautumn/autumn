@@ -16,17 +16,20 @@ import {
   UsageModel,
   TierInfinite,
   UsagePriceConfig,
+  OnIncrease,
+  OnDecrease,
 } from "@autumn/shared";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { pricesAreSame } from "@/internal/products/prices/priceInitUtils.js";
-import { entsAreSame } from "../entitlements/entitlementUtils.js";
+import { entsAreSame } from "../../entitlements/entitlementUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { isFeatureItem, isPriceItem } from "./getItemType.js";
 import {
   itemToBillingInterval,
   itemToEntInterval,
-} from "./itemIntervalUtils.js";
+} from "../itemIntervalUtils.js";
+import { itemCanBeProrated } from "./classifyItem.js";
 
 // ITEM TO PRICE AND ENTITLEMENT
 export const toPrice = ({
@@ -55,6 +58,7 @@ export const toPrice = ({
     internal_product_id: internalProductId,
     is_custom: isCustom,
     config,
+    proration_config: null,
   };
 
   if (isCustom || newVersion) {
@@ -131,6 +135,7 @@ export const toFeatureAndPrice = ({
   curPrice,
   curEnt,
   newVersion,
+  features,
 }: {
   item: ProductItem;
   orgId: string;
@@ -140,6 +145,7 @@ export const toFeatureAndPrice = ({
   curPrice?: Price;
   curEnt?: Entitlement;
   newVersion?: boolean;
+  features: Feature[];
 }) => {
   let resetUsage = item.reset_usage_when_enabled || false;
 
@@ -197,6 +203,14 @@ export const toFeatureAndPrice = ({
     interval: itemToBillingInterval(item) as BillingInterval,
   };
 
+  let prorationConfig = null;
+  if (itemCanBeProrated({ item, features })) {
+    prorationConfig = {
+      on_increase: item.config?.on_increase || OnIncrease.ProrateImmediately,
+      on_decrease: item.config?.on_decrease || OnDecrease.Prorate,
+    };
+  }
+
   let price: Price = {
     id: item.price_id || generateId("pr"),
     created_at: item.created_at || Date.now(),
@@ -205,6 +219,7 @@ export const toFeatureAndPrice = ({
     is_custom: isCustom,
     config,
     entitlement_id: ent.id,
+    proration_config: prorationConfig,
   };
 
   let billingType = getBillingType(price.config!);
@@ -224,8 +239,6 @@ export const toFeatureAndPrice = ({
     (curPrice && !pricesAreSame(curPrice, price, true)) ||
     (curEnt && !entsAreSame(curEnt, ent));
 
-  // console.log("Cur price exists: ", notNullish(curPrice));
-  // console.log("Price or ent different: ", priceOrEntDifferent);
   if (curPrice && (priceOrEntDifferent || newVersion)) {
     let newConfig = price.config as UsagePriceConfig;
     let curConfig = curPrice.config as UsagePriceConfig;
@@ -254,6 +267,7 @@ export const itemToPriceAndEnt = ({
   curEnt,
   isCustom,
   newVersion,
+  features,
 }: {
   item: ProductItem;
   orgId: string;
@@ -263,6 +277,7 @@ export const itemToPriceAndEnt = ({
   curEnt?: Entitlement;
   isCustom: boolean;
   newVersion?: boolean;
+  features: Feature[];
 }) => {
   let newPrice: Price | null = null;
   let newEnt: Entitlement | null = null;
@@ -335,6 +350,7 @@ export const itemToPriceAndEnt = ({
       curPrice,
       curEnt,
       newVersion,
+      features,
     });
 
     let entSame = curEnt && entsAreSame(curEnt, ent);

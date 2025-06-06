@@ -1,13 +1,16 @@
 import {
   BillingInterval,
   EntInterval,
+  Feature,
   Infinite,
   ProductItem,
-  ProductItemInterval,
+  ProductItemFeatureType,
   ProductItemType,
+  UsageModel,
 } from "@autumn/shared";
 import { notNullish, nullish } from "../genUtils";
-import { isFeatureItem, isPriceItem } from "./getItemType";
+import { isFeatureItem, isFeaturePriceItem, isPriceItem } from "./getItemType";
+import { itemToUsageType } from "./productItemUtils/convertItem";
 
 export const itemIsUnlimited = (item: ProductItem) => {
   return item.included_usage == Infinite;
@@ -66,4 +69,27 @@ export const getShowParams = (item: ProductItem | null) => {
     perEntity: notNullish(item.entity_feature_id),
     cycle: true,
   };
+};
+
+export const shouldShowProrationConfig = ({
+  item,
+  features,
+}: {
+  item: ProductItem;
+  features: Feature[];
+}) => {
+  if (!isFeaturePriceItem(item)) return false;
+
+  // If pay per use single use
+  const usageType = itemToUsageType({ item, features });
+
+  if (
+    usageType == ProductItemFeatureType.SingleUse &&
+    item.usage_model == UsageModel.Prepaid
+  ) {
+    return true;
+  } else if (usageType == ProductItemFeatureType.ContinuousUse) {
+    return true;
+  }
+  return false;
 };

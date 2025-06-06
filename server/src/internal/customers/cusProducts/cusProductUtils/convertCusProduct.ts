@@ -19,9 +19,11 @@ import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 export const cusProductsToCusPrices = ({
   cusProducts,
   inStatuses = [CusProductStatus.Active],
+  billingType,
 }: {
   cusProducts: FullCusProduct[];
   inStatuses?: CusProductStatus[];
+  billingType?: BillingType;
 }) => {
   const cusPrices: FullCustomerPrice[] = [];
 
@@ -30,7 +32,14 @@ export const cusProductsToCusPrices = ({
       continue;
     }
 
-    cusPrices.push(...cusProduct.customer_prices);
+    let prices = cusProduct.customer_prices;
+    if (billingType) {
+      prices = prices.filter(
+        (cp) => getBillingType(cp.price.config) === billingType,
+      );
+    }
+
+    cusPrices.push(...prices);
   }
 
   return cusPrices;
@@ -120,5 +129,18 @@ export const cusProductsToSchedules = ({
   return getStripeSchedules({
     stripeCli,
     scheduleIds,
+  });
+};
+
+export const cusProductsToStripeSubs = ({
+  cusProducts,
+  stripeCli,
+}: {
+  cusProducts: FullCusProduct[];
+  stripeCli: Stripe;
+}) => {
+  return getStripeSubs({
+    stripeCli,
+    subIds: cusProducts.flatMap((p: any) => p.subscription_ids || []),
   });
 };

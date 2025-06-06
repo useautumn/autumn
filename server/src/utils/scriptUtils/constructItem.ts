@@ -1,5 +1,23 @@
 import { ProductItem, ProductItemInterval, UsageModel } from "@autumn/shared";
 
+export const constructFeatureItem = ({
+  featureId,
+  includedUsage = 150,
+  entityFeatureId,
+}: {
+  featureId: string;
+  includedUsage?: number;
+  entityFeatureId?: string;
+}) => {
+  let item: ProductItem = {
+    feature_id: featureId,
+    included_usage: includedUsage,
+    entity_feature_id: entityFeatureId,
+  };
+
+  return item;
+};
+
 export const constructPrepaidItem = ({
   featureId,
   price,
@@ -51,14 +69,16 @@ export const constructArrearItem = ({
 export const constructArrearProratedItem = ({
   featureId,
   pricePerUnit,
+  includedUsage = 1,
 }: {
   featureId: string;
   pricePerUnit: number;
+  includedUsage?: number;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
     usage_model: UsageModel.PayPerUse,
-    included_usage: 1,
+    included_usage: includedUsage,
     price: pricePerUnit,
     billing_units: 1,
     interval: ProductItemInterval.Month,

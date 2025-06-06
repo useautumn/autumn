@@ -28,7 +28,7 @@ import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import {
   isFeaturePriceItem,
   isPriceItem,
-} from "@/internal/products/product-items/getItemType.js";
+} from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { cusProductToPrices } from "../cusProducts/cusProductUtils/convertCusProduct.js";

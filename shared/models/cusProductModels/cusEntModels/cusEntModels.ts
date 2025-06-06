@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { EntitlementWithFeatureSchema } from "../../productModels/entModels/entModels.js";
-import { CusProductSchema } from "../cusProductModels.js";
+import { Replaceable } from "./replaceableTable.js";
+import { ReplaceableSchema } from "./replaceableSchema.js";
 
 export const EntityBalanceSchema = z.object({
   id: z.string(),
@@ -34,6 +35,7 @@ export const CustomerEntitlementSchema = z.object({
 
 export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({
   entitlement: EntitlementWithFeatureSchema,
+  replaceables: z.array(ReplaceableSchema),
 });
 
 export type EntityBalance = z.infer<typeof EntityBalanceSchema>;

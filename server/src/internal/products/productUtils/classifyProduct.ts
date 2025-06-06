@@ -1,6 +1,6 @@
 import { FullProduct, Price, ProductV2 } from "@autumn/shared";
 import { pricesOnlyOneOff } from "../prices/priceUtils.js";
-import { isFeatureItem } from "../product-items/getItemType.js";
+import { isFeatureItem } from "../product-items/productItemUtils/getItemType.js";
 
 export const prodIsAddOn = ({ product }: { product: FullProduct }) => {
   return product.is_add_on;

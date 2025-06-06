@@ -30,6 +30,7 @@ import {
   subtractBillingIntervalUnix,
 } from "../../products/prices/billingIntervalUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
+import { getContUseInvoiceItems } from "@/internal/customers/attach/attachFunctions/upgradeFlow/getContUseInvoiceItems.js";
 
 const getDefaultPriceStr = ({
   org,
@@ -147,13 +148,13 @@ export const getItemsForNewProduct = ({
         product: newProduct,
       });
 
-      if (proration) {
+      if (finalProration) {
         description = `${description} (from ${formatUnixToDate(now)})`;
       }
 
       items.push({
-        // price: formatAmount({ org, amount }),
-        price: "",
+        price: formatAmount({ org, amount }),
+        // price: "",
         description,
         amount,
         usage_model: priceToUsageModel(price),
@@ -161,20 +162,24 @@ export const getItemsForNewProduct = ({
       continue;
     }
 
-    if (billingType == BillingType.UsageInAdvance) continue;
-
-    if (billingType == BillingType.UsageInArrear) {
-      items.push({
-        price: getDefaultPriceStr({ org, price, ent, features }),
-        description: newPriceToInvoiceDescription({
-          org,
-          price,
-          product: newProduct,
-        }),
-        usage_model: priceToUsageModel(price),
-      });
+    if (
+      billingType == BillingType.UsageInAdvance ||
+      billingType == BillingType.InArrearProrated
+    )
       continue;
-    }
+
+    // if (billingType == BillingType.UsageInArrear) {
+    //   items.push({
+    //     price: getDefaultPriceStr({ org, price, ent, features }),
+    //     description: newPriceToInvoiceDescription({
+    //       org,
+    //       price,
+    //       product: newProduct,
+    //     }),
+    //     usage_model: priceToUsageModel(price),
+    //   });
+    //   continue;
+    // }
 
     const usage = getExistingUsageFromCusProducts({
       entitlement: ent,
@@ -219,12 +224,6 @@ export const getItemsForNewProduct = ({
         usage_model: priceToUsageModel(price),
       });
     }
-
-    // // const finalAmount = cycleWillReset ? amount : proratedAmount;
-
-    // console.log("Item:", description);
-    // console.log("Amount: ", amount);
-    // console.log("--------------------------------");
   }
 
   for (const item of items) {

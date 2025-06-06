@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { Infinite } from "../../productModels/productEnums.js";
+import { OnIncrease } from "./productItemEnums.js";
+import { OnDecrease } from "./productItemEnums.js";
 
 export const TierInfinite = "inf";
 
@@ -41,6 +43,14 @@ export enum ProductItemFeatureType {
   Static = "static",
 }
 
+const ProductItemConfigSchema = z.object({
+  on_increase: z
+    .nativeEnum(OnIncrease)
+    .optional()
+    .default(OnIncrease.BillImmediately),
+  on_decrease: z.nativeEnum(OnDecrease).optional().default(OnDecrease.None),
+});
+
 export const ProductItemSchema = z.object({
   // Feature stuff
   feature_id: z.string().nullish(),
@@ -62,6 +72,8 @@ export const ProductItemSchema = z.object({
   entity_feature_id: z.string().nullish(),
   // carry_over_usage: z.boolean().nullish(),
   reset_usage_when_enabled: z.boolean().nullish(),
+
+  config: ProductItemConfigSchema.nullish(),
 
   // Stored in backend
   created_at: z.number().nullish(),

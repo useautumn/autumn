@@ -65,31 +65,7 @@ import { migrationErrorRelations } from "../models/migrationModels/migrationErro
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
 import { events } from "../models/eventModels/eventTable.js";
-
-// const relations = {
-//   organizationsRelations,
-//   entitlementsRelations,
-//   featureRelations,
-//   priceRelations,
-//   productRelations,
-//   freeTrialRelations,
-//   customerProductsRelations,
-//   customerPricesRelations,
-//   customerEntitlementsRelations,
-
-//   // Customer Relations
-//   customersRelations,
-//   entitiesRelations,
-//   apiKeyRelations,
-
-//   // Reward Relations
-//   rewardProgramRelations,
-//   referralCodeRelations,
-//   rewardRedemptionRelations,
-
-//   // Migration Relations
-//   migrationErrorRelations,
-// };
+import { replaceables } from "../models/cusProductModels/cusEntModels/replaceableTable.js";
 
 export {
   // Tables
@@ -117,6 +93,7 @@ export {
   migrationErrors,
   actions,
   events,
+  replaceables,
 
   // Relations
   organizationsRelations,

@@ -4,29 +4,28 @@ import { StatusCodes } from "http-status-codes";
 import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleCustomerRaceCondition } from "@/external/redis/redisUtils.js";
-import {
-  getCusEntMasterBalance,
-  getRelatedCusPrice,
-} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { removeEntityFromCusEnt } from "../entityUtils.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
-import { removeScheduledProduct } from "../../../customers/handlers/handleCusProductExpired.js";
-import { cusProductsToCusEnts } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import {
+  findLinkedCusEnts,
+  findMainCusEntForFeature,
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
+import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
+import {
+  deleteEntityFromCusEnt,
+  replaceEntityInCusEnt,
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils.js";
+import { cancelSubsForEntity } from "@/internal/entities/handlers/handleDeleteEntity/cancelSubsForEntity.js";
 
 export const handleDeleteEntity = async (req: any, res: any) => {
   try {
-    const { orgId, env, db, logtail: logger } = req;
+    const { org, env, db, logtail: logger, features } = req;
     const { customer_id, entity_id } = req.params;
 
     await handleCustomerRaceCondition({
       action: "entity",
       customerId: customer_id,
-      orgId,
+      orgId: org.id,
       env,
       res,
       logger,
@@ -55,7 +54,6 @@ export const handleDeleteEntity = async (req: any, res: any) => {
 
     const existingEntities = customer.entities;
     const cusProducts = customer.customer_products;
-
     const entity = existingEntities.find((e: any) => e.id === entity_id);
 
     if (!entity) {
@@ -72,146 +70,201 @@ export const handleDeleteEntity = async (req: any, res: any) => {
       });
     }
 
-    const org = await OrgService.getFromReq(req);
-
-    let cusPriceExists = false;
+    const feature = features.find((f: any) => f.id === entity?.feature_id);
 
     for (const cusProduct of cusProducts) {
       let cusEnts = cusProduct.customer_entitlements;
-      let product = cusProduct.product;
 
-      let cusEnt = cusEnts.find(
-        (e: any) =>
-          e.entitlement.feature.internal_id === entity.internal_feature_id,
-      );
+      let mainCusEnt = findMainCusEntForFeature({
+        cusEnts,
+        feature,
+      });
 
-      if (!cusEnt) {
+      if (!mainCusEnt) {
         continue;
       }
 
-      let relatedCusPrice = getRelatedCusPrice(
-        cusEnt,
-        cusProduct.customer_prices,
-      );
-
-      if (relatedCusPrice) {
-        cusPriceExists = true;
-      }
-
-      let { unused } = getCusEntMasterBalance({
-        cusEnt,
-        entities: existingEntities,
-      });
-
-      let newBalance = (cusEnt.balance || 0) + 1 + (unused || 0);
-
-      await adjustAllowance({
+      const { newReplaceables } = await adjustAllowance({
         db,
         env,
         org,
         cusPrices: cusProducts.flatMap((p: any) => p.customer_prices),
         customer,
-        affectedFeature: cusEnt.entitlement.feature,
-        cusEnt: { ...cusEnt, customer_product: cusProduct },
-        originalBalance: (cusEnt.balance || 0) + (unused || 0),
-        newBalance,
-        deduction: 1,
-        product,
-        fromEntities: true,
+        affectedFeature: mainCusEnt.entitlement.feature,
+        cusEnt: { ...mainCusEnt, customer_product: cusProduct },
+        originalBalance: mainCusEnt.balance!,
+        newBalance: mainCusEnt.balance! + 1,
+        logger,
+
+        // deduction: 1,
+        // product,
+        // fromEntities: true,
       });
-    }
 
-    if (!cusPriceExists || org.config.prorate_unused) {
-      // Completely remove entity
-      let cusEnts = cusProductsToCusEnts({ cusProducts });
+      let linkedCusEnts = findLinkedCusEnts({
+        cusEnts: cusProduct.customer_entitlements,
+        feature: mainCusEnt.entitlement.feature,
+      });
 
-      // TODO: Charge for unused feature IDs...
-
-      for (const cusEnt of cusEnts) {
-        let relatedCusPrice = getRelatedCusPrice(
-          cusEnt,
-          cusProducts.flatMap((p: any) => p.customer_prices),
-        );
-        await removeEntityFromCusEnt({
+      if (newReplaceables) {
+        let replaceable = newReplaceables[0];
+        await RepService.update({
           db,
-          cusEnt,
-          entity,
-          logger,
-          cusPrice: relatedCusPrice,
-          customer,
-          org,
-          env,
+          id: replaceable.id,
+          data: {
+            from_entity_id: entity.id,
+          },
         });
       }
 
-      try {
-        let stripeCli = createStripeCli({ org, env });
-        let curSubs = await getStripeSubs({
-          stripeCli,
-          subIds: cusProducts.flatMap((p: any) => p.subscription_ids),
-        });
+      let replaceable = newReplaceables ? newReplaceables[0] : null;
 
-        for (const cusProduct of cusProducts) {
-          if (cusProduct.internal_entity_id !== entity.internal_id) {
-            continue;
-          }
-
-          if (cusProduct.status == CusProductStatus.Scheduled) {
-            await removeScheduledProduct({
-              req,
-              db,
-              cusProduct,
-              cusProducts,
-              org,
-              env,
-              logger,
-              renewCurProduct: false,
-            });
-          } else {
-            await cancelCurSubs({
-              curCusProduct: cusProduct,
-              curSubs,
-              stripeCli,
-            });
-          }
+      // Update linked cus ents with replaceables...
+      for (const linkedCusEnt of linkedCusEnts) {
+        let newEntities;
+        if (replaceable) {
+          let { newEntities: newEntities_ } = replaceEntityInCusEnt({
+            cusEnt: linkedCusEnt,
+            entityId: entity.id,
+            replaceable,
+          });
+          newEntities = newEntities_;
+        } else {
+          let { newEntities: newEntities_ } = deleteEntityFromCusEnt({
+            cusEnt: linkedCusEnt,
+            entityId: entity.id,
+          });
+          newEntities = newEntities_;
         }
-      } catch (error) {
-        logger.error("FAILED TO CANCEL SUBS FOR DELETED ENTITY", error);
-      }
 
-      // Perform deduction on cus ent
-      let updateCusEnt = cusEnts.find(
-        (e: any) => e.entitlement.feature.id === entity.feature_id,
-      );
-      if (updateCusEnt) {
-        await CusEntService.increment({
+        await CusEntService.update({
           db,
-          id: updateCusEnt.id,
-          amount: 1,
+          id: linkedCusEnt.id,
+          updates: {
+            entities: newEntities,
+          },
         });
       }
 
-      await EntityService.deleteInInternalIds({
+      await CusEntService.increment({
         db,
-        internalIds: [entity.internal_id],
-        orgId: req.orgId,
-        env: req.env,
-      });
-    } else {
-      await EntityService.update({
-        db,
-        internalId: entity.internal_id,
-        update: {
-          deleted: true,
-        },
+        id: mainCusEnt.id,
+        amount: 1,
       });
     }
+
+    // Cancel any subs
+    await cancelSubsForEntity({
+      req,
+      cusProducts,
+      entity,
+    });
+
+    await EntityService.deleteInInternalIds({
+      db,
+      internalIds: [entity.internal_id],
+      orgId: req.orgId,
+      env: req.env,
+    });
 
     logger.info(` ✅ Finished deleting entity ${entity_id}`);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
     });
+
+    // const linkedCusEnts = findLinkedCusEnts({
+    //   cusEnts: cusEnt.customer_product.customer_entitlements,
+    //   feature: cusEnt.entitlement.feature,
+    // });
+
+    // if (!cusPriceExists || org.config.prorate_unused) {
+    //   let cusEnts = cusProductsToCusEnts({ cusProducts });
+    //   for (const cusEnt of cusEnts) {
+    //     let relatedCusPrice = getRelatedCusPrice(
+    //       cusEnt,
+    //       cusProducts.flatMap((p: any) => p.customer_prices),
+    //     );
+    //     await removeEntityFromCusEnt({
+    //       db,
+    //       cusEnt,
+    //       entity,
+    //       logger,
+    //       cusPrice: relatedCusPrice,
+    //       customer,
+    //       org,
+    //       env,
+    //     });
+    //   }
+
+    //   try {
+    //     let stripeCli = createStripeCli({ org, env });
+    //     let curSubs = await getStripeSubs({
+    //       stripeCli,
+    //       subIds: cusProducts.flatMap((p: any) => p.subscription_ids),
+    //     });
+
+    //     for (const cusProduct of cusProducts) {
+    //       if (cusProduct.internal_entity_id !== entity.internal_id) {
+    //         continue;
+    //       }
+
+    //       if (cusProduct.status == CusProductStatus.Scheduled) {
+    //         await removeScheduledProduct({
+    //           req,
+    //           db,
+    //           cusProduct,
+    //           cusProducts,
+    //           org,
+    //           env,
+    //           logger,
+    //           renewCurProduct: false,
+    //         });
+    //       } else {
+    //         await cancelCurSubs({
+    //           curCusProduct: cusProduct,
+    //           curSubs,
+    //           stripeCli,
+    //         });
+    //       }
+    //     }
+    //   } catch (error) {
+    //     logger.error("FAILED TO CANCEL SUBS FOR DELETED ENTITY", error);
+    //   }
+
+    //   // Perform deduction on cus ent
+    //   let updateCusEnt = cusEnts.find(
+    //     (e: any) => e.entitlement.feature.id === entity.feature_id,
+    //   );
+    //   if (updateCusEnt) {
+    //     await CusEntService.increment({
+    //       db,
+    //       id: updateCusEnt.id,
+    //       amount: 1,
+    //     });
+    //   }
+
+    //   await EntityService.deleteInInternalIds({
+    //     db,
+    //     internalIds: [entity.internal_id],
+    //     orgId: req.orgId,
+    //     env: req.env,
+    //   });
+    // } else {
+    //   await EntityService.update({
+    //     db,
+    //     internalId: entity.internal_id,
+    //     update: {
+    //       deleted: true,
+    //     },
+    //   });
+    // }
+
+    // logger.info(` ✅ Finished deleting entity ${entity_id}`);
+
+    // res.status(200).json({
+    //   success: true,
+    // });
   } catch (error) {
     handleRequestError({ error, req, res, action: "delete entity" });
   }

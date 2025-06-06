@@ -2,12 +2,18 @@ import { z } from "zod";
 import { ProcessorType } from "../genModels/genEnums.js";
 import { ProductSchema } from "../productModels/productModels.js";
 import { PriceSchema } from "../productModels/priceModels/priceModels.js";
-import { CustomerEntitlementSchema } from "./cusEntModels/cusEntModels.js";
+import {
+  CustomerEntitlementSchema,
+  FullCustomerEntitlementSchema,
+} from "./cusEntModels/cusEntModels.js";
 import { EntitlementSchema } from "../productModels/entModels/entModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
 import { CustomerSchema } from "../cusModels/cusModels.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
-import { CustomerPriceSchema } from "./cusPriceModels/cusPriceModels.js";
+import {
+  CustomerPriceSchema,
+  FullCustomerPriceSchema,
+} from "./cusPriceModels/cusPriceModels.js";
 import { CollectionMethod } from "./cusProductEnums.js";
 import { CusProductStatus } from "./cusProductEnums.js";
 
@@ -66,19 +72,8 @@ export const CusProductSchema = z.object({
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({
-  customer_prices: z.array(
-    CustomerPriceSchema.extend({
-      price: PriceSchema,
-    }),
-  ),
-
-  customer_entitlements: z.array(
-    CustomerEntitlementSchema.extend({
-      entitlement: EntitlementSchema.extend({
-        feature: FeatureSchema,
-      }),
-    }),
-  ),
+  customer_prices: z.array(FullCustomerPriceSchema),
+  customer_entitlements: z.array(FullCustomerEntitlementSchema),
 
   customer: CustomerSchema.optional(),
   product: ProductSchema,

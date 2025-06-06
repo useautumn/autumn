@@ -11,7 +11,7 @@ import {
   Feature,
   FeatureType,
 } from "@autumn/shared";
-import { isFeatureItem } from "./getItemType.js";
+import { isFeatureItem } from "./productItemUtils/getItemType.js";
 import {
   billingToItemInterval,
   entToItemInterval,

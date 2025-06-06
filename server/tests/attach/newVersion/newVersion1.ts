@@ -1,3 +1,4 @@
+import { expect } from "chai";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
@@ -27,7 +28,6 @@ import { timeout } from "@/utils/genUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addHours, addMonths, addWeeks } from "date-fns";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { expect } from "chai";
 
 export let pro = constructProduct({
   items: [constructArrearItem({ featureId: TestFeature.Words })],

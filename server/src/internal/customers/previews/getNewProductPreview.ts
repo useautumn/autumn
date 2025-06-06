@@ -5,7 +5,7 @@ import { isOneOff } from "@/internal/products/productUtils.js";
 import {
   isFeatureItem,
   isPriceItem,
-} from "@/internal/products/product-items/getItemType.js";
+} from "@/internal/products/product-items/productItemUtils/getItemType.js";
 
 import {
   getPricecnPrice,
