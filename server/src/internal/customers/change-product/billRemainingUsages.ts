@@ -147,6 +147,8 @@ const invoiceForUsageImmediately = async ({
     env: customer.env,
   });
 
+  const product = curCusProduct.product;
+
   await new Promise((resolve) => setTimeout(resolve, 5000));
 
   let invoiceItems = Object.values(intervalToInvoiceItems).flat() as any[];
@@ -184,8 +186,27 @@ const invoiceForUsageImmediately = async ({
     let config = item.price.config! as UsagePriceConfig;
 
     // TO TEST
-    let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
-    let description = `${curCusProduct.product.name} - ${
+    // let stripePrice = await stripeCli.prices.retrieve(config.stripe_price_id!);
+    let stripeProdId = config.stripe_product_id;
+
+    if (!stripeProdId) {
+      try {
+        let stripePrice = await stripeCli.prices.retrieve(
+          config.stripe_price_id!,
+        );
+        stripeProdId = stripePrice.product as string;
+      } catch (error) {}
+    }
+
+    // Finally, if still no stripeProdId, use product id...
+    if (!stripeProdId) {
+      logger.error(
+        `❗️❗️❗️billForUsages: Stripe product ID not found. Autumn price ID: ${item.price.id}`,
+      );
+      stripeProdId = product.processor?.id;
+    }
+
+    let description = `${product.name} - ${
       item.feature.name
     } x ${Math.round(item.usage)}`;
 
@@ -199,7 +220,7 @@ const invoiceForUsageImmediately = async ({
       currency: org.default_currency,
       description: description,
       price_data: {
-        product: stripePrice.product as string,
+        product: stripeProdId!,
         unit_amount: Math.round(amount * 100),
         currency: org.default_currency,
       },
