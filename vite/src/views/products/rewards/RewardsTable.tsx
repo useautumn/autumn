@@ -13,8 +13,6 @@ export const RewardsTable = () => {
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
   const [open, setOpen] = useState(false);
 
-  console.log("products: ", products);
-
   return (
     <>
       <UpdateReward

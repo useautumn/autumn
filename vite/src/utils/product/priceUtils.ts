@@ -5,6 +5,7 @@ import {
   EntitlementWithFeature,
   PriceType,
   ProductItem,
+  ProductItemInterval,
 } from "@autumn/shared";
 
 import { FixedPriceConfig, Price, UsagePriceConfig } from "@autumn/shared";
@@ -13,7 +14,7 @@ import { isFeatureItem } from "./getItemType";
 
 export const validBillingInterval = (
   prices: Price[],
-  config: FixedPriceConfig | UsagePriceConfig
+  config: FixedPriceConfig | UsagePriceConfig,
 ) => {
   const interval1 = config.interval;
   if (!interval1 || interval1 == BillingInterval.OneOff) {
@@ -37,7 +38,7 @@ export const validBillingInterval = (
 
 export const getBillingUnits = (
   config: UsagePriceConfig,
-  entitlements: EntitlementWithFeature[]
+  entitlements: EntitlementWithFeature[],
 ) => {
   if (!entitlements) return "(error)";
 
@@ -46,11 +47,11 @@ export const getBillingUnits = (
     config.bill_when == BillWhen.StartOfPeriod ||
     config.bill_when == BillWhen.InAdvance
   ) {
-    return `${config.billing_units} ` || "n";
+    return `${config.billing_units} `;
   }
 
   const entitlement = entitlements?.find(
-    (e) => e.internal_feature_id == config?.internal_feature_id
+    (e) => e.internal_feature_id == config?.internal_feature_id,
   );
   if (!entitlement) return "n";
 
@@ -89,9 +90,9 @@ export const getDefaultPriceConfig = (type: PriceType) => {
 
 export const pricesOnlyOneOff = (
   items: ProductItem[],
-  isAddOn: boolean = false
+  isAddOn: boolean = false,
 ) => {
-  let prices = items.filter((item) => !isFeatureItem(item));
+  const prices = items.filter((item) => !isFeatureItem(item));
 
   if (prices.length == 0 && isAddOn) return true;
   if (prices.length == 0) return false;
@@ -99,14 +100,8 @@ export const pricesOnlyOneOff = (
   return prices.every((price) => {
     return intervalIsNone(price.interval);
   });
-  // if (items.length == 0) return false;
-  // return items.every((item) => {
-  //   return item.interval == ProductItemInterval.None;
-  // });
 };
 
-export const isFreeProduct = (prices: Price[]) => {
-  return prices.every((price) => {
-    return price.config?.interval == BillingInterval.OneOff;
-  });
+export const isFreeProduct = (items: ProductItem[]) => {
+  return items.every((item) => isFeatureItem(item));
 };
