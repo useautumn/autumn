@@ -1,6 +1,11 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { BillingInterval, BillingType, FullCusProduct } from "@autumn/shared";
+import {
+  BillingInterval,
+  BillingType,
+  FullCusProduct,
+  FullProduct,
+} from "@autumn/shared";
 import Stripe from "stripe";
 import { getContUseInvoiceItems } from "./getContUseInvoiceItems.js";
 import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
@@ -12,32 +17,39 @@ export const filterContUsageProrations = async ({
   sub,
   stripeCli,
   curCusProduct,
+  newProduct,
   logger,
 }: {
   sub: Stripe.Subscription;
   stripeCli: Stripe;
   curCusProduct: FullCusProduct;
+  newProduct: FullProduct;
   logger: any;
 }) => {
   const curPrices = cusProductToPrices({
     cusProduct: curCusProduct,
   });
+  let allPrices = [...curPrices, ...newProduct.prices];
 
   const upcomingLines = await stripeCli.invoices.listUpcomingLines({
     subscription: sub.id,
   });
+  logger.info(
+    `Filtering cont use prorated items, interval: ${subToAutumnInterval(sub)}`,
+  );
 
   for (const item of upcomingLines.data) {
     if (!item.proration) continue;
 
     let price = findPriceInStripeItems({
-      prices: curPrices,
+      prices: allPrices,
       subItem: item as any,
       billingType: BillingType.InArrearProrated,
     });
 
     logger.info(`Invoice: ${item.description}, ${item.amount}`);
     if (!price) continue;
+    logger.info(`Deleting!`);
 
     await stripeCli.invoiceItems.del(
       // @ts-ignore -- Stripe types are not correct
@@ -84,6 +96,7 @@ export const createAndFilterContUseItems = async ({
     sub,
     stripeCli,
     curCusProduct: curMainProduct,
+    newProduct: product,
     logger,
   });
 
@@ -94,10 +107,6 @@ export const createAndFilterContUseItems = async ({
       continue;
     }
 
-    logger.info(
-      `Adding invoice item: ${item.description}, ${item.description}`,
-    );
-
     let price = product.prices.find((p) => p.id === item.price_id);
 
     if (interval && price?.config.interval !== interval) {
@@ -105,7 +114,7 @@ export const createAndFilterContUseItems = async ({
     }
 
     logger.info(
-      `Adding invoice item to sub interval ${subToAutumnInterval(sub)}`,
+      `Adding invoice item: ${item.description}, ${item.description}, interval: ${interval}`,
     );
 
     await stripeCli.invoiceItems.create({
