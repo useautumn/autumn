@@ -1,6 +1,17 @@
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 
+export const attachParamsToCurCusProduct = ({
+  attachParams,
+}: {
+  attachParams: AttachParams;
+}) => {
+  const { curMainProduct, curSameProduct, curScheduledProduct } =
+    attachParamToCusProducts({ attachParams });
+
+  return curMainProduct || curSameProduct;
+};
+
 export const attachParamToCusProducts = ({
   attachParams,
 }: {

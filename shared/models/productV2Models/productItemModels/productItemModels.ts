@@ -83,4 +83,5 @@ export const ProductItemSchema = z.object({
 });
 
 export type ProductItem = z.infer<typeof ProductItemSchema>;
+export type ProductItemConfig = z.infer<typeof ProductItemConfigSchema>;
 export type PriceTier = z.infer<typeof PriceTierSchema>;

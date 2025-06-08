@@ -1,6 +1,6 @@
 import { Entitlement, Price, UsagePriceConfig } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { priceToInvoiceAmount } from "../getAmountForPrice.js";
+import { priceToInvoiceAmount } from "../priceToInvoiceAmount.js";
 
 export const getUsageFromBalance = ({
   ent,

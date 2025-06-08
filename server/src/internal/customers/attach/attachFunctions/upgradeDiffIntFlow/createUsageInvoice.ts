@@ -4,7 +4,6 @@ import { FullCusProduct } from "@autumn/shared";
 import Stripe from "stripe";
 import {
   createUsageInvoiceItems,
-  getUsageInvoiceItems,
   resetUsageBalances,
 } from "./createUsageInvoiceItems.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";

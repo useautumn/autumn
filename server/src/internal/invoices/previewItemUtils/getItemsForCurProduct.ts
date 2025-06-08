@@ -14,7 +14,7 @@ import { formatAmount } from "@/utils/formatUtils.js";
 import { getProration } from "./getItemsForNewProduct.js";
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { getContUseInvoiceItems } from "@/internal/customers/attach/attachFunctions/upgradeFlow/getContUseInvoiceItems.js";
+import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
 
 export const getItemsForCurProduct = async ({
   stripeSubs,
@@ -32,6 +32,7 @@ export const getItemsForCurProduct = async ({
   const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
 
   let items: PreviewLineItem[] = [];
+
   for (const sub of stripeSubs) {
     for (const item of sub.items.data) {
       const price = findPriceInStripeItems({
@@ -50,8 +51,6 @@ export const getItemsForCurProduct = async ({
 
       const totalAmountCents = getSubItemAmount({ subItem: item });
       const totalAmount = new Decimal(totalAmountCents).div(100).toNumber();
-
-      if (totalAmount == 0) continue;
 
       const periodEnd = sub.current_period_end * 1000;
 
@@ -100,7 +99,7 @@ export const getItemsForCurProduct = async ({
     cusProduct: curCusProduct,
   });
 
-  items = [...items, ...(oldItems || []), ...(newItems || [])];
+  items = [...items, ...oldItems];
 
   for (const price of curPrices) {
     let billingType = getBillingType(price.config);

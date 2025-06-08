@@ -4,23 +4,18 @@ import {
   AttachResultSchema,
 } from "../../cusProducts/AttachParams.js";
 import { AttachBranch, AttachFunction } from "@autumn/shared";
-import { handleUpgradeFunction } from "../attachFunctions/upgradeFlow/handleUpgradeFunction.js";
+import { handleUpgradeFunction } from "../attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
 import { AttachBody } from "../models/AttachBody.js";
 import { AttachConfig } from "@autumn/shared";
 import { handleScheduleFunction } from "../attachFunctions/scheduleFlow/handleScheduleFunction.js";
-import { handleEntsChangedFunction } from "../attachFunctions/updateEntsFlow/handleUpdateEntsFunction.js";
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
 import { SuccessCode } from "@autumn/shared";
-import {
-  attachParamsToProduct,
-  attachParamToCusProducts,
-} from "./convertAttachParams.js";
-
+import { attachParamToCusProducts } from "./convertAttachParams.js";
 import { deleteCurrentScheduledProduct } from "./deleteCurrentScheduledProduct.js";
 import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOneOffFunction.js";
-import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { handleUpgradeSameInterval } from "../attachFunctions/upgradeSameIntFlow/handleUpgradeSameInt.js";
 
 /* 
 1. If from new version, free trial should just carry over
@@ -28,23 +23,6 @@ import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCus
 3. In migrateCustomer flow, if to free product, upgrade product still called... should be changed to add product...
 5. Migrate customer uses proration behaviour none
 */
-
-const intervalsAreSame = ({ attachParams }: { attachParams: AttachParams }) => {
-  let { curMainProduct, curSameProduct } = attachParamToCusProducts({
-    attachParams,
-  });
-
-  let curCusProduct = curMainProduct || curSameProduct;
-  let newProduct = attachParamsToProduct({ attachParams });
-  let curPrices = cusProductToPrices({ cusProduct: curCusProduct! });
-
-  let curIntervals = new Set(curPrices.map((p) => p.config.interval));
-  let newIntervals = new Set(newProduct.prices.map((p) => p.config.interval));
-  return (
-    curIntervals.size === newIntervals.size &&
-    [...curIntervals].every((interval) => newIntervals.has(interval))
-  );
-};
 
 export const getAttachFunction = async ({
   branch,
@@ -77,24 +55,20 @@ export const getAttachFunction = async ({
     return AttachFunction.AddProduct;
   }
 
-  if (branch == AttachBranch.SameCustomEnts) {
-    return AttachFunction.UpdateEnts;
-  }
-
   // 2. Upgrade scenarios
   let updateScenarios = [
     AttachBranch.NewVersion,
     AttachBranch.SameCustom,
+    AttachBranch.SameCustomEnts,
     AttachBranch.Upgrade,
   ];
 
   if (updateScenarios.includes(branch)) {
-    // If all same interval
-    if (intervalsAreSame({ attachParams })) {
-      return AttachFunction.UpdateEnts;
+    if (config.sameIntervals) {
+      return AttachFunction.UpgradeSameInterval;
+    } else {
+      return AttachFunction.UpgradeDiffInterval;
     }
-
-    return AttachFunction.UpdateProduct;
   }
 
   // 3. Downgrade scenarios
@@ -221,15 +195,6 @@ export const runAttachFunction = async ({
     });
   }
 
-  if (attachFunction == AttachFunction.UpdateEnts) {
-    return await handleEntsChangedFunction({
-      req,
-      res,
-      attachParams,
-      config,
-    });
-  }
-
   if (attachFunction == AttachFunction.ScheduleProduct) {
     return await handleScheduleFunction({
       req,
@@ -238,7 +203,16 @@ export const runAttachFunction = async ({
     });
   }
 
-  if (attachFunction == AttachFunction.UpdateProduct) {
+  if (attachFunction == AttachFunction.UpgradeSameInterval) {
+    return await handleUpgradeSameInterval({
+      req,
+      res,
+      attachParams,
+      config,
+    });
+  }
+
+  if (attachFunction == AttachFunction.UpgradeDiffInterval) {
     return await handleUpgradeFunction({
       req,
       res,

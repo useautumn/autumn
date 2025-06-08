@@ -8,11 +8,8 @@ import { AttachConfig, FullCusProduct } from "@autumn/shared";
 import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { updateCurSchedules } from "./updateCurSchedules.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { addSubItemsToRemove } from "../attachFuncUtils.js";
-import { filterContUsageProrations } from "./createAndFilterContUseItems.js";
-
-// UPGRADE FUNCTIONS
+import { updateStripeSub } from "../../attachUtils/updateStripeSub/updateStripeSub.js";
 
 export const updateStripeSubs = async ({
   db,
@@ -43,20 +40,11 @@ export const updateStripeSubs = async ({
   const firstSub = stripeSubs[0];
   const firstItemSet = itemSets[0];
 
-  // 1. Remove items from current sub that belong to old product
-  for (const item of firstSub.items.data) {
-    let shouldRemove = subItemInCusProduct({
-      cusProduct: curCusProduct,
-      subItem: item,
-    });
-
-    if (shouldRemove) {
-      firstItemSet.items.push({
-        id: item.id,
-        deleted: true,
-      });
-    }
-  }
+  await addSubItemsToRemove({
+    sub: firstSub,
+    cusProduct: curCusProduct,
+    itemSet: firstItemSet,
+  });
 
   let trialEnd = config.disableTrial
     ? undefined
@@ -67,8 +55,7 @@ export const updateStripeSubs = async ({
 
   // 3. Update current subscription
   logger.info("1.2: Updating current subscription");
-
-  const subUpdateRes = await updateStripeSubscription({
+  const { updatedSub, latestInvoice, cusEntIds } = await updateStripeSub({
     db,
     attachParams,
     config,
@@ -79,9 +66,8 @@ export const updateStripeSubs = async ({
     stripeSubs,
   });
 
-  let { sub: subUpdate, invoice } = subUpdateRes;
-  let newSubs = [subUpdate!];
-  let newInvoiceIds = invoice ? [invoice.id] : [];
+  let newSubs = [updatedSub!];
+  const newInvoiceIds = latestInvoice ? [latestInvoice.id] : [];
 
   // 4. Update current sub schedules if exist...
   await updateCurSchedules({
@@ -116,18 +102,17 @@ export const updateStripeSubs = async ({
       itemSet,
       invoiceOnly: attachParams.invoiceOnly || false,
       freeTrial: attachParams.freeTrial,
-      anchorToUnix: subUpdate!.current_period_end! * 1000,
+      anchorToUnix: updatedSub!.current_period_end! * 1000,
       now: attachParams.now,
     });
 
-    newSubs.push(newSub as Stripe.Subscription);
+    newSubs.push(newSub);
     newInvoiceIds.push(newSub.latest_invoice as string);
   }
 
   return {
     newSubs,
-    updatePreview: null,
-    invoice: subUpdateRes.invoice,
+    invoice: latestInvoice,
     newInvoiceIds,
   };
 };

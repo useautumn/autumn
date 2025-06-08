@@ -2,6 +2,7 @@ import {
   FullCusEntWithFullCusProduct,
   FullCusEntWithProduct,
   FullCustomerPrice,
+  InsertReplaceable,
   OnDecrease,
 } from "@autumn/shared";
 import Stripe from "stripe";
@@ -20,10 +21,13 @@ import { createAndFinalizeInvoice } from "@/internal/invoices/invoiceUtils/creat
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/getAmountForPrice.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { handleCreateReplaceables } from "./handleCreateReplaceables.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getUsageFromBalance } from "../adjustAllowance.js";
+import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { getReplaceables } from "@/internal/products/prices/priceUtils/arrearProratedUtils/getContUsageDowngradeItem.js";
+import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 
 export const createDowngradeProrationInvoice = async ({
   org,
@@ -130,22 +134,17 @@ export const handleProratedDowngrade = async ({
 }) => {
   logger.info(`Handling quantity decrease`);
 
-  const {
-    roundedUsage: newRoundedUsage,
-    roundedOverage: newRoundedOverage,
-    overage: newOverage,
-  } = getUsageFromBalance({
+  const { overage: prevOverage } = getUsageFromBalance({
+    ent: cusEnt.entitlement,
+    price: cusPrice.price,
+    balance: prevBalance,
+  });
+
+  const { overage: newOverage, usage: newUsage } = getUsageFromBalance({
     ent: cusEnt.entitlement,
     price: cusPrice.price,
     balance: newBalance,
   });
-
-  const { roundedOverage: prevRoundedOverage, overage: prevOverage } =
-    getUsageFromBalance({
-      ent: cusEnt.entitlement,
-      price: cusPrice.price,
-      balance: prevBalance,
-    });
 
   let onDecrease =
     cusPrice.price.proration_config?.on_decrease || OnDecrease.Prorate;
@@ -154,17 +153,22 @@ export const handleProratedDowngrade = async ({
   const product = cusEnt.customer_product.product;
 
   let invoice = null;
-  let newReplaceables = null;
-
+  let newReplaceables: InsertReplaceable[] = [];
   if (onDecrease === OnDecrease.Prorate) {
     let prevPrice = priceToInvoiceAmount({
       price: cusPrice.price,
-      overage: prevRoundedOverage,
+      overage: roundUsage({
+        usage: prevOverage,
+        price: cusPrice.price,
+      }),
     });
 
     let newPrice = priceToInvoiceAmount({
       price: cusPrice.price,
-      overage: newRoundedOverage,
+      overage: roundUsage({
+        usage: newOverage,
+        price: cusPrice.price,
+      }),
     });
 
     invoice = await createDowngradeProrationInvoice({
@@ -174,19 +178,32 @@ export const handleProratedDowngrade = async ({
       sub,
       newPrice,
       prevPrice,
-      newRoundedUsage,
+      newRoundedUsage: roundUsage({
+        usage: newOverage,
+        price: cusPrice.price,
+      }),
       feature,
       product,
       onDecrease,
       logger,
     });
   } else {
-    newReplaceables = await handleCreateReplaceables({
-      db,
+    // newReplaceables = await handleCreateReplaceables({
+    //   db,
+    //   prevOverage,
+    //   newOverage,
+    //   cusEnt,
+    //   logger,
+    // });
+    newReplaceables = getReplaceables({
+      cusEnt,
       prevOverage,
       newOverage,
-      cusEnt,
-      logger,
+    });
+
+    await RepService.insert({
+      db,
+      data: newReplaceables,
     });
 
     logger.info("New replaceables", {
@@ -194,8 +211,13 @@ export const handleProratedDowngrade = async ({
     });
   }
 
+  let quantity = newUsage + (newReplaceables?.length || 0);
+
   await stripeCli.subscriptionItems.update(subItem.id, {
-    quantity: newRoundedUsage,
+    quantity: roundUsage({
+      usage: quantity,
+      price: cusPrice.price,
+    }),
     proration_behavior: "none",
   });
 

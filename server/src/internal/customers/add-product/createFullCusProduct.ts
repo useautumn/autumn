@@ -9,6 +9,8 @@ import {
   CollectionMethod,
   FullCusProduct,
   APIVersion,
+  Replaceable,
+  InsertReplaceable,
 } from "@autumn/shared";
 import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 
@@ -32,6 +34,8 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "../cusProducts/cusPrices/CusPriceService.js";
 import { addExistingUsagesToCusEnts } from "../cusProducts/cusEnts/cusEntUtils/getExistingUsage.js";
+import { cusProductsToCusEnts } from "../cusProducts/cusProductUtils/convertCusProduct.js";
+import { RepService } from "../cusProducts/cusEnts/RepService.js";
 
 export const initCusPrice = ({
   price,
@@ -146,11 +150,13 @@ export const insertFullCusProduct = async ({
   cusProd,
   cusEnts,
   cusPrices,
+  replaceables,
 }: {
   db: DrizzleCli;
   cusProd: CusProduct;
   cusEnts: CustomerEntitlement[];
   cusPrices: CustomerPrice[];
+  replaceables: InsertReplaceable[];
 }) => {
   await CusProductService.insert({
     db,
@@ -165,6 +171,11 @@ export const insertFullCusProduct = async ({
   await CusPriceService.insert({
     db,
     data: cusPrices,
+  });
+
+  await RepService.insert({
+    db,
+    data: replaceables,
   });
 };
 
@@ -266,7 +277,7 @@ export const createFullCusProduct = async ({
   createdAt = null,
   subscriptionIds = [],
   subscriptionScheduleIds = [],
-  keepResetIntervals = false,
+  // keepResetIntervals = false,
   anchorToUnix,
   carryExistingUsages = false,
   carryOverTrial = false,
@@ -302,6 +313,8 @@ export const createFullCusProduct = async ({
 
   let { customer, product, prices, entitlements, optionsList, freeTrial, org } =
     attachParams;
+
+  let attachReplaceables = attachParams.replaceables || [];
 
   // Try to get current cus product or set to null...
   let curCusProduct;
@@ -341,6 +354,7 @@ export const createFullCusProduct = async ({
 
   // 1. create customer entitlements
   const cusEnts: CustomerEntitlement[] = [];
+  const newReplaceables: InsertReplaceable[] = [];
 
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
@@ -355,16 +369,27 @@ export const createFullCusProduct = async ({
       freeTrial: disableFreeTrial ? null : freeTrial,
       relatedPrice,
       // existingCusEnt,
-      keepResetIntervals,
+      // keepResetIntervals,
       anchorToUnix,
       entities: attachParams.entities || [],
       carryExistingUsages,
       curCusProduct: curCusProduct as FullCusProduct,
+      replaceables: attachReplaceables,
     });
 
     cusEnts.push(cusEnt);
+
+    let newReplaceables_ = attachReplaceables
+      .filter((r) => r.ent.id === entitlement.id)
+      .map((r) => ({
+        ...r,
+        cus_ent_id: cusEnt.id,
+      }));
+
+    newReplaceables.push(...newReplaceables_);
   }
 
+  // 3. Deduct existing usages
   let deductedCusEnts = addExistingUsagesToCusEnts({
     cusEnts: cusEnts,
     entitlements: entitlements,
@@ -375,7 +400,7 @@ export const createFullCusProduct = async ({
     features: attachParams.features,
   });
 
-  // 2. create customer prices
+  // 4. create customer prices
   const cusPrices: CustomerPrice[] = [];
 
   for (const price of prices) {
@@ -388,7 +413,7 @@ export const createFullCusProduct = async ({
     cusPrices.push(cusPrice);
   }
 
-  // 3. create customer product
+  // 5. create customer product
   if (carryOverTrial && curCusProduct?.free_trial_id) {
     freeTrial = curCusProduct.free_trial || null;
     trialEndsAt = curCusProduct.trial_ends_at || null;
@@ -435,6 +460,7 @@ export const createFullCusProduct = async ({
     cusProd,
     cusEnts: deductedCusEnts,
     cusPrices,
+    replaceables: newReplaceables,
   });
 
   let fullCusProduct = {
@@ -443,6 +469,12 @@ export const createFullCusProduct = async ({
     customer_entitlements: cusEnts.map((ce) => ({
       ...ce,
       entitlement: entitlements.find((e) => e.id === ce.entitlement_id)!,
+      replaceables: newReplaceables
+        .filter((r) => r.cus_ent_id === ce.id)
+        .map((r) => ({
+          ...r,
+          delete_next_cycle: r.delete_next_cycle || false,
+        })),
     })),
     customer_prices: cusPrices.map((cp) => ({
       ...cp,

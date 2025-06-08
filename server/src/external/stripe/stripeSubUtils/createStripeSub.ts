@@ -71,20 +71,6 @@ export const createStripeSub = async ({
       prices[index].config!.interval === BillingInterval.OneOff,
   );
 
-  // if (shouldPreview) {
-  //   return await stripeCli.invoices.createPreview({
-  //     subscription_details: {
-  //       items: subItems as any,
-  //       trial_end: freeTrialToStripeTimestamp({ freeTrial }),
-  //       billing_cycle_anchor: billingCycleAnchorUnix
-  //         ? Math.floor(billingCycleAnchorUnix / 1000)
-  //         : undefined,
-  //     },
-  //     invoice_items: invoiceItems as any,
-  //     customer: customer.processor.id,
-  //   });
-  // }
-
   try {
     const subscription = await stripeCli.subscriptions.create({
       ...paymentMethodData,
@@ -94,9 +80,7 @@ export const createStripeSub = async ({
       payment_behavior: "error_if_incomplete",
       add_invoice_items: invoiceItems,
       collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
-      // metadata: subMeta || {},
       days_until_due: invoiceOnly ? 30 : undefined,
-
       billing_cycle_anchor: billingCycleAnchorUnix
         ? Math.floor(billingCycleAnchorUnix / 1000)
         : undefined,
@@ -118,14 +102,8 @@ export const createStripeSub = async ({
       },
     });
 
-    // if (invoiceOnly && subscription.latest_invoice) {
-    //   await stripeCli.invoices.finalizeInvoice(
-    //     subscription.latest_invoice as string
-    //   );
-    // }
     return subscription;
   } catch (error: any) {
-    // console.log("Error creating stripe subscription", error?.message || error);
     console.log("Warning: Failed to create stripe subscription");
     console.log("Error code:", error.code);
     console.log("Message:", error.message);

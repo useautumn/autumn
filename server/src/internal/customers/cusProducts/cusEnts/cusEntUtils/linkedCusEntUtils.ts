@@ -1,4 +1,8 @@
-import { FullCustomerEntitlement, Replaceable } from "@autumn/shared";
+import {
+  FullCustomerEntitlement,
+  InsertReplaceable,
+  Replaceable,
+} from "@autumn/shared";
 
 export const replaceEntityInCusEnt = ({
   cusEnt,
@@ -7,7 +11,7 @@ export const replaceEntityInCusEnt = ({
 }: {
   cusEnt: FullCustomerEntitlement;
   entityId: string;
-  replaceable: Replaceable;
+  replaceable: Replaceable | InsertReplaceable;
 }) => {
   let newEntities = structuredClone(cusEnt.entities) || {};
   newEntities[replaceable.id] = newEntities[entityId];

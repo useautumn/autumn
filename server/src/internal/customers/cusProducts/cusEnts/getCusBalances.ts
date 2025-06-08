@@ -158,12 +158,13 @@ export const getCusBalances = async ({
         data[key].next_reset_at = cusEnt.next_reset_at;
       }
 
-      data[key].allowance += getResetBalance({
-        entitlement: ent,
-        options: getEntOptions(cusProduct.options, ent),
-        relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
-        productQuantity: cusProduct.quantity || 1,
-      });
+      data[key].allowance +=
+        (getResetBalance({
+          entitlement: ent,
+          options: getEntOptions(cusProduct.options, ent),
+          relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
+          productQuantity: cusProduct.quantity || 1,
+        }) || 0) * count;
     }
   }
 

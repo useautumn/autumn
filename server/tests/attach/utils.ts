@@ -27,7 +27,7 @@ import {
   cusProductToPrices,
 } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/getAmountForPrice.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { Decimal } from "decimal.js";
 
 export const runAttachTest = async ({

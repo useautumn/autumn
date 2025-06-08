@@ -29,6 +29,7 @@ import {
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { Decimal } from "decimal.js";
+import { intervalsAreSame } from "../attachUtils/getAttachConfig.js";
 
 const getNextCycleAt = ({
   prices,
@@ -100,7 +101,7 @@ export const getUpgradeProductPreview = async ({
     expand: ["items.data.price.tiers"],
   });
 
-  let curPreviewItems = await getItemsForCurProduct({
+  const curPreviewItems = await getItemsForCurProduct({
     stripeSubs,
     attachParams,
     now,
@@ -109,37 +110,55 @@ export const getUpgradeProductPreview = async ({
 
   // Get prorated amounts for new product
   const newProduct = attachParamsToProduct({ attachParams });
-  const firstInterval = getFirstInterval({ prices: newProduct.prices });
-  const prevInterval = subToAutumnInterval(stripeSubs[0]);
-  const cycleWillReset = prevInterval !== firstInterval;
+  const intervalsSame = intervalsAreSame({ attachParams });
+  const anchorToUnix = intervalsSame
+    ? stripeSubs[0].current_period_end * 1000
+    : undefined;
 
-  const newPreviewItems = getItemsForNewProduct({
+  const newPreviewItems = await getItemsForNewProduct({
     newProduct,
     attachParams,
     now,
-    anchorToUnix: !cycleWillReset
-      ? stripeSubs[0].current_period_end * 1000
-      : undefined,
+    anchorToUnix,
     freeTrial: attachParams.freeTrial,
-  }).filter((item) => notNullish(item.amount) && item.amount != 0);
+    stripeSubs,
+    logger,
+  });
 
   const lastInterval = getLastInterval({ prices: newProduct.prices });
   const nextCycleAt = getNextCycleAt({
     prices: newProduct.prices,
     stripeSubs,
-    willCycleReset: cycleWillReset,
+    willCycleReset: !intervalsSame,
     interval: lastInterval,
     now,
     freeTrial: attachParams.freeTrial,
   });
 
-  let nextCycleItems = getItemsForNewProduct({
+  let nextCycleItems = await getItemsForNewProduct({
     newProduct,
     attachParams,
     interval: attachParams.freeTrial ? undefined : lastInterval,
+    logger,
   });
 
   let items = [...curPreviewItems, ...newPreviewItems];
+
+  for (const item of structuredClone(curPreviewItems)) {
+    let priceId = item.price_id;
+    let newItem = newPreviewItems.find((i) => i.price_id == priceId);
+
+    if (!newItem) {
+      continue;
+    }
+
+    let newItemAmount = new Decimal(newItem?.amount ?? 0).toDecimalPlaces(2);
+    let curItemAmount = new Decimal(item.amount ?? 0).toDecimalPlaces(2);
+
+    if (newItemAmount.add(curItemAmount).eq(0)) {
+      items = items.filter((i) => i.price_id !== priceId);
+    }
+  }
 
   const dueTodayAmt = items
     .reduce((acc, item) => acc.plus(item.amount ?? 0), new Decimal(0))
@@ -153,9 +172,7 @@ export const getUpgradeProductPreview = async ({
       features: attachParams.features,
     }),
     features: attachParams.features,
-    anchorToUnix: cycleWillReset
-      ? undefined
-      : stripeSubs[0].current_period_end * 1000,
+    anchorToUnix,
     now,
     freeTrial: attachParams.freeTrial,
   });

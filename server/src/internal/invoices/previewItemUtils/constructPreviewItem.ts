@@ -3,17 +3,17 @@ import { formatAmount } from "@/utils/formatUtils.js";
 import { Organization, Price } from "@autumn/shared";
 
 export const constructPreviewItem = ({
-  priceStr,
   price,
+  description,
+  priceStr,
   org,
   amount,
-  description,
 }: {
-  priceStr?: string;
   price: Price;
-  org: Organization;
-  amount?: number;
   description: string;
+  priceStr?: string;
+  org?: Organization;
+  amount?: number;
 }) => {
   if (amount) {
     priceStr = formatAmount({

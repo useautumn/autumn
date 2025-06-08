@@ -106,8 +106,12 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         feature: mainCusEnt.entitlement.feature,
       });
 
-      if (newReplaceables) {
-        let replaceable = newReplaceables[0];
+      let replaceable =
+        newReplaceables && newReplaceables.length > 0
+          ? newReplaceables[0]
+          : null;
+
+      if (replaceable) {
         await RepService.update({
           db,
           id: replaceable.id,
@@ -116,8 +120,6 @@ export const handleDeleteEntity = async (req: any, res: any) => {
           },
         });
       }
-
-      let replaceable = newReplaceables ? newReplaceables[0] : null;
 
       // Update linked cus ents with replaceables...
       for (const linkedCusEnt of linkedCusEnts) {
@@ -146,11 +148,13 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         });
       }
 
-      await CusEntService.increment({
-        db,
-        id: mainCusEnt.id,
-        amount: 1,
-      });
+      if (!replaceable) {
+        await CusEntService.increment({
+          db,
+          id: mainCusEnt.id,
+          amount: 1,
+        });
+      }
     }
 
     // Cancel any subs

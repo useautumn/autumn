@@ -9,7 +9,7 @@ import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatUtils.js";
 import { getPriceOptions } from "@/internal/products/prices/priceUtils.js";
 import { priceToProduct } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/getAmountForPrice.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { AttachConfig } from "@autumn/shared";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";

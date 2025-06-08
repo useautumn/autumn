@@ -7,6 +7,37 @@ import { nullish } from "@/utils/genUtils.js";
 import { ProrationBehavior } from "../../change-product/handleUpgrade.js";
 import { AppEnv } from "@autumn/shared";
 import { Organization } from "@autumn/shared";
+import {
+  attachParamsToProduct,
+  attachParamToCusProducts,
+} from "./convertAttachParams.js";
+import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+
+export const intervalsAreSame = ({
+  attachParams,
+}: {
+  attachParams: AttachParams;
+}) => {
+  let { curMainProduct, curSameProduct } = attachParamToCusProducts({
+    attachParams,
+  });
+
+  let curCusProduct = curMainProduct || curSameProduct;
+
+  if (!curCusProduct) {
+    return false;
+  }
+
+  let newProduct = attachParamsToProduct({ attachParams });
+  let curPrices = cusProductToPrices({ cusProduct: curCusProduct! });
+
+  let curIntervals = new Set(curPrices.map((p) => p.config.interval));
+  let newIntervals = new Set(newProduct.prices.map((p) => p.config.interval));
+  return (
+    curIntervals.size === newIntervals.size &&
+    [...curIntervals].every((interval) => newIntervals.has(interval))
+  );
+};
 
 export const getAttachConfig = async ({
   req,
@@ -49,6 +80,8 @@ export const getAttachConfig = async ({
     branch == AttachBranch.Downgrade ||
     attachBody.free_trial === false;
 
+  let sameIntervals = intervalsAreSame({ attachParams });
+
   let config: AttachConfig = {
     branch,
     onlyCheckout:
@@ -58,6 +91,7 @@ export const getAttachConfig = async ({
     disableTrial,
     invoiceOnly: flags.invoiceOnly,
     disableMerge: org.config.merge_billing_cycles === false,
+    sameIntervals,
   };
 
   return { flags, config };
@@ -72,6 +106,7 @@ const webhookToConfig = ({ org, env }: { org: Organization; env: AppEnv }) => {
     disableTrial: false,
     invoiceOnly: false,
     disableMerge: false,
+    sameIntervals: false,
   };
 
   return config;

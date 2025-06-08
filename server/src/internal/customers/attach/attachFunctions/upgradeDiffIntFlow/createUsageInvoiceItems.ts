@@ -1,5 +1,6 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getUsageBasedSub } from "@/external/stripe/stripeSubUtils.js";
+import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import {
@@ -11,7 +12,12 @@ import {
   cusProductsToCusPrices,
 } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { FullCusProduct, UsagePriceConfig, BillingType } from "@autumn/shared";
+import {
+  FullCusProduct,
+  UsagePriceConfig,
+  BillingType,
+  BillingInterval,
+} from "@autumn/shared";
 
 import Stripe from "stripe";
 
@@ -21,12 +27,14 @@ export const getUsageInvoiceItems = async ({
   attachParams,
   cusProduct,
   stripeSubs,
+  interval,
 }: {
   db: DrizzleCli;
   logger: any;
   attachParams: AttachParams;
   cusProduct: FullCusProduct;
   stripeSubs: Stripe.Subscription[];
+  interval?: BillingInterval;
 }) => {
   const { stripeCli, org } = attachParams;
 
@@ -45,7 +53,7 @@ export const getUsageInvoiceItems = async ({
 
     if (billingType !== BillingType.UsageInArrear) continue;
 
-    const { usage, overage, description, amount } = getCusPriceUsage({
+    const { description, amount } = getCusPriceUsage({
       cusPrice,
       cusProduct,
       logger,
@@ -64,6 +72,8 @@ export const getUsageInvoiceItems = async ({
     });
 
     if (!sub) continue;
+
+    if (interval !== subToAutumnInterval(sub)) continue;
 
     cusEntIds.push(cusEnt.id);
 
@@ -96,6 +106,7 @@ export const createUsageInvoiceItems = async ({
   stripeSubs,
   invoiceId,
   logger,
+  interval,
 }: {
   db: DrizzleCli;
   attachParams: AttachParams;
@@ -103,6 +114,7 @@ export const createUsageInvoiceItems = async ({
   stripeSubs: Stripe.Subscription[];
   invoiceId?: string;
   logger: any;
+  interval?: BillingInterval;
 }) => {
   const { stripeCli } = attachParams;
   const { invoiceItems, cusEntIds } = await getUsageInvoiceItems({
@@ -110,6 +122,7 @@ export const createUsageInvoiceItems = async ({
     attachParams,
     cusProduct,
     stripeSubs,
+    interval,
     logger,
   });
 

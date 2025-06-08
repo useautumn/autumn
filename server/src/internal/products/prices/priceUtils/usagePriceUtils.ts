@@ -5,10 +5,12 @@ import {
   OnDecrease,
   OnIncrease,
   Price,
+  UsagePriceConfig,
 } from "@autumn/shared";
 import { getBillingType } from "../priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import Stripe from "stripe";
+import { Decimal } from "decimal.js";
 
 export const isUsagePrice = ({ price }: { price: Price }) => {
   let billingType = getBillingType(price.config);
@@ -17,6 +19,14 @@ export const isUsagePrice = ({ price }: { price: Price }) => {
     billingType == BillingType.UsageInArrear ||
     billingType == BillingType.InArrearProrated ||
     billingType == BillingType.UsageInAdvance
+  );
+};
+
+export const isPayPerUse = ({ price }: { price: Price }) => {
+  let billingType = getBillingType(price.config);
+  return (
+    billingType == BillingType.UsageInArrear ||
+    billingType == BillingType.InArrearProrated
   );
 };
 
@@ -77,4 +87,29 @@ export const onDecreaseToStripeProration = ({
   }
 
   return behavior as Stripe.SubscriptionItemUpdateParams.ProrationBehavior;
+};
+
+export const roundUsage = ({
+  usage,
+  price,
+  pos = true,
+}: {
+  usage: number;
+  price: Price;
+  pos?: boolean;
+}) => {
+  let config = price.config as UsagePriceConfig;
+  let billingUnits = config.billing_units || 1;
+
+  let rounded = new Decimal(usage)
+    .div(billingUnits)
+    .ceil()
+    .mul(billingUnits)
+    .toNumber();
+
+  if (pos) {
+    return Math.max(rounded, 0);
+  }
+
+  return rounded;
 };

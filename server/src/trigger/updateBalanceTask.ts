@@ -270,11 +270,6 @@ export const performDeductionOnCusEnt = ({
       allowNegativeBalance,
     });
 
-    // console.log("Deducting:", toDeduct);
-    // console.log("Old balance", cusEnt.balance);
-    // console.log("New balance", newBalance_);
-    // console.log("Allowed negative balance", allowNegativeBalance);
-
     newBalance = newBalance_;
     deducted = deducted_;
     toDeduct = newToDeduct_;
@@ -361,7 +356,8 @@ export const deductAllowanceFromCusEnt = async ({
     cusEnt: cusEnt as any,
     originalBalance: originalGrpBalance,
     newBalance: newGrpBalance,
-    deduction: deducted,
+    logger: console,
+    // deduction: deducted,
   });
 
   // Deduct credit amounts too
@@ -453,12 +449,6 @@ export const deductFromUsageBasedCusEnt = async ({
     updates.adjustment = 0;
   }
 
-  await CusEntService.update({
-    db,
-    id: usageBasedEnt.id,
-    updates,
-  });
-
   await adjustAllowance({
     db,
     env,
@@ -469,7 +459,13 @@ export const deductFromUsageBasedCusEnt = async ({
     customer,
     originalBalance: oldGrpBalance,
     newBalance: newGrpBalance,
-    deduction: toDeduct,
+    logger: console,
+  });
+
+  await CusEntService.update({
+    db,
+    id: usageBasedEnt!.id,
+    updates,
   });
 };
 

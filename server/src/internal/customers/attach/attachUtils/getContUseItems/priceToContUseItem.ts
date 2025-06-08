@@ -1,0 +1,126 @@
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import {
+  FullCustomerEntitlement,
+  FullEntitlement,
+  PreviewLineItem,
+  Price,
+  UsagePriceConfig,
+} from "@autumn/shared";
+import Stripe from "stripe";
+import { attachParamsToProduct } from "../convertAttachParams.js";
+import { intervalsAreSame } from "../getAttachConfig.js";
+import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getContUseDowngradeItems } from "./getContUseDowngradeItems.js";
+import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
+import { getContUseUpgradeItems } from "./getContUseUpgradeItems.js";
+import { priceToInvoiceItem } from "@/internal/products/prices/priceUtils/priceToInvoiceItem.js";
+import { Decimal } from "decimal.js";
+
+export const priceToContUseItem = async ({
+  price,
+  ent,
+  prevCusEnt,
+  attachParams,
+  sub,
+  logger,
+  curItem,
+}: {
+  price: Price;
+  ent: FullEntitlement;
+  prevCusEnt: FullCustomerEntitlement;
+  attachParams: AttachParams;
+  sub: Stripe.Subscription | undefined;
+  logger: any;
+  curItem: PreviewLineItem;
+}) => {
+  const { cusProducts, entities, internalEntityId, now } = attachParams;
+  const product = attachParamsToProduct({ attachParams });
+  const prevEnt = prevCusEnt?.entitlement;
+  const proration = sub
+    ? {
+        start: sub.current_period_start * 1000,
+        end: sub.current_period_end * 1000,
+      }
+    : undefined;
+
+  const isDowngrade = ent.allowance! > prevEnt?.allowance!;
+  const willProrate = isDowngrade
+    ? shouldProrate(price.proration_config?.on_decrease)
+    : shouldProrate(price.proration_config?.on_increase);
+
+  // 1. Get current usage
+  let curUsage = getExistingUsageFromCusProducts({
+    entitlement: ent,
+    cusProducts,
+    entities,
+    carryExistingUsages: true,
+    internalEntityId,
+  });
+
+  // Case 1: Downgrade and no proration
+  let res;
+  if (isDowngrade && !willProrate) {
+    res = await getContUseDowngradeItems({
+      price,
+      ent,
+      prevCusEnt,
+      attachParams,
+      curItem: curItem!,
+      curUsage: curUsage,
+      proration,
+      logger,
+    });
+  }
+
+  // Case 2: Upgrade and no proration
+  else if (!isDowngrade && !willProrate) {
+    res = await getContUseUpgradeItems({
+      price,
+      ent,
+      prevCusEnt,
+      attachParams,
+      curItem: curItem!,
+      curUsage: curUsage,
+      proration,
+      logger,
+    });
+  }
+
+  // Case 3: Regular...
+  else {
+    const newItem = priceToInvoiceItem({
+      price,
+      ent,
+      org: attachParams.org,
+      usage: curUsage,
+      prodName: product.name,
+    });
+
+    res = {
+      oldItem: curItem,
+      newItem,
+      replaceables: [],
+    };
+  }
+
+  // Clean up items
+  // 1. If old item and new item same, remove both
+  let oldAmount = res.oldItem?.amount!;
+  let newAmount = res.newItem?.amount!;
+
+  if (new Decimal(oldAmount).add(newAmount).eq(0)) {
+    return {
+      oldItem: null,
+      newItems: [res.newUsageItem].filter((item) => item !== undefined),
+      replaceables: res.replaceables,
+    };
+  } else {
+    return {
+      oldItem: res.oldItem,
+      newItems: [res.newItem, res.newUsageItem].filter(
+        (item) => item !== undefined,
+      ),
+      replaceables: res.replaceables,
+    };
+  }
+};

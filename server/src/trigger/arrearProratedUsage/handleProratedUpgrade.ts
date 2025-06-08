@@ -1,4 +1,4 @@
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/getAmountForPrice.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { shouldCreateInvoiceItem } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 
 import {
@@ -17,6 +17,7 @@ import { createUpgradeProrationInvoice } from "./createUpgradeProrationInvoice.j
 import { getUsageFromBalance } from "../adjustAllowance.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
 
 interface UsageValues {
   prevRoundedUsage: number;
@@ -27,75 +28,49 @@ interface UsageValues {
 
 export const getPrevAndNewPriceForUpgrade = ({
   ent,
-  numReplaceables,
+  // numReplaceables,
   price,
   newBalance,
   prevBalance,
   logger,
 }: {
   ent: Entitlement;
-  numReplaceables: number;
+  // numReplaceables: number;
   price: Price;
   newBalance: number;
   prevBalance: number;
   logger: any;
 }) => {
-  const {
-    usage: newUsage,
-    roundedUsage: newRoundedUsage,
-    roundedOverage: newRoundedOverage,
-  } = getUsageFromBalance({
-    ent,
-    price,
-    balance: newBalance,
-  });
-
-  const {
-    usage: prevUsage,
-    roundedUsage: prevRoundedUsage,
-    overage: prevOverage,
-    roundedOverage: prevRoundedOverage,
-  } = getUsageFromBalance({
+  const { usage: prevUsage, overage: prevOverage } = getUsageFromBalance({
     ent,
     price,
     balance: prevBalance,
   });
 
-  const { roundedOverage: overageWithReplaceables } = getUsageFromBalance({
+  const { usage: newUsage, overage: newOverage } = getUsageFromBalance({
     ent,
     price,
-    balance: prevBalance - numReplaceables,
+    balance: newBalance,
   });
-
-  // logger.info(`Handling quantity increase`);
-  // logger.info(
-  //   `Prev overage: ${prevOverage} -> ${newOverage}, [Replaceables: ${numReplaceables}]`,
-  // );
-  // logger.info(`Usage:   ${prevRoundedUsage} -> ${newRoundedUsage}`);
 
   // Get price for usage...
   let prevPrice = priceToInvoiceAmount({
     price,
-    overage: overageWithReplaceables,
+    overage: prevOverage,
   });
 
   let newPrice = priceToInvoiceAmount({
     price,
-    overage: newRoundedOverage,
+    overage: newOverage,
   });
 
   return {
+    prevOverage,
+    newOverage,
     newUsage,
     prevUsage,
-
-    prevRoundedUsage,
-    newRoundedUsage,
-
     prevPrice,
     newPrice,
-    prevOverage,
-    prevRoundedOverage,
-    newRoundedOverage,
   };
 };
 
@@ -124,15 +99,23 @@ export const handleProratedUpgrade = async ({
 }) => {
   logger.info(`Handling quantity increase`);
 
-  const { prevPrice, newPrice, newRoundedUsage, newUsage, prevUsage } =
+  // 1. Get num reps to use
+
+  // let reps = cusEnt.replaceables.slice(0, usageDiff);
+  // newBalance = newBalance + reps.length; // Increase new balance by number of reps
+
+  let { prevPrice, newPrice, newUsage, prevUsage, prevOverage, newOverage } =
     getPrevAndNewPriceForUpgrade({
       ent: cusEnt.entitlement,
-      numReplaceables: cusEnt.replaceables.length,
       price: cusPrice.price,
       newBalance,
       prevBalance,
       logger,
     });
+
+  let overageDiff = newOverage - prevOverage;
+  let reps = cusEnt.replaceables.slice(0, overageDiff);
+  newBalance = newBalance + reps.length; // Increase new balance by number of reps
 
   const config = cusPrice.price.config as UsagePriceConfig;
   const product = cusEnt.customer_product.product;
@@ -142,7 +125,10 @@ export const handleProratedUpgrade = async ({
     cusPrice.price.proration_config?.on_increase ||
     OnIncrease.ProrateImmediately;
 
-  logger.info(`Prev price: ${prevPrice}, New price: ${newPrice}`);
+  const newRoundedUsage = roundUsage({
+    usage: newUsage,
+    price: cusPrice.price,
+  });
 
   let invoice = null;
   if (shouldCreateInvoiceItem(onIncrease)) {
@@ -162,20 +148,19 @@ export const handleProratedUpgrade = async ({
     });
   }
 
-  // Replaceables used
-  let usageDiff = newUsage - prevUsage;
-  let deletedReplaceables = cusEnt.replaceables.slice(0, usageDiff);
-
   let deleted = await RepService.deleteInIds({
     db,
-    ids: deletedReplaceables.map((r) => r.id),
+    ids: reps.map((r) => r.id),
   });
 
   await stripeCli.subscriptionItems.update(subItem.id, {
-    quantity: newRoundedUsage,
+    quantity: roundUsage({
+      usage: newUsage,
+      price: cusPrice.price,
+    }),
     proration_behavior: "none",
   });
 
   logger.info(`Updated sub item ${subItem.id} to quantity: ${newRoundedUsage}`);
-  return { deletedReplaceables: deleted, invoice };
+  return { deletedReplaceables: deleted, invoice, newReplaceables: [] };
 };

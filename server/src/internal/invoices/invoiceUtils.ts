@@ -16,7 +16,7 @@ export const insertInvoiceFromAttach = async ({
 }: {
   db: DrizzleCli;
   attachParams: AttachParams;
-  invoiceId: string;
+  invoiceId?: string;
   stripeInvoice?: Stripe.Invoice;
   logger: any;
 }) => {
@@ -24,14 +24,14 @@ export const insertInvoiceFromAttach = async ({
     if (!stripeInvoice) {
       stripeInvoice = await getStripeExpandedInvoice({
         stripeCli: attachParams.stripeCli,
-        stripeInvoiceId: invoiceId,
+        stripeInvoiceId: invoiceId!,
       });
     }
 
     // Create or update
     let invoice = await InvoiceService.getByStripeId({
       db,
-      stripeId: invoiceId,
+      stripeId: stripeInvoice.id,
     });
 
     let autumnInvoiceItems = await getInvoiceItems({
@@ -43,7 +43,7 @@ export const insertInvoiceFromAttach = async ({
     if (invoice) {
       await InvoiceService.updateByStripeId({
         db,
-        stripeId: invoiceId,
+        stripeId: stripeInvoice.id,
         updates: {
           product_ids: attachParams.products.map((p) => p.id),
           internal_product_ids: attachParams.products.map((p) => p.internal_id),

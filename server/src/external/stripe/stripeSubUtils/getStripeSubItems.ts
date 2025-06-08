@@ -15,6 +15,8 @@ import {
   BillingInterval,
   Entity,
   APIVersion,
+  InsertReplaceable,
+  AttachReplaceable,
 } from "@autumn/shared";
 import { priceToStripeItem } from "../priceToStripeItem/priceToStripeItem.js";
 import { getArrearItems } from "./getStripeSubItems/getArrearItems.js";
@@ -66,6 +68,7 @@ export const getStripeSubItems = async ({
     cusProducts?: FullCusProduct[];
     entities: Entity[];
     apiVersion?: APIVersion;
+    replaceables: AttachReplaceable[];
   };
   isCheckout?: boolean;
   carryExistingUsages?: boolean;
@@ -105,6 +108,12 @@ export const getStripeSubItems = async ({
         carryExistingUsages,
         internalEntityId,
       });
+
+      let replaceables = priceEnt
+        ? attachParams.replaceables.filter((r) => r.ent.id === priceEnt.id)
+        : [];
+
+      existingUsage += replaceables.length;
 
       if (isUsagePrice({ price })) {
         usage_features.push({

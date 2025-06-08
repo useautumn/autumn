@@ -3,10 +3,13 @@ export enum AttachFunction {
   AddProduct = "add_product",
   OneOff = "one_off",
   UpdateEnts = "update_ents", // only update entitlements
-  UpdateProduct = "update_product", // update product
   ScheduleProduct = "schedule_product",
   UpdatePrepaidQuantity = "update_prepaid_quantity",
   Renew = "renew",
+  // UpdateProduct = "update_product", // update product
+
+  UpgradeSameInterval = "upgrade_same_interval",
+  UpgradeDiffInterval = "upgrade_diff_interval",
 }
 
 /* Handle checkout / public error:

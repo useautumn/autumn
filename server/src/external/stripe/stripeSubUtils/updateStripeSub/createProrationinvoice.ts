@@ -4,7 +4,7 @@ import { payForInvoice } from "../../stripeInvoiceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 
-const undoSubUpdate = async ({
+export const undoSubUpdate = async ({
   stripeCli,
   curSub,
   updatedSub,
@@ -56,6 +56,20 @@ export const createProrationInvoice = async ({
   logger: any;
 }) => {
   const { stripeCli, customer, paymentMethod } = attachParams;
+
+  let items = await stripeCli.invoices.listUpcomingLines({
+    subscription: curSub.id,
+  });
+
+  let proratedItems = items.data.filter(
+    (item) => item.proration || item.type === "invoiceitem",
+  );
+
+  if (proratedItems.length == 0) {
+    logger.info(`No items to prorate, skipping invoice creation`);
+    return null;
+  }
+
   let invoice = await stripeCli.invoices.create({
     customer: customer.processor.id,
     subscription: curSub.id,

@@ -125,6 +125,23 @@ export const deleteStripeCustomer = async ({
   return stripeCustomer;
 };
 
+export const listCusPaymentMethods = async ({
+  stripeCli,
+  stripeId,
+}: {
+  stripeCli: Stripe;
+  stripeId: string;
+}) => {
+  let res = await stripeCli.paymentMethods.list({
+    customer: stripeId,
+  });
+
+  const paymentMethods = res.data;
+  paymentMethods.sort((a, b) => b.created - a.created);
+
+  return paymentMethods;
+};
+
 export const getCusPaymentMethod = async ({
   stripeCli,
   stripeId,
@@ -137,8 +154,6 @@ export const getCusPaymentMethod = async ({
   if (!stripeId) {
     return null;
   }
-
-  // const stripeCli = createStripeCli({ org, env });
 
   const stripeCustomer = (await stripeCli.customers.retrieve(
     stripeId,

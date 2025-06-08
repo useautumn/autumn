@@ -106,11 +106,14 @@ export const createEntityForCusProduct = async ({
       });
 
     deletedReplaceables = deletedReplaceables_ || [];
+    // logger.info(`New balance: ${newBalance}`);
+    // logger.info(`Num deleted replaceables: ${deletedReplaceables.length}`);
+    // logger.info(`Num input entities: ${inputEntities.length}`);
 
     await CusEntService.decrement({
       db,
       id: mainCusEnt.id,
-      amount: inputEntities.length,
+      amount: inputEntities.length - deletedReplaceables.length,
     });
   }
 

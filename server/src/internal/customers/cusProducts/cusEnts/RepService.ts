@@ -10,6 +10,7 @@ export class RepService {
     db: DrizzleCli;
     data: InsertReplaceable[];
   }) {
+    if (data.length === 0) return [];
     const inserted = await db.insert(replaceables).values(data).returning();
     return inserted as Replaceable[];
   }
@@ -32,6 +33,7 @@ export class RepService {
   }
 
   static async deleteInIds({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+    if (ids.length === 0) return [];
     const deleted = await db
       .delete(replaceables)
       .where(inArray(replaceables.id, ids))
