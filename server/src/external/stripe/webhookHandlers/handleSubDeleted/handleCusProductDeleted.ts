@@ -1,6 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-// import { billForRemainingUsages } from "@/internal/customers/change-product/billRemainingUsages.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   activateFutureProduct,
@@ -20,7 +19,7 @@ import {
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "../../stripeCusUtils.js";
 import { webhookToAttachParams } from "../../webhookUtils/webhookUtils.js";
-import { createUsageInvoice } from "@/internal/customers/attach/attachFunctions/upgradeFlow/createUsageInvoice.js";
+import { createUsageInvoice } from "@/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/createUsageInvoice.js";
 
 export const handleCusProductDeleted = async ({
   req,

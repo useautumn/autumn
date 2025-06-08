@@ -10,9 +10,11 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 export const getNewProductPreview = async ({
   attachParams,
   now,
+  logger,
 }: {
   attachParams: AttachParams;
   now: number;
+  logger: any;
 }) => {
   const { org } = attachParams;
   const newProduct = attachParamsToProduct({ attachParams });
@@ -23,20 +25,22 @@ export const getNewProductPreview = async ({
   }
 
   const freeTrial = attachParams.freeTrial;
-  const items = getItemsForNewProduct({
+  const items = await getItemsForNewProduct({
     newProduct,
     attachParams,
     now,
     anchorToUnix,
     freeTrial,
+    logger,
   });
 
   let dueNextCycle = null;
   if (freeTrial) {
-    let nextCycleItems = getItemsForNewProduct({
+    let nextCycleItems = await getItemsForNewProduct({
       newProduct,
       attachParams,
       now,
+      logger,
     });
 
     dueNextCycle = {

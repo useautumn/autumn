@@ -12,9 +12,11 @@ import { UsageModel } from "@autumn/shared";
 export const getDowngradeProductPreview = async ({
   attachParams,
   now,
+  logger,
 }: {
   attachParams: AttachParams;
   now: number;
+  logger: any;
 }) => {
   const newProduct = attachParamsToProduct({ attachParams });
 
@@ -26,11 +28,11 @@ export const getDowngradeProductPreview = async ({
 
   const anchorToUnix = stripeSubs[0].current_period_end * 1000;
 
-  let items = getItemsForNewProduct({
+  let items = await getItemsForNewProduct({
     newProduct,
     attachParams,
     now,
-    // anchorToUnix,
+    logger,
   });
 
   items = items.filter((item) => item.usage_model !== UsageModel.Prepaid);

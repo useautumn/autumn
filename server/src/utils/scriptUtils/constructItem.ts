@@ -1,4 +1,11 @@
-import { ProductItem, ProductItemInterval, UsageModel } from "@autumn/shared";
+import {
+  OnDecrease,
+  OnIncrease,
+  ProductItem,
+  ProductItemConfig,
+  ProductItemInterval,
+  UsageModel,
+} from "@autumn/shared";
 
 export const constructFeatureItem = ({
   featureId,
@@ -70,10 +77,15 @@ export const constructArrearProratedItem = ({
   featureId,
   pricePerUnit,
   includedUsage = 1,
+  config = {
+    on_increase: OnIncrease.BillImmediately,
+    on_decrease: OnDecrease.None,
+  },
 }: {
   featureId: string;
   pricePerUnit: number;
   includedUsage?: number;
+  config?: ProductItemConfig;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -82,6 +94,7 @@ export const constructArrearProratedItem = ({
     price: pricePerUnit,
     billing_units: 1,
     interval: ProductItemInterval.Month,
+    config,
   };
 
   return item;

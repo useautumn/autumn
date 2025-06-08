@@ -1,7 +1,5 @@
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
-
 import { getPricesForCusProduct } from "@/internal/customers/change-product/scheduleUtils.js";
 import { getDowngradePreview } from "@/internal/customers/previews/getDowngradePreview.js";
 import { getNewProductPreview } from "@/internal/customers/previews/getNewProductPreview.js";
@@ -12,8 +10,8 @@ import {
   isOneOff,
   isProductUpgrade,
 } from "@/internal/products/productUtils.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
 
+import { formatUnixToDate } from "@/utils/genUtils.js";
 import {
   AppEnv,
   BillingType,

@@ -43,7 +43,7 @@ export const getUsageDiffLineItem = ({
   if (isIncrease) {
     description = `${product.name} - Additional ${description}`;
   } else {
-    description = `${product.name} - Unused ${description}`;
+    description = `Unused ${product.name} - ${description}`;
   }
 
   let previewLineItem = constructPreviewItem({

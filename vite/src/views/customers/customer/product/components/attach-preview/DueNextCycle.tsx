@@ -25,6 +25,8 @@ export const DueNextCycle = () => {
 
   if (!preview.due_next_cycle) return null;
 
+  if (!preview.due_next_cycle.line_items?.length) return null;
+
   return (
     <div className="flex flex-col">
       <p className="text-t2 font-semibold mb-2">

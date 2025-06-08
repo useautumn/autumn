@@ -86,10 +86,6 @@ export const adjustAllowance = async ({
   newBalance: number;
   logger: any;
   errorIfIncomplete?: boolean;
-  // deduction: number;
-  // product?: Product;
-  // replacedCount?: number;
-  // fromEntities?: boolean;
 }) => {
   let cusPrice = getRelatedCusPrice(cusEnt, cusPrices);
   let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
@@ -101,7 +97,7 @@ export const adjustAllowance = async ({
     billingType !== BillingType.InArrearProrated ||
     originalBalance == newBalance
   ) {
-    return { newReplaceables: null, invoice: null, deletedReplaceables: null };
+    return { newReplaceables: [], invoice: null, deletedReplaceables: null };
   }
 
   logger.info(`Updating arrear prorated usage: ${affectedFeature.name}`);

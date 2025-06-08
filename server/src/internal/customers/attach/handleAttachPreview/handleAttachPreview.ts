@@ -21,6 +21,7 @@ export const handleAttachPreview = (req: any, res: any) =>
     res,
     action: "attach-preview",
     handler: async (req: ExtendedRequest, res: ExtendedResponse) => {
+      const { logtail: logger } = req;
       const attachBody = AttachBodySchema.parse(req.body);
 
       const { attachParams } = await getAttachParams({
@@ -50,10 +51,11 @@ export const handleAttachPreview = (req: any, res: any) =>
         config,
       });
 
-      console.log(`Branch: ${branch}, Function: ${func}`);
+      logger.info("--------------------------------");
+      logger.info(`ATTACH PREVIEW (org: ${attachParams.org.id})`);
+      logger.info(`Branch: ${branch}, Function: ${func}`);
 
-      const { stripeCli, stripeCus } = attachParams;
-      const now = await getStripeNow({ stripeCli, stripeCus });
+      let now = attachParams.now || Date.now();
 
       let preview: any = null;
 
@@ -65,6 +67,7 @@ export const handleAttachPreview = (req: any, res: any) =>
         preview = await getNewProductPreview({
           attachParams,
           now,
+          logger,
         });
       }
 
@@ -72,21 +75,14 @@ export const handleAttachPreview = (req: any, res: any) =>
         preview = await getDowngradeProductPreview({
           attachParams,
           now,
+          logger,
         });
       }
 
-      // if (func == AttachFunction.UpdateEnts) {
-      //   preview = await getUpdateEntsPreview({
-      //     req,
-      //     attachParams,
-      //     now,
-      //   });
-      // }
-
       if (
-        func == AttachFunction.UpdateProduct ||
+        func == AttachFunction.UpgradeDiffInterval ||
         func == AttachFunction.UpdatePrepaidQuantity ||
-        func == AttachFunction.UpdateEnts
+        func == AttachFunction.UpgradeSameInterval
       ) {
         preview = await getUpgradeProductPreview({
           req,

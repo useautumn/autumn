@@ -8,6 +8,7 @@ import {
   Feature,
   BillingInterval,
   FreeTrial,
+  PreviewLineItem,
 } from "@autumn/shared";
 import { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import {
@@ -15,7 +16,10 @@ import {
   getPriceForOverage,
 } from "../../products/prices/priceUtils.js";
 import { getPriceEntitlement } from "../../products/prices/priceUtils.js";
-import { isFixedPrice } from "../../products/prices/priceUtils/usagePriceUtils.js";
+import {
+  isFixedPrice,
+  isUsagePrice,
+} from "../../products/prices/priceUtils/usagePriceUtils.js";
 import { getExistingUsageFromCusProducts } from "../../customers/cusProducts/cusEnts/cusEntUtils.js";
 import { Decimal } from "decimal.js";
 import { newPriceToInvoiceDescription } from "../invoiceFormatUtils.js";
@@ -26,13 +30,17 @@ import { formatAmount } from "@/utils/formatUtils.js";
 import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 import {
   getAlignedIntervalUnix,
-  getNextStartOfMonthUnix,
   subtractBillingIntervalUnix,
 } from "../../products/prices/billingIntervalUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
-import { getContUseInvoiceItems } from "@/internal/customers/attach/attachFunctions/upgradeFlow/getContUseInvoiceItems.js";
+import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
+import Stripe from "stripe";
+import {
+  attachParamsToCurCusProduct,
+  attachParamToCusProducts,
+} from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 
-const getDefaultPriceStr = ({
+export const getDefaultPriceStr = ({
   org,
   price,
   ent,
@@ -93,7 +101,7 @@ export const getProration = ({
   };
 };
 
-export const getItemsForNewProduct = ({
+export const getItemsForNewProduct = async ({
   newProduct,
   attachParams,
   now,
@@ -101,6 +109,8 @@ export const getItemsForNewProduct = ({
   interval,
   anchorToUnix,
   freeTrial,
+  stripeSubs,
+  logger,
 }: {
   newProduct: FullProduct;
   attachParams: AttachParams;
@@ -112,12 +122,14 @@ export const getItemsForNewProduct = ({
   interval?: BillingInterval;
   anchorToUnix?: number;
   freeTrial?: FreeTrial | null;
+  stripeSubs?: Stripe.Subscription[];
+  logger: any;
 }) => {
   const { org, features } = attachParams;
 
   now = now || Date.now();
 
-  const items: PreviewItem[] = [];
+  const items: PreviewLineItem[] = [];
 
   for (const price of newProduct.prices) {
     const ent = getPriceEntitlement(price, newProduct.entitlements);
@@ -153,8 +165,8 @@ export const getItemsForNewProduct = ({
       }
 
       items.push({
+        price_id: price.id,
         price: formatAmount({ org, amount }),
-        // price: "",
         description,
         amount,
         usage_model: priceToUsageModel(price),
@@ -162,69 +174,23 @@ export const getItemsForNewProduct = ({
       continue;
     }
 
-    if (
-      billingType == BillingType.UsageInAdvance ||
-      billingType == BillingType.InArrearProrated
-    )
-      continue;
-
-    // if (billingType == BillingType.UsageInArrear) {
-    //   items.push({
-    //     price: getDefaultPriceStr({ org, price, ent, features }),
-    //     description: newPriceToInvoiceDescription({
-    //       org,
-    //       price,
-    //       product: newProduct,
-    //     }),
-    //     usage_model: priceToUsageModel(price),
-    //   });
-    //   continue;
-    // }
-
-    const usage = getExistingUsageFromCusProducts({
-      entitlement: ent,
-      cusProducts: attachParams.cusProducts,
-      entities: attachParams.entities,
-      carryExistingUsages: undefined,
-      internalEntityId: attachParams.internalEntityId,
-    });
-
-    let description = newPriceToInvoiceDescription({
-      org,
-      price,
-      product: newProduct,
-      quantity: usage,
-    });
-
-    if (usage == 0) {
-      items.push({
-        price: getDefaultPriceStr({ org, price, ent, features }),
-        description,
-        usage_model: priceToUsageModel(price),
-      });
-    } else {
-      const overage = new Decimal(usage).sub(ent.allowance!).toNumber();
-      const amount = finalProration
-        ? calculateProrationAmount({
-            periodEnd: finalProration.end,
-            periodStart: finalProration.start,
-            now,
-            amount: getPriceForOverage(price, overage),
-          })
-        : getPriceForOverage(price, overage);
-
-      if (proration) {
-        description = `${description} (from ${formatUnixToDate(now)})`;
-      }
-
-      items.push({
-        price: "",
-        description,
-        amount,
-        usage_model: priceToUsageModel(price),
-      });
-    }
+    if (isUsagePrice({ price })) continue;
   }
+
+  const cusProduct = attachParamsToCurCusProduct({
+    attachParams,
+  });
+
+  const { newItems } = await getContUseInvoiceItems({
+    cusProduct,
+    stripeSubs,
+    attachParams,
+    logger,
+  });
+
+  // logger.info(`New items:`, newItems);
+
+  items.push(...newItems);
 
   for (const item of items) {
     if (item.amount && freeTrial) {
@@ -237,3 +203,56 @@ export const getItemsForNewProduct = ({
 
   return items;
 };
+
+// if (
+//   billingType == BillingType.UsageInAdvance ||
+//   billingType == BillingType.InArrearProrated
+// )
+//   continue;
+
+// const usage = getExistingUsageFromCusProducts({
+//   entitlement: ent,
+//   cusProducts: attachParams.cusProducts,
+//   entities: attachParams.entities,
+//   carryExistingUsages: undefined,
+//   internalEntityId: attachParams.internalEntityId,
+// });
+
+// let description = newPriceToInvoiceDescription({
+//   org,
+//   price,
+//   product: newProduct,
+//   quantity: usage,
+// });
+
+// if (usage == 0) {
+//   items.push({
+//     price_id: price.id,
+//     price: getDefaultPriceStr({ org, price, ent, features }),
+//     amount: undefined,
+//     description,
+//     usage_model: priceToUsageModel(price),
+//   });
+// } else {
+//   const overage = new Decimal(usage).sub(ent.allowance!).toNumber();
+//   const amount = finalProration
+//     ? calculateProrationAmount({
+//         periodEnd: finalProration.end,
+//         periodStart: finalProration.start,
+//         now,
+//         amount: getPriceForOverage(price, overage),
+//       })
+//     : getPriceForOverage(price, overage);
+
+//   if (proration) {
+//     description = `${description} (from ${formatUnixToDate(now)})`;
+//   }
+
+//   items.push({
+//     price_id: price.id,
+//     price: "",
+//     description,
+//     amount,
+//     usage_model: priceToUsageModel(price),
+//   });
+// }

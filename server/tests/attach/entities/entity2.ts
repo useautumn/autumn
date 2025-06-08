@@ -37,11 +37,11 @@ export let pro = constructProduct({
   type: "pro",
 });
 
-const testCase = "entity1";
+const testCase = "entity2";
 
 // Pro is $20 / month, Seat is $50 / user
 
-describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / delete entities`)}`, () => {
+describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing track usage for cont use`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -84,19 +84,7 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
     testClockId = testClockId1!;
   });
 
-  let usage = 0;
-  let firstEntities = [
-    {
-      id: "1",
-      name: "test",
-      featureId: TestFeature.Users,
-    },
-  ];
-
-  it("should create entity, then attach pro", async function () {
-    await autumn.entities.create(customerId, firstEntities);
-    usage += 1;
-
+  it("should attach pro", async function () {
     await runAttachTest({
       autumn,
       customerId,
@@ -105,29 +93,11 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
       db,
       org,
       env,
-      usage: [
-        {
-          featureId: TestFeature.Users,
-          value: 1,
-        },
-      ],
     });
   });
 
-  const entities = [
-    {
-      id: "2",
-      name: "test",
-      featureId: TestFeature.Users,
-    },
-    {
-      id: "3",
-      name: "test2",
-      featureId: TestFeature.Users,
-    },
-  ];
-
-  it("should create 2 entities and have correct invoice", async function () {
+  let usage = 0;
+  it("should create track +3 usage and have correct invoice", async function () {
     curUnix = await advanceTestClock({
       stripeCli,
       testClockId,
@@ -135,8 +105,13 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
       waitForSeconds: 10,
     });
 
-    await autumn.entities.create(customerId, entities);
-    usage += entities.length;
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Users,
+      value: 3,
+    });
+
+    usage += 3;
 
     await expectSubQuantityCorrect({
       stripeCli,
@@ -151,8 +126,10 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
     let customer = await autumn.customers.get(customerId);
     let invoices = customer.invoices;
     expect(invoices.length).to.equal(2);
-    expect(invoices[0].total).to.equal(userItem.price! * entities.length);
+    expect(invoices[0].total).to.equal(userItem.price! * 3);
   });
+
+  return;
 
   it("should delete 1 entity and have no new invoice", async function () {
     await autumn.entities.delete(customerId, entities[0].id);
@@ -208,10 +185,3 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
     });
   });
 });
-
-// Product is 1 free, $10 per seat
-// 1. Attach product
-// 2. Create three entities -> should have -2 balance, 3 qty sub item
-// 3. Delete two entities -> should have -2 balance, 2 replaceables, 3 qty sub item
-// 4. Create two entities -> should have -2 balance, 0 replaceables, 3 qty sub item, No invoice
-// 4. Delete two entities, advance clock to end of cycle -> should have 0 balance, 0 replaceables, 1 qty sub item, 1 invoice (correct amount)

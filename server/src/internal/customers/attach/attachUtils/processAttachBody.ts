@@ -26,6 +26,8 @@ import {
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import { isMainProduct } from "@/internal/products/productUtils/classifyProduct.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { getStripeCusData } from "../getAttachParams/getStripeCusData.js";
 
 const getProductsForAttach = async ({
   req,
@@ -222,10 +224,19 @@ export const processAttachBody = async ({
   attachBody: AttachBody;
 }) => {
   // 1. Get customer and products
+  const { org, env } = req;
+
   const { customer, products } = await getCustomerAndProducts({
     req,
     attachBody,
   });
+
+  const stripeCli = createStripeCli({ org, env });
+  let stripeCusData = await getStripeCusData({
+    stripeCli,
+    stripeId: customer.processor?.id,
+  });
+  const { stripeCus, paymentMethod, now } = stripeCusData;
 
   const {
     optionsList,
@@ -257,5 +268,13 @@ export const processAttachBody = async ({
     freeTrial,
     customPrices,
     customEnts,
+
+    // Additional data
+    stripeVars: {
+      stripeCli,
+      stripeCus,
+      paymentMethod,
+      now,
+    },
   };
 };

@@ -1,5 +1,6 @@
 import {
   AllowanceType,
+  AttachReplaceable,
   BillingType,
   Customer,
   EntInterval,
@@ -9,6 +10,7 @@ import {
   FreeTrial,
   FullCusProduct,
   FullCustomerEntitlement,
+  InsertReplaceable,
   Price,
 } from "@autumn/shared";
 
@@ -257,6 +259,7 @@ export const initCusEntitlement = ({
   entities,
   carryExistingUsages = false,
   curCusProduct,
+  replaceables,
 }: {
   entitlement: EntitlementWithFeature;
   customer: Customer;
@@ -271,16 +274,20 @@ export const initCusEntitlement = ({
   entities: Entity[];
   carryExistingUsages?: boolean;
   curCusProduct?: FullCusProduct;
+  replaceables: AttachReplaceable[];
 }) => {
   let { newBalance, newEntities } = initCusEntBalance({
     entitlement,
     options,
     relatedPrice,
-    // existingCusEnt,
     entities,
     carryExistingUsages,
     curCusProduct,
   });
+
+  newBalance =
+    (newBalance || 0) -
+    replaceables.filter((r) => r.ent.id === entitlement.id).length;
 
   let nextResetAtValue = initCusEntNextResetAt({
     entitlement,
@@ -302,8 +309,6 @@ export const initCusEntitlement = ({
   ) {
     usageAllowed = true;
   }
-
-  // Calculate balance...
 
   return {
     id: generateId("cus_ent"),

@@ -14,7 +14,7 @@ import { shouldProrate } from "../prorationConfigUtils.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
 import { constructStripeInvoiceItem } from "@/internal/invoices/invoiceItemUtils/invoiceItemUtils.js";
-import { priceToInvoiceAmount } from "../getAmountForPrice.js";
+import { priceToInvoiceAmount } from "../priceToInvoiceAmount.js";
 import { getPrevAndNewPriceForUpgrade } from "./getPrevAndNewUsages.js";
 
 export const getNewContUsageAmount = ({

@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 export const CustomerEntitlementsList = () => {
   const [featureType, setFeatureType] = useState<FeatureType>(
-    FeatureType.Metered
+    FeatureType.Metered,
   );
   const [showExpired, setShowExpired] = useState(false);
 
@@ -33,7 +33,7 @@ export const CustomerEntitlementsList = () => {
     (cusEnt: FullCustomerEntitlement) => {
       const entFeatureType = cusEnt.entitlement.feature.type;
       const cusProduct = customer.products.find(
-        (p: any) => p.id === cusEnt.customer_product_id
+        (p: any) => p.id === cusEnt.customer_product_id,
       );
       const isExpired = cusProduct?.status === "expired";
       const isScheduled = cusProduct?.status === "scheduled";
@@ -50,7 +50,7 @@ export const CustomerEntitlementsList = () => {
 
       // Filter by entity
       const entity = entities.find((e: any) => e.id === entityId);
-      let entityMatches =
+      const entityMatches =
         customer.products.find((p: any) => p.id === cusEnt.customer_product_id)
           ?.internal_entity_id === entity?.internal_id ||
         Object.keys(cusEnt.entities || {}).includes(entity?.id);
@@ -61,12 +61,12 @@ export const CustomerEntitlementsList = () => {
         !isScheduled &&
         (entityId ? entityMatches : true)
       );
-    }
+    },
   );
 
   const getProductName = (cusEnt: FullCustomerEntitlement) => {
     const cusProduct = customer.products.find(
-      (p: any) => p.id === cusEnt.customer_product_id
+      (p: any) => p.id === cusEnt.customer_product_id,
     );
 
     const product = products.find((p: any) => p.id === cusProduct?.product_id);
@@ -81,12 +81,12 @@ export const CustomerEntitlementsList = () => {
   };
 
   const getAdminHoverTexts = (cusEnt: FullCustomerEntitlement) => {
-    let entitlement = cusEnt.entitlement;
-    let featureEntities = entities.filter(
-      (e: any) => e.feature_id === entitlement.feature.id
+    const entitlement = cusEnt.entitlement;
+    const featureEntities = entities.filter(
+      (e: any) => e.feature_id === entitlement.feature.id,
     );
 
-    let hoverTexts = [
+    const hoverTexts = [
       {
         key: "Cus Ent ID",
         value: cusEnt.id,
@@ -101,10 +101,10 @@ export const CustomerEntitlementsList = () => {
           .join("\n"),
       });
     } else if (cusEnt.entities && Object.keys(cusEnt.entities).length > 0) {
-      let mappedEntities = Object.keys(cusEnt.entities)
+      const mappedEntities = Object.keys(cusEnt.entities)
         .map((e: any) => {
-          let entity = entities.find((ee: any) => ee.id === e);
-          let balance = cusEnt.entities![e].balance;
+          const entity = entities.find((ee: any) => ee.id === e);
+          const balance = cusEnt.entities![e].balance;
           return `${entity?.id} (${entity?.name}): ${balance}`;
         })
         .join("\n");
@@ -132,7 +132,7 @@ export const CustomerEntitlementsList = () => {
                     variant="ghost"
                     className={cn(
                       "text-t3 text-xs font-normal p-0",
-                      showExpired && "text-t1 hover:text-t1"
+                      showExpired && "text-t1 hover:text-t1",
                     )}
                     size="sm"
                     onClick={() => setShowExpired(!showExpired)}
@@ -220,7 +220,9 @@ export const CustomerEntitlementsList = () => {
                     <>
                       {cusEnt.balance}{" "}
                       <span className="text-t3">
-                        {cusEnt.unused ? ` (${cusEnt.unused} free)` : ""}
+                        {cusEnt.replaceables.length > 0
+                          ? ` (${cusEnt.replaceables.length} free)`
+                          : ""}
                       </span>
                     </>
                   )}
@@ -230,7 +232,7 @@ export const CustomerEntitlementsList = () => {
                 <div className="flex items-center gap-2 max-w-[150px] truncate text-t3">
                   {getProductName(cusEnt)}
                   {customer.products.find(
-                    (p: any) => p.id === cusEnt.customer_product_id
+                    (p: any) => p.id === cusEnt.customer_product_id,
                   )?.status === "expired" && (
                     <Badge variant="status" className="bg-black">
                       expired
@@ -245,7 +247,7 @@ export const CustomerEntitlementsList = () => {
               <Item className="col-span-1" />
             </Row>
           );
-        }
+        },
       )}
     </div>
   );

@@ -96,6 +96,8 @@ export const advanceTestClock = async ({
     frozen_time: Math.floor(advanceTo / 1000),
   });
 
+  return advanceTo;
+
   // await timeout(
   //   waitForSeconds ? waitForSeconds * 1000 : STRIPE_TEST_CLOCK_TIMING,
   // );

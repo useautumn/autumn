@@ -53,7 +53,7 @@ export const payForInvoice = async ({
   voidIfFailed = false,
 }: {
   stripeCli: Stripe;
-  paymentMethod: Stripe.PaymentMethod | null;
+  paymentMethod?: Stripe.PaymentMethod | null;
   invoiceId: string;
   logger: any;
   errorOnFail?: boolean;

@@ -12,6 +12,7 @@ import {
   AttachScenario,
   APIVersion,
   FullCustomer,
+  AttachReplaceable,
 } from "@autumn/shared";
 import Stripe from "stripe";
 
@@ -45,6 +46,8 @@ export type AttachParams = {
     old: FeatureOptions;
     new: FeatureOptions;
   }[];
+
+  replaceables: AttachReplaceable[];
 
   // CONFIGS
   invoiceOnly?: boolean | undefined;
@@ -85,6 +88,7 @@ export type InsertCusProductParams = {
 
   curCusProduct?: FullCusProduct | undefined;
   cusProducts?: FullCusProduct[];
+  replaceables: AttachReplaceable[];
 
   // CONFIGS
   invoiceOnly?: boolean | undefined;

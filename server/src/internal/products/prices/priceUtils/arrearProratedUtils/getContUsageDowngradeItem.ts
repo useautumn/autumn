@@ -1,29 +1,25 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { handleCreateReplaceables } from "@/trigger/arrearProratedUsage/handleCreateReplaceables.js";
 import { generateId } from "@/utils/genUtils.js";
 import {
-  Feature,
-  FullCusEntWithFullCusProduct,
   FullCustomerEntitlement,
-  getFeatureInvoiceDescription,
+  InsertReplaceable,
   InsertReplaceableSchema,
   OnDecrease,
   Price,
-  UsagePriceConfig,
 } from "@autumn/shared";
-import Decimal from "decimal.js";
 
 export const getReplaceables = ({
   cusEnt,
   prevOverage,
   newOverage,
+  deleteNextCycle = true,
 }: {
   cusEnt: FullCustomerEntitlement;
   prevOverage: number;
   newOverage: number;
-}) => {
+  deleteNextCycle?: boolean;
+}): InsertReplaceable[] => {
   if (prevOverage <= newOverage) {
-    return;
+    return [];
   }
 
   let numReplaceables = prevOverage - newOverage;
@@ -32,7 +28,7 @@ export const getReplaceables = ({
       id: generateId("rep"),
       cus_ent_id: cusEnt.id,
       created_at: Date.now(),
-      delete_next_cycle: true,
+      delete_next_cycle: deleteNextCycle,
     }),
   );
 

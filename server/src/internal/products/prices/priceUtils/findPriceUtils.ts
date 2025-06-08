@@ -34,6 +34,13 @@ export const findPrepaidPrice = ({
   });
 };
 
+export const findContUsePrice = ({ prices }: { prices: Price[] }) => {
+  return prices.find((p: Price) => {
+    const billingType = getBillingType(p.config);
+    return billingType == BillingType.InArrearProrated;
+  });
+};
+
 export const findPriceForFeature = ({
   prices,
   feature,

@@ -1,16 +1,11 @@
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
+import { listCusPaymentMethods } from "@/external/stripe/stripeCusUtils.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachBody } from "../models/AttachBody.js";
 import { processAttachBody } from "./processAttachBody.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { APIVersion } from "@autumn/shared";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import {
-  getCusPaymentMethod,
-  getStripeCus,
-} from "@/external/stripe/stripeCusUtils.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
+import Stripe from "stripe";
 
 export const getAttachParams = async ({
   req,
@@ -28,12 +23,13 @@ export const getAttachParams = async ({
     freeTrial,
     customPrices,
     customEnts,
+    stripeVars,
   } = await processAttachBody({
     req,
     attachBody,
   });
 
-  const { org, env } = req;
+  const { org } = req;
 
   const apiVersion =
     orgToVersion({
@@ -43,29 +39,7 @@ export const getAttachParams = async ({
 
   const entityId = attachBody.entity_id;
   const internalEntityId = entityId ? customer.entity.internal_id : undefined;
-
-  const stripeCli = createStripeCli({ org, env });
-  const [paymentMethod, { stripeCus, now }] = await Promise.all([
-    getCusPaymentMethod({
-      stripeCli,
-      stripeId: customer.processor?.id,
-    }),
-    (async () => {
-      try {
-        const stripeCus = await getStripeCus({
-          stripeCli,
-          stripeId: customer.processor?.id,
-        });
-        const now = await getStripeNow({
-          stripeCli,
-          stripeCus,
-        });
-        return { stripeCus, now };
-      } catch (error) {
-        return { stripeCus: undefined, now: undefined };
-      }
-    })(),
-  ]);
+  const { stripeCli, stripeCus, paymentMethod, now } = stripeVars;
 
   const attachParams: AttachParams = {
     stripeCli,
@@ -79,6 +53,7 @@ export const getAttachParams = async ({
     prices,
     entitlements,
     freeTrial,
+    replaceables: [],
 
     // From req
     req,
