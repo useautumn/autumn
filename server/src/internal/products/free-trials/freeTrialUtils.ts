@@ -92,64 +92,17 @@ export const freeTrialToStripeTimestamp = ({
   return Math.ceil(trialEnd.getTime() / 1000);
 };
 
-export const freeTrialToNumDays = (freeTrial: FreeTrial | null) => {
-  if (!freeTrial) return undefined;
-  return freeTrial.length;
-};
-
-export const trialFingerprintExists = async ({
-  db,
-  freeTrialId,
-  fingerprint,
-}: {
-  db: DrizzleCli;
-  freeTrialId: string;
-  fingerprint: string;
-}) => {
-  const data = await CusProductService.getByFingerprint({
-    db,
-    freeTrialId,
-    fingerprint,
-  });
-
-  if (data && data.length > 0) {
-    return true;
-  }
-
-  return false;
-};
-
-export const trialWithCustomerExists = async ({
-  db,
-  internalCustomerId,
-  freeTrialId,
-}: {
-  db: DrizzleCli;
-  internalCustomerId: string;
-  freeTrialId: string;
-}) => {
-  const data = await CusProductService.getByFingerprint({
-    db,
-    freeTrialId,
-    fingerprint: internalCustomerId,
-  });
-
-  if (data && data.length > 0) {
-    return true;
-  }
-
-  return false;
-};
-
 export const getFreeTrialAfterFingerprint = async ({
   db,
   freeTrial,
+  productId,
   fingerprint,
   internalCustomerId,
   multipleAllowed,
 }: {
   db: DrizzleCli;
   freeTrial: FreeTrial | null | undefined;
+  productId: string;
   fingerprint: string | null | undefined;
   internalCustomerId: string;
   multipleAllowed: boolean;
@@ -161,31 +114,19 @@ export const getFreeTrialAfterFingerprint = async ({
   }
 
   let uniqueFreeTrial: FreeTrial | null = freeTrial;
-  if (uniqueFreeTrial.unique_fingerprint && fingerprint) {
-    let exists = await trialFingerprintExists({
-      db,
-      fingerprint,
-      freeTrialId: uniqueFreeTrial.id,
-    });
 
-    if (exists) {
-      console.log("Free trial fingerprint exists");
-      uniqueFreeTrial = null;
-    }
-  }
+  const data = await CusProductService.getByFingerprint({
+    db,
+    productId,
+    internalCustomerId,
+    fingerprint: uniqueFreeTrial.unique_fingerprint ? fingerprint! : undefined,
+  });
 
-  if (uniqueFreeTrial) {
-    // Check if same customer exists
-    let exists = await trialWithCustomerExists({
-      db,
-      internalCustomerId,
-      freeTrialId: uniqueFreeTrial.id,
-    });
+  const exists = data && data.length > 0;
 
-    if (exists) {
-      console.log("Free trial with customer exists");
-      uniqueFreeTrial = null;
-    }
+  if (exists) {
+    console.log("Free trial fingerprint exists");
+    uniqueFreeTrial = null;
   }
 
   return uniqueFreeTrial;

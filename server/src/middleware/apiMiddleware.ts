@@ -41,6 +41,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
   }
 
   const apiKey = authHeader.split(" ")[1];
+
   if (!apiKey.startsWith("am_")) {
     return {
       error: ErrCode.InvalidAuthHeader,

@@ -63,6 +63,16 @@ export const handleVersionProductV2 = async ({
     env,
   });
 
+  if (latestProduct.is_default) {
+    await ProductService.updateByInternalId({
+      db,
+      internalId: latestProduct.internal_id,
+      update: {
+        is_default: false,
+      },
+    });
+  }
+
   await ProductService.insert({ db, product: newProduct });
 
   const { customPrices, customEnts } = await handleNewProductItems({

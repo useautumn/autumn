@@ -1,22 +1,20 @@
 import { AppEnv } from "../../genModels/genEnums.js";
-import {
-  CusProductResponseSchema,
-  CusEntResponseV2Schema,
-} from "../cusResponseModels.js";
 
 import { z } from "zod";
 import { InvoiceResponseSchema } from "../invoiceModels/invoiceResponseModels.js";
+import { CusProductResponseSchema } from "../cusResModels/cusProductResponse.js";
+import { CusEntResponseV2Schema } from "../cusResModels/cusFeatureResponse.js";
 
 export const EntityResponseSchema = z.object({
   id: z.string().nullable(),
   name: z.string().nullable(),
   customer_id: z.string(),
+  feature_id: z.string().nullish(),
+
   created_at: z.number(),
   env: z.nativeEnum(AppEnv),
-
-  products: z.array(CusProductResponseSchema),
-
-  features: z.record(z.string(), CusEntResponseV2Schema),
+  products: z.array(CusProductResponseSchema).optional(),
+  features: z.record(z.string(), CusEntResponseV2Schema).optional(),
   invoices: z.array(InvoiceResponseSchema).optional(),
 });
 

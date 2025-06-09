@@ -8,8 +8,8 @@ if [ "$1" == "basic-parallel" ]; then
     tests/basic/*.ts \
     tests/basic/multi-feature/*.ts \
     tests/basic/entities/*.ts \
-    # 'tests/basic/referrals/*.ts' 'tests/attach/**/*.ts' \
     # && $MOCHA_CMD \
+    # 'tests/basic/referrals/*.ts' 'tests/attach/**/*.ts' \
     # 'tests/basic/referrals/*.ts' 'tests/attach/**/*.ts' \
 
 elif [ "$1" == "advanced-parallel" ]; then
