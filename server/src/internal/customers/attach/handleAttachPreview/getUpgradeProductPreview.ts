@@ -5,14 +5,9 @@ import {
 } from "../attachUtils/convertAttachParams.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-  getFirstInterval,
-  getLastInterval,
-} from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { subToAutumnInterval } from "@/external/stripe/utils.js";
+import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { getItemsForCurProduct } from "@/internal/invoices/previewItemUtils/getItemsForCurProduct.js";
-import { notNullish } from "@/utils/genUtils.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import Stripe from "stripe";

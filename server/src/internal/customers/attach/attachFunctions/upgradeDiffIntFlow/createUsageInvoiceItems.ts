@@ -72,8 +72,7 @@ export const getUsageInvoiceItems = async ({
     });
 
     if (!sub) continue;
-
-    if (interval !== subToAutumnInterval(sub)) continue;
+    if (interval && interval !== subToAutumnInterval(sub)) continue;
 
     cusEntIds.push(cusEnt.id);
 

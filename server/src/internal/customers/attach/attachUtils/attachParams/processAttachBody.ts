@@ -1,5 +1,5 @@
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachBody } from "../models/AttachBody.js";
+import { AttachBody } from "../../models/AttachBody.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   CreateFreeTrial,
@@ -12,9 +12,9 @@ import {
 } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { getOrCreateCustomer } from "../../cusUtils/getOrCreateCustomer.js";
-import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
-import { mapOptionsList } from "./mapOptionsList.js";
+import { getOrCreateCustomer } from "../../../cusUtils/getOrCreateCustomer.js";
+import { getExistingCusProducts } from "../../../cusProducts/cusProductUtils/getExistingCusProducts.js";
+import { mapOptionsList } from "../mapOptionsList.js";
 import {
   getFreeTrialAfterFingerprint,
   handleNewFreeTrial,
@@ -22,12 +22,12 @@ import {
 import {
   cusProductToEnts,
   cusProductToPrices,
-} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+} from "../../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils.js";
 import { isMainProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getStripeCusData } from "../getAttachParams/getStripeCusData.js";
+import { getStripeCusData } from "./attachParamsUtils/getStripeCusData.js";
 
 const getProductsForAttach = async ({
   req,
@@ -134,6 +134,7 @@ const getPricesAndEnts = async ({
         fingerprint: customer.fingerprint,
         internalCustomerId: customer.internal_id,
         multipleAllowed: org.config.multiple_trials,
+        productId: freeTrialProduct.id,
       });
     }
 
@@ -194,6 +195,7 @@ const getPricesAndEnts = async ({
     fingerprint: customer.fingerprint,
     internalCustomerId: customer.internal_id,
     multipleAllowed: org.config.multiple_trials,
+    productId: product.id,
   });
 
   const prodIsMain = isMainProduct({ product: products[0], prices });
@@ -236,6 +238,7 @@ export const processAttachBody = async ({
     stripeCli,
     stripeId: customer.processor?.id,
   });
+
   const { stripeCus, paymentMethod, now } = stripeCusData;
 
   const {
@@ -251,13 +254,6 @@ export const processAttachBody = async ({
     customer,
     products,
   });
-
-  if (attachBody.free_trial === false) {
-    throw new RecaseError({
-      message: "Free trial is not allowed",
-      code: ErrCode.InvalidRequest,
-    });
-  }
 
   return {
     customer,

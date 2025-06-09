@@ -19,16 +19,16 @@ import {
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
-import { updateStripeSubs } from "./updateStripeSubs.js";
+import { updateSubsDiffInt } from "./updateSubsDiffInt.js";
 
-export const handleUpgradeFunction = async ({
+export const handleUpgradeDiffInterval = async ({
   req,
   res,
   attachParams,
   config,
 }: {
   req: ExtendedRequest;
-  res: any;
+  res?: any;
   attachParams: AttachParams;
   config: AttachConfig;
 }) => {
@@ -53,7 +53,7 @@ export const handleUpgradeFunction = async ({
   });
 
   logger.info("1. Updating current subscriptions in Stripe");
-  let { newSubs, invoice, newInvoiceIds } = await updateStripeSubs({
+  let { newSubs, invoice, newInvoiceIds } = await updateSubsDiffInt({
     db: req.db,
     curCusProduct,
     stripeCli,

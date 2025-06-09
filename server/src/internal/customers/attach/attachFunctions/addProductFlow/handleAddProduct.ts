@@ -4,11 +4,12 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "../../../cusProducts/AttachParams.js";
-import { APIVersion, AttachConfig } from "@autumn/shared";
+import { APIVersion, AttachBranch, AttachConfig } from "@autumn/shared";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { SuccessCode } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handlePaidProduct } from "./handlePaidProduct.js";
+import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
 
 export const handleAddProduct = async ({
   req,
@@ -17,7 +18,7 @@ export const handleAddProduct = async ({
   config,
 }: {
   req: ExtendedRequest;
-  res: any;
+  res?: any;
   attachParams: AttachParams;
   config: AttachConfig;
 }) => {
@@ -41,13 +42,20 @@ export const handleAddProduct = async ({
   const batchInsert = [];
 
   for (const product of products) {
+    let curCusProduct = attachParamsToCurCusProduct({ attachParams });
+    let anchorToUnix = undefined;
+
+    if (curCusProduct && config.branch == AttachBranch.NewVersion) {
+      anchorToUnix = curCusProduct.created_at;
+    }
+
     batchInsert.push(
       createFullCusProduct({
         db: req.db,
         attachParams: attachToInsertParams(attachParams, product),
-        subscriptionId: undefined,
         billLaterOnly: true,
         carryExistingUsages: config.carryUsage,
+        anchorToUnix,
         logger,
       }),
     );

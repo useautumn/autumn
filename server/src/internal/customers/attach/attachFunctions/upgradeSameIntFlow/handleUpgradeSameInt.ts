@@ -10,6 +10,7 @@ import { APIVersion, AttachConfig, CusProductStatus } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { updateSubsByInt } from "./updateSubsSameInt.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { formatUnixToDate } from "@/utils/genUtils.js";
 
 export const handleUpgradeSameInterval = async ({
   req,
@@ -18,7 +19,7 @@ export const handleUpgradeSameInterval = async ({
   config,
 }: {
   req: ExtendedRequest;
-  res: any;
+  res?: any;
   attachParams: AttachParams;
   config: AttachConfig;
 }) => {
@@ -58,31 +59,38 @@ export const handleUpgradeSameInterval = async ({
   });
 
   logger.info(`3. Creating new cus product`);
+
+  logger.info(
+    `Anchoring to unix: ${formatUnixToDate(stripeSubs[0].current_period_end * 1000)}`,
+  );
   await createFullCusProduct({
     db: req.db,
     attachParams: attachToInsertParams(attachParams, attachParams.products[0]),
     subscriptionIds: curCusProduct!.subscription_ids || [],
     disableFreeTrial: config.disableTrial,
     carryExistingUsages: config.carryUsage,
+    carryOverTrial: config.carryTrial,
     anchorToUnix: stripeSubs[0].current_period_end * 1000,
     logger,
   });
 
-  let apiVersion = attachParams.org.api_version || APIVersion.v1;
-  if (apiVersion >= APIVersion.v1_1) {
-    res.status(200).json(
-      AttachResultSchema.parse({
-        customer_id: attachParams.customer.id,
-        product_ids: attachParams.products.map((p) => p.id),
-        code: "updated_product_successfully",
+  if (res) {
+    let apiVersion = attachParams.org.api_version || APIVersion.v1;
+    if (apiVersion >= APIVersion.v1_1) {
+      res.status(200).json(
+        AttachResultSchema.parse({
+          customer_id: attachParams.customer.id,
+          product_ids: attachParams.products.map((p) => p.id),
+          code: "updated_product_successfully",
+          message: `Successfully updated product`,
+        }),
+      );
+    } else {
+      res.status(200).json({
+        success: true,
         message: `Successfully updated product`,
-      }),
-    );
-  } else {
-    res.status(200).json({
-      success: true,
-      message: `Successfully updated product`,
-    });
+      });
+    }
   }
 };
 

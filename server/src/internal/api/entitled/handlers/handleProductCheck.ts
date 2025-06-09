@@ -6,6 +6,7 @@ import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCu
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 import { getProductResponse } from "@/internal/products/productV2Utils.js";
 import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
+import { getProductCheckPreview } from "./getProductCheckPreview.js";
 
 export const handleProductCheck = async ({
   req,
@@ -40,6 +41,7 @@ export const handleProductCheck = async ({
 
       entityId: entity_id,
       entityData: entity_data,
+      withEntities: true,
     }),
     ProductService.getFull({
       db,
@@ -62,18 +64,27 @@ export const handleProductCheck = async ({
   );
 
   let preview = with_preview
-    ? await getAttachPreview({
-        db,
+    ? await getProductCheckPreview({
+        req,
         customer,
-        org,
-        env,
-        product: product!,
-        cusProducts,
-        features,
+        product,
         logger,
-        shouldFormat: with_preview == "formatted",
       })
     : undefined;
+
+  // let preview = with_preview
+  //   ? await getAttachPreview({
+  //       db,
+  //       customer,
+  //       org,
+  //       env,
+  //       product: product!,
+  //       cusProducts,
+  //       features,
+  //       logger,
+  //       shouldFormat: with_preview == "formatted",
+  //     })
+  //   : undefined;
 
   if (preview) {
     preview = {

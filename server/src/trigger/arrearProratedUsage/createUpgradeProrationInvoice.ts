@@ -149,7 +149,7 @@ export const createUpgradeProrationInvoice = async ({
       stripeSubId: sub.id,
     });
 
-    const { invoice: paidInvoice } = await payForInvoice({
+    const { invoice: paidInvoice, error } = await payForInvoice({
       stripeCli,
       paymentMethod,
       invoiceId: finalInvoice.id,

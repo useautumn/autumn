@@ -2,7 +2,7 @@ import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { AttachBodySchema } from "./models/AttachBody.js";
-import { getAttachParams } from "./attachUtils/getAttachParams.js";
+import { getAttachParams } from "./attachUtils/attachParams/getAttachParams.js";
 import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "./attachUtils/getAttachConfig.js";
 import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";

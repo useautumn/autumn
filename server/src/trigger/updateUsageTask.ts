@@ -279,10 +279,12 @@ export const runUpdateUsageTask = async ({
   payload,
   logger,
   db,
+  throwError = false,
 }: {
   payload: any;
   logger: any;
   db: DrizzleCli;
+  throwError?: boolean;
 }) => {
   try {
     // 1. Update customer balance
@@ -321,19 +323,11 @@ export const runUpdateUsageTask = async ({
     }
     console.log("   ✅ Customer balance updated");
   } catch (error) {
-    if (logger) {
-      logger.use((log: any) => {
-        return {
-          ...log,
-          task: JobName.UpdateUsage,
-          data: payload,
-        };
-      });
+    logger.error(`ERROR UPDATING USAGE`);
+    logger.error(error);
 
-      logger.error(`ERROR UPDATING USAGE`);
-      logger.error(error);
-    } else {
-      console.log(error);
+    if (throwError) {
+      throw error;
     }
   }
 };

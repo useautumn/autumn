@@ -4,7 +4,7 @@ import {
   AttachResultSchema,
 } from "../../cusProducts/AttachParams.js";
 import { AttachBranch, AttachFunction } from "@autumn/shared";
-import { handleUpgradeFunction } from "../attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
+import { handleUpgradeDiffInterval } from "../attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
 import { AttachBody } from "../models/AttachBody.js";
@@ -213,7 +213,7 @@ export const runAttachFunction = async ({
   }
 
   if (attachFunction == AttachFunction.UpgradeDiffInterval) {
-    return await handleUpgradeFunction({
+    return await handleUpgradeDiffInterval({
       req,
       res,
       attachParams,

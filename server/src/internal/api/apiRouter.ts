@@ -11,7 +11,7 @@ import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { usageRouter } from "./events/usageRouter.js";
 import { invoiceRouter } from "./invoiceRouter.js";
 import { entityRouter } from "./entities/entityRouter.js";
-import { migrationRouter } from "./migrations/migrationRouter.js";
+import { migrationRouter } from "../migrations/migrationRouter.js";
 
 import { redemptionRouter, referralRouter } from "./rewards/referralRouter.js";
 import { rewardProgramRouter } from "./rewards/rewardProgramRouter.js";

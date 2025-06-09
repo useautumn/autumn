@@ -24,6 +24,11 @@ import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { FeatureOptions } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { migrationToAttachParams } from "../migrationUtils/migrationToAttachParams.js";
+import { runMigrationAttach } from "../migrationUtils/runMigrationAttach.js";
 
 export const migrateCustomer = async ({
   db,
@@ -49,81 +54,110 @@ export const migrateCustomer = async ({
   features: Feature[];
 }) => {
   try {
-    let cusProducts = await CusProductService.list({
+    const stripeCli = createStripeCli({ org, env });
+    let fullCus = await CusService.getFull({
       db,
-      internalCustomerId: customer.internal_id,
-      inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+      idOrInternalId: customer.id!,
+      orgId,
+      env,
+      withEntities: true,
     });
 
-    let entities = await EntityService.list({
+    // 1. Build req object
+    let req = {
       db,
-      internalCustomerId: customer.internal_id,
-    });
+      orgId,
+      env,
+      org,
+      features,
+      logtail: logger,
+      timestamp: Date.now(),
+    } as ExtendedRequest;
 
-    let curCusProduct = cusProducts.find(
+    const cusProducts = fullCus.customer_products;
+    const filteredCusProducts = cusProducts.filter(
       (cp: FullCusProduct) => cp.product.internal_id == fromProduct.internal_id,
     );
 
-    if (!curCusProduct) {
-      logger.error(
-        `Customer ${customer.id} does not have a ${fromProduct.internal_id} cus product, skipping migration`,
-      );
-      return false;
+    for (const cusProduct of filteredCusProducts) {
+      const attachParams = await migrationToAttachParams({
+        req,
+        stripeCli,
+        customer: fullCus,
+        cusProduct,
+        newProduct: toProduct,
+      });
+
+      await runMigrationAttach({
+        req,
+        attachParams,
+      });
     }
 
-    let attachParams: AttachParams = {
-      org,
-      customer,
-      products: [toProduct],
-      prices: toProduct.prices,
-      entitlements: toProduct.entitlements,
-      freeTrial: toProduct.free_trial || null,
-      features,
-      optionsList: curCusProduct.options,
-      entities,
-      cusProducts,
-      fromMigration: true,
-    };
+    // // let cusProducts = await CusProductService.list({
+    // //   db,
+    // //   internalCustomerId: customer.internal_id,
+    // //   inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    // // });
 
-    // Get prepaid prices
-    let prepaidPrices = toProduct.prices.filter(
-      (price: Price) =>
-        getBillingType(price.config!) === BillingType.UsageInAdvance,
-    );
+    // // let entities = await EntityService.list({
+    // //   db,
+    // //   internalCustomerId: customer.internal_id,
+    // // });
 
-    for (const prepaidPrice of prepaidPrices) {
-      let config = prepaidPrice.config as UsagePriceConfig;
+    // let attachParams: AttachParams = {
+    //   org,
+    //   customer,
+    //   products: [toProduct],
+    //   prices: toProduct.prices,
+    //   entitlements: toProduct.entitlements,
+    //   freeTrial: toProduct.free_trial || null,
+    //   features,
+    //   optionsList: curCusProduct.options,
+    //   entities,
+    //   cusProducts,
+    //   fromMigration: true,
+    // };
 
-      let newPrepaid = curCusProduct.options.find(
-        (option: FeatureOptions) =>
-          option.internal_feature_id === config.internal_feature_id,
-      );
+    // // Get prepaid prices
+    // let prepaidPrices = toProduct.prices.filter(
+    //   (price: Price) =>
+    //     getBillingType(price.config!) === BillingType.UsageInAdvance,
+    // );
 
-      if (!newPrepaid) {
-        curCusProduct.options.push({
-          feature_id: config.feature_id,
-          internal_feature_id: config.internal_feature_id,
-          quantity: 0,
-        });
-      }
-    }
+    // for (const prepaidPrice of prepaidPrices) {
+    //   let config = prepaidPrice.config as UsagePriceConfig;
 
-    await handleUpgrade({
-      req: {
-        db,
-        orgId,
-        env,
-        logtail: logger,
-      },
-      res: null,
-      attachParams,
-      curCusProduct,
-      curFullProduct: fromProduct,
-      fromReq: false,
-      carryExistingUsages: true,
-      prorationBehavior: ProrationBehavior.None,
-      newVersion: true,
-    });
+    //   let newPrepaid = curCusProduct.options.find(
+    //     (option: FeatureOptions) =>
+    //       option.internal_feature_id === config.internal_feature_id,
+    //   );
+
+    //   if (!newPrepaid) {
+    //     curCusProduct.options.push({
+    //       feature_id: config.feature_id,
+    //       internal_feature_id: config.internal_feature_id,
+    //       quantity: 0,
+    //     });
+    //   }
+    // }
+
+    // await handleUpgrade({
+    //   req: {
+    //     db,
+    //     orgId,
+    //     env,
+    //     logtail: logger,
+    //   },
+    //   res: null,
+    //   attachParams,
+    //   curCusProduct,
+    //   curFullProduct: fromProduct,
+    //   fromReq: false,
+    //   carryExistingUsages: true,
+    //   prorationBehavior: ProrationBehavior.None,
+    //   newVersion: true,
+    // });
 
     return true;
   } catch (error: any) {
@@ -131,25 +165,40 @@ export const migrateCustomer = async ({
       `Migration failed for customer ${customer.id}, job id: ${migrationJob.id}`,
     );
     logger.error(error);
-    if (error instanceof RecaseError) {
-      logger.error(`Recase error: ${error.message} (${error.code})`);
-    } else if (error.type === "StripeError") {
-      logger.error(`Stripe error: ${error.message} (${error.code})`);
-    } else {
-      logger.error("Unknown error:", error);
-    }
+    // logger.error(
+    //   `Migration failed for customer ${customer.id}, job id: ${migrationJob.id}`,
+    // );
+    // logger.error(error);
+    // if (error instanceof RecaseError) {
+    //   logger.error(`Recase error: ${error.message} (${error.code})`);
+    // } else if (error.type === "StripeError") {
+    //   logger.error(`Stripe error: ${error.message} (${error.code})`);
+    // } else {
+    //   logger.error("Unknown error:", error);
+    // }
 
-    await MigrationService.insertError({
-      db,
-      data: constructMigrationError({
-        migrationJobId: migrationJob.id,
-        internalCustomerId: customer.internal_id,
-        data: error.data || error,
-        code: error.code || "unknown",
-        message: error.message || "unknown",
-      }),
-    });
+    // await MigrationService.insertError({
+    //   db,
+    //   data: constructMigrationError({
+    //     migrationJobId: migrationJob.id,
+    //     internalCustomerId: customer.internal_id,
+    //     data: error.data || error,
+    //     code: error.code || "unknown",
+    //     message: error.message || "unknown",
+    //   }),
+    // });
 
     return false;
   }
 };
+
+// let curCusProduct = cusProducts.find(
+//   (cp: FullCusProduct) => cp.product.internal_id == fromProduct.internal_id,
+// );
+
+// if (!curCusProduct) {
+//   logger.error(
+//     `Customer ${customer.id} does not have a ${fromProduct.internal_id} cus product, skipping migration`,
+//   );
+//   return false;
+// }

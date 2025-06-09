@@ -15,4 +15,5 @@ export interface AttachConfig {
   invoiceOnly: boolean;
   disableMerge: boolean;
   sameIntervals: boolean;
+  carryTrial: boolean;
 }

@@ -17,17 +17,17 @@ import { addPrefixToProducts } from "../utils.js";
 
 // UNCOMMENT FROM HERE
 let pro = constructProduct({
-  id: "attach1_pro",
+  id: "pro",
   items: [constructArrearItem({ featureId: TestFeature.Words })],
   type: "pro",
 });
 let premium = constructProduct({
-  id: "attach1_premium",
+  id: "premium",
   items: [constructArrearItem({ featureId: TestFeature.Words })],
   type: "premium",
 });
 let growth = constructProduct({
-  id: "attach1_growth",
+  id: "growth",
   items: [constructArrearItem({ featureId: TestFeature.Words })],
   type: "growth",
 });
@@ -60,6 +60,9 @@ describe(`${chalk.yellowBright("attach/upgrade1: Testing usage upgrades")}`, () 
     await createProducts({
       autumn: autumnJs,
       products: [pro, premium, growth],
+      db,
+      orgId: org.id,
+      env,
       customerId,
     });
 

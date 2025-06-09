@@ -18,7 +18,7 @@ import { FeatureOptions } from "@autumn/shared";
 
 import { EntitlementWithFeature } from "@autumn/shared";
 import { getResetBalance } from "../cusProducts/cusEnts/cusEntUtils.js";
-import { generateId, notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDate, generateId, notNullish } from "@/utils/genUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { applyTrialToEntitlement } from "@/internal/products/entitlements/entitlementUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -26,6 +26,7 @@ import { getNextEntitlementReset } from "@/utils/timeUtils.js";
 import { subtractFromUnixTillAligned } from "@/internal/products/prices/billingIntervalUtils.js";
 import { UTCDate } from "@date-fns/utc";
 import { entitlementLinkedToEntity } from "@/internal/api/entities/entityUtils.js";
+import { initNextResetAt } from "../cusProducts/insertCusProduct/initCusEnt/initNextResetAt.js";
 
 export const initCusEntEntities = ({
   entitlement,
@@ -69,73 +70,6 @@ export const initCusEntEntities = ({
   }
 
   return newEntities;
-};
-
-const initCusEntNextResetAt = ({
-  entitlement,
-  nextResetAt,
-  keepResetIntervals,
-  existingCusEnt,
-  freeTrial,
-  anchorToUnix,
-}: {
-  entitlement: EntitlementWithFeature;
-  nextResetAt?: number;
-  keepResetIntervals?: boolean;
-  existingCusEnt?: FullCustomerEntitlement;
-  freeTrial: FreeTrial | null;
-  anchorToUnix?: number;
-}) => {
-  // 1. If entitlement is boolean, or unlimited, or lifetime, then next reset at is null
-  if (
-    entitlement.feature.type === FeatureType.Boolean ||
-    entitlement.allowance_type === AllowanceType.Unlimited ||
-    entitlement.interval == EntInterval.Lifetime
-  ) {
-    return null;
-  }
-
-  if (nextResetAt) {
-    return nextResetAt;
-  }
-
-  // 3. If keepResetIntervals is true, return existing next reset at...
-  if (keepResetIntervals && existingCusEnt?.next_reset_at) {
-    return existingCusEnt.next_reset_at;
-  }
-
-  // 4. Calculate next reset at...
-  let nextResetAtCalculated = null;
-  let trialEndTimestamp = freeTrialToStripeTimestamp({ freeTrial });
-  if (
-    freeTrial &&
-    applyTrialToEntitlement(entitlement, freeTrial) &&
-    trialEndTimestamp
-  ) {
-    nextResetAtCalculated = new UTCDate(trialEndTimestamp! * 1000);
-  }
-
-  let resetInterval = entitlement.interval as EntInterval;
-
-  nextResetAtCalculated = getNextEntitlementReset(
-    nextResetAtCalculated,
-    resetInterval,
-  ).getTime();
-
-  // If anchorToUnix, align next reset at to anchorToUnix...
-  if (anchorToUnix && nextResetAtCalculated) {
-    nextResetAtCalculated = subtractFromUnixTillAligned({
-      targetUnix: anchorToUnix,
-      originalUnix: nextResetAtCalculated,
-    });
-  }
-
-  // console.log(
-  //   "NEXT RESET AT",
-  //   format(new Date(nextResetAtCalculated), "dd MMM yyyy HH:mm:ss")
-  // );
-
-  return nextResetAtCalculated;
 };
 
 const initCusEntBalance = ({
@@ -253,13 +187,15 @@ export const initCusEntitlement = ({
   options,
   nextResetAt,
   relatedPrice,
-  existingCusEnt,
-  keepResetIntervals = false,
+  // existingCusEnt,
+  // keepResetIntervals = false,
+  trialEndsAt,
   anchorToUnix,
   entities,
   carryExistingUsages = false,
   curCusProduct,
   replaceables,
+  now,
 }: {
   entitlement: EntitlementWithFeature;
   customer: Customer;
@@ -268,13 +204,15 @@ export const initCusEntitlement = ({
   options?: FeatureOptions;
   nextResetAt?: number;
   relatedPrice?: Price;
-  existingCusEnt?: FullCustomerEntitlement;
-  keepResetIntervals?: boolean;
+  // existingCusEnt?: FullCustomerEntitlement;
+  // keepResetIntervals?: boolean;
+  trialEndsAt?: number;
   anchorToUnix?: number;
   entities: Entity[];
   carryExistingUsages?: boolean;
   curCusProduct?: FullCusProduct;
   replaceables: AttachReplaceable[];
+  now: number;
 }) => {
   let { newBalance, newEntities } = initCusEntBalance({
     entitlement,
@@ -289,13 +227,15 @@ export const initCusEntitlement = ({
     (newBalance || 0) -
     replaceables.filter((r) => r.ent.id === entitlement.id).length;
 
-  let nextResetAtValue = initCusEntNextResetAt({
+  let nextResetAtValue = initNextResetAt({
     entitlement,
     nextResetAt,
-    keepResetIntervals,
-    existingCusEnt,
+    // keepResetIntervals,
+    // existingCusEnt,
+    trialEndsAt,
     freeTrial,
     anchorToUnix,
+    now,
   });
 
   // 3. Define expires at (TODO next time...)

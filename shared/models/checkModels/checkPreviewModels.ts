@@ -3,9 +3,6 @@ import { Infinite } from "../productModels/productEnums.js";
 import { ProductResponse } from "../productV2Models/productResponseModels.js";
 
 export enum AttachScenario {
-  // AlreadyAttached = "already_attached",
-  // AlreadyScheduled = "already_scheduled",
-
   Scheduled = "scheduled",
   Active = "active",
   New = "new",
@@ -71,7 +68,7 @@ export enum FeaturePreviewScenario {
   FeatureFlag = "feature_flag",
 }
 
-export interface CheckFeatureFormattedPreview {
+export interface CheckFeaturePreview {
   title: string;
   message: string;
 
@@ -80,6 +77,4 @@ export interface CheckFeatureFormattedPreview {
   feature_name: string;
 
   products: ProductResponse[];
-  // next_main_product: ProductResponse | null;
-  // next_add_on_product: ProductResponse | null;
 }

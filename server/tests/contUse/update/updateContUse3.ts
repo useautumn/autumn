@@ -17,7 +17,7 @@ import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.j
 import { TestFeature } from "tests/setup/v2Features.js";
 import { addPrefixToProducts, replaceItems } from "tests/attach/utils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectSubQuantityCorrect } from "tests/attach/entities/expectEntity.js";
+import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
 import { attachNewContUseAndExpectCorrect } from "tests/utils/expectUtils/expectContUse/expectUpdateContUse.js";
 
 let userItem = constructArrearProratedItem({

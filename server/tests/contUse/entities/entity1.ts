@@ -17,7 +17,7 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { expect } from "chai";
-import { expectSubQuantityCorrect } from "../../attach/entities/expectEntity.js";
+import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
 import { addWeeks } from "date-fns";
 import { timeout } from "@/utils/genUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";

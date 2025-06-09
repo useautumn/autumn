@@ -12,7 +12,12 @@ import {
   Replaceable,
   InsertReplaceable,
 } from "@autumn/shared";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import {
+  formatUnixToDate,
+  generateId,
+  notNullish,
+  nullish,
+} from "@/utils/genUtils.js";
 
 import { Customer } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
@@ -61,13 +66,13 @@ export const initCusPrice = ({
 export const initCusProduct = ({
   customer,
   product,
-  subscriptionId,
+  // subscriptionId,
+  // subscriptionScheduleId,
+  // lastInvoiceId,
   cusProdId,
   startsAt,
-  subscriptionScheduleId,
   optionsList,
   freeTrial,
-  lastInvoiceId,
   trialEndsAt,
   subscriptionStatus,
   canceledAt,
@@ -82,13 +87,13 @@ export const initCusProduct = ({
 }: {
   customer: Customer;
   product: FullProduct;
-  subscriptionId: string | undefined | null;
+  // subscriptionId: string | undefined | null;
+  // subscriptionScheduleId?: string | null;
+  // lastInvoiceId?: string | null;
   cusProdId: string;
   startsAt?: number;
-  subscriptionScheduleId?: string | null;
   optionsList: FeatureOptions[];
   freeTrial: FreeTrial | null;
-  lastInvoiceId?: string | null;
   trialEndsAt?: number | null;
   subscriptionStatus?: CusProductStatus;
   canceledAt?: number | null;
@@ -122,12 +127,12 @@ export const initCusProduct = ({
         ? CusProductStatus.Scheduled
         : CusProductStatus.Active,
 
-    processor: {
-      type: ProcessorType.Stripe,
-      subscription_id: subscriptionId,
-      subscription_schedule_id: subscriptionScheduleId,
-      last_invoice_id: lastInvoiceId,
-    },
+    // processor: {
+    //   type: ProcessorType.Stripe,
+    //   subscription_id: subscriptionId,
+    //   subscription_schedule_id: subscriptionScheduleId,
+    //   last_invoice_id: lastInvoiceId,
+    // },
 
     starts_at: startsAt || Date.now(),
     trial_ends_at: trialEnds,
@@ -267,11 +272,11 @@ export const createFullCusProduct = async ({
   db,
   attachParams,
   startsAt,
-  subscriptionId,
+  // subscriptionId,
   nextResetAt,
   disableFreeTrial = false,
   lastInvoiceId = null,
-  trialEndsAt = null,
+  trialEndsAt,
   subscriptionStatus,
   canceledAt = null,
   createdAt = null,
@@ -289,12 +294,12 @@ export const createFullCusProduct = async ({
   db: DrizzleCli;
   attachParams: InsertCusProductParams;
   startsAt?: number;
-  subscriptionId?: string;
+  // subscriptionId?: string;
   nextResetAt?: number;
   billLaterOnly?: boolean;
   disableFreeTrial?: boolean;
   lastInvoiceId?: string | null;
-  trialEndsAt?: number | null;
+  trialEndsAt?: number;
   subscriptionStatus?: CusProductStatus;
   canceledAt?: number | null;
   createdAt?: number | null;
@@ -311,22 +316,26 @@ export const createFullCusProduct = async ({
 }) => {
   disableFreeTrial = attachParams.disableFreeTrial || disableFreeTrial;
 
-  let { customer, product, prices, entitlements, optionsList, freeTrial, org } =
+  let { customer, product, prices, entitlements, optionsList, org, freeTrial } =
     attachParams;
 
-  let attachReplaceables = attachParams.replaceables || [];
-
   // Try to get current cus product or set to null...
-  let curCusProduct;
-  try {
-    curCusProduct = await getExistingCusProduct({
-      db,
-      cusProducts: attachParams.cusProducts,
-      product,
-      internalCustomerId: customer.internal_id,
-      internalEntityId: attachParams.internalEntityId,
-    });
-  } catch (error) {}
+  let curCusProduct = await getExistingCusProduct({
+    db,
+    cusProducts: attachParams.cusProducts,
+    product,
+    internalCustomerId: customer.internal_id,
+    internalEntityId: attachParams.internalEntityId,
+  });
+
+  freeTrial = disableFreeTrial ? null : freeTrial;
+
+  if (carryOverTrial && curCusProduct?.free_trial) {
+    freeTrial = curCusProduct.free_trial;
+    trialEndsAt = curCusProduct.trial_ends_at || undefined;
+  }
+
+  let attachReplaceables = attachParams.replaceables || [];
 
   const existingCusProduct = searchCusProducts({
     internalProductId: product.internal_id,
@@ -359,6 +368,7 @@ export const createFullCusProduct = async ({
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
     const relatedPrice = getEntRelatedPrice(entitlement, prices);
+    const now = attachParams.now || Date.now();
 
     const cusEnt: any = initCusEntitlement({
       entitlement,
@@ -366,15 +376,17 @@ export const createFullCusProduct = async ({
       cusProductId: cusProdId,
       options: options || undefined,
       nextResetAt,
-      freeTrial: disableFreeTrial ? null : freeTrial,
+      freeTrial,
       relatedPrice,
       // existingCusEnt,
       // keepResetIntervals,
+      trialEndsAt,
       anchorToUnix,
       entities: attachParams.entities || [],
       carryExistingUsages,
       curCusProduct: curCusProduct as FullCusProduct,
       replaceables: attachReplaceables,
+      now,
     });
 
     cusEnts.push(cusEnt);
@@ -414,21 +426,25 @@ export const createFullCusProduct = async ({
   }
 
   // 5. create customer product
-  if (carryOverTrial && curCusProduct?.free_trial_id) {
-    freeTrial = curCusProduct.free_trial || null;
-    trialEndsAt = curCusProduct.trial_ends_at || null;
-  }
+
+  // let freeTrial = disableFreeTrial ? null : freeTrial;
+  // if (carryOverTrial && curCusProduct?.free_trial_id) {
+  //   logger.info(`Free trial ID: ${curCusProduct.free_trial_id}`);
+  //   logger.info(
+  //     `Trial ends at: ${formatUnixToDate(curCusProduct.trial_ends_at)}`,
+  //   );
+  //   freeTrial = curCusProduct.free_trial || null;
+  //   trialEndsAt = curCusProduct.trial_ends_at || null;
+  // }
 
   let entityId = customer.entity?.id;
   const cusProd = initCusProduct({
     cusProdId,
     customer,
     product,
-    subscriptionId,
     startsAt,
     optionsList,
     freeTrial: disableFreeTrial ? null : freeTrial,
-    lastInvoiceId,
     trialEndsAt,
     subscriptionStatus,
     canceledAt,
