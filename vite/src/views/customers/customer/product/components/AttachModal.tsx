@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { DialogContent } from "@/components/ui/dialog";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import { AttachBranch, Entity, ErrCode } from "@autumn/shared";
+import { AttachBranch, AttachFunction, Entity, ErrCode } from "@autumn/shared";
 
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
@@ -97,7 +97,7 @@ export const AttachModal = ({
       return "Renew Product";
     }
 
-    if (!preview?.payment_method) {
+    if (preview?.func == AttachFunction.CreateCheckout) {
       return "Checkout Page";
     }
 
@@ -198,12 +198,13 @@ export const AttachModal = ({
               <AttachInfo />
             </div>
 
-            <div className="flex justify-end">
+            {/* <div className="flex justify-end">
               <ToggleConfigButton
                 configOpen={configOpen}
                 setConfigOpen={setConfigOpen}
               />
-            </div>
+            </div> */}
+            <div className="my-2"></div>
           </div>
           <div
             className={`transition-all duration-300 ease-in-out border-l border-zinc-200 overflow-hidden ${

@@ -83,12 +83,17 @@ export const shouldShowProrationConfig = ({
   // If pay per use single use
   const usageType = itemToUsageType({ item, features });
 
+  // if (
+  //   usageType == ProductItemFeatureType.SingleUse &&
+  //   item.usage_model == UsageModel.Prepaid
+  // ) {
+  //   return true;
+  // } else
+
   if (
-    usageType == ProductItemFeatureType.SingleUse &&
-    item.usage_model == UsageModel.Prepaid
+    usageType == ProductItemFeatureType.ContinuousUse &&
+    item.usage_model !== UsageModel.Prepaid
   ) {
-    return true;
-  } else if (usageType == ProductItemFeatureType.ContinuousUse) {
     return true;
   }
   return false;

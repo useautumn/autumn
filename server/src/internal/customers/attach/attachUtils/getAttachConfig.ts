@@ -95,3 +95,19 @@ export const getAttachConfig = async ({
 
   return { flags, config };
 };
+
+export const getDefaultAttachConfig = () => {
+  const config: AttachConfig = {
+    branch: AttachBranch.New,
+    carryUsage: false,
+    onlyCheckout: false,
+    proration: ProrationBehavior.None,
+    disableTrial: false,
+    invoiceOnly: false,
+    disableMerge: false,
+    sameIntervals: false,
+    carryTrial: false,
+  };
+
+  return config;
+};

@@ -5,6 +5,7 @@ import { AttachParams } from "../cusProducts/AttachParams.js";
 import { CusProductService } from "../cusProducts/CusProductService.js";
 import { cancelFutureProductSchedule } from "./scheduleUtils.js";
 
+// DUplicate?
 export const cancelScheduledProductIfExists = async ({
   req,
   org,
@@ -50,5 +51,5 @@ export const cancelScheduledProductIfExists = async ({
     });
   }
 
-  attachParams.curScheduledProduct = null;
+  // attachParams.curScheduledProduct = null;
 };

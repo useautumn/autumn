@@ -75,7 +75,7 @@ export type InsertCusProductParams = {
   req?: any;
   now?: number;
 
-  customer: FullCustomer;
+  customer: Customer;
   org: Organization;
   product: FullProduct;
   prices: Price[];

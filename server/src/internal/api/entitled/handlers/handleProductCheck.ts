@@ -1,11 +1,9 @@
 import { CusProductStatus, FullCusProduct, SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { getAttachPreview } from "./getAttachPreview.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 import { getProductResponse } from "@/internal/products/productV2Utils.js";
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { getProductCheckPreview } from "./getProductCheckPreview.js";
 
 export const handleProductCheck = async ({
@@ -55,7 +53,7 @@ export const handleProductCheck = async ({
   if (customer.entity) {
     cusProducts = cusProducts.filter(
       (cusProduct: FullCusProduct) =>
-        cusProduct.internal_entity_id == customer.entity.internal_id,
+        cusProduct.internal_entity_id == customer.entity!.internal_id,
     );
   }
 

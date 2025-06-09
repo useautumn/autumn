@@ -37,7 +37,7 @@ export const getAttachParams = async ({
     }) || APIVersion.v1;
 
   const entityId = attachBody.entity_id;
-  const internalEntityId = entityId ? customer.entity.internal_id : undefined;
+  const internalEntityId = entityId ? customer.entity?.internal_id : undefined;
   const { stripeCli, stripeCus, paymentMethod, now } = stripeVars;
 
   const attachParams: AttachParams = {
@@ -60,6 +60,7 @@ export const getAttachParams = async ({
     entities: customer.entities,
     features: req.features,
     internalEntityId,
+    entityId,
     cusProducts: customer.customer_products,
 
     // Others

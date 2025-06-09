@@ -81,7 +81,7 @@ export const addCurMainProductToSchedule = async ({
     await updateScheduledSubWithNewItems({
       scheduleObj: scheduleObj,
       newItems: oldItemSet?.items || [],
-      cusProducts: [],
+      cusProductsForGroup: [],
       stripeCli: stripeCli,
       itemSet: null,
       db,

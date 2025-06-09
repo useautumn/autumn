@@ -8,13 +8,12 @@ import {
   FullCustomerEntitlement,
   PreviewLineItem,
   Price,
-  InsertReplaceableSchema,
   usageToFeatureName,
 } from "@autumn/shared";
 
 import { attachParamsToProduct } from "../convertAttachParams.js";
 import { priceToInvoiceItem } from "@/internal/products/prices/priceUtils/priceToInvoiceItem.js";
-import { AttachReplaceableSchema } from "@shared/models/cusProductModels/cusEntModels/replaceableSchema.js";
+import { AttachReplaceableSchema } from "@autumn/shared";
 
 export const getContUseDowngradeItems = async ({
   price,

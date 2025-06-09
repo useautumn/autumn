@@ -121,6 +121,7 @@ export const cancelFutureProductSchedule = async ({
       optionsList: [],
       entities: [],
       cusProducts,
+      replaceables: [],
     },
   });
 

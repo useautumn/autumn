@@ -259,7 +259,7 @@ const getCusEntsAndFeatures = async ({
         // notNullish(cusEnt.entities) ||
         nullish(cusEnt.customer_product.internal_entity_id) ||
         cusEnt.customer_product.internal_entity_id ===
-          customer.entity.internal_id
+          customer.entity!.internal_id
       );
     });
   }

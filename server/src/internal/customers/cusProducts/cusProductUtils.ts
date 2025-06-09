@@ -154,13 +154,6 @@ export const activateDefaultProduct = async ({
     return false;
   }
 
-  // const insertParams = webhookToInsertParams({
-  //   req,
-  //   cusProduct: curCusProduct,
-  //   fullCus: customer,
-  //   entities: [],
-  // });
-
   await createFullCusProduct({
     db,
     attachParams: {
@@ -173,6 +166,7 @@ export const activateDefaultProduct = async ({
       optionsList: [],
       entities: [],
       features: [],
+      replaceables: [],
     },
     scenario: AttachScenario.New,
     logger,

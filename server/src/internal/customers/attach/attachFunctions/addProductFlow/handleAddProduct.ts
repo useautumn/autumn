@@ -10,6 +10,7 @@ import { SuccessCode } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handlePaidProduct } from "./handlePaidProduct.js";
 import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
+import { getDefaultAttachConfig } from "../../attachUtils/getAttachConfig.js";
 
 export const handleAddProduct = async ({
   req,
@@ -20,10 +21,12 @@ export const handleAddProduct = async ({
   req: ExtendedRequest;
   res?: any;
   attachParams: AttachParams;
-  config: AttachConfig;
+  config?: AttachConfig;
 }) => {
   const logger = req.logtail;
   const { customer, products, prices } = attachParams;
+
+  const defaultConfig: AttachConfig = getDefaultAttachConfig();
 
   // 1. If paid product
   if (prices.length > 0) {
@@ -31,7 +34,7 @@ export const handleAddProduct = async ({
       req,
       res,
       attachParams,
-      config,
+      config: config || defaultConfig,
     });
 
     return;
@@ -45,7 +48,7 @@ export const handleAddProduct = async ({
     let curCusProduct = attachParamsToCurCusProduct({ attachParams });
     let anchorToUnix = undefined;
 
-    if (curCusProduct && config.branch == AttachBranch.NewVersion) {
+    if (curCusProduct && config?.branch == AttachBranch.NewVersion) {
       anchorToUnix = curCusProduct.created_at;
     }
 
@@ -54,7 +57,7 @@ export const handleAddProduct = async ({
         db: req.db,
         attachParams: attachToInsertParams(attachParams, product),
         billLaterOnly: true,
-        carryExistingUsages: config.carryUsage,
+        carryExistingUsages: config?.carryUsage || false,
         anchorToUnix,
         logger,
       }),

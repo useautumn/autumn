@@ -12,10 +12,12 @@ import { ProrationSelect } from "./ProrationSelect";
 
 const optionToText = (option: OnDecrease) => {
   switch (option) {
-    case OnDecrease.ProrateImmediately:
-      return "Refund prorated amount immediately";
-    case OnDecrease.ProrateNextCycle:
-      return "Add prorated amount to next cycle";
+    // case OnDecrease.ProrateImmediately:
+    //   return "Refund prorated amount immediately";
+    // case OnDecrease.ProrateNextCycle:
+    //   return "Add prorated amount to next cycle";
+    case OnDecrease.Prorate:
+      return "Prorate";
     case OnDecrease.None:
       return "No proration (usage will be kept till next cycle)";
   }
@@ -24,7 +26,17 @@ const optionToText = (option: OnDecrease) => {
 export const OnDecreaseSelect = () => {
   const { item, setItem } = useProductItemContext();
 
-  const value = item.config?.on_decrease;
+  const getOnDecreaseVal = () => {
+    if (
+      item.config?.on_decrease == OnDecrease.ProrateImmediately ||
+      item.config?.on_decrease == OnDecrease.ProrateNextCycle ||
+      item.config?.on_decrease == OnDecrease.Prorate
+    ) {
+      return OnDecrease.Prorate;
+    }
+
+    return OnDecrease.None;
+  };
 
   useEffect(() => {
     if (!item.config?.on_decrease) {
@@ -32,7 +44,7 @@ export const OnDecreaseSelect = () => {
         ...item,
         config: {
           ...item.config,
-          on_decrease: OnDecrease.ProrateImmediately,
+          on_decrease: OnDecrease.Prorate,
         },
       });
     }
@@ -48,12 +60,15 @@ export const OnDecreaseSelect = () => {
       <p className="text-t3">{text}</p>
 
       <ProrationSelect
-        value={value}
-        setValue={(value) =>
-          setItem({ ...item, config: { ...item.config, on_decrease: value } })
-        }
+        value={getOnDecreaseVal()}
+        setValue={(value) => {
+          setItem({
+            ...item,
+            config: { ...item.config, on_decrease: value },
+          });
+        }}
         optionToText={optionToText}
-        options={Object.values(OnDecrease)}
+        options={[OnDecrease.Prorate, OnDecrease.None]}
       />
     </div>
   );
