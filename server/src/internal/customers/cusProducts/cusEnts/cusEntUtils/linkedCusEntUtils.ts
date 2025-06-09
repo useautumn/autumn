@@ -33,3 +33,18 @@ export const deleteEntityFromCusEnt = ({
 
   return { newEntities };
 };
+
+export const removeReplaceablesFromCusEnt = ({
+  cusEnt,
+  replaceableIds,
+}: {
+  cusEnt: FullCustomerEntitlement;
+  replaceableIds: string[];
+}) => {
+  let newEntities = structuredClone(cusEnt.entities) || {};
+  for (const replaceableId of replaceableIds) {
+    delete newEntities[replaceableId];
+  }
+
+  return { newEntities };
+};

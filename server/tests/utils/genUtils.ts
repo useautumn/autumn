@@ -25,7 +25,7 @@ export const batchSendCountEvents = async ({
       AutumnCli.sendEvent({
         customerId: customerId,
         eventName: featureId,
-      })
+      }),
     );
   }
 
@@ -48,7 +48,7 @@ export const searchCusProducts = ({
   return cusProducts.find(
     (cusProduct: FullCusProduct) =>
       cusProduct.product.id === productId &&
-      (status ? cusProduct.status === status : true)
+      (status ? cusProduct.status === status : true),
   );
 };
 

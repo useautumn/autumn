@@ -7,7 +7,7 @@ import { OnIncrease } from "../../productV2Models/productItemModels/productItemE
 
 const ProrationConfigSchema = z.object({
   on_increase: z.nativeEnum(OnIncrease).default(OnIncrease.ProrateImmediately),
-  on_decrease: z.nativeEnum(OnDecrease).default(OnDecrease.Prorate),
+  on_decrease: z.nativeEnum(OnDecrease).default(OnDecrease.ProrateImmediately),
 });
 
 export const PriceSchema = z.object({

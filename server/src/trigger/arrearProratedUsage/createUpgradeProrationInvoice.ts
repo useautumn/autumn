@@ -75,8 +75,8 @@ export const getUpgradeProrationInvoiceItem = ({
     description: invoiceDescription,
     stripeSubId: stripeSub.id,
     stripeCustomerId: stripeSub.customer as string,
-    periodStart: stripeSub.current_period_start,
-    periodEnd: Math.floor(now / 1000),
+    periodStart: Math.floor(now / 1000),
+    periodEnd: Math.floor(stripeSub.current_period_end * 1000),
   });
 
   return invoiceItem;

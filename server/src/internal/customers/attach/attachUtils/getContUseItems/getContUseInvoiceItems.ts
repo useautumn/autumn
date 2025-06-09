@@ -128,13 +128,19 @@ export const getContUseInvoiceItems = async ({
       feature: ent.feature,
     });
 
+    let prevCusPrice = prevCusEnt
+      ? getRelatedCusPrice(prevCusEnt, cusPrices)!
+      : undefined;
+
     if (!intervalsSame || !prevCusEnt || !stripeSubs) {
       const newItem = await getContUseNewItems({
         price,
         ent,
         attachParams,
       });
-      const prevItem = curItems.find((item) => item.price_id === price.id);
+      const prevItem = curItems.find(
+        (item) => item.price_id === prevCusPrice?.price.id,
+      );
 
       newItems.push(newItem);
 
@@ -145,7 +151,6 @@ export const getContUseInvoiceItems = async ({
       continue;
     }
 
-    let prevCusPrice = getRelatedCusPrice(prevCusEnt, cusPrices)!;
     const curItem = curItems.find(
       (item) => item.price_id === prevCusPrice?.price.id,
     );

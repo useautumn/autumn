@@ -340,13 +340,7 @@ export const deductAllowanceFromCusEnt = async ({
     updates.adjustment = 0;
   }
 
-  await CusEntService.update({
-    db,
-    id: cusEnt.id,
-    updates,
-  });
-
-  await adjustAllowance({
+  const { newReplaceables, deletedReplaceables } = await adjustAllowance({
     db,
     env,
     org,
@@ -357,7 +351,21 @@ export const deductAllowanceFromCusEnt = async ({
     originalBalance: originalGrpBalance,
     newBalance: newGrpBalance,
     logger: console,
-    // deduction: deducted,
+  });
+
+  console.log("New balance:", newBalance);
+  console.log("New replaceables:", newReplaceables);
+
+  if (newReplaceables && newReplaceables.length > 0) {
+    updates.balance = newBalance! - newReplaceables.length;
+  } else if (deletedReplaceables && deletedReplaceables.length > 0) {
+    updates.balance = newBalance! + deletedReplaceables.length;
+  }
+
+  await CusEntService.update({
+    db,
+    id: cusEnt.id,
+    updates,
   });
 
   // Deduct credit amounts too
@@ -449,7 +457,7 @@ export const deductFromUsageBasedCusEnt = async ({
     updates.adjustment = 0;
   }
 
-  await adjustAllowance({
+  const { newReplaceables, deletedReplaceables } = await adjustAllowance({
     db,
     env,
     affectedFeature: feature,
@@ -461,6 +469,12 @@ export const deductFromUsageBasedCusEnt = async ({
     newBalance: newGrpBalance,
     logger: console,
   });
+
+  if (newReplaceables && newReplaceables.length > 0) {
+    updates.balance = newBalance! - newReplaceables.length;
+  } else if (deletedReplaceables && deletedReplaceables.length > 0) {
+    updates.balance = newBalance! + deletedReplaceables.length;
+  }
 
   await CusEntService.update({
     db,

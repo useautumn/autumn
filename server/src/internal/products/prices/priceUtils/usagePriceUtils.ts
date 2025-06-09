@@ -82,8 +82,10 @@ export const onDecreaseToStripeProration = ({
   onDecrease: OnDecrease;
 }) => {
   let behavior = "none";
-  if (onDecrease === OnDecrease.Prorate) {
+  if (onDecrease === OnDecrease.ProrateImmediately) {
     behavior = "always_invoice";
+  } else if (onDecrease === OnDecrease.ProrateNextCycle) {
+    behavior = "create_prorations";
   }
 
   return behavior as Stripe.SubscriptionItemUpdateParams.ProrationBehavior;

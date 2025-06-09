@@ -12,8 +12,10 @@ import { ProrationSelect } from "./ProrationSelect";
 
 const optionToText = (option: OnDecrease) => {
   switch (option) {
-    case OnDecrease.Prorate:
-      return "Refund prorated amount";
+    case OnDecrease.ProrateImmediately:
+      return "Refund prorated amount immediately";
+    case OnDecrease.ProrateNextCycle:
+      return "Add prorated amount to next cycle";
     case OnDecrease.None:
       return "No proration (usage will be kept till next cycle)";
   }
@@ -28,7 +30,10 @@ export const OnDecreaseSelect = () => {
     if (!item.config?.on_decrease) {
       setItem({
         ...item,
-        config: { ...item.config, on_decrease: OnDecrease.Prorate },
+        config: {
+          ...item.config,
+          on_decrease: OnDecrease.ProrateImmediately,
+        },
       });
     }
   }, [item]);

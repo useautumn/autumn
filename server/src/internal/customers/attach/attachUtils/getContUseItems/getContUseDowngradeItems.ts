@@ -41,7 +41,7 @@ export const getContUseDowngradeItems = async ({
   const product = attachParamsToProduct({ attachParams });
   const feature = prevCusEnt.entitlement.feature;
 
-  let { usage: prevUsage } = getUsageFromBalance({
+  let { usage: prevUsage, overage: prevOverage } = getUsageFromBalance({
     ent: prevCusEnt.entitlement,
     price,
     balance: prevBalance,
@@ -51,6 +51,42 @@ export const getContUseDowngradeItems = async ({
     ent,
     price,
     balance: prevBalance,
+  });
+
+  if (prevOverage == 0) {
+    let { usage: newUsage } = getUsageFromBalance({
+      ent,
+      price,
+      balance: ent.allowance! - curUsage,
+    });
+
+    let newItem = priceToInvoiceItem({
+      price,
+      ent,
+      org: attachParams.org,
+      usage: newUsage,
+      prodName: product.name,
+      proration,
+      now,
+      allowNegative: false,
+    });
+
+    return {
+      oldItem: prevInvoiceItem,
+      newItem,
+      newUsageItem: null,
+      replaceables: [],
+    };
+  }
+
+  const newItem = priceToInvoiceItem({
+    price,
+    ent,
+    org: attachParams.org,
+    usage: newUsage,
+    prodName: product.name,
+    proration,
+    now,
   });
 
   let numReplaceables = newUsage - prevUsage;
@@ -63,16 +99,6 @@ export const getContUseDowngradeItems = async ({
       delete_next_cycle: false,
     }),
   );
-
-  const newItem = priceToInvoiceItem({
-    price,
-    ent,
-    org: attachParams.org,
-    usage: newUsage,
-    prodName: product.name,
-    proration,
-    now,
-  });
 
   const featureName = usageToFeatureName({
     usage: numReplaceables,

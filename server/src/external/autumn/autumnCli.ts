@@ -7,7 +7,7 @@ import {
   CusExpand,
   ErrCode,
 } from "@autumn/shared";
-import { TrackParams } from "autumn-js";
+import { TrackParams, UsageParams } from "autumn-js";
 import { AttachBody } from "@/internal/customers/attach/models/AttachBody.js";
 
 export default class AutumnError extends Error {
@@ -390,6 +390,11 @@ export class AutumnInt {
 
   track = async (params: TrackParams) => {
     const data = await this.post(`/track`, params);
+    return data;
+  };
+
+  usage = async (params: UsageParams) => {
+    const data = await this.post(`/usage`, params);
     return data;
   };
 

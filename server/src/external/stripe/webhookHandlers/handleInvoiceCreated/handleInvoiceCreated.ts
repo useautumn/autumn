@@ -28,6 +28,7 @@ import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullStripeInvoice } from "../../stripeInvoiceUtils.js";
 import { handleUsagePrices } from "./handleUsagePrices.js";
+import { handleContUsePrices } from "./handleContUsePrices.js";
 
 const handleInArrearProrated = async ({
   db,
@@ -247,17 +248,29 @@ export const sendUsageAndReset = async ({
     }
 
     if (billingType == BillingType.InArrearProrated) {
-      await handleInArrearProrated({
+      await handleContUsePrices({
         db,
+        stripeCli,
         cusEnts,
         cusPrice,
-        customer,
-        org,
-        env,
+        // customer,
+        // org,
+        // env,
         invoice,
         usageSub: usageBasedSub,
         logger,
       });
+      // await handleInArrearProrated({
+      //   db,
+      //   cusEnts,
+      //   cusPrice,
+      //   customer,
+      //   org,
+      //   env,
+      //   invoice,
+      //   usageSub: usageBasedSub,
+      //   logger,
+      // });
     }
   }
 };

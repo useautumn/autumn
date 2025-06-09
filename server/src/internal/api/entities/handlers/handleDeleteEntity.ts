@@ -95,10 +95,6 @@ export const handleDeleteEntity = async (req: any, res: any) => {
         originalBalance: mainCusEnt.balance!,
         newBalance: mainCusEnt.balance! + 1,
         logger,
-
-        // deduction: 1,
-        // product,
-        // fromEntities: true,
       });
 
       let linkedCusEnts = findLinkedCusEnts({

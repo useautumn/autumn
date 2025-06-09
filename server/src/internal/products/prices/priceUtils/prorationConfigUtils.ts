@@ -8,10 +8,11 @@ export const shouldCreateInvoiceItem = (onIncrease: OnIncrease) => {
   );
 };
 
-export const shouldBillNow = (onIncrease: OnIncrease) => {
+export const shouldBillNow = (onIncrease: OnIncrease | OnDecrease) => {
   return (
     onIncrease === OnIncrease.BillImmediately ||
-    onIncrease === OnIncrease.ProrateImmediately
+    onIncrease === OnIncrease.ProrateImmediately ||
+    onIncrease === OnDecrease.ProrateImmediately
   );
 };
 
@@ -23,6 +24,7 @@ export const shouldProrate = (onIncrease?: OnIncrease | OnDecrease) => {
   return (
     onIncrease === OnIncrease.ProrateNextCycle ||
     onIncrease === OnIncrease.ProrateImmediately ||
-    onIncrease === OnDecrease.Prorate
+    onIncrease === OnDecrease.ProrateImmediately ||
+    onIncrease === OnDecrease.ProrateNextCycle
   );
 };

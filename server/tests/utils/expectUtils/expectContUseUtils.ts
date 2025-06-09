@@ -1,19 +1,19 @@
+import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { findContUsePrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
-import { AppEnv, Organization } from "@autumn/shared";
+import { AppEnv, FullCustomer, Organization } from "@autumn/shared";
 import { expect } from "chai";
-import Stripe from "stripe";
 import { TestFeature } from "tests/setup/v2Features.js";
+import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 
 export const expectSubQuantityCorrect = async ({
   stripeCli,
   productId,
   usage,
-  itemQuantity,
   db,
   org,
   env,
@@ -23,7 +23,6 @@ export const expectSubQuantityCorrect = async ({
   stripeCli: Stripe;
   productId: string;
   usage: number;
-  itemQuantity: number;
   db: DrizzleCli;
   org: Organization;
   env: AppEnv;
@@ -57,7 +56,7 @@ export const expectSubQuantityCorrect = async ({
   });
 
   expect(subItem).to.exist;
-  expect(subItem!.quantity).to.equal(itemQuantity);
+  expect(subItem!.quantity).to.equal(usage);
 
   // Check num replaceables correct
   let cusEnts = cusProduct?.customer_entitlements;
@@ -68,9 +67,48 @@ export const expectSubQuantityCorrect = async ({
 
   let expectedBalance = cusEnt!.entitlement.allowance! - usage;
   expect(cusEnt!.balance).to.equal(expectedBalance);
+};
 
-  return {
-    stripeSubs,
-    cusProduct,
-  };
+export const expectUpcomingItemsCorrect = async ({
+  stripeCli,
+  fullCus,
+  stripeSubs,
+  curUnix,
+  unitPrice,
+  expectedNumItems = 1,
+  quantity,
+}: {
+  stripeCli: Stripe;
+  fullCus: FullCustomer;
+  stripeSubs: Stripe.Subscription[];
+  curUnix: number;
+  unitPrice: number;
+  expectedNumItems: number;
+  quantity: number;
+}) => {
+  let sub = stripeSubs[0];
+  let upcomingLines = await stripeCli.invoices.listUpcomingLines({
+    subscription: sub.id,
+  });
+
+  let lines = upcomingLines.data.filter((line) => line.type === "invoiceitem");
+
+  let amount = quantity * unitPrice!;
+  let proratedAmount = calculateProrationAmount({
+    amount,
+    periodStart: sub.current_period_start * 1000,
+    periodEnd: sub.current_period_end * 1000,
+    now: curUnix,
+    allowNegative: true,
+  });
+
+  console.group();
+  console.group("Upcoming lines");
+  for (const line of lines) {
+    console.log(line.description, line.amount / 100);
+  }
+  console.groupEnd();
+  console.groupEnd();
+
+  expect(lines[0].amount).to.equal(Math.round(proratedAmount * 100));
 };

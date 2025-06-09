@@ -53,6 +53,7 @@ import { customerProductsRelations } from "../models/cusProductModels/cusProduct
 import { customerPricesRelations } from "../models/cusProductModels/cusPriceModels/cusPriceRelations.js";
 import { customerEntitlementsRelations } from "../models/cusProductModels/cusEntModels/cusEntRelations.js";
 import { apiKeyRelations } from "../models/devModels/apiKeyRelations.js";
+import { replaceableRelations } from "../models/cusProductModels/cusEntModels/replaceableRelations.js";
 
 // Reward Relations
 import { rewardProgramRelations } from "../models/rewardModels/rewardProgramModels/rewardProgramRelations.js";
@@ -112,4 +113,5 @@ export {
   referralCodeRelations,
   rewardRedemptionRelations,
   migrationErrorRelations,
+  replaceableRelations,
 };
