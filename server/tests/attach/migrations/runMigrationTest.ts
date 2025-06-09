@@ -100,7 +100,7 @@ export const runMigrationTest = async ({
   expectResetAtCorrect({ cusBefore, cusAfter });
   expectTrialEndsAtCorrect({ cusBefore, cusAfter });
 
-  await expectSubItemsCorrect({
+  const { cusProduct } = await expectSubItemsCorrect({
     stripeCli,
     customerId,
     product: toProduct,
@@ -112,4 +112,9 @@ export const runMigrationTest = async ({
   if (!isFreeProductV2({ product: toProduct })) {
     expect(cusAfter.invoices.length).to.equal(numInvoices);
   }
+
+  return {
+    stripeSubs: subsAfter,
+    cusProduct,
+  };
 };

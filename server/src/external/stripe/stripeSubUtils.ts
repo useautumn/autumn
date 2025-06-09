@@ -5,10 +5,11 @@ import {
   Feature,
   FullCusProduct,
   Organization,
+  ProrationBehavior,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { differenceInSeconds } from "date-fns";
-import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
+// import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { stripeToAutumnInterval } from "./utils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";

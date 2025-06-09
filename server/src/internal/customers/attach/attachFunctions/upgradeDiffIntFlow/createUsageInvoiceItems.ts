@@ -116,6 +116,7 @@ export const createUsageInvoiceItems = async ({
   interval?: BillingInterval;
 }) => {
   const { stripeCli } = attachParams;
+
   const { invoiceItems, cusEntIds } = await getUsageInvoiceItems({
     db,
     attachParams,

@@ -8,10 +8,12 @@ export const expectProductAttached = ({
   customer,
   product,
   status,
+  entityId,
 }: {
   customer: Customer;
   product: ProductV2;
   status?: CusProductStatus;
+  entityId?: string;
 }) => {
   const cusProducts = customer.products;
   const productAttached = cusProducts.find((p) => p.id === product.id);
@@ -33,6 +35,11 @@ export const expectProductAttached = ({
       productAttached?.status,
       `product ${product.id} is not expired`,
     ).to.not.equal(CusProductStatus.Expired);
+  }
+
+  if (entityId) {
+    // @ts-ignore
+    expect(productAttached?.entity_id).to.equal(entityId);
   }
 };
 

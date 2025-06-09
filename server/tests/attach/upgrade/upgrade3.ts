@@ -95,6 +95,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with arrear prorat
     await createProducts({
       autumn,
       products: [pro, premium, proAnnual],
+      db,
+      orgId: org.id,
+      env,
     });
 
     testClockId = testClockId1!;

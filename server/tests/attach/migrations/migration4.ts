@@ -23,6 +23,7 @@ import { runMigrationTest } from "./runMigrationTest.js";
 import { timeout } from "@/utils/genUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addDays } from "date-fns";
+import { expect } from "chai";
 
 let wordsItem = constructArrearItem({
   featureId: TestFeature.Words,
@@ -48,7 +49,7 @@ let proWithTrial = constructProduct({
 
 const testCase = "migrations4";
 
-describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro with trial`)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro -> pro with trial (should not start trial)`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: defaultApiVersion });
   let testClockId: string;
@@ -67,7 +68,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro with tria
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro],
+      products: [pro, proWithTrial],
       prefix: testCase,
     });
 
@@ -105,8 +106,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro with tria
   });
 
   it("should update product to new version", async function () {
+    proWithTrial.version = 2;
     await autumn.products.update(pro.id, {
       items: proWithTrial.items,
+      free_trial: proWithTrial.free_trial,
     });
   });
 
@@ -120,13 +123,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro with tria
 
     await timeout(4000);
 
-    // await advanceTestClock({
-    //   stripeCli,
-    //   testClockId,
-    //   advanceTo: addDays(Date.now(), 4).getTime(),
-    // });
-
-    await runMigrationTest({
+    const { stripeSubs, cusProduct } = await runMigrationTest({
       autumn,
       stripeCli,
       customerId,
@@ -142,5 +139,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing migration for pro with tria
         },
       ],
     });
+
+    expect(stripeSubs[0].trial_end).to.equal(null);
+    expect(cusProduct?.free_trial).to.equal(null);
   });
 });

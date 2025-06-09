@@ -6,12 +6,7 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import {
-  addPrefixToProducts,
-  getExpectedInvoiceTotal,
-  replaceItems,
-  runAttachTest,
-} from "../utils.js";
+import { addPrefixToProducts, replaceItems, runAttachTest } from "../utils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
@@ -21,6 +16,7 @@ import { expect } from "chai";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import runUpdateEntsTest from "./expectUpdateEnts.js";
 import { timeout } from "@/utils/genUtils.js";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
 
 const testCase = "updateEnts2";
 

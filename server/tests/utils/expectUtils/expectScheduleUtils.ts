@@ -94,13 +94,13 @@ export const expectDowngradeCorrect = async ({
   env: AppEnv;
 }) => {
   const preview = await autumn.attachPreview({
-    customerId,
-    productId: newProduct.id,
+    customer_id: customerId,
+    product_id: newProduct.id,
   });
 
   await autumn.attach({
-    customerId,
-    productId: newProduct.id,
+    customer_id: customerId,
+    product_id: newProduct.id,
   });
 
   const customer = await autumn.customers.get(customerId);

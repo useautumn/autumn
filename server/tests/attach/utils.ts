@@ -33,6 +33,7 @@ import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduc
 export const runAttachTest = async ({
   autumn,
   customerId,
+  entityId,
   product,
   options,
   stripeCli,
@@ -46,6 +47,7 @@ export const runAttachTest = async ({
 }: {
   autumn: AutumnInt;
   customerId: string;
+  entityId?: string;
   product: ProductV2;
   options?: FeatureOptions[];
   stripeCli: Stripe;
@@ -63,6 +65,7 @@ export const runAttachTest = async ({
   const preview = await autumn.attachPreview({
     customer_id: customerId,
     product_id: product.id,
+    entity_id: entityId,
   });
 
   const total = getAttachTotal({
@@ -73,6 +76,7 @@ export const runAttachTest = async ({
   await autumn.attach({
     customer_id: customerId,
     product_id: product.id,
+    entity_id: entityId,
     options: toSnakeCase(options),
   });
 
@@ -81,6 +85,7 @@ export const runAttachTest = async ({
   }
 
   const customer = await autumn.customers.get(customerId);
+
   const productCount = customer.products.reduce((acc: number, p: any) => {
     if (product.group == p.group) {
       return acc + 1;
@@ -95,6 +100,7 @@ export const runAttachTest = async ({
   expectProductAttached({
     customer,
     product,
+    entityId,
   });
 
   let intervals = Array.from(
@@ -194,64 +200,4 @@ export const replaceItems = ({
   newItems[index!] = newItem;
 
   return newItems;
-};
-
-export const getExpectedInvoiceTotal = async ({
-  customerId,
-  productId,
-  usage,
-  stripeCli,
-  db,
-  org,
-  env,
-  onlyIncludeMonthly = false,
-}: {
-  customerId: string;
-  productId: string;
-  usage: {
-    featureId: string;
-    value: number;
-  }[];
-  stripeCli: Stripe;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
-  onlyIncludeMonthly?: boolean;
-}) => {
-  const { cusProduct } = await getSubsFromCusId({
-    stripeCli,
-    customerId,
-    productId,
-    db,
-    org,
-    env,
-  });
-
-  const prices = cusProductToPrices({ cusProduct });
-  const ents = cusProductToEnts({ cusProduct });
-
-  let total = new Decimal(0);
-  for (const price of prices) {
-    if (onlyIncludeMonthly && price.config.interval != BillingInterval.Month) {
-      continue;
-    }
-
-    const config = price.config as UsagePriceConfig;
-    const featureId = config.feature_id;
-    const ent = getPriceEntitlement(price, ents);
-
-    const usageAmount = usage.find((u) => u.featureId == featureId)?.value;
-
-    const overage =
-      usageAmount && ent.allowance ? usageAmount - ent.allowance : usageAmount;
-
-    const invoiceAmt = priceToInvoiceAmount({
-      price,
-      overage,
-    });
-
-    total = total.plus(invoiceAmt);
-  }
-
-  return total.toNumber();
 };

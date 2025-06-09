@@ -135,8 +135,6 @@ export const handlePaidProduct = async ({
         db: req.db,
         attachParams: attachToInsertParams(attachParams, product),
         subscriptionIds: subscriptions.map((s) => s.id),
-        subscriptionId:
-          subscriptions.length > 0 ? subscriptions[0].id : undefined,
         anchorToUnix:
           subscriptions.length > 0
             ? subscriptions[0].current_period_end * 1000

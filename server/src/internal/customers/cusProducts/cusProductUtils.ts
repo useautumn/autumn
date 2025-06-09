@@ -39,6 +39,7 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { webhookToInsertParams } from "@/external/stripe/webhookUtils/webhookUtils.js";
 
 export const isActiveStatus = (status: CusProductStatus) => {
   return (
@@ -152,6 +153,13 @@ export const activateDefaultProduct = async ({
     // console.log("   ❌ default product is already active");
     return false;
   }
+
+  // const insertParams = webhookToInsertParams({
+  //   req,
+  //   cusProduct: curCusProduct,
+  //   fullCus: customer,
+  //   entities: [],
+  // });
 
   await createFullCusProduct({
     db,

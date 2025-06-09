@@ -87,6 +87,9 @@ describe(`${chalk.yellowBright("attach/upgrade2: Testing usage upgrades with mon
     await createProducts({
       autumn,
       products: [pro, proAnnual, premiumAnnual],
+      db,
+      orgId: org.id,
+      env,
     });
 
     testClockId = testClockId1!;

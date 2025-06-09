@@ -54,6 +54,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing one-off`)}`, () => {
     await createProducts({
       autumn,
       products: [oneOff],
+      db,
+      orgId: org.id,
+      env,
       customerId,
     });
 
@@ -130,8 +133,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing one-off`)}`, () => {
     });
 
     const res = await autumn.attach({
-      customerId,
-      productId: oneOff.id,
+      customer_id: customerId,
+      product_id: oneOff.id,
       options,
     });
 

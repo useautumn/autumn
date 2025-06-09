@@ -73,6 +73,9 @@ describe(`${chalk.yellowBright(`${testCase}: Checking price changes don't result
     await createProducts({
       autumn,
       products: [pro],
+      db,
+      orgId: org.id,
+      env,
     });
 
     testClockId = testClockId1!;
@@ -89,101 +92,6 @@ describe(`${chalk.yellowBright(`${testCase}: Checking price changes don't result
       env,
     });
   });
-
-  // // Check errors
-  // it("branch should not have same custom ents new feature price item", async function () {
-  //   const customItems = [
-  //     ...pro.items,
-  //     constructArrearProratedItem({
-  //       featureId: TestFeature.Messages,
-  //       pricePerUnit: 1000,
-  //     }),
-  //   ];
-
-  //   const preview = await autumn.attachPreview({
-  //     customer_id: customerId,
-  //     product_id: pro.id,
-  //     is_custom: true,
-  //     items: customItems,
-  //   });
-
-  //   expect(preview.branch).to.equal(AttachBranch.SameCustom);
-  // });
-
-  // it("branch should not have same custom ents if price changes", async function () {
-  //   const customItems = replaceItems({
-  //     items: pro.items,
-  //     featureId: TestFeature.Words,
-  //     newItem: constructArrearItem({
-  //       featureId: TestFeature.Words,
-  //       includedUsage: 10000,
-  //       price: 0.2,
-  //     }),
-  //   });
-
-  //   const preview = await autumn.attachPreview({
-  //     customer_id: customerId,
-  //     product_id: pro.id,
-  //     is_custom: true,
-  //     items: customItems,
-  //   });
-
-  //   expect(preview.branch).to.equal(AttachBranch.SameCustom);
-  // });
-
-  // it("branch should have same custom ents if billing units change", async function () {
-  //   const customItems = replaceItems({
-  //     items: pro.items,
-  //     featureId: TestFeature.Words,
-  //     newItem: constructArrearItem({
-  //       featureId: TestFeature.Words,
-  //       billingUnits: 2001,
-  //     }),
-  //   });
-
-  //   const preview = await autumn.attachPreview({
-  //     customer_id: customerId,
-  //     product_id: pro.id,
-  //     is_custom: true,
-  //     items: customItems,
-  //   });
-
-  //   expect(preview.branch).to.equal(AttachBranch.SameCustom);
-  // });
-
-  // it("branch should not be same custom ents if usage model changes", async function () {
-  //   const customItems = replaceItems({
-  //     items: pro.items,
-  //     featureId: TestFeature.Words,
-  //     newItem: constructPrepaidItem({
-  //       featureId: TestFeature.Words,
-  //       price: 0.1,
-  //       billingUnits: 1000,
-  //     }),
-  //   });
-
-  //   const preview = await autumn.attachPreview({
-  //     customer_id: customerId,
-  //     product_id: pro.id,
-  //     is_custom: true,
-  //     items: customItems,
-  //   });
-
-  //   expect(preview.branch).to.equal(AttachBranch.SameCustom);
-  // });
-
-  // it("branch should not be same custom ents if base price deleted", async function () {
-  //   const customItems = pro.items.filter((item) => nullish(item.feature_id));
-
-  //   const preview = await autumn.attachPreview({
-  //     customer_id: customerId,
-  //     product_id: pro.id,
-  //     is_custom: true,
-  //     items: customItems,
-  //   });
-
-  //   expect(preview.branch).to.equal(AttachBranch.SameCustom);
-  // });
 
   it("branch should not be same custom ents if base price updated", async function () {
     let customItems = pro.items.filter((item) => !nullish(item.feature_id));

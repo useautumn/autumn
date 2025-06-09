@@ -13,11 +13,7 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import {
-  addPrefixToProducts,
-  getExpectedInvoiceTotal,
-  runAttachTest,
-} from "../utils.js";
+import { addPrefixToProducts, runAttachTest } from "../utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -28,6 +24,7 @@ import { timeout } from "@/utils/genUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addHours, addMonths, addWeeks } from "date-fns";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
 
 export let pro = constructProduct({
   items: [constructArrearItem({ featureId: TestFeature.Words })],

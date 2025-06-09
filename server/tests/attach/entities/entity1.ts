@@ -1,25 +1,30 @@
-import chalk from "chalk";
-import Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { APIVersion, AppEnv, Organization } from "@autumn/shared";
+import chalk from "chalk";
+import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
 import { addPrefixToProducts } from "../utils.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { expect } from "chai";
-import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
 
-const testCase = "others3";
+const testCase = "aentity1";
 
 export let pro = constructProduct({
+  items: [
+    constructArrearItem({
+      featureId: TestFeature.Words,
+      includedUsage: 1500,
+    }),
+  ],
   type: "pro",
-  items: [],
 });
 
-describe(`${chalk.yellowBright(`${testCase}: Testing attach payment failure`)}`, () => {
+describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach to entity via checkout`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -34,7 +39,17 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach payment failure`)}`,
     db = this.db;
     org = this.org;
     env = this.env;
+
     stripeCli = this.stripeCli;
+
+    await initCustomer({
+      autumn: autumnJs,
+      customerId,
+      db,
+      org,
+      env,
+      // attachPm: "success",
+    });
 
     addPrefixToProducts({
       products: [pro],
@@ -47,42 +62,32 @@ describe(`${chalk.yellowBright(`${testCase}: Testing attach payment failure`)}`,
       db,
       orgId: org.id,
       env,
-      customerId,
     });
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
+    // testClockId = testClockId1!;
+  });
+
+  const newEntities = [
+    {
+      id: "1",
+      name: "Entity 1",
+      featureId: TestFeature.Users,
+    },
+  ];
+
+  it("should attach pro product to entity 1", async function () {
+    await autumn.entities.create(customerId, newEntities);
+    let entityId = newEntities[0].id;
+
+    await attachAndExpectCorrect({
+      autumn,
       customerId,
+      product: pro,
+      stripeCli,
       db,
       org,
       env,
-      attachPm: "success",
+      entityId,
     });
-
-    testClockId = testClockId1!;
-  });
-
-  // Payment failure
-  it("should handle payment failure", async function () {
-    let customer = await CusService.get({
-      db,
-      idOrInternalId: customerId,
-      orgId: org.id,
-      env,
-    });
-
-    await attachFailedPaymentMethod({
-      stripeCli,
-      customer: customer!,
-    });
-
-    const res = await autumn.attach({
-      customer_id: customerId,
-      product_id: pro.id,
-    });
-
-    // console.log(res);
-
-    expect(res.checkout_url).to.exist;
   });
 });

@@ -11,6 +11,7 @@ import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduc
 import { nullish } from "@/utils/genUtils.js";
 import {
   AppEnv,
+  CusProductStatus,
   FullCusProduct,
   Organization,
   ProductV2,
@@ -27,6 +28,7 @@ export const getSubsFromCusId = async ({
   db,
   org,
   env,
+  withExpired = false,
 }: {
   stripeCli: Stripe;
   customerId: string;
@@ -34,12 +36,21 @@ export const getSubsFromCusId = async ({
   db: DrizzleCli;
   org: Organization;
   env: AppEnv;
+  withExpired?: boolean;
 }) => {
   const fullCus = await CusService.getFull({
     db,
     idOrInternalId: customerId,
     orgId: org.id,
     env,
+    inStatuses: withExpired
+      ? [
+          CusProductStatus.Active,
+          CusProductStatus.Expired,
+          CusProductStatus.PastDue,
+          CusProductStatus.Scheduled,
+        ]
+      : undefined,
   });
 
   const cusProduct = fullCus.customer_products.find(
@@ -114,6 +125,7 @@ export const expectSubItemsCorrect = async ({
   org,
   env,
   isCanceled = false,
+  entityId,
 }: {
   stripeCli: Stripe;
   customerId: string;
@@ -122,17 +134,23 @@ export const expectSubItemsCorrect = async ({
   org: Organization;
   env: AppEnv;
   isCanceled?: boolean;
+  entityId?: string;
 }) => {
   const fullCus = await CusService.getFull({
     db,
     idOrInternalId: customerId,
     orgId: org.id,
     env,
+    withEntities: true,
   });
+
+  let entity = entityId ? fullCus.entities.find((e) => e.id == entityId) : null;
 
   const productId = product.id;
   const cusProduct = fullCus.customer_products.find(
-    (cp: FullCusProduct) => cp.product.id == productId,
+    (cp: FullCusProduct) =>
+      cp.product.id == productId &&
+      (entity ? cp.internal_entity_id == entity.internal_id : true),
   )!;
 
   if (isCanceled) {
@@ -214,5 +232,7 @@ export const expectSubItemsCorrect = async ({
 
   return {
     fullCus,
+
+    cusProduct,
   };
 };

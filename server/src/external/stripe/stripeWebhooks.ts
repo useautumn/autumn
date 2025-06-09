@@ -4,7 +4,7 @@ import express from "express";
 import stripe, { Stripe } from "stripe";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";
-import { handleSubscriptionDeleted } from "./webhookHandlers/handleSubDeleted.js";
+import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { getStripeWebhookSecret } from "@/internal/orgs/orgUtils.js";
 import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
@@ -16,6 +16,7 @@ import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubS
 import { createLogtailWithContext } from "../logtail/logtailUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { createStripeCli } from "./utils.js";
 
 export const stripeWebhookRouter = express.Router();
 
@@ -91,14 +92,7 @@ stripeWebhookRouter.post(
       env,
     });
 
-    // console.log(
-    //   `${chalk.gray(format(new Date(), "dd MMM HH:mm:ss"))} ${chalk.yellow(
-    //     "Stripe Webhook: ",
-    //   )} ${request.url} ${request.url.includes("live") ? "   " : ""}| ${
-    //     event?.type
-    //   } | ID: ${event?.id}`,
-    // );
-
+    const stripeCli = createStripeCli({ org, env });
     try {
       switch (event.type) {
         case "customer.subscription.created":
@@ -125,13 +119,10 @@ stripeWebhookRouter.post(
           break;
 
         case "customer.subscription.deleted":
-          const deletedSubscription = event.data.object;
-          await handleSubscriptionDeleted({
+          await handleSubDeleted({
             req: request,
-            db,
-            subscription: deletedSubscription,
-            org,
-            env,
+            stripeCli,
+            data: event.data.object,
             logger,
           });
           break;
