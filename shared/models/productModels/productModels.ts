@@ -68,6 +68,7 @@ export const FullProductSchema = ProductSchema.extend({
   ),
   free_trial: FreeTrialSchema.nullish(),
   free_trials: z.array(FreeTrialSchema).nullish(),
+  free_trial_ids: z.array(z.string()).nullish(),
 });
 
 export type Product = z.infer<typeof ProductSchema>;

@@ -18,7 +18,6 @@ import {
   Organization,
   Subscription,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getEntityResponse = async ({
   db,
@@ -101,8 +100,9 @@ export const getEntityResponse = async ({
       ...(withAutumnId ? { autumn_id: entity.internal_id } : {}),
       id: entity.id,
       name: entity.name,
-      customer_id: customerId,
       created_at: entity.created_at,
+      // feature_id: entity.feature_id,
+      customer_id: customerId,
       env,
       products,
       features,

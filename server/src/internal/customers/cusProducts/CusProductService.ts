@@ -13,7 +13,16 @@ import {
 
 import { customerProducts } from "@autumn/shared";
 
-import { and, arrayContains, eq, inArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  arrayContains,
+  eq,
+  inArray,
+  isNotNull,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 
 export const ACTIVE_STATUSES = [
   CusProductStatus.Active,
@@ -466,12 +475,14 @@ export class CusProductService {
 
   static async getByFingerprint({
     db,
-    freeTrialId,
+    productId,
+    internalCustomerId,
     fingerprint,
   }: {
     db: DrizzleCli;
-    freeTrialId: string;
-    fingerprint: string;
+    productId: string;
+    internalCustomerId: string;
+    fingerprint?: string;
   }) {
     let data = await db
       .select()
@@ -480,10 +491,18 @@ export class CusProductService {
         customers,
         eq(customerProducts.internal_customer_id, customers.internal_id),
       )
+      .innerJoin(
+        products,
+        eq(customerProducts.internal_product_id, products.internal_id),
+      )
       .where(
         and(
-          eq(customers.fingerprint, fingerprint),
-          eq(customerProducts.free_trial_id, freeTrialId),
+          or(
+            fingerprint ? eq(customers.fingerprint, fingerprint) : undefined,
+            eq(customers.internal_id, internalCustomerId),
+          ),
+          eq(products.id, productId),
+          isNotNull(customerProducts.free_trial_id),
         ),
       );
 

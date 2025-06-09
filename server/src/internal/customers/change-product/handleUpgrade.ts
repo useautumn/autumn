@@ -210,7 +210,8 @@ export const handleStripeSubUpdate = async ({
   // CREATE NEW SUBSCRIPTIONS
   for (const itemSet of newItemSets) {
     // 1. Next billing date for first sub
-    const nextCycleAnchor = firstSub.current_period_end * 1000;
+    // const nextCycleAnchor = firstSub.current_period_end * 1000;
+    const nextCycleAnchor = subUpdate.current_period_end * 1000;
     let nextCycleAnchorUnix = nextCycleAnchor;
     const naturalBillingDate = addBillingIntervalUnix(
       Date.now(),

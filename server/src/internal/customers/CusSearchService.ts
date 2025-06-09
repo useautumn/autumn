@@ -1,5 +1,7 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
+
 import { AppEnv, customers, CusProductStatus } from "@autumn/shared";
+
 import { and, desc, eq, ilike, or, lt, isNotNull, gt, sql } from "drizzle-orm";
 import { customerProducts, products } from "@autumn/shared";
 
@@ -55,14 +57,13 @@ export class CusSearchService {
       filters.product_id
         ? eq(customerProducts.product_id, filters.product_id)
         : undefined,
-      filters.status ? eq(customerProducts.status, filters.status) : undefined,
       filters.status === "canceled"
         ? and(activeProdFilter, isNotNull(customerProducts.canceled_at))
         : undefined,
       filters.status === "free_trial"
         ? and(
-            eq(customerProducts.status, CusProductStatus.Active),
             gt(customerProducts.trial_ends_at, Date.now()),
+            isNotNull(customerProducts.free_trial_id),
           )
         : undefined,
     );

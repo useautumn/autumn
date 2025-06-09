@@ -22,6 +22,7 @@ import {
   RewardType,
   RewardResponse,
   CouponDurationType,
+  EntityResponseSchema,
 } from "@autumn/shared";
 import { getCusInvoices, processFullCusProducts } from "./cusUtils.js";
 
@@ -295,6 +296,18 @@ export const getCustomerDetails = async ({
           : undefined,
         rewards: withRewards ? rewards : undefined,
         metadata: customer.metadata,
+        entities: expand.includes(CusExpand.Entities)
+          ? customer.entities.map((e) =>
+              EntityResponseSchema.parse({
+                id: e.id,
+                name: e.name,
+                customer_id: customer.id,
+                feature_id: e.feature_id,
+                created_at: e.created_at,
+                env: customer.env,
+              }),
+            )
+          : undefined,
       }),
     };
 

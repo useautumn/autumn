@@ -5,7 +5,13 @@ import { useEffect, useState } from "react";
 import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 import { SelectTrigger, SelectValue } from "@/components/ui/select";
 import { keyToTitle, slugify } from "@/utils/formatUtils/formatTextUtils";
-import { Reward, RewardType, Product, FullProduct } from "@autumn/shared";
+import {
+  Reward,
+  RewardType,
+  Product,
+  FullProduct,
+  ProductV2,
+} from "@autumn/shared";
 import { useProductsContext } from "../ProductsContext";
 import { DiscountConfig } from "./DiscountConfig";
 import { notNullish } from "@/utils/genUtils";
@@ -20,6 +26,7 @@ export const RewardConfig = ({
   setReward: (reward: Reward) => void;
 }) => {
   const { products } = useProductsContext();
+
   const [idChanged, setIdChanged] = useState(false);
 
   useEffect(() => {
@@ -110,10 +117,8 @@ export const RewardConfig = ({
           >
             {(() => {
               const freeAddOns = products
-                .filter((product: FullProduct) => product.is_add_on)
-                .filter((product: FullProduct) =>
-                  isFreeProduct(product.prices),
-                );
+                .filter((product: ProductV2) => product.is_add_on)
+                .filter((product: ProductV2) => isFreeProduct(product.items));
 
               const empty = freeAddOns.length === 0;
               return (
