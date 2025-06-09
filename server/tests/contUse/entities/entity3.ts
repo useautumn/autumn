@@ -40,7 +40,7 @@ export let pro = constructProduct({
 
 const testCase = "entity3";
 
-describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / delete entities`)}`, () => {
+describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing replaceables deleted at end of cycle`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
