@@ -1,29 +1,21 @@
 import {
   AppEnv,
-  AttachScenario,
   CollectionMethod,
   CusProductStatus,
   ErrCode,
-  FullCusProduct,
   Organization,
 } from "@autumn/shared";
 
 import { createStripeCli } from "../utils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { formatUnixToDateTime, notNullish, nullish } from "@/utils/genUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { cancelFutureProductSchedule } from "@/internal/customers/change-product/scheduleUtils.js";
-import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
+
 import {
   getWebhookLock,
   releaseWebhookLock,
 } from "@/external/redis/stripeWebhookLocks.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleSubCanceled } from "./handleSubUpdated/handleSubCanceled.js";
@@ -54,11 +46,6 @@ export const handleSubscriptionUpdated = async ({
     env,
   });
   let fullSub = await stripeCli.subscriptions.retrieve(subscription.id);
-  let features = await FeatureService.list({
-    db,
-    orgId: org.id,
-    env,
-  });
 
   let subStatusMap: {
     [key: string]: CusProductStatus;

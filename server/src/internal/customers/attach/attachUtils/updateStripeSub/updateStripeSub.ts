@@ -103,12 +103,13 @@ export const updateStripeSub = async ({
   }
 
   // 2. Create prorations for single use items
-  let { cusEntIds } = await createUsageInvoiceItems({
+  let { invoiceItems, cusEntIds } = await createUsageInvoiceItems({
     db,
     attachParams,
     cusProduct: curMainProduct!,
     stripeSubs,
     logger,
+    interval: config.sameIntervals ? interval : undefined,
   });
 
   // 3. Create prorations for continuous use items

@@ -1,11 +1,10 @@
 import { listCusPaymentMethods } from "@/external/stripe/stripeCusUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachBody } from "../models/AttachBody.js";
+import { AttachBody } from "../../models/AttachBody.js";
 import { processAttachBody } from "./processAttachBody.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { APIVersion } from "@autumn/shared";
-import { AttachParams } from "../../cusProducts/AttachParams.js";
-import Stripe from "stripe";
+import { AttachParams } from "../../../cusProducts/AttachParams.js";
 
 export const getAttachParams = async ({
   req,

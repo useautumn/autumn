@@ -80,23 +80,24 @@ export const priceToInvoiceAmount = ({
   // 1. If fixed price, just return amount
 
   let amount = 0;
+
   if (isFixedPrice({ price })) {
     amount = (price.config as FixedPriceConfig).amount;
-  }
-
-  const config = price.config as UsagePriceConfig;
-  let billingType = getBillingType(config);
-
-  if (!nullish(quantity) && !nullish(overage)) {
-    throw new Error(
-      `getAmountForPrice: quantity or overage is required, autumn price: ${price.id}`,
-    );
-  }
-
-  if (billingType == BillingType.UsageInAdvance) {
-    amount = getAmountForQuantity({ price, quantity: quantity! });
   } else {
-    amount = getAmountForQuantity({ price, quantity: overage! });
+    const config = price.config as UsagePriceConfig;
+    let billingType = getBillingType(config);
+
+    if (!nullish(quantity) && !nullish(overage)) {
+      throw new Error(
+        `getAmountForPrice: quantity or overage is required, autumn price: ${price.id}`,
+      );
+    }
+
+    if (billingType == BillingType.UsageInAdvance) {
+      amount = getAmountForQuantity({ price, quantity: quantity! });
+    } else {
+      amount = getAmountForQuantity({ price, quantity: overage! });
+    }
   }
 
   if (proration) {

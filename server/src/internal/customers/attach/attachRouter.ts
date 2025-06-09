@@ -39,7 +39,7 @@ import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { AttachBodySchema } from "./models/AttachBody.js";
-import { processAttachBody } from "./attachUtils/processAttachBody.js";
+import { processAttachBody } from "./attachUtils/attachParams/processAttachBody.js";
 import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
 import { handleAttach } from "./handleAttach.js";
 

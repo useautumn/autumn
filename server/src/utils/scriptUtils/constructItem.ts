@@ -10,16 +10,19 @@ import {
 export const constructFeatureItem = ({
   featureId,
   includedUsage = 150,
+  interval = ProductItemInterval.Month,
   entityFeatureId,
 }: {
   featureId: string;
   includedUsage?: number;
+  interval?: ProductItemInterval;
   entityFeatureId?: string;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
     included_usage: includedUsage,
     entity_feature_id: entityFeatureId,
+    interval: interval,
   };
 
   return item;
@@ -29,11 +32,13 @@ export const constructPrepaidItem = ({
   featureId,
   price,
   billingUnits = 100,
+  includedUsage = 0,
   isOneOff = false,
 }: {
   featureId: string;
   price: number;
   billingUnits?: number;
+  includedUsage?: number;
   isOneOff?: boolean;
 }) => {
   let item: ProductItem = {
@@ -44,6 +49,7 @@ export const constructPrepaidItem = ({
     billing_units: billingUnits || 100,
 
     interval: isOneOff ? null : ProductItemInterval.Month,
+    included_usage: includedUsage,
   };
 
   return item;
@@ -54,11 +60,18 @@ export const constructArrearItem = ({
   includedUsage = 10000,
   price = 0.1,
   billingUnits = 1000,
+  config = {
+    // on_increase: OnIncrease.BillImmediately,
+    // on_decrease: OnDecrease.None,
+    on_increase: OnIncrease.ProrateImmediately,
+    on_decrease: OnDecrease.ProrateImmediately,
+  },
 }: {
   featureId: string;
   includedUsage?: number;
   price?: number;
   billingUnits?: number;
+  config?: ProductItemConfig;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -68,6 +81,7 @@ export const constructArrearItem = ({
     billing_units: billingUnits,
     interval: ProductItemInterval.Month,
     reset_usage_when_enabled: true,
+    config,
   };
 
   return item;

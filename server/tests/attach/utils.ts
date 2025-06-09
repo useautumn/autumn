@@ -3,7 +3,6 @@ import {
   AppEnv,
   AttachBranch,
   BillingInterval,
-  Customer,
   FeatureOptions,
   Organization,
   ProductItem,
@@ -29,6 +28,7 @@ import {
 import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { Decimal } from "decimal.js";
+import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 
 export const runAttachTest = async ({
   autumn,
@@ -102,11 +102,14 @@ export const runAttachTest = async ({
   ).filter(notNullish);
   const multiInterval = intervals.length > 1;
 
-  expectInvoicesCorrect({
-    customer,
-    first: multiInterval ? undefined : { productId: product.id, total },
-    second: multiInterval ? { productId: product.id, total } : undefined,
-  });
+  const freeProduct = isFreeProductV2({ product });
+  if (!freeProduct) {
+    expectInvoicesCorrect({
+      customer,
+      first: multiInterval ? undefined : { productId: product.id, total },
+      second: multiInterval ? { productId: product.id, total } : undefined,
+    });
+  }
 
   if (!skipFeatureCheck) {
     expectFeaturesCorrect({
@@ -118,7 +121,7 @@ export const runAttachTest = async ({
   }
 
   const branch = preview.branch;
-  if (branch == AttachBranch.OneOff) {
+  if (branch == AttachBranch.OneOff || freeProduct) {
     return;
   }
   await expectSubItemsCorrect({

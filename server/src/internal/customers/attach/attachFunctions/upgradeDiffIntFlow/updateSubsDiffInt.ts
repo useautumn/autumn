@@ -1,17 +1,19 @@
 import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeSub } from "@/external/stripe/stripeSubUtils/createStripeSub.js";
-import { updateStripeSubscription } from "@/external/stripe/stripeSubUtils/updateStripeSub.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { AttachConfig, FullCusProduct } from "@autumn/shared";
-import { subItemInCusProduct } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { updateCurSchedules } from "./updateCurSchedules.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { addSubItemsToRemove } from "../attachFuncUtils.js";
 import { updateStripeSub } from "../../attachUtils/updateStripeSub/updateStripeSub.js";
+import {
+  createUsageInvoiceItems,
+  resetUsageBalances,
+} from "./createUsageInvoiceItems.js";
 
-export const updateStripeSubs = async ({
+export const updateSubsDiffInt = async ({
   db,
   stripeCli,
   curCusProduct,
@@ -53,9 +55,18 @@ export const updateStripeSubs = async ({
         now: attachParams.now,
       });
 
+  // 2. Create prorations for single use items
+  let { invoiceItems, cusEntIds } = await createUsageInvoiceItems({
+    db,
+    attachParams,
+    cusProduct: curCusProduct,
+    stripeSubs,
+    logger,
+  });
+
   // 3. Update current subscription
   logger.info("1.2: Updating current subscription");
-  const { updatedSub, latestInvoice, cusEntIds } = await updateStripeSub({
+  const { updatedSub, latestInvoice } = await updateStripeSub({
     db,
     attachParams,
     config,
@@ -64,6 +75,12 @@ export const updateStripeSubs = async ({
     itemSet: firstItemSet,
     shouldPreview,
     stripeSubs,
+  });
+
+  await resetUsageBalances({
+    db,
+    cusEntIds,
+    cusProduct: curCusProduct,
   });
 
   let newSubs = [updatedSub!];

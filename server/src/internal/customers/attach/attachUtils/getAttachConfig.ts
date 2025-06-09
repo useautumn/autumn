@@ -80,6 +80,8 @@ export const getAttachConfig = async ({
     branch == AttachBranch.Downgrade ||
     attachBody.free_trial === false;
 
+  let carryTrial = branch === AttachBranch.NewVersion;
+
   let sameIntervals = intervalsAreSame({ attachParams });
 
   let config: AttachConfig = {
@@ -92,22 +94,8 @@ export const getAttachConfig = async ({
     invoiceOnly: flags.invoiceOnly,
     disableMerge: org.config.merge_billing_cycles === false,
     sameIntervals,
+    carryTrial,
   };
 
   return { flags, config };
-};
-
-const webhookToConfig = ({ org, env }: { org: Organization; env: AppEnv }) => {
-  const config: AttachConfig = {
-    branch: AttachBranch.NewVersion, // not needed...
-    carryUsage: false, // not needed...
-    onlyCheckout: false,
-    proration: ProrationBehavior.Immediately,
-    disableTrial: false,
-    invoiceOnly: false,
-    disableMerge: false,
-    sameIntervals: false,
-  };
-
-  return config;
 };

@@ -197,6 +197,7 @@ export const handleUsageEvent = async ({
       payload,
       logger: console,
       db: req.db,
+      throwError: true,
     });
   } else {
     await addTaskToQueue({

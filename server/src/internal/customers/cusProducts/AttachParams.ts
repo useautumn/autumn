@@ -73,6 +73,7 @@ export type AttachParams = {
 
 export type InsertCusProductParams = {
   req?: any;
+  now?: number;
 
   customer: FullCustomer;
   org: Organization;

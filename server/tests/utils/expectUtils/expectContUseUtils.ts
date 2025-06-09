@@ -9,6 +9,7 @@ import { AppEnv, FullCustomer, Organization } from "@autumn/shared";
 import { expect } from "chai";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 export const expectSubQuantityCorrect = async ({
   stripeCli,
@@ -18,6 +19,7 @@ export const expectSubQuantityCorrect = async ({
   org,
   env,
   customerId,
+  itemQuantity,
   numReplaceables = 0,
 }: {
   stripeCli: Stripe;
@@ -27,6 +29,7 @@ export const expectSubQuantityCorrect = async ({
   org: Organization;
   env: AppEnv;
   customerId: string;
+  itemQuantity?: number;
   numReplaceables?: number;
 }) => {
   const fullCus = await CusService.getFull({
@@ -56,7 +59,7 @@ export const expectSubQuantityCorrect = async ({
   });
 
   expect(subItem).to.exist;
-  expect(subItem!.quantity).to.equal(usage);
+  expect(subItem!.quantity).to.equal(itemQuantity || usage);
 
   // Check num replaceables correct
   let cusEnts = cusProduct?.customer_entitlements;
@@ -67,6 +70,12 @@ export const expectSubQuantityCorrect = async ({
 
   let expectedBalance = cusEnt!.entitlement.allowance! - usage;
   expect(cusEnt!.balance).to.equal(expectedBalance);
+
+  return {
+    fullCus,
+    cusProduct,
+    stripeSubs,
+  };
 };
 
 export const expectUpcomingItemsCorrect = async ({
@@ -111,4 +120,46 @@ export const expectUpcomingItemsCorrect = async ({
   console.groupEnd();
 
   expect(lines[0].amount).to.equal(Math.round(proratedAmount * 100));
+};
+
+export const calcProrationAndExpectInvoice = async ({
+  autumn,
+  stripeSubs,
+  customerId,
+  quantity,
+  unitPrice,
+  curUnix,
+  numInvoices,
+}: {
+  autumn: AutumnInt;
+  stripeSubs: Stripe.Subscription[];
+  customerId: string;
+  quantity: number;
+  unitPrice: number;
+  curUnix: number;
+  numInvoices: number;
+}) => {
+  let customer = await autumn.customers.get(customerId);
+  let invoices = customer.invoices;
+
+  let sub = stripeSubs[0];
+  let amount = quantity * unitPrice;
+  let proratedAmount = calculateProrationAmount({
+    amount,
+    periodStart: sub.current_period_start * 1000,
+    periodEnd: sub.current_period_end * 1000,
+    now: curUnix,
+    allowNegative: true,
+  });
+
+  proratedAmount = Number(proratedAmount.toFixed(2));
+
+  expect(invoices.length).to.equal(
+    numInvoices,
+    `Should have ${numInvoices} invoices`,
+  );
+  expect(invoices[0].total).to.equal(
+    proratedAmount,
+    "Latest invoice should be equals to calculated prorated amount",
+  );
 };

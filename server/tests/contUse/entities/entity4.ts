@@ -1,4 +1,9 @@
 // Handling per entity features!
+
+import { TestFeature } from "tests/setup/v2Features.js";
+import { expect } from "chai";
+import { timeout } from "@/utils/genUtils.js";
+import { useEntityBalanceAndExpect } from "tests/utils/expectUtils/expectContUse/expectEntityUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
@@ -20,13 +25,6 @@ import {
   constructArrearProratedItem,
   constructFeatureItem,
 } from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { expect } from "chai";
-import { expectSubQuantityCorrect } from "../../attach/entities/expectEntity.js";
-import { addHours, addMonths, addWeeks } from "date-fns";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
-import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 
 let userItem = constructArrearProratedItem({
   featureId: TestFeature.Users,
@@ -141,63 +139,101 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing per entity 
     await autumn.entities.create(customerId, newEntities);
     usage += newEntities.length;
 
-    return;
-
     let customer = await autumn.customers.get(customerId, {
       expand: [CusExpand.Entities],
     });
 
-    let balance = await autumn.check({
+    let res = await autumn.check({
       customer_id: customerId,
       feature_id: TestFeature.Messages,
     });
 
-    expect(balance.quantity).to.equal(
+    expect(res.balance).to.equal(
       (perEntityItem.included_usage as number) * usage,
     );
 
     for (const entity of customer.entities) {
-      let balance = await autumn.check({
+      let entRes = await autumn.check({
         customer_id: customerId,
         feature_id: TestFeature.Messages,
         entity_id: entity.id,
       });
 
-      expect(balance.quantity).to.equal(perEntityItem.included_usage);
+      expect(entRes.balance).to.equal(perEntityItem.included_usage);
     }
   });
 
-  return;
+  // 1. Use from main balance...
+  it("should use from top level balance", async function () {
+    let deduction = 600;
+    let perEntityIncluded = perEntityItem.included_usage as number;
 
-  it("should advance clock to next cycle and have correct invoice", async function () {
-    await advanceTestClock({
-      stripeCli,
-      testClockId,
-      advanceTo: addHours(
-        addMonths(new Date(), 1),
-        hoursToFinalizeInvoice,
-      ).getTime(),
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      value: deduction,
+    });
+    await timeout(5000);
+
+    let { balance } = await autumn.check({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
     });
 
-    usage -= 2; // 2 entities deleted
+    expect(balance).to.equal(perEntityIncluded * usage - deduction);
+  });
 
-    const customer = await autumn.customers.get(customerId);
-    const invoices = customer.invoices;
-
-    let basePrice = getBasePrice({ product: pro });
-    expect(invoices.length).to.equal(2);
-    expect(invoices[0].total).to.equal(basePrice); // 0 entities
-
-    await expectSubQuantityCorrect({
-      stripeCli,
-      productId: pro.id,
-      db,
-      org,
-      env,
+  it("should use from entity balance", async function () {
+    await useEntityBalanceAndExpect({
+      autumn,
       customerId,
-      usage,
-      itemQuantity: usage,
-      numReplaceables: 0,
+      featureId: TestFeature.Messages,
+      entityId: "2",
     });
+
+    await useEntityBalanceAndExpect({
+      autumn,
+      customerId,
+      featureId: TestFeature.Messages,
+      entityId: "3",
+    });
+  });
+
+  // Delete one entity and create a new one and master balance should be same
+  let deletedEntityId = "2";
+  let newEntity = {
+    id: "4",
+    name: "test",
+    featureId: TestFeature.Users,
+  };
+  it("should delete one entity and create a new one", async function () {
+    let { balance: masterBalanceBefore } = await autumn.check({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+    });
+
+    let { balance: entityBalanceBefore } = await autumn.check({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      entity_id: deletedEntityId,
+    });
+
+    await autumn.entities.delete(customerId, deletedEntityId);
+    await autumn.entities.create(customerId, [newEntity]);
+
+    let { balance: masterBalanceAfter } = await autumn.check({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+    });
+
+    expect(masterBalanceAfter).to.equal(masterBalanceBefore);
+
+    let { balance: entityBalanceAfter } = await autumn.check({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      entity_id: newEntity.id,
+    });
+
+    expect(entityBalanceAfter).to.equal(entityBalanceBefore);
   });
 });

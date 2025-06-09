@@ -7,7 +7,7 @@ import {
   CusExpand,
   ErrCode,
 } from "@autumn/shared";
-import { CheckParams, TrackParams, UsageParams } from "autumn-js";
+import { CheckParams, CheckResult, TrackParams, UsageParams } from "autumn-js";
 import { AttachBody } from "@/internal/customers/attach/models/AttachBody.js";
 
 export default class AutumnError extends Error {
@@ -398,13 +398,23 @@ export class AutumnInt {
     return data;
   };
 
-  check = async (params: CheckParams) => {
+  check = async (params: CheckParams): Promise<CheckResult> => {
     const data = await this.post(`/check`, params);
     return data;
   };
 
   attachPreview = async (params: AttachBody) => {
     const data = await this.post(`/attach/preview`, params);
+    return data;
+  };
+
+  migrate = async (params: {
+    from_product_id: string;
+    to_product_id: string;
+    from_version: number;
+    to_version: number;
+  }) => {
+    const data = await this.post(`/migrations`, params);
     return data;
   };
 
