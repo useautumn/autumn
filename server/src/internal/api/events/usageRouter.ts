@@ -6,6 +6,7 @@ import {
   Event,
   EventInsert,
   FeatureType,
+  FeatureUsageType,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, nullish } from "@/utils/genUtils.js";
@@ -23,6 +24,8 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 import { getEventTimestamp } from "./eventUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
+import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 export const eventsRouter = Router();
 export const usageRouter = Router();
 
@@ -169,8 +172,6 @@ export const handleUsageEvent = async ({
 
   const features = [feature, ...creditSystems];
 
-  const queue = await QueueManager.getQueue({ useBackup: false });
-
   if (nullish(value) || isNaN(parseFloat(value))) {
     value = 1;
   } else {
@@ -189,10 +190,20 @@ export const handleUsageEvent = async ({
     entityId: entity_id,
   };
 
-  await addTaskToQueue({
-    jobName: JobName.UpdateUsage,
-    payload,
-  });
+  const featureUsageType = feature.config?.usage_type;
+  // console.log(`Feature Usage Type: ${featureUsageType}`);
+  if (featureUsageType === FeatureUsageType.Continuous) {
+    await runUpdateUsageTask({
+      payload,
+      logger: console,
+      db: req.db,
+    });
+  } else {
+    await addTaskToQueue({
+      jobName: JobName.UpdateUsage,
+      payload,
+    });
+  }
 
   return { event: newEvent, affectedFeatures: features, org };
 };

@@ -17,6 +17,7 @@ import { getCusEntBalance } from "@/internal/customers/cusProducts/cusEnts/cusEn
 import { performDeductionOnCusEnt } from "@/trigger/updateBalanceTask.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
 
 const getCusOrgAndCusPrice = async ({
   db,
@@ -44,7 +45,7 @@ const getCusOrgAndCusPrice = async ({
 
 export const handleUpdateEntitlement = async (req: any, res: any) => {
   try {
-    const { db } = req;
+    const { db, logtail: logger } = req;
     const { customer_entitlement_id } = req.params;
     const { balance, next_reset_at, entity_id } = req.body;
 
@@ -92,10 +93,6 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       });
     }
 
-    // let { balance: masterBalance } = getCusEntMasterBalance({
-    //   cusEnt,
-    //   entities: cusEnt.customer_product.entities,
-    // });
     let { balance: masterBalance } = getCusEntBalance({
       cusEnt,
       entityId: entity_id,
@@ -113,16 +110,12 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       entityId: entity_id,
     });
 
-    await CusEntService.update({
-      db,
-      id: customer_entitlement_id,
-      updates: {
-        balance: newBalance,
-        next_reset_at,
-        entities: newEntities,
-        adjustment: newAdjustment,
-      },
-    });
+    let updates = {
+      balance: newBalance,
+      next_reset_at,
+      entities: newEntities,
+      adjustment: newAdjustment,
+    };
 
     const { cusPrice, customer, org } = await getCusOrgAndCusPrice({
       db,
@@ -130,23 +123,43 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       cusEnt,
     });
 
-    if (!cusPrice || !customer) {
-      res.status(200).json({ success: true });
-      return;
+    if (cusPrice && customer) {
+      let fullCusProduct = await CusProductService.get({
+        db,
+        id: cusEnt.customer_product_id,
+        orgId: req.orgId,
+        env: req.env,
+      });
+
+      const { newReplaceables, deletedReplaceables } = await adjustAllowance({
+        db,
+        env: req.env,
+        org: org,
+        affectedFeature: cusEnt.entitlement.feature,
+        cusEnt: {
+          ...cusEnt,
+          customer_product: fullCusProduct!,
+        },
+        cusPrices: [cusPrice],
+        customer: customer,
+        originalBalance: originalBalance!,
+        newBalance: balance,
+        logger: req.logtail,
+      });
+
+      if (newReplaceables && newReplaceables.length > 0) {
+        updates.balance = newBalance! - newReplaceables.length;
+      }
+
+      if (deletedReplaceables && deletedReplaceables.length > 0) {
+        updates.balance = newBalance! + deletedReplaceables.length;
+      }
     }
 
-    await adjustAllowance({
+    await CusEntService.update({
       db,
-
-      env: req.env,
-      org: org,
-      affectedFeature: cusEnt.entitlement.feature,
-      cusEnt: cusEnt as FullCusEntWithProduct,
-      cusPrices: [cusPrice],
-      customer: customer,
-      originalBalance: originalBalance!,
-      newBalance: balance,
-      deduction: deducted,
+      id: customer_entitlement_id,
+      updates,
     });
 
     res.status(200).json({ success: true });

@@ -74,8 +74,6 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       });
     }
 
-    // Can't update feature -> credit system here...
-
     const { cusEnts, cusPrices } = await getCusEntsInFeatures({
       customer,
       internalFeatureIds: featuresToUpdate.map((f) => f.internal_id!),

@@ -15,6 +15,7 @@ import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationCo
 import { getContUseUpgradeItems } from "./getContUseUpgradeItems.js";
 import { priceToInvoiceItem } from "@/internal/products/prices/priceUtils/priceToInvoiceItem.js";
 import { Decimal } from "decimal.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const priceToContUseItem = async ({
   price,
@@ -94,6 +95,8 @@ export const priceToContUseItem = async ({
       org: attachParams.org,
       usage: curUsage,
       prodName: product.name,
+      proration,
+      now,
     });
 
     res = {
@@ -111,15 +114,17 @@ export const priceToContUseItem = async ({
   if (new Decimal(oldAmount).add(newAmount).eq(0)) {
     return {
       oldItem: null,
-      newItems: [res.newUsageItem].filter((item) => item !== undefined),
+      newItems: [res.newUsageItem].filter((item) =>
+        notNullish(item),
+      ) as PreviewLineItem[],
       replaceables: res.replaceables,
     };
   } else {
     return {
       oldItem: res.oldItem,
-      newItems: [res.newItem, res.newUsageItem].filter(
-        (item) => item !== undefined,
-      ),
+      newItems: [res.newItem, res.newUsageItem].filter((item) =>
+        notNullish(item),
+      ) as PreviewLineItem[],
       replaceables: res.replaceables,
     };
   }

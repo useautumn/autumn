@@ -100,13 +100,18 @@ export const createAndFilterContUseItems = async ({
   });
 
   const items = [...oldItems, ...newItems];
+  const curPrices = cusProductToPrices({
+    cusProduct: curMainProduct,
+  });
 
   for (const item of items) {
     if (!item.amount || item.amount === 0) {
       continue;
     }
 
-    let price = product.prices.find((p) => p.id === item.price_id);
+    let price =
+      product.prices.find((p) => p.id === item.price_id) ||
+      curPrices.find((p) => p.id === item.price_id);
 
     if (interval && price?.config.interval !== interval) {
       continue;

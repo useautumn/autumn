@@ -100,6 +100,7 @@ export const adjustAllowance = async ({
     return { newReplaceables: [], invoice: null, deletedReplaceables: null };
   }
 
+  logger.info(`--------------------------------`);
   logger.info(`Updating arrear prorated usage: ${affectedFeature.name}`);
   logger.info(`Customer: ${customer.name}, Org: ${org.slug}`);
 

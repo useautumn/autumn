@@ -207,7 +207,7 @@ export const toFeatureAndPrice = ({
   if (itemCanBeProrated({ item, features })) {
     prorationConfig = {
       on_increase: item.config?.on_increase || OnIncrease.ProrateImmediately,
-      on_decrease: item.config?.on_decrease || OnDecrease.Prorate,
+      on_decrease: item.config?.on_decrease || OnDecrease.ProrateImmediately,
     };
   }
 

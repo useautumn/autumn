@@ -1,6 +1,5 @@
 import { Entitlement, Price, UsagePriceConfig } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { priceToInvoiceAmount } from "../priceToInvoiceAmount.js";
 
 export const getUsageFromBalance = ({
   ent,
@@ -33,69 +32,4 @@ export const getUsageFromBalance = ({
   }
 
   return { usage, roundedUsage, overage, roundedOverage };
-};
-
-export const getPrevAndNewPriceForUpgrade = ({
-  ent,
-  numReplaceables,
-  price,
-  newBalance,
-  prevBalance,
-}: {
-  ent: Entitlement;
-  numReplaceables: number;
-  price: Price;
-  newBalance: number;
-  prevBalance: number;
-}) => {
-  const {
-    usage: newUsage,
-    roundedUsage: newRoundedUsage,
-    roundedOverage: newRoundedOverage,
-  } = getUsageFromBalance({
-    ent,
-    price,
-    balance: newBalance,
-  });
-
-  const {
-    usage: prevUsage,
-    overage: prevOverage,
-    roundedOverage: prevRoundedOverage,
-  } = getUsageFromBalance({
-    ent,
-    price,
-    balance: prevBalance,
-  });
-
-  const { roundedOverage: overageWithReplaceables } = getUsageFromBalance({
-    ent,
-    price,
-    balance: prevBalance - numReplaceables,
-  });
-
-  // Get price for usage...
-  let prevPrice = priceToInvoiceAmount({
-    price,
-    overage: overageWithReplaceables,
-  });
-
-  let newPrice = priceToInvoiceAmount({
-    price,
-    overage: newRoundedOverage,
-  });
-
-  return {
-    prevPrice,
-    newPrice,
-
-    prevUsage,
-    newUsage,
-
-    overageWithReplaceables,
-    newRoundedOverage,
-    // newRoundedUsage,
-    // prevRoundedOverage,
-    // prevOverage,
-  };
 };

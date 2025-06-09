@@ -12,23 +12,25 @@ import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
-import { addPrefixToProducts, runAttachTest } from "../utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { expect } from "chai";
-import { expectSubQuantityCorrect } from "./expectEntity.js";
 import { addWeeks } from "date-fns";
 import { timeout } from "@/utils/genUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
+import { addPrefixToProducts } from "tests/attach/utils.js";
+import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectSubQuantityCorrect } from "tests/attach/entities/expectEntity.js";
+import { expectUpcomingItemsCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
 
 let userItem = constructArrearProratedItem({
   featureId: TestFeature.Users,
   pricePerUnit: 50,
   includedUsage: 1,
   config: {
-    on_increase: OnIncrease.BillImmediately,
-    on_decrease: OnDecrease.None,
+    on_increase: OnIncrease.ProrateNextCycle,
+    on_decrease: OnDecrease.ProrateNextCycle,
   },
 });
 
@@ -37,11 +39,9 @@ export let pro = constructProduct({
   type: "pro",
 });
 
-const testCase = "entity1";
+const testCase = "track3";
 
-// Pro is $20 / month, Seat is $50 / user
-
-describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / delete entities`)}`, () => {
+describe(`${chalk.yellowBright(`contUse/${testCase}: Testing track usage for cont use, prorate next cycle`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -85,19 +85,8 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
   });
 
   let usage = 0;
-  let firstEntities = [
-    {
-      id: "1",
-      name: "test",
-      featureId: TestFeature.Users,
-    },
-  ];
-
-  it("should create entity, then attach pro", async function () {
-    await autumn.entities.create(customerId, firstEntities);
-    usage += 1;
-
-    await runAttachTest({
+  it("should attach pro", async function () {
+    await attachAndExpectCorrect({
       autumn,
       customerId,
       product: pro,
@@ -105,40 +94,28 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
       db,
       org,
       env,
-      usage: [
-        {
-          featureId: TestFeature.Users,
-          value: 1,
-        },
-      ],
     });
   });
 
-  const entities = [
-    {
-      id: "2",
-      name: "test",
-      featureId: TestFeature.Users,
-    },
-    {
-      id: "3",
-      name: "test2",
-      featureId: TestFeature.Users,
-    },
-  ];
-
-  it("should create 2 entities and have correct invoice", async function () {
+  it("should create track +3 usage and have correct invoice", async function () {
     curUnix = await advanceTestClock({
       stripeCli,
       testClockId,
       advanceTo: addWeeks(new Date(), 2).getTime(),
-      waitForSeconds: 10,
+      waitForSeconds: 5,
     });
 
-    await autumn.entities.create(customerId, entities);
-    usage += entities.length;
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Users,
+      value: 3,
+    });
 
-    await expectSubQuantityCorrect({
+    await timeout(15000);
+
+    usage += 3;
+
+    let { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
       stripeCli,
       productId: pro.id,
       db,
@@ -148,20 +125,38 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
       usage,
     });
 
+    await expectUpcomingItemsCorrect({
+      stripeCli,
+      fullCus,
+      stripeSubs,
+      curUnix,
+      expectedNumItems: 1,
+      unitPrice: userItem.price!,
+      quantity: 2,
+    });
+
     let customer = await autumn.customers.get(customerId);
     let invoices = customer.invoices;
-    expect(invoices.length).to.equal(2);
-    expect(invoices[0].total).to.equal(userItem.price! * entities.length);
+    expect(invoices.length).to.equal(1);
   });
 
-  it("should delete 1 entity and have no new invoice", async function () {
-    await autumn.entities.delete(customerId, entities[0].id);
+  it("should track -1 and have no new invoice", async function () {
+    curUnix = await advanceTestClock({
+      stripeCli,
+      testClockId,
+      advanceTo: addWeeks(curUnix, 1).getTime(),
+      waitForSeconds: 5,
+    });
 
-    let customer = await autumn.customers.get(customerId);
-    let invoices = customer.invoices;
-    expect(invoices.length).to.equal(2);
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Users,
+      value: -1,
+    });
 
-    await expectSubQuantityCorrect({
+    usage -= 1;
+
+    let { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
       stripeCli,
       productId: pro.id,
       db,
@@ -169,35 +164,34 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
       env,
       customerId,
       usage,
-      numReplaceables: 1,
     });
+
+    await expectUpcomingItemsCorrect({
+      stripeCli,
+      fullCus,
+      stripeSubs,
+      unitPrice: userItem.price!,
+      curUnix,
+      expectedNumItems: 2,
+      quantity: -1,
+    });
+
+    let customer = await autumn.customers.get(customerId);
+    let invoices = customer.invoices;
+    expect(invoices.length).to.equal(1);
   });
 
-  const newEntities = [
-    {
-      id: "4",
-      name: "test3",
-      featureId: TestFeature.Users,
-    },
-    {
-      id: "5",
-      name: "test4",
-      featureId: TestFeature.Users,
-    },
-  ];
+  it("should track -1 and have no new invoice", async function () {
+    let quantity = 2;
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Users,
+      value: quantity,
+    });
 
-  it("should create 2 entities and have correct invoice (only pay for 1)", async function () {
-    await autumn.entities.create(customerId, newEntities);
-    await timeout(3000);
-    usage += 1;
+    usage += quantity;
 
-    let customer = await autumn.customers.get(customerId);
-    let invoices = customer.invoices;
-
-    expect(invoices.length).to.equal(3);
-    expect(invoices[0].total).to.equal(userItem.price!);
-
-    await expectSubQuantityCorrect({
+    let { stripeSubs, cusProduct, fullCus } = await expectSubQuantityCorrect({
       stripeCli,
       productId: pro.id,
       db,
@@ -206,12 +200,19 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
       customerId,
       usage,
     });
+
+    await expectUpcomingItemsCorrect({
+      stripeCli,
+      fullCus,
+      stripeSubs,
+      unitPrice: userItem.price!,
+      curUnix,
+      expectedNumItems: 3,
+      quantity,
+    });
+
+    let customer = await autumn.customers.get(customerId);
+    let invoices = customer.invoices;
+    expect(invoices.length).to.equal(1);
   });
 });
-
-// Product is 1 free, $10 per seat
-// 1. Attach product
-// 2. Create three entities -> should have -2 balance, 3 qty sub item
-// 3. Delete two entities -> should have -2 balance, 2 replaceables, 3 qty sub item
-// 4. Create two entities -> should have -2 balance, 0 replaceables, 3 qty sub item, No invoice
-// 4. Delete two entities, advance clock to end of cycle -> should have 0 balance, 0 replaceables, 1 qty sub item, 1 invoice (correct amount)

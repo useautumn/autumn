@@ -1,4 +1,5 @@
 import { Router } from "express";
+
 import {
   APIVersion,
   AppEnv,
@@ -12,13 +13,11 @@ import {
   FullCustomer,
   Organization,
 } from "@autumn/shared";
+
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId } from "@/utils/genUtils.js";
-
 import { EventService } from "./EventService.js";
-
 import { OrgService } from "@/internal/orgs/OrgService.js";
-
 import { handleUsageEvent } from "./usageRouter.js";
 import { StatusCodes } from "http-status-codes";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";

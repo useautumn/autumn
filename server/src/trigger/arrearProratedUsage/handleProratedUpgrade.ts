@@ -53,22 +53,29 @@ export const getPrevAndNewPriceForUpgrade = ({
     balance: newBalance,
   });
 
-  // Get price for usage...
   let prevPrice = priceToInvoiceAmount({
     price,
-    overage: prevOverage,
+    overage: roundUsage({
+      // usage: prevUsage,
+      usage: prevOverage,
+      price,
+    }),
   });
 
   let newPrice = priceToInvoiceAmount({
     price,
-    overage: newOverage,
+    overage: roundUsage({
+      // usage: newUsage,
+      usage: newOverage,
+      price,
+    }),
   });
 
   return {
-    prevOverage,
-    newOverage,
+    // prevOverage,
+    // newOverage,
     newUsage,
-    prevUsage,
+    // prevUsage,
     prevPrice,
     newPrice,
   };
@@ -100,22 +107,17 @@ export const handleProratedUpgrade = async ({
   logger.info(`Handling quantity increase`);
 
   // 1. Get num reps to use
-
-  // let reps = cusEnt.replaceables.slice(0, usageDiff);
-  // newBalance = newBalance + reps.length; // Increase new balance by number of reps
-
-  let { prevPrice, newPrice, newUsage, prevUsage, prevOverage, newOverage } =
-    getPrevAndNewPriceForUpgrade({
-      ent: cusEnt.entitlement,
-      price: cusPrice.price,
-      newBalance,
-      prevBalance,
-      logger,
-    });
-
-  let overageDiff = newOverage - prevOverage;
-  let reps = cusEnt.replaceables.slice(0, overageDiff);
+  let usageDiff = prevBalance - newBalance;
+  let reps = cusEnt.replaceables.slice(0, usageDiff);
   newBalance = newBalance + reps.length; // Increase new balance by number of reps
+
+  let { prevPrice, newPrice, newUsage } = getPrevAndNewPriceForUpgrade({
+    ent: cusEnt.entitlement,
+    price: cusPrice.price,
+    newBalance,
+    prevBalance,
+    logger,
+  });
 
   const config = cusPrice.price.config as UsagePriceConfig;
   const product = cusEnt.customer_product.product;

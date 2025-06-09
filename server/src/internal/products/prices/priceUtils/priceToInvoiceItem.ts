@@ -18,6 +18,7 @@ export const priceToInvoiceItem = ({
   org,
   proration,
   now,
+  allowNegative,
 }: {
   price: Price;
   ent: FullEntitlement;
@@ -26,6 +27,7 @@ export const priceToInvoiceItem = ({
   org: Organization;
   proration?: Proration;
   now?: number;
+  allowNegative?: boolean;
 }) => {
   const config = price.config as UsagePriceConfig;
   const billingUnits = config.billing_units || 1;
@@ -45,12 +47,16 @@ export const priceToInvoiceItem = ({
   // Get overage
   const overage = usage - ent.allowance!;
 
-  const invoiceAmount = priceToInvoiceAmount({
+  let invoiceAmount = priceToInvoiceAmount({
     price,
     overage,
     proration,
     now,
   });
+
+  if (!allowNegative && invoiceAmount < 0) {
+    invoiceAmount = 0;
+  }
 
   let newPreviewItem = constructPreviewItem({
     price,

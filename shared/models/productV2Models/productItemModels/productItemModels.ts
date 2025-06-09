@@ -48,7 +48,10 @@ const ProductItemConfigSchema = z.object({
     .nativeEnum(OnIncrease)
     .optional()
     .default(OnIncrease.BillImmediately),
-  on_decrease: z.nativeEnum(OnDecrease).optional().default(OnDecrease.None),
+  on_decrease: z
+    .nativeEnum(OnDecrease)
+    .optional()
+    .default(OnDecrease.ProrateImmediately),
 });
 
 export const ProductItemSchema = z.object({

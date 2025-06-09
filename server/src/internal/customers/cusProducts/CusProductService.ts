@@ -69,6 +69,7 @@ const getFullCusProdRelations = () => {
             feature: true as const,
           },
         },
+        replaceables: true,
       },
     },
     customer_prices: {
@@ -130,6 +131,7 @@ export class CusProductService {
                 feature: true,
               },
             },
+            replaceables: true,
           },
         },
         customer_prices: {
@@ -192,6 +194,7 @@ export class CusProductService {
                 feature: true,
               },
             },
+            replaceables: true,
           },
         },
         customer_prices: {
@@ -279,6 +282,7 @@ export class CusProductService {
                 feature: true,
               },
             },
+            replaceables: true,
           },
         },
         customer_prices: {
@@ -332,6 +336,7 @@ export class CusProductService {
                 feature: true,
               },
             },
+            replaceables: true,
           },
         },
         customer_prices: {
@@ -371,6 +376,7 @@ export class CusProductService {
               feature: true as const,
             },
           },
+          replaceables: true,
         },
       },
       customer_prices: {
@@ -422,10 +428,6 @@ export class CusProductService {
     stripeSubId: string;
     updates: Partial<CusProduct>;
   }) {
-    // eq(
-    //   sql`${customerProducts.processor}->>'subscription_id'`,
-    //   stripeSubId,
-    // ),
     let updated = await db
       .update(customerProducts)
       .set(updates as any)

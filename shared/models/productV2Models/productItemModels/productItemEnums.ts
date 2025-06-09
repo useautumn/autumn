@@ -6,6 +6,7 @@ export enum OnIncrease {
 }
 
 export enum OnDecrease {
-  Prorate = "prorate",
+  ProrateImmediately = "prorate_immediately",
+  ProrateNextCycle = "prorate_next_cycle",
   None = "none",
 }
