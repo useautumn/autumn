@@ -1,6 +1,4 @@
-import { AppEnv } from "@shared/models/genModels/genEnums.js";
-
-import { Organization } from "@autumn/shared";
+import { Organization, AppEnv } from "@autumn/shared";
 import {
   deactivateStripeMeters,
   deleteAllStripeProducts,

@@ -13,6 +13,8 @@ import {
   ErrCode,
   FullProduct,
   TierInfinite,
+  OnIncrease,
+  OnDecrease,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -58,6 +60,10 @@ export const constructPrice = ({
     is_custom: isCustom,
     config: (usageConfig || fixedConfig)!,
     entitlement_id: entitlementId,
+    proration_config: {
+      on_increase: OnIncrease.ProrateImmediately,
+      on_decrease: OnDecrease.ProrateImmediately,
+    },
   };
 
   return newPrice;

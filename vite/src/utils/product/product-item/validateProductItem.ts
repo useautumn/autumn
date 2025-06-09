@@ -19,7 +19,7 @@ export const validateProductItem = ({
 }) => {
   // Price item validation (when amount is set)
 
-  let feature = features.find((f) => f.id == item.feature_id);
+  const feature = features.find((f) => f.id == item.feature_id);
   // 1. If featureItem and feature is continuous, set interval to null
   if (
     feature &&

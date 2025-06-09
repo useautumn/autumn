@@ -161,18 +161,18 @@ export const triggerFreeProduct = async ({
     });
   }
 
-  logger.info(`Referrer: ${referrer.name} (${referrer.id})`);
-
-  let [redeemerCusProducts, referrerCusProducts] = await Promise.all([
-    CusProductService.list({
+  let [fullReferrer, fullRedeemer] = await Promise.all([
+    CusService.getFull({
       db,
-      internalCustomerId: redeemer.internal_id,
-      inStatuses: [CusProductStatus.Active],
+      idOrInternalId: referrer.id!,
+      orgId: org.id,
+      env,
     }),
-    CusProductService.list({
+    CusService.getFull({
       db,
-      internalCustomerId: referrer.internal_id,
-      inStatuses: [CusProductStatus.Active],
+      idOrInternalId: redeemer.id!,
+      orgId: org.id,
+      env,
     }),
   ]);
 
@@ -185,15 +185,16 @@ export const triggerFreeProduct = async ({
     entities: [],
     freeTrial: null,
     features: [],
-    customer: referrer,
-    cusProducts: referrerCusProducts,
+    customer: fullReferrer,
+    cusProducts: fullReferrer.customer_products,
+    replaceables: [],
   };
 
   if (addToRedeemer) {
     let redeemerAttachParams = structuredClone({
       ...attachParams,
-      customer: redeemer,
-      cusProducts: redeemerCusProducts,
+      customer: fullRedeemer,
+      cusProducts: fullRedeemer.customer_products,
     });
 
     await createFullCusProduct({
@@ -209,8 +210,8 @@ export const triggerFreeProduct = async ({
       db,
       attachParams: {
         ...attachParams,
-        customer: referrer,
-        cusProducts: referrerCusProducts,
+        customer: fullReferrer,
+        cusProducts: fullReferrer.customer_products,
       },
       logger,
     });

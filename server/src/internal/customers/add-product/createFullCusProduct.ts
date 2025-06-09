@@ -437,7 +437,7 @@ export const createFullCusProduct = async ({
   //   trialEndsAt = curCusProduct.trial_ends_at || null;
   // }
 
-  let entityId = customer.entity?.id;
+  // let entityId = customer.entity?.id;
   const cusProd = initCusProduct({
     cusProdId,
     customer,
@@ -456,7 +456,7 @@ export const createFullCusProduct = async ({
     subscriptionScheduleIds,
     isCustom: attachParams.isCustom || false,
     internalEntityId: attachParams.internalEntityId,
-    entityId,
+    entityId: attachParams.entityId,
     apiVersion: attachParams.apiVersion,
   });
 

@@ -124,8 +124,7 @@ export const updateOneTimeCusProduct = async ({
         nextResetAt: undefined,
         freeTrial: null,
         relatedPrice,
-        existingCusEnt: undefined,
-        keepResetIntervals: false,
+        replaceables: [],
         entities: attachParams.entities || [],
       });
 

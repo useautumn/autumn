@@ -212,8 +212,9 @@ export const initCusEntitlement = ({
   carryExistingUsages?: boolean;
   curCusProduct?: FullCusProduct;
   replaceables: AttachReplaceable[];
-  now: number;
+  now?: number;
 }) => {
+  now = now || Date.now();
   let { newBalance, newEntities } = initCusEntBalance({
     entitlement,
     options,

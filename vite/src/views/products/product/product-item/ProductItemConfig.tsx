@@ -3,7 +3,6 @@ import {
   FeatureType,
   FeatureUsageType,
   Infinite,
-  OnIncrease,
   ProductItemFeatureType,
   ProductItemInterval,
   TierInfinite,

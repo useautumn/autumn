@@ -30,6 +30,7 @@ import {
   itemToEntInterval,
 } from "../itemIntervalUtils.js";
 import { itemCanBeProrated } from "./classifyItem.js";
+import { shouldProrate } from "../../prices/priceUtils/prorationConfigUtils.js";
 
 // ITEM TO PRICE AND ENTITLEMENT
 export const toPrice = ({
@@ -205,10 +206,21 @@ export const toFeatureAndPrice = ({
 
   let prorationConfig = null;
   if (itemCanBeProrated({ item, features })) {
+    let onIncrease = item.config?.on_increase || OnIncrease.ProrateImmediately;
+    let onDecrease = item.config?.on_decrease || OnDecrease.Prorate;
+
+    if (shouldProrate(onDecrease) || onDecrease == OnDecrease.Prorate) {
+      onDecrease =
+        onIncrease == OnIncrease.ProrateImmediately
+          ? OnDecrease.ProrateImmediately
+          : OnDecrease.ProrateNextCycle;
+    }
+
     prorationConfig = {
-      on_increase: item.config?.on_increase || OnIncrease.ProrateImmediately,
-      on_decrease: item.config?.on_decrease || OnDecrease.ProrateImmediately,
+      on_increase: onIncrease,
+      on_decrease: onDecrease,
     };
+    console.log("Proration config", prorationConfig);
   }
 
   let price: Price = {

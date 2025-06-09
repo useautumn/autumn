@@ -60,9 +60,6 @@ export const handleUpgradeSameInterval = async ({
 
   logger.info(`3. Creating new cus product`);
 
-  logger.info(
-    `Anchoring to unix: ${formatUnixToDate(stripeSubs[0].current_period_end * 1000)}`,
-  );
   await createFullCusProduct({
     db: req.db,
     attachParams: attachToInsertParams(attachParams, attachParams.products[0]),

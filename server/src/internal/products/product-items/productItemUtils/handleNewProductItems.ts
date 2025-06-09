@@ -227,6 +227,8 @@ export const handleNewProductItems = async ({
         features,
       });
 
+    console.log("Updated price", updatedPrice);
+
     if (newPrice) {
       newPrices.push(newPrice);
     }

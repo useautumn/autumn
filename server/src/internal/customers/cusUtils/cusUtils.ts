@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   CusExpand,
   CusProductSchema,
+  Customer,
   CustomerData,
   CustomerSchema,
   Entity,
@@ -203,4 +204,14 @@ export const parseCusExpand = (expand?: string): CusExpand[] => {
   } else {
     return [];
   }
+};
+
+export const newCusToFullCus = ({ newCus }: { newCus: Customer }) => {
+  let fullCus: FullCustomer = {
+    ...newCus,
+    customer_products: [],
+    entities: [],
+  };
+
+  return fullCus;
 };
