@@ -17,10 +17,12 @@ import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 import { expect } from "chai";
+import { completeCheckoutForm } from "../stripeUtils.js";
 
 export const attachAndExpectCorrect = async ({
   autumn,
   customerId,
+  entityId,
   product,
   options,
   stripeCli,
@@ -31,9 +33,11 @@ export const attachAndExpectCorrect = async ({
   waitForInvoice = 0,
   isCanceled = false,
   skipFeatureCheck = false,
+  numSubs = 1,
 }: {
   autumn: AutumnInt;
   customerId: string;
+  entityId?: string;
   product: ProductV2;
   options?: FeatureOptions[];
   stripeCli: Stripe;
@@ -47,10 +51,12 @@ export const attachAndExpectCorrect = async ({
   waitForInvoice?: number;
   isCanceled?: boolean;
   skipFeatureCheck?: boolean;
+  numSubs?: number;
 }) => {
   const preview = await autumn.attachPreview({
     customer_id: customerId,
     product_id: product.id,
+    entity_id: entityId,
   });
 
   const total = getAttachTotal({
@@ -58,17 +64,29 @@ export const attachAndExpectCorrect = async ({
     options,
   });
 
-  await autumn.attach({
+  const { checkout_url } = await autumn.attach({
     customer_id: customerId,
     product_id: product.id,
+    entity_id: entityId,
     options: toSnakeCase(options),
   });
+
+  if (checkout_url) {
+    await completeCheckoutForm(checkout_url);
+    await timeout(5000);
+  }
 
   if (waitForInvoice) {
     await timeout(waitForInvoice);
   }
 
-  const customer = await autumn.customers.get(customerId);
+  let customer;
+  if (entityId) {
+    customer = await autumn.entities.get(customerId, entityId);
+  } else {
+    customer = await autumn.customers.get(customerId);
+  }
+
   const productCount = customer.products.reduce((acc: number, p: any) => {
     if (product.group == p.group) {
       return acc + 1;
@@ -83,6 +101,7 @@ export const attachAndExpectCorrect = async ({
   expectProductAttached({
     customer,
     product,
+    entityId,
   });
 
   let intervals = Array.from(
@@ -117,12 +136,20 @@ export const attachAndExpectCorrect = async ({
     org,
     env,
     isCanceled,
+    entityId,
   });
 
+  let cus = await autumn.customers.get(customerId);
   const stripeSubs = await stripeCli.subscriptions.list({
-    customer: customer.stripe_id,
+    customer: cus.stripe_id,
   });
-  if (multiInterval) {
+
+  if (numSubs) {
+    expect(stripeSubs.data.length).to.equal(
+      numSubs,
+      `should have ${numSubs} subscriptions`,
+    );
+  } else if (multiInterval) {
     expect(stripeSubs.data.length).to.equal(2, "should have 2 subscriptions");
   } else {
     expect(stripeSubs.data.length).to.equal(

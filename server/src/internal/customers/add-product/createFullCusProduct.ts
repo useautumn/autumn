@@ -127,12 +127,12 @@ export const initCusProduct = ({
         ? CusProductStatus.Scheduled
         : CusProductStatus.Active,
 
-    // processor: {
-    //   type: ProcessorType.Stripe,
-    //   subscription_id: subscriptionId,
-    //   subscription_schedule_id: subscriptionScheduleId,
-    //   last_invoice_id: lastInvoiceId,
-    // },
+    processor: {
+      type: ProcessorType.Stripe,
+      // subscription_id: subscriptionId,
+      // subscription_schedule_id: subscriptionScheduleId,
+      // last_invoice_id: lastInvoiceId,
+    },
 
     starts_at: startsAt || Date.now(),
     trial_ends_at: trialEnds,

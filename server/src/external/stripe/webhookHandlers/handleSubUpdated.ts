@@ -16,7 +16,7 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
+
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleSubCanceled } from "./handleSubUpdated/handleSubCanceled.js";
 import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
@@ -133,6 +133,7 @@ export const handleSubscriptionUpdated = async ({
       previousAttributes,
       sub: fullSub,
       updatedCusProducts,
+      stripeCli,
     });
 
     await handleSubRenewed({

@@ -1,36 +1,37 @@
 import Stripe from "stripe";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { AppEnv, Organization } from "@autumn/shared";
-import { subIsPrematurelyCanceled } from "../stripeSubUtils.js";
+import {
+  getFullStripeSub,
+  subIsPrematurelyCanceled,
+} from "../stripeSubUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { createStripeCli } from "../utils.js";
 import { handleCusProductDeleted } from "./handleSubDeleted/handleCusProductDeleted.js";
 
-export const handleSubscriptionDeleted = async ({
+export const handleSubDeleted = async ({
   req,
-  db,
-  subscription,
-  org,
-  env,
+  stripeCli,
+  data,
   logger,
 }: {
   req: ExtendedRequest;
-  db: DrizzleCli;
-  subscription: Stripe.Subscription;
-  org: Organization;
-  env: AppEnv;
+  stripeCli: Stripe;
+  data: Stripe.Subscription;
   logger: any;
 }) => {
+  const { db, org, env } = req;
+
+  const subscription = await getFullStripeSub({
+    stripeCli,
+    stripeId: data.id,
+  });
+
   const activeCusProducts = await CusProductService.getByStripeSubId({
     db,
     stripeSubId: subscription.id,
     orgId: org.id,
-    env,
-  });
-
-  const stripeCli = createStripeCli({
-    org,
     env,
   });
 

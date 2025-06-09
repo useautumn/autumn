@@ -5,9 +5,16 @@ import {
   APIVersion,
   CreateRewardProgram,
   CusExpand,
+  EntityExpand,
   ErrCode,
 } from "@autumn/shared";
-import { CheckParams, CheckResult, TrackParams, UsageParams } from "autumn-js";
+import {
+  CancelParams,
+  CheckParams,
+  CheckResult,
+  TrackParams,
+  UsageParams,
+} from "autumn-js";
 import { AttachBody } from "@/internal/customers/attach/models/AttachBody.js";
 
 export default class AutumnError extends Error {
@@ -244,6 +251,13 @@ export class AutumnInt {
   };
 
   entities = {
+    get: async (customerId: string, entityId: string) => {
+      const data = await this.get(
+        `/customers/${customerId}/entities/${entityId}?expand=${EntityExpand.Invoices}`,
+      );
+      return data;
+    },
+
     create: async (
       customerId: string,
       entity:
@@ -405,6 +419,11 @@ export class AutumnInt {
 
   attachPreview = async (params: AttachBody) => {
     const data = await this.post(`/attach/preview`, params);
+    return data;
+  };
+
+  cancel = async (params: CancelParams) => {
+    const data = await this.post(`/cancel`, params);
     return data;
   };
 

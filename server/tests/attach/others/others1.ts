@@ -59,6 +59,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing trials: pro with trial -> p
     await createProducts({
       autumn,
       products: [free, pro, premium],
+      db,
+      orgId: org.id,
+      env,
       customerId,
     });
 

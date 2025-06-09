@@ -9,17 +9,24 @@ import { createFullCusProduct } from "@/internal/customers/add-product/createFul
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import {
+  webhookToAttachParams,
+  webhookToInsertParams,
+} from "../../webhookUtils/webhookUtils.js";
+import { attachToInsertParams } from "@/internal/products/productUtils.js";
 
 export const handleSubCanceled = async ({
   req,
   previousAttributes,
   sub,
   updatedCusProducts,
+  stripeCli,
 }: {
   req: ExtendedRequest;
   previousAttributes: any;
   sub: Stripe.Subscription;
   updatedCusProducts: FullCusProduct[];
+  stripeCli: Stripe;
 }) => {
   let isCanceled =
     nullish(previousAttributes?.canceled_at) && !nullish(sub.canceled_at);
@@ -79,19 +86,16 @@ export const handleSubCanceled = async ({
       continue;
     }
 
+    let insertParams = webhookToInsertParams({
+      req,
+      cusProduct: updatedCusProducts[0],
+      fullCus,
+      entities,
+    });
+
     let fullCusProduct = await createFullCusProduct({
       db,
-      attachParams: {
-        customer: updatedCusProducts[0].customer!,
-        product,
-        prices: product.prices,
-        entitlements: product.entitlements,
-        freeTrial: product.free_trial || null,
-        entities: entities,
-        optionsList: [],
-        features,
-        org,
-      },
+      attachParams: insertParams,
       startsAt: sub.current_period_end * 1000,
       sendWebhook: false,
       logger,

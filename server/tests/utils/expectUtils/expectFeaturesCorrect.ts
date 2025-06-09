@@ -2,7 +2,7 @@ import { nullish } from "@/utils/genUtils.js";
 import { expect } from "chai";
 import { notNullish } from "@/utils/genUtils.js";
 import { FeatureOptions, Infinite, ProductV2 } from "@autumn/shared";
-import { Customer } from "autumn-js";
+import { Customer, Entity } from "autumn-js";
 
 export const expectFeaturesCorrect = ({
   customer,
@@ -10,7 +10,7 @@ export const expectFeaturesCorrect = ({
   options,
   usage,
 }: {
-  customer: Customer;
+  customer: Customer | Entity;
   product: ProductV2;
   options?: FeatureOptions[];
   usage?: {

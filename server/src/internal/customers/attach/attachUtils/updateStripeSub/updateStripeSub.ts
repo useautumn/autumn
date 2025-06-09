@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { BillingInterval, AttachConfig } from "@autumn/shared";
-import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
+import { ProrationBehavior } from "@autumn/shared";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";

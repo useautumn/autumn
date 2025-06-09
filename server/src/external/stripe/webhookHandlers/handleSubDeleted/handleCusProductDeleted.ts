@@ -20,6 +20,7 @@ import Stripe from "stripe";
 import { getCusPaymentMethod } from "../../stripeCusUtils.js";
 import { webhookToAttachParams } from "../../webhookUtils/webhookUtils.js";
 import { createUsageInvoice } from "@/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/createUsageInvoice.js";
+import { CusService } from "@/internal/customers/CusService.js";
 
 export const handleCusProductDeleted = async ({
   req,
@@ -39,8 +40,15 @@ export const handleCusProductDeleted = async ({
   prematurelyCanceled: boolean;
 }) => {
   const { org, env } = req;
-  const customer = cusProduct.customer!;
   const { scheduled_ids } = cusProduct;
+
+  const customer = await CusService.getFull({
+    db,
+    idOrInternalId: cusProduct.internal_customer_id,
+    orgId: org.id,
+    env,
+    withEntities: true,
+  });
 
   const paymentMethod = await getCusPaymentMethod({
     stripeCli,
@@ -66,6 +74,7 @@ export const handleCusProductDeleted = async ({
           stripeCli,
           paymentMethod,
           cusProduct,
+          fullCus: customer,
         }),
         cusProduct,
         stripeSubs: [subscription],

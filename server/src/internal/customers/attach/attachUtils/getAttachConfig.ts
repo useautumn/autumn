@@ -4,13 +4,9 @@ import { AttachConfig, AttachBranch } from "@autumn/shared";
 import { AttachBody } from "../models/AttachBody.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { nullish } from "@/utils/genUtils.js";
-import { ProrationBehavior } from "../../change-product/handleUpgrade.js";
-import { AppEnv } from "@autumn/shared";
-import { Organization } from "@autumn/shared";
-import {
-  attachParamsToProduct,
-  attachParamToCusProducts,
-} from "./convertAttachParams.js";
+import { ProrationBehavior } from "@autumn/shared";
+import { attachParamsToProduct } from "./convertAttachParams.js";
+import { attachParamToCusProducts } from "./convertAttachParams.js";
 import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 
 export const intervalsAreSame = ({
