@@ -425,13 +425,19 @@ export const getUsageInArrearPrice = async ({
 export const getDiscount = async ({
   stripeCli,
   customer,
+  stripeId,
 }: {
   stripeCli: Stripe;
-  customer: Customer;
+  customer?: Customer;
+  stripeId?: string;
 }) => {
   const stripeCustomer: any = await stripeCli.customers.retrieve(
-    customer.processor!.id,
+    stripeId || customer!.processor!.id,
+    {
+      expand: ["discount.coupon"],
+    },
   );
+
   return stripeCustomer.discount;
 };
 

@@ -10,12 +10,10 @@ import { addPrefixToProducts, runAttachTest } from "../utils.js";
 import {
   constructArrearItem,
   constructArrearProratedItem,
-  constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addWeeks } from "date-fns";
+
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
 import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -54,9 +52,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
   let testClockId: string;
   let db: DrizzleCli, org: Organization, env: AppEnv;
   let stripeCli: Stripe;
-
-  let curUnix = new Date().getTime();
-  let numUsers = 0;
 
   before(async function () {
     await setupBefore(this);
@@ -121,6 +116,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
     });
 
     await attachFailedPaymentMethod({ stripeCli, customer: cus! });
+    await timeout(2000);
 
     await expectAutumnError({
       func: async () => {

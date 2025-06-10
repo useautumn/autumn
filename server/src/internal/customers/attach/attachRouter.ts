@@ -198,10 +198,7 @@ export const createStripePrices = async ({
   req: any;
   logger: any;
 }) => {
-  const { prices, entitlements, products, org, internalEntityId } =
-    attachParams;
-
-  const stripeCli = createStripeCli({ org, env: attachParams.customer.env });
+  const { prices, entitlements, products, org, stripeCli } = attachParams;
 
   const batchPriceUpdates = [];
   for (const price of prices) {

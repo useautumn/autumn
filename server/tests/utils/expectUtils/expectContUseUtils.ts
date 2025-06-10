@@ -10,6 +10,7 @@ import { expect } from "chai";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { calculateProrationAmount } from "@/internal/invoices/prorationUtils.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const expectSubQuantityCorrect = async ({
   stripeCli,
@@ -59,7 +60,10 @@ export const expectSubQuantityCorrect = async ({
   });
 
   expect(subItem).to.exist;
-  expect(subItem!.quantity).to.equal(itemQuantity || usage);
+
+  expect(subItem!.quantity).to.equal(
+    notNullish(itemQuantity) ? itemQuantity : usage,
+  );
 
   // Check num replaceables correct
   let cusEnts = cusProduct?.customer_entitlements;
@@ -111,13 +115,13 @@ export const expectUpcomingItemsCorrect = async ({
     allowNegative: true,
   });
 
-  console.group();
-  console.group("Upcoming lines");
-  for (const line of lines) {
-    console.log(line.description, line.amount / 100);
-  }
-  console.groupEnd();
-  console.groupEnd();
+  // console.group();
+  // console.group("Upcoming lines");
+  // for (const line of lines) {
+  //   console.log(line.description, line.amount / 100);
+  // }
+  // console.groupEnd();
+  // console.groupEnd();
 
   expect(lines[0].amount).to.equal(Math.round(proratedAmount * 100));
 };

@@ -1,6 +1,14 @@
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
 import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { nullish } from "@/utils/genUtils.js";
-import { BillingInterval, ProductItem, ProductV2 } from "@autumn/shared";
+import {
+  BillingInterval,
+  FixedPriceConfig,
+  FullProduct,
+  Price,
+  ProductItem,
+  ProductV2,
+} from "@autumn/shared";
 
 export const addPrefixToProducts = ({
   products,
@@ -53,4 +61,11 @@ export const replaceItems = ({
 
 export const getBasePrice = ({ product }: { product: ProductV2 }) => {
   return product.items.find((item) => isPriceItem(item))?.price || 0;
+};
+
+export const v1ProductToBasePrice = ({ prices }: { prices: Price[] }) => {
+  let fixedPrice = prices.find((price) => isFixedPrice({ price }));
+  if (fixedPrice) {
+    return (fixedPrice.config as FixedPriceConfig).amount;
+  } else return 0;
 };

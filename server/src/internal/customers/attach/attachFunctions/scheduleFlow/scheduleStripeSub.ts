@@ -71,10 +71,12 @@ export const scheduleStripeSub = async ({
 export const updateOtherCusProdsWithNewSchedule = async ({
   db,
   attachParams,
+  newSchedule,
   otherSub,
 }: {
   db: DrizzleCli;
   attachParams: AttachParams;
+  newSchedule: Stripe.SubscriptionSchedule;
   otherSub: Stripe.Subscription;
 }) => {
   const otherCusProducts = getCusProductsWithStripeSubId({
@@ -86,7 +88,7 @@ export const updateOtherCusProdsWithNewSchedule = async ({
     for (const otherCusProduct of otherCusProducts) {
       let newScheduledIds = [
         ...(otherCusProduct.scheduled_ids || []),
-        otherSub.id,
+        newSchedule.id,
       ];
 
       await CusProductService.update({
@@ -138,6 +140,7 @@ export const handleNewScheduleForItemSet = async ({
   await updateOtherCusProdsWithNewSchedule({
     db,
     attachParams,
+    newSchedule: stripeSchedule,
     otherSub,
   });
 

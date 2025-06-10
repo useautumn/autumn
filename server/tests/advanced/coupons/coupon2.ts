@@ -1,156 +1,206 @@
-import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
-import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
-import { Customer } from "@autumn/shared";
-import { expect } from "chai";
-import chalk from "chalk";
-import Stripe from "stripe";
-import { AutumnCli } from "tests/cli/AutumnCli.js";
-import { features, products, rewards } from "tests/global.js";
-import { compareMainProduct } from "tests/utils/compare.js";
-import { getFixedPriceAmount, timeout } from "tests/utils/genUtils.js";
 import {
   advanceClockForInvoice,
   completeCheckoutForm,
   getDiscount,
 } from "tests/utils/stripeUtils.js";
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
+
+import chalk from "chalk";
+import Stripe from "stripe";
+
+import { expect } from "chai";
+import {
+  APIVersion,
+  AppEnv,
+  CouponDurationType,
+  CreateReward,
+  Organization,
+  RewardType,
+} from "@autumn/shared";
+import { getOriginalCouponId } from "@/internal/rewards/rewardUtils.js";
+import { getPriceForOverage } from "@/internal/products/prices/priceUtils.js";
+
+import { timeout } from "tests/utils/genUtils.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { setupBefore } from "tests/before.js";
+import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
+import { TestFeature } from "tests/setup/v2Features.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
+import {
+  addPrefixToProducts,
+  getBasePrice,
+} from "tests/utils/testProductUtils/testProductUtils.js";
+import { createProducts, createReward } from "tests/utils/productUtils.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { Decimal } from "decimal.js";
+import { getExpectedInvoiceTotal } from "tests/utils/expectUtils/expectInvoiceUtils.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
+import { addHours, addMonths } from "date-fns";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
+
+const pro = constructProduct({
+  type: "pro",
+  items: [constructArrearItem({ featureId: TestFeature.Words })],
+});
+
+const testCase = "coupon2";
+
+// Create reward input
+const reward: CreateReward = {
+  id: "usage",
+  name: "usage",
+  promo_codes: [{ code: "usage" }],
+  type: RewardType.InvoiceCredits,
+  discount_config: {
+    discount_value: 10000,
+    duration_type: CouponDurationType.Forever,
+    duration_value: 1,
+    should_rollover: true,
+    apply_to_all: false,
+    price_ids: [],
+  },
+};
 
 describe(
-  chalk.yellow("coupon2 -- Testing one-off rollover, apply to usage only"),
+  chalk.yellow(`${testCase} - Testing one-off rollover, apply to usage only`),
   () => {
     let logger: any;
-    let customerId = "coupon2";
+    let customerId = testCase;
     let stripeCli: Stripe;
-    let customer: Customer;
     let testClockId: string;
 
-    let couponAmount = rewards.rolloverUsage.discount_config.discount_value;
+    let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+    let org: Organization;
+    let env: AppEnv;
+    let db: DrizzleCli;
+
+    let couponAmount = reward.discount_config!.discount_value;
 
     before(async function () {
-      const { testClockId: testClockId1, customer: customer1 } =
-        await initCustomerWithTestClock({
-          customerId,
-          org: this.org,
-          env: this.env,
-          db: this.db,
-        });
-      testClockId = testClockId1;
-      customer = customer1;
+      await setupBefore(this);
 
-      logger = createLogtailWithContext({
-        test: "coupon2 -- Testing one-off rollover, apply to usage only",
+      org = this.org;
+      env = this.env;
+      db = this.db;
+      stripeCli = this.stripeCli;
+
+      const { testClockId: testClockId1 } = await initCustomer({
         customerId,
-      });
-      stripeCli = createStripeCli({
         org: this.org,
         env: this.env,
+        db: this.db,
+        autumn: this.autumnJs,
+      });
+
+      testClockId = testClockId1;
+
+      addPrefixToProducts({
+        products: [pro],
+        prefix: testCase,
+      });
+
+      await createProducts({
+        orgId: this.org.id,
+        env: this.env,
+        db: this.db,
+        autumn,
+        products: [pro],
+      });
+
+      await createReward({
+        orgId: org.id,
+        env,
+        db,
+        autumn,
+        reward,
+        productId: pro.id,
+        onlyUsage: true,
       });
     });
 
     // CYCLE 0
-    it("should attach pro with overage (through checkout)", async () => {
-      const res = await AutumnCli.attach({
-        customerId,
-        productId: products.proWithOverage.id,
-        forceCheckout: true,
+    it("should attach pro with promo code", async () => {
+      const res = await autumn.attach({
+        customer_id: customerId,
+        product_id: pro.id,
       });
 
-      await completeCheckoutForm(
-        res.checkout_url,
-        undefined,
-        rewards.rolloverUsage.id,
-      );
+      await completeCheckoutForm(res.checkout_url, undefined, reward.id);
 
       await timeout(10000);
 
-      const cusRes = await AutumnCli.getCustomer(customerId);
-      compareMainProduct({
-        sent: products.proWithOverage,
-        cusRes,
+      const customer = await autumn.customers.get(customerId);
+      expectProductAttached({
+        customer,
+        product: pro,
       });
     });
 
     it("should have fixed price invoice and correct remaining coupon amount", async () => {
-      const cusRes = await AutumnCli.getCustomer(customerId);
-      const fixedPrice = getFixedPriceAmount(products.proWithOverage);
-      expect(cusRes.invoices[0].total).to.equal(fixedPrice);
+      const customer = await autumn.customers.get(customerId);
+      const fixedPrice = getBasePrice({ product: pro });
+      expect(customer.invoices![0].total).to.equal(fixedPrice);
 
       const cusDiscount = await getDiscount({
-        stripeCli: stripeCli,
-        customer: cusRes.customer,
+        stripeCli,
+        stripeId: customer.stripe_id!,
       });
 
-      try {
-        expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(
-          rewards.rolloverUsage.id,
-        );
-
-        // Expect amount to be original amount - pro price
-        expect(cusDiscount.coupon?.amount_off).to.equal(couponAmount * 100);
-      } catch (error) {
-        logger.error("--------------------------------");
-        logger.error(
-          "Expected stripe cus to have coupon",
-          rewards.rolloverUsage,
-        );
-        logger.error("Actual stripe cus discount", cusDiscount);
-        throw error;
-      }
+      expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(reward.id);
+      expect(cusDiscount.coupon?.amount_off).to.equal(couponAmount * 100);
     });
 
     // CYCLE 1
-    it("should set usage to -100 and advance clock by 1 month", async () => {
-      const usage = Math.min(Math.floor(Math.random() * 1000), 100);
+    it("should track usage and have correct invoice amount", async () => {
+      const usage = new Decimal(Math.random() * 1250120 + 10000)
+        .toDecimalPlaces(2)
+        .toNumber();
 
-      const res = await AutumnCli.usage({
-        customerId,
-        featureId: features.metered1.id,
+      await autumn.track({
+        customer_id: customerId,
+        feature_id: TestFeature.Words,
         value: usage,
       });
 
-      // Price
-      const price = getPriceForOverage(
-        products.proWithOverage.prices[1],
-        -(products.proWithOverage.entitlements.metered1.allowance! - usage),
-      );
+      let usageTotal = await getExpectedInvoiceTotal({
+        org,
+        env,
+        db,
+        customerId,
+        productId: pro.id,
+        usage: [{ featureId: TestFeature.Words, value: usage }],
+        stripeCli,
+        onlyIncludeUsage: true,
+      });
 
-      couponAmount = couponAmount - price;
+      let basePrice = getBasePrice({ product: pro });
 
-      await advanceClockForInvoice({
+      couponAmount = couponAmount - usageTotal;
+
+      await advanceTestClock({
         stripeCli,
         testClockId,
-        waitForMeterUpdate: true,
+        advanceTo: addHours(
+          addMonths(new Date(), 1),
+          hoursToFinalizeInvoice,
+        ).getTime(),
+        waitForSeconds: 20,
       });
-    });
 
-    it("should have $0 invoice and correct new coupon amount", async () => {
-      const cusRes = await AutumnCli.getCustomer(customerId);
-      expect(cusRes.invoices[0].total).to.equal(
-        getFixedPriceAmount(products.proWithOverage),
-      );
+      const customer = await autumn.customers.get(customerId);
+      expect(customer.invoices![0].total).to.equal(basePrice);
 
       const cusDiscount = await getDiscount({
-        stripeCli: stripeCli,
-        customer: cusRes.customer,
+        stripeCli,
+        stripeId: customer.stripe_id!,
       });
 
-      try {
-        expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(
-          rewards.rolloverUsage.id,
-        );
-        expect(cusDiscount.coupon?.amount_off).to.equal(couponAmount * 100);
-      } catch (error) {
-        logger.error("--------------------------------");
-        logger.error("coupon2, cycle 1 failed");
-        logger.error(
-          "Expected stripe cus to have coupon",
-          rewards.rolloverUsage,
-        );
-        logger.error("Actual stripe cus discount", cusDiscount);
-        throw error;
-      }
+      expect(getOriginalCouponId(cusDiscount.coupon?.id)).to.equal(reward.id);
+
+      expect(cusDiscount.coupon?.amount_off).to.equal(
+        Math.round(couponAmount * 100),
+      );
     });
   },
 );

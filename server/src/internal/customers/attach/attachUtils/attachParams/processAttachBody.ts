@@ -28,6 +28,7 @@ import { getEntsWithFeature } from "@/internal/products/entitlements/entitlement
 import { isMainProduct } from "@/internal/products/productUtils/classifyProduct.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeCusData } from "./attachParamsUtils/getStripeCusData.js";
+import { isOneOff } from "@/internal/products/productUtils.js";
 
 const getProductsForAttach = async ({
   req,
@@ -60,7 +61,8 @@ const getProductsForAttach = async ({
       let otherProd = products.find(
         (p) => p.group === prod.group && !p.is_add_on && p.id !== prod.id,
       );
-      if (otherProd && !otherProd.is_add_on) {
+
+      if (otherProd && !otherProd.is_add_on && !isOneOff(prod.prices)) {
         throw new RecaseError({
           message:
             "Can't attach multiple products from the same group that are not add-ons",
@@ -145,8 +147,7 @@ const getPricesAndEnts = async ({
         optionsInput,
         features,
         prices,
-        // to check if it fails for multi prod attach...
-        curCusProduct: prodIsMain ? curMainProduct : curSameProduct,
+        curCusProduct: curMainProduct,
       }),
       prices,
       entitlements,
@@ -205,7 +206,7 @@ const getPricesAndEnts = async ({
       optionsInput,
       features,
       prices,
-      curCusProduct: prodIsMain ? curMainProduct : curSameProduct,
+      curCusProduct: curMainProduct,
     }),
     prices,
     entitlements: getEntsWithFeature({

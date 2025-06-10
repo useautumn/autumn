@@ -3,7 +3,7 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "../../cusProducts/AttachParams.js";
-import { AttachBranch, AttachFunction } from "@autumn/shared";
+import { AttachBranch, AttachFunction, CusProductStatus } from "@autumn/shared";
 import { handleUpgradeDiffInterval } from "../attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
@@ -16,6 +16,7 @@ import { attachParamToCusProducts } from "./convertAttachParams.js";
 import { deleteCurrentScheduledProduct } from "./deleteCurrentScheduledProduct.js";
 import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOneOffFunction.js";
 import { handleUpgradeSameInterval } from "../attachFunctions/upgradeSameIntFlow/handleUpgradeSameInt.js";
+import { CusProductService } from "../../cusProducts/CusProductService.js";
 
 /* 
 1. If from new version, free trial should just carry over
@@ -103,7 +104,7 @@ export const runAttachFunction = async ({
   attachBody: AttachBody;
   config: AttachConfig;
 }) => {
-  const { logtail: logger } = req;
+  const { logtail: logger, db } = req;
   const { stripeCli } = attachParams;
 
   const attachFunction = await getAttachFunction({
@@ -160,8 +161,20 @@ export const runAttachFunction = async ({
 
   // 2. If main is trial, cancel it...
   if (branch == AttachBranch.MainIsTrial) {
+    await CusProductService.update({
+      db,
+      cusProductId: curMainProduct!.id,
+      updates: {
+        status: CusProductStatus.Expired,
+      },
+    });
+
     for (const subId of curMainProduct?.subscription_ids || []) {
-      await stripeCli.subscriptions.cancel(subId);
+      await stripeCli.subscriptions.cancel(subId, {
+        cancellation_details: {
+          comment: "autumn_downgrade",
+        },
+      });
     }
   }
 

@@ -23,7 +23,7 @@ import { timeout } from "@/utils/genUtils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addPrefixToProducts } from "tests/attach/utils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectSubQuantityCorrect } from "tests/attach/entities/expectEntity.js";
+import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
 import { expectUpcomingItemsCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
 
 let userItem = constructArrearProratedItem({

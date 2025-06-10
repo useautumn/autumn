@@ -3,14 +3,11 @@ import {
   AppEnv,
   AttachScenario,
   CusProductResponseSchema,
-  CusProductSchema,
   CusProductStatus,
   Customer,
   Entity,
   FixedPriceConfig,
   FullCusProduct,
-  FullCustomerEntitlement,
-  FullCustomerPrice,
   Organization,
   PriceType,
   Subscription,
@@ -31,7 +28,6 @@ import {
   getStripeSubs,
   subIsPrematurelyCanceled,
 } from "@/external/stripe/stripeSubUtils.js";
-import { sortCusEntsForDeduction } from "./cusEnts/cusEntUtils.js";
 import { getRelatedCusEnt } from "./cusPrices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
@@ -39,7 +35,6 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { webhookToInsertParams } from "@/external/stripe/webhookUtils/webhookUtils.js";
 
 export const isActiveStatus = (status: CusProductStatus) => {
   return (

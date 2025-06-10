@@ -65,6 +65,7 @@ const runUpdateEntsTest = async ({
     expect(preview.branch).to.equal(AttachBranch.NewVersion);
   } else {
     expect(preview.branch).to.equal(AttachBranch.SameCustomEnts);
+    expect(preview.due_today).to.be.undefined;
   }
 
   await autumn.attach({

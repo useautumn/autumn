@@ -81,7 +81,6 @@ export const checkUsageInvoiceAmount = async ({
   );
 
   let meteredPrice = product.prices[product.prices.length - 1];
-  // let overage = Math.round(totalUsage - featureEntitlement.allowance);
   let overage = new Decimal(totalUsage)
     .minus(featureEntitlement.allowance)
     .toNumber();
@@ -99,15 +98,8 @@ export const checkUsageInvoiceAmount = async ({
   try {
     for (let i = 0; i < invoices.length; i++) {
       let invoice = invoices[i];
-      // console.log(
-      //   "Invoice total: ",
-      //   invoice.total,
-      //   "Product id: ",
-      //   invoice.product_ids[0]
-      // );
       if (invoice.total == totalPrice) {
         invoiceIndex = i;
-        // console.log("   - Found correct total price at index: ", invoiceIndex);
         assert.equal(invoice.product_ids[0], product.id);
         return;
       }

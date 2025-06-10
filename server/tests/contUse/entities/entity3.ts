@@ -17,11 +17,11 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { expect } from "chai";
-import { expectSubQuantityCorrect } from "../../attach/entities/expectEntity.js";
 import { addHours, addMonths, addWeeks } from "date-fns";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { getBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
+import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
 
 let userItem = constructArrearProratedItem({
   featureId: TestFeature.Users,
@@ -40,7 +40,7 @@ export let pro = constructProduct({
 
 const testCase = "entity3";
 
-describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing replaceables deleted at end of cycle`)}`, () => {
+describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables deleted at end of cycle`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -128,7 +128,7 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing replaceable
       stripeCli,
       testClockId,
       advanceTo: addWeeks(new Date(), 2).getTime(),
-      waitForSeconds: 10,
+      waitForSeconds: 30,
     });
 
     await autumn.entities.delete(customerId, firstEntities[0].id);
@@ -148,7 +148,7 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing replaceable
     });
 
     let customer = await autumn.customers.get(customerId);
-    let invoices = customer.invoices;
+    let invoices = customer.invoices!;
     expect(invoices.length).to.equal(1);
   });
 

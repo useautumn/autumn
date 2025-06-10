@@ -20,7 +20,7 @@ import { addWeeks } from "date-fns";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addPrefixToProducts, replaceItems } from "tests/attach/utils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectSubQuantityCorrect } from "tests/attach/entities/expectEntity.js";
+import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
 
 let userItem = constructArrearProratedItem({
   featureId: TestFeature.Users,

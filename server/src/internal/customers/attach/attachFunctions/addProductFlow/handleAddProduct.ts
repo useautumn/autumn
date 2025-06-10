@@ -29,6 +29,7 @@ export const handleAddProduct = async ({
   const defaultConfig: AttachConfig = getDefaultAttachConfig();
 
   // 1. If paid product
+
   if (prices.length > 0) {
     await handlePaidProduct({
       req,

@@ -3,7 +3,6 @@ import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
   APIVersion,
   AppEnv,
-  entities,
   OnDecrease,
   OnIncrease,
   Organization,
@@ -17,12 +16,10 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { expect } from "chai";
-import { addWeeks } from "date-fns";
-import { timeout } from "@/utils/genUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
+
 import { addPrefixToProducts } from "tests/attach/utils.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
-import { expectSubQuantityCorrect } from "tests/attach/entities/expectEntity.js";
+import { expectSubQuantityCorrect } from "tests/utils/expectUtils/expectContUseUtils.js";
 
 let userItem = constructArrearProratedItem({
   featureId: TestFeature.Users,

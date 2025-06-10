@@ -1,3 +1,4 @@
+import Stripe from "stripe";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { cancelCurSubs } from "@/internal/customers/change-product/handleDowngrade/cancelCurSubs.js";
 import { updateScheduledSubWithNewItems } from "@/internal/customers/change-product/scheduleUtils/updateScheduleWithNewItems.js";
@@ -13,9 +14,7 @@ import {
   isFreeProduct,
 } from "@/internal/products/productUtils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-
 import { cusProductsToSchedules } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import Stripe from "stripe";
 import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 

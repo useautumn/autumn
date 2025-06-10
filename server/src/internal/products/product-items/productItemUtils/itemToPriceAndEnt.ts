@@ -220,7 +220,6 @@ export const toFeatureAndPrice = ({
       on_increase: onIncrease,
       on_decrease: onDecrease,
     };
-    console.log("Proration config", prorationConfig);
   }
 
   let price: Price = {

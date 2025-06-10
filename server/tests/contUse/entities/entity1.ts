@@ -41,7 +41,7 @@ const testCase = "entity1";
 
 // Pro is $20 / month, Seat is $50 / user
 
-describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / delete entities`)}`, () => {
+describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create / delete entities`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -150,7 +150,7 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
     });
 
     let customer = await autumn.customers.get(customerId);
-    let invoices = customer.invoices;
+    let invoices = customer.invoices!;
     expect(invoices.length).to.equal(2);
     expect(invoices[0].total).to.equal(userItem.price! * entities.length);
   });
@@ -159,7 +159,7 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
     await autumn.entities.delete(customerId, entities[0].id);
 
     let customer = await autumn.customers.get(customerId);
-    let invoices = customer.invoices;
+    let invoices = customer.invoices!;
     expect(invoices.length).to.equal(2);
 
     await expectSubQuantityCorrect({
@@ -194,7 +194,7 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing create / de
     usage += 1;
 
     let customer = await autumn.customers.get(customerId);
-    let invoices = customer.invoices;
+    let invoices = customer.invoices!;
 
     expect(invoices.length).to.equal(3);
     expect(invoices[0].total).to.equal(userItem.price!);

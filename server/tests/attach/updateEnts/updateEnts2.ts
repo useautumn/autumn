@@ -183,7 +183,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
     });
 
     const customer = await autumn.customers.get(customerId);
-    const invoice = customer.invoices[0];
+    const invoice = customer.invoices![0];
     expect(invoice.total).to.equal(
       invoiceTotal,
       "invoice total after 1 cycle should be correct",

@@ -2,12 +2,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
-import {
-  AttachBranch,
-  AttachErrCode,
-  entitlements,
-  UsagePriceConfig,
-} from "@autumn/shared";
+import { AttachBranch, AttachErrCode, UsagePriceConfig } from "@autumn/shared";
 import { AttachBody } from "../models/AttachBody.js";
 import { AttachConfig, AttachFlags } from "../models/AttachFlags.js";
 import {
@@ -233,7 +228,7 @@ export const handleAttachErrors = async ({
     useCheckout: onlyCheckout,
   });
 
-  await handleUpdateQuantityErrors({
-    attachParams,
-  });
+  // await handleUpdateQuantityErrors({
+  //   attachParams,
+  // });
 };

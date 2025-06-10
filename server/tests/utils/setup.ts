@@ -30,6 +30,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { features as v2Features } from "tests/setup/v2Features.js";
+import { timeout } from "./genUtils.js";
 
 export const getAxiosInstance = (
   apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!,
@@ -143,8 +144,7 @@ export const clearOrg = async ({
     active: true,
   });
 
-  const batchSize = 5;
-
+  const batchSize = 15;
   const removeStripeProduct = async (product: Stripe.Product) => {
     try {
       await stripeCli.products.del(product.id);
@@ -162,6 +162,7 @@ export const clearOrg = async ({
       batchDeleteProducts.push(removeStripeProduct(product));
     }
     await Promise.all(batchDeleteProducts);
+    await timeout(800);
     console.log(
       `   ✅ Deleted ${i + batch.length}/${
         stripeProducts.data.length

@@ -90,12 +90,13 @@ export const initCustomer = async ({
     })) as Customer;
 
     const stripeCli = createStripeCli({ org: org, env: env });
-    // if (withTestClock) {
-    const testClock = await stripeCli.testHelpers.testClocks.create({
-      frozen_time: Math.floor(Date.now() / 1000),
-    });
-    testClockId = testClock.id;
-    // }
+    let testClockId = "";
+    if (withTestClock) {
+      const testClock = await stripeCli.testHelpers.testClocks.create({
+        frozen_time: Math.floor(Date.now() / 1000),
+      });
+      testClockId = testClock.id;
+    }
 
     if (attachPm) {
       await attachPmToCus({

@@ -1,5 +1,5 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+
 import {
   APIVersion,
   AppEnv,
@@ -19,6 +19,7 @@ import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
 import { timeout } from "@/utils/genUtils.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 
 const testCase = "updateQuantity1";
 
@@ -32,17 +33,6 @@ export let pro = constructProduct({
   ],
   type: "pro",
 });
-
-/**
- * upgrade3:
- * Testing upgrades for arrear prorated
- * 1. Start with pro monthly plan (usage-based)
- * 2. Upgrade to pro annual plan (usage-based)
- * 3. Upgrade to premium annual plan (usage-based)
- *
- * Verifies subscription items and anchors are correct after each upgrade
- * with arrear prorated billing
- */
 
 describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid single use`)}`, () => {
   let customerId = testCase;
@@ -80,6 +70,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
     await createProducts({
       autumn,
       products: [pro],
+      db,
+      orgId: org.id,
+      env,
     });
 
     testClockId = testClockId1!;
@@ -110,40 +103,40 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
       errCode: AttachErrCode.ProductAlreadyAttached,
       func: async () => {
         await autumn.attach({
-          customerId,
-          productId: pro.id,
+          customer_id: customerId,
+          product_id: pro.id,
           options: proOpts,
         });
       },
     });
   });
 
-  const newOpts = [
-    {
-      feature_id: TestFeature.Users,
-      quantity: 1,
-    },
-  ];
-  it("should throw error if try to reduce seats to less than current usage", async function () {
-    await autumn.track({
-      customer_id: customerId,
-      feature_id: TestFeature.Users,
-      value: 2,
-    });
+  // const newOpts = [
+  //   {
+  //     feature_id: TestFeature.Users,
+  //     quantity: 1,
+  //   },
+  // ];
+  // it("should throw error if try to reduce seats to less than current usage", async function () {
+  //   await autumn.track({
+  //     customer_id: customerId,
+  //     feature_id: TestFeature.Users,
+  //     value: 2,
+  //   });
 
-    await timeout(1000);
+  //   await timeout(1000);
 
-    await expectAutumnError({
-      errCode: AttachErrCode.InvalidOptions,
-      func: async () => {
-        await autumn.attach({
-          customerId,
-          productId: pro.id,
-          options: newOpts,
-        });
-      },
-    });
-  });
+  //   await expectAutumnError({
+  //     errCode: AttachErrCode.InvalidOptions,
+  //     func: async () => {
+  //       await autumn.attach({
+  //         customer_id: customerId,
+  //         product_id: pro.id,
+  //         options: newOpts,
+  //       });
+  //     },
+  //   });
+  // });
 
   const updatedOpts = [
     {

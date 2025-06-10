@@ -229,21 +229,34 @@ const getChangeProductBranch = async ({
     return AttachBranch.MainIsFree;
   }
 
-  if (isTrialing(curMainProduct!)) {
-    if (isFreeProduct(attachParams.prices)) {
-      return AttachBranch.Downgrade;
-    }
-
-    return AttachBranch.MainIsTrial;
-  }
-
   // 2. If main product is paid, check if upgrade or downgrade
   // Check if upgrade or downgrade
   let curPrices = cusProductToPrices({ cusProduct: curMainProduct! });
   let newPrices = attachParams.prices;
 
+  // if (isTrialing(curMainProduct!)) {
+  //   if (isFreeProduct(attachParams.prices)) {
+  //     return AttachBranch.Downgrade;
+  //   }
+
+  //   let isUpgrade = isProductUpgrade({
+  //     prices1: curPrices,
+  //     prices2: newPrices,
+  //   });
+
+  //   if (!isUpgrade) {
+  //     return AttachBranch.Downgrade;
+  //   }
+
+  //   return AttachBranch.MainIsTrial;
+  // }
+
   let isUpgrade = isProductUpgrade({ prices1: curPrices, prices2: newPrices });
   if (isUpgrade) {
+    if (isTrialing(curMainProduct!)) {
+      return AttachBranch.MainIsTrial;
+    }
+
     return AttachBranch.Upgrade;
   }
 

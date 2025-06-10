@@ -48,35 +48,3 @@ export const webhookToAttachParams = ({
 
   return params;
 };
-
-export const webhookToInsertParams = ({
-  req,
-  cusProduct,
-  fullCus,
-  entities,
-}: {
-  req: ExtendedRequest;
-  cusProduct: FullCusProduct;
-  fullCus: FullCustomer;
-  entities?: Entity[];
-}): InsertCusProductParams => {
-  const fullProduct = cusProductToProduct({ cusProduct });
-
-  const params: InsertCusProductParams = {
-    customer: fullCus,
-    org: req.org,
-    product: fullProduct,
-    prices: cusProductToPrices({ cusProduct }),
-    entitlements: cusProductToEnts({ cusProduct }),
-    features: req.features,
-    freeTrial: cusProduct.free_trial || null,
-    optionsList: cusProduct.options,
-    cusProducts: [cusProduct],
-
-    internalEntityId: cusProduct.internal_entity_id || undefined,
-    entities: entities || [],
-    replaceables: [],
-  };
-
-  return params;
-};
