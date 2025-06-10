@@ -12,7 +12,6 @@ import { addPrefixToProducts, runAttachTest } from "../utils.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructFeatureItem } from "@/internal/products/product-items/productItemUtils.js";
 import { expectDowngradeCorrect } from "tests/utils/expectUtils/expectScheduleUtils.js";
 import { expectNextCycleCorrect } from "tests/utils/expectUtils/expectScheduleUtils.js";
 

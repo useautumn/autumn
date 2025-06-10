@@ -44,6 +44,7 @@ export const runAttachTest = async ({
   waitForInvoice = 0,
   isCanceled = false,
   skipFeatureCheck = false,
+  singleInvoice = false,
 }: {
   autumn: AutumnInt;
   customerId: string;
@@ -61,6 +62,7 @@ export const runAttachTest = async ({
   waitForInvoice?: number;
   isCanceled?: boolean;
   skipFeatureCheck?: boolean;
+  singleInvoice?: boolean;
 }) => {
   const preview = await autumn.attachPreview({
     customer_id: customerId,
@@ -110,10 +112,11 @@ export const runAttachTest = async ({
 
   const freeProduct = isFreeProductV2({ product });
   if (!freeProduct) {
+    let multiInvoice = !singleInvoice && multiInterval;
     expectInvoicesCorrect({
       customer,
-      first: multiInterval ? undefined : { productId: product.id, total },
-      second: multiInterval ? { productId: product.id, total } : undefined,
+      first: multiInvoice ? undefined : { productId: product.id, total },
+      second: multiInvoice ? { productId: product.id, total } : undefined,
     });
   }
 
@@ -141,7 +144,7 @@ export const runAttachTest = async ({
   });
 
   const stripeSubs = await stripeCli.subscriptions.list({
-    customer: customer.stripe_id,
+    customer: customer.stripe_id!,
   });
   if (multiInterval) {
     expect(stripeSubs.data.length).to.equal(2, "should have 2 subscriptions");

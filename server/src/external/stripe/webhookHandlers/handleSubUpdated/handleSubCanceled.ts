@@ -1,19 +1,13 @@
-import { AttachScenario } from "@autumn/shared";
-
-import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
-
-import { CusProductStatus, FullCusProduct } from "@autumn/shared";
 import Stripe from "stripe";
+import { AttachScenario } from "@autumn/shared";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
+import { CusProductStatus, FullCusProduct } from "@autumn/shared";
 import { formatUnixToDateTime, nullish } from "@/utils/genUtils.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-  webhookToAttachParams,
-  webhookToInsertParams,
-} from "../../webhookUtils/webhookUtils.js";
-import { attachToInsertParams } from "@/internal/products/productUtils.js";
+import { productToInsertParams } from "@/internal/customers/attach/attachUtils/attachParams/convertToParams.js";
 
 export const handleSubCanceled = async ({
   req,
@@ -36,7 +30,7 @@ export const handleSubCanceled = async ({
 
   const canceledFromPortal = isCanceled && !isAutumnDowngrade;
 
-  const { db, org, env, features, logtail: logger } = req;
+  const { db, org, env, logtail: logger } = req;
 
   if (!canceledFromPortal || updatedCusProducts.length == 0) {
     return;
@@ -86,10 +80,10 @@ export const handleSubCanceled = async ({
       continue;
     }
 
-    let insertParams = webhookToInsertParams({
+    let insertParams = productToInsertParams({
       req,
-      cusProduct: updatedCusProducts[0],
       fullCus,
+      newProduct: product,
       entities,
     });
 

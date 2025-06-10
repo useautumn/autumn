@@ -30,17 +30,6 @@ export let pro = constructProduct({
   type: "pro",
 });
 
-/**
- * upgrade3:
- * Testing upgrades for arrear prorated
- * 1. Start with pro monthly plan (usage-based)
- * 2. Upgrade to pro annual plan (usage-based)
- * 3. Upgrade to premium annual plan (usage-based)
- *
- * Verifies subscription items and anchors are correct after each upgrade
- * with arrear prorated billing
- */
-
 describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing included usage)`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
@@ -60,15 +49,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
 
     stripeCli = this.stripeCli;
 
-    const { testClockId: testClockId1 } = await initCustomer({
-      autumn: autumnJs,
-      customerId,
-      db,
-      org,
-      env,
-      attachPm: "success",
-    });
-
     addPrefixToProducts({
       products: [pro],
       prefix: testCase,
@@ -83,10 +63,19 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
       customerId,
     });
 
+    const { testClockId: testClockId1 } = await initCustomer({
+      autumn: autumnJs,
+      customerId,
+      db,
+      org,
+      env,
+      attachPm: "success",
+    });
+
     testClockId = testClockId1!;
   });
 
-  it("should attach pro product (prepaid single use)", async function () {
+  it("should attach pro product", async function () {
     await runAttachTest({
       autumn,
       customerId,
@@ -112,7 +101,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
   let usage = 50000;
   let overage = 50000 - (newItem.included_usage as number);
 
-  it("should attach custom pro product", async function () {
+  it("should update overage item to have new included usage", async function () {
     const customProduct = {
       ...pro,
       items: customItems,
@@ -144,7 +133,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
     });
   });
 
-  it("should have correct invoice usage next cycle", async function () {
+  it("should have correct invoice  next cycle", async function () {
     const invoiceTotal = await getExpectedInvoiceTotal({
       org,
       env,
@@ -175,7 +164,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
     });
 
     const customer = await autumn.customers.get(customerId);
-    const invoice = customer.invoices[0];
+    const invoice = customer.invoices![0];
     expect(invoice.total).to.equal(
       invoiceTotal,
       "invoice total after 1 cycle should be correct",

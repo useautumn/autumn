@@ -32,7 +32,7 @@ let growth = constructProduct({
   type: "growth",
 });
 
-describe(`${chalk.yellowBright("attach/upgrade1: Testing usage upgrades")}`, () => {
+describe(`${chalk.yellowBright("upgrade1: Testing usage upgrades")}`, () => {
   let customerId = "upgrade1";
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
 

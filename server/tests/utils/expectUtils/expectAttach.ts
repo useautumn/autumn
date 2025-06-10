@@ -33,7 +33,7 @@ export const attachAndExpectCorrect = async ({
   waitForInvoice = 0,
   isCanceled = false,
   skipFeatureCheck = false,
-  numSubs = 1,
+  numSubs,
 }: {
   autumn: AutumnInt;
   customerId: string;
@@ -141,7 +141,7 @@ export const attachAndExpectCorrect = async ({
 
   let cus = await autumn.customers.get(customerId);
   const stripeSubs = await stripeCli.subscriptions.list({
-    customer: cus.stripe_id,
+    customer: cus.stripe_id!,
   });
 
   if (numSubs) {

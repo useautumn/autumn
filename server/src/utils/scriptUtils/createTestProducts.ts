@@ -61,13 +61,25 @@ export const initFeature = ({
   }
 };
 
-// enum TestItemType {
-//   Prepaid = "prepaid",
-//   Arrear = "arrear",
-//   ArrearProrated = "arrear_prorated",
-//   FixedPrice = "fixed_price",
-// }
-
+export const constructRawProduct = ({
+  id,
+  isAddOn = false,
+  items,
+}: {
+  id: string;
+  isAddOn?: boolean;
+  items: ProductItem[];
+}) => {
+  return {
+    id,
+    name: keyToTitle(id),
+    items,
+    is_add_on: isAddOn,
+    is_default: false,
+    version: 1,
+    group: "",
+  };
+};
 export const constructProduct = ({
   id,
   items,

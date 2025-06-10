@@ -7,6 +7,7 @@ import {
   format,
 } from "date-fns";
 import { Stripe } from "stripe";
+import { timeout } from "../genUtils.js";
 
 export const getStripeNow = async ({
   stripeCli,
@@ -57,6 +58,7 @@ export const advanceTestClock = async ({
   numberOfHours,
   numberOfMonths,
   advanceTo,
+  waitForSeconds,
 }: {
   stripeCli: Stripe;
   testClockId: string;
@@ -66,6 +68,7 @@ export const advanceTestClock = async ({
   numberOfHours?: number;
   numberOfMonths?: number;
   advanceTo?: number;
+  waitForSeconds?: number;
 }) => {
   if (!startingFrom) {
     startingFrom = new Date();
@@ -95,6 +98,10 @@ export const advanceTestClock = async ({
   await stripeCli.testHelpers.testClocks.advance(testClockId, {
     frozen_time: Math.floor(advanceTo / 1000),
   });
+
+  if (waitForSeconds) {
+    await timeout(waitForSeconds * 1000);
+  }
 
   return advanceTo;
 

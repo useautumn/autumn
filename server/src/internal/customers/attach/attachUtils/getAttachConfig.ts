@@ -8,6 +8,7 @@ import { ProrationBehavior } from "@autumn/shared";
 import { attachParamsToProduct } from "./convertAttachParams.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
 import { cusProductToPrices } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
+import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 
 export const intervalsAreSame = ({
   attachParams,
@@ -80,15 +81,21 @@ export const getAttachConfig = async ({
 
   let sameIntervals = intervalsAreSame({ attachParams });
 
+  let disableMerge =
+    branch == AttachBranch.MainIsTrial ||
+    org.config.merge_billing_cycles === false;
+
+  const onlyCheckout =
+    isPublic || forceCheckout || (noPaymentMethod && !invoiceOnly && !isFree);
+
   let config: AttachConfig = {
     branch,
-    onlyCheckout:
-      (isPublic || forceCheckout || noPaymentMethod) && !invoiceOnly && !isFree,
+    onlyCheckout,
     carryUsage,
     proration,
     disableTrial,
     invoiceOnly: flags.invoiceOnly,
-    disableMerge: org.config.merge_billing_cycles === false,
+    disableMerge,
     sameIntervals,
     carryTrial,
   };

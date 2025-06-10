@@ -1,50 +1,50 @@
 import { expect } from "chai";
+import { v1ProductToBasePrice } from "tests/utils/testProductUtils/testProductUtils.js";
 import { AutumnCli } from "../../cli/AutumnCli.js";
 import { features, products } from "../../global.js";
 import { compareMainProduct } from "../../utils/compare.js";
-import { initCustomer } from "../../utils/init.js";
-import {
-  advanceClockForInvoice,
-  completeCheckoutForm,
-} from "../../utils/stripeUtils.js";
+import { advanceClockForInvoice } from "../../utils/stripeUtils.js";
 import { timeout } from "../../utils/genUtils.js";
-import {
-  calculateMetered1Price,
-  createStripeCli,
-} from "@/external/stripe/utils.js";
+import { calculateMetered1Price } from "@/external/stripe/utils.js";
 import chalk from "chalk";
-import { initCustomerWithTestClock } from "tests/utils/testInitUtils.js";
 import { Customer } from "@autumn/shared";
-describe(`${chalk.yellowBright("usage1: Pro with overage")}`, () => {
+import { setupBefore } from "tests/before.js";
+import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import Stripe from "stripe";
+
+const testCase = "usage1";
+
+describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
   const NUM_EVENTS = 50;
-  const customerId = "usage1";
+  const customerId = testCase;
   let testClockId: string;
   let customer: Customer;
+  let stripeCli: Stripe;
+
   before(async function () {
+    await setupBefore(this);
+    stripeCli = this.stripeCli;
+
     const { customer: customer_, testClockId: testClockId_ } =
-      await initCustomerWithTestClock({
+      await initCustomer({
         customerId,
         org: this.org,
         env: this.env,
         db: this.db,
+        autumn: this.autumnJs,
+        attachPm: "success",
       });
 
     customer = customer_;
     testClockId = testClockId_;
   });
 
-  it("usage1: should create a usage based entitlement", async function () {
-    const res = await AutumnCli.attach({
+  it("should attach usage based product", async function () {
+    await AutumnCli.attach({
       customerId: customerId,
       productId: products.proWithOverage.id,
-      forceCheckout: true,
     });
 
-    await completeCheckoutForm(res.checkout_url);
-    await timeout(10000);
-  });
-
-  it("usage1: should have correct product", async function () {
     const res = await AutumnCli.getCustomer(customerId);
 
     compareMainProduct({
@@ -68,7 +68,7 @@ describe(`${chalk.yellowBright("usage1: Pro with overage")}`, () => {
     await timeout(10000);
   });
 
-  it("usage1: should have correct metered1 balance after sending events", async function () {
+  it("should have correct metered1 balance after sending events", async function () {
     const res: any = await AutumnCli.entitled(customerId, features.metered1.id);
 
     expect(res!.allowed).to.be.true;
@@ -80,23 +80,17 @@ describe(`${chalk.yellowBright("usage1: Pro with overage")}`, () => {
     const proOverageAmt =
       products.proWithOverage.entitlements.metered1.allowance;
 
-    try {
-      expect(res!.allowed).to.be.true;
-      expect(balance?.balance).to.equal(proOverageAmt! - NUM_EVENTS);
-      expect(balance?.usage_allowed).to.be.true;
-    } catch (error) {
-      console.group();
-      console.log("Entitled res", res);
-      console.group();
-      throw error;
-    }
+    expect(res!.allowed, "should be allowed").to.be.true;
+
+    expect(balance?.balance, "should have correct metered1 balance").to.equal(
+      proOverageAmt! - NUM_EVENTS,
+    );
+
+    expect(balance?.usage_allowed, "should have usage_allowed").to.be.true;
   });
 
   // Check invoice
-  it("usage1: advance stripe test clock and wait for event", async function () {
-    // this.timeout(1000 * 60 * 10);
-
-    const stripeCli = createStripeCli({ org: this.org, env: this.env });
+  it("should advance stripe test clock and wait for event", async function () {
     await advanceClockForInvoice({
       stripeCli,
       testClockId,
@@ -104,7 +98,7 @@ describe(`${chalk.yellowBright("usage1: Pro with overage")}`, () => {
     });
   });
 
-  it("usage1: should have correct invoice amount", async function () {
+  it("should have correct invoice amount", async function () {
     const cusRes = await AutumnCli.getCustomer(customerId);
     const invoices = cusRes!.invoices;
 
@@ -115,22 +109,17 @@ describe(`${chalk.yellowBright("usage1: Pro with overage")}`, () => {
       metered1Feature: features.metered1,
     });
 
-    try {
-      expect(invoices.length).to.equal(2);
+    expect(invoices.length).to.equal(2);
 
-      const invoice2 = invoices[0];
-      expect(invoice2.total).to.equal(
-        price + products.proWithOverage.prices[0].config.amount,
-      );
-    } catch (error) {
-      console.group();
-      console.log(
-        "Expected invoices[0] to have total of: ",
-        price + products.proWithOverage.prices[0].config.amount,
-      );
-      console.log("Invoices", invoices);
-      console.group();
-      throw error;
-    }
+    const invoice2 = invoices[0];
+
+    const basePrice = v1ProductToBasePrice({
+      prices: products.proWithOverage.prices,
+    });
+
+    expect(invoice2.total).to.equal(
+      price + basePrice,
+      "invoice total should be usage price + base price",
+    );
   });
 });

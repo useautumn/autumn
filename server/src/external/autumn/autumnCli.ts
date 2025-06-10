@@ -7,11 +7,13 @@ import {
   CusExpand,
   EntityExpand,
   ErrCode,
+  Invoice,
 } from "@autumn/shared";
 import {
   CancelParams,
   CheckParams,
   CheckResult,
+  Customer,
   TrackParams,
   UsageParams,
 } from "autumn-js";
@@ -214,7 +216,11 @@ export class AutumnInt {
       params?: {
         expand?: CusExpand[];
       },
-    ) => {
+    ): Promise<
+      Customer & {
+        invoices: any[];
+      }
+    > => {
       const queryParams = new URLSearchParams();
       const defaultParams = {
         expand: [CusExpand.Invoices],
@@ -335,6 +341,11 @@ export class AutumnInt {
       const data = await this.post(`/rewards`, reward);
       return data;
     },
+
+    delete: async (rewardId: string) => {
+      const data = await this.delete(`/rewards/${rewardId}`);
+      return data;
+    },
   };
 
   rewardPrograms = {
@@ -422,7 +433,7 @@ export class AutumnInt {
     return data;
   };
 
-  cancel = async (params: CancelParams) => {
+  cancel = async (params: CancelParams & { expire_immediately?: boolean }) => {
     const data = await this.post(`/cancel`, params);
     return data;
   };

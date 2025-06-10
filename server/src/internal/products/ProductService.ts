@@ -323,7 +323,7 @@ export class ProductService {
     internalId: string;
     update: any;
   }) {
-    const data = await db
+    await db
       .update(products)
       .set(update)
       .where(eq(products.internal_id, internalId));

@@ -147,38 +147,4 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro annual to
       env,
     });
   });
-
-  // let nextUsage = 123123912;
-  // it("should cancel and have a final invoice", async function () {
-  //   await autumn.cancel({
-  //     customer_id: customerId,
-  //     product_id: proAnnual.id,
-  //     entity_id: entityId,
-  //   });
-
-  //   await timeout(5000);
-
-  //   curUnix = await advanceTestClock({
-  //     stripeCli,
-  //     testClockId,
-  //     advanceTo: addHours(
-  //       addMonths(curUnix, 1),
-  //       hoursToFinalizeInvoice,
-  //     ).getTime(),
-  //   });
-
-  //   await expectInvoiceAfterUsage({
-  //     autumn,
-  //     customerId,
-  //     entityId,
-  //     featureId: TestFeature.Words,
-  //     product: proAnnual,
-  //     usage: nextUsage,
-  //     stripeCli,
-  //     db,
-  //     org,
-  //     env,
-  //     numInvoices: 3,
-  //   });
-  // });
 });

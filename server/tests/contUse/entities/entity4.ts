@@ -49,7 +49,7 @@ export let pro = constructProduct({
 
 const testCase = "entity4";
 
-describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing per entity features`)}`, () => {
+describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -152,6 +152,7 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing per entity 
       (perEntityItem.included_usage as number) * usage,
     );
 
+    // @ts-ignore
     for (const entity of customer.entities) {
       let entRes = await autumn.check({
         customer_id: customerId,

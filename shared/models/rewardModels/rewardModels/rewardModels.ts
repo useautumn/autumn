@@ -33,7 +33,7 @@ const RewardSchema = z.object({
 export const CreateRewardSchema = z.object({
   name: z.string(),
   promo_codes: z.array(PromoCodeSchema),
-  id: z.string().nullish(),
+  id: z.string(),
   type: z.nativeEnum(RewardType).nullish(),
   discount_config: DiscountConfigSchema.nullish(),
   free_product_id: z.string().nullish(),

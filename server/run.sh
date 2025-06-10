@@ -3,8 +3,11 @@
 # npx tsx scripts/alex.ts
 filename=$1
 
-# Check if the file path contains "/tests/"
-if [[ $filename == *"/tests/"* ]]; then
+
+# Check if the file path contains "shell"
+if [[ $filename == *"shell"* ]]; then
+    $filename
+elif [[ $filename == *"/tests/"* ]]; then
     # Extract everything after "/tests/"
     path_after_tests=$(echo "$filename" | sed 's/.*\/tests\///')
     # Remove .ts extension if present

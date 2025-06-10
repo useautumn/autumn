@@ -55,7 +55,7 @@ export class EventService {
         event_name: events.event_name,
         value: events.value,
         created_at: events.created_at,
-        // timestamp: events.timestamp,
+        timestamp: events.timestamp,
         idempotency_key: events.idempotency_key,
         properties: events.properties,
         set_usage: events.set_usage,

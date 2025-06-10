@@ -29,36 +29,13 @@ export let pro = constructProduct({
 export let premium = constructProduct({
   items: [
     constructPrepaidItem({
-      featureId: TestFeature.Users,
+      featureId: TestFeature.Messages,
       price: 8,
       billingUnits: 100,
     }),
   ],
   type: "premium",
 });
-
-export let proAnnual = constructProduct({
-  items: [
-    constructPrepaidItem({
-      featureId: TestFeature.Users,
-      price: 12,
-      billingUnits: 1,
-    }),
-  ],
-  type: "pro",
-  isAnnual: true,
-});
-
-/**
- * upgrade3:
- * Testing upgrades for arrear prorated
- * 1. Start with pro monthly plan (usage-based)
- * 2. Upgrade to pro annual plan (usage-based)
- * 3. Upgrade to premium annual plan (usage-based)
- *
- * Verifies subscription items and anchors are correct after each upgrade
- * with arrear prorated billing
- */
 
 describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid single use`)}`, () => {
   let customerId = testCase;
@@ -89,13 +66,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
     });
 
     addPrefixToProducts({
-      products: [pro, premium, proAnnual],
+      products: [pro, premium],
       prefix: testCase,
     });
 
     await createProducts({
       autumn,
-      products: [pro, premium, proAnnual],
+      products: [pro, premium],
       db,
       orgId: org.id,
       env,
@@ -136,7 +113,9 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
       stripeCli,
       testClockId,
       advanceTo: addWeeks(curUnix, 1).getTime(),
+      waitForSeconds: 20,
     });
+
     await runAttachTest({
       autumn,
       customerId,

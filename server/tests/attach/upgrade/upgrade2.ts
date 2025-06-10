@@ -6,17 +6,11 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import {
-  APIVersion,
-  AppEnv,
-  FullCusProduct,
-  Organization,
-} from "@autumn/shared";
+import { APIVersion, AppEnv, Organization } from "@autumn/shared";
 import { addPrefixToProducts, runAttachTest } from "../utils.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addWeeks, getDate } from "date-fns";
+import { addWeeks } from "date-fns";
 
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -51,7 +45,7 @@ export let premiumAnnual = constructProduct({
  * Verifies subscription items and anchors are correct after each upgrade
  */
 
-describe(`${chalk.yellowBright("attach/upgrade2: Testing usage upgrades with monthly -> annual")}`, () => {
+describe(`${chalk.yellowBright("upgrade2: Testing usage upgrades with monthly -> annual")}`, () => {
   let customerId = "upgrade2";
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let stripeCli: Stripe;
@@ -153,6 +147,7 @@ describe(`${chalk.yellowBright("attach/upgrade2: Testing usage upgrades with mon
       db,
       org,
       env,
+      singleInvoice: true,
     });
   });
 });

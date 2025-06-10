@@ -15,6 +15,7 @@ import {
   AttachBranch,
   BillingInterval,
   FreeTrial,
+  PreviewLineItem,
   Price,
   UsageModel,
 } from "@autumn/shared";
@@ -179,12 +180,23 @@ export const getUpgradeProductPreview = async ({
     );
   }
 
+  let dueToday:
+    | {
+        line_items: PreviewLineItem[];
+        total: number;
+      }
+    | undefined = {
+    line_items: items,
+    total: dueTodayAmt,
+  };
+
+  if (branch == AttachBranch.SameCustomEnts) {
+    dueToday = undefined;
+  }
+
   return {
     currency: attachParams.org.default_currency,
-    due_today: {
-      line_items: items,
-      total: dueTodayAmt,
-    },
+    due_today: dueToday,
     due_next_cycle: {
       line_items: nextCycleItems,
       due_at: nextCycleAt.next_cycle_at,

@@ -40,6 +40,10 @@ export const handleCusProductDeleted = async ({
   prematurelyCanceled: boolean;
 }) => {
   const { org, env } = req;
+  // const customerId = cusProduct.customer!.id;
+  // const orgId = org.id;
+  // const lockKey = `attach_${customerId}_${orgId}_${env}`;
+
   const { scheduled_ids } = cusProduct;
 
   const customer = await CusService.getFull({
@@ -84,6 +88,7 @@ export const handleCusProductDeleted = async ({
   }
 
   if (cusProduct.status === CusProductStatus.Expired) {
+    // When attaching eg. main is trial, canceled in attach function, don't handle...
     return;
   }
 

@@ -239,6 +239,7 @@ export const checkStripeProductExists = async ({
       let stripeProduct = await stripeCli.products.retrieve(
         product.processor!.id,
       );
+
       if (!stripeProduct.active) {
         createNew = true;
       }
@@ -260,6 +261,10 @@ export const checkStripeProductExists = async ({
         processor: { id: stripeProduct.id, type: ProcessorType.Stripe },
       },
     });
+
+    console.log(
+      `Updated product ${product.name} with stripe product ${stripeProduct.id}`,
+    );
 
     product.processor = {
       id: stripeProduct.id,

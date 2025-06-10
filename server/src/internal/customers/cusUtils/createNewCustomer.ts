@@ -13,7 +13,6 @@ import {
   ErrCode,
   BillingInterval,
   AttachScenario,
-  AttachBranch,
 } from "@autumn/shared";
 import { AppEnv, Customer } from "@autumn/shared";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
@@ -21,8 +20,7 @@ import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handl
 import { CusService } from "../CusService.js";
 import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
 import { generateId } from "@/utils/genUtils.js";
-import { newCusToFullCus } from "./cusUtils.js";
-import { webhookToInsertParams } from "@/external/stripe/webhookUtils/webhookUtils.js";
+
 import {
   newCusToAttachParams,
   newCusToInsertParams,

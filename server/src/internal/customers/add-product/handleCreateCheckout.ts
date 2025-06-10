@@ -1,17 +1,14 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
-
-import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
-
-import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import {
   AttachParams,
   AttachResultSchema,
 } from "../cusProducts/AttachParams.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
+import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { ErrCode } from "@/errors/errCodes.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
@@ -49,6 +46,7 @@ export const handleCreateCheckout = async ({
 
   // Handle first item set
   const { items } = itemSets[0];
+
   attachParams.itemSets = itemSets;
 
   const isRecurring = pricesContainRecurring(attachParams.prices);
