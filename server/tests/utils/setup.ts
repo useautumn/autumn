@@ -144,7 +144,7 @@ export const clearOrg = async ({
     active: true,
   });
 
-  const batchSize = 15;
+  const batchSize = 10;
   const removeStripeProduct = async (product: Stripe.Product) => {
     try {
       await stripeCli.products.del(product.id);

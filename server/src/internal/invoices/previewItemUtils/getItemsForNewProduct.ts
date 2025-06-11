@@ -37,6 +37,7 @@ import {
   attachParamsToCurCusProduct,
   attachParamToCusProducts,
 } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
 
 export const getDefaultPriceStr = ({
   org,
@@ -128,6 +129,8 @@ export const getItemsForNewProduct = async ({
   now = now || Date.now();
 
   const items: PreviewLineItem[] = [];
+
+  sortPricesByType(newProduct.prices);
 
   for (const price of newProduct.prices) {
     const ent = getPriceEntitlement(price, newProduct.entitlements);

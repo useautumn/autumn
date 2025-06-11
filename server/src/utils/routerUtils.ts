@@ -5,6 +5,7 @@ import RecaseError, {
 } from "./errorUtils.js";
 import { ZodError } from "zod";
 import { StatusCodes } from "http-status-codes";
+import Stripe from "stripe";
 
 export const routeHandler = async ({
   req,
@@ -31,6 +32,20 @@ export const routeHandler = async ({
         }
       }
     } catch (error) {}
+
+    let originalUrl = req.originalUrl;
+    if (error instanceof Stripe.errors.StripeError) {
+      if (
+        originalUrl.includes("/billing_portal") &&
+        error.message.includes("Provide a configuration or create your default")
+      ) {
+        req.logtail.warn(`Billing portal config error, org: ${req.org?.slug}`);
+        return res.status(404).json({
+          message: error.message,
+          code: ErrCode.InvalidRequest,
+        });
+      }
+    }
 
     if (error instanceof ZodError && req.originalUrl.includes("/attach")) {
       error = new RecaseError({
