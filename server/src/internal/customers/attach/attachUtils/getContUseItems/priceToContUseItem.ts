@@ -4,11 +4,9 @@ import {
   FullEntitlement,
   PreviewLineItem,
   Price,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import Stripe from "stripe";
 import { attachParamsToProduct } from "../convertAttachParams.js";
-import { intervalsAreSame } from "../getAttachConfig.js";
 import { getExistingUsageFromCusProducts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getContUseDowngradeItems } from "./getContUseDowngradeItems.js";
 import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";

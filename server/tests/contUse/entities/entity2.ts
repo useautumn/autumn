@@ -132,7 +132,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing entities, prorate n
       stripeCli,
       testClockId,
       advanceTo: addWeeks(new Date(), 2).getTime(),
-      waitForSeconds: 10,
+      waitForSeconds: 30,
     });
 
     await autumn.entities.create(customerId, newEntities);
@@ -165,7 +165,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing entities, prorate n
       stripeCli,
       testClockId,
       advanceTo: addWeeks(curUnix, 1).getTime(),
-      waitForSeconds: 10,
+      waitForSeconds: 30,
     });
 
     await timeout(5000);

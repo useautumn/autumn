@@ -162,7 +162,7 @@ export const clearOrg = async ({
       batchDeleteProducts.push(removeStripeProduct(product));
     }
     await Promise.all(batchDeleteProducts);
-    await timeout(800);
+    // await timeout(800);
     console.log(
       `   ✅ Deleted ${i + batch.length}/${
         stripeProducts.data.length

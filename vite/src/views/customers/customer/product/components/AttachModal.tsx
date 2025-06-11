@@ -81,6 +81,11 @@ export const AttachModal = ({
       return false;
     }
 
+    const dueToday = preview?.due_today;
+    if (dueToday && dueToday.total == 0) {
+      return false;
+    }
+
     return true;
   };
 
@@ -99,6 +104,11 @@ export const AttachModal = ({
 
     if (preview?.func == AttachFunction.CreateCheckout) {
       return "Checkout Page";
+    }
+
+    const dueToday = preview?.due_today;
+    if (dueToday && dueToday.total == 0) {
+      return "Confirm";
     }
 
     return "Charge Customer";

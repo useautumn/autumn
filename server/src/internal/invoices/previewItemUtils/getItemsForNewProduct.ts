@@ -209,6 +209,9 @@ export const getItemsForNewProduct = async ({
     if (item.amount && freeTrial) {
       item.amount = 0;
     }
+    if (item.amount && item.amount < 0) {
+      item.amount = 0;
+    }
     if (notNullish(item.amount)) {
       item.price = formatAmount({ org, amount: item.amount! });
     }

@@ -85,7 +85,7 @@ export const deactivateStripeMeters = async ({
     }
   }
 
-  const batchSize = 40;
+  const batchSize = 20;
   for (let i = 0; i < allStripeMeters.length; i += batchSize) {
     const batch = allStripeMeters.slice(i, i + batchSize);
     await Promise.all(
