@@ -1,21 +1,16 @@
 import {
   BillingInterval,
   EntInterval,
+  Feature,
   Infinite,
   ProductItem,
-  ProductItemInterval,
+  ProductItemFeatureType,
   ProductItemType,
+  UsageModel,
 } from "@autumn/shared";
 import { notNullish, nullish } from "../genUtils";
-import { isFeatureItem } from "./getItemType";
-
-export const itemIsFixedPrice = (item: ProductItem) => {
-  return notNullish(item.price) && nullish(item.feature_id);
-};
-
-// export const itemIsFree = (item: ProductItem) => {
-//   return (nullish(item.amount) || item.amount === 0) && nullish(item.tiers);
-// };
+import { isFeatureItem, isFeaturePriceItem, isPriceItem } from "./getItemType";
+import { itemToUsageType } from "./productItemUtils/convertItem";
 
 export const itemIsUnlimited = (item: ProductItem) => {
   return item.included_usage == Infinite;
@@ -24,20 +19,22 @@ export const itemIsUnlimited = (item: ProductItem) => {
 export const formatAmount = ({
   defaultCurrency,
   amount,
+  maxFractionDigits = 6,
 }: {
   defaultCurrency: string;
   amount: number;
+  maxFractionDigits?: number;
 }) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: defaultCurrency,
     minimumFractionDigits: 0,
-    maximumFractionDigits: 6,
+    maximumFractionDigits: maxFractionDigits || 6,
   }).format(amount);
 };
 
 export const getItemType = (item: ProductItem) => {
-  if (itemIsFixedPrice(item)) {
+  if (isPriceItem(item)) {
     return ProductItemType.Price;
   } else if (isFeatureItem(item)) {
     return ProductItemType.Feature;
@@ -67,9 +64,37 @@ export const getShowParams = (item: ProductItem | null) => {
 
   return {
     price: notNullish(item.price) || notNullish(item.tiers),
-    feature: !itemIsFixedPrice(item),
+    feature: !isPriceItem(item),
     allowance: true,
     perEntity: notNullish(item.entity_feature_id),
     cycle: true,
   };
+};
+
+export const shouldShowProrationConfig = ({
+  item,
+  features,
+}: {
+  item: ProductItem;
+  features: Feature[];
+}) => {
+  if (!isFeaturePriceItem(item)) return false;
+
+  // If pay per use single use
+  const usageType = itemToUsageType({ item, features });
+
+  // if (
+  //   usageType == ProductItemFeatureType.SingleUse &&
+  //   item.usage_model == UsageModel.Prepaid
+  // ) {
+  //   return true;
+  // } else
+
+  if (
+    usageType == ProductItemFeatureType.ContinuousUse &&
+    item.usage_model !== UsageModel.Prepaid
+  ) {
+    return true;
+  }
+  return false;
 };

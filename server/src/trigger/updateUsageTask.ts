@@ -8,11 +8,10 @@ import {
   FullCustomerEntitlement,
   Organization,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
+import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import { getFeatureBalance } from "@/internal/customers/entitlements/cusEntUtils.js";
+import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { Decimal } from "decimal.js";
 
 import {
@@ -280,10 +279,12 @@ export const runUpdateUsageTask = async ({
   payload,
   logger,
   db,
+  throwError = false,
 }: {
   payload: any;
   logger: any;
   db: DrizzleCli;
+  throwError?: boolean;
 }) => {
   try {
     // 1. Update customer balance
@@ -322,19 +323,11 @@ export const runUpdateUsageTask = async ({
     }
     console.log("   ✅ Customer balance updated");
   } catch (error) {
-    if (logger) {
-      logger.use((log: any) => {
-        return {
-          ...log,
-          task: JobName.UpdateUsage,
-          data: payload,
-        };
-      });
+    logger.error(`ERROR UPDATING USAGE`);
+    logger.error(error);
 
-      logger.error(`ERROR UPDATING USAGE`);
-      logger.error(error);
-    } else {
-      console.log(error);
+    if (throwError) {
+      throw error;
     }
   }
 };

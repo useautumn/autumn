@@ -1,301 +1,248 @@
-import RecaseError from "@/utils/errorUtils.js";
+// import RecaseError from "@/utils/errorUtils.js";
 
-import {
-  BillingInterval,
-  CusProductStatus,
-  FullCusProduct,
-  Product,
-} from "@autumn/shared";
-import { ErrCode } from "@/errors/errCodes.js";
+// import {
+//   BillingInterval,
+//   CusProductStatus,
+//   FullCusProduct,
+//   Product,
+// } from "@autumn/shared";
+// import { ErrCode } from "@/errors/errCodes.js";
 
-import {
-  getPricesForProduct,
-  isFreeProduct,
-  isOneOff,
-  isProductUpgrade,
-} from "@/internal/products/productUtils.js";
+// import {
+//   getPricesForProduct,
+//   isFreeProduct,
+//   isOneOff,
+//   isProductUpgrade,
+// } from "@/internal/products/productUtils.js";
 
-import { AttachParams } from "@/internal/customers/products/AttachParams.js";
-import chalk from "chalk";
+// import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+// import chalk from "chalk";
 
-import { handleSameMainProduct } from "@/internal/customers/add-product/handleSameProduct.js";
+// import { handleSameMainProduct } from "@/internal/customers/add-product/handleSameProduct.js";
 
-import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
-import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
-import { nullish } from "@/utils/genUtils.js";
-import { handleSameAddOnProduct } from "./handleSameProduct/handleSameAddOn.js";
+// import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
+// import { getPricesForCusProduct } from "../change-product/scheduleUtils.js";
+// import { nullish } from "@/utils/genUtils.js";
+// import { handleSameAddOnProduct } from "./handleSameProduct/handleSameAddOn.js";
+// import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 
-export const getExistingCusProducts = async ({
-  product,
-  cusProducts,
-  internalEntityId,
-}: {
-  product: Product;
-  cusProducts: FullCusProduct[];
-  internalEntityId?: string | null;
-}) => {
-  if (!cusProducts || cusProducts.length === 0) {
-    return {
-      curMainProduct: null,
-      curSameProduct: null,
-      curScheduledProduct: null,
-    };
-  }
+// const handleExistingMultipleProducts = async ({
+//   attachParams,
+// }: {
+//   attachParams: AttachParams;
+// }) => {
+//   let { products } = attachParams;
 
-  let curMainProduct = cusProducts.find((cp: any) => {
-    let sameGroup = cp.product.group === product.group;
-    let isMain = !cp.product.is_add_on;
-    let isActive =
-      cp.status == CusProductStatus.Active ||
-      cp.status == CusProductStatus.PastDue;
+//   // If all one time products, return ok
+//   if (
+//     products.every((p) =>
+//       p.prices.every(
+//         (price) => price.config?.interval === BillingInterval.OneOff,
+//       ),
+//     )
+//   ) {
+//     return { curCusProduct: null, done: false };
+//   }
 
-    let oneOff = isOneOff(cp.customer_prices.map((cp: any) => cp.price));
+//   for (const product of products) {
+//     let { curMainProduct, curSameProduct, curScheduledProduct }: any =
+//       getExistingCusProducts({
+//         product,
+//         cusProducts: attachParams.cusProducts!,
+//       });
 
-    let sameEntity = internalEntityId
-      ? cp.internal_entity_id === internalEntityId
-      : nullish(cp.internal_entity_id);
+//     // 2. If existing same product
+//     if (curSameProduct) {
+//       // 2a. If add-on product, only allow if prices are one-off
+//       let prices = getPricesForProduct(product, attachParams.prices);
+//       let allowed = product.is_add_on && pricesOnlyOneOff(prices);
+//       if (!allowed) {
+//         throw new RecaseError({
+//           message: `Product ${product.name} is already attached, can't attach again`,
+//           code: ErrCode.InvalidRequest,
+//           statusCode: 400,
+//         });
+//       }
+//     }
 
-    return sameGroup && isMain && isActive && !oneOff && sameEntity;
-  });
+//     // 3. If existing scheduled product, can't remove...
+//     if (curScheduledProduct) {
+//       throw new RecaseError({
+//         message: `Can't attach multiple products at once when scheduled product exists...`,
+//         code: ErrCode.InvalidRequest,
+//         statusCode: 400,
+//       });
+//     }
 
-  const curSameProduct = cusProducts!.find(
-    (cp: any) =>
-      cp.product.internal_id === product.internal_id &&
-      (internalEntityId
-        ? cp.internal_entity_id === internalEntityId
-        : nullish(cp.internal_entity_id)),
-  );
+//     // Set curMainProduct to null if it's free
+//     if (
+//       curMainProduct &&
+//       isFreeProduct(curMainProduct.customer_prices.map((cp: any) => cp.price))
+//     ) {
+//       curMainProduct = null;
+//     }
 
-  const curScheduledProduct = cusProducts!.find(
-    (cp: any) =>
-      cp.status === CusProductStatus.Scheduled &&
-      cp.product.group === product.group &&
-      !cp.product.is_add_on &&
-      (internalEntityId
-        ? cp.internal_entity_id === internalEntityId
-        : nullish(cp.internal_entity_id)),
-  );
+//     // 3. If existing main product, can't upgrade / downgrade
+//     if (curMainProduct && !product.is_add_on) {
+//       throw new RecaseError({
+//         message: `Upgrade / downgrade to ${product.name} not allowed with multiple products`,
+//         code: ErrCode.InvalidRequest,
+//         statusCode: 400,
+//       });
+//     }
+//   }
 
-  return { curMainProduct, curSameProduct, curScheduledProduct };
-};
+//   return { curCusProduct: null, done: false };
+// };
 
-const handleExistingMultipleProducts = async ({
-  attachParams,
-}: {
-  attachParams: AttachParams;
-}) => {
-  let { products } = attachParams;
+// export const handleExistingProduct = async ({
+//   req,
+//   res,
+//   attachParams,
+//   useCheckout = false,
+//   invoiceOnly = false,
+//   isCustom = false,
+// }: {
+//   req: any;
+//   res: any;
+//   attachParams: AttachParams;
+//   useCheckout?: boolean;
+//   invoiceOnly?: boolean;
+//   isCustom?: boolean;
+// }): Promise<{ curCusProduct: FullCusProduct | null; done: boolean }> => {
+//   const { db, logtail: logger } = req;
+//   const { products, cusProducts } = attachParams;
 
-  // If all one time products, return ok
-  if (
-    products.every((p) =>
-      p.prices.every(
-        (price) => price.config?.interval === BillingInterval.OneOff,
-      ),
-    )
-  ) {
-    return { curCusProduct: null, done: false };
-  }
+//   if (products.length > 1) {
+//     return await handleExistingMultipleProducts({
+//       attachParams,
+//     });
+//   }
 
-  for (const product of products) {
-    let { curMainProduct, curSameProduct, curScheduledProduct }: any =
-      await getExistingCusProducts({
-        product,
-        cusProducts: attachParams.cusProducts!,
-      });
+//   const product = products[0];
 
-    // 2. If existing same product
-    if (curSameProduct) {
-      // 2a. If add-on product, only allow if prices are one-off
-      let prices = getPricesForProduct(product, attachParams.prices);
-      let allowed = product.is_add_on && pricesOnlyOneOff(prices);
-      if (!allowed) {
-        throw new RecaseError({
-          message: `Product ${product.name} is already attached, can't attach again`,
-          code: ErrCode.InvalidRequest,
-          statusCode: 400,
-        });
-      }
-    }
+//   let { curMainProduct, curSameProduct, curScheduledProduct }: any =
+//     getExistingCusProducts({
+//       product,
+//       cusProducts: cusProducts || [],
+//       internalEntityId: attachParams.internalEntityId,
+//     });
 
-    // 3. If existing scheduled product, can't remove...
-    if (curScheduledProduct) {
-      throw new RecaseError({
-        message: `Can't attach multiple products at once when scheduled product exists...`,
-        code: ErrCode.InvalidRequest,
-        statusCode: 400,
-      });
-    }
+//   // Merge options
+//   let curOptions = curMainProduct?.options || [];
+//   let newOptions = attachParams.optionsList || [];
 
-    // Set curMainProduct to null if it's free
-    if (
-      curMainProduct &&
-      isFreeProduct(curMainProduct.customer_prices.map((cp: any) => cp.price))
-    ) {
-      curMainProduct = null;
-    }
+//   for (const option of curOptions) {
+//     let newOption = newOptions.find((o) => o.feature_id === option.feature_id);
+//     if (!newOption) {
+//       newOptions.push(option);
+//     }
+//   }
 
-    // 3. If existing main product, can't upgrade / downgrade
-    if (curMainProduct && !product.is_add_on) {
-      throw new RecaseError({
-        message: `Upgrade / downgrade to ${product.name} not allowed with multiple products`,
-        code: ErrCode.InvalidRequest,
-        statusCode: 400,
-      });
-    }
-  }
+//   if (isOneOff(product.prices)) {
+//     return { curCusProduct: null, done: false };
+//   }
 
-  return { curCusProduct: null, done: false };
-};
+//   logger.info(
+//     `Checking existing product | curMain: ${chalk.yellow(
+//       curMainProduct?.product.name || "None",
+//     )} | curSame: ${chalk.yellow(
+//       curSameProduct?.product.name || "None",
+//     )} | curScheduled: ${chalk.yellow(
+//       curScheduledProduct?.product.name || "None",
+//     )}`,
+//   );
 
-export const handleExistingProduct = async ({
-  req,
-  res,
-  attachParams,
-  useCheckout = false,
-  invoiceOnly = false,
-  isCustom = false,
-}: {
-  req: any;
-  res: any;
-  attachParams: AttachParams;
-  useCheckout?: boolean;
-  invoiceOnly?: boolean;
-  isCustom?: boolean;
-}): Promise<{ curCusProduct: FullCusProduct | null; done: boolean }> => {
-  const { db, logtail: logger } = req;
-  const { products, cusProducts } = attachParams;
+//   attachParams.curCusProduct = curMainProduct;
+//   attachParams.curScheduledProduct = curScheduledProduct;
 
-  if (products.length > 1) {
-    return await handleExistingMultipleProducts({
-      attachParams,
-    });
-  }
+//   // Case 2: Current product is scheduled
+//   if (curScheduledProduct?.product.internal_id === product.internal_id) {
+//     throw new RecaseError({
+//       message: `${product.name} is already scheduled, can't attach again`,
+//       code: ErrCode.CustomerAlreadyHasProduct,
+//       statusCode: 400,
+//     });
+//   }
 
-  const product = products[0];
+//   // Case 3: Main product is same -- remove scheduled and update quantity
+//   if (curMainProduct?.product.id === product.id) {
+//     return await handleSameMainProduct({
+//       db,
+//       curMainProduct,
+//       curScheduledProduct,
+//       attachParams,
+//       req,
+//       res,
+//       isCustom,
+//     });
+//   }
 
-  let { curMainProduct, curSameProduct, curScheduledProduct }: any =
-    await getExistingCusProducts({
-      product,
-      cusProducts: cusProducts || [],
-      internalEntityId: attachParams.internalEntityId,
-    });
+//   // Case 4: Add-on product is same -- remove scheduled and update quantity
 
-  // Merge options
-  let curOptions = curMainProduct?.options || [];
-  let newOptions = attachParams.optionsList || [];
+//   if (curSameProduct && product.is_add_on) {
+//     return await handleSameAddOnProduct({
+//       db,
+//       curSameProduct,
+//       curMainProduct: curMainProduct || null,
+//       attachParams,
+//       res,
+//     });
+//   }
 
-  for (const option of curOptions) {
-    let newOption = newOptions.find((o) => o.feature_id === option.feature_id);
-    if (!newOption) {
-      newOptions.push(option);
-    }
-  }
+//   // Case 5: Main product exists, different from new product
+//   if (curMainProduct && useCheckout) {
+//     let mainProductPrices = getPricesForCusProduct({
+//       cusProduct: curMainProduct,
+//     });
 
-  if (isOneOff(product.prices)) {
-    return { curCusProduct: null, done: false };
-  }
+//     let downgradeToFree =
+//       !isProductUpgrade({
+//         prices1: mainProductPrices,
+//         prices2: attachParams.prices,
+//       }) && isFreeProduct(attachParams.prices);
 
-  logger.info(
-    `Checking existing product | curMain: ${chalk.yellow(
-      curMainProduct?.product.name || "None",
-    )} | curSame: ${chalk.yellow(
-      curSameProduct?.product.name || "None",
-    )} | curScheduled: ${chalk.yellow(
-      curScheduledProduct?.product.name || "None",
-    )}`,
-  );
+//     let upgradeFromFree =
+//       isProductUpgrade({
+//         prices1: mainProductPrices,
+//         prices2: attachParams.prices,
+//       }) &&
+//       isFreeProduct(
+//         curMainProduct?.customer_prices.map((cp: any) => cp.price) || [],
+//       );
 
-  attachParams.curCusProduct = curMainProduct;
-  attachParams.curScheduledProduct = curScheduledProduct;
+//     let isAddOn = product.is_add_on;
 
-  // Case 2: Current product is scheduled
-  if (curScheduledProduct?.product.internal_id === product.internal_id) {
-    throw new RecaseError({
-      message: `${product.name} is already scheduled, can't attach again`,
-      code: ErrCode.CustomerAlreadyHasProduct,
-      statusCode: 400,
-    });
-  }
+//     if (!downgradeToFree && !upgradeFromFree && !isAddOn) {
+//       throw new RecaseError({
+//         message: `Either payment method not found, or force_checkout is true: unable to perform upgrade / downgrade`,
+//         code: ErrCode.InvalidRequest,
+//         statusCode: 400,
+//       });
+//     }
+//   }
 
-  // Case 3: Main product is same -- remove scheduled and update quantity
-  if (curMainProduct?.product.id === product.id) {
-    return await handleSameMainProduct({
-      db,
-      curMainProduct,
-      curScheduledProduct,
-      attachParams,
-      req,
-      res,
-      isCustom,
-    });
-  }
+//   // If main product is free, or one time product, or  add-on, treat as if adding new product
 
-  // Case 4: Add-on product is same -- remove scheduled and update quantity
+//   if (
+//     (curMainProduct &&
+//       isFreeProduct(
+//         curMainProduct.customer_prices.map((cp: any) => cp.price),
+//       )) ||
+//     attachParams.products[0].is_add_on
+//   ) {
+//     curMainProduct = null;
+//     attachParams.curCusProduct = undefined;
+//   }
 
-  if (curSameProduct && product.is_add_on) {
-    return await handleSameAddOnProduct({
-      db,
-      curSameProduct,
-      curMainProduct: curMainProduct || null,
-      attachParams,
-      res,
-    });
-  }
+//   // if (curMainProduct && invoiceOnly) {
+//   //   // return { curCusProduct: curMainProduct, done: true };
+//   //   throw new RecaseError({
+//   //     message: `Please contact hey@useautumn.com to enable upgrading / downgrading through invoice`,
+//   //     code: ErrCode.CustomerAlreadyHasProduct,
+//   //     statusCode: 400,
+//   //   });
+//   // }
 
-  // Case 5: Main product exists, different from new product
-  if (curMainProduct && useCheckout) {
-    let mainProductPrices = getPricesForCusProduct({
-      cusProduct: curMainProduct,
-    });
-
-    let downgradeToFree =
-      !isProductUpgrade({
-        prices1: mainProductPrices,
-        prices2: attachParams.prices,
-      }) && isFreeProduct(attachParams.prices);
-
-    let upgradeFromFree =
-      isProductUpgrade({
-        prices1: mainProductPrices,
-        prices2: attachParams.prices,
-      }) &&
-      isFreeProduct(
-        curMainProduct?.customer_prices.map((cp: any) => cp.price) || [],
-      );
-
-    let isAddOn = product.is_add_on;
-
-    if (!downgradeToFree && !upgradeFromFree && !isAddOn) {
-      throw new RecaseError({
-        message: `Either payment method not found, or force_checkout is true: unable to perform upgrade / downgrade`,
-        code: ErrCode.InvalidRequest,
-        statusCode: 400,
-      });
-    }
-  }
-
-  // If main product is free, or one time product, or  add-on, treat as if adding new product
-
-  if (
-    (curMainProduct &&
-      isFreeProduct(
-        curMainProduct.customer_prices.map((cp: any) => cp.price),
-      )) ||
-    attachParams.products[0].is_add_on
-  ) {
-    curMainProduct = null;
-    attachParams.curCusProduct = undefined;
-  }
-
-  // if (curMainProduct && invoiceOnly) {
-  //   // return { curCusProduct: curMainProduct, done: true };
-  //   throw new RecaseError({
-  //     message: `Please contact hey@useautumn.com to enable upgrading / downgrading through invoice`,
-  //     code: ErrCode.CustomerAlreadyHasProduct,
-  //     statusCode: 400,
-  //   });
-  // }
-
-  return { curCusProduct: curMainProduct || null, done: false };
-};
+//   return { curCusProduct: curMainProduct || null, done: false };
+// };

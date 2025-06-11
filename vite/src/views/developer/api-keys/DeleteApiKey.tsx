@@ -31,6 +31,11 @@ export const DeleteApiKey = ({
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleDelete = async () => {
+    if (confirmText !== apiKey.name) {
+      toast.error("Please type the correct API key name to confirm deletion");
+      return;
+    }
+
     setDeleteLoading(true);
     try {
       await DevService.deleteAPIKey(axiosInstance, apiKey.id);

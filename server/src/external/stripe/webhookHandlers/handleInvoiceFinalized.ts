@@ -1,5 +1,3 @@
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
-
 import {
   AppEnv,
   CusProductStatus,
@@ -7,18 +5,18 @@ import {
   InvoiceStatus,
   Organization,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
-
-import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   getFullStripeInvoice,
   getStripeExpandedInvoice,
   updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
-import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 
 export const handleInvoiceFinalized = async ({
   db,

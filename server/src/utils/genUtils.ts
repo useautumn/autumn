@@ -53,11 +53,11 @@ export const notNullish = (value: any) => {
   return !nullish(value);
 };
 
-export const formatUnixToDateTime = (unixDate: number) => {
+export const formatUnixToDateTime = (unixDate?: number | null) => {
   if (!unixDate) {
-    return null;
+    return "undefined unix date";
   }
-  return format(new Date(unixDate), "yyyy MMM dd HH:mm:ss");
+  return format(new Date(unixDate), "dd MMM yyyy HH:mm:ss");
 };
 
 export const formatUnixToDate = (unixDate?: number) => {
@@ -79,4 +79,25 @@ export const validateId = (type: string, id: string) => {
       statusCode: 400,
     });
   }
+};
+
+function stringToSnakeCase(str: string): string {
+  return str
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .replace(/[-\s]+/g, "_")
+    .toLowerCase();
+}
+
+export const toSnakeCase = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(toSnakeCase);
+  } else if (obj !== null && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj).map(([key, value]) => [
+        stringToSnakeCase(key),
+        toSnakeCase(value),
+      ]),
+    );
+  }
+  return obj;
 };

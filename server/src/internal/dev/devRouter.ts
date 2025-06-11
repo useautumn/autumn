@@ -106,6 +106,3 @@ devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
     return;
   }
 });
-
-// am_live_3ZaPDgqt7K4GkdirAU9oDFT3
-// am_test_3ZTRcHdEsdAdoxvSUGL8L35x

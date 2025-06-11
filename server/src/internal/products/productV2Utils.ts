@@ -13,13 +13,9 @@ import {
 import { getEntRelatedPrice } from "./entitlements/entitlementUtils.js";
 import { getPriceEntitlement } from "./prices/priceUtils.js";
 import { toProductItem } from "./product-items/mapToItem.js";
-import {
-  getItemFeatureType,
-  getItemType,
-  isFeaturePriceItem,
-} from "./product-items/productItemUtils.js";
-import { isPriceItem } from "./product-items/getItemType.js";
+import { getItemFeatureType } from "./product-items/productItemUtils.js";
 import { sortProductItems } from "./pricecn/pricecnUtils.js";
+import { getItemType } from "./product-items/productItemUtils/getItemType.js";
 
 export const mapToProductItems = ({
   prices,

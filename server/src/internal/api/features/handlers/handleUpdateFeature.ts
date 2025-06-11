@@ -1,6 +1,6 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ErrCode } from "@/errors/errCodes.js";
-import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import {

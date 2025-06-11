@@ -19,7 +19,7 @@ import {
 } from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
 export const validateAndInitFreeTrial = ({
   freeTrial,
@@ -42,10 +42,13 @@ export const validateAndInitFreeTrial = ({
   };
 };
 
-export const freeTrialsAreSame = (
-  ft1?: FreeTrial | null,
-  ft2?: FreeTrial | null,
-) => {
+export const freeTrialsAreSame = ({
+  ft1,
+  ft2,
+}: {
+  ft1?: FreeTrial | CreateFreeTrial | null;
+  ft2?: FreeTrial | CreateFreeTrial | null;
+}) => {
   if (!ft1 && !ft2) return true;
   if (!ft1 || !ft2) return false;
   return (
@@ -55,7 +58,15 @@ export const freeTrialsAreSame = (
   );
 };
 
-export const freeTrialToStripeTimestamp = (freeTrial: FreeTrial | null) => {
+export const freeTrialToStripeTimestamp = ({
+  freeTrial,
+  now,
+}: {
+  freeTrial: FreeTrial | null | undefined;
+  now?: number | undefined;
+}) => {
+  now = now || Date.now();
+
   if (!freeTrial) return undefined;
 
   let duration = freeTrial.duration || FreeTrialDuration.Day;
@@ -63,11 +74,11 @@ export const freeTrialToStripeTimestamp = (freeTrial: FreeTrial | null) => {
 
   let trialEnd: Date;
   if (duration === FreeTrialDuration.Day) {
-    trialEnd = addDays(new Date(), length);
+    trialEnd = addDays(new Date(now), length);
   } else if (duration === FreeTrialDuration.Month) {
-    trialEnd = addMonths(new Date(), length);
+    trialEnd = addMonths(new Date(now), length);
   } else if (duration === FreeTrialDuration.Year) {
-    trialEnd = addYears(new Date(), length);
+    trialEnd = addYears(new Date(now), length);
   } else {
     throw new RecaseError({
       message: `Invalid free trial duration: ${duration}`,
@@ -129,7 +140,7 @@ export const handleNewFreeTrial = async ({
   isCustom = false,
 }: {
   db: DrizzleCli;
-  newFreeTrial: FreeTrial | null;
+  newFreeTrial: CreateFreeTrial | null;
   curFreeTrial: FreeTrial | null | undefined;
   internalProductId: string;
   isCustom: boolean;
@@ -145,7 +156,7 @@ export const handleNewFreeTrial = async ({
     return null;
   }
 
-  if (freeTrialsAreSame(curFreeTrial, newFreeTrial)) {
+  if (freeTrialsAreSame({ ft1: curFreeTrial, ft2: newFreeTrial })) {
     return curFreeTrial;
   }
 

@@ -1,4 +1,3 @@
-import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
 import {
   getStripeSchedules,
   getStripeSubs,
@@ -7,9 +6,6 @@ import {
   AppEnv,
   AttachScenario,
   FullCusProduct,
-  FullCustomerEntitlement,
-  FullCustomerPrice,
-  FullProduct,
   Organization,
   Product,
 } from "@autumn/shared";
@@ -17,10 +13,10 @@ import Stripe from "stripe";
 import {
   fullCusProductToProduct,
   isActiveStatus,
-} from "../products/cusProductUtils.js";
-import { CusProductService } from "../products/CusProductService.js";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { getExistingCusProducts } from "../add-product/handleExistingProduct.js";
+} from "../cusProducts/cusProductUtils.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
+
+import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 
 import { getFilteredScheduleItems } from "./scheduleUtils/getFilteredScheduleItems.js";
@@ -32,6 +28,7 @@ import {
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 
 export const getPricesForCusProduct = ({
   cusProduct,
@@ -89,7 +86,7 @@ export const cancelFutureProductSchedule = async ({
   sendWebhook?: boolean;
 }) => {
   // 1. Get main and scheduled products
-  const { curMainProduct, curScheduledProduct } = await getExistingCusProducts({
+  const { curMainProduct, curScheduledProduct } = getExistingCusProducts({
     product,
     cusProducts,
     internalEntityId,
@@ -117,15 +114,14 @@ export const cancelFutureProductSchedule = async ({
   let fullCurProduct = fullCusProductToProduct(curMainProduct);
   let oldItemSets = await getStripeSubItems({
     attachParams: {
-      customer: curMainProduct.customer!,
       org: org,
       products: [fullCurProduct],
       prices: fullCurProduct.prices,
       entitlements: fullCurProduct.entitlements,
-      freeTrial: null,
       optionsList: [],
       entities: [],
-      features: [],
+      cusProducts,
+      replaceables: [],
     },
   });
 
@@ -147,9 +143,9 @@ export const cancelFutureProductSchedule = async ({
     const activeCusProducts = cusProducts.filter((cusProduct) =>
       isActiveStatus(cusProduct?.status),
     );
+
     const filteredScheduleItems = getFilteredScheduleItems({
       scheduleObj,
-      // cusProducts: [curMainProduct, curScheduledProduct],
       cusProducts: [...activeCusProducts, curScheduledProduct],
     });
 
@@ -162,7 +158,7 @@ export const cancelFutureProductSchedule = async ({
       await updateScheduledSubWithNewItems({
         scheduleObj: scheduleObj,
         newItems: includeOldItems ? oldItemSet?.items || [] : [],
-        cusProducts: [curMainProduct, curScheduledProduct],
+        cusProductsForGroup: [curMainProduct, curScheduledProduct],
         stripeCli: stripeCli,
         itemSet: null,
         db,
@@ -237,8 +233,6 @@ export const cancelFutureProductSchedule = async ({
     curScheduledProduct &&
     isFreeProduct(getPricesForCusProduct({ cusProduct: curScheduledProduct! }))
   ) {
-    logger.info(`CASE: DELETING FREE SCHEDULED PRODUCT`);
-
     // 1. Look at main product
     let curMainSubIds = curMainProduct.subscription_ids;
 
@@ -264,9 +258,7 @@ export const cancelFutureProductSchedule = async ({
 
     // 99% of cases!
     else {
-      logger.info(
-        "No other cus products with same sub, uncanceling current main product",
-      );
+      logger.info("cancelFutureProductSchedule: renewing main product");
 
       if (curMainSubIds && curMainSubIds.length > 0) {
         for (const subId of curMainSubIds) {
@@ -304,4 +296,25 @@ export const cancelFutureProductSchedule = async ({
       }
     }
   }
+
+  // TODO: Check?
+  // if (
+  //   !curScheduledProduct &&
+  //   curMainProduct &&
+  //   notNullish(curMainProduct.canceled_at)
+  // ) {
+  //   console.log("Renewing main product... why...");
+  //   const batchRenew = [];
+  //   for (const subId of curMainProduct.subscription_ids || []) {
+  //     batchRenew.push(
+  //       stripeCli.subscriptions.update(subId, {
+  //         cancel_at: null,
+  //       }),
+  //     );
+  //   }
+
+  //   await Promise.all(batchRenew);
+
+  //   return;
+  // }
 };

@@ -1,5 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { fullCusProductToProduct } from "@/internal/customers/products/cusProductUtils.js";
+import { fullCusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
   isOneOff,

@@ -11,10 +11,10 @@ import { Organization } from "@autumn/shared";
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "./stripeCusUtils.js";
 import { createStripeCli } from "./utils.js";
-import RecaseError, { isPaymentDeclined } from "@/utils/errorUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { isStripeCardDeclined } from "./stripeCardUtils.js";
-import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 
 // For API calls
 export const getStripeExpandedInvoice = async ({
@@ -45,69 +45,103 @@ export const getFullStripeInvoice = async ({
 };
 
 export const payForInvoice = async ({
-  fullOrg,
-  env,
-  customer,
-  invoice,
+  stripeCli,
+  paymentMethod,
+  invoiceId,
   logger,
+  errorOnFail = true,
+  voidIfFailed = false,
 }: {
-  fullOrg: Organization;
-  env: AppEnv;
-  customer: Customer;
-  invoice: Stripe.Invoice;
+  stripeCli: Stripe;
+  paymentMethod?: Stripe.PaymentMethod | null;
+  invoiceId: string;
   logger: any;
+  errorOnFail?: boolean;
+  voidIfFailed?: boolean;
 }) => {
-  const stripeCli = createStripeCli({ org: fullOrg, env: env as AppEnv });
-
-  const paymentMethod = await getCusPaymentMethod({
-    org: fullOrg,
-    env: env as AppEnv,
-    stripeId: customer.processor.id,
-  });
-
   if (!paymentMethod) {
-    logger.warn("   ❌ No payment method found");
-    return {
-      paid: false,
-      error: new RecaseError({
+    if (errorOnFail) {
+      throw new RecaseError({
         message: "No payment method found",
         code: ErrCode.CustomerHasNoPaymentMethod,
         statusCode: 400,
-      }),
+      });
+    } else {
+      return {
+        paid: false,
+        error: new RecaseError({
+          message: "No payment method found",
+          code: ErrCode.CustomerHasNoPaymentMethod,
+          statusCode: 400,
+        }),
+        invoice: null,
+      };
+    }
+  }
+
+  let invoice = await stripeCli.invoices.retrieve(invoiceId);
+  if (invoice.status == "paid") {
+    logger.info(`Invoice ${invoiceId} is already paid`);
+    return {
+      paid: true,
+      error: null,
+      invoice,
     };
   }
 
   try {
-    await stripeCli.invoices.pay(invoice.id, {
-      payment_method: paymentMethod as string,
+    const invoice = await stripeCli.invoices.pay(invoiceId, {
+      payment_method: paymentMethod?.id,
     });
     return {
       paid: true,
       error: null,
+      invoice,
     };
   } catch (error: any) {
     logger.error(
-      `   ❌ Stripe error: Failed to pay invoice: ${error?.message || error}`,
+      `❌ Stripe error: Failed to pay invoice: ${error?.message || error}`,
     );
 
-    if (isStripeCardDeclined(error)) {
+    if (voidIfFailed) {
+      try {
+        await stripeCli.invoices.voidInvoice(invoiceId);
+      } catch (error) {
+        logger.error(`Failed to void failed invoice: ${invoiceId}`);
+      }
+    }
+
+    if (errorOnFail) {
+      throw error;
+    } else {
       return {
         paid: false,
         error: new RecaseError({
-          message: `Payment declined: ${error.message}`,
-          code: ErrCode.StripeCardDeclined,
-          statusCode: 400,
+          message: `Failed to pay invoice: ${error?.message || error}`,
+          code: ErrCode.PayInvoiceFailed,
         }),
+        invoice: null,
       };
     }
 
-    return {
-      paid: false,
-      error: new RecaseError({
-        message: "Failed to pay invoice",
-        code: ErrCode.PayInvoiceFailed,
-      }),
-    };
+    // if (isStripeCardDeclined(error)) {
+    //   return {
+    //     paid: false,
+    //     error: new RecaseError({
+    //       message: `Payment declined: ${error.message}`,
+    //       code: ErrCode.StripeCardDeclined,
+    //       statusCode: 400,
+    //     }),
+    //   };
+    // }
+
+    // return {
+    //   paid: false,
+    //   error: new RecaseError({
+    //     message: "Failed to pay invoice",
+    //     code: ErrCode.PayInvoiceFailed,
+    //   }),
+    // };
   }
 };
 

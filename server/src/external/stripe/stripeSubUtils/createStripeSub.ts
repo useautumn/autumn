@@ -11,9 +11,9 @@ import Stripe from "stripe";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 
 // Get payment method
 
@@ -24,9 +24,10 @@ export const createStripeSub = async ({
   org,
   freeTrial,
   invoiceOnly = false,
-  billingCycleAnchorUnix,
+  anchorToUnix,
   itemSet,
   shouldPreview = false,
+  now,
 }: {
   db: DrizzleCli;
   stripeCli: Stripe;
@@ -34,14 +35,13 @@ export const createStripeSub = async ({
   freeTrial: FreeTrial | null;
   org: Organization;
   invoiceOnly?: boolean;
-  billingCycleAnchorUnix?: number;
-
+  anchorToUnix?: number;
   itemSet: ItemSet;
   shouldPreview?: boolean;
+  now?: number;
 }) => {
   let paymentMethod = await getCusPaymentMethod({
-    org,
-    env: customer.env,
+    stripeCli,
     stripeId: customer.processor.id,
     errorIfNone: !invoiceOnly, // throw error if no payment method and invoiceOnly is false
   });
@@ -49,11 +49,19 @@ export const createStripeSub = async ({
   let paymentMethodData = {};
   if (paymentMethod) {
     paymentMethodData = {
-      default_payment_method: paymentMethod as string,
+      default_payment_method: paymentMethod.id,
     };
   }
 
-  const { items, prices, interval, subMeta, usageFeatures } = itemSet;
+  const billingCycleAnchorUnix = anchorToUnix
+    ? getAlignedIntervalUnix({
+        alignWithUnix: anchorToUnix,
+        interval: itemSet.interval,
+        now,
+      })
+    : undefined;
+
+  const { items, prices, usageFeatures } = itemSet;
   let subItems = items.filter(
     (i: any, index: number) =>
       prices[index].config!.interval !== BillingInterval.OneOff,
@@ -63,30 +71,16 @@ export const createStripeSub = async ({
       prices[index].config!.interval === BillingInterval.OneOff,
   );
 
-  if (shouldPreview) {
-    return await stripeCli.invoices.createPreview({
-      subscription_details: {
-        items: subItems as any,
-        trial_end: freeTrialToStripeTimestamp(freeTrial),
-        billing_cycle_anchor: billingCycleAnchorUnix,
-      },
-      invoice_items: invoiceItems as any,
-      customer: customer.processor.id,
-    });
-  }
-
   try {
     const subscription = await stripeCli.subscriptions.create({
       ...paymentMethodData,
       customer: customer.processor.id,
       items: subItems as any,
-      trial_end: freeTrialToStripeTimestamp(freeTrial),
+      trial_end: freeTrialToStripeTimestamp({ freeTrial }),
       payment_behavior: "error_if_incomplete",
       add_invoice_items: invoiceItems,
       collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
-      // metadata: subMeta || {},
       days_until_due: invoiceOnly ? 30 : undefined,
-
       billing_cycle_anchor: billingCycleAnchorUnix
         ? Math.floor(billingCycleAnchorUnix / 1000)
         : undefined,
@@ -108,14 +102,8 @@ export const createStripeSub = async ({
       },
     });
 
-    // if (invoiceOnly && subscription.latest_invoice) {
-    //   await stripeCli.invoices.finalizeInvoice(
-    //     subscription.latest_invoice as string
-    //   );
-    // }
     return subscription;
   } catch (error: any) {
-    // console.log("Error creating stripe subscription", error?.message || error);
     console.log("Warning: Failed to create stripe subscription");
     console.log("Error code:", error.code);
     console.log("Message:", error.message);

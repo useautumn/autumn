@@ -6,7 +6,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import { handleGetEntity } from "./handlers/handleGetEntity.js";
-import { handlePostEntityRequest } from "./handlers/handleCreateEntity.js";
+import { handlePostEntityRequest } from "../../entities/handlers/handleCreateEntity/handleCreateEntity.js";
 import { handleDeleteEntity } from "./handlers/handleDeleteEntity.js";
 
 export const entityRouter = Router({ mergeParams: true });

@@ -16,12 +16,12 @@ import { useNavigate } from "react-router";
 import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
 import { toast } from "sonner";
 import { OrgService } from "@/services/OrgService";
-import { Product } from "@autumn/shared";
+import { CusProductStatus, Entity, Product } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Search } from "lucide-react";
 
 function AddProduct() {
-  const { products, customer, env, entityId } = useCustomerContext();
+  const { products, customer, env, entityId, entities } = useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
   const [options, setOptions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -30,13 +30,22 @@ function AddProduct() {
   const filteredProducts = products.filter((product: Product) => {
     if (product.is_add_on && !searchQuery) return true;
 
+    const entity = entities.find((e: Entity) => e.id === entityId);
+
+    const customerHasProduct = customer.products?.some((cp: any) => {
+      const idMatch = cp.product_id === product.id;
+      const entityIdMatch = entity
+        ? cp.internal_entity_id === entity?.internal_id
+        : true;
+      const isAddOn = product.is_add_on;
+      const isActive = cp.status === CusProductStatus.Active;
+
+      return idMatch && entityIdMatch && isAddOn && isActive;
+    });
+
     return (
-      !customer.products?.some(
-        (cp: any) =>
-          cp.product_id === product.id &&
-          !product.is_add_on &&
-          cp.status === "active"
-      ) && product.name.toLowerCase().includes(searchQuery.toLowerCase())
+      !customerHasProduct &&
+      product.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 
@@ -63,7 +72,7 @@ function AddProduct() {
         entityId ? `?entity_id=${entityId}` : ""
       }`,
       navigate,
-      env
+      env,
     );
   };
 

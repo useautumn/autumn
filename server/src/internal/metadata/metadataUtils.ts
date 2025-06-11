@@ -3,7 +3,7 @@ import { AutumnMetadata } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils.js";
 import { addDays } from "date-fns";
 import { MetadataService } from "./MetadataService.js";
-import { AttachParams } from "../customers/products/AttachParams.js";
+import { AttachParams } from "../customers/cusProducts/AttachParams.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const createCheckoutMetadata = async ({
@@ -15,7 +15,8 @@ export const createCheckoutMetadata = async ({
 }) => {
   const metaId = generateId("meta");
 
-  let { req, checkoutSessionParams, ...rest } = attachParams;
+  let { req, checkoutSessionParams, stripeCli, paymentMethod, ...rest } =
+    attachParams;
 
   let attachClone = structuredClone(rest);
 

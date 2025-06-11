@@ -14,7 +14,10 @@ import { PlusIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useProductItemContext } from "./ProductItemContext";
-import { getShowParams } from "@/utils/product/productItemUtils";
+import {
+  getShowParams,
+  shouldShowProrationConfig,
+} from "@/utils/product/productItemUtils";
 import { ConfigWithFeature } from "./components/ConfigWithFeature";
 import FixedPriceConfig from "./components/ConfigFixedPrice";
 import { getFeature } from "@/utils/product/entitlementUtils";
@@ -35,7 +38,7 @@ export const ProductItemConfig = () => {
   const [show, setShow] = useState(getShowParams(item));
 
   const selectedFeature = features.find(
-    (f: Feature) => f.id == item.feature_id
+    (f: Feature) => f.id == item.feature_id,
   );
 
   const handleAddPrice = () => {
@@ -57,7 +60,7 @@ export const ProductItemConfig = () => {
   }, []);
 
   useEffect(() => {
-    let feature = features.find((f: any) => f.id == item.feature_id);
+    const feature = features.find((f: Feature) => f.id == item.feature_id);
     if (feature) {
       if (feature.type == FeatureType.Boolean) {
         setItem({
@@ -75,7 +78,15 @@ export const ProductItemConfig = () => {
         });
       }
     }
-  }, [item.feature_id]);
+    const showProration = shouldShowProrationConfig({ item, features });
+    if (!showProration) {
+      console.log("Setting item proration config to null");
+      setItem({
+        ...item,
+        config: null,
+      });
+    }
+  }, [item.feature_id, item.usage_model]);
 
   useEffect(() => {
     if (!show.perEntity) {
@@ -100,7 +111,7 @@ export const ProductItemConfig = () => {
         "flex flex-col gap-6 w-lg transition-all ease-in-out duration-300", //modal animations
         !show.feature && "w-xs",
         show.feature && show.price && "w-xl",
-        show.price && show.feature && item.tiers?.length > 1 && "w-2xl"
+        show.price && show.feature && item.tiers?.length > 1 && "w-2xl",
       )}
     >
       {!show.feature ? (
@@ -129,7 +140,7 @@ export const ProductItemConfig = () => {
                     getFeature(item.feature_id, features)?.type !=
                       FeatureType.Boolean
                     ? "w-full max-w-32 mr-0 p-2"
-                    : "w-0 max-w-0 p-0 border-none"
+                    : "w-0 max-w-0 p-0 border-none",
                 )}
               >
                 <PlusIcon size={14} className="mr-1" />
@@ -140,7 +151,7 @@ export const ProductItemConfig = () => {
                   "w-0 max-w-0 p-0 overflow-hidden transition-all duration-200 ease-in-out -ml-2",
                   !show.feature && !isUpdate
                     ? "w-full max-w-32 mr-0 p-2"
-                    : "w-0 max-w-0 p-0 border-none"
+                    : "w-0 max-w-0 p-0 border-none",
                 )}
                 variant="outline"
                 onClick={() => {

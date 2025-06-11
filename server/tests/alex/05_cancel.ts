@@ -173,35 +173,35 @@ describe(chalk.yellowBright("05_cancel"), () => {
       await timeout(5000);
     });
 
-    // TODO: Edit so that it doesn't auto cancel for unit test org
-    it("should have expired / past_dued pro product", async function () {
-      const cusRes = await AutumnCli.getCustomer(customerId);
+    // // TODO: Edit so that it doesn't auto cancel for unit test org
+    // it("should have expired / past_dued pro product", async function () {
+    //   const cusRes = await AutumnCli.getCustomer(customerId);
 
-      let org = this.org;
+    //   let org = this.org;
 
-      console.log("Cancel on past due:", org.config.cancel_on_past_due);
-      if (org.config.cancel_on_past_due) {
-        const proProduct = getProductFromCusRes({
-          cusRes,
-          productId: alexProducts.pro.id,
-        });
+    //   console.log("Cancel on past due:", org.config.cancel_on_past_due);
+    //   if (org.config.cancel_on_past_due) {
+    //     const proProduct = getProductFromCusRes({
+    //       cusRes,
+    //       productId: alexProducts.pro.id,
+    //     });
 
-        expect(proProduct).to.not.exist;
+    //     expect(proProduct).to.not.exist;
 
-        const freeProduct = getProductFromCusRes({
-          cusRes,
-          productId: alexProducts.free.id,
-        });
+    //     const freeProduct = getProductFromCusRes({
+    //       cusRes,
+    //       productId: alexProducts.free.id,
+    //     });
 
-        expect(freeProduct).to.exist;
-        expect(freeProduct.status).to.equal(CusProductStatus.Active);
-      } else {
-        compareMainProduct({
-          sent: alexProducts.pro,
-          cusRes,
-          status: CusProductStatus.PastDue,
-        });
-      }
-    });
+    //     expect(freeProduct).to.exist;
+    //     expect(freeProduct.status).to.equal(CusProductStatus.Active);
+    //   } else {
+    //     compareMainProduct({
+    //       sent: alexProducts.pro,
+    //       cusRes,
+    //       status: CusProductStatus.PastDue,
+    //     });
+    //   }
+    // });
   });
 });

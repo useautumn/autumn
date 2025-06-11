@@ -8,30 +8,37 @@ import {
   FreeTrial,
   CollectionMethod,
   FullCusProduct,
-  LoggerAction,
+  APIVersion,
+  Replaceable,
+  InsertReplaceable,
 } from "@autumn/shared";
-import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import {
+  formatUnixToDate,
+  generateId,
+  notNullish,
+  nullish,
+} from "@/utils/genUtils.js";
 
 import { Customer } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 import { CustomerPrice } from "@autumn/shared";
-import { CusProductService } from "../products/CusProductService.js";
-import { InsertCusProductParams } from "../products/AttachParams.js";
+import { CusProductService } from "../cusProducts/CusProductService.js";
+import { InsertCusProductParams } from "../cusProducts/AttachParams.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getEntRelatedPrice } from "@/internal/products/entitlements/entitlementUtils.js";
 
-import { getExistingCusProducts } from "./handleExistingProduct.js";
+import { getExistingCusProducts } from "../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import { searchCusProducts } from "@/internal/customers/products/cusProductUtils.js";
+import { searchCusProducts } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
-import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
-import { addExistingUsagesToCusEnts } from "../entitlements/cusEntUtils/getExistingUsage.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusEntService } from "../entitlements/CusEntitlementService.js";
-import { CusPriceService } from "../prices/CusPriceService.js";
+import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
+import { CusPriceService } from "../cusProducts/cusPrices/CusPriceService.js";
+import { addExistingUsagesToCusEnts } from "../cusProducts/cusEnts/cusEntUtils/getExistingUsage.js";
+import { RepService } from "../cusProducts/cusEnts/RepService.js";
 
 export const initCusPrice = ({
   price,
@@ -57,13 +64,13 @@ export const initCusPrice = ({
 export const initCusProduct = ({
   customer,
   product,
-  subscriptionId,
+  // subscriptionId,
+  // subscriptionScheduleId,
+  // lastInvoiceId,
   cusProdId,
   startsAt,
-  subscriptionScheduleId,
   optionsList,
   freeTrial,
-  lastInvoiceId,
   trialEndsAt,
   subscriptionStatus,
   canceledAt,
@@ -74,16 +81,17 @@ export const initCusProduct = ({
   isCustom,
   entityId,
   internalEntityId,
+  apiVersion,
 }: {
   customer: Customer;
   product: FullProduct;
-  subscriptionId: string | undefined | null;
+  // subscriptionId: string | undefined | null;
+  // subscriptionScheduleId?: string | null;
+  // lastInvoiceId?: string | null;
   cusProdId: string;
   startsAt?: number;
-  subscriptionScheduleId?: string | null;
   optionsList: FeatureOptions[];
   freeTrial: FreeTrial | null;
-  lastInvoiceId?: string | null;
   trialEndsAt?: number | null;
   subscriptionStatus?: CusProductStatus;
   canceledAt?: number | null;
@@ -94,12 +102,13 @@ export const initCusProduct = ({
   isCustom?: boolean;
   entityId?: string;
   internalEntityId?: string;
+  apiVersion?: APIVersion;
 }) => {
   let isFuture = startsAt && startsAt > Date.now();
 
   let trialEnds = trialEndsAt;
   if (!trialEndsAt && freeTrial) {
-    trialEnds = freeTrialToStripeTimestamp(freeTrial)! * 1000;
+    trialEnds = freeTrialToStripeTimestamp({ freeTrial })! * 1000;
   }
 
   return {
@@ -118,9 +127,9 @@ export const initCusProduct = ({
 
     processor: {
       type: ProcessorType.Stripe,
-      subscription_id: subscriptionId,
-      subscription_schedule_id: subscriptionScheduleId,
-      last_invoice_id: lastInvoiceId,
+      // subscription_id: subscriptionId,
+      // subscription_schedule_id: subscriptionScheduleId,
+      // last_invoice_id: lastInvoiceId,
     },
 
     starts_at: startsAt || Date.now(),
@@ -135,6 +144,7 @@ export const initCusProduct = ({
     quantity: 1,
     internal_entity_id: internalEntityId,
     entity_id: entityId,
+    api_version: apiVersion,
   };
 };
 
@@ -143,11 +153,13 @@ export const insertFullCusProduct = async ({
   cusProd,
   cusEnts,
   cusPrices,
+  replaceables,
 }: {
   db: DrizzleCli;
   cusProd: CusProduct;
   cusEnts: CustomerEntitlement[];
   cusPrices: CustomerPrice[];
+  replaceables: InsertReplaceable[];
 }) => {
   await CusProductService.insert({
     db,
@@ -162,6 +174,11 @@ export const insertFullCusProduct = async ({
   await CusPriceService.insert({
     db,
     data: cusPrices,
+  });
+
+  await RepService.insert({
+    db,
+    data: replaceables,
   });
 };
 
@@ -196,7 +213,7 @@ export const expireOrDeleteCusProduct = async ({
       });
     }
   } else {
-    let { curMainProduct } = await getExistingCusProducts({
+    let { curMainProduct } = getExistingCusProducts({
       product,
       cusProducts: cusProducts as FullCusProduct[],
       internalEntityId,
@@ -240,7 +257,7 @@ export const getExistingCusProduct = async ({
     });
   }
 
-  const { curMainProduct } = await getExistingCusProducts({
+  const { curMainProduct } = getExistingCusProducts({
     product,
     cusProducts: cusProducts as FullCusProduct[],
     internalEntityId,
@@ -253,34 +270,34 @@ export const createFullCusProduct = async ({
   db,
   attachParams,
   startsAt,
-  subscriptionId,
+  // subscriptionId,
   nextResetAt,
   disableFreeTrial = false,
   lastInvoiceId = null,
-  trialEndsAt = null,
+  trialEndsAt,
   subscriptionStatus,
   canceledAt = null,
   createdAt = null,
   subscriptionIds = [],
   subscriptionScheduleIds = [],
-  keepResetIntervals = false,
+  // keepResetIntervals = false,
   anchorToUnix,
   carryExistingUsages = false,
   carryOverTrial = false,
   isDowngrade = false,
   scenario = "default",
   sendWebhook = true,
+  logger,
 }: {
   db: DrizzleCli;
   attachParams: InsertCusProductParams;
-
   startsAt?: number;
-  subscriptionId?: string;
+  // subscriptionId?: string;
   nextResetAt?: number;
   billLaterOnly?: boolean;
   disableFreeTrial?: boolean;
   lastInvoiceId?: string | null;
-  trialEndsAt?: number | null;
+  trialEndsAt?: number;
   subscriptionStatus?: CusProductStatus;
   canceledAt?: number | null;
   createdAt?: number | null;
@@ -293,35 +310,32 @@ export const createFullCusProduct = async ({
   isDowngrade?: boolean;
   scenario?: string;
   sendWebhook?: boolean;
+  logger: any;
 }) => {
   disableFreeTrial = attachParams.disableFreeTrial || disableFreeTrial;
 
-  const logger = createLogtailWithContext({
-    action: LoggerAction.CreateFullCusProduct,
-    org_slug: attachParams.org.slug,
-    org_id: attachParams.org.id,
-    attachParams,
-  });
-
-  let { customer, product, prices, entitlements, optionsList, freeTrial, org } =
+  let { customer, product, prices, entitlements, optionsList, org, freeTrial } =
     attachParams;
 
-  // 1. If one off
-
   // Try to get current cus product or set to null...
-  let curCusProduct;
-  try {
-    curCusProduct = await getExistingCusProduct({
-      db,
-      cusProducts: attachParams.cusProducts,
-      product,
-      internalCustomerId: customer.internal_id,
-      internalEntityId: attachParams.internalEntityId,
-    });
-  } catch (error) {}
+  let curCusProduct = await getExistingCusProduct({
+    db,
+    cusProducts: attachParams.cusProducts,
+    product,
+    internalCustomerId: customer.internal_id,
+    internalEntityId: attachParams.internalEntityId,
+  });
+
+  freeTrial = disableFreeTrial ? null : freeTrial;
+
+  if (carryOverTrial && curCusProduct?.free_trial) {
+    freeTrial = curCusProduct.free_trial;
+    trialEndsAt = curCusProduct.trial_ends_at || undefined;
+  }
+
+  let attachReplaceables = attachParams.replaceables || [];
 
   const existingCusProduct = searchCusProducts({
-    // productId: product.id,
     internalProductId: product.internal_id,
     cusProducts: attachParams.cusProducts!,
     status: CusProductStatus.Active,
@@ -341,13 +355,18 @@ export const createFullCusProduct = async ({
   }
 
   const cusProdId = generateId("cus_prod");
+  logger.info(
+    `Inserting cus product ${product.id} for ${customer.name}, cus product ID: ${cusProdId}`,
+  );
 
   // 1. create customer entitlements
   const cusEnts: CustomerEntitlement[] = [];
+  const newReplaceables: InsertReplaceable[] = [];
 
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
     const relatedPrice = getEntRelatedPrice(entitlement, prices);
+    const now = attachParams.now || Date.now();
 
     const cusEnt: any = initCusEntitlement({
       entitlement,
@@ -355,21 +374,32 @@ export const createFullCusProduct = async ({
       cusProductId: cusProdId,
       options: options || undefined,
       nextResetAt,
-      freeTrial: disableFreeTrial ? null : freeTrial,
+      freeTrial,
       relatedPrice,
       // existingCusEnt,
-      keepResetIntervals,
+      // keepResetIntervals,
+      trialEndsAt,
       anchorToUnix,
       entities: attachParams.entities || [],
       carryExistingUsages,
       curCusProduct: curCusProduct as FullCusProduct,
+      replaceables: attachReplaceables,
+      now,
     });
 
     cusEnts.push(cusEnt);
+
+    let newReplaceables_ = attachReplaceables
+      .filter((r) => r.ent.id === entitlement.id)
+      .map((r) => ({
+        ...r,
+        cus_ent_id: cusEnt.id,
+      }));
+
+    newReplaceables.push(...newReplaceables_);
   }
 
-  // Perform deductions on new cus ents...
-
+  // 3. Deduct existing usages
   let deductedCusEnts = addExistingUsagesToCusEnts({
     cusEnts: cusEnts,
     entitlements: entitlements,
@@ -380,7 +410,7 @@ export const createFullCusProduct = async ({
     features: attachParams.features,
   });
 
-  // 2. create customer prices
+  // 4. create customer prices
   const cusPrices: CustomerPrice[] = [];
 
   for (const price of prices) {
@@ -393,21 +423,26 @@ export const createFullCusProduct = async ({
     cusPrices.push(cusPrice);
   }
 
-  // 3. create customer product
-  if (carryOverTrial && curCusProduct?.free_trial_id) {
-    freeTrial = curCusProduct.free_trial || null;
-    trialEndsAt = curCusProduct.trial_ends_at || null;
-  }
+  // 5. create customer product
 
+  // let freeTrial = disableFreeTrial ? null : freeTrial;
+  // if (carryOverTrial && curCusProduct?.free_trial_id) {
+  //   logger.info(`Free trial ID: ${curCusProduct.free_trial_id}`);
+  //   logger.info(
+  //     `Trial ends at: ${formatUnixToDate(curCusProduct.trial_ends_at)}`,
+  //   );
+  //   freeTrial = curCusProduct.free_trial || null;
+  //   trialEndsAt = curCusProduct.trial_ends_at || null;
+  // }
+
+  // let entityId = customer.entity?.id;
   const cusProd = initCusProduct({
     cusProdId,
     customer,
     product,
-    subscriptionId,
     startsAt,
     optionsList,
     freeTrial: disableFreeTrial ? null : freeTrial,
-    lastInvoiceId,
     trialEndsAt,
     subscriptionStatus,
     canceledAt,
@@ -418,8 +453,9 @@ export const createFullCusProduct = async ({
     subscriptionIds,
     subscriptionScheduleIds,
     isCustom: attachParams.isCustom || false,
-    entityId: attachParams.entityId,
     internalEntityId: attachParams.internalEntityId,
+    entityId: attachParams.entityId,
+    apiVersion: attachParams.apiVersion,
   });
 
   // Expire previous product if not one off
@@ -438,6 +474,7 @@ export const createFullCusProduct = async ({
     cusProd,
     cusEnts: deductedCusEnts,
     cusPrices,
+    replaceables: newReplaceables,
   });
 
   let fullCusProduct = {
@@ -446,6 +483,12 @@ export const createFullCusProduct = async ({
     customer_entitlements: cusEnts.map((ce) => ({
       ...ce,
       entitlement: entitlements.find((e) => e.id === ce.entitlement_id)!,
+      replaceables: newReplaceables
+        .filter((r) => r.cus_ent_id === ce.id)
+        .map((r) => ({
+          ...r,
+          delete_next_cycle: r.delete_next_cycle || false,
+        })),
     })),
     customer_prices: cusPrices.map((cp) => ({
       ...cp,

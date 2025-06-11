@@ -14,6 +14,7 @@ import { FixedPriceConfig } from "./priceConfig/fixedPriceConfig.js";
 import { UsagePriceConfig } from "./priceConfig/usagePriceConfig.js";
 import { sql } from "drizzle-orm";
 import { collatePgColumn } from "../../../db/utils.js";
+import { ProrationConfig } from "./priceModels.js";
 
 export const prices = pgTable(
   "prices",
@@ -26,6 +27,9 @@ export const prices = pgTable(
     billing_type: text("billing_type"),
     is_custom: boolean("is_custom").default(false),
     entitlement_id: text("entitlement_id").default(sql`null`),
+    proration_config: jsonb("proration_config")
+      .$type<ProrationConfig>()
+      .default(sql`null`),
   },
   (table) => [
     foreignKey({

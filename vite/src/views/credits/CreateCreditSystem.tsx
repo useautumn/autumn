@@ -12,7 +12,12 @@ import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { toast } from "sonner";
 
-import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
+import {
+  CreateFeature,
+  Feature,
+  FeatureType,
+  FeatureUsageType,
+} from "@autumn/shared";
 import { getBackendErr } from "@/utils/genUtils";
 import CreditSystemConfig from "./CreditSystemConfig";
 import { useFeaturesContext } from "../features/FeaturesContext";
@@ -26,7 +31,9 @@ const defaultCreditSystem = {
   },
 };
 
-export const validateCreditSystem = (creditSystem: Feature): string | null => {
+export const validateCreditSystem = (
+  creditSystem: CreateFeature,
+): string | null => {
   if (!creditSystem.id || !creditSystem.name) {
     return "Please fill in all fields";
   }
@@ -56,7 +63,7 @@ function CreateCreditSystem() {
   const [open, setOpen] = useState(false);
 
   const [creditSystem, setCreditSystem] =
-    useState<Feature>(defaultCreditSystem);
+    useState<CreateFeature>(defaultCreditSystem);
 
   useEffect(() => {
     if (open) {

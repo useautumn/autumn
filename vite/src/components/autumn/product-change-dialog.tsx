@@ -41,7 +41,7 @@ export default function ProductChangeDialog(params?: ProductChangeDialogProps) {
     let sum = 0;
     optionsInput.forEach((option) => {
       if (option.price && option.quantity) {
-        sum += option.price * option.quantity;
+        sum += option.price * (option.quantity / option.billing_units);
       }
     });
     setPrepaidTotals(sum);

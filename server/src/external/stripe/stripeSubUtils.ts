@@ -5,10 +5,11 @@ import {
   Feature,
   FullCusProduct,
   Organization,
+  ProrationBehavior,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { differenceInSeconds } from "date-fns";
-import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
+// import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { stripeToAutumnInterval } from "./utils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -246,6 +247,21 @@ export const subIsPrematurelyCanceled = (sub: Stripe.Subscription) => {
     differenceInSeconds(sub.current_period_end * 1000, sub.cancel_at! * 1000) >
     20
   );
+};
+
+export const autumnToStripeProrationBehavior = ({
+  prorationBehavior,
+}: {
+  prorationBehavior: ProrationBehavior;
+}) => {
+  switch (prorationBehavior) {
+    case ProrationBehavior.Immediately:
+      return "always_invoice";
+    case ProrationBehavior.NextBilling:
+      return "create_prorations";
+    case ProrationBehavior.None:
+      return "none";
+  }
 };
 
 export const getStripeProrationBehavior = ({

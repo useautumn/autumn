@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { Infinite } from "../../productModels/productEnums.js";
+import { OnIncrease } from "./productItemEnums.js";
+import { OnDecrease } from "./productItemEnums.js";
 
 export const TierInfinite = "inf";
 
@@ -41,6 +43,17 @@ export enum ProductItemFeatureType {
   Static = "static",
 }
 
+const ProductItemConfigSchema = z.object({
+  on_increase: z
+    .nativeEnum(OnIncrease)
+    .optional()
+    .default(OnIncrease.BillImmediately),
+  on_decrease: z
+    .nativeEnum(OnDecrease)
+    .optional()
+    .default(OnDecrease.ProrateImmediately),
+});
+
 export const ProductItemSchema = z.object({
   // Feature stuff
   feature_id: z.string().nullish(),
@@ -49,7 +62,7 @@ export const ProductItemSchema = z.object({
   included_usage: z.union([z.number(), z.literal(Infinite)]).nullish(),
 
   interval: z.nativeEnum(ProductItemInterval).nullish(),
-  reset_interval: z.nativeEnum(ProductItemInterval).nullish(),
+  // reset_interval: z.nativeEnum(ProductItemInterval).nullish(),
 
   // Price config
   usage_model: z.nativeEnum(UsageModel).nullish(),
@@ -63,6 +76,8 @@ export const ProductItemSchema = z.object({
   // carry_over_usage: z.boolean().nullish(),
   reset_usage_when_enabled: z.boolean().nullish(),
 
+  config: ProductItemConfigSchema.nullish(),
+
   // Stored in backend
   created_at: z.number().nullish(),
   entitlement_id: z.string().nullish(),
@@ -71,4 +86,5 @@ export const ProductItemSchema = z.object({
 });
 
 export type ProductItem = z.infer<typeof ProductItemSchema>;
+export type ProductItemConfig = z.infer<typeof ProductItemConfigSchema>;
 export type PriceTier = z.infer<typeof PriceTierSchema>;

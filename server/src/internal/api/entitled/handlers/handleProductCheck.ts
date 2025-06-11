@@ -1,10 +1,10 @@
 import { CusProductStatus, FullCusProduct, SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { getAttachPreview } from "./getAttachPreview.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 import { getProductResponse } from "@/internal/products/productV2Utils.js";
+import { getProductCheckPreview } from "./getProductCheckPreview.js";
 
 export const handleProductCheck = async ({
   req,
@@ -29,21 +29,17 @@ export const handleProductCheck = async ({
   let [customer, product] = await Promise.all([
     getOrCreateCustomer({
       req,
-      db,
-      org,
-      env,
       customerId: customer_id,
       customerData: customer_data,
-      logger,
       inStatuses: [
         CusProductStatus.Active,
         CusProductStatus.PastDue,
         CusProductStatus.Scheduled,
       ],
-      features,
 
       entityId: entity_id,
       entityData: entity_data,
+      withEntities: true,
     }),
     ProductService.getFull({
       db,
@@ -57,7 +53,7 @@ export const handleProductCheck = async ({
   if (customer.entity) {
     cusProducts = cusProducts.filter(
       (cusProduct: FullCusProduct) =>
-        cusProduct.internal_entity_id == customer.entity.internal_id,
+        cusProduct.internal_entity_id == customer.entity!.internal_id,
     );
   }
 
@@ -66,18 +62,27 @@ export const handleProductCheck = async ({
   );
 
   let preview = with_preview
-    ? await getAttachPreview({
-        db,
+    ? await getProductCheckPreview({
+        req,
         customer,
-        org,
-        env,
-        product: product!,
-        cusProducts,
-        features,
+        product,
         logger,
-        shouldFormat: with_preview == "formatted",
       })
     : undefined;
+
+  // let preview = with_preview
+  //   ? await getAttachPreview({
+  //       db,
+  //       customer,
+  //       org,
+  //       env,
+  //       product: product!,
+  //       cusProducts,
+  //       features,
+  //       logger,
+  //       shouldFormat: with_preview == "formatted",
+  //     })
+  //   : undefined;
 
   if (preview) {
     preview = {

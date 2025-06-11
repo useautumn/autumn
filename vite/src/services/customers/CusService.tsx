@@ -10,13 +10,8 @@ export class CusService {
     await axios.delete(`/v1/customers/${customer_id}`);
   }
 
-  static async addProduct(
-    axios: AxiosInstance,
-    customer_id: string,
-    data: any
-  ) {
+  static async attach(axios: AxiosInstance, data: any) {
     return await axios.post(`/v1/attach`, {
-      customer_id,
       ...data,
     });
   }
@@ -42,22 +37,22 @@ export class CusService {
   static async updateCusEntitlement(
     axios: AxiosInstance,
     customer_entitlement_id: string,
-    data: any
+    data: any,
   ) {
     return await axios.post(
       `/v1/customers/customer_entitlements/${customer_entitlement_id}`,
-      data
+      data,
     );
   }
 
   static async updateCusProductStatus(
     axios: AxiosInstance,
     customer_product_id: string,
-    data: any
+    data: any,
   ) {
     return await axios.post(
       `/v1/customers/customer_products/${customer_product_id}`,
-      data
+      data,
     );
   }
 
@@ -71,7 +66,7 @@ export class CusService {
     coupon_id: string;
   }) {
     return await axios.post(
-      `/v1/customers/${customer_id}/coupons/${coupon_id}`
+      `/v1/customers/${customer_id}/coupons/${coupon_id}`,
     );
   }
 }

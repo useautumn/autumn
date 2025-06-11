@@ -82,10 +82,12 @@ export class OrgService {
     db,
     orgId,
     env,
+    allowNotFound = false,
   }: {
     db: DrizzleCli;
     orgId: string;
     env: AppEnv;
+    allowNotFound?: boolean;
   }) {
     const result = (await db.query.organizations.findFirst({
       where: eq(organizations.id, orgId),
@@ -99,6 +101,10 @@ export class OrgService {
     };
 
     if (!result) {
+      if (allowNotFound) {
+        return null;
+      }
+
       throw new RecaseError({
         message: `Organization ${orgId} not found`,
         code: ErrCode.OrgNotFound,
@@ -108,7 +114,16 @@ export class OrgService {
 
     let org = structuredClone(result);
     delete (org as any).features;
-    return { org, features: result.features || [] };
+    return {
+      org: {
+        ...org,
+        api_version: getApiVersion({
+          createdAt: org.created_at!,
+        }),
+        config: OrgConfigSchema.parse(org.config || {}),
+      },
+      features: result.features || [],
+    };
   }
 
   static async getFromPkeyWithFeatures({

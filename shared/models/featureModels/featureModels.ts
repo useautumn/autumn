@@ -3,10 +3,10 @@ import { AppEnv } from "../genModels/genEnums.js";
 import { FeatureType } from "./featureEnums.js";
 
 export const FeatureSchema = z.object({
-  internal_id: z.string().optional(),
-  org_id: z.string().optional(),
-  created_at: z.number().optional(),
-  env: z.nativeEnum(AppEnv).optional(),
+  internal_id: z.string(),
+  org_id: z.string(),
+  created_at: z.number(),
+  env: z.nativeEnum(AppEnv),
 
   id: z.string().nonempty(),
   name: z.string().nonempty(),
@@ -20,11 +20,12 @@ export const FeatureSchema = z.object({
     .nullish(),
 });
 
-export const CreateFeatureSchema = FeatureSchema.omit({
-  internal_id: true,
-  org_id: true,
-  created_at: true,
-  env: true,
+export const CreateFeatureSchema = FeatureSchema.pick({
+  id: true,
+  name: true,
+  type: true,
+  config: true,
+  display: true,
 });
 
 export const FeatureResponseSchema = z.object({
@@ -36,3 +37,4 @@ export const FeatureResponseSchema = z.object({
 });
 
 export type Feature = z.infer<typeof FeatureSchema>;
+export type CreateFeature = z.infer<typeof CreateFeatureSchema>;

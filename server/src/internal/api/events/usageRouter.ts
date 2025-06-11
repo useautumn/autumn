@@ -6,6 +6,7 @@ import {
   Event,
   EventInsert,
   FeatureType,
+  FeatureUsageType,
 } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, nullish } from "@/utils/genUtils.js";
@@ -22,6 +23,9 @@ import { creditSystemContainsFeature } from "@/internal/features/creditSystemUti
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 import { getEventTimestamp } from "./eventUtils.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
+import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
+import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 export const eventsRouter = Router();
 export const usageRouter = Router();
 
@@ -32,29 +36,24 @@ const getCusFeatureAndOrg = async ({
   entityId,
   customerData,
 }: {
-  req: any;
+  req: ExtendedRequest;
   customerId: string;
   featureId: string;
   entityId: string;
   customerData: any;
 }) => {
   // 1. Get customer
-  const { db } = req;
-  let { org, features } = await getOrgAndFeatures({ req });
+  const { org, features } = req;
+
   let [customer] = await Promise.all([
     getOrCreateCustomer({
       req,
-      db,
-      org,
-      env: req.env,
       customerId,
       customerData,
-      logger: req.logtail,
       inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 
       entityId,
       entityData: req.body.entity_data,
-      features,
     }),
   ]);
 
@@ -173,8 +172,6 @@ export const handleUsageEvent = async ({
 
   const features = [feature, ...creditSystems];
 
-  const queue = await QueueManager.getQueue({ useBackup: false });
-
   if (nullish(value) || isNaN(parseFloat(value))) {
     value = 1;
   } else {
@@ -193,10 +190,21 @@ export const handleUsageEvent = async ({
     entityId: entity_id,
   };
 
-  await addTaskToQueue({
-    jobName: JobName.UpdateUsage,
-    payload,
-  });
+  const featureUsageType = feature.config?.usage_type;
+  // console.log(`Feature Usage Type: ${featureUsageType}`);
+  if (featureUsageType === FeatureUsageType.Continuous) {
+    await runUpdateUsageTask({
+      payload,
+      logger: console,
+      db: req.db,
+      throwError: true,
+    });
+  } else {
+    await addTaskToQueue({
+      jobName: JobName.UpdateUsage,
+      payload,
+    });
+  }
 
   return { event: newEvent, affectedFeatures: features, org };
 };

@@ -5,10 +5,7 @@ import { Router } from "express";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
-import {
-  checkStripeProductExists,
-  isProductUpgrade,
-} from "@/internal/products/productUtils.js";
+import { checkStripeProductExists } from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 
@@ -47,12 +44,16 @@ productApiRouter.post("/all/init_stripe", async (req: any, res) => {
       OrgService.getFromReq(req),
     ]);
 
+    console.log(
+      "fullProducts",
+      fullProducts.map((p) => p.id),
+    );
+
     const stripeCli = createStripeCli({
       org,
       env,
     });
 
-    const batchProductInit: Promise<any>[] = [];
     const productBatchSize = 5;
     for (let i = 0; i < fullProducts.length; i += productBatchSize) {
       const batch = fullProducts.slice(i, i + productBatchSize);

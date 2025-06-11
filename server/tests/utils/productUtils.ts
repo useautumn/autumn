@@ -1,15 +1,46 @@
-import { Autumn } from "@/external/autumn/autumnCli.js";
-import { Product, ProductV2 } from "@autumn/shared";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { AppEnv, CreateReward, Product, ProductV2 } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
 
 export const createProduct = async ({
+  db,
+  orgId,
+  env,
   autumn,
   product,
+  prefix,
 }: {
-  autumn: Autumn;
+  db: DrizzleCli;
+  orgId: string;
+  env: AppEnv;
+  autumn: AutumnInt;
   product: any;
+  prefix?: string;
 }) => {
   try {
-    await autumn.products.delete(product.id);
+    const products = await ProductService.listFull({
+      db,
+      orgId,
+      env,
+      returnAll: true,
+      inIds: [product.id],
+    });
+
+    const batchDelete = [];
+    for (const prod of products) {
+      batchDelete.push(
+        ProductService.deleteByInternalId({
+          db,
+          internalId: prod.internal_id,
+          orgId,
+          env,
+        }),
+      );
+    }
+
+    await Promise.all(batchDelete);
   } catch (error) {}
 
   let clone = structuredClone(product);
@@ -17,9 +48,82 @@ export const createProduct = async ({
     clone.items = Object.values(clone.items);
   }
 
+  if (prefix) {
+    clone.id = `${prefix}_${clone.id}`;
+    clone.name = `${prefix} ${clone.name}`;
+  }
+
   await autumn.products.create(clone);
+};
 
-  // await autumn.products.update(product.id, clone);
+export const createProducts = async ({
+  db,
+  orgId,
+  env,
+  autumn,
+  products,
+  prefix,
+  customerId,
+}: {
+  db: DrizzleCli;
+  orgId: string;
+  env: AppEnv;
+  autumn: AutumnInt;
+  products: any[];
+  prefix?: string;
+  customerId?: string;
+}) => {
+  if (customerId) {
+    try {
+      await autumn.customers.delete(customerId);
+    } catch (error) {}
+  }
 
-  // await autumn.products.update(product.id, clone);
+  const batchCreate = [];
+  for (const product of products) {
+    batchCreate.push(
+      createProduct({ db, orgId, env, autumn, product, prefix }),
+    );
+  }
+
+  await Promise.all(batchCreate);
+};
+
+export const createReward = async ({
+  db,
+  orgId,
+  env,
+  autumn,
+  reward,
+  productId,
+  onlyUsage = false,
+}: {
+  db: DrizzleCli;
+  orgId: string;
+  env: AppEnv;
+  autumn: AutumnInt;
+  reward: CreateReward;
+  productId: string;
+  onlyUsage?: boolean;
+}) => {
+  let fullProduct = await ProductService.getFull({
+    db,
+    orgId,
+    env,
+    idOrInternalId: productId!,
+  });
+
+  let usagePrices = fullProduct.prices.filter((price) =>
+    isUsagePrice({ price }),
+  );
+
+  if (onlyUsage) {
+    reward.discount_config!.price_ids = usagePrices.map((price) => price.id);
+  }
+
+  try {
+    await autumn.rewards.delete(reward.id);
+  } catch (error) {}
+
+  await autumn.rewards.create(reward);
 };

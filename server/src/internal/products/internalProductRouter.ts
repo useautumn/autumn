@@ -8,13 +8,14 @@ import { OrgService } from "../orgs/OrgService.js";
 import { RewardService } from "../rewards/RewardService.js";
 import { getProductVersionCounts } from "./productUtils.js";
 import { getLatestProducts } from "./productUtils.js";
-import { CusProdReadService } from "../customers/products/CusProdReadService.js";
+import { CusProdReadService } from "../customers/cusProducts/CusProdReadService.js";
 import { MigrationService } from "../migrations/MigrationService.js";
 import { RewardProgramService } from "../rewards/RewardProgramService.js";
 import { mapToProductV2 } from "./productV2Utils.js";
-import { isFeaturePriceItem } from "./product-items/productItemUtils.js";
+import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType.js";
 
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
+import { createOrgResponse } from "../orgs/orgUtils.js";
 
 export const productRouter = Router({ mergeParams: true });
 
@@ -42,15 +43,7 @@ productRouter.get("/data", async (req: any, res) => {
       }),
       versionCounts: getProductVersionCounts(products),
       features,
-      org: {
-        id: org.id,
-        name: org.name,
-        // test_pkey: org.test_pkey,
-        // live_pkey: org.live_pkey,
-        default_currency: org.default_currency,
-        stripe_connected: org.stripe_connected,
-      },
-      // coupons,
+      org: createOrgResponse(org),
       rewards: coupons,
       rewardPrograms,
     });

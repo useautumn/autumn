@@ -13,6 +13,8 @@ import {
   ErrCode,
   FullProduct,
   TierInfinite,
+  OnIncrease,
+  OnDecrease,
 } from "@autumn/shared";
 
 import RecaseError from "@/utils/errorUtils.js";
@@ -58,6 +60,10 @@ export const constructPrice = ({
     is_custom: isCustom,
     config: (usageConfig || fixedConfig)!,
     entitlement_id: entitlementId,
+    proration_config: {
+      on_increase: OnIncrease.ProrateImmediately,
+      on_decrease: OnDecrease.ProrateImmediately,
+    },
   };
 
   return newPrice;
@@ -243,29 +249,6 @@ export const pricesAreSame = (price1: Price, price2: Price) => {
   return true;
 };
 
-export function compareBillingIntervals(
-  a: BillingInterval | null,
-  b: BillingInterval | null,
-): number {
-  if (a == null) {
-    return 1;
-  }
-
-  if (b == null) {
-    return -1;
-  }
-
-  const priority = {
-    [BillingInterval.OneOff]: 0,
-    [BillingInterval.Month]: 1,
-    [BillingInterval.Quarter]: 2,
-    [BillingInterval.SemiAnnual]: 3,
-    [BillingInterval.Year]: 4,
-  };
-
-  return priority[a] - priority[b];
-}
-
 export const getUsageTier = (price: Price, quantity: number) => {
   let usageConfig = price.config as UsagePriceConfig;
   for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
@@ -309,26 +292,22 @@ export const getPriceAmount = ({
   return 0;
 };
 
-export const getPriceForOverage = (price: Price, overage: number) => {
+export const getPriceForOverage = (price: Price, overage?: number) => {
   let usageConfig = price.config as UsagePriceConfig;
   let billingType = getBillingType(usageConfig);
 
   if (
-    billingType !== BillingType.UsageInArrear &&
-    billingType !== BillingType.InArrearProrated &&
-    billingType !== BillingType.UsageInAdvance
+    billingType == BillingType.FixedCycle ||
+    billingType == BillingType.OneOff
   ) {
-    throw new RecaseError({
-      message: `getPriceForOverage not implemented for this billing type: ${billingType}`,
-      code: ErrCode.InvalidRequest,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
+    const config = price.config as FixedPriceConfig;
+    return config.amount;
   }
 
   let amount = 0;
   let billingUnits = usageConfig.billing_units || 1;
   let remainingUsage = new Decimal(
-    Math.ceil(new Decimal(overage).div(billingUnits).toNumber()),
+    Math.ceil(new Decimal(overage!).div(billingUnits).toNumber()),
   )
     .mul(billingUnits)
     .toNumber();

@@ -1,32 +1,29 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
-
-import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
-
-import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
-import { AttachParams, AttachResultSchema } from "../products/AttachParams.js";
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-
-import { getStripeSubItems } from "@/external/stripe/stripePriceUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError from "@/utils/errorUtils.js";
+import {
+  AttachParams,
+  AttachResultSchema,
+} from "../cusProducts/AttachParams.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { pricesContainRecurring } from "@/internal/products/prices/priceUtils.js";
+import { createCheckoutMetadata } from "@/internal/metadata/metadataUtils.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { ErrCode } from "@/errors/errCodes.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const handleCreateCheckout = async ({
-  db,
   req,
   res,
   attachParams,
 }: {
-  db: DrizzleCli;
   req: any;
   res: any;
   attachParams: AttachParams;
 }) => {
-  const logger = req.logtail;
+  const { db, logtail: logger } = req;
 
   const { customer, org, freeTrial, successUrl } = attachParams;
 
@@ -49,6 +46,7 @@ export const handleCreateCheckout = async ({
 
   // Handle first item set
   const { items } = itemSets[0];
+
   attachParams.itemSets = itemSets;
 
   const isRecurring = pricesContainRecurring(attachParams.prices);
@@ -73,7 +71,7 @@ export const handleCreateCheckout = async ({
     ? {
         trial_end:
           freeTrial && !attachParams.disableFreeTrial
-            ? freeTrialToStripeTimestamp(freeTrial)
+            ? freeTrialToStripeTimestamp({ freeTrial })
             : undefined,
         // metadata: subMeta,
         billing_cycle_anchor: billingCycleAnchorUnixSeconds,

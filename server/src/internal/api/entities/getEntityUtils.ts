@@ -66,7 +66,9 @@ export const getEntityResponse = async ({
 
   const entityResponses: EntityResponse[] = [];
   for (const entityId of entityIds) {
-    let entity = customer.entities.find((e: Entity) => e.id == entityId);
+    let entity = customer.entities.find(
+      (e: Entity) => e.id == entityId || e.internal_id == entityId,
+    );
     if (!entity) {
       throw new RecaseError({
         message: `Entity ${entityId} not found for customer ${customerId}`,

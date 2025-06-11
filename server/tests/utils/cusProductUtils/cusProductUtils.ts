@@ -1,8 +1,6 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { Autumn } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { AppEnv, CusProductStatus, FullCusProduct } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 
 export const getMainCusProduct = async ({
   db,

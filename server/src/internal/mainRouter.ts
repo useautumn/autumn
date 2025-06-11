@@ -9,7 +9,6 @@ import { featureRouter } from "./features/featureRouter.js";
 import { productRouter } from "./products/internalProductRouter.js";
 import { devRouter } from "./dev/devRouter.js";
 import { cusRouter } from "./customers/internalCusRouter.js";
-import { testRouter } from "./test/testRouter.js";
 import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
 import { handlePostOrg } from "./orgs/handlers/handlePostOrg.js";
 import { Autumn } from "autumn-js";
@@ -31,15 +30,10 @@ mainRouter.use("/features", withOrgAuth, featureRouter);
 mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
-mainRouter.use("/test", testRouter);
 
 mainRouter.use(
   "/api/autumn",
   withOrgAuth,
-  (req: any, res: any, next: any) => {
-    // console.log("Autumn middleware:", req.originalUrl);
-    next();
-  },
   autumnHandler({
     identify: async (req: any) => {
       return {

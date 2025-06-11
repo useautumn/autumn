@@ -7,14 +7,9 @@ import {
   MigrationJob,
   MigrationJobStep,
 } from "@autumn/shared";
-
-import { SupabaseClient } from "@supabase/supabase-js";
 import { MigrationService } from "../MigrationService.js";
-
 import { OrgService } from "@/internal/orgs/OrgService.js";
-
 import { createStripeCli } from "@/external/stripe/utils.js";
-
 import { migrateCustomer } from "./migrateCustomer.js";
 import { sendMigrationEmail } from "./sendMigrationEmail.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
@@ -52,8 +47,6 @@ export const migrateCustomers = async ({
     db,
     orgId,
   });
-
-  org.config.bill_upgrade_immediately = false;
 
   // Create stripe prices if they don't exist
   let stripeCli = createStripeCli({ org, env });
@@ -175,9 +168,9 @@ export const migrateCustomers = async ({
     },
   });
 
-  await sendMigrationEmail({
-    db,
-    migrationJobId: migrationJob.id,
-    org,
-  });
+  // await sendMigrationEmail({
+  //   db,
+  //   migrationJobId: migrationJob.id,
+  //   org,
+  // });
 };

@@ -1,12 +1,11 @@
 import { AppEnv, FullCusProduct, Organization } from "@autumn/shared";
-import { getExistingCusProducts } from "../../add-product/handleExistingProduct.js";
+import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
 import { getScheduleIdsFromCusProducts } from "../scheduleUtils.js";
 import Stripe from "stripe";
 import { ItemSet } from "@/utils/models/ItemSet.js";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { updateScheduledSubWithNewItems } from "./updateScheduleWithNewItems.js";
-import { CusProductService } from "../../products/CusProductService.js";
+import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const getOtherCusProductsOnSub = async ({
@@ -82,7 +81,7 @@ export const addCurMainProductToSchedule = async ({
     await updateScheduledSubWithNewItems({
       scheduleObj: scheduleObj,
       newItems: oldItemSet?.items || [],
-      cusProducts: [],
+      cusProductsForGroup: [],
       stripeCli: stripeCli,
       itemSet: null,
       db,

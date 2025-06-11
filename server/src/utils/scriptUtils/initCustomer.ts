@@ -1,9 +1,52 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { AppEnv, Customer, Organization } from "@autumn/shared";
+import { AppEnv, Customer, Organization, ProcessorType } from "@autumn/shared";
 import { createStripeCli } from "../../external/stripe/utils.js";
 import { Autumn } from "autumn-js";
-import { attachPmToCus } from "../../external/stripe/stripeCusUtils.js";
+import {
+  attachPmToCus,
+  createStripeCustomer,
+} from "../../external/stripe/stripeCusUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import Stripe from "stripe";
+
+export const createCusInStripe = async ({
+  customer,
+  org,
+  env,
+  db,
+  testClockId,
+}: {
+  customer: Customer;
+  org: Organization;
+  env: AppEnv;
+  db: DrizzleCli;
+  testClockId?: string;
+}) => {
+  const stripeCustomer = await createStripeCustomer({
+    org,
+    env,
+    customer,
+    testClockId,
+  });
+
+  await CusService.update({
+    db,
+    internalCusId: customer.internal_id,
+    update: {
+      processor: {
+        type: ProcessorType.Stripe,
+        id: stripeCustomer.id,
+      },
+    },
+  });
+
+  customer.processor = {
+    id: stripeCustomer.id,
+    type: "stripe",
+  };
+
+  return stripeCustomer;
+};
 
 export const initCustomer = async ({
   autumn,
@@ -13,6 +56,7 @@ export const initCustomer = async ({
   env,
   db,
   attachPm,
+  withTestClock = true,
 }: {
   autumn: Autumn;
   customerId: string;
@@ -21,6 +65,7 @@ export const initCustomer = async ({
   env: AppEnv;
   db: DrizzleCli;
   attachPm?: "success" | "fail";
+  withTestClock?: boolean;
 }) => {
   let customerData = {
     id: customerId,
@@ -44,21 +89,31 @@ export const initCustomer = async ({
       env: env,
     })) as Customer;
 
-    if (attachPm) {
-      const stripeCli = createStripeCli({ org: org, env: env });
+    const stripeCli = createStripeCli({ org: org, env: env });
+    let testClockId = "";
+    if (withTestClock) {
       const testClock = await stripeCli.testHelpers.testClocks.create({
         frozen_time: Math.floor(Date.now() / 1000),
       });
-
       testClockId = testClock.id;
+    }
 
+    if (attachPm) {
       await attachPmToCus({
         customer,
         org: org,
         env: env,
         db: db,
         willFail: attachPm === "fail",
-        testClockId: testClockId,
+        testClockId: testClockId || undefined,
+      });
+    } else {
+      await createCusInStripe({
+        customer,
+        org,
+        env,
+        db,
+        testClockId,
       });
     }
 

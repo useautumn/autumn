@@ -8,10 +8,9 @@ import {
   FullCustomerPrice,
   Organization,
 } from "@autumn/shared";
-import { CusEntService } from "@/internal/customers/entitlements/CusEntitlementService.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { Customer, FeatureType } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import { getCusEntsInFeatures } from "@/internal/api/customers/cusUtils.js";
+import { getCusEntsInFeatures } from "@/internal/customers/cusUtils/cusUtils.js";
 import { Decimal } from "decimal.js";
 import { adjustAllowance } from "./adjustAllowance.js";
 import {
@@ -28,7 +27,7 @@ import {
 import {
   getCusEntMasterBalance,
   getTotalNegativeBalance,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { entityFeatureIdExists } from "@/internal/api/entities/entityUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -271,11 +270,6 @@ export const performDeductionOnCusEnt = ({
       allowNegativeBalance,
     });
 
-    // console.log("Deducting:", toDeduct);
-    // console.log("Old balance", cusEnt.balance);
-    // console.log("New balance", newBalance_);
-    // console.log("Allowed negative balance", allowNegativeBalance);
-
     newBalance = newBalance_;
     deducted = deducted_;
     toDeduct = newToDeduct_;
@@ -346,13 +340,7 @@ export const deductAllowanceFromCusEnt = async ({
     updates.adjustment = 0;
   }
 
-  await CusEntService.update({
-    db,
-    id: cusEnt.id,
-    updates,
-  });
-
-  await adjustAllowance({
+  const { newReplaceables, deletedReplaceables } = await adjustAllowance({
     db,
     env,
     org,
@@ -362,7 +350,22 @@ export const deductAllowanceFromCusEnt = async ({
     cusEnt: cusEnt as any,
     originalBalance: originalGrpBalance,
     newBalance: newGrpBalance,
-    deduction: deducted,
+    logger: console,
+  });
+
+  console.log("New balance:", newBalance);
+  console.log("New replaceables:", newReplaceables);
+
+  if (newReplaceables && newReplaceables.length > 0) {
+    updates.balance = newBalance! - newReplaceables.length;
+  } else if (deletedReplaceables && deletedReplaceables.length > 0) {
+    updates.balance = newBalance! + deletedReplaceables.length;
+  }
+
+  await CusEntService.update({
+    db,
+    id: cusEnt.id,
+    updates,
   });
 
   // Deduct credit amounts too
@@ -454,13 +457,7 @@ export const deductFromUsageBasedCusEnt = async ({
     updates.adjustment = 0;
   }
 
-  await CusEntService.update({
-    db,
-    id: usageBasedEnt.id,
-    updates,
-  });
-
-  await adjustAllowance({
+  const { newReplaceables, deletedReplaceables } = await adjustAllowance({
     db,
     env,
     affectedFeature: feature,
@@ -470,7 +467,19 @@ export const deductFromUsageBasedCusEnt = async ({
     customer,
     originalBalance: oldGrpBalance,
     newBalance: newGrpBalance,
-    deduction: toDeduct,
+    logger: console,
+  });
+
+  if (newReplaceables && newReplaceables.length > 0) {
+    updates.balance = newBalance! - newReplaceables.length;
+  } else if (deletedReplaceables && deletedReplaceables.length > 0) {
+    updates.balance = newBalance! + deletedReplaceables.length;
+  }
+
+  await CusEntService.update({
+    db,
+    id: usageBasedEnt!.id,
+    updates,
   });
 };
 

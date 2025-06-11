@@ -17,9 +17,9 @@ import Stripe from "stripe";
 import { RewardRedemptionService } from "./RewardRedemptionService.js";
 import { ProductService } from "../products/ProductService.js";
 import { createFullCusProduct } from "../customers/add-product/createFullCusProduct.js";
-import { InsertCusProductParams } from "../customers/products/AttachParams.js";
+import { InsertCusProductParams } from "../customers/cusProducts/AttachParams.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { CusProductService } from "../customers/products/CusProductService.js";
+import { CusProductService } from "../customers/cusProducts/CusProductService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 
@@ -161,18 +161,18 @@ export const triggerFreeProduct = async ({
     });
   }
 
-  logger.info(`Referrer: ${referrer.name} (${referrer.id})`);
-
-  let [redeemerCusProducts, referrerCusProducts] = await Promise.all([
-    CusProductService.list({
+  let [fullReferrer, fullRedeemer] = await Promise.all([
+    CusService.getFull({
       db,
-      internalCustomerId: redeemer.internal_id,
-      inStatuses: [CusProductStatus.Active],
+      idOrInternalId: referrer.id!,
+      orgId: org.id,
+      env,
     }),
-    CusProductService.list({
+    CusService.getFull({
       db,
-      internalCustomerId: referrer.internal_id,
-      inStatuses: [CusProductStatus.Active],
+      idOrInternalId: redeemer.id!,
+      orgId: org.id,
+      env,
     }),
   ]);
 
@@ -185,20 +185,22 @@ export const triggerFreeProduct = async ({
     entities: [],
     freeTrial: null,
     features: [],
-    customer: referrer,
-    cusProducts: referrerCusProducts,
+    customer: fullReferrer,
+    cusProducts: fullReferrer.customer_products,
+    replaceables: [],
   };
 
   if (addToRedeemer) {
     let redeemerAttachParams = structuredClone({
       ...attachParams,
-      customer: redeemer,
-      cusProducts: redeemerCusProducts,
+      customer: fullRedeemer,
+      cusProducts: fullRedeemer.customer_products,
     });
 
     await createFullCusProduct({
       db,
       attachParams: redeemerAttachParams,
+      logger,
     });
     logger.info(`✅ Added ${fullProduct.name} to redeemer`);
   }
@@ -208,9 +210,10 @@ export const triggerFreeProduct = async ({
       db,
       attachParams: {
         ...attachParams,
-        customer: referrer,
-        cusProducts: referrerCusProducts,
+        customer: fullReferrer,
+        cusProducts: fullReferrer.customer_products,
       },
+      logger,
     });
     logger.info(`✅ Added ${fullProduct.name} to referrer`);
   }

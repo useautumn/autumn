@@ -11,7 +11,7 @@ import {
 import { sendSvixEvent } from "../../../external/svix/svixUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
-import { getCustomerDetails } from "@/internal/api/customers/getCustomerDetails.js";
+import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 
 import { getProductResponse } from "@/internal/products/productV2Utils.js";

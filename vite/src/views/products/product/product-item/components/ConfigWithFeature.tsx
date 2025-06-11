@@ -20,6 +20,7 @@ import { SelectCycle } from "./SelectCycle";
 import MoreMenuButton, { MoreMenuPriceButton } from "../MoreMenuButton";
 
 import { getFeature } from "@/utils/product/entitlementUtils";
+import { ProrationConfig } from "./ProrationConfig";
 
 export const ConfigWithFeature = ({
   show,
@@ -30,8 +31,8 @@ export const ConfigWithFeature = ({
   setShow: (show: any) => void;
   handleAddPrice: () => void;
 }) => {
-  let { features } = useProductContext();
-  let { item, setItem } = useProductItemContext();
+  const { features } = useProductContext();
+  const { item, setItem } = useProductItemContext();
 
   return (
     <div className="flex flex-col gap-6 text-sm w-full">
@@ -54,7 +55,7 @@ export const ConfigWithFeature = ({
                       "transition-all duration-400 ease-in-out absolute top-0 left-0 w-full h-full",
                       !show.allowance
                         ? " z-10"
-                        : "opacity-0 overflow-hidden z-[-1]"
+                        : "opacity-0 overflow-hidden z-[-1]",
                     )}
                   >
                     <Button
@@ -72,7 +73,7 @@ export const ConfigWithFeature = ({
                       "transition-all duration-400 ease-in-out whitespace-nowrap",
                       show.allowance
                         ? "opacity-100 max-w-full max-h-[200px]"
-                        : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden"
+                        : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden",
                     )}
                   >
                     <FieldLabel className="flex items-center gap-2">
@@ -137,7 +138,7 @@ export const ConfigWithFeature = ({
                   className={cn(
                     "transition-all duration-400 ease-in-out whitespace-nowrap w-0 max-w-0 opacity-0 z-[-1] overflow-hidden -ml-2",
                     show.perEntity &&
-                      "opacity-100 max-w-full w-full max-h-[200px] z-10 ml-0"
+                      "opacity-100 max-w-full w-full max-h-[200px] z-10 ml-0",
                   )}
                 >
                   <PerEntityConfig />
@@ -152,7 +153,7 @@ export const ConfigWithFeature = ({
                         "transition-all duration-400 ease-in-out whitespace-nowrap w-full",
                         show.cycle
                           ? "opacity-100 max-w-full max-h-[200px]"
-                          : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden"
+                          : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden",
                       )}
                     >
                       <SelectCycle show={show} setShow={setShow} type="reset" />
@@ -168,7 +169,7 @@ export const ConfigWithFeature = ({
                   "transition-all duration-300 ease-in-out whitespace-nowrap",
                   show.price
                     ? "opacity-100  max-h-[200px]"
-                    : "opacity-0 z-[-1] max-h-0 overflow-hidden -mb-6"
+                    : "opacity-0 z-[-1] max-h-0 overflow-hidden -mb-6",
                 )}
               >
                 <div className="flex gap-6 flex-2">
@@ -176,7 +177,9 @@ export const ConfigWithFeature = ({
                   <div
                     className={cn(
                       "flex items-end gap-2 transition-all duration-300 ease-in-out",
-                      item.tiers?.length > 1 ? "w-40 min-w-40 flex-1" : "w-full"
+                      item.tiers?.length > 1
+                        ? "w-40 min-w-40 flex-1"
+                        : "w-full",
                     )}
                   >
                     <SelectCycle show={show} setShow={setShow} type="price" />
@@ -184,7 +187,8 @@ export const ConfigWithFeature = ({
                   </div>
                 </div>
               </div>
-              {/* </div> */}
+
+              <ProrationConfig />
             </div>
           </div>
         </div>

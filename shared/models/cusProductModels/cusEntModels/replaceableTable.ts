@@ -1,0 +1,35 @@
+import {
+  pgTable,
+  boolean,
+  foreignKey,
+  text,
+  bigint,
+} from "drizzle-orm/pg-core";
+
+import { collatePgColumn } from "../../../db/utils.js";
+import { customerEntitlements } from "./cusEntTable.js";
+import { createInsertSchema } from "drizzle-zod";
+
+export const replaceables = pgTable(
+  "replaceables",
+  {
+    id: text().primaryKey().notNull(),
+    cus_ent_id: text().notNull(),
+    created_at: bigint({ mode: "number" }).notNull(),
+    from_entity_id: text(),
+    delete_next_cycle: boolean("delete_next_cycle").notNull().default(false),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.cus_ent_id],
+      foreignColumns: [customerEntitlements.id],
+      name: "replaceables_cus_ent_id_fkey",
+    }).onDelete("cascade"),
+  ],
+).enableRLS();
+
+collatePgColumn(replaceables.id, "C");
+
+export const InsertReplaceableSchema = createInsertSchema(replaceables);
+export type Replaceable = typeof replaceables.$inferSelect;
+export type InsertReplaceable = typeof replaceables.$inferInsert;

@@ -1,5 +1,5 @@
-import { updateCustomerDetails } from "@/internal/api/customers/cusUtils.js";
-import { handleCreateCustomer } from "@/internal/api/customers/handlers/handleCreateCustomer.js";
+import { updateCustomerDetails } from "./cusUtils.js";
+import { handleCreateCustomer } from "../handlers/handleCreateCustomer.js";
 
 import { CusService } from "../CusService.js";
 import {
@@ -14,7 +14,7 @@ import {
   Organization,
 } from "@autumn/shared";
 
-import { createEntities } from "@/internal/api/entities/handlers/handleCreateEntity.js";
+import { createEntities } from "@/internal/entities/handlers/handleCreateEntity/handleCreateEntity.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -22,13 +22,8 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const getOrCreateCustomer = async ({
   req,
-  db,
-  org,
-  features,
   customerId,
   customerData,
-  env,
-  logger,
   inStatuses = [
     CusProductStatus.Active,
     CusProductStatus.PastDue,
@@ -43,13 +38,8 @@ export const getOrCreateCustomer = async ({
   entityData,
 }: {
   req: ExtendedRequest;
-  db: DrizzleCli;
-  org: Organization;
-  features: Feature[];
-  env: AppEnv;
   customerId: string;
   customerData?: CustomerData;
-  logger: any;
   inStatuses?: CusProductStatus[];
   skipGet?: boolean;
   withEntities?: boolean;
@@ -58,6 +48,8 @@ export const getOrCreateCustomer = async ({
   entityData?: EntityData;
 }): Promise<FullCustomer> => {
   let customer;
+
+  const { db, org, features, env, logtail: logger } = req;
 
   if (!skipGet) {
     customer = await CusService.getFull({
@@ -130,16 +122,12 @@ export const getOrCreateCustomer = async ({
 
     let newEntities = await createEntities({
       req,
-      db,
-      org,
       customerId,
       createEntityData: {
         id: entityId,
         name: entityData?.name,
         feature_id: entityData?.feature_id,
       },
-      features,
-      env,
       logger,
       fromAutoCreate: true,
     });

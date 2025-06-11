@@ -31,6 +31,7 @@ export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
         if (token) {
           config.headers["Authorization"] = `Bearer ${token}`;
           config.headers["app_env"] = trueEnv;
+          config.headers["x-api-version"] = "1.2";
         }
 
         return config;
