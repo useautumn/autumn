@@ -2,11 +2,7 @@ import { handleRequestError } from "@/utils/errorUtils.js";
 
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import {
-  ErrCode,
-  FullCustomerEntitlement,
-  FullCusEntWithProduct,
-} from "@autumn/shared";
+import { ErrCode, FullCustomerEntitlement } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { StatusCodes } from "http-status-codes";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";

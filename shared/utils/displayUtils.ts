@@ -91,7 +91,7 @@ export const getFeatureInvoiceDescription = ({
 }) => {
   const { singular, plural } = getSingularAndPlural({ feature });
 
-  const usageStr = numberWithCommas(usage);
+  const usageStr = numberWithCommas(Math.ceil(usage));
 
   let result = "";
 

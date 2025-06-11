@@ -173,15 +173,30 @@ export const itemsAreSame = ({
   // 1. If feature item
   let same = false;
   let pricesChanged = false;
+
   if (isFeatureItem(item1)) {
+    if (!isFeatureItem(item2)) {
+      return {
+        same: false,
+        pricesChanged: true,
+      };
+    }
+
     same = featureItemsAreSame({
       item1: FeatureItemSchema.parse(item1),
-      item2: FeatureItemSchema.parse(item2),
+      item2: item2 as FeatureItem,
     });
     pricesChanged = false;
   }
 
   if (isFeaturePriceItem(item1)) {
+    if (!isFeaturePriceItem(item2)) {
+      return {
+        same: false,
+        pricesChanged: true,
+      };
+    }
+
     const { same: same_, pricesChanged: pricesChanged_ } =
       featurePriceItemsAreSame({
         item1: FeaturePriceItemSchema.parse(item1),
