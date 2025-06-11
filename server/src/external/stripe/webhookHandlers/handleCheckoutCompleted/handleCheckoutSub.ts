@@ -62,9 +62,15 @@ export const handleCheckoutSub = async ({
 
     if (arrearProratedPrice) {
       itemsUpdate.push({
-        id: item.id,
+        price: arrearProratedPrice.config.stripe_price_id!,
         quantity: 0,
       });
+
+      itemsUpdate.push({
+        id: item.id,
+        deleted: true,
+      });
+      continue;
     }
 
     let arrearPrice = findPriceFromStripeId({
