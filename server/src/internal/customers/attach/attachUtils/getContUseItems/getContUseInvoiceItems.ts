@@ -4,6 +4,7 @@ import {
   AttachReplaceable,
   BillingType,
   FullCusProduct,
+  FullCustomerEntitlement,
   FullEntitlement,
   getFeatureInvoiceDescription,
   InsertReplaceable,
@@ -30,20 +31,24 @@ import { newPriceToInvoiceDescription } from "@/internal/invoices/invoiceFormatU
 import { getDefaultPriceStr } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { priceToContUseItem } from "./priceToContUseItem.js";
+import { shouldProrate } from "@/internal/products/prices/priceUtils/prorationConfigUtils.js";
 
 export const getContUseNewItems = async ({
   price,
   ent,
   attachParams,
+  prevCusEnt,
 }: {
   price: Price;
   ent: FullEntitlement;
   attachParams: AttachParams;
+  prevCusEnt?: FullCustomerEntitlement;
 }) => {
   const { org, features } = attachParams;
   const newProduct = attachParamsToProduct({ attachParams });
+  const intervalsSame = intervalsAreSame({ attachParams });
 
-  const usage = getExistingUsageFromCusProducts({
+  let usage = getExistingUsageFromCusProducts({
     entitlement: ent,
     cusProducts: attachParams.cusProducts,
     entities: attachParams.entities,
@@ -67,9 +72,24 @@ export const getContUseNewItems = async ({
       usage_model: priceToUsageModel(price),
     } as PreviewLineItem;
   } else {
-    const overage = new Decimal(usage).sub(ent.allowance!).toNumber();
-    const amount = getPriceForOverage(price, overage);
-    const description = getFeatureInvoiceDescription({
+    let overage = new Decimal(usage).sub(ent.allowance!).toNumber();
+
+    if (
+      intervalsSame &&
+      prevCusEnt &&
+      !shouldProrate(price.proration_config?.on_decrease)
+    ) {
+      let isDowngrade = ent.allowance! > prevCusEnt.entitlement.allowance!;
+      let prevBalance = prevCusEnt.balance!;
+
+      if (isDowngrade && prevBalance < 0) {
+        overage = new Decimal(prevBalance).abs().toNumber();
+        usage = ent.allowance! - prevBalance;
+      }
+    }
+
+    let amount = getPriceForOverage(price, overage);
+    let description = getFeatureInvoiceDescription({
       feature: ent.feature,
       usage: usage,
       prodName: newProduct.name,
@@ -137,6 +157,7 @@ export const getContUseInvoiceItems = async ({
         price,
         ent,
         attachParams,
+        prevCusEnt,
       });
       const prevItem = curItems.find(
         (item) => item.price_id === prevCusPrice?.price.id,
