@@ -93,7 +93,7 @@ const getCustomerAndProducts = async ({
         CusProductStatus.PastDue,
       ],
       withEntities: true,
-      entityId: attachBody.entity_id,
+      entityId: attachBody.entity_id || undefined,
       entityData: attachBody.entity_data,
     }),
     getProductsForAttach({ req, attachBody }),
@@ -144,7 +144,7 @@ const getPricesAndEnts = async ({
 
     return {
       optionsList: mapOptionsList({
-        optionsInput,
+        optionsInput: optionsInput || [],
         features,
         prices,
         curCusProduct: curMainProduct,
@@ -203,7 +203,7 @@ const getPricesAndEnts = async ({
 
   return {
     optionsList: mapOptionsList({
-      optionsInput,
+      optionsInput: optionsInput || [],
       features,
       prices,
       curCusProduct: curMainProduct,

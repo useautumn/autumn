@@ -17,19 +17,19 @@ export const AttachBodySchema = z
 
     customer_data: z
       .any()
-      .optional()
+      .nullish()
       .describe("Customer data if using attach to auto create customer"),
 
     // Entity Info
-    entity_id: z.string().optional(),
-    entity_data: z.any().optional(),
+    entity_id: z.string().nullish(),
+    entity_data: z.any().nullish(),
 
     // Product Info
-    product_id: z.string().optional(),
-    product_ids: z.array(z.string()).min(1).optional(),
+    product_id: z.string().nullish(),
+    product_ids: z.array(z.string()).min(1).nullish(),
 
     // Options
-    options: z.array(FeatureOptionsSchema).optional(),
+    options: z.array(FeatureOptionsSchema).nullish(),
 
     // Custom Product
     is_custom: z.boolean().optional(),

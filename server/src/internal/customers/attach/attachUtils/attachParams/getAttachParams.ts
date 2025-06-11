@@ -60,7 +60,7 @@ export const getAttachParams = async ({
     entities: customer.entities,
     features: req.features,
     internalEntityId,
-    entityId,
+    entityId: entityId || undefined,
     cusProducts: customer.customer_products,
 
     // Others
