@@ -48,6 +48,7 @@ stripeWebhookRouter.post(
       db: request.db,
       orgId,
       env,
+      allowNotFound: true,
     });
 
     if (!data) {
