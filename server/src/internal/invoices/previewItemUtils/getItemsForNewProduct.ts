@@ -1,14 +1,13 @@
 import {
-  BillingType,
   EntitlementWithFeature,
   FullProduct,
   Organization,
-  PreviewItem,
   Price,
   Feature,
   BillingInterval,
   FreeTrial,
   PreviewLineItem,
+  BillingType,
 } from "@autumn/shared";
 import { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import {
@@ -20,8 +19,7 @@ import {
   isFixedPrice,
   isUsagePrice,
 } from "../../products/prices/priceUtils/usagePriceUtils.js";
-import { getExistingUsageFromCusProducts } from "../../customers/cusProducts/cusEnts/cusEntUtils.js";
-import { Decimal } from "decimal.js";
+
 import { newPriceToInvoiceDescription } from "../invoiceFormatUtils.js";
 import { calculateProrationAmount } from "../prorationUtils.js";
 import { getPricecnPrice } from "../../products/pricecn/pricecnUtils.js";
@@ -174,6 +172,20 @@ export const getItemsForNewProduct = async ({
       continue;
     }
 
+    if (billingType == BillingType.UsageInArrear) {
+      items.push({
+        price: getDefaultPriceStr({ org, price, ent, features }),
+        description: newPriceToInvoiceDescription({
+          org,
+          price,
+          product: newProduct,
+        }),
+        usage_model: priceToUsageModel(price),
+        price_id: price.id,
+      });
+      continue;
+    }
+
     if (isUsagePrice({ price })) continue;
   }
 
@@ -187,8 +199,6 @@ export const getItemsForNewProduct = async ({
     attachParams,
     logger,
   });
-
-  // logger.info(`New items:`, newItems);
 
   items.push(...newItems);
 

@@ -1,7 +1,7 @@
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { EntityService } from "../../../api/entities/EntityService.js";
-import { APIVersion, CreateEntity, CustomerData } from "@autumn/shared";
+import { APIVersion, CreateEntity, CustomerData, Entity } from "@autumn/shared";
 import { getEntityResponse } from "../../../api/entities/getEntityUtils.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
@@ -178,44 +178,27 @@ export const createEntities = async ({
     }),
   );
 
-  let newEntities = await EntityService.insert({
+  let newEntities: Entity[] = [];
+  if (existingEntities.some((e: any) => e.id === null)) {
+    let updatedEntity = await EntityService.update({
+      db,
+      internalId: existingEntities.find((e: any) => e.id === null)!.internal_id,
+      update: {
+        id: inputEntities[0].id,
+        name: inputEntities[0].name,
+      },
+    });
+
+    data = data.slice(1);
+    newEntities.push(updatedEntity);
+  }
+
+  let insertedEntities = await EntityService.insert({
     db,
     data,
   });
 
-  // 4. CREATE ENTITIES
-  // let newEntities: Entity[] = [];
-  // for (const id in entityToAction) {
-  //   let { action, entity, replace } = entityToAction[id];
-
-  //   // Create and add to customer entitlement?
-  //   if (action === "create") {
-  //     let results = await EntityService.insert({
-  //       db,
-  //       data: constructEntity({
-  //         inputEntity: entity,
-  //         feature,
-  //         internalCustomerId: customer.internal_id,
-  //         orgId: org.id,
-  //         env,
-  //       }),
-  //     });
-
-  //     newEntities.push(results[0]);
-  //   } else if (action === "replace") {
-  //     let updatedEntity = await EntityService.update({
-  //       db,
-  //       internalId: replace.internal_id,
-  //       update: {
-  //         id: entity.id,
-  //         name: entity.name,
-  //         deleted: false,
-  //       },
-  //     });
-
-  //     newEntities.push(updatedEntity);
-  //   }
-  // }
+  newEntities.push(...insertedEntities);
 
   if (fromAutoCreate) {
     return newEntities;
@@ -223,7 +206,7 @@ export const createEntities = async ({
 
   let { entities } = await getEntityResponse({
     db,
-    entityIds: inputEntities.map((e: any) => e.id),
+    entityIds: newEntities.map((e: any) => e.id || e.internal_id),
     org,
     env,
     customerId: customer.id || customer.internal_id,
@@ -284,3 +267,37 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
       }
     },
   });
+
+// 4. CREATE ENTITIES
+// let newEntities: Entity[] = [];
+// for (const id in entityToAction) {
+//   let { action, entity, replace } = entityToAction[id];
+
+//   // Create and add to customer entitlement?
+//   if (action === "create") {
+//     let results = await EntityService.insert({
+//       db,
+//       data: constructEntity({
+//         inputEntity: entity,
+//         feature,
+//         internalCustomerId: customer.internal_id,
+//         orgId: org.id,
+//         env,
+//       }),
+//     });
+
+//     newEntities.push(results[0]);
+//   } else if (action === "replace") {
+//     let updatedEntity = await EntityService.update({
+//       db,
+//       internalId: replace.internal_id,
+//       update: {
+//         id: entity.id,
+//         name: entity.name,
+//         deleted: false,
+//       },
+//     });
+
+//     newEntities.push(updatedEntity);
+//   }
+// }

@@ -58,6 +58,7 @@ export const attachParamsToPreview = async ({
     func == AttachFunction.OneOff
   ) {
     preview = await getNewProductPreview({
+      branch,
       attachParams,
       now,
       logger,

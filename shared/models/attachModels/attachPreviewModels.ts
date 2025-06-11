@@ -6,7 +6,7 @@ import { AttachBranch } from "./attachEnums/AttachBranch.js";
 import { AttachFunction } from "./attachEnums/AttachFunction.js";
 
 export interface PreviewLineItem {
-  amount: number | undefined;
+  amount?: number | undefined;
   description: string;
   price: string;
   price_id: string;

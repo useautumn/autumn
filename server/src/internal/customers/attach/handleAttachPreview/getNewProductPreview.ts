@@ -1,17 +1,23 @@
-import { BillingInterval } from "@autumn/shared";
+import { AttachBranch, BillingInterval } from "@autumn/shared";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
-import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import {
+  addBillingIntervalUnix,
+  getNextStartOfMonthUnix,
+} from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 
 export const getNewProductPreview = async ({
+  branch,
   attachParams,
   now,
   logger,
 }: {
+  branch: AttachBranch;
   attachParams: AttachParams;
   now: number;
   logger: any;
@@ -35,6 +41,13 @@ export const getNewProductPreview = async ({
   });
 
   let dueNextCycle = null;
+
+  let dueTodayFree =
+    items.reduce((acc, item) => {
+      return acc + (item.amount ?? 0);
+    }, 0) === 0;
+
+  // || dueTodayFree || branch == AttachBranch.SameCustomEnts
   if (freeTrial) {
     let nextCycleItems = await getItemsForNewProduct({
       newProduct,
@@ -43,13 +56,17 @@ export const getNewProductPreview = async ({
       logger,
     });
 
-    dueNextCycle = {
-      line_items: nextCycleItems,
-      due_at:
-        freeTrialToStripeTimestamp({
+    let minInterval = getLastInterval({ prices: newProduct.prices });
+    let dueAt = freeTrial
+      ? freeTrialToStripeTimestamp({
           freeTrial,
           now,
-        })! * 1000,
+        })! * 1000
+      : addBillingIntervalUnix(now, minInterval);
+
+    dueNextCycle = {
+      line_items: nextCycleItems,
+      due_at: dueAt,
     };
   }
 
