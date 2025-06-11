@@ -47,7 +47,7 @@ export const compareMainProduct = ({
 }) => {
   const { products, add_ons, entitlements } = cusRes;
   const prod = products.find(
-    (p: any) => p.id === sent.id && p.status == status && !sent.is_add_on
+    (p: any) => p.id === sent.id && p.status == status && !sent.is_add_on,
   );
 
   try {
@@ -76,14 +76,14 @@ export const compareMainProduct = ({
 
     // If options list provideed, and feature
     let options = optionsList.find(
-      (o: any) => o.feature_id === entitlement.feature_id
+      (o: any) => o.feature_id === entitlement.feature_id,
     );
 
     let expectedBalance = entitlement.allowance;
     if (options?.quantity) {
       // Get price from sent
       const price = sent.prices.find(
-        (p: any) => p.config.feature_id === entitlement.feature_id
+        (p: any) => p.config.feature_id === entitlement.feature_id,
       );
       const config = price.config as UsagePriceConfig;
       expectedBalance = new Decimal(expectedBalance || 0)
@@ -102,7 +102,7 @@ export const compareMainProduct = ({
       }
     } catch (error) {
       console.log(
-        `Failed to compare main product (entitlements) ${entitlement.feature_id}`
+        `Failed to compare main product (entitlements) ${entitlement.feature_id}`,
       );
       console.log("Looking for entitlement: ", entitlement);
       console.log("Received entitlements: ", entitlements);
@@ -134,20 +134,20 @@ export const checkFeatureHasCorrectBalance = async ({
     return;
   }
 
-  console.log(
-    `     - Checking entitlement ${feature.id} has ${
-      entitlement.allowance_type == AllowanceType.Unlimited
-        ? "unlimited balance"
-        : `balance of ${expectedBalance}`
-    }`
-  );
+  // console.log(
+  //   `     - Checking entitlement ${feature.id} has ${
+  //     entitlement.allowance_type == AllowanceType.Unlimited
+  //       ? "unlimited balance"
+  //       : `balance of ${expectedBalance}`
+  //   }`
+  // );
 
   // Get ent from cusRes
   const { entitlements: cusEnts }: any = cusRes;
   const { allowed, balanceObj }: any = entitledRes;
   const cusEnt = cusEnts.find(
     (e: any) =>
-      e.feature_id === feature.id && e.interval == entitlement.interval
+      e.feature_id === feature.id && e.interval == entitlement.interval,
   );
 
   expect(cusEnt).to.exist;
@@ -188,7 +188,7 @@ export const compareProductEntitlements = ({
   quantity?: number;
 }) => {
   for (const entitlement of Object.values(
-    product.entitlements
+    product.entitlements,
   ) as Entitlement[]) {
     let feature =
       features[entitlement.feature_id!] ||

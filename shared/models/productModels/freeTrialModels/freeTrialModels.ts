@@ -17,7 +17,7 @@ export const CreateFreeTrialSchema = z.object({
     .string()
     .or(z.number())
     .transform((val) => Number(val)),
-  unique_fingerprint: z.boolean(),
+  unique_fingerprint: z.boolean().default(false),
   duration: z.nativeEnum(FreeTrialDuration).default(FreeTrialDuration.Day),
 });
 

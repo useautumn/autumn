@@ -36,6 +36,17 @@ const initWorker = ({
   let worker = new Worker(
     "autumn",
     async (job: Job) => {
+      try {
+        logtail.use((log: any) => {
+          return {
+            ...log,
+            task: job.name,
+            data: job.data,
+            workerId: id,
+          };
+        });
+      } catch (error) {}
+
       if (job.name == JobName.GenerateFeatureDisplay) {
         await runSaveFeatureDisplayTask({
           db,

@@ -1,12 +1,26 @@
 import { AppEnv, Customer, Organization, ProcessorType } from "@autumn/shared";
-import stripe, { Stripe } from "stripe";
+import { Stripe } from "stripe";
 import { createStripeCli } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+
+export const getStripeCus = async ({
+  stripeCli,
+  stripeId,
+}: {
+  stripeCli: Stripe;
+  stripeId: string;
+}) => {
+  try {
+    const stripeCus = await stripeCli.customers.retrieve(stripeId);
+    return stripeCus as Stripe.Customer;
+  } catch (error) {
+    return undefined;
+  }
+};
 
 export const createStripeCusIfNotExists = async ({
   db,
@@ -111,18 +125,35 @@ export const deleteStripeCustomer = async ({
   return stripeCustomer;
 };
 
+export const listCusPaymentMethods = async ({
+  stripeCli,
+  stripeId,
+}: {
+  stripeCli: Stripe;
+  stripeId: string;
+}) => {
+  let res = await stripeCli.paymentMethods.list({
+    customer: stripeId,
+  });
+
+  const paymentMethods = res.data;
+  paymentMethods.sort((a, b) => b.created - a.created);
+
+  return paymentMethods;
+};
+
 export const getCusPaymentMethod = async ({
-  org,
-  env,
+  stripeCli,
   stripeId,
   errorIfNone = false,
 }: {
-  org: Organization;
-  env: AppEnv;
-  stripeId: string;
+  stripeCli: Stripe;
+  stripeId?: string;
   errorIfNone?: boolean;
 }) => {
-  const stripeCli = createStripeCli({ org, env });
+  if (!stripeId) {
+    return null;
+  }
 
   const stripeCustomer = (await stripeCli.customers.retrieve(
     stripeId,
@@ -134,8 +165,6 @@ export const getCusPaymentMethod = async ({
     let res = await stripeCli.paymentMethods.list({
       customer: stripeId,
     });
-
-    // const paymentMethods = res.data.filter((pm) => pm.type === "card" );
 
     const paymentMethods = res.data;
     paymentMethods.sort((a, b) => b.created - a.created);
@@ -151,10 +180,13 @@ export const getCusPaymentMethod = async ({
       return null;
     }
 
-    return paymentMethods[0].id;
+    return paymentMethods[0];
+  } else {
+    const paymentMethod = await stripeCli.paymentMethods.retrieve(
+      paymentMethodId as string,
+    );
+    return paymentMethod;
   }
-
-  return paymentMethodId;
 };
 
 // 2. Create a payment method and attach to customer

@@ -96,6 +96,7 @@ export const toFeaturePriceItem = ({
     price_id: price.id,
 
     price_config: price.config,
+    config: price.proration_config || undefined,
   };
 
   return item;

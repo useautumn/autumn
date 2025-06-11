@@ -1,5 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { constructProduct } from "@/internal/products/productUtils.js";
 import {
   AppEnv,

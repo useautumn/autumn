@@ -18,18 +18,19 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { deleteAllStripeTestClocks } from "./stripeUtils.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import Stripe from "stripe";
-import { Autumn } from "@/external/autumn/autumnCli.js";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { deactivateStripeMeters } from "@/external/stripe/stripeProductUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
 import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
-import { eq } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { features as v2Features } from "tests/setup/v2Features.js";
+import { timeout } from "./genUtils.js";
 
 export const getAxiosInstance = (
   apiKey: string = process.env.UNIT_TEST_AUTUMN_SECRET_KEY!,
@@ -74,7 +75,6 @@ export const clearOrg = async ({
     process.exit(1);
   }
 
-  const sb = createSupabaseClient();
   const { db, client } = initDrizzle();
   const org = await OrgService.getBySlug({ db, slug: orgSlug });
 
@@ -144,8 +144,7 @@ export const clearOrg = async ({
     active: true,
   });
 
-  const batchSize = 5;
-
+  const batchSize = 15;
   const removeStripeProduct = async (product: Stripe.Product) => {
     try {
       await stripeCli.products.del(product.id);
@@ -163,6 +162,7 @@ export const clearOrg = async ({
       batchDeleteProducts.push(removeStripeProduct(product));
     }
     await Promise.all(batchDeleteProducts);
+    await timeout(800);
     console.log(
       `   ✅ Deleted ${i + batch.length}/${
         stripeProducts.data.length
@@ -221,13 +221,19 @@ export const setupOrg = async ({
   const sb = createSupabaseClient();
   const { client, db } = initDrizzle();
 
-  const autumn = new Autumn(process.env.UNIT_TEST_AUTUMN_SECRET_KEY!);
+  const autumn = new AutumnInt();
 
   let insertFeatures = [];
   for (const feature of Object.values(features)) {
     insertFeatures.push(axiosInstance.post("/v1/features", feature));
   }
   await Promise.all(insertFeatures);
+
+  await FeatureService.insert({
+    db,
+    data: Object.values(v2Features),
+    logger: console,
+  });
 
   const org = await OrgService.get({ db, orgId });
   await OrgService.update({
@@ -241,13 +247,10 @@ export const setupOrg = async ({
     },
   });
 
+  const newFeatures = (await FeatureService.list({ db, orgId, env })).filter(
+    (f) => Object.keys(features).includes(f.id),
+  );
   await client.end();
-
-  const { data: newFeatures } = await sb
-    .from("features")
-    .select("*")
-    .eq("org_id", orgId)
-    .eq("env", env);
 
   for (const feature of newFeatures!) {
     features[feature.id].internal_id = feature.internal_id;
@@ -265,11 +268,7 @@ export const setupOrg = async ({
   for (let i = 0; i < Object.values(products).length; i++) {
     const product = Object.values(products)[i];
     const insertProduct = async () => {
-      // if (product.id != "entityPro") {
-      //   return;
-      // }
-
-      const insertedProduct = await autumn.products.create({
+      await autumn.products.create({
         id: product.id,
         name: product.name,
         group: product.group,

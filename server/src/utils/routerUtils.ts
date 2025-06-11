@@ -1,5 +1,10 @@
 import { ErrCode } from "@autumn/shared";
-import RecaseError, { handleRequestError } from "./errorUtils.js";
+import RecaseError, {
+  formatZodError,
+  handleRequestError,
+} from "./errorUtils.js";
+import { ZodError } from "zod";
+import { StatusCodes } from "http-status-codes";
 
 export const routeHandler = async ({
   req,
@@ -26,6 +31,14 @@ export const routeHandler = async ({
         }
       }
     } catch (error) {}
+
+    if (error instanceof ZodError && req.originalUrl.includes("/attach")) {
+      error = new RecaseError({
+        message: formatZodError(error),
+        code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
 
     handleRequestError({
       error,

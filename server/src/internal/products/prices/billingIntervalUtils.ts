@@ -17,6 +17,7 @@ import {
   subYears,
 } from "date-fns";
 import { UTCDate } from "@date-fns/utc";
+import { formatUnixToDate, formatUnixToDateTime } from "@/utils/genUtils.js";
 
 export const subtractBillingIntervalUnix = (
   unixTimestamp: number,
@@ -79,13 +80,26 @@ export const getNextStartOfMonthUnix = (interval: BillingInterval) => {
   return twelveOClock.getTime();
 };
 
-export const getAlignedIntervalUnix = (
-  alignWithUnix: number,
-  interval: BillingInterval,
-) => {
-  const nextCycleAnchor = alignWithUnix;
-  let nextCycleAnchorUnix = nextCycleAnchor;
-  const naturalBillingDate = addBillingIntervalUnix(Date.now(), interval);
+export const getAlignedIntervalUnix = ({
+  alignWithUnix,
+  interval,
+  now,
+  alwaysReturn,
+}: {
+  alignWithUnix: number;
+  interval: BillingInterval;
+  now?: number;
+  alwaysReturn?: boolean;
+}) => {
+  let nextCycleAnchorUnix = alignWithUnix;
+
+  now = now || Date.now();
+
+  const naturalBillingDate = addBillingIntervalUnix(now, interval);
+
+  // console.log("Now:", formatUnixToDateTime(now));
+  // console.log("Anchoring to:", formatUnixToDateTime(alignWithUnix));
+  // console.log("Nat billing date:", formatUnixToDateTime(naturalBillingDate));
 
   const maxIterations = 10000;
   let iterations = 0;
@@ -95,7 +109,7 @@ export const getAlignedIntervalUnix = (
       interval,
     );
 
-    if (subtractedUnix < Date.now()) {
+    if (subtractedUnix <= now) {
       break;
     }
 
@@ -108,13 +122,21 @@ export const getAlignedIntervalUnix = (
   }
 
   let billingCycleAnchorUnix: number | undefined = nextCycleAnchorUnix;
+
+  // console.log("Next cycle anchor:", formatUnixToDateTime(nextCycleAnchorUnix));
+  // console.log("--------------------------------");
+
   if (
     differenceInSeconds(
       new Date(naturalBillingDate),
       new Date(nextCycleAnchorUnix),
     ) < 60
   ) {
-    billingCycleAnchorUnix = undefined;
+    if (alwaysReturn) {
+      return naturalBillingDate;
+    } else {
+      billingCycleAnchorUnix = undefined;
+    }
   }
 
   return billingCycleAnchorUnix;

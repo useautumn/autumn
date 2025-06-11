@@ -11,25 +11,62 @@ import {
   Feature,
   FeatureType,
 } from "@autumn/shared";
-import { isFeatureItem } from "./getItemType.js";
+import { isFeatureItem } from "./productItemUtils/getItemType.js";
 import {
   billingToItemInterval,
   entToItemInterval,
 } from "./itemIntervalUtils.js";
+import {
+  calculateProrationAmount,
+  Proration,
+} from "@/internal/invoices/prorationUtils.js";
 
-export const itemToPriceOrTiers = (item: ProductItem) => {
+export const itemToPriceOrTiers = ({
+  item,
+  proration,
+  now,
+}: {
+  item: ProductItem;
+  proration?: Proration;
+  now?: number;
+}) => {
+  now = now || Date.now();
   if (item.price) {
     return {
-      price: item.price,
+      price: proration
+        ? calculateProrationAmount({
+            periodEnd: proration.end,
+            periodStart: proration.start,
+            now,
+            amount: item.price,
+          })
+        : item.price,
     };
   } else if (item.tiers) {
     if (item.tiers.length > 1) {
       return {
-        tiers: item.tiers,
+        tiers: item.tiers.map((tier) => ({
+          ...tier,
+          amount: proration
+            ? calculateProrationAmount({
+                periodEnd: proration.end,
+                periodStart: proration.start,
+                now,
+                amount: tier.amount,
+              })
+            : tier.amount,
+        })),
       };
     } else {
       return {
-        price: item.tiers[0].amount,
+        price: proration
+          ? calculateProrationAmount({
+              periodEnd: proration.end,
+              periodStart: proration.start,
+              now,
+              amount: item.tiers[0].amount,
+            })
+          : item.tiers[0].amount,
       };
     }
   }
@@ -54,57 +91,6 @@ export const getItemFeatureType = ({
   }
 
   return undefined;
-};
-
-export const itemsAreSame = (item1: ProductItem, item2: ProductItem) => {
-  // Compare tiers
-  const compareTiers = (tiers1: any, tiers2: any) => {
-    if (!tiers1 && !tiers2) {
-      return true;
-    }
-
-    if (!tiers1 || !tiers2) {
-      return false;
-    }
-
-    if (tiers1.length !== tiers2.length) {
-      return false;
-    }
-
-    return tiers1.every(
-      (tier: any, index: number) =>
-        tier.amount === tiers2[index].amount && tier.to === tiers2[index].to
-    );
-  };
-  return (
-    item1.feature_id == item2.feature_id &&
-    item1.included_usage == item2.included_usage &&
-    item1.interval == item2.interval &&
-    item1.feature_type == item2.feature_type &&
-    item1.price == item2.price &&
-    compareTiers(item1.tiers, item2.tiers)
-  );
-};
-
-export const itemIsFixedPrice = (item: ProductItem) => {
-  return notNullish(item.price) && nullish(item.feature_id);
-};
-
-export const isFeaturePriceItem = (item: ProductItem) => {
-  return (
-    notNullish(item.feature_id) &&
-    (notNullish(item.price) || notNullish(item.tiers))
-  );
-};
-
-export const getItemType = (item: ProductItem) => {
-  if (isFeatureItem(item)) {
-    return ProductItemType.Feature;
-  } else if (isFeaturePriceItem(item)) {
-    return ProductItemType.FeaturePrice;
-  }
-
-  return ProductItemType.Price;
 };
 
 // FOR TESTS?
@@ -137,7 +123,7 @@ export const constructPriceItem = ({
   interval,
 }: {
   price: number;
-  interval: BillingInterval;
+  interval: BillingInterval | null;
 }) => {
   let item: ProductItem = {
     price: price,

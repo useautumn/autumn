@@ -1,0 +1,160 @@
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { addCustomerCreatedTask } from "@/internal/analytics/handlers/handleCustomerCreated.js";
+import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
+import { ProductService } from "@/internal/products/ProductService.js";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
+import {
+  Organization,
+  CreateCustomer,
+  CreateCustomerSchema,
+  ErrCode,
+  BillingInterval,
+  AttachScenario,
+} from "@autumn/shared";
+import { AppEnv, Customer } from "@autumn/shared";
+import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
+import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
+import { CusService } from "../CusService.js";
+import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
+import { generateId } from "@/utils/genUtils.js";
+
+import {
+  newCusToAttachParams,
+  newCusToInsertParams,
+} from "../attach/attachUtils/attachParams/convertToParams.js";
+
+export const createNewCustomer = async ({
+  req,
+  db,
+  org,
+  env,
+  customer,
+  nextResetAt,
+  processor,
+  logger,
+  createDefaultProducts = true,
+}: {
+  req: ExtendedRequest;
+  db: DrizzleCli;
+  org: Organization;
+  env: AppEnv;
+  customer: CreateCustomer;
+  nextResetAt?: number;
+  processor?: any;
+  logger: any;
+  createDefaultProducts?: boolean;
+}) => {
+  logger.info(
+    `Creating customer: ${customer.email || customer.id}, org: ${org.slug}`,
+  );
+
+  const defaultProds = await ProductService.listDefault({
+    db,
+    orgId: org.id,
+    env,
+  });
+
+  const nonFreeProds = defaultProds.filter((p) => !isFreeProduct(p.prices));
+  const freeProds = defaultProds.filter((p) => isFreeProduct(p.prices));
+
+  const parsedCustomer = CreateCustomerSchema.parse(customer);
+
+  const customerData: Customer = {
+    ...parsedCustomer,
+    name: parsedCustomer.name || "",
+    email:
+      nonFreeProds.length > 0 && !parsedCustomer.email
+        ? `${parsedCustomer.id}@invoices.useautumn.com`
+        : parsedCustomer.email || "",
+
+    internal_id: generateId("cus"),
+    org_id: org.id,
+    created_at: Date.now(),
+    env,
+    processor,
+  };
+
+  // Check if stripeCli exists
+  if (nonFreeProds.length > 0) {
+    createStripeCli({
+      org,
+      env,
+    });
+
+    if (!customerData?.email) {
+      throw new RecaseError({
+        code: ErrCode.InvalidRequest,
+        message:
+          "Customer email is required to attach default product with prices",
+      });
+    }
+  }
+
+  const newCustomer = await CusService.insert({
+    db,
+    data: customerData,
+  });
+
+  if (!newCustomer) {
+    throw new RecaseError({
+      code: ErrCode.InternalError,
+      message: "CusService.insert returned null",
+    });
+  }
+
+  if (!createDefaultProducts) {
+    return newCustomer;
+  }
+
+  await addCustomerCreatedTask({
+    req,
+    internalCustomerId: newCustomer.internal_id,
+    org,
+    env,
+  });
+
+  if (nonFreeProds.length > 0) {
+    const stripeCli = createStripeCli({ org, env });
+
+    await initStripeCusAndProducts({
+      db,
+      org,
+      env,
+      customer: newCustomer,
+      products: nonFreeProds,
+      logger,
+    });
+
+    await handleAddProduct({
+      req,
+      attachParams: newCusToAttachParams({
+        req,
+        newCus: newCustomer,
+        products: nonFreeProds,
+        stripeCli,
+      }),
+    });
+  }
+
+  for (const product of freeProds) {
+    await createFullCusProduct({
+      db,
+      attachParams: newCusToInsertParams({
+        req,
+        newCus: newCustomer,
+        product,
+      }),
+      nextResetAt,
+      anchorToUnix: org.config.anchor_start_of_month
+        ? getNextStartOfMonthUnix(BillingInterval.Month)
+        : undefined,
+      scenario: AttachScenario.New,
+      logger,
+    });
+  }
+
+  return newCustomer;
+};

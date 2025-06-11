@@ -1,40 +1,33 @@
 import { z } from "zod";
 import { UsagePriceConfigSchema } from "./priceConfig/usagePriceConfig.js";
 import { FixedPriceConfigSchema } from "./priceConfig/fixedPriceConfig.js";
+import { BillingType } from "./priceEnums.js";
+import { OnDecrease } from "../../productV2Models/productItemModels/productItemEnums.js";
+import { OnIncrease } from "../../productV2Models/productItemModels/productItemEnums.js";
 
-export enum PriceType {
-  Fixed = "fixed",
-  Usage = "usage",
-}
-
-export enum BillingType {
-  OneOff = "one_off",
-  FixedCycle = "fixed_cycle",
-
-  UsageBelowThreshold = "usage_below_threshold",
-  UsageInAdvance = "usage_in_advance",
-  UsageInArrear = "usage_in_arrear",
-  InArrearProrated = "in_arrear_prorated",
-}
+const ProrationConfigSchema = z.object({
+  on_increase: z.nativeEnum(OnIncrease).default(OnIncrease.ProrateImmediately),
+  on_decrease: z.nativeEnum(OnDecrease).default(OnDecrease.ProrateImmediately),
+});
 
 export const PriceSchema = z.object({
-  id: z.string().optional(),
+  id: z.string(),
+  internal_product_id: z.string(),
+
   org_id: z.string().optional(),
-  internal_product_id: z.string().optional(),
   created_at: z.number().optional(),
   billing_type: z.nativeEnum(BillingType).nullish(),
   is_custom: z.boolean().optional(),
-
-  // name: z.string().optional(),
   config: FixedPriceConfigSchema.or(UsagePriceConfigSchema),
   entitlement_id: z.string().nullish(),
+
+  proration_config: ProrationConfigSchema.nullable(),
+});
+
+export const CreatePriceSchema = z.object({
+  config: FixedPriceConfigSchema.or(UsagePriceConfigSchema),
 });
 
 export type Price = z.infer<typeof PriceSchema>;
-
-export const CreatePriceSchema = z.object({
-  // name: z.string().nonempty(),
-  config: FixedPriceConfigSchema.or(UsagePriceConfigSchema),
-});
-
 export type CreatePrice = z.infer<typeof CreatePriceSchema>;
+export type ProrationConfig = z.infer<typeof ProrationConfigSchema>;

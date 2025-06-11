@@ -12,12 +12,10 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { handleNewFreeTrial } from "@/internal/products/free-trials/freeTrialUtils.js";
-
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { handleVersionProductV2 } from "./handleVersionProduct.js";
-
 import { routeHandler } from "@/utils/routerUtils.js";
-import { handleNewProductItems } from "@/internal/products/product-items/productItemInitUtils.js";
+import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 

@@ -1,3 +1,9 @@
+import RecaseError from "@/utils/errorUtils.js";
+
+import { nullish } from "@/utils/genUtils.js";
+import { numberWithCommas } from "tests/utils/general/numberUtils.js";
+import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
+
 import {
   ProductV2,
   Feature,
@@ -7,16 +13,9 @@ import {
   ErrCode,
   Infinite,
   FullCusProduct,
-  CusProductStatus,
 } from "@autumn/shared";
-import { features } from "process";
-import { isPriceItem } from "../product-items/getItemType.js";
-import { isFeaturePriceItem } from "../product-items/productItemUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import { numberWithCommas } from "tests/utils/general/numberUtils.js";
-import { getExistingCusProducts } from "@/internal/customers/add-product/handleExistingProduct.js";
-import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
+import { isPriceItem } from "../product-items/productItemUtils/getItemType.js";
+import { isFeaturePriceItem } from "../product-items/productItemUtils/getItemType.js";
 
 export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
   items.sort((a, b) => {
@@ -132,7 +131,7 @@ export const getPricecnPrice = ({
   if (isPriceItem(priceItem)) {
     return {
       primaryText: getPriceText({ item: priceItem, org }),
-      secondaryText: `per ${priceItem.interval}`,
+      secondaryText: priceItem.interval ? `per ${priceItem.interval}` : " ",
     };
   } else {
     let feature = features.find((f) => f.id == priceItem.feature_id);

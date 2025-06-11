@@ -42,11 +42,17 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
 
     let tokenOrg = tokenData!.org as any;
 
-    let { org, features } = await OrgService.getWithFeatures({
+    let data = await OrgService.getWithFeatures({
       db: req.db,
       orgId: tokenOrg.id,
       env: req.env,
     });
+
+    if (!data) {
+      return res.status(404).json({ message: "Org not found" });
+    }
+
+    const { org, features } = data;
 
     req.minOrg = {
       id: tokenOrg?.id,

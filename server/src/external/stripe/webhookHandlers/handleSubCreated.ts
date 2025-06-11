@@ -1,4 +1,4 @@
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   BillingType,
   FullCusProduct,
@@ -7,17 +7,16 @@ import {
   Price,
 } from "@autumn/shared";
 import { AppEnv } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { createStripeCli } from "../utils.js";
-import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
 import { getStripeExpandedInvoice } from "../stripeInvoiceUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { generateId } from "@/utils/genUtils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
-import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullStripeSub } from "../stripeSubUtils.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 
 export const handleSubCreated = async ({
   db,

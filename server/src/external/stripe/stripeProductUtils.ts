@@ -7,7 +7,7 @@ import { StatusCodes } from "http-status-codes";
 export const createStripeProduct = async (
   org: Organization,
   env: AppEnv,
-  product: Product
+  product: Product,
 ) => {
   try {
     const stripe = createStripeCli({ org, env });
@@ -33,7 +33,7 @@ export const createStripeProduct = async (
 export const deleteStripeProduct = async (
   org: Organization,
   env: AppEnv,
-  product: Product
+  product: Product,
 ) => {
   const stripe = createStripeCli({ org, env });
 
@@ -85,14 +85,14 @@ export const deactivateStripeMeters = async ({
     }
   }
 
-  const batchSize = 10;
+  const batchSize = 40;
   for (let i = 0; i < allStripeMeters.length; i += batchSize) {
     const batch = allStripeMeters.slice(i, i + batchSize);
     await Promise.all(
-      batch.map((meter) => stripeCli.billing.meters.deactivate(meter.id))
+      batch.map((meter) => stripeCli.billing.meters.deactivate(meter.id)),
     );
     console.log(
-      `Deactivated ${i + batch.length}/${allStripeMeters.length} meters`
+      `Deactivated ${i + batch.length}/${allStripeMeters.length} meters`,
     );
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
@@ -125,7 +125,7 @@ export const deleteAllStripeProducts = async ({
     });
   }
 
-  let batchSize = 10;
+  let batchSize = 50;
   for (let i = 0; i < stripeProducts.data.length; i += batchSize) {
     let batch = stripeProducts.data.slice(i, i + batchSize);
     await Promise.all(
@@ -137,10 +137,10 @@ export const deleteAllStripeProducts = async ({
             active: false,
           });
         }
-      })
+      }),
     );
     console.log(
-      `Deleted ${i + batch.length}/${stripeProducts.data.length} products`
+      `Deleted ${i + batch.length}/${stripeProducts.data.length} products`,
     );
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }

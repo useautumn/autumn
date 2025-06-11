@@ -32,8 +32,7 @@ export const createStripeSubThroughInvoice = async ({
   let paymentMethod;
   try {
     paymentMethod = await getCusPaymentMethod({
-      org,
-      env: customer.env,
+      stripeCli,
       stripeId: customer.processor.id,
     });
   } catch (error) {}
@@ -41,17 +40,17 @@ export const createStripeSubThroughInvoice = async ({
   let paymentMethodData = {};
   if (paymentMethod) {
     paymentMethodData = {
-      default_payment_method: paymentMethod as string,
+      default_payment_method: paymentMethod.id,
     };
   }
 
   let subItems = items.filter(
     (i: any, index: number) =>
-      prices[index].config!.interval !== BillingInterval.OneOff
+      prices[index].config!.interval !== BillingInterval.OneOff,
   );
   let invoiceItems = items.filter(
     (i: any, index: number) =>
-      prices[index].config!.interval === BillingInterval.OneOff
+      prices[index].config!.interval === BillingInterval.OneOff,
   );
 
   try {
@@ -59,7 +58,7 @@ export const createStripeSubThroughInvoice = async ({
       // ...paymentMethodData,
       customer: customer.processor.id,
       items: subItems as any,
-      trial_end: freeTrialToStripeTimestamp(freeTrial),
+      trial_end: freeTrialToStripeTimestamp({ freeTrial }),
       metadata,
       add_invoice_items: invoiceItems,
       collection_method: "send_invoice",

@@ -172,18 +172,21 @@ export class ProductService {
     env,
     inIds,
     returnAll = false,
+    version,
   }: {
     db: DrizzleCli;
     orgId: string;
     env: AppEnv;
     inIds?: string[];
     returnAll?: boolean;
+    version?: number;
   }) {
     let data = (await db.query.products.findMany({
       where: and(
         eq(products.org_id, orgId),
         eq(products.env, env),
         inIds ? inArray(products.id, inIds) : undefined,
+        version ? eq(products.version, version) : undefined,
       ),
       with: {
         entitlements: {
@@ -204,7 +207,23 @@ export class ProductService {
       return data;
     }
 
-    const latestProducts = getLatestProducts(data);
+    const latestProducts: FullProduct[] = getLatestProducts(data);
+
+    if (inIds) {
+      let newProducts: FullProduct[] = [];
+      for (const id of inIds) {
+        const prod = latestProducts.find((prod) => prod.id === id);
+        if (!prod) {
+          throw new RecaseError({
+            message: `Product ${id} not found`,
+            code: ErrCode.ProductNotFound,
+            statusCode: StatusCodes.NOT_FOUND,
+          });
+        }
+        newProducts.push(prod);
+      }
+      return newProducts;
+    }
 
     return latestProducts as FullProduct[];
   }
@@ -304,7 +323,7 @@ export class ProductService {
     internalId: string;
     update: any;
   }) {
-    const data = await db
+    await db
       .update(products)
       .set(update)
       .where(eq(products.internal_id, internalId));

@@ -1,61 +1,49 @@
-import RecaseError from "@/utils/errorUtils.js";
-import {
-  Organization,
-  Customer,
-  Price,
-  ErrCode,
-  BillingInterval,
-} from "@autumn/shared";
 import Stripe from "stripe";
-import { isStripeCardDeclined } from "../stripeCardUtils.js";
-import { getCusPaymentMethod } from "../stripeCusUtils.js";
-import { ProrationBehavior } from "@/internal/customers/change-product/handleUpgrade.js";
-import { getStripeProrationBehavior } from "../stripeSubUtils.js";
-import { SupabaseClient } from "@supabase/supabase-js";
+import {
+  BillingInterval,
+  AttachConfig,
+  ProrationBehavior,
+} from "@autumn/shared";
+
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { createProrationInvoice } from "./updateStripeSub/createProrationinvoice.js";
+import {
+  createUsageInvoiceItems,
+  resetUsageBalances,
+} from "@/internal/customers/attach/attachFunctions/upgradeDiffIntFlow/createUsageInvoiceItems.js";
+import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
+import { createAndFilterContUseItems } from "@/internal/customers/attach/attachUtils/getContUseItems/createContUseInvoiceItems.js";
 
 export const updateStripeSubscription = async ({
   db,
-  org,
-  customer,
-  stripeCli,
-  subscriptionId,
+  attachParams,
+  config,
   trialEnd,
-  invoiceOnly,
-  prorationBehavior,
-  logger,
+  stripeSubs,
   itemSet,
-  shouldPreview,
+  logger,
+  interval,
 }: {
   db: DrizzleCli;
-  org: Organization;
-  customer: Customer;
-  stripeCli: Stripe;
-  subscriptionId: string;
-  trialEnd?: number | null;
-  invoiceOnly: boolean;
-  prorationBehavior?: ProrationBehavior;
-  logger: any;
+  attachParams: AttachParams;
+  config: AttachConfig;
+  stripeSubs: Stripe.Subscription[];
+  trialEnd?: number;
   itemSet: ItemSet;
   shouldPreview?: boolean;
+  logger: any;
+  interval?: BillingInterval;
 }) => {
-  let paymentMethod = await getCusPaymentMethod({
-    org,
-    env: customer.env,
-    stripeId: customer.processor.id,
-    errorIfNone: !invoiceOnly, // throw error if no payment method and invoiceOnly is false
-  });
+  const { curMainProduct } = attachParamToCusProducts({ attachParams });
+  const { stripeCli, customer, org, paymentMethod } = attachParams;
+  const { invoiceOnly, proration } = config;
+  const curSub = stripeSubs[0];
 
-  let paymentMethodData = {};
-  if (paymentMethod) {
-    paymentMethodData = {
-      default_payment_method: paymentMethod as string,
-    };
-  }
+  let { items, prices } = itemSet;
 
-  let { items, prices, subMeta } = itemSet;
   let subItems = items.filter(
     (i: any, index: number) =>
       i.deleted || prices[index].config!.interval !== BillingInterval.OneOff,
@@ -69,68 +57,124 @@ export const updateStripeSubscription = async ({
     return false;
   });
 
-  let stripeProration = getStripeProrationBehavior({
-    org,
-    prorationBehavior,
-  });
-
-  if (shouldPreview) {
-    // console.log("Sub items: ", subItems);
-    // console.log("Sub invoice items: ", subInvoiceItems);
-    let preview = await stripeCli.invoices.createPreview({
-      subscription_details: {
-        items: subItems,
-        proration_behavior: stripeProration as any,
-        trial_end: trialEnd as any,
-      },
-      subscription: subscriptionId,
-      invoice_items: subInvoiceItems,
-      customer: customer.processor.id,
-    });
-    return preview;
-  }
+  // 1. Update subscription
+  let sub: Stripe.Subscription | null = null;
+  let stripeProration =
+    proration == ProrationBehavior.None ? "none" : "create_prorations";
 
   try {
-    const sub = await stripeCli.subscriptions.update(subscriptionId, {
+    sub = await stripeCli.subscriptions.update(curSub.id, {
       items: subItems,
       proration_behavior: stripeProration,
       trial_end: trialEnd,
-      default_payment_method: paymentMethod as string,
+      default_payment_method: paymentMethod?.id,
       add_invoice_items: subInvoiceItems,
       ...((invoiceOnly && {
         collection_method: "send_invoice",
         days_until_due: 30,
       }) as any),
       payment_behavior: "error_if_incomplete",
+      expand: ["latest_invoice"],
     });
-
-    // Upsert sub
-    await SubService.addUsageFeatures({
-      db,
-      stripeId: subscriptionId,
-      usageFeatures: itemSet.usageFeatures,
-      orgId: org.id,
-      env: customer.env,
-    });
-
-    return sub;
   } catch (error: any) {
-    console.log("Error updating stripe subscription.", error.message);
+    throw error;
+  }
 
-    if (isStripeCardDeclined(error)) {
-      logger.info("Error");
-      logger.info(error);
-      throw new RecaseError({
-        code: ErrCode.StripeCardDeclined,
-        message: `Card was declined, Stripe decline code: ${error.decline_code}, Code: ${error.code}`,
-        statusCode: 500,
-      });
+  const latestInvoice = sub.latest_invoice as Stripe.Invoice;
+
+  if (proration == ProrationBehavior.None) {
+    return {
+      preview: null,
+      sub: {
+        ...sub,
+        latest_invoice: latestInvoice.id,
+      },
+      invoice: null,
+    };
+  }
+
+  // 3. Create invoice items for remaining usages
+  let invoice: Stripe.Invoice | null = null;
+  let { cusEntIds } = await createUsageInvoiceItems({
+    db,
+    attachParams,
+    cusProduct: curMainProduct!,
+    stripeSubs,
+    logger,
+  });
+
+  await createAndFilterContUseItems({
+    attachParams,
+    curMainProduct: curMainProduct!,
+    stripeSubs,
+    interval,
+    logger,
+  });
+
+  if (proration === ProrationBehavior.Immediately) {
+    if (latestInvoice.id != curSub.latest_invoice) {
+      sub.latest_invoice = latestInvoice.id;
+      return {
+        preview: null,
+        sub,
+        invoice: latestInvoice,
+      };
     }
 
-    throw new RecaseError({
-      code: ErrCode.StripeUpdateSubscriptionFailed,
-      message: "Failed to update stripe subscription",
-      statusCode: 500,
+    invoice = await createProrationInvoice({
+      attachParams,
+      invoiceOnly,
+      curSub,
+      updatedSub: sub,
+      logger,
     });
   }
+
+  await resetUsageBalances({
+    db,
+    cusEntIds,
+    cusProduct: curMainProduct!,
+  });
+
+  // Upsert sub
+  await SubService.addUsageFeatures({
+    db,
+    stripeId: curSub.id,
+    usageFeatures: itemSet.usageFeatures,
+    orgId: org.id,
+    env: customer.env,
+  });
+
+  if (invoice) {
+    sub.latest_invoice = invoice.id;
+  } else {
+    sub.latest_invoice = null;
+  }
+
+  return {
+    preview: null,
+    sub,
+    invoice,
+  };
 };
+
+// if (shouldPreview) {
+//   let preview = await stripeCli.invoices.createPreview({
+//     subscription_details: {
+//       items: subItems,
+//       proration_behavior: getStripeProrationBehavior({
+//         org,
+//         prorationBehavior: proration,
+//       }) as any,
+//       trial_end: trialEnd as any,
+//     },
+//     subscription: curSub.id,
+//     invoice_items: subInvoiceItems,
+//     customer: customer.processor.id,
+//   });
+//   return {
+//     preview,
+//     sub: null,
+//     invoice: null,
+//   };
+// }

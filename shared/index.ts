@@ -45,16 +45,23 @@ export * from "./models/productV2Models/productV2Models.js";
 export * from "./models/productV2Models/productResponseModels.js";
 export * from "./models/productV2Models/productItemModels/productItemModels.js";
 export * from "./models/productV2Models/productItemModels/prodItemResponseModels.js";
+export * from "./models/productV2Models/productItemModels/featureItem.js";
+export * from "./models/productV2Models/productItemModels/featurePriceItem.js";
+export * from "./models/productV2Models/productItemModels/priceItem.js";
+export * from "./models/productV2Models/productItemModels/productItemEnums.js";
 
 // 7. Cus Product Models
 export * from "./models/cusProductModels/cusProductModels.js";
 export * from "./models/cusProductModels/cusProductTable.js";
 export * from "./models/cusProductModels/cusProductEnums.js";
+export * from "./models/cusProductModels/cusPriceModels/cusPriceModels.js";
+export * from "./models/cusProductModels/cusPriceModels/cusPriceTable.js";
+
 export * from "./models/cusProductModels/cusEntModels/cusEntModels.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntWithProduct.js";
 export * from "./models/cusProductModels/cusEntModels/cusEntTable.js";
-export * from "./models/cusProductModels/cusPriceModels/cusPriceModels.js";
-export * from "./models/cusProductModels/cusPriceModels/cusPriceTable.js";
+export * from "./models/cusProductModels/cusEntModels/replaceableTable.js";
+export * from "./models/cusProductModels/cusEntModels/replaceableSchema.js";
 
 // 8. Customer Models
 export * from "./models/cusModels/cusModels.js";
@@ -113,6 +120,12 @@ export * from "./models/migrationModels/migrationErrorTable.js";
 export * from "./models/analyticsModels/actionEnums.js";
 export * from "./models/analyticsModels/actionTable.js";
 
+// Attach Models
+export * from "./models/attachModels/attachPreviewModels.js";
+export * from "./models/attachModels/attachEnums/AttachBranch.js";
+export * from "./models/attachModels/attachEnums/AttachFunction.js";
+export * from "./models/attachModels/attachEnums/AttachConfig.js";
+
 // Utils
 export * from "./utils/displayUtils.js";
 export * from "./models/checkModels/checkPreviewModels.js";
@@ -122,3 +135,5 @@ export * from "./models/chatResultModels/chatResultFeature.js";
 export * from "./enums/SuccessCode.js";
 export * from "./enums/ErrCode.js";
 export * from "./enums/LoggerAction.js";
+export * from "./enums/AttachErrCode.js";
+export * from "./enums/APIVersion.js";

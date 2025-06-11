@@ -4,6 +4,8 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 import { LoaderCircle, PlusIcon } from "lucide-react";
+import { Tooltip, TooltipContent } from "./tooltip";
+import { TooltipTrigger } from "./tooltip";
 
 // [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0
 
@@ -56,7 +58,7 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 export interface ButtonProps
@@ -68,6 +70,8 @@ export interface ButtonProps
   dim?: number;
   startIcon?: React.ReactNode;
   endIcon?: React.ReactNode;
+  tooltipContent?: string;
+  disableStartIcon?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -82,18 +86,58 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       dim = 7,
       startIcon,
       endIcon,
+      tooltipContent,
       children,
+      disableStartIcon = false,
       ...props
     },
-    ref
+    ref,
   ) => {
     const Comp = asChild ? Slot : "button";
+    const Button = (
+      <Comp
+        {...props}
+        className={cn(
+          buttonVariants({ variant, size, className }),
+          isIcon && `w-${dim} h-${dim} p-0`,
+        )}
+        ref={ref}
+        onClick={(e) => {
+          if (isLoading) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+          props.onClick?.(e);
+        }}
+      >
+        {isLoading && <LoaderCircle className="animate-spin" size={14} />}
+        {startIcon && !isLoading && <>{startIcon}</>}
+        {variant == "add" && !disableStartIcon && <PlusIcon size={12} />}
+        {children}
+        {endIcon && !isLoading && <>{endIcon}</>}
+      </Comp>
+    );
+
+    if (tooltipContent) {
+      return (
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>{Button}</TooltipTrigger>
+          <TooltipContent>{tooltipContent}</TooltipContent>
+        </Tooltip>
+        // <Tooltip content={tooltipContent}>
+        //   {Button}
+        // </Tooltip>
+      );
+    } else {
+      return Button;
+    }
     return (
       <Comp
         {...props}
         className={cn(
           buttonVariants({ variant, size, className }),
-          isIcon && `w-${dim} h-${dim} p-0`
+          isIcon && `w-${dim} h-${dim} p-0`,
         )}
         ref={ref}
         onClick={(e) => {
@@ -112,7 +156,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {endIcon && !isLoading && <>{endIcon}</>}
       </Comp>
     );
-  }
+  },
 );
 Button.displayName = "Button";
 

@@ -1,34 +1,26 @@
 import Stripe from "stripe";
-import { InvoiceService } from "@/internal/customers/invoices/InvoiceService.js";
-import { CusProductService } from "@/internal/customers/products/CusProductService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   AppEnv,
-  CouponDurationType,
   FullCusProduct,
   FullCustomerPrice,
   InvoiceStatus,
   Organization,
-  Reward,
-  RewardType,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { createStripeCli } from "../utils.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
-import { Decimal } from "decimal.js";
-import { formatUnixToDateTime, generateId, nullish } from "@/utils/genUtils.js";
+
+import { nullish } from "@/utils/genUtils.js";
 import {
   getFullStripeInvoice,
   getInvoiceDiscounts,
-  getStripeExpandedInvoice,
   updateInvoiceIfExists,
 } from "../stripeInvoiceUtils.js";
 import { getStripeSubs } from "../stripeSubUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
-import { getInvoiceItems } from "@/internal/customers/invoices/invoiceUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { addDays } from "date-fns";
-import { deleteCouponFromCus } from "../stripeCouponUtils/deleteCouponFromCus.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { getInvoiceItems } from "@/internal/invoices/invoiceUtils.js";
 import { handleInvoicePaidDiscount } from "./handleInvoicePaidDiscount.js";
 
 const handleOneOffInvoicePaid = async ({

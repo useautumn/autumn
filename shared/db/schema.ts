@@ -53,6 +53,7 @@ import { customerProductsRelations } from "../models/cusProductModels/cusProduct
 import { customerPricesRelations } from "../models/cusProductModels/cusPriceModels/cusPriceRelations.js";
 import { customerEntitlementsRelations } from "../models/cusProductModels/cusEntModels/cusEntRelations.js";
 import { apiKeyRelations } from "../models/devModels/apiKeyRelations.js";
+import { replaceableRelations } from "../models/cusProductModels/cusEntModels/replaceableRelations.js";
 
 // Reward Relations
 import { rewardProgramRelations } from "../models/rewardModels/rewardProgramModels/rewardProgramRelations.js";
@@ -65,31 +66,7 @@ import { migrationErrorRelations } from "../models/migrationModels/migrationErro
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
 import { events } from "../models/eventModels/eventTable.js";
-
-// const relations = {
-//   organizationsRelations,
-//   entitlementsRelations,
-//   featureRelations,
-//   priceRelations,
-//   productRelations,
-//   freeTrialRelations,
-//   customerProductsRelations,
-//   customerPricesRelations,
-//   customerEntitlementsRelations,
-
-//   // Customer Relations
-//   customersRelations,
-//   entitiesRelations,
-//   apiKeyRelations,
-
-//   // Reward Relations
-//   rewardProgramRelations,
-//   referralCodeRelations,
-//   rewardRedemptionRelations,
-
-//   // Migration Relations
-//   migrationErrorRelations,
-// };
+import { replaceables } from "../models/cusProductModels/cusEntModels/replaceableTable.js";
 
 export {
   // Tables
@@ -117,6 +94,7 @@ export {
   migrationErrors,
   actions,
   events,
+  replaceables,
 
   // Relations
   organizationsRelations,
@@ -135,4 +113,5 @@ export {
   referralCodeRelations,
   rewardRedemptionRelations,
   migrationErrorRelations,
+  replaceableRelations,
 };

@@ -2,25 +2,27 @@ import { z } from "zod";
 import { ProcessorType } from "../genModels/genEnums.js";
 import { ProductSchema } from "../productModels/productModels.js";
 import { PriceSchema } from "../productModels/priceModels/priceModels.js";
-import { CustomerEntitlementSchema } from "./cusEntModels/cusEntModels.js";
+import {
+  CustomerEntitlementSchema,
+  FullCustomerEntitlementSchema,
+} from "./cusEntModels/cusEntModels.js";
 import { EntitlementSchema } from "../productModels/entModels/entModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
 import { CustomerSchema } from "../cusModels/cusModels.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
-import { CustomerPriceSchema } from "./cusPriceModels/cusPriceModels.js";
+import {
+  CustomerPriceSchema,
+  FullCustomerPriceSchema,
+} from "./cusPriceModels/cusPriceModels.js";
 import { CollectionMethod } from "./cusProductEnums.js";
 import { CusProductStatus } from "./cusProductEnums.js";
 
 export const FeatureOptionsSchema = z.object({
-  internal_feature_id: z.string().optional(),
   feature_id: z.string(),
+  quantity: z.number(), // same as prepaid
+
   adjustable_quantity: z.boolean().nullish(),
-
-  // Quantities
-  quantity: z.number().optional().nullable(), // same as prepaid
-  prepaid_quantity: z.number().nullish(),
-
-  usage_quantity: z.number().nullish(),
+  internal_feature_id: z.string().nullish(),
 });
 
 export const BillingCycleAnchorConfig = z.object({
@@ -66,22 +68,12 @@ export const CusProductSchema = z.object({
     .optional(),
 
   quantity: z.number().default(1),
+  api_version: z.number().nullish(),
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({
-  customer_prices: z.array(
-    CustomerPriceSchema.extend({
-      price: PriceSchema,
-    }),
-  ),
-
-  customer_entitlements: z.array(
-    CustomerEntitlementSchema.extend({
-      entitlement: EntitlementSchema.extend({
-        feature: FeatureSchema,
-      }),
-    }),
-  ),
+  customer_prices: z.array(FullCustomerPriceSchema),
+  customer_entitlements: z.array(FullCustomerEntitlementSchema),
 
   customer: CustomerSchema.optional(),
   product: ProductSchema,

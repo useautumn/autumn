@@ -13,7 +13,7 @@ import {
   cusEntsContainFeature,
   getFeatureBalance,
   getUnlimitedAndUsageAllowed,
-} from "@/internal/customers/entitlements/cusEntUtils.js";
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
@@ -217,16 +217,11 @@ const getCusEntsAndFeatures = async ({
 
   const customer = await getOrCreateCustomer({
     req,
-    db,
-    org: req.org,
-    env,
     customerId: customer_id,
     customerData: customer_data,
     inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-    logger,
     entityId: entity_id,
     entityData: req.body.entity_data,
-    features: allFeatures,
   });
 
   const duration = Date.now() - startTime;
@@ -264,7 +259,7 @@ const getCusEntsAndFeatures = async ({
         // notNullish(cusEnt.entities) ||
         nullish(cusEnt.customer_product.internal_entity_id) ||
         cusEnt.customer_product.internal_entity_id ===
-          customer.entity.internal_id
+          customer.entity!.internal_id
       );
     });
   }

@@ -19,7 +19,7 @@ export default class RecaseError extends Error {
     message,
     code,
     data,
-    statusCode = 500,
+    statusCode = 400,
   }: {
     message: string;
     code: string;
@@ -48,7 +48,9 @@ export default class RecaseError extends Error {
 
 export function formatZodError(error: ZodError): string {
   return error.errors
-    .map((err) => `${err.path.join(".")}: ${err.message}`)
+    .map((err) =>
+      err.path.length ? `${err.path.join(".")}: ${err.message}` : err.message,
+    )
     .join(", ");
 }
 
@@ -146,6 +148,7 @@ export const handleRequestError = ({
       logger.error("Stripe error");
       logger.error("Request body:", getJsonBody(req.body));
       logger.error(error.message || error);
+      logger.error(error.stack);
       res.status(400).json({
         message: error.message,
         code: ErrCode.InvalidInputs,
@@ -163,12 +166,10 @@ export const handleRequestError = ({
       logger.error(`Type: Unknown`);
       logger.error(error);
 
-      res
-        .status(500)
-        .json({
-          message: error.message || "Unknown error",
-          code: error.code || "unknown_error",
-        });
+      res.status(500).json({
+        message: error.message || "Unknown error",
+        code: error.code || "unknown_error",
+      });
     }
     logger.error("--------------------------------");
   } catch (error) {

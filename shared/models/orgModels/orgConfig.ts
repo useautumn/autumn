@@ -5,13 +5,14 @@ export const OrgConfigSchema = z.object({
   convert_to_charge_automatically: z.boolean().default(true),
   anchor_start_of_month: z.boolean().default(false), // If true, the billing cycle will start on the first day of the month
   cancel_on_past_due: z.boolean().default(false),
+
   prorate_unused: z.boolean().default(true),
 
   api_version: z.number().default(0.2),
-  checkout_on_failed_payment: z.boolean().default(true),
+  checkout_on_failed_payment: z.boolean().default(true), // false for pipeline?
   reverse_deduction_order: z.boolean().default(false),
 
-  include_past_due: z.boolean().default(false),
+  include_past_due: z.boolean().default(true),
   sync_status: z.boolean().default(true),
   merge_billing_cycles: z.boolean().default(true),
   multiple_trials: z.boolean().default(false),

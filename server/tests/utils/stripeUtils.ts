@@ -17,11 +17,10 @@ import {
   addWeeks,
   format,
 } from "date-fns";
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 
-const STRIPE_TEST_CLOCK_TIMING = 30000; // 30s
+const STRIPE_TEST_CLOCK_TIMING = 20000; // 30s
 // const STRIPE_TEST_CLOCK_TIMING = 40000; // 30s
 
 export const completeCheckoutForm = async (
@@ -249,7 +248,7 @@ export const advanceTestClock = async ({
     advanceTo = addMinutes(addMonths(startingFrom, 1), 10).getTime();
   }
 
-  console.log("   - Advancing to: ", format(advanceTo, "yyyy MMM dd HH:mm:ss"));
+  console.log("   - Advancing to: ", format(advanceTo, "dd MMM yyyy HH:mm:ss"));
   await stripeCli.testHelpers.testClocks.advance(testClockId, {
     frozen_time: Math.floor(advanceTo / 1000),
   });
@@ -257,6 +256,8 @@ export const advanceTestClock = async ({
   await timeout(
     waitForSeconds ? waitForSeconds * 1000 : STRIPE_TEST_CLOCK_TIMING,
   );
+
+  return advanceTo;
 };
 
 export const waitForMeterUpdate = async () => {
@@ -424,13 +425,19 @@ export const getUsageInArrearPrice = async ({
 export const getDiscount = async ({
   stripeCli,
   customer,
+  stripeId,
 }: {
   stripeCli: Stripe;
-  customer: Customer;
+  customer?: Customer;
+  stripeId?: string;
 }) => {
   const stripeCustomer: any = await stripeCli.customers.retrieve(
-    customer.processor!.id,
+    stripeId || customer!.processor!.id,
+    {
+      expand: ["discount.coupon"],
+    },
   );
+
   return stripeCustomer.discount;
 };
 

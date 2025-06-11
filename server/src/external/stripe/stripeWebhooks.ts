@@ -1,23 +1,36 @@
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { AuthType, LoggerAction, Organization } from "@autumn/shared";
 import express from "express";
-import stripe from "stripe";
+import stripe, { Stripe } from "stripe";
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";
-import { handleSubscriptionDeleted } from "./webhookHandlers/handleSubDeleted.js";
+import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
 import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
 import { getStripeWebhookSecret } from "@/internal/orgs/orgUtils.js";
 import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
-import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated.js";
+import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import chalk from "chalk";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
-import { format } from "date-fns";
 import { createLogtailWithContext } from "../logtail/logtailUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
+import { createStripeCli } from "./utils.js";
 
 export const stripeWebhookRouter = express.Router();
+
+const logStripeWebhook = ({
+  req,
+  event,
+}: {
+  req: ExtendedRequest;
+  event: Stripe.Event;
+}) => {
+  console.log(
+    `${chalk.yellow("STRIPE").padEnd(18)} ${event.type.padEnd(30)} ${req.org.slug} | ${event.id}`,
+  );
+};
 
 stripeWebhookRouter.post(
   "/:orgId/:env",
@@ -30,12 +43,22 @@ stripeWebhookRouter.post(
     const { db } = request;
 
     let org: Organization;
-    try {
-      org = await OrgService.get({ db: request.db, orgId });
-    } catch (error) {
+
+    const data = await OrgService.getWithFeatures({
+      db: request.db,
+      orgId,
+      env,
+    });
+
+    if (!data) {
       response.status(200).send(`Org ${orgId} not found`);
       return;
     }
+
+    request.org = data.org;
+    request.features = data.features;
+    request.env = env;
+    org = data.org;
 
     if (!org.stripe_config) {
       console.log(`Org ${orgId} does not have a stripe config`);
@@ -51,14 +74,14 @@ stripeWebhookRouter.post(
       return;
     }
 
-    // event = JSON.parse(request.body);
-
     try {
       request.body = JSON.parse(request.body);
       request.authType = AuthType.Stripe;
     } catch (error) {
       console.log("Error parsing body", error);
     }
+
+    logStripeWebhook({ req: request, event });
 
     const logger = createLogtailWithContext({
       action: LoggerAction.StripeWebhook,
@@ -69,14 +92,7 @@ stripeWebhookRouter.post(
       env,
     });
 
-    console.log(
-      `${chalk.gray(format(new Date(), "dd MMM HH:mm:ss"))} ${chalk.yellow(
-        "Stripe Webhook: ",
-      )} ${request.url} ${request.url.includes("live") ? "   " : ""}| ${
-        event?.type
-      } | ID: ${event?.id}`,
-    );
-
+    const stripeCli = createStripeCli({ org, env });
     try {
       switch (event.type) {
         case "customer.subscription.created":
@@ -103,13 +119,10 @@ stripeWebhookRouter.post(
           break;
 
         case "customer.subscription.deleted":
-          const deletedSubscription = event.data.object;
-          await handleSubscriptionDeleted({
+          await handleSubDeleted({
             req: request,
-            db,
-            subscription: deletedSubscription,
-            org,
-            env,
+            stripeCli,
+            data: event.data.object,
             logger,
           });
           break;
@@ -119,7 +132,7 @@ stripeWebhookRouter.post(
           await handleCheckoutSessionCompleted({
             req: request,
             db,
-            checkoutSession,
+            data: checkoutSession,
             org,
             env,
             logger,

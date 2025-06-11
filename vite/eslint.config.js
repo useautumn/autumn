@@ -26,6 +26,7 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off', // Disable the "any" type warning
       '@typescript-eslint/no-unused-vars': 'off',
       'no-unused-vars': 'off', // Also disable the core ESLint unused vars rule
+      'react-hooks/exhaustive-deps': 'off', // Disable exhaustive deps rule project-wide
 
     },
   },
