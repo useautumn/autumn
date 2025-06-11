@@ -190,7 +190,7 @@ export const addExistingUsagesToCusEnts = ({
   // Sort cusEnts
   sortCusEntsForDeduction(fullCusEnts);
 
-  // printLogs = true;
+  printLogs = true;
   if (printLogs) {
     console.log("DEDUCTING EXISTING USAGE FROM CUS ENTS");
     console.log("Existing usages:", existingUsages);
@@ -212,12 +212,14 @@ export const addExistingUsagesToCusEnts = ({
     for (const cusEnt of fullCusEnts) {
       let ent = cusEnt.entitlement;
       let cusEntKey = `${ent.feature_id}-${ent.interval}`;
+      let fromEntities = existingUsages[key].fromEntities;
 
       if (cusEntKey !== key) {
         continue;
       }
 
-      let shouldCarry = ent.carry_from_previous || carryExistingUsages;
+      let shouldCarry =
+        ent.carry_from_previous || carryExistingUsages || fromEntities;
       if (!shouldCarry) {
         continue;
       }
