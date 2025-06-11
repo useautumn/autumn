@@ -76,6 +76,7 @@ export const toFeaturePriceItem = ({
       ent.feature.config?.usage_type || ProductItemFeatureType.SingleUse,
 
     included_usage: ent.allowance,
+
     interval: billingToItemInterval(config.interval!),
 
     price: null,

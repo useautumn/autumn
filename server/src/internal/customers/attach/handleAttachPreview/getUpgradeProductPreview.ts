@@ -26,6 +26,7 @@ import {
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { Decimal } from "decimal.js";
 import { intervalsAreSame } from "../attachUtils/getAttachConfig.js";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
 
 const getNextCycleAt = ({
   prices,
@@ -107,9 +108,10 @@ export const getUpgradeProductPreview = async ({
   // Get prorated amounts for new product
   const newProduct = attachParamsToProduct({ attachParams });
   const intervalsSame = intervalsAreSame({ attachParams });
-  const anchorToUnix = intervalsSame
-    ? stripeSubs[0].current_period_end * 1000
-    : undefined;
+  const anchorToUnix =
+    intervalsSame && stripeSubs.length > 0
+      ? stripeSubs[0].current_period_end * 1000
+      : undefined;
 
   const newPreviewItems = await getItemsForNewProduct({
     newProduct,
@@ -122,21 +124,30 @@ export const getUpgradeProductPreview = async ({
   });
 
   const lastInterval = getLastInterval({ prices: newProduct.prices });
-  const nextCycleAt = getNextCycleAt({
-    prices: newProduct.prices,
-    stripeSubs,
-    willCycleReset: !intervalsSame,
-    interval: lastInterval,
-    now,
-    freeTrial: attachParams.freeTrial,
-  });
 
-  let nextCycleItems = await getItemsForNewProduct({
-    newProduct,
-    attachParams,
-    interval: attachParams.freeTrial ? undefined : lastInterval,
-    logger,
-  });
+  let dueNextCycle = undefined;
+  if (!isFreeProduct(newProduct.prices)) {
+    const nextCycleAt = getNextCycleAt({
+      prices: newProduct.prices,
+      stripeSubs,
+      willCycleReset: !intervalsSame,
+      interval: lastInterval,
+      now,
+      freeTrial: attachParams.freeTrial,
+    });
+
+    let nextCycleItems = await getItemsForNewProduct({
+      newProduct,
+      attachParams,
+      interval: attachParams.freeTrial ? undefined : lastInterval,
+      logger,
+    });
+
+    dueNextCycle = {
+      line_items: nextCycleItems,
+      due_at: nextCycleAt.next_cycle_at,
+    };
+  }
 
   let items = [...curPreviewItems, ...newPreviewItems];
 
@@ -175,7 +186,7 @@ export const getUpgradeProductPreview = async ({
 
   if (branch == AttachBranch.UpdatePrepaidQuantity) {
     items = items.filter((item) => item.usage_model == UsageModel.Prepaid);
-    nextCycleItems = nextCycleItems.filter(
+    dueNextCycle!.line_items = dueNextCycle!.line_items.filter(
       (item) => item.usage_model == UsageModel.Prepaid,
     );
   }
@@ -197,10 +208,7 @@ export const getUpgradeProductPreview = async ({
   return {
     currency: attachParams.org.default_currency,
     due_today: dueToday,
-    due_next_cycle: {
-      line_items: nextCycleItems,
-      due_at: nextCycleAt.next_cycle_at,
-    },
+    due_next_cycle: dueNextCycle,
 
     options,
   };

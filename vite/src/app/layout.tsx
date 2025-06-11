@@ -21,11 +21,10 @@ import { AutumnProvider } from "autumn-js/react";
 import { useAuth } from "@clerk/clerk-react";
 
 export function MainLayout() {
+  const env = useEnv();
   const { isLoaded: isUserLoaded, user } = useUser();
   const { organization: org } = useOrganization();
-  const { setActive } = useOrganizationList();
   const { getToken } = useAuth();
-  const env = useEnv();
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
@@ -84,13 +83,6 @@ export function MainLayout() {
   if (!user) {
     return <RedirectToSignIn />;
   }
-
-  // // 1. If not org, and memberships > 0, set org active
-  // if (!org && user.organizationMemberships.length > 0 && setActive) {
-  //   setActive({
-  //     organization: user.organizationMemberships[0].organization.id,
-  //   });
-  // }
 
   if (!org && !pathname.includes("/onboarding")) {
     return (

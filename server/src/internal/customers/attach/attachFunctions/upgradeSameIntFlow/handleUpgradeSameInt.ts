@@ -67,7 +67,10 @@ export const handleUpgradeSameInterval = async ({
     disableFreeTrial: config.disableTrial,
     carryExistingUsages: config.carryUsage,
     carryOverTrial: config.carryTrial,
-    anchorToUnix: stripeSubs[0].current_period_end * 1000,
+    anchorToUnix:
+      stripeSubs.length > 0
+        ? stripeSubs[0].current_period_end * 1000
+        : undefined,
     logger,
   });
 
