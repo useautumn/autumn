@@ -5,18 +5,12 @@ import { getMetadataFromCheckoutSession } from "@/internal/metadata/metadataUtil
 import {
   AppEnv,
   AttachScenario,
-  BillingType,
   CusProductStatus,
   Organization,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { createStripeCli } from "../utils.js";
-import {
-  getBillingType,
-  getPriceEntitlement,
-  priceIsOneOffAndTiered,
-} from "@/internal/products/prices/priceUtils.js";
+
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
