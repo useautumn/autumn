@@ -3,7 +3,12 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "../../cusProducts/AttachParams.js";
-import { AttachBranch, AttachFunction, CusProductStatus } from "@autumn/shared";
+import {
+  AttachBranch,
+  AttachFunction,
+  CusProductStatus,
+  ProrationBehavior,
+} from "@autumn/shared";
 import { handleUpgradeDiffInterval } from "../attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
@@ -137,6 +142,9 @@ export const runAttachFunction = async ({
       curScheduledProduct: curScheduledProduct?.product.id,
     },
   );
+
+  // config.proration = ProrationBehavior.None;
+  // attachParams.billingAnchor = 1752175672000;
 
   // attachParams.billingAnchor = 1749902400000;
   // config.proration = ProrationBehavior.None;

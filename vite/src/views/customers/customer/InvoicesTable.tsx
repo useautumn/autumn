@@ -11,12 +11,14 @@ export const InvoicesTable = () => {
   const { env, invoices, products, entityId, entities } = useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
 
-  const entity = entities.find((e: any) => e.id === entityId);
+  const entity = entities.find(
+    (e: any) => e.id === entityId || e.internal_id === entityId,
+  );
 
   const getStripeInvoice = async (stripeInvoiceId: string) => {
     try {
       const { data } = await axiosInstance.get(
-        `/v1/invoices/${stripeInvoiceId}/stripe`
+        `/v1/invoices/${stripeInvoiceId}/stripe`,
       );
       return data;
     } catch (error) {
@@ -69,7 +71,7 @@ export const InvoicesTable = () => {
           onClick={async () => {
             const stripeInvoice = await getStripeInvoice(invoice.stripe_id);
             if (!stripeInvoice.hosted_invoice_url) {
-              let livemode = stripeInvoice.livemode;
+              const livemode = stripeInvoice.livemode;
               window.open(getStripeInvoiceLink(stripeInvoice), "_blank");
               return;
             }

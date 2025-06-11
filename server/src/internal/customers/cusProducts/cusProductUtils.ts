@@ -229,9 +229,10 @@ export const activateFutureProduct = async ({
     inStatuses: [CusProductStatus.Scheduled],
   });
 
-  let { curScheduledProduct: futureProduct } = await getExistingCusProducts({
+  let { curScheduledProduct: futureProduct } = getExistingCusProducts({
     product: cusProduct.product,
     cusProducts,
+    // internalEntityId: cusProduct.internal_entity_id,
   });
 
   if (!futureProduct) {

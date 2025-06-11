@@ -6,6 +6,10 @@ import { and, eq, inArray } from "drizzle-orm";
 
 export class EntityService {
   static async insert({ db, data }: { db: DrizzleCli; data: any }) {
+    if (data.length === 0) {
+      return [];
+    }
+
     const results = await db
       .insert(entities)
       .values(data as any)

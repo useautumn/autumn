@@ -123,9 +123,10 @@ export const expireCusProduct = async ({
       internalCustomerId: customer.internal_id,
     });
 
-    let { curScheduledProduct: futureProduct } = await getExistingCusProducts({
+    let { curScheduledProduct: futureProduct } = getExistingCusProducts({
       product: cusProduct.product,
       cusProducts,
+      internalEntityId: cusProduct.internal_entity_id,
     });
 
     if (futureProduct) {

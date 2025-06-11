@@ -33,13 +33,11 @@ import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { searchCusProducts } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { updateOneTimeCusProduct } from "./createOneTimeCusProduct.js";
 import { initCusEntitlement } from "./initCusEnt.js";
-import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "../cusProducts/cusEnts/CusEntitlementService.js";
 import { CusPriceService } from "../cusProducts/cusPrices/CusPriceService.js";
 import { addExistingUsagesToCusEnts } from "../cusProducts/cusEnts/cusEntUtils/getExistingUsage.js";
-import { cusProductsToCusEnts } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 import { RepService } from "../cusProducts/cusEnts/RepService.js";
 
 export const initCusPrice = ({

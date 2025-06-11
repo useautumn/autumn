@@ -1,17 +1,11 @@
 import { routeHandler } from "@/utils/routerUtils.js";
-import { getAttachBranch } from "../attachUtils/getAttachBranch.js";
+
 import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
 import { AttachBodySchema } from "../models/AttachBody.js";
-import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
-import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
+
 import { ExtendedResponse } from "@/utils/models/Request.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { getNewProductPreview } from "./getNewProductPreview.js";
-import { getUpgradeProductPreview } from "./getUpgradeProductPreview.js";
-import { getDowngradeProductPreview } from "./getDowngradeProductPreview.js";
-import { attachParamToCusProducts } from "../attachUtils/convertAttachParams.js";
-import { cusProductToProduct } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
-import { AttachFunction } from "@autumn/shared";
+
 import { attachParamsToPreview } from "./attachParamsToPreview.js";
 
 export const handleAttachPreview = (req: any, res: any) =>

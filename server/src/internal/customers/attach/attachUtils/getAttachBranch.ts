@@ -38,6 +38,7 @@ const checkMultiProductErrors = async ({
       getExistingCusProducts({
         product,
         cusProducts: attachParams.cusProducts!,
+        internalEntityId: attachParams.internalEntityId,
       });
 
     // 1. If product is add on, allow attach
@@ -218,12 +219,12 @@ const getChangeProductBranch = async ({
 }: {
   attachParams: AttachParams;
 }) => {
-  const { curMainProduct, curScheduledProduct } = getExistingCusProducts({
-    product: attachParams.products[0],
-    cusProducts: attachParams.cusProducts!,
+  const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
+    attachParams,
   });
 
   // 1. If main product is free, it's the same as adding a new product
+
   let mainProduct = cusProductToProduct({ cusProduct: curMainProduct! });
   if (isFreeProduct(mainProduct.prices)) {
     return AttachBranch.MainIsFree;
