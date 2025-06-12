@@ -306,14 +306,12 @@ export const deductAllowanceFromCusEnt = async ({
     return 0;
   }
 
-  console.log("Deducting from cusEnt:", cusEnt.id);
-
   if (
     entity &&
     entityFeatureIdExists({ cusEnt }) &&
     cusEnt.entitlement.entity_feature_id !== entity.feature_id
   )
-    return 0;
+    return toDeduct;
 
   let {
     newBalance,
