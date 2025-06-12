@@ -1,4 +1,5 @@
-import { Feature, FullCustomerEntitlement } from "@autumn/shared";
+import { notNullish } from "@/utils/genUtils.js";
+import { Entity, Feature, FullCustomerEntitlement } from "@autumn/shared";
 
 export const findMainCusEntForFeature = ({
   cusEnts,
@@ -26,14 +27,30 @@ export const findLinkedCusEnts = ({
   );
 };
 
-export const findCusEntByFeatureId = ({
-  cusEnts,
+export const findCusEnt = ({
   feature,
+  cusEnts,
+  entity,
+  onlyUsageAllowed = false,
 }: {
-  cusEnts: FullCustomerEntitlement[];
   feature: Feature;
+  cusEnts: FullCustomerEntitlement[];
+  entity?: Entity;
+  onlyUsageAllowed?: boolean;
 }) => {
-  return cusEnts.find(
-    (e: any) => e.entitlement.feature.internal_id === feature.internal_id,
-  );
+  return cusEnts.find((e: any) => {
+    let featureMatch =
+      e.entitlement.feature.internal_id === feature.internal_id;
+
+    let entityFeatureId = e.entitlement.entity_feature_id;
+    let compareEntity = notNullish(entityFeatureId) && notNullish(entity);
+
+    let entityMatch = compareEntity
+      ? entityFeatureId === entity!.feature_id
+      : true;
+
+    let usageMatch = onlyUsageAllowed ? e.usage_allowed : true;
+
+    return featureMatch && entityMatch && usageMatch;
+  });
 };

@@ -181,9 +181,7 @@ export const ProductItemConfig = () => {
               {handleDeleteProductItem && (
                 <Button
                   variant="destructive"
-                  // disabled={!selectedFeature}
                   className="w-32 max-w-64 "
-                  // size="sm"
                   onClick={() => {
                     handleDeleteProductItem();
                   }}
@@ -194,7 +192,6 @@ export const ProductItemConfig = () => {
               {handleUpdateProductItem && (
                 <Button
                   variant="gradientPrimary"
-                  // disabled={!selectedFeature}
                   className="w-full"
                   onClick={() => {
                     handleUpdateProductItem(show);

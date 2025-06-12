@@ -7,6 +7,7 @@ import {
   Feature,
   FreeTrial,
   FullCusProduct,
+  FullCustomer,
   FullCustomerEntitlement,
   Organization,
   ProductItem,
@@ -17,13 +18,12 @@ import { getCheckPreview } from "./getCheckPreview.js";
 
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { formatUnixToDateTime } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, notNullish } from "@/utils/genUtils.js";
 
 export const getBooleanEntitledResult = async ({
   db,
-  customer_id,
+  fullCus,
   cusEnts,
-  org,
   res,
   feature,
   apiVersion,
@@ -32,9 +32,8 @@ export const getBooleanEntitledResult = async ({
   allFeatures,
 }: {
   db: DrizzleCli;
-  customer_id: string;
+  fullCus: FullCustomer;
   cusEnts: FullCustomerEntitlement[];
-  org: Organization;
   res: any;
   feature: Feature;
   apiVersion: number;
@@ -42,13 +41,23 @@ export const getBooleanEntitledResult = async ({
   cusProducts: FullCusProduct[];
   allFeatures: Feature[];
 }) => {
-  const allowed = cusEnts.some(
-    (cusEnt) => cusEnt.internal_feature_id === feature.internal_id,
-  );
+  const allowed = cusEnts.some((cusEnt) => {
+    let featureMatch = cusEnt.internal_feature_id === feature.internal_id;
+
+    let entityFeatureId = cusEnt.entitlement.entity_feature_id;
+    let compareEntity =
+      notNullish(entityFeatureId) && notNullish(fullCus.entity);
+
+    let entityMatch = compareEntity
+      ? entityFeatureId === fullCus.entity!.feature_id
+      : true;
+
+    return featureMatch && entityMatch;
+  });
 
   if (apiVersion >= APIVersion.v1_1) {
     return res.status(200).json({
-      customer_id,
+      customer_id: fullCus.id,
       feature_id: feature.id,
       code: SuccessCode.FeatureFound,
       allowed,

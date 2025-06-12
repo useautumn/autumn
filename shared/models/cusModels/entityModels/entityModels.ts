@@ -16,7 +16,7 @@ export const EntitySchema = z.object({
 export const CreateEntitySchema = z.object({
   id: z.string(),
   name: z.string().nullish(),
-  feature_id: z.string().nullish(),
+  feature_id: z.string(),
 });
 
 export const EntityDataSchema = z.object({

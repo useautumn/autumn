@@ -48,12 +48,10 @@ export const getCusProductsResponse = async ({
 export const getCusFeaturesResponse = async ({
   cusProducts,
   org,
-  entities,
   entityId,
 }: {
   cusProducts: FullCusProduct[];
   org: Organization;
-  entities: Entity[];
   entityId?: string;
 }) => {
   let cusEnts = cusProductsToCusEnts({ cusProducts }) as any;
@@ -61,7 +59,6 @@ export const getCusFeaturesResponse = async ({
   const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,
     cusPrices: cusProductsToCusPrices({ cusProducts }),
-    entities,
     org,
     entityId,
   });

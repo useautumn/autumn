@@ -82,11 +82,11 @@ export const getCusEntMasterBalance = ({
 
 export const getCusEntBalance = ({
   cusEnt,
-  entities,
+  // entities,
   entityId,
 }: {
   cusEnt: FullCustomerEntitlement;
-  entities?: Entity[];
+  // entities?: Entity[];
   entityId?: string | null;
 }) => {
   let entitlement = cusEnt.entitlement;
@@ -110,18 +110,18 @@ export const getCusEntBalance = ({
     };
   }
 
-  let unusedCount =
-    (entities &&
-      entities.filter(
-        (entity) =>
-          entity.internal_feature_id == feature.internal_id && entity.deleted,
-      ).length) ||
-    0;
+  // let unusedCount =
+  //   (entities &&
+  //     entities.filter(
+  //       (entity) =>
+  //         entity.internal_feature_id == feature.internal_id && entity.deleted,
+  //     ).length) ||
+  //   0;
 
   return {
     balance: cusEnt.balance,
     adjustment: cusEnt.adjustment,
-    unused: unusedCount,
+    unused: cusEnt.replaceables?.length || 0,
     count: 1,
   };
 };
