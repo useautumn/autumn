@@ -88,18 +88,19 @@ export const AttachBodySchema = z
     {
       message: "Can't pass in items if is_custom is false",
     },
-  )
-  .refine(
-    (data) => {
-      if (data.free_trial && !data.is_custom) {
-        return false;
-      }
-
-      return true;
-    },
-    {
-      message: "Can't pass in free_trial if is_custom is false",
-    },
   );
+
+// .refine(
+//   (data) => {
+//     if (data.free_trial && !data.is_custom) {
+//       return false;
+//     }
+
+//     return true;
+//   },
+//   {
+//     message: "Can't pass in free_trial if is_custom is false",
+//   },
+// );
 
 export type AttachBody = z.infer<typeof AttachBodySchema>;
