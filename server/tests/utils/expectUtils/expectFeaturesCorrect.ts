@@ -2,6 +2,7 @@ import { nullish } from "@/utils/genUtils.js";
 import { expect } from "chai";
 import { notNullish } from "@/utils/genUtils.js";
 import {
+  CreateEntity,
   FeatureOptions,
   FeatureType,
   Infinite,
@@ -14,6 +15,7 @@ export const expectFeaturesCorrect = ({
   product,
   options,
   usage,
+  entities,
 }: {
   customer: Customer | Entity;
   product: ProductV2;
@@ -22,6 +24,7 @@ export const expectFeaturesCorrect = ({
     featureId: string;
     value: number;
   }[];
+  entities?: CreateEntity[];
 }) => {
   const items = product.items;
 
@@ -44,7 +47,11 @@ export const expectFeaturesCorrect = ({
         break;
       }
 
-      includedUsage += item.included_usage || 0;
+      let numEntities =
+        entities?.filter((e) => e.feature_id === item.entity_feature_id)
+          .length || 1;
+
+      includedUsage += (item.included_usage || 0) * numEntities;
     }
 
     for (const option of options || []) {
