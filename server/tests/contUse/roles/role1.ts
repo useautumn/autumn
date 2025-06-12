@@ -101,12 +101,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing roles`)}`, () => {
     {
       id: userId,
       name: "test",
-      featureId: user,
+      feature_id: user,
     },
     {
       id: adminId,
       name: "test",
-      featureId: admin,
+      feature_id: admin,
     },
   ];
 
