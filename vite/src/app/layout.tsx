@@ -5,11 +5,7 @@ import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { AppEnv } from "@autumn/shared";
-import {
-  RedirectToSignIn,
-  useOrganizationList,
-  useUser,
-} from "@clerk/clerk-react";
+import { RedirectToSignIn, useUser } from "@clerk/clerk-react";
 import { useOrganization } from "@clerk/clerk-react";
 import { useEffect } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router";

@@ -1,3 +1,4 @@
+import { DefaultView } from "./views/DefaultView";
 import { AppEnv } from "@autumn/shared";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { MainLayout } from "./app/layout";
@@ -6,13 +7,10 @@ import CustomerProductView from "./views/customers/customer/product/CustomerProd
 import CustomersView from "./views/customers/CustomersView";
 import DevScreen from "./views/developer/DevView";
 import FeaturesView from "./views/features/FeaturesView";
-import ConnectStripe from "./views/onboarding/ConnectStripe";
 import StripePage from "./views/onboarding/StripePage";
 import ProductView from "./views/products/product/ProductView";
 import ProductsView from "./views/products/ProductsView";
-
 import OnboardingView from "./views/onboarding/OnboardingView";
-import { DefaultView } from "./views/DefaultView";
 import CliAuth from "./views/CliAuth";
 
 export default function App() {

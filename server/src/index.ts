@@ -7,6 +7,8 @@ import mainRouter from "./internal/mainRouter.js";
 import express from "express";
 import cors from "cors";
 import chalk from "chalk";
+
+import http from "http";
 import { apiRouter } from "./internal/api/apiRouter.js";
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 
@@ -18,14 +20,14 @@ import {
   createLogtail,
   createLogtailAll,
 } from "./external/logtail/logtailUtils.js";
-import { format } from "date-fns";
 import { CacheManager } from "./external/caching/CacheManager.js";
-import { initDrizzle } from "./db/initDrizzle.js";
+// import { initDrizzle } from "./db/initDrizzle.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
-import pg from "pg";
-import http from "http";
 import { generateId } from "./utils/genUtils.js";
 import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
+import { client, db } from "./db/initDrizzle.js";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "./utils/auth.js";
 
 if (!process.env.DATABASE_URL) {
   console.error(`DATABASE_URL is not set`);
@@ -34,6 +36,9 @@ if (!process.env.DATABASE_URL) {
 
 const init = async () => {
   const app = express();
+
+  app.all("/api/auth/*", toNodeHandler(auth));
+
   const logger = initLogger();
   const server = http.createServer(app);
   server.keepAliveTimeout = 120000; // 120 seconds
@@ -43,7 +48,8 @@ const init = async () => {
   await CacheManager.getInstance();
 
   const supabaseClient = createSupabaseClient();
-  const { db } = initDrizzle();
+
+  // const { db } = initDrizzle();
 
   // Optional services
   const logtailAll = createLogtailAll();
@@ -154,3 +160,21 @@ if (process.env.NODE_ENV === "development") {
     init();
   }
 }
+
+// Close connections gracefully?
+const closeConnections = async () => {
+  console.log("Closing connections");
+  await client.end();
+};
+
+process.on("SIGTERM", async () => {
+  console.log("SIGTERM received, shutting down gracefully");
+  await closeConnections();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  console.log("SIGINT received, shutting down gracefully");
+  await closeConnections();
+  process.exit(0);
+});

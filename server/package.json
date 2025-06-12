@@ -12,7 +12,6 @@
     "build": "tsc -b tsconfig.build.json",
     "prod": "tsc -b tsconfig.build.json && tsc-alias && node dist/src/index.js",
     "prod:build": "tsc -b tsconfig.build.json && tsc-alias",
-    
     "prod:start": "node dist/src/index.js",
     "cron": "tsx src/cron.ts",
     "cron:start": "node --no-deprecation dist/src/cron.js",
@@ -47,6 +46,7 @@
     "@types/express": "^5.0.0",
     "ai": "^4.3.10",
     "autumn-js": "^0.0.46",
+    "better-auth": "^1.2.9",
     "body-parser": "^1.20.3",
     "bullmq": "^5.31.1",
     "chai": "^5.1.2",
