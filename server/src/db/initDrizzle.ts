@@ -3,11 +3,12 @@ dotenv.config();
 
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
-import { schemas as schema } from "@autumn/shared";
+import { authSchema, schemas as schema } from "@autumn/shared";
 
 export let client = postgres(process.env.DATABASE_URL!);
 
 export let db = drizzle(client, { schema });
+export let authDb = drizzle(client, { schema: authSchema });
 
 export const initDrizzle = () => {
   if (!client) {

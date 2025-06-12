@@ -1,5 +1,6 @@
 // Schemas
 import * as schemas from "./db/schema.js";
+export * from "./db/auth-schema.js";
 export { schemas };
 
 // Gen Models

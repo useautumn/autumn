@@ -37,6 +37,14 @@ if (!process.env.DATABASE_URL) {
 const init = async () => {
   const app = express();
 
+  // Check if this blocks API calls...
+  app.use(
+    cors({
+      origin: "http://localhost:3000",
+      credentials: true,
+    }),
+  );
+
   app.all("/api/auth/*", toNodeHandler(auth));
 
   const logger = initLogger();
@@ -96,8 +104,6 @@ const init = async () => {
 
     next();
   });
-
-  app.use(cors());
 
   app.use("/webhooks", webhooksRouter);
 

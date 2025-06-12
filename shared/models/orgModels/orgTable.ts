@@ -5,9 +5,11 @@ import {
   jsonb,
   boolean,
   unique,
+  timestamp,
 } from "drizzle-orm/pg-core";
 
 import { OrgConfig } from "./orgConfig.js";
+import { sql } from "drizzle-orm";
 
 export type MinOrg = {
   id: string;
@@ -27,11 +29,24 @@ export type StripeConfig = {
   success_url: string;
 };
 
+//   logo: text("logo"),
+//   createdAt: timestamp("created_at").notNull(),
+//   metadata: text("metadata"),
+
 export const organizations = pgTable(
   "organizations",
   {
-    id: text().primaryKey().notNull(),
-    slug: text().notNull(),
+    id: text().primaryKey(),
+    slug: text().notNull().unique(),
+    // Better Auth
+    name: text("name").notNull().default(""),
+    logo: text("logo"),
+    createdAt: timestamp("createdAt")
+      .notNull()
+      .default(sql`now()`), // is custom
+    metadata: text("metadata"),
+
+    // Stripe
     default_currency: text("default_currency").notNull().default("usd"),
     stripe_connected: boolean("stripe_connected").default(false),
     stripe_config: jsonb("stripe_config").$type<StripeConfig>(),

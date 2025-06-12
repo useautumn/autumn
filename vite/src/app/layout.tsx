@@ -15,35 +15,35 @@ import { Button } from "@/components/ui/button";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
 import { useAuth } from "@clerk/clerk-react";
+import { useSession } from "@/lib/auth-client";
 
 export function MainLayout() {
   const env = useEnv();
-  const { isLoaded: isUserLoaded, user } = useUser();
-  const { organization: org } = useOrganization();
+  // const { isLoaded: isUserLoaded, user } = useUser();
+  // const { organization: org } = useOrganization();
   const { getToken } = useAuth();
   const { pathname } = useLocation();
   const navigate = useNavigate();
 
   const posthog = usePostHog();
 
+  const { data, isPending } = useSession();
+
   useEffect(() => {
     // Identify user
-    if (user && process.env.NODE_ENV !== "development") {
-      let email = user.primaryEmailAddress?.emailAddress;
-      if (!email) {
-        email = user.emailAddresses[0].emailAddress;
-      }
+    if (data && process.env.NODE_ENV !== "development") {
+      const email = data.user.email;
 
       posthog?.identify(email, {
         email,
-        name: user.fullName,
-        id: user.id,
+        name: data.user.name,
+        id: data.user.id,
       });
     }
-  }, [user, posthog]);
+  }, [data, posthog]);
 
   // 1. If not loaded, show loading screen
-  if (!isUserLoaded) {
+  if (isPending) {
     return (
       <div className="w-screen h-screen flex bg-stone-100">
         <MainSidebar />
@@ -76,11 +76,12 @@ export function MainLayout() {
   }
 
   // 2. If no user, redirect to sign in
-  if (!user) {
-    return <RedirectToSignIn />;
+  if (!data) {
+    navigate("/sign-in");
+    return;
   }
 
-  if (!org && !pathname.includes("/onboarding")) {
+  if (!pathname.includes("/onboarding")) {
     return (
       <Navigate
         to={getRedirectUrl("/onboarding", AppEnv.Sandbox)}
