@@ -261,12 +261,19 @@ export const toPricecnProduct = ({
 
   sortProductItems(items, features);
 
-  let priceExists = items.some((i) => isPriceItem(i) || isFeaturePriceItem(i));
-
   let price = getPricecnPrice({ org, items, features });
+  let priceExists = items.some((i) => isPriceItem(i) || isFeaturePriceItem(i));
   let itemsWithoutPrice = priceExists ? items.slice(1) : items;
 
   let pricecnItems = itemsWithoutPrice.map((i) => {
+    if (isPriceItem(i)) {
+      let priceTxt = getPriceText({ item: i, org });
+      return {
+        primaryText: priceTxt,
+        secondaryText: i.interval ? `per ${i.interval}` : undefined,
+      };
+    }
+
     let feature = features.find((f) => f.id == i.feature_id);
     if (isFeaturePriceItem(i)) {
       return featurePricetoPricecnItem({ feature, item: i, org });
