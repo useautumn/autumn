@@ -100,12 +100,14 @@ export const useAttachState = ({
     initFlags();
 
     const hasItemsChanged =
-      JSON.stringify(sortedProduct.items) !==
-      JSON.stringify(initialProductRef.current?.items || []);
-
-    console.log("Sorted product items", sortedProduct.items);
-    console.log("Initial product items", initialProductRef.current?.items);
-    console.log("Has items changed", hasItemsChanged);
+      JSON.stringify({
+        items: sortedProduct.items,
+        free_trial: sortedProduct.free_trial,
+      }) !==
+      JSON.stringify({
+        items: initialProductRef.current?.items || [],
+        free_trial: initialProductRef.current?.free_trial || null,
+      });
 
     setItemsChanged(hasItemsChanged);
   }, [product]);
