@@ -114,14 +114,14 @@ export const saveOrgToDB = async ({
   console.log(`Handling organization.created: ${slug} (${id})`);
 
   try {
-    // 2. Insert org
-    await OrgService.insert({
-      db,
-      org: constructOrg({
-        id,
-        slug,
-      }),
-    });
+    // // 2. Insert org
+    // await OrgService.insert({
+    //   db,
+    //   org: constructOrg({
+    //     id,
+    //     slug,
+    //   }),
+    // });
 
     // 1. Create svix webhoooks
     const { sandboxApp, liveApp } = await initOrgSvixApps({

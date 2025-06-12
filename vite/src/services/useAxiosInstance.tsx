@@ -17,6 +17,7 @@ export function useAxiosInstance(params?: { env?: AppEnv; isAuth?: boolean }) {
 
   const axiosInstance = axios.create({
     baseURL: endpoint,
+    withCredentials: true,
   });
 
   const { getToken } = useAuth();

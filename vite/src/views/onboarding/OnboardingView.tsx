@@ -26,7 +26,7 @@ import { AutumnProvider } from "autumn-js/react";
 function OnboardingView() {
   const env = useEnv();
 
-  const { organization: org } = useOrganization();
+  // const { organization: org } = useOrganization();
   const [searchParams] = useSearchParams();
 
   const [apiKey, setApiKey] = useState("");
@@ -50,32 +50,32 @@ function OnboardingView() {
 
   useCreateOrg({ productMutate });
 
-  useEffect(() => {
-    const handleToken = async () => {
-      try {
-        const { data } = await axiosInstance.post("/onboarding", {
-          token,
-        });
+  // useEffect(() => {
+  //   const handleToken = async () => {
+  //     try {
+  //       const { data } = await axiosInstance.post("/onboarding", {
+  //         token,
+  //       });
 
-        await productMutate();
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  //       await productMutate();
+  //     } catch (error) {
+  //       console.error(error);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   };
 
-    if (org && token && !hasHandledToken.current) {
-      hasHandledToken.current = true;
-      handleToken();
-    }
-  }, [org, searchParams, token, axiosInstance, productMutate]);
+  //   if (org && token && !hasHandledToken.current) {
+  //     hasHandledToken.current = true;
+  //     handleToken();
+  //   }
+  // }, [org, searchParams, token, axiosInstance, productMutate]);
 
-  useEffect(() => {
-    if (org && !token) {
-      setLoading(false);
-    }
-  }, [org, token]);
+  // useEffect(() => {
+  //   if (org && !token) {
+  //     setLoading(false);
+  //   }
+  // }, [org, token]);
 
   if (loading || productLoading) {
     return <LoadingScreen />;
