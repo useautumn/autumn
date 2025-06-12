@@ -14,7 +14,12 @@ import { Input } from "@/components/ui/input";
 import { useProductItemContext } from "../ProductItemContext";
 import { Button } from "@/components/ui/button";
 import { useProductContext } from "../../ProductContext";
-import { FeatureType, Infinite, ProductItemFeatureType } from "@autumn/shared";
+import {
+  FeatureType,
+  FeatureUsageType,
+  Infinite,
+  ProductItemFeatureType,
+} from "@autumn/shared";
 import { itemIsUnlimited } from "@/utils/product/productItemUtils";
 import { SelectCycle } from "./SelectCycle";
 import MoreMenuButton, { MoreMenuPriceButton } from "../MoreMenuButton";
@@ -37,6 +42,7 @@ export const ConfigWithFeature = ({
   const feature = getFeature(item.feature_id, features);
   const featureType = feature?.type;
 
+  const featureUsageType = feature?.config?.usage_type;
   return (
     <div className="flex flex-col gap-6 text-sm w-full">
       {/* 1. Select or create feature */}
@@ -161,19 +167,18 @@ export const ConfigWithFeature = ({
 
                 {/* INTERVAL CONFIG */}
 
-                {item.feature_type == ProductItemFeatureType.SingleUse &&
-                  !show.price && (
-                    <div
-                      className={cn(
-                        "transition-all duration-400 ease-in-out whitespace-nowrap w-full",
-                        show.cycle
-                          ? "opacity-100 max-w-full max-h-[200px]"
-                          : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden",
-                      )}
-                    >
-                      <SelectCycle show={show} setShow={setShow} type="reset" />
-                    </div>
-                  )}
+                {featureUsageType == FeatureUsageType.Single && !show.price && (
+                  <div
+                    className={cn(
+                      "transition-all duration-400 ease-in-out whitespace-nowrap w-full",
+                      show.cycle
+                        ? "opacity-100 max-w-full max-h-[200px]"
+                        : "opacity-0 z-[-1] max-h-7 max-w-0 overflow-hidden",
+                    )}
+                  >
+                    <SelectCycle show={show} setShow={setShow} type="reset" />
+                  </div>
+                )}
               </div>
               {/* </div> */}
 
