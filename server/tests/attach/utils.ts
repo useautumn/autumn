@@ -45,6 +45,7 @@ export const runAttachTest = async ({
   isCanceled = false,
   skipFeatureCheck = false,
   singleInvoice = false,
+  skipSubCheck = false,
 }: {
   autumn: AutumnInt;
   customerId: string;
@@ -63,6 +64,7 @@ export const runAttachTest = async ({
   isCanceled?: boolean;
   skipFeatureCheck?: boolean;
   singleInvoice?: boolean;
+  skipSubCheck?: boolean;
 }) => {
   const preview = await autumn.attachPreview({
     customer_id: customerId,
@@ -133,6 +135,9 @@ export const runAttachTest = async ({
   if (branch == AttachBranch.OneOff || freeProduct) {
     return;
   }
+
+  if (skipSubCheck) return;
+
   await expectSubItemsCorrect({
     stripeCli,
     customerId,

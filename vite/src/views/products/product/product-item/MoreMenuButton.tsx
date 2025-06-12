@@ -25,9 +25,6 @@ export default function MoreMenuButton({
   }: { item: ProductItem; setItem: (item: ProductItem) => void } =
     useProductItemContext();
 
-  const [checkedChanged, setCheckedChanged] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(true);
-
   return (
     <Popover open={showPopover} onOpenChange={setShowPopover}>
       <PopoverTrigger asChild>
@@ -49,7 +46,6 @@ export default function MoreMenuButton({
             variant="secondary"
             className="text-xs text-t2 shadow-none border-none w-full justify-start"
             onClick={() => {
-              setCheckedChanged(true);
               setItem({
                 ...item,
                 reset_usage_when_enabled: !item.reset_usage_when_enabled,

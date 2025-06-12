@@ -2,6 +2,7 @@ import {
   AllowanceType,
   AppEnv,
   CusProductStatus,
+  Entity,
   Event,
   Feature,
   FullCustomerEntitlement,
@@ -31,6 +32,7 @@ import {
 import { entityFeatureIdExists } from "@/internal/api/entities/entityUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { findCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 
 // Decimal.set({ precision: 12 }); // 12 DP precision
 
@@ -42,6 +44,7 @@ type DeductParams = {
   customer: Customer;
   properties: any;
   feature: Feature;
+  entity?: Entity;
 };
 
 // 2. Get deductions for each feature
@@ -286,26 +289,31 @@ export const deductAllowanceFromCusEnt = async ({
   toDeduct,
   deductParams,
   cusEnt,
-  features,
   featureDeductions,
   willDeductCredits = false,
-  entityId,
   setZeroAdjustment = false,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
   cusEnt: FullCustomerEntitlement;
-  features: Feature[];
   featureDeductions: any;
   willDeductCredits?: boolean;
-  entityId?: string | null;
   setZeroAdjustment?: boolean;
 }) => {
-  const { db, feature, env, org, cusPrices, customer } = deductParams;
+  const { db, feature, env, org, cusPrices, customer, entity } = deductParams;
 
   if (toDeduct == 0) {
     return 0;
   }
+
+  console.log("Deducting from cusEnt:", cusEnt.id);
+
+  if (
+    entity &&
+    entityFeatureIdExists({ cusEnt }) &&
+    cusEnt.entitlement.entity_feature_id !== entity.feature_id
+  )
+    return 0;
 
   let {
     newBalance,
@@ -315,7 +323,7 @@ export const deductAllowanceFromCusEnt = async ({
   } = performDeductionOnCusEnt({
     cusEnt,
     toDeduct,
-    entityId,
+    entityId: entity?.id,
     allowNegativeBalance: false,
     setZeroAdjustment,
   });
@@ -352,9 +360,6 @@ export const deductAllowanceFromCusEnt = async ({
     newBalance: newGrpBalance,
     logger: console,
   });
-
-  console.log("New balance:", newBalance);
-  console.log("New replaceables:", newReplaceables);
 
   if (newReplaceables && newReplaceables.length > 0) {
     updates.balance = newBalance! - newReplaceables.length;
@@ -404,23 +409,22 @@ export const deductFromUsageBasedCusEnt = async ({
   toDeduct,
   deductParams,
   cusEnts,
-  entityId,
   setZeroAdjustment = false,
 }: {
   toDeduct: number;
   deductParams: DeductParams;
   cusEnts: FullCustomerEntitlement[];
-  entityId?: string | null;
   setZeroAdjustment?: boolean;
 }) => {
-  const { db, feature, env, org, cusPrices, customer } = deductParams;
+  const { db, feature, env, org, cusPrices, customer, entity } = deductParams;
 
   // Deduct from usage-based price
-  const usageBasedEnt = cusEnts.find(
-    (cusEnt: FullCustomerEntitlement) =>
-      cusEnt.usage_allowed &&
-      cusEnt.entitlement.internal_feature_id == feature.internal_id,
-  );
+  const usageBasedEnt = findCusEnt({
+    cusEnts,
+    feature,
+    entity,
+    onlyUsageAllowed: true,
+  });
 
   if (!usageBasedEnt) {
     console.log(
@@ -432,7 +436,6 @@ export const deductFromUsageBasedCusEnt = async ({
   let { newBalance, newEntities, deducted } = performDeductionOnCusEnt({
     cusEnt: usageBasedEnt,
     toDeduct,
-    entityId,
     allowNegativeBalance: true,
     setZeroAdjustment,
   });
@@ -559,7 +562,6 @@ export const updateCustomerBalance = async ({
       toDeduct = await deductAllowanceFromCusEnt({
         toDeduct,
         cusEnt,
-        features,
         deductParams: {
           db,
           feature,
@@ -568,10 +570,10 @@ export const updateCustomerBalance = async ({
           cusPrices: cusPrices as any[],
           customer,
           properties: event.properties,
+          entity: customer.entity,
         },
         featureDeductions,
         willDeductCredits: true,
-        entityId: event.entity_id,
       });
     }
 
@@ -590,8 +592,8 @@ export const updateCustomerBalance = async ({
         cusPrices: cusPrices as any[],
         customer,
         properties: event.properties,
+        entity: customer.entity,
       },
-      entityId: event.entity_id,
     });
   }
 

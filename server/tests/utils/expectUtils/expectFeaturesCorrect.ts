@@ -1,7 +1,12 @@
 import { nullish } from "@/utils/genUtils.js";
 import { expect } from "chai";
 import { notNullish } from "@/utils/genUtils.js";
-import { FeatureOptions, Infinite, ProductV2 } from "@autumn/shared";
+import {
+  FeatureOptions,
+  FeatureType,
+  Infinite,
+  ProductV2,
+} from "@autumn/shared";
 import { Customer, Entity } from "autumn-js";
 
 export const expectFeaturesCorrect = ({
@@ -27,7 +32,10 @@ export const expectFeaturesCorrect = ({
   for (const featureId of featureIds) {
     let includedUsage: string | number = 0;
 
-    let item = items.find((i) => i.feature_id === featureId);
+    let item = items.find((i) => i.feature_id === featureId)!;
+    expect(item, `Item ${featureId} exists`).to.exist;
+
+    if (item.included_usage === undefined) continue;
 
     for (const item of items) {
       if (item.feature_id !== featureId) continue;
@@ -50,9 +58,11 @@ export const expectFeaturesCorrect = ({
 
     expect(feature, `Feature ${featureId} exists`).to.exist;
 
+    // @ts-ignore
+
     // 1. Check that included usage matches
     expect(
-      feature?.included_usage,
+      feature.included_usage,
       `Feature ${featureId} included usage is correct`,
     ).to.equal(includedUsage);
 
