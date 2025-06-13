@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { Plus, PlusIcon } from "lucide-react";
+
 interface SideAccordionProps {
   title: string;
   value: string;
@@ -14,6 +15,8 @@ interface SideAccordionProps {
   className?: string;
   onClick?: () => void;
   buttonIcon?: React.ReactNode;
+  isOpen?: boolean;
+  onToggle?: (value: string) => void;
 }
 
 export function SideAccordion({
@@ -23,7 +26,19 @@ export function SideAccordion({
   className,
   onClick,
   buttonIcon,
+  isOpen = false,
+  onToggle,
 }: SideAccordionProps) {
+  const handleButtonClick = () => {
+    if (!isOpen && onToggle) {
+      onToggle(value);
+    }
+
+    if (onClick) {
+      onClick();
+    }
+  };
+
   return (
     <div className="w-full">
       <AccordionItem
@@ -35,14 +50,19 @@ export function SideAccordion({
             <AccordionTrigger
               className={cn(
                 "hover:bg-stone-100 border border-transparent text-t2 p-2",
-                className
+                className,
               )}
             >
               <span>{title}</span>
             </AccordionTrigger>
           </div>
           {onClick && (
-            <Button variant="ghost" size="sm" onClick={onClick} className="">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleButtonClick}
+              className=""
+            >
               {buttonIcon}
             </Button>
           )}

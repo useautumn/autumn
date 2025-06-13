@@ -11,6 +11,13 @@ import { useEffect, useState } from "react";
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { cn } from "@/lib/utils";
 import { useProductItemContext } from "./ProductItemContext";
@@ -24,7 +31,7 @@ import { getFeature } from "@/utils/product/entitlementUtils";
 
 export const ProductItemConfig = () => {
   // HOOKS
-  const { features, product, env } = useProductContext();
+  const { features, product, env, entityFeatureIds } = useProductContext();
 
   const {
     item,
@@ -200,17 +207,60 @@ export const ProductItemConfig = () => {
                   Update Item
                 </Button>
               )}
-              {handleCreateProductItem && (
-                <Button
-                  variant="gradientPrimary"
-                  disabled={!selectedFeature && !item.price}
-                  className="w-full"
-                  onClick={() => {
-                    handleCreateProductItem(show);
-                  }}
-                >
-                  Add to Product
-                </Button>
+              {handleCreateProductItem &&
+              show.feature &&
+              item.feature_id &&
+              !entityFeatureIds.includes(item.feature_id) &&
+              entityFeatureIds.length > 0 ? (
+                <>
+                  <Select
+                    onValueChange={async (value) => {
+                      setItem({
+                        ...item,
+                        entity_feature_id: value,
+                      });
+                      handleCreateProductItem(
+                        show,
+                        value != product.name ? value : null,
+                      );
+                    }}
+                  >
+                    <SelectTrigger
+                      className="w-full bg-primary data-[placeholder]:text-white bg-gradient-to-b font-semibold border border-primary rounded-sm from-primary/85 to-primary text-white hover:from-primary hover:to-primary shadow-purple-500/50 transition-[background] duration-300 !h-7.5 mt-0.25 flex justify-center items-center gap-2"
+                      disabled={!selectedFeature && !item.price}
+                    >
+                      <SelectValue placeholder="Add Item" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={product.name}>
+                        {product.name} (Product)
+                      </SelectItem>
+                      {entityFeatureIds.map((entityFeatureId: string) => (
+                        <SelectItem
+                          key={entityFeatureId}
+                          value={entityFeatureId}
+                        >
+                          {entityFeatureId} (Entity)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              ) : (
+                <>
+                  {handleCreateProductItem && (
+                    <Button
+                      variant="gradientPrimary"
+                      disabled={!selectedFeature && !item.price}
+                      className="w-full"
+                      onClick={() => {
+                        handleCreateProductItem(show);
+                      }}
+                    >
+                      Add Item
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </div>
