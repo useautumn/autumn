@@ -19,6 +19,14 @@ import { formatAmount } from "@/utils/formatUtils.js";
 import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
 
+const getNextCycle = (preview: AttachPreview) => {
+  if (!preview.due_next_cycle && !preview.due_today) {
+    return undefined;
+  }
+
+  if (!preview.due_today && preview.due_next_cycle) {
+  }
+};
 export const attachToCheckPreview = async ({
   preview,
   product,
@@ -73,20 +81,22 @@ export const attachToCheckPreview = async ({
       }
     : undefined;
 
-  let due_next_cycle = {
-    price:
-      preview.due_next_cycle?.line_items.reduce((acc, item) => {
+  let due_next_cycle = undefined;
+  if (preview.due_next_cycle) {
+    due_next_cycle = {
+      price: preview.due_next_cycle.line_items.reduce((acc, item) => {
         if (item.amount) {
           return acc + item.amount;
         }
         return acc;
-      }, 0) || 0,
-    currency: org.default_currency || "usd",
-  };
+      }, 0),
+      currency: org.default_currency || "usd",
+    };
+  }
 
   let checkPreview: CheckProductPreview = {
-    title: "Check",
-    message: "Check",
+    // title: "Check",
+    // message: "Check",
     scenario,
 
     // Meta

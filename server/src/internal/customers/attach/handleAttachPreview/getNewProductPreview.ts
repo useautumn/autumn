@@ -10,6 +10,7 @@ import {
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
 
 export const getNewProductPreview = async ({
   branch,
@@ -42,12 +43,6 @@ export const getNewProductPreview = async ({
 
   let dueNextCycle = null;
 
-  let dueTodayFree =
-    items.reduce((acc, item) => {
-      return acc + (item.amount ?? 0);
-    }, 0) === 0;
-
-  // || dueTodayFree || branch == AttachBranch.SameCustomEnts
   if (freeTrial) {
     let nextCycleItems = await getItemsForNewProduct({
       newProduct,
@@ -83,6 +78,22 @@ export const getNewProductPreview = async ({
     features: attachParams.features,
     anchorToUnix,
   });
+
+  // Next cycle at
+  if (!dueNextCycle) {
+    if (!isFreeProduct(newProduct.prices) && branch != AttachBranch.OneOff) {
+      let minInterval = getLastInterval({ prices: newProduct.prices });
+      dueNextCycle = {
+        line_items: items.filter((item) => {
+          let price = newProduct.prices.find(
+            (price) => price.id == item.price_id,
+          );
+          return price?.config.interval == minInterval;
+        }),
+        due_at: addBillingIntervalUnix(now, minInterval),
+      };
+    }
+  }
 
   return {
     currency: attachParams.org.default_currency,
