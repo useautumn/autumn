@@ -31,7 +31,6 @@ export const beforeSessionCreated = async (session: Session) => {
       .where(eq(member.userId, session.userId));
 
     let lastActiveId = lastSession[0].activeOrganizationId;
-    console.log("lastActiveId", lastActiveId);
 
     if (lastActiveId) {
       let isMember = memberships.find((m) => m.organizationId === lastActiveId);

@@ -1,17 +1,12 @@
-import { betterAuth } from "better-auth";
-import { emailOTP, admin, organization } from "better-auth/plugins";
-
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-// import { authDb } from "@/db/initDrizzle.js"; // your drizzle instance
-import { saveOrgToDB } from "@/external/webhooks/clerkWebhooks.js";
 import { db } from "@/db/initDrizzle.js";
-import { invitation, member, session as sessionTable } from "@autumn/shared";
-import { desc, eq } from "drizzle-orm";
-import { createDefaultOrg } from "@/utils/authUtils/createDefaultOrg.js";
+import { saveOrgToDB } from "@/external/webhooks/clerkWebhooks.js";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { sendInvitationEmail } from "@/internal/orgs/emails/sendInvitationEmail.js";
 import { afterUserCreated } from "@/utils/authUtils/afterUserCreated.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
-
+import { betterAuth } from "better-auth";
+import { emailOTP, admin, organization } from "better-auth/plugins";
+import { session as sessionTable } from "@autumn/shared";
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg", // or "mysql", "sqlite"
@@ -27,6 +22,13 @@ export const auth = betterAuth({
       create: {
         before: beforeSessionCreated,
       },
+      // update: {
+      //   after: async (session: any, request: any) => {
+      //     await db.update(sessionTable).set({
+      //       activeOrganizationId: session.activeOrganizationId,
+      //     });
+      //   },
+      // },
     },
   },
   user: {
@@ -68,6 +70,7 @@ export const auth = betterAuth({
       },
     }),
     admin(),
+
     organization({
       async sendInvitationEmail(data) {
         const inviteLink = `${process.env.CLIENT_URL}/accept?id=${data.id}`;

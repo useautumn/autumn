@@ -11,9 +11,13 @@ export const handleGetOrgMembers = async (req: any, res: any) => {
     const invites = await OrgService.getInvites({ db, orgId });
 
     res.status(200).json({
-      memberships: Array(10).fill(memberships[0]),
-      invites: Array(10).fill(invites[0]),
+      memberships,
+      invites,
     });
+    // res.status(200).json({
+    //   memberships: Array(10).fill(memberships[0]),
+    //   invites: Array(10).fill(invites[0]),
+    // });
   } catch (error) {
     handleFrontendReqError({
       req,

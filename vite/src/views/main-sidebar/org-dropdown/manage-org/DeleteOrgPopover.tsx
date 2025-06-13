@@ -6,13 +6,68 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useOrg } from "@/hooks/useOrg";
+import { authClient, useListOrganizations } from "@/lib/auth-client";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getBackendErr } from "@/utils/genUtils";
 import { useState } from "react";
+import { toast } from "sonner";
+import { useMemberships } from "../hooks/useOrgMembers";
 
 export const DeleteOrgPopover = () => {
   const { org } = useOrg();
+  const { data: organizations } = useListOrganizations();
+  const { memberships } = useMemberships();
   const [confirmText, setConfirmText] = useState("");
-  const handleDeleteOrg = () => {
-    console.log("delete org");
+  const [deleting, setDeleting] = useState(false);
+  const axiosInstance = useAxiosInstance();
+
+  const deleteOrg = async () => {
+    if (!organizations || !memberships) {
+      toast.error("Failed to delete org");
+      return;
+    }
+    if (organizations.length === 1) {
+      toast.error("You must have at least one organization");
+      return;
+    }
+
+    if (memberships.length > 1) {
+      toast.error("Can't delete org with multiple members");
+      return;
+    }
+
+    if (confirmText !== org?.name) {
+      toast.error("Please type the org name to confirm");
+      return;
+    }
+
+    await axiosInstance.delete(`/organization`);
+
+    // Other org is now the active org
+    const otherOrg = organizations.find((o) => o.id !== org.id);
+    await authClient.organization.setActive({
+      organizationId: otherOrg!.id,
+    });
+
+    const { data, error } = await authClient.organization.delete({
+      organizationId: org.id,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    window.location.reload();
+  };
+  const handleDeleteClicked = async () => {
+    setDeleting(true);
+    try {
+      await deleteOrg();
+    } catch (error) {
+      toast.error(getBackendErr(error, "Failed to delete org"));
+    }
+
+    setDeleting(false);
   };
   return (
     <Popover>
@@ -32,7 +87,12 @@ export const DeleteOrgPopover = () => {
             value={confirmText}
             onChange={(e) => setConfirmText(e.target.value)}
           />
-          <Button variant="outline" className="w-fit">
+          <Button
+            variant="outline"
+            className="w-fit"
+            isLoading={deleting}
+            onClick={handleDeleteClicked}
+          >
             Confirm
           </Button>
         </div>

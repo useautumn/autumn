@@ -36,6 +36,7 @@ export const MemberRowToolbar = ({
         memberIdOrEmail: membership!.member.id,
         organizationId: org.id,
       });
+
       if (error) {
         toast.error(error.message);
       } else {

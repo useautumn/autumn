@@ -39,7 +39,7 @@ import { useMemberships } from "../org-dropdown/hooks/useOrgMembers";
 const OrgLogo = ({ org }: { org: FrontendOrg }) => {
   const firstLetter = org.name.charAt(0).toUpperCase();
   return (
-    <div className="bg-primary/80 w-5 h-5 rounded-md flex items-center justify-center">
+    <div className="bg-primary/80 w-5 h-5 rounded-md overflow-hidden flex items-center justify-center">
       {org.logo ? (
         <img src={org.logo} alt={org.name} className="w-full h-full" />
       ) : (
@@ -57,14 +57,12 @@ export const OrgDropdown = () => {
   );
 
   const { data: session } = useSession();
-  // console.log("Org:", org);
-  // console.log("Session:", session);
-  const { memberships, isLoading: isMembersLoading } = useMemberships();
 
+  // To pre-fetch data
+  useMemberships();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
 
-  // if (!org) return null;
   if (isLoading)
     return (
       <div className="h-7 w-32 p-2 flex items-center gap-2">
@@ -83,7 +81,7 @@ export const OrgDropdown = () => {
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <Button
-            className="p-2 h-7 gap-2 rounded-md hover:bg-stone-200/60 min-w-32 justify-start items-center"
+            className="shimmer-hover p-2 h-7 gap-2 rounded-md hover:bg-stone-200/60 min-w-32 justify-start items-center"
             variant="ghost"
           >
             <OrgLogo org={org} />

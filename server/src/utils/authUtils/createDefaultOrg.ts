@@ -28,6 +28,18 @@ export const createDefaultOrg = async ({
       );
 
     if (invites.length > 0) {
+      await auth.api.addMember({
+        body: {
+          userId: session.userId,
+          role: invites[0].role as any,
+          organizationId: invites[0].organizationId,
+        },
+      });
+
+      await db.update(invitation).set({
+        status: "accepted",
+      });
+
       return invites[0].organizationId as any;
     }
 
