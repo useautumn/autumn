@@ -34,6 +34,12 @@ orgRouter.delete("/delete-user", async (req: any, res) => {
   });
 });
 
+orgRouter.post("/remove_member", async (req: any, res) => {
+  res.status(200).json({
+    message: "Member removed",
+  });
+});
+
 orgRouter.get("", async (req: any, res) => {
   try {
     if (!req.orgId) {
