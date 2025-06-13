@@ -108,14 +108,14 @@ export const ProductItemConfig = () => {
   return (
     <div
       className={cn(
-        "flex flex-col gap-6 w-lg transition-all ease-in-out duration-300", //modal animations
+        "flex flex-col gap-6 w-lg transition-all ease-in-out duration-300 !overflow-visible", //modal animations
         !show.feature && "w-xs",
         show.feature && show.price && "w-xl",
         show.price && show.feature && item.tiers?.length > 1 && "w-2xl",
       )}
     >
       {!show.feature ? (
-        <div className="flex w-full">
+        <div className="flex w-full !overflow-visible">
           <FixedPriceConfig show={show} setShow={setShow} />
         </div>
       ) : (

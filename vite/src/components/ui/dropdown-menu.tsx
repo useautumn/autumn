@@ -90,8 +90,7 @@ const DropdownMenuItem = React.forwardRef<
     ref={ref}
     className={cn(
       `relative flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-zinc-100 focus:text-zinc-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0 dark:focus:bg-zinc-800 dark:focus:text-zinc-50
-      
-      hover:bg-zinc-100
+      hover:bg-zinc-100 ${shimmer ? "shimmer" : ""}
       `,
       inset && "pl-8",
       className,
@@ -104,8 +103,6 @@ const DropdownMenuItem = React.forwardRef<
         {props.children}
         <SmallSpinner />
       </>
-    ) : shimmer ? (
-      <div className="shimmer rounded">{props.children}</div>
     ) : (
       props.children
     )}

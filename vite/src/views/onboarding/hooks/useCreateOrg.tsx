@@ -1,10 +1,13 @@
+import { useOrg } from "@/hooks/useOrg";
 import {
   authClient,
   useListOrganizations,
   useSession,
 } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 export const useCreateOrg = ({
   productMutate,
@@ -16,10 +19,16 @@ export const useCreateOrg = ({
 
   const { data: session } = useSession();
   const { data: organizations, isPending } = useListOrganizations();
+  const { mutate } = useOrg();
+
+  const getOrgSlug = () => {
+    const randomDigits = Math.floor(10000000 + Math.random() * 90000000);
+    return `${slugify(session?.user!.name || "org")}_${randomDigits}`;
+  };
 
   useEffect(() => {
     const createDefaultOrg = async () => {
-      if (hasCreatedOrg.current || isPending) return;
+      if (hasCreatedOrg.current || isPending || !session?.user) return;
       hasCreatedOrg.current = true;
       // Either set first org active, or create a new org
       try {
@@ -28,31 +37,22 @@ export const useCreateOrg = ({
             organizationId: organizations[0]?.id,
           });
         } else {
-          await authClient.organization.create({
+          const { data, error } = await authClient.organization.create({
             name: `${session?.user.name}'s Org`,
-            slug: crypto.randomUUID(),
+            slug: getOrgSlug(),
           });
 
+          if (error) throw error;
+
+          await authClient.organization.setActive({
+            organizationId: data?.id,
+          });
+
+          await mutate();
           await productMutate();
         }
-        // await axiosInstance.post("/organization");
-        // await authClient.use
-        // if (
-        //   user?.organizationMemberships?.length &&
-        //   user.organizationMemberships.length > 0
-        // ) {
-        //   await setActive?.({
-        //     organization: user.organizationMemberships[0].organization.id,
-        //   });
-
-        //   return;
-        // } else {
-        //   const { data } = await axiosInstance.post("/organization");
-        //   const res = await setActive?.({ organization: data.id });
-        //   await productMutate();
-        // }
-      } catch (error) {
-        console.error("Error creating organization:", error);
+      } catch (error: any) {
+        toast.error(`Error initializing org: ${error.message}`);
       }
     };
     createDefaultOrg();

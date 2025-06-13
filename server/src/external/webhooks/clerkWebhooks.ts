@@ -151,30 +151,17 @@ export const saveOrgToDB = async ({
     return;
   }
 
-  const batch = [];
-
-  try {
-    // batch.push(
-    //   createOnboardingProducts({
-    //     db,
-    //     orgId: eventData.id,
-    //   }),
-    // );
-
-    batch.push(
-      sendOnboardingEmail({
-        orgId: id,
-        clerkCli: createClerkCli(),
-      }),
-    );
-
-    await Promise.all(batch);
-  } catch (error) {
-    console.error(
-      "Failed to create default products or send onboarding email",
-      error,
-    );
-  }
+  // try {
+  //   await sendOnboardingEmail({
+  //     orgId: id,
+  //     clerkCli: createClerkCli(),
+  //   }),
+  // } catch (error) {
+  //   console.error(
+  //     "Failed to create default products or send onboarding email",
+  //     error,
+  //   );
+  // }
 };
 
 const handleOrgDeleted = async ({

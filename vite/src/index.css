@@ -238,6 +238,9 @@ button:focus-visible {
   --color-code-tabs: #2d2d2d;
   --color-code-bg: #1e1e1e;
   --color-code-tabs-active: #3c3c3c;
+
+  --shadow-focus: 0 0 3px 1.5px rgba(139, 92, 246, 0.4);
+  --color-focus: rgba(139, 92, 246, 0.95);
 }
 
 /* 
