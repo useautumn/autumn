@@ -9,6 +9,8 @@ export const CusProductResponseSchema = z.object({
   // created_at: z.number(),
   canceled_at: z.number().nullish(),
   started_at: z.number(),
+  is_default: z.boolean(),
+  is_add_on: z.boolean(),
 
   subscription_ids: z.array(z.string()).nullish(),
 

@@ -27,6 +27,7 @@ import {
 export const ACTIVE_STATUSES = [
   CusProductStatus.Active,
   CusProductStatus.PastDue,
+  CusProductStatus.Scheduled,
 ];
 
 export const orgOwnsCusProduct = async ({
