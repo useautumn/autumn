@@ -257,10 +257,6 @@ const handleAttachOld = async (req: any, res: any) =>
       }
 
       logger.info("--------------------------------");
-      let publicStr = req.isPublic ? "(Public) " : "";
-      logger.info(
-        `${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`,
-      );
 
       const {
         customer,

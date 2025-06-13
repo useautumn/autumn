@@ -1,6 +1,6 @@
 import { decryptData, generatePublishableKey } from "@/utils/encryptUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { AppEnv, ErrCode, Organization } from "@autumn/shared";
+import { AppEnv, ErrCode, FrontendOrg, Organization } from "@autumn/shared";
 import { createSvixApp } from "@/external/svix/svixUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "./OrgService.js";
@@ -104,13 +104,15 @@ export const initDefaultConfig = () => {
   };
 };
 
-export const createOrgResponse = (org: Organization) => {
+export const createOrgResponse = (org: Organization): FrontendOrg => {
   return {
     id: org.id,
+    name: org.name,
+    logo: org.logo,
     slug: org.slug,
-    default_currency: org.default_currency,
-    stripe_connected: org.stripe_connected,
-    created_at: org.created_at,
+    default_currency: org.default_currency || "usd",
+    stripe_connected: org.stripe_connected || false,
+    created_at: new Date(org.createdAt).getTime(),
     test_pkey: org.test_pkey,
     live_pkey: org.live_pkey,
   };

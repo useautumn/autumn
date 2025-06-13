@@ -1,11 +1,10 @@
 import { Check } from "lucide-react";
-import { useAuth, useOrganization, useUser } from "@clerk/clerk-react";
 import { Tooltip, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 import { TooltipContent } from "../ui/tooltip";
 import { Copy } from "lucide-react";
 import { useState } from "react";
-import { notNullish } from "@/utils/genUtils";
+import { useSession } from "@/lib/auth-client";
 
 export const AdminHover = ({
   children,
@@ -16,13 +15,17 @@ export const AdminHover = ({
   texts: (string | { key: string; value: string } | undefined | null)[];
   hide?: boolean;
 }) => {
-  const { isLoaded, user } = useUser();
-  const { actor } = useAuth();
+  const { data, isPending } = useSession();
 
-  const email = user?.primaryEmailAddress?.emailAddress;
+  const user = data?.user;
+
+  // const { isLoaded, user } = useUser();
+  // const { actor } = useAuth();
+
+  const email = user?.email;
 
   const isAdmin =
-    notNullish(actor) ||
+    // notNullish(actor) ||
     email === "johnyeocx@gmail.com" ||
     email === "ayush@recaseai.com" ||
     email === "johnyeo10@gmail.com" ||
@@ -36,7 +39,7 @@ export const AdminHover = ({
         <TooltipTrigger className="w-fit !cursor-default">
           {children}
         </TooltipTrigger>
-        {isLoaded && (
+        {!isPending && (
           <TooltipContent
             className="bg-white/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2"
             align="start"

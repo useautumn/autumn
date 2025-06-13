@@ -19,34 +19,36 @@ import {
 } from "@/components/ui/tooltip";
 import { Check, ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import { AdminHover } from "@/components/general/AdminHover";
+import { OrgDropdown } from "./components/OrgDropdown";
 
 export const SidebarTop = () => {
   const { isLoaded, user } = useUser();
   const { state, setState } = useSidebarContext();
   const primaryEmail = user?.primaryEmailAddress?.emailAddress;
   const env = useEnv();
-  const { organization } = useOrganization();
-  const prevOrgIdRef = useRef<string | null>(null);
+  // const { organization } = useOrganization();
+  // const prevOrgIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    // Skip the first render
-    if (prevOrgIdRef.current === null) {
-      prevOrgIdRef.current = organization?.id || null;
-      return;
-    }
+  // useEffect(() => {
+  //   // Skip the first render
+  //   if (prevOrgIdRef.current === null) {
+  //     prevOrgIdRef.current = organization?.id || null;
+  //     return;
+  //   }
 
-    // If organization changed (switched or created/deleted)
-    if (prevOrgIdRef.current !== (organization?.id || null)) {
-      console.log("Organization changed, refreshing page");
-      window.location.reload();
-    }
+  //   // If organization changed (switched or created/deleted)
+  //   if (prevOrgIdRef.current !== (organization?.id || null)) {
+  //     console.log("Organization changed, refreshing page");
+  //     window.location.reload();
+  //   }
 
-    // Update the ref
-    prevOrgIdRef.current = organization?.id || null;
-  }, [organization]);
+  //   // Update the ref
+  //   prevOrgIdRef.current = organization?.id || null;
+  // }, [organization]);
 
   return (
     <div className="px-2">
+      <OrgDropdown />
       <div
         className={cn(
           "flex items-center w-full",
@@ -56,7 +58,17 @@ export const SidebarTop = () => {
         {state == "expanded" && (
           <div className="flex flex-col">
             <div className="flex relative w-full h-7">
-              {organization && (
+              <OrganizationSwitcher
+                appearance={{
+                  elements: {
+                    organizationSwitcherTrigger: "flex !pl- pr-1 max-w-[160px]",
+                  },
+                }}
+                hidePersonal={true}
+                skipInvitationScreen={true}
+                afterCreateOrganizationUrl="/sandbox/onboarding"
+              />
+              {/* {organization && (
                 <AdminHover
                   texts={[
                     {
@@ -69,19 +81,9 @@ export const SidebarTop = () => {
                     },
                   ]}
                 >
-                  <OrganizationSwitcher
-                    appearance={{
-                      elements: {
-                        organizationSwitcherTrigger:
-                          "flex !pl- pr-1 max-w-[160px]",
-                      },
-                    }}
-                    hidePersonal={true}
-                    skipInvitationScreen={true}
-                    afterCreateOrganizationUrl="/sandbox/onboarding"
-                  />
+                 
                 </AdminHover>
-              )}
+              )} */}
             </div>
           </div>
         )}

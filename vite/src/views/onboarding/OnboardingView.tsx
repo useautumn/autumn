@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useAuth, useOrganization } from "@clerk/clerk-react";
 import { useSearchParams } from "react-router";
 import Step from "@/components/general/OnboardingStep";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
@@ -22,21 +21,19 @@ import { SampleApp } from "./onboarding-steps/SampleApp";
 import IntegrationGuideStep from "./onboarding-steps/IntegrationGuide";
 import AutumnProviderStep from "./onboarding-steps/AutumnProvider";
 import { AutumnProvider } from "autumn-js/react";
+import { useSession } from "@/lib/auth-client";
 
 function OnboardingView() {
   const env = useEnv();
 
-  // const { organization: org } = useOrganization();
   const [searchParams] = useSearchParams();
-
+  const token = searchParams.get("token");
   const [apiKey, setApiKey] = useState("");
   const [showIntegrationSteps, setShowIntegrationSteps] = useState(false);
-
-  const hasHandledToken = useRef(false);
-  const axiosInstance = useAxiosInstance();
-  const token = searchParams.get("token");
   const [loading, setLoading] = useState(true);
-  const { getToken } = useAuth();
+  const { data } = useSession();
+
+  const orgId = data?.session?.activeOrganizationId;
 
   const {
     data: productData,
@@ -71,11 +68,11 @@ function OnboardingView() {
   //   }
   // }, [org, searchParams, token, axiosInstance, productMutate]);
 
-  // useEffect(() => {
-  //   if (org && !token) {
-  //     setLoading(false);
-  //   }
-  // }, [org, token]);
+  useEffect(() => {
+    if (orgId && !token) {
+      setLoading(false);
+    }
+  }, [orgId, token]);
 
   if (loading || productLoading) {
     return <LoadingScreen />;
@@ -94,13 +91,12 @@ function OnboardingView() {
             />
             <AutumnProvider
               backendUrl={`${import.meta.env.VITE_PUBLIC_BACKEND_URL}/demo`}
-              includeCredentials={false}
-              getBearerToken={async () => {
-                const token = await getToken({
-                  template: "custom_template",
-                });
-                return token;
-              }}
+              // getBearerToken={async () => {
+              //   const token = await getToken({
+              //     template: "custom_template",
+              //   });
+              //   return token;
+              // }}
             >
               <SampleApp data={productData} mutate={productMutate} number={3} />
             </AutumnProvider>

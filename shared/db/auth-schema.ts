@@ -40,7 +40,7 @@ export const session = pgTable("session", {
     .references(() => user.id, { onDelete: "cascade" }),
   impersonatedBy: text("impersonated_by"),
   activeOrganizationId: text("active_organization_id"),
-});
+}).enableRLS();
 
 export const account = pgTable("account", {
   id: text("id").primaryKey(),
@@ -58,7 +58,7 @@ export const account = pgTable("account", {
   password: text("password"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
-});
+}).enableRLS();
 
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
@@ -71,7 +71,7 @@ export const verification = pgTable("verification", {
   updatedAt: timestamp("updated_at").$defaultFn(
     () => /* @__PURE__ */ new Date(),
   ),
-});
+}).enableRLS();
 
 // export const organization = pgTable("organization", {
 //   id: text("id").primaryKey(),
@@ -92,7 +92,7 @@ export const member = pgTable("member", {
     .references(() => user.id, { onDelete: "cascade" }),
   role: text("role").default("member").notNull(),
   createdAt: timestamp("created_at").notNull(),
-});
+}).enableRLS();
 
 export const invitation = pgTable("invitation", {
   id: text("id").primaryKey(),
@@ -106,7 +106,7 @@ export const invitation = pgTable("invitation", {
   inviterId: text("inviter_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-});
+}).enableRLS();
 
 export const authSchema = {
   user,

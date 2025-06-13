@@ -43,6 +43,27 @@
       "when": 1749746944226,
       "tag": "0005_young_wendell_rand",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1749752804406,
+      "tag": "0006_bizarre_maestro",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1749752870654,
+      "tag": "0007_slim_talisman",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1749752911832,
+      "tag": "0008_fresh_jackpot",
+      "breakpoints": true
     }
   ]
 }

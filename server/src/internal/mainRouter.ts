@@ -53,11 +53,12 @@ mainRouter.use(
 
   autumnHandler({
     autumn: (req: any) => {
-      let bearerToken = parseAuthHeader(req);
+      // let bearerToken = parseAuthHeader(req);
 
       return new Autumn({
-        secretKey: bearerToken,
+        // secretKey: bearerToken,
         url: "http://localhost:8080/v1",
+        headers: req.headers,
       }) as any;
     },
     identify: async (req: any) => {

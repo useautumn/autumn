@@ -113,9 +113,7 @@ export const handleRequestError = ({
       // logger.warn(`${req.method} ${req.originalUrl}`);
       logReqUrl(logger, req, "warn");
       logger.warn(
-        `Request from ${
-          req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
-        } for ${action}`,
+        `Request from ${req.org?.slug || req.orgId || "unknown"} for ${action}`,
       );
       error.print(logger);
       if (req.originalUrl.includes("/webhooks/stripe")) {
@@ -139,9 +137,7 @@ export const handleRequestError = ({
     // logger.error(`${req.method} ${req.originalUrl}`);
     logReqUrl(logger, req, "error");
     logger.error(
-      `Request from ${
-        req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
-      } for ${action}`,
+      `Request from ${req.org?.slug || req.orgId || "unknown"} for ${action}`,
     );
 
     if (error instanceof Stripe.errors.StripeError) {

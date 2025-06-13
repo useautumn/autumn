@@ -8,6 +8,7 @@ import { signIn } from "@/lib/auth-client";
 
 export const SignIn = () => {
   const [email, setEmail] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleEmailSignIn = (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,10 +18,19 @@ export const SignIn = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    await signIn.social({
-      provider: "google",
-      callbackURL: "http://localhost:3000/customers",
-    });
+    setGoogleLoading(true);
+    try {
+      await signIn.social({
+        provider: "google",
+        callbackURL: "http://localhost:3000/customers",
+      });
+    } catch (error) {
+      console.error("Error signing in with Google:", error);
+    } finally {
+      setTimeout(() => {
+        setGoogleLoading(false);
+      }, 1000);
+    }
   };
 
   return (
@@ -45,8 +55,12 @@ export const SignIn = () => {
             variant="outline"
             onClick={handleGoogleSignIn}
             className="w-full h-10 font-medium text-sm gap-2"
+            // disabled={googleLoading}
+            isLoading={googleLoading}
+            startIcon={
+              <FontAwesomeIcon icon={faGoogle} className="text-zinc-400" />
+            }
           >
-            <FontAwesomeIcon icon={faGoogle} className="text-zinc-400" />
             Continue with Google
           </Button>
 
