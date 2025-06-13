@@ -23,15 +23,18 @@ import {
   useListOrganizations,
   useSession,
 } from "@/lib/auth-client";
-import { FrontendOrg } from "@autumn/shared";
+import { FrontendOrg, user } from "@autumn/shared";
 import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
-import { LogOut, Plus, Settings, Trash } from "lucide-react";
+import { ChevronDown, LogOut, Plus, Settings, Trash } from "lucide-react";
 import React from "react";
 import { useState } from "react";
 import { CreateNewOrg } from "./CreateNewOrg";
 import { toast } from "sonner";
 import { LogOutItem } from "./LogOutItem";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ManageOrg } from "./ManageOrg";
+import { useMemberships } from "../org-dropdown/hooks/useOrgMembers";
 
 const OrgLogo = ({ org }: { org: FrontendOrg }) => {
   const firstLetter = org.name.charAt(0).toUpperCase();
@@ -53,31 +56,62 @@ export const OrgDropdown = () => {
     null,
   );
 
+  const { data: session } = useSession();
+  // console.log("Org:", org);
+  // console.log("Session:", session);
+  const { memberships, isLoading: isMembersLoading } = useMemberships();
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [manageOpen, setManageOpen] = useState(false);
+
+  // if (!org) return null;
+  if (isLoading)
+    return (
+      <div className="h-7 w-32 p-2 flex items-center gap-2">
+        <Skeleton className="min-w-5 h-5 bg-stone-200" />
+        <Skeleton className="w-32 h-5 bg-stone-200" />
+      </div>
+    );
 
   if (!org) return null;
-  if (isLoading) return <div></div>;
 
   return (
     <React.Fragment>
+      <ManageOrg open={manageOpen} setOpen={setManageOpen} />
       <CreateNewOrg dialogType={dialogType} setDialogType={setDialogType} />
 
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
         <DropdownMenuTrigger asChild>
           <Button
-            className="p-2 h-7 gap-2 hover:bg-stone-200/60"
+            className="p-2 h-7 gap-2 rounded-md hover:bg-stone-200/60 min-w-32 justify-start items-center"
             variant="ghost"
           >
             <OrgLogo org={org} />
-            <span className="text-t2">{org.name}</span>
+            <span className="text-t2">{org?.name}</span>
+            <ChevronDown size={14} className="text-t3" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="start"
           className="border-1 border-zinc-200 shadow-sm w-48"
         >
+          <DropdownMenuItem className="flex justify-between w-full items-center gap-2 text-t2">
+            <div className="flex flex-col">
+              <span>{session?.user?.name}</span>
+              <span className="text-xs text-zinc-500">
+                {session?.user?.email}
+              </span>
+            </div>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.preventDefault();
+                setManageOpen(true);
+                setDropdownOpen(false);
+              }}
+            >
               <div className="flex justify-between w-full items-center gap-2 text-t2">
                 <span>Manage</span>
                 <Settings size={14} />

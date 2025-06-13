@@ -13,12 +13,14 @@ import ProductsView from "./views/products/ProductsView";
 import OnboardingView from "./views/onboarding/OnboardingView";
 import CliAuth from "./views/CliAuth";
 import { SignIn } from "./views/auth/SignIn";
+import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/sign-in" element={<SignIn />} />
+        <Route path="/accept" element={<AcceptInvitation />} />
         <Route element={<MainLayout />}>
           <Route path="*" element={<DefaultView />} />
           <Route path="/onboarding" element={<OnboardingView />} />

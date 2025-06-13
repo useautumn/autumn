@@ -152,4 +152,7 @@ export const ErrCode = {
   InsertMigrationJobFailed: "insert_migration_job_failed",
   InsertMigrationErrorFailed: "insert_migration_error_failed",
   MigrationJobNotFound: "migration_job_not_found",
+
+  // Supabase
+  SupabaseNotFound: "supabase_not_found",
 };

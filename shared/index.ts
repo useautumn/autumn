@@ -1,7 +1,10 @@
 // Schemas
 import * as schemas from "./db/schema.js";
-export * from "./db/auth-schema.js";
 export { schemas };
+
+// Auth Models
+export * from "./db/auth-schema.js";
+export * from "./models/authModels/membership.js";
 
 // Gen Models
 export * from "./models/genModels/genEnums.js";

@@ -217,6 +217,10 @@ export const handleFrontendReqError = ({
     });
     logger.warn(`${action}`);
     logger.warn(error);
+    res.status(400).json({
+      message: error.message || "Unknown error",
+      code: error.code || "unknown_error",
+    });
   } catch (error) {
     console.log("Failed to log error / warning");
   }

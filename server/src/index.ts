@@ -21,13 +21,14 @@ import {
   createLogtailAll,
 } from "./external/logtail/logtailUtils.js";
 import { CacheManager } from "./external/caching/CacheManager.js";
-// import { initDrizzle } from "./db/initDrizzle.js";
+
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import { generateId } from "./utils/genUtils.js";
 import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
 import { client, db } from "./db/initDrizzle.js";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
+import { logtail as logtailAll } from "./external/logtail/logtailUtils.js";
 
 if (!process.env.DATABASE_URL) {
   console.error(`DATABASE_URL is not set`);
@@ -60,7 +61,7 @@ const init = async () => {
   // const { db } = initDrizzle();
 
   // Optional services
-  const logtailAll = createLogtailAll();
+  // const logtailAll = createLogtailAll();
   const posthog = createPosthogCli();
   subscribeToOrgUpdates({ db });
 
@@ -72,7 +73,6 @@ const init = async () => {
     req.logtailAll = logtailAll;
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
 
-    req.logtailAll = logtailAll;
     req.posthog = posthog;
 
     req.id = req.headers["rndr-id"] || generateId("local_req");

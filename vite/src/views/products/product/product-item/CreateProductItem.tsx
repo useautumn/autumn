@@ -107,12 +107,10 @@ export function CreateProductItem() {
           </DialogTrigger>
         </div>
         <DialogContent
-          className={cn(
-            "translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit overflow-visible",
-          )}
+          className={cn("translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit")}
         >
           <DialogHeader>
-            <div className="flex flex-col">
+            <div className="flex flex-col  ">
               {showCreateFeature && (
                 <Button
                   variant="ghost"
@@ -125,7 +123,7 @@ export function CreateProductItem() {
               <DialogTitle>Add Product Item</DialogTitle>
             </div>
           </DialogHeader>
-          <div className="flex overflow-visible w-fit">
+          <div className="flex !overflow-visible  w-fit">
             {showCreateFeature ||
             (features.length == 0 && item.price === null) ? (
               <div className="w-full -mt-2">
@@ -138,7 +136,7 @@ export function CreateProductItem() {
                 />
               </div>
             ) : (
-              <div className="flex flex-col gap-4 w-fit">
+              <div className="flex flex-col gap-4 w-fit !overflow-visible">
                 <ProductItemConfig />
               </div>
             )}

@@ -47,6 +47,7 @@
     "react-confetti-explosion": "^2.1.2",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.2.0",
+    "react-dropzone": "^14.3.8",
     "react-hot-toast": "^2.5.2",
     "react-hotkeys-hook": "^4.6.1",
     "react-router": "^7.3.0",

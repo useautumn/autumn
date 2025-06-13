@@ -117,3 +117,7 @@ export const authSchema = {
   invitation,
   organizations,
 };
+
+export type User = typeof user.$inferSelect;
+export type Member = typeof member.$inferSelect;
+export type Invite = typeof invitation.$inferSelect;

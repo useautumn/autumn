@@ -5,64 +5,53 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 // import { authDb } from "@/db/initDrizzle.js"; // your drizzle instance
 import { saveOrgToDB } from "@/external/webhooks/clerkWebhooks.js";
 import { db } from "@/db/initDrizzle.js";
-import { member, session as sessionTable } from "@autumn/shared";
+import { invitation, member, session as sessionTable } from "@autumn/shared";
 import { desc, eq } from "drizzle-orm";
+import { createDefaultOrg } from "@/utils/authUtils/createDefaultOrg.js";
+import { sendInvitationEmail } from "@/internal/orgs/emails/sendInvitationEmail.js";
+import { afterUserCreated } from "@/utils/authUtils/afterUserCreated.js";
+import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg", // or "mysql", "sqlite"
   }),
+
   databaseHooks: {
+    user: {
+      create: {
+        after: afterUserCreated,
+      },
+    },
     session: {
       create: {
-        before: async (session) => {
-          let lastSession = await db
-            .select()
-            .from(sessionTable)
-            .where(eq(sessionTable.userId, session.userId))
-            .orderBy(desc(sessionTable.createdAt))
-            .limit(1);
-
-          if (!lastSession) {
-            return {
-              data: {
-                ...session,
-                activeOrganizationId: null,
-              },
-            };
-          }
-
-          if (lastSession[0].activeOrganizationId) {
-            return {
-              data: {
-                ...session,
-                activeOrganizationId: lastSession[0].activeOrganizationId,
-              },
-            };
-          }
-
-          let memberships = await db
-            .select()
-            .from(member)
-            .where(eq(member.userId, session.userId));
-
-          if (memberships.length > 0) {
-            return {
-              data: {
-                ...session,
-                activeOrganizationId: memberships[0].organizationId,
-              },
-            };
-          }
-
-          return { data: session };
-        },
+        before: beforeSessionCreated,
       },
     },
   },
   user: {
     deleteUser: {
       enabled: true,
+
+      sendDeleteAccountVerification: async ({ user, url, token }) => {
+        console.log("Delete account verification", { url, token });
+        // try {
+        //   const res = await auth.api.removeUser({
+        //     body: {
+        //       userId: user.id,
+        //     },
+        //   });
+        //   console.log("Res:", res);
+        // } catch (error) {
+        //   console.log("Error:", error);
+        // }
+        // console.log("Res:", res);
+        // const res2 = await fetch(url, {
+        //   method: "GET",
+        // });
+        // const deleteData = await res2.json();
+        // console.log("Delete account verification", deleteData);
+      },
     },
   },
   trustedOrigins: ["http://localhost:3000"],
@@ -80,6 +69,14 @@ export const auth = betterAuth({
     }),
     admin(),
     organization({
+      async sendInvitationEmail(data) {
+        const inviteLink = `${process.env.CLIENT_URL}/accept?id=${data.id}`;
+        await sendInvitationEmail({
+          email: data.email,
+          orgName: data.organization.name,
+          inviteLink,
+        });
+      },
       schema: {
         organization: {
           modelName: "organizations",

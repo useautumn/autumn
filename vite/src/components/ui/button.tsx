@@ -72,6 +72,7 @@ export interface ButtonProps
   endIcon?: React.ReactNode;
   tooltipContent?: string;
   disableStartIcon?: boolean;
+  shimmer?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -89,6 +90,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       tooltipContent,
       children,
       disableStartIcon = false,
+      shimmer = false,
       ...props
     },
     ref,
@@ -100,6 +102,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           buttonVariants({ variant, size, className }),
           isIcon && `w-${dim} h-${dim} p-0`,
+          shimmer && "shimmer",
         )}
         ref={ref}
         onClick={(e) => {
@@ -110,6 +113,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           }
           props.onClick?.(e);
         }}
+        disabled={isLoading || props.disabled || shimmer}
       >
         {isLoading && <LoaderCircle className="animate-spin" size={14} />}
         {startIcon && !isLoading && <>{startIcon}</>}

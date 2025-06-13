@@ -110,7 +110,7 @@ export const createOrgResponse = (org: Organization): FrontendOrg => {
     name: org.name,
     logo: org.logo,
     slug: org.slug,
-    default_currency: org.default_currency || "usd",
+    default_currency: org.default_currency || "USD",
     stripe_connected: org.stripe_connected || false,
     created_at: new Date(org.createdAt).getTime(),
     test_pkey: org.test_pkey,

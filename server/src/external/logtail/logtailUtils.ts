@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { initLogger } from "@/errors/logger.js";
 import { Logtail } from "@logtail/node";
 
@@ -97,6 +100,8 @@ export const createLogtailAll = () => {
 
   return logtail;
 };
+
+export const logtail = createLogtailAll();
 
 // const logtail = createLogtailLogger();
 // export default logtail;
