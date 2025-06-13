@@ -3,9 +3,11 @@ import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { LogOut, Trash } from "lucide-react";
 import { useState } from "react";
 import React from "react";
+import { useNavigate } from "react-router";
 
 export const LogOutItem = () => {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <React.Fragment>
@@ -14,7 +16,7 @@ export const LogOutItem = () => {
           try {
             setLoading(true);
             await authClient.signOut();
-            window.location.reload();
+            await navigate("/sign-in");
           } catch (error) {
             console.error("Error signing out:", error);
           } finally {

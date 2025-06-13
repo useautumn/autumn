@@ -7,9 +7,9 @@ const getInvitationEmailBody = ({
   orgName: string;
   inviteLink: string;
 }) => {
-  return `Hey there! You've been invited to join ${orgName}. 
+  return `Hey there! You've been invited to join ${orgName} on Autumn. 
 
-Just click the link below to create an account on Autumn and join the org.
+Click the link below to create an account / sign in and you'll be automatically added to the organization.
 
 ${process.env.CLIENT_URL}/sign-in
   `;

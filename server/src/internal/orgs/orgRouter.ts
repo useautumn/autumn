@@ -19,17 +19,16 @@ import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
 import { createOrgResponse } from "./orgUtils.js";
 import { handleGetOrgMembers } from "./handlers/handleGetOrgMembers.js";
 import { handleInvite } from "./handlers/handleInvite.js";
-import { auth } from "@/utils/auth.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
+import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
 
 export const orgRouter = express.Router();
 orgRouter.get("/members", handleGetOrgMembers);
 orgRouter.get("/upload_url", handleGetUploadUrl);
 orgRouter.post("/invite", handleInvite as any);
+orgRouter.delete("", handleDeleteOrg as any);
 
 orgRouter.delete("/delete-user", async (req: any, res) => {
-  // await auth.api.deleteUser();
-
   res.status(200).json({
     message: "User deleted",
   });

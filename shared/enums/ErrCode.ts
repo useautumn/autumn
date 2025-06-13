@@ -20,6 +20,7 @@ export const ErrCode = {
 
   // Org
   OrgNotFound: "org_not_found",
+  OrgHasCustomers: "org_has_customers",
 
   // Feature
   FeatureNotFound: "feature_not_found",
