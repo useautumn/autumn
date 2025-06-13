@@ -57,9 +57,7 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) =>
         name,
         orgId,
         prefix,
-        meta: {
-          org_slug: req.minOrg.slug,
-        },
+        meta: {},
       });
 
       res.status(200).json({

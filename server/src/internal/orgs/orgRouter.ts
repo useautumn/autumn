@@ -16,6 +16,7 @@ import { createStripeCli } from "@/external/stripe/utils.js";
 import { AppEnv } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
+import { createOrgResponse } from "./orgUtils.js";
 
 export const orgRouter = express.Router();
 
@@ -30,9 +31,7 @@ orgRouter.get("", async (req: any, res) => {
 
     const org = await OrgService.getFromReq(req);
 
-    res.status(200).json({
-      org,
-    });
+    res.status(200).json(createOrgResponse(org));
   } catch (error) {
     handleRequestError({
       req,

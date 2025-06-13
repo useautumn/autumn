@@ -56,9 +56,7 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
       error instanceof RecaseError &&
       error.code === ErrCode.DuplicateCustomerId
     ) {
-      logger.warn(
-        `POST /customers: ${error.message} (org: ${req.minOrg.slug})`,
-      );
+      logger.warn(`POST /customers: ${error.message} (org: ${req.org?.slug})`);
       res.status(error.statusCode).json({
         message: error.message,
         code: error.code,

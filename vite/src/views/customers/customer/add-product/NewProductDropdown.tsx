@@ -19,6 +19,7 @@ import { OrgService } from "@/services/OrgService";
 import { CusProductStatus, Entity, Product } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Search } from "lucide-react";
+import { useOrg } from "@/hooks/useOrg";
 
 function AddProduct() {
   const { products, customer, env, entityId, entities } = useCustomerContext();
@@ -26,6 +27,7 @@ function AddProduct() {
   const [options, setOptions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const { org } = useOrg();
 
   const filteredProducts = products.filter((product: Product) => {
     if (product.is_add_on && !searchQuery) return true;

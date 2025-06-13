@@ -5,8 +5,6 @@ import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { AppEnv } from "@autumn/shared";
-import { RedirectToSignIn, useUser } from "@clerk/clerk-react";
-import { useOrganization } from "@clerk/clerk-react";
 import { useEffect } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router";
 
@@ -19,15 +17,14 @@ import { useSession } from "@/lib/auth-client";
 
 export function MainLayout() {
   const env = useEnv();
-  // const { isLoaded: isUserLoaded, user } = useUser();
-  // const { organization: org } = useOrganization();
+
   const { getToken } = useAuth();
   const { pathname } = useLocation();
+  const { data, isPending } = useSession();
   const navigate = useNavigate();
-
   const posthog = usePostHog();
 
-  const { data, isPending } = useSession();
+  const orgId = data?.session.activeOrganizationId;
 
   useEffect(() => {
     // Identify user
@@ -81,7 +78,7 @@ export function MainLayout() {
     return;
   }
 
-  if (!pathname.includes("/onboarding")) {
+  if (!orgId && !pathname.includes("/onboarding")) {
     return (
       <Navigate
         to={getRedirectUrl("/onboarding", AppEnv.Sandbox)}

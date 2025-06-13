@@ -1,6 +1,10 @@
-import { useSession } from "@/lib/auth-client";
+import {
+  authClient,
+  useListOrganizations,
+  useSession,
+} from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 export const useCreateOrg = ({
   productMutate,
@@ -11,18 +15,28 @@ export const useCreateOrg = ({
   const hasCreatedOrg = useRef(false);
 
   const { data: session } = useSession();
-  // const { user } = useUser();
-  // const { organization: org } = useOrganization();
-  // const { setActive } = useOrganizationList();
+  const { data: organizations, isPending } = useListOrganizations();
 
   useEffect(() => {
-    console.log("session", session);
     const createDefaultOrg = async () => {
-      if (hasCreatedOrg.current) return;
+      if (hasCreatedOrg.current || isPending) return;
       hasCreatedOrg.current = true;
       // Either set first org active, or create a new org
       try {
-        await axiosInstance.post("/organization");
+        if (organizations && organizations.length > 0) {
+          await authClient.organization.setActive({
+            organizationId: organizations[0]?.id,
+          });
+        } else {
+          await authClient.organization.create({
+            name: `${session?.user.name}'s Org`,
+            slug: crypto.randomUUID(),
+          });
+
+          await productMutate();
+        }
+        // await axiosInstance.post("/organization");
+        // await authClient.use
         // if (
         //   user?.organizationMemberships?.length &&
         //   user.organizationMemberships.length > 0
@@ -30,7 +44,7 @@ export const useCreateOrg = ({
         //   await setActive?.({
         //     organization: user.organizationMemberships[0].organization.id,
         //   });
-        //   await productMutate();
+
         //   return;
         // } else {
         //   const { data } = await axiosInstance.post("/organization");

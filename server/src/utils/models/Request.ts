@@ -1,10 +1,4 @@
-import {
-  AppEnv,
-  AuthType,
-  Feature,
-  MinOrg,
-  Organization,
-} from "@autumn/shared";
+import { AppEnv, AuthType, Feature, Organization } from "@autumn/shared";
 import { Logtail } from "@logtail/node";
 import type {
   Request as ExpressRequest,
@@ -27,7 +21,6 @@ export interface ExtendedRequest extends ExpressRequest {
   orgId: string;
   env: AppEnv;
 
-  minOrg: MinOrg;
   org: Organization;
   features: Feature[];
 

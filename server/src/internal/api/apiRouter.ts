@@ -27,12 +27,6 @@ apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
 apiRouter.use(analyticsMiddleware);
 
-apiRouter.get("/auth", (req: any, res) => {
-  res.json({
-    message: `Authenticated -- Hello ${req.minOrg?.slug}!`,
-  });
-});
-
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/invoices", invoiceRouter);
 apiRouter.use("/products", productApiRouter);

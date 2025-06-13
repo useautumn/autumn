@@ -8,7 +8,7 @@
     "moduleResolution": "NodeNext", // or "node16"/"nodenext"
     "module": "NodeNext", // or "node16"/"nodenext"
 
-    "declaration": true,
+    // "declaration": true,
     "rootDir": ".",
     "baseUrl": ".",
     "outDir": "./dist",

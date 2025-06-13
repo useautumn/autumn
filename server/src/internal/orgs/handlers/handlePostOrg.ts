@@ -15,10 +15,9 @@ export const handlePostOrg = async (req: any, res: any) =>
 
       console.log("userId", userId);
 
-      const userMemberships = await auth.api.({
-        userId: userId!,
-      });
-      
+      // const userMemberships = await auth.api.({
+      //   userId: userId!,
+      // });
 
       // const clerk = createClerkCli();
       // const user = await clerk.users.getUser(userId!);
@@ -41,11 +40,11 @@ export const handlePostOrg = async (req: any, res: any) =>
       //     role: "org:admin",
       //   });
 
-        // await saveOrgToDB({
-        //   db,
-        //   id: org.id,
-        //   slug: org.slug,
-        // });
+      // await saveOrgToDB({
+      //   db,
+      //   id: org.id,
+      //   slug: org.slug,
+      // });
 
       //   console.log(`Created new org: ${org.id} (${org.slug})`);
       // } else {

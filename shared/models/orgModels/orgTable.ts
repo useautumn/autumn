@@ -11,11 +11,6 @@ import {
 import { OrgConfig } from "./orgConfig.js";
 import { sql } from "drizzle-orm";
 
-export type MinOrg = {
-  id: string;
-  slug: string;
-};
-
 export type SvixConfig = {
   sandbox_app_id: string;
   live_app_id: string;
