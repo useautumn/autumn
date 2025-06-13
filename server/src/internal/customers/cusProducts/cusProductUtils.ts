@@ -404,6 +404,8 @@ export const processFullCusProduct = ({
       status: trialing ? CusProductStatus.Trialing : cusProduct.status,
       // created_at: cusProduct.created_at,
       canceled_at: cusProduct.canceled_at,
+      is_default: cusProduct.product.is_default || false,
+      is_add_on: cusProduct.product.is_add_on || false,
 
       stripe_subscription_ids: cusProduct.subscription_ids || [],
       started_at: cusProduct.starts_at,

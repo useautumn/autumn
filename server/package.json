@@ -12,7 +12,6 @@
     "build": "tsc -b tsconfig.build.json",
     "prod": "tsc -b tsconfig.build.json && tsc-alias && node dist/src/index.js",
     "prod:build": "tsc -b tsconfig.build.json && tsc-alias",
-    
     "prod:start": "node dist/src/index.js",
     "cron": "tsx src/cron.ts",
     "cron:start": "node --no-deprecation dist/src/cron.js",
