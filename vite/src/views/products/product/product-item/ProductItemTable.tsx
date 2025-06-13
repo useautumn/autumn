@@ -1,120 +1,38 @@
 import UpdateProductItem from "./UpdateProductItem";
-import {
-  Feature,
-  FeatureType,
-  Infinite,
-  ProductItem,
-  ProductItemType,
-} from "@autumn/shared";
+import { ProductItem } from "@autumn/shared";
 import { useProductContext } from "../ProductContext";
 import { CreateProductItem } from "./CreateProductItem";
-import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { ProductItemRow } from "./ProductItemRow";
+import { Button } from "@/components/ui/button";
 import {
-  formatAmount,
-  getItemType,
-  intervalIsNone,
-} from "@/utils/product/productItemUtils";
-
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
+import { EllipsisVertical } from "lucide-react";
 import { useState } from "react";
-import { AdminHover } from "@/components/general/AdminHover";
-import { getFeature } from "@/utils/product/entitlementUtils";
-import { Badge } from "@/components/ui/badge";
-import { DollarSign } from "lucide-react";
-import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { isFeatureItem, isPriceItem } from "@/utils/product/getItemType";
-import { notNullish } from "@/utils/genUtils";
+import { EntitiesDropdownContent } from "./EntitiesDropdown";
+import { CreateFreeTrial } from "../free-trial/CreateFreeTrial";
+import { InfoTooltip } from "@/components/general/InfoTooltip";
 
 export const ProductItemTable = ({
   isOnboarding = false,
 }: {
   isOnboarding?: boolean;
 }) => {
-  const { product, setProduct, features, org } = useProductContext();
+  const { product, setProduct, features, org, entityFeatureIds } =
+    useProductContext();
   const [selectedItem, setSelectedItem] = useState<ProductItem | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
-
-  const getFreeFeatureString = (item: ProductItem) => {
-    const feature = features.find((f: Feature) => f.id == item.feature_id);
-
-    if (feature?.type === FeatureType.Boolean) {
-      return `${feature.name}`;
-    }
-
-    if (item.included_usage == Infinite) {
-      return `Unlimited ${feature?.name}`;
-    }
-
-    return (
-      <div className="whitespace-nowrap flex">
-        {item.included_usage ?? 0}&nbsp;
-        <span className="truncate">{feature?.name}</span> &nbsp;
-        {item.entity_feature_id && (
-          <span className="truncate">
-            per {getFeature(item.entity_feature_id, features)?.name} &nbsp;
-          </span>
-        )}
-        {notNullish(item.interval) && (
-          <span className="text-t3">per {item.interval}</span>
-        )}
-      </div>
-    );
-  };
-
-  const getPaidFeatureString = (item: ProductItem) => {
-    let amountStr = "";
-
-    if (item.price) {
-      amountStr = formatAmount({
-        defaultCurrency: org?.default_currency || "USD",
-        amount: item.price,
-      });
-    } else if (item.tiers && item.tiers.length == 1) {
-      amountStr = formatAmount({
-        defaultCurrency: org?.default_currency || "USD",
-        amount: item.tiers![0].amount,
-      });
-    } else {
-      amountStr = `${formatAmount({
-        defaultCurrency: org?.default_currency || "USD",
-        amount: item.tiers![0].amount,
-      })} - ${formatAmount({
-        defaultCurrency: org?.default_currency || "USD",
-        amount: item.tiers![item.tiers!.length - 1].amount,
-      })}`;
-    }
-
-    const feature = features.find((f: Feature) => f.id == item.feature_id);
-
-    amountStr += ` per ${item.billing_units! > 1 ? item.billing_units : ""} ${
-      feature?.name
-    }`;
-
-    if (!intervalIsNone(item.interval)) {
-      amountStr += ` per ${item.interval}`;
-    }
-
-    if (item.included_usage) {
-      return `${item.included_usage} ${feature?.name} free, then ${amountStr}`;
-    } else {
-      return amountStr;
-    }
-  };
-
-  const getFixedPriceString = (item: ProductItem) => {
-    const currency = org?.default_currency || "USD";
-    const formattedAmount = formatAmount({
-      defaultCurrency: currency,
-      amount: item.price!,
-    });
-
-    if (!intervalIsNone(item.interval)) {
-      return `${formattedAmount} per ${item.interval}`;
-    }
-
-    return `${formattedAmount}`;
-  };
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [entitiesOpen, setEntitiesOpen] = useState(false);
+  const [freeTrialOpen, setFreeTrialOpen] = useState(false);
 
   const handleRowClick = (item: ProductItem, index: number) => {
     setSelectedItem(item);
@@ -122,46 +40,17 @@ export const ProductItemTable = ({
     setOpen(true);
   };
 
-  const getAdminHoverTexts = (item: ProductItem) => {
-    if (isFeatureItem(item)) {
-      return [
-        {
-          key: "Entitlement ID",
-          value: item.entitlement_id || "N/A",
-        },
-      ];
-    }
+  // Group product items by entity_feature_id, and also include items where feature_id matches
+  const groupedItems = entityFeatureIds.reduce(
+    (acc: Record<string, ProductItem[]>, entityFeatureId: string) => {
+      acc[entityFeatureId] = product.items.filter(
+        (item: ProductItem) => item.entity_feature_id === entityFeatureId,
+      );
+      return acc;
+    },
+    {} as Record<string, ProductItem[]>,
+  );
 
-    let texts = [
-      {
-        key: "Price ID",
-        value: item.price_id || "N/A",
-      },
-      {
-        key: "Stripe Price ID",
-        value: item.price_config?.stripe_price_id || "N/A",
-      },
-    ];
-
-    if (!isPriceItem(item)) {
-      texts = texts.concat([
-        {
-          key: "Entitlement ID",
-          value: item.entitlement_id || "N/A",
-        },
-        {
-          key: "Stripe Product ID",
-          value: item.price_config?.stripe_product_id || "N/A",
-        },
-        {
-          key: "Stripe Meter ID",
-          value: item.price_config?.stripe_meter_id || "N/A",
-        },
-      ]);
-    }
-
-    return texts;
-  };
   return (
     <>
       <UpdateProductItem
@@ -174,7 +63,7 @@ export const ProductItemTable = ({
       <div className="flex flex-col text-sm rounded-sm">
         <div
           className={cn(
-            "flex items-center justify-between border-y bg-stone-100 pl-10 pr-10 h-10",
+            "flex items-center justify-between border-y bg-stone-100 pl-10 h-10",
             isOnboarding && "pl-2 pr-2 border-x",
           )}
         >
@@ -184,73 +73,113 @@ export const ProductItemTable = ({
           <div className="flex w-full h-full items-center justify-end">
             <div className="flex w-fit h-full items-center">
               <CreateProductItem />
+              <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="add"
+                    disableStartIcon
+                    startIcon={<EllipsisVertical size={16} />}
+                    className="w-10 h-10 p-0 text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                  />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-36 max-w-36">
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="flex items-center gap-2">
+                      Add Entity
+                      <InfoTooltip>
+                        <p>
+                          Add an entity to group items by (eg, usage limits per
+                          users, compute instances, etc).
+                        </p>
+                      </InfoTooltip>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="max-w-52">
+                      <EntitiesDropdownContent />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      setFreeTrialOpen(true);
+                    }}
+                  >
+                    Add Free Trial
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <CreateFreeTrial
+                open={freeTrialOpen}
+                setOpen={setFreeTrialOpen}
+              />
             </div>
           </div>
         </div>
         <div className="flex flex-col">
-          {product.items.map((item: ProductItem, index: number) => {
-            const itemType = getItemType(item);
-
-            return (
-              <div
+          {/* Original product items mapping - excluding items that appear in grouped sections */}
+          {product.items
+            .filter(
+              (item: ProductItem) =>
+                !entityFeatureIds.some(
+                  (entityFeatureId: string) =>
+                    item.entity_feature_id === entityFeatureId,
+                ),
+            )
+            .map((item: ProductItem, index: number) => (
+              <ProductItemRow
                 key={index}
-                className={cn(
-                  "grid grid-cols-17 gap-4 px-10 text-t2 h-10 items-center hover:bg-primary/3",
-                  isOnboarding && "grid-cols-12 px-2",
-                )}
-                onClick={() => handleRowClick(item, index)}
-              >
-                {!isOnboarding && (
-                  <span className="col-span-3 overflow-hidden flex whitespace-nowrap  items-center">
-                    <span className="truncate font-mono text-t3 w-full ">
-                      {item.feature_id || ""}
-                    </span>
-                  </span>
-                )}
-                <span className="col-span-8 whitespace-nowrap truncate">
-                  <AdminHover texts={getAdminHoverTexts(item)}>
-                    {itemType === ProductItemType.Feature
-                      ? getFreeFeatureString(item)
-                      : itemType === ProductItemType.Price
-                        ? getFixedPriceString(item)
-                        : getPaidFeatureString(item)}
-                  </AdminHover>
-                </span>
-                <span className="col-span-4 flex gap-1 justify-end w-fit ">
-                  <Badge
-                    variant="blue"
-                    className={cn(
-                      "text-xs flex gap-1 items-center opacity-0",
-                      (itemType === ProductItemType.Feature ||
-                        itemType === ProductItemType.FeaturePrice) &&
-                        "opacity-100",
-                    )}
-                  >
-                    <Flag size={12} /> Feature
-                  </Badge>
+                item={item}
+                index={product.items.indexOf(item)} // Use indexOf to maintain correct index reference
+                isOnboarding={isOnboarding}
+                features={features}
+                org={org}
+                onRowClick={handleRowClick}
+              />
+            ))}
 
-                  <Badge
-                    variant="yellow"
-                    className={cn(
-                      "text-xs flex gap-1 items-center opacity-0",
-                      (itemType === ProductItemType.Price ||
-                        itemType === ProductItemType.FeaturePrice) &&
-                        "opacity-100",
-                    )}
-                  >
-                    <DollarSign size={12} /> Price
-                  </Badge>
-                </span>
-                {!isOnboarding && (
-                  <span className="flex text-xs text-t3 items-center col-span-2 whitespace-nowrap justify-end">
-                    {item.created_at
-                      ? formatUnixToDateTime(item.created_at).date
-                      : formatUnixToDateTime(Math.floor(Date.now())).date}
-                  </span>
+          {/* Grouped items with separators */}
+          {entityFeatureIds.map((entityFeatureId: string) => (
+            <div key={entityFeatureId}>
+              {/* Separator for each entityFeatureId */}
+              <div
+                className={cn(
+                  "flex items-center bg-stone-50 border-b pl-10 pr-10 h-5 relative mb-2",
+                  isOnboarding && "pl-2 pr-2",
                 )}
+              >
+                <h3 className="text-t2 font-medium uppercase text-xs font-mono tracking-widest absolute top-3.5 bg-stone-50 px-3 left-7">
+                  {entityFeatureId}
+                </h3>
               </div>
-            );
-          })}
+
+              {/* Filtered items for this entityFeatureId */}
+              {groupedItems[entityFeatureId]?.map(
+                (item: ProductItem, index: number) => (
+                  <ProductItemRow
+                    key={`${entityFeatureId}-${index}`}
+                    item={item}
+                    index={product.items.indexOf(item)}
+                    isOnboarding={isOnboarding}
+                    features={features}
+                    org={org}
+                    onRowClick={handleRowClick}
+                  />
+                ),
+              )}
+
+              {/* Show message if no items for this entityFeatureId */}
+              {groupedItems[entityFeatureId]?.length === 0 && (
+                <div
+                  className={cn(
+                    "flex items-center pl-10 pr-10 h-12 text-t3 text-sm",
+                    isOnboarding && "pl-2 pr-2",
+                  )}
+                >
+                  Add the features this entity gets access to
+                </div>
+              )}
+            </div>
+          ))}
+
           {product.items.length === 0 && (
             <div className="flex flex-col px-10 h-full mt-2">
               <p className="text-t3">
@@ -277,8 +206,7 @@ export const ProductItemTable = ({
                 <p className="text-t3">
                   ↳{" "}
                   <span className="font-medium text-t2">Priced Features:</span>{" "}
-                  features that have a price based on their usage (eg, $1 per
-                  credit)
+                  features that have a price based on usage (eg, $1 per credit)
                 </p>
               </div>
             </div>

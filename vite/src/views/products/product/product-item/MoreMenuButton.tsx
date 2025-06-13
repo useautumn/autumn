@@ -59,25 +59,6 @@ export default function MoreMenuButton({
             Reset usage when product is enabled
           </Button>
         </div>
-        <Button
-          className="h-7 shadow-none text-t3 text-xs justify-start border-none"
-          variant="outline"
-          startIcon={
-            show.perEntity ? (
-              <MinusIcon size={14} className="ml-0.5 mr-1" />
-            ) : (
-              <PlusIcon size={14} className="ml-0.5 mr-1" />
-            )
-          }
-          onClick={() => {
-            setShow({ ...show, perEntity: !show.perEntity });
-            setShowPopover(false);
-          }}
-        >
-          {show.perEntity
-            ? "Remove per feature entity"
-            : "Add per feature entity"}
-        </Button>
       </PopoverContent>
     </Popover>
   );

@@ -51,7 +51,7 @@ export const ConfigWithFeature = ({
         <MoreMenuButton show={show} setShow={setShow} />
       </div>
 
-      {show.perEntity && featureType == FeatureType.Boolean && (
+      {/* {show.perEntity && featureType == FeatureType.Boolean && (
         <div
           className={cn(
             "transition-all duration-400 ease-in-out whitespace-nowrap w-0 max-w-0 opacity-0 z-[-1] overflow-hidden -ml-2",
@@ -61,7 +61,7 @@ export const ConfigWithFeature = ({
         >
           <PerEntityConfig />
         </div>
-      )}
+      )} */}
 
       {/* if feature type is boolean, dont show anything */}
 
@@ -104,8 +104,8 @@ export const ConfigWithFeature = ({
                           <InfoIcon className="w-3 h-3 text-t3/50" />
                         </TooltipTrigger>
                         <TooltipContent sideOffset={5} side="top">
-                          How much usage of this feature is included as part of
-                          this plan
+                          How much usage of this feature is included for free.
+                          If there is no price, it is a usage limit.
                         </TooltipContent>
                       </Tooltip>
                     </FieldLabel>
@@ -152,17 +152,6 @@ export const ConfigWithFeature = ({
                       </ToggleDisplayButton>
                     </div>
                   </div>
-                </div>
-
-                {/* ENTITY CONFIG */}
-                <div
-                  className={cn(
-                    "transition-all duration-400 ease-in-out whitespace-nowrap w-0 max-w-0 opacity-0 z-[-1] overflow-hidden -ml-2",
-                    show.perEntity &&
-                      "opacity-100 max-w-full w-full max-h-[200px] z-10 ml-0",
-                  )}
-                >
-                  <PerEntityConfig />
                 </div>
 
                 {/* INTERVAL CONFIG */}

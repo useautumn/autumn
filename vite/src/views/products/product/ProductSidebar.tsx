@@ -12,10 +12,18 @@ import { Badge } from "@/components/ui/badge";
 import { notNullish } from "@/utils/genUtils";
 import { AttachButton } from "@/views/customers/customer/product/components/AttachButton";
 import { CustomerProductBadge } from "@/views/customers/customer/product/components/CustomerProductBadge";
+import { EntitiesSidebar } from "./product-item/EntitiesSidebar";
 
 export default function ProductSidebar() {
-  const { product, org, setProduct, customer } = useProductContext();
+  const { product, org, setProduct, customer, features } = useProductContext();
   const [freeTrialModalOpen, setFreeTrialModalOpen] = useState(false);
+  const [entitiesOpen, setEntitiesOpen] = useState(false);
+  const [accordionValues, setAccordionValues] = useState([
+    "properties",
+    "versions",
+    "free-trial",
+    "entities",
+  ]);
 
   const handleFreeTrialModalOpen = () => {
     setFreeTrialModalOpen(!freeTrialModalOpen);
@@ -26,6 +34,12 @@ export default function ProductSidebar() {
 
   const isCustomerProductView = notNullish(customer);
 
+  const handleAccordionToggle = (value: string) => {
+    setAccordionValues((prev) =>
+      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
+    );
+  };
+
   return (
     <div className="flex-col gap-4 h-full border-l py-6">
       <div className="flex items-center gap-2 justify-start px-4">
@@ -35,7 +49,8 @@ export default function ProductSidebar() {
       <Accordion
         type="multiple"
         className="w-full flex flex-col"
-        defaultValue={["properties", "versions", "free-trial"]}
+        value={accordionValues}
+        onValueChange={setAccordionValues}
       >
         <div className="flex w-full border-b mt-[2px] p-4">
           <SideAccordion title="Properties" value="properties">
@@ -45,6 +60,18 @@ export default function ProductSidebar() {
         <div className="flex w-full border-b p-4">
           <SideAccordion title="Versions" value="versions">
             <ProductVersions />
+          </SideAccordion>
+        </div>
+        <div className="flex w-full border-b p-4 relative">
+          <SideAccordion
+            title="Entities"
+            value="entities"
+            isOpen={accordionValues.includes("entities")}
+            onToggle={handleAccordionToggle}
+            onClick={() => setEntitiesOpen(!entitiesOpen)}
+            buttonIcon={<Plus size={14} />}
+          >
+            <EntitiesSidebar open={entitiesOpen} setOpen={setEntitiesOpen} />
           </SideAccordion>
         </div>
 
