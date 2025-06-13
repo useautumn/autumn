@@ -8,7 +8,6 @@ import { CreateFreeTrial } from "./free-trial/CreateFreeTrial";
 import { FreeTrialView } from "./free-trial/FreeTrialView";
 import { ProductProps } from "./ProductProps";
 import { ProductVersions } from "./ProductVersions";
-import { Badge } from "@/components/ui/badge";
 import { notNullish } from "@/utils/genUtils";
 import { AttachButton } from "@/views/customers/customer/product/components/AttachButton";
 import { CustomerProductBadge } from "@/views/customers/customer/product/components/CustomerProductBadge";

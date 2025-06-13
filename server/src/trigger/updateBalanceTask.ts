@@ -436,6 +436,7 @@ export const deductFromUsageBasedCusEnt = async ({
     toDeduct,
     allowNegativeBalance: true,
     setZeroAdjustment,
+    entityId: entity?.id,
   });
 
   let oldGrpBalance = getTotalNegativeBalance({

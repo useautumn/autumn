@@ -88,17 +88,17 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing replaceables delete
     {
       id: "1",
       name: "test",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
     {
       id: "2",
       name: "test",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
     {
       id: "3",
       name: "test",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 

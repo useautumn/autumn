@@ -10,6 +10,7 @@ import {
   APIVersion,
   AppEnv,
   CusExpand,
+  LimitedItem,
   OnDecrease,
   OnIncrease,
   Organization,
@@ -40,7 +41,7 @@ let perEntityItem = constructFeatureItem({
   featureId: TestFeature.Messages,
   entityFeatureId: TestFeature.Users,
   includedUsage: 500,
-});
+}) as LimitedItem;
 
 export let pro = constructProduct({
   items: [userItem, perEntityItem],
@@ -97,7 +98,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
     {
       id: "1",
       name: "test",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 
@@ -127,12 +128,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
       {
         id: "2",
         name: "test",
-        featureId: TestFeature.Users,
+        feature_id: TestFeature.Users,
       },
       {
         id: "3",
         name: "test",
-        featureId: TestFeature.Users,
+        feature_id: TestFeature.Users,
       },
     ];
 
@@ -205,7 +206,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing per entity features
   let newEntity = {
     id: "4",
     name: "test",
-    featureId: TestFeature.Users,
+    feature_id: TestFeature.Users,
   };
   it("should delete one entity and create a new one", async function () {
     let { balance: masterBalanceBefore } = await autumn.check({
