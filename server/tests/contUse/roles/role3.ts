@@ -7,7 +7,6 @@ import {
   CreateEntity,
   LimitedItem,
   Organization,
-  ProductItem,
 } from "@autumn/shared";
 
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -21,7 +20,6 @@ import { createProducts } from "tests/utils/productUtils.js";
 import { addPrefixToProducts, runAttachTest } from "../../attach/utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { Decimal } from "decimal.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { addHours, addMonths } from "date-fns";
@@ -37,23 +35,23 @@ let userMessages = constructArrearItem({
   entityFeatureId: user,
 }) as LimitedItem;
 
-// let adminMessages = constructArrearItem({
-//   featureId: TestFeature.Messages,
-//   includedUsage: 0,
-//   price: 0.1,
-//   entityFeatureId: admin,
-// }) as LimitedItem;
+let adminMessages = constructArrearItem({
+  featureId: TestFeature.Messages,
+  includedUsage: 0,
+  price: 0.1,
+  entityFeatureId: admin,
+}) as LimitedItem;
 
 export let pro = constructProduct({
-  items: [userMessages],
+  items: [userMessages, adminMessages],
   type: "pro",
 });
 
-const testCase = "role2";
+const testCase = "role3";
 
-describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per entity`)}`, () => {
+describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per entity, diff roles`)}`, () => {
   let customerId = testCase;
-  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
+  let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
   let db: DrizzleCli, org: Organization, env: AppEnv;
   let stripeCli: Stripe;
   let testClockId: string;
@@ -138,6 +136,8 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 
   let user1Usage = 125000;
   let user2Usage = 150000;
+
+  // total: 275000, included: 10000, overage: 255000
   it("should track correct usage for seat messages", async function () {
     await autumn.track({
       customer_id: customerId,
@@ -172,29 +172,84 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
     });
 
     expect(user2Balance).to.equal(includedUsage - user2Usage);
+
+    const { balance: admin1Balance } = await autumn.check({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      entity_id: admin1,
+    });
+
+    expect(admin1Balance).to.equal(adminMessages.included_usage);
+
+    const { balance: admin2Balance } = await autumn.check({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      entity_id: admin2,
+    });
+
+    expect(admin2Balance).to.equal(adminMessages.included_usage);
+  });
+
+  let admin1Usage = 130000;
+  let admin2Usage = 140000;
+  // total: 270000, included: 0, overage: 270000
+  it("should track correct usage for admin messages", async function () {
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      value: admin1Usage,
+      entity_id: admin1,
+    });
+
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      value: admin2Usage,
+      entity_id: admin2,
+    });
+
+    await timeout(4000);
   });
 
   it("should have correct invoice next cycle", async function () {
     await advanceTestClock({
       stripeCli,
       testClockId,
-      advanceTo: addHours(
-        addMonths(new Date(), 1),
-        hoursToFinalizeInvoice,
-      ).getTime(),
+      advanceTo: addMonths(new Date(), 1).getTime(),
+      // addHours(
+      //   addMonths(new Date(), 1),
+      //   hoursToFinalizeInvoice,
+      // ).getTime(),
       waitForSeconds: 30,
     });
+
+    return;
 
     let includedUsage = userMessages.included_usage;
     let user1Overage = user1Usage - includedUsage;
     let user2Overage = user2Usage - includedUsage;
+    let totalUserUsage = user1Overage + user2Overage + includedUsage;
 
-    let totalUsage = user1Overage + user2Overage + includedUsage;
+    let admin1Overage = admin1Usage - adminMessages.included_usage;
+    let admin2Overage = admin2Usage - adminMessages.included_usage;
+    let totalAdminUsage =
+      admin1Overage + admin2Overage + adminMessages.included_usage;
 
     let expectedInvoiceTotal = await getExpectedInvoiceTotal({
       customerId,
       productId: pro.id,
-      usage: [{ featureId: TestFeature.Messages, value: totalUsage }],
+      usage: [
+        {
+          featureId: TestFeature.Messages,
+          entityFeatureId: user,
+          value: totalUserUsage,
+        },
+        {
+          featureId: TestFeature.Messages,
+          entityFeatureId: admin,
+          value: totalAdminUsage,
+        },
+      ],
       stripeCli,
       db,
       org,

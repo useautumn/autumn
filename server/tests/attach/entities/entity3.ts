@@ -77,7 +77,7 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro annual to
     {
       id: "1",
       name: "Entity 1",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 
