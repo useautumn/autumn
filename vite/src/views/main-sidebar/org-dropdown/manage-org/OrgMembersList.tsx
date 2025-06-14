@@ -1,4 +1,4 @@
-import { useMemberships } from "../hooks/useOrgMembers";
+import { useMemberships } from "../hooks/useMemberships";
 import { Membership } from "@autumn/shared";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Item, Row } from "@/components/general/TableGrid";
@@ -36,10 +36,10 @@ export const OrgMembersList = () => {
 
       <Row type="header" className={cn("grid-cols-18 px-6")}>
         <Item className="col-span-6">Email</Item>
-        <Item className="col-span-3">Name</Item>
+        <Item className="col-span-5">Name</Item>
         <Item className="col-span-3">Role</Item>
-        <Item className="col-span-3"></Item>
-        <Item className="col-span-2">Created At</Item>
+        {/* <Item className="col-span-0"></Item> */}
+        <Item className="col-span-3">Created At</Item>
         <Item className="col-span-1"></Item>
       </Row>
       {memberships.map((membership: Membership) => {
@@ -51,12 +51,12 @@ export const OrgMembersList = () => {
             className={cn("grid-cols-18 px-6 text-sm text-t2")}
           >
             <Item className="col-span-6">{user.email}</Item>
-            <Item className="col-span-3">{user.name}</Item>
+            <Item className="col-span-5">{user.name}</Item>
             <Item className="col-span-3">
               <Badge variant="outline">{member.role}</Badge>
             </Item>
-            <Item className="col-span-3"></Item>
-            <Item className="col-span-2">
+            {/* <Item className="col-span-0"></Item> */}
+            <Item className="col-span-3">
               {formatDateStr(member.createdAt)}
             </Item>
             <Item className="col-span-1 flex justify-end">

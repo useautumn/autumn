@@ -29,7 +29,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               `,
               isFocused &&
                 `transition-colors duration-100 focus-visible:outline-none focus-visible:ring-0
-            border-focus shadow-focus`,
+               border-focus shadow-focus`,
               variant === "destructive" &&
                 `focus-visible:border-red-400 focus-visible:shadow-[0_0_2px_1px_rgba(248,113,113,0.25)]`,
             )}

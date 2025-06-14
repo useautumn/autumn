@@ -2,6 +2,9 @@ import { useLocation } from "react-router";
 
 export const useTab = () => {
   const { pathname } = useLocation();
+  if (pathname.startsWith("/admin") || pathname.startsWith("/sandbox/admin")) {
+    return "admin";
+  }
   if (
     pathname.startsWith("/features") ||
     pathname.startsWith("/sandbox/features")

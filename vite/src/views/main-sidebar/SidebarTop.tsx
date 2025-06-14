@@ -1,92 +1,27 @@
 import { cn } from "@/lib/utils";
-import {
-  OrganizationSwitcher,
-  useOrganization,
-  useUser,
-} from "@clerk/clerk-react";
+import { OrganizationSwitcher, useUser } from "@clerk/clerk-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-import { EnvDropdown } from "./EnvDropdown";
-
 import { useEnv } from "@/utils/envUtils";
 import { useSidebarContext } from "./SidebarContext";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+
 import { Check, ChevronLeft, ChevronRight, Copy } from "lucide-react";
 import { AdminHover } from "@/components/general/AdminHover";
 import { OrgDropdown } from "./components/OrgDropdown";
 
 export const SidebarTop = () => {
-  const { isLoaded, user } = useUser();
   const { state, setState } = useSidebarContext();
-  const primaryEmail = user?.primaryEmailAddress?.emailAddress;
-  const env = useEnv();
-  // const { organization } = useOrganization();
-  // const prevOrgIdRef = useRef<string | null>(null);
-
-  // useEffect(() => {
-  //   // Skip the first render
-  //   if (prevOrgIdRef.current === null) {
-  //     prevOrgIdRef.current = organization?.id || null;
-  //     return;
-  //   }
-
-  //   // If organization changed (switched or created/deleted)
-  //   if (prevOrgIdRef.current !== (organization?.id || null)) {
-  //     console.log("Organization changed, refreshing page");
-  //     window.location.reload();
-  //   }
-
-  //   // Update the ref
-  //   prevOrgIdRef.current = organization?.id || null;
-  // }, [organization]);
 
   return (
     <div className="px-2">
       <OrgDropdown />
-      <div
+      {/* <div
         className={cn(
           "flex items-center w-full",
           state == "expanded" ? "justify-between" : "justify-center",
         )}
       >
-        {state == "expanded" && (
-          <div className="flex flex-col">
-            <div className="flex relative w-full h-7">
-              <OrganizationSwitcher
-                appearance={{
-                  elements: {
-                    organizationSwitcherTrigger: "flex !pl- pr-1 max-w-[160px]",
-                  },
-                }}
-                hidePersonal={true}
-                skipInvitationScreen={true}
-                afterCreateOrganizationUrl="/sandbox/onboarding"
-              />
-              {/* {organization && (
-                <AdminHover
-                  texts={[
-                    {
-                      key: "id",
-                      value: organization.id,
-                    },
-                    {
-                      key: "slug",
-                      value: organization.slug || "N/A",
-                    },
-                  ]}
-                >
-                 
-                </AdminHover>
-              )} */}
-            </div>
-          </div>
-        )}
         <Button
           size="sm"
           onClick={() => {
@@ -103,7 +38,7 @@ export const SidebarTop = () => {
             <ChevronRight size={14} />
           )}
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 };
@@ -143,3 +78,38 @@ const CopyText = ({ text }: { text: string }) => {
     </div>
   );
 };
+
+// {
+//   state == "expanded" && (
+//     <div className="flex flex-col">
+//       <div className="flex relative w-full h-7">
+//         <OrganizationSwitcher
+//           appearance={{
+//             elements: {
+//               organizationSwitcherTrigger: "flex !pl- pr-1 max-w-[160px]",
+//             },
+//           }}
+//           hidePersonal={true}
+//           skipInvitationScreen={true}
+//           afterCreateOrganizationUrl="/sandbox/onboarding"
+//         />
+//         {organization && (
+//                 <AdminHover
+//                   texts={[
+//                     {
+//                       key: "id",
+//                       value: organization.id,
+//                     },
+//                     {
+//                       key: "slug",
+//                       value: organization.slug || "N/A",
+//                     },
+//                   ]}
+//                 >
+
+//                 </AdminHover>
+//               )}
+//       </div>
+//     </div>
+//   );
+// }

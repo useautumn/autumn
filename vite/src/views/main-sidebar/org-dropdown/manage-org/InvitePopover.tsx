@@ -11,7 +11,7 @@ import { getBackendErr } from "@/utils/genUtils";
 import { Mail, PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useMemberships } from "../hooks/useOrgMembers";
+import { useMemberships } from "../hooks/useMemberships";
 
 export const InvitePopover = () => {
   const [email, setEmail] = useState("");
@@ -27,7 +27,7 @@ export const InvitePopover = () => {
         "/organization/invite",
         {
           email: email,
-          role: "admin",
+          role: "member",
         },
       );
 

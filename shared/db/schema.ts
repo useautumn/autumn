@@ -76,6 +76,7 @@ import {
   member,
   invitation,
 } from "./auth-schema.js";
+import { userRelations } from "./auth-relations.js";
 
 export {
   // Tables
@@ -131,4 +132,7 @@ export {
   rewardRedemptionRelations,
   migrationErrorRelations,
   replaceableRelations,
+
+  // Auth Relations
+  userRelations,
 };

@@ -1,4 +1,4 @@
-import { useMemberships } from "../hooks/useOrgMembers";
+import { useMemberships } from "../hooks/useMemberships";
 import { Invite, Membership } from "@autumn/shared";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Item, Row } from "@/components/general/TableGrid";
@@ -30,8 +30,8 @@ export const OrgInvitesList = () => {
         <Item className="col-span-6">Email</Item>
         <Item className="col-span-3">Status</Item>
         <Item className="col-span-3">Role</Item>
-        <Item className="col-span-3"></Item>
-        <Item className="col-span-2">Expires At</Item>
+        <Item className="col-span-2"></Item>
+        <Item className="col-span-3">Expires At</Item>
         <Item className="col-span-1"></Item>
       </Row>
       {invites.map((invite: Invite) => {
@@ -45,8 +45,8 @@ export const OrgInvitesList = () => {
             <Item className="col-span-3">
               <Badge variant="outline">{invite.role}</Badge>
             </Item>
-            <Item className="col-span-3"></Item>
-            <Item className="col-span-2">
+            <Item className="col-span-2"></Item>
+            <Item className="col-span-3">
               {formatDateStr(invite.expiresAt)}
             </Item>
             <Item className="col-span-1 flex justify-end">

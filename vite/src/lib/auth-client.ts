@@ -1,10 +1,10 @@
 import { createAuthClient } from "better-auth/react";
-import { emailOTPClient } from "better-auth/client/plugins";
+import { adminClient, emailOTPClient } from "better-auth/client/plugins";
 import { organizationClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
   baseURL: "http://localhost:8080",
-  plugins: [emailOTPClient(), organizationClient()],
+  plugins: [emailOTPClient(), organizationClient(), adminClient()],
 });
 
 export const {
@@ -16,5 +16,5 @@ export const {
   useListOrganizations,
 } = createAuthClient({
   baseURL: "http://localhost:8080",
-  plugins: [emailOTPClient(), organizationClient()],
+  plugins: [emailOTPClient(), organizationClient(), adminClient()],
 });

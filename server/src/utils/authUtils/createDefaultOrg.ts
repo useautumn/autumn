@@ -43,10 +43,15 @@ export const createDefaultOrg = async ({
       return invites[0].organizationId as any;
     }
 
+    let userName = user?.name;
+    if (!userName) {
+      userName = user?.email?.split("@")[0] || "org";
+    }
+
     const res = await auth.api.createOrganization({
       body: {
-        name: `${user?.name}'s Org`,
-        slug: `${slugify(user?.name || "org")}_${Math.floor(10000000 + Math.random() * 90000000)}`,
+        name: `${userName}'s Org`,
+        slug: `${slugify(userName)}_${Math.floor(10000000 + Math.random() * 90000000)}`,
         userId: session.userId,
       },
     });

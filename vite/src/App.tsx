@@ -14,6 +14,7 @@ import OnboardingView from "./views/onboarding/OnboardingView";
 import CliAuth from "./views/CliAuth";
 import { SignIn } from "./views/auth/SignIn";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
+import { AdminView } from "./views/admin/AdminView";
 
 export default function App() {
   return (
@@ -23,11 +24,11 @@ export default function App() {
         <Route path="/accept" element={<AcceptInvitation />} />
         <Route element={<MainLayout />}>
           <Route path="*" element={<DefaultView />} />
+          <Route path="/admin" element={<AdminView />} />
+
           <Route path="/onboarding" element={<OnboardingView />} />
           <Route path="/sandbox/onboarding" element={<OnboardingView />} />
-
           <Route path="/cli-auth" element={<CliAuth />} />
-
           {/* FEATURES */}
           <Route
             path="/features"

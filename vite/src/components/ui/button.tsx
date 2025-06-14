@@ -46,6 +46,8 @@ const buttonVariants = cva(
 
         destructivePrimary:
           "bg-gradient-to-b font-semibold border-t border-red-400 outline outline-red-500 rounded-sm from-red-500/85 to-red-500 text-white hover:from-red-500 hover:to-red-500 shadow-red-500/50 transition-[background] duration-300 !h-7.5 mt-0.25",
+
+        auth: "!gap-2 hover:bg-stone-100 border border-zinc-250 bg-white text-t1 w-full shadow-sm",
       },
       size: {
         default: "h-8 px-3 flex items-center gap-1",

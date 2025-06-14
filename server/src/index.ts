@@ -41,8 +41,29 @@ const init = async () => {
   // Check if this blocks API calls...
   app.use(
     cors({
-      origin: "http://localhost:3000",
+      origin: [
+        "http://localhost:3000",
+        "https://app.useautumn.com",
+        "https://*.useautumn.com",
+      ],
       credentials: true,
+      allowedHeaders: [
+        "app_env",
+        "x-api-version",
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "X-API-Version",
+        "X-Requested-With",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+        "Cache-Control",
+        "If-Match",
+        "If-None-Match",
+        "If-Modified-Since",
+        "If-Unmodified-Since",
+      ],
     }),
   );
 
@@ -71,6 +92,7 @@ const init = async () => {
 
     req.logger = logger;
     req.logtailAll = logtailAll;
+
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
 
     req.posthog = posthog;
