@@ -10,7 +10,7 @@ export const initDrizzle = () => {
 
   const db = drizzle(client, {
     schema: schemas,
-    // logger: true, // Enable SQL logging for debugging
+    logger: process.env.NODE_ENV === "development", // Enable SQL logging for debugging
   });
 
   return { db, client };

@@ -24,15 +24,17 @@ const allowedEndpoints = [
   },
 ];
 
+export interface IsAllowedEndpointProps {
+  pattern: string;
+  path: string;
+  method: string;
+}
+
 const isAllowedEndpoint = ({
   pattern,
   path,
   method,
-}: {
-  pattern: string;
-  path: string;
-  method: string;
-}) => {
+}: IsAllowedEndpointProps) => {
   // Convert pattern to regex, handling path params like :id
   const matchPath = (pattern: string, path: string) => {
     // Convert pattern to regex, handling path params like :id

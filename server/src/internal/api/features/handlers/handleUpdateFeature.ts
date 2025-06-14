@@ -26,7 +26,6 @@ import {
   EntInterval,
   FeatureUsageType,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 
 const handleFeatureIdChanged = async ({

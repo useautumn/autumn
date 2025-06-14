@@ -26,7 +26,7 @@ import { creditSystemContainsFeature } from "@/internal/features/creditSystemUti
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { getEventTimestamp } from "./eventUtils.js";
 
