@@ -1,5 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config();
+import "dotenv/config";
 
 import { orgRouter } from "./orgs/orgRouter.js";
 import { Router } from "express";
@@ -35,35 +34,36 @@ mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
 
-mainRouter.use(
-  "/api/autumn",
-  withOrgAuth,
-  autumnHandler({
-    identify: async (req: any) => {
-      return {
-        customerId: req.org?.id,
-        customerData: {
-          name: req.org?.slug,
-          email: req.user?.email,
-        },
-      };
-    },
-  }),
-);
+// Optional...
+if (process.env.AUTUMN_SECRET_KEY) {
+  mainRouter.use(
+    "/api/autumn",
+    withOrgAuth,
+    autumnHandler({
+      identify: async (req: any) => {
+        return {
+          customerId: req.org?.id,
+          customerData: {
+            name: req.org?.slug,
+            email: req.user?.email,
+          },
+        };
+      },
+    }),
+  );
+}
 
 mainRouter.use(
   "/demo/api/autumn",
   withOrgAuth,
-
   autumnHandler({
     autumn: (req: any) => {
-      // let bearerToken = parseAuthHeader(req);
-
-      return new Autumn({
-        // secretKey: bearerToken,
+      console.log("Instantiating Autumn...");
+      let client = new Autumn({
         url: "http://localhost:8080/v1",
         headers: req.headers,
-      }) as any;
+      });
+      return client as any;
     },
     identify: async (req: any) => {
       return {

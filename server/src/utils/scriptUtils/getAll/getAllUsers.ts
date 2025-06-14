@@ -1,6 +1,7 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { user } from "@autumn/shared";
-import { User } from "better-auth";
+
+import { desc } from "drizzle-orm";
 
 export const getAllUsers = async (db: DrizzleCli) => {
   const users = [];
@@ -8,7 +9,12 @@ export const getAllUsers = async (db: DrizzleCli) => {
   const limit = 200;
 
   while (true) {
-    const batch = await db.select().from(user).limit(limit).offset(offset);
+    const batch = await db
+      .select()
+      .from(user)
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(user.createdAt));
     users.push(...batch);
 
     if (batch.length < limit) {
