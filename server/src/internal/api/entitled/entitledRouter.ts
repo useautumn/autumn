@@ -3,10 +3,10 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import {
   APIVersion,
   CusProductStatus,
-  Feature,
+  type Feature,
   FeatureType,
-  FullCustomerEntitlement,
-  Organization,
+  type FullCustomerEntitlement,
+  type Organization,
 } from "@autumn/shared";
 
 import {

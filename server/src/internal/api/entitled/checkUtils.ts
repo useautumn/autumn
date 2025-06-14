@@ -4,20 +4,19 @@ import { isFeaturePriceItem } from "@/internal/products/product-items/productIte
 import {
   APIVersion,
   BillingInterval,
-  Feature,
-  FreeTrial,
-  FullCusProduct,
-  FullCustomerEntitlement,
-  Organization,
-  ProductItem,
+  type Feature,
+  type FreeTrial,
+  type FullCusProduct,
+  type FullCustomerEntitlement,
+  type Organization,
+  type ProductItem,
   SuccessCode,
   UsageModel,
 } from "@autumn/shared";
 import { getCheckPreview } from "./getCheckPreview.js";
 
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { formatUnixToDateTime } from "@/utils/genUtils.js";
 
 export const getBooleanEntitledResult = async ({
   db,

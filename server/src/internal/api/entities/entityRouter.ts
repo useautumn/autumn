@@ -1,10 +1,7 @@
 import { Router } from "express";
 
 import { routeHandler } from "@/utils/routerUtils.js";
-import { EntityService } from "./EntityService.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@autumn/shared";
 import { handleGetEntity } from "./handlers/handleGetEntity.js";
 import { handlePostEntityRequest } from "../../entities/handlers/handleCreateEntity/handleCreateEntity.js";
 import { handleDeleteEntity } from "./handlers/handleDeleteEntity.js";
@@ -18,7 +15,7 @@ entityRouter.get("", (req, res) =>
     res,
     action: "listEntities",
     handler: async (req, res) => {
-      const customerId = req.params.customer_id as string;
+      const customerId = String(req.params.customer_id);
       let { orgId, env } = req;
 
       let customer = await CusService.getFull({

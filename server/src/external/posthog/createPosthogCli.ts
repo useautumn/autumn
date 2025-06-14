@@ -13,6 +13,6 @@ export const createPosthogCli = () => {
   }
 
   return new PostHog(process.env.POSTHOG_API_KEY, {
-    host: "https://us.i.posthog.com",
+    host: process.env.POSTHOG_HOST_URL ?? "https://us.i.posthog.com",
   });
 };

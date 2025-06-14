@@ -8,11 +8,7 @@ export const posthogCapture = ({
   params: EventMessage;
 }) => {
   try {
-    if (process.env.NODE_ENV === "development") {
-      return;
-    }
-
-    if (!posthog) {
+    if (process.env.NODE_ENV === "development" || !posthog) {
       return;
     }
 

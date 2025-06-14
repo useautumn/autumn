@@ -3,7 +3,7 @@ import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUti
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
+import type { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 
 export const handleDeleteFeature = async (req: any, res: any) =>
