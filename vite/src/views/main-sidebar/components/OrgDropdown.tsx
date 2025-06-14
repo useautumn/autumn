@@ -34,23 +34,15 @@ import { LogOutItem } from "./LogOutItem";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ManageOrg } from "./ManageOrg";
-import { useMemberships } from "../org-dropdown/hooks/useOrgMembers";
-
-const OrgLogo = ({ org }: { org: FrontendOrg }) => {
-  const firstLetter = org.name.charAt(0).toUpperCase();
-  return (
-    <div className="bg-primary/80 w-5 h-5 rounded-md overflow-hidden flex items-center justify-center">
-      {org.logo ? (
-        <img src={org.logo} alt={org.name} className="w-full h-full" />
-      ) : (
-        <span className="text-white text-xs">{firstLetter}</span>
-      )}
-    </div>
-  );
-};
+import { useMemberships } from "../org-dropdown/hooks/useMemberships";
+import { useSidebarContext } from "../SidebarContext";
+import { OrgLogo } from "../org-dropdown/components/OrgLogo";
+import { AdminHover } from "@/components/general/AdminHover";
 
 export const OrgDropdown = () => {
   const { org, isLoading } = useOrg();
+  const { state, setState } = useSidebarContext();
+
   const { data: orgs, isPending } = useListOrganizations();
   const [dialogType, setDialogType] = useState<"create" | "manage" | null>(
     null,
@@ -65,7 +57,7 @@ export const OrgDropdown = () => {
 
   if (isLoading)
     return (
-      <div className="h-7 w-32 p-2 flex items-center gap-2">
+      <div className="h-7 w-32 px-4 flex items-center gap-2">
         <Skeleton className="min-w-5 h-5 bg-stone-200" />
         <Skeleton className="w-32 h-5 bg-stone-200" />
       </div>
@@ -73,22 +65,45 @@ export const OrgDropdown = () => {
 
   if (!org) return null;
 
+  const expanded = state === "expanded";
+
   return (
-    <React.Fragment>
+    <div className={cn("flex px-3")}>
       <ManageOrg open={manageOpen} setOpen={setManageOpen} />
       <CreateNewOrg dialogType={dialogType} setDialogType={setDialogType} />
 
       <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            className="shimmer-hover p-2 h-7 gap-2 rounded-md hover:bg-stone-200/60 min-w-32 justify-start items-center"
-            variant="ghost"
-          >
-            <OrgLogo org={org} />
-            <span className="text-t2">{org?.name}</span>
-            <ChevronDown size={14} className="text-t3" />
-          </Button>
-        </DropdownMenuTrigger>
+        <AdminHover
+          texts={[
+            {
+              key: "id",
+              value: org.id,
+            },
+          ]}
+        >
+          <DropdownMenuTrigger asChild>
+            <Button
+              className={cn(
+                "shimmer-hover p-0.5 gap-2 rounded-md hover:bg-stone-200/60 justify-start items-center transition-all duration-200",
+                expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5",
+              )}
+              variant="ghost"
+            >
+              <OrgLogo org={org} />
+              <div
+                className={cn(
+                  "flex items-center gap-1 transition-all duration-200",
+                  expanded
+                    ? "opacity-100 translate-x-0"
+                    : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
+                )}
+              >
+                <span className="text-t2 max-w-24 truncate">{org?.name}</span>
+                <ChevronDown size={14} className="text-t3" />
+              </div>
+            </Button>
+          </DropdownMenuTrigger>
+        </AdminHover>
         <DropdownMenuContent
           align="start"
           className="border-1 border-zinc-200 shadow-sm w-48"
@@ -148,7 +163,7 @@ export const OrgDropdown = () => {
           <LogOutItem />
         </DropdownMenuContent>
       </DropdownMenu>
-    </React.Fragment>
+    </div>
   );
 };
 

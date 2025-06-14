@@ -7,53 +7,31 @@ import { createDefaultOrg } from "@/utils/authUtils/createDefaultOrg.js";
 export const beforeSessionCreated = async (session: Session) => {
   try {
     console.log(`Running beforeSessionCreated for user ${session.userId}`);
-    let lastSession = await db
-      .select()
-      .from(sessionTable)
-      .where(eq(sessionTable.userId, session.userId))
-      .orderBy(desc(sessionTable.createdAt))
-      .limit(1);
 
-    if (!lastSession || lastSession.length === 0) {
-      const orgId = await createDefaultOrg({ session });
+    let membership = await db.query.member.findFirst({
+      where: eq(member.userId, session.userId),
+    });
 
+    if (membership) {
+      console.log(
+        "Returning session with active org ID:",
+        membership.organizationId,
+      );
       return {
         data: {
           ...session,
-          activeOrganizationId: orgId,
+          activeOrganizationId: membership.organizationId,
         },
       };
     }
 
-    let memberships = await db
-      .select()
-      .from(member)
-      .where(eq(member.userId, session.userId));
+    const orgId = await createDefaultOrg({ session });
 
-    let lastActiveId = lastSession[0].activeOrganizationId;
-
-    if (lastActiveId) {
-      let isMember = memberships.find((m) => m.organizationId === lastActiveId);
-
-      if (isMember) {
-        return {
-          data: {
-            ...session,
-            activeOrganizationId: isMember.organizationId,
-          },
-        };
-      }
-    }
-
-    if (memberships.length > 0) {
-      return {
-        data: {
-          ...session,
-          activeOrganizationId: memberships[0].organizationId,
-        },
-      };
-    }
-
-    return { data: session };
+    return {
+      data: {
+        ...session,
+        activeOrganizationId: orgId,
+      },
+    };
   } catch (error) {}
 };

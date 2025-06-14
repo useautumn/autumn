@@ -1,45 +1,57 @@
+import React, {
+  useState,
+  forwardRef,
+  cloneElement,
+  isValidElement,
+} from "react";
 import { Check } from "lucide-react";
 import { Tooltip, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
 import { TooltipContent } from "../ui/tooltip";
 import { Copy } from "lucide-react";
-import { useState } from "react";
 import { useSession } from "@/lib/auth-client";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 
-export const AdminHover = ({
-  children,
-  texts,
-  hide = false,
-}: {
-  children: React.ReactNode;
-  texts: (string | { key: string; value: string } | undefined | null)[];
-  hide?: boolean;
-}) => {
-  const { data, isPending } = useSession();
+export const AdminHover = forwardRef<
+  HTMLElement,
+  {
+    children: React.ReactNode;
+    texts: (string | { key: string; value: string } | undefined | null)[];
+    hide?: boolean;
+  }
+>(({ children, texts, hide = false }, ref) => {
+  // const { data, isPending } = useSession();
+  const { isAdmin } = useAdmin();
 
-  const user = data?.user;
+  // const user = data?.user;
 
-  // const { isLoaded, user } = useUser();
-  // const { actor } = useAuth();
+  // // const { isLoaded, user } = useUser();
+  // // const { actor } = useAuth();
 
-  const email = user?.email;
+  // const email = user?.email;
 
-  const isAdmin =
-    // notNullish(actor) ||
-    email === "johnyeocx@gmail.com" ||
-    email === "ayush@recaseai.com" ||
-    email === "johnyeo10@gmail.com" ||
-    email == "npmrundemo@gmail.com";
+  // const isAdmin =
+  //   // notNullish(actor) ||
+  //   email === "johnyeocx@gmail.com" ||
+  //   email === "ayush@recaseai.com" ||
+  //   email === "johnyeo10@gmail.com" ||
+  //   email == "npmrundemo@gmail.com";
 
-  if (!isAdmin || hide) return children;
+  if (!isAdmin || hide) return <>{children}</>;
+
+  // Try to forward the ref to the child if possible
+  let triggerChild = children;
+  if (isValidElement(children)) {
+    triggerChild = cloneElement(children as React.ReactElement, { ref });
+  }
 
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger className="w-fit !cursor-default">
-          {children}
+          {triggerChild}
         </TooltipTrigger>
-        {!isPending && (
+        {isAdmin && (
           <TooltipContent
             className="bg-white/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2"
             align="start"
@@ -67,7 +79,7 @@ export const AdminHover = ({
       </Tooltip>
     </TooltipProvider>
   );
-};
+});
 
 const CopyText = ({ text }: { text: string }) => {
   const [isHover, setIsHover] = useState(false);

@@ -9,6 +9,7 @@
     "module": "NodeNext", // or "node16"/"nodenext"
 
     // "declaration": true,
+    "jsx": "react-jsx",
     "rootDir": ".",
     "baseUrl": ".",
     "outDir": "./dist",
@@ -20,10 +21,11 @@
     "paths": {
       "@/*": ["src/*"],
       "@shared/*": ["../shared/*"],
-      "@scripts/*": ["scripts/*"]
+      "@scripts/*": ["scripts/*"],
+      "@emails/*": ["emails/*"]
     }
   },
-  "include": ["src", "tests", "scripts"],
+  "include": ["src", "tests", "scripts", "emails"],
   "references": [
     {
       "path": "../shared"

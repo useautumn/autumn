@@ -108,7 +108,7 @@ const OrgLogoUploader: React.FC<OrgLogoUploaderProps> = ({
         />
         {org.logo ? (
           <img
-            src={getOrgLogoUrl(org.id) + "?v=" + logoVersion}
+            src={org.logo + "?v=" + logoVersion}
             alt="Org Logo Preview"
             className="w-16 h-16 rounded object-cover border"
           />

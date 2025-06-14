@@ -12,7 +12,7 @@ import { Invite, Membership } from "@autumn/shared";
 import { TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useMemberships } from "../hooks/useOrgMembers";
+import { useMemberships } from "../hooks/useMemberships";
 
 export const MemberRowToolbar = ({
   membership,

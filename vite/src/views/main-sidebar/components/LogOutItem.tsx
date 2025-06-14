@@ -29,7 +29,7 @@ export const LogOutItem = () => {
           <LogOut size={14} />
         </div>
       </DropdownMenuItem>
-      <DropdownMenuItem
+      {/* <DropdownMenuItem
         onClick={async () => {
           await authClient.deleteUser({
             callbackURL: "http://localhost:3000/sign-in",
@@ -40,7 +40,7 @@ export const LogOutItem = () => {
           <span>Delete Account</span>
           <Trash size={14} />
         </div>
-      </DropdownMenuItem>
+      </DropdownMenuItem> */}
     </React.Fragment>
   );
 };

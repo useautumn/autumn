@@ -20,7 +20,7 @@ createRoot(document.getElementById("root")!).render(
         <PostHogProvider
           apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
           options={{
-            autocapture: false,
+            // autocapture: false,
             // capture_pageview: false,
             // capture_pageleave: false,
             // session_recording: {}

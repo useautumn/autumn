@@ -14,6 +14,7 @@ import { ArrowUpRightFromSquare } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
 import { useAuth } from "@clerk/clerk-react";
 import { useSession } from "@/lib/auth-client";
+import { CustomToaster } from "@/components/general/CustomToaster";
 
 export function MainLayout() {
   const env = useEnv();
@@ -21,10 +22,9 @@ export function MainLayout() {
   const { getToken } = useAuth();
   const { pathname } = useLocation();
   const { data, isPending } = useSession();
+
   const navigate = useNavigate();
   const posthog = usePostHog();
-
-  const orgId = data?.session.activeOrganizationId;
 
   useEffect(() => {
     // Identify user
@@ -78,14 +78,14 @@ export function MainLayout() {
     return;
   }
 
-  if (!orgId && !pathname.includes("/onboarding")) {
-    return (
-      <Navigate
-        to={getRedirectUrl("/onboarding", AppEnv.Sandbox)}
-        replace={true}
-      />
-    );
-  }
+  // if (!pathname.includes("/onboarding")) {
+  //   return (
+  //     <Navigate
+  //       to={getRedirectUrl("/onboarding", AppEnv.Sandbox)}
+  //       replace={true}
+  //     />
+  //   );
+  // }
 
   return (
     <AutumnProvider
@@ -99,20 +99,7 @@ export function MainLayout() {
       }}
     >
       <main className="w-screen h-screen flex bg-stone-100">
-        <Toaster
-          position="top-center"
-          className="flex justify-center"
-          duration={6000}
-          toastOptions={{
-            unstyled: true,
-            classNames: {
-              error: `w-[350px] text-red-400 flex items-start
-                gap-2 bg-white/70 backdrop-blur-sm border border-red-400 rounded-sm p-2 text-sm shadow-md`,
-              success: `w-[350px] text-green-600 flex items-start
-                gap-2 bg-white/90 backdrop-blur-sm border border-green-500 rounded-sm p-2 text-sm shadow-md`,
-            },
-          }}
-        />
+        <CustomToaster />
         <MainSidebar />
         <MainContent />
       </main>

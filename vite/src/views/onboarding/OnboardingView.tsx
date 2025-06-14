@@ -1,27 +1,27 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router";
+import EnvStep from "./onboarding-steps/Env";
+import MountHandler from "./onboarding-steps/MountHandler";
 import Step from "@/components/general/OnboardingStep";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEnv } from "@/utils/envUtils";
-import { Book } from "lucide-react";
-import { ConnectStripeStep } from "./onboarding-steps/ConnectStripe";
-import { CreateSecretKey } from "./onboarding-steps/CreateSecretKey";
 import AttachProduct from "./onboarding-steps/AttachProduct";
 import CheckAccessStep from "./onboarding-steps/CheckAccess";
 import Install from "./onboarding-steps/Install";
 import LoadingScreen from "../general/LoadingScreen";
-import { ProductList } from "./onboarding-steps/ProductList";
-import { useCreateOrg } from "./hooks/useCreateOrg";
-import EnvStep from "./onboarding-steps/Env";
-import MountHandler from "./onboarding-steps/MountHandler";
-import { SampleApp } from "./onboarding-steps/SampleApp";
 import IntegrationGuideStep from "./onboarding-steps/IntegrationGuide";
 import AutumnProviderStep from "./onboarding-steps/AutumnProvider";
+
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router";
+import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { useEnv } from "@/utils/envUtils";
+import { Book } from "lucide-react";
+import { ConnectStripeStep } from "./onboarding-steps/ConnectStripe";
+import { CreateSecretKey } from "./onboarding-steps/CreateSecretKey";
+import { ProductList } from "./onboarding-steps/ProductList";
+import { SampleApp } from "./onboarding-steps/SampleApp";
 import { AutumnProvider } from "autumn-js/react";
 import { useSession } from "@/lib/auth-client";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 function OnboardingView() {
   const env = useEnv();
@@ -32,6 +32,9 @@ function OnboardingView() {
   const [showIntegrationSteps, setShowIntegrationSteps] = useState(false);
   const [loading, setLoading] = useState(true);
   const { data } = useSession();
+
+  const axiosInstance = useAxiosInstance();
+  const hasHandledToken = useRef(false);
 
   const orgId = data?.session?.activeOrganizationId;
 
@@ -45,28 +48,26 @@ function OnboardingView() {
     withAuth: true,
   });
 
-  // useCreateOrg({ productMutate });
+  useEffect(() => {
+    const handleToken = async () => {
+      try {
+        await axiosInstance.post("/onboarding", {
+          token,
+        });
 
-  // useEffect(() => {
-  //   const handleToken = async () => {
-  //     try {
-  //       const { data } = await axiosInstance.post("/onboarding", {
-  //         token,
-  //       });
+        await productMutate();
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  //       await productMutate();
-  //     } catch (error) {
-  //       console.error(error);
-  //     } finally {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   if (org && token && !hasHandledToken.current) {
-  //     hasHandledToken.current = true;
-  //     handleToken();
-  //   }
-  // }, [org, searchParams, token, axiosInstance, productMutate]);
+    if (token && !hasHandledToken.current) {
+      hasHandledToken.current = true;
+      handleToken();
+    }
+  }, [searchParams, token, axiosInstance, productMutate]);
 
   useEffect(() => {
     if (orgId && !token) {
@@ -90,13 +91,7 @@ function OnboardingView() {
               number={2}
             />
             <AutumnProvider
-              backendUrl={`${import.meta.env.VITE_PUBLIC_BACKEND_URL}/demo`}
-              // getBearerToken={async () => {
-              //   const token = await getToken({
-              //     template: "custom_template",
-              //   });
-              //   return token;
-              // }}
+              backendUrl={`${import.meta.env.VITE_BACKEND_URL}/demo`}
             >
               <SampleApp data={productData} mutate={productMutate} number={3} />
             </AutumnProvider>

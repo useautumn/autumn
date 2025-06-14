@@ -18,6 +18,7 @@ import { constructOrg } from "@/internal/orgs/orgUtils.js";
 import { createOnboardingProducts } from "@/internal/orgs/onboarding/createOnboardingProducts.js";
 import { eq } from "drizzle-orm";
 import { Organization, organizations } from "@autumn/shared";
+import { generatePublishableKey } from "@/utils/encryptUtils.js";
 
 const verifyClerkWebhook = async (req: Request, res: Response) => {
   const wh = new Webhook(process.env.CLERK_SIGNING_SECRET!);
@@ -73,6 +74,7 @@ export const handleClerkWebhook = async (req: any, res: any) => {
           db: req.db,
           id: eventData.id,
           slug: eventData.slug,
+          createdAt: eventData.created_at,
         });
         break;
 
@@ -106,22 +108,23 @@ export const saveOrgToDB = async ({
   db,
   id,
   slug,
+  createdAt,
 }: {
   db: DrizzleCli;
   id: string;
   slug: string;
+  createdAt: Date;
 }) => {
   console.log(`Handling organization.created: ${slug} (${id})`);
 
   try {
-    // // 2. Insert org
-    // await OrgService.insert({
-    //   db,
-    //   org: constructOrg({
-    //     id,
-    //     slug,
-    //   }),
-    // });
+    await OrgService.update({
+      db,
+      orgId: id,
+      updates: {
+        created_at: createdAt.getTime(),
+      },
+    });
 
     // 1. Create svix webhoooks
     const { sandboxApp, liveApp } = await initOrgSvixApps({
@@ -134,6 +137,8 @@ export const saveOrgToDB = async ({
       orgId: id,
       updates: {
         svix_config: { sandbox_app_id: sandboxApp.id, live_app_id: liveApp.id },
+        test_pkey: generatePublishableKey(AppEnv.Sandbox),
+        live_pkey: generatePublishableKey(AppEnv.Live),
       },
     });
 
@@ -150,18 +155,6 @@ export const saveOrgToDB = async ({
     );
     return;
   }
-
-  // try {
-  //   await sendOnboardingEmail({
-  //     orgId: id,
-  //     clerkCli: createClerkCli(),
-  //   }),
-  // } catch (error) {
-  //   console.error(
-  //     "Failed to create default products or send onboarding email",
-  //     error,
-  //   );
-  // }
 };
 
 const handleOrgDeleted = async ({

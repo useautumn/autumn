@@ -33,17 +33,17 @@ export const organizations = pgTable(
   {
     id: text().primaryKey(),
     slug: text().notNull().unique(),
+
     // Better Auth
-    name: text("name").notNull().default(""),
+    name: text("name").notNull(),
     logo: text("logo"),
-    createdAt: timestamp("createdAt")
-      .notNull()
-      .default(sql`now()`), // is custom
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull(),
     metadata: text("metadata"),
 
     // Stripe
-    default_currency: text("default_currency").notNull().default("usd"),
+    default_currency: text("default_currency").default("usd"),
     stripe_connected: boolean("stripe_connected").default(false),
+
     stripe_config: jsonb("stripe_config").$type<StripeConfig>(),
     test_pkey: text("test_pkey"),
     live_pkey: text("live_pkey"),

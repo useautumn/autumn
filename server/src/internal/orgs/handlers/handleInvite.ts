@@ -31,6 +31,7 @@ export const handleInvite = async (
       res.status(200).send({
         message: "User added to organization",
       });
+      return;
     }
 
     res.status(202).send({

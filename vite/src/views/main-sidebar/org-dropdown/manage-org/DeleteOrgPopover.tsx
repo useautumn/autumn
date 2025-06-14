@@ -11,7 +11,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useMemberships } from "../hooks/useOrgMembers";
+import { useMemberships } from "../hooks/useMemberships";
 
 export const DeleteOrgPopover = () => {
   const { org } = useOrg();

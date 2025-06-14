@@ -19,32 +19,19 @@ Co-founder, Autumn</p>
 };
 
 export const sendOnboardingEmail = async ({
-  orgId,
-  clerkCli,
+  name,
+  email,
 }: {
-  orgId: string;
-  clerkCli: ClerkClient;
+  name: string;
+  email: string;
 }) => {
-  const memberships =
-    await clerkCli.organizations.getOrganizationMembershipList({
-      organizationId: orgId,
-    });
+  console.log("Sending onboarding email to", email);
 
-  for (let membership of memberships.data) {
-    if (!membership.publicUserData) break;
+  const firstName = name.split(" ")[0];
 
-    const user = await clerkCli.users.getUser(membership.publicUserData.userId);
-    const email = user.primaryEmailAddress?.emailAddress;
-
-    if (!email) break;
-
-    console.log("Sending onboarding email to", email);
-    await sendHtmlEmail({
-      to: email,
-      subject: "Anything I can help with?",
-      body: getWelcomeEmailBody(user.firstName ?? "there"),
-    });
-
-    break;
-  }
+  await sendHtmlEmail({
+    to: email,
+    subject: "Anything I can help with?",
+    body: getWelcomeEmailBody(firstName),
+  });
 };

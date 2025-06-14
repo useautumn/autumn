@@ -9,15 +9,12 @@ import { ProductsContext } from "@/views/products/ProductsContext";
 import { ProductsTable } from "@/views/products/ProductsTable";
 import { Product, products, ProductV2 } from "@autumn/shared";
 import {
-  DialogHeader,
   DialogContent,
-  DialogTrigger,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
-import { AddProductButton } from "@/views/customers/customer/add-product/AddProductButton";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";

@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-export const createCli = () => {
+export const createResendCli = () => {
   return new Resend(process.env.RESEND_API_KEY);
 };
 
@@ -13,7 +13,7 @@ export const sendTextEmail = async ({
   subject: string;
   body: string;
 }) => {
-  const resend = createCli();
+  const resend = createResendCli();
   await resend.emails.send({
     from: `Ayush <ayush@${process.env.RESEND_DOMAIN}>`,
     to: to,
@@ -31,7 +31,7 @@ export const sendHtmlEmail = async ({
   subject: string;
   body: string;
 }) => {
-  const resend = createCli();
+  const resend = createResendCli();
   await resend.emails.send({
     from: `Ayush <ayush@${process.env.RESEND_DOMAIN}>`,
     to: to,
