@@ -19,5 +19,8 @@
     "server:cron": "npm run cron:start -w server",
     "server:workers": "npm run workers:start -w server",
     "dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }
