@@ -2,4 +2,4 @@ https://docs.fontawesome.com/web/use-with/react
 
 https://docs.fontawesome.com/web/setup/packages#1-configure-access
 
-In frontend, ran `npm link @useautumn/react`
+In the frontend (vite) run `npm link @useautumn/react`

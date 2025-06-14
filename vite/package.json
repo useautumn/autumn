@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "author": "Recase Inc.",
+  "license": "Apache-2.0",
   "dependencies": {
     "@autumn/shared": "*",
     "@clerk/clerk-react": "^5.24.2",

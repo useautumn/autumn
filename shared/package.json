@@ -10,6 +10,8 @@
       "import": "./dist/index.js"
     }
   },
+  "author": "Recase Inc.",
+  "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
     "db:generate": "NODE_OPTIONS='--import tsx' drizzle-kit generate --config drizzle.config.ts",
