@@ -1,5 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ActionRequest, ExtendedRequest } from "@/utils/models/Request.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { ActionType, AppEnv, Organization } from "@autumn/shared";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";

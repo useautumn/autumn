@@ -1,5 +1,5 @@
 import { ClerkClient } from "@clerk/express";
-import { sendHtmlEmail, sendTextEmail } from "../resend/resendUtils.js";
+import { sendHtmlEmail } from "../resend/resendUtils.js";
 
 const getWelcomeEmailBody = (userFirstName: string) => {
   return `
@@ -43,6 +43,7 @@ export const sendOnboardingEmail = async ({
       to: email,
       subject: "Anything I can help with?",
       body: getWelcomeEmailBody(user.firstName ?? "there"),
+      from: "Ayush",
     });
 
     break;

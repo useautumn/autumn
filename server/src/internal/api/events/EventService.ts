@@ -2,7 +2,7 @@ import { ErrCode, EventInsert } from "@autumn/shared";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { events } from "@autumn/shared";
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { and, eq, desc } from "drizzle-orm";
 
 export class EventService {

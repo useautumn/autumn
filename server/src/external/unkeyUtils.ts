@@ -1,7 +1,6 @@
 // import { AppEnv } from "@autumn/shared";
 // import { Unkey } from "@unkey/api";
 
-// const UNKEY_API_ID = "api_2fcMv43jiAbBySAgDubovfpVUABP";
 // const createUnkeyCli = () => {
 //   return new Unkey({ rootKey: process.env.UNKEY_ROOT_KEY! });
 // };
@@ -21,7 +20,7 @@
 // }) => {
 //   const unkey = createUnkeyCli();
 //   const key = await unkey.keys.create({
-//     apiId: UNKEY_API_ID,
+//     apiId:  process.env.UNKEY_API_ID,
 //     name,
 //     prefix,
 //     ownerId,
@@ -47,7 +46,7 @@
 // export const validateApiKey = async (apiKey: string) => {
 //   const unkey = createUnkeyCli();
 //   const { result, error } = await unkey.keys.verify({
-//     apiId: UNKEY_API_ID,
+//     apiId:  process.env.UNKEY_API_ID,
 //     key: apiKey,
 //   });
 

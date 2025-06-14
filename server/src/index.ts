@@ -18,11 +18,9 @@ import {
   createLogtail,
   createLogtailAll,
 } from "./external/logtail/logtailUtils.js";
-import { format } from "date-fns";
 import { CacheManager } from "./external/caching/CacheManager.js";
 import { initDrizzle } from "./db/initDrizzle.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
-import pg from "pg";
 import http from "http";
 import { generateId } from "./utils/genUtils.js";
 import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";

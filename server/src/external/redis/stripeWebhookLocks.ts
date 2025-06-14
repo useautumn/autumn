@@ -1,6 +1,4 @@
-import { ErrCode } from "@/errors/errCodes.js";
 import { QueueManager } from "@/queue/QueueManager.js";
-import RecaseError from "@/utils/errorUtils.js";
 
 export const getWebhookLock = async ({
   lockKey,
