@@ -1,16 +1,17 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { createSupabaseClient } from "../supabaseUtils.js";
 
 export const uploadFile = async ({
-  sb,
   path,
   file,
   contentType,
 }: {
-  sb: SupabaseClient;
   path: string;
   file: Buffer;
   contentType?: string;
 }) => {
+  const sb = createSupabaseClient();
+
   const { data, error } = await sb.storage.from("autumn").upload(path, file, {
     upsert: true,
     contentType,
@@ -23,13 +24,8 @@ export const uploadFile = async ({
   return data;
 };
 
-export const getUploadUrl = async ({
-  sb,
-  path,
-}: {
-  sb: SupabaseClient;
-  path: string;
-}) => {
+export const getUploadUrl = async ({ path }: { path: string }) => {
+  const sb = createSupabaseClient();
   await sb.storage.from("autumn").remove([path]);
 
   const { data, error } = await sb.storage

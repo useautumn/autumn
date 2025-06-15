@@ -1,5 +1,5 @@
-import { ClerkClient } from "@clerk/express";
-import { sendHtmlEmail, sendTextEmail } from "../resend/resendUtils.js";
+import { sendHtmlEmail } from "@/external/resend/resendUtils.js";
+import { safeResend } from "@/external/resend/safeResend.js";
 
 const getWelcomeEmailBody = (userFirstName: string) => {
   return `
@@ -18,20 +18,15 @@ Co-founder, Autumn</p>
   `;
 };
 
-export const sendOnboardingEmail = async ({
-  name,
-  email,
-}: {
-  name: string;
-  email: string;
-}) => {
-  console.log("Sending onboarding email to", email);
+export const sendOnboardingEmail = safeResend({
+  fn: async ({ name, email }: { name: string; email: string }) => {
+    const firstName = name.split(" ")[0];
 
-  const firstName = name.split(" ")[0];
-
-  await sendHtmlEmail({
-    to: email,
-    subject: "Anything I can help with?",
-    body: getWelcomeEmailBody(firstName),
-  });
-};
+    await sendHtmlEmail({
+      to: email,
+      subject: "Anything I can help with?",
+      body: getWelcomeEmailBody(firstName),
+    });
+  },
+  action: "send onboarding email",
+});

@@ -37,6 +37,7 @@ import SmallSpinner from "@/components/general/SmallSpinner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faStripeS } from "@fortawesome/free-brands-svg-icons";
 import { useNavigate } from "react-router";
+import { useOrg } from "@/hooks/useOrg";
 
 function ConnectStripe({
   className,
@@ -45,28 +46,18 @@ function ConnectStripe({
   className?: string;
   onboarding?: boolean;
 }) {
+  const axiosInstance = useAxiosInstance({ env: AppEnv.Live });
+
   const navigate = useNavigate();
+  const { org, mutate, isLoading: isOrgLoading } = useOrg();
   const [searchParams] = useSearchParams();
   const redirect = searchParams.get("redirect");
-
-  const axiosInstance = useAxiosInstance({ env: AppEnv.Live });
 
   const [testApiKey, setTestApiKey] = useState("");
   const [liveApiKey, setLiveApiKey] = useState("");
   const [successUrl, setSuccessUrl] = useState("https://useautumn.com");
   const [defaultCurrency, setDefaultCurrency] = useState("USD");
   const [isLoading, setIsLoading] = useState(false);
-
-  const {
-    data: orgData,
-    mutate: mutateOrg,
-    isLoading: isOrgLoading,
-  } = useAxiosSWR({
-    url: `/organization`,
-    env: AppEnv.Live,
-  });
-
-  const org = orgData?.org;
 
   const handleConnectStripe = async () => {
     if (!testApiKey || !successUrl || !defaultCurrency) {
@@ -90,7 +81,7 @@ function ConnectStripe({
       });
 
       toast.success("Successfully connected to Stripe");
-      await mutateOrg();
+      await mutate();
       if (redirect && !onboarding) {
         navigate(redirect);
       }
@@ -107,7 +98,7 @@ function ConnectStripe({
     try {
       setIsDisconnecting(true);
       await OrgService.disconnectStripe(axiosInstance);
-      await mutateOrg();
+      await mutate();
       toast.success("Successfully disconnected from Stripe");
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to disconnect Stripe"));
@@ -125,7 +116,7 @@ function ConnectStripe({
         className={cn(
           "flex flex-col gap-4",
           className,
-          onboarding && "flex-row justify-between items-center"
+          onboarding && "flex-row justify-between items-center",
         )}
       >
         <p className="text-t3 text-sm">Stripe Connected &nbsp; ✅</p>
@@ -222,7 +213,7 @@ export const CurrencySelect = ({
             "w-full justify-between transition-colors duration-100",
             open &&
               "border-[rgb(139,92,246)] shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]",
-            className
+            className,
           )}
           disabled={disabled}
         >

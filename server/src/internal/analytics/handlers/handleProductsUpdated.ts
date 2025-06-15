@@ -8,7 +8,7 @@ import {
   Organization,
 } from "@autumn/shared";
 
-import { sendSvixEvent } from "../../../external/svix/svixUtils.js";
+import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
 import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
@@ -205,7 +205,7 @@ export const handleProductsUpdated = async ({
   }
 
   // 2. Send Svix event
-  const res = await sendSvixEvent({
+  await sendSvixEvent({
     org,
     env,
     eventType: "customer.products.updated",

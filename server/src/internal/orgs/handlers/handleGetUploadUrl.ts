@@ -1,22 +1,24 @@
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { getUploadUrl } from "@/external/supabase/storageUtils.js";
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 
 export const handleGetUploadUrl = async (req: any, res: any) => {
   try {
-    const { org, db, sb } = req;
+    const { org } = req;
 
-    if (!sb) {
-      throw new RecaseError({
-        message: "Supabase not initialized, can't get signed URL",
-        code: ErrCode.SupabaseNotFound,
-      });
-    }
-
-    // Get signed URL
     let path = `logo/${org.id}`;
 
-    const data = await getUploadUrl({ sb, path });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+      logger.warn("Supabase storage not set up");
+      res.status(400).json({
+        message: "Supabase storage not set up",
+        code: ErrCode.SupabaseNotFound,
+      });
+      return;
+    }
+
+    const data = await getUploadUrl({ path });
 
     res.status(200).json(data);
   } catch (error) {

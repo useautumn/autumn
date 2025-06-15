@@ -51,8 +51,12 @@ export const account = pgTable("account", {
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
-  accessTokenExpiresAt: timestamp("access_token_expires_at"),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+  accessTokenExpiresAt: timestamp("access_token_expires_at", {
+    withTimezone: true,
+  }),
+  refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+    withTimezone: true,
+  }),
   scope: text("scope"),
   password: text("password"),
   createdAt: timestamp("created_at").notNull(),
@@ -63,11 +67,11 @@ export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").$defaultFn(
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).$defaultFn(
     () => /* @__PURE__ */ new Date(),
   ),
-  updatedAt: timestamp("updated_at").$defaultFn(
+  updatedAt: timestamp("updated_at", { withTimezone: true }).$defaultFn(
     () => /* @__PURE__ */ new Date(),
   ),
 }).enableRLS();
@@ -77,7 +81,7 @@ export const organization = pgTable("organization", {
   name: text("name").notNull(),
   slug: text("slug").unique(),
   logo: text("logo"),
-  createdAt: timestamp("created_at").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   metadata: text("metadata"),
 }).enableRLS();
 
@@ -90,7 +94,7 @@ export const member = pgTable("member", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   role: text("role").default("member").notNull(),
-  createdAt: timestamp("created_at").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
 }).enableRLS();
 
 export const invitation = pgTable("invitation", {
@@ -101,7 +105,7 @@ export const invitation = pgTable("invitation", {
   email: text("email").notNull(),
   role: text("role"),
   status: text("status").default("pending").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   inviterId: text("inviter_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),

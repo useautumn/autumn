@@ -1,12 +1,10 @@
-import { deleteSvixApp } from "@/external/svix/svixUtils.js";
+import { deleteSvixApp } from "@/external/svix/svixHelpers.js";
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AppEnv, customers, ErrCode, Organization } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
-import { Request, Response } from "express";
+import { Response } from "express";
 import { deleteStripeWebhook } from "../orgUtils.js";
-import { OrgService } from "../OrgService.js";
-import { auth } from "@/utils/auth.js";
 
 const deleteSvixWebhooks = async ({
   org,

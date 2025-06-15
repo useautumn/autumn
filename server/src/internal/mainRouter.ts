@@ -12,7 +12,6 @@ import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
 import { handlePostOrg } from "./orgs/handlers/handlePostOrg.js";
 import { Autumn } from "autumn-js";
 import { autumnHandler } from "autumn-js/express";
-import { parseAuthHeader } from "@/utils/authUtils.js";
 import { withAdminAuth } from "./admin/withAdminAuth.js";
 import { adminRouter } from "./admin/adminRouter.js";
 
@@ -23,10 +22,8 @@ mainRouter.get("", async (req: any, res) => {
 });
 
 mainRouter.post("/organization", withAuth, handlePostOrg);
-
 mainRouter.use("/admin", withAdminAuth, adminRouter);
 mainRouter.use("/users", withAuth, userRouter);
-
 mainRouter.use("/onboarding", withOrgAuth, onboardingRouter);
 mainRouter.use("/organization", withOrgAuth, orgRouter);
 mainRouter.use("/features", withOrgAuth, featureRouter);
@@ -58,7 +55,6 @@ mainRouter.use(
   withOrgAuth,
   autumnHandler({
     autumn: (req: any) => {
-      console.log("Instantiating Autumn...");
       let client = new Autumn({
         url: "http://localhost:8080/v1",
         headers: req.headers,

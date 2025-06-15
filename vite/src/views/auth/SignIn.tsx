@@ -9,9 +9,9 @@ import { OTPSignIn } from "./components/OTPSignIn";
 import { Mail } from "lucide-react";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { toast } from "sonner";
+import { getBackendErr } from "@/utils/genUtils";
 
 export const SignIn = () => {
-  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [googleLoading, setGoogleLoading] = useState(false);
   const [sendOtpLoading, setSendOtpLoading] = useState(false);
@@ -60,13 +60,16 @@ export const SignIn = () => {
     setGoogleLoading(true);
     try {
       const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
-      await signIn.social({
+      const { data, error } = await signIn.social({
         provider: "google",
         callbackURL: `${frontendUrl}${callbackPath}`,
         newUserCallbackURL: `${frontendUrl}${newPath}`,
       });
+      if (error) {
+        toast.error(error.message || "Failed to sign in with Google");
+      }
     } catch (error) {
-      console.error("Error signing in with Google:", error);
+      toast.error(getBackendErr(error, "Failed to sign in with Google"));
     } finally {
       setTimeout(() => {
         setGoogleLoading(false);

@@ -391,37 +391,6 @@ export const checkBillingMeterEventSummary = async ({
   }
 };
 
-export const getUsageInArrearPrice = async ({
-  org,
-  sb,
-  env,
-  productId,
-}: {
-  org: Organization;
-  sb: SupabaseClient;
-  env: AppEnv;
-  productId: string;
-}) => {
-  const { data, error } = await sb
-    .from("prices")
-    .select("*, product:products!inner(*)")
-    .eq("product.org_id", org.id)
-    .eq("product.env", env)
-    .eq("product.id", productId);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  for (const price of data) {
-    if (getBillingType(price.config as any) === BillingType.UsageInArrear) {
-      return price;
-    }
-  }
-
-  return null;
-};
-
 export const getDiscount = async ({
   stripeCli,
   customer,

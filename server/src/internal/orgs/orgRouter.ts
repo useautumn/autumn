@@ -1,16 +1,16 @@
+import express from "express";
+import Stripe from "stripe";
+
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { encryptData } from "@/utils/encryptUtils.js";
+
 import { ErrCode } from "@/errors/errCodes.js";
 import { createClerkCli } from "@/external/clerkUtils.js";
 import {
   checkKeyValid,
   createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
-import { encryptData } from "@/utils/encryptUtils.js";
-import RecaseError, {
-  handleFrontendReqError,
-  handleRequestError,
-} from "@/utils/errorUtils.js";
-import express from "express";
-import Stripe from "stripe";
+
 import { OrgService } from "./OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { AppEnv } from "@autumn/shared";

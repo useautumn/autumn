@@ -144,7 +144,6 @@ describe(`${chalk.yellowBright("usage4: GPU starter annual")}`, () => {
 
 //   let usagePrice = await getUsageInArrearPrice({
 //     org: this.org,
-//     sb: this.sb,
 //     env: this.env,
 //     productId: advanceProducts.gpuStarterAnnual.id,
 //   });
