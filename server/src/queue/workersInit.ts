@@ -20,7 +20,7 @@ const actionHandlers = [
   JobName.HandleCustomerCreated,
 ];
 
-const { db, client } = initDrizzle();
+const { db, client } = initDrizzle({ maxConnections: 10 });
 
 const initWorker = ({
   id,
