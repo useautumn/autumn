@@ -26,7 +26,6 @@ export const createStripeSub = async ({
   invoiceOnly = false,
   anchorToUnix,
   itemSet,
-  shouldPreview = false,
   now,
 }: {
   db: DrizzleCli;
@@ -37,7 +36,6 @@ export const createStripeSub = async ({
   invoiceOnly?: boolean;
   anchorToUnix?: number;
   itemSet: ItemSet;
-  shouldPreview?: boolean;
   now?: number;
 }) => {
   let paymentMethod = await getCusPaymentMethod({

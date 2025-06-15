@@ -116,8 +116,6 @@ export const getContUseInvoiceItems = async ({
   attachParams: AttachParams;
   logger: any;
 }) => {
-  const now = attachParams.now || Date.now();
-
   const cusPrices = cusProduct ? cusProduct.customer_prices : [];
   const cusEnts = cusProduct ? cusProduct.customer_entitlements : [];
 
@@ -127,7 +125,6 @@ export const getContUseInvoiceItems = async ({
     ? await getCurContUseItems({
         stripeSubs,
         attachParams,
-        now,
       })
     : [];
 

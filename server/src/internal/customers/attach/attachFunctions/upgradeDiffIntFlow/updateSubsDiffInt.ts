@@ -48,6 +48,8 @@ export const updateSubsDiffInt = async ({
     itemSet: firstItemSet,
   });
 
+  // throw new Error("Stop");
+
   let trialEnd = config.disableTrial
     ? undefined
     : freeTrialToStripeTimestamp({
@@ -87,6 +89,7 @@ export const updateSubsDiffInt = async ({
   const newInvoiceIds = latestInvoice ? [latestInvoice.id] : [];
 
   // 4. Update current sub schedules if exist...
+  logger.info("1.3 Updating current sub schedules");
   await updateCurSchedules({
     db,
     stripeCli,
@@ -119,7 +122,7 @@ export const updateSubsDiffInt = async ({
       itemSet,
       invoiceOnly: attachParams.invoiceOnly || false,
       freeTrial: attachParams.freeTrial,
-      anchorToUnix: updatedSub!.current_period_end! * 1000,
+      // anchorToUnix: updatedSub!.current_period_end! * 1000,
       now: attachParams.now,
     });
 
