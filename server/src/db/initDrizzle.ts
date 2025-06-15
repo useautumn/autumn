@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { schemas } from "@autumn/shared";
 
 export const initDrizzle = () => {
-  const client = postgres(process.env.DATABASE_URL!);
+  const client = postgres(process.env.DATABASE_URL!, { max: 4 });
 
   const db = drizzle(client, {
     schema: schemas,
