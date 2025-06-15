@@ -20,6 +20,8 @@ const actionHandlers = [
   JobName.HandleCustomerCreated,
 ];
 
+const { db, client } = initDrizzle();
+
 const initWorker = ({
   id,
   queue,
@@ -190,7 +192,6 @@ export const initWorkers = async () => {
   const backupQueue = await QueueManager.getQueue({ useBackup: true });
   await CacheManager.getInstance();
   const logtail = createLogtail();
-  const { db, client } = initDrizzle();
 
   for (let i = 0; i < NUM_WORKERS; i++) {
     workers.push(
