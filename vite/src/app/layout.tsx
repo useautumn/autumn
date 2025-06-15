@@ -12,15 +12,11 @@ import { usePostHog } from "posthog-js/react";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
-import { useAuth } from "@clerk/clerk-react";
 import { useSession } from "@/lib/auth-client";
 import { CustomToaster } from "@/components/general/CustomToaster";
 
 export function MainLayout() {
   const env = useEnv();
-
-  const { getToken } = useAuth();
-  const { pathname } = useLocation();
   const { data, isPending } = useSession();
 
   const navigate = useNavigate();
@@ -88,16 +84,7 @@ export function MainLayout() {
   // }
 
   return (
-    <AutumnProvider
-      includeCredentials={false}
-      backendUrl={import.meta.env.VITE_BACKEND_URL}
-      getBearerToken={async () => {
-        const token = await getToken({
-          template: "custom_template",
-        });
-        return token;
-      }}
-    >
+    <AutumnProvider backendUrl={import.meta.env.VITE_BACKEND_URL}>
       <main className="w-screen h-screen flex bg-stone-100">
         <CustomToaster />
         <MainSidebar />

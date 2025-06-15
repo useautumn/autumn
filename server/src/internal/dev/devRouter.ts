@@ -4,7 +4,7 @@ import { Router } from "express";
 import { ApiKeyService } from "./ApiKeyService.js";
 import { OrgService } from "../orgs/OrgService.js";
 import { createKey } from "./api-keys/apiKeyUtils.js";
-import { getSvixDashboardUrl } from "@/external/svix/svixUtils.js";
+import { getSvixDashboardUrl } from "@/external/svix/svixHelpers.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";

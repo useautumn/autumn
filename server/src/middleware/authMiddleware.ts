@@ -92,8 +92,6 @@ export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
 };
 
 export const withAuth = async (req: any, res: any, next: NextFunction) => {
-  // const tokenData = await getTokenData(req, res);
-
   const session = await auth.api.getSession({
     headers: fromNodeHeaders(req.headers),
   });

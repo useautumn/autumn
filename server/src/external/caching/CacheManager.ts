@@ -15,10 +15,10 @@ export class CacheManager {
     console.log("Initializing Cache Manager...");
     if (this.initialized) return;
 
-    const redisUrl = process.env.REDIS_BACKUP_URL;
+    const redisUrl = process.env.REDIS_BACKUP_URL || process.env.REDIS_URL;
 
     if (!redisUrl) {
-      throw new Error("Redis URL not configured");
+      throw new Error("Cache error: no redis connection string set in env");
     }
 
     this.client = new Redis(redisUrl, {

@@ -5,17 +5,19 @@ export const createResendCli = () => {
 };
 
 export const sendTextEmail = async ({
+  from,
   to,
   subject,
   body,
 }: {
+  from?: string;
   to: string;
   subject: string;
   body: string;
 }) => {
   const resend = createResendCli();
   await resend.emails.send({
-    from: `Ayush <ayush@${process.env.RESEND_DOMAIN}>`,
+    from: from || `Ayush <ayush@${process.env.RESEND_DOMAIN}>`,
     to: to,
     subject: subject,
     text: body,
@@ -23,17 +25,19 @@ export const sendTextEmail = async ({
 };
 
 export const sendHtmlEmail = async ({
+  from,
   to,
   subject,
   body,
 }: {
+  from?: string;
   to: string;
   subject: string;
   body: string;
 }) => {
   const resend = createResendCli();
   await resend.emails.send({
-    from: `Ayush <ayush@${process.env.RESEND_DOMAIN}>`,
+    from: from || `Ayush <ayush@${process.env.RESEND_DOMAIN}>`,
     to: to,
     subject: subject,
     html: body,

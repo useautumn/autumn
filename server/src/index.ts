@@ -9,32 +9,24 @@ import cors from "cors";
 import chalk from "chalk";
 
 import http from "http";
-import { apiRouter } from "./internal/api/apiRouter.js";
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 
-import { initLogger } from "./errors/logger.js";
+import { apiRouter } from "./internal/api/apiRouter.js";
 import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
-import { createSupabaseClient } from "./external/supabaseUtils.js";
-import {
-  createLogtail,
-  createLogtailAll,
-} from "./external/logtail/logtailUtils.js";
+import { createLogtail } from "./external/logtail/logtailUtils.js";
 import { CacheManager } from "./external/caching/CacheManager.js";
 
+import { logtailAll, logger } from "./external/logtail/logtailUtils.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import { generateId } from "./utils/genUtils.js";
 import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
 import { client, db } from "./db/initDrizzle.js";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
-import { logtail as logtailAll } from "./external/logtail/logtailUtils.js";
+import { checkEnvVars } from "./utils/initUtils.js";
 
-if (!process.env.DATABASE_URL) {
-  console.error(`DATABASE_URL is not set`);
-  process.exit(1);
-}
-
+checkEnvVars();
 const init = async () => {
   const app = express();
 
@@ -45,6 +37,7 @@ const init = async () => {
         "http://localhost:3000",
         "https://app.useautumn.com",
         "https://*.useautumn.com",
+        process.env.CLIENT_URL || "",
       ],
       credentials: true,
       allowedHeaders: [
@@ -69,32 +62,21 @@ const init = async () => {
 
   app.all("/api/auth/*", toNodeHandler(auth));
 
-  const logger = initLogger();
   const server = http.createServer(app);
+  const posthog = createPosthogCli();
+
   server.keepAliveTimeout = 120000; // 120 seconds
   server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
 
   await QueueManager.getInstance(); // initialize the queue manager
   await CacheManager.getInstance();
 
-  const supabaseClient = createSupabaseClient();
-
-  // const { db } = initDrizzle();
-
-  // Optional services
-  // const logtailAll = createLogtailAll();
-  const posthog = createPosthogCli();
   subscribeToOrgUpdates({ db });
 
   app.use((req: any, res: any, next: any) => {
-    req.sb = supabaseClient;
-    req.db = db;
-
-    req.logger = logger;
-    req.logtailAll = logtailAll;
-
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
-
+    req.db = db;
+    req.logtailAll = logtailAll;
     req.posthog = posthog;
 
     req.id = req.headers["rndr-id"] || generateId("local_req");
@@ -105,7 +87,7 @@ const init = async () => {
       headersClone.authorization = undefined;
       headersClone.Authorization = undefined;
 
-      logtailAll.info(`${req.method} ${req.originalUrl}`, {
+      logtailAll?.info(`${req.method} ${req.originalUrl}`, {
         url: req.originalUrl,
         method: req.method,
         headers: headersClone,
@@ -113,9 +95,8 @@ const init = async () => {
       });
 
       req.logtail = createLogtail();
-      req.logger = req.logtail;
     } catch (error) {
-      req.logtail = logtailAll; // fallback
+      req.logtail = logger; // fallback
       console.error(`Error creating req.logtail`);
       console.error(error);
     }
@@ -174,14 +155,7 @@ if (process.env.NODE_ENV === "development") {
     }
 
     cluster.on("exit", (worker, code, signal) => {
-      try {
-        let logtail = createLogtail();
-        logtail.error(`WORKER DIED: ${worker.process.pid}`);
-        logtail.flush();
-      } catch (error) {
-        console.log("Error sending log to logtail", error);
-      }
-      // LOG in Render
+      logger.error(`WORKER DIED: ${worker.process.pid}`);
       cluster.fork();
     });
   } else {

@@ -7,6 +7,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import axios from "axios";
 import { useOrg } from "@/hooks/useOrg";
 import { getOrgLogoUrl } from "@/utils/orgUtils";
+import { getBackendErr } from "@/utils/genUtils";
 
 const MAX_SIZE_MB = 10;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
@@ -89,7 +90,7 @@ const OrgLogoUploader: React.FC<OrgLogoUploaderProps> = ({
       setLogoVersion(logoVersion + 1);
       toast.success("Successfully uploaded logo");
     } catch (error) {
-      toast.error("Failed to upload logo");
+      toast.error(getBackendErr(error, "Failed to upload logo"));
     } finally {
       setUploading(false);
     }

@@ -1,14 +1,15 @@
 import { db } from "@/db/initDrizzle.js";
-import { saveOrgToDB } from "@/external/webhooks/clerkWebhooks.js";
+
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { sendInvitationEmail } from "@/internal/orgs/emails/sendInvitationEmail.js";
+import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { betterAuth } from "better-auth";
 import { emailOTP, admin, organization } from "better-auth/plugins";
 
-import sendOTPEmail from "@/internal/orgs/emails/sendOTPEmail.js";
-import { sendOnboardingEmail } from "@/external/webhooks/sendOnboardingEmail.js";
+import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
+import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
 import { ADMIN_USER_IDs } from "./constants.js";
+import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg", // or "mysql", "sqlite"
@@ -55,6 +56,7 @@ export const auth = betterAuth({
     emailOTP({
       async sendVerificationOTP({ email, otp, type }) {
         // Implement the sendVerificationOTP method to send the OTP to the user's email address
+
         await sendOTPEmail({
           email,
           otp,
@@ -86,13 +88,8 @@ export const auth = betterAuth({
 
       organizationCreation: {
         disabled: false,
-        afterCreate: async ({ organization, user }) => {
-          await saveOrgToDB({
-            db,
-            id: organization.id,
-            slug: organization.slug,
-            createdAt: organization.createdAt,
-          });
+        afterCreate: async ({ organization }) => {
+          await afterOrgCreated({ org: organization as any });
         },
       },
     }),

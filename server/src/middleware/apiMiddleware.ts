@@ -8,6 +8,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
   const authHeader =
     req.headers["authorization"] || req.headers["Authorization"];
 
+  const logger = req.logtail;
   const version = req.headers["x-api-version"];
 
   if (version) {
@@ -56,7 +57,6 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
 
   // Try verify via Autumn
 
-  let logger = req.logtail;
   try {
     const { valid, data } = await verifyKey({
       db: req.db,

@@ -34,13 +34,15 @@ export const OTPSignIn = ({
   }, [resendCountdown]);
 
   const handleSubmit = async (otp: string) => {
-    console.log(otp);
     setVerifying(true);
     try {
       const { data, error } = await authClient.signIn.emailOtp({
         email: email,
         otp: otp,
       });
+
+      console.log("Data", data);
+      console.log("Error", error);
 
       if (error) {
         toast.error(error.message || "Failed to verify code");

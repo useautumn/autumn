@@ -54,15 +54,14 @@ function AddProduct() {
   const navigate = useNavigate();
 
   const handleAddProduct = async (productId: string, setLoading: any) => {
-    const { data } = await OrgService.get(axiosInstance);
+    let stripeConnected = org?.stripe_connected;
 
-    if (!data.org) {
-      toast.error("Something went wrong...please try again later");
-      setLoading(false);
-      return;
+    if (!stripeConnected) {
+      const { data: org } = await OrgService.get(axiosInstance);
+      stripeConnected = org?.stripe_connected;
     }
 
-    if (!data.org.stripe_connected) {
+    if (!stripeConnected) {
       toast.error("Connect to Stripe to add products to customers");
       const redirectUrl = getRedirectUrl(`/customers/${customer.id}`, env);
       navigateTo(`/integrations/stripe?redirect=${redirectUrl}`, navigate, env);
