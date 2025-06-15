@@ -1,4 +1,4 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { fullCusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import {
@@ -9,10 +9,10 @@ import {
 import { getProductResponse } from "@/internal/products/productV2Utils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
-  Feature,
+  type Feature,
   FeaturePreviewScenario,
-  FullCusProduct,
-  FullProduct,
+  type FullCusProduct,
+  type FullProduct,
 } from "@autumn/shared";
 
 export const getCheckPreview = async ({

@@ -1,6 +1,6 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { JobName } from "@/queue/JobName.js";
-import { acquireLock, getLock, releaseLock } from "@/queue/lockUtils.js";
+import { getLock, releaseLock } from "@/queue/lockUtils.js";
 import { Queue } from "bullmq";
 import { Job } from "bullmq";
 import { handleProductsUpdated } from "./handlers/handleProductsUpdated.js";

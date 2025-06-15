@@ -1,4 +1,4 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import { Entity, entities } from "@autumn/shared";
@@ -108,7 +108,7 @@ export class EntityService {
     orgId: string;
     env: string;
   }) {
-    const results = await db
+    const _results = await db
       .delete(entities)
       .where(
         and(
