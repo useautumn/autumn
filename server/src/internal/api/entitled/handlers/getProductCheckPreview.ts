@@ -1,5 +1,5 @@
 import { checkToAttachParams } from "@/internal/customers/attach/attachUtils/attachParams/checkToAttachParams.js";
-import { FullCusProduct, FullCustomer, FullProduct } from "@autumn/shared";
+import { FullCustomer, FullProduct } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachBody } from "@/internal/customers/attach/models/AttachBody.js";
 import { attachParamsToPreview } from "@/internal/customers/attach/handleAttachPreview/attachParamsToPreview.js";
@@ -39,7 +39,6 @@ export const attachToCheckPreview = async ({
   features: Feature[];
 }) => {
   // 1. If check
-  let branch = preview.branch;
   let attachFunc = preview.func;
 
   const noOptions = !preview.options || preview.options.length === 0;

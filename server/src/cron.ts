@@ -22,7 +22,7 @@ import { getResetBalancesUpdate } from "./internal/customers/cusProducts/cusEnts
 import { CusProductService } from "./internal/customers/cusProducts/CusProductService.js";
 import { createStripeCli } from "./external/stripe/utils.js";
 import { UTCDate } from "@date-fns/utc";
-import { DrizzleCli, initDrizzle } from "./db/initDrizzle.js";
+import { type DrizzleCli, initDrizzle } from "./db/initDrizzle.js";
 
 import { CusPriceService } from "./internal/customers/cusProducts/cusPrices/CusPriceService.js";
 

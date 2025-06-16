@@ -24,7 +24,6 @@ export const getAttachScenario = async ({
   product: FullProduct;
 }) => {
   let branch = preview.branch;
-  let attachFunc = preview.func;
 
   if (
     branch == AttachBranch.New ||

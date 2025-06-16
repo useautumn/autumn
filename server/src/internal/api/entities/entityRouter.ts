@@ -15,7 +15,7 @@ entityRouter.get("", (req: any, res: any) =>
     res,
     action: "listEntities",
     handler: async (req, res) => {
-      const customerId = req.params.customer_id as string;
+      const customerId = String(req.params.customer_id);
       let { orgId, env } = req;
 
       let customer = await CusService.getFull({
