@@ -101,3 +101,13 @@ export const toSnakeCase = (obj: any): any => {
   }
   return obj;
 };
+
+export const slugify = (
+  text: string,
+  type: "underscore" | "dash" = "underscore",
+) => {
+  return text
+    .toLowerCase()
+    .replace(/ /g, type == "underscore" ? "_" : "-")
+    .replace(/[^\w\s-]/g, "");
+};

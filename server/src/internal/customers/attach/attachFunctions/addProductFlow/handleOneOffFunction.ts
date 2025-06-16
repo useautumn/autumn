@@ -86,18 +86,18 @@ export const handleOneOffFunction = async ({
   // Create invoice
   logger.info("1. Creating invoice");
   const stripeInvoice = await stripeCli.invoices.create({
-    customer: customer.processor.id,
+    customer: customer.processor.id!,
     auto_advance: false,
-    currency: org.default_currency,
+    currency: org.default_currency!,
   });
 
   logger.info("2. Creating invoice items");
   for (const invoiceItem of invoiceItems) {
     await stripeCli.invoiceItems.create({
       ...invoiceItem,
-      customer: customer.processor.id,
+      customer: customer.processor.id!,
       invoice: stripeInvoice.id,
-    });
+    } as any);
   }
 
   // Create invoice items

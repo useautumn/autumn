@@ -1,1 +1,0 @@
-ALTER TABLE "actions" DROP CONSTRAINT "actions_request_id_unique";

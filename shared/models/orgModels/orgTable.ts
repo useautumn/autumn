@@ -5,14 +5,11 @@ import {
   jsonb,
   boolean,
   unique,
+  timestamp,
 } from "drizzle-orm/pg-core";
 
 import { OrgConfig } from "./orgConfig.js";
-
-export type MinOrg = {
-  id: string;
-  slug: string;
-};
+import { sql } from "drizzle-orm";
 
 export type SvixConfig = {
   sandbox_app_id: string;
@@ -27,17 +24,32 @@ export type StripeConfig = {
   success_url: string;
 };
 
+//   logo: text("logo"),
+//   createdAt: timestamp("created_at").notNull(),
+//   metadata: text("metadata"),
+
 export const organizations = pgTable(
   "organizations",
   {
-    id: text().primaryKey().notNull(),
-    slug: text().notNull(),
-    default_currency: text("default_currency").notNull().default("usd"),
+    id: text().primaryKey(),
+    slug: text().notNull().unique(),
+
+    // Better Auth
+    name: text("name").notNull(),
+    logo: text("logo"),
+    createdAt: timestamp("createdAt", { withTimezone: true }).notNull(),
+    metadata: text("metadata"),
+
+    // Stripe
+    default_currency: text("default_currency").default("usd"),
     stripe_connected: boolean("stripe_connected").default(false),
+
     stripe_config: jsonb("stripe_config").$type<StripeConfig>(),
     test_pkey: text("test_pkey"),
     live_pkey: text("live_pkey"),
-    svix_config: jsonb("svix_config").notNull().$type<SvixConfig>(),
+    svix_config: jsonb("svix_config")
+      .$type<SvixConfig>()
+      .default(sql`'{}'::jsonb`),
     created_at: numeric({ mode: "number" }),
     config: jsonb().default({}).notNull().$type<OrgConfig>(),
   },
