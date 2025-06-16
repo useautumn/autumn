@@ -40,7 +40,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 
       if (!customer) {
         req.logtail.warn(
-          `GET /customers/${customerId}: not found | Org: ${req.minOrg.slug}`,
+          `GET /customers/${customerId}: not found | Org: ${org.slug}`,
         );
         res.status(StatusCodes.NOT_FOUND).json({
           message: `Customer ${customerId} not found`,

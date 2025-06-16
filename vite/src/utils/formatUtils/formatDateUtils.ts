@@ -1,5 +1,9 @@
 import { format } from "date-fns";
 
+export const formatDateStr = (date: Date | string) => {
+  return format(new Date(date), "dd MMM yyyy");
+};
+
 export const formatTimestamp = (timestamp: number | null | undefined) => {
   if (!timestamp) return "";
   return format(new Date(timestamp), "MM/dd/yyyy");

@@ -1,3 +1,4 @@
+import { DefaultView } from "./views/DefaultView";
 import { AppEnv } from "@autumn/shared";
 import { BrowserRouter, Routes, Route } from "react-router";
 import { MainLayout } from "./app/layout";
@@ -6,26 +7,28 @@ import CustomerProductView from "./views/customers/customer/product/CustomerProd
 import CustomersView from "./views/customers/CustomersView";
 import DevScreen from "./views/developer/DevView";
 import FeaturesView from "./views/features/FeaturesView";
-import ConnectStripe from "./views/onboarding/ConnectStripe";
 import StripePage from "./views/onboarding/StripePage";
 import ProductView from "./views/products/product/ProductView";
 import ProductsView from "./views/products/ProductsView";
-
 import OnboardingView from "./views/onboarding/OnboardingView";
-import { DefaultView } from "./views/DefaultView";
 import CliAuth from "./views/CliAuth";
+import { SignIn } from "./views/auth/SignIn";
+import { AcceptInvitation } from "./views/auth/AcceptInvitation";
+import { AdminView } from "./views/admin/AdminView";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/sign-in" element={<SignIn />} />
+        <Route path="/accept" element={<AcceptInvitation />} />
         <Route element={<MainLayout />}>
           <Route path="*" element={<DefaultView />} />
+          <Route path="/admin" element={<AdminView />} />
+
           <Route path="/onboarding" element={<OnboardingView />} />
           <Route path="/sandbox/onboarding" element={<OnboardingView />} />
-
           <Route path="/cli-auth" element={<CliAuth />} />
-
           {/* FEATURES */}
           <Route
             path="/features"

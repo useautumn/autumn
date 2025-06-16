@@ -2,6 +2,10 @@
 import * as schemas from "./db/schema.js";
 export { schemas };
 
+// Auth Models
+export * from "./db/auth-schema.js";
+export * from "./models/authModels/membership.js";
+
 // Gen Models
 export * from "./models/genModels/genEnums.js";
 export * from "./models/genModels/genModels.js";
@@ -9,6 +13,7 @@ export * from "./models/genModels/genModels.js";
 // 1. Org Models
 export * from "./models/orgModels/orgTable.js";
 export * from "./models/orgModels/orgConfig.js";
+export * from "./models/orgModels/frontendOrg.js";
 
 // 2. Feature Models
 export * from "./models/featureModels/featureTable.js";

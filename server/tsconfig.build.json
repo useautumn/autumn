@@ -7,7 +7,8 @@
     "target": "ES2020",
     "moduleResolution": "NodeNext",
     "module": "NodeNext",
-    "declaration": true,
+    "jsx": "react-jsx",
+
     "rootDir": ".",
     "baseUrl": ".",
     "outDir": "./dist",
@@ -17,9 +18,10 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@emails/*": ["emails/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "emails"],
   "exclude": ["node_modules", "dist"]
 }

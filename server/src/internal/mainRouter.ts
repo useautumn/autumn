@@ -1,5 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config();
+import "dotenv/config";
 
 import { orgRouter } from "./orgs/orgRouter.js";
 import { Router } from "express";
@@ -13,17 +12,18 @@ import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
 import { handlePostOrg } from "./orgs/handlers/handlePostOrg.js";
 import { Autumn } from "autumn-js";
 import { autumnHandler } from "autumn-js/express";
-import { parseAuthHeader } from "@/utils/authUtils.js";
+import { withAdminAuth } from "./admin/withAdminAuth.js";
+import { adminRouter } from "./admin/adminRouter.js";
 
-const mainRouter = Router();
+const mainRouter: Router = Router();
 
 mainRouter.get("", async (req: any, res) => {
   res.status(200).json({ message: "Hello World" });
 });
 
 mainRouter.post("/organization", withAuth, handlePostOrg);
+mainRouter.use("/admin", withAdminAuth, adminRouter);
 mainRouter.use("/users", withAuth, userRouter);
-
 mainRouter.use("/onboarding", withOrgAuth, onboardingRouter);
 mainRouter.use("/organization", withOrgAuth, orgRouter);
 mainRouter.use("/features", withOrgAuth, featureRouter);
@@ -31,34 +31,35 @@ mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
 
-mainRouter.use(
-  "/api/autumn",
-  withOrgAuth,
-  autumnHandler({
-    identify: async (req: any) => {
-      return {
-        customerId: req.org?.id,
-        customerData: {
-          name: req.org?.slug,
-          email: req.user?.email,
-        },
-      };
-    },
-  }),
-);
+// Optional...
+if (process.env.AUTUMN_SECRET_KEY) {
+  mainRouter.use(
+    "/api/autumn",
+    withOrgAuth,
+    autumnHandler({
+      identify: async (req: any) => {
+        return {
+          customerId: req.org?.id,
+          customerData: {
+            name: req.org?.slug,
+            email: req.user?.email,
+          },
+        };
+      },
+    }),
+  );
+}
 
 mainRouter.use(
   "/demo/api/autumn",
   withOrgAuth,
-
   autumnHandler({
     autumn: (req: any) => {
-      let bearerToken = parseAuthHeader(req);
-
-      return new Autumn({
-        secretKey: bearerToken,
+      let client = new Autumn({
         url: "http://localhost:8080/v1",
-      }) as any;
+        headers: req.headers,
+      });
+      return client as any;
     },
     identify: async (req: any) => {
       return {

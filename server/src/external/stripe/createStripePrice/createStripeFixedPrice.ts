@@ -26,7 +26,7 @@ export const createStripeFixedPrice = async ({
   const stripePrice = await stripeCli.prices.create({
     product: product.processor!.id,
     unit_amount: amount,
-    currency: org.default_currency,
+    currency: org.default_currency!,
     recurring: {
       ...(billingIntervalToStripe(config.interval!) as any),
     },

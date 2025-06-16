@@ -30,7 +30,7 @@ export const getProductChargeText = ({
     itemStrs.push(
       formatCurrency({
         amount: total,
-        defaultCurrency: org.default_currency,
+        defaultCurrency: org.default_currency!,
       }),
     );
   }
