@@ -13,7 +13,7 @@ import { DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 
-const NUM_WORKERS = 10;
+const NUM_WORKERS = 15;
 
 const actionHandlers = [
   JobName.HandleProductsUpdated,
