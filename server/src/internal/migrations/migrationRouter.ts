@@ -7,7 +7,7 @@ import {
   UsagePriceConfig,
 } from "@autumn/shared";
 import { routeHandler } from "@/utils/routerUtils.js";
-import express from "express";
+import express, { Router } from "express";
 import { constructMigrationJob } from "@/internal/migrations/migrationUtils.js";
 import { MigrationService } from "@/internal/migrations/MigrationService.js";
 import { JobName } from "@/queue/JobName.js";
@@ -20,7 +20,7 @@ import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { findPrepaidPrice } from "../products/prices/priceUtils/findPriceUtils.js";
 
-export const migrationRouter = express.Router();
+export const migrationRouter: Router = express.Router();
 
 migrationRouter.post("", async (req: any, res: any) => {
   return routeHandler({

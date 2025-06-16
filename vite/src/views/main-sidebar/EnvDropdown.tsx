@@ -13,20 +13,12 @@ import { envToPath } from "@/utils/genUtils";
 import { useLocation } from "react-router";
 import { useSidebarContext } from "./SidebarContext";
 import { cn } from "@/lib/utils";
-import {
-  Check,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  FlaskConical,
-  Sailboat,
-  TestTube,
-} from "lucide-react";
+import { Check } from "lucide-react";
 import { useState } from "react";
+import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
   const location = useLocation();
-  const expanded = true;
 
   const { state } = useSidebarContext();
 
@@ -38,66 +30,27 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
     }
   };
 
-  let [isHovered, setIsHovered] = useState(false);
-  let [open, setOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const envText = env === AppEnv.Sandbox ? "Sandbox" : "Production";
+  const expanded = state == "expanded";
 
   return (
     <div
-      className="flex text-t2 text-xs gap-1 mt-2 mb-4"
+      className={cn("flex text-t2 text-xs gap-1 px-3")}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <DropdownMenu open={open} onOpenChange={setOpen}>
-        {expanded ? (
-          <DropdownMenuTrigger
-            className={cn(
-              "ring-0 focus:ring-0 text-t2 rounded-sm w-full flex items-center bg-transparent h-8",
-              state != "expanded" &&
-                "!w-6 !h-6 p-0 items-center justify-center",
-            )}
-          >
-            {state == "expanded" ? (
-              <div
-                className={cn(
-                  "flex items-center justify-between -ml-1 pl-1 pr-3 h-6 border border-amber-500 rounded-xs bg-amber-100 text-amber-600",
-                  env === AppEnv.Live &&
-                    "text-primary bg-purple-100 shadow-none border-primary font-medium",
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex justify-center w-4 h-4 items-center rounded-sm transition-all duration-100",
-                    state == "expanded" && "mr-2",
-                    isHovered && "translate-x-[-1px]",
-                  )}
-                >
-                  {env === AppEnv.Sandbox ? (
-                    <FlaskConical size={14} className="!h-4" />
-                  ) : (
-                    <Sailboat size={14} className="!h-4" />
-                  )}
-                </div>
-                <p className="text-sm">{envText}</p>
-                {/* <ChevronRight
-                  className={cn(
-                    "ml-2 transition-all duration-100",
-                    open && "rotate-90"
-                  )}
-                  size={14}
-                /> */}
-              </div>
-            ) : (
-              <p className="text-sm">{envText.slice(0, 1)}</p>
-            )}
-          </DropdownMenuTrigger>
+        <ExpandedEnvTrigger isHovered={isHovered} />
+        {/* {expanded ? (
         ) : (
-          <DropdownMenuTrigger>{envText.slice(0, 1)}</DropdownMenuTrigger>
-        )}
+          <CollapsedEnvTrigger />
+        )} */}
         <DropdownMenuContent side="bottom" align="start" className="w-[180px]">
           <DropdownMenuItem
-            className="flex justify-between items-center"
+            className="flex justify-between items-center text-t2"
             onClick={() => {
               handleEnvChange(AppEnv.Sandbox);
             }}
@@ -109,7 +62,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
           </DropdownMenuItem>
 
           <DropdownMenuItem
-            className="flex justify-between items-center"
+            className="flex justify-between items-center text-t2"
             onClick={() => {
               handleEnvChange(AppEnv.Live);
             }}

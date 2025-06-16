@@ -1,5 +1,10 @@
+import "dotenv/config";
+
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
+
+const BACKUP_REDIS_URL = process.env.REDIS_BACKUP_URL || process.env.REDIS_URL;
+const MAIN_REDIS_URL = process.env.REDIS_URL;
 
 export class QueueManager {
   private static instance: QueueManager;
@@ -31,16 +36,7 @@ export class QueueManager {
     useBackup: boolean;
     keepConnection?: boolean;
   }) {
-    // 1. Connect to redis
-
-    if (useBackup && !process.env.REDIS_BACKUP_URL) {
-      console.warn(`REDIS_BACKUP_URL not set, using main redis`);
-      useBackup = false;
-    }
-
-    const redisUrl = useBackup
-      ? process.env.REDIS_BACKUP_URL
-      : process.env.REDIS_URL;
+    const redisUrl = useBackup ? BACKUP_REDIS_URL : MAIN_REDIS_URL;
 
     const connection = new Redis(redisUrl!, {
       retryStrategy: (times) => {
@@ -52,7 +48,7 @@ export class QueueManager {
       console.log(
         `Redis connection error (${useBackup ? "backup" : "main"}): ${
           error.message
-        }`,
+        }`
       );
 
       if (!keepConnection) {
@@ -95,7 +91,7 @@ export class QueueManager {
     console.log("2. Initializing main & backup queues");
     const mainQueue = new Queue("autumn", {
       connection: {
-        url: process.env.REDIS_URL,
+        url: MAIN_REDIS_URL,
         enableOfflineQueue: false,
         retryStrategy: (times) => {
           return 5000;
@@ -105,7 +101,7 @@ export class QueueManager {
 
     const backupQueue = new Queue("autumn", {
       connection: {
-        url: process.env.REDIS_BACKUP_URL,
+        url: BACKUP_REDIS_URL,
         enableOfflineQueue: false,
       },
     });

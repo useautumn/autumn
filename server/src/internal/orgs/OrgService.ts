@@ -1,18 +1,21 @@
 import RecaseError from "@/utils/errorUtils.js";
+import { and, eq } from "drizzle-orm";
 import {
   AppEnv,
   ErrCode,
   Feature,
   features,
+  invitation,
+  member,
   Organization,
   OrgConfigSchema,
+  user,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
+
 import { getApiVersion } from "@/utils/versionUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
-import { DrizzleCli } from "@/db/initDrizzle.js";
-import { eq } from "drizzle-orm";
 import { organizations, apiKeys } from "@autumn/shared";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class OrgService {
   static async getFromReq(req: any) {
@@ -30,6 +33,30 @@ export class OrgService {
     }
 
     return await this.get({ db: req.db, orgId: req.orgId });
+  }
+
+  static async getMembers({ db, orgId }: { db: DrizzleCli; orgId: string }) {
+    const results = await db
+      .select()
+      .from(member)
+      .where(eq(member.organizationId, orgId))
+      .innerJoin(user, eq(member.userId, user.id));
+
+    return results;
+  }
+
+  static async getInvites({ db, orgId }: { db: DrizzleCli; orgId: string }) {
+    const results = await db
+      .select()
+      .from(invitation)
+      .where(
+        and(
+          eq(invitation.organizationId, orgId),
+          eq(invitation.status, "pending"),
+        ),
+      );
+
+    return results;
   }
 
   // Drizzle get

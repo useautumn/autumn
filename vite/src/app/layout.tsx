@@ -5,12 +5,6 @@ import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { AppEnv } from "@autumn/shared";
-import {
-  RedirectToSignIn,
-  useOrganizationList,
-  useUser,
-} from "@clerk/clerk-react";
-import { useOrganization } from "@clerk/clerk-react";
 import { useEffect } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router";
 
@@ -18,36 +12,33 @@ import { usePostHog } from "posthog-js/react";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRightFromSquare } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
-import { useAuth } from "@clerk/clerk-react";
+import { useSession } from "@/lib/auth-client";
+import { CustomToaster } from "@/components/general/CustomToaster";
 
 export function MainLayout() {
   const env = useEnv();
-  const { isLoaded: isUserLoaded, user } = useUser();
-  const { organization: org } = useOrganization();
-  const { getToken } = useAuth();
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
+  const { data, isPending } = useSession();
 
+  console.log("Session", data, "isPending", isPending);
+
+  const navigate = useNavigate();
   const posthog = usePostHog();
 
   useEffect(() => {
     // Identify user
-    if (user && process.env.NODE_ENV !== "development") {
-      let email = user.primaryEmailAddress?.emailAddress;
-      if (!email) {
-        email = user.emailAddresses[0].emailAddress;
-      }
+    if (data && process.env.NODE_ENV !== "development") {
+      const email = data.user.email;
 
       posthog?.identify(email, {
         email,
-        name: user.fullName,
-        id: user.id,
+        name: data.user.name,
+        id: data.user.id,
       });
     }
-  }, [user, posthog]);
+  }, [data, posthog]);
 
   // 1. If not loaded, show loading screen
-  if (!isUserLoaded) {
+  if (isPending) {
     return (
       <div className="w-screen h-screen flex bg-stone-100">
         <MainSidebar />
@@ -80,45 +71,24 @@ export function MainLayout() {
   }
 
   // 2. If no user, redirect to sign in
-  if (!user) {
-    return <RedirectToSignIn />;
+  if (!data) {
+    navigate("/sign-in");
+    return;
   }
 
-  if (!org && !pathname.includes("/onboarding")) {
-    return (
-      <Navigate
-        to={getRedirectUrl("/onboarding", AppEnv.Sandbox)}
-        replace={true}
-      />
-    );
-  }
+  // if (!pathname.includes("/onboarding")) {
+  //   return (
+  //     <Navigate
+  //       to={getRedirectUrl("/onboarding", AppEnv.Sandbox)}
+  //       replace={true}
+  //     />
+  //   );
+  // }
 
   return (
-    <AutumnProvider
-      includeCredentials={false}
-      backendUrl={import.meta.env.VITE_BACKEND_URL}
-      getBearerToken={async () => {
-        const token = await getToken({
-          template: "custom_template",
-        });
-        return token;
-      }}
-    >
+    <AutumnProvider backendUrl={import.meta.env.VITE_BACKEND_URL}>
       <main className="w-screen h-screen flex bg-stone-100">
-        <Toaster
-          position="top-center"
-          className="flex justify-center"
-          duration={6000}
-          toastOptions={{
-            unstyled: true,
-            classNames: {
-              error: `w-[350px] text-red-400 flex items-start
-                gap-2 bg-white/70 backdrop-blur-sm border border-red-400 rounded-sm p-2 text-sm shadow-md`,
-              success: `w-[350px] text-green-600 flex items-start
-                gap-2 bg-white/90 backdrop-blur-sm border border-green-500 rounded-sm p-2 text-sm shadow-md`,
-            },
-          }}
-        />
+        <CustomToaster />
         <MainSidebar />
         <MainContent />
       </main>

@@ -21,17 +21,11 @@ import { analyticsMiddleware } from "@/middleware/analyticsMiddleware.js";
 import rewardRouter from "./rewards/rewardRouter.js";
 import expireRouter from "../customers/expire/expireRouter.js";
 
-const apiRouter = Router();
+const apiRouter: Router = Router();
 
 apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);
 apiRouter.use(analyticsMiddleware);
-
-apiRouter.get("/auth", (req: any, res) => {
-  res.json({
-    message: `Authenticated -- Hello ${req.minOrg?.slug}!`,
-  });
-});
 
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/invoices", invoiceRouter);

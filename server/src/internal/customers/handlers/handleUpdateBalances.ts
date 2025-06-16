@@ -82,7 +82,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 
     logger.info("--------------------------------");
     logger.info(
-      `REQUEST: UPDATE BALANCES FOR CUSTOMER ${customer.id}, ORG: ${req.minOrg.slug}`,
+      `REQUEST: UPDATE BALANCES FOR CUSTOMER ${customer.id}, ORG: ${org.slug}`,
     );
     logger.info(
       `Features to update: ${balances.map(

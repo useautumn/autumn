@@ -9,10 +9,10 @@ export default function FixedPriceConfig({
   show: any;
   setShow: (show: any) => void;
 }) {
-  let { item, setItem } = useProductItemContext();
+  const { item, setItem } = useProductItemContext();
 
   return (
-    <div className="overflow-hidden flex flex-col gap-4 w-full">
+    <div className="!overflow-visible flex flex-col gap-4 w-full">
       <CreateFixedPrice
         config={item}
         setConfig={setItem}

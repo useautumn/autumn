@@ -7,8 +7,10 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { SidebarContext } from "./SidebarContext";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Code, Flag, Package, Tag, User } from "lucide-react";
+import { Code, Package, Shield, User } from "lucide-react";
 import { EnvDropdown } from "./EnvDropdown";
+import { OrgDropdown } from "./components/OrgDropdown";
+import { AdminOnly } from "../admin/components/AdminOnly";
 
 export const MainSidebar = () => {
   const env = useEnv();
@@ -25,20 +27,14 @@ export const MainSidebar = () => {
           `h-full bg-stone-100 py-4 flex flex-col justify-between transition-all duration-150`,
           state == "expanded"
             ? "min-w-[200px] max-w-[200px]"
-            : "min-w-[50px] max-w-[50px]"
+            : "min-w-[50px] max-w-[50px]",
         )}
       >
-        <div>
-          <SidebarTop />
-          <div className="flex flex-col mt-4 px-4">
-            <EnvDropdown env={env} />
-
-            {/* <NavButton
-              value="features"
-              icon={<Flag size={15} />}
-              title="Features"
-              env={env}
-            /> */}
+        <div className="flex flex-col gap-6">
+          <OrgDropdown />
+          {/* <SidebarTop /> */}
+          <EnvDropdown env={env} />
+          <div className="flex flex-col px-4">
             <NavButton
               value="products"
               icon={<Package size={14} />}
@@ -57,6 +53,14 @@ export const MainSidebar = () => {
               title="Developer"
               env={env}
             />
+            {/* <AdminOnly>
+              <NavButton
+                value="admin"
+                icon={<Shield size={15} />}
+                title="Admin"
+                env={env}
+              />
+            </AdminOnly> */}
           </div>
         </div>
         {/* Sidebar bottom */}
