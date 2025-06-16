@@ -81,7 +81,7 @@ export const updateOtherCusProdsWithNewSchedule = async ({
 }) => {
   const otherCusProducts = getCusProductsWithStripeSubId({
     cusProducts: attachParams.cusProducts!,
-    stripeSubId: otherSub.id,
+    stripeSubId: otherSub?.id,
   });
 
   if (otherCusProducts.length > 0) {
