@@ -8,7 +8,7 @@ docker compose -f docker-compose.db.yml up --build
 docker compose -f docker-compose.dev.yml down
 docker volume rm main-repo_shared-node-modules main-repo_root-node-modules main-repo_vite-node-modules
 docker compose -f docker-compose.dev.yml build --no-cache
-docker compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up --build
 
 # Prod
 docker compose -f docker-compose.prod.yml up --build
