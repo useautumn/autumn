@@ -9,6 +9,7 @@ export interface ResendEmailProps {
   subject: string;
   body: string;
   from: string;
+  fromEmail?: string;
 }
 
 export const nameToEmail = (name: string) => {
@@ -17,13 +18,18 @@ export const nameToEmail = (name: string) => {
 
 export const sendTextEmail = async ({
   from,
+  fromEmail,
   to,
   subject,
   body,
 }: ResendEmailProps) => {
   const resend = createResendCli();
+  fromEmail = fromEmail
+    ? `${fromEmail}${process.env.RESEND_DOMAIN}`
+    : nameToEmail(from);
+
   await resend.emails.send({
-    from: `${from} <${nameToEmail(from)}>`,
+    from: `${from} <${fromEmail}>`,
     to: to,
     subject: subject,
     text: body,
@@ -35,10 +41,15 @@ export const sendHtmlEmail = async ({
   to,
   subject,
   body,
+  fromEmail,
 }: ResendEmailProps) => {
   const resend = createResendCli();
+  fromEmail = fromEmail
+    ? `${fromEmail}${process.env.RESEND_DOMAIN}`
+    : nameToEmail(from);
+
   await resend.emails.send({
-    from: `${from} <${nameToEmail(from)}>`,
+    from: `${from} <${fromEmail}>`,
     to: to,
     subject: subject,
     html: body,

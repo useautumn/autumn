@@ -23,6 +23,7 @@ export const sendOnboardingEmail = safeResend({
     const firstName = name.split(" ")[0];
 
     await sendHtmlEmail({
+      from: "Ayush",
       to: email,
       subject: "Anything I can help with?",
       body: getWelcomeEmailBody(firstName),
