@@ -77,8 +77,10 @@ export const updateOtherCusProdsWithNewSchedule = async ({
   db: DrizzleCli;
   attachParams: AttachParams;
   newSchedule: Stripe.SubscriptionSchedule;
-  otherSub: Stripe.Subscription;
+  otherSub: Stripe.Subscription | null;
 }) => {
+  if (!otherSub) return;
+
   const otherCusProducts = getCusProductsWithStripeSubId({
     cusProducts: attachParams.cusProducts!,
     stripeSubId: otherSub.id,

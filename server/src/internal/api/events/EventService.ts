@@ -29,7 +29,7 @@ export class EventService {
           message:
             "Event (event_name, customer_id, idempotency_key) already exists.",
           code: ErrCode.DuplicateEvent,
-          data: error,
+          // data: error,
           statusCode: StatusCodes.BAD_REQUEST,
         });
       } else throw error;
