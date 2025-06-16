@@ -13,12 +13,14 @@ import { DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 
-const NUM_WORKERS = 5;
+const NUM_WORKERS = 15;
 
 const actionHandlers = [
   JobName.HandleProductsUpdated,
   JobName.HandleCustomerCreated,
 ];
+
+const { db, client } = initDrizzle({ maxConnections: 20 });
 
 const initWorker = ({
   id,
@@ -190,7 +192,6 @@ export const initWorkers = async () => {
   const backupQueue = await QueueManager.getQueue({ useBackup: true });
   await CacheManager.getInstance();
   const logtail = createLogtail();
-  const { db, client } = initDrizzle();
 
   for (let i = 0; i < NUM_WORKERS; i++) {
     workers.push(
