@@ -8,9 +8,9 @@ import {
   ErrCode,
   RewardTriggerEvent,
 } from "@autumn/shared";
-import express from "express";
+import express, { Router } from "express";
 
-export const rewardProgramRouter = express.Router();
+export const rewardProgramRouter: Router = express.Router();
 
 rewardProgramRouter.post("", (req, res) =>
   routeHandler({

@@ -21,7 +21,7 @@ import { analyticsMiddleware } from "@/middleware/analyticsMiddleware.js";
 import rewardRouter from "./rewards/rewardRouter.js";
 import expireRouter from "./customers/products/expireRouter.js";
 
-const apiRouter = Router();
+const apiRouter: Router = Router();
 
 apiRouter.use(apiAuthMiddleware);
 apiRouter.use(pricingMiddleware);

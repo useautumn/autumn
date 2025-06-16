@@ -15,7 +15,7 @@ import { autumnHandler } from "autumn-js/express";
 import { withAdminAuth } from "./admin/withAdminAuth.js";
 import { adminRouter } from "./admin/adminRouter.js";
 
-const mainRouter = Router();
+const mainRouter: Router = Router();
 
 mainRouter.get("", async (req: any, res) => {
   res.status(200).json({ message: "Hello World" });

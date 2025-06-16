@@ -11,7 +11,7 @@ import { routeHandler } from "@/utils/routerUtils.js";
 import { FullCusProduct, CusProductStatus, ProductV2 } from "@autumn/shared";
 import { Router } from "express";
 
-export const componentRouter = Router();
+export const componentRouter: Router = Router();
 
 componentRouter.get("/pricing_table", async (req: any, res) =>
   routeHandler({

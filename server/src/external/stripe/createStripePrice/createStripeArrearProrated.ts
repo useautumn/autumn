@@ -89,7 +89,7 @@ export const createStripeMeteredPrice = async ({
   const stripePrice = await stripeCli.prices.create({
     ...productData,
     ...priceAmountData,
-    currency: org.default_currency,
+    currency: org.default_currency || "usd",
     nickname: `Autumn Price (${feature!.name}) [Placeholder]`,
     recurring: {
       ...(billingIntervalToStripe(price.config!.interval!) as any),
@@ -194,7 +194,7 @@ export const createStripeArrearProrated = async ({
 
   let stripePrice = await stripeCli.prices.create({
     ...productData,
-    currency: org.default_currency,
+    currency: org.default_currency || "usd",
     ...priceAmountData,
     recurring: {
       ...(recurringData as any),

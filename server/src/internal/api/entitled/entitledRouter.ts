@@ -30,7 +30,7 @@ import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCu
 import { getCheckPreview } from "./getCheckPreview.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 
-export const entitledRouter = Router();
+export const entitledRouter: Router = Router();
 
 const getRequiredAndActualBalance = ({
   cusEnts,

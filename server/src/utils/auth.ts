@@ -10,6 +10,7 @@ import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg", // or "mysql", "sqlite"

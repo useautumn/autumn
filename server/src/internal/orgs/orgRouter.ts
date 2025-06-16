@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Router } from "express";
 import Stripe from "stripe";
 
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
@@ -22,7 +22,7 @@ import { handleInvite } from "./handlers/handleInvite.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
 
-export const orgRouter = express.Router();
+export const orgRouter: Router = express.Router();
 orgRouter.get("/members", handleGetOrgMembers);
 orgRouter.get("/upload_url", handleGetUploadUrl);
 orgRouter.post("/invite", handleInvite as any);

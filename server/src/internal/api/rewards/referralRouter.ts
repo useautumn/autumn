@@ -8,13 +8,13 @@ import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionServ
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { Customer, ErrCode, RewardTriggerEvent } from "@autumn/shared";
-import express from "express";
-import { ReferralCode, RewardRedemption } from "@autumn/shared";
+import { ErrCode, RewardTriggerEvent } from "@autumn/shared";
+import express, { Router } from "express";
+import { RewardRedemption } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 
-export const referralRouter = express.Router();
+export const referralRouter: Router = express.Router();
 
 // 1. Get referral code
 referralRouter.post("/code", (req, res) =>
@@ -238,7 +238,7 @@ referralRouter.post("/redeem", (req, res) =>
   }),
 );
 
-export const redemptionRouter = express.Router();
+export const redemptionRouter: Router = express.Router();
 
 redemptionRouter.get("/:redemptionId", (req, res) =>
   routeHandler({

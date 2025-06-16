@@ -1,6 +1,3 @@
-import { WebSocketServer } from "ws";
-import http from "http";
-
 export class WebsocketManager {
   public channels: Map<string, Set<WebSocket>>;
   public subscriptions: WeakMap<WebSocket, Set<string>>;
