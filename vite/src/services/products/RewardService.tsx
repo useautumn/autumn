@@ -1,6 +1,5 @@
 import { Reward, CreateReward } from "@autumn/shared";
 
-import { SupabaseClient } from "@supabase/supabase-js";
 import { AxiosInstance } from "axios";
 
 export class RewardService {

@@ -115,32 +115,3 @@ export class CachedKeyService {
     }
   }
 }
-
-// const { data, error } = await sb.rpc("verify_api_key", {
-//   p_hashed_key: hashedKey,
-//   p_env: env,
-// });
-
-// if (error) {
-//   throw error;
-// }
-
-// if (!data.success || !data.organization) {
-//   console.warn(`(warning) failed to verify secret key: ${data.error}`);
-//   return null;
-// }
-
-// let org = structuredClone(data.organization);
-// delete org.features;
-
-// // Add org config and api version
-// org.config = OrgConfigSchema.parse(org.config || {});
-// org.api_version = getApiVersion({
-//   createdAt: org.created_at,
-// });
-
-// return {
-//   org,
-//   features: data.organization?.features || [],
-//   env,
-// };

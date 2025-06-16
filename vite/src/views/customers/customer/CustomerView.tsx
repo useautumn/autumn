@@ -3,13 +3,7 @@
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { AppEnv } from "@autumn/shared";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+
 import { CustomerContext } from "./CustomerContext";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { CustomerProductList } from "./CustomerProductList";

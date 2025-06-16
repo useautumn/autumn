@@ -6,7 +6,7 @@ import RecaseError, {
 import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
 import { Feature, FeatureResponseSchema, FeatureType } from "@autumn/shared";
 import { CreateFeatureSchema } from "@autumn/shared";
-import express from "express";
+import express, { Router } from "express";
 import { generateId } from "@/utils/genUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
 
@@ -20,7 +20,7 @@ import { JobName } from "@/queue/JobName.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleDeleteFeature } from "./handlers/handleDeleteFeature.js";
 
-export const featureApiRouter = express.Router();
+export const featureApiRouter: Router = express.Router();
 
 export const validateFeature = (data: any) => {
   let featureType = data.type;

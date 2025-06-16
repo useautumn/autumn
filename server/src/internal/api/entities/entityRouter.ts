@@ -6,10 +6,10 @@ import { handleGetEntity } from "./handlers/handleGetEntity.js";
 import { handlePostEntityRequest } from "../../entities/handlers/handleCreateEntity/handleCreateEntity.js";
 import { handleDeleteEntity } from "./handlers/handleDeleteEntity.js";
 
-export const entityRouter = Router({ mergeParams: true });
+export const entityRouter: Router = Router({ mergeParams: true });
 
 // List entityes
-entityRouter.get("", (req, res) =>
+entityRouter.get("", (req: any, res: any) =>
   routeHandler({
     req,
     res,

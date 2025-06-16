@@ -30,7 +30,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { getEventTimestamp } from "./eventUtils.js";
 
-export const eventsRouter = Router();
+export const eventsRouter: Router = Router();
 
 const getEventAndCustomer = async ({
   req,

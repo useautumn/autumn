@@ -20,9 +20,8 @@ import { handleUpdateCustomer } from "../customers/handlers/handleUpdateCustomer
 import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
 import { handleGetCustomer } from "../customers/handlers/handleGetCustomer.js";
 import { CusSearchService } from "@/internal/customers/CusSearchService.js";
-import assert from "assert";
 
-export const cusRouter = Router();
+export const cusRouter: Router = Router();
 
 cusRouter.post("/all/search", async (req: any, res: any) => {
   try {

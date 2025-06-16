@@ -3,7 +3,6 @@ import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { routeHandler } from "@/utils/routerUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { createClerkCli } from "@/external/clerkUtils.js";
 import { AppEnv } from "@autumn/shared";
 import { parseChatResultFeatures } from "./parseChatFeatures.js";
 import { parseChatProducts } from "./parseChatProducts.js";
@@ -14,7 +13,7 @@ import { EntitlementService } from "@/internal/products/entitlements/Entitlement
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 
-export const onboardingRouter = Router();
+export const onboardingRouter: Router = Router();
 
 onboardingRouter.post("", async (req: Request, res: any) =>
   routeHandler({

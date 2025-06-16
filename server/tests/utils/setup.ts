@@ -5,6 +5,7 @@ import {
   Feature,
   FeatureType,
   FullProduct,
+  Organization,
   Price,
   PriceType,
   RewardProgram,
@@ -218,7 +219,6 @@ export const setupOrg = async ({
   rewardTriggers: Record<string, RewardProgram>;
 }) => {
   const axiosInstance = getAxiosInstance();
-  const sb = createSupabaseClient();
   const { client, db } = initDrizzle();
 
   const autumn = new AutumnInt();
@@ -235,21 +235,27 @@ export const setupOrg = async ({
     logger: console,
   });
 
-  const org = await OrgService.get({ db, orgId });
-  await OrgService.update({
-    db,
-    orgId,
-    updates: {
-      config: {
-        ...org.config,
-        bill_upgrade_immediately: true,
+  let org: Organization | null = null;
+  let newFeatures: Feature[] = [];
+  try {
+    org = await OrgService.get({ db, orgId });
+    await OrgService.update({
+      db,
+      orgId,
+      updates: {
+        config: {
+          ...org.config,
+          bill_upgrade_immediately: true,
+        },
       },
-    },
-  });
+    });
 
-  const newFeatures = (await FeatureService.list({ db, orgId, env })).filter(
-    (f) => Object.keys(features).includes(f.id),
-  );
+    newFeatures = (await FeatureService.list({ db, orgId, env })).filter((f) =>
+      Object.keys(features).includes(f.id),
+    );
+  } catch (error) {
+    console.error("Error updating org", error);
+  }
   await client.end();
 
   for (const feature of newFeatures!) {
@@ -331,7 +337,7 @@ export const setupOrg = async ({
   await Promise.all(insertProducts);
   console.log("✅ Inserted products");
 
-  if (process.env.MOCHA_PARALLEL) {
+  if (process.env.MOCHA_PARALLEL === "true") {
     console.log("MOCHA RUNNING IN PARALLEL");
     await AutumnCli.initStripeProducts();
     console.log("✅ Initialized stripe products / prices");

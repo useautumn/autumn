@@ -854,7 +854,6 @@ const DEFAULT_ENV = AppEnv.Sandbox;
 before(async function () {
   try {
     this.env = AppEnv.Sandbox;
-    this.sb = createSupabaseClient();
     let { db, client } = initDrizzle();
     this.db = db;
     this.client = client;

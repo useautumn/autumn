@@ -4,7 +4,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { Router } from "express";
 
-export const invoiceRouter = Router();
+export const invoiceRouter: Router = Router();
 
 invoiceRouter.get("/:stripe_invoice_id/stripe", async (req: any, res: any) => {
   try {
