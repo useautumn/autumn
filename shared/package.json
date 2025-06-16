@@ -10,6 +10,8 @@
       "import": "./dist/index.js"
     }
   },
+  "author": "Recase Inc.",
+  "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
     "dev": "nodemon --watch . --ext ts --ignore dist --exec 'pnpm run build'",

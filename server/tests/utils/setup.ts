@@ -337,7 +337,7 @@ export const setupOrg = async ({
   await Promise.all(insertProducts);
   console.log("✅ Inserted products");
 
-  if (process.env.MOCHA_PARALLEL) {
+  if (process.env.MOCHA_PARALLEL === "true") {
     console.log("MOCHA RUNNING IN PARALLEL");
     await AutumnCli.initStripeProducts();
     console.log("✅ Initialized stripe products / prices");

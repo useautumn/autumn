@@ -10,6 +10,8 @@
     "preview": "vite preview",
     "start": "serve -s dist"
   },
+  "author": "Recase Inc.",
+  "license": "Apache-2.0",
   "dependencies": {
     "@autumn/shared": "workspace:*",
     "@clerk/clerk-react": "^5.24.2",
