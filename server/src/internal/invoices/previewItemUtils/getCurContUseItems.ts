@@ -29,11 +29,9 @@ import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
 export const getCurContUseItems = async ({
   stripeSubs,
   attachParams,
-  now,
 }: {
   stripeSubs: Stripe.Subscription[];
   attachParams: AttachParams;
-  now: number;
 }) => {
   const { features } = attachParams;
   const { curMainProduct } = attachParamToCusProducts({ attachParams });
@@ -42,6 +40,7 @@ export const getCurContUseItems = async ({
   const curEnts = cusProductToEnts({ cusProduct: curCusProduct });
 
   let items: PreviewLineItem[] = [];
+  let now = attachParams.now || Date.now();
 
   for (const sub of stripeSubs) {
     for (const item of sub.items.data) {

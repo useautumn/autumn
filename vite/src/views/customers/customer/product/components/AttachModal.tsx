@@ -138,7 +138,7 @@ export const AttachModal = ({
         optionsInput: options,
         attachState,
         useInvoice,
-        successUrl: `${import.meta.env.VITE_PUBLIC_FRONTEND_URL}${redirectUrl}`,
+        successUrl: `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`,
         version,
       });
 

@@ -199,8 +199,6 @@ const getPricesAndEnts = async ({
     productId: product.id,
   });
 
-  const prodIsMain = isMainProduct({ product: products[0], prices });
-
   return {
     optionsList: mapOptionsList({
       optionsInput: optionsInput || [],

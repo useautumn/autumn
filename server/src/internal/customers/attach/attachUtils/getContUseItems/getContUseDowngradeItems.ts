@@ -34,7 +34,6 @@ export const getContUseDowngradeItems = async ({
   proration?: Proration;
   logger: any;
 }) => {
-  let now = attachParams.now || Date.now();
   let prevInvoiceItem = curItem;
   let prevBalance = prevCusEnt.entitlement.allowance! - curUsage;
   const product = attachParamsToProduct({ attachParams });
@@ -66,7 +65,7 @@ export const getContUseDowngradeItems = async ({
       usage: newUsage,
       prodName: product.name,
       proration,
-      now,
+      now: attachParams.now,
       allowNegative: false,
     });
 
@@ -85,7 +84,7 @@ export const getContUseDowngradeItems = async ({
     usage: newUsage,
     prodName: product.name,
     proration,
-    now,
+    now: attachParams.now,
   });
 
   let numReplaceables = newUsage - prevUsage;
