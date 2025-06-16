@@ -31,7 +31,7 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-const { db, client } = initDrizzle();
+const { db, client } = initDrizzle({ maxConnections: 10 });
 
 const init = async () => {
   const app = express();
@@ -134,8 +134,8 @@ if (process.env.NODE_ENV === "development") {
   if (cluster.isPrimary) {
     console.log(`Master ${process.pid} is running`);
     console.log("Number of CPUs", numCPUs);
-    // let numWorkers = Math.min(numCPUs, 3);
-    let numWorkers = 5;
+
+    let numWorkers = 8;
 
     for (let i = 0; i < numWorkers; i++) {
       cluster.fork();

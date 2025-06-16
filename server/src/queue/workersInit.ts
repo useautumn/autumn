@@ -13,14 +13,14 @@ import { DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 
-const NUM_WORKERS = 5;
+const NUM_WORKERS = 10;
 
 const actionHandlers = [
   JobName.HandleProductsUpdated,
   JobName.HandleCustomerCreated,
 ];
 
-const { db, client } = initDrizzle({ maxConnections: 10 });
+const { db, client } = initDrizzle({ maxConnections: 20 });
 
 const initWorker = ({
   id,
