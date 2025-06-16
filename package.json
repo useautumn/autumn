@@ -15,5 +15,12 @@
     "server:cron": "npm run cron:start -w server",
     "server:workers": "npm run workers:start -w server",
     "dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\""
+  },
+  "dependencies": {
+    "drizzle-kit": "^0.31.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "dotenv": "^16.5.0"
   }
 }
