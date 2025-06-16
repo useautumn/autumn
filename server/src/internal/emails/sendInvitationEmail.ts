@@ -30,7 +30,8 @@ export const sendInvitationEmail = safeResend({
   }) => {
     console.log("Sending invitation email to", email);
     await sendTextEmail({
-      from: `Autumn <hey@${process.env.RESEND_DOMAIN}>`,
+      from: `Autumn`,
+      fromEmail: "hey",
       to: email,
       subject: `Join ${orgName} on Autumn`,
       body: getInvitationEmailBody({ orgName, inviteLink }),
