@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { randomBytes } from 'crypto';
-import { writeFileSync } from 'fs';
+import { writeFileSync, copyFileSync } from 'fs';
 import inquirer from 'inquirer';
 import { spawnSync } from 'child_process';
 import chalk from 'chalk';
@@ -14,7 +14,7 @@ const genUrlSafeBase64 = (bytes) => {
 }
 
 
-const genRandomSubdomain = (length = 32) => {
+const genRandomSubdomain = (length = 10) => {
   const chars = 'abcdefghijklmnopqrstuvwxyz';
   let result = '';
   for (let i = 0; i < length; i++) {
@@ -32,29 +32,77 @@ const genAlphanumericPassword = (length = 24) => {
   return result;
 }
 
+// Helper to get or create a Supabase org
+const getOrCreateSupabaseOrg = async () => {
+  
+  // List orgs (table output)
+  const orgListResult = spawnSync(
+    'npx',
+    ['supabase', 'orgs', 'list'],
+    { encoding: 'utf-8' }
+  );
+  if (orgListResult.status !== 0) {
+    console.error(chalk.red('❌ Failed to list Supabase orgs.'));
+    process.exit(1);
+  }
+  const lines = orgListResult.stdout.split('\n').map(l => l.trim()).filter(Boolean);
+
+  // Find separator line (e.g., "------|------")
+  const sepIdx = lines.findIndex(line => line.includes('|') && line.includes('-'));
+
+  // If only header and separator, no orgs exist
+  if (lines.length <= sepIdx + 1) {
+    console.log(chalk.yellowBright('No Supabase organizations found.'));
+    const { createOrg } = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'createOrg',
+        message: chalk.cyan('Would you like to create a new Supabase organization now?'),
+        default: true,
+      },
+    ]);
+    if (!createOrg) {
+      console.log(chalk.red('❌ Cannot continue without a Supabase organization. Exiting.'));
+      process.exit(1);
+    }
+    const { orgName } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'orgName',
+        message: chalk.cyan('Enter a name for your new Supabase organization:'),
+        validate: (input) => input && input.length > 2,
+      },
+    ]);
+    console.log(chalk.blueBright(`\nCreating Supabase organization '${orgName}'...`));
+    const createOrgResult = spawnSync(
+      'npx',
+      ['supabase', 'orgs', 'create', orgName],
+      { stdio: 'inherit', encoding: 'utf-8' }
+    );
+    if (createOrgResult.status !== 0) {
+      console.error(chalk.red('❌ Failed to create Supabase organization.'));
+      process.exit(1);
+    }
+    // Done! Org created, return
+    return;
+  }
+
+  // At least one org exists, just proceed
+  return;
+};
+
 const generateSupabaseDatabaseUrl = async () => {
   // Step 3: Run supabase login
+  console.log(chalk.magentaBright('\n================ Supabase Setup ================\n'));
+
   console.log(chalk.blueBright('\nLaunching Supabase login...'));
   spawnSync('npx', ['supabase', 'login'], { stdio: 'inherit' });
 
+  // Step 3.5: Ensure org exists and select one
+  await getOrCreateSupabaseOrg();
+
   // Step 4: Prompt for project name and region
   const projectName = "autumn-oss-db";
-  // const { region } = await inquirer.prompt([
-  //   {
-  //     type: 'list',
-  //     name: 'region',
-  //     message: 'Choose a Supabase region:',
-  //     choices: [
-  //       { name: 'eu-west-2 (London)', value: 'eu-west-2' },
-  //       { name: 'us-east-1 (N. Virginia)', value: 'us-east-1' },
-  //       { name: 'ap-southeast-1 (Singapore)', value: 'ap-southeast-1' },
-  //       { name: 'ap-southeast-2 (Sydney)', value: 'ap-southeast-2' },
-  //       { name: 'eu-central-1 (Frankfurt)', value: 'eu-central-1' },
-  //       { name: 'us-west-1 (N. California)', value: 'us-west-1' },
-  //     ],
-  //     default: 'eu-west-2',
-  //   },
-  // ]);
 
   // Step 5: Generate DB password (alphanumeric only)
   const dbPassword = genAlphanumericPassword(24); // 24 chars, alphanumeric
@@ -98,6 +146,12 @@ const generateSupabaseDatabaseUrl = async () => {
   console.log(chalk.greenBright(`\nGenerated DB password: ${dbPassword}\n`));
   console.log(chalk.greenBright(`\nYour DATABASE_URL is:\n${databaseUrl}\n`));
   console.log(chalk.yellow('--------------------------------'));
+
+  // Step 9: Prompt to run docker compose up
+  console.log(chalk.magentaBright('\nNext steps:'));
+  console.log(chalk.yellow('Run "docker compose -f docker-compose.dev.yml up" to start Autumn'));
+  
+
   return databaseUrl;
 }
 
@@ -110,7 +164,7 @@ const handleDatabaseSetup = async () => {
     name: 'dbOption',
     message: chalk.cyan('How do you want to set up your database?'),
     choices: [
-      { name: 'Set up Supabase for Autumn', value: 'supabase' },
+      { name: 'Set up Supabase (Cloud) for Autumn', value: 'supabase' },
       { name: 'Paste in your own DATABASE_URL', value: 'paste' },
       { name: 'Paste in your own DATABASE_URL later', value: 'later' },
     ],
@@ -236,9 +290,18 @@ async function main() {
 
   const envVars = envSections.join('\n');
 
+  
   writeFileSync('server/.env', envVars);
+  try {
+    copyFileSync('vite/.env.example', 'vite/.env');
+  } catch (error) {
+    console.log(chalk.red('❌ Failed to copy vite/.env.example to vite/.env'));
+    console.log(chalk.red('❌ Please copy the file manually'));
+  }
+
   console.log(chalk.greenBright('🎉 Setup complete! 🎉'));
   console.log(chalk.cyan('You can find your env variables in server/.env'));
+
 
   // Prompt to run pnpm run db:push at the end
   const { runDbPush } = await inquirer.prompt([
