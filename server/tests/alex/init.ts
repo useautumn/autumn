@@ -422,7 +422,6 @@ let orgSlug = "unit-test-org";
 before(async function () {
   try {
     this.env = AppEnv.Sandbox;
-    this.sb = createSupabaseClient();
     const { db, client } = initDrizzle();
     this.db = db;
     this.client = client;

@@ -1,7 +1,10 @@
+import express, { Router } from "express";
+import stripe, { Stripe } from "stripe";
+import chalk from "chalk";
+
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { AuthType, LoggerAction, Organization } from "@autumn/shared";
-import express from "express";
-import stripe, { Stripe } from "stripe";
+
 import { handleCheckoutSessionCompleted } from "./webhookHandlers/handleCheckoutCompleted.js";
 import { handleSubscriptionUpdated } from "./webhookHandlers/handleSubUpdated.js";
 import { handleSubDeleted } from "./webhookHandlers/handleSubDeleted.js";
@@ -10,7 +13,6 @@ import { getStripeWebhookSecret } from "@/internal/orgs/orgUtils.js";
 import { handleInvoicePaid } from "./webhookHandlers/handleInvoicePaid.js";
 import { handleRequestError } from "@/utils/errorUtils.js";
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
-import chalk from "chalk";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
 import { createLogtailWithContext } from "../logtail/logtailUtils.js";
@@ -18,7 +20,7 @@ import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDel
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { createStripeCli } from "./utils.js";
 
-export const stripeWebhookRouter = express.Router();
+export const stripeWebhookRouter: Router = express.Router();
 
 const logStripeWebhook = ({
   req,

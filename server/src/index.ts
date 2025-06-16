@@ -8,55 +8,74 @@ import mainRouter from "./internal/mainRouter.js";
 import express from "express";
 import cors from "cors";
 import chalk from "chalk";
-import { apiRouter } from "./internal/api/apiRouter.js";
+
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 
-import { initLogger } from "./errors/logger.js";
+import { apiRouter } from "./internal/api/apiRouter.js";
 import { QueueManager } from "./queue/QueueManager.js";
 import { AppEnv } from "@autumn/shared";
-import { createSupabaseClient } from "./external/supabaseUtils.js";
-import {
-  createLogtail,
-  createLogtailAll,
-} from "./external/logtail/logtailUtils.js";
+import { createLogtail } from "./external/logtail/logtailUtils.js";
 import { CacheManager } from "./external/caching/CacheManager.js";
-import { initDrizzle } from "./db/initDrizzle.js";
+
+import { logtailAll, logger } from "./external/logtail/logtailUtils.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import { generateId } from "./utils/genUtils.js";
 import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
+import { client, db } from "./db/initDrizzle.js";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "./utils/auth.js";
+import { checkEnvVars } from "./utils/initUtils.js";
 
-if (!process.env.DATABASE_URL) {
-  console.error(`DATABASE_URL is not set`);
-  process.exit(1);
-}
-
-const { db, client } = initDrizzle({ maxConnections: 10 });
-
+checkEnvVars();
 const init = async () => {
   const app = express();
-  const logger = initLogger();
+
+  // Check if this blocks API calls...
+  app.use(
+    cors({
+      origin: [
+        "http://localhost:3000",
+        "https://app.useautumn.com",
+        "https://*.useautumn.com",
+        process.env.CLIENT_URL || "",
+      ],
+      credentials: true,
+      allowedHeaders: [
+        "app_env",
+        "x-api-version",
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "Origin",
+        "X-API-Version",
+        "X-Requested-With",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+        "Cache-Control",
+        "If-Match",
+        "If-None-Match",
+        "If-Modified-Since",
+        "If-Unmodified-Since",
+      ],
+    }),
+  );
+
+  app.all("/api/auth/*", toNodeHandler(auth));
+
   const server = http.createServer(app);
+  const posthog = createPosthogCli();
+
   server.keepAliveTimeout = 120000; // 120 seconds
   server.headersTimeout = 120000; // 120 seconds should be >= keepAliveTimeout
 
   await QueueManager.getInstance(); // initialize the queue manager
   await CacheManager.getInstance();
 
-  const supabaseClient = createSupabaseClient();
-
-  // Optional services
-  const logtailAll = createLogtailAll();
-  const posthog = createPosthogCli();
   subscribeToOrgUpdates({ db });
 
   app.use((req: any, res: any, next: any) => {
-    req.sb = supabaseClient;
-    req.db = db;
-
-    req.logger = logger;
-    req.logtailAll = logtailAll;
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
-
+    req.db = db;
     req.logtailAll = logtailAll;
     req.posthog = posthog;
 
@@ -68,7 +87,7 @@ const init = async () => {
       headersClone.authorization = undefined;
       headersClone.Authorization = undefined;
 
-      logtailAll.info(`${req.method} ${req.originalUrl}`, {
+      logtailAll?.info(`${req.method} ${req.originalUrl}`, {
         url: req.originalUrl,
         method: req.method,
         headers: headersClone,
@@ -76,9 +95,8 @@ const init = async () => {
       });
 
       req.logtail = createLogtail();
-      req.logger = req.logtail;
     } catch (error) {
-      req.logtail = logtailAll; // fallback
+      req.logtail = logger; // fallback
       console.error(`Error creating req.logtail`);
       console.error(error);
     }
@@ -89,8 +107,6 @@ const init = async () => {
 
     next();
   });
-
-  app.use(cors());
 
   app.use("/webhooks", webhooksRouter);
 
@@ -141,14 +157,7 @@ if (process.env.NODE_ENV === "development") {
     }
 
     cluster.on("exit", (worker, code, signal) => {
-      try {
-        let logtail = createLogtail();
-        logtail.error(`WORKER DIED: ${worker.process.pid}`);
-        logtail.flush();
-      } catch (error) {
-        console.log("Error sending log to logtail", error);
-      }
-      // LOG in Render
+      logger.error(`WORKER DIED: ${worker.process.pid}`);
       cluster.fork();
     });
   } else {
@@ -174,3 +183,21 @@ async function gracefulShutdown() {
     process.exit(1);
   }
 }
+
+// Close connections gracefully?
+const closeConnections = async () => {
+  console.log("Closing connections");
+  await client.end();
+};
+
+process.on("SIGTERM", async () => {
+  console.log("SIGTERM received, shutting down gracefully");
+  await closeConnections();
+  process.exit(0);
+});
+
+process.on("SIGINT", async () => {
+  console.log("SIGINT received, shutting down gracefully");
+  await closeConnections();
+  process.exit(0);
+});

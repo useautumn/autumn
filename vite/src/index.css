@@ -238,6 +238,9 @@ button:focus-visible {
   --color-code-tabs: #2d2d2d;
   --color-code-bg: #1e1e1e;
   --color-code-tabs-active: #3c3c3c;
+
+  --shadow-focus: 0 0 3px 1.5px rgba(139, 92, 246, 0.4);
+  --color-focus: rgba(139, 92, 246, 0.95);
 }
 
 /* 
@@ -254,4 +257,66 @@ button:focus-visible {
 
 button {
   cursor: pointer;
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+  /* background-color: #e5e7eb;  */
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  100% {
+    left: 150%;
+  }
+}
+
+.shimmer-hover {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-hover::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.shimmer-hover:hover::after {
+  animation: shimmer-once 0.8s;
+  opacity: 1;
+}
+@keyframes shimmer-once {
+  0% {
+    left: -150%;
+    opacity: 1;
+  }
+  100% {
+    left: 150%;
+    opacity: 1;
+  }
 }

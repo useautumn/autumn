@@ -11,12 +11,12 @@ export function useAxiosSWR({
   enabled = true,
 }: {
   url: string;
-  env: AppEnv;
+  env?: AppEnv;
   withAuth?: boolean;
   options?: SWRConfiguration;
   enabled?: boolean;
 }) {
-  const axiosInstance = useAxiosInstance({ env, isAuth: withAuth });
+  const axiosInstance = useAxiosInstance({ isAuth: withAuth });
 
   const fetcher = async (url: string) => {
     const res = await axiosInstance.get(url);

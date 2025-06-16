@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-export const createCli = () => {
+export const createResendCli = () => {
   return new Resend(process.env.RESEND_API_KEY);
 };
 
@@ -8,7 +8,7 @@ export interface ResendEmailProps {
   to: string;
   subject: string;
   body: string;
-  from: string
+  from: string;
 }
 
 export const nameToEmail = (name: string) => {
@@ -16,12 +16,12 @@ export const nameToEmail = (name: string) => {
 };
 
 export const sendTextEmail = async ({
+  from,
   to,
   subject,
   body,
-  from,
 }: ResendEmailProps) => {
-  const resend = createCli();
+  const resend = createResendCli();
   await resend.emails.send({
     from: `${from} <${nameToEmail(from)}>`,
     to: to,
@@ -31,12 +31,12 @@ export const sendTextEmail = async ({
 };
 
 export const sendHtmlEmail = async ({
+  from,
   to,
   subject,
   body,
-  from
 }: ResendEmailProps) => {
-  const resend = createCli();
+  const resend = createResendCli();
   await resend.emails.send({
     from: `${from} <${nameToEmail(from)}>`,
     to: to,

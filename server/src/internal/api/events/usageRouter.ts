@@ -3,7 +3,7 @@ import {
   CusProductStatus,
   type Customer,
   ErrCode,
-  type EventInsert,
+  EventInsert,
   FeatureType,
   FeatureUsageType,
 } from "@autumn/shared";
@@ -12,7 +12,6 @@ import { generateId, nullish } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
 import { StatusCodes } from "http-status-codes";
-
 import { JobName } from "@/queue/JobName.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
@@ -20,8 +19,9 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getEventTimestamp } from "./eventUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
-export const eventsRouter = Router();
-export const usageRouter = Router();
+
+export const eventsRouter: Router = Router();
+export const usageRouter: Router = Router();
 
 const getCusFeatureAndOrg = async ({
   req,

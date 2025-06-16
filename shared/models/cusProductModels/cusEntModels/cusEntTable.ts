@@ -13,6 +13,7 @@ import { features } from "../../featureModels/featureTable.js";
 import { collatePgColumn } from "../../../db/utils.js";
 import { EntityBalance } from "./cusEntModels.js";
 import { customerProducts } from "../cusProductTable.js";
+import { entitlements } from "../../../db/schema.js";
 
 export const customerEntitlements = pgTable(
   "customer_entitlements",
@@ -48,7 +49,13 @@ export const customerEntitlements = pgTable(
     })
       .onUpdate("cascade")
       .onDelete("cascade"),
-    unique("entitlements_id_key").on(table.id),
+    foreignKey({
+      columns: [table.entitlement_id],
+      foreignColumns: [entitlements.id],
+      name: "customer_entitlements_entitlement_id_fkey",
+    })
+      .onUpdate("cascade")
+      .onDelete("cascade"),
   ],
 );
 

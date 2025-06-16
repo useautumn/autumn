@@ -1,9 +1,6 @@
-import { WebSocketServer } from "ws";
 import http from "http";
-
-import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { AppEnv, ErrCode } from "@autumn/shared";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+import { WebSocketServer, WebSocket } from "ws";
 
 export enum SbChannelEvent {
   BalanceUpdated = "balance_updated",
@@ -74,7 +71,7 @@ class WebSocketRouter {
 
   constructor(server: http.Server) {
     this.wss = new WebSocketServer({ server });
-    this.wss.on("connection", (ws, req) =>
+    this.wss.on("connection", (ws: WebSocket, req: http.IncomingMessage) =>
       this.handleConnection(ws as any, req as any),
     );
   }

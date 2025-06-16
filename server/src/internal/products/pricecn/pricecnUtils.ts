@@ -1,7 +1,6 @@
 import RecaseError from "@/utils/errorUtils.js";
 
 import { nullish } from "@/utils/genUtils.js";
-import { numberWithCommas } from "tests/utils/general/numberUtils.js";
 import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 
 import {
@@ -13,6 +12,7 @@ import {
   ErrCode,
   Infinite,
   FullCusProduct,
+  numberWithCommas,
 } from "@autumn/shared";
 import { isPriceItem } from "../product-items/productItemUtils/getItemType.js";
 import { isFeaturePriceItem } from "../product-items/productItemUtils/getItemType.js";
