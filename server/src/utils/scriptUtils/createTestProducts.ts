@@ -145,6 +145,7 @@ export const constructProduct = ({
           unique_fingerprint: false,
         }) as any)
       : null,
+    created_at: Date.now(),
   };
 
   return product;

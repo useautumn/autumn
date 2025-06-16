@@ -126,7 +126,7 @@ export const getOrCreateCustomer = async ({
       createEntityData: {
         id: entityId,
         name: entityData?.name,
-        feature_id: entityData?.feature_id,
+        feature_id: entityData?.feature_id!,
       },
       logger,
       fromAutoCreate: true,
