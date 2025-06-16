@@ -36,6 +36,6 @@ export const getSvixAppId = ({
 }) => {
   const svixConfig = org.svix_config;
   return env == AppEnv.Live
-    ? svixConfig.live_app_id
-    : svixConfig.sandbox_app_id;
+    ? svixConfig?.live_app_id
+    : svixConfig?.sandbox_app_id;
 };

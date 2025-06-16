@@ -94,7 +94,6 @@ export const getEntityResponse = async ({
     let features = await getCusFeaturesResponse({
       cusProducts: entityCusProducts,
       org,
-      entities: customer.entities,
       entityId,
     });
 
