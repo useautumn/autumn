@@ -1,5 +1,3 @@
-import { RedirectToSignIn, useOrganization, useUser } from "@clerk/clerk-react";
-import LoadingScreen from "./general/LoadingScreen";
 import { Link, Navigate, useLocation } from "react-router";
 import ErrorScreen from "./general/ErrorScreen";
 
@@ -18,11 +16,4 @@ export const DefaultView = () => {
       </Link>
     </ErrorScreen>
   );
-
-  // By default, will come here
-  // 2. if user, redirect to customers
-  // return <Navigate to="/customers" replace={true} />;
-  // if (!user) {
-  //   return <div>Hello World</div>;
-  // }
 };

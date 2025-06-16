@@ -30,7 +30,7 @@ function CopyButton({
       size="icon"
       className={cn(
         "h-6 px-2 text-t2 w-fit font-mono rounded-md truncate justify-start",
-        className
+        className,
       )}
       onClick={(e) => {
         e.preventDefault();
@@ -39,7 +39,7 @@ function CopyButton({
         setCopied(true);
       }}
     >
-      <span className="truncate block">{children}</span>
+      {children && <span className="truncate block">{children}</span>}
       <div className="flex items-center justify-center">
         {copied ? (
           <Check size={copySize || 13} />

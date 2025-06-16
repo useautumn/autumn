@@ -26,17 +26,17 @@ export const formatTiers = ({
   if (tiers.length == 1) {
     return formatCurrency({
       amount: tiers[0].amount,
-      defaultCurrency: org.default_currency,
+      defaultCurrency: org.default_currency!,
     });
   }
 
   let tiersStart = formatCurrency({
     amount: tiers[0].amount,
-    defaultCurrency: org.default_currency,
+    defaultCurrency: org.default_currency!,
   });
   let tiersEnd = formatCurrency({
     amount: tiers[tiers.length - 1].amount,
-    defaultCurrency: org.default_currency,
+    defaultCurrency: org.default_currency!,
   });
 
   return `${tiersStart} - ${tiersEnd}`;
@@ -58,13 +58,13 @@ export const getItemsHtml = ({
   if (pricedItems.length == 1) {
     html += `<br/><p style="font-size: 1.1em;"><strong>${formatCurrency({
       amount: totalAmount,
-      defaultCurrency: org.default_currency,
+      defaultCurrency: org.default_currency!,
     })}</strong></p>`;
   } else {
     html += `<br/><ul>${itemsToHtml({ items: pricedItems })}</ul>`;
     html += `<br/><p style="font-size: 1.1em;">Total: ${formatCurrency({
       amount: totalAmount,
-      defaultCurrency: org.default_currency,
+      defaultCurrency: org.default_currency!,
     })}</p>`;
   }
 

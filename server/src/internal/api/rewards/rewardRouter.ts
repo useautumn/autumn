@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Router } from "express";
 import {
   CreateRewardSchema,
   ErrCode,
@@ -19,7 +19,7 @@ import {
   getRewardCat,
 } from "@/internal/rewards/rewardUtils.js";
 
-const rewardRouter = express.Router();
+const rewardRouter: Router = express.Router();
 
 rewardRouter.post("", async (req: any, res: any) => {
   try {

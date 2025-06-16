@@ -11,10 +11,13 @@ export const keyToTitleFirstCaps = (key: string) => {
   return res.replace(/_/g, " ");
 };
 
-export const slugify = (text: string) => {
+export const slugify = (
+  text: string,
+  type: "underscore" | "dash" = "underscore",
+) => {
   return text
     .toLowerCase()
-    .replace(/ /g, "_")
+    .replace(/ /g, type == "underscore" ? "_" : "-")
     .replace(/[^\w\s-]/g, "");
 };
 

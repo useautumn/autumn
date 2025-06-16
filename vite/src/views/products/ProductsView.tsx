@@ -8,11 +8,9 @@ import { ProductsContext } from "./ProductsContext";
 import { AppEnv } from "@autumn/shared";
 import CreateProduct from "./CreateProduct";
 import { ProductsTable } from "./ProductsTable";
-import { ToggleDisplayButton } from "@/components/general/ToggleDisplayButton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-import { Ticket, Package, Gift, Flag, Banknote } from "lucide-react";
-import React from "react";
+import { Package, Gift, Flag } from "lucide-react";
 
 import { RewardsTable } from "./rewards/RewardsTable";
 import CreateReward from "./rewards/CreateReward";

@@ -26,12 +26,12 @@ export const invoices = pgTable(
   (table) => [
     foreignKey({
       columns: [table.internal_customer_id],
-      foreignColumns: [customers.id],
+      foreignColumns: [customers.internal_id],
       name: "invoices_internal_customer_id_fkey",
     }),
     foreignKey({
       columns: [table.internal_entity_id],
-      foreignColumns: [entities.id],
+      foreignColumns: [entities.internal_id],
       name: "invoices_internal_entity_id_fkey",
     }),
   ],

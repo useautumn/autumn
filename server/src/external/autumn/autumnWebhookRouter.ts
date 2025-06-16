@@ -1,7 +1,7 @@
-import express from "express";
+import express, { Router } from "express";
 import { Webhook } from "svix";
 
-export const autumnWebhookRouter = express.Router();
+export const autumnWebhookRouter: Router = express.Router();
 
 const verifyAutumnWebhook = async (req: any, res: any) => {
   const wh = new Webhook(process.env.AUTUMN_WEBHOOK_SECRET!);
@@ -54,5 +54,5 @@ autumnWebhookRouter.post(
       success: true,
       message: "Webhook received",
     });
-  }
+  },
 );

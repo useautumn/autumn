@@ -2,22 +2,31 @@
   "name": "autumn",
   "private": true,
   "workspaces": [
-    "frontend",
     "server",
     "shared",
-    "tests",
     "vite"
   ],
   "type": "module",
   "scripts": {
-    "frontend:build": "npm run build -w shared && npm run build -w frontend",
-    "frontend:start": "npm run start -w frontend",
-    "vite:build": "npm run build -w shared && npm run build -w vite",
-    "vite:start": "npm run start -w vite",
-    "server:build": "npm run build -w shared && npm run prod:build -w server",
-    "server:start": "npm run prod:start -w server",
+    "vite:build": "pnpm -F shared build && pnpm -F vite build",
+    "vite:start": "pnpm -F vite start",
+    "server:build": "pnpm -F shared build && pnpm -F server prod:build",
+    "server:start": "pnpm -F server prod:start",
     "server:cron": "npm run cron:start -w server",
     "server:workers": "npm run workers:start -w server",
-    "dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\""
+    "dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\"",
+    "setup": "node setup.js",
+    "db:push": "pnpm -F shared db:push",
+    "db:generate": "pnpm -F shared db:generate",
+    "db:migrate": "pnpm -F shared db:migrate"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "drizzle-kit": "^0.31.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.3",
+    "dotenv": "^16.5.0",
+    "inquirer": "^12.6.3"
   }
 }

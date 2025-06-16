@@ -113,9 +113,7 @@ export const handleRequestError = ({
       // logger.warn(`${req.method} ${req.originalUrl}`);
       logReqUrl(logger, req, "warn");
       logger.warn(
-        `Request from ${
-          req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
-        } for ${action}`,
+        `Request from ${req.org?.slug || req.orgId || "unknown"} for ${action}`,
       );
       error.print(logger);
       if (req.originalUrl.includes("/webhooks/stripe")) {
@@ -139,9 +137,7 @@ export const handleRequestError = ({
     // logger.error(`${req.method} ${req.originalUrl}`);
     logReqUrl(logger, req, "error");
     logger.error(
-      `Request from ${
-        req.minOrg?.slug || req.org?.slug || req.orgId || "unknown"
-      } for ${action}`,
+      `Request from ${req.org?.slug || req.orgId || "unknown"} for ${action}`,
     );
 
     if (error instanceof Stripe.errors.StripeError) {
@@ -221,6 +217,10 @@ export const handleFrontendReqError = ({
     });
     logger.warn(`${action}`);
     logger.warn(error);
+    res.status(400).json({
+      message: error.message || "Unknown error",
+      code: error.code || "unknown_error",
+    });
   } catch (error) {
     console.log("Failed to log error / warning");
   }

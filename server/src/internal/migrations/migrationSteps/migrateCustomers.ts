@@ -11,7 +11,7 @@ import { MigrationService } from "../MigrationService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { migrateCustomer } from "./migrateCustomer.js";
-import { sendMigrationEmail } from "./sendMigrationEmail.js";
+import { sendMigrationEmail } from "../../emails/sendMigrationEmail.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
