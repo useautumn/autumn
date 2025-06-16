@@ -64,6 +64,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# example env files
+!.env.example
+
 # vercel
 .vercel
 
@@ -73,6 +76,5 @@ next-env.d.ts
 
 *.rdb
 
-packages/useautumn
 
 shared/drizzle

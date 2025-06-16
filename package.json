@@ -27,6 +27,7 @@
   "devDependencies": {
     "@types/node": "^24.0.3",
     "dotenv": "^16.5.0",
-    "inquirer": "^12.6.3"
+    "inquirer": "^12.6.3",
+    "concurrently": "^9.1.2"
   }
 }
