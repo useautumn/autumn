@@ -10,7 +10,6 @@ import {
   FeatureOptions,
   FixedPriceConfig,
   FullProduct,
-  InsertReplaceable,
   Organization,
   UsagePriceConfig,
 } from "@autumn/shared";

@@ -33,6 +33,11 @@ export class QueueManager {
   }) {
     // 1. Connect to redis
 
+    if (useBackup && !process.env.REDIS_BACKUP_URL) {
+      console.warn(`REDIS_BACKUP_URL not set, using main redis`);
+      useBackup = false;
+    }
+
     const redisUrl = useBackup
       ? process.env.REDIS_BACKUP_URL
       : process.env.REDIS_URL;
@@ -47,7 +52,7 @@ export class QueueManager {
       console.log(
         `Redis connection error (${useBackup ? "backup" : "main"}): ${
           error.message
-        }`
+        }`,
       );
 
       if (!keepConnection) {

@@ -36,7 +36,6 @@ export const getContUseUpgradeItems = async ({
   proration?: Proration;
   logger: any;
 }) => {
-  let now = attachParams.now || Date.now();
   let prevInvoiceItem = curItem;
   let prevBalance = prevCusEnt.entitlement.allowance! - curUsage;
   let newBalance = ent.allowance! - curUsage;
@@ -70,7 +69,7 @@ export const getContUseUpgradeItems = async ({
     usage: newUsage,
     prodName: product.name,
     proration,
-    now,
+    now: attachParams.now,
   });
 
   const featureName = usageToFeatureName({

@@ -19,7 +19,7 @@ import { componentRouter } from "./components/componentRouter.js";
 import { analyticsMiddleware } from "@/middleware/analyticsMiddleware.js";
 
 import rewardRouter from "./rewards/rewardRouter.js";
-import expireRouter from "./customers/products/expireRouter.js";
+import expireRouter from "../customers/expire/expireRouter.js";
 
 const apiRouter = Router();
 
