@@ -109,12 +109,12 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with arrear prorat
       {
         id: "entity1",
         name: "entity1",
-        featureId: TestFeature.Users,
+        feature_id: TestFeature.Users,
       },
       {
         id: "entity2",
         name: "entity2",
-        featureId: TestFeature.Users,
+        feature_id: TestFeature.Users,
       },
     ]);
     numUsers = 2;
@@ -148,7 +148,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with arrear prorat
       {
         id: "entity3",
         name: "entity3",
-        featureId: TestFeature.Users,
+        feature_id: TestFeature.Users,
       },
     ]);
     numUsers += 1;
