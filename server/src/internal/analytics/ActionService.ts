@@ -1,5 +1,5 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { Action, ActionInsert, actions } from "@autumn/shared";
+import { type ActionInsert, actions } from "@autumn/shared";
 
 export class ActionService {
   static async insert(db: DrizzleCli, data: ActionInsert | ActionInsert[]) {

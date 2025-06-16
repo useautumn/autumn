@@ -27,6 +27,7 @@ export const sendMigrationEmail = safeResend({
 
     console.log("Sending migration email");
     await sendTextEmail({
+      from: "John",
       to: "johnyeocx@gmail.com",
       subject: `Migration Job Finished -- ${migrationJob.id}`,
       body: `

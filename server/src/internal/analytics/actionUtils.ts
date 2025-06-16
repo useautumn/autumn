@@ -1,5 +1,5 @@
 import { generateId } from "@/utils/genUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   Entity,
   Organization,

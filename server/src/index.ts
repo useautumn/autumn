@@ -9,7 +9,6 @@ import express from "express";
 import cors from "cors";
 import chalk from "chalk";
 
-import http from "http";
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 
 import { apiRouter } from "./internal/api/apiRouter.js";

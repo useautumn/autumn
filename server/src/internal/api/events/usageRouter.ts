@@ -1,7 +1,7 @@
 import { Router } from "express";
 import {
   CusProductStatus,
-  Customer,
+  type Customer,
   ErrCode,
   EventInsert,
   FeatureType,
