@@ -174,7 +174,8 @@ export const validateProductItems = ({
       return (
         i.feature_id == item.feature_id &&
         index2 != index &&
-        itemToEntInterval(i) == entInterval
+        itemToEntInterval(i) == entInterval &&
+        i.entity_feature_id == item.entity_feature_id
       );
     });
 
@@ -186,6 +187,8 @@ export const validateProductItems = ({
       isFeatureItem(otherItem) ||
       item.usage_model == otherItem?.usage_model
     ) {
+      // console.log("item", item);
+      // console.log("otherItem", otherItem);
       throw new RecaseError({
         message: `Can't have two features with same reset interval, unless one is prepaid, and another is pay per use`,
         code: ErrCode.InvalidInputs,

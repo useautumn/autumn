@@ -85,6 +85,11 @@ export const ProductItemSchema = z.object({
   price_config: z.any().nullish(),
 });
 
+export const LimitedItemSchema = ProductItemSchema.extend({
+  included_usage: z.number(),
+});
+
 export type ProductItem = z.infer<typeof ProductItemSchema>;
+export type LimitedItem = z.infer<typeof LimitedItemSchema>;
 export type ProductItemConfig = z.infer<typeof ProductItemConfigSchema>;
 export type PriceTier = z.infer<typeof PriceTierSchema>;

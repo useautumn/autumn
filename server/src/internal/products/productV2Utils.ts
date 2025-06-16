@@ -98,6 +98,7 @@ export const mapToProductV2 = ({
     version: product.version,
     group: product.group,
     free_trial: product.free_trial,
+    created_at: product.created_at,
 
     items: items,
   };

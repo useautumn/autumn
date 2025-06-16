@@ -89,7 +89,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create entity payme
     {
       id: "1",
       name: "test",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 
@@ -136,12 +136,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create entity payme
           {
             id: "2",
             name: "test",
-            featureId: TestFeature.Users,
+            feature_id: TestFeature.Users,
           },
           {
             id: "3",
             name: "test",
-            featureId: TestFeature.Users,
+            feature_id: TestFeature.Users,
           },
         ]);
       },
