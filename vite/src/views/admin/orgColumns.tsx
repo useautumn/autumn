@@ -76,7 +76,7 @@ export const columns: OrgColumnDef[] = [
     width: "100%",
     cell: ({ row }: { row: Row<Org> }) => {
       const value = row.getValue("users");
-      return <span className="truncate">{value?.join(", ")}</span>;
+      return <span className="truncate">{(value as string[]).join(", ")}</span>;
     },
   },
 ];

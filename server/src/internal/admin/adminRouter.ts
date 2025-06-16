@@ -1,22 +1,10 @@
 import { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { member, organizations, user } from "@autumn/shared";
-import {
-  and,
-  desc,
-  eq,
-  gt,
-  gte,
-  ilike,
-  inArray,
-  lt,
-  lte,
-  or,
-} from "drizzle-orm";
+import { and, desc, eq, gt, gte, ilike, inArray, lt, or } from "drizzle-orm";
 import { Router } from "express";
-import { getUserCount } from "./adminUtils/userAnalytics.js";
 
-export const adminRouter = Router();
+export const adminRouter: Router = Router();
 
 adminRouter.get("/users", async (req: any, res: any) => {
   try {

@@ -1,7 +1,3 @@
-import { createClerkCli } from "@/external/clerkUtils.js";
-import { saveOrgToDB } from "@/external/webhooks/clerkWebhooks.js";
-import { auth } from "@/utils/auth.js";
-
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 

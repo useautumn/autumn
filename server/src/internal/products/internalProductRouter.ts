@@ -17,7 +17,7 @@ import { isFeaturePriceItem } from "./product-items/productItemUtils/getItemType
 import RecaseError, { handleFrontendReqError } from "@/utils/errorUtils.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
 
-export const productRouter = Router({ mergeParams: true });
+export const productRouter: Router = Router({ mergeParams: true });
 
 productRouter.get("/data", async (req: any, res) => {
   try {

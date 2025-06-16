@@ -42,7 +42,7 @@ import { processAttachBody } from "./attachUtils/attachParams/processAttachBody.
 import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
 import { handleAttach } from "./handleAttach.js";
 
-export const attachRouter = Router();
+export const attachRouter: Router = Router();
 
 export const handlePrepaidErrors = async ({
   attachParams,

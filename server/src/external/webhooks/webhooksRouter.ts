@@ -1,9 +1,9 @@
-import express from "express";
+import express, { Router } from "express";
 
 import { stripeWebhookRouter } from "../stripe/stripeWebhooks.js";
 import { autumnWebhookRouter } from "../autumn/autumnWebhookRouter.js";
 
-const webhooksRouter = express.Router();
+const webhooksRouter: Router = express.Router();
 
 webhooksRouter.use("/stripe", stripeWebhookRouter);
 

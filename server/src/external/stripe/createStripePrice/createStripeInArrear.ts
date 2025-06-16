@@ -255,7 +255,7 @@ export const createStripeInArrearPrice = async ({
   const stripePrice = await stripeCli.prices.create({
     ...productData,
     ...priceAmountData,
-    currency: org.default_currency,
+    currency: org.default_currency!,
     recurring: {
       ...(billingIntervalToStripe(price.config!.interval!) as any),
       meter: meter!.id,

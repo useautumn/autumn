@@ -10,7 +10,7 @@ import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 
-export const devRouter = Router();
+export const devRouter: Router = Router();
 
 devRouter.get("/data", withOrgAuth, async (req: any, res) => {
   try {
