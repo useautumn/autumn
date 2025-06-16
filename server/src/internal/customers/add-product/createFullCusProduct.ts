@@ -366,7 +366,6 @@ export const createFullCusProduct = async ({
   for (const entitlement of entitlements) {
     const options = getEntOptions(optionsList, entitlement);
     const relatedPrice = getEntRelatedPrice(entitlement, prices);
-    const now = attachParams.now || Date.now();
 
     const cusEnt: any = initCusEntitlement({
       entitlement,
@@ -384,7 +383,7 @@ export const createFullCusProduct = async ({
       carryExistingUsages,
       curCusProduct: curCusProduct as FullCusProduct,
       replaceables: attachReplaceables,
-      now,
+      now: attachParams.now,
     });
 
     cusEnts.push(cusEnt);

@@ -133,6 +133,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing failed upgrades`)}`, () => 
       errMessage: "Failed to update subscription. Your card was declined.",
     });
 
+    await timeout(4000);
     let customer = await autumn.customers.get(customerId);
 
     expectProductAttached({

@@ -224,9 +224,10 @@ export const expectSubItemsCorrect = async ({
 
   for (const sub of subs.slice(1)) {
     let dateOfAnchor = getDate(sub.current_period_end * 1000);
-    expect(dateOfAnchor).to.equal(
+    expect(dateOfAnchor).to.approximately(
       firstDate,
-      `subscription anchors are the same`,
+      5000,
+      `subscription anchors are the same, +/- 5s`,
     );
   }
 

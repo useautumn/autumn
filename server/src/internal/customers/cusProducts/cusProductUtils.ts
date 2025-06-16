@@ -50,6 +50,7 @@ export const cancelCusProductSubscriptions = async ({
   excludeIds,
   expireImmediately = true,
   logger,
+  prorate = true,
 }: {
   cusProduct: FullCusProduct;
   org: Organization;
@@ -57,6 +58,7 @@ export const cancelCusProductSubscriptions = async ({
   excludeIds?: string[];
   expireImmediately?: boolean;
   logger: any;
+  prorate?: boolean;
 }) => {
   // 1. Cancel all subscriptions
   const stripeCli = createStripeCli({
@@ -81,7 +83,9 @@ export const cancelCusProductSubscriptions = async ({
 
     try {
       if (expireImmediately) {
-        await stripeCli.subscriptions.cancel(subId);
+        await stripeCli.subscriptions.cancel(subId, {
+          prorate: prorate,
+        });
       } else {
         await stripeCli.subscriptions.update(subId, {
           cancel_at: latestSubEnd || undefined,

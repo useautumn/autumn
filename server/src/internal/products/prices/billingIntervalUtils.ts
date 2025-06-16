@@ -1,6 +1,8 @@
 import { BillingInterval } from "@autumn/shared";
 import {
+  addMinutes,
   addMonths,
+  addSeconds,
   addYears,
   differenceInSeconds,
   getDate,
@@ -91,6 +93,8 @@ export const getAlignedIntervalUnix = ({
   now?: number;
   alwaysReturn?: boolean;
 }) => {
+  // alignWithUnix = addSeconds(alignWithUnix, 20).getTime();
+
   let nextCycleAnchorUnix = alignWithUnix;
 
   now = now || Date.now();
@@ -109,6 +113,8 @@ export const getAlignedIntervalUnix = ({
       interval,
     );
 
+    // console.log("Subtracted unix:", formatUnixToDateTime(subtractedUnix));
+
     if (subtractedUnix <= now) {
       break;
     }
@@ -126,12 +132,17 @@ export const getAlignedIntervalUnix = ({
   // console.log("Next cycle anchor:", formatUnixToDateTime(nextCycleAnchorUnix));
   // console.log("--------------------------------");
 
-  if (
-    differenceInSeconds(
-      new Date(naturalBillingDate),
-      new Date(nextCycleAnchorUnix),
-    ) < 60
-  ) {
+  let anchorAndNaturalDiff = differenceInSeconds(
+    naturalBillingDate,
+    nextCycleAnchorUnix,
+  );
+
+  // For insurance, also means you can't set billing cycle anchor to a minute in the future...
+  let anchorAndNowDiff = Math.abs(
+    differenceInSeconds(now, nextCycleAnchorUnix),
+  );
+
+  if (anchorAndNaturalDiff < 60 || anchorAndNowDiff < 20) {
     if (alwaysReturn) {
       return naturalBillingDate;
     } else {

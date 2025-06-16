@@ -43,10 +43,7 @@ export const updateCurSchedules = async ({
 
     // If schedule has passed, skip this step.
     let phase = schedule.phases.length > 0 ? schedule.phases[0] : null;
-    let now = await getStripeNow({
-      stripeCli,
-      testClockId: schedule.test_clock as string,
-    });
+    let now = attachParams.now || Date.now();
 
     if (phase && phase.start_date * 1000 < now) {
       logger.info("Note: Schedule has passed, skipping");

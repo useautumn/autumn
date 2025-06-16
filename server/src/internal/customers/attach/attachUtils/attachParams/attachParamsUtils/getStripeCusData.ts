@@ -19,7 +19,9 @@ export const getStripeCusData = async ({
   let stripeCusData = stripeCus as Stripe.Customer;
   let testClock =
     stripeCusData.test_clock as Stripe.TestHelpers.TestClock | null;
-  let now = testClock ? testClock.frozen_time * 1000 : Date.now();
+
+  // let now = testClock ? testClock.frozen_time * 1000 : Date.now();
+  let now = testClock ? testClock.frozen_time * 1000 : undefined;
 
   let paymentMethod = stripeCusData.invoice_settings
     ?.default_payment_method as Stripe.PaymentMethod | null;

@@ -78,6 +78,7 @@ export const expireCusProduct = async ({
   logger,
   customer,
   expireImmediately = true,
+  prorate,
 }: {
   req: ExtendedRequest;
   db: DrizzleCli;
@@ -88,6 +89,7 @@ export const expireCusProduct = async ({
   logger: any;
   customer: Customer;
   expireImmediately: boolean;
+  prorate: boolean;
 }) => {
   logger.info("--------------------------------");
   logger.info(
@@ -186,6 +188,7 @@ export const expireCusProduct = async ({
     org,
     env,
     logger,
+    prorate,
   });
 
   if (!cancelled) {
@@ -245,6 +248,7 @@ export const handleCusProductExpired = async (req: any, res: any) => {
       logger: req.logtail,
       customer: cusProduct.customer!,
       expireImmediately: true,
+      prorate: true,
     });
 
     res.status(200).json({ message: "Product expired" });

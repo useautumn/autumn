@@ -1,6 +1,7 @@
 import { config } from "dotenv";
 config();
 
+import http from "http";
 import cluster from "cluster";
 import os from "os";
 import mainRouter from "./internal/mainRouter.js";
@@ -21,7 +22,6 @@ import {
 import { CacheManager } from "./external/caching/CacheManager.js";
 import { initDrizzle } from "./db/initDrizzle.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
-import http from "http";
 import { generateId } from "./utils/genUtils.js";
 import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
 
@@ -29,6 +29,8 @@ if (!process.env.DATABASE_URL) {
   console.error(`DATABASE_URL is not set`);
   process.exit(1);
 }
+
+const { db, client } = initDrizzle({ maxConnections: 10 });
 
 const init = async () => {
   const app = express();
@@ -41,7 +43,6 @@ const init = async () => {
   await CacheManager.getInstance();
 
   const supabaseClient = createSupabaseClient();
-  const { db } = initDrizzle();
 
   // Optional services
   const logtailAll = createLogtailAll();
@@ -125,13 +126,15 @@ const init = async () => {
 
 if (process.env.NODE_ENV === "development") {
   init();
+  registerShutdownHandlers();
 } else {
   let numCPUs = os.cpus().length;
 
   if (cluster.isPrimary) {
     console.log(`Master ${process.pid} is running`);
     console.log("Number of CPUs", numCPUs);
-    let numWorkers = Math.min(numCPUs, 3);
+
+    let numWorkers = 8;
 
     for (let i = 0; i < numWorkers; i++) {
       cluster.fork();
@@ -150,5 +153,24 @@ if (process.env.NODE_ENV === "development") {
     });
   } else {
     init();
+    registerShutdownHandlers();
+  }
+}
+
+function registerShutdownHandlers() {
+  process.on("SIGTERM", gracefulShutdown);
+  process.on("SIGINT", gracefulShutdown);
+  // Do NOT use process.on("exit", ...) for async cleanup!
+}
+
+async function gracefulShutdown() {
+  console.log("Shutting down worker, closing DB connections...");
+  try {
+    await client.end();
+    console.log("DB connection closed. Exiting process.");
+    process.exit(0);
+  } catch (err) {
+    console.error("Error closing DB connection:", err);
+    process.exit(1);
   }
 }
