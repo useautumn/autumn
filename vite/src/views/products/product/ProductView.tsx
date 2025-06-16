@@ -50,6 +50,8 @@ function ProductView({ env }: { env: AppEnv }) {
   const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
   const [features, setFeatures] = useState<Feature[]>([]);
 
+  const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
+
   const { data, isLoading, mutate } = useAxiosSWR({
     url: `/products/${product_id}/data?version=${version}`,
     env,
@@ -73,6 +75,15 @@ function ProductView({ env }: { env: AppEnv }) {
         ...data.product,
         items: sortProductItems(data.product.items),
       };
+      setEntityFeatureIds(
+        Array.from(
+          new Set(
+            sortedProduct.items
+              .filter((item: ProductItem) => item.entity_feature_id != null)
+              .map((item: ProductItem) => item.entity_feature_id),
+          ),
+        ),
+      );
       setProduct(sortedProduct);
       setOriginalProduct(structuredClone(sortedProduct));
     }
@@ -267,6 +278,8 @@ function ProductView({ env }: { env: AppEnv }) {
           mutateCount,
           actionState,
           handleCreateProduct: createProductClicked,
+          entityFeatureIds,
+          setEntityFeatureIds,
         }}
       >
         <ConfirmNewVersionDialog
@@ -289,7 +302,7 @@ function ProductView({ env }: { env: AppEnv }) {
               </div>
             </div>
           </div>
-          <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+          <div className="flex max-w-md w-1/3 shrink-1 hidden lg:block lg:min-w-xs sticky top-0">
             <ProductSidebar />
           </div>
         </div>

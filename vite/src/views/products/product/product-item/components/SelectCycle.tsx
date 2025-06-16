@@ -31,40 +31,30 @@ export const SelectCycle = ({
   return (
     <div className={cn("flex flex-col w-full ")}>
       <FieldLabel className="flex items-center gap-2">
-        {show.price ? "Billing Interval" : "Reset Interval"}
-        {type == "reset" && (
-          <Tooltip delayDuration={400}>
-            <TooltipTrigger asChild>
-              <InfoIcon className="w-3 h-3 text-t3/50" />
-            </TooltipTrigger>
-            <TooltipContent
-              sideOffset={5}
-              side="top"
-              align="start"
-              className="flex flex-col"
-            >
-              <span className="mb-2">
-                How often usage counts reset for this feature:
+        Interval
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <InfoIcon className="w-3 h-3 text-t3/50" />
+          </TooltipTrigger>
+          <TooltipContent
+            sideOffset={5}
+            side="top"
+            align="start"
+            className="flex flex-col"
+          >
+            {!show.price ? (
+              <span className="">
+                How often usage counts reset for this feature. Choose "no reset"
+                for items that don't expire.
               </span>
-              <div>
-                <span className="font-bold">• Periodic reset:</span> for
-                consumables like API calls or credits
-                <br />
-                <span className="font-bold">• No reset:</span> for features with
-                ongoing usage like seats or workspaces
-                <br />
-                <div className="flex items-center gap-1 mt-2 text-amber-600">
-                  <InfoIcon size={14} />
-                  <span>
-                    This isn't a hard rule e.g., consumable credits that don't
-                    expire should have{" "}
-                    <span className="font-semibold">no reset</span>
-                  </span>
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        )}
+            ) : (
+              <span className="">
+                How often to bill for this feature. Usage will also be reset on
+                this period.
+              </span>
+            )}
+          </TooltipContent>
+        </Tooltip>
       </FieldLabel>
       {type == "price" ? (
         <div className="flex flex-col gap-2">
@@ -91,8 +81,8 @@ export const SelectCycle = ({
                     {interval === "semi_annual"
                       ? "per half year"
                       : interval === "one_off"
-                      ? "one off"
-                      : `per ${interval}`}
+                        ? "one off"
+                        : `per ${interval}`}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -128,8 +118,8 @@ export const SelectCycle = ({
                       {interval === "semi_annual"
                         ? "per half year"
                         : interval === "lifetime"
-                        ? "no reset"
-                        : `per ${interval}`}
+                          ? "no reset"
+                          : `per ${interval}`}
                     </SelectItem>
                   ))}
                 </SelectContent>

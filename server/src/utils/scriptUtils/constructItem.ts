@@ -1,4 +1,5 @@
 import {
+  LimitedItem,
   OnDecrease,
   OnIncrease,
   ProductItem,
@@ -12,13 +13,21 @@ export const constructFeatureItem = ({
   includedUsage = 150,
   interval = ProductItemInterval.Month,
   entityFeatureId,
+  isBoolean = false,
 }: {
   featureId: string;
   includedUsage?: number;
   interval?: ProductItemInterval;
   entityFeatureId?: string;
+  isBoolean?: boolean;
 }) => {
-  let item: ProductItem = {
+  if (isBoolean) {
+    return {
+      feature_id: featureId,
+      entity_feature_id: entityFeatureId,
+    };
+  }
+  let item: LimitedItem = {
     feature_id: featureId,
     included_usage: includedUsage,
     entity_feature_id: entityFeatureId,
@@ -61,17 +70,17 @@ export const constructArrearItem = ({
   price = 0.1,
   billingUnits = 1000,
   config = {
-    // on_increase: OnIncrease.BillImmediately,
-    // on_decrease: OnDecrease.None,
     on_increase: OnIncrease.ProrateImmediately,
     on_decrease: OnDecrease.ProrateImmediately,
   },
+  entityFeatureId,
 }: {
   featureId: string;
   includedUsage?: number;
   price?: number;
   billingUnits?: number;
   config?: ProductItemConfig;
+  entityFeatureId?: string;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -82,6 +91,7 @@ export const constructArrearItem = ({
     interval: ProductItemInterval.Month,
     reset_usage_when_enabled: true,
     config,
+    entity_feature_id: entityFeatureId,
   };
 
   return item;

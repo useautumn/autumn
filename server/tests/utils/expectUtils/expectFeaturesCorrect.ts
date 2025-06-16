@@ -1,7 +1,13 @@
 import { nullish } from "@/utils/genUtils.js";
 import { expect } from "chai";
 import { notNullish } from "@/utils/genUtils.js";
-import { FeatureOptions, Infinite, ProductV2 } from "@autumn/shared";
+import {
+  CreateEntity,
+  FeatureOptions,
+  FeatureType,
+  Infinite,
+  ProductV2,
+} from "@autumn/shared";
 import { Customer, Entity } from "autumn-js";
 
 export const expectFeaturesCorrect = ({
@@ -9,6 +15,7 @@ export const expectFeaturesCorrect = ({
   product,
   options,
   usage,
+  entities,
 }: {
   customer: Customer | Entity;
   product: ProductV2;
@@ -17,6 +24,7 @@ export const expectFeaturesCorrect = ({
     featureId: string;
     value: number;
   }[];
+  entities?: CreateEntity[];
 }) => {
   const items = product.items;
 
@@ -27,7 +35,10 @@ export const expectFeaturesCorrect = ({
   for (const featureId of featureIds) {
     let includedUsage: string | number = 0;
 
-    let item = items.find((i) => i.feature_id === featureId);
+    let item = items.find((i) => i.feature_id === featureId)!;
+    expect(item, `Item ${featureId} exists`).to.exist;
+
+    if (item.included_usage === undefined) continue;
 
     for (const item of items) {
       if (item.feature_id !== featureId) continue;
@@ -36,7 +47,11 @@ export const expectFeaturesCorrect = ({
         break;
       }
 
-      includedUsage += item.included_usage || 0;
+      let numEntities =
+        entities?.filter((e) => e.feature_id === item.entity_feature_id)
+          .length || 1;
+
+      includedUsage += (item.included_usage || 0) * numEntities;
     }
 
     for (const option of options || []) {
@@ -50,9 +65,11 @@ export const expectFeaturesCorrect = ({
 
     expect(feature, `Feature ${featureId} exists`).to.exist;
 
+    // @ts-ignore
+
     // 1. Check that included usage matches
     expect(
-      feature?.included_usage,
+      feature.included_usage,
       `Feature ${featureId} included usage is correct`,
     ).to.equal(includedUsage);
 

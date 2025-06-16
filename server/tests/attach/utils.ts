@@ -3,31 +3,22 @@ import {
   AppEnv,
   AttachBranch,
   BillingInterval,
+  CreateEntity,
   FeatureOptions,
   Organization,
   ProductItem,
   ProductV2,
-  UsagePriceConfig,
 } from "@autumn/shared";
 import { getAttachTotal } from "tests/utils/testAttachUtils/testAttachUtils.js";
 import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expectInvoicesCorrect } from "tests/utils/expectUtils/expectProductAttached.js";
 import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
 import { notNullish, nullish, timeout, toSnakeCase } from "@/utils/genUtils.js";
-import {
-  expectSubItemsCorrect,
-  getSubsFromCusId,
-} from "tests/utils/expectUtils/expectSubUtils.js";
+import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import Stripe from "stripe";
 import { expect } from "chai";
-import {
-  cusProductToEnts,
-  cusProductToPrices,
-} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
-import { getPriceEntitlement } from "@/internal/products/prices/priceUtils.js";
-import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
-import { Decimal } from "decimal.js";
+
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 
 export const runAttachTest = async ({
@@ -45,6 +36,8 @@ export const runAttachTest = async ({
   isCanceled = false,
   skipFeatureCheck = false,
   singleInvoice = false,
+  skipSubCheck = false,
+  entities,
 }: {
   autumn: AutumnInt;
   customerId: string;
@@ -63,6 +56,8 @@ export const runAttachTest = async ({
   isCanceled?: boolean;
   skipFeatureCheck?: boolean;
   singleInvoice?: boolean;
+  skipSubCheck?: boolean;
+  entities?: CreateEntity[];
 }) => {
   const preview = await autumn.attachPreview({
     customer_id: customerId,
@@ -126,6 +121,7 @@ export const runAttachTest = async ({
       product,
       usage,
       options,
+      entities,
     });
   }
 
@@ -133,6 +129,9 @@ export const runAttachTest = async ({
   if (branch == AttachBranch.OneOff || freeProduct) {
     return;
   }
+
+  if (skipSubCheck) return;
+
   await expectSubItemsCorrect({
     stripeCli,
     customerId,

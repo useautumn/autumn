@@ -7,13 +7,13 @@ import { ManageProduct } from "@/views/products/product/ManageProduct";
 import { ProductContext } from "@/views/products/product/ProductContext";
 import { ProductsContext } from "@/views/products/ProductsContext";
 import { ProductsTable } from "@/views/products/ProductsTable";
-import { Product, products, ProductV2 } from "@autumn/shared";
+import { Product, ProductItem, products, ProductV2 } from "@autumn/shared";
 import {
   DialogContent,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -45,8 +45,22 @@ export const ProductList = ({
   const [features, setFeatures] = useState<any[]>(data.features);
   const [open, setOpen] = useState(false);
   const [originalProduct, setOriginalProduct] = useState<any>(null);
+  const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
   if (!data.products) return null;
+
+  useEffect(() => {
+    setFeatures(data.features);
+    setEntityFeatureIds(
+      Array.from(
+        new Set(
+          product.items
+            .filter((item: ProductItem) => item.entity_feature_id != null)
+            .map((item: ProductItem) => item.entity_feature_id),
+        ),
+      ),
+    );
+  }, [data.features, product]);
 
   return (
     <Step
@@ -72,6 +86,8 @@ export const ProductList = ({
         open={open}
         setOpen={setOpen}
         originalProduct={originalProduct}
+        entityFeatureIds={entityFeatureIds}
+        setEntityFeatureIds={setEntityFeatureIds}
       />
       <ProductsContext.Provider
         value={{
@@ -79,6 +95,8 @@ export const ProductList = ({
           env,
           onboarding: true,
           mutate,
+          entityFeatureIds,
+          setEntityFeatureIds,
         }}
       >
         <PageSectionHeader
@@ -106,6 +124,7 @@ export const ProductList = ({
               (p: ProductV2) => p.id === id,
             );
             setProduct(selectedProduct);
+            // setEntityFeatureIds([]);
             setOriginalProduct(JSON.parse(JSON.stringify(selectedProduct)));
             setOpen(true);
           }}
@@ -123,8 +142,9 @@ const EditProductDialog = ({
   mutate,
   open,
   setOpen,
-
   originalProduct,
+  entityFeatureIds,
+  setEntityFeatureIds,
 }: {
   product: any;
   setProduct: (product: any) => void;
@@ -134,6 +154,8 @@ const EditProductDialog = ({
   open: boolean;
   setOpen: (open: boolean) => void;
   originalProduct: any;
+  entityFeatureIds: string[];
+  setEntityFeatureIds: (entityFeatureIds: string[]) => void;
 }) => {
   const env = useEnv();
   const axiosInstance = useAxiosInstance();
@@ -204,6 +226,8 @@ const EditProductDialog = ({
                 env,
                 features,
                 setFeatures,
+                entityFeatureIds,
+                setEntityFeatureIds,
               }}
             >
               <CreateFreeTrial

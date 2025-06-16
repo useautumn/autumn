@@ -1,7 +1,10 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { getResetBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
+import {
+  findLinkedCusEnts,
+  findMainCusEntForFeature,
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
@@ -58,86 +61,93 @@ export const updateLinkedCusEnt = async ({
 
 export const createEntityForCusProduct = async ({
   req,
-  feature,
+  // feature,
   customer,
   cusProduct,
   inputEntities,
   logger,
 }: {
   req: ExtendedRequest;
-  feature: Feature;
+  // feature: Feature;
   customer: FullCustomer;
   cusProduct: FullCusProduct;
   inputEntities: CreateEntity[];
   logger: any;
 }) => {
-  const { db, env, org } = req;
+  const featureToEntities = inputEntities.reduce(
+    (acc, entity) => {
+      acc[entity.feature_id!] = [...(acc[entity.feature_id!] || []), entity];
+      return acc;
+    },
+    {} as Record<string, CreateEntity[]>,
+  );
+
+  const { db, env, org, features } = req;
 
   const cusEnts = cusProduct.customer_entitlements;
   const cusPrices = cusProduct.customer_prices;
-  const mainCusEnt = cusEnts.find(
-    (e: any) => e.entitlement.feature.id === feature.id,
-  );
 
-  // 1. If main cus ent:
-  let deletedReplaceables: Replaceable[] = [];
-  if (mainCusEnt) {
-    const originalBalance = mainCusEnt.balance || 0;
-    const newBalance = originalBalance - inputEntities.length;
+  for (const featureId in featureToEntities) {
+    const inputEntities = featureToEntities[featureId]!;
+    const feature = features.find((f: any) => f.id === featureId)!;
 
-    const { deletedReplaceables: deletedReplaceables_, invoice } =
-      await adjustAllowance({
+    const mainCusEnt = findMainCusEntForFeature({
+      cusEnts,
+      feature,
+    });
+
+    // 1. If main cus ent:
+    let deletedReplaceables: Replaceable[] = [];
+    if (mainCusEnt) {
+      const originalBalance = mainCusEnt.balance || 0;
+      const newBalance = originalBalance - inputEntities.length;
+
+      const { deletedReplaceables: deletedReplaceables_, invoice } =
+        await adjustAllowance({
+          db,
+          env,
+          org,
+          cusPrices,
+          customer,
+          affectedFeature: feature,
+          cusEnt: { ...mainCusEnt, customer_product: cusProduct },
+          originalBalance,
+          newBalance,
+          logger,
+          errorIfIncomplete: true,
+        });
+
+      deletedReplaceables = deletedReplaceables_ || [];
+
+      await CusEntService.decrement({
         db,
-        env,
-        org,
-        cusPrices,
-        customer,
-        affectedFeature: feature,
-        cusEnt: { ...mainCusEnt, customer_product: cusProduct },
-        originalBalance,
-        newBalance,
-        logger,
-        errorIfIncomplete: true,
-        // deduction: newCount + replacedCount,
-        // deduction: newEntities.length,
-        // product,
-        // replacedCount,
-        // fromEntities: true,
+        id: mainCusEnt.id,
+        amount: inputEntities.length - deletedReplaceables.length,
       });
-
-    deletedReplaceables = deletedReplaceables_ || [];
-    // logger.info(`New balance: ${newBalance}`);
-    // logger.info(`Num deleted replaceables: ${deletedReplaceables.length}`);
-    // logger.info(`Num input entities: ${inputEntities.length}`);
-
-    await CusEntService.decrement({
-      db,
-      id: mainCusEnt.id,
-      amount: inputEntities.length - deletedReplaceables.length,
-    });
-  }
-
-  const entityToReplacement: Record<string, string> = {};
-  for (let i = 0; i < deletedReplaceables.length; i++) {
-    const replaceable = deletedReplaceables[i];
-    entityToReplacement[inputEntities[i].id] = replaceable.id;
-
-    if (i >= inputEntities.length) {
-      break;
     }
-  }
 
-  const linkedCusEnts = findLinkedCusEnts({
-    cusEnts,
-    feature,
-  });
+    const entityToReplacement: Record<string, string> = {};
+    for (let i = 0; i < deletedReplaceables.length; i++) {
+      const replaceable = deletedReplaceables[i];
+      entityToReplacement[inputEntities[i].id] = replaceable.id;
 
-  for (const linkedCusEnt of linkedCusEnts) {
-    await updateLinkedCusEnt({
-      db,
-      linkedCusEnt,
-      inputEntities,
-      entityToReplacement,
+      if (i >= inputEntities.length) {
+        break;
+      }
+    }
+
+    const linkedCusEnts = findLinkedCusEnts({
+      cusEnts,
+      feature,
     });
+
+    for (const linkedCusEnt of linkedCusEnts) {
+      await updateLinkedCusEnt({
+        db,
+        linkedCusEnt,
+        inputEntities,
+        entityToReplacement,
+      });
+    }
   }
 };

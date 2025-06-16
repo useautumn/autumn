@@ -156,4 +156,6 @@ export const ErrCode = {
 
   // Supabase
   SupabaseNotFound: "supabase_not_found",
+  // Entities
+  EntityBalanceNotFound: "entity_balance_not_found",
 };

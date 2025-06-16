@@ -9,9 +9,12 @@ export const formatTimestamp = (timestamp: number | null | undefined) => {
   return format(new Date(timestamp), "MM/dd/yyyy");
 };
 
-export const formatUnixToDate = (unix: number | null | undefined) => {
+export const formatUnixToDate = (
+  unix: number | null | undefined,
+  excludeYear = false,
+) => {
   if (!unix) return "";
-  return format(new Date(unix), "d MMM yyyy");
+  return format(new Date(unix), excludeYear ? "d MMM" : "d MMM yyyy");
 };
 
 export const formatUnixToDateTime = (unix: number | null | undefined) => {
