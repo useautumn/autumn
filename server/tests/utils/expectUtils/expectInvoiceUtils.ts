@@ -71,7 +71,7 @@ export const getExpectedInvoiceTotal = async ({
     const usageAmount = usage.find(
       (u) =>
         u.featureId == featureId &&
-        (u.featureId ? u.entityFeatureId == ent.entity_feature_id : true),
+        (u.entityFeatureId ? u.entityFeatureId == ent.entity_feature_id : true),
     )?.value;
 
     const overage =

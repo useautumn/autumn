@@ -18,6 +18,7 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 
 import { expect } from "chai";
 import { completeCheckoutForm } from "../stripeUtils.js";
+import { Customer } from "autumn-js";
 
 export const attachAndExpectCorrect = async ({
   autumn,
@@ -157,4 +158,25 @@ export const attachAndExpectCorrect = async ({
       "should only have 1 subscription",
     );
   }
+};
+
+export const expectAttachCorrect = async ({
+  customer,
+  product,
+  entityId,
+}: {
+  customer: Customer;
+  product: ProductV2;
+  entityId?: string;
+}) => {
+  expectProductAttached({
+    customer,
+    product,
+    entityId,
+  });
+
+  expectFeaturesCorrect({
+    customer,
+    product,
+  });
 };

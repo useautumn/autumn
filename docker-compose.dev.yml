@@ -1,4 +1,5 @@
 services:
+  # Run valkey
   valkey:
     image: docker.io/bitnami/valkey:8.0
     environment:
@@ -11,8 +12,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    # ports:
-    #   - "6379:6379"
+    ports:
+      - "6379:6379"
     restart: unless-stopped
 
   shared:

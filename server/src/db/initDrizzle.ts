@@ -16,7 +16,7 @@ export const initDrizzle = (params?: { maxConnections?: number }) => {
 
   const db = drizzle(client, {
     schema,
-    logger: process.env.NODE_ENV === "development",
+    // logger: process.env.NODE_ENV === "development",
   });
 
   return { db, client };

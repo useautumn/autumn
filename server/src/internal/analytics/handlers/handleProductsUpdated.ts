@@ -119,7 +119,11 @@ export const handleProductsUpdated = async ({
 
   if (!req) {
     logger.warn("products.updated, no req object found, skipping", {
-      data,
+      ...data,
+      org: {
+        id: org.id,
+        slug: org.slug,
+      },
     });
     return;
   }

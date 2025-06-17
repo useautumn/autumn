@@ -10,7 +10,7 @@ $MOCHA_CMD 'tests/advanced/multiFeature/*.ts' \
            'tests/attach/updateQuantity/*.ts' \
            'tests/advanced/referrals/*.ts'
           
-# $MOCHA_CMD 'tests/attach/multiProduct/*.ts' 
+$MOCHA_CMD 'tests/attach/multiProduct/*.ts' 
 
-# $MOCHA_CMD 'tests/advanced/usage/*.ts'
+$MOCHA_CMD 'tests/advanced/usage/*.ts'
            

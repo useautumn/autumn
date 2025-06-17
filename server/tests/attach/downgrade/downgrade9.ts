@@ -1,6 +1,4 @@
-import { createStripeCli } from "@/external/stripe/utils.js";
 import chalk from "chalk";
-import Stripe from "stripe";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { advanceProducts } from "tests/global.js";
 import {

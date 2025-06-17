@@ -9,7 +9,7 @@ import { setupBefore } from "tests/before.js";
 import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 
 const testCase = "downgrade6";
-describe(`${chalk.yellowBright("downgrade6: testing expire button")}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: testing expire button`)}`, () => {
   let customerId = testCase;
   let testClockId: string;
   let autumn: AutumnInt = new AutumnInt();

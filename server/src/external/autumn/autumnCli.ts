@@ -238,8 +238,8 @@ export class AutumnInt {
       return data;
     },
 
-    create: async (customer: { id: string; email: string; name: string }) => {
-      const data = await this.post(`/customers`, customer);
+    create: async (customer: { id: string; email: string; name?: string }) => {
+      const data = await this.post(`/customers?with_autumn_id=true`, customer);
       return data;
     },
     delete: async (
@@ -269,10 +269,10 @@ export class AutumnInt {
       customerId: string,
       entity: CreateEntity | CreateEntity[],
     ) => {
-      let entities = Array.isArray(entity) ? entity : [entity];
+      // let entities = Array.isArray(entity) ? entity : [entity];
       const data = await this.post(
-        `/customers/${customerId}/entities`,
-        entities,
+        `/customers/${customerId}/entities?with_autumn_id=true`,
+        entity,
       );
 
       return data;

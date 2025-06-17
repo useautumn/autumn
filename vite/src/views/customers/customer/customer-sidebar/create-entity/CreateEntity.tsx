@@ -25,11 +25,6 @@ export const CreateEntity = ({
   const cusContext = useCustomerContext();
   const navigate = useNavigate();
 
-  if (!cusContext) {
-    return null;
-  }
-
-  const { customer, cusMutate } = cusContext;
   const [isLoading, setIsLoading] = useState(false);
   const [entity, setEntity] = useState<any>({
     id: "",
@@ -38,6 +33,11 @@ export const CreateEntity = ({
 
   const env = useEnv();
   const axiosInstance = useAxiosInstance({ env });
+
+  if (!cusContext) {
+    return null;
+  }
+  const { customer, cusMutate } = cusContext;
 
   const handleCreateClicked = async () => {
     setIsLoading(true);
@@ -51,7 +51,7 @@ export const CreateEntity = ({
           name: entity.name || null,
           feature_id: entity.feature_id,
           customer_id: customer.id,
-        }
+        },
       );
 
       await cusMutate();

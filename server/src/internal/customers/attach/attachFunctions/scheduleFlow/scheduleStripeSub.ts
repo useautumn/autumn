@@ -120,6 +120,8 @@ export const handleNewScheduleForItemSet = async ({
   let otherSub = otherSubObj?.otherSub || null;
   let otherSubItems = otherSubObj?.otherSubItems || [];
 
+  // console.log("Interval:", itemSet.interval, "Other sub: ", otherSub?.id);
+
   // 2. Add to item set to create new schedule
   itemSet.items.push(
     ...otherSubItems.map((sub: any) => ({
