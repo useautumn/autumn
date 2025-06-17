@@ -87,17 +87,17 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
     {
       id: "1",
       name: "test",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
     {
       id: "2",
       name: "test2",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
     {
       id: "3",
       name: "test3",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 
@@ -167,12 +167,12 @@ describe(`${chalk.yellowBright(`attach/entities/${testCase}: Testing update cont
     {
       id: "4",
       name: "test4",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
     {
       id: "5",
       name: "test5",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 

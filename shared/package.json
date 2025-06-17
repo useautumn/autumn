@@ -21,6 +21,8 @@
   },
   "dependencies": {
     "decimal.js": "^10.5.0",
+    "dotenv": "^16.5.0",
+    "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.43.1",
     "drizzle-zod": "^0.8.2",
     "zod": "^3.25.23"

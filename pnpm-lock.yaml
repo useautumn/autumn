@@ -244,6 +244,12 @@ importers:
       decimal.js:
         specifier: ^10.5.0
         version: 10.5.0
+      dotenv:
+        specifier: ^16.5.0
+        version: 16.5.0
+      drizzle-kit:
+        specifier: ^0.31.1
+        version: 0.31.1
       drizzle-orm:
         specifier: ^0.43.1
         version: 0.43.1(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(kysely@0.28.2)(pg@8.16.0)(postgres@3.4.7)

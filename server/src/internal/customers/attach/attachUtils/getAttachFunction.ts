@@ -3,12 +3,7 @@ import {
   AttachParams,
   AttachResultSchema,
 } from "../../cusProducts/AttachParams.js";
-import {
-  AttachBranch,
-  AttachFunction,
-  CusProductStatus,
-  ProrationBehavior,
-} from "@autumn/shared";
+import { AttachBranch, AttachFunction, CusProductStatus } from "@autumn/shared";
 import { handleUpgradeDiffInterval } from "../attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";

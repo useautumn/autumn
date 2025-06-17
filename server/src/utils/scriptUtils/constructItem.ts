@@ -123,3 +123,16 @@ export const constructArrearProratedItem = ({
 
   return item;
 };
+
+export const constructFixedPrice = ({
+  price,
+  interval = ProductItemInterval.Month,
+}: {
+  price: number;
+  interval?: ProductItemInterval;
+}) => {
+  return {
+    price,
+    interval,
+  };
+};

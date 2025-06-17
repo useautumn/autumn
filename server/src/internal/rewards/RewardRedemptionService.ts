@@ -178,10 +178,6 @@ export class RewardRedemptionService {
           rewardPrograms.internal_id,
         ),
       )
-      .innerJoin(
-        rewards,
-        eq(rewards.internal_id, rewardPrograms.internal_reward_id),
-      )
       .where(
         and(
           eq(referralCodes.internal_customer_id, internalCustomerId),
@@ -197,7 +193,7 @@ export class RewardRedemptionService {
       referral_code: d.referral_codes,
       reward_program: {
         ...d.reward_programs,
-        reward: d.rewards,
+        // reward: d.rewards,
       },
     }));
 

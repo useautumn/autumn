@@ -10,3 +10,5 @@ $MOCHA_CMD 'tests/contUse/entities/*.ts'
 $MOCHA_CMD 'tests/contUse/update/*.ts'
 
 $MOCHA_CMD 'tests/contUse/track/*.ts'
+
+$MOCHA_CMD 'tests/contUse/roles/*.ts' 

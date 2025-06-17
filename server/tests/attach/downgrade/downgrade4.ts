@@ -38,7 +38,12 @@ let pro = constructProduct({
   type: "pro",
 });
 
-describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: premium -> pro -> free -> pro -> premium`)}`, () => {
+let premium = constructProduct({
+  items: [constructArrearItem({ featureId: TestFeature.Words })],
+  type: "premium",
+});
+
+describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: pro-quarter -> premium -> pro`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let customer: Customer;
@@ -58,13 +63,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: premium -> pro -
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [proQuarter, pro],
+      products: [proQuarter, pro, premium],
       prefix: testCase,
     });
 
     await createProducts({
       autumn,
-      products: [proQuarter, pro],
+      products: [proQuarter, pro, premium],
       customerId,
       db,
       orgId: org.id,
@@ -90,6 +95,19 @@ describe(`${chalk.yellowBright(`${testCase}: Testing downgrade: premium -> pro -
       autumn,
       customerId,
       product: proQuarter,
+      stripeCli,
+      db,
+      org,
+      env,
+    });
+  });
+
+  it("should downgrade to premium", async function () {
+    await expectDowngradeCorrect({
+      autumn,
+      customerId,
+      curProduct: proQuarter,
+      newProduct: premium,
       stripeCli,
       db,
       org,

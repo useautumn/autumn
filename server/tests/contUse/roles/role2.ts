@@ -7,7 +7,6 @@ import {
   CreateEntity,
   LimitedItem,
   Organization,
-  ProductItem,
 } from "@autumn/shared";
 
 import { TestFeature } from "tests/setup/v2Features.js";
@@ -21,7 +20,6 @@ import { createProducts } from "tests/utils/productUtils.js";
 import { addPrefixToProducts, runAttachTest } from "../../attach/utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
-import { Decimal } from "decimal.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { addHours, addMonths } from "date-fns";
@@ -36,13 +34,6 @@ let userMessages = constructArrearItem({
   price: 0.5,
   entityFeatureId: user,
 }) as LimitedItem;
-
-// let adminMessages = constructArrearItem({
-//   featureId: TestFeature.Messages,
-//   includedUsage: 0,
-//   price: 0.1,
-//   entityFeatureId: admin,
-// }) as LimitedItem;
 
 export let pro = constructProduct({
   items: [userMessages],
