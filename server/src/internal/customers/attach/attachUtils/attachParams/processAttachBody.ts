@@ -57,6 +57,14 @@ export const processAttachBody = async ({
   // 1. Get customer and products
   const { org, env } = req;
 
+  if (!org.stripe_connected) {
+    throw new RecaseError({
+      message: "Please connect to Stripe to add products",
+      code: ErrCode.StripeConfigNotFound,
+      statusCode: 400,
+    });
+  }
+
   const { customer, products } = await getCustomerAndProducts({
     req,
     attachBody,
@@ -66,7 +74,6 @@ export const processAttachBody = async ({
   const [stripeCusData, rewardData] = await Promise.all([
     getStripeCusData({
       stripeCli,
-      stripeId: customer.processor?.id,
       db: req.db,
       org,
       env,
