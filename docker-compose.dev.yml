@@ -1,5 +1,5 @@
 services:
-  # Run valkey
+
   valkey:
     image: docker.io/bitnami/valkey:8.0
     environment:
@@ -85,6 +85,21 @@ services:
     depends_on:
       - shared
     restart: unless-stopped
+
+
+  # Run localtunnel
+  localtunnel:
+    image: node:20-alpine
+    build:
+      dockerfile: docker/dev.dockerfile
+      context: .
+      target: localtunnel
+    volumes:
+      - ./server:/app/server
+    depends_on:
+      - server
+    restart: unless-stopped
+
 
 volumes:
   # Shared package dist output
