@@ -18,7 +18,7 @@ import {
   getPriceEntitlement,
   getPriceForOverage,
 } from "@/internal/products/prices/priceUtils.js";
-import { findCusEntByFeatureId } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
+import { findCusEnt } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import {
   getExistingUsageFromCusProducts,
   getRelatedCusPrice,
@@ -140,7 +140,7 @@ export const getContUseInvoiceItems = async ({
     }
 
     let ent = getPriceEntitlement(price, newEnts);
-    let prevCusEnt = findCusEntByFeatureId({
+    let prevCusEnt = findCusEnt({
       cusEnts,
       feature: ent.feature,
     });

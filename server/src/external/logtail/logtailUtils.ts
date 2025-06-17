@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { initLogger } from "@/errors/logger.js";
 import { Logtail } from "@logtail/node";
 
@@ -36,6 +39,10 @@ const createLogMethod = (pinoMethod: any, logtailMethod: any) => {
       pinoMethod(message);
     }
 
+    if (!logtailMethod) {
+      return;
+    }
+
     // Logtail format: message first, then object (if exists)
     if (Object.keys(mergedObj).length > 0) {
       logtailMethod(message, mergedObj);
@@ -45,34 +52,42 @@ const createLogMethod = (pinoMethod: any, logtailMethod: any) => {
   };
 };
 
-export const createLogtail = () => {
-  const logtail = new Logtail(process.env.LOGTAIL_SOURCE_TOKEN!, {
-    endpoint: process.env.LOGTAIL_INGESTING_HOST!,
-  });
+export const createLogger = ({
+  sourceToken,
+  ingestingHost,
+}: {
+  sourceToken: string;
+  ingestingHost: string;
+}) => {
+  let logtail: any;
+  if (sourceToken && ingestingHost) {
+    logtail = new Logtail(sourceToken, {
+      endpoint: ingestingHost,
+    });
+  }
 
   // Create a custom logger that logs to both Logtail and console
   const logger = {
     debug: createLogMethod(
       pinoLogger.debug.bind(pinoLogger),
-      logtail.debug.bind(logtail),
+      logtail?.debug.bind(logtail),
     ),
     info: createLogMethod(
       pinoLogger.info.bind(pinoLogger),
-      logtail.info.bind(logtail),
+      logtail?.info.bind(logtail),
     ),
     warn: createLogMethod(
       pinoLogger.warn.bind(pinoLogger),
-      logtail.warn.bind(logtail),
+      logtail?.warn.bind(logtail),
     ),
     error: createLogMethod(
       pinoLogger.error.bind(pinoLogger),
-      logtail.error.bind(logtail),
+      logtail?.error.bind(logtail),
     ),
     use: (fn: any) => {
-      logtail.use(fn);
+      logtail?.use(fn);
     },
-    getLogtail: () => logtail,
-    flush: () => logtail.flush(),
+    flush: () => logtail?.flush(),
   };
 
   return logger;
@@ -90,7 +105,21 @@ export const createLogtailWithContext = (context: any) => {
   return logtail;
 };
 
+export const createLogtail = () => {
+  return createLogger({
+    sourceToken: process.env.LOGTAIL_SOURCE_TOKEN!,
+    ingestingHost: process.env.LOGTAIL_INGESTING_HOST!,
+  });
+};
+
 export const createLogtailAll = () => {
+  if (
+    !process.env.LOGTAIL_ALL_SOURCE_TOKEN ||
+    !process.env.LOGTAIL_ALL_INGESTING_HOST
+  ) {
+    return null;
+  }
+
   const logtail = new Logtail(process.env.LOGTAIL_ALL_SOURCE_TOKEN!, {
     endpoint: process.env.LOGTAIL_ALL_INGESTING_HOST!,
   });
@@ -98,5 +127,5 @@ export const createLogtailAll = () => {
   return logtail;
 };
 
-// const logtail = createLogtailLogger();
-// export default logtail;
+export const logger = createLogtail();
+export const logtailAll = createLogtailAll();

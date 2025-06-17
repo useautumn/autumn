@@ -72,41 +72,6 @@ export class RewardRedemptionService {
     });
 
     return data as any;
-
-    // let query = sb
-    //   .from("reward_redemptions")
-    //   .select(
-    //     `
-    //   *
-    //   ${
-    //     withRewardProgram
-    //       ? ", reward_program:reward_programs!inner(*, reward:rewards!inner(*))"
-    //       : ""
-    //   }
-    //   ${withReferralCode ? ", referral_code:referral_codes!inner(*)" : ""}
-    //   `,
-    //   )
-    //   .eq("internal_customer_id", internalCustomerId);
-
-    // if (notNullish(internalRewardProgramId)) {
-    //   query = query.eq("internal_reward_program_id", internalRewardProgramId);
-    // }
-
-    // if (notNullish(triggered)) {
-    //   query = query.eq("triggered", triggered);
-    // }
-
-    // if (notNullish(limit)) {
-    //   query = query.limit(limit);
-    // }
-
-    // const { data, error } = await query;
-
-    // if (error) {
-    //   throw error;
-    // }
-
-    // return data;
   }
 
   static async getByReferrer({
@@ -142,23 +107,6 @@ export class RewardRedemptionService {
     }));
 
     return processed;
-
-    // const { data, error } = await sb
-    //   .from("reward_redemptions")
-    //   .select(
-    //     `
-    //   *, referral_code:referral_codes!inner(*)
-    //   ${withCustomer ? ", customer:customers!inner(*)" : ""}
-    //   `,
-    //   )
-    //   .eq("referral_code.internal_customer_id", internalCustomerId)
-    //   .limit(limit);
-
-    // if (error) {
-    //   throw error;
-    // }
-
-    // return data;
   }
 
   static async insert({
@@ -230,10 +178,6 @@ export class RewardRedemptionService {
           rewardPrograms.internal_id,
         ),
       )
-      .innerJoin(
-        rewards,
-        eq(rewards.internal_id, rewardPrograms.internal_reward_id),
-      )
       .where(
         and(
           eq(referralCodes.internal_customer_id, internalCustomerId),
@@ -249,7 +193,7 @@ export class RewardRedemptionService {
       referral_code: d.referral_codes,
       reward_program: {
         ...d.reward_programs,
-        reward: d.rewards,
+        // reward: d.rewards,
       },
     }));
 

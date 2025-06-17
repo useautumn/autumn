@@ -29,149 +29,32 @@ export const createEntities = async ({
   apiVersion?: APIVersion;
   fromAutoCreate?: boolean;
 }) => {
-  const { db, org, env } = req;
+  const { db, org, env, features } = req;
 
   // 1. Get data
-  const {
-    customer,
-    inputEntities,
-    feature_id,
-    feature,
-    cusProducts,
-    existingEntities,
-  } = await validateAndGetInputEntities({
-    req,
-    customerId,
-    customerData,
-    createEntityData,
-    logger,
-  });
-
-  // const entityToAction = getEntityToAction({
-  //   inputEntities,
-  //   existingEntities,
-  //   feature,
-  //   logger,
-  // });
+  const { customer, inputEntities, cusProducts, existingEntities } =
+    await validateAndGetInputEntities({
+      req,
+      customerId,
+      customerData,
+      createEntityData,
+      logger,
+    });
 
   for (const cusProduct of cusProducts) {
     await createEntityForCusProduct({
       req,
-      feature,
       customer,
       cusProduct,
       inputEntities,
       logger,
     });
-    // let cusEnts = cusProduct.customer_entitlements;
-    // let product = cusProduct.product;
-
-    // let mainCusEnt = cusEnts.find(
-    //   (e: any) => e.entitlement.feature.id === feature_id,
-    // );
-
-    // let linkedCusEnts = cusEnts.filter(
-    //   (e: any) => e.entitlement.entity_feature_id === feature.id,
-    // );
-
-    // if (linkedCusEnts.length > 0 && inputEntities.some((e: any) => !e.id)) {
-    //   throw new RecaseError({
-    //     message: "Entity ID is required",
-    //     code: ErrCode.EntityIdRequired,
-    //     statusCode: StatusCodes.BAD_REQUEST,
-    //   });
-    // }
-
-    // let replacedCount = Object.keys(entityToAction).filter(
-    //   (id) => entityToAction[id].action === "replace",
-    // ).length;
-
-    // let newCount = Object.keys(entityToAction).filter(
-    //   (id) => entityToAction[id].action === "create",
-    // ).length;
-
-    // if (mainCusEnt) {
-    //   if (fromAutoCreate) {
-    //     let cusPrice = getRelatedCusPrice(
-    //       mainCusEnt,
-    //       cusProduct.customer_prices || [],
-    //     );
-
-    //     if (cusPrice) {
-    //       return [];
-    //     }
-    //   }
-
-    //   let { unused } = getCusEntMasterBalance({
-    //     cusEnt: mainCusEnt,
-    //     entities: existingEntities,
-    //   });
-
-    //   let mainCusEntBalance = mainCusEnt.balance || 0;
-    // const originalBalance = mainCusEntBalance + (unused || 0);
-    // const newBalance =
-    //   mainCusEntBalance - (newCount + replacedCount) + (unused || 0);
-
-    //   await adjustAllowance({
-    //     db,
-
-    //     env,
-    //     org,
-    //     cusPrices: cusProducts.flatMap((p: any) => p.customer_prices),
-    //     customer,
-    //     affectedFeature: feature,
-    //     cusEnt: { ...mainCusEnt, customer_product: cusProduct },
-    //     originalBalance,
-    //     newBalance,
-    //     deduction: newCount + replacedCount,
-    //     product,
-    //     replacedCount,
-    //     fromEntities: true,
-    //   });
-
-    //   await CusEntService.update({
-    //     db,
-    //     id: mainCusEnt.id,
-    //     updates: { balance: mainCusEntBalance - newCount },
-    //   });
-    // }
-
-    // // Linked cus ent stuff...
-    // for (const linkedCusEnt of linkedCusEnts) {
-    //   let allowance = linkedCusEnt?.entitlement.allowance;
-    //   let newEntities = linkedCusEnt?.entities || {};
-
-    //   for (const entity of inputEntities) {
-    //     let entityAction = entityToAction[entity.id];
-
-    //     if (entityAction.action === "create") {
-    //       newEntities[entity.id] = {
-    //         id: entity.id,
-    //         balance: allowance!,
-    //         adjustment: 0,
-    //       };
-    //     } else if (entityAction.action === "replace") {
-    //       let tmp = newEntities[entityAction.replace.id];
-    //       delete newEntities[entityAction.replace.id];
-    //       newEntities[entity.id] = {
-    //         ...tmp,
-    //         id: entity.id,
-    //       };
-    //     }
-    //   }
-
-    //   await CusEntService.update({
-    //     db,
-    //     id: linkedCusEnt.id,
-    //     updates: { entities: newEntities },
-    //   });
-    // }
   }
 
   let data = inputEntities.map((e: any) =>
     constructEntity({
       inputEntity: e,
-      feature,
+      feature: features.find((f: any) => f.id === e.feature_id)!,
       internalCustomerId: customer.internal_id,
       orgId: org.id,
       env,
@@ -267,37 +150,3 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
       }
     },
   });
-
-// 4. CREATE ENTITIES
-// let newEntities: Entity[] = [];
-// for (const id in entityToAction) {
-//   let { action, entity, replace } = entityToAction[id];
-
-//   // Create and add to customer entitlement?
-//   if (action === "create") {
-//     let results = await EntityService.insert({
-//       db,
-//       data: constructEntity({
-//         inputEntity: entity,
-//         feature,
-//         internalCustomerId: customer.internal_id,
-//         orgId: org.id,
-//         env,
-//       }),
-//     });
-
-//     newEntities.push(results[0]);
-//   } else if (action === "replace") {
-//     let updatedEntity = await EntityService.update({
-//       db,
-//       internalId: replace.internal_id,
-//       update: {
-//         id: entity.id,
-//         name: entity.name,
-//         deleted: false,
-//       },
-//     });
-
-//     newEntities.push(updatedEntity);
-//   }
-// }

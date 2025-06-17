@@ -4,6 +4,7 @@ import { createStripeCli } from "../utils.js";
 import Stripe from "stripe";
 import { notNullish, timeout } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { RewardService } from "@/internal/rewards/RewardService.js";
 
 export async function handleCusDiscountDeleted({
   db,
@@ -35,61 +36,68 @@ export async function handleCusDiscountDeleted({
     return;
   }
 
+  // Check if any redemptions available, and apply to customer if so
+  let redemptions = await RewardRedemptionService.getUnappliedRedemptions({
+    db,
+    internalCustomerId: customer.internal_id,
+  });
+
+  logger.info(`discount.deleted: found ${redemptions.length} redemptions`);
+
+  if (redemptions.length == 0) {
+    return;
+  }
+
+  let redemption = redemptions[0];
+
+  // Apply redemption to customer
+  let stripeCli = createStripeCli({
+    org,
+    env,
+  });
+
+  let stripeCus = (await stripeCli.customers.retrieve(
+    discount.customer,
+  )) as Stripe.Customer;
+
+  if (stripeCus && notNullish(stripeCus.discount)) {
+    logger.info(
+      `discount.deleted: stripe customer ${discount.customer} already has a discount`,
+    );
+    return;
+  }
+
+  // Send response first...?
   res.status(200).json({ message: "OK" });
-  return;
 
-  // // Check if any redemptions available, and apply to customer if so
-  // let redemptions = await RewardRedemptionService.getUnappliedRedemptions({
-  //   db,
-  //   internalCustomerId: customer.internal_id,
-  // });
+  const reward = await RewardService.get({
+    db,
+    orgId: org.id,
+    env,
+    idOrInternalId: redemption.reward_program.internal_reward_id!,
+  });
 
-  // if (redemptions.length == 0) {
-  //   return;
-  // }
+  if (!reward) {
+    logger.warn(
+      `discount.deleted: reward ${redemption.reward_program.internal_id} not found`,
+    );
+    return;
+  }
 
-  // let redemption = redemptions[0];
-  // let reward = redemption.reward_program.reward;
+  await stripeCli.customers.update(discount.customer, {
+    coupon: reward.internal_id,
+  });
 
-  // // Apply redemption to customer
-  // let stripeCli = createStripeCli({
-  //   org,
-  //   env,
-  // });
+  await RewardRedemptionService.update({
+    db,
+    id: redemption.id,
+    updates: {
+      applied: true,
+    },
+  });
 
-  // let stripeCus = (await stripeCli.customers.retrieve(
-  //   discount.customer,
-  // )) as Stripe.Customer;
-
-  // if (stripeCus && notNullish(stripeCus.discount)) {
-  //   logger.info(
-  //     `discount.deleted: stripe customer ${discount.customer} already has a discount`,
-  //   );
-  //   return;
-  // }
-
-  // // Send response first...?
-  // res.status(200).json({ message: "OK" });
-
-  // if (notNullish(stripeCus.test_clock)) {
-  //   // Time out for test clock to complete
-  //   await timeout(5000);
-  // }
-
-  // await stripeCli.customers.update(discount.customer, {
-  //   coupon: reward.internal_id,
-  // });
-
-  // await RewardRedemptionService.update({
-  //   db,
-  //   id: redemption.id,
-  //   updates: {
-  //     applied: true,
-  //   },
-  // });
-
-  // logger.info(
-  //   `discount.deleted: applied reward ${reward.name} on customer ${customer.name} (${customer.id})`,
-  // );
-  // logger.info(`Redemption ID: ${redemption.id}`);
+  logger.info(
+    `discount.deleted: applied reward ${reward.name} on customer ${customer.name} (${customer.id})`,
+  );
+  logger.info(`Redemption ID: ${redemption.id}`);
 }

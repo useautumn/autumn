@@ -113,7 +113,7 @@ export const initCustomer = async ({
         org,
         env,
         db,
-        testClockId,
+        testClockId: testClockId || undefined,
       });
     }
 

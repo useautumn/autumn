@@ -1,9 +1,8 @@
 import { Router } from "express";
 import {
   CusProductStatus,
-  Customer,
+  type Customer,
   ErrCode,
-  Event,
   EventInsert,
   FeatureType,
   FeatureUsageType,
@@ -12,22 +11,17 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { generateId, nullish } from "@/utils/genUtils.js";
 
 import { EventService } from "./EventService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { StatusCodes } from "http-status-codes";
-import { QueueManager } from "@/queue/QueueManager.js";
-
 import { JobName } from "@/queue/JobName.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { creditSystemContainsFeature } from "@/internal/features/creditSystemUtils.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
-import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
 import { getEventTimestamp } from "./eventUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
-export const eventsRouter = Router();
-export const usageRouter = Router();
+
+export const eventsRouter: Router = Router();
+export const usageRouter: Router = Router();
 
 const getCusFeatureAndOrg = async ({
   req,

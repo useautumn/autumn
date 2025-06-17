@@ -39,7 +39,7 @@ const DialogOverlay = React.forwardRef<
     data-slot="dialog-overlay"
     className={cn(
       "fixed inset-0 z-50 bg-white/70 backdrop-blur-sm  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      className
+      className,
     )}
     {...props}
   />
@@ -62,7 +62,7 @@ function DialogContent({
           bg-stone-50
           min-w-sm
           `,
-          className
+          className,
         )}
         {...props}
       >
@@ -86,13 +86,19 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
+function DialogFooter({
+  className,
+  variant = "default",
+  ...props
+}: React.ComponentProps<"div"> & { variant?: "new" | "default" }) {
   return (
     <div
       data-slot="dialog-footer"
       className={cn(
         "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
-        className
+        variant == "new" &&
+          "bg-stone-100 flex items-center h-10 gap-0 border-t border-zinc-200",
+        className,
       )}
       {...props}
     />

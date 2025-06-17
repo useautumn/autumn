@@ -19,6 +19,7 @@ import { OrgService } from "@/services/OrgService";
 import { CusProductStatus, Entity, Product } from "@autumn/shared";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { Search } from "lucide-react";
+import { useOrg } from "@/hooks/useOrg";
 
 function AddProduct() {
   const { products, customer, env, entityId, entities } = useCustomerContext();
@@ -26,6 +27,7 @@ function AddProduct() {
   const [options, setOptions] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const { org } = useOrg();
 
   const filteredProducts = products.filter((product: Product) => {
     if (product.is_add_on && !searchQuery) return true;
@@ -52,15 +54,14 @@ function AddProduct() {
   const navigate = useNavigate();
 
   const handleAddProduct = async (productId: string, setLoading: any) => {
-    const { data } = await OrgService.get(axiosInstance);
+    let stripeConnected = org?.stripe_connected;
 
-    if (!data.org) {
-      toast.error("Something went wrong...please try again later");
-      setLoading(false);
-      return;
+    if (!stripeConnected) {
+      const { data: org } = await OrgService.get(axiosInstance);
+      stripeConnected = org?.stripe_connected;
     }
 
-    if (!data.org.stripe_connected) {
+    if (!stripeConnected) {
       toast.error("Connect to Stripe to add products to customers");
       const redirectUrl = getRedirectUrl(`/customers/${customer.id}`, env);
       navigateTo(`/integrations/stripe?redirect=${redirectUrl}`, navigate, env);

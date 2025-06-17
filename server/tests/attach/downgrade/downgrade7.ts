@@ -1,17 +1,16 @@
+import chalk from "chalk";
 import { Customer } from "@autumn/shared";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
 import { products } from "tests/global.js";
-import chalk from "chalk";
 import { compareMainProduct } from "tests/utils/compare.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { setupBefore } from "tests/before.js";
 import { findCusProductById } from "@/internal/customers/cusProducts/cusProductUtils/findCusProduct.js";
 import { expect } from "chai";
 import { getSubsFromCusId } from "tests/utils/expectUtils/expectSubUtils.js";
 
 const testCase = "downgrade7";
-describe(`${chalk.yellowBright("downgrade7: testing expire scheduled product")}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: testing expire scheduled product`)}`, () => {
   let customerId = testCase;
   let testClockId: string;
   let customer: Customer;

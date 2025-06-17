@@ -42,7 +42,7 @@ import { processAttachBody } from "./attachUtils/attachParams/processAttachBody.
 import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
 import { handleAttach } from "./handleAttach.js";
 
-export const attachRouter = Router();
+export const attachRouter: Router = Router();
 
 export const handlePrepaidErrors = async ({
   attachParams,
@@ -257,10 +257,6 @@ const handleAttachOld = async (req: any, res: any) =>
       }
 
       logger.info("--------------------------------");
-      let publicStr = req.isPublic ? "(Public) " : "";
-      logger.info(
-        `${publicStr}ATTACH PRODUCT REQUEST (from ${req.minOrg.slug})`,
-      );
 
       const {
         customer,

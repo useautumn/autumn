@@ -9,7 +9,7 @@ import {
 import { Entity } from "@autumn/shared";
 import { useLocation, useNavigate } from "react-router";
 
-import { CreateEntity } from "./create-entity/create-entity";
+import { CreateEntity } from "./create-entity/CreateEntity";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
@@ -46,7 +46,8 @@ export const SelectEntity = ({
   }
 
   const entity = entities.find(
-    (entity: Entity) => entity.id === entityId || entity.internal_id == entityId
+    (entity: Entity) =>
+      entity.id === entityId || entity.internal_id == entityId,
   );
 
   return (

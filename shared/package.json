@@ -10,17 +10,25 @@
       "import": "./dist/index.js"
     }
   },
+  "author": "Recase Inc.",
+  "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
+    "dev": "nodemon --watch . --ext ts --ignore dist --exec 'pnpm run build'",
+    "db:push": "NODE_OPTIONS='--import tsx' drizzle-kit push --config drizzle.config.ts",
     "db:generate": "NODE_OPTIONS='--import tsx' drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "NODE_OPTIONS='--import tsx' drizzle-kit migrate --config drizzle.config.ts"
   },
   "dependencies": {
+    "decimal.js": "^10.5.0",
+    "dotenv": "^16.5.0",
+    "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.43.1",
-    "drizzle-zod": "^0.8.1",
+    "drizzle-zod": "^0.8.2",
     "zod": "^3.25.23"
   },
   "devDependencies": {
+    "nodemon": "^3.1.7",
     "tsx": "^4.19.4",
     "typescript": "^5.7.2"
   }

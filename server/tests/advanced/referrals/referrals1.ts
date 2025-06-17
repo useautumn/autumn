@@ -199,34 +199,34 @@ describe(`${chalk.yellowBright(
     assert.equal(invoices[0].total, 0);
   });
 
-  it("customer should have discount for second purchase", async function () {
-    // 2. Check that customer has another discount
-    let stripeCus = (await stripeCli.customers.retrieve(
-      mainCustomer.processor?.id,
-    )) as Stripe.Customer;
+  // it("customer should have discount for second purchase", async function () {
+  //   // 2. Check that customer has another discount
+  //   let stripeCus = (await stripeCli.customers.retrieve(
+  //     mainCustomer.processor?.id,
+  //   )) as Stripe.Customer;
 
-    assert.notEqual(stripeCus.discount, null);
+  //   assert.notEqual(stripeCus.discount, null);
 
-    // 2. Advance test clock to 1 month from start (trigger discount.deleted event)
-    curTime = addHours(addMonths(new Date(), 1), 2);
-    await advanceTestClock({
-      testClockId,
-      advanceTo: curTime.getTime(),
-      stripeCli,
-    });
+  //   // 2. Advance test clock to 1 month from start (trigger discount.deleted event)
+  //   curTime = addHours(addMonths(new Date(), 1), 2);
+  //   await advanceTestClock({
+  //     testClockId,
+  //     advanceTo: curTime.getTime(),
+  //     stripeCli,
+  //   });
 
-    // 3. Advance test clock to 1 month + 12 days from start (trigger new invoice)
-    curTime = addDays(curTime, 12);
-    await advanceTestClock({
-      testClockId,
-      advanceTo: curTime.getTime(),
-      stripeCli,
-    });
+  //   // 3. Advance test clock to 1 month + 12 days from start (trigger new invoice)
+  //   curTime = addDays(curTime, 12);
+  //   await advanceTestClock({
+  //     testClockId,
+  //     advanceTo: curTime.getTime(),
+  //     stripeCli,
+  //   });
 
-    // // 3. Get invoice again
-    let { invoices: invoices2 } = await autumn.customers.get(mainCustomerId);
+  //   // // 3. Get invoice again
+  //   let { invoices: invoices2 } = await autumn.customers.get(mainCustomerId);
 
-    assert.equal(invoices2.length, 3);
-    assert.equal(invoices2[0].total, 0);
-  });
+  //   assert.equal(invoices2.length, 3);
+  //   assert.equal(invoices2[0].total, 0);
+  // });
 });

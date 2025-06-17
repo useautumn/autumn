@@ -87,17 +87,17 @@ describe(`${chalk.yellowBright(`contUse/update/${testCase}: Testing update cont 
     {
       id: "1",
       name: "test",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
     {
       id: "2",
       name: "test2",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
     {
       id: "3",
       name: "test3",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 

@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CountAndMigrate } from "./versioning/CountAndMigrate";
+import { formatUnixToDate } from "@/utils/formatUtils/formatDateUtils";
 
 export const ProductVersions = () => {
   const { product, numVersions, customer, version } = useProductContext();
@@ -25,7 +26,9 @@ export const ProductVersions = () => {
         </div>
         <div className="flex items-center w-full justify-between h-4">
           <p className=" text-t3 font-medium text-center">Created At </p>
-          <p className=" text-sm text-t2 pr-2">29 Mar</p>
+          <p className=" text-sm text-t2 pr-2">
+            {formatUnixToDate(product.created_at, true)}
+          </p>
         </div>
         <div className="flex items-center w-full justify-between h-4">
           <p className=" text-t3 font-medium text-center">Version History </p>

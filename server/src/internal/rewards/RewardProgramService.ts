@@ -252,17 +252,5 @@ export class RewardProgramService {
       );
 
     return result[0].count;
-
-    // const { data, error, count } = await sb
-    //   .from("reward_redemptions")
-    //   .select("*, reward_program:reward_programs!inner(*)", { count: "exact" })
-    //   .eq("referral_code_id", referralCodeId)
-    //   .eq("triggered", true);
-
-    // if (error) {
-    //   throw error;
-    // }
-
-    // return count;
   }
 }

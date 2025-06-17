@@ -8,40 +8,44 @@ const handleResFinish = (req: any, res: any, logtailContext: any) => {
     if (skipUrls.includes(req.originalUrl)) {
       return;
     }
-    req.logtailAll.info(
-      `[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.org?.slug})`,
-      {
-        req: {
-          ...logtailContext,
+
+    // Only log to logtailAll if it exists
+    if (req.logtailAll) {
+      req.logtailAll.info(
+        `[${res.statusCode}] ${req.method} ${req.originalUrl} (${req.org?.slug})`,
+        {
+          req: {
+            ...logtailContext,
+          },
+          statusCode: res.statusCode,
+          res: res.locals.responseBody,
         },
-        statusCode: res.statusCode,
-        res: res.locals.responseBody,
-      },
-    );
-    req.logtailAll.flush();
+      );
+      req.logtailAll.flush();
+    }
   } catch (error) {
     console.error("Failed to log response to logtailAll");
     console.error(error);
   }
 
-  // Post hog
-  let posthogUrls = ["/v1/attach"];
-  if (req.posthog && posthogUrls.includes(req.originalUrl)) {
-    posthogCapture({
-      posthog: req.posthog,
-      params: {
-        distinctId: req.org?.id,
-        event: `${req.method} ${req.originalUrl}`,
-        properties: {
-          authType: req.auth,
-          orgSlug: req.org?.slug,
-          statusCode: res.statusCode,
-          res: res.locals.responseBody,
-          req: req.body,
-        },
-      },
-    });
-  }
+  // Save to PostHog
+  // let posthogUrls = ["/v1/attach"];
+  // if (req.posthog && posthogUrls.includes(req.originalUrl)) {
+  //   posthogCapture({
+  //     posthog: req.posthog,
+  //     params: {
+  //       distinctId: req.org?.id,
+  //       event: `${req.method} ${req.originalUrl}`,
+  //       properties: {
+  //         authType: req.auth,
+  //         orgSlug: req.org?.slug,
+  //         statusCode: res.statusCode,
+  //         res: res.locals.responseBody,
+  //         req: req.body,
+  //       },
+  //     },
+  //   });
+  // }
 };
 
 export const analyticsMiddleware = async (req: any, res: any, next: any) => {

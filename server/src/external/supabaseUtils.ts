@@ -1,4 +1,4 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 import fetchRetry from "fetch-retry";
 import { createLogtail } from "./logtail/logtailUtils.js";
 

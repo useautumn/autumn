@@ -39,7 +39,7 @@ export const NavButton = ({
         `cursor-pointer font-medium transition-all duration-100 
          text-sm flex h-9 items-center text-t2 hover:text-primary`,
         isActive && "font-semibold text-primary hover:text-primary/80",
-        className
+        className,
       )}
       target={href ? "_blank" : undefined}
     >
@@ -47,12 +47,21 @@ export const NavButton = ({
         className={cn(
           "flex justify-center w-4 h-4 items-center rounded-sm transition-all duration-100",
           state == "expanded" && "mr-2",
-          isHovered && "translate-x-[-1px]"
+          isHovered && "translate-x-[-1px]",
         )}
       >
         {icon}
       </div>
-      {state == "expanded" && <span className="">{title}</span>}
+      <span
+        className={cn(
+          "transition-all duration-200 whitespace-nowrap",
+          state === "expanded"
+            ? "opacity-100 translate-x-0"
+            : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
+        )}
+      >
+        {title}
+      </span>
       {online && (
         <span className="relative flex h-2 w-2 ml-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>

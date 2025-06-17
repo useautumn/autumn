@@ -61,14 +61,21 @@ export function CreateProductItem() {
   const { features, product, setProduct, setFeatures } = useProductContext();
 
   const setSelectedFeature = (feature: CreateFeatureType) => {
-    console.log("Setting selected feature", feature);
     setFeatures([...features, feature]);
-    console.log("Made it here");
     setItem({ ...item, feature_id: feature.id! });
   };
 
-  const handleCreateProductItem = (show: any) => {
-    const validatedItem = validateProductItem({ item, show, features });
+  const handleCreateProductItem = (show: any, entityFeatureId?: string) => {
+    const validatedItem = validateProductItem({
+      item: {
+        ...item,
+        entity_feature_id: entityFeatureId
+          ? entityFeatureId
+          : item.entity_feature_id,
+      },
+      show,
+      features,
+    });
     if (!validatedItem) return;
     setProduct({ ...product, items: [...product.items, validatedItem] });
     setOpen(false);
@@ -107,12 +114,10 @@ export function CreateProductItem() {
           </DialogTrigger>
         </div>
         <DialogContent
-          className={cn(
-            "translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit overflow-visible",
-          )}
+          className={cn("translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit")}
         >
           <DialogHeader>
-            <div className="flex flex-col">
+            <div className="flex flex-col  ">
               {showCreateFeature && (
                 <Button
                   variant="ghost"
@@ -125,7 +130,7 @@ export function CreateProductItem() {
               <DialogTitle>Add Product Item</DialogTitle>
             </div>
           </DialogHeader>
-          <div className="flex overflow-visible w-fit">
+          <div className="flex !overflow-visible  w-fit">
             {showCreateFeature ||
             (features.length == 0 && item.price === null) ? (
               <div className="w-full -mt-2">
@@ -138,7 +143,7 @@ export function CreateProductItem() {
                 />
               </div>
             ) : (
-              <div className="flex flex-col gap-4 w-fit">
+              <div className="flex flex-col gap-4 w-fit !overflow-visible">
                 <ProductItemConfig />
               </div>
             )}

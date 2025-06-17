@@ -5,6 +5,8 @@ filename=$1
 
 
 # Check if the file path contains "shell"
+
+
 if [[ $filename == *"shell"* ]]; then
     $filename
 elif [[ $filename == *"/tests/"* ]]; then
@@ -17,6 +19,9 @@ elif [[ $filename == *"/tests/"* ]]; then
     else
         ./test.sh custom $path_after_tests
     fi
+
+elif [[ $filename == *".sh"* ]]; then
+    $filename
 else
     npx tsx $filename
 fi

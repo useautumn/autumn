@@ -14,6 +14,7 @@ export const ProductV2Schema = z.object({
 
   free_trial: FreeTrialSchema.nullish(),
   items: z.array(ProductItemSchema),
+  created_at: z.number(),
 });
 
 export type ProductV2 = z.infer<typeof ProductV2Schema>;

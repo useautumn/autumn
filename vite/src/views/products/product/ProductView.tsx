@@ -5,15 +5,13 @@ import LoadingScreen from "@/views/general/LoadingScreen";
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
 import { ProductContext } from "./ProductContext";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useParams, useSearchParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { ManageProduct } from "./ManageProduct";
 import {
   AppEnv,
   Feature,
-  FrontendProduct,
   ProductItem,
-  ProductItemType,
   ProductV2,
   UpdateProductSchema,
 } from "@autumn/shared";
@@ -21,18 +19,12 @@ import { toast } from "sonner";
 import { ProductService } from "@/services/products/ProductService";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { AddProductButton } from "@/views/customers/customer/add-product/AddProductButton";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+
 import ErrorScreen from "@/views/general/ErrorScreen";
 import ProductSidebar from "./ProductSidebar";
 import { FeaturesContext } from "@/views/features/FeaturesContext";
 import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
-import { getItemType } from "@/utils/product/productItemUtils";
 import { sortProductItems } from "@/utils/productUtils";
 
 function ProductView({ env }: { env: AppEnv }) {
@@ -49,6 +41,8 @@ function ProductView({ env }: { env: AppEnv }) {
 
   const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
   const [features, setFeatures] = useState<Feature[]>([]);
+
+  const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
   const { data, isLoading, mutate } = useAxiosSWR({
     url: `/products/${product_id}/data?version=${version}`,
@@ -73,6 +67,15 @@ function ProductView({ env }: { env: AppEnv }) {
         ...data.product,
         items: sortProductItems(data.product.items),
       };
+      setEntityFeatureIds(
+        Array.from(
+          new Set(
+            sortedProduct.items
+              .filter((item: ProductItem) => item.entity_feature_id != null)
+              .map((item: ProductItem) => item.entity_feature_id),
+          ),
+        ),
+      );
       setProduct(sortedProduct);
       setOriginalProduct(structuredClone(sortedProduct));
     }
@@ -267,6 +270,8 @@ function ProductView({ env }: { env: AppEnv }) {
           mutateCount,
           actionState,
           handleCreateProduct: createProductClicked,
+          entityFeatureIds,
+          setEntityFeatureIds,
         }}
       >
         <ConfirmNewVersionDialog
@@ -289,7 +294,7 @@ function ProductView({ env }: { env: AppEnv }) {
               </div>
             </div>
           </div>
-          <div className="max-w-[300px] w-1/3 shrink-1 hidden lg:block">
+          <div className="flex max-w-md w-1/3 shrink-1 hidden lg:block lg:min-w-xs sticky top-0">
             <ProductSidebar />
           </div>
         </div>

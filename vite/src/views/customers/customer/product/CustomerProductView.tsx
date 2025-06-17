@@ -8,6 +8,7 @@ import {
   Entity,
   Feature,
   FeatureOptions,
+  ProductItem,
   ProductV2,
 } from "@autumn/shared";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
@@ -69,6 +70,7 @@ export default function CustomerProductView() {
   const [features, setFeatures] = useState<Feature[]>([]);
   const [options, setOptions] = useState<OptionValue[]>([]);
   const [entityId, setEntityId] = useState<string | null>(entityIdParam);
+  const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (entityIdParam) {
@@ -104,6 +106,16 @@ export default function CustomerProductView() {
     const product = data.product;
     setProduct(product);
     initialProductRef.current = structuredClone(product);
+
+    setEntityFeatureIds(
+      Array.from(
+        new Set(
+          product.items
+            .filter((item: ProductItem) => item.entity_feature_id != null)
+            .map((item: ProductItem) => item.entity_feature_id),
+        ),
+      ),
+    );
 
     if (product.options) {
       setOptions(product.options);
@@ -158,6 +170,8 @@ export default function CustomerProductView() {
           setEntityId,
           attachState,
           version,
+          entityFeatureIds,
+          setEntityFeatureIds,
         }}
       >
         <CustomToaster />

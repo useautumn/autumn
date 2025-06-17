@@ -339,7 +339,7 @@ export const itemToPriceAndEnt = ({
     }
 
     // Boolean features can't be updated
-    else if (!isBoolean && !entsAreSame(curEnt, ent)) {
+    else if (!entsAreSame(curEnt, ent)) {
       updatedEnt = ent;
     } else {
       sameEnt = curEnt;

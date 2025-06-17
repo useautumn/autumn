@@ -185,7 +185,7 @@ export const handleAttachErrors = async ({
 }) => {
   const { onlyCheckout } = config;
 
-  if (onlyCheckout) {
+  if (onlyCheckout || flags.isPublic) {
     let upgradeDowngradeFlows = [
       AttachBranch.Upgrade,
       AttachBranch.Downgrade,

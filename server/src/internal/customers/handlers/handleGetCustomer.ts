@@ -1,6 +1,6 @@
 import { CusService } from "@/internal/customers/CusService.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { CusProductStatus, ErrCode } from "@autumn/shared";
+import { CusExpand, CusProductStatus, ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -32,7 +32,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
             CusProductStatus.PastDue,
             CusProductStatus.Scheduled,
           ],
-          withEntities: true,
+          withEntities: expandArray.includes(CusExpand.Entities),
           expand: expandArray,
           allowNotFound: true,
         }),
@@ -40,7 +40,7 @@ export const handleGetCustomer = async (req: any, res: any) =>
 
       if (!customer) {
         req.logtail.warn(
-          `GET /customers/${customerId}: not found | Org: ${req.minOrg.slug}`,
+          `GET /customers/${customerId}: not found | Org: ${org.slug}`,
         );
         res.status(StatusCodes.NOT_FOUND).json({
           message: `Customer ${customerId} not found`,
