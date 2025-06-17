@@ -26,13 +26,15 @@ export const migrationToAttachParams = async ({
 
   const apiVersion = org.config.api_version || APIVersion.v1;
   const internalEntityId = cusProduct.internal_entity_id || undefined;
-  // const entityId = customer.entities.find(
-  //   (e) => e.internal_id == internalEntityId,
-  // )?.id;
 
   const { stripeCus, paymentMethod, now } = await getStripeCusData({
     stripeCli,
-    stripeId: customer.processor?.id,
+    db: req.db,
+    org: req.org,
+    env: req.env,
+    customer,
+    logger: req.logtail,
+    allowNoStripe: true,
   });
 
   const attachParams: AttachParams = {

@@ -44,7 +44,7 @@ export const initStripeCusAndProducts = async ({
   products: FullProduct[];
   logger: any;
 }) => {
-  const batchInit = [
+  const batchInit: any[] = [
     createStripeCusIfNotExists({
       db,
       org,

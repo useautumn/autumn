@@ -34,7 +34,12 @@ export const checkToAttachParams = async ({
   const stripeCli = createStripeCli({ org, env });
   let stripeCusData = await getStripeCusData({
     stripeCli,
-    stripeId: customer.processor?.id,
+    db,
+    org,
+    env,
+    customer,
+    logger,
+    allowNoStripe: true,
   });
 
   let freeTrial = await getFreeTrialAfterFingerprint({

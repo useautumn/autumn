@@ -9,27 +9,23 @@ import Stripe from "stripe";
 
 export const getStripeCusData = async ({
   stripeCli,
-  stripeId,
   db,
   org,
   env,
   customer,
   logger,
+  allowNoStripe,
 }: {
   stripeCli: Stripe;
-  stripeId?: string;
   db: DrizzleCli;
   org: Organization;
   env: AppEnv;
   customer: Customer;
   logger: any;
+  allowNoStripe?: boolean;
 }) => {
-  if (!org.stripe_connected) {
-    throw new RecaseError({
-      message: "Please connect to Stripe to add products",
-      code: ErrCode.StripeConfigNotFound,
-      statusCode: 400,
-    });
+  if (allowNoStripe && !customer.processor?.id) {
+    return { stripeCus: undefined, paymentMethod: null, now: undefined };
   }
 
   let stripeCus = (await createStripeCusIfNotExists({
