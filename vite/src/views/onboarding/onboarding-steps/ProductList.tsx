@@ -47,20 +47,20 @@ export const ProductList = ({
   const [originalProduct, setOriginalProduct] = useState<any>(null);
   const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
 
-  if (!data.products) return null;
-
   useEffect(() => {
     setFeatures(data.features);
     setEntityFeatureIds(
       Array.from(
         new Set(
-          product.items
+          product?.items
             .filter((item: ProductItem) => item.entity_feature_id != null)
             .map((item: ProductItem) => item.entity_feature_id),
         ),
       ),
     );
   }, [data.features, product]);
+
+  if (!data.products) return null;
 
   return (
     <Step
