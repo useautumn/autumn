@@ -13,5 +13,6 @@
     "rootDir": "."
   },
   "include": ["./**/*"],
+  "types": ["node"],
   "exclude": ["node_modules", "dist"]
 }

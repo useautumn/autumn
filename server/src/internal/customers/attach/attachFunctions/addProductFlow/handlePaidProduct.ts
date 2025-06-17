@@ -44,6 +44,7 @@ export const handlePaidProduct = async ({
     invoiceOnly,
     cusProducts,
     stripeCli,
+    reward,
   } = attachParams;
 
   if (attachParams.disableFreeTrial) {
@@ -56,7 +57,6 @@ export const handlePaidProduct = async ({
   });
 
   let subscriptions: Stripe.Subscription[] = [];
-  let invoiceIds: string[] = [];
 
   // Only merge if no free trials
   let mergeCusProduct = undefined;
@@ -71,7 +71,8 @@ export const handlePaidProduct = async ({
     subIds: mergeCusProduct?.subscription_ids,
   });
 
-  for (const itemSet of itemSets) {
+  for (let i = 0; i < itemSets.length; i++) {
+    const itemSet = itemSets[i];
     if (itemSet.interval === BillingInterval.OneOff) {
       continue;
     }
@@ -104,6 +105,7 @@ export const handlePaidProduct = async ({
         invoiceOnly,
         itemSet,
         anchorToUnix: billingCycleAnchorUnix,
+        reward: i == 0 ? reward : undefined,
       });
 
       let sub = subscription as Stripe.Subscription;

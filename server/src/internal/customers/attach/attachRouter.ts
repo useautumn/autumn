@@ -144,14 +144,6 @@ export const checkStripeConnections = async ({
   const logger = req.logtail;
   const env = customer.env;
 
-  if (!org.stripe_connected) {
-    throw new RecaseError({
-      message: "Please connect to Stripe to add products",
-      code: ErrCode.StripeConfigNotFound,
-      statusCode: 400,
-    });
-  }
-
   // 2. If invoice only and no email, save email
   if (attachParams.invoiceOnly && !customer.email) {
     customer.email = `${customer.id}@invoices.useautumn.com`;
@@ -165,13 +157,13 @@ export const checkStripeConnections = async ({
   }
 
   const batchProductUpdates = [
-    createStripeCusIfNotExists({
-      db: req.db,
-      org,
-      env,
-      customer,
-      logger,
-    }),
+    // createStripeCusIfNotExists({
+    //   db: req.db,
+    //   org,
+    //   env,
+    //   customer,
+    //   logger,
+    // }),
   ];
   for (const product of products) {
     batchProductUpdates.push(

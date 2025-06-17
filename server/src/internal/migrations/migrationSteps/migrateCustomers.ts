@@ -134,22 +134,22 @@ export const migrateCustomers = async ({
 
   // Get number of errors
   let migrationDetails: any = {};
-  try {
-    let errors = await MigrationService.getErrors({
-      db,
-      migrationJobId: migrationJob.id,
-    });
+  // try {
+  //   let errors = await MigrationService.getErrors({
+  //     db,
+  //     migrationJobId: migrationJob.id,
+  //   });
 
-    migrationDetails.num_errors = errors!.length;
-    migrationDetails.failed_customers = errors!.map(
-      (e: any) => `${e.customer.id} - ${e.customer.name}`,
-    );
-  } catch (error) {
-    migrationDetails.failed_to_get_errors = true;
-    migrationDetails.error = error;
-    logger.error("Failed to get migration errors");
-    logger.error(error);
-  }
+  //   migrationDetails.num_errors = errors!.length;
+  //   migrationDetails.failed_customers = errors!.map(
+  //     (e: any) => `${e.customer.id} - ${e.customer.name}`,
+  //   );
+  // } catch (error) {
+  //   migrationDetails.failed_to_get_errors = true;
+  //   migrationDetails.error = error;
+  //   logger.error("Failed to get migration errors");
+  //   logger.error(error);
+  // }
 
   let curMigrationJob = await MigrationService.getJob({
     db,

@@ -1,10 +1,6 @@
-import express, { Router } from "express";
-import {
-  CreateRewardSchema,
-  ErrCode,
-  RewardCategory,
-  RewardType,
-} from "@autumn/shared";
+import express from "express";
+import { CreateRewardSchema, ErrCode, RewardCategory } from "@autumn/shared";
+import { Router } from "express";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";

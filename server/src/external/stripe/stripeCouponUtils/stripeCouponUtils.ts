@@ -75,6 +75,10 @@ export const createStripeCoupon = async ({
 }) => {
   let discountConfig = reward.discount_config;
 
+  try {
+    await stripeCli.coupons.del(reward.id);
+  } catch (error) {}
+
   let stripeProdIds = prices.map((price) => {
     if (price.config!.type === PriceType.Fixed) {
       return price.product.processor?.id;

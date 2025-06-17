@@ -6,6 +6,7 @@ import {
   Organization,
   ErrCode,
   BillingInterval,
+  Reward,
 } from "@autumn/shared";
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
@@ -27,6 +28,7 @@ export const createStripeSub = async ({
   anchorToUnix,
   itemSet,
   now,
+  reward,
 }: {
   db: DrizzleCli;
   stripeCli: Stripe;
@@ -37,6 +39,7 @@ export const createStripeSub = async ({
   anchorToUnix?: number;
   itemSet: ItemSet;
   now?: number;
+  reward?: Reward;
 }) => {
   let paymentMethod = await getCusPaymentMethod({
     stripeCli,
@@ -82,6 +85,8 @@ export const createStripeSub = async ({
       billing_cycle_anchor: billingCycleAnchorUnix
         ? Math.floor(billingCycleAnchorUnix / 1000)
         : undefined,
+
+      coupon: reward ? reward.id : undefined,
     });
 
     // Store

@@ -1,7 +1,7 @@
 import { AppEnv, ErrCode, Reward, rewards } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, arrayContains, desc, eq, inArray, or, sql } from "drizzle-orm";
 
 export class RewardService {
   static async get({
@@ -31,6 +31,38 @@ export class RewardService {
     }
 
     return result as Reward;
+  }
+
+  static async getByIdOrCode({
+    db,
+    idOrCode,
+    orgId,
+    env,
+  }: {
+    db: DrizzleCli;
+    idOrCode: string;
+    orgId: string;
+    env: AppEnv;
+  }) {
+    let reward = await db.query.rewards.findFirst({
+      where: and(
+        eq(rewards.org_id, orgId),
+        eq(rewards.env, env),
+        or(
+          eq(rewards.id, idOrCode),
+          sql`EXISTS (
+            SELECT 1 FROM unnest("promo_codes") AS elem
+            WHERE elem->>'code' = ${idOrCode}
+          )`,
+        ),
+      ),
+    });
+
+    if (!reward) {
+      return null;
+    }
+
+    return reward as Reward;
   }
 
   static async insert({

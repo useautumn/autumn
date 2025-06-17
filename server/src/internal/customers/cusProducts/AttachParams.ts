@@ -13,6 +13,7 @@ import {
   APIVersion,
   FullCustomer,
   AttachReplaceable,
+  Reward,
 } from "@autumn/shared";
 import Stripe from "stripe";
 
@@ -25,6 +26,7 @@ export type AttachParams = {
   stripeCus?: Stripe.Customer;
   now?: number;
   paymentMethod: Stripe.PaymentMethod | null | undefined;
+  reward?: Reward;
 
   org: Organization;
   // customer: Customer;

@@ -11,7 +11,7 @@ export const DiscountConfigSchema = z.object({
   duration_value: z.number(),
   should_rollover: z.boolean().optional(),
   apply_to_all: z.boolean().optional(),
-  price_ids: z.array(z.string()),
+  price_ids: z.array(z.string()).optional(),
 });
 
 const RewardSchema = z.object({
