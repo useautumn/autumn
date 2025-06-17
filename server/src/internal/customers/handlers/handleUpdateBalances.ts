@@ -49,7 +49,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
   try {
     const logger = req.logtail;
     const cusId = req.params.customer_id;
-    const { env, db } = req;
+    const { env, db, features } = req;
     const { balances } = req.body;
 
     if (!Array.isArray(balances)) {
@@ -60,7 +60,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
       });
     }
 
-    const { customer, features, org } = await getCusFeaturesAndOrg(req, cusId);
+    const { customer, org } = await getCusFeaturesAndOrg(req, cusId);
 
     const featuresToUpdate = features.filter((f: any) =>
       balances.map((b: any) => b.feature_id).includes(f.id),
@@ -76,7 +76,7 @@ export const handleUpdateBalances = async (req: any, res: any) => {
 
     const { cusEnts, cusPrices } = await getCusEntsInFeatures({
       customer,
-      internalFeatureIds: featuresToUpdate.map((f) => f.internal_id!),
+      internalFeatureIds: featuresToUpdate.map((f: any) => f.internal_id!),
       logger: req.logtail,
     });
 
@@ -110,7 +110,9 @@ export const handleUpdateBalances = async (req: any, res: any) => {
         });
       }
 
-      const feature = featuresToUpdate.find((f) => f.id === balance.feature_id);
+      const feature = featuresToUpdate.find(
+        (f: any) => f.id === balance.feature_id,
+      );
 
       if (balance.unlimited === true) {
         featureDeductions.push({
@@ -237,7 +239,6 @@ export const handleUpdateBalances = async (req: any, res: any) => {
               properties,
             },
             cusEnt,
-            features,
             featureDeductions: [], // not important because not deducting credits
             willDeductCredits: false,
           });

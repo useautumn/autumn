@@ -45,7 +45,11 @@ export const sendSvixEvent = safeSvix({
     data: any;
   }) => {
     const svix = createSvixCli();
-    return await svix.message.create(getSvixAppId({ org, env }), {
+    const appId = getSvixAppId({ org, env });
+    if (!appId) {
+      return null;
+    }
+    return await svix.message.create(appId, {
       eventType,
       payload: {
         type: eventType,
@@ -59,7 +63,9 @@ export const sendSvixEvent = safeSvix({
 export const getSvixDashboardUrl = safeSvix({
   fn: async ({ org, env }: { org: Organization; env: AppEnv }) => {
     const appId = getSvixAppId({ org, env });
-
+    if (!appId) {
+      return null;
+    }
     const svix = createSvixCli();
     const dashboard = await svix.authentication.appPortalAccess(appId, {});
     return dashboard.url;
