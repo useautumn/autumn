@@ -25,9 +25,6 @@ export default function MoreMenuButton({
   }: { item: ProductItem; setItem: (item: ProductItem) => void } =
     useProductItemContext();
 
-  const [checkedChanged, setCheckedChanged] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(true);
-
   return (
     <Popover open={showPopover} onOpenChange={setShowPopover}>
       <PopoverTrigger asChild>
@@ -49,7 +46,6 @@ export default function MoreMenuButton({
             variant="secondary"
             className="text-xs text-t2 shadow-none border-none w-full justify-start"
             onClick={() => {
-              setCheckedChanged(true);
               setItem({
                 ...item,
                 reset_usage_when_enabled: !item.reset_usage_when_enabled,
@@ -63,25 +59,6 @@ export default function MoreMenuButton({
             Reset usage when product is enabled
           </Button>
         </div>
-        <Button
-          className="h-7 shadow-none text-t3 text-xs justify-start border-none"
-          variant="outline"
-          startIcon={
-            show.perEntity ? (
-              <MinusIcon size={14} className="ml-0.5 mr-1" />
-            ) : (
-              <PlusIcon size={14} className="ml-0.5 mr-1" />
-            )
-          }
-          onClick={() => {
-            setShow({ ...show, perEntity: !show.perEntity });
-            setShowPopover(false);
-          }}
-        >
-          {show.perEntity
-            ? "Remove per feature entity"
-            : "Add per feature entity"}
-        </Button>
       </PopoverContent>
     </Popover>
   );

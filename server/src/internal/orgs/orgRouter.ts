@@ -1,23 +1,38 @@
+import express, { Router } from "express";
+import Stripe from "stripe";
+
+import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { encryptData } from "@/utils/encryptUtils.js";
+
 import { ErrCode } from "@/errors/errCodes.js";
 import { createClerkCli } from "@/external/clerkUtils.js";
 import {
   checkKeyValid,
   createWebhookEndpoint,
 } from "@/external/stripe/stripeOnboardingUtils.js";
-import { encryptData } from "@/utils/encryptUtils.js";
-import RecaseError, {
-  handleFrontendReqError,
-  handleRequestError,
-} from "@/utils/errorUtils.js";
-import express from "express";
-import Stripe from "stripe";
+
 import { OrgService } from "./OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { AppEnv } from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 import { clearOrgCache } from "./orgUtils/clearOrgCache.js";
+import { createOrgResponse } from "./orgUtils.js";
+import { handleGetOrgMembers } from "./handlers/handleGetOrgMembers.js";
+import { handleInvite } from "./handlers/handleInvite.js";
+import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
+import { handleDeleteOrg } from "./handlers/handleDeleteOrg.js";
 
-export const orgRouter = express.Router();
+export const orgRouter: Router = express.Router();
+orgRouter.get("/members", handleGetOrgMembers);
+orgRouter.get("/upload_url", handleGetUploadUrl);
+orgRouter.post("/invite", handleInvite as any);
+orgRouter.delete("", handleDeleteOrg as any);
+
+orgRouter.delete("/delete-user", async (req: any, res) => {
+  res.status(200).json({
+    message: "User deleted",
+  });
+});
 
 orgRouter.get("", async (req: any, res) => {
   try {
@@ -30,9 +45,7 @@ orgRouter.get("", async (req: any, res) => {
 
     const org = await OrgService.getFromReq(req);
 
-    res.status(200).json({
-      org,
-    });
+    res.status(200).json(createOrgResponse(org));
   } catch (error) {
     handleRequestError({
       req,
@@ -90,8 +103,6 @@ orgRouter.post("/stripe", async (req: any, res) => {
     let testWebhook: Stripe.WebhookEndpoint;
     let liveWebhook: Stripe.WebhookEndpoint;
     try {
-      console.log(`Creating stripe webhook for URL: ${process.env.SERVER_URL}`);
-
       testWebhook = await createWebhookEndpoint(
         testApiKey,
         AppEnv.Sandbox,
@@ -125,15 +136,6 @@ orgRouter.post("/stripe", async (req: any, res) => {
           live_webhook_secret: encryptData(liveWebhook.secret as string),
           success_url: successUrl,
         },
-      },
-    });
-
-    // 2. Update org in Clerk
-    const clerkCli = createClerkCli();
-    await clerkCli.organizations.updateOrganization(req.orgId, {
-      publicMetadata: {
-        stripe_connected: true,
-        default_currency: defaultCurrency,
       },
     });
 

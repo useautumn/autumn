@@ -8,7 +8,7 @@ const anthropic = createAnthropic({
 });
 
 export const generateFeatureDisplay = async (feature: Feature) => {
-  let prompt = `I'm building an entitlement system and my users can create features on my platform. I also help with displaying components (like pricing table) so I need to get the feature name in singular and plural form. 
+  const prompt = `I'm building an entitlement system and my users can create features on my platform. I also help with displaying components (like pricing table) so I need to get the feature name in singular and plural form. 
   
   Based on the feature name passed in, please generate a singular and plural form, in lowercase.
   

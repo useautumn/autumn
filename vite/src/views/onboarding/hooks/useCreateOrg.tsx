@@ -1,8 +1,13 @@
-import { useOrganization, useUser } from "@clerk/clerk-react";
-
+import { useOrg } from "@/hooks/useOrg";
+import {
+  authClient,
+  useListOrganizations,
+  useSession,
+} from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useOrganizationList } from "@clerk/clerk-react";
-import { useEffect, useRef, useState } from "react";
+import { slugify } from "@/utils/formatUtils/formatTextUtils";
+import { useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 export const useCreateOrg = ({
   productMutate,
@@ -10,43 +15,50 @@ export const useCreateOrg = ({
   productMutate: () => Promise<void>;
 }) => {
   const axiosInstance = useAxiosInstance();
-  const { user } = useUser();
-  const { organization: org } = useOrganization();
-  const { setActive } = useOrganizationList();
   const hasCreatedOrg = useRef(false);
+
+  const { data: session } = useSession();
+  const { data: organizations, isPending } = useListOrganizations();
+  const { mutate } = useOrg();
+
+  const getOrgSlug = () => {
+    const randomDigits = Math.floor(10000000 + Math.random() * 90000000);
+    return `${slugify(session?.user!.name || "org")}_${randomDigits}`;
+  };
 
   useEffect(() => {
     const createDefaultOrg = async () => {
-      if (hasCreatedOrg.current) return;
-
+      if (hasCreatedOrg.current || isPending || !session?.user) return;
       hasCreatedOrg.current = true;
-
       // Either set first org active, or create a new org
       try {
-        if (
-          user?.organizationMemberships?.length &&
-          user.organizationMemberships.length > 0
-        ) {
-          await setActive?.({
-            organization: user.organizationMemberships[0].organization.id,
+        if (organizations && organizations.length > 0) {
+          await authClient.organization.setActive({
+            organizationId: organizations[0]?.id,
           });
-          await productMutate();
-
-          return;
         } else {
-          const { data } = await axiosInstance.post("/organization");
+          const { data, error } = await authClient.organization.create({
+            name: `${session?.user.name}'s Org`,
+            slug: getOrgSlug(),
+          });
 
-          const res = await setActive?.({ organization: data.id });
+          if (error) throw error;
 
+          await authClient.organization.setActive({
+            organizationId: data?.id,
+          });
+
+          await mutate();
           await productMutate();
         }
-      } catch (error) {
-        console.error("Error creating organization:", error);
+      } catch (error: any) {
+        toast.error(`Error initializing org: ${error.message}`);
       }
     };
+    createDefaultOrg();
 
-    if (!org && setActive) {
-      createDefaultOrg();
-    }
-  }, [org, axiosInstance, setActive, productMutate, user]);
+    // if (!org && setActive) {
+    //   createDefaultOrg();
+    // }
+  }, [session, axiosInstance, productMutate]);
 };

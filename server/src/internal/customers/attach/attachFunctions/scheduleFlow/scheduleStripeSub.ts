@@ -83,7 +83,7 @@ export const updateOtherCusProdsWithNewSchedule = async ({
 
   const otherCusProducts = getCusProductsWithStripeSubId({
     cusProducts: attachParams.cusProducts!,
-    stripeSubId: otherSub.id,
+    stripeSubId: otherSub?.id,
   });
 
   if (otherCusProducts.length > 0) {
@@ -121,6 +121,8 @@ export const handleNewScheduleForItemSet = async ({
   const otherSubObj = intervalToOtherSubs[itemSet.interval];
   let otherSub = otherSubObj?.otherSub || null;
   let otherSubItems = otherSubObj?.otherSubItems || [];
+
+  // console.log("Interval:", itemSet.interval, "Other sub: ", otherSub?.id);
 
   // 2. Add to item set to create new schedule
   itemSet.items.push(

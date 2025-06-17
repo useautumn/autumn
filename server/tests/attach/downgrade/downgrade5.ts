@@ -16,9 +16,7 @@ import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 
 const testCase = "downgrade5";
-describe(`${chalk.yellowBright(
-  "downgrade5: testing basic downgrade (paid to paid)",
-)}`, () => {
+describe(`${chalk.yellowBright(`${testCase}: testing basic downgrade (paid to paid)`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt();
   let testClockId: string;

@@ -17,7 +17,7 @@ import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
 import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
 import { handleListProducts } from "./handlers/handleListProducts.js";
 
-export const productApiRouter = Router();
+export const productApiRouter: Router = Router();
 
 productApiRouter.get("", handleListProducts);
 

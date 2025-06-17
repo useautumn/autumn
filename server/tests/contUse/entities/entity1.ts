@@ -89,7 +89,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create / delete ent
     {
       id: "1",
       name: "test",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 
@@ -118,12 +118,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create / delete ent
     {
       id: "2",
       name: "test",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
     {
       id: "3",
       name: "test2",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 
@@ -179,12 +179,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create / delete ent
     {
       id: "4",
       name: "test3",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
     {
       id: "5",
       name: "test4",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 

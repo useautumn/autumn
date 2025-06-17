@@ -158,7 +158,7 @@ export const getCustomerDetails = async ({
   const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,
     cusPrices: cusProductsToCusPrices({ cusProducts, inStatuses }),
-    entities: customer.entities,
+
     org,
   });
 

@@ -12,12 +12,20 @@ import {
   BillingInterval,
   BillingType,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import { priceToInArrearTiers } from "./createStripeInArrear.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+
+export interface StripeMeteredPriceParams {
+  db: DrizzleCli;
+  stripeCli: Stripe;
+  price: Price;
+  entitlements: EntitlementWithFeature[];
+  product: Product;
+  org: Organization;
+}
 
 export const createStripeMeteredPrice = async ({
   db,
@@ -26,14 +34,7 @@ export const createStripeMeteredPrice = async ({
   entitlements,
   product,
   org,
-}: {
-  db: DrizzleCli;
-  stripeCli: Stripe;
-  price: Price;
-  entitlements: EntitlementWithFeature[];
-  product: Product;
-  org: Organization;
-}) => {
+}: StripeMeteredPriceParams) => {
   const config = price.config as UsagePriceConfig;
   const ent = getPriceEntitlement(price, entitlements);
   const feature = ent.feature;
@@ -89,7 +90,7 @@ export const createStripeMeteredPrice = async ({
   const stripePrice = await stripeCli.prices.create({
     ...productData,
     ...priceAmountData,
-    currency: org.default_currency,
+    currency: org.default_currency || "usd",
     nickname: `Autumn Price (${feature!.name}) [Placeholder]`,
     recurring: {
       ...(billingIntervalToStripe(price.config!.interval!) as any),
@@ -194,7 +195,7 @@ export const createStripeArrearProrated = async ({
 
   let stripePrice = await stripeCli.prices.create({
     ...productData,
-    currency: org.default_currency,
+    currency: org.default_currency || "usd",
     ...priceAmountData,
     recurring: {
       ...(recurringData as any),

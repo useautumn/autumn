@@ -68,6 +68,16 @@ import { actions } from "../models/analyticsModels/actionTable.js";
 import { events } from "../models/eventModels/eventTable.js";
 import { replaceables } from "../models/cusProductModels/cusEntModels/replaceableTable.js";
 
+import {
+  user,
+  session,
+  account,
+  verification,
+  member,
+  invitation,
+} from "./auth-schema.js";
+import { userRelations } from "./auth-relations.js";
+
 export {
   // Tables
   organizations,
@@ -96,6 +106,14 @@ export {
   events,
   replaceables,
 
+  // Auth
+  user,
+  session,
+  account,
+  verification,
+  member,
+  invitation,
+
   // Relations
   organizationsRelations,
   entitlementsRelations,
@@ -114,4 +132,7 @@ export {
   rewardRedemptionRelations,
   migrationErrorRelations,
   replaceableRelations,
+
+  // Auth Relations
+  userRelations,
 };

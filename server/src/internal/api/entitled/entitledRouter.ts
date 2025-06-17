@@ -3,10 +3,10 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import {
   APIVersion,
   CusProductStatus,
-  Feature,
+  type Feature,
   FeatureType,
-  FullCustomerEntitlement,
-  Organization,
+  type FullCustomerEntitlement,
+  type Organization,
 } from "@autumn/shared";
 
 import {
@@ -30,7 +30,7 @@ import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCu
 import { getCheckPreview } from "./getCheckPreview.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 
-export const entitledRouter = Router();
+export const entitledRouter: Router = Router();
 
 const getRequiredAndActualBalance = ({
   cusEnts,
@@ -265,6 +265,7 @@ const getCusEntsAndFeatures = async ({
   }
 
   return {
+    fullCus: customer,
     cusEnts,
     feature,
     creditSystems,
@@ -341,11 +342,18 @@ entitledRouter.post("", async (req: any, res: any) => {
       quantity = floatQuantity;
     }
 
-    const { cusEnts, feature, creditSystems, org, cusProducts, allFeatures } =
-      await getCusEntsAndFeatures({
-        req,
-        logger: req.logtail,
-      });
+    const {
+      fullCus,
+      cusEnts,
+      feature,
+      creditSystems,
+      org,
+      cusProducts,
+      allFeatures,
+    } = await getCusEntsAndFeatures({
+      req,
+      logger: req.logtail,
+    });
 
     let apiVersion = orgToVersion({
       org,
@@ -358,11 +366,10 @@ entitledRouter.post("", async (req: any, res: any) => {
     if (feature.type === FeatureType.Boolean) {
       return await getBooleanEntitledResult({
         db,
-        customer_id,
+        fullCus,
         res,
         cusEnts,
         feature,
-        org,
         apiVersion,
         withPreview: req.body.with_preview,
         cusProducts,

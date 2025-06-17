@@ -1,6 +1,8 @@
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { AuthType } from "@autumn/shared";
+import { auth } from "@/utils/auth.js";
+import { AuthType, ErrCode } from "@autumn/shared";
 import { verifyToken } from "@clerk/express";
+import { fromNodeHeaders } from "better-auth/node";
 import { NextFunction } from "express";
 
 const getTokenData = async (req: any, res: any) => {
@@ -33,59 +35,73 @@ const getTokenData = async (req: any, res: any) => {
 };
 
 export const withOrgAuth = async (req: any, res: any, next: NextFunction) => {
-  try {
-    let tokenData = await getTokenData(req, res);
+  const { logtail: logger } = req;
 
-    if (!tokenData?.org_id) {
-      throw new Error("token data has no org_id");
+  try {
+    // let tokenData = await getTokenData(req, res);
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
+    });
+
+    if (!session) {
+      logger.info(`Unauthorized - no session found (${req.originalUrl})`);
+      return res
+        .status(401)
+        .json({ message: "Unauthorized - no session found" });
     }
 
-    let tokenOrg = tokenData!.org as any;
+    const orgId = session?.session?.activeOrganizationId;
+
+    if (!orgId) {
+      logger.info(`Unauthorized - no org id found`);
+      return res
+        .status(401)
+        .json({ message: "Unauthorized - no org id found" });
+    }
+
+    // let tokenOrg = tokenData!.org as any;
 
     let data = await OrgService.getWithFeatures({
       db: req.db,
-      orgId: tokenOrg.id,
+      orgId: orgId,
       env: req.env,
     });
 
     if (!data) {
-      return res.status(404).json({ message: "Org not found" });
+      logger.warn(`Org ${orgId} not found in DB`);
+      return res
+        .status(500)
+        .json({ message: "Org not found", code: ErrCode.OrgNotFound });
     }
 
     const { org, features } = data;
 
-    req.minOrg = {
-      id: tokenOrg?.id,
-      slug: tokenOrg?.slug,
-    };
-
-    req.orgId = tokenData!.org_id;
-    req.user = tokenData!.user;
+    req.user = session?.user;
+    req.orgId = orgId;
     req.org = org;
     req.features = features;
     req.authType = AuthType.Dashboard;
 
     next();
   } catch (error: any) {
-    console.log(
-      // `withOrgAuth error (${req.headers["authorization"]}):`,
-      `(warning) clerk auth failed:`,
-      error?.message || error,
-    );
+    // console.log(`(warning) clerk auth failed:`, error?.message || error);
+    logger.warn(`(warning) withOrgAuth failed:`, error?.message || error);
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
 };
 
 export const withAuth = async (req: any, res: any, next: NextFunction) => {
-  const tokenData = await getTokenData(req, res);
+  const session = await auth.api.getSession({
+    headers: fromNodeHeaders(req.headers),
+  });
 
-  if (!tokenData) {
+  if (!session) {
     res.status(401).json({ message: "Unauthorized" });
     return;
   }
 
-  req.userId = tokenData?.user_id;
+  req.userId = session?.user.id;
 
   next();
 };

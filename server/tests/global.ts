@@ -26,6 +26,7 @@ import {
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
+import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const features: Record<string, Feature & { eventName: string }> = {
   boolean1: initFeature({
@@ -854,7 +855,6 @@ const DEFAULT_ENV = AppEnv.Sandbox;
 before(async function () {
   try {
     this.env = AppEnv.Sandbox;
-    this.sb = createSupabaseClient();
     let { db, client } = initDrizzle();
     this.db = db;
     this.client = client;
@@ -864,11 +864,11 @@ before(async function () {
       slug: ORG_SLUG,
     });
 
-    let { data: dbFeatures, error } = await this.sb
-      .from("features")
-      .select("*")
-      .eq("org_id", this.org.id)
-      .eq("env", this.env);
+    const dbFeatures = await FeatureService.list({
+      db: this.db,
+      orgId: this.org.id,
+      env: this.env,
+    });
 
     const cleanFeatures = (features: Record<string, Feature>) => {
       for (const featureId in features) {

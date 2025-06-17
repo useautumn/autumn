@@ -2,14 +2,20 @@ import { cn } from "@/lib/utils";
 
 export const PageSectionHeader = ({
   title,
+  titleComponent,
   isOnboarding = false,
   addButton,
   className,
+  classNames,
 }: {
-  title: string;
+  title?: string;
+  titleComponent?: React.ReactNode;
   isOnboarding?: boolean;
   addButton?: React.ReactNode;
   className?: string;
+  classNames?: {
+    title?: string;
+  };
 }) => {
   return (
     <div
@@ -20,7 +26,12 @@ export const PageSectionHeader = ({
       )}
     >
       <div className="flex items-center gap-2">
-        <h2 className="text-sm text-t2 font-medium">{title}</h2>
+        {title && (
+          <h2 className={cn("text-sm text-t2 font-medium", classNames?.title)}>
+            {title}
+          </h2>
+        )}
+        {titleComponent}
       </div>
       {addButton && <div className="flex items-center">{addButton}</div>}
     </div>

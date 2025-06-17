@@ -61,7 +61,7 @@ export const ConnectStripeStep = ({
               target="_blank"
               rel="noopener noreferrer"
             >
-              Stripe Test Key
+              Stripe Test Secret Key
               <ArrowUpRightFromSquare size={12} className="inline ml-1" />
             </a>{" "}
           </span>
@@ -71,7 +71,7 @@ export const ConnectStripeStep = ({
       <div className="flex gap-2 w-full">
         <Input
           className="w-8/10"
-          placeholder="Stripe Test Key"
+          placeholder="sk_test_...  "
           value={stripeConnected ? "Stripe connected  ✅ " : testApiKey}
           onChange={(e) => setTestApiKey(e.target.value)}
           disabled={stripeConnected}

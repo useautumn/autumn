@@ -18,7 +18,6 @@ import {
   deductAllowanceFromCusEnt,
   deductFromUsageBasedCusEnt,
 } from "./updateBalanceTask.js";
-import { JobName } from "@/queue/JobName.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
@@ -233,7 +232,6 @@ export const updateUsage = async ({
       toDeduct = await deductAllowanceFromCusEnt({
         toDeduct,
         cusEnt,
-        features,
         deductParams: {
           db,
           feature,
@@ -242,11 +240,11 @@ export const updateUsage = async ({
           cusPrices: cusPrices as any[],
           customer,
           properties,
+          entity: customer.entity,
         },
         featureDeductions,
         willDeductCredits: true,
         setZeroAdjustment: true,
-        entityId,
       });
     }
 
@@ -265,9 +263,9 @@ export const updateUsage = async ({
         cusPrices: cusPrices as any[],
         customer,
         properties,
+        entity: customer.entity,
       },
       setZeroAdjustment: true,
-      entityId,
     });
   }
 

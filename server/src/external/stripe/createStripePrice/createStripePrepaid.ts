@@ -110,7 +110,7 @@ export const createStripePrepaid = async ({
       ...productData,
       // unit_amount_decimal: (amount * 100).toString(),
       unit_amount_decimal: unitAmountDecimalStr,
-      currency: org.default_currency,
+      currency: org.default_currency!,
     });
 
     config.stripe_product_id = stripePrice.product as string;
@@ -133,7 +133,7 @@ export const createStripePrepaid = async ({
 
     stripePrice = await stripeCli.prices.create({
       ...productData,
-      currency: org.default_currency,
+      currency: org.default_currency!,
       ...priceAmountData,
       recurring: {
         ...(recurringData as any),

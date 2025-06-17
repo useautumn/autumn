@@ -12,7 +12,6 @@ describe("Initialize org for tests", () => {
 
     this.org = await clearOrg({ orgSlug: ORG_SLUG, env: DEFAULT_ENV });
     this.env = DEFAULT_ENV;
-    this.sb = createSupabaseClient();
     await setupOrg({
       orgId: this.org.id,
       env: DEFAULT_ENV,

@@ -74,12 +74,12 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach pro diff enti
     {
       id: "1",
       name: "Entity 1",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
     {
       id: "2",
       name: "Entity 1",
-      featureId: TestFeature.Users,
+      feature_id: TestFeature.Users,
     },
   ];
 

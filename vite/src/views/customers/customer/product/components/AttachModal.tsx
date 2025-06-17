@@ -132,7 +132,7 @@ export const AttachModal = ({
       const redirectUrl = getRedirectUrl(`/customers/${cusId}`, env);
 
       const attachBody = getAttachBody({
-        customerId: customer.id,
+        customerId: customer.id || customer.internal_id,
         entityId,
         product,
         optionsInput: options,

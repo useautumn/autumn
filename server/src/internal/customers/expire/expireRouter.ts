@@ -6,7 +6,7 @@ import { CusProductStatus, ErrCode, FullCusProduct } from "@autumn/shared";
 import { Router } from "express";
 import { expireCusProduct } from "../handlers/handleCusProductExpired.js";
 
-const expireRouter = Router();
+const expireRouter: Router = Router();
 
 expireRouter.post("", async (req, res) =>
   routeHandler({

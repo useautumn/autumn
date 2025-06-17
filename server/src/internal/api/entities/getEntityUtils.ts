@@ -1,4 +1,4 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
   getCusFeaturesResponse,
@@ -8,15 +8,15 @@ import {
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import {
-  AppEnv,
+  type AppEnv,
   CusProductStatus,
-  Entity,
+  type Entity,
   EntityExpand,
-  EntityResponse,
+  type EntityResponse,
   ErrCode,
-  FullCusProduct,
-  Organization,
-  Subscription,
+  type FullCusProduct,
+  type Organization,
+  type Subscription,
 } from "@autumn/shared";
 
 export const getEntityResponse = async ({
@@ -94,7 +94,6 @@ export const getEntityResponse = async ({
     let features = await getCusFeaturesResponse({
       cusProducts: entityCusProducts,
       org,
-      entities: customer.entities,
       entityId,
     });
 

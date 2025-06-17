@@ -42,33 +42,14 @@ export const validateAndGetInputEntities = async ({
     inputEntities = [createEntityData];
   }
 
-  let featureIds = [...new Set(inputEntities.map((e: any) => e.feature_id))];
-  if (featureIds.length > 1) {
-    throw new RecaseError({
-      message: "Multiple features not supported",
-      code: ErrCode.InvalidInputs,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-  }
-
-  let feature_id = featureIds[0];
-  let feature = features.find((f: any) => f.id === feature_id);
-
-  if (!feature_id) {
-    throw new RecaseError({
-      message:
-        "Feature ID is required to create entity. Did you forget to pass it into entity_data?",
-      code: ErrCode.InvalidInputs,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-  }
-
-  if (!feature) {
-    throw new RecaseError({
-      message: `Create entity failed: feature ${feature_id} not found`,
-      code: ErrCode.FeatureNotFound,
-      statusCode: StatusCodes.NOT_FOUND,
-    });
+  for (const entity of inputEntities) {
+    let feature = features.find((f: any) => f.id === entity.feature_id);
+    if (!feature) {
+      throw new RecaseError({
+        message: `Feature ${entity.feature_id} not found`,
+        code: ErrCode.FeatureNotFound,
+      });
+    }
   }
 
   let cusProducts = customer.customer_products;
@@ -102,8 +83,8 @@ export const validateAndGetInputEntities = async ({
     customer,
     features,
     inputEntities,
-    feature_id,
-    feature,
+    // feature_id,
+    // feature,
     cusProducts,
     existingEntities,
   };

@@ -26,7 +26,7 @@ import { StatusCodes } from "http-status-codes";
 import { cusProductToProduct } from "./cusProducts/cusProductUtils/convertCusProduct.js";
 import { createOrgResponse } from "../orgs/orgUtils.js";
 
-export const cusRouter = Router();
+export const cusRouter: Router = Router();
 
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
   try {

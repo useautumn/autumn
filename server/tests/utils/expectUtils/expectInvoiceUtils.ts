@@ -32,6 +32,7 @@ export const getExpectedInvoiceTotal = async ({
   productId: string;
   usage: {
     featureId: string;
+    entityFeatureId?: string;
     value: number;
   }[];
   stripeCli: Stripe;
@@ -67,7 +68,11 @@ export const getExpectedInvoiceTotal = async ({
     const featureId = config.feature_id;
     const ent = getPriceEntitlement(price, ents);
 
-    const usageAmount = usage.find((u) => u.featureId == featureId)?.value;
+    const usageAmount = usage.find(
+      (u) =>
+        u.featureId == featureId &&
+        (u.entityFeatureId ? u.entityFeatureId == ent.entity_feature_id : true),
+    )?.value;
 
     const overage =
       usageAmount && ent.allowance ? usageAmount - ent.allowance : usageAmount;

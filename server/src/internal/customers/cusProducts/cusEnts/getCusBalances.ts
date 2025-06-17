@@ -57,7 +57,7 @@ export const getV1EntitlementsRes = ({
 export const getCusBalances = async ({
   cusEntsWithCusProduct,
   cusPrices,
-  entities,
+  // entities,
   org,
   entityId,
 }: {
@@ -65,7 +65,7 @@ export const getCusBalances = async ({
     customer_product: FullCusProduct;
   })[];
   cusPrices: FullCustomerPrice[];
-  entities: Entity[];
+  // entities: Entity[];
   org: Organization;
   entityId?: string;
 }) => {
@@ -133,7 +133,7 @@ export const getCusBalances = async ({
 
     let { balance, adjustment, count, unused } = getCusEntBalance({
       cusEnt,
-      entities,
+      // entities,
       entityId,
     });
 

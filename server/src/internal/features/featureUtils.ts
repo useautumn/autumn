@@ -159,6 +159,13 @@ export const runSaveFeatureDisplayTask = async ({
 }) => {
   let display;
   try {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      logger.warn(
+        "ANTHROPIC_API_KEY is not set, skipping feature display generation",
+      );
+      return;
+    }
+
     logger.info(
       `Generating feature display for ${feature.id} (org: ${org.slug})`,
     );

@@ -21,36 +21,40 @@ import { FeatureConfig } from "./metered-features/FeatureConfig";
 import { getBackendErr } from "@/utils/genUtils";
 import { useEnv } from "@/utils/envUtils";
 
-const defaultFeature: CreateFeatureType = {
-  type: FeatureType.Metered,
-  config: {
-    filters: [
-      {
-        property: "",
-        operator: "",
-        value: [],
-      },
-    ],
-    usage_type: FeatureUsageType.Single,
-  },
-  name: "",
-  id: "",
-};
 export const CreateFeature = ({
   isFromEntitlement,
   setShowFeatureCreate,
   setSelectedFeature,
   setOpen,
   open,
+  entityCreate,
 }: {
   isFromEntitlement: boolean;
   setShowFeatureCreate: (show: boolean) => void;
   setSelectedFeature: (feature: CreateFeatureType) => void;
   setOpen: (open: boolean) => void;
   open: boolean;
+  entityCreate?: boolean;
 }) => {
   const { mutate, features } = useFeaturesContext();
   const env = useEnv();
+  const defaultFeature: CreateFeatureType = {
+    type: FeatureType.Metered,
+    config: {
+      filters: [
+        {
+          property: "",
+          operator: "",
+          value: [],
+        },
+      ],
+      usage_type: entityCreate
+        ? FeatureUsageType.Continuous
+        : FeatureUsageType.Single,
+    },
+    name: "",
+    id: "",
+  };
 
   const axiosInstance = useAxiosInstance({ env });
 

@@ -14,7 +14,6 @@ const ORG_SLUG = "unit-test-org";
 const DEFAULT_ENV = AppEnv.Sandbox;
 
 export const setupBefore = async (instance: any) => {
-  const sb = createSupabaseClient();
   const { db, client } = initDrizzle();
 
   const org = await OrgService.getBySlug({ db, slug: ORG_SLUG });
@@ -31,7 +30,6 @@ export const setupBefore = async (instance: any) => {
   });
 
   const stripeCli = createStripeCli({ org, env });
-  instance.sb = sb;
   instance.org = org;
   instance.env = env;
   instance.autumn = autumn;
