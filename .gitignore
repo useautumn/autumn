@@ -78,3 +78,7 @@ next-env.d.ts
 
 
 shared/drizzle
+
+
+run.sh
+commands.sh
