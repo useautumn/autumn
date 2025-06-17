@@ -46,6 +46,7 @@ export const AttachBodySchema = z
     metadata: z.any().optional(),
     billing_cycle_anchor: z.number().optional(),
     checkout_session_params: z.any().optional(),
+    reward: z.string().optional(),
   })
   .refine((data) => !(data.product_id && data.product_ids), {
     message: "Either product_id or product_ids should be provided, not both",

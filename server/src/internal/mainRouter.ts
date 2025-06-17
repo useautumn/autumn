@@ -10,10 +10,10 @@ import { devRouter } from "./dev/devRouter.js";
 import { cusRouter } from "./customers/internalCusRouter.js";
 import { onboardingRouter } from "./orgs/onboarding/onboardingRouter.js";
 import { handlePostOrg } from "./orgs/handlers/handlePostOrg.js";
-import { Autumn } from "autumn-js";
-import { autumnHandler } from "autumn-js/express";
 import { withAdminAuth } from "./admin/withAdminAuth.js";
 import { adminRouter } from "./admin/adminRouter.js";
+import { autumnHandler } from "autumn-js/express";
+import { Autumn } from "autumn-js";
 
 const mainRouter: Router = Router();
 
@@ -57,7 +57,10 @@ mainRouter.use(
     autumn: (req: any) => {
       let client = new Autumn({
         url: "http://localhost:8080/v1",
-        headers: req.headers,
+        headers: {
+          cookie: req.headers.cookie,
+          "Content-Type": "application/json",
+        },
       });
       return client as any;
     },

@@ -67,8 +67,8 @@ importers:
         specifier: ^4.3.10
         version: 4.3.16(react@18.3.1)(zod@3.25.64)
       autumn-js:
-        specifier: ^0.0.64
-        version: 0.0.64(@tanstack/react-query@5.80.7(react@18.3.1))(react@18.3.1)
+        specifier: ^0.0.65
+        version: 0.0.65(@tanstack/react-query@5.80.7(react@18.3.1))(react@18.3.1)
       axios:
         specifier: ^1.8.3
         version: 1.10.0
@@ -260,6 +260,9 @@ importers:
         specifier: ^3.25.23
         version: 3.25.64
     devDependencies:
+      '@types/node':
+        specifier: ^24.0.3
+        version: 24.0.3
       nodemon:
         specifier: ^3.1.7
         version: 3.1.10
@@ -2685,8 +2688,8 @@ packages:
       react:
         optional: true
 
-  autumn-js@0.0.64:
-    resolution: {integrity: sha512-Fa5lr9A0ywYNcbny/dQBRKSGaqnTuUvqtiBegHrr5Z3wCw9A/Z2LRH/f8AqHYQSFOXVkS763ngLlGLxfJpYgQQ==}
+  autumn-js@0.0.65:
+    resolution: {integrity: sha512-YKR5kNDdpYvxGDNEmgqtqrDODyJG3frApR2HC9z05hazg94rEDSoatfUh7iweJUAGSauhqhjWADtgMvRRbSLfA==}
     peerDependencies:
       '@tanstack/react-query': ^5.76.1
       react: ^18.0.0 || ^19.0.0
@@ -7829,7 +7832,7 @@ snapshots:
     optionalDependencies:
       react: 18.3.1
 
-  autumn-js@0.0.64(@tanstack/react-query@5.80.7(react@18.3.1))(react@18.3.1):
+  autumn-js@0.0.65(@tanstack/react-query@5.80.7(react@18.3.1))(react@18.3.1):
     dependencies:
       '@tanstack/react-query': 5.80.7(react@18.3.1)
       rou3: 0.6.3

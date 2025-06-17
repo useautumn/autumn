@@ -7,16 +7,33 @@ import { Logtail } from "@logtail/node";
 const pinoLogger = initLogger();
 
 const createLogMethod = (pinoMethod: any, logtailMethod: any) => {
+  function rewriteAppPath(str: string) {
+    if (typeof str !== "string") return str;
+    return str.replace(/\/app\//g, "./");
+  }
+
+  function rewriteErrorStack(error: Error) {
+    if (error instanceof Error && typeof error.stack === "string") {
+      const newError = new Error(error.message);
+      newError.stack = rewriteAppPath(error.stack);
+      return newError;
+    }
+
+    return error;
+  }
+
   return (...args: any[]) => {
     let message = "";
     let mergedObj = {};
 
     // Helper function to convert Error objects to plain objects
 
-    const strings = args.filter((arg) => typeof arg === "string");
-    const objects = args.filter(
-      (arg) => typeof arg !== "string" && arg !== null,
-    );
+    const strings = args
+      .filter((arg) => typeof arg === "string")
+      .map(rewriteAppPath);
+    const objects = args
+      .filter((arg) => typeof arg !== "string" && arg !== null)
+      .map((obj) => (obj instanceof Error ? rewriteErrorStack(obj) : obj));
 
     // Use last string as message, or use Error message if no strings provided
     if (strings.length > 0) {
@@ -25,7 +42,9 @@ const createLogMethod = (pinoMethod: any, logtailMethod: any) => {
       // If no string message but we have an Error object, use its stack trace
       const errorObject = args.find((arg) => arg instanceof Error);
       if (errorObject) {
-        message = errorObject.stack || errorObject.message || "Error occurred";
+        message = rewriteAppPath(
+          errorObject.stack || errorObject.message || "Error occurred",
+        );
       }
     }
 

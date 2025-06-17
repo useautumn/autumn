@@ -41,7 +41,13 @@ export const createStripeCusIfNotExists = async ({
     createNew = true;
   } else {
     try {
-      await stripeCli.customers.retrieve(customer.processor.id);
+      let stripeCus = await stripeCli.customers.retrieve(
+        customer.processor.id,
+        {
+          expand: ["test_clock", "invoice_settings.default_payment_method"],
+        },
+      );
+      return stripeCus as Stripe.Customer;
     } catch (error) {
       createNew = true;
     }
@@ -70,9 +76,9 @@ export const createStripeCusIfNotExists = async ({
       id: stripeCustomer.id,
       type: ProcessorType.Stripe,
     };
-  }
 
-  return;
+    return stripeCustomer;
+  }
 };
 
 export const createStripeCustomer = async ({

@@ -1,0 +1,12 @@
+{
+  "name": "Autumn dev container",
+  "image": "mcr.microsoft.com/devcontainers/node:18",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "forwardPorts": [8080],
+  // "postCreateCommand": "pnpm install",
+  "postCreateCommand": "apt update && apt install -y zsh",
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/zsh"
+  },
+  "extensions": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+}

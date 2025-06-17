@@ -109,13 +109,16 @@ export const handleInvoicePaidDiscount = async ({
           `Coupon ${couponId}, stripeCus: ${stripeCus.id}: credits used up or expired. discountFinished: ${discountFinished}, expired: ${expired}`,
         );
 
-        await deleteCouponFromCus({
-          stripeCli,
-          stripeSubId: expandedInvoice.subscription as string,
-          stripeCusId: expandedInvoice.customer as string,
-          discountId: discount.id,
-          logger,
-        });
+        if (expandedInvoice.subscription) {
+          await deleteCouponFromCus({
+            stripeCli,
+            stripeSubId: expandedInvoice.subscription as string,
+            stripeCusId: expandedInvoice.customer as string,
+            discountId: discount.id,
+            logger,
+          });
+        }
+
         continue;
       }
 

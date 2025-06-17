@@ -1,12 +1,6 @@
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import {
-  AppEnv,
-  BillingInterval,
-  Organization,
-  ProductItemInterval,
-  ProductV2,
-} from "@autumn/shared";
+import { AppEnv, Organization } from "@autumn/shared";
 import chalk from "chalk";
 import Stripe from "stripe";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -16,13 +10,9 @@ import { addPrefixToProducts, runAttachTest } from "../utils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
-import { replaceItems } from "../utils.js";
-
 import { defaultApiVersion } from "tests/constants.js";
 import { runMigrationTest } from "./runMigrationTest.js";
 import { timeout } from "@/utils/genUtils.js";
-import { advanceTestClock } from "tests/utils/stripeUtils.js";
-import { addDays } from "date-fns";
 import { expect } from "chai";
 
 let wordsItem = constructArrearItem({

@@ -197,14 +197,6 @@ orgRouter.delete("/stripe", async (req: any, res) => {
       },
     });
 
-    const clerkCli = createClerkCli();
-    await clerkCli.organizations.updateOrganization(req.orgId, {
-      publicMetadata: {
-        stripe_connected: false,
-        default_currency: undefined,
-      },
-    });
-
     res.status(200).json({
       message: "Stripe disconnected",
     });

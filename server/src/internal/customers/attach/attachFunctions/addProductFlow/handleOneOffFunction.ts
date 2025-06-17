@@ -37,6 +37,7 @@ export const handleOneOffFunction = async ({
     products,
     prices,
     optionsList,
+    reward,
   } = attachParams;
 
   const { invoiceOnly } = config;
@@ -89,6 +90,13 @@ export const handleOneOffFunction = async ({
     customer: customer.processor.id!,
     auto_advance: false,
     currency: org.default_currency!,
+    discounts: reward
+      ? [
+          {
+            coupon: reward.id,
+          },
+        ]
+      : undefined,
   });
 
   logger.info("2. Creating invoice items");
