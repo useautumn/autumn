@@ -104,3 +104,11 @@ await track({
 You've embedded a full billing system into your application within a few minutes. You can make any pricing model changes you need, or handle custom plans without needing to alter your codebase.
 
 Feel free to self-host Autumn, or use our hosted version at https://useautumn.com. And let us know any questions, thoughts or feedback at hey@useautumn.com. -->
+
+## Contributors
+
+Thanks to all our contributors for helping make autumn a better product!
+
+<a href="https://github.com/useautumn/autumn/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=useautumn/autumn" />
+</a>
