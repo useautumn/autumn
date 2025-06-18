@@ -1,13 +1,15 @@
 import { ColumnDef, Row } from "@tanstack/react-table";
 import CopyButton from "@/components/general/CopyButton";
 import { format } from "date-fns";
+import { User } from "better-auth";
+import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type Org = {
   id: string;
   name: string;
   slug: string;
   createdAt: string;
-  users: string[];
+  users: User[];
 };
 
 // Helper to add width and canCopy to columns
@@ -71,12 +73,30 @@ export const columns: OrgColumnDef[] = [
     },
   },
   {
+    accessorKey: "impersonate",
+    header: "Impersonate",
+    width: 150,
+    cell: ({ row }: { row: Row<Org> }) => {
+      const users = row.getValue("users") as User[];
+
+      if (!users || users.length === 0) {
+        return null;
+      }
+
+      return <ImpersonateButton userId={users?.[0]?.id} />;
+    },
+  },
+  {
     accessorKey: "users",
     header: "Users",
     width: "100%",
     cell: ({ row }: { row: Row<Org> }) => {
       const value = row.getValue("users");
-      return <span className="truncate">{(value as string[]).join(", ")}</span>;
+      return (
+        <span className="truncate">
+          {(value as User[]).map((user) => user.email)}
+        </span>
+      );
     },
   },
 ];

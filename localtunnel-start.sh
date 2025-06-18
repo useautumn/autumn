@@ -7,7 +7,8 @@ fi
 
 # Set default subdomain if env var not found
 if [ -z "$LOCALTUNNEL_RESERVED_KEY" ]; then
-  LOCALTUNNEL_RESERVED_KEY="abcasdjnaslkjdnas"
+  echo "No LOCALTUNNEL_RESERVED_KEY found in .env, exiting..."
+  exit 0
 fi
 
 echo "LOCALTUNNEL_RESERVED_KEY: ${LOCALTUNNEL_RESERVED_KEY}"
