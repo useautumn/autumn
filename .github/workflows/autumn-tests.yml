@@ -1,0 +1,41 @@
+name: Run Autumn Test Suites
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  run-autumn-tests:
+    runs-on: ubuntu-latest
+
+    env:
+      STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run g1.sh
+        run: bash shell/g1.sh
+
+      - name: Run g2.sh
+        run: bash shell/g2.sh
+
+      - name: Run g3.sh
+        run: bash shell/g3.sh
+
+      - name: Run g4.sh
+        run: bash shell/g4.sh
+
+      - name: Run g5.sh
+        run: bash shell/g5.sh
