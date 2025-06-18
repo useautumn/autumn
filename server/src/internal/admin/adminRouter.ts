@@ -101,7 +101,11 @@ adminRouter.get("/orgs", async (req: any, res: any) => {
       .where(
         and(
           search
-            ? or(ilike(organizations.name, `%${search as string}%`))
+            ? or(
+                ilike(organizations.name, `%${search as string}%`),
+                ilike(organizations.id, `%${search as string}%`),
+                ilike(organizations.slug, `%${search as string}%`),
+              )
             : undefined,
           after
             ? or(
@@ -143,7 +147,7 @@ adminRouter.get("/orgs", async (req: any, res: any) => {
         ...org,
         users: memberships
           .filter((membership) => membership.member.organizationId === org.id)
-          .map((membership) => membership.user?.email),
+          .map((membership) => membership.user),
       })),
       hasNextPage: orgs.length > 20,
     });

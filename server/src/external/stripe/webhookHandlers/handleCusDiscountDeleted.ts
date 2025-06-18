@@ -67,9 +67,6 @@ export async function handleCusDiscountDeleted({
     return;
   }
 
-  // Send response first...?
-  res.status(200).json({ message: "OK" });
-
   const reward = await RewardService.get({
     db,
     orgId: org.id,

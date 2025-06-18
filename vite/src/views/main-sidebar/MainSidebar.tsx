@@ -1,8 +1,6 @@
-import { NavButton } from "./NavButton";
-import { SidebarTop } from "./SidebarTop";
-
-import { useEnv } from "@/utils/envUtils";
 import SidebarBottom from "./SidebarBottom";
+import { NavButton } from "./NavButton";
+import { useEnv } from "@/utils/envUtils";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { SidebarContext } from "./SidebarContext";
@@ -53,14 +51,6 @@ export const MainSidebar = () => {
               title="Developer"
               env={env}
             />
-            {/* <AdminOnly>
-              <NavButton
-                value="admin"
-                icon={<Shield size={15} />}
-                title="Admin"
-                env={env}
-              />
-            </AdminOnly> */}
           </div>
         </div>
         {/* Sidebar bottom */}

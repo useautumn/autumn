@@ -1,14 +1,12 @@
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Select, SelectContent, SelectItem } from "@/components/ui/select";
 import { SelectTrigger, SelectValue } from "@/components/ui/select";
-import { keyToTitle, slugify } from "@/utils/formatUtils/formatTextUtils";
+import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import {
   Reward,
   CouponDurationType,
-  DiscountType,
   RewardType,
   ProductItem,
 } from "@autumn/shared";
@@ -156,11 +154,11 @@ const ProductPriceSelector = ({
 
   // Handle selection/deselection of a price
   const handlePriceToggle = (priceId: string) => {
-    let newPriceIds = [...config.price_ids];
-    if (config.price_ids.includes(priceId)) {
-      newPriceIds = config.price_ids.filter((id) => id !== priceId);
+    let newPriceIds = [...(config.price_ids || [])];
+    if (config.price_ids?.includes(priceId)) {
+      newPriceIds = config.price_ids?.filter((id) => id !== priceId) || [];
     } else {
-      newPriceIds = [...config.price_ids, priceId];
+      newPriceIds = [...(config.price_ids || []), priceId];
     }
     setConfig("price_ids", newPriceIds);
   };
@@ -190,11 +188,11 @@ const ProductPriceSelector = ({
         >
           {config.apply_to_all ? (
             "All Products"
-          ) : config.price_ids.length == 0 ? (
+          ) : config.price_ids?.length == 0 ? (
             "Select Products"
           ) : (
             <>
-              {config.price_ids.map((priceId) => (
+              {config.price_ids?.map((priceId) => (
                 <div
                   key={priceId}
                   className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit max-w-full"
@@ -270,7 +268,7 @@ const ProductPriceSelector = ({
                               })}
                             </span>
 
-                            {config.price_ids.includes(item.price_id) && (
+                            {config.price_ids?.includes(item.price_id) && (
                               <Check size={12} className="text-t3" />
                             )}
                           </CommandItem>

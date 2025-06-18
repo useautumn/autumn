@@ -53,7 +53,6 @@ const initWorker = ({
         await runSaveFeatureDisplayTask({
           db,
           feature: job.data.feature,
-          org: job.data.org,
           logger: logtail,
         });
         return;

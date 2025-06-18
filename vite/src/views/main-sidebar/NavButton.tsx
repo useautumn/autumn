@@ -5,6 +5,7 @@ import { AppEnv } from "@autumn/shared";
 import { Link } from "react-router";
 import { useState } from "react";
 import { useSidebarContext } from "./SidebarContext";
+import { useEnv } from "@/utils/envUtils";
 
 export const NavButton = ({
   value,
@@ -18,12 +19,13 @@ export const NavButton = ({
   value: string;
   icon: any;
   title: string;
-  env: AppEnv;
+  env?: AppEnv;
   className?: string;
   href?: string;
   online?: boolean;
 }) => {
   // Get window path
+  env = useEnv();
   const { state } = useSidebarContext();
 
   const tab = useTab();

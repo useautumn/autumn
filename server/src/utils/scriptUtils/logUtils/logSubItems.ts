@@ -1,8 +1,5 @@
+import { subItemToAutumnInterval } from "@/external/stripe/utils.js";
 import Stripe from "stripe";
-import {
-  stripeToAutumnInterval,
-  subItemToAutumnInterval,
-} from "tests/utils/stripeUtils.js";
 
 export const logSubItems = (sub: Stripe.Subscription) => {
   for (const item of sub.items.data) {

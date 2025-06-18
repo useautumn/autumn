@@ -11,6 +11,7 @@ import { constructArrearItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
 
 const testCase = "aentity1";
 
@@ -87,6 +88,13 @@ describe(`${chalk.yellowBright(`attach/${testCase}: Testing attach to entity via
       db,
       org,
       env,
+      entityId,
+    });
+
+    let customer = await autumn.customers.get(customerId);
+    expectProductAttached({
+      customer,
+      product: pro,
       entityId,
     });
   });
