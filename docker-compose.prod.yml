@@ -1,4 +1,4 @@
-version: "3.8"
+
 services:
   valkey:
     image: docker.io/bitnami/valkey:8.0
@@ -32,9 +32,23 @@ services:
       context: .
       dockerfile: docker/prod.dockerfile
       target: server-prod
+    volumes:
+      - ./server:/app/server
     ports:
       - "8080:8080"
     restart: always
+
+  localtunnel:
+    image: node:20-alpine
+    build:
+      dockerfile: docker/prod.dockerfile
+      context: .
+      target: localtunnel
+    volumes:
+      - ./server:/app/server
+    depends_on:
+      - server
+    restart: unless-stopped
 
   workers:
     environment:  
@@ -44,3 +58,9 @@ services:
       dockerfile: docker/prod.dockerfile
       target: workers-prod
     restart: always
+
+volumes:
+  valkey-data:
+  shared-dist:
+  shared-node-modules:
+  root-node-modules:

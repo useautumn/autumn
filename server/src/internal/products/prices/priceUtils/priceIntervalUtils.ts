@@ -10,7 +10,7 @@ const BillingIntervalOrder = [
 ];
 
 const ReversedBillingIntervalOrder = [
-  BillingInterval.OneOff,
+  // BillingInterval.OneOff,
   BillingInterval.Month,
   BillingInterval.Quarter,
   BillingInterval.SemiAnnual,

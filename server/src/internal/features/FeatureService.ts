@@ -94,7 +94,7 @@ export class FeatureService {
       env: updatedFeatures[0].env as AppEnv,
     });
 
-    return updatedFeatures as Feature[];
+    return updatedFeatures.length > 0 ? updatedFeatures[0] : null;
   }
 
   static async insert({

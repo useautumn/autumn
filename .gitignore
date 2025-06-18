@@ -82,3 +82,7 @@ shared/drizzle
 
 run.sh
 commands.sh
+env.sh
+server/env.sh
+server/run.sh
+server/test.sh

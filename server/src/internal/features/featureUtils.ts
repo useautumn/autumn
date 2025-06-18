@@ -149,12 +149,12 @@ export const getObjectsUsingFeature = async ({
 export const runSaveFeatureDisplayTask = async ({
   db,
   feature,
-  org,
+
   logger,
 }: {
   db: DrizzleCli;
   feature: Feature;
-  org: Organization;
+
   logger: any;
 }) => {
   let display;
@@ -166,9 +166,7 @@ export const runSaveFeatureDisplayTask = async ({
       return;
     }
 
-    logger.info(
-      `Generating feature display for ${feature.id} (org: ${org.slug})`,
-    );
+    logger.info(`Generating feature display for ${feature.id}`);
     display = await generateFeatureDisplay(feature);
     logger.info(`Result: ${JSON.stringify(display)}`);
 

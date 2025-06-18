@@ -6,6 +6,7 @@ import { PriceItem } from "@/components/pricing/attach-pricing-dialog";
 import { formatAmount } from "@/utils/product/productItemUtils";
 import { AttachBranch } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import { Input } from "@/components/ui/input";
 
 export const DueToday = () => {
   const { attachState, product, org } = useProductContext();
@@ -67,7 +68,7 @@ export const DueToday = () => {
               <span>
                 {product.name} - {feature_name}
               </span>
-              <QuantityInput
+              {/* <QuantityInput
                 key={feature_name}
                 value={quantity ? quantity / billing_units : ""}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,7 +78,22 @@ export const DueToday = () => {
                   setOptions(newOptions);
                 }}
               >
-                <span className="text-muted-foreground">
+                
+              </QuantityInput> */}
+              <div className="flex items-center gap-2 ">
+                <Input
+                  type="number"
+                  value={quantity ? quantity / billing_units : ""}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const newOptions = [...options];
+                    newOptions[index].quantity =
+                      parseInt(e.target.value) * billing_units;
+                    setOptions(newOptions);
+                  }}
+                  className="w-12 h-7"
+                />
+
+                <span className="text-muted-foreground truncate max-w-40">
                   ×{" "}
                   {formatAmount({
                     defaultCurrency: currency,
@@ -86,7 +102,7 @@ export const DueToday = () => {
                   })}{" "}
                   per {billing_units === 1 ? " " : billing_units} {feature_name}
                 </span>
-              </QuantityInput>
+              </div>
             </PriceItem>
           );
         })}
