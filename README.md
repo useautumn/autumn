@@ -52,14 +52,10 @@ Growing companies iterate on pricing often: raising prices, experimenting with c
 ## How it works
 First, create your products and plans on the dashboard. We support **any** pricing model. Some popular ones we've seen include:
 
-1. **Usage & Overage** ⚡
-- Set real-time usage limits and choose when they reset. Charge users if they go over.
-2. **Credits** 💰
-- Users can access monetary or arbitrary credits that many features can draw from
-3. **Seat-based with per-seat limits** 👥:
-- Bill customers for their users (or other entities). Set usage-limits per user.
-4. **Pay upfront** 💳
-- let users purchase a fixed quantity of a feature upfront, which is used over time
+1. **Usage & Overage** ⚡: set real-time usage limits and choose when they reset. Charge users if they go over.
+2. **Credits** 💰: users can access monetary or arbitrary credits that many features can draw from
+3. **Seat-based with per-seat limits** 👥:: bill customers for their users (or other entities). Set usage-limits per user.
+4. **Pay upfront** 💳: let users purchase a fixed quantity of a feature upfront, which is used over time
 
 
 Next, all your billing logic can be implemented through just 3 functions:
