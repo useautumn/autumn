@@ -110,3 +110,9 @@ export const stripeToAutumnInterval = ({
     return BillingInterval.Year;
   }
 };
+export const subItemToAutumnInterval = (item: Stripe.SubscriptionItem) => {
+  return stripeToAutumnInterval({
+    interval: item.price.recurring?.interval!,
+    intervalCount: item.price.recurring?.interval_count!,
+  });
+};

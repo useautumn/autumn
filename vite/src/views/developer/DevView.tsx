@@ -55,17 +55,21 @@ const ConfigureWebhookSection = ({ dashboardUrl }: any) => {
     <div className="bg-white">
       <PageSectionHeader title="Webhooks" />
 
-      <AppPortal
-        url={dashboardUrl}
-        style={{
-          height: "100%",
-          borderRadius: "none",
-          marginTop: "0.5rem",
-          // paddingLeft: "1rem",
-          // paddingRight: "1rem",
-        }}
-        fullSize
-      />
+      {dashboardUrl ? (
+        <AppPortal
+          url={dashboardUrl}
+          style={{
+            height: "100%",
+            borderRadius: "none",
+            marginTop: "0.5rem",
+            // paddingLeft: "1rem",
+            // paddingRight: "1rem",
+          }}
+          fullSize
+        />
+      ) : (
+        <div className="text-muted-foreground">Dashboard URL not found.</div>
+      )}
     </div>
   );
 };

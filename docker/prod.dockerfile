@@ -10,11 +10,10 @@ COPY vite/package*.json ./vite/
 
 RUN pnpm install
 
-
-# # ---- Build shared ----
-# FROM base AS shared-build
-# COPY shared/ ./shared/
-# RUN pnpm -F shared build
+FROM base AS localtunnel
+WORKDIR /app
+COPY localtunnel-start.sh ./
+CMD ["sh", "localtunnel-start.sh"]
 
 # # ---- Build frontend (vite) ----
 FROM base AS vite-build
@@ -44,17 +43,3 @@ EXPOSE 8080
 WORKDIR /app
 CMD ["pnpm", "run", "server:workers"]
 
-# # ---- Production backend image ----
-# FROM node:18-alpine AS server-prod
-# COPY --from=server-build /app/server/dist ./dist
-# COPY --from=server-build /app/server/package.json ./
-# COPY --from=server-build /app/server/node_modules ./node_modules
-# EXPOSE 8080
-# CMD ["pnpm", "run", "server:start"]
-
-# # ---- Production workers image ----
-# FROM node:18-alpine AS workers-prod
-# COPY --from=server-build /app/server/dist ./dist
-# COPY --from=server-build /app/server/package.json ./
-# COPY --from=server-build /app/server/node_modules ./node_modules
-# CMD ["pnpm", "run", "server:workers"]

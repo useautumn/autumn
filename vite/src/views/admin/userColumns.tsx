@@ -4,6 +4,8 @@ import CopyButton from "@/components/general/CopyButton";
 import { format } from "date-fns";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
+import { impersonateUser } from "./adminUtils";
+import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type User = {
   id: string;
@@ -78,25 +80,7 @@ export const columns: UserColumnDef[] = [
     header: "Impersonate",
     width: "100%",
     cell: ({ row }: { row: Row<User> }) => (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={async () => {
-          const res = await authClient.admin.impersonateUser({
-            userId: row.original.id,
-          });
-
-          if (res.error) {
-            toast.error("Something went wrong");
-            return;
-          }
-
-          window.location.reload();
-        }}
-        style={{ width: 100 }}
-      >
-        Impersonate
-      </Button>
+      <ImpersonateButton userId={row.original.id} />
     ),
     enableSorting: false,
     enableHiding: false,

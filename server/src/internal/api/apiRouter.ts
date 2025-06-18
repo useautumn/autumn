@@ -1,4 +1,4 @@
-import { apiAuthMiddleware } from "@/middleware/apiMiddleware.js";
+import { apiAuthMiddleware } from "@/middleware/apiAuthMiddleware.js";
 import { Router } from "express";
 import { eventsRouter } from "./events/eventRouter.js";
 import { cusRouter } from "./cusRouter.js";

@@ -25,7 +25,14 @@ import {
 } from "@/lib/auth-client";
 import { FrontendOrg, user } from "@autumn/shared";
 import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, LogOut, Plus, Settings, Trash } from "lucide-react";
+import {
+  ChevronDown,
+  LogOut,
+  Plus,
+  Settings,
+  Shield,
+  Trash,
+} from "lucide-react";
 import React from "react";
 import { useState } from "react";
 import { CreateNewOrg } from "./CreateNewOrg";
@@ -38,6 +45,8 @@ import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { AdminHover } from "@/components/general/AdminHover";
+import { NavButton } from "../NavButton";
+import { AdminOnly } from "@/views/admin/components/AdminOnly";
 
 export const OrgDropdown = () => {
   const { org, isLoading, error } = useOrg();
@@ -108,6 +117,19 @@ export const OrgDropdown = () => {
           align="start"
           className="border-1 border-zinc-200 shadow-sm w-48"
         >
+          <AdminOnly>
+            <DropdownMenuItem
+              onClick={() => {
+                window.location.href = "/admin";
+              }}
+            >
+              <div className="flex justify-between w-full items-center gap-2 text-t2">
+                Admin
+                <Shield size={12} />
+              </div>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </AdminOnly>
           <DropdownMenuItem className="flex justify-between w-full items-center gap-2 text-t2">
             <div className="flex flex-col">
               <span>{session?.user?.name}</span>
