@@ -14,7 +14,12 @@ git checkout -b feature/your-feature-name
 git checkout -b fix/your-bug-fix
 ```
 
-3. Commit Your changes with clear, descriptive messages
+3. Commit your changes with clear, descriptive messages (you can use [commitizen](https://www.npmjs.com/package/commitizen) to help with this):
+```bash
+git commit -m "docs: added new code snippet to concepts.md"
+# or
+git commit -m "fix: fixed rounding error on priceUtils.ts"
+```
 
 4. Fetch the latest updated repo and merge with your changes
 ```bash
@@ -74,8 +79,8 @@ Use this approach if you prefer to configure your own database or tunneling solu
 2. Copy `vite/.env.example` to `vite/.env`
 3. Run the Docker command from Step 3 above
 
----
-### Database Management
+
+## Database Management
 Autumn uses Postgres as it's database solution, and Drizzle ORM to manage our queries / migrations. 
 
 Our cloud offering uses Supabase to host Postgres, but you can use any hosting solution you'd like. At the moment, our docker compose does not spin up a database for you, so you'll have to do this yourself (we help you set up Supabase super easily in our set up script).

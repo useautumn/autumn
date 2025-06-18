@@ -132,7 +132,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing create / delete ent
       stripeCli,
       testClockId,
       advanceTo: addWeeks(new Date(), 2).getTime(),
-      waitForSeconds: 10,
+      waitForSeconds: 30,
     });
 
     await autumn.entities.create(customerId, entities);
