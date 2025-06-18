@@ -25,11 +25,15 @@ All this without having to handle webhooks, upgrades/downgrades, cancellations o
 **Self Hosted**: If you'd like to self-host Autumn:
 
 1. Make sure you have `node.js` and `pnpm` installed
-2. Run our set up script:
+2. Install the project dependencies
+```bash
+pnpm install
+```
+3. Run our set up script:
 ```bash
 pnpm run setup
 ```
-3. Run Autumn:
+4. Run Autumn:
 ```bash
 docker compose -f docker-compose.prod.yml up
 ```
