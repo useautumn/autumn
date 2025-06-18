@@ -195,7 +195,6 @@ stripeWebhookRouter.post(
             logger,
             res: response,
           });
-          return;
           break;
       }
     } catch (error) {

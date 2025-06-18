@@ -2,6 +2,13 @@
 
 ![Autumn](assets/github_hero.png)
 
+![Discord](https://img.shields.io/badge/Join%20Community-5865F2?logo=discord&logoColor=white)
+![Follow](https://img.shields.io/twitter/follow/autumn_pricing?style=social)
+![Y Combinator](https://img.shields.io/badge/Y%20Combinator-F24-orange)
+[![Cloud](https://img.shields.io/badge/Cloud-☁️-blue)](https://app.useautumn.com)
+[![Documentation](https://img.shields.io/badge/Documentation-📕-blue)](https://docs.useautumn.com)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/useautumn/autumn)
+
 [Autumn](https://useautumn.com) is an open-source layer between Stripe and your application, allowing you to create any pricing model and embed it with a couple lines of code. On Autumn you can build:
 - Subscriptions
 - Credit systems & top ups

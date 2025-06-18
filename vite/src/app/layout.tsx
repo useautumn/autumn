@@ -1,12 +1,11 @@
-import { Toaster } from "@/components/ui/sonner";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { getRedirectUrl, navigateTo } from "@/utils/genUtils";
+import { navigateTo } from "@/utils/genUtils";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
 import { AppEnv } from "@autumn/shared";
 import { useEffect } from "react";
-import { Navigate, Outlet, useLocation, useNavigate } from "react-router";
+import { Outlet, useNavigate } from "react-router";
 
 import { usePostHog } from "posthog-js/react";
 import { Button } from "@/components/ui/button";
@@ -18,8 +17,6 @@ import { CustomToaster } from "@/components/general/CustomToaster";
 export function MainLayout() {
   const env = useEnv();
   const { data, isPending } = useSession();
-
-  console.log("Session", data, "isPending", isPending);
 
   const navigate = useNavigate();
   const posthog = usePostHog();
