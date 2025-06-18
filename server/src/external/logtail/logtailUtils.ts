@@ -9,6 +9,8 @@ const pinoLogger = initLogger();
 const createLogMethod = (pinoMethod: any, logtailMethod: any) => {
   function rewriteAppPath(str: string) {
     if (typeof str !== "string") return str;
+    // Replace file:///app/ with ./
+    str = str.replace("file:///app/", "./");
     return str.replace(/\/app\//g, "./");
   }
 

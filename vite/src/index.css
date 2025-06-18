@@ -243,6 +243,17 @@ button:focus-visible {
   --color-focus: rgba(139, 92, 246, 0.95);
 }
 
+/* Hide number input spinners globally */
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none; /* Chrome, Safari, Edge */
+  margin: 0;
+}
+
 /* 
 ---break--- */
 
