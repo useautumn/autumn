@@ -191,7 +191,7 @@ describe(`${chalk.yellowBright(
       feature_id: features.metered1.id,
     });
 
-    await timeout(3000);
+    await timeout(5000);
 
     await autumn.attach({
       customer_id: customerId,
