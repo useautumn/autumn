@@ -77,9 +77,7 @@ const { attach } = useAutumn();
 ```ts
 const { check } = useAutumn();
 
-const { data } = await check({
-  productId: "ai_tokens"
-})
+const { data } = await check({ featureId: "ai_tokens" })
 
 !data.allowed && alert("AI limit reached")
 ```
