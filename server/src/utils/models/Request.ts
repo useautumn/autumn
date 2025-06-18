@@ -9,25 +9,22 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PostHog } from "posthog-node";
 
 export interface ExtendedRequest extends ExpressRequest {
-  id: string;
-  authType: AuthType;
-
-  db: DrizzleCli;
-
-  userId?: string;
-  isPublic?: boolean;
-
-  logtail: Logtail;
   orgId: string;
   env: AppEnv;
-
   org: Organization;
   features: Feature[];
+  db: DrizzleCli;
+  logtail: Logtail;
+
+  id?: string;
+  userId?: string;
+  isPublic?: boolean;
+  authType?: AuthType;
 
   posthog?: PostHog;
   apiVersion?: number;
 
-  timestamp: number;
+  timestamp?: number;
 }
 
 export interface ActionRequest {
