@@ -15,6 +15,12 @@ COPY vite/package*.json ./vite/
 RUN pnpm install
 RUN npm install -g nodemon tsx
 
+# Stage 1: /localtunnel
+FROM base AS localtunnel
+WORKDIR /app
+COPY localtunnel-start.sh ./
+CMD ["sh", "localtunnel-start.sh"]
+
 #  Stage 2: /shared
 FROM base AS shared
 COPY shared/ ./shared/

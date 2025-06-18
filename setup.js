@@ -243,19 +243,22 @@ const handleLocalRunSetup = async () => {
 async function main() {
   // Step 1: Generate secrets
   console.log(chalk.magentaBright('\n================ Autumn Setup ================\n'));
+  const localtunnelReservedKey = genRandomSubdomain(32);
   const secrets = {
     BETTER_AUTH_SECRET: genUrlSafeBase64(64),
     ENCRYPTION_IV: genUrlSafeBase64(16),
     ENCRYPTION_PASSWORD: genUrlSafeBase64(64),
     BETTER_AUTH_URL: 'http://localhost:8080',
     CLIENT_URL: 'http://localhost:3000',
+    LOCALTUNNEL_RESERVED_KEY: localtunnelReservedKey,
+    STRIPE_WEBHOOK_URL: `https://${localtunnelReservedKey}.loca.lt`,
   };
 
   let databaseUrl = "";
   let stripeWebhookVars = [];
 
   databaseUrl = await handleDatabaseSetup();
-  stripeWebhookVars = await handleLocalRunSetup();
+  // stripeWebhookVars = await handleLocalRunSetup();
 
   // Step 11: Write to server/.env
   console.log(chalk.magentaBright('\n================ Writing .env ================\n'));
@@ -263,12 +266,20 @@ async function main() {
 
   // Autumn Auth section
   envSections.push(
-    '# Autumn Auth',
+    '# Auth',
     `BETTER_AUTH_SECRET=${secrets.BETTER_AUTH_SECRET}`,
-    `ENCRYPTION_IV=${secrets.ENCRYPTION_IV}`,
-    `ENCRYPTION_PASSWORD=${secrets.ENCRYPTION_PASSWORD}`,
     `BETTER_AUTH_URL=${secrets.BETTER_AUTH_URL}`,
     `CLIENT_URL=${secrets.CLIENT_URL}`,
+    ''
+  );
+
+  // Stripe required section
+  envSections.push(
+    '# Stripe',
+    `LOCALTUNNEL_RESERVED_KEY=${secrets.LOCALTUNNEL_RESERVED_KEY}`,
+    `ENCRYPTION_IV=${secrets.ENCRYPTION_IV}`,
+    `ENCRYPTION_PASSWORD=${secrets.ENCRYPTION_PASSWORD}`,
+    `STRIPE_WEBHOOK_URL=${secrets.STRIPE_WEBHOOK_URL}`,
     ''
   );
 
@@ -322,6 +333,10 @@ async function main() {
     }
     console.log(chalk.greenBright('✅ Successfully ran "pnpm run db:push".'));
   }
+
+  console.log(chalk.cyan('\nNext steps:'));
+  console.log(chalk.cyan('Run the following command to start Autumn:'));
+  console.log(chalk.cyan('  docker compose -f docker-compose.dev.yml up'));
 }
 
 main(); 

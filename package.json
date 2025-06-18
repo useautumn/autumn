@@ -18,7 +18,8 @@
     "setup": "node setup.js",
     "db:push": "pnpm -F shared db:push",
     "db:generate": "pnpm -F shared db:generate",
-    "db:migrate": "pnpm -F shared db:migrate"
+    "db:migrate": "pnpm -F shared db:migrate",
+    "docker:up": "docker compose -f docker-compose.dev.yml up --build"
   },
   "dependencies": {
     "chalk": "^5.3.0",
