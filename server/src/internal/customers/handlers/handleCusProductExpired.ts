@@ -183,7 +183,18 @@ export const expireCusProduct = async ({
 
   // For regular products
   // 1. Cancel stripe subscriptions
-  const cancelled = await cancelCusProductSubscriptions({
+
+  logger.info(`Expiring current product: ${cusProduct.product.name}`);
+  await expireAndActivate({
+    db,
+    env,
+    cusProduct,
+    org,
+    logger,
+  });
+
+  logger.info(`Cancelling stripe subscriptions`);
+  await cancelCusProductSubscriptions({
     cusProduct,
     org,
     env,
@@ -191,15 +202,15 @@ export const expireCusProduct = async ({
     prorate,
   });
 
-  if (!cancelled) {
-    await expireAndActivate({
-      db,
-      env,
-      cusProduct,
-      org,
-      logger,
-    });
-  } // else will be handled by webhook
+  // if (!cancelled) {
+  //   await expireAndActivate({
+  //     db,
+  //     env,
+  //     cusProduct,
+  //     org,
+  //     logger,
+  //   });
+  // } // else will be handled by webhook
 
   return;
 };
