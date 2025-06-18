@@ -418,7 +418,7 @@ export class AutumnInt {
     return data;
   };
 
-  cancel = async (params: CancelParams & { expire_immediately?: boolean }) => {
+  cancel = async (params: CancelParams) => {
     const data = await this.post(`/cancel`, params);
     return data;
   };
