@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "email": "email dev -p 3001",
-    "dev": "NODE_ENV=development nodemon --no-deprecation --exec tsx src/index.ts --ignore scripts --ignore tests",
-    "start": "tsx src/index.ts",
-    "workers": "tsx watch src/workers.ts",
+    "dev": "npx nodemon --no-deprecation --exec npx tsx src/index.ts --ignore scripts --ignore tests",
+    "start": "npx tsx src/index.ts",
+    "workers": "npx tsx watch src/workers.ts",
     "workers:start": "node --no-deprecation dist/src/workers.js",
     "build": "tsc -b tsconfig.build.json",
     "prod": "tsc -b tsconfig.build.json && tsc-alias && node dist/src/index.js",

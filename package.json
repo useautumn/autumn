@@ -8,7 +8,6 @@
   ],
   "type": "module",
   "scripts": {    
-    "postinstall": "pnpm -F shared build",
     "vite:build": "pnpm -F shared build && pnpm -F vite build",
     "vite:start": "pnpm -F vite start",
     "server:build": "pnpm -F shared build && pnpm -F server prod:build",

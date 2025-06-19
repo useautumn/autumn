@@ -17,6 +17,7 @@ import {
   getBackendErrObj,
   getRedirectUrl,
   navigateTo,
+  nullish,
 } from "@/utils/genUtils";
 import { toast } from "sonner";
 import { CusService } from "@/services/customers/CusService";
@@ -118,16 +119,15 @@ export const AttachModal = ({
     const setLoading = useInvoice ? setInvoiceLoading : setCheckoutLoading;
     const cusId = getCusId();
 
+    for (const option of options) {
+      if (nullish(option.quantity)) {
+        toast.error(`Quantity for ${option.feature_name} is required`);
+        return;
+      }
+    }
+
     try {
       setLoading(true);
-
-      const isCustom = attachState.itemsChanged;
-      const customData = attachState.itemsChanged
-        ? {
-            items: product.items,
-            free_trial: product.free_trial || undefined,
-          }
-        : {};
 
       const redirectUrl = getRedirectUrl(`/customers/${cusId}`, env);
 
@@ -144,8 +144,6 @@ export const AttachModal = ({
 
       const { data } = await CusService.attach(axiosInstance, attachBody);
 
-      // 1. If checkout url, open checkout dialog
-
       if (data.checkout_url) {
         window.open(data.checkout_url, "_blank");
       } else if (data.invoice) {
@@ -155,6 +153,7 @@ export const AttachModal = ({
       }
 
       toast.success(data.message || "Successfully attached product");
+      setOpen(false);
     } catch (error) {
       console.log("Error creating product: ", error);
       const errObj = getBackendErrObj(error);
