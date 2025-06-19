@@ -43,8 +43,6 @@
     "@logtail/node": "^0.5.2",
     "@react-email/components": "^0.0.42",
     "@supabase/supabase-js": "^2.46.2",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
     "ai": "^4.3.10",
     "autumn-js": "^0.0.65",
     "axios": "^1.8.3",
@@ -90,6 +88,8 @@
   "devDependencies": {
     "@types/chai": "^5.0.1",
     "@types/chai-http": "^3.0.5",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "@types/lodash-es": "^4.17.12",
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.13.4",
