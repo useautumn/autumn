@@ -16,4 +16,4 @@ echo "Installing localtunnel..."
 npm install -g localtunnel
 
 echo "Starting localtunnel..."
-lt --port 8080 --local-host server --subdomain ${LOCALTUNNEL_RESERVED_KEY} --print-requests 
+lt --port 8080 --local-host server --subdomain ${LOCALTUNNEL_RESERVED_KEY} --print-requests

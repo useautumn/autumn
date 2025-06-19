@@ -20,7 +20,7 @@ All this without having to handle webhooks, upgrades/downgrades, cancellations o
 
 ## Getting Started
 
-**Cloud**: The quickest way to start using Autum is through our cloud service [here](https://app.useautumn.com). 
+**Cloud**: The quickest way to start using Autum is through our [cloud service](https://app.useautumn.com). 
 
 **Self Hosted**: If you'd like to self-host Autumn:
 
@@ -43,6 +43,17 @@ That's it! You should be able to see the Autumn dashboard on `http://localhost:3
 > ⚠️ To log in, enter an email at the sign in page, and an OTP should appear in your console / terminal. Normally, we use Resend to email an OTP or Google OAuth -- these can be set up by providing your credentials in `server/.env`
 
 > ℹ️ Our set up script initializes the required env vars and (optionally) a Supabase instance. If you'd like to use your own Postgres instance, you can do so -- just paste the connection string in the `DATABASE_URL` env variable at `server/.env`
+
+## Troubleshooting
+
+If you encounter a `SyntaxError: Unexpected end of JSON input` error when running `pnpm run setup` again after previously running it, you may need to clear your database tables first. This is a [known issue](https://github.com/drizzle-team/drizzle-orm/issues/4529) that can occur when running database migrations multiple times.
+
+To resolve this:
+
+1. Connect to your database
+2. Drop all existing tables
+3. Run the setup script again:
+
 
 ## Why Autumn
 
