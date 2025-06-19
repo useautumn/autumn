@@ -12,7 +12,7 @@
 - [ ] Other (please describe):
 
 ## Checklist
-- [ ] I have read the [CONTRIBUTING.md](./CONTRIBUTING.md)
+- [ ] I have read the [CONTRIBUTING.md](https://github.com/useautumn/autumn/blob/staging/.github/CONTRIBUTING.md)
 - [ ] My code follows the code style of this project
 - [ ] I have added tests where applicable
 - [ ] I have tested my changes locally
