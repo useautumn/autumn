@@ -39,7 +39,7 @@ const getOrCreateSupabaseOrg = async () => {
   const orgListResult = spawnSync(
     'npx',
     ['supabase', 'orgs', 'list'],
-    { encoding: 'utf-8' }
+    { encoding: 'utf-8', shell: true }
   );
   if (orgListResult.status !== 0) {
     console.error(chalk.red('❌ Failed to list Supabase orgs.'));
@@ -77,7 +77,7 @@ const getOrCreateSupabaseOrg = async () => {
     const createOrgResult = spawnSync(
       'npx',
       ['supabase', 'orgs', 'create', orgName],
-      { stdio: 'inherit', encoding: 'utf-8' }
+      { stdio: 'inherit', encoding: 'utf-8', shell: true }
     );
     if (createOrgResult.status !== 0) {
       console.error(chalk.red('❌ Failed to create Supabase organization.'));
@@ -96,7 +96,7 @@ const generateSupabaseDatabaseUrl = async () => {
   console.log(chalk.magentaBright('\n================ Supabase Setup ================\n'));
 
   console.log(chalk.blueBright('\nLaunching Supabase login...'));
-  spawnSync('npx', ['supabase', 'login'], { stdio: 'inherit' });
+  spawnSync('npx', ['supabase', 'login'], { stdio: 'inherit', shell: true });
 
   // Step 3.5: Ensure org exists and select one
   await getOrCreateSupabaseOrg();
@@ -112,7 +112,7 @@ const generateSupabaseDatabaseUrl = async () => {
   const createResult = spawnSync(
     'npx',
     ['supabase', 'projects', 'create', projectName, '--db-password', dbPassword],
-    { stdio: 'inherit', encoding: 'utf-8' }
+    { stdio: 'inherit', encoding: 'utf-8', shell: true }
   );
   
   if (createResult.status !== 0) {
@@ -124,7 +124,7 @@ const generateSupabaseDatabaseUrl = async () => {
   const listResult = spawnSync(
     'npx',
     ['supabase', 'projects', 'list', '--output', 'json'],
-    { encoding: 'utf-8' }
+    { encoding: 'utf-8', shell: true }
   );
 
   if (listResult.status !== 0) {
@@ -327,7 +327,7 @@ async function main() {
 
   if (runDbPush) {
     console.log(chalk.blueBright('\nRunning "pnpm run db:push"...'));
-    const dbPushResult = spawnSync('pnpm', ['run', 'db:push'], { stdio: 'inherit', encoding: 'utf-8' });
+    const dbPushResult = spawnSync('pnpm', ['run', 'db:push'], { stdio: 'inherit', encoding: 'utf-8', shell: true });
     if (dbPushResult.status !== 0) {
       console.error(chalk.red('❌ Failed to run "pnpm run db:push". Please check the error above.'));
       process.exit(1);
