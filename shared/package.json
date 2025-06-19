@@ -15,9 +15,9 @@
   "scripts": {
     "build": "tsc",
     "dev": "nodemon --watch . --ext ts --ignore dist --exec 'pnpm run build'",
-    "db:push": "NODE_OPTIONS='--import tsx' drizzle-kit push --config drizzle.config.ts",
-    "db:generate": "NODE_OPTIONS='--import tsx' drizzle-kit generate --config drizzle.config.ts",
-    "db:migrate": "NODE_OPTIONS='--import tsx' drizzle-kit migrate --config drizzle.config.ts"
+    "db:push": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit push --config drizzle.config.ts",
+    "db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit migrate --config drizzle.config.ts"
   },
   "dependencies": {
     "decimal.js": "^10.5.0",
@@ -25,7 +25,8 @@
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.43.1",
     "drizzle-zod": "^0.8.2",
-    "zod": "^3.25.23"
+    "zod": "^3.25.23",
+    "cross-env": "^7.0.3"
   },
   "devDependencies": {
     "@types/node": "^24.0.3",
