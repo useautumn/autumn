@@ -49,7 +49,7 @@ export const ProductProps = () => {
               </TooltipTrigger>
               <TooltipContent
                 className="w-22 px-2 flex flex-col gap-2
-            bg-white/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2 text-t3 whitespace-nowrap
+            bg-background/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2 text-t3 whitespace-nowrap
             "
                 side="bottom"
                 sideOffset={4}

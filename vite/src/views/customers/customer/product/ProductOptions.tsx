@@ -7,7 +7,7 @@ export const ProductOptions = ({
 }) => {
   return (
     <div className="mt-6">
-      <div className="flex items-center justify-between border-y bg-stone-100 px-10 rounded-md h-8 w-full">
+      <div className="flex items-center justify-between border-y bg-muted px-10 rounded-md h-8 w-full">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex whitespace-nowrap">
           Billing Quantity
         </h2>

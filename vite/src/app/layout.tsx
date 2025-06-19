@@ -14,6 +14,8 @@ import { AutumnProvider } from "autumn-js/react";
 import { useSession } from "@/lib/auth-client";
 import { CustomToaster } from "@/components/general/CustomToaster";
 
+import { ThemeProvider } from "@/components/general/ThemeProvider"
+
 export function MainLayout() {
   const env = useEnv();
   const { data, isPending } = useSession();
@@ -37,7 +39,7 @@ export function MainLayout() {
   // 1. If not loaded, show loading screen
   if (isPending) {
     return (
-      <div className="w-screen h-screen flex bg-stone-100">
+      <div className="w-screen h-screen flex bg-surface-2">
         <MainSidebar />
         <div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
           <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
@@ -58,7 +60,7 @@ export function MainLayout() {
                 </Button>
               </div>
             )}
-            <div className="flex bg-stone-50 flex-col h-full">
+            <div className="flex bg-surface-1 flex-col h-full">
               <LoadingScreen />
             </div>
           </div>
@@ -83,13 +85,15 @@ export function MainLayout() {
   // }
 
   return (
+          <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
     <AutumnProvider backendUrl={import.meta.env.VITE_BACKEND_URL}>
-      <main className="w-screen h-screen flex bg-stone-100">
+      <main className="w-screen h-screen flex bg-surface-2">
         <CustomToaster />
         <MainSidebar />
         <MainContent />
       </main>
     </AutumnProvider>
+    </ThemeProvider>
   );
 }
 
@@ -119,14 +123,14 @@ const MainContent = () => {
         )}
         <div
           className={cn(
-            "w-full h-full overflow-auto flex justify-center bg-stone-50",
+            "w-full h-full overflow-auto flex justify-center bg-surface-1",
           )}
         >
           <div className="hidden md:flex w-full h-full justify-center">
             <Outlet />
           </div>
           <div className="md:hidden w-full h-full flex items-center justify-center">
-            <div className="bg-white p-6 rounded-lg shadow-sm text-center">
+            <div className="bg-background p-6 rounded-lg shadow-sm text-center">
               <h2 className="text-xl font-semibold mb-2">
                 Autumn is coming to mobile soon
               </h2>

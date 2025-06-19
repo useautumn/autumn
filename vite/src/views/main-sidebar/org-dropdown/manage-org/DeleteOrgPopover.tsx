@@ -76,9 +76,9 @@ export const DeleteOrgPopover = () => {
           Delete Organization
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="border border-zinc-200">
+      <PopoverContent align="start" className="border border-border bg-background">
         <div className="flex flex-col gap-4 text-sm w-fit">
-          <p className="text-t3">
+          <p className="text-foreground">
             Are you sure you want to delete this organization?
           </p>
           <Input

@@ -25,7 +25,7 @@ export const OrgInvitesList = () => {
     membership?.member.role === "admin" || membership?.member.role === "owner";
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto bg-background">
       <Row type="header" className={cn("grid-cols-18 px-6")}>
         <Item className="col-span-6">Email</Item>
         <Item className="col-span-3">Status</Item>
@@ -38,7 +38,7 @@ export const OrgInvitesList = () => {
         return (
           <Row
             key={invite.id}
-            className={cn("grid-cols-18 px-6 text-sm text-t2")}
+            className={cn("grid-cols-18 px-6 text-sm text-foreground")}
           >
             <Item className="col-span-6">{invite.email}</Item>
             <Item className="col-span-3">{invite.status}</Item>

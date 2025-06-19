@@ -101,7 +101,7 @@ function CreateProduct({
                       })
                     }
                     className={`min-w-32 flex items-center gap-2 ${
-                      product?.is_default ? "bg-stone-100" : ""
+                      product?.is_default ? "bg-muted" : ""
                     }`}
                   >
                     {product?.is_default && (
@@ -125,7 +125,7 @@ function CreateProduct({
                       setProduct({ ...product, is_add_on: !product?.is_add_on })
                     }
                     className={`min-w-32 flex items-center gap-2 ${
-                      product?.is_add_on ? "bg-stone-100" : ""
+                      product?.is_add_on ? "bg-muted" : ""
                     }`}
                   >
                     {product?.is_add_on && (

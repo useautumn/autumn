@@ -52,7 +52,7 @@ export default function DevScreen({ env }: { env: AppEnv }) {
 
 const ConfigureWebhookSection = ({ dashboardUrl }: any) => {
   return (
-    <div className="bg-white">
+    <div className="bg-background">
       <PageSectionHeader title="Webhooks" />
 
       {dashboardUrl ? (

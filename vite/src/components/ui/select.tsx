@@ -39,7 +39,7 @@ function SelectTrigger({
         <SelectPrimitive.Trigger
           data-slot="select-trigger"
           className={cn(
-            `flex  w-full items-center justify-between whitespace-nowrap rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm ring-offset-white placeholder:text-t3 focus:outline-none  disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 dark:border-zinc-800 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus:ring-zinc-300 
+            `flex  w-full items-center justify-between whitespace-nowrap rounded-md border border-zinc-200 bg-background px-3 py-2 text-sm shadow-sm ring-offset-white placeholder:text-t3 focus:outline-none  disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 dark:border-zinc-800 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus:ring-zinc-300 
         h-8
         
         data-[state=open]:border-focus data-[state=open]:shadow-focus
@@ -83,7 +83,7 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        `flex  w-full items-center justify-between whitespace-nowrap rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm shadow-sm ring-offset-white placeholder:text-t3 focus:outline-none  disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 dark:border-zinc-800 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus:ring-zinc-300 
+        `flex  w-full items-center justify-between whitespace-nowrap rounded-md border border-zinc-200 bg-background px-3 py-2 text-sm shadow-sm ring-offset-white placeholder:text-t3 focus:outline-none  disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1 dark:border-zinc-800 dark:ring-offset-zinc-950 dark:placeholder:text-zinc-400 dark:focus:ring-zinc-300 
 h-8
 
 data-[state=open]:border-focus data-[state=open]:shadow-focus

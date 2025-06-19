@@ -46,7 +46,7 @@ export const SelectItemFeature = ({
             </SelectItem>
           ))}
           <Button
-            className="flex w-full font-medium bg-white shadow-none text-primary hover:bg-stone-200"
+            className="flex w-full font-medium bg-background shadow-none text-primary hover:bg-primary/5"
             onClick={(e) => {
               e.preventDefault();
               setShowCreateFeature(true);

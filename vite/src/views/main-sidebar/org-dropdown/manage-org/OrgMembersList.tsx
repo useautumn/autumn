@@ -23,13 +23,13 @@ export const OrgMembersList = () => {
     membership?.member.role === "admin" || membership?.member.role === "owner";
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto bg-background">
       {/* <PageSectionHeader
         title="Members"
         isOnboarding={true}
         className="px-6"
         classNames={{
-          title: "text-t3",
+          title: "text-foreground",
         }}
         addButton={<InvitePopover />}
       /> */}
@@ -48,7 +48,7 @@ export const OrgMembersList = () => {
         return (
           <Row
             key={membership.user.id}
-            className={cn("grid-cols-18 px-6 text-sm text-t2")}
+            className={cn("grid-cols-18 px-6 text-sm text-foreground")}
           >
             <Item className="col-span-6">{user.email}</Item>
             <Item className="col-span-5">{user.name}</Item>

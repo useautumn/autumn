@@ -6,8 +6,8 @@ import { DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useSidebarContext } from "../SidebarContext";
 
 export const sandboxStyles =
-  "text-amber-600 bg-amber-100 border-amber-500 w-[100px]";
-export const liveStyles = "text-primary bg-purple-100 border-primary w-[120px]";
+  "text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 border-amber-500 dark:border-amber-700 w-[100px]";
+export const liveStyles = "text-primary bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 border-primary dark:border-purple-700 w-[120px]";
 
 export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
   const env = useEnv();

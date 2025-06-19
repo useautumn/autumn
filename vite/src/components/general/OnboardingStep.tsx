@@ -18,7 +18,7 @@ function Step({ title, children, className, description, number }: StepProps) {
         className,
       )}
     >
-      <div className="absolute -left-[17px] -top-1 flex items-center justify-center w-8 h-8 rounded-full bg-stone-50 border">
+      <div className="absolute -left-[17px] -top-1 flex items-center justify-center w-8 h-8 rounded-full bg-surface-2 border">
         {/* <Wallet size={16} className="text-t3" /> */}
         <div className="w-6 h-6 rounded-full bg-gradient-to-b from-stone-100 to-stone-100 text-primary font-bold flex items-center justify-center">
           {number || "1"}

@@ -53,7 +53,7 @@ export const AdminHover = forwardRef<
         </TooltipTrigger>
         {isAdmin && (
           <TooltipContent
-            className="bg-white/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2"
+            className="bg-background/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2"
             align="start"
             side="bottom"
           >

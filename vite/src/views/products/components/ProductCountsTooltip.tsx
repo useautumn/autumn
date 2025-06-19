@@ -25,7 +25,7 @@ export const ProductCountsTooltip = ({
         <TooltipContent
           side="bottom"
           align="start"
-          className="bg-white/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2 text-t3"
+          className="bg-background/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2 text-t3"
         >
           {allCounts &&
             allCounts[product.id] &&

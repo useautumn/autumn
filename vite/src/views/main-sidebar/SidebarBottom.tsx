@@ -4,10 +4,9 @@ import { NavButton } from "./NavButton";
 import { useEnv } from "@/utils/envUtils";
 import { SidebarContact } from "./SidebarContact";
 import { useSidebarContext } from "./SidebarContext";
-import { cn } from "@/lib/utils";
 import { Blocks, Book } from "lucide-react";
 import { useSession } from "@/lib/auth-client";
-import { UserButton } from "./components/UserButton";
+import { ModeToggle } from "@/components/general/ModeToggle";
 
 export default function SidebarBottom() {
   const env = useEnv();
@@ -21,6 +20,7 @@ export default function SidebarBottom() {
   return (
     <div className="">
       <div className="px-4">
+        <ModeToggle />
         <NavButton
           value="integrations/stripe"
           icon={<Blocks size={14} />}

@@ -57,11 +57,11 @@ export const InvitePopover = () => {
       </PopoverTrigger>
       <PopoverContent
         align="end"
-        className="border border-zinc-200 bg-stone-50 flex flex-col gap-2 pt-3"
+        className="border border-border bg-background text-foreground flex flex-col gap-2 pt-3"
       >
-        <div className="flex items-center gap-1 text-t3">
-          <Mail size={12} />
-          <p className="text-t3 text-sm">Invite by email</p>
+        <div className="flex items-center gap-1">
+          <Mail size={12} className="text-muted-foreground" />
+          <p className="text-foreground text-sm">Invite by email</p>
         </div>
 
         <div className="flex items-center gap-2">

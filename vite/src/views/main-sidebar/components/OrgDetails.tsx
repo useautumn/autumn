@@ -50,7 +50,7 @@ export const OrgDetails = () => {
   };
 
   return (
-    <div className="px-6 py-4 w-full h-full flex flex-col gap-4">
+    <div className="px-6 py-4 w-full h-full flex flex-col gap-4 bg-background text-foreground">
       <div className="flex flex-col gap-4">
         <div className="w-full flex justify-between items-center">
           <OrgLogoUploader />

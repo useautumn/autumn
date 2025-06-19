@@ -99,7 +99,7 @@ const OrgLogoUploader: React.FC<OrgLogoUploaderProps> = ({
   return (
     <div className="flex flex-col items-start">
       <FieldLabel>Logo</FieldLabel>
-      <div className="flex items-center gap-4 rounded bg-gray-50 w-full max-w-xs">
+      <div className="flex items-center gap-4 rounded bg-background border w-full max-w-xs p-2">
         <input
           ref={inputRef}
           type="file"
@@ -114,7 +114,7 @@ const OrgLogoUploader: React.FC<OrgLogoUploaderProps> = ({
             className="w-16 h-16 rounded object-cover border"
           />
         ) : (
-          <div className="w-16 h-16 rounded bg-stone-100 flex items-center justify-center text-stone-400 border">
+          <div className="w-16 h-16 rounded bg-muted flex items-center justify-center text-muted-foreground border">
             <span className="text-2xl">+</span>
           </div>
         )}
@@ -142,7 +142,7 @@ const OrgLogoUploader: React.FC<OrgLogoUploaderProps> = ({
               </Button>
             )}
           </div>
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-muted-foreground">
             Recommended size 1:1, up to 10MB.
           </span>
           {error && <span className="text-xs text-red-500">{error}</span>}

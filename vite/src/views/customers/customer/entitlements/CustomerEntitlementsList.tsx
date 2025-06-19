@@ -119,7 +119,7 @@ export const CustomerEntitlementsList = () => {
 
   return (
     <div>
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 px-10 h-10">
+      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-muted px-10 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex whitespace-nowrap">
           Available Features
         </h2>

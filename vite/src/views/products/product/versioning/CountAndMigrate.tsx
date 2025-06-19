@@ -95,7 +95,7 @@ export const CountAndMigrate = () => {
           </TooltipTrigger>
           <TooltipContent
             className="w-40 flex flex-col gap-2
-          bg-white/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2 text-t3
+          bg-background/50 backdrop-blur-sm shadow-sm border-1 px-2 pr-6 py-2 text-t3
           "
           >
             <p className="font-medium">Migration in progress</p>
@@ -154,7 +154,7 @@ export const CountAndMigrate = () => {
           variant="outline"
           className="
           w-full
-          h-6 text-sm font-medium text-zinc-600 bg-white border-zinc-200 hover:bg-zinc-50 hover:text-zinc-700 transition-colors"
+          h-6 text-sm font-medium text-zinc-600 bg-background border-zinc-200 hover:bg-zinc-50 hover:text-zinc-700 transition-colors"
           onClick={onMigrateClicked}
         >
           {loading && <SmallSpinner size={16} />}

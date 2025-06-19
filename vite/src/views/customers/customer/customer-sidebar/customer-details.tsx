@@ -95,7 +95,7 @@ export const CustomerDetails = ({
                   <div className="flex items-center gap-2 justify-end">
                     <Button
                       variant="sidebarItem"
-                      // className="bg-white border shadow-sm rounded-md gap-2 h-6 max-h-6 !py-0"
+                      // className="bg-background border shadow-sm rounded-md gap-2 h-6 max-h-6 !py-0"
                     >
                       <FontAwesomeIcon
                         icon={faStripe}

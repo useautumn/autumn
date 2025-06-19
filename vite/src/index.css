@@ -58,6 +58,18 @@
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
+  
+  /* Light mode custom colors */
+  --color-t1: #27272a;
+  --color-t2: #52525b;
+  --color-t3: #a1a1aa;
+  
+  /* Light mode surface colors */
+  --color-surface-1: #ffffff;      /* Main background */
+  --color-surface-2: #fafaf9;      /* Secondary background */
+  --color-surface-3: #f5f5f4;      /* Elevated background */
+  --color-surface-4: #e7e5e4;      /* Border/separator */
+  --color-surface-5: #d6d3d1;      /* Subtle accent */
 }
 
 /* 
@@ -151,6 +163,18 @@ button:focus-visible {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.274 0.006 286.033);
   --sidebar-ring: oklch(0.442 0.017 285.786);
+  
+  /* Dark mode custom colors */
+  --color-t1: #f4f4f5;
+  --color-t2: #a1a1aa;
+  --color-t3: #71717a;
+  
+  /* Dark mode surface colors */
+  --color-surface-1: #18181b;      /* Main background */
+  --color-surface-2: #27272a;      /* Secondary background */
+  --color-surface-3: #3f3f46;      /* Elevated background */
+  --color-surface-4: #52525b;      /* Border/separator */
+  --color-surface-5: #71717a;      /* Subtle accent */
 }
 
 /* 
@@ -195,9 +219,14 @@ button:focus-visible {
   --color-sidebar-ring: var(--sidebar-ring);
 
   /* CUSTOM STUFF */
-  --color-t1: #27272a;
-  --color-t2: #52525b;
-  --color-t3: #a1a1aa;
+  --color-t1: var(--color-t1);
+  --color-t2: var(--color-t2);
+  --color-t3: var(--color-t3);
+  --color-surface-1: var(--color-surface-1);
+  --color-surface-2: var(--color-surface-2);
+  --color-surface-3: var(--color-surface-3);
+  --color-surface-4: var(--color-surface-4);
+  --color-surface-5: var(--color-surface-5);
 
   /* fontSize: {
     xs: ["11px", "16px"],

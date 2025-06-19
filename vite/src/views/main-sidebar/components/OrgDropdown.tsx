@@ -67,8 +67,8 @@ export const OrgDropdown = () => {
   if (isLoading)
     return (
       <div className="h-7 w-32 px-4 flex items-center gap-2">
-        <Skeleton className="min-w-5 h-5 bg-stone-200" />
-        <Skeleton className="w-32 h-5 bg-stone-200" />
+        <Skeleton className="min-w-5 h-5 bg-muted" />
+        <Skeleton className="w-32 h-5 bg-muted" />
       </div>
     );
 
@@ -93,7 +93,7 @@ export const OrgDropdown = () => {
           <DropdownMenuTrigger asChild>
             <Button
               className={cn(
-                "shimmer-hover p-0.5 gap-2 rounded-md hover:bg-stone-200/60 justify-start items-center transition-all duration-200",
+                "shimmer-hover p-0.5 gap-2 rounded-md hover:bg-primary/5 justify-start items-center transition-all duration-200",
                 expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5",
               )}
               variant="ghost"

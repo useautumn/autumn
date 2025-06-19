@@ -168,7 +168,7 @@ function CustomersView({ env }: { env: AppEnv }) {
       <div className="flex flex-col gap-4 h-fit relative w-full">
         <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Customers</h1>
         <div>
-          <div className="flex w-full justify-between sticky top-0 z-10 border-y h-10 bg-stone-100 pl-10 pr-7 items-center">
+          <div className="flex w-full justify-between sticky top-0 z-10 border-y h-10 bg-surface-3 pl-10 pr-7 items-center">
             <div className="flex gap-4 items-center">
               <div className="flex justify-center items-center gap-8 text-xs text-t3 pr-1 rounded-sm shrink-0 w-[100px]">
                 {paginationLoading && !searching ? (
@@ -213,7 +213,7 @@ function CustomersView({ env }: { env: AppEnv }) {
               />
               <div className="h-10 flex items-center border-r pr-4 gap-2">
                 <FilterButton />
-                <p className="text-t2 px-1 rounded-md bg-stone-200 text-sm h-fit">
+                <p className="text-foreground px-1 rounded-md bg-muted text-sm h-fit">
                   {data?.totalCount}
                 </p>
               </div>

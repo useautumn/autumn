@@ -64,12 +64,14 @@ function CreateReward() {
       <DialogTrigger asChild>
         <Button variant="add"> Reward</Button>
       </DialogTrigger>
-      <DialogContent className="w-[500px]">
+      <DialogContent className="w-[500px] bg-background text-foreground border-border">
         <DialogHeader>
-          <DialogTitle>Create Reward</DialogTitle>
+          <DialogTitle className="text-foreground">Create Reward</DialogTitle>
         </DialogHeader>
-        <RewardConfig reward={reward as any} setReward={setReward as any} />
-        <DialogFooter>
+        <div className="bg-background">
+          <RewardConfig reward={reward as any} setReward={setReward as any} />
+        </div>
+        <DialogFooter className="bg-background">
           <Button
             onClick={handleCreate}
             isLoading={isLoading}

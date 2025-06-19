@@ -14,8 +14,8 @@ export const ToggleDisplayButton = ({
       variant="outline"
       size="sm"
       className={cn(
-        "text-t3 w-fit",
-        show && "bg-zinc-200 text-t2 hover:bg-zinc-200",
+        "text-muted-foreground w-fit",
+        show && "bg-primary/5 text-foreground hover:bg-primary/10",
         className
       )}
       disabled={disabled}

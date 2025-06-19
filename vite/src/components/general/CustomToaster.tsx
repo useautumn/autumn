@@ -10,9 +10,9 @@ export const CustomToaster = () => {
         unstyled: true,
         classNames: {
           error: `w-[350px] text-red-400 flex items-start
-        gap-2 bg-white/70 backdrop-blur-sm border border-red-400 rounded-sm p-2 text-sm shadow-md`,
+        gap-2 bg-background/70 backdrop-blur-sm border border-red-400 rounded-sm p-2 text-sm shadow-md`,
           success: `w-[350px] text-green-600 flex items-start
-        gap-2 bg-white/90 backdrop-blur-sm border border-green-500 rounded-sm p-2 text-sm shadow-md`,
+        gap-2 bg-background/90 backdrop-blur-sm border border-green-500 rounded-sm p-2 text-sm shadow-md`,
         },
       }}
     />

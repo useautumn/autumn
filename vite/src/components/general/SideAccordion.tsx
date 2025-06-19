@@ -49,7 +49,7 @@ export function SideAccordion({
           <div className="w-fit">
             <AccordionTrigger
               className={cn(
-                "hover:bg-stone-100 border border-transparent text-t2 p-2",
+                "hover:bg-surface-4 border border-transparent text-t2 p-2",
                 className,
               )}
             >

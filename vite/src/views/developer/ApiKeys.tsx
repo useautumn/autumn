@@ -4,10 +4,10 @@ import CreateAPIKey from "./CreateAPIKey";
 export const ApiKeysView = ({ apiKeys }: any) => {
   return (
     <div>
-      <div className="sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center">
+      <div className="sticky top-0 z-10 border-y bg-surface-3 pl-10 pr-7 h-10 flex justify-between items-center">
         <div className="flex items-center gap-2">
           <h2 className="text-sm text-t2 font-medium">Secret API Keys</h2>
-          <span className="text-t2 px-1 rounded-md bg-stone-200">
+          <span className="text-foreground px-1 rounded-md bg-muted">
             {apiKeys.length}
           </span>
         </div>

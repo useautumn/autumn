@@ -39,7 +39,7 @@ export function SidebarContact() {
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top">
-        <span className="text-xs text-t3 p-2">
+        <span className="text-xs text-muted-foreground p-2">
           👋 We respond within 30 minutes
         </span>
         <DropdownMenuSeparator />
@@ -52,7 +52,7 @@ export function SidebarContact() {
             <span>hey@useautumn.com</span>
             <CopyButton
               text={email}
-              className="bg-transparent shadow-none hover:bg-zinc-200 w-6 gap-0 h-6 !px-0 py-0 flex items-center justify-center text-t2"
+              className="bg-transparent shadow-none hover:bg-primary/5 w-6 gap-0 h-6 !px-0 py-0 flex items-center justify-center text-muted-foreground"
             />
           </div>
         </DropdownMenuItem>

@@ -20,21 +20,21 @@ const buttonVariants = cva(
           // "bg-zinc-900 text-zinc-50 shadow hover:bg-zinc-900/90 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90",
           "bg-primary hover:bg-primary/90 text-zinc-50 shadow dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/90",
         secondary:
-          "border border-zinc-200 bg-white shadow-sm hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
+          "border border-zinc-200 bg-background shadow-sm hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         // "bg-zinc-100 text-zinc-900 shadow-sm hover:bg-zinc-100/80 dark:bg-zinc-800 dark:text-zinc-50 dark:hover:bg-zinc-800/80",
         destructive:
           "font-semibold text-red-400 border border-red-400 rounded-md shadow-sm hover:bg-red-500/90 hover:text-zinc-50 dark:bg-red-900 dark:text-zinc-50 dark:hover:bg-red-900/90 shadow-sm ",
         // destructive:
         //   "bg-red-500 font-semibold text-zinc-50 shadow-sm hover:bg-red-500/90 dark:bg-red-900 dark:text-zinc-50 dark:hover:bg-red-900/90",
         outline:
-          "border border-zinc-200 bg-white shadow-sm hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
+          "border border-zinc-200 bg-background shadow-sm hover:bg-zinc-100 hover:text-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         ghost:
           "hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         sidebarItem:
           "hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 !px-2 !h-fit !py-0.5 truncate justify-start",
         link: "text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50",
         dashed:
-          "font-semibold border border-1 border-dashed bg-gradient-to-b from-white to-stone-100 border-stone-300 text-primary shadow-sm hover:from-stone-100 hover:to-stone-200 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
+          "font-semibold border border-1 border-dashed bg-gradient-to-b from-surface-1 to-surface-3 border-surface-4 text-primary shadow-sm hover:from-surface-3 hover:to-surface-4 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:hover:text-zinc-50",
         gradientPrimary:
           "bg-gradient-to-b font-semibold border-t border-purple-400 outline outline-primary  rounded-sm from-primary/85 to-primary text-white hover:from-primary hover:to-primary  shadow-purple-500/50 transition-[background] duration-300 !h-7.5 mt-0.25",
 
@@ -47,7 +47,7 @@ const buttonVariants = cva(
         destructivePrimary:
           "bg-gradient-to-b font-semibold border-t border-red-400 outline outline-red-500 rounded-sm from-red-500/85 to-red-500 text-white hover:from-red-500 hover:to-red-500 shadow-red-500/50 transition-[background] duration-300 !h-7.5 mt-0.25",
 
-        auth: "!gap-2 hover:bg-stone-100 border border-zinc-250 bg-white text-t1 w-full shadow-sm",
+        auth: "!gap-2 hover:bg-surface-3 border border-zinc-250 bg-background text-t1 w-full shadow-sm",
       },
       size: {
         default: "h-8 px-3 flex items-center gap-1",

@@ -100,7 +100,7 @@ export const CustomerRewards = () => {
                           `/customers/${referral.customer.id}`,
                           env
                         )}
-                        className="flex justify-between hover:bg-zinc-100 items-center"
+                        className="flex justify-between hover:bg-primary/5 items-center"
                         key={referral.customer.id}
                       >
                         <p className="max-w-40 truncate">
@@ -144,7 +144,7 @@ export const CustomerRewards = () => {
                             `/customers/${referral.customer.id}`,
                             env
                           )}
-                          className="flex justify-between hover:bg-zinc-100 items-center"
+                          className="flex justify-between hover:bg-primary/5 items-center"
                           key={referral.customer.id}
                         >
                           <p className="max-w-40 truncate">

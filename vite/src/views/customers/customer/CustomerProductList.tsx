@@ -76,7 +76,7 @@ export const CustomerProductList = ({
 
   return (
     <div>
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
+      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-muted pl-10 pr-7 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex">
           Products
         </h2>
@@ -153,7 +153,7 @@ export const CustomerProductList = ({
                   {versionCounts[cusProduct.product.id] > 1 && (
                     <Badge
                       variant="outline"
-                      className="text-xs bg-stone-50 text-t3 px-2 py-0 ml-2 font-mono"
+                      className="text-xs bg-accent text-muted-foreground px-2 py-0 ml-2 font-mono"
                     >
                       v{cusProduct.product.version}
                     </Badge>

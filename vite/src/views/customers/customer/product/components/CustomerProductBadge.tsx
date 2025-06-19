@@ -7,7 +7,7 @@ export const CustomerProductBadge = () => {
   if (!customer) return null;
 
   return (
-    <Badge className="flex items-center gap-1 rounded-sm shadow-none w-full text-xs text-t2 bg-stone-100 border hover:bg-stone-100 truncate">
+    <Badge className="flex items-center gap-1 rounded-sm shadow-none w-full text-xs text-foreground bg-transparent border hover:bg-primary/5 truncate">
       <span className="">
         {product.isCustom ? (
           <>

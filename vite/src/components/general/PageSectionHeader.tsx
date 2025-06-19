@@ -20,7 +20,7 @@ export const PageSectionHeader = ({
   return (
     <div
       className={cn(
-        "sticky top-0 z-10 border-y bg-stone-100 pl-10 pr-7 h-10 flex justify-between items-center",
+        "sticky top-0 z-10 border-y bg-surface-3 pl-10 pr-7 h-10 flex justify-between items-center",
         isOnboarding && "px-2",
         className,
       )}

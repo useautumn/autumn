@@ -297,7 +297,7 @@ export const FilterInput = ({
     <div
       className={cn(
         `p-2 py-2 h-fit rounded-md border text-sm w-full transition-colors duration-100 
-        flex items-center flex-wrap gap-2 gap-y-2 bg-white`,
+        flex items-center flex-wrap gap-2 gap-y-2 bg-background`,
         inputFocused &&
           "border-primary shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]",
       )}

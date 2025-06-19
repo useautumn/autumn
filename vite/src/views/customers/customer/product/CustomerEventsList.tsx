@@ -40,7 +40,7 @@ export const CustomerEventsList = ({ events }: { events: any }) => {
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 h-10">
+      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-muted pl-10 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex">Events</h2>
         <div className="flex w-full h-full items-center col-span-8 justify-end"></div>
       </div>
@@ -73,7 +73,7 @@ export const CustomerEventsList = ({ events }: { events: any }) => {
               {event.value || event.properties.value || 1}
             </span>
             {/* <div className="absolute hidden group-hover:block top-1/2 -translate-y-1/2 right-0 rounded-sm h-5 w-5">
-              <CopyButton text={event.id} className="bg-white h-full w-full" />
+              <CopyButton text={event.id} className="bg-background h-full w-full" />
             </div> */}
           </Item>
           <Item className="col-span-3 font-mono">

@@ -39,7 +39,7 @@ export const RewardConfig = ({
   }, [reward.name]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 bg-background text-foreground">
       <div className="flex items-center gap-2">
         <div className="w-6/12">
           <FieldLabel description="Will be shown on receipt">Name</FieldLabel>
@@ -65,6 +65,7 @@ export const RewardConfig = ({
         <div className="w-full">
           <FieldLabel>Promotional Code</FieldLabel>
           <Input
+          className="bg-background text-foreground"
             value={
               reward.promo_codes.length > 0 ? reward.promo_codes[0].code : ""
             }

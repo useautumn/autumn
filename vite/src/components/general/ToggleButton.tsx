@@ -24,7 +24,7 @@ export const ToggleButton = ({
           onClick={() => setValue(!value)}
           className={cn(
             `flex items-center gap-2`,
-            value && "bg-stone-100",
+            value && "bg-surface-3",
             className,
           )}
         >

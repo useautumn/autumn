@@ -456,7 +456,7 @@ const FeatureUsageItem = ({
             type="number"
             value={customerFeature ? trackValue : ""}
             onChange={(e) => setTrackValue(e.target.value)}
-            className="w-12 h-6 px-1 text-xs bg-white border rounded-xs text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            className="w-12 h-6 px-1 text-xs bg-background border rounded-xs text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             disabled={!customerFeature}
           />
           <Button

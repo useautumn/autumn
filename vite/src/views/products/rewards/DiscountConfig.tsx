@@ -59,7 +59,7 @@ export const DiscountConfig = ({
               setConfig("discount_value", Number(e.target.value))
             }
             endContent={
-              <p className="text-t3">
+              <p className="text-muted-foreground">
                 {reward.type === RewardType.PercentageDiscount
                   ? "%"
                   : org?.currency || "USD"}
@@ -164,7 +164,7 @@ const ProductPriceSelector = ({
   };
 
   if (!products || products.length === 0) {
-    return <p className="text-sm text-t3">No products available</p>;
+    return <p className="text-sm text-muted-foreground">No products available</p>;
   }
 
   const getPriceText = (priceId: string) => {
@@ -184,7 +184,7 @@ const ProductPriceSelector = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50"
+          className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-primary/5"
         >
           {config.apply_to_all ? (
             "All Products"
@@ -195,7 +195,7 @@ const ProductPriceSelector = ({
               {config.price_ids?.map((priceId) => (
                 <div
                   key={priceId}
-                  className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit max-w-full"
+                  className="py-1 px-3 text-xs text-muted-foreground border-border bg-muted rounded-full w-fit flex items-center gap-2 h-fit max-w-full"
                 >
                   <p className="truncate">
                     {formatProductItemText({
@@ -217,7 +217,7 @@ const ProductPriceSelector = ({
                     }}
                     className="bg-transparent hover:bg-transparent p-0 w-5 h-5"
                   >
-                    <X size={12} className="text-t3" />
+                    <X size={12} className="text-muted-foreground" />
                   </Button>
                 </div>
               ))}
@@ -241,7 +241,7 @@ const ProductPriceSelector = ({
                 >
                   <p>Apply to all products</p>
                   {config.apply_to_all && (
-                    <Check size={12} className="text-t3" />
+                    <Check size={12} className="text-muted-foreground" />
                   )}
                 </CommandItem>
               </CommandGroup>
@@ -269,13 +269,13 @@ const ProductPriceSelector = ({
                             </span>
 
                             {config.price_ids?.includes(item.price_id) && (
-                              <Check size={12} className="text-t3" />
+                              <Check size={12} className="text-muted-foreground" />
                             )}
                           </CommandItem>
                         ))
                     ) : (
                       <CommandItem disabled>
-                        <p className="text-sm text-t3">No prices available</p>
+                        <p className="text-sm text-muted-foreground">No prices available</p>
                       </CommandItem>
                     )}
                   </CommandGroup>

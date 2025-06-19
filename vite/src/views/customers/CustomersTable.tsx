@@ -74,7 +74,7 @@ export const CustomersTable = ({
             <>
               <Badge
                 variant="outline"
-                className="text-xs bg-stone-50 text-t3 px-2 ml-2 font-mono py-0"
+                className="text-xs bg-surface-2 text-t3 px-2 ml-2 font-mono py-0"
               >
                 v{version}
               </Badge>
@@ -136,7 +136,7 @@ export const CustomersTable = ({
                     <TooltipTrigger>
                       <Badge
                         variant="status"
-                        className="ml-1 bg-stone-100 text-primary"
+                        className="ml-1 bg-surface-3 text-primary"
                       >
                         +{activeProducts.length - 1}
                       </Badge>

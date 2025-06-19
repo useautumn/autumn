@@ -59,7 +59,7 @@ export const ProductVersions = () => {
                     <SelectItem
                       key={version}
                       value={version.toString()}
-                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer w-full"
+                      className="px-3 py-2 hover:bg-surface-3 cursor-pointer w-full"
                       onClick={() => {
                         navigate(
                           getRedirectUrl(

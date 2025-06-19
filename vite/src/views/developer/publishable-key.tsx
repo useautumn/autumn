@@ -10,7 +10,7 @@ export const PublishableKeySection = ({
   const env = useEnv();
   return (
     <div>
-      <div className="border-y bg-stone-100 px-10 h-10 flex items-center">
+      <div className="border-y bg-surface-3 px-10 h-10 flex items-center">
         <h2 className="text-sm text-t2 font-medium">Publishable Key</h2>
       </div>
       <div className="px-10 py-4 flex flex-col gap-6">

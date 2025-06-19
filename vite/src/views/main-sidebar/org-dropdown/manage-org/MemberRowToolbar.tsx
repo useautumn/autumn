@@ -78,7 +78,7 @@ export const MemberRowToolbar = ({
       <DropdownMenuContent>
         <DropdownMenuItem
           shimmer={deleteLoading}
-          className="flex justify-between text-t2"
+          className="flex justify-between text-foreground"
           onClick={(e) => {
             if (membership) {
               handleDeleteMember(e);

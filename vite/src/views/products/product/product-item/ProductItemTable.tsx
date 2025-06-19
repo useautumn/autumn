@@ -63,7 +63,7 @@ export const ProductItemTable = ({
       <div className="flex flex-col text-sm rounded-sm">
         <div
           className={cn(
-            "flex items-center justify-between border-y bg-stone-100 pl-10 h-10",
+            "flex items-center justify-between border-y bg-muted pl-10 h-10",
             isOnboarding && "pl-2 pr-2 border-x",
           )}
         >
@@ -142,11 +142,11 @@ export const ProductItemTable = ({
               {/* Separator for each entityFeatureId */}
               <div
                 className={cn(
-                  "flex items-center bg-stone-50 border-b pl-10 pr-10 h-5 relative mb-2",
+                  "flex items-center bg-muted border-b pl-10 pr-10 h-5 relative mb-2",
                   isOnboarding && "pl-2 pr-2",
                 )}
               >
-                <h3 className="text-t2 font-medium uppercase text-xs font-mono tracking-widest absolute top-3.5 bg-stone-50 px-3 left-7">
+                <h3 className="text-muted-foreground font-medium uppercase text-xs font-mono tracking-widest absolute top-3.5 bg-muted px-3 left-7">
                   {entityFeatureId}
                 </h3>
               </div>
