@@ -25,11 +25,11 @@
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.43.1",
     "drizzle-zod": "^0.8.2",
-    "zod": "^3.25.23",
-    "cross-env": "^7.0.3"
+    "zod": "^3.25.23"
   },
   "devDependencies": {
     "@types/node": "^24.0.3",
+    "cross-env": "^7.0.3",
     "nodemon": "^3.1.7",
     "tsx": "^4.19.4",
     "typescript": "^5.7.2"
