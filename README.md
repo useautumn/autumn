@@ -38,7 +38,9 @@ pnpm run setup
 docker compose -f docker-compose.prod.yml up
 ```
 
-That's it! You should be able to see the Autumn dashboard on `http://localhost:3000`. To log in, enter an email at the sign in page, and an OTP should appear in your console / terminal (we use Resend & Google OAuth for sign in, and to set this up, you can refer to the environment variables set up guide)
+That's it! You should be able to see the Autumn dashboard on `http://localhost:3000`. 
+
+> ⚠️ To log in, enter an email at the sign in page, and an OTP should appear in your console / terminal. Normally, we use Resend to email an OTP or Google OAuth -- these can be set up by providing your credentials in `server/.env`
 
 > ℹ️ Our set up script initializes the required env vars and (optionally) a Supabase instance. If you'd like to use your own Postgres instance, you can do so -- just paste the connection string in the `DATABASE_URL` env variable at `server/.env`
 
