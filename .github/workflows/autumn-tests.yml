@@ -1,0 +1,84 @@
+name: Autumn Tests CI/CD
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  autumn-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      # Run tests sequentially to respect Stripe API rate limits
+      max-parallel: 1
+      matrix:
+        test-group: [1, 2, 3, 4, 5]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'pnpm'
+        
+    - name: Install dependencies
+      run: pnpm install --no-frozen-lockfile
+        
+    - name: Build shared package
+      run: pnpm run build --filter @autumn/shared
+        
+    - name: Make shell scripts executable
+      run: |
+        chmod +x server/shell/g1.sh
+        chmod +x server/shell/g2.sh
+        chmod +x server/shell/g3.sh
+        chmod +x server/shell/g4.sh
+        chmod +x server/shell/g5.sh
+        chmod +x server/shell/config.sh
+        
+    - name: Run test group ${{ matrix.test-group }}
+      working-directory: server
+      env:
+        # Add your Stripe test API keys and other required environment variables
+        STRIPE_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+        STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_TEST_PUBLISHABLE_KEY }}
+        # Add other environment variables your tests need
+        NODE_ENV: test
+      run: |
+        case ${{ matrix.test-group }} in
+          1) ./shell/g1.sh ;;
+          2) ./shell/g2.sh ;;
+          3) ./shell/g3.sh ;;
+          4) ./shell/g4.sh ;;
+          5) ./shell/g5.sh ;;
+        esac
+        
+    # Optional: Add delay between test groups to further respect rate limits
+    - name: Wait between test groups
+      if: matrix.test-group != 5
+      run: sleep 30
+
+  # Summary job that depends on all test groups completing successfully
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: autumn-tests
+    if: always()
+    steps:
+    - name: Check test results
+      run: |
+        if [[ "${{ needs.autumn-tests.result }}" == "success" ]]; then
+          echo "✅ All Autumn test groups passed successfully!"
+        else
+          echo "❌ Some Autumn test groups failed"
+          exit 1
+        fi
