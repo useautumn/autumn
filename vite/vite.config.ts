@@ -12,6 +12,16 @@ export default defineConfig({
     },
   },
   server: {
-    allowedHosts: ["dev.useautumn.com", "client.dev.useautumn.com"],
+    host: '0.0.0.0', // Required for Docker
+    port: 3000,
+    strictPort: true,
+    allowedHosts: ["dev.useautumn.com", "client.dev.useautumn.com", "localhost"],
+    watch: {
+      usePolling: true, // Required for file watching in Docker on Windows
+      interval: 1000,
+    },
+    hmr: {
+      port: 3000,
+    },
   },
 });
