@@ -61,11 +61,13 @@ services:
       - ./server:/app/server
       - shared-dist:/app/shared/dist
       - root-node-modules:/app/node_modules
+      - server-node-modules:/app/server/node_modules
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://valkey:6379
     depends_on:
       - shared
+      - valkey
     restart: unless-stopped
 
   # BullMQ Workers
@@ -79,11 +81,13 @@ services:
       - ./server:/app/server
       - shared-dist:/app/shared/dist
       - root-node-modules:/app/node_modules
+      - server-node-modules:/app/server/node_modules
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://valkey:6379
     depends_on:
       - shared
+      - valkey
     restart: unless-stopped
 
 
