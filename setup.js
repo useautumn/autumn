@@ -177,7 +177,7 @@ let databaseUrl = '';
 if (dbOption === 'supabase') {
   databaseUrl = await generateSupabaseDatabaseUrl();
 } else if (dbOption === 'paste') {
-  databaseUrl = await inquirer.prompt([
+  const res = await inquirer.prompt([
     {
       type: 'input',
       name: 'databaseUrl',
@@ -185,6 +185,7 @@ if (dbOption === 'supabase') {
       validate: (input) => input && input.length > 5,
     },
   ]);
+  databaseUrl = res.databaseUrl;
 } else if (dbOption === 'later') {
   databaseUrl = '';
 } 
