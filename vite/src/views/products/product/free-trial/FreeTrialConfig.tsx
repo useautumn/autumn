@@ -49,7 +49,7 @@ export const FreeTrialConfig = ({
                 })
               }
             >
-              <SelectTrigger className="border-none shadow-none my-1">
+              <SelectTrigger className="border-none shadow-none my-1 bg-transparent">
                 <SelectValue placeholder="Days">
                   {freeTrial.duration}
                 </SelectValue>

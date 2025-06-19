@@ -37,13 +37,13 @@ CMD ["pnpm", "run", "dev"]
 
 # Stage 4: /server
 FROM base AS server
+COPY server/ ./server/
 WORKDIR /app/server
-COPY server/ ./
 EXPOSE 8080
 CMD ["pnpm", "run", "dev"]
 
 # Stage 5: Workers
 FROM base AS workers
+COPY server/ ./server/
 WORKDIR /app/server
-COPY server/ ./
 CMD ["pnpm", "run", "workers"]
