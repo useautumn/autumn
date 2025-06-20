@@ -55,7 +55,7 @@ function UpdateCreditSystem({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
+      <DialogContent className="w-[500px] overflow-y-auto max-h-[500px]">
         <DialogTitle>Update Credit System</DialogTitle>
 
         <CreditSystemConfig

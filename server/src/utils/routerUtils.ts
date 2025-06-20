@@ -47,6 +47,21 @@ export const routeHandler = async ({
           code: ErrCode.InvalidRequest,
         });
       }
+
+      if (
+        originalUrl.includes("/billing_portal") &&
+        error.message.includes(
+          "Invalid URL: An explicit scheme (such as https)",
+        )
+      ) {
+        req.logtail.warn(
+          `Billing portal return_url error, org: ${req.org?.slug}, return_url: ${req.body.return_url}`,
+        );
+        return res.status(400).json({
+          message: error.message,
+          code: ErrCode.InvalidRequest,
+        });
+      }
     }
 
     if (error instanceof ZodError && req.originalUrl.includes("/attach")) {

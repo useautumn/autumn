@@ -290,8 +290,6 @@ entitledRouter.post("", async (req: any, res: any) => {
       entity_id,
     } = req.body;
 
-    console.log("BODY:", req.body);
-
     const { logtail: logger, db } = req;
 
     if (!customer_id) {
