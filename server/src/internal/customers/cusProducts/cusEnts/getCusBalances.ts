@@ -10,7 +10,7 @@ import {
 } from "@autumn/shared";
 import { getEntOptions } from "@/internal/products/prices/priceUtils.js";
 
-import { notNullOrUndefined } from "@/utils/genUtils.js";
+import { notNullish, notNullOrUndefined } from "@/utils/genUtils.js";
 
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
@@ -59,7 +59,7 @@ export const getCusBalances = async ({
   cusPrices,
   // entities,
   org,
-  entityId,
+  entity,
 }: {
   cusEntsWithCusProduct: (FullCustomerEntitlement & {
     customer_product: FullCusProduct;
@@ -67,14 +67,28 @@ export const getCusBalances = async ({
   cusPrices: FullCustomerPrice[];
   // entities: Entity[];
   org: Organization;
-  entityId?: string;
+  entity?: Entity;
 }) => {
   const data: Record<string, any> = {};
   const features = cusEntsWithCusProduct.map(
     (cusEnt) => cusEnt.entitlement.feature,
   );
+  const cusEntsFiltered = cusEntsWithCusProduct.filter((cusEnt) => {
+    const ent: EntitlementWithFeature = cusEnt.entitlement;
 
-  for (const cusEnt of cusEntsWithCusProduct) {
+    if (!entity) return true;
+
+    if (
+      notNullish(ent.entity_feature_id) &&
+      entity?.feature_id != ent.entity_feature_id
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  for (const cusEnt of cusEntsFiltered) {
     const cusProduct = cusEnt.customer_product;
     const feature = cusEnt.entitlement.feature;
     const ent: EntitlementWithFeature = cusEnt.entitlement;
@@ -82,6 +96,7 @@ export const getCusBalances = async ({
 
     // 1. Handle boolean
     let isBoolean = feature.type == FeatureType.Boolean;
+
     const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
       cusEnts: cusEntsWithCusProduct,
       internalFeatureId: feature.internal_id!,
@@ -133,8 +148,7 @@ export const getCusBalances = async ({
 
     let { balance, adjustment, count, unused } = getCusEntBalance({
       cusEnt,
-      // entities,
-      entityId,
+      entityId: entity?.id,
     });
 
     data[key].balance += balance || 0;
@@ -165,6 +179,7 @@ export const getCusBalances = async ({
         relatedPrice: getRelatedCusPrice(cusEnt, cusPrices)?.price,
         productQuantity: cusProduct.quantity || 1,
       });
+
       data[key].allowance += (resetBalance || 0) * count;
     }
   }

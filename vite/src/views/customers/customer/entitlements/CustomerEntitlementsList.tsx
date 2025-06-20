@@ -12,10 +12,8 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import UpdateCusEntitlement from "./UpdateCusEntitlement";
 import { AdminHover } from "@/components/general/AdminHover";
-import React from "react";
 import { Item, Row } from "@/components/general/TableGrid";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -50,16 +48,30 @@ export const CustomerEntitlementsList = () => {
 
       // Filter by entity
       const entity = entities.find((e: any) => e.id === entityId);
-      const entityMatches =
-        customer.products.find((p: any) => p.id === cusEnt.customer_product_id)
-          ?.internal_entity_id === entity?.internal_id ||
-        Object.keys(cusEnt.entities || {}).includes(entity?.id);
+      let entityMatch = true;
+      if (entityId) {
+        entityMatch = false;
+
+        const cusProduct = customer.products.find(
+          (p: any) => p.id === cusEnt.customer_product_id,
+        );
+
+        // 1. Product match
+        const productAttachedToEntity =
+          cusProduct?.internal_entity_id === entity?.internal_id;
+
+        const cusEntContainsEntity =
+          Object.keys(cusEnt.entities || {}).includes(entity?.id) ||
+          cusEnt.entitlement.entity_feature_id === entity?.feature_id;
+
+        entityMatch = productAttachedToEntity || cusEntContainsEntity;
+      }
 
       return (
         featureTypeMatches &&
         expiredStatusMatches &&
         !isScheduled &&
-        (entityId ? entityMatches : true)
+        entityMatch
       );
     },
   );

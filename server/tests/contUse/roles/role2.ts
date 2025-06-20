@@ -86,8 +86,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
 
   let user1 = "user1";
   let user2 = "user2";
-  let admin1 = "admin1";
-  let admin2 = "admin2";
+
   let firstEntities: CreateEntity[] = [
     {
       id: user1,
@@ -98,16 +97,6 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
       id: user2,
       name: "test",
       feature_id: user,
-    },
-    {
-      id: admin1,
-      name: "test",
-      feature_id: admin,
-    },
-    {
-      id: admin2,
-      name: "test",
-      feature_id: admin,
     },
   ];
 
@@ -125,6 +114,11 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing overages for per en
       skipSubCheck: true,
       entities: firstEntities,
     });
+
+    let customer = await autumn.customers.get(customerId);
+    expect(customer.features[TestFeature.Messages].included_usage).to.equal(
+      userMessages.included_usage * firstEntities.length,
+    );
   });
 
   let user1Usage = 125000;

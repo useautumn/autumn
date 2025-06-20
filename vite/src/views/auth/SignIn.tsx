@@ -140,6 +140,7 @@ export const SignIn = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="text-base"
+                    autoComplete="email"
                   />
                 </div>
 

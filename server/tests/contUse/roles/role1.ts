@@ -132,15 +132,20 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing roles`)}`, () => {
       entity_id: adminId,
     });
 
+    let entity = await autumn.entities.get(customerId, adminId);
+
     expect(allowed).to.equal(true);
+    expect(entity.features[TestFeature.AdminRights]).exist;
 
     let { allowed: userAllowed } = await autumn.check({
       customer_id: customerId,
       feature_id: TestFeature.AdminRights,
       entity_id: userId,
     });
+    let userEntity = await autumn.entities.get(customerId, userId);
 
     expect(userAllowed).to.equal(false);
+    expect(userEntity.features[TestFeature.AdminRights]).not.exist;
   });
 
   it("should have correct total balance", async function () {
@@ -162,7 +167,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing roles`)}`, () => {
       entity_id: userId,
     });
 
+    let userEntity = await autumn.entities.get(customerId, userId);
+
     expect(userBalance).to.equal(userMessages.included_usage);
+    expect(userEntity.features[TestFeature.Messages].included_usage).to.equal(
+      userMessages.included_usage,
+    );
 
     let { balance: adminBalance } = await autumn.check({
       customer_id: customerId,
@@ -170,7 +180,12 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing roles`)}`, () => {
       entity_id: adminId,
     });
 
+    let adminEntity = await autumn.entities.get(customerId, adminId);
+
     expect(adminBalance).to.equal(adminMessages.included_usage);
+    expect(adminEntity.features[TestFeature.Messages].included_usage).to.equal(
+      adminMessages.included_usage,
+    );
   });
 
   let userUsage = Math.random() * 50;
