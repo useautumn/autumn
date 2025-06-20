@@ -27,6 +27,23 @@ export const findLinkedCusEnts = ({
   );
 };
 
+export const cusEntEntityMatch = ({
+  cusEnt,
+  entity,
+}: {
+  cusEnt: FullCustomerEntitlement;
+  entity?: Entity;
+}) => {
+  let entityFeatureId = cusEnt.entitlement.entity_feature_id;
+  let compareEntity = notNullish(entityFeatureId) && notNullish(entity);
+
+  let entityMatch = compareEntity
+    ? entityFeatureId === entity!.feature_id
+    : true;
+
+  return entityMatch;
+};
+
 export const findCusEnt = ({
   feature,
   cusEnts,
@@ -38,18 +55,13 @@ export const findCusEnt = ({
   entity?: Entity;
   onlyUsageAllowed?: boolean;
 }) => {
-  return cusEnts.find((e: any) => {
+  return cusEnts.find((ce: any) => {
     let featureMatch =
-      e.entitlement.feature.internal_id === feature.internal_id;
+      ce.entitlement.feature.internal_id === feature.internal_id;
 
-    let entityFeatureId = e.entitlement.entity_feature_id;
-    let compareEntity = notNullish(entityFeatureId) && notNullish(entity);
+    let entityMatch = cusEntEntityMatch({ cusEnt: ce, entity });
 
-    let entityMatch = compareEntity
-      ? entityFeatureId === entity!.feature_id
-      : true;
-
-    let usageMatch = onlyUsageAllowed ? e.usage_allowed : true;
+    let usageMatch = onlyUsageAllowed ? ce.usage_allowed : true;
 
     return featureMatch && entityMatch && usageMatch;
   });
