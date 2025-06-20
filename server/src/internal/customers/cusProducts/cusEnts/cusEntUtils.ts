@@ -82,11 +82,9 @@ export const getCusEntMasterBalance = ({
 
 export const getCusEntBalance = ({
   cusEnt,
-  // entities,
   entityId,
 }: {
   cusEnt: FullCustomerEntitlement;
-  // entities?: Entity[];
   entityId?: string | null;
 }) => {
   let entitlement = cusEnt.entitlement;
