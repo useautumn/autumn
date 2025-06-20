@@ -1,4 +1,3 @@
-import { DrizzleCli } from "@/db/initDrizzle.js";
 import {
   constructBooleanFeature,
   constructMeteredFeature,

@@ -14,10 +14,10 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc",
-    "dev": "nodemon --watch . --ext ts --ignore dist --exec 'pnpm run build'",
-    "db:push": "NODE_OPTIONS='--import tsx' drizzle-kit push --config drizzle.config.ts",
-    "db:generate": "NODE_OPTIONS='--import tsx' drizzle-kit generate --config drizzle.config.ts",
-    "db:migrate": "NODE_OPTIONS='--import tsx' drizzle-kit migrate --config drizzle.config.ts"
+    "dev": "npx nodemon --watch . --ext ts --ignore dist --exec 'pnpm run build'",
+    "db:push": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit push --config drizzle.config.ts",
+    "db:generate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "cross-env NODE_OPTIONS=\"--import tsx\" pnpm exec drizzle-kit migrate --config drizzle.config.ts"
   },
   "dependencies": {
     "decimal.js": "^10.5.0",
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.3",
+    "cross-env": "^7.0.3",
     "nodemon": "^3.1.7",
     "tsx": "^4.19.4",
     "typescript": "^5.7.2"

@@ -39,13 +39,13 @@ export const constructFeatureItem = ({
 
 export const constructPrepaidItem = ({
   featureId,
-  price,
+  price = 9,
   billingUnits = 100,
   includedUsage = 0,
   isOneOff = false,
 }: {
   featureId: string;
-  price: number;
+  price?: number;
   billingUnits?: number;
   includedUsage?: number;
   isOneOff?: boolean;
@@ -99,7 +99,7 @@ export const constructArrearItem = ({
 
 export const constructArrearProratedItem = ({
   featureId,
-  pricePerUnit,
+  pricePerUnit = 10,
   includedUsage = 1,
   config = {
     on_increase: OnIncrease.BillImmediately,
@@ -107,7 +107,7 @@ export const constructArrearProratedItem = ({
   },
 }: {
   featureId: string;
-  pricePerUnit: number;
+  pricePerUnit?: number;
   includedUsage?: number;
   config?: ProductItemConfig;
 }) => {

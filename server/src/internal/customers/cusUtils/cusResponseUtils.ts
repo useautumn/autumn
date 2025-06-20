@@ -18,6 +18,8 @@ import {
   cusProductsToCusEnts,
   cusProductsToCusPrices,
 } from "../cusProducts/cusProductUtils/convertCusProduct.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { cusEntEntityMatch } from "../cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 
 export const getCusProductsResponse = async ({
   cusProducts,
@@ -48,19 +50,23 @@ export const getCusProductsResponse = async ({
 export const getCusFeaturesResponse = async ({
   cusProducts,
   org,
-  entityId,
+  entity,
 }: {
   cusProducts: FullCusProduct[];
   org: Organization;
-  entityId?: string;
+  entity?: Entity;
 }) => {
   let cusEnts = cusProductsToCusEnts({ cusProducts }) as any;
+
+  // cusEnts = cusEnts.filter((ce: FullCustomerEntitlement) => {
+  //   // return cusEntEntityMatch({ cusEnt: ce, entity });
+  // });
 
   const balances = await getCusBalances({
     cusEntsWithCusProduct: cusEnts,
     cusPrices: cusProductsToCusPrices({ cusProducts }),
     org,
-    entityId,
+    entity,
   });
 
   let features = cusEnts.map(
@@ -71,6 +77,7 @@ export const getCusFeaturesResponse = async ({
     let isBoolean =
       features.find((f: Feature) => f.id == b.feature_id)?.type ==
       FeatureType.Boolean;
+
     if (b.unlimited || isBoolean) {
       return b;
     }

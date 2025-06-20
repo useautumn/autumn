@@ -14,11 +14,25 @@ export const handlePostCustomerRequest = async (req: any, res: any) => {
     const expand = parseCusExpand(req.query.expand);
     const { db, org, features } = req;
 
+    if (data.customer_id) {
+      throw new RecaseError({
+        message:
+          "use the `id` field instead of `customer_id` to specify the new customer's ID",
+        code: ErrCode.InvalidInputs,
+      });
+    }
+
+    if (data.id === undefined) {
+      throw new RecaseError({
+        message: "`id` field must be either a string or null",
+        code: ErrCode.InvalidInputs,
+      });
+    }
+
     if (!data.id && !data.email) {
       throw new RecaseError({
         message: "ID or email is required",
         code: ErrCode.InvalidRequest,
-        statusCode: StatusCodes.BAD_REQUEST,
       });
     }
 
