@@ -92,7 +92,7 @@ export const triggerRedemption = async ({
   let applied = false;
   if (!stripeCus.discount) {
     await stripeCli.customers.update(stripeCusId, {
-      coupon: reward.internal_id,
+      coupon: reward.id,
     });
 
     applied = true;
