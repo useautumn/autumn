@@ -15,7 +15,6 @@ import { handleRequestError } from "@/utils/errorUtils.js";
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
-import { createLogtailWithContext } from "../logtail/logtailUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { createStripeCli } from "./utils.js";
@@ -85,15 +84,27 @@ stripeWebhookRouter.post(
     }
 
     logStripeWebhook({ req: request, event });
-
-    const logger = createLogtailWithContext({
-      action: LoggerAction.StripeWebhook,
-      event_type: event.type,
-      data: event.data,
-      org_id: orgId,
-      org_slug: org.slug,
-      env,
+    const logger = request.logtail.child({
+      context: {
+        context: {
+          body: request.body,
+          event_type: event.type,
+          authType: AuthType.Stripe,
+          org_id: orgId,
+          org_slug: org.slug,
+          env,
+        },
+      },
     });
+
+    // const logger = createLogtailWithContext({
+    //   action: LoggerAction.StripeWebhook,
+    //   event_type: event.type,
+    //   data: event.data,
+    //   org_id: orgId,
+    //   org_slug: org.slug,
+    //   env,
+    // });
 
     const stripeCli = createStripeCli({ org, env });
     try {
@@ -162,6 +173,7 @@ stripeWebhookRouter.post(
             org,
             data: createdInvoice,
             env,
+            logger,
           });
           break;
 

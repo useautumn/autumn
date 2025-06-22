@@ -108,23 +108,24 @@ export const handleRequestError = ({
   try {
     const logger = req.logtail;
     if (error instanceof RecaseError) {
-      logger.warn("--------------------------------");
-      logger.warn(`RECASE WARNING`);
-      // logger.warn(`${req.method} ${req.originalUrl}`);
-      logReqUrl(logger, req, "warn");
-      logger.warn(
-        `Request from ${req.org?.slug || req.orgId || "unknown"} for ${action}`,
-      );
-      error.print(logger);
-      if (req.originalUrl.includes("/webhooks/stripe")) {
-        logger.warn("request body", {
-          body: getJsonBody(req.body),
-        });
-      } else {
-        logRequestBody(logger, req, "warn");
-      }
+      logger.warn(`RECASE WARNING: (${error.code}) ${error.message}`, {
+        error: error.data,
+      });
 
-      logger.warn("--------------------------------");
+      // logReqUrl(logger, req, "warn");
+      // logger.warn(
+      //   `Request from ${req.org?.slug || req.orgId || "unknown"} for ${action}`,
+      // );
+      // error.print(logger);
+      // if (req.originalUrl.includes("/webhooks/stripe")) {
+      //   logger.warn("request body", {
+      //     body: getJsonBody(req.body),
+      //   });
+      // } else {
+      //   logRequestBody(logger, req, "warn");
+      // }
+
+      // logger.warn("--------------------------------");
       res.status(error.statusCode).json({
         message: error.message,
         code: error.code,
@@ -132,42 +133,62 @@ export const handleRequestError = ({
       return;
     }
 
-    logger.error("--------------------------------");
-    logger.error("ERROR");
-    // logger.error(`${req.method} ${req.originalUrl}`);
-    logReqUrl(logger, req, "error");
-    logger.error(
-      `Request from ${req.org?.slug || req.orgId || "unknown"} for ${action}`,
-    );
+    // logger.error("--------------------------------");
+    // logger.error("ERROR");
+    // // logger.error(`${req.method} ${req.originalUrl}`);
+    // logReqUrl(logger, req, "error");
+    // logger.error(
+    //   `Request from ${req.org?.slug || req.orgId || "unknown"} for ${action}`,
+    // );
 
     if (error instanceof Stripe.errors.StripeError) {
-      logger.error("Stripe error");
-      logger.error("Request body:", getJsonBody(req.body));
-      logger.error(error.message || error);
-      logger.error(error.stack);
+      let curStack;
+      try {
+        throw new Error("test");
+      } catch (e: any) {
+        curStack = e.stack;
+      }
+
+      const { raw, headers, ...rest } = error;
+      logger.error(
+        `STRIPE ERROR (${req.org?.slug || "unknown"}): ${error.message}`,
+        {
+          error: {
+            ...rest,
+            stack: curStack,
+          },
+        },
+      );
+
       res.status(400).json({
         message: error.message,
         code: ErrCode.InvalidInputs,
       });
     } else if (error instanceof ZodError) {
-      logRequestBody(logger, req, "error");
-      logger.error("Type: ZodError");
-      logger.error(formatZodError(error));
+      logger.error(
+        `ZOD ERROR (${req.org?.slug || "unknown"}): ${formatZodError(error)}`,
+      );
+
       res.status(400).json({
         message: formatZodError(error),
         code: ErrCode.InvalidInputs,
       });
     } else {
-      logRequestBody(logger, req, "error");
-      logger.error(`Type: Unknown`);
-      logger.error(error);
+      logger.error(
+        `UNKNOWN ERROR (${req.org?.slug || "unknown"}): ${error.message}, ${error.stack}`,
+        {
+          error: {
+            stack: error.stack,
+            message: error.message,
+          },
+        },
+      );
 
       res.status(500).json({
         message: error.message || "Unknown error",
         code: error.code || "unknown_error",
       });
     }
-    logger.error("--------------------------------");
   } catch (error) {
     console.log("Failed to log error / warning");
     console.log(`Request: ${req.originalUrl}`);
@@ -189,12 +210,6 @@ export const handleFrontendReqError = ({
 }) => {
   try {
     let logger = req.logtail;
-    req.logtail.use((log: any) => {
-      return {
-        ...log,
-        from_frontend: true,
-      };
-    });
 
     if (
       error instanceof RecaseError &&
@@ -210,13 +225,21 @@ export const handleFrontendReqError = ({
       return;
     }
 
-    logger.warn("--------------------------------");
-    logger.warn("FRONTEND REQUEST WARNING");
-    logger.warn(`${req.method} ${req.originalUrl}`, {
+    logger.warn(`FRONTEND REQUEST WARNING: ${error.message}`, {
       type: "frontend_request",
+      error: {
+        message: error.message,
+        stack: error.stack,
+        code: error.code,
+        action,
+      },
     });
-    logger.warn(`${action}`);
-    logger.warn(error);
+
+    // logger.warn(`${req.method} ${req.originalUrl}`, {
+    //   type: "frontend_request",
+    // });
+    // logger.warn(`${action}`);
+    // logger.warn(error);
     res.status(400).json({
       message: error.message || "Unknown error",
       code: error.code || "unknown_error",

@@ -124,7 +124,7 @@ export const runAttachFunction = async ({
 
   logger.info(`--------------------------------`);
   logger.info(
-    `ATTACHING ${productIdsStr} to ${customer.name} (${customer.id || customer.email}), org: ${org.slug}`,
+    `ATTACHING ${productIdsStr} to ${customer.name} (${customer.id || customer.email}), org: ${org.slug}\n`,
   );
   if (customer.entity) {
     logger.info(`Entity: ${customer.entity.name} (${customer.entity.id})`);
@@ -132,9 +132,11 @@ export const runAttachFunction = async ({
   logger.info(
     `Branch: ${chalk.yellow(branch)}, Function: ${chalk.yellow(attachFunction)}`,
     {
-      curMainProduct: curMainProduct?.product.id,
-      curSameProduct: curSameProduct?.product.id,
-      curScheduledProduct: curScheduledProduct?.product.id,
+      data: {
+        curMainProduct: curMainProduct?.product.id,
+        curSameProduct: curSameProduct?.product.id,
+        curScheduledProduct: curScheduledProduct?.product.id,
+      },
     },
   );
 

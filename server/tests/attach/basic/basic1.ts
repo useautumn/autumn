@@ -1,12 +1,9 @@
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import {
-  constructFeatureItem,
-  constructFixedPrice,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { assert, expect } from "chai";
+import { expect } from "chai";
 
 import { setupBefore } from "tests/before.js";
 import { AutumnCli } from "tests/cli/AutumnCli.js";
