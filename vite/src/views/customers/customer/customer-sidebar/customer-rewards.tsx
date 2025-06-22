@@ -44,7 +44,7 @@ export const CustomerRewards = () => {
     }
     return coupon.name;
   };
-  let { referrals } = useCustomerContext();
+  const { referrals } = useCustomerContext();
 
   // if (!referrals) return null;
 
@@ -98,7 +98,7 @@ export const CustomerRewards = () => {
                       <Link
                         to={getRedirectUrl(
                           `/customers/${referral.customer.id}`,
-                          env
+                          env,
                         )}
                         className="flex justify-between hover:bg-zinc-100 items-center"
                         key={referral.customer.id}
@@ -142,7 +142,7 @@ export const CustomerRewards = () => {
                         <Link
                           to={getRedirectUrl(
                             `/customers/${referral.customer.id}`,
-                            env
+                            env,
                           )}
                           className="flex justify-between hover:bg-zinc-100 items-center"
                           key={referral.customer.id}
@@ -172,7 +172,7 @@ export const CustomerRewards = () => {
                     <Link
                       to={getRedirectUrl(
                         `/customers/${referrals.redeemed[0].referral_code?.customer.id}`,
-                        env
+                        env,
                       )}
                       className="flex items-center gap-1 truncate w-full"
                     >

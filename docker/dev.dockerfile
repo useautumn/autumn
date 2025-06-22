@@ -39,7 +39,6 @@ CMD ["pnpm", "run", "dev"]
 FROM base AS server
 COPY server/ ./server/
 WORKDIR /app/server
-RUN pnpm install
 EXPOSE 8080
 CMD ["pnpm", "run", "dev"]
 

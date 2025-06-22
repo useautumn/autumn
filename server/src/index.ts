@@ -27,6 +27,7 @@ import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 
 checkEnvVars();
+
 const init = async () => {
   const app = express();
 
