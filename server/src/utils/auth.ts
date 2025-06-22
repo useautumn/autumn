@@ -47,6 +47,16 @@ export const auth = betterAuth({
     "https://app.useautumn.com",
     "https://*.useautumn.com",
   ],
+  emailAndPassword: {
+    enabled: true,
+    disableSignUp: false,
+    requireEmailVerification: true,
+    minPasswordLength: 8,
+    maxPasswordLength: 128,
+    autoSignIn: true,
+    resetPasswordTokenExpiresIn: 3600, // 1 hour
+  },
+
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,

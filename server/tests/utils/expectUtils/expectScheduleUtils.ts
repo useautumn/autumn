@@ -4,7 +4,7 @@ import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
 import { findStripePriceFromPrices } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import {
   AppEnv,
   AttachBranch,

@@ -57,7 +57,7 @@ export const SelectItemFeature = ({
           </Button>
         </SelectContent>
       </Select>
-      {!isUpdate && (
+      {!isUpdate && item.feature_id && (
         <Button
           isIcon
           size="sm"
@@ -70,9 +70,10 @@ export const SelectItemFeature = ({
               included_usage: null,
               feature_type: null,
               tiers: null,
-              price: item.tiers?.[0]?.amount || 0,
+              price: null,
+              // price: item.tiers?.[0]?.amount || 0,
             });
-            setShow({ ...show, feature: false });
+            // setShow({ ...show, feature: false });
           }}
         >
           <X size={12} className="text-t3" />

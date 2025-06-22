@@ -15,8 +15,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Label } from "@radix-ui/react-dropdown-menu";
-import { Switch } from "@/components/ui/switch";
 
 export function FeatureConfig({
   feature,

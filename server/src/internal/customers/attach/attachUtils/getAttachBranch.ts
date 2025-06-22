@@ -19,7 +19,7 @@ import {
 import { FeatureOptions, FullCusProduct } from "@autumn/shared";
 import { productsAreSame } from "@/internal/products/compareProductUtils.js";
 import { isTrialing } from "../../cusProducts/cusProductUtils.js";
-import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
 
 const checkMultiProductErrors = async ({
