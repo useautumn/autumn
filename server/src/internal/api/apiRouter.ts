@@ -2,7 +2,7 @@ import { apiAuthMiddleware } from "@/middleware/apiAuthMiddleware.js";
 import { Router } from "express";
 import { eventsRouter } from "./events/eventRouter.js";
 import { cusRouter } from "./cusRouter.js";
-import { productApiRouter } from "./products/productRouter.js";
+import { productRouter } from "../products/productRouter.js";
 
 import { featureApiRouter } from "./features/featureApiRouter.js";
 import { entitledRouter } from "./entitled/entitledRouter.js";
@@ -29,7 +29,7 @@ apiRouter.use(analyticsMiddleware);
 
 apiRouter.use("/customers", cusRouter);
 apiRouter.use("/invoices", invoiceRouter);
-apiRouter.use("/products", productApiRouter);
+apiRouter.use("/products", productRouter);
 apiRouter.use("/components", componentRouter);
 apiRouter.use("/rewards", rewardRouter);
 apiRouter.use("/features", featureApiRouter);

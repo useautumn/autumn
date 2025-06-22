@@ -2,6 +2,7 @@
 import {
   Feature,
   FeatureType,
+  getFeatureName,
   Infinite,
   ProductItem,
   ProductItemType,
@@ -38,25 +39,54 @@ export const ProductItemRow = ({
   org,
   onRowClick,
 }: ProductItemRowProps) => {
+  const getName = ({
+    featureId,
+    units,
+  }: {
+    featureId: string;
+    units: number | string | null | undefined;
+  }) => {
+    const feature = getFeature(featureId, features);
+
+    if (!feature) return "";
+
+    const plural = units !== 1;
+    return getFeatureName({
+      feature: feature!,
+      plural: plural,
+    });
+  };
+
   const getFreeFeatureString = (item: ProductItem) => {
     const feature = features.find((f: Feature) => f.id == item.feature_id);
 
+    const featureName = getName({
+      featureId: item.feature_id!,
+      units: item.included_usage,
+    });
+
     if (feature?.type === FeatureType.Boolean) {
-      return `${feature.name}`;
+      return `${featureName}`;
     }
 
     if (item.included_usage == Infinite) {
-      return `Unlimited ${feature?.name}`;
+      return `Unlimited ${featureName}`;
+    }
+
+    let entityFeatureName = "";
+    if (item.entity_feature_id) {
+      entityFeatureName = getName({
+        featureId: item.entity_feature_id!,
+        units: 1,
+      });
     }
 
     return (
       <div className="whitespace-nowrap flex">
         {item.included_usage ?? 0}&nbsp;
-        <span className="truncate">{feature?.name}</span> &nbsp;
+        <span className="truncate">{featureName}</span> &nbsp;
         {item.entity_feature_id && (
-          <span className="truncate">
-            per {getFeature(item.entity_feature_id, features)?.name} &nbsp;
-          </span>
+          <span className="truncate">per {entityFeatureName} &nbsp;</span>
         )}
         {notNullish(item.interval) && (
           <span className="text-t3">per {item.interval}</span>
@@ -89,9 +119,13 @@ export const ProductItemRow = ({
     }
 
     const feature = features.find((f: Feature) => f.id == item.feature_id);
+    const billUnitsFeatureName = getName({
+      featureId: item.feature_id!,
+      units: item.billing_units,
+    });
 
     amountStr += ` per ${item.billing_units! > 1 ? item.billing_units : ""} ${
-      feature?.name
+      billUnitsFeatureName
     }`;
 
     if (!intervalIsNone(item.interval)) {
@@ -99,7 +133,12 @@ export const ProductItemRow = ({
     }
 
     if (item.included_usage) {
-      return `${item.included_usage} ${feature?.name} free, then ${amountStr}`;
+      const includedUsageFeatureName = getName({
+        featureId: item.feature_id!,
+        units: item.included_usage,
+      });
+
+      return `${item.included_usage} ${includedUsageFeatureName} free, then ${amountStr}`;
     } else {
       return amountStr;
     }

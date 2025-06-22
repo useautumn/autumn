@@ -14,7 +14,7 @@ import { AppEnv } from "autumn-js";
 import { Decimal } from "decimal.js";
 import Stripe from "stripe";
 import { getSubsFromCusId } from "./expectSubUtils.js";
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 export const getExpectedInvoiceTotal = async ({
   customerId,

@@ -5,7 +5,7 @@ import {
   Price,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { isFixedPrice } from "./usagePriceUtils.js";
+import { isFixedPrice } from "./usagePriceUtils/classifyUsagePrice.js";
 import { getBillingType } from "../priceUtils.js";
 import { Decimal } from "decimal.js";
 import { nullish } from "@/utils/genUtils.js";

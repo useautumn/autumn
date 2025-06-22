@@ -18,7 +18,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { EntitiesDropdownContent } from "./EntitiesDropdown";
 import { CreateFreeTrial } from "../free-trial/CreateFreeTrial";
-import { InfoTooltip } from "@/components/general/InfoTooltip";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 
 export const ProductItemTable = ({
   isOnboarding = false,

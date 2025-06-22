@@ -15,12 +15,14 @@ import CliAuth from "./views/CliAuth";
 import { SignIn } from "./views/auth/SignIn";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { AdminView } from "./views/admin/AdminView";
+import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/sign-in" element={<SignIn />} />
+        <Route path="/pw-sign-in" element={<PasswordSignIn />} />
         <Route path="/accept" element={<AcceptInvitation />} />
         <Route element={<MainLayout />}>
           <Route path="*" element={<DefaultView />} />

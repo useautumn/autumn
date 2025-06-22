@@ -6,7 +6,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 
 import { useState } from "react";
 import { ProductItemConfig } from "./ProductItemConfig";
@@ -16,11 +15,17 @@ import {
   ProductItemInterval,
   ProductItem,
   CreateFeature as CreateFeatureType,
+  UpdateProductSchema,
 } from "@autumn/shared";
 
 import { useProductContext } from "../ProductContext";
-
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
+
+import { DialogContentWrapper } from "@/components/general/modal-components/DialogContentWrapper";
+import { ItemConfigFooter } from "./product-item-config/item-config-footer/ItemConfigFooter";
+import { ProductService } from "@/services/products/ProductService";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+
 export const defaultProductItem: ProductItem = {
   feature_id: null,
 
@@ -58,14 +63,18 @@ export function CreateProductItem() {
   const [open, setOpen] = useState(false);
   const [showCreateFeature, setShowCreateFeature] = useState(false);
   const [item, setItem] = useState<ProductItem>(defaultProductItem);
-  const { features, product, setProduct, setFeatures } = useProductContext();
+  const { features, product, setProduct, setFeatures, counts, mutate } =
+    useProductContext();
+
+  const axiosInstance = useAxiosInstance();
+  const hasCustomers = counts?.all > 0;
 
   const setSelectedFeature = (feature: CreateFeatureType) => {
     setFeatures([...features, feature]);
     setItem({ ...item, feature_id: feature.id! });
   };
 
-  const handleCreateProductItem = (show: any, entityFeatureId?: string) => {
+  const handleCreateProductItem = async (entityFeatureId?: string) => {
     const validatedItem = validateProductItem({
       item: {
         ...item,
@@ -73,11 +82,17 @@ export function CreateProductItem() {
           ? entityFeatureId
           : item.entity_feature_id,
       },
-      show,
+      // show: {
+      //   price: true,
+      // },
       features,
     });
+
     if (!validatedItem) return;
-    setProduct({ ...product, items: [...product.items, validatedItem] });
+
+    const newItems = [...product.items, validatedItem];
+    setProduct({ ...product, items: newItems });
+
     setOpen(false);
   };
 
@@ -97,7 +112,7 @@ export function CreateProductItem() {
           <DialogTrigger asChild>
             <Button
               variant="add"
-              className="w-full w-24"
+              className="w-24"
               onClick={() => setItem(defaultProductItem)}
             >
               Feature
@@ -113,41 +128,42 @@ export function CreateProductItem() {
             </Button>
           </DialogTrigger>
         </div>
-        <DialogContent
-          className={cn("translate-y-[0%] top-[20%] flex flex-col gap-4 w-fit")}
-        >
-          <DialogHeader>
-            <div className="flex flex-col  ">
-              {showCreateFeature && (
-                <Button
-                  variant="ghost"
-                  className="text-xs py-0 px-2 w-fit -ml-5 -mt-5 hover:bg-transparent"
-                  onClick={() => setShowCreateFeature(false)}
-                >
-                  ← Product
-                </Button>
+        <DialogContent className="translate-y-[0%] top-[20%] flex flex-col gap-0 w-fit p-0">
+          <DialogContentWrapper>
+            <DialogHeader className="p-0">
+              <div className="flex flex-col  ">
+                {showCreateFeature && (
+                  <Button
+                    variant="ghost"
+                    className="text-xs py-0 px-2 w-fit -ml-5 -mt-5 hover:bg-transparent"
+                    onClick={() => setShowCreateFeature(false)}
+                  >
+                    ← Product
+                  </Button>
+                )}
+                <DialogTitle>Add Product Item</DialogTitle>
+              </div>
+            </DialogHeader>
+            <div className="flex !overflow-visible  w-fit">
+              {showCreateFeature ||
+              (features.length == 0 && item.price === null) ? (
+                <div className="w-full -mt-2">
+                  <CreateFeature
+                    isFromEntitlement={true}
+                    setShowFeatureCreate={setShowCreateFeature}
+                    setSelectedFeature={setSelectedFeature}
+                    setOpen={setOpen}
+                    open={open}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4 w-fit !overflow-visible">
+                  <ProductItemConfig />
+                </div>
               )}
-              <DialogTitle>Add Product Item</DialogTitle>
             </div>
-          </DialogHeader>
-          <div className="flex !overflow-visible  w-fit">
-            {showCreateFeature ||
-            (features.length == 0 && item.price === null) ? (
-              <div className="w-full -mt-2">
-                <CreateFeature
-                  isFromEntitlement={true}
-                  setShowFeatureCreate={setShowCreateFeature}
-                  setSelectedFeature={setSelectedFeature}
-                  setOpen={setOpen}
-                  open={open}
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4 w-fit !overflow-visible">
-                <ProductItemConfig />
-              </div>
-            )}
-          </div>
+          </DialogContentWrapper>
+          {!showCreateFeature ? <ItemConfigFooter /> : <div className="" />}
         </DialogContent>
       </Dialog>
     </ProductItemContext.Provider>

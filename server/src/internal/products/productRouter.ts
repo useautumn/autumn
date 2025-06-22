@@ -9,29 +9,28 @@ import { checkStripeProductExists } from "@/internal/products/productUtils.js";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 
-import { handleUpdateProductV2 } from "./handleUpdateProduct.js";
-import { handleDeleteProduct } from "./handleDeleteProduct.js";
-import { handleGetProduct } from "./handleGetProduct.js";
-import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
+import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
+import { handleDeleteProduct } from "../api/products/handleDeleteProduct.js";
+import { handleGetProduct } from "../api/products/handleGetProduct.js";
+import { handleCopyProduct } from "../api/products/handlers/handleCopyProduct.js";
+import { handleCreateProduct } from "../api/products/handlers/handleCreateProduct.js";
+import { handleListProducts } from "../api/products/handlers/handleListProducts.js";
 
-import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
-import { handleListProducts } from "./handlers/handleListProducts.js";
+export const productRouter: Router = Router();
 
-export const productApiRouter: Router = Router();
+productRouter.get("", handleListProducts);
 
-productApiRouter.get("", handleListProducts);
+productRouter.post("", handleCreateProduct);
 
-productApiRouter.post("", handleCreateProduct);
+productRouter.get("/:productId", handleGetProduct);
 
-productApiRouter.get("/:productId", handleGetProduct);
+productRouter.post("/:productId", handleUpdateProductV2);
 
-productApiRouter.post("/:productId", handleUpdateProductV2);
+productRouter.delete("/:productId", handleDeleteProduct);
 
-productApiRouter.delete("/:productId", handleDeleteProduct);
+productRouter.post("/:productId/copy", handleCopyProduct);
 
-productApiRouter.post("/:productId/copy", handleCopyProduct);
-
-productApiRouter.post("/all/init_stripe", async (req: any, res) => {
+productRouter.post("/all/init_stripe", async (req: any, res) => {
   try {
     const { orgId, env, logtail: logger, db } = req;
 

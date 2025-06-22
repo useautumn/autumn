@@ -7,7 +7,7 @@ import {
   Price,
   UsagePriceConfig,
 } from "@autumn/shared";
-import { getBillingType } from "../priceUtils.js";
+import { getBillingType } from "../../priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import Stripe from "stripe";
 import { Decimal } from "decimal.js";

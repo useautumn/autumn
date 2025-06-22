@@ -2,10 +2,7 @@ import { Router } from "express";
 import RecaseError from "@/utils/errorUtils.js";
 import { APIVersion, BillingType, FullCusProduct } from "@autumn/shared";
 import { ErrCode } from "@/errors/errCodes.js";
-import {
-  createStripeCusIfNotExists,
-  getCusPaymentMethod,
-} from "@/external/stripe/stripeCusUtils.js";
+import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 
 import {
   getBillingType,
@@ -27,13 +24,8 @@ import {
   notNullOrUndefined,
   nullOrUndefined,
 } from "@/utils/genUtils.js";
-import chalk from "chalk";
-
 import { CusService } from "@/internal/customers/CusService.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
-
-// import { handleExistingProduct } from "@/internal/customers/add-product/handleExistingProduct.js";
-
 import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
@@ -140,20 +132,26 @@ export const checkStripeConnections = async ({
   req: any;
   attachParams: AttachParams;
 }) => {
-  const { org, customer, products } = attachParams;
+  const { org, customer, products, stripeCus, stripeCli } = attachParams;
   const logger = req.logtail;
   const env = customer.env;
 
   // 2. If invoice only and no email, save email
   if (attachParams.invoiceOnly && !customer.email) {
     customer.email = `${customer.id}@invoices.useautumn.com`;
-    await CusService.update({
-      db: req.db,
-      internalCusId: customer.internal_id,
-      update: {
-        email: customer.email,
-      },
-    });
+    await Promise.all([
+      CusService.update({
+        db: req.db,
+        internalCusId: customer.internal_id,
+        update: {
+          email: customer.email,
+        },
+      }),
+      stripeCus &&
+        stripeCli.customers.update(stripeCus.id, {
+          email: customer.email,
+        }),
+    ]);
   }
 
   const batchProductUpdates = [
@@ -336,7 +334,7 @@ const handleAttachOld = async (req: any, res: any) =>
       // );
 
       // // 3. Check for stripe connection
-      // await checkStripeConnections({ req, attachParams });
+
       // let hasPm = await customerHasPm({ attachParams });
       // const useCheckout = !hasPm || forceCheckout;
       // await createStripePrices({

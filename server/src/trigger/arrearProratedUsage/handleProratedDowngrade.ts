@@ -23,7 +23,7 @@ import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getUsageFromBalance } from "../adjustAllowance.js";
-import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { getReplaceables } from "@/internal/products/prices/priceUtils/arrearProratedUtils/getContUsageDowngradeItem.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import {
