@@ -21,7 +21,6 @@ import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntit
 import { getRelatedCusEnt } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
-import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
@@ -280,22 +279,18 @@ export const handleInvoiceCreated = async ({
   org,
   data,
   env,
+  logger,
 }: {
   db: DrizzleCli;
   org: Organization;
   data: Stripe.Invoice;
   env: AppEnv;
+  logger: any;
 }) => {
   const stripeCli = createStripeCli({ org, env });
   const invoice = await getFullStripeInvoice({
     stripeCli,
     stripeId: data.id,
-  });
-
-  const logger = createLogtailWithContext({
-    org: org,
-    invoice: invoice,
-    action: LoggerAction.StripeWebhookInvoiceCreated,
   });
 
   if (invoice.subscription) {

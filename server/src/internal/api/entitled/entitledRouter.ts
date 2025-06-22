@@ -4,6 +4,7 @@ import {
   APIVersion,
   CusProductStatus,
   type Feature,
+  FeatureSchema,
   FeatureType,
   type FullCustomerEntitlement,
   type Organization,
@@ -29,6 +30,7 @@ import { getBooleanEntitledResult } from "./checkUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { getCheckPreview } from "./getCheckPreview.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 
 export const entitledRouter: Router = Router();
 

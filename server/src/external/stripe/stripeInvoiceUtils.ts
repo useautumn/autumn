@@ -1,20 +1,8 @@
-import {
-  Customer,
-  ErrCode,
-  InvoiceDiscount,
-  InvoiceStatus,
-} from "@autumn/shared";
-
-import { AppEnv } from "@autumn/shared";
-
-import { Organization } from "@autumn/shared";
 import Stripe from "stripe";
-import { getCusPaymentMethod } from "./stripeCusUtils.js";
-import { createStripeCli } from "./utils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { isStripeCardDeclined } from "./stripeCardUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
+import { ErrCode, InvoiceDiscount, InvoiceStatus } from "@autumn/shared";
 
 // For API calls
 export const getStripeExpandedInvoice = async ({
@@ -176,10 +164,8 @@ export const updateInvoiceIfExists = async ({
 
 export const getInvoiceDiscounts = ({
   expandedInvoice,
-  logger,
 }: {
   expandedInvoice: Stripe.Invoice;
-  logger: any;
 }) => {
   try {
     if (!expandedInvoice.discounts || expandedInvoice.discounts.length === 0) {
@@ -187,8 +173,6 @@ export const getInvoiceDiscounts = ({
     }
 
     if (typeof expandedInvoice.discounts[0] == "string") {
-      logger.warn("Getting invoice discounts failed, discounts not expanded");
-      logger.warn(expandedInvoice.discounts);
       return [];
     }
 
@@ -212,8 +196,6 @@ export const getInvoiceDiscounts = ({
 
     return autumnDiscounts;
   } catch (error) {
-    logger.error(`Error getting invoice discounts`);
-    logger.error(error);
     throw error;
   }
 };
