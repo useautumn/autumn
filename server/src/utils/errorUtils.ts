@@ -108,9 +108,12 @@ export const handleRequestError = ({
   try {
     const logger = req.logtail;
     if (error instanceof RecaseError) {
-      logger.warn(`RECASE WARNING: (${error.code}) ${error.message}`, {
-        error: error.data,
-      });
+      logger.warn(
+        `RECASE WARNING (${req.org?.slug || "unknown"}): ${error.message} [${error.code}]`,
+        {
+          error: error.data,
+        },
+      );
 
       // logReqUrl(logger, req, "warn");
       // logger.warn(

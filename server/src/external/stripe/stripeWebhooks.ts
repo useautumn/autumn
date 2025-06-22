@@ -28,7 +28,7 @@ const logStripeWebhook = ({
   req: ExtendedRequest;
   event: Stripe.Event;
 }) => {
-  console.log(
+  req.logtail.info(
     `${chalk.yellow("STRIPE").padEnd(18)} ${event.type.padEnd(30)} ${req.org.slug} | ${event.id}`,
   );
 };
@@ -68,13 +68,13 @@ stripeWebhookRouter.post(
       return;
     }
 
-    const webhookSecret = getStripeWebhookSecret(org, env);
-    try {
-      event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
-    } catch (err: any) {
-      response.status(400).send(`Webhook Error: ${err.message}`);
-      return;
-    }
+    // const webhookSecret = getStripeWebhookSecret(org, env);
+    // try {
+    //   event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
+    // } catch (err: any) {
+    //   response.status(400).send(`Webhook Error: ${err.message}`);
+    //   return;
+    // }
 
     try {
       request.body = JSON.parse(request.body);
@@ -83,7 +83,8 @@ stripeWebhookRouter.post(
       console.log("Error parsing body", error);
     }
 
-    logStripeWebhook({ req: request, event });
+    event = request.body;
+
     const logger = request.logtail.child({
       context: {
         context: {
@@ -96,6 +97,7 @@ stripeWebhookRouter.post(
         },
       },
     });
+    logStripeWebhook({ req: request, event });
 
     // const logger = createLogtailWithContext({
     //   action: LoggerAction.StripeWebhook,
