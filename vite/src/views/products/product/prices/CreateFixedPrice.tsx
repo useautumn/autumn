@@ -129,7 +129,7 @@ function CreateFixedPrice({
           </div>
         </div>
         <div className="w-full">
-          <SelectCycle show={show} setShow={setShow} type="price" />
+          <SelectCycle />
         </div>
         {intervalWarning() && (
           <WarningBox className="py-2">

@@ -9,10 +9,9 @@ import {
 } from "@/components/ui/select";
 import { BillingInterval, UsageModel } from "@autumn/shared";
 import { useProductItemContext } from "../../../ProductItemContext";
-import { isFeatureItem } from "@/utils/product/getItemType";
 import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 
-export const SelectCycle = ({ type }: { type: "price" | "reset" }) => {
+export const SelectCycle = () => {
   const { item, setItem } = useProductItemContext();
 
   const handleBillingIntervalSelected = (value: BillingInterval) => {
