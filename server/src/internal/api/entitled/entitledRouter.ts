@@ -213,6 +213,7 @@ const getCusEntsAndFeatures = async ({
     }),
   ]);
 
+  logger.info(`running /check for org: ${org.slug}, feature: ${feature_id}`);
   const { feature, creditSystems, allFeatures } = featureRes;
 
   const customer = await getOrCreateCustomer({
@@ -225,7 +226,8 @@ const getCusEntsAndFeatures = async ({
   });
 
   const duration = Date.now() - startTime;
-  console.log(`/check: fetched org, features & customer in ${duration}ms`);
+  // console.log(`/check: fetched org, features & customer in ${duration}ms`);
+  logger.info(`/check: fetched org, features & customer in ${duration}ms`);
 
   if (!feature) {
     throw new RecaseError({
@@ -342,6 +344,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       quantity = floatQuantity;
     }
 
+    logger.info(`/check: getting cusEnts and features`);
     const {
       fullCus,
       cusEnts,

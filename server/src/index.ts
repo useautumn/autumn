@@ -97,6 +97,12 @@ const init = async () => {
       });
 
       req.logtail = createLogtail();
+      req.logtail.use((log: any) => {
+        return {
+          ...log,
+          id: req.id,
+        };
+      });
     } catch (error) {
       req.logtail = logger; // fallback
       console.error(`Error creating req.logtail`);
