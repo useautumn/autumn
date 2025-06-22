@@ -1,21 +1,10 @@
-import { OnDecrease, OnIncrease, UsageModel } from "@autumn/shared";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useProductItemContext } from "../../ProductItemContext";
-import { useEffect } from "react";
+import { OnDecrease, UsageModel } from "@autumn/shared";
+import { useProductItemContext } from "../../../ProductItemContext";
 import { ProrationSelect } from "./ProrationSelect";
+import { nullish } from "zod/v4";
 
 const optionToText = (option: OnDecrease) => {
   switch (option) {
-    // case OnDecrease.ProrateImmediately:
-    //   return "Refund prorated amount immediately";
-    // case OnDecrease.ProrateNextCycle:
-    //   return "Add prorated amount to next cycle";
     case OnDecrease.Prorate:
       return "Prorate";
     case OnDecrease.None:
@@ -27,6 +16,10 @@ export const OnDecreaseSelect = () => {
   const { item, setItem } = useProductItemContext();
 
   const getOnDecreaseVal = () => {
+    if (nullish(item.config?.on_decrease)) {
+      return OnDecrease.Prorate;
+    }
+
     if (
       item.config?.on_decrease == OnDecrease.ProrateImmediately ||
       item.config?.on_decrease == OnDecrease.ProrateNextCycle ||
@@ -38,17 +31,17 @@ export const OnDecreaseSelect = () => {
     return OnDecrease.None;
   };
 
-  useEffect(() => {
-    if (!item.config?.on_decrease) {
-      setItem({
-        ...item,
-        config: {
-          ...item.config,
-          on_decrease: OnDecrease.Prorate,
-        },
-      });
-    }
-  }, [item]);
+  // useEffect(() => {
+  //   if (!item.config?.on_decrease) {
+  //     setItem({
+  //       ...item,
+  //       config: {
+  //         ...item.config,
+  //         on_decrease: OnDecrease.Prorate,
+  //       },
+  //     });
+  //   }
+  // }, [item]);
 
   const text =
     item.usage_model == UsageModel.PayPerUse

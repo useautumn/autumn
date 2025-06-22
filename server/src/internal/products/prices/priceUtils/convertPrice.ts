@@ -8,7 +8,7 @@ import {
 
 import { Price } from "@autumn/shared";
 import { getBillingType, getPriceEntitlement } from "../priceUtils.js";
-import { isFixedPrice } from "./usagePriceUtils.js";
+import { isFixedPrice } from "./usagePriceUtils/classifyUsagePrice.js";
 
 export const priceToFeature = ({
   price,
@@ -31,7 +31,7 @@ export const priceToFeature = ({
   }
 
   const ent = getPriceEntitlement(price, ents!);
-  return ent.feature;
+  return ent?.feature;
 };
 
 export const priceToUsageModel = (price: Price) => {

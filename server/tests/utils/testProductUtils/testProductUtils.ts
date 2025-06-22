@@ -1,4 +1,4 @@
-import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { isPriceItem } from "@/internal/products/product-items/productItemUtils/getItemType.js";
 import { nullish } from "@/utils/genUtils.js";
 import {

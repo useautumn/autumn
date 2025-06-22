@@ -17,7 +17,7 @@ import { createUpgradeProrationInvoice } from "./createUpgradeProrationInvoice.j
 import { getUsageFromBalance } from "../adjustAllowance.js";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { roundUsage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 interface UsageValues {
   prevRoundedUsage: number;

@@ -1,18 +1,16 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
 import { ProductItemConfig } from "./ProductItemConfig";
 import { ProductItem } from "@autumn/shared";
 import { ProductItemContext } from "./ProductItemContext";
 import { useProductContext } from "../ProductContext";
 import { notNullish } from "@/utils/genUtils";
-import { defaultProductItem } from "./CreateProductItem";
 import { validateProductItem } from "@/utils/product/product-item/validateProductItem";
 import CopyButton from "@/components/general/CopyButton";
+
+import { DialogContentWrapper } from "@/components/general/modal-components/DialogContentWrapper";
+import { ItemConfigFooter } from "./product-item-config/item-config-footer/ItemConfigFooter";
+
 export default function UpdateProductItem({
   selectedItem,
   selectedIndex,
@@ -26,55 +24,38 @@ export default function UpdateProductItem({
   open: boolean;
   setOpen: (open: boolean) => void;
 }) {
-  let { product, setProduct, features } = useProductContext();
+  const { product, setProduct, features } = useProductContext();
+  const [showCreateFeature, setShowCreateFeature] = useState(false);
 
-  // let [item, setItem] = useState<ProductItem>(
-  //   selectedItem || defaultProductItem
-  // );
-  let [showCreateFeature, setShowCreateFeature] = useState(false);
-
-  let handleUpdateProductItem = (show: any) => {
+  const handleUpdateProductItem = (show: any) => {
     const validatedItem = validateProductItem({
       item: selectedItem!,
-      show,
       features,
     });
     if (!validatedItem) return;
     if (notNullish(selectedIndex)) {
-      let newProduct = { ...product };
+      const newProduct = { ...product };
       newProduct.items[selectedIndex!] = validatedItem;
       setProduct(newProduct);
       setOpen(false);
     }
   };
 
-  let handleDeleteProductItem = () => {
+  const handleDeleteProductItem = () => {
     if (notNullish(selectedIndex)) {
-      let newProduct = { ...product };
+      const newProduct = { ...product };
       newProduct.items.splice(selectedIndex!, 1);
       setProduct(newProduct);
       setOpen(false);
     }
   };
 
-  // useEffect(() => {
-  //   if (selectedItem) {
-  //     setOpen(true);
-  //   }
-  // }, [selectedItem]);
-
-  // useEffect(() => {
-  //   console.log("open", open);
-  //   // if (!open) {
-  //   //   setSelectedItem(null);
-  //   // }
-  // }, [open]);
-
   return (
     <ProductItemContext.Provider
       value={{
         item: selectedItem,
         setItem: setSelectedItem,
+        selectedIndex,
         showCreateFeature,
         setShowCreateFeature,
         isUpdate: true,
@@ -83,16 +64,19 @@ export default function UpdateProductItem({
       }}
     >
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-3xl overflow-visible">
-          <div className="flex items-center justify-between pr-9.5">
-            <DialogTitle>Update Item</DialogTitle>
-            {selectedItem?.feature_id && (
-              <CopyButton text={selectedItem.feature_id || ""}>
-                {selectedItem.feature_id || ""}
-              </CopyButton>
-            )}
-          </div>
-          <ProductItemConfig />
+        <DialogContent className="translate-y-[0%] top-[20%] flex flex-col w-fit gap-0 p-0">
+          <DialogContentWrapper>
+            <div className="flex items-center justify-between pr-9.5">
+              <DialogTitle>Update Item</DialogTitle>
+              {selectedItem?.feature_id && (
+                <CopyButton text={selectedItem.feature_id || ""}>
+                  {selectedItem.feature_id || ""}
+                </CopyButton>
+              )}
+            </div>
+            <ProductItemConfig />
+          </DialogContentWrapper>
+          <ItemConfigFooter />
         </DialogContent>
       </Dialog>
     </ProductItemContext.Provider>

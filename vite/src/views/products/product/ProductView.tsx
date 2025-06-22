@@ -8,17 +8,11 @@ import { ProductContext } from "./ProductContext";
 import { useParams, useSearchParams } from "react-router";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { ManageProduct } from "./ManageProduct";
-import {
-  AppEnv,
-  Feature,
-  ProductItem,
-  ProductV2,
-  UpdateProductSchema,
-} from "@autumn/shared";
+import { AppEnv, UpdateProductSchema } from "@autumn/shared";
 import { toast } from "sonner";
 import { ProductService } from "@/services/products/ProductService";
-import { getBackendErr, navigateTo } from "@/utils/genUtils";
-import { AddProductButton } from "@/views/customers/customer/add-product/AddProductButton";
+import { getBackendErr } from "@/utils/genUtils";
+import { UpdateProductButton } from "@/views/products/product/components/UpdateProductButton";
 
 import ErrorScreen from "@/views/general/ErrorScreen";
 import ProductSidebar from "./ProductSidebar";
@@ -26,176 +20,63 @@ import { FeaturesContext } from "@/views/features/FeaturesContext";
 import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
 import { sortProductItems } from "@/utils/productUtils";
+import { useProductData } from "./hooks/useProductData";
+import { useProductChangedAlert } from "./hooks/useProductChangedAlert";
 
 function ProductView({ env }: { env: AppEnv }) {
+  const axiosInstance = useAxiosInstance();
+
   const { product_id } = useParams();
   const [searchParams] = useSearchParams();
   const version = searchParams.get("version");
 
-  const axiosInstance = useAxiosInstance({ env });
-  const initialProductRef = useRef<ProductV2 | null>(null);
-
-  const [product, setProduct] = useState<ProductV2 | null>(null);
-  const [showFreeTrial, setShowFreeTrial] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
-
   const [showNewVersionDialog, setShowNewVersionDialog] = useState(false);
-  const [features, setFeatures] = useState<Feature[]>([]);
 
-  const [entityFeatureIds, setEntityFeatureIds] = useState<string[]>([]);
+  const url = `/products/${product_id}/data?version=${version}`;
+  const { data, isLoading, mutate } = useAxiosSWR({ url });
 
-  const { data, isLoading, mutate } = useAxiosSWR({
-    url: `/products/${product_id}/data?version=${version}`,
-    env,
-  });
-
-  const { data: counts, mutate: mutateCount } = useAxiosSWR({
-    url: `/products/${product_id}/count?version=${version}`,
-    env,
-  });
+  const countUrl = `/products/${product_id}/count?version=${version}`;
+  const { data: counts, mutate: mutateCount } = useAxiosSWR({ url: countUrl });
 
   //this is to make sure pricing for unlimited entitlements can't be applied
   const [selectedEntitlementAllowance, setSelectedEntitlementAllowance] =
     useState<"unlimited" | number>(0);
-  const [originalProduct, setOriginalProduct] = useState<ProductV2 | null>(
-    null,
-  );
 
-  useEffect(() => {
-    if (data?.product) {
-      const sortedProduct = {
-        ...data.product,
-        items: sortProductItems(data.product.items),
-      };
-      setEntityFeatureIds(
-        Array.from(
-          new Set(
-            sortedProduct.items
-              .filter((item: ProductItem) => item.entity_feature_id != null)
-              .map((item: ProductItem) => item.entity_feature_id),
-          ),
-        ),
-      );
-      setProduct(sortedProduct);
-      setOriginalProduct(structuredClone(sortedProduct));
-    }
-
-    if (data?.features) {
-      setFeatures(data.features);
-    }
-
-    setShowFreeTrial(!!data?.product?.free_trial);
-  }, [data]);
-
-  useEffect(() => {
-    //sort product items and check if there are changes from the original
-    if (!product) return;
-    const sortedProduct = {
-      ...product,
-      items: sortProductItems(product.items),
-    };
-
-    if (JSON.stringify(product.items) !== JSON.stringify(sortedProduct.items)) {
-      setProduct(sortedProduct);
-    }
-
-    if (!originalProduct || !sortedProduct) {
-      setHasChanges(false);
-      return;
-    }
-
-    const hasChanged =
-      JSON.stringify(sortedProduct) !== JSON.stringify(originalProduct);
-    setHasChanges(hasChanged);
-  }, [product]);
-
-  const isNewProduct =
-    // initialProductRef.current?.entitlements?.length === 0 &&
-    // initialProductRef.current?.prices?.length === 0 &&
-    initialProductRef.current?.items?.length === 0 &&
-    !initialProductRef.current?.free_trial;
-
-  const actionState = {
-    disabled: !hasChanges,
-    buttonText: isNewProduct ? "Create Product" : "Update Product",
-    tooltipText: !hasChanges
-      ? isNewProduct
-        ? "Add entitlements and prices to create a new product"
-        : `Make a change to the entitlements or prices to update ${product?.name}`
-      : isNewProduct
-        ? `Create a new product: ${product?.name} `
-        : `Save changes to product: ${product?.name}`,
-  };
+  const {
+    product,
+    setProduct,
+    hasChanges,
+    features,
+    setFeatures,
+    entityFeatureIds,
+    setEntityFeatureIds,
+    actionState,
+    isNewProduct,
+  } = useProductData({ data });
 
   // Replace the current useBlocker call with a fixed useEffect
-  useEffect(() => {
-    if (!hasChanges) return;
+  useProductChangedAlert({ hasChanges });
 
-    const originalPushState = window.history.pushState;
-    const originalReplaceState = window.history.replaceState;
-    let currentUrl = window.location.href;
-    let isRestoring = false; // Flag to prevent recursive popstate events
+  const [buttonLoading, setButtonLoading] = useState(false);
 
-    const handleNavigation = () => {
-      const confirmed = window.confirm(
-        "Are you sure you want to leave without updating the product? Click cancel to stay and save your changes, or click OK to leave without saving.",
-      );
-      return confirmed;
-    };
+  // const hasCustomers = counts?.all > 0;
 
-    // Handle programmatic navigation (pushState/replaceState)
-    window.history.pushState = function (...args) {
-      if (handleNavigation()) {
-        currentUrl = window.location.href;
-        return originalPushState.apply(this, args);
-      }
-    };
-
-    window.history.replaceState = function (...args) {
-      if (handleNavigation()) {
-        currentUrl = window.location.href;
-        return originalReplaceState.apply(this, args);
-      }
-    };
-
-    // Handle back/forward button navigation
-    const handlePopState = (event: PopStateEvent) => {
-      if (isRestoring) return; // Prevent handling our own restore operation
-
-      const confirmed = window.confirm(
-        "Are you sure you want to leave without updating the product? Click cancel to stay and save your changes, or click OK to leave without saving.",
-      );
-
-      if (!confirmed) {
-        // User clicked Cancel (wants to stay) - go forward to undo the back navigation
-        isRestoring = true;
-        window.history.go(1); // Go forward to undo the back navigation
-        setTimeout(() => {
-          isRestoring = false;
-        }, 100); // Reset flag after navigation
-      } else {
-        currentUrl = window.location.href;
-      }
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
-    // Optional: Handle page unload/refresh as well
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = ""; // Required for some browsers
-      return "";
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.history.pushState = originalPushState;
-      window.history.replaceState = originalReplaceState;
-      window.removeEventListener("popstate", handlePopState);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [hasChanges]);
+  // const handleAutoSave = async () => {
+  //   setButtonLoading(true);
+  //   try {
+  //     console.log("Auto saving");
+  //     await new Promise((resolve) => setTimeout(resolve, 1000));
+  //     await updateProduct();
+  //   } catch (error) {
+  //     toast.error(getBackendErr(error, "Failed to auto save product"));
+  //   }
+  //   setButtonLoading(false);
+  // };
+  // useEffect(() => {
+  //   if (hasChanges && !hasCustomers) {
+  //     handleAutoSave();
+  //   }
+  // }, [hasChanges]);
 
   if (isLoading) return <LoadingScreen />;
 
@@ -207,7 +88,7 @@ function ProductView({ env }: { env: AppEnv }) {
     );
   }
 
-  const createProduct = async () => {
+  const updateProduct = async () => {
     try {
       await ProductService.updateProduct(axiosInstance, product.id, {
         ...UpdateProductSchema.parse(product),
@@ -228,7 +109,7 @@ function ProductView({ env }: { env: AppEnv }) {
     }
   };
 
-  const createProductClicked = async () => {
+  const updateProductClicked = async () => {
     if (!counts) {
       toast.error("Something went wrong, please try again...");
       return;
@@ -244,7 +125,7 @@ function ProductView({ env }: { env: AppEnv }) {
       return;
     }
 
-    await createProduct();
+    await updateProduct();
   };
 
   return (
@@ -269,15 +150,19 @@ function ProductView({ env }: { env: AppEnv }) {
           version,
           mutateCount,
           actionState,
-          handleCreateProduct: createProductClicked,
+          handleCreateProduct: updateProductClicked,
           entityFeatureIds,
           setEntityFeatureIds,
+          hasChanges,
+
+          buttonLoading,
+          setButtonLoading,
         }}
       >
         <ConfirmNewVersionDialog
           open={showNewVersionDialog}
           setOpen={setShowNewVersionDialog}
-          createProduct={createProduct}
+          createProduct={updateProduct}
         />
         <div className="flex w-full">
           <div className="flex flex-col gap-4 w-full">
@@ -290,11 +175,11 @@ function ProductView({ env }: { env: AppEnv }) {
             </div>
             <div className="flex justify-end gap-2 p-10 w-full lg:hidden">
               <div className="w-fit">
-                <AddProductButton />
+                <UpdateProductButton />
               </div>
             </div>
           </div>
-          <div className="flex max-w-md w-1/3 shrink-1 hidden lg:block lg:min-w-xs sticky top-0">
+          <div className="flex max-w-md w-1/3 shrink-1 lg:block hidden lg:min-w-xs sticky top-0">
             <ProductSidebar />
           </div>
         </div>

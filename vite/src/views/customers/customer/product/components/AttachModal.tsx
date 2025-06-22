@@ -82,10 +82,10 @@ export const AttachModal = ({
       return false;
     }
 
-    const dueToday = preview?.due_today;
-    if (dueToday && dueToday.total == 0) {
-      return false;
-    }
+    // const dueToday = preview?.due_today;
+    // if (dueToday && dueToday.total == 0) {
+    //   return false;
+    // }
 
     return true;
   };

@@ -6,7 +6,7 @@ import { useCustomerContext } from "../CustomerContext";
 import UpdateCustomerDialog from "../UpdateCustomerDialog";
 import { CustomerToolbar } from "../CustomerToolbar";
 import { CustomerDetails } from "./customer-details";
-import { CustomerEntities } from "./customer-entities";
+import { CustomerEntities } from "./CustomerEntities";
 
 export const CustomerSidebar = () => {
   const { customer, entities } = useCustomerContext();

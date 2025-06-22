@@ -15,7 +15,7 @@ import {
 } from "@autumn/shared";
 
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
-import { generateId } from "@/utils/genUtils.js";
+import { generateId, notNullish } from "@/utils/genUtils.js";
 import { EventService } from "./EventService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { handleUsageEvent } from "./usageRouter.js";
@@ -207,6 +207,15 @@ eventsRouter.post("", async (req: any, res: any) => {
     if (!body.event_name && !body.feature_id) {
       throw new RecaseError({
         message: "event_name or feature_id is required",
+        code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    if (notNullish(body.event_name) && notNullish(body.feature_id)) {
+      throw new RecaseError({
+        message:
+          "either `event_name` or `feature_id` should be provided, not both",
         code: ErrCode.InvalidInputs,
         statusCode: StatusCodes.BAD_REQUEST,
       });

@@ -23,7 +23,7 @@ export const ProrationSelect = ({
       value={value}
       onValueChange={(value) => setValue(value as OnDecrease | OnIncrease)}
     >
-      <SelectTrigger className="w-full min-w-48">
+      <SelectTrigger className="w-full min-w-48 max-w-72">
         <SelectValue className="w-full">
           <span className="text-sm truncate overflow-hidden block w-full">
             {optionToText(value)}
