@@ -58,7 +58,7 @@ export const FeatureConfig = () => {
           </div>
 
           <div className="flex gap-2">
-            <SelectCycle type="price" />
+            <SelectCycle />
             <PrepaidToggle />
           </div>
 
