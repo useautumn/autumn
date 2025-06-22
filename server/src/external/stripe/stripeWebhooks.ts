@@ -85,7 +85,7 @@ stripeWebhookRouter.post(
 
     event = request.body;
 
-    const logger = request.logtail.child({
+    request.logtail = request.logtail.child({
       context: {
         context: {
           body: request.body,
@@ -97,6 +97,8 @@ stripeWebhookRouter.post(
         },
       },
     });
+
+    let logger = request.logtail;
     logStripeWebhook({ req: request, event });
 
     // const logger = createLogtailWithContext({
