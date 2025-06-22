@@ -58,6 +58,21 @@ cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
       }),
     ]);
 
+    // for (const cusProduct of customer.customer_products) {
+    //   console.log(
+    //     "Cus ents:",
+    //     cusProduct.customer_entitlements.map((ce) => {
+    //       return `${ce.entitlement.feature.id}, ${ce.balance}, ${ce.replaceables}`;
+    //     }),
+    //   );
+    //   console.log(
+    //     "Cus prices:",
+    //     cusProduct.customer_prices.map((cp) => {
+    //       return `${cp.price.id}`;
+    //     }),
+    //   );
+    // }
+
     if (!customer) {
       throw new RecaseError({
         message: "Customer not found",
