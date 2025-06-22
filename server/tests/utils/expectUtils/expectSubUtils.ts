@@ -6,7 +6,7 @@ import {
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { nullish } from "@/utils/genUtils.js";
 import {

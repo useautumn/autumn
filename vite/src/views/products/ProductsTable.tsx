@@ -22,8 +22,6 @@ export const ProductsTable = ({
   const navigate = useNavigate();
   const { allCounts } = useProductsContext();
 
-  console.log("products", products);
-
   return (
     <>
       {products && products.length > 0 ? (

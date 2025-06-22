@@ -1,28 +1,4 @@
-import {
-  Feature,
-  FeatureUsageType,
-  ProductItem,
-  ProductV2,
-} from "@autumn/shared";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogTitle,
-  DialogHeader,
-} from "@/components/ui/dialog";
-import { CreateFeature } from "@/views/features/CreateFeature";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
 import { useProductContext } from "../ProductContext";
-import { toast } from "sonner";
-import { CheckIcon } from "lucide-react";
 import { EntitiesDropdown } from "./EntitiesDropdown";
 
 export const EntitiesSidebar = ({

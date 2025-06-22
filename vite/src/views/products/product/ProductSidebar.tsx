@@ -1,7 +1,6 @@
 import { Accordion } from "@/components/ui/accordion";
 import { useProductContext } from "./ProductContext";
 import { Minus, Plus } from "lucide-react";
-import { AddProductButton } from "@/views/customers/customer/add-product/AddProductButton";
 import { SideAccordion } from "@/components/general/SideAccordion";
 import { useState } from "react";
 import { CreateFreeTrial } from "./free-trial/CreateFreeTrial";
@@ -12,6 +11,7 @@ import { notNullish } from "@/utils/genUtils";
 import { AttachButton } from "@/views/customers/customer/product/components/AttachButton";
 import { CustomerProductBadge } from "@/views/customers/customer/product/components/CustomerProductBadge";
 import { EntitiesSidebar } from "./product-item/EntitiesSidebar";
+import { UpdateProductButton } from "./components/UpdateProductButton";
 
 export default function ProductSidebar() {
   const { product, org, setProduct, customer, features } = useProductContext();
@@ -104,7 +104,7 @@ export default function ProductSidebar() {
           </SideAccordion>
         </div>
         <div className="flex gap-2 px-4 py-6 w-full">
-          {isCustomerProductView ? <AttachButton /> : <AddProductButton />}
+          {isCustomerProductView ? <AttachButton /> : <UpdateProductButton />}
         </div>
       </Accordion>
     </div>

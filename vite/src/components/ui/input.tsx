@@ -16,8 +16,11 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const handleFocus = () => setIsFocused(true);
     const handleBlur = () => setIsFocused(false);
 
-    const gradientBg =
-      "bg-[linear-gradient(180deg,white,theme(colors.stone.100))]";
+    // const gradientBg =
+    //   "bg-[linear-gradient(180deg,white,theme(colors.stone.50))]";
+    const gradientBg = "bg-white";
+
+    // const gradientBg = "bg-input";
     return (
       <>
         {hasAdornment ? (
@@ -58,7 +61,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             type={type}
             className={cn(
-              `flex w-full rounded-md border border-zinc-200 bg-[linear-gradient(180deg,white,theme(colors.stone.50))] px-3 py-1 text-base transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-zinc-950 placeholder:text-zinc-500 disabled:cursor-not-allowed disabled:opacity-50
+              `flex w-full rounded-md border border-zinc-200 ${gradientBg} px-3 py-1 text-base transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-zinc-950 placeholder:text-zinc-500 disabled:cursor-not-allowed disabled:opacity-50
             md:text-sm dark:border-zinc-800 dark:file:text-zinc-50 dark:placeholder:text-zinc-400
             
             p-2 h-8 shadow-sm 

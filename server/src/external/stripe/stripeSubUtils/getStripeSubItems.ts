@@ -24,7 +24,7 @@ import {
   compareBillingIntervals,
   sortPricesByInterval,
 } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 const getIntervalToPrices = (prices: Price[]) => {
   const intervalToPrices: Record<string, Price[]> = {};

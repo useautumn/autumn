@@ -1,7 +1,10 @@
 import { cn } from "@/lib/utils";
 import React from "react";
 
-function FieldLabel({ children, className, description }: any) {
+function FieldLabel({ children, className, description, empty = false }: any) {
+  if (empty) {
+    children = "\u00A0";
+  }
   if (!description) {
     return (
       <div className={cn("text-t3 text-sm mb-2", className)}>{children}</div>
