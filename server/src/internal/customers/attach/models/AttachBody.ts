@@ -48,9 +48,30 @@ export const AttachBodySchema = z
     checkout_session_params: z.any().optional(),
     reward: z.string().optional(),
   })
-  .refine((data) => !(data.product_id && data.product_ids), {
-    message: "Either product_id or product_ids should be provided, not both",
-  })
+  .refine(
+    (data) => {
+      if (!data.product_id && !data.product_ids) {
+        return false;
+      }
+
+      return true;
+    },
+    {
+      message: "`product_id` is not provided",
+    },
+  )
+  .refine(
+    (data) => {
+      if (data.product_id && data.product_ids) {
+        return false;
+      }
+
+      return true;
+    },
+    {
+      message: "provide either one `product_id` or `product_ids`",
+    },
+  )
   .refine(
     (data) => {
       if (

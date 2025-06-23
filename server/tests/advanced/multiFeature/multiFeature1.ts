@@ -202,7 +202,7 @@ describe(`${chalk.yellowBright(
 
     totalUsage += value;
 
-    await timeout(5000);
+    await timeout(10000);
 
     let { usageCusEnt } = await getPrepaidAndUsageCusEnts({
       customerId,

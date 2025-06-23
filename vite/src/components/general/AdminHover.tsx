@@ -18,24 +18,10 @@ export const AdminHover = forwardRef<
     children: React.ReactNode;
     texts: (string | { key: string; value: string } | undefined | null)[];
     hide?: boolean;
+    asChild?: boolean;
   }
->(({ children, texts, hide = false }, ref) => {
-  // const { data, isPending } = useSession();
+>(({ children, texts, hide = false, asChild = false }, ref) => {
   const { isAdmin } = useAdmin();
-
-  // const user = data?.user;
-
-  // // const { isLoaded, user } = useUser();
-  // // const { actor } = useAuth();
-
-  // const email = user?.email;
-
-  // const isAdmin =
-  //   // notNullish(actor) ||
-  //   email === "johnyeocx@gmail.com" ||
-  //   email === "ayush@recaseai.com" ||
-  //   email === "johnyeo10@gmail.com" ||
-  //   email == "npmrundemo@gmail.com";
 
   if (!isAdmin || hide) return <>{children}</>;
 
@@ -48,7 +34,7 @@ export const AdminHover = forwardRef<
   return (
     <TooltipProvider>
       <Tooltip>
-        <TooltipTrigger className="w-fit !cursor-default">
+        <TooltipTrigger className="w-fit !cursor-default" asChild={asChild}>
           {triggerChild}
         </TooltipTrigger>
         {isAdmin && (

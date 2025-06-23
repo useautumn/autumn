@@ -44,7 +44,9 @@ export const updateCustomerDetails = async ({
   }
 
   if (Object.keys(updates).length > 0) {
-    logger.info(`Updating customer details`, { updates });
+    logger.info(`Updating customer details:`, {
+      data: updates,
+    });
     await CusService.update({
       db,
       internalCusId: customer.internal_id,

@@ -7,6 +7,7 @@ import { AdminTable } from "./AdminTable";
 import { columns as userColumns } from "./userColumns";
 import { columns as orgColumns } from "./orgColumns";
 import { Button } from "@/components/ui/button";
+import { CreateUser } from "./components/CreateUser";
 
 export const AdminView = () => {
   const { isAdmin, isPending } = useAdmin();
@@ -38,7 +39,8 @@ export const AdminView = () => {
     <div className="flex flex-col p-6">
       {/* 1. User list */}
 
-      <div className="flex justify-end absolute top-10 right-10">
+      <div className="flex justify-end absolute top-10 right-10 gap-2">
+        <CreateUser />
         <Button
           onClick={handleStopImpersonating}
           variant="outline"

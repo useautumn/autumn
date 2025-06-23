@@ -2,7 +2,7 @@ import { SelectContent } from "@/components/ui/select";
 import { SelectValue } from "@/components/ui/select";
 import { SelectTrigger } from "@/components/ui/select";
 import { DialogFooter } from "@/components/ui/dialog";
-import { Reward } from "@autumn/shared";
+import { Reward, RewardType } from "@autumn/shared";
 import { Select, SelectItem } from "@/components/ui/select";
 import { DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
@@ -46,11 +46,11 @@ const AddCouponDialogContent = ({
   };
 
   const existingDiscount = discount;
-  console.log("Existing discount", existingDiscount);
+
   const getExistingCoupon = () => {
     if (discount) {
       return coupons.find(
-        (c: Reward) => c.internal_id === getOriginalCouponId(discount.coupon.id)
+        (c: Reward) => c.id === getOriginalCouponId(discount.coupon.id),
       );
     } else {
       return null;
@@ -58,7 +58,7 @@ const AddCouponDialogContent = ({
   };
 
   return (
-    <DialogContent className="min-w-sm">
+    <DialogContent className="min-w-sm max-w-md">
       <DialogTitle>Add Reward</DialogTitle>
       {getExistingCoupon() && (
         <WarningBox>
@@ -83,11 +83,17 @@ const AddCouponDialogContent = ({
             {/* If empty */}
 
             {coupons && coupons.length > 0 ? (
-              coupons.map((coupon: Reward) => (
-                <SelectItem key={coupon.internal_id} value={coupon.internal_id}>
-                  {coupon.name}
-                </SelectItem>
-              ))
+              coupons.map((coupon: Reward) => {
+                if (coupon.type == RewardType.FreeProduct) return null;
+                return (
+                  <SelectItem
+                    key={coupon.internal_id}
+                    value={coupon.internal_id}
+                  >
+                    {coupon.name}
+                  </SelectItem>
+                );
+              })
             ) : (
               <SelectItem value="none" disabled>
                 No coupons found

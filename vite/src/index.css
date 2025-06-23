@@ -241,6 +241,9 @@ button:focus-visible {
 
   --shadow-focus: 0 0 3px 1.5px rgba(139, 92, 246, 0.4);
   --color-focus: rgba(139, 92, 246, 0.95);
+
+  /* --color-input: #fafaf9; */
+  /* --color-input: white; */
 }
 
 /* Hide number input spinners globally */

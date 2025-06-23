@@ -18,7 +18,7 @@ import { getPriceEntitlement } from "../../products/prices/priceUtils.js";
 import {
   isFixedPrice,
   isUsagePrice,
-} from "../../products/prices/priceUtils/usagePriceUtils.js";
+} from "../../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 import { newPriceToInvoiceDescription } from "../invoiceFormatUtils.js";
 import { calculateProrationAmount } from "../prorationUtils.js";

@@ -1,14 +1,19 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
-import { getResetBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import {
+  getRelatedCusPrice,
+  getResetBalance,
+} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import {
   findLinkedCusEnts,
   findMainCusEntForFeature,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   CreateEntity,
+  ErrCode,
   Feature,
   FullCusProduct,
   FullCustomer,
@@ -61,18 +66,18 @@ export const updateLinkedCusEnt = async ({
 
 export const createEntityForCusProduct = async ({
   req,
-  // feature,
   customer,
   cusProduct,
   inputEntities,
   logger,
+  fromAutoCreate = false,
 }: {
   req: ExtendedRequest;
-  // feature: Feature;
   customer: FullCustomer;
   cusProduct: FullCusProduct;
   inputEntities: CreateEntity[];
   logger: any;
+  fromAutoCreate?: boolean;
 }) => {
   const featureToEntities = inputEntities.reduce(
     (acc, entity) => {
@@ -95,6 +100,17 @@ export const createEntityForCusProduct = async ({
       cusEnts,
       feature,
     });
+
+    if (mainCusEnt) {
+      const cusPrice = getRelatedCusPrice(mainCusEnt, cusPrices);
+
+      if (fromAutoCreate && cusPrice) {
+        throw new RecaseError({
+          message: `Failed to auto create entity for feature ${feature.name} because it is a paid feature.`,
+          code: ErrCode.InvalidInputs,
+        });
+      }
+    }
 
     // 1. If main cus ent:
     let deletedReplaceables: Replaceable[] = [];

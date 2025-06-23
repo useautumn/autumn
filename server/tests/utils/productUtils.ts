@@ -2,7 +2,7 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { AppEnv, CreateReward, Product, ProductV2 } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils.js";
+import { isUsagePrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 export const createProduct = async ({
   db,

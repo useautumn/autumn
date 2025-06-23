@@ -1,7 +1,7 @@
 import { Job, Queue, Worker } from "bullmq";
 import { runUpdateBalanceTask } from "@/trigger/updateBalanceTask.js";
 import { QueueManager } from "./QueueManager.js";
-import { createLogtail } from "@/external/logtail/logtailUtils.js";
+
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
 import { JobName } from "./JobName.js";
 
@@ -12,6 +12,7 @@ import { CacheManager } from "@/external/caching/CacheManager.js";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
 
 const NUM_WORKERS = 10;
 
@@ -26,28 +27,25 @@ const initWorker = ({
   id,
   queue,
   useBackup,
-  logtail,
   db,
 }: {
   id: number;
   queue: Queue;
   useBackup: boolean;
-  logtail: any;
   db: DrizzleCli;
 }) => {
   let worker = new Worker(
     "autumn",
     async (job: Job) => {
-      try {
-        logtail.use((log: any) => {
-          return {
-            ...log,
+      const logtail = logger.child({
+        context: {
+          worker: {
             task: job.name,
             data: job.data,
             workerId: id,
-          };
-        });
-      } catch (error) {}
+          },
+        },
+      });
 
       if (job.name == JobName.GenerateFeatureDisplay) {
         await runSaveFeatureDisplayTask({
@@ -190,7 +188,6 @@ export const initWorkers = async () => {
   const mainQueue = await QueueManager.getQueue({ useBackup: false });
   const backupQueue = await QueueManager.getQueue({ useBackup: true });
   await CacheManager.getInstance();
-  const logtail = createLogtail();
 
   for (let i = 0; i < NUM_WORKERS; i++) {
     workers.push(
@@ -198,7 +195,6 @@ export const initWorkers = async () => {
         id: i,
         queue: mainQueue,
         useBackup: false,
-        logtail,
         db,
       }),
     );
@@ -207,7 +203,7 @@ export const initWorkers = async () => {
         id: i,
         queue: backupQueue,
         useBackup: true,
-        logtail,
+
         db,
       }),
     );

@@ -6,6 +6,8 @@ import { Router } from "express";
 
 export const adminRouter: Router = Router();
 
+// adminRouter.post()
+
 adminRouter.get("/users", async (req: any, res: any) => {
   try {
     const { db } = req as ExtendedRequest;

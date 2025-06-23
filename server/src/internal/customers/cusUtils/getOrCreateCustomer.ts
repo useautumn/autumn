@@ -19,6 +19,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 
 export const getOrCreateCustomer = async ({
   req,
@@ -120,28 +121,20 @@ export const getOrCreateCustomer = async ({
   if (entityId && !customer.entity) {
     logger.info(`Auto creating entity ${entityId} for customer ${customerId}`);
 
-    let newEntities = await createEntities({
+    let newEntity = await autoCreateEntity({
       req,
-      customerId,
-      createEntityData: {
+      customer,
+      entityId,
+      entityData: {
         id: entityId,
         name: entityData?.name,
         feature_id: entityData?.feature_id!,
       },
       logger,
-      fromAutoCreate: true,
     });
 
-    customer.entities = [...(customer.entities || []), ...newEntities];
-    customer.entity = newEntities.length > 0 ? newEntities[0] : null;
-
-    if (customer.entity === null) {
-      throw new RecaseError({
-        message: `Entity ${entityId} not found for customer ${customerId}. This entity must be created first as it has a price associated with it.`,
-        code: ErrCode.EntityNotFound,
-        statusCode: StatusCodes.BAD_REQUEST,
-      });
-    }
+    customer.entities = [...(customer.entities || []), newEntity];
+    customer.entity = newEntity;
   }
 
   return customer as FullCustomer;

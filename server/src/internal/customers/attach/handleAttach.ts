@@ -9,6 +9,8 @@ import { handleAttachErrors } from "./attachUtils/handleAttachErrors.js";
 import { checkStripeConnections, createStripePrices } from "./attachRouter.js";
 import { insertCustomItems } from "./attachUtils/insertCustomItems.js";
 import { runAttachFunction } from "./attachUtils/getAttachFunction.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { FeatureSchema } from "@autumn/shared";
 
 export const handleAttach = async (req: any, res: any) =>
   routeHandler({
