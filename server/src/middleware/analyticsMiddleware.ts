@@ -21,25 +21,38 @@ const handleResFinish = (req: any, res: any) => {
   }
 };
 
+const parseCustomerIdFromUrl = (url: string): string | undefined => {
+  if (!url.startsWith("/v1")) {
+    return undefined;
+  }
+
+  const cleanUrl = url.split("?")[0].replace(/^\/+|\/+$/g, "");
+  const segments = cleanUrl.split("/");
+  const customersIndex = segments.findIndex(
+    (segment) => segment === "customers",
+  );
+
+  if (customersIndex !== -1 && segments[customersIndex + 1]) {
+    return segments[customersIndex + 1];
+  }
+
+  return undefined;
+};
+
 export const analyticsMiddleware = async (req: any, res: any, next: any) => {
-  // const logtailContext: any = {
-  //   org_id: req.org?.id,
-  //   org_slug: req.org?.slug,
-  //   method: req.method,
-  //   url: req.originalUrl,
-  //   body: req.body,
-  //   env: req.env,
-  // };
+  let reqContext = {
+    org_id: req.org?.id,
+    org_slug: req.org?.slug,
+    env: req.env,
+    authType: req.authType,
+    body: req.body,
+    customer_id:
+      req?.body?.customer_id || parseCustomerIdFromUrl(req.originalUrl),
+  };
 
   req.logtail = req.logtail.child({
     context: {
-      context: {
-        org_id: req.org?.id,
-        org_slug: req.org?.slug,
-        env: req.env,
-        authType: req.authType,
-        body: req.body,
-      },
+      context: reqContext,
     },
   });
 

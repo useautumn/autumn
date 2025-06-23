@@ -11,7 +11,7 @@ export const initLogger = () => {
         options: {
           colorize: true,
           translateTime: "UTC:yyyy-mm-dd HH:MM:ss",
-          ignore: "pid,hostname,res,req,context,statusCode,worker",
+          ignore: "pid,hostname,res,context,req,statusCode,worker",
           customColors: {
             default: "white",
             60: "bgRed",

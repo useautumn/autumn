@@ -237,6 +237,7 @@ const handleAttachOld = async (req: any, res: any) =>
       await handleAttachRaceCondition({ req, res });
 
       const attachBody = AttachBodySchema.parse(req.body);
+
       const logger = req.logtail;
 
       // PUBLIC STUFF

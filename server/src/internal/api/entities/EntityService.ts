@@ -2,9 +2,33 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ErrCode } from "@autumn/shared";
 import { Entity, entities } from "@autumn/shared";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 export class EntityService {
+  static async getNull({
+    db,
+    orgId,
+    env,
+    internalCustomerId,
+    internalFeatureId,
+  }: {
+    db: DrizzleCli;
+    orgId: string;
+    env: string;
+    internalCustomerId: string;
+    internalFeatureId: string;
+  }) {
+    return await db.query.entities.findFirst({
+      where: (entities, { eq, and }) =>
+        and(
+          eq(entities.id, sql`null`),
+          eq(entities.org_id, orgId),
+          eq(entities.env, env),
+          eq(entities.internal_customer_id, internalCustomerId),
+          eq(entities.internal_feature_id, internalFeatureId),
+        ),
+    });
+  }
   static async insert({ db, data }: { db: DrizzleCli; data: any }) {
     if (data.length === 0) {
       return [];
