@@ -150,7 +150,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
       stripeCli,
       testClockId,
       advanceTo: addWeeks(curUnix, 1).getTime(),
-      waitForSeconds: 30,
+      waitForSeconds: 40,
     });
 
     await runAttachTest({
