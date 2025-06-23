@@ -15,7 +15,6 @@ import { handleRequestError } from "@/utils/errorUtils.js";
 import { handleInvoiceCreated } from "./webhookHandlers/handleInvoiceCreated/handleInvoiceCreated.js";
 import { handleInvoiceFinalized } from "./webhookHandlers/handleInvoiceFinalized.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
-import { createLogtailWithContext } from "../logtail/logtailUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { createStripeCli } from "./utils.js";
@@ -29,7 +28,7 @@ const logStripeWebhook = ({
   req: ExtendedRequest;
   event: Stripe.Event;
 }) => {
-  console.log(
+  req.logtail.info(
     `${chalk.yellow("STRIPE").padEnd(18)} ${event.type.padEnd(30)} ${req.org.slug} | ${event.id}`,
   );
 };
@@ -69,13 +68,13 @@ stripeWebhookRouter.post(
       return;
     }
 
-    const webhookSecret = getStripeWebhookSecret(org, env);
-    try {
-      event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
-    } catch (err: any) {
-      response.status(400).send(`Webhook Error: ${err.message}`);
-      return;
-    }
+    // const webhookSecret = getStripeWebhookSecret(org, env);
+    // try {
+    //   event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
+    // } catch (err: any) {
+    //   response.status(400).send(`Webhook Error: ${err.message}`);
+    //   return;
+    // }
 
     try {
       request.body = JSON.parse(request.body);
@@ -84,16 +83,32 @@ stripeWebhookRouter.post(
       console.log("Error parsing body", error);
     }
 
+    event = request.body;
+
+    request.logtail = request.logtail.child({
+      context: {
+        context: {
+          body: request.body,
+          event_type: event.type,
+          authType: AuthType.Stripe,
+          org_id: orgId,
+          org_slug: org.slug,
+          env,
+        },
+      },
+    });
+
+    let logger = request.logtail;
     logStripeWebhook({ req: request, event });
 
-    const logger = createLogtailWithContext({
-      action: LoggerAction.StripeWebhook,
-      event_type: event.type,
-      data: event.data,
-      org_id: orgId,
-      org_slug: org.slug,
-      env,
-    });
+    // const logger = createLogtailWithContext({
+    //   action: LoggerAction.StripeWebhook,
+    //   event_type: event.type,
+    //   data: event.data,
+    //   org_id: orgId,
+    //   org_slug: org.slug,
+    //   env,
+    // });
 
     const stripeCli = createStripeCli({ org, env });
     try {
@@ -162,6 +177,7 @@ stripeWebhookRouter.post(
             org,
             data: createdInvoice,
             env,
+            logger,
           });
           break;
 

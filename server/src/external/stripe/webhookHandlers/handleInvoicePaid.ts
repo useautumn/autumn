@@ -53,7 +53,6 @@ const handleOneOffInvoicePaid = async ({
       hosted_invoice_url: stripeInvoice.hosted_invoice_url,
       discounts: getInvoiceDiscounts({
         expandedInvoice: stripeInvoice,
-        logger,
       }),
     },
   });

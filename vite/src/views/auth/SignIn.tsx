@@ -91,7 +91,7 @@ export const SignIn = () => {
         {/* Title */}
         <div className="text-center">
           <h1 className="text-lg font-semibold text-foreground">
-            Sign in to Autumn
+            Welcome to Autumn
           </h1>
         </div>
 

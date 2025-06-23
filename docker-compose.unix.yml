@@ -1,0 +1,113 @@
+services:
+
+  valkey:
+    image: docker.io/bitnami/valkey:8.0
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - VALKEY_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    volumes:
+      - valkey-data:/bitnami/valkey/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-h', 'localhost', '-p', '6379', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  shared:
+    build:
+      dockerfile: docker/dev.dockerfile
+      context: .
+      target: shared
+    volumes:
+      - ./shared:/app/shared
+      - shared-dist:/app/shared/dist
+      - shared-node-modules:/app/shared/node_modules
+      - root-node-modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped
+
+  # Vite frontend
+  vite:
+    build:
+      dockerfile: docker/dev.dockerfile
+      context: .
+      target: vite
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./vite:/app/vite
+      - shared-dist:/app/shared/dist
+      - vite-node-modules:/app/vite/node_modules
+      - root-node-modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - shared
+    restart: unless-stopped
+
+  # Main Express server
+  server:
+    build:
+      dockerfile: docker/dev.dockerfile
+      context: .
+      target: server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./server:/app/server
+      - shared-dist:/app/shared/dist
+      - root-node-modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - REDIS_URL=redis://valkey:6379
+    depends_on:
+      - shared
+    restart: unless-stopped
+
+  # BullMQ Workers
+  workers:
+    build:
+      dockerfile: docker/dev.dockerfile
+      context: .
+      target: workers
+    volumes:
+      # Mount server source for hot reload (workers use server code)
+      - ./server:/app/server
+      - shared-dist:/app/shared/dist
+      - root-node-modules:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - REDIS_URL=redis://valkey:6379
+    depends_on:
+      - shared
+    restart: unless-stopped
+
+
+  # Run localtunnel
+  localtunnel:
+    image: node:20-alpine
+    build:
+      dockerfile: docker/dev.dockerfile
+      context: .
+      target: localtunnel
+    volumes:
+      - ./server:/app/server
+    depends_on:
+      - server
+    restart: unless-stopped
+
+
+volumes:
+  # Shared package dist output
+  shared-dist:
+  valkey-data:
+
+  # Node modules volumes to avoid host/container conflicts
+  shared-node-modules:
+  server-node-modules:
+  vite-node-modules:
+  root-node-modules:

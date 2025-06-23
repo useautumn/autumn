@@ -1,5 +1,3 @@
-import { FeatureService } from "@/internal/features/FeatureService.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { EntityService } from "../../../api/entities/EntityService.js";
 import { APIVersion, CreateEntity, CustomerData, Entity } from "@autumn/shared";
 import { getEntityResponse } from "../../../api/entities/getEntityUtils.js";
@@ -106,12 +104,7 @@ export const handlePostEntityRequest = async (req: any, res: any) =>
     res,
     action: "create entity",
     handler: async (req: any, res: any) => {
-      const { env, db, logtail: logger } = req;
-
-      const [org, features] = await Promise.all([
-        OrgService.getFromReq(req),
-        FeatureService.getFromReq(req),
-      ]);
+      const { logtail: logger, org } = req;
 
       let apiVersion = orgToVersion({
         org,

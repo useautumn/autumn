@@ -2,11 +2,10 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { initLogger } from "@/errors/logger.js";
-import { Logtail } from "@logtail/node";
 
 const pinoLogger = initLogger();
 
-const createLogMethod = (pinoMethod: any, logtailMethod: any) => {
+const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
   function rewriteAppPath(str: string) {
     if (typeof str !== "string") return str;
     // Replace file:///app/ with ./
@@ -73,80 +72,49 @@ const createLogMethod = (pinoMethod: any, logtailMethod: any) => {
   };
 };
 
-export const createLogger = ({
-  sourceToken,
-  ingestingHost,
-}: {
-  sourceToken: string;
-  ingestingHost: string;
-}) => {
-  let logtail: any;
-  if (sourceToken && ingestingHost) {
-    logtail = new Logtail(sourceToken, {
-      endpoint: ingestingHost,
-    });
-  }
+export const createLogger = () => {
+  // Helper function to create logger structure recursively
+  const createLoggerStructure = (basePinoLogger: any) => {
+    return {
+      debug: createLogMethod(basePinoLogger.debug.bind(basePinoLogger)),
+      info: createLogMethod(basePinoLogger.info.bind(basePinoLogger)),
+      warn: createLogMethod(basePinoLogger.warn.bind(basePinoLogger)),
+      error: createLogMethod(basePinoLogger.error.bind(basePinoLogger)),
 
-  // Create a custom logger that logs to both Logtail and console
-  const logger = {
-    debug: createLogMethod(
-      pinoLogger.debug.bind(pinoLogger),
-      logtail?.debug.bind(logtail),
-    ),
-    info: createLogMethod(
-      pinoLogger.info.bind(pinoLogger),
-      logtail?.info.bind(logtail),
-    ),
-    warn: createLogMethod(
-      pinoLogger.warn.bind(pinoLogger),
-      logtail?.warn.bind(logtail),
-    ),
-    error: createLogMethod(
-      pinoLogger.error.bind(pinoLogger),
-      logtail?.error.bind(logtail),
-    ),
-    use: (fn: any) => {
-      logtail?.use(fn);
-    },
-    flush: () => logtail?.flush(),
+      child: ({
+        context,
+        onlyProd = false,
+      }: {
+        context: any;
+        onlyProd?: boolean;
+      }) => {
+        if (onlyProd && process.env.NODE_ENV !== "production") {
+          return createLoggerStructure(basePinoLogger);
+        }
+
+        const childPinoLogger = basePinoLogger.child(context);
+        return createLoggerStructure(childPinoLogger);
+      },
+    };
   };
 
-  return logger;
+  // Create the root logger using the helper function
+  return createLoggerStructure(pinoLogger);
 };
 
-export const createLogtailWithContext = (context: any) => {
-  const logtail = createLogtail();
-  logtail.use((log: any) => {
-    return {
-      ...log,
-      ...context,
-    };
-  });
+// export const createLogtailAll = () => {
+//   if (
+//     !process.env.LOGTAIL_ALL_SOURCE_TOKEN ||
+//     !process.env.LOGTAIL_ALL_INGESTING_HOST
+//   ) {
+//     return null;
+//   }
 
-  return logtail;
-};
+//   const logtail = new Logtail(process.env.LOGTAIL_ALL_SOURCE_TOKEN!, {
+//     endpoint: process.env.LOGTAIL_ALL_INGESTING_HOST!,
+//   });
 
-export const createLogtail = () => {
-  return createLogger({
-    sourceToken: process.env.LOGTAIL_SOURCE_TOKEN!,
-    ingestingHost: process.env.LOGTAIL_INGESTING_HOST!,
-  });
-};
+//   return logtail;
+// };
 
-export const createLogtailAll = () => {
-  if (
-    !process.env.LOGTAIL_ALL_SOURCE_TOKEN ||
-    !process.env.LOGTAIL_ALL_INGESTING_HOST
-  ) {
-    return null;
-  }
-
-  const logtail = new Logtail(process.env.LOGTAIL_ALL_SOURCE_TOKEN!, {
-    endpoint: process.env.LOGTAIL_ALL_INGESTING_HOST!,
-  });
-
-  return logtail;
-};
-
-export const logger = createLogtail();
-export const logtailAll = createLogtailAll();
+export const logger = createLogger();

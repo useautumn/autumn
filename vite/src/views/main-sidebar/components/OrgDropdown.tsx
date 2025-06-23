@@ -47,6 +47,8 @@ import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { AdminHover } from "@/components/general/AdminHover";
 import { NavButton } from "../NavButton";
 import { AdminOnly } from "@/views/admin/components/AdminOnly";
+import { getBackendErr, notNullish } from "@/utils/genUtils";
+import { AdminDropdownItems } from "./AdminDropdownItems";
 
 export const OrgDropdown = () => {
   const { org, isLoading, error } = useOrg();
@@ -63,6 +65,8 @@ export const OrgDropdown = () => {
   useMemberships();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [stopImpersonatingLoading, setStopImpersonatingLoading] =
+    useState(false);
 
   if (isLoading)
     return (
@@ -89,6 +93,7 @@ export const OrgDropdown = () => {
               value: org.id,
             },
           ]}
+          asChild
         >
           <DropdownMenuTrigger asChild>
             <Button
@@ -117,19 +122,7 @@ export const OrgDropdown = () => {
           align="start"
           className="border-1 border-zinc-200 shadow-sm w-48"
         >
-          <AdminOnly>
-            <DropdownMenuItem
-              onClick={() => {
-                window.location.href = "/admin";
-              }}
-            >
-              <div className="flex justify-between w-full items-center gap-2 text-t2">
-                Admin
-                <Shield size={12} />
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </AdminOnly>
+          <AdminDropdownItems />
           <DropdownMenuItem className="flex justify-between w-full items-center gap-2 text-t2">
             <div className="flex flex-col">
               <span>{session?.user?.name}</span>

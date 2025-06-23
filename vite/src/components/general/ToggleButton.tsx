@@ -2,6 +2,8 @@ import { Check } from "lucide-react";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "@/lib/utils";
+import { Switch } from "../ui/switch";
+import { InfoTooltip } from "./modal-components/InfoTooltip";
 
 export const ToggleButton = ({
   value,
@@ -9,34 +11,46 @@ export const ToggleButton = ({
   tooltipContent,
   buttonText,
   className,
+  disabled,
+  infoContent,
 }: {
   value: boolean;
   setValue: (value: boolean) => void;
   tooltipContent?: string;
   buttonText?: string;
   className?: string;
+  disabled?: boolean;
+  infoContent?: string;
 }) => {
-  return (
-    <Tooltip delayDuration={200}>
-      <TooltipTrigger asChild>
-        <Button
-          variant="outline"
-          onClick={() => setValue(!value)}
-          className={cn(
-            `flex items-center gap-2`,
-            value && "bg-stone-100",
-            className,
-          )}
-        >
-          {value && (
-            <div className="w-3 h-3 bg-lime-500 rounded-full flex items-center justify-center">
-              <Check className="w-2 h-2 text-white" />
-            </div>
-          )}
-          {buttonText}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{tooltipContent}</TooltipContent>
-    </Tooltip>
+  const MainButton = (
+    <Button
+      variant="outline"
+      disabled={disabled}
+      onClick={() => setValue(!value)}
+      className={cn(
+        `flex justify-start items-center hover:bg-transparent bg-transparent border-none shadow-none gap-2 w-fit p-0`,
+        className,
+      )}
+    >
+      {buttonText}
+      <Switch
+        checked={value}
+        onCheckedChange={setValue}
+        className="h-4 w-7 data-[state=checked]:bg-stone-500"
+        thumbClassName="h-3 w-3 data-[state=checked]:translate-x-3"
+      />
+      {infoContent && <InfoTooltip>{infoContent}</InfoTooltip>}
+    </Button>
   );
+
+  if (tooltipContent) {
+    return (
+      <Tooltip delayDuration={200}>
+        <TooltipTrigger asChild>{MainButton}</TooltipTrigger>
+        <TooltipContent>{tooltipContent}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return MainButton;
 };

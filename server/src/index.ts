@@ -13,11 +13,9 @@ import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 
 import { apiRouter } from "./internal/api/apiRouter.js";
 import { QueueManager } from "./queue/QueueManager.js";
-import { AppEnv } from "@autumn/shared";
-import { createLogtail } from "./external/logtail/logtailUtils.js";
+import { AppEnv, AuthType } from "@autumn/shared";
 import { CacheManager } from "./external/caching/CacheManager.js";
-
-import { logtailAll, logger } from "./external/logtail/logtailUtils.js";
+import { logger } from "./external/logtail/logtailUtils.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import { generateId } from "./utils/genUtils.js";
 import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
@@ -25,8 +23,10 @@ import { client, db } from "./db/initDrizzle.js";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
+import { initLogger } from "./errors/logger.js";
 
 checkEnvVars();
+
 const init = async () => {
   const app = express();
 
@@ -78,33 +78,22 @@ const init = async () => {
   app.use((req: any, res: any, next: any) => {
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
     req.db = db;
-    req.logtailAll = logtailAll;
+    // req.logtailAll = logtailAll;
     req.posthog = posthog;
-
     req.id = req.headers["rndr-id"] || generateId("local_req");
     req.timestamp = Date.now();
 
-    try {
-      let headersClone = structuredClone(req.headers);
-      headersClone.authorization = undefined;
-      headersClone.Authorization = undefined;
-
-      logtailAll?.info(`${req.method} ${req.originalUrl}`, {
-        url: req.originalUrl,
-        method: req.method,
-        headers: headersClone,
-        body: req.body,
-      });
-
-      req.logtail = createLogtail();
-    } catch (error) {
-      req.logtail = logger; // fallback
-      console.error(`Error creating req.logtail`);
-      console.error(error);
-    }
-
-    res.on("finish", () => {
-      req.logtail.flush();
+    req.logtail = logger.child({
+      context: {
+        req: {
+          id: req.id,
+          env: req.env,
+          method: req.method,
+          url: req.originalUrl,
+          body: req.body,
+          timestamp: req.timestamp,
+        },
+      },
     });
 
     next();
@@ -112,23 +101,28 @@ const init = async () => {
 
   app.use("/webhooks", webhooksRouter);
 
-  app.use((req: any, res, next) => {
-    const method = req.method;
-    const path = req.url;
-    const methodToColor: any = {
-      GET: chalk.green,
-      POST: chalk.yellow,
-      PUT: chalk.blue,
-      DELETE: chalk.red,
-      PATCH: chalk.magenta,
-    };
-
-    const methodColor: any = methodToColor[method] || chalk.gray;
-
-    console.log(`${methodColor(method).padEnd(18)} ${path}`);
-
+  app.use((req: any, res: any, next: any) => {
+    req.logtail.info(`${req.method} ${req.originalUrl}`);
     next();
   });
+
+  // app.use((req: any, res, next) => {
+  //   const method = req.method;
+  //   const path = req.url;
+  //   const methodToColor: any = {
+  //     GET: chalk.green,
+  //     POST: chalk.yellow,
+  //     PUT: chalk.blue,
+  //     DELETE: chalk.red,
+  //     PATCH: chalk.magenta,
+  //   };
+
+  //   const methodColor: any = methodToColor[method] || chalk.gray;
+
+  //   console.log(`${methodColor(method).padEnd(18)} ${path}`);
+
+  //   next();
+  // });
 
   app.use(express.json());
 

@@ -31,8 +31,9 @@ export const handleAttachRaceCondition = async ({
       try {
         await clearLock({ lockKey, logger: req.logtail });
       } catch (error) {
-        req.logtail.warn("❗️❗️ Error clearing lock");
-        req.logtail.warn(error);
+        req.logtail.warn("❗️❗️ Error clearing lock", {
+          error,
+        });
       }
       originalJson.call(this, body);
     };
@@ -43,8 +44,9 @@ export const handleAttachRaceCondition = async ({
       throw error;
     }
 
-    req.logtail.warn("❗️❗️ Error acquiring lock");
-    req.logtail.warn(error);
+    req.logtail.warn("❗️❗️ Error acquiring lock", {
+      error,
+    });
     return null;
   }
 };

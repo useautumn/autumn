@@ -15,6 +15,21 @@ export const FeatureItemSchema = ProductItemSchema.pick({
   reset_usage_when_enabled: true,
 }).extend({
   feature_id: z.string().nonempty(),
+  included_usage: z
+    .number()
+    .or(z.string())
+    .transform((val) => {
+      if (val === "Unlimited") {
+        return Infinite;
+      }
+      let num = Number(val);
+
+      if (isNaN(num) || num <= 0) {
+        num = 0;
+      }
+
+      return num;
+    }),
 });
 
 export type FeatureItem = z.infer<typeof FeatureItemSchema>;

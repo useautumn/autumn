@@ -65,7 +65,7 @@ describe(`${chalk.yellowBright("usage1: Testing basic usage product")}`, () => {
     }
 
     await Promise.all(batchUpdates);
-    await timeout(10000);
+    await timeout(15000);
   });
 
   it("should have correct metered1 balance after sending events", async function () {

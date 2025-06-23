@@ -4,6 +4,7 @@ import {
   APIVersion,
   CusProductStatus,
   type Feature,
+  FeatureSchema,
   FeatureType,
   type FullCustomerEntitlement,
   type Organization,
@@ -29,6 +30,7 @@ import { getBooleanEntitledResult } from "./checkUtils.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { getCheckPreview } from "./getCheckPreview.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
 
 export const entitledRouter: Router = Router();
 
@@ -213,6 +215,7 @@ const getCusEntsAndFeatures = async ({
     }),
   ]);
 
+  logger.info(`running /check for org: ${org.slug}, feature: ${feature_id}`);
   const { feature, creditSystems, allFeatures } = featureRes;
 
   const customer = await getOrCreateCustomer({
@@ -225,7 +228,8 @@ const getCusEntsAndFeatures = async ({
   });
 
   const duration = Date.now() - startTime;
-  console.log(`/check: fetched org, features & customer in ${duration}ms`);
+  // console.log(`/check: fetched org, features & customer in ${duration}ms`);
+  logger.info(`/check: fetched org, features & customer in ${duration}ms`);
 
   if (!feature) {
     throw new RecaseError({
@@ -342,6 +346,7 @@ entitledRouter.post("", async (req: any, res: any) => {
       quantity = floatQuantity;
     }
 
+    logger.info(`/check: getting cusEnts and features`);
     const {
       fullCus,
       cusEnts,

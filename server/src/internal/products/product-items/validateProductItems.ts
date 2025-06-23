@@ -14,6 +14,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import { notNullish, nullish } from "@/utils/genUtils.js";
 import {
+  isBooleanFeatureItem,
   isFeatureItem,
   isFeaturePriceItem,
   isPriceItem,
@@ -170,6 +171,25 @@ export const validateProductItems = ({
       }
     }
 
+    // Boolean duplicate
+    if (isBooleanFeatureItem(item)) {
+      let otherItem = newItems.find((i: any, index2: any) => {
+        return (
+          i.feature_id == item.feature_id &&
+          index2 != index &&
+          item.entity_feature_id == i.entity_feature_id
+        );
+      });
+
+      if (otherItem) {
+        throw new RecaseError({
+          message: `Feature ${item.feature_id} is duplicated`,
+          code: ErrCode.InvalidInputs,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
+    }
+
     let otherItem = newItems.find((i: any, index2: any) => {
       return (
         i.feature_id == item.feature_id &&
@@ -187,8 +207,6 @@ export const validateProductItems = ({
       isFeatureItem(otherItem) ||
       item.usage_model == otherItem?.usage_model
     ) {
-      // console.log("item", item);
-      // console.log("otherItem", otherItem);
       throw new RecaseError({
         message: `Can't have two features with same reset interval, unless one is prepaid, and another is pay per use`,
         code: ErrCode.InvalidInputs,

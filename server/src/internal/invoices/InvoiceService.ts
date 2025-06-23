@@ -12,7 +12,6 @@ import Stripe from "stripe";
 import { generateId } from "@/utils/genUtils.js";
 
 import { getInvoiceDiscounts } from "@/external/stripe/stripeInvoiceUtils.js";
-import { createLogtailWithContext } from "@/external/logtail/logtailUtils.js";
 import { Autumn } from "autumn-js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { invoices } from "@autumn/shared";
@@ -122,13 +121,6 @@ export class InvoiceService {
     const uniqueProductIds = [...new Set(productIds)];
     const uniqueInternalProductIds = [...new Set(internalProductIds)];
 
-    let logger = createLogtailWithContext({
-      org_slug: org.slug,
-      stripe_invoice: stripeInvoice,
-      action: LoggerAction.InsertStripeInvoice,
-      internal_customer_id: internalCustomerId,
-    });
-
     const invoice: Invoice = {
       id: generateId("inv"),
       internal_customer_id: internalCustomerId,
@@ -145,7 +137,6 @@ export class InvoiceService {
       currency: stripeInvoice.currency,
       discounts: getInvoiceDiscounts({
         expandedInvoice: stripeInvoice,
-        logger: logger,
       }),
 
       items: items,
