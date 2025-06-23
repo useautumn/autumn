@@ -1,13 +1,7 @@
 import RecaseError from "@/utils/errorUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import {
-  CustomerData,
-  CusProduct,
-  ErrCode,
-  FullCusProduct,
-  FullCustomer,
-} from "@autumn/shared";
-import { CreateEntity } from "@shared/models/cusModels/entityModels/entityModels.js";
+import { ErrCode, FullCustomer } from "@autumn/shared";
+import { CreateEntity } from "@autumn/shared";
 import { createEntityForCusProduct } from "./createEntityForCusProduct.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
 import { constructEntity } from "../../entityUtils/entityUtils.js";
