@@ -17,7 +17,16 @@ export const ApiKeysView = ({ apiKeys }: any) => {
       {apiKeys.length > 0 ? (
         <APIKeyTable apiKeys={apiKeys} />
       ) : (
-        <div className="px-10 py-2">
+        <div
+          className="flex flex-col px-10 center text-t3 text-sm w-full
+        min-h-[60vh] gap-4 mt-3"
+        >
+          {/* <img
+            src="./secret.png"
+            alt="No API Keys"
+            className="w-48 h-48 opacity-60 filter grayscale"
+            // className="w-48 h-48 opacity-80 filter brightness-0 invert" // this is for dark mode
+          /> */}
           <p className="text-sm text-t3">
             API keys are used to securely authenticate your requests from your
             server. Learn more{" "}
@@ -28,6 +37,7 @@ export const ApiKeysView = ({ apiKeys }: any) => {
             >
               here
             </a>
+            .
           </p>
         </div>
       )}

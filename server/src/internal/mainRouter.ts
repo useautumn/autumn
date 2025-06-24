@@ -60,6 +60,7 @@ mainRouter.use(
         headers: {
           cookie: req.headers.cookie,
           "Content-Type": "application/json",
+          origin: req.get("origin"),
         },
       });
       return client as any;

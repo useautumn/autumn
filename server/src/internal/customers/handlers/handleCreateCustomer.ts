@@ -2,31 +2,19 @@ import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import {
   AppEnv,
-  AttachScenario,
-  BillingInterval,
   CreateCustomer,
   CreateCustomerSchema,
-  CusProductStatus,
   Customer,
   ErrCode,
   FullProduct,
   Organization,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { generateId, notNullish } from "@/utils/genUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
-import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
-import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
-import { ProductService } from "@/internal/products/ProductService.js";
-import {
-  initProductInStripe,
-  isFreeProduct,
-} from "@/internal/products/productUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
+import { initProductInStripe } from "@/internal/products/productUtils.js";
 import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ActionRequest, ExtendedRequest } from "@/utils/models/Request.js";
-import { addCustomerCreatedTask } from "@/internal/analytics/handlers/handleCustomerCreated.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 import { createNewCustomer } from "../cusUtils/createNewCustomer.js";
 
 export const initStripeCusAndProducts = async ({

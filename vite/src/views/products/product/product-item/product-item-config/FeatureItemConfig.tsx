@@ -64,7 +64,6 @@ export const FeatureConfig = () => {
         </React.Fragment>
       )}
 
-      <AdvancedItemConfig />
       {isFeature && (
         <div className="flex w-full justify-start transition-all duration-300 ease-in-out overflow-hidden">
           <Button
@@ -77,6 +76,7 @@ export const FeatureConfig = () => {
           </Button>
         </div>
       )}
+      <AdvancedItemConfig />
     </>
   );
 };
