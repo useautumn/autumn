@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 config();
 
-import "./instrumentation";
+import "./instrumentation.js";
 import { trace, context } from "@opentelemetry/api";
 
 import http from "http";
