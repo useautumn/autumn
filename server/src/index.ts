@@ -43,6 +43,7 @@ const init = async () => {
         "https://*.useautumn.com",
         "https://localhost:8080",
         "https://app.aidvize.com",
+        "http://staging.aidvize.com/",
         process.env.CLIENT_URL || "",
       ],
       credentials: true,
@@ -114,15 +115,26 @@ const init = async () => {
       },
     });
 
-    // End span when response finishes
-    res.on("finish", () => {
-      span.setAttributes({
-        "http.response.status_code": res.statusCode,
-        "http.response.body.size": res.get("content-length") || 0,
-        "http.response.duration": Date.now() - req.timestamp,
-      });
-      span.end();
-    });
+    const endSpan = () => {
+      try {
+        span.setAttributes({
+          "http.response.status_code": res.statusCode,
+          "http.response.body.size": res.get("content-length") || 0,
+          "http.response.duration": Date.now() - req.timestamp,
+        });
+        span.end();
+
+        const closeSpan = tracer.startSpan("response_closed");
+        closeSpan.setAttributes({
+          req_id: req.id,
+        });
+        closeSpan.end();
+      } catch (error) {
+        logger.error("Error ending span", { error });
+      }
+    };
+
+    res.on("close", endSpan);
 
     // Run the rest of the request processing within the span's context
     context.with(trace.setSpan(context.active(), span), () => {
@@ -133,7 +145,7 @@ const init = async () => {
   app.use("/webhooks", webhooksRouter);
 
   app.use(express.json());
-  app.use((req: any, res: any, next: any) => {
+  app.use(async (req: any, res: any, next: any) => {
     req.logtail.info(`${req.method} ${req.originalUrl}`, {
       context: {
         body: req.body,

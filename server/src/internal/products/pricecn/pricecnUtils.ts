@@ -13,9 +13,13 @@ import {
   Infinite,
   FullCusProduct,
   numberWithCommas,
+  AttachScenario,
+  FullProduct,
 } from "@autumn/shared";
 import { isPriceItem } from "../product-items/productItemUtils/getItemType.js";
 import { isFeaturePriceItem } from "../product-items/productItemUtils/getItemType.js";
+import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import { isProductUpgrade } from "../productUtils.js";
 
 export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
   items.sort((a, b) => {
@@ -244,15 +248,48 @@ export const featurePricetoPricecnItem = ({
   };
 };
 
+export const getAttachScenario = ({
+  curMainProduct,
+  curScheduledProduct,
+  fullProduct,
+}: {
+  curMainProduct?: FullCusProduct | null;
+  curScheduledProduct?: FullCusProduct | null;
+  fullProduct: FullProduct;
+}) => {
+  if (!curMainProduct) return AttachScenario.New;
+
+  // 1. If current product is the same as the product, return active
+  if (curMainProduct?.product.id == fullProduct.id) {
+    if (curMainProduct.canceled_at != null) {
+      return AttachScenario.Renew;
+    } else return AttachScenario.Active;
+  }
+
+  if (curScheduledProduct?.product.id == fullProduct.id) {
+    return AttachScenario.Scheduled;
+  }
+
+  let curFullProduct = cusProductToProduct({ cusProduct: curMainProduct });
+  let isUpgrade = isProductUpgrade({
+    prices1: fullProduct.prices,
+    prices2: curFullProduct.prices,
+  });
+
+  return isUpgrade ? AttachScenario.Upgrade : AttachScenario.Downgrade;
+};
+
 export const toPricecnProduct = ({
   org,
   product,
+  fullProduct,
   features,
   curMainProduct,
   curScheduledProduct,
 }: {
   org: Organization;
   product: ProductV2;
+  fullProduct: FullProduct;
   features: Feature[];
   curMainProduct?: FullCusProduct | null;
   curScheduledProduct?: FullCusProduct | null;
@@ -266,9 +303,14 @@ export const toPricecnProduct = ({
   let itemsWithoutPrice = priceExists ? items.slice(1) : items;
 
   let pricecnItems = itemsWithoutPrice.map((i) => {
+    let data: {
+      primaryText?: string;
+      secondaryText?: string;
+    };
+
     if (isPriceItem(i)) {
       let priceTxt = getPriceText({ item: i, org });
-      return {
+      data = {
         primaryText: priceTxt,
         secondaryText: i.interval ? `per ${i.interval}` : undefined,
       };
@@ -276,10 +318,20 @@ export const toPricecnProduct = ({
 
     let feature = features.find((f) => f.id == i.feature_id);
     if (isFeaturePriceItem(i)) {
-      return featurePricetoPricecnItem({ feature, item: i, org });
+      data = featurePricetoPricecnItem({ feature, item: i, org });
     } else {
-      return featureToPricecnItem({ feature, item: i });
+      data = featureToPricecnItem({ feature, item: i });
     }
+
+    return {
+      ...i,
+
+      primary_text: data?.primaryText,
+      secondary_text: data?.secondaryText,
+
+      // To deprecate
+      ...data,
+    };
   });
 
   let isCurrent = curMainProduct?.product.id == product.id;
@@ -299,12 +351,28 @@ export const toPricecnProduct = ({
     buttonText = "Scheduled";
   }
 
+  let scenario = getAttachScenario({
+    curMainProduct,
+    curScheduledProduct,
+    fullProduct,
+  });
+
+  let freeTrial = fullProduct.free_trial;
   return {
     id: product.id,
     name: product.name,
-    buttonText,
     price: price,
     items: pricecnItems,
-    // buttonUrl: org.stripe_config?.success_url,
+    scenario,
+    button_text: buttonText,
+    free_trial: freeTrial
+      ? {
+          length: freeTrial,
+          interval: freeTrial.duration,
+        }
+      : null,
+
+    // To deprecate
+    buttonText,
   };
 };
