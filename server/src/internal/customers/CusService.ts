@@ -15,7 +15,11 @@ import { StatusCodes } from "http-status-codes";
 import { and, eq, or, sql } from "drizzle-orm";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullCusQuery } from "./getFullCusQuery.js";
-import { flipProductResults } from "./cusUtils/cusUtils.js";
+import { trace } from "@opentelemetry/api";
+import { withSpan } from "../analytics/tracer/spanUtils.js";
+
+const tracer = trace.getTracer("express");
+
 export class CusService {
   static async getFull({
     db,
@@ -47,51 +51,61 @@ export class CusService {
     const includeInvoices = expand?.includes(CusExpand.Invoices) || false;
     const withTrialsUsed = expand?.includes(CusExpand.TrialsUsed) || false;
 
-    const query = getFullCusQuery(
-      idOrInternalId,
-      orgId,
-      env,
-      inStatuses,
-      includeInvoices,
-      withEntities,
-      withTrialsUsed,
-      withSubs,
-      entityId,
-    );
+    return withSpan<FullCustomer>({
+      name: "CusService.getFull",
+      attributes: {
+        idOrInternalId,
+        entityId,
+        orgId,
+        env,
+        inStatuses,
+        withEntities,
+        withSubs,
+      },
+      fn: async () => {
+        const query = getFullCusQuery(
+          idOrInternalId,
+          orgId,
+          env,
+          inStatuses,
+          includeInvoices,
+          withEntities,
+          withTrialsUsed,
+          withSubs,
+          entityId,
+        );
 
-    let result = await db.execute(query);
+        let result = await db.execute(query);
 
-    if (!result || result.length == 0) {
-      if (allowNotFound) {
-        // @ts-ignore
-        return null;
-      }
+        if (!result || result.length == 0) {
+          if (allowNotFound) {
+            // @ts-ignore
+            return null as FullCustomer;
+          }
 
-      throw new RecaseError({
-        message: `Customer ${idOrInternalId} not found`,
-        code: ErrCode.CustomerNotFound,
-        statusCode: StatusCodes.NOT_FOUND,
-      });
-    }
+          throw new RecaseError({
+            message: `Customer ${idOrInternalId} not found`,
+            code: ErrCode.CustomerNotFound,
+            statusCode: StatusCodes.NOT_FOUND,
+          });
+        }
 
-    let data = result[0];
-    data.created_at = Number(data.created_at);
+        let data = result[0];
+        data.created_at = Number(data.created_at);
 
-    for (const product of data.customer_products as FullCusProduct[]) {
-      if (!product.customer_prices) {
-        product.customer_prices = [];
-      }
+        for (const product of data.customer_products as FullCusProduct[]) {
+          if (!product.customer_prices) {
+            product.customer_prices = [];
+          }
 
-      if (!product.customer_entitlements) {
-        product.customer_entitlements = [];
-      }
-    }
+          if (!product.customer_entitlements) {
+            product.customer_entitlements = [];
+          }
+        }
 
-    // data.invoices = data.invoices || [];
-    // data.subscriptions = data.subscriptions || [];
-    // data.trials_used = data.trials_used || [];
-
-    return data as FullCustomer;
+        return data as FullCustomer;
+      },
+    });
   }
 
   static async get({

@@ -28,6 +28,7 @@ import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
 import {
   ChevronDown,
   LogOut,
+  PanelRight,
   Plus,
   Settings,
   Shield,
@@ -45,9 +46,7 @@ import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { AdminHover } from "@/components/general/AdminHover";
-import { NavButton } from "../NavButton";
-import { AdminOnly } from "@/views/admin/components/AdminOnly";
-import { getBackendErr, notNullish } from "@/utils/genUtils";
+
 import { AdminDropdownItems } from "./AdminDropdownItems";
 
 export const OrgDropdown = () => {
@@ -155,6 +154,19 @@ export const OrgDropdown = () => {
                 <Plus size={14} />
               </div>
             </DropdownMenuItem>
+            {state === "collapsed" && (
+              <DropdownMenuItem
+                onClick={(e) => {
+                  setState("expanded");
+                  setDropdownOpen(false);
+                }}
+              >
+                <div className="flex justify-between w-full items-center gap-2 text-t2">
+                  <span>Open Sidebar</span>
+                  <PanelRight size={14} />
+                </div>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
 
             <DropdownMenuSub>

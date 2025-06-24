@@ -3,6 +3,27 @@ import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
 import { AuthType, ErrCode } from "@autumn/shared";
 import { floatToVersion } from "@/utils/versionUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { dashboardOrigins } from "@/utils/constants.js";
+
+const verifyApiVersion = (version: string) => {
+  let versionFloat = parseFloat(version);
+  let apiVersion = floatToVersion(versionFloat);
+
+  if (isNaN(versionFloat) || !apiVersion) {
+    throw new RecaseError({
+      message: `${version} is not a valid API version`,
+      code: ErrCode.InvalidApiVersion,
+      statusCode: 400,
+    });
+  }
+
+  return apiVersion;
+};
+
+const maskApiKey = (apiKey: string) => {
+  return apiKey.slice(0, 15) + apiKey.slice(15).replace(/./g, "*");
+};
 
 export const verifySecretKey = async (req: any, res: any, next: any) => {
   const authHeader =
@@ -12,159 +33,92 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
   const version = req.headers["x-api-version"];
 
   if (version) {
-    let versionFloat = parseFloat(version);
-
-    if (isNaN(versionFloat)) {
-      return {
-        error: ErrCode.InvalidApiVersion,
-        fallback: false,
-        statusCode: 400,
-      };
-    }
-
-    let apiVersion = floatToVersion(versionFloat);
-    if (!apiVersion) {
-      return {
-        error: ErrCode.InvalidApiVersion,
-        fallback: false,
-        statusCode: 400,
-      };
-    }
-
-    req.apiVersion = apiVersion;
+    req.apiVersion = verifyApiVersion(version);
   }
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return {
-      error: ErrCode.NoAuthHeader,
-      fallback: true,
-    };
+    let origin = req.get("origin");
+    if (dashboardOrigins.includes(origin)) {
+      return withOrgAuth(req, res, next);
+    } else {
+      throw new RecaseError({
+        message: "Secret key not found in Authorization header",
+        code: ErrCode.NoSecretKey,
+        statusCode: 401,
+      });
+    }
   }
 
   const apiKey = authHeader.split(" ")[1];
 
   if (!apiKey.startsWith("am_")) {
-    return {
-      error: ErrCode.InvalidAuthHeader,
-      fallback: true,
-      statusCode: null,
-    };
+    throw new RecaseError({
+      message: "Invalid secret key",
+      code: ErrCode.InvalidSecretKey,
+      statusCode: 401,
+    });
   }
 
   if (apiKey.startsWith("am_pk")) {
     return await verifyBearerPublishableKey(apiKey, req, res, next);
   }
 
-  // Try verify via Autumn
+  const { valid, data } = await verifyKey({
+    db: req.db,
+    key: apiKey,
+  });
 
-  try {
-    const { valid, data } = await verifyKey({
-      db: req.db,
-      key: apiKey,
+  if (!valid || !data) {
+    throw new RecaseError({
+      message: "Invalid secret key",
+      code: ErrCode.InvalidSecretKey,
+      statusCode: 401,
     });
-
-    if (valid && data) {
-      let { org, features, env } = data;
-      req.orgId = org.id;
-      req.env = env;
-      req.minOrg = {
-        id: org.id,
-        slug: org.slug,
-      };
-      req.org = org;
-      req.features = features;
-      req.authType = AuthType.SecretKey;
-
-      next();
-
-      return {
-        error: null,
-        fallback: null,
-        statusCode: null,
-      };
-    } else {
-      logger.info(`Autumn API verification failed`);
-      return {
-        error: ErrCode.FailedToVerifySecretKey,
-        fallback: true,
-        statusCode: 401,
-      };
-    }
-  } catch (error) {
-    try {
-      logger.error("Failed to fetch key from Autumn", error);
-    } catch (error) {
-      console.error("(log failed) Failed to fetch key from Autumn", error);
-    }
-    return {
-      error: ErrCode.FailedToFetchKeyFromAutumn,
-      fallback: true,
-      statusCode: 500,
-    };
   }
+
+  let { org, features, env } = data;
+  req.orgId = org.id;
+  req.env = env;
+  req.minOrg = {
+    id: org.id,
+    slug: org.slug,
+  };
+  req.org = org;
+  req.features = features;
+  req.authType = AuthType.SecretKey;
+
+  next();
 };
 
 export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
-  // 1. Verify secret key
+  const logger = req.logtail;
   try {
-    const { error, fallback, statusCode } = await verifySecretKey(
-      req,
-      res,
-      next,
-    );
+    await verifySecretKey(req, res, next);
 
-    if (!error) {
-      return;
-    }
-
-    if (error && !fallback) {
-      res.status(statusCode).json({
-        message: error,
-        code: error,
-      });
-      return;
-    }
+    return;
   } catch (error: any) {
-    try {
-      let logger = req.logtail;
-      logger.error("Error: verifySecretKey failed", error);
-    } catch (error) {
-      console.error("(log failed) Error: verifySecretKey failed", error);
+    if (error instanceof RecaseError) {
+      if (error.code === ErrCode.InvalidSecretKey) {
+        let apiKey = req.headers["authorization"]?.split(" ")[1];
+        error.message = `Invalid secret key: ${maskApiKey(apiKey)}`;
+      }
+
+      logger.warn(`auth warning: ${error.message}`);
+
+      res.status(error.statusCode).json({
+        message: error.message,
+        code: error.code,
+      });
+    } else {
+      logger.error(`auth error: ${error.message}`, {
+        error,
+      });
+      res.status(500).json({
+        message: `Failed to verify secret key: ${error.message}`,
+        code: ErrCode.InternalError,
+      });
     }
-    res.status(500).json({
-      message: "Failed to verify secret key -- internal server error",
-      code: ErrCode.FailedToVerifySecretKey,
-    });
+
     return;
   }
-
-  withOrgAuth(req, res, next);
-
-  // // 2. Verify publishable key (through x-publishable-key header)
-  // try {
-  //   const { error, fallback, statusCode } = await verifyPublishableKey(
-  //     req,
-  //     res,
-  //     next
-  //   );
-
-  //   if (!error) {
-  //     return;
-  //   }
-
-  //   if (error && !fallback) {
-  //     res.status(statusCode).json({
-  //       message: error,
-  //       code: error,
-  //     });
-  //     return;
-  //   }
-  // } catch (error) {
-  //   console.log("Error: verifyPublishableKey failed", error);
-  //   res.status(500).json({
-  //     message: "Failed to verify publishable key -- internal server error",
-  //     code: ErrCode.FailedToVerifyPublishableKey,
-  //   });
-  //   return;
-  // }
 };

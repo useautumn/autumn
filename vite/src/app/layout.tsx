@@ -13,12 +13,17 @@ import { ArrowUpRightFromSquare, PanelLeft, PanelRight } from "lucide-react";
 import { AutumnProvider } from "autumn-js/react";
 import { useSession } from "@/lib/auth-client";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import { SidebarContext, useSidebarContext } from "@/views/main-sidebar/SidebarContext";
+import {
+  SidebarContext,
+  useSidebarContext,
+} from "@/views/main-sidebar/SidebarContext";
 
 export function MainLayout() {
   const env = useEnv();
   const { data, isPending } = useSession();
-  const [sidebarState, setSidebarState] = useState<"expanded" | "collapsed">("expanded");
+  const [sidebarState, setSidebarState] = useState<"expanded" | "collapsed">(
+    "expanded",
+  );
 
   const navigate = useNavigate();
   const posthog = usePostHog();
@@ -39,7 +44,9 @@ export function MainLayout() {
   // 1. If not loaded, show loading screen
   if (isPending) {
     return (
-      <SidebarContext.Provider value={{ state: sidebarState, setState: setSidebarState }}>
+      <SidebarContext.Provider
+        value={{ state: sidebarState, setState: setSidebarState }}
+      >
         <div className="w-screen h-screen flex bg-stone-100">
           <MainSidebar />
           <div className="w-full h-screen flex flex-col overflow-hidden py-3 pr-3">
@@ -88,7 +95,9 @@ export function MainLayout() {
 
   return (
     <AutumnProvider backendUrl={import.meta.env.VITE_BACKEND_URL}>
-      <SidebarContext.Provider value={{ state: sidebarState, setState: setSidebarState }}>
+      <SidebarContext.Provider
+        value={{ state: sidebarState, setState: setSidebarState }}
+      >
         <main className="w-screen h-screen flex bg-stone-100">
           <CustomToaster />
           <MainSidebar />
@@ -104,23 +113,11 @@ const MainContent = () => {
   const navigate = useNavigate();
   const { state, setState } = useSidebarContext();
 
-  const toggleSidebar = () => {
-    setState(state === "expanded" ? "collapsed" : "expanded");
-  };
-
   return (
     <div className="w-full h-screen flex flex-col justify-center overflow-hidden py-3 pr-3 relative">
       <div className="w-full h-full flex flex-col overflow-hidden rounded-lg border">
         {/* Toggle Button */}
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={toggleSidebar}
-          className="absolute top-4 left-2 z-10 border-none border-0 shadow-none bg-stone-50 hover:bg-stone-100 text-stone-600 hover:text-stone-800 focus:ring-0 focus:outline-none"
-        >
-          {state === "expanded" ? <PanelLeft size={16} /> : <PanelRight size={16} />}
-        </Button>
-        
+
         {env === AppEnv.Sandbox && (
           <div className="w-full min-h-10 h-10 bg-amber-100 text-sm flex items-center justify-center relative px-4 text-amber-500 ">
             <p className="font-medium font-mono">You&apos;re in sandbox</p>

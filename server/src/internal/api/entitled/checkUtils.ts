@@ -66,7 +66,6 @@ export const getBooleanEntitledResult = async ({
             allowed,
             balance: undefined,
             feature,
-            raw: false,
             cusProducts,
             allFeatures,
           })

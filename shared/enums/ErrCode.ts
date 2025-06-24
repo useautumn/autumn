@@ -1,5 +1,9 @@
 export const ErrCode = {
   // Auth
+  InvalidApiVersion: "invalid_api_version",
+  NoSecretKey: "no_secret_key",
+  InvalidSecretKey: "invalid_secret_key",
+
   NoAuthHeader: "no_auth_header",
   InvalidAuthHeader: "invalid_auth_header",
   FailedToVerifySecretKey: "failed_to_verify_secret_key",
@@ -10,7 +14,6 @@ export const ErrCode = {
   GetOrgFromPublishableKeyFailed: "get_org_from_publishable_key_failed",
   EndpointNotPublic: "endpoint_not_public",
   FailedToVerifyPublishableKey: "failed_to_verify_publishable_key",
-  InvalidApiVersion: "invalid_api_version",
 
   // General
   InvalidInputs: "invalid_inputs",

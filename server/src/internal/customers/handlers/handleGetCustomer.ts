@@ -14,30 +14,29 @@ export const handleGetCustomer = async (req: any, res: any) =>
     action: "get customer",
     handler: async () => {
       let customerId = req.params.customer_id;
-      let { orgId, env, db } = req;
+      let { env, db, logtail: logger, org, features } = req;
       let { expand } = req.query;
 
       let expandArray = parseCusExpand(expand);
 
-      const [features, org, customer] = await Promise.all([
-        FeatureService.getFromReq(req),
-        OrgService.getFromReq(req),
-        CusService.getFull({
-          db,
-          idOrInternalId: customerId,
-          orgId: orgId,
-          env: env,
-          inStatuses: [
-            CusProductStatus.Active,
-            CusProductStatus.PastDue,
-            CusProductStatus.Scheduled,
-          ],
-          withEntities: true,
-          // withEntities: expandArray.includes(CusExpand.Entities),
-          expand: expandArray,
-          allowNotFound: true,
-        }),
-      ]);
+      logger.info(`getting customer ${customerId} for org ${org.slug}`);
+      const startTime = Date.now();
+      const customer = await CusService.getFull({
+        db,
+        idOrInternalId: customerId,
+        orgId: org.id,
+        env: env,
+        inStatuses: [
+          CusProductStatus.Active,
+          CusProductStatus.PastDue,
+          CusProductStatus.Scheduled,
+        ],
+        withEntities: true,
+        // withEntities: expandArray.includes(CusExpand.Entities),
+        expand: expandArray,
+        allowNotFound: true,
+      });
+      logger.info(`get customer took ${Date.now() - startTime}ms`);
 
       if (!customer) {
         req.logtail.warn(
