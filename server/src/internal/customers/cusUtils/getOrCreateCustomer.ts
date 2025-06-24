@@ -52,6 +52,10 @@ export const getOrCreateCustomer = async ({
 
   const { db, org, features, env, logtail: logger } = req;
 
+  if (!withEntities) {
+    withEntities = expand?.includes(CusExpand.Entities) || false;
+  }
+
   if (!skipGet) {
     customer = await CusService.getFull({
       db,

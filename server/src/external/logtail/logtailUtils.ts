@@ -80,7 +80,6 @@ export const createLogger = () => {
       info: createLogMethod(basePinoLogger.info.bind(basePinoLogger)),
       warn: createLogMethod(basePinoLogger.warn.bind(basePinoLogger)),
       error: createLogMethod(basePinoLogger.error.bind(basePinoLogger)),
-
       child: ({
         context,
         onlyProd = false,

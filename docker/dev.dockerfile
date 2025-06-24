@@ -46,5 +46,5 @@ CMD ["pnpm", "run", "dev"]
 FROM base AS workers
 COPY server/ ./server/
 WORKDIR /app/server
-RUN pnpm install
+# RUN pnpm install
 CMD ["pnpm", "run", "workers"]

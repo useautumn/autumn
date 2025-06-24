@@ -2,18 +2,11 @@ import {
   AppEnv,
   CollectionMethod,
   CusProductStatus,
-  ErrCode,
   Organization,
 } from "@autumn/shared";
 
 import { createStripeCli } from "../utils.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-
-import {
-  getWebhookLock,
-  releaseWebhookLock,
-} from "@/external/redis/stripeWebhookLocks.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
