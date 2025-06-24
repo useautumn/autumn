@@ -42,4 +42,9 @@ export const checkEnvVars = () => {
       `SUPABASE_URL or SUPABASE_SERVICE_KEY is not set, some actions will be skipped`,
     );
   }
+
+  if (!process.env.SVIX_API_KEY) {
+    logger.warn(`SVIX_API_KEY is not set, some actions will be skipped`);
+    return;
+  }
 };
