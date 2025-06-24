@@ -86,6 +86,7 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
           return toPricecnProduct({
             org,
             product: prod as ProductV2,
+            fullProduct: p,
             features,
             curMainProduct,
             curScheduledProduct,
