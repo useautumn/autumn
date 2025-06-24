@@ -98,9 +98,13 @@ export const getCheckPreview = async ({
     getProductResponse({ product: p, features: allFeatures }),
   );
 
+  let scenario = notNullish(balance)
+    ? FeaturePreviewScenario.UsageLimit
+    : FeaturePreviewScenario.FeatureFlag;
+
   if (mainProds.length === 0 && addOns.length === 0) {
     return {
-      scenario: FeaturePreviewScenario.FeatureFlag,
+      scenario,
       title: "Feature Unavailable",
       feature_id: feature.id,
       feature_name: feature.name,
@@ -126,10 +130,9 @@ export const getCheckPreview = async ({
 
   // If there's a current balance...
   let msg = "";
-  let scenario: FeaturePreviewScenario = FeaturePreviewScenario.FeatureFlag;
+  // let scenario: FeaturePreviewScenario = FeaturePreviewScenario.FeatureFlag;
 
   if (notNullish(balance)) {
-    scenario = FeaturePreviewScenario.UsageLimit;
     msg = `You have run out of ${feature.name}.`;
 
     if (mainProds.length > 0) {
