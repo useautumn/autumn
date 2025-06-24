@@ -62,7 +62,7 @@ export const initLogger = () => {
         target: "@axiomhq/pino",
         options: {
           dataset: "express",
-          token: "xaat-32eb7e2b-8291-40c3-a5bf-c3a0b233fcf8",
+          token: process.env.AXIOM_TOKEN,
         },
       }),
     });
