@@ -19,6 +19,7 @@ import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { getEventTimestamp } from "./eventUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { runUpdateUsageTask } from "@/trigger/updateUsageTask.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
 
 export const eventsRouter: Router = Router();
 export const usageRouter: Router = Router();
@@ -39,17 +40,15 @@ const getCusFeatureAndOrg = async ({
   // 1. Get customer
   const { org, features } = req;
 
-  let [customer] = await Promise.all([
-    getOrCreateCustomer({
-      req,
-      customerId,
-      customerData,
-      inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+  let customer = await getOrCreateCustomer({
+    req,
+    customerId,
+    customerData,
+    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 
-      entityId,
-      entityData: req.body.entity_data,
-    }),
-  ]);
+    entityId,
+    entityData: req.body.entity_data,
+  });
 
   let feature = features.find((f) => f.id == featureId);
   let creditSystems = features.filter(
@@ -136,6 +135,8 @@ export const handleUsageEvent = async ({
     entity_id,
     idempotency_key,
   } = req.body;
+  const { logtail: logger } = req;
+
   if (!customer_id || !feature_id) {
     throw new RecaseError({
       message: "customer_id and feature_id are required",
@@ -146,6 +147,8 @@ export const handleUsageEvent = async ({
 
   properties = properties || {};
 
+  logger.info(`/track: customer ${customer_id}, feature ${feature_id}`);
+  const startTime = Date.now();
   const { customer, org, feature, creditSystems } = await getCusFeatureAndOrg({
     req,
     customerId: customer_id,
@@ -153,6 +156,8 @@ export const handleUsageEvent = async ({
     customerData: customer_data,
     entityId: entity_id,
   });
+  logger.info(`/track: get customer took ${Date.now() - startTime}ms`);
+  const startTime2 = Date.now();
 
   let newEvent = await createAndInsertEvent({
     req,
@@ -163,6 +168,7 @@ export const handleUsageEvent = async ({
     properties,
     idempotencyKey: idempotency_key,
   });
+  logger.info(`/track: insert event took ${Date.now() - startTime2}ms`);
 
   const features = [feature, ...creditSystems];
 

@@ -1,19 +1,21 @@
 import { config } from "dotenv";
 config();
 
+import "./instrumentation";
+import { trace, context } from "@opentelemetry/api";
+
 import http from "http";
 import cluster from "cluster";
 import os from "os";
 import mainRouter from "./internal/mainRouter.js";
 import express from "express";
 import cors from "cors";
-import chalk from "chalk";
 
 import webhooksRouter from "./external/webhooks/webhooksRouter.js";
 
 import { apiRouter } from "./internal/api/apiRouter.js";
 import { QueueManager } from "./queue/QueueManager.js";
-import { AppEnv, AuthType } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import { CacheManager } from "./external/caching/CacheManager.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
@@ -24,6 +26,8 @@ import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import { initLogger } from "./errors/logger.js";
+
+const tracer = trace.getTracer("express");
 
 checkEnvVars();
 
@@ -75,7 +79,7 @@ const init = async () => {
 
   subscribeToOrgUpdates({ db });
 
-  app.use((req: any, res: any, next: any) => {
+  app.use(async (req: any, res: any, next: any) => {
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
     req.db = db;
     // req.logtailAll = logtailAll;
@@ -83,48 +87,60 @@ const init = async () => {
     req.id = req.headers["rndr-id"] || generateId("local_req");
     req.timestamp = Date.now();
 
+    const reqContext = {
+      id: req.id,
+      env: req.headers["app_env"] || undefined,
+      method: req.method,
+      url: req.originalUrl,
+      body: req.body,
+      timestamp: req.timestamp,
+    };
+
+    // Create span
+    const spanName = `${req.method} ${req.originalUrl} - ${req.id}`;
+    const span = tracer.startSpan(spanName);
+    span.setAttributes({
+      req_id: req.id,
+      method: req.method,
+      url: req.originalUrl,
+    });
+
+    // Store span on request for potential use in other middleware/handlers
+    req.span = span;
+
     req.logtail = logger.child({
       context: {
-        req: {
-          id: req.id,
-          env: req.env,
-          method: req.method,
-          url: req.originalUrl,
-          body: req.body,
-          timestamp: req.timestamp,
-        },
+        req: reqContext,
       },
     });
 
-    next();
+    // End span when response finishes
+    res.on("finish", () => {
+      span.setAttributes({
+        "http.response.status_code": res.statusCode,
+        "http.response.body.size": res.get("content-length") || 0,
+        "http.response.duration": Date.now() - req.timestamp,
+      });
+      span.end();
+    });
+
+    // Run the rest of the request processing within the span's context
+    context.with(trace.setSpan(context.active(), span), () => {
+      next();
+    });
   });
 
   app.use("/webhooks", webhooksRouter);
 
+  app.use(express.json());
   app.use((req: any, res: any, next: any) => {
-    req.logtail.info(`${req.method} ${req.originalUrl}`);
+    req.logtail.info(`${req.method} ${req.originalUrl}`, {
+      context: {
+        body: req.body,
+      },
+    });
     next();
   });
-
-  // app.use((req: any, res, next) => {
-  //   const method = req.method;
-  //   const path = req.url;
-  //   const methodToColor: any = {
-  //     GET: chalk.green,
-  //     POST: chalk.yellow,
-  //     PUT: chalk.blue,
-  //     DELETE: chalk.red,
-  //     PATCH: chalk.magenta,
-  //   };
-
-  //   const methodColor: any = methodToColor[method] || chalk.gray;
-
-  //   console.log(`${methodColor(method).padEnd(18)} ${path}`);
-
-  //   next();
-  // });
-
-  app.use(express.json());
 
   app.use(mainRouter);
   app.use("/v1", apiRouter);

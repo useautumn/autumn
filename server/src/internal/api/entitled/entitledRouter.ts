@@ -233,7 +233,7 @@ const getCusEntsAndFeatures = async ({
 
   if (!feature) {
     throw new RecaseError({
-      message: "Feature not found",
+      message: `feature with id ${feature_id} not found`,
       code: ErrCode.FeatureNotFound,
       statusCode: StatusCodes.NOT_FOUND,
     });
@@ -298,7 +298,7 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     if (!customer_id) {
       throw new RecaseError({
-        message: "Customer ID is required",
+        message: "`customer_id` is required",
         code: ErrCode.InvalidRequest,
         statusCode: StatusCodes.BAD_REQUEST,
       });
@@ -306,7 +306,7 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     if (!feature_id && !product_id) {
       throw new RecaseError({
-        message: "Feature ID or product ID is required",
+        message: "`feature_id` or `product_id` is required",
         code: ErrCode.InvalidRequest,
         statusCode: StatusCodes.BAD_REQUEST,
       });
@@ -315,7 +315,7 @@ entitledRouter.post("", async (req: any, res: any) => {
     if (feature_id && product_id) {
       throw new RecaseError({
         message:
-          "Provide either feature_id or product_id. Not allowed to provide both.",
+          "Provide either feature_id or product_id. Not allowed to provide both",
         code: ErrCode.InvalidRequest,
         statusCode: StatusCodes.BAD_REQUEST,
       });
@@ -442,15 +442,6 @@ entitledRouter.post("", async (req: any, res: any) => {
     // 3. If with preview, get preview
     let preview = undefined;
     if (req.body.with_preview) {
-      // let withPreview = notNullish(req.body.with_preview);
-      // if (withPreview !== "raw" && withPreview !== "formatted") {
-      //   throw new RecaseError({
-      //     message: "with_preview must be 'raw' or 'formatted'",
-      //     code: ErrCode.InvalidRequest,
-      //     statusCode: StatusCodes.BAD_REQUEST,
-      //   });
-      // }
-
       try {
         preview = await getCheckPreview({
           db,
@@ -458,7 +449,6 @@ entitledRouter.post("", async (req: any, res: any) => {
           balance: balanceObj?.balance,
           feature: featureToUse!,
           cusProducts,
-          raw: req.body.with_preview === "raw",
           allFeatures,
         });
       } catch (error) {

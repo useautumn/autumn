@@ -21,7 +21,6 @@ export const getCheckPreview = async ({
   balance,
   feature,
   cusProducts,
-  raw = false,
   allFeatures,
 }: {
   db: DrizzleCli;
@@ -29,7 +28,6 @@ export const getCheckPreview = async ({
   balance?: number;
   feature: Feature;
   cusProducts: FullCusProduct[];
-  raw?: boolean;
   allFeatures: Feature[];
 }) => {
   if (allowed) {

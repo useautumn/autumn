@@ -29,7 +29,7 @@ import CopyButton from "@/components/general/CopyButton";
 
 const CustomerWithProductsSchema = CustomerSchema.extend({
   customer_products: z.array(
-    CusProductSchema.extend({ product: ProductSchema })
+    CusProductSchema.extend({ product: ProductSchema }),
   ),
 });
 type CustomerWithProducts = z.infer<typeof CustomerWithProductsSchema>;
@@ -53,7 +53,7 @@ export const CustomersTable = ({
 
     // Filter out expired products first
     const activeProducts = customer.customer_products.filter(
-      (cusProduct) => cusProduct.status !== CusProductStatus.Expired
+      (cusProduct) => cusProduct.status !== CusProductStatus.Expired,
     );
 
     if (activeProducts.length === 0) {
@@ -67,7 +67,7 @@ export const CustomersTable = ({
       const versionCount = versionCounts[cusProduct.product.id];
       const version = cusProduct.product.version;
 
-      let prodName = (
+      const prodName = (
         <>
           {name}
           {versionCount > 1 && (
@@ -172,7 +172,7 @@ export const CustomersTable = ({
           <Link
             to={getRedirectUrl(
               `/customers/${customer.id || customer.internal_id}`,
-              env
+              env,
             )}
             key={index}
             className="grid grid-cols-16 gap-2 items-center px-10 w-full text-sm h-8 cursor-default hover:bg-primary/5 text-t2 whitespace-nowrap"
@@ -218,7 +218,7 @@ export const CustomTableCell = ({
       className={cn(
         colSpan ? `col-span-${colSpan}` : "col-span-3",
         "overflow-hidden text-ellipsis pr-1",
-        className
+        className,
       )}
     >
       {children}

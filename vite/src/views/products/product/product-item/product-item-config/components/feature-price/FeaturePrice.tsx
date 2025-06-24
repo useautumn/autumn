@@ -1,8 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Plus, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
 import { useProductContext } from "../../../../ProductContext";
 import { useProductItemContext } from "../../../ProductItemContext";
 import { Feature, FeatureItemSchema, TierInfinite } from "@autumn/shared";
@@ -15,9 +13,6 @@ export default function FeaturePrice() {
   const { item, setItem } = useProductItemContext();
 
   const feature = features.find((f: Feature) => f.id == item.feature_id);
-  const featureName = feature?.name;
-
-  const [editBillingUnits, setEditBillingUnits] = useState(false);
 
   const setUsageTier = (index: number, key: string, value: string | number) => {
     const newUsageTiers = [...item.tiers];

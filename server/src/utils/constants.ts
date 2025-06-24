@@ -13,4 +13,7 @@ export const ADMIN_USER_IDs =
     ? ["user_2tMgAiPsQzX8JTHjZZh9m0VdvUv", "user_2sB3tBXsnVVLlTKliQIqvvM2xfB"]
     : ["user_2rypooIKyMQx81vMS8FFGx24UHU"];
 
-// console.log(ADMIN_USER_IDs);
+export const dashboardOrigins = [
+  "http://localhost:3000",
+  "https://app.useautumn.com",
+];

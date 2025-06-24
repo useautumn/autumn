@@ -60,6 +60,7 @@ services:
     volumes:
       - ./server:/app/server
       - shared-dist:/app/shared/dist
+      - server-node-modules:/app/server/node_modules
       - root-node-modules:/app/node_modules
     environment:
       - NODE_ENV=development
@@ -78,6 +79,7 @@ services:
       # Mount server source for hot reload (workers use server code)
       - ./server:/app/server
       - shared-dist:/app/shared/dist
+      - server-node-modules:/app/server/node_modules
       - root-node-modules:/app/node_modules
     environment:
       - NODE_ENV=development

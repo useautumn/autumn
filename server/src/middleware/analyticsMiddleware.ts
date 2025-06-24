@@ -50,6 +50,15 @@ export const analyticsMiddleware = async (req: any, res: any, next: any) => {
       req?.body?.customer_id || parseCustomerIdFromUrl(req.originalUrl),
   };
 
+  if (req.span) {
+    req.span.setAttributes({
+      org_id: req.org?.id,
+      org_slug: req.org?.slug,
+      env: req.env,
+      customer_id: reqContext.customer_id,
+    });
+  }
+
   req.logtail = req.logtail.child({
     context: {
       context: reqContext,
