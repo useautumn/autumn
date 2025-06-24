@@ -68,7 +68,9 @@ The `setup` script generates required environment variables to run Autumn locall
 
 #### Step 3: Start Development Environment
 ```bash
-docker compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up # (if on windows)
+# or
+docker compose -f docker-compose.dev.yml up # (if on mac / linux)
 ```
 
 ### Manual Setup
