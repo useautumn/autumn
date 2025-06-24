@@ -20,6 +20,7 @@ import { handleUpdateCustomer } from "../customers/handlers/handleUpdateCustomer
 import { handleCreateBillingPortal } from "../customers/handlers/handleCreateBillingPortal.js";
 import { handleGetCustomer } from "../customers/handlers/handleGetCustomer.js";
 import { CusSearchService } from "@/internal/customers/CusSearchService.js";
+import { createStripeCusIfNotExists } from "@/external/stripe/stripeCusUtils.js";
 
 export const cusRouter: Router = Router();
 
@@ -95,15 +96,51 @@ cusRouter.get("/:customer_id/billing_portal", async (req: any, res: any) => {
       });
     }
 
+    const stripeCli = createStripeCli({ org, env: req.env });
+
     if (!customer.processor?.id) {
-      throw new RecaseError({
-        message: `Customer ${customerId} not connected to Stripe`,
-        code: ErrCode.InvalidRequest,
-        statusCode: StatusCodes.BAD_REQUEST,
-      });
+      let newCus;
+      try {
+        newCus = await createStripeCusIfNotExists({
+          db: req.db,
+          org,
+          env: req.env,
+          customer,
+          logger: req.logtail,
+        });
+      } catch (error: any) {
+        throw new RecaseError({
+          message: `Failed to create Stripe customer`,
+          code: ErrCode.StripeError,
+          statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+        });
+      } finally {
+        if (!newCus) {
+          throw new RecaseError({
+            message: `Failed to create Stripe customer`,
+            code: ErrCode.StripeError,
+            statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+          });
+        }
+
+        const portal = await stripeCli.billingPortal.sessions.create({
+          customer: newCus.id,
+          return_url: returnUrl || org.stripe_config.success_url,
+        });
+
+        if (org.api_version >= APIVersion.v1_1) {
+          return res.status(200).json({
+            customer_id: customer.id,
+            url: portal.url,
+          });
+        } else {
+          return res.status(200).json({
+            url: portal.url,
+          });
+        }
+      }
     }
 
-    const stripeCli = createStripeCli({ org, env: req.env });
     const portal = await stripeCli.billingPortal.sessions.create({
       customer: customer.processor.id,
       return_url: returnUrl || org.stripe_config?.success_url,
