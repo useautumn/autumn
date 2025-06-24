@@ -20,7 +20,7 @@ All this without having to handle webhooks, upgrades/downgrades, cancellations o
 
 ## Getting Started
 
-**Cloud**: The quickest way to start using Autum is through our [cloud service](https://app.useautumn.com). 
+**Cloud**: The quickest way to start using Autumn is through our [cloud service](https://app.useautumn.com). 
 
 **Self Hosted**: If you'd like to self-host Autumn:
 
