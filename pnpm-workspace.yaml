@@ -9,5 +9,6 @@ onlyBuiltDependencies:
   - esbuild
   - iframe-resizer
   - msgpackr-extract
+  - protobufjs
   - puppeteer
   - sharp
