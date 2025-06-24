@@ -55,18 +55,18 @@ export const initLogger = () => {
     });
   }
 
-  // if (process.env.AXIOM_TOKEN) {
-  //   streams.push({
-  //     level: "info",
-  //     stream: pino.transport({
-  //       target: "@axiomhq/pino",
-  //       options: {
-  //         dataset: "express",
-  //         token: "xaat-32eb7e2b-8291-40c3-a5bf-c3a0b233fcf8",
-  //       },
-  //     }),
-  //   });
-  // }
+  if (process.env.AXIOM_TOKEN) {
+    streams.push({
+      level: "info",
+      stream: pino.transport({
+        target: "@axiomhq/pino",
+        options: {
+          dataset: "express",
+          token: process.env.AXIOM_TOKEN,
+        },
+      }),
+    });
+  }
 
   const logger = pino.default(
     {
