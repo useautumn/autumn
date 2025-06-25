@@ -63,18 +63,26 @@ export const ProductItemConfig = () => {
         });
       } else {
         const showProration = shouldShowProrationConfig({ item, features });
-        const newConfig = !showProration ? null : item.config;
         const resetUsageWhenEnabled =
           feature.config?.usage_type == FeatureUsageType.Continuous
             ? false
             : true;
 
-        setItem({
+        const newItem = {
           ...item,
           feature_type: feature.config?.usage_type,
           reset_usage_when_enabled: resetUsageWhenEnabled,
-          config: newConfig,
-        });
+        };
+
+        const newConfig = !showProration ? undefined : item.config;
+
+        if (newConfig) {
+          newItem.config = newConfig;
+        } else {
+          delete newItem.config;
+        }
+
+        setItem(newItem);
       }
     }
   }, [item.feature_id, item.usage_model]);

@@ -45,21 +45,13 @@ export class EntityService {
   static async getByInternalId({
     db,
     internalId,
-    orgId,
-    env,
   }: {
     db: DrizzleCli;
     internalId: string;
-    orgId: string;
-    env: string;
   }) {
     let entity = await db.query.entities.findFirst({
       where: (entities, { eq, and }) =>
-        and(
-          eq(entities.internal_id, internalId),
-          eq(entities.org_id, orgId),
-          eq(entities.env, env),
-        ),
+        and(eq(entities.internal_id, internalId)),
     });
     if (!entity) {
       throw new RecaseError({

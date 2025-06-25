@@ -49,12 +49,14 @@ export const cusProductsToCusEnts = ({
   cusProducts,
   inStatuses = [CusProductStatus.Active],
   reverseOrder = false,
+  featureId,
 }: {
   cusProducts: FullCusProduct[];
   inStatuses?: CusProductStatus[];
   reverseOrder?: boolean;
+  featureId?: string;
 }) => {
-  const cusEnts: FullCustomerEntitlement[] = [];
+  let cusEnts: FullCustomerEntitlement[] = [];
 
   for (const cusProduct of cusProducts) {
     if (!inStatuses.includes(cusProduct.status)) {
@@ -66,6 +68,12 @@ export const cusProductsToCusEnts = ({
         ...cusEnt,
         customer_product: cusProduct,
       })),
+    );
+  }
+
+  if (featureId) {
+    cusEnts = cusEnts.filter(
+      (cusEnt) => cusEnt.entitlement.feature_id === featureId,
     );
   }
 

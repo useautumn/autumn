@@ -74,7 +74,6 @@ export const getOrCreateCustomer = async ({
     try {
       customer = await handleCreateCustomer({
         req,
-        db,
         cusData: {
           id: customerId,
           name: customerData?.name,
@@ -82,9 +81,6 @@ export const getOrCreateCustomer = async ({
           fingerprint: customerData?.fingerprint,
           metadata: customerData?.metadata || {},
         },
-        org,
-        env,
-        logger,
       });
 
       customer = await CusService.getFull({

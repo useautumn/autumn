@@ -88,8 +88,10 @@ stripeWebhookRouter.post(
     request.logtail = request.logtail.child({
       context: {
         context: {
-          body: request.body,
+          // body: request.body,
           event_type: event.type,
+          event_id: event.id,
+          object_id: `${event.data?.object?.id}` || "N/A",
           authType: AuthType.Stripe,
           org_id: orgId,
           org_slug: org.slug,

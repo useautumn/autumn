@@ -29,25 +29,17 @@ import {
 
 export const createNewCustomer = async ({
   req,
-  db,
-  org,
-  env,
   customer,
   nextResetAt,
-  processor,
-  logger,
   createDefaultProducts = true,
 }: {
   req: ExtendedRequest;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
   customer: CreateCustomer;
   nextResetAt?: number;
-  processor?: any;
-  logger: any;
   createDefaultProducts?: boolean;
 }) => {
+  const { db, org, env, logger } = req;
+
   logger.info(
     `Creating customer: ${customer.email || customer.id}, org: ${org.slug}`,
   );
@@ -65,17 +57,24 @@ export const createNewCustomer = async ({
 
   const customerData: Customer = {
     ...parsedCustomer,
+
     name: parsedCustomer.name || "",
     email:
       nonFreeProds.length > 0 && !parsedCustomer.email
         ? `${parsedCustomer.id}@invoices.useautumn.com`
         : parsedCustomer.email || "",
 
+    metadata: parsedCustomer.metadata || {},
     internal_id: generateId("cus"),
     org_id: org.id,
     created_at: Date.now(),
     env,
-    processor,
+    processor: parsedCustomer.stripe_id
+      ? {
+          id: parsedCustomer.stripe_id,
+          type: "stripe",
+        }
+      : undefined,
   };
 
   // Check if stripeCli exists

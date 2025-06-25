@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import LoadingScreen from "@/views/general/LoadingScreen";
 
 import { useAxiosSWR } from "@/services/useAxiosSwr";
@@ -19,7 +19,6 @@ import ProductSidebar from "./ProductSidebar";
 import { FeaturesContext } from "@/views/features/FeaturesContext";
 import ProductViewBreadcrumbs from "./components/ProductViewBreadcrumbs";
 import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
-import { sortProductItems } from "@/utils/productUtils";
 import { useProductData } from "./hooks/useProductData";
 import { useProductChangedAlert } from "./hooks/useProductChangedAlert";
 

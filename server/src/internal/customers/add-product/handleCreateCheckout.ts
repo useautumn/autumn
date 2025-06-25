@@ -13,6 +13,8 @@ import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingInter
 import { APIVersion } from "@autumn/shared";
 import { SuccessCode } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
+import { getEntityInvoiceDescription } from "@/internal/entities/entityUtils/entityInvoiceUtils.js";
+import Stripe from "stripe";
 
 export const handleCreateCheckout = async ({
   req,
@@ -67,13 +69,14 @@ export const handleCreateCheckout = async ({
     );
   }
 
-  const subscriptionData = isRecurring
+  const subscriptionData:
+    | Stripe.Checkout.SessionCreateParams.SubscriptionData
+    | undefined = isRecurring
     ? {
         trial_end:
           freeTrial && !attachParams.disableFreeTrial
             ? freeTrialToStripeTimestamp({ freeTrial })
             : undefined,
-        // metadata: subMeta,
         billing_cycle_anchor: billingCycleAnchorUnixSeconds,
       }
     : undefined;

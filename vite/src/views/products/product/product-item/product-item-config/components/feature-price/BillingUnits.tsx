@@ -66,7 +66,9 @@ export const BillingUnits = ({ disabled }: { disabled: boolean }) => {
             placeholder={`eg. 100 ${featureName}`}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                handleEnterClick();
+                if (popoverOpen) {
+                  handleEnterClick();
+                }
               }
             }}
             onBlur={handleEnterClick}
