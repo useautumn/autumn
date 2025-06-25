@@ -116,3 +116,13 @@ export const priceToProduct = ({
     (p: Product) => p.internal_id == price.internal_product_id,
   );
 };
+
+export const filterByBillingType = ({
+  prices,
+  billingType,
+}: {
+  prices: Price[];
+  billingType: BillingType;
+}) => {
+  return prices.filter((p) => getBillingType(p.config) == billingType);
+};

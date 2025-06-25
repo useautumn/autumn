@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ProductItemConfig } from "./ProductItemConfig";
 import { ProductItem } from "@autumn/shared";
 import { ProductItemContext } from "./ProductItemContext";
@@ -27,11 +27,12 @@ export default function UpdateProductItem({
   const { product, setProduct, features } = useProductContext();
   const [showCreateFeature, setShowCreateFeature] = useState(false);
 
-  const handleUpdateProductItem = (show: any) => {
+  const handleUpdateProductItem = () => {
     const validatedItem = validateProductItem({
       item: selectedItem!,
       features,
     });
+
     if (!validatedItem) return;
     if (notNullish(selectedIndex)) {
       const newProduct = { ...product };

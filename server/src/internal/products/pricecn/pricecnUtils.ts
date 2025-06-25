@@ -134,17 +134,23 @@ export const getPricecnPrice = ({
 
   if (isPriceItem(priceItem)) {
     return {
+      ...priceItem,
       primaryText: getPriceText({ item: priceItem, org }),
       secondaryText: priceItem.interval ? `per ${priceItem.interval}` : " ",
     };
   } else {
     let feature = features.find((f) => f.id == priceItem.feature_id);
-    return featurePricetoPricecnItem({
+    let texts = featurePricetoPricecnItem({
       feature,
       item: priceItem,
       org,
       isMainPrice,
     });
+    return {
+      ...priceItem,
+      primaryText: texts.primaryText,
+      secondaryText: texts.secondaryText,
+    };
   }
 };
 

@@ -59,23 +59,15 @@ export const initStripeCusAndProducts = async ({
 
 const handleIdIsNull = async ({
   req,
-  db,
-  org,
-  env,
   newCus,
-  logger,
-  processor,
   createDefaultProducts,
 }: {
   req: ExtendedRequest;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
   newCus: CreateCustomer;
-  logger: any;
-  processor?: any;
   createDefaultProducts?: boolean;
 }) => {
+  const { db, org, env, logger } = req;
+
   // 1. ID is null
   if (!newCus.email) {
     throw new RecaseError({
@@ -113,12 +105,7 @@ const handleIdIsNull = async ({
 
   const createdCustomer = await createNewCustomer({
     req,
-    db,
-    org,
-    env,
     customer: newCus,
-    logger,
-    processor,
     createDefaultProducts,
   });
 
@@ -128,23 +115,15 @@ const handleIdIsNull = async ({
 // CAN ALSO USE DURING MIGRATION...
 export const handleCreateCustomerWithId = async ({
   req,
-  db,
-  org,
-  env,
-  logger,
   newCus,
-  processor,
   createDefaultProducts = true,
 }: {
   req: ExtendedRequest;
-  db: DrizzleCli;
-  org: Organization;
-  env: AppEnv;
-  logger: any;
   newCus: CreateCustomer;
-  processor?: any;
   createDefaultProducts?: boolean;
 }) => {
+  const { db, org, env, logger } = req;
+
   // 1. Get by ID
   let existingCustomer = await CusService.get({
     db,
@@ -155,7 +134,7 @@ export const handleCreateCustomerWithId = async ({
 
   if (existingCustomer) {
     logger.info(
-      `POST /customers, existing customer found: ${existingCustomer.id} (org: ${org.slug})`,
+      `Customer already exists, skipping creation: ${existingCustomer.id}`,
     );
     return existingCustomer;
   }
@@ -191,33 +170,18 @@ export const handleCreateCustomerWithId = async ({
   // 2. Handle email step...
   return await createNewCustomer({
     req,
-    db,
-    org,
-    env,
     customer: newCus,
-    logger,
-    processor,
     createDefaultProducts,
   });
 };
 
 export const handleCreateCustomer = async ({
   req,
-  db,
   cusData,
-  org,
-  env,
-  logger,
-  processor,
   createDefaultProducts = true,
 }: {
   req: ExtendedRequest;
-  db: DrizzleCli;
   cusData: CreateCustomer;
-  org: Organization;
-  env: AppEnv;
-  logger: any;
-  processor?: any;
   createDefaultProducts?: boolean;
 }) => {
   const newCus = CreateCustomerSchema.parse(cusData);
@@ -227,23 +191,13 @@ export const handleCreateCustomer = async ({
   if (newCus.id === null) {
     createdCustomer = await handleIdIsNull({
       req,
-      db,
-      org,
-      env,
       newCus,
-      logger,
-      processor,
       createDefaultProducts,
     });
   } else {
     createdCustomer = await handleCreateCustomerWithId({
       req,
-      db,
-      org,
-      env,
-      logger,
       newCus,
-      processor,
       createDefaultProducts,
     });
   }

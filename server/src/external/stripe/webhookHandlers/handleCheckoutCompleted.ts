@@ -20,6 +20,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleCheckoutSub } from "./handleCheckoutCompleted/handleCheckoutSub.js";
 import { handleRemainingSets } from "./handleCheckoutCompleted/handleRemainingSets.js";
 import { getOptionsFromCheckoutSession } from "./handleCheckoutCompleted/getOptionsFromCheckout.js";
+import { getEntityInvoiceDescription } from "@/internal/entities/entityUtils/entityInvoiceUtils.js";
 
 export const handleCheckoutSessionCompleted = async ({
   req,
@@ -130,6 +131,7 @@ export const handleCheckoutSessionCompleted = async ({
 
   console.log("✅ checkout.completed: successfully created cus product");
   const batchInsertInvoice: any = [];
+
   for (const invoiceId of invoiceIds) {
     batchInsertInvoice.push(
       insertInvoiceFromAttach({

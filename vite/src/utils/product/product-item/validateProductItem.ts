@@ -1,7 +1,7 @@
 import { invalidNumber, notNullish } from "@/utils/genUtils";
 import { Feature, FeatureUsageType, ProductItem } from "@autumn/shared";
 import { toast } from "sonner";
-import { isFeatureItem } from "../getItemType";
+import { isFeatureItem, isFeaturePriceItem } from "../getItemType";
 
 export const validateProductItem = ({
   item,
@@ -93,7 +93,11 @@ export const validateProductItem = ({
     toast.error("Please enter valid billing units");
     return null;
   } else {
-    item.billing_units = Number(item.billing_units);
+    if (isFeaturePriceItem(item)) {
+      item.billing_units = Number(item.billing_units);
+    } else {
+      item.billing_units = undefined;
+    }
   }
 
   return item;

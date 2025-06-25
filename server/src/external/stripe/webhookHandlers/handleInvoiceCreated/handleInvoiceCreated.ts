@@ -329,8 +329,6 @@ export const handleInvoiceCreated = async ({
         let entity = await EntityService.getByInternalId({
           db,
           internalId: internalEntityId,
-          orgId: org.id,
-          env,
         });
 
         let feature = features.find(
@@ -352,7 +350,7 @@ export const handleInvoiceCreated = async ({
               feature,
               plural: false,
               capitalize: true,
-            })}: ${entity?.name} (ID: ${entity?.id})`,
+            })}: ${entDetails}`,
           });
         }
       } catch (error: any) {

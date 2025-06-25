@@ -34,10 +34,12 @@ export const IncludedUsage = () => {
           }
           type={item.included_usage === Infinite ? "text" : "number"}
           onChange={(e) => {
-            setItem({
+            const newItem = {
               ...item,
               included_usage: e.target.value,
-            });
+            };
+
+            setItem(newItem);
           }}
         />
         <ToggleDisplayButton

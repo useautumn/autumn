@@ -23,7 +23,7 @@ elif [[ $filename == *"/tests/"* ]]; then
 elif [[ $filename == *".sh"* ]]; then
     $filename
 else
-    npx tsx $filename
+    NODE_ENV=development npx tsx $filename
 fi
 
 
