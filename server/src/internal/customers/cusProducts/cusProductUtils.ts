@@ -8,6 +8,7 @@ import {
   Entity,
   FixedPriceConfig,
   FullCusProduct,
+  FullCustomer,
   Organization,
   PriceType,
   Subscription,
@@ -35,6 +36,11 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getExistingCusProducts } from "./cusProductUtils/getExistingCusProducts.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { cusProductToPrices } from "./cusProductUtils/convertCusProduct.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
+import { initStripeCusAndProducts } from "../handlers/handleCreateCustomer.js";
+import { handleAddProduct } from "../attach/attachFunctions/addProductFlow/handleAddProduct.js";
+import { newCusToAttachParams } from "../attach/attachUtils/attachParams/convertToParams.js";
 
 export const isActiveStatus = (status: CusProductStatus) => {
   return (
@@ -116,22 +122,17 @@ export const cancelCusProductSubscriptions = async ({
 };
 
 export const activateDefaultProduct = async ({
-  db,
+  req,
   productGroup,
-  customer,
-  org,
-  env,
+  fullCus,
   curCusProduct,
-  logger,
 }: {
-  db: DrizzleCli;
+  req: ExtendedRequest;
   productGroup: string;
-  customer: Customer;
-  org: Organization;
-  env: AppEnv;
+  fullCus: FullCustomer;
   curCusProduct?: FullCusProduct;
-  logger: any;
 }) => {
+  const { db, org, env, logger } = req;
   // 1. Expire current product
   const defaultProducts = await ProductService.listDefault({
     db,
@@ -145,49 +146,67 @@ export const activateDefaultProduct = async ({
     return false;
   }
 
-  if (
-    curCusProduct &&
-    curCusProduct.internal_product_id == defaultProd.internal_id
-  ) {
-    // console.log("   ❌ default product is already active");
+  if (curCusProduct?.internal_product_id == defaultProd.internal_id) {
     return false;
   }
 
-  await createFullCusProduct({
-    db,
-    attachParams: {
+  const stripeCli = createStripeCli({ org, env });
+
+  let defaultIsFree = isFreeProduct(defaultProd.prices);
+
+  if (!defaultIsFree) {
+    await initStripeCusAndProducts({
+      db,
       org,
-      customer,
-      product: defaultProd,
-      prices: defaultProd.prices,
-      entitlements: defaultProd.entitlements,
-      freeTrial: defaultProd.free_trial || null,
-      optionsList: [],
-      entities: [],
-      features: [],
-      replaceables: [],
-    },
-    scenario: AttachScenario.New,
-    logger,
+      env,
+      customer: fullCus,
+      products: [defaultProd],
+      logger,
+    });
+  }
+
+  await handleAddProduct({
+    req,
+    attachParams: newCusToAttachParams({
+      req,
+      newCus: fullCus,
+      products: [defaultProd],
+      stripeCli,
+    }),
   });
+
+  // await createFullCusProduct({
+  //   db,
+  //   attachParams: {
+  //     org,
+  //     customer,
+  //     product: defaultProd,
+  //     prices: defaultProd.prices,
+  //     entitlements: defaultProd.entitlements,
+  //     freeTrial: defaultProd.free_trial || null,
+  //     optionsList: [],
+  //     entities: [],
+  //     features: [],
+  //     replaceables: [],
+  //   },
+  //   scenario: AttachScenario.New,
+  //   logger,
+  // });
 
   // console.log(`   ✅ activated default product: ${defaultProd.group}`);
   return true;
 };
 
 export const expireAndActivate = async ({
-  db,
-  env,
+  req,
   cusProduct,
-  org,
-  logger,
+  fullCus,
 }: {
-  db: DrizzleCli;
-  env: AppEnv;
+  req: ExtendedRequest;
   cusProduct: FullCusProduct;
-  org: Organization;
-  logger: any;
+  fullCus: FullCustomer;
 }) => {
+  const { db, org, env, logger } = req;
   // 1. Expire current product
   await CusProductService.update({
     db,
@@ -195,33 +214,32 @@ export const expireAndActivate = async ({
     updates: { status: CusProductStatus.Expired, ended_at: Date.now() },
   });
 
+  // Check if it's one time product
+  let prices = cusProductToPrices({ cusProduct });
+  let product = cusProduct.product;
+  const isOneOffOrAddOn = product.is_add_on || isOneOff(prices);
+
+  if (isOneOffOrAddOn) {
+    return;
+  }
+
   await activateDefaultProduct({
-    db,
+    req,
     productGroup: cusProduct.product.group,
-    customer: cusProduct.customer!,
-    org,
-    env,
-    logger,
+    fullCus,
   });
 };
 
 export const activateFutureProduct = async ({
   req,
-  db,
   cusProduct,
   subscription,
-  org,
-  env,
-  logger = console,
 }: {
   req: ExtendedRequest;
-  db: DrizzleCli;
   cusProduct: FullCusProduct;
   subscription: Stripe.Subscription;
-  org: Organization;
-  env: AppEnv;
-  logger: any;
 }) => {
+  const { db, org, env, logger } = req;
   const stripeCli = createStripeCli({
     org,
     env,

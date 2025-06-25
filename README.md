@@ -2,7 +2,7 @@
 
 ![Autumn](assets/github_hero.png)
 
-![Discord](https://img.shields.io/badge/Join%20Community-5865F2?logo=discord&logoColor=white)
+[![Discord](https://img.shields.io/badge/Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/53emPtY9tA)
 [![Follow](https://img.shields.io/twitter/follow/autumnpricing?style=social)](https://x.com/autumnpricing)
 ![Y Combinator](https://img.shields.io/badge/Y%20Combinator-F24-orange)
 [![Cloud](https://img.shields.io/badge/Cloud-☁️-blue)](https://app.useautumn.com)

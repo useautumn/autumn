@@ -17,6 +17,7 @@ import { billingIntervalToStripe } from "../stripePriceUtils.js";
 import { priceToInArrearTiers } from "./createStripeInArrear.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
+import { Decimal } from "decimal.js";
 
 export interface StripeMeteredPriceParams {
   db: DrizzleCli;
@@ -123,7 +124,8 @@ export const arrearProratedToStripeTiers = (
   }
   for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
     const tier = usageConfig.usage_tiers[i];
-    const amount = tier.amount * 100;
+    // const amount = tier.amount * 100;
+    const amount = new Decimal(tier.amount).mul(100).toNumber();
     const upTo =
       tier.to == -1 || tier.to == TierInfinite
         ? "inf"

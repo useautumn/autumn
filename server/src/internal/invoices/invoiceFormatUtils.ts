@@ -180,16 +180,20 @@ export const newPriceToInvoiceDescription = ({
   product,
   quantity,
   withProductPrefix = true,
+  ents,
 }: {
   org: Organization;
   price: Price;
   product: FullProduct;
   quantity?: number;
   withProductPrefix?: boolean;
+  ents?: EntitlementWithFeature[];
 }) => {
-  const ents = product.entitlements;
-
   const billingType = getBillingType(price.config);
+
+  if (!ents) {
+    ents = product.entitlements;
+  }
 
   let description = "";
   if (
@@ -209,7 +213,6 @@ export const newPriceToInvoiceDescription = ({
   }
 
   if (billingType == BillingType.UsageInAdvance) {
-    const ent = getPriceEntitlement(price, ents);
     description = formatPrepaidPrice({ price, ents, quantity: quantity! });
   }
 

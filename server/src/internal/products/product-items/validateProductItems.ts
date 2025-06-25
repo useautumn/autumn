@@ -21,6 +21,7 @@ import {
 } from "./productItemUtils/getItemType.js";
 import { itemToEntInterval } from "./itemIntervalUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
+import { Decimal } from "decimal.js";
 
 const validateProductItem = ({
   item,
@@ -86,6 +87,30 @@ const validateProductItem = ({
           statusCode: StatusCodes.BAD_REQUEST,
         });
       }
+    }
+  }
+
+  // 4. One off prices / fixed prices can have at most 2 decimal places
+  if ((isFeaturePriceItem(item) && !item.interval) || isPriceItem(item)) {
+    // One off price..., can't have more than 2 DP
+    if (item.price && item.price.toString().split(".")[1]?.length > 2) {
+      throw new RecaseError({
+        message: `One off prices can have at most 2 decimal places`,
+        code: ErrCode.InvalidInputs,
+        statusCode: StatusCodes.BAD_REQUEST,
+      });
+    }
+
+    if (item.tiers) {
+      item.tiers.forEach((tier) => {
+        if (tier.amount.toString().split(".")[1]?.length > 2) {
+          throw new RecaseError({
+            message: `One off prices can have at most 2 decimal places`,
+            code: ErrCode.InvalidInputs,
+            statusCode: StatusCodes.BAD_REQUEST,
+          });
+        }
+      });
     }
   }
 
