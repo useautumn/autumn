@@ -7,6 +7,7 @@ import type {
 
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PostHog } from "posthog-node";
+import { Logger } from "pino";
 
 export interface ExtendedRequest extends ExpressRequest {
   orgId: string;
@@ -15,6 +16,7 @@ export interface ExtendedRequest extends ExpressRequest {
   features: Feature[];
   db: DrizzleCli;
   logtail: Logtail;
+  logger: Logger;
 
   id?: string;
   userId?: string;

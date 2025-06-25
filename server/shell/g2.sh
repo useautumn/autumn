@@ -9,6 +9,6 @@ MOCHA_PARALLEL=true $MOCHA_SETUP && $MOCHA_CMD \
 'tests/attach/migrations/*.ts' \
 'tests/attach/newVersion/*.ts' \
 'tests/attach/others/*.ts' \
-'tests/attach/updateEnts/*.ts' \
+'tests/attach/updateEnts/*.ts'
 
 

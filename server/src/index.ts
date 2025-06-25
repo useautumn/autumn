@@ -25,7 +25,6 @@ import { client, db } from "./db/initDrizzle.js";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
-import { initLogger } from "./errors/logger.js";
 
 const tracer = trace.getTracer("express");
 
@@ -93,7 +92,6 @@ const init = async () => {
       env: req.headers["app_env"] || undefined,
       method: req.method,
       url: req.originalUrl,
-      body: req.body,
       timestamp: req.timestamp,
     };
 
@@ -114,6 +112,7 @@ const init = async () => {
         req: reqContext,
       },
     });
+    req.logger = req.logtail;
 
     const endSpan = () => {
       try {

@@ -92,16 +92,24 @@ export const newCusToAttachParams = ({
   stripeCli,
 }: {
   req: ExtendedRequest;
-  newCus: Customer;
+  newCus: FullCustomer;
   products: FullProduct[];
   stripeCli: Stripe;
 }) => {
+  if (!newCus.customer_products) {
+    newCus.customer_products = [];
+  }
+
+  if (!newCus.entities) {
+    newCus.entities = [];
+  }
+
   const attachParams: AttachParams = {
     stripeCli,
     paymentMethod: null,
     req,
     org: req.org,
-    customer: newCusToFullCus({ newCus }),
+    customer: newCus,
     products,
     prices: products.flatMap((p) => p.prices),
     entitlements: products.flatMap((p) => p.entitlements),

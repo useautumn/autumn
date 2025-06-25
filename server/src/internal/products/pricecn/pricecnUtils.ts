@@ -361,7 +361,16 @@ export const toPricecnProduct = ({
   return {
     id: product.id,
     name: product.name,
-    price: price,
+    is_add_on: product.is_add_on,
+    price: price
+      ? {
+          primary_text: price.primaryText,
+          secondary_text: price.secondaryText,
+
+          // To deprecate
+          ...price,
+        }
+      : null,
     items: pricecnItems,
     scenario,
     button_text: buttonText,

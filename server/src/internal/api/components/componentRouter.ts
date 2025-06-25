@@ -39,6 +39,11 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
         })(),
       ]);
 
+      // Sort by add ons
+      products.sort((a, b) => {
+        return a.is_add_on ? 1 : -1;
+      });
+
       // 1. Sort products by price
       products.sort((a, b) => {
         let isUpgradeA = isProductUpgrade({
@@ -69,29 +74,31 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
       }
 
       let pricecnProds = await Promise.all(
-        products.map(async (p) => {
-          let prod = getProductResponse({ product: p, features });
-          let curMainProduct, curScheduledProduct;
+        products
+          // .filter((p) => !p.is_add_on)
+          .map(async (p) => {
+            let prod = getProductResponse({ product: p, features });
+            let curMainProduct, curScheduledProduct;
 
-          if (cusProducts) {
-            let res = getExistingCusProducts({
-              product: p,
-              cusProducts: cusProducts,
+            if (cusProducts) {
+              let res = getExistingCusProducts({
+                product: p,
+                cusProducts: cusProducts,
+              });
+
+              curMainProduct = res.curMainProduct;
+              curScheduledProduct = res.curScheduledProduct;
+            }
+
+            return toPricecnProduct({
+              org,
+              product: prod as ProductV2,
+              fullProduct: p,
+              features,
+              curMainProduct,
+              curScheduledProduct,
             });
-
-            curMainProduct = res.curMainProduct;
-            curScheduledProduct = res.curScheduledProduct;
-          }
-
-          return toPricecnProduct({
-            org,
-            product: prod as ProductV2,
-            fullProduct: p,
-            features,
-            curMainProduct,
-            curScheduledProduct,
-          });
-        }),
+          }),
       );
 
       res.status(200).json({
