@@ -4,6 +4,7 @@ import { features } from "tests/global.js";
 import { setupBefore } from "tests/before.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
+  APIVersion,
   AppEnv,
   BillingInterval,
   EntInterval,
@@ -101,6 +102,7 @@ describe(`${chalk.yellowBright(
   "multiFeature2: Testing lifetime + pay per use -> pay per use",
 )}`, () => {
   let autumn: AutumnInt = new AutumnInt();
+  let autumn2: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
   let customerId = testCase;
 
   let totalUsage = 0;
@@ -191,7 +193,7 @@ describe(`${chalk.yellowBright(
       feature_id: features.metered1.id,
     });
 
-    await timeout(5000);
+    await timeout(4000);
 
     await autumn.attach({
       customer_id: customerId,
@@ -213,8 +215,9 @@ describe(`${chalk.yellowBright(
     );
 
     // Check invoice too
-    let res = await autumn.customers.get(customerId);
+    let res = await autumn2.customers.get(customerId);
     let invoices = res.invoices;
+
     let invoice0Amount = value * (pro.items.payPerUse.price ?? 0);
     expect(invoices![0].total).to.equal(
       invoice0Amount,

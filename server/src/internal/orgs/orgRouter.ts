@@ -5,7 +5,7 @@ import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
 import { ErrCode } from "@/errors/errCodes.js";
-import { createClerkCli } from "@/external/clerkUtils.js";
+
 import {
   checkKeyValid,
   createWebhookEndpoint,

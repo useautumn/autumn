@@ -4,6 +4,7 @@ import { features } from "tests/global.js";
 import { setupBefore } from "tests/before.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
 import {
+  APIVersion,
   AppEnv,
   BillingInterval,
   ProductItemFeatureType,
@@ -106,6 +107,7 @@ describe(`${chalk.yellowBright(
   "multiFeature1: Testing prepaid + pay per use -> prepaid + pay per use",
 )}`, () => {
   let autumn: AutumnInt = new AutumnInt();
+  let autumn2: AutumnInt = new AutumnInt({ version: APIVersion.v1_2 });
   let customerId = testCase;
 
   let prepaidQuantity = 10;
@@ -228,7 +230,7 @@ describe(`${chalk.yellowBright(
       });
 
     // Check invoice too
-    let { invoices } = await autumn.customers.get(customerId);
+    let { invoices } = await autumn2.customers.get(customerId);
 
     let invoice1Amount =
       (premium.items.prepaid.price ?? 0) * prepaidQuantity -
