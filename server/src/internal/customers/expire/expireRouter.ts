@@ -20,28 +20,25 @@ expireRouter.post("", async (req, res) =>
       let expireImmediately = cancel_immediately || false;
       let prorate = true;
 
-      let [customer, org] = await Promise.all([
-        CusService.getFull({
-          db,
-          orgId,
-          idOrInternalId: customer_id,
-          env,
-          withEntities: true,
-          entityId: entity_id,
-          inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-          allowNotFound: false,
-        }),
-        OrgService.getFromReq(req),
-      ]);
+      let fullCus = await CusService.getFull({
+        db,
+        orgId,
+        idOrInternalId: customer_id,
+        env,
+        withEntities: true,
+        entityId: entity_id,
+        inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+        allowNotFound: false,
+      });
 
-      if (entity_id && !customer.entity) {
+      if (entity_id && !fullCus.entity) {
         throw new RecaseError({
           code: ErrCode.EntityNotFound,
           message: `Entity ${entity_id} not found for customer ${customer_id}`,
         });
       }
 
-      let cusProducts = customer.customer_products;
+      let cusProducts = fullCus.customer_products;
 
       let cusProductsToExpire = cusProducts.filter(
         (cusProduct: FullCusProduct) =>
@@ -59,13 +56,8 @@ expireRouter.post("", async (req, res) =>
       for (const cusProduct of cusProductsToExpire) {
         await expireCusProduct({
           req,
-          db,
           cusProduct,
-          cusProducts,
-          org,
-          env,
-          logger,
-          customer,
+          fullCus,
           expireImmediately,
           prorate,
         });

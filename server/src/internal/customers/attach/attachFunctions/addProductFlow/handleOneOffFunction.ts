@@ -36,6 +36,7 @@ export const handleOneOffFunction = async ({
     customer,
     products,
     prices,
+    entitlements,
     optionsList,
     reward,
   } = attachParams;
@@ -69,6 +70,7 @@ export const handleOneOffFunction = async ({
       org,
       price,
       product: product!,
+      ents: entitlements,
       quantity: options?.quantity,
       withProductPrefix: true,
     });
@@ -76,7 +78,7 @@ export const handleOneOffFunction = async ({
     invoiceItems.push({
       description,
       price_data: {
-        unit_amount: amount * 100,
+        unit_amount: new Decimal(amount).mul(100).round().toNumber(),
         currency: org.default_currency,
         product: price.config?.stripe_product_id || product?.processor?.id!,
       },

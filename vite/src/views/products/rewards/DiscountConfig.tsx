@@ -167,16 +167,6 @@ const ProductPriceSelector = ({
     return <p className="text-sm text-t3">No products available</p>;
   }
 
-  const getPriceText = (priceId: string) => {
-    let product: any = null;
-    product = products.find((p: any) =>
-      p.prices?.find((p: any) => p.id === priceId),
-    );
-    const price = product?.prices?.find((p: any) => p.id === priceId);
-
-    return `${product?.name} - ${price?.name}`;
-  };
-
   return (
     <Popover modal open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -195,9 +185,9 @@ const ProductPriceSelector = ({
               {config.price_ids?.map((priceId) => (
                 <div
                   key={priceId}
-                  className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit max-w-full"
+                  className="py-1 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full flex items-center gap-2 h-fit max-w-[200px] min-w-0"
                 >
-                  <p className="truncate">
+                  <p className="truncate flex-1 min-w-0">
                     {formatProductItemText({
                       item: products
                         .find((p: any) =>
@@ -255,8 +245,8 @@ const ProductPriceSelector = ({
                         })
                         .map((item: any) => (
                           <CommandItem
-                            key={item.id}
-                            value={item.id}
+                            key={item.price_id}
+                            value={item.price_id}
                             onSelect={() => handlePriceToggle(item.price_id)}
                             className="cursor-pointer overflow-x-hidden max-w-[380px]"
                           >

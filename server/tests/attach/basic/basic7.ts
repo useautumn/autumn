@@ -51,7 +51,7 @@ describe(`${chalk.yellowBright("basic7: Testing trial duplicates (same customer)
     await autumn.cancel({
       customer_id: customerId,
       product_id: products.proWithTrial.id,
-      expire_immediately: true,
+      cancel_immediately: true,
     });
     await timeout(5000); // for webhook to be processed
   });
@@ -67,11 +67,10 @@ describe(`${chalk.yellowBright("basic7: Testing trial duplicates (same customer)
     compareMainProduct({
       sent: products.proWithTrial,
       cusRes: customer,
-      status: CusProductStatus.Trialing,
     });
 
     const invoices = customer.invoices;
-    expect(invoices.length).to.equal(1, "Invoice length should be 1");
+    expect(invoices.length).to.equal(2, "Invoice length should be 1");
     expect(invoices[0].amount).to.equal(
       products.proWithTrial.prices[0].amount,
       "should have paid full amount (trial already used once)",

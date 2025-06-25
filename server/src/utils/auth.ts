@@ -10,6 +10,7 @@ import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
+import { createLoopsContact } from "@/external/resend/loopsUtils.js";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -20,6 +21,7 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (user) => {
+          await createLoopsContact(user);
           await sendOnboardingEmail({
             name: user.name,
             email: user.email,
