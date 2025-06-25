@@ -24,8 +24,6 @@ export const withAdminAuth = async (req: any, res: any, next: NextFunction) => {
       });
     }
 
-    console.log("Admin auth passed");
-
     next();
   } catch (error: any) {
     logger.error(`Admin req failed: ${error.message}`);

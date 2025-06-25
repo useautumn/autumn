@@ -33,16 +33,9 @@ export const prepaidToStripeTiers = (
 
   const tiers: any[] = [];
 
-  // if (numFree > 0) {
-  //   tiers.push({
-  //     unit_amount_decimal: 0,
-  //     up_to: numFree,
-  //   });
-  // }
-
   for (let i = 0; i < usageConfig.usage_tiers.length; i++) {
     const tier = usageConfig.usage_tiers[i];
-    const amount = tier.amount * 100;
+    const amount = new Decimal(tier.amount).mul(100).toNumber();
     const upTo =
       tier.to == -1 || tier.to == TierInfinite
         ? "inf"
@@ -108,7 +101,6 @@ export const createStripePrepaid = async ({
 
     stripePrice = await stripeCli.prices.create({
       ...productData,
-      // unit_amount_decimal: (amount * 100).toString(),
       unit_amount_decimal: unitAmountDecimalStr,
       currency: org.default_currency!,
     });
