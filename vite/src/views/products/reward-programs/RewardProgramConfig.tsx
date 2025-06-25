@@ -196,7 +196,7 @@ const ProductSelector = ({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50"
+          className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative hover:bg-zinc-50 data-[state=open]:border-focus data-[state=open]:shadow-focus"
         >
           {rewardProgram.product_ids?.length === 0 ? (
             "Select Products"

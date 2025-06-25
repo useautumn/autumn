@@ -40,13 +40,8 @@ export const handleCusProductDeleted = async ({
   prematurelyCanceled: boolean;
 }) => {
   const { org, env } = req;
-  // const customerId = cusProduct.customer!.id;
-  // const orgId = org.id;
-  // const lockKey = `attach_${customerId}_${orgId}_${env}`;
-
   const { scheduled_ids } = cusProduct;
-
-  const customer = await CusService.getFull({
+  const fullCus = await CusService.getFull({
     db,
     idOrInternalId: cusProduct.internal_customer_id,
     orgId: org.id,
@@ -56,7 +51,7 @@ export const handleCusProductDeleted = async ({
 
   const paymentMethod = await getCusPaymentMethod({
     stripeCli,
-    stripeId: customer.processor?.id,
+    stripeId: fullCus.processor?.id,
   });
 
   const isV4Usage = cusProduct.api_version === APIVersion.v1_4;
@@ -68,7 +63,7 @@ export const handleCusProductDeleted = async ({
 
     if (usagePrices.length > 0) {
       logger.info(
-        `sub.deleted, submitting usage for ${customer.id}, ${cusProduct.product.name}`,
+        `sub.deleted, submitting usage for ${fullCus.id}, ${cusProduct.product.name}`,
       );
 
       await createUsageInvoice({
@@ -78,7 +73,7 @@ export const handleCusProductDeleted = async ({
           stripeCli,
           paymentMethod,
           cusProduct,
-          fullCus: customer,
+          fullCus,
         }),
         cusProduct,
         stripeSubs: [subscription],
@@ -138,12 +133,8 @@ export const handleCusProductDeleted = async ({
 
   const activatedFuture = await activateFutureProduct({
     req,
-    db,
     cusProduct,
     subscription,
-    org,
-    env,
-    logger,
   });
 
   if (activatedFuture) {
@@ -163,13 +154,10 @@ export const handleCusProductDeleted = async ({
   });
 
   await activateDefaultProduct({
-    db,
+    req,
     productGroup: cusProduct.product.group,
-    customer: cusProduct.customer!,
-    org,
-    env,
+    fullCus,
     curCusProduct: curMainProduct || undefined,
-    logger,
   });
 
   await cancelCusProductSubscriptions({

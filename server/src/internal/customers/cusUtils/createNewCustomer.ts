@@ -13,6 +13,7 @@ import {
   ErrCode,
   BillingInterval,
   AttachScenario,
+  FullCustomer,
 } from "@autumn/shared";
 import { AppEnv, Customer } from "@autumn/shared";
 import { createFullCusProduct } from "../add-product/createFullCusProduct.js";
@@ -132,7 +133,7 @@ export const createNewCustomer = async ({
       req,
       attachParams: newCusToAttachParams({
         req,
-        newCus: newCustomer,
+        newCus: newCustomer as FullCustomer,
         products: nonFreeProds,
         stripeCli,
       }),

@@ -7,6 +7,7 @@ import { formatAmount } from "@/utils/product/productItemUtils";
 import { AttachBranch } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { Input } from "@/components/ui/input";
+import { notNullish } from "@/utils/genUtils";
 
 export const DueToday = () => {
   const { attachState, product, org } = useProductContext();
@@ -83,11 +84,12 @@ export const DueToday = () => {
               <div className="flex items-center gap-2 ">
                 <Input
                   type="number"
-                  value={quantity ? quantity / billing_units : ""}
+                  value={notNullish(quantity) ? quantity / billing_units : ""}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const newOptions = [...options];
                     newOptions[index].quantity =
                       parseInt(e.target.value) * billing_units;
+
                     setOptions(newOptions);
                   }}
                   className="w-12 h-7"
