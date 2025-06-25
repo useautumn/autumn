@@ -55,7 +55,7 @@ function ProductView({ env }: { env: AppEnv }) {
   } = useProductData({ data });
 
   // Replace the current useBlocker call with a fixed useEffect
-  useProductChangedAlert({ hasChanges });
+  const { modal } = useProductChangedAlert({ hasChanges });
 
   const [buttonLoading, setButtonLoading] = useState(false);
 
@@ -183,6 +183,7 @@ function ProductView({ env }: { env: AppEnv }) {
             <ProductSidebar />
           </div>
         </div>
+        {modal}
       </ProductContext.Provider>
     </FeaturesContext.Provider>
   );
