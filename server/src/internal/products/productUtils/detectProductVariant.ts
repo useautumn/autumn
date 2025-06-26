@@ -34,6 +34,8 @@ export const detectBaseVariant = async ({
   curProduct: FullProduct;
   logger: Logger;
 }) => {
+  if (!process.env.ANTHROPIC_API_KEY) return;
+
   let existingProducts = (await ProductService.listFull({
     db,
     orgId: curProduct.org_id,
