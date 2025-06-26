@@ -1,0 +1,75 @@
+name: test-run
+
+on: 
+  push: 
+    branches: [staging]
+  pull_request:
+    branches: [staging]
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Setup Supabase (optional)
+        run: |
+          if command -v supabase; then
+            supabase start
+            supabase db push
+          fi
+
+      - name: Make shell scripts executable
+        run: chmod +x shell/g*.sh
+
+      - name: Run g1.sh
+        id: g1
+        run: ./shell/g1.sh || echo "g1_failed=true" >> $GITHUB_ENV
+
+      - name: Run g2.sh
+        id: g2
+        run: ./shell/g2.sh || echo "g2_failed=true" >> $GITHUB_ENV
+
+      - name: Run g3.sh
+        id: g3
+        run: ./shell/g3.sh || echo "g3_failed=true" >> $GITHUB_ENV
+
+      - name: Run g4.sh
+        id: g4
+        run: ./shell/g4.sh || echo "g4_failed=true" >> $GITHUB_ENV
+
+      - name: Run g5.sh
+        id: g5
+        run: ./shell/g5.sh || echo "g5_failed=true" >> $GITHUB_ENV
+
+      - name: Fail if any test failed
+        run: |
+          failed=0
+          for test in g1 g2 g3 g4 g5; do
+            var_name="${test}_failed"
+            if [ "${!var_name}" = "true" ]; then
+              echo "❌ $test.sh failed"
+              failed=1
+            fi
+          done
+          if [ "$failed" -eq 1 ]; then
+            echo "❗ One or more tests failed."
+            exit 1
+          else
+            echo "✅ All tests passed."
