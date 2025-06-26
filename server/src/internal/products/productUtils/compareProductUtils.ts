@@ -5,17 +5,17 @@ import {
   ProductItem,
   ProductV2,
 } from "@autumn/shared";
-import { mapToProductItems } from "./productV2Utils.js";
+import { mapToProductItems } from "../productV2Utils.js";
 import {
   findSimilarItem,
   itemsAreSame,
-} from "./product-items/compareItemUtils.js";
+} from "../product-items/compareItemUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { freeTrialsAreSame } from "./free-trials/freeTrialUtils.js";
+import { freeTrialsAreSame } from "../free-trials/freeTrialUtils.js";
 import {
   isFeaturePriceItem,
   isPriceItem,
-} from "./product-items/productItemUtils/getItemType.js";
+} from "../product-items/productItemUtils/getItemType.js";
 
 export const productsAreSame = ({
   newProductV1,

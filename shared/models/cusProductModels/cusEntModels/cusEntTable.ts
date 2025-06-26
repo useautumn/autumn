@@ -6,6 +6,7 @@ import {
   unique,
   text,
   jsonb,
+  index,
 } from "drizzle-orm/pg-core";
 
 import { features } from "../../featureModels/featureTable.js";
@@ -56,6 +57,7 @@ export const customerEntitlements = pgTable(
     })
       .onUpdate("cascade")
       .onDelete("cascade"),
+    index("idx_customer_entitlements_product_id").on(table.customer_product_id),
   ],
 );
 

@@ -135,7 +135,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
       stripeCli,
       testClockId,
       advanceTo: addWeeks(curUnix, 2).getTime(),
-      waitForSeconds: 5,
+      waitForSeconds: 15,
     });
 
     let customItems = replaceItems({
@@ -197,7 +197,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing update contUse incl
       stripeCli,
       testClockId,
       advanceTo: addWeeks(curUnix, 1).getTime(),
-      waitForSeconds: 5,
+      waitForSeconds: 15,
     });
 
     let customItems = replaceItems({

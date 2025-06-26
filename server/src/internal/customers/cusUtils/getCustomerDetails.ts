@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getCusBalances } from "@/internal/customers/cusProducts/cusEnts/getCusBalances.js";
+import { getCusBalances } from "@/internal/customers/cusProducts/cusEnts/cusFeatureUtils/getCusBalances.js";
 
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
@@ -33,90 +33,7 @@ import {
   cusProductsToCusPrices,
 } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
-
-export const sumValues = (
-  entList: CusEntResponse[],
-  key: keyof CusEntResponse,
-) => {
-  return entList.reduce((acc, curr) => {
-    if (curr[key]) {
-      return acc + Number(curr[key]);
-    }
-
-    return acc;
-  }, 0);
-};
-
-export const getEarliestNextResetAt = (entList: CusEntResponse[]) => {
-  let earliest = entList.reduce((acc, curr) => {
-    if (curr.next_reset_at && curr.next_reset_at < acc) {
-      return curr.next_reset_at;
-    }
-
-    return acc;
-  }, Infinity);
-
-  return earliest == Infinity ? null : earliest;
-};
-
-export const featuresToObject = ({
-  features,
-  entList,
-}: {
-  features: Feature[];
-  entList: CusEntResponse[];
-}) => {
-  let featureObject: Record<string, CusEntResponseV2> = {};
-  for (let entRes of entList) {
-    let feature = features.find((f) => f.id == entRes.feature_id)!;
-    if (feature.type == FeatureType.Boolean) {
-      featureObject[feature.id] = {
-        id: feature.id,
-        name: feature.name,
-      };
-      continue;
-    } else if (entRes.unlimited) {
-      featureObject[feature.id] = {
-        id: feature.id,
-        name: feature.name,
-        unlimited: true,
-      };
-      continue;
-    }
-
-    let featureId = feature.id;
-    let unlimited = entRes.unlimited;
-    let relatedEnts = entList.filter((e) => e.feature_id == featureId);
-
-    if (featureObject[featureId]) {
-      continue;
-    }
-
-    featureObject[featureId] = {
-      id: featureId,
-      name: feature.name,
-      unlimited,
-      balance: unlimited ? null : sumValues(relatedEnts, "balance"),
-      usage: sumValues(relatedEnts, "usage"),
-      included_usage: sumValues(relatedEnts, "included_usage"),
-
-      next_reset_at: getEarliestNextResetAt(relatedEnts),
-      interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",
-      breakdown:
-        relatedEnts.length > 1
-          ? relatedEnts.map((e) => ({
-              interval: e.interval!,
-              balance: e.balance,
-              usage: e.usage,
-              included_usage: e.included_usage,
-              next_reset_at: e.next_reset_at,
-            }))
-          : undefined,
-    };
-  }
-
-  return featureObject;
-};
+import { featuresToObject } from "../cusProducts/cusEnts/cusFeatureUtils/balancesToFeatureResponse.js";
 
 export const getCustomerDetails = async ({
   db,

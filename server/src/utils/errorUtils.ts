@@ -132,6 +132,7 @@ export const handleRequestError = ({
       res.status(error.statusCode).json({
         message: error.message,
         code: error.code,
+        env: req.env,
       });
       return;
     }

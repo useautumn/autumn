@@ -81,6 +81,8 @@ export const getProration = ({
 }) => {
   if (!proration && !anchorToUnix) return undefined;
 
+  if (interval == BillingInterval.OneOff) return undefined;
+
   if (proration) {
     return proration;
   }
