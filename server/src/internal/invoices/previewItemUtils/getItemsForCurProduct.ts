@@ -27,8 +27,12 @@ export const getItemsForCurProduct = async ({
   now: number;
   logger: any;
 }) => {
-  const { curMainProduct } = attachParamToCusProducts({ attachParams });
-  const curCusProduct = curMainProduct!;
+  const { curMainProduct, curSameProduct } = attachParamToCusProducts({
+    attachParams,
+  });
+
+  const curCusProduct = curSameProduct || curMainProduct!;
+
   const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
 
   let items: PreviewLineItem[] = [];
