@@ -5,6 +5,7 @@ import {
   foreignKey,
   unique,
   text,
+  index,
 } from "drizzle-orm/pg-core";
 
 import { features } from "../../featureModels/featureTable.js";
@@ -47,6 +48,7 @@ export const entitlements = pgTable(
       .onUpdate("cascade")
       .onDelete("cascade"),
     unique("entitlements_id_key").on(table.id),
+    index("idx_entitlements_internal_product_id").on(table.internal_product_id),
   ],
 );
 

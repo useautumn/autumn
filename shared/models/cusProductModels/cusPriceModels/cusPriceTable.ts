@@ -1,4 +1,4 @@
-import { foreignKey, jsonb, text } from "drizzle-orm/pg-core";
+import { foreignKey, index, jsonb, text } from "drizzle-orm/pg-core";
 import { numeric, pgTable } from "drizzle-orm/pg-core";
 
 import { customers } from "../../cusModels/cusTable.js";
@@ -31,5 +31,6 @@ export const customerPrices = pgTable(
       foreignColumns: [prices.id],
       name: "customer_prices_price_id_fkey",
     }),
+    index("idx_customer_prices_product_id").on(table.customer_product_id),
   ],
 );

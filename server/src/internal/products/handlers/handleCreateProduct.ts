@@ -10,6 +10,7 @@ import {
   CreateProductSchema,
   ErrCode,
   FreeTrial,
+  Price,
   ProductResponseSchema,
 } from "@autumn/shared";
 import {
@@ -22,12 +23,14 @@ import {
 import { ProductService } from "@/internal/products/ProductService.js";
 import { constructProduct } from "@/internal/products/productUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
+import { detectBaseVariant } from "../productUtils/detectProductVariant.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
 
 const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
   let { free_trial, items } = req.body;
-  let { orgId, env, db } = req;
+  let { orgId, env, db, features } = req;
 
   let productData = CreateProductSchema.parse(req.body);
 
@@ -37,18 +40,15 @@ const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
     productData.name = keyToTitle(productData.id);
   }
 
-  const [features, existingProduct] = await Promise.all([
-    FeatureService.getFromReq(req),
-    ProductService.get({
-      db,
-      id: productData.id,
-      orgId,
-      env,
-    }),
-  ]);
+  const existing = await ProductService.get({
+    db,
+    orgId,
+    env,
+    id: productData.id,
+  });
 
   // 1. If existing product, throw error
-  if (existingProduct) {
+  if (existing) {
     throw new RecaseError({
       message: `Product ${productData.id} already exists`,
       code: ErrCode.ProductAlreadyExists,
@@ -89,6 +89,7 @@ const validateCreateProduct = async ({ req }: { req: ExtendedRequest }) => {
     productData,
   };
 };
+
 export const handleCreateProduct = async (req: Request, res: any) =>
   routeHandler({
     req,
@@ -96,22 +97,23 @@ export const handleCreateProduct = async (req: Request, res: any) =>
     action: "POST /products",
     handler: async (req, res) => {
       let { items } = req.body;
-      let { logtail: logger, orgId, env, db } = req;
+      let { logtail: logger, org, features, env, db } = req;
 
-      let { features, freeTrial, productData } = await validateCreateProduct({
+      let { freeTrial, productData } = await validateCreateProduct({
         req,
       });
 
       let newProduct = constructProduct({
         productData,
-        orgId,
+        orgId: org.id,
         env,
       });
 
       let product = await ProductService.insert({ db, product: newProduct });
 
+      let prices: Price[] = [];
       if (notNullish(items)) {
-        await handleNewProductItems({
+        const res = await handleNewProductItems({
           db,
           product,
           features,
@@ -122,6 +124,7 @@ export const handleCreateProduct = async (req: Request, res: any) =>
           isCustom: false,
           newVersion: false,
         });
+        prices = res.prices;
       }
 
       if (notNullish(freeTrial)) {
@@ -133,6 +136,17 @@ export const handleCreateProduct = async (req: Request, res: any) =>
           isCustom: false,
         });
       }
+
+      await addTaskToQueue({
+        jobName: JobName.DetectBaseVariant,
+        payload: {
+          curProduct: {
+            ...product,
+            prices,
+            entitlements: [],
+          },
+        },
+      });
 
       res.status(200).json(
         ProductResponseSchema.parse({

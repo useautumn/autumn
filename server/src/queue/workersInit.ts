@@ -13,6 +13,8 @@ import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { acquireLock, getRedisConnection, releaseLock } from "./lockUtils.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { detectBaseVariant } from "@/internal/products/productUtils/detectProductVariant.js";
+import { Logger } from "pino";
 
 const NUM_WORKERS = 10;
 
@@ -46,6 +48,15 @@ const initWorker = ({
           },
         },
       });
+
+      if (job.name == JobName.DetectBaseVariant) {
+        await detectBaseVariant({
+          db,
+          curProduct: job.data.curProduct,
+          logger: logtail as Logger,
+        });
+        return;
+      }
 
       if (job.name == JobName.GenerateFeatureDisplay) {
         await runSaveFeatureDisplayTask({

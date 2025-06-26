@@ -10,11 +10,11 @@ import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice
 import { createStripeCli } from "@/external/stripe/utils.js";
 
 import { handleUpdateProductV2 } from "./handlers/handleUpdateProduct/handleUpdateProduct.js";
-import { handleDeleteProduct } from "../api/products/handleDeleteProduct.js";
-import { handleGetProduct } from "../api/products/handleGetProduct.js";
-import { handleCopyProduct } from "../api/products/handlers/handleCopyProduct.js";
-import { handleCreateProduct } from "../api/products/handlers/handleCreateProduct.js";
-import { handleListProducts } from "../api/products/handlers/handleListProducts.js";
+import { handleDeleteProduct } from "./handlers/handleDeleteProduct.js";
+import { handleGetProduct } from "./handlers/handleGetProduct.js";
+import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
+import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
+import { handleListProducts } from "./handlers/handleListProducts.js";
 
 export const productRouter: Router = Router();
 

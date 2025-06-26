@@ -1,6 +1,6 @@
 import RecaseError from "@/utils/errorUtils.js";
 
-import { nullish } from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import { getFeatureName } from "@/internal/features/utils/displayUtils.js";
 
 import {
@@ -20,6 +20,7 @@ import { isPriceItem } from "../product-items/productItemUtils/getItemType.js";
 import { isFeaturePriceItem } from "../product-items/productItemUtils/getItemType.js";
 import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { isProductUpgrade } from "../productUtils.js";
+import { getFirstInterval } from "../prices/priceUtils/priceIntervalUtils.js";
 
 export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
   items.sort((a, b) => {
@@ -277,9 +278,10 @@ export const getAttachScenario = ({
   }
 
   let curFullProduct = cusProductToProduct({ cusProduct: curMainProduct });
+
   let isUpgrade = isProductUpgrade({
-    prices1: fullProduct.prices,
-    prices2: curFullProduct.prices,
+    prices1: curFullProduct.prices,
+    prices2: fullProduct.prices,
   });
 
   return isUpgrade ? AttachScenario.Upgrade : AttachScenario.Downgrade;
@@ -289,6 +291,7 @@ export const toPricecnProduct = ({
   org,
   product,
   fullProduct,
+  otherProducts,
   features,
   curMainProduct,
   curScheduledProduct,
@@ -296,6 +299,7 @@ export const toPricecnProduct = ({
   org: Organization;
   product: ProductV2;
   fullProduct: FullProduct;
+  otherProducts: FullProduct[];
   features: Feature[];
   curMainProduct?: FullCusProduct | null;
   curScheduledProduct?: FullCusProduct | null;
@@ -364,9 +368,30 @@ export const toPricecnProduct = ({
   });
 
   let freeTrial = fullProduct.free_trial;
+
+  let baseVariant = null;
+  if (fullProduct.base_variant_id) {
+    baseVariant = otherProducts.find(
+      (p) => p.id == fullProduct.base_variant_id,
+    );
+  }
+
+  let name = product.name;
+  if (baseVariant) {
+    name = `${baseVariant.name}`;
+  }
+
+  let intervalGroup = null;
+  if (
+    baseVariant ||
+    otherProducts.some((p) => p.base_variant_id == product.id)
+  ) {
+    intervalGroup = getFirstInterval({ prices: fullProduct.prices });
+  }
+
   return {
     id: product.id,
-    name: product.name,
+    name,
     is_add_on: product.is_add_on,
     price: price
       ? {
@@ -386,6 +411,8 @@ export const toPricecnProduct = ({
           interval: freeTrial.duration,
         }
       : null,
+
+    interval_group: intervalGroup,
 
     // To deprecate
     buttonText,

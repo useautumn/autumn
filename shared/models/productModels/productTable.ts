@@ -32,6 +32,7 @@ export const products = pgTable(
     processor: jsonb()
       .$type<ProductProcessor>()
       .default(sql`null`),
+    base_variant_id: text("base_variant_id"),
   },
   (table) => [
     foreignKey({

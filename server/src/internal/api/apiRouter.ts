@@ -5,7 +5,7 @@ import { cusRouter } from "./cusRouter.js";
 import { productRouter } from "../products/productRouter.js";
 
 import { featureApiRouter } from "./features/featureApiRouter.js";
-import { entitledRouter } from "./entitled/entitledRouter.js";
+import { checkRouter } from "./entitled/checkRouter.js";
 import { attachRouter } from "../customers/attach/attachRouter.js";
 import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
 import { usageRouter } from "./events/usageRouter.js";
@@ -46,8 +46,8 @@ apiRouter.use("/redemptions", redemptionRouter);
 // Cus Product
 apiRouter.use("/attach", attachRouter);
 apiRouter.use("/cancel", expireRouter);
-apiRouter.use("/entitled", entitledRouter);
-apiRouter.use("/check", entitledRouter);
+apiRouter.use("/entitled", checkRouter);
+apiRouter.use("/check", checkRouter);
 
 apiRouter.use("/events", eventsRouter);
 apiRouter.use("/track", eventsRouter);

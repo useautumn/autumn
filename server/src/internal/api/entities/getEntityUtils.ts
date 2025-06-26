@@ -1,9 +1,7 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import {
-  getCusFeaturesResponse,
-  getCusProductsResponse,
-} from "@/internal/customers/cusUtils/cusResponseUtils.js";
+import { getCusProductsResponse } from "@/internal/customers/cusUtils/cusResponseUtils.js";
+import { getCusFeaturesResponse } from "@/internal/customers/cusProducts/cusEnts/cusFeatureUtils/getCusFeaturesResponse.js";
 
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";

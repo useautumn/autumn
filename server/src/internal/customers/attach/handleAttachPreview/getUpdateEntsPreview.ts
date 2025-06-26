@@ -1,4 +1,4 @@
-import { productsAreSame } from "@/internal/products/compareProductUtils.js";
+import { productsAreSame } from "@/internal/products/productUtils/compareProductUtils.js";
 import {
   attachParamsToProduct,
   attachParamToCusProducts,

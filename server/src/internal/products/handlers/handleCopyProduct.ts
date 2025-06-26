@@ -3,7 +3,7 @@ import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { CreateFeatureSchema, ErrCode } from "@autumn/shared";
-import { initNewFeature } from "../../features/featureApiRouter.js";
+import { initNewFeature } from "../../api/features/featureApiRouter.js";
 import { copyProduct } from "@/internal/products/productUtils.js";
 
 export const handleCopyProduct = async (req: any, res: any) =>
@@ -106,6 +106,7 @@ export const handleCopyProduct = async (req: any, res: any) =>
         toOrgId: orgId,
         toId,
         toName,
+        fromEnv,
         toEnv: toEnv,
         toFeatures,
         fromFeatures,
