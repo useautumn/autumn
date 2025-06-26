@@ -1,5 +1,6 @@
 import {
   APIVersion,
+  BillingInterval,
   BillingType,
   FullCusProduct,
   OnDecrease,
@@ -38,10 +39,18 @@ export const isFixedPrice = ({ price }: { price: Price }) => {
   );
 };
 
-export const hasPrepaidPrice = ({ prices }: { prices: Price[] }) => {
-  return prices.some(
-    (price) => getBillingType(price.config) == BillingType.UsageInAdvance,
-  );
+export const hasPrepaidPrice = ({
+  prices,
+  excludeOneOff,
+}: {
+  prices: Price[];
+  excludeOneOff?: boolean;
+}) => {
+  return prices.some((price) => {
+    let isUsage = getBillingType(price.config) == BillingType.UsageInAdvance;
+    let isOneOff = price.config.interval == BillingInterval.OneOff;
+    return isUsage && (excludeOneOff ? !isOneOff : true);
+  });
 };
 
 export const isV4Usage = ({

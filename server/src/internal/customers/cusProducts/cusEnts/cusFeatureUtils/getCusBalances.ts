@@ -1,5 +1,6 @@
 import {
   APIVersion,
+  EntInterval,
   EntitlementWithFeature,
   Entity,
   FeatureType,
@@ -18,7 +19,20 @@ import {
   getRelatedCusPrice,
   getResetBalance,
   getUnlimitedAndUsageAllowed,
-} from "./cusEntUtils.js";
+} from "../cusEntUtils.js";
+
+export interface CusFeatureBalance {
+  feature_id: string;
+  unlimited?: boolean;
+  interval?: EntInterval;
+  balance?: number | null;
+  total?: number | null;
+  adjustment?: number | null;
+  used?: number | null;
+  unused?: number | null;
+  next_reset_at?: number | null;
+  allowance?: number | null;
+}
 
 export const getV1EntitlementsRes = ({
   org,
@@ -57,7 +71,6 @@ export const getV1EntitlementsRes = ({
 export const getCusBalances = async ({
   cusEntsWithCusProduct,
   cusPrices,
-  // entities,
   org,
   entity,
 }: {
@@ -65,7 +78,6 @@ export const getCusBalances = async ({
     customer_product: FullCusProduct;
   })[];
   cusPrices: FullCustomerPrice[];
-  // entities: Entity[];
   org: Organization;
   entity?: Entity;
 }) => {
@@ -231,5 +243,5 @@ export const getCusBalances = async ({
     });
   }
 
-  return balances;
+  return balances as CusFeatureBalance[];
 };

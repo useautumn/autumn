@@ -173,6 +173,7 @@ export class ProductService {
     inIds,
     returnAll = false,
     version,
+    excludeEnts = false,
   }: {
     db: DrizzleCli;
     orgId: string;
@@ -180,6 +181,7 @@ export class ProductService {
     inIds?: string[];
     returnAll?: boolean;
     version?: number;
+    excludeEnts?: boolean;
   }) {
     let data = (await db.query.products.findMany({
       where: and(
@@ -188,13 +190,16 @@ export class ProductService {
         inIds ? inArray(products.id, inIds) : undefined,
         version ? eq(products.version, version) : undefined,
       ),
+
       with: {
-        entitlements: {
-          with: {
-            feature: true,
-          },
-          where: eq(entitlements.is_custom, false),
-        },
+        entitlements: excludeEnts
+          ? undefined
+          : {
+              with: {
+                feature: true,
+              },
+              where: eq(entitlements.is_custom, false),
+            },
         prices: { where: eq(prices.is_custom, false) },
         free_trials: { where: eq(freeTrials.is_custom, false) },
       },

@@ -102,6 +102,7 @@ export const constructProduct = ({
     processor,
     internal_id: generateId("prod"),
     created_at: Date.now(),
+    base_variant_id: null,
   };
 
   return newProduct;
@@ -296,6 +297,7 @@ export const copyProduct = async ({
   toOrgId,
   toId,
   toName,
+  fromEnv,
   toEnv,
   toFeatures,
   fromFeatures,
@@ -303,6 +305,7 @@ export const copyProduct = async ({
   db: DrizzleCli;
   product: FullProduct;
   toOrgId: string;
+  fromEnv: AppEnv;
   toEnv: AppEnv;
   toId: string;
   toName: string;
@@ -317,6 +320,7 @@ export const copyProduct = async ({
     org_id: toOrgId,
     env: toEnv,
     processor: null,
+    base_variant_id: fromEnv == toEnv ? null : product.base_variant_id,
   };
 
   const newEntitlements: Entitlement[] = [];

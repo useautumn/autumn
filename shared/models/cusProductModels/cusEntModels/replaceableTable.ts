@@ -4,6 +4,7 @@ import {
   foreignKey,
   text,
   bigint,
+  index,
 } from "drizzle-orm/pg-core";
 
 import { collatePgColumn } from "../../../db/utils.js";
@@ -25,6 +26,7 @@ export const replaceables = pgTable(
       foreignColumns: [customerEntitlements.id],
       name: "replaceables_cus_ent_id_fkey",
     }).onDelete("cascade"),
+    index("idx_replaceables_cus_ent_id").on(table.cus_ent_id),
   ],
 ).enableRLS();
 

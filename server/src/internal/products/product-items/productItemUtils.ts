@@ -97,7 +97,7 @@ export const getItemFeatureType = ({
 export const constructFeatureItem = ({
   feature_id,
   included_usage,
-  interval,
+  interval = EntInterval.Month,
   entitlement_id,
   entity_feature_id,
 }: {

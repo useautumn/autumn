@@ -3,6 +3,7 @@ import { PriceSchema } from "./priceModels/priceModels.js";
 import { EntitlementSchema } from "./entModels/entModels.js";
 import { FeatureSchema } from "../featureModels/featureModels.js";
 import { FreeTrialSchema } from "./freeTrialModels/freeTrialModels.js";
+import { AppEnv } from "../genModels/genEnums.js";
 
 export const ProductSchema = z.object({
   id: z.string(),
@@ -12,7 +13,7 @@ export const ProductSchema = z.object({
   version: z.number(),
   group: z.string(),
 
-  env: z.string(),
+  env: z.nativeEnum(AppEnv),
   internal_id: z.string(),
   org_id: z.string(),
   created_at: z.number(),
@@ -23,6 +24,7 @@ export const ProductSchema = z.object({
       id: z.string(),
     })
     .nullish(),
+  base_variant_id: z.string().nullable(),
 });
 
 export const CreateProductSchema = z.object({

@@ -97,6 +97,7 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
               features,
               curMainProduct,
               curScheduledProduct,
+              otherProducts: products.filter((other) => other.id != p.id),
             });
           }),
       );

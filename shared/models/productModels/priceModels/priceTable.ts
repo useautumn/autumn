@@ -6,6 +6,7 @@ import {
   numeric,
   jsonb,
   text,
+  index,
 } from "drizzle-orm/pg-core";
 
 import { entitlements } from "../entModels/entTable.js";
@@ -45,6 +46,7 @@ export const prices = pgTable(
       .onUpdate("cascade")
       .onDelete("cascade"),
     unique("prices_id_key").on(table.id),
+    index("idx_prices_internal_product_id").on(table.internal_product_id),
   ],
 );
 

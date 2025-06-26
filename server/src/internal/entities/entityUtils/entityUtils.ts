@@ -1,5 +1,10 @@
-import { generateId } from "@/utils/genUtils.js";
-import { AppEnv, Entity } from "@autumn/shared";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
+import {
+  AppEnv,
+  Entity,
+  FeatureType,
+  FullCusEntWithFullCusProduct,
+} from "@autumn/shared";
 
 export const constructEntity = ({
   inputEntity,

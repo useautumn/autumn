@@ -2,9 +2,7 @@ import { ErrCode } from "@/errors/errCodes.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import {
   APIVersion,
-  CusProductStatus,
   type Feature,
-  FeatureSchema,
   FeatureType,
   type FullCustomerEntitlement,
   type Organization,
@@ -18,21 +16,19 @@ import {
 
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
-
 import { handleEventSent } from "../events/eventRouter.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
-import { notNullish, nullish } from "@/utils/genUtils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
+import { notNullish } from "@/utils/genUtils.js";
 import { SuccessCode } from "@autumn/shared";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 import { getBooleanEntitledResult } from "./checkUtils.js";
-import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { getCheckPreview } from "./getCheckPreview.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
+import { getCheckData } from "./checkUtils/getCheckData.js";
+import { getV1CheckResponse } from "./checkUtils/getV1CheckResponse.js";
+import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 
-export const entitledRouter: Router = Router();
+export const checkRouter: Router = Router();
 
 const getRequiredAndActualBalance = ({
   cusEnts,
@@ -165,122 +161,7 @@ const getMeteredEntitledResult = ({
   };
 };
 
-// Main functions
-const getFeatureAndCreditSystems = async ({
-  req,
-  featureId,
-}: {
-  req: any;
-  featureId: string;
-}) => {
-  const features = await FeatureService.getFromReq(req);
-
-  const feature: Feature | undefined = features.find(
-    (feature) => feature.id === featureId,
-  );
-
-  const creditSystems: Feature[] = features.filter((feature) => {
-    return (
-      feature.type == FeatureType.CreditSystem &&
-      feature.config.schema.some(
-        (schema: any) => schema.metered_feature_id === featureId,
-      )
-    );
-  });
-
-  return { feature, creditSystems, allFeatures: features };
-};
-
-// FETCH FUNCTION
-const getCusEntsAndFeatures = async ({
-  req,
-  logger,
-}: {
-  req: any;
-  logger: any;
-}) => {
-  let { customer_id, feature_id, customer_data, entity_id } = req.body;
-
-  let { env, db } = req;
-
-  // 1. Get org and features
-  const startTime = Date.now();
-
-  // Fetch org, feature, and customer in parallel
-  const [org, featureRes] = await Promise.all([
-    OrgService.getFromReq(req),
-    getFeatureAndCreditSystems({
-      req,
-      featureId: feature_id,
-    }),
-  ]);
-
-  logger.info(`running /check for org: ${org.slug}, feature: ${feature_id}`);
-  const { feature, creditSystems, allFeatures } = featureRes;
-
-  const customer = await getOrCreateCustomer({
-    req,
-    customerId: customer_id,
-    customerData: customer_data,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-    entityId: entity_id,
-    entityData: req.body.entity_data,
-  });
-
-  const duration = Date.now() - startTime;
-  // console.log(`/check: fetched org, features & customer in ${duration}ms`);
-  logger.info(`/check: fetched org, features & customer in ${duration}ms`);
-
-  if (!feature) {
-    throw new RecaseError({
-      message: `feature with id ${feature_id} not found`,
-      code: ErrCode.FeatureNotFound,
-      statusCode: StatusCodes.NOT_FOUND,
-    });
-  }
-
-  let cusProducts = customer.customer_products;
-
-  if (!org.config.include_past_due) {
-    cusProducts = cusProducts.filter(
-      (cusProduct) => cusProduct.status !== CusProductStatus.PastDue,
-    );
-  }
-
-  // For logging purposes...
-  let cusEnts = cusProducts.flatMap((cusProduct) => {
-    return cusProduct.customer_entitlements.map((cusEnt) => {
-      return {
-        ...cusEnt,
-        customer_product: cusProduct,
-      };
-    });
-  });
-
-  if (customer.entity) {
-    cusEnts = cusEnts.filter((cusEnt) => {
-      return (
-        // notNullish(cusEnt.entities) ||
-        nullish(cusEnt.customer_product.internal_entity_id) ||
-        cusEnt.customer_product.internal_entity_id ===
-          customer.entity!.internal_id
-      );
-    });
-  }
-
-  return {
-    fullCus: customer,
-    cusEnts,
-    feature,
-    creditSystems,
-    org,
-    cusProducts,
-    allFeatures,
-    entity: customer.entity,
-  };
-};
-
-entitledRouter.post("", async (req: any, res: any) => {
+checkRouter.post("", async (req: any, res: any) => {
   try {
     let {
       customer_id,
@@ -346,7 +227,6 @@ entitledRouter.post("", async (req: any, res: any) => {
       quantity = floatQuantity;
     }
 
-    logger.info(`/check: getting cusEnts and features`);
     const {
       fullCus,
       cusEnts,
@@ -355,17 +235,12 @@ entitledRouter.post("", async (req: any, res: any) => {
       org,
       cusProducts,
       allFeatures,
-    } = await getCusEntsAndFeatures({
-      req,
-      logger: req.logtail,
-    });
+    } = await getCheckData({ req });
 
     let apiVersion = orgToVersion({
       org,
       reqApiVersion: req.apiVersion,
     });
-
-    // logEntitled({ req, customer_id, cusEnts: cusEnts! });
 
     // 2. If boolean, return true
     if (feature.type === FeatureType.Boolean) {
@@ -382,14 +257,29 @@ entitledRouter.post("", async (req: any, res: any) => {
       });
     }
 
-    const { allowed, balances } = getMeteredEntitledResult({
+    const v1Response = getV1CheckResponse({
       originalFeature: feature,
       creditSystems,
-      cusEnts: cusEnts! as FullCustomerEntitlement[],
+      cusEnts: cusEnts!,
       quantity,
       entityId: entity_id,
       org,
     });
+
+    const v2Response = await getV2CheckResponse({
+      fullCus,
+      cusEnts,
+      feature,
+      creditSystems,
+      org,
+      cusProducts,
+      requiredBalance,
+    });
+
+    const { allowed, balance } = v2Response;
+    const featureToUse = allFeatures.find(
+      (f: Feature) => f.id === v2Response.feature_id,
+    );
 
     if (allowed && req.isPublic !== true) {
       if (send_event) {
@@ -424,29 +314,13 @@ entitledRouter.post("", async (req: any, res: any) => {
       }
     }
 
-    let features = [feature, ...creditSystems];
-    let balanceObj: any, featureToUse: any;
-    try {
-      balanceObj = balances.length > 0 ? balances[0] : null;
-
-      featureToUse =
-        notNullish(balanceObj) && balanceObj.feature_id !== feature.id
-          ? features.find((f) => f.id === balanceObj.feature_id)
-          : creditSystems.length > 0
-            ? creditSystems[0]
-            : feature;
-    } catch (error) {
-      logger.error(`/check: failed to get balance & feature to use`, error);
-    }
-
-    // 3. If with preview, get preview
     let preview = undefined;
     if (req.body.with_preview) {
       try {
         preview = await getCheckPreview({
           db,
           allowed,
-          balance: balanceObj?.balance,
+          balance: balance || undefined,
           feature: featureToUse!,
           cusProducts,
           allFeatures,
@@ -459,21 +333,12 @@ entitledRouter.post("", async (req: any, res: any) => {
 
     if (apiVersion >= APIVersion.v1_1) {
       res.status(200).json({
-        customer_id,
-        entity_id,
-        feature_id: featureToUse?.id,
-        required_balance: balanceObj?.required,
-        code: SuccessCode.FeatureFound,
-
-        allowed,
-        unlimited: balanceObj?.unlimited || false,
-        balance: balanceObj?.unlimited ? null : balanceObj?.balance,
+        ...v2Response,
         preview,
       });
     } else {
       res.status(200).json({
-        allowed,
-        balances,
+        ...v1Response,
         preview,
       });
     }
@@ -483,3 +348,20 @@ entitledRouter.post("", async (req: any, res: any) => {
     handleRequestError({ req, error, res, action: "Failed to GET entitled" });
   }
 });
+
+// let features = [feature, ...creditSystems];
+// let balanceObj: any, featureToUse: any;
+// try {
+//   balanceObj = balances.length > 0 ? balances[0] : null;
+
+//   featureToUse =
+//     notNullish(balanceObj) && balanceObj.feature_id !== feature.id
+//       ? features.find((f) => f.id === balanceObj.feature_id)
+//       : creditSystems.length > 0
+//         ? creditSystems[0]
+//         : feature;
+// } catch (error) {
+//   logger.error(`/check: failed to get balance & feature to use`, error);
+// }
+
+// 3. If with preview, get preview

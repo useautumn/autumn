@@ -1,6 +1,7 @@
 import {
   BillingType,
   CusProductStatus,
+  FullCusEntWithFullCusProduct,
   FullCusProduct,
   FullCustomerEntitlement,
   FullCustomerPrice,
@@ -79,7 +80,7 @@ export const cusProductsToCusEnts = ({
 
   sortCusEntsForDeduction(cusEnts, reverseOrder);
 
-  return cusEnts;
+  return cusEnts as FullCusEntWithFullCusProduct[];
 };
 
 export const cusProductToPrices = ({
