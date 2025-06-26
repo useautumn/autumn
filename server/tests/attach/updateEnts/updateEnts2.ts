@@ -117,7 +117,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
       stripeCli,
       testClockId,
       advanceTo: addWeeks(curUnix, 2).getTime(),
-      waitForSeconds: 10,
+      waitForSeconds: 30,
     });
 
     const customProduct = {

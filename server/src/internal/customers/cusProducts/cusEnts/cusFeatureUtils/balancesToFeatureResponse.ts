@@ -1,12 +1,18 @@
 import {
+  CreditSchemaItem,
   CusEntResponse,
   CusEntResponseSchema,
   CusEntResponseV2,
   Feature,
   FeatureType,
   FullCustomerEntitlement,
+  ProductItemFeatureType,
 } from "@autumn/shared";
 import { CusFeatureBalance } from "./getCusBalances.js";
+import {
+  getCusFeatureType,
+  isCreditSystem,
+} from "@/internal/features/featureUtils.js";
 
 export const sumValues = (
   entList: CusEntResponse[],
@@ -43,20 +49,7 @@ export const featuresToObject = ({
   let featureObject: Record<string, CusEntResponseV2> = {};
   for (let entRes of entList) {
     let feature = features.find((f) => f.id == entRes.feature_id)!;
-    if (feature.type == FeatureType.Boolean) {
-      featureObject[feature.id] = {
-        id: feature.id,
-        name: feature.name,
-      };
-      continue;
-    } else if (entRes.unlimited) {
-      featureObject[feature.id] = {
-        id: feature.id,
-        name: feature.name,
-        unlimited: true,
-      };
-      continue;
-    }
+    let featureType = getCusFeatureType({ feature });
 
     let featureId = feature.id;
     let unlimited = entRes.unlimited;
@@ -69,6 +62,7 @@ export const featuresToObject = ({
     featureObject[featureId] = {
       id: featureId,
       name: feature.name,
+      type: featureType,
       unlimited,
       balance: unlimited ? null : sumValues(relatedEnts, "balance"),
       usage: sumValues(relatedEnts, "usage"),
@@ -86,6 +80,12 @@ export const featuresToObject = ({
               next_reset_at: e.next_reset_at,
             }))
           : undefined,
+      credit_schema: isCreditSystem({ feature })
+        ? feature.config?.schema?.map((s: CreditSchemaItem) => ({
+            feature_id: s.metered_feature_id,
+            credit_amount: s.credit_amount,
+          }))
+        : undefined,
     };
   }
 

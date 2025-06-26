@@ -8,6 +8,7 @@ import { balancesToFeatureResponse } from "@/internal/customers/cusProducts/cusE
 import {
   CheckResponseSchema,
   Feature,
+  FeatureType,
   FullCusEntWithFullCusProduct,
   FullCusProduct,
   FullCustomer,
@@ -15,6 +16,39 @@ import {
   SuccessCode,
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
+
+export const getFeatureToUse = ({
+  creditSystems,
+  feature,
+  cusEnts,
+}: {
+  creditSystems: Feature[];
+  feature: Feature;
+  cusEnts: FullCusEntWithFullCusProduct[];
+}) => {
+  // 1. If there's a credit system
+  let featureCusEnts = cusEnts.filter((cusEnt) =>
+    cusEntMatchesFeature({ cusEnt, feature }),
+  );
+
+  if (creditSystems.length > 0) {
+    let creditCusEnts = cusEnts.filter((cusEnt) =>
+      cusEntMatchesFeature({ cusEnt, feature: creditSystems[0] }),
+    );
+
+    if (creditCusEnts.length > 0) {
+      return creditSystems[0];
+    }
+
+    if (featureCusEnts.length > 0) {
+      return feature;
+    }
+
+    return creditSystems[0];
+  }
+
+  return feature;
+};
 
 export const getV2CheckResponse = async ({
   fullCus,
@@ -34,11 +68,15 @@ export const getV2CheckResponse = async ({
   requiredBalance?: number;
 }) => {
   // 1. Get the feature to use
-  const featureToUse = creditSystems.length > 0 ? creditSystems[0] : feature;
-
-  const featureCusEnts = cusEnts.filter((cusEnt) => {
-    return cusEntMatchesFeature({ cusEnt, feature: featureToUse });
+  const featureToUse = getFeatureToUse({
+    creditSystems,
+    feature,
+    cusEnts,
   });
+
+  const featureCusEnts = cusEnts.filter((cusEnt) =>
+    cusEntMatchesFeature({ cusEnt, feature: featureToUse }),
+  );
 
   const { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
     cusEnts: featureCusEnts,
