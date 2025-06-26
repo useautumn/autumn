@@ -42,7 +42,7 @@ const init = async () => {
         "https://*.useautumn.com",
         "https://localhost:8080",
         "https://app.aidvize.com",
-        "http://staging.aidvize.com/",
+        "http://staging.aidvize.com",
         process.env.CLIENT_URL || "",
       ],
       credentials: true,
