@@ -108,14 +108,6 @@ export const getCusEntBalance = ({
     };
   }
 
-  // let unusedCount =
-  //   (entities &&
-  //     entities.filter(
-  //       (entity) =>
-  //         entity.internal_feature_id == feature.internal_id && entity.deleted,
-  //     ).length) ||
-  //   0;
-
   return {
     balance: cusEnt.balance,
     adjustment: cusEnt.adjustment,
@@ -378,6 +370,16 @@ export const getFeatureBalance = ({
   entityId?: string;
 }) => {
   let balance = 0;
+
+  const { unlimited } = getUnlimitedAndUsageAllowed({
+    cusEnts,
+    internalFeatureId,
+  });
+
+  if (unlimited) {
+    return null;
+  }
+
   for (const cusEnt of cusEnts) {
     if (cusEnt.internal_feature_id !== internalFeatureId) {
       continue;

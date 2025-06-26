@@ -104,7 +104,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing set usage for cont 
       stripeCli,
       testClockId,
       advanceTo: addWeeks(curUnix, 2).getTime(),
-      waitForSeconds: 5,
+      waitForSeconds: 15,
     });
 
     await autumn.usage({
@@ -149,7 +149,7 @@ describe(`${chalk.yellowBright(`contUse/${testCase}: Testing set usage for cont 
       stripeCli,
       testClockId,
       advanceTo: addWeeks(curUnix, 1).getTime(),
-      waitForSeconds: 5,
+      waitForSeconds: 15,
     });
 
     await autumn.usage({

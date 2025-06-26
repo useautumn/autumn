@@ -15,6 +15,8 @@ import { handleNewProductItems } from "@/internal/products/product-items/product
 import { validateProductItems } from "@/internal/products/product-items/validateProductItems.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
 
 export const handleVersionProductV2 = async ({
   req,
@@ -107,6 +109,13 @@ export const handleVersionProductV2 = async ({
       isCustom: false,
     });
   }
+
+  await addTaskToQueue({
+    jobName: JobName.DetectBaseVariant,
+    payload: {
+      curProduct: newProduct,
+    },
+  });
 
   res.status(200).send(newProduct);
 };

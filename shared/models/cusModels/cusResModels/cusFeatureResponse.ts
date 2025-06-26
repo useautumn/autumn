@@ -11,9 +11,7 @@ export const CusEntResponseSchema = z.object({
   next_reset_at: z.number().nullish(),
 });
 
-export const CusEntResponseV2Schema = z.object({
-  id: z.string(),
-  name: z.string().nullish(),
+export const CoreCusFeatureResponseSchema = z.object({
   interval: z.nativeEnum(EntInterval).or(z.literal("multiple")).nullish(),
   unlimited: z.boolean().nullish(),
   balance: z.number().nullish(),
@@ -34,5 +32,24 @@ export const CusEntResponseV2Schema = z.object({
     .nullish(),
 });
 
+export const CusEntResponseV2Schema = z
+  .object({
+    id: z.string(),
+    name: z.string().nullish(),
+  })
+  .extend(CoreCusFeatureResponseSchema.shape);
+
+export const CheckResponseSchema = z
+  .object({
+    allowed: z.boolean(),
+    customer_id: z.string(),
+    feature_id: z.string(),
+    entity_id: z.string().nullish(),
+    required_balance: z.number(),
+    code: z.string(),
+  })
+  .extend(CoreCusFeatureResponseSchema.shape);
+
 export type CusEntResponse = z.infer<typeof CusEntResponseSchema>;
 export type CusEntResponseV2 = z.infer<typeof CusEntResponseV2Schema>;
+export type CheckResponse = z.infer<typeof CheckResponseSchema>;

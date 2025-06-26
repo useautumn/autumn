@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Feature } from "../../featureModels/featureModels.js";
 
 export const EntitySchema = z.object({
   id: z.string(),
@@ -25,5 +26,8 @@ export const EntityDataSchema = z.object({
 });
 
 export type Entity = z.infer<typeof EntitySchema>;
+export type EntityWithFeature = Entity & {
+  feature: Feature;
+};
 export type CreateEntity = z.infer<typeof CreateEntitySchema>;
 export type EntityData = z.infer<typeof EntityDataSchema>;

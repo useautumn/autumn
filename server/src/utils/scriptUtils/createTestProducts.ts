@@ -80,6 +80,7 @@ export const constructProduct = ({
   trial = false,
   excludeBase = false,
   isDefault = true,
+  isAddOn = false,
 }: {
   id?: string;
   items: ProductItem[];
@@ -89,6 +90,7 @@ export const constructProduct = ({
   trial?: boolean;
   excludeBase?: boolean;
   isDefault?: boolean;
+  isAddOn?: boolean;
 }) => {
   let price = 0;
   if (type == "pro") {
@@ -133,7 +135,7 @@ export const constructProduct = ({
         ? `${keyToTitle(type)} (${interval})`
         : keyToTitle(type),
     items,
-    is_add_on: false,
+    is_add_on: isAddOn,
     is_default: type == "free" && isDefault,
     version: 1,
     group: "",

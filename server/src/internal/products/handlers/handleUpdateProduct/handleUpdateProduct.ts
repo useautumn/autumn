@@ -13,6 +13,8 @@ import { routeHandler } from "@/utils/routerUtils.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { JobName } from "@/queue/JobName.js";
 
 export const handleUpdateProductV2 = async (req: any, res: any) =>
   routeHandler({
@@ -90,7 +92,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
 
       const { items, free_trial } = req.body;
 
-      await handleNewProductItems({
+      const { prices, entitlements } = await handleNewProductItems({
         db,
         curPrices: fullProduct.prices,
         curEnts: fullProduct.entitlements,
@@ -110,6 +112,18 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
           isCustom: false,
         });
       }
+
+      logger.info("Adding task to queue to detect base variant");
+      await addTaskToQueue({
+        jobName: JobName.DetectBaseVariant,
+        payload: {
+          curProduct: {
+            ...fullProduct,
+            prices: prices.length > 0 ? prices : fullProduct.prices,
+            entitlements,
+          },
+        },
+      });
 
       res.status(200).send({ message: "Product updated" });
       return;

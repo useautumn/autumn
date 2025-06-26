@@ -3,7 +3,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { AttachBody } from "../models/AttachBody.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { AttachBranch, AttachErrCode } from "@autumn/shared";
+import { AttachBranch, AttachErrCode, BillingInterval } from "@autumn/shared";
 import { getExistingCusProducts } from "../../cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { ErrCode } from "@/errors/errCodes.js";
@@ -17,10 +17,11 @@ import {
   cusProductToProduct,
 } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { FeatureOptions, FullCusProduct } from "@autumn/shared";
-import { productsAreSame } from "@/internal/products/compareProductUtils.js";
+import { productsAreSame } from "@/internal/products/productUtils/compareProductUtils.js";
 import { isTrialing } from "../../cusProducts/cusProductUtils.js";
 import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { attachParamToCusProducts } from "./convertAttachParams.js";
+import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 
 const checkMultiProductErrors = async ({
   attachParams,
@@ -78,17 +79,29 @@ const checkMultiProductErrors = async ({
 const getOptionsToUpdate = ({
   oldOptionsList,
   newOptionsList,
+  curSameProduct,
 }: {
   oldOptionsList: FeatureOptions[];
   newOptionsList: FeatureOptions[];
+  curSameProduct: FullCusProduct;
 }) => {
   let optionsToUpdate: { new: FeatureOptions; old: FeatureOptions }[] = [];
+  const prices = cusProductToPrices({ cusProduct: curSameProduct });
 
   for (const newOptions of newOptionsList) {
     let internalFeatureId = newOptions.internal_feature_id;
     let existingOptions = oldOptionsList.find(
       (o) => o.internal_feature_id === internalFeatureId,
     );
+
+    let price = findPrepaidPrice({
+      prices,
+      internalFeatureId: internalFeatureId!,
+    });
+
+    if (price?.config.interval == BillingInterval.OneOff) {
+      continue;
+    }
 
     if (existingOptions && existingOptions.quantity !== newOptions.quantity) {
       optionsToUpdate.push({
@@ -164,6 +177,7 @@ const getSameProductBranch = async ({
   let optionsToUpdate = getOptionsToUpdate({
     oldOptionsList: curSameProduct.options,
     newOptionsList: attachParams.optionsList,
+    curSameProduct,
   });
 
   // 1. If prepaid quantity changed
@@ -202,7 +216,7 @@ const getSameProductBranch = async ({
   }
 
   if (fromPreview) {
-    if (hasPrepaidPrice({ prices: attachParams.prices })) {
+    if (hasPrepaidPrice({ prices: attachParams.prices, excludeOneOff: true })) {
       return AttachBranch.UpdatePrepaidQuantity;
     }
   }

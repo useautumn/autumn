@@ -1,5 +1,52 @@
 import { notNullish } from "@/utils/genUtils.js";
-import { Entity, Feature, FullCustomerEntitlement } from "@autumn/shared";
+import {
+  Entity,
+  EntityWithFeature,
+  Feature,
+  FullCusEntWithFullCusProduct,
+  FullCustomerEntitlement,
+} from "@autumn/shared";
+
+export const cusEntMatchesEntity = ({
+  cusEnt,
+  entity,
+  features,
+}: {
+  cusEnt: FullCusEntWithFullCusProduct;
+  entity?: Entity;
+  features?: Feature[];
+}) => {
+  if (!entity) return true;
+
+  let cusProductMatch = true;
+
+  if (notNullish(cusEnt.customer_product?.internal_entity_id)) {
+    cusProductMatch =
+      cusEnt.customer_product.internal_entity_id === entity.internal_id;
+  }
+
+  let entityFeatureIdMatch = true;
+  // let feature = features?.find(
+  //   (f) => f.id == cusEnt.entitlement.entity_feature_id,
+  // );
+
+  if (notNullish(cusEnt.entitlement.entity_feature_id)) {
+    entityFeatureIdMatch =
+      cusEnt.entitlement.entity_feature_id == entity.feature_id;
+  }
+
+  return cusProductMatch && entityFeatureIdMatch;
+};
+
+export const cusEntMatchesFeature = ({
+  cusEnt,
+  feature,
+}: {
+  cusEnt: FullCustomerEntitlement;
+  feature: Feature;
+}) => {
+  return cusEnt.entitlement.feature.internal_id === feature.internal_id;
+};
 
 export const findMainCusEntForFeature = ({
   cusEnts,
@@ -27,39 +74,24 @@ export const findLinkedCusEnts = ({
   );
 };
 
-export const cusEntEntityMatch = ({
-  cusEnt,
-  entity,
-}: {
-  cusEnt: FullCustomerEntitlement;
-  entity?: Entity;
-}) => {
-  let entityFeatureId = cusEnt.entitlement.entity_feature_id;
-  let compareEntity = notNullish(entityFeatureId) && notNullish(entity);
-
-  let entityMatch = compareEntity
-    ? entityFeatureId === entity!.feature_id
-    : true;
-
-  return entityMatch;
-};
-
 export const findCusEnt = ({
   feature,
   cusEnts,
-  entity,
   onlyUsageAllowed = false,
+  entity,
+  features,
 }: {
   feature: Feature;
   cusEnts: FullCustomerEntitlement[];
-  entity?: Entity;
   onlyUsageAllowed?: boolean;
+  entity?: Entity;
+  features?: Feature[];
 }) => {
   return cusEnts.find((ce: any) => {
     let featureMatch =
       ce.entitlement.feature.internal_id === feature.internal_id;
 
-    let entityMatch = cusEntEntityMatch({ cusEnt: ce, entity });
+    let entityMatch = cusEntMatchesEntity({ cusEnt: ce, entity, features });
 
     let usageMatch = onlyUsageAllowed ? ce.usage_allowed : true;
 

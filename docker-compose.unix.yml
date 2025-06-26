@@ -91,7 +91,6 @@ services:
 
   # Run localtunnel
   localtunnel:
-    image: node:20-alpine
     build:
       dockerfile: docker/dev.dockerfile
       context: .
