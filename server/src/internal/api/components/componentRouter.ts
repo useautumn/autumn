@@ -28,9 +28,9 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
         ProductService.listFull({ db, orgId, env }),
         (async () => {
           if (!customerId) {
-            return null;
+            return undefined;
           }
-          return await CusService.get({
+          return await CusService.getFull({
             db,
             orgId,
             env,
@@ -59,48 +59,66 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
         }
       });
 
-      let cusProducts: FullCusProduct[] | null = null;
+      let batchResponse = [];
+      for (let p of products) {
+        let prod = getProductResponse({ product: p, features });
+        let curMainProduct, curScheduledProduct;
 
-      if (customer) {
-        cusProducts = await CusProductService.list({
-          db,
-          internalCustomerId: customer.internal_id,
-          inStatuses: [
-            CusProductStatus.Active,
-            CusProductStatus.PastDue,
-            CusProductStatus.Scheduled,
-          ],
-        });
+        if (customer) {
+          let res = getExistingCusProducts({
+            product: p,
+            cusProducts: customer.customer_products,
+          });
+
+          curMainProduct = res.curMainProduct;
+          curScheduledProduct = res.curScheduledProduct;
+        }
+
+        batchResponse.push(
+          toPricecnProduct({
+            db,
+            org,
+            product: prod as ProductV2,
+            fullProduct: p,
+            features,
+            curMainProduct,
+            curScheduledProduct,
+            otherProducts: products.filter((other) => other.id != p.id),
+            fullCus: customer,
+          }),
+        );
       }
 
-      let pricecnProds = await Promise.all(
-        products
-          // .filter((p) => !p.is_add_on)
-          .map(async (p) => {
-            let prod = getProductResponse({ product: p, features });
-            let curMainProduct, curScheduledProduct;
+      let pricecnProds = await Promise.all(batchResponse);
 
-            if (cusProducts) {
-              let res = getExistingCusProducts({
-                product: p,
-                cusProducts: cusProducts,
-              });
+      // let pricecnProds = await Promise.all(
+      //   products
+      //     // .filter((p) => !p.is_add_on)
+      //     .map(async (p) => {
+      //       let prod = getProductResponse({ product: p, features });
+      //       let curMainProduct, curScheduledProduct;
 
-              curMainProduct = res.curMainProduct;
-              curScheduledProduct = res.curScheduledProduct;
-            }
+      //       if (cusProducts) {
+      //         let res = getExistingCusProducts({
+      //           product: p,
+      //           cusProducts: cusProducts,
+      //         });
 
-            return toPricecnProduct({
-              org,
-              product: prod as ProductV2,
-              fullProduct: p,
-              features,
-              curMainProduct,
-              curScheduledProduct,
-              otherProducts: products.filter((other) => other.id != p.id),
-            });
-          }),
-      );
+      //         curMainProduct = res.curMainProduct;
+      //         curScheduledProduct = res.curScheduledProduct;
+      //       }
+
+      //       return toPricecnProduct({
+      //         org,
+      //         product: prod as ProductV2,
+      //         fullProduct: p,
+      //         features,
+      //         curMainProduct,
+      //         curScheduledProduct,
+      //         otherProducts: products.filter((other) => other.id != p.id),
+      //       });
+      //     }),
+      // );
 
       res.status(200).json({
         list: pricecnProds,

@@ -18,6 +18,7 @@ import { isOneOff } from "@/internal/products/productUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
 import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 
 const getNextCycle = (preview: AttachPreview) => {
   if (!preview.due_next_cycle && !preview.due_today) {
@@ -29,11 +30,13 @@ const getNextCycle = (preview: AttachPreview) => {
 };
 export const attachToCheckPreview = async ({
   preview,
+  params,
   product,
   org,
   features,
 }: {
   preview: AttachPreview;
+  params: AttachParams;
   product: FullProduct;
   org: Organization;
   features: Feature[];
@@ -112,7 +115,11 @@ export const attachToCheckPreview = async ({
     items,
     due_today,
     due_next_cycle,
-    product: getProductResponse({ product, features }),
+    product: getProductResponse({
+      product,
+      features,
+      trialAvailable: notNullish(params.freeTrial) ? true : false,
+    }),
   };
   return checkPreview;
 };
@@ -153,6 +160,7 @@ export const getProductCheckPreview = async ({
 
   const checkPreview = await attachToCheckPreview({
     preview,
+    params: attachParams,
     product,
     org,
     features,

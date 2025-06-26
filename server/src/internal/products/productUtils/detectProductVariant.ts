@@ -59,7 +59,10 @@ export const detectBaseVariant = async ({
       nullish(p.base_variant_id) &&
       !p.is_add_on &&
       p.prices.length > 0 &&
-      p.prices.every((price) => price.config.interval == BillingInterval.Month),
+      p.prices.every(
+        (price) => price.config.interval == BillingInterval.Month,
+      ) &&
+      p.group == curProduct.group,
   );
 
   if (filteredExistingProducts.length == 0) return null;

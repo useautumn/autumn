@@ -2,6 +2,8 @@ import {
   EntitlementWithFeature,
   Feature,
   FeatureType,
+  FreeTrial,
+  FreeTrialResponseSchema,
   FullProduct,
   Price,
   ProductItem,
@@ -109,9 +111,11 @@ export const mapToProductV2 = ({
 export const getProductResponse = ({
   product,
   features,
+  trialAvailable,
 }: {
   product: FullProduct;
   features: Feature[];
+  trialAvailable?: boolean;
 }) => {
   let items = mapToProductItems({
     prices: product.prices,
@@ -134,5 +138,13 @@ export const getProductResponse = ({
     name: product.name || null,
     group: product.group || null,
     items: items,
+    free_trial: product.free_trial
+      ? FreeTrialResponseSchema.parse({
+          duration: product.free_trial?.duration,
+          length: product.free_trial?.length,
+          unique_fingerprint: product.free_trial?.unique_fingerprint,
+          trial_available: trialAvailable,
+        })
+      : null,
   });
 };

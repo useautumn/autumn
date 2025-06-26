@@ -26,6 +26,7 @@ export const FreeTrialResponseSchema = z.object({
   duration: z.nativeEnum(FreeTrialDuration),
   length: z.number(),
   unique_fingerprint: z.boolean(),
+  trial_available: z.boolean().nullish().default(true),
 });
 
 export type FreeTrial = z.infer<typeof FreeTrialSchema>;

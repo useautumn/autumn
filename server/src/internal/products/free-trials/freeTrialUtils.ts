@@ -5,18 +5,8 @@ import {
   CreateFreeTrialSchema,
   FreeTrial,
   FreeTrialDuration,
-  FullProduct,
 } from "@autumn/shared";
-import { SupabaseClient } from "@supabase/supabase-js";
-import {
-  addDays,
-  addMinutes,
-  addMonths,
-  addSeconds,
-  addWeeks,
-  addYears,
-  getTime,
-} from "date-fns";
+import { addDays, addMinutes, addMonths, addYears } from "date-fns";
 import { FreeTrialService } from "./FreeTrialService.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
