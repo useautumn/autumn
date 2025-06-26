@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { EntInterval } from "../../productModels/entModels/entEnums.js";
+import { ProductItemFeatureType } from "../../productV2Models/productItemModels/productItemModels.js";
 
 export const CusEntResponseSchema = z.object({
   feature_id: z.string(),
@@ -30,11 +31,20 @@ export const CoreCusFeatureResponseSchema = z.object({
       }),
     )
     .nullish(),
+  credit_schema: z
+    .array(
+      z.object({
+        feature_id: z.string(),
+        credit_amount: z.number(),
+      }),
+    )
+    .nullish(),
 });
 
 export const CusEntResponseV2Schema = z
   .object({
     id: z.string(),
+    type: z.nativeEnum(ProductItemFeatureType),
     name: z.string().nullish(),
   })
   .extend(CoreCusFeatureResponseSchema.shape);

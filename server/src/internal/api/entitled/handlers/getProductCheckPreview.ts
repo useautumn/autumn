@@ -111,8 +111,8 @@ export const attachToCheckPreview = async ({
 
     // Otehrs
 
-    options,
-    items,
+    options: options?.length > 0 ? options : undefined,
+    items: items?.length > 0 ? items : undefined,
     due_today,
     due_next_cycle,
     product: getProductResponse({

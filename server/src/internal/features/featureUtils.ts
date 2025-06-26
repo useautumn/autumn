@@ -7,6 +7,8 @@ import {
   Feature,
   FeatureUsageType,
   Organization,
+  ProductItemFeatureType,
+  FeatureType,
 } from "@autumn/shared";
 import { FeatureService } from "./FeatureService.js";
 import { StatusCodes } from "http-status-codes";
@@ -183,4 +185,22 @@ export const runSaveFeatureDisplayTask = async ({
       feature,
     });
   }
+};
+
+export const getCusFeatureType = ({ feature }: { feature: Feature }) => {
+  if (feature.type == FeatureType.Boolean) {
+    return ProductItemFeatureType.Static;
+  } else if (feature.type == FeatureType.Metered) {
+    if (feature.config.usage_type == FeatureUsageType.Single) {
+      return ProductItemFeatureType.SingleUse;
+    } else {
+      return ProductItemFeatureType.ContinuousUse;
+    }
+  } else {
+    return ProductItemFeatureType.SingleUse;
+  }
+};
+
+export const isCreditSystem = ({ feature }: { feature: Feature }) => {
+  return feature.type == FeatureType.CreditSystem;
 };
