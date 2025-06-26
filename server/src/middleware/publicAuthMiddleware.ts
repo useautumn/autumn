@@ -1,4 +1,5 @@
 import { verifyPublicKey } from "@/internal/dev/api-keys/publicKeyUtils.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { AppEnv, AuthType, ErrCode } from "@autumn/shared";
 
 const allowedEndpoints = [
@@ -59,73 +60,59 @@ export const verifyBearerPublishableKey = async (
   res: any,
   next: any,
 ) => {
-  try {
-    if (
-      !isAllowedEndpoint({
-        pattern: req.originalUrl,
-        path: req.originalUrl,
-        method: req.method,
-      })
-    ) {
-      return {
-        error: ErrCode.EndpointNotPublic,
-        fallback: false,
-        statusCode: 401,
-      };
-    }
-
-    if (!pkey.startsWith("am_pk_test") && !pkey.startsWith("am_pk_live")) {
-      return {
-        error: ErrCode.InvalidPublishableKey,
-        fallback: false,
-        statusCode: 400,
-      };
-    }
-
-    let env: AppEnv = pkey.startsWith("am_pk_test")
-      ? AppEnv.Sandbox
-      : AppEnv.Live;
-
-    const data = await verifyPublicKey({
-      db: req.db,
-      pkey,
-      env,
+  if (
+    !isAllowedEndpoint({
+      pattern: req.originalUrl,
+      path: req.originalUrl,
+      method: req.method,
+    })
+  ) {
+    throw new RecaseError({
+      message: `Endpoint ${req.originalUrl} not accessable via publishable key. Please try with a secret key instead.`,
+      code: ErrCode.EndpointNotPublic,
+      statusCode: 401,
     });
-
-    if (!data) {
-      return {
-        error: ErrCode.OrgNotFound,
-        fallback: false,
-        statusCode: 401,
-      };
-    }
-
-    let { org, features } = data;
-
-    req.minOrg = {
-      id: org.id,
-      slug: org.slug,
-    };
-    req.orgId = org.id;
-    req.env = env;
-    req.isPublic = true;
-    req.org = org;
-    req.features = features;
-    req.authType = AuthType.PublicKey;
-
-    next();
-    return {
-      error: null,
-      fallback: null,
-      statusCode: null,
-    };
-  } catch (error: any) {
-    console.log(`Failed to get org from publishable key ${pkey}`);
-    console.log(`${error}`);
-    return {
-      error: ErrCode.GetOrgFromPublishableKeyFailed,
-      fallback: false,
-      statusCode: 500,
-    };
   }
+
+  if (!pkey.startsWith("am_pk_test") && !pkey.startsWith("am_pk_live")) {
+    throw new RecaseError({
+      message: "Invalid publishable key",
+      code: ErrCode.InvalidPublishableKey,
+      statusCode: 401,
+    });
+  }
+
+  let env: AppEnv = pkey.startsWith("am_pk_test")
+    ? AppEnv.Sandbox
+    : AppEnv.Live;
+
+  const data = await verifyPublicKey({
+    db: req.db,
+    pkey,
+    env,
+  });
+
+  if (!data) {
+    throw new RecaseError({
+      message: "Invalid publishable key",
+      code: ErrCode.InvalidPublishableKey,
+      statusCode: 401,
+    });
+  }
+
+  let { org, features } = data;
+
+  req.minOrg = {
+    id: org.id,
+    slug: org.slug,
+  };
+  req.orgId = org.id;
+  req.env = env;
+  req.isPublic = true;
+  req.org = org;
+  req.features = features;
+  req.authType = AuthType.PublicKey;
+
+  next();
+  return;
 };

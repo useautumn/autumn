@@ -60,6 +60,7 @@ export const verifySecretKey = async (req: any, res: any, next: any) => {
   }
 
   if (apiKey.startsWith("am_pk")) {
+    console.log("Verifying publishable key");
     return await verifyBearerPublishableKey(apiKey, req, res, next);
   }
 
