@@ -84,16 +84,6 @@ export const handleProductCheck = async ({
   //     })
   //   : undefined;
 
-  if (preview) {
-    preview = {
-      ...preview,
-      product: getProductResponse({
-        product: product!,
-        features,
-      }),
-    };
-  }
-
   if (!cusProduct) {
     res.status(200).json({
       customer_id,

@@ -15,12 +15,16 @@ import {
   numberWithCommas,
   AttachScenario,
   FullProduct,
+  FullCustomer,
+  FreeTrialResponseSchema,
 } from "@autumn/shared";
 import { isPriceItem } from "../product-items/productItemUtils/getItemType.js";
 import { isFeaturePriceItem } from "../product-items/productItemUtils/getItemType.js";
 import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { isProductUpgrade } from "../productUtils.js";
 import { getFirstInterval } from "../prices/priceUtils/priceIntervalUtils.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
+import { getFreeTrialAfterFingerprint } from "../free-trials/freeTrialUtils.js";
 
 export const sortProductItems = (items: ProductItem[], features: Feature[]) => {
   items.sort((a, b) => {
@@ -287,7 +291,8 @@ export const getAttachScenario = ({
   return isUpgrade ? AttachScenario.Upgrade : AttachScenario.Downgrade;
 };
 
-export const toPricecnProduct = ({
+export const toPricecnProduct = async ({
+  db,
   org,
   product,
   fullProduct,
@@ -295,7 +300,9 @@ export const toPricecnProduct = ({
   features,
   curMainProduct,
   curScheduledProduct,
+  fullCus,
 }: {
+  db: DrizzleCli;
   org: Organization;
   product: ProductV2;
   fullProduct: FullProduct;
@@ -303,6 +310,7 @@ export const toPricecnProduct = ({
   features: Feature[];
   curMainProduct?: FullCusProduct | null;
   curScheduledProduct?: FullCusProduct | null;
+  fullCus?: FullCustomer;
 }) => {
   let items = structuredClone(product.items);
 
@@ -389,6 +397,21 @@ export const toPricecnProduct = ({
     intervalGroup = getFirstInterval({ prices: fullProduct.prices });
   }
 
+  let trialAvailable = false;
+  if (product.free_trial && fullCus) {
+    let trial = await getFreeTrialAfterFingerprint({
+      db,
+      freeTrial: product.free_trial,
+      fingerprint: fullCus.fingerprint,
+      internalCustomerId: fullCus.internal_id,
+      multipleAllowed: org.config.multiple_trials,
+      productId: product.id,
+    });
+
+    if (scenario == AttachScenario.Downgrade) trial = null;
+    trialAvailable = notNullish(trial) ? true : false;
+  }
+
   return {
     id: product.id,
     name,
@@ -406,10 +429,10 @@ export const toPricecnProduct = ({
     scenario,
     button_text: buttonText,
     free_trial: freeTrial
-      ? {
-          length: freeTrial,
-          interval: freeTrial.duration,
-        }
+      ? FreeTrialResponseSchema.parse({
+          ...freeTrial,
+          trial_available: trialAvailable,
+        })
       : null,
 
     interval_group: intervalGroup,

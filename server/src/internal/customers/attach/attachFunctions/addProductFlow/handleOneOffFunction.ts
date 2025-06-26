@@ -14,6 +14,7 @@ import { AttachConfig } from "@autumn/shared";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { Decimal } from "decimal.js";
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
 export const handleOneOffFunction = async ({
   req,
@@ -56,32 +57,46 @@ export const handleOneOffFunction = async ({
         .toNumber();
     }
 
-    const amount = priceToInvoiceAmount({
-      price,
-      quantity,
-    });
+    let invoiceItemData = {};
+    if (isFixedPrice({ price })) {
+      quantity = 1;
 
-    const product = priceToProduct({
-      price,
-      products,
-    });
+      invoiceItemData = {
+        price: price.config.stripe_price_id,
+        quantity: 1,
+      };
+    } else {
+      const amount = priceToInvoiceAmount({
+        price,
+        quantity,
+      });
 
-    const description = newPriceToInvoiceDescription({
-      org,
-      price,
-      product: product!,
-      ents: entitlements,
-      quantity: options?.quantity,
-      withProductPrefix: true,
-    });
+      const product = priceToProduct({
+        price,
+        products,
+      });
+
+      const description = newPriceToInvoiceDescription({
+        org,
+        price,
+        product: product!,
+        ents: entitlements,
+        quantity: options?.quantity,
+        withProductPrefix: true,
+      });
+
+      invoiceItemData = {
+        description,
+        price_data: {
+          unit_amount: new Decimal(amount).mul(100).round().toNumber(),
+          currency: org.default_currency,
+          product: price.config?.stripe_product_id || product?.processor?.id!,
+        },
+      };
+    }
 
     invoiceItems.push({
-      description,
-      price_data: {
-        unit_amount: new Decimal(amount).mul(100).round().toNumber(),
-        currency: org.default_currency,
-        product: price.config?.stripe_product_id || product?.processor?.id!,
-      },
+      ...invoiceItemData,
       quantity: 1,
     });
   }
