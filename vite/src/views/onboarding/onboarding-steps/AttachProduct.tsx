@@ -18,10 +18,10 @@ const attachCodeNextjs = (productId: string, apiKey: string) => {
 
   const { attach } = useAutumn();
 
-  <Button onClick={() => attach({ product_id: "${
-    productId || "PRODUCT_ID"
+  <Button onClick={() => attach({ productId: "${
+    productId || "<product_id>"
   }" })}>
-    Buy ${productId || "Product"}
+    Buy ${productId || "<product_name>"}
   </Button>
 `;
 };
