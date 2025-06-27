@@ -4,10 +4,12 @@ import { Decimal } from "decimal.js";
 export const getFeatureName = ({
   feature,
   plural,
+  units,
   capitalize = false,
 }: {
   feature?: Feature;
-  plural: boolean;
+  plural?: boolean;
+  units?: any;
   capitalize?: boolean;
 }) => {
   if (!feature) {
@@ -17,6 +19,14 @@ export const getFeatureName = ({
   let featureName = feature.name || "";
 
   if (feature.display) {
+    if (!plural) {
+      if (units && units === 1) {
+        plural = false;
+      } else {
+        plural = true;
+      }
+    }
+
     if (plural) {
       featureName = feature.display.plural || featureName;
     } else {

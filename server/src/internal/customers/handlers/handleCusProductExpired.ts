@@ -8,7 +8,6 @@ import {
   expireAndActivate,
   fullCusProductToProduct,
 } from "@/internal/customers/cusProducts/cusProductUtils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
@@ -18,7 +17,6 @@ import {
   FullCusProduct,
   Organization,
   AppEnv,
-  Customer,
   FullCustomer,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
@@ -90,7 +88,9 @@ export const expireCusProduct = async ({
       expireImmediately ? "immediately" : "end of cycle"
     })`,
   );
-  logger.info(`Customer: ${fullCus.id} (${env}), Org: ${org.id}`);
+  logger.info(
+    `Customer: ${fullCus.id || fullCus.internal_id} (${env}), Org: ${org.id}`,
+  );
   logger.info(
     `Product: ${cusProduct.product.name}, Status: ${cusProduct.status}`,
   );
@@ -211,7 +211,8 @@ export const handleCusProductExpired = async (req: any, res: any) => {
 
     const fullCus = await CusService.getFull({
       db,
-      idOrInternalId: cusProduct.customer!.id!,
+      idOrInternalId:
+        cusProduct.customer!.id || cusProduct.customer!.internal_id,
       orgId: req.orgId,
       env: req.env,
     });

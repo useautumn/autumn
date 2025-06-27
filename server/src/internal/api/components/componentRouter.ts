@@ -1,14 +1,13 @@
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { toPricecnProduct } from "@/internal/products/pricecn/pricecnUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { isProductUpgrade } from "@/internal/products/productUtils.js";
-import { getProductResponse } from "@/internal/products/productV2Utils.js";
+import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { FullCusProduct, CusProductStatus, ProductV2 } from "@autumn/shared";
+import { ProductV2 } from "@autumn/shared";
 import { Router } from "express";
 
 export const componentRouter: Router = Router();
@@ -61,7 +60,7 @@ componentRouter.get("/pricing_table", async (req: any, res) =>
 
       let batchResponse = [];
       for (let p of products) {
-        let prod = getProductResponse({ product: p, features });
+        let prod = await getProductResponse({ product: p, features });
         let curMainProduct, curScheduledProduct;
 
         if (customer) {

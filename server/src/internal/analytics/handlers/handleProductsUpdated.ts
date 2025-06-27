@@ -14,7 +14,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import { getCustomerDetails } from "@/internal/customers/cusUtils/getCustomerDetails.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 
-import { getProductResponse } from "@/internal/products/productV2Utils.js";
+import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { JobName } from "@/queue/JobName.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -173,7 +173,7 @@ export const handleProductsUpdated = async ({
     expand: [],
   });
 
-  const productRes = getProductResponse({
+  const productRes = await getProductResponse({
     product: fullProduct,
     features,
   });

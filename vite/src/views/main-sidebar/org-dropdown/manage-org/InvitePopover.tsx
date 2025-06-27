@@ -35,6 +35,7 @@ export const InvitePopover = () => {
         await authClient.organization.inviteMember({
           email: email,
           role: "admin",
+          resend: true,
         });
         toast.success(`Successfully sent invitation to ${email}`);
       } else {

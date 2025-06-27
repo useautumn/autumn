@@ -115,6 +115,7 @@ export const getPriceText = ({
   }
 };
 
+// Deprecate
 export const getPricecnPrice = ({
   org,
   items,
@@ -224,12 +225,15 @@ export const featurePricetoPricecnItem = ({
     item,
   });
 
-  let includedUsageStr =
-    nullish(item.included_usage) || item.included_usage == 0
-      ? ""
-      : `${numberWithCommas(item.included_usage as number)} ${
-          withNameAfterIncluded ? `${includedFeatureName} ` : ""
-        }included`;
+  let includedUsageStr = "";
+  if (notNullish(item.included_usage) && (item.included_usage as number) > 0) {
+    let includedUsage = numberWithCommas(item.included_usage as number);
+    if (withNameAfterIncluded) {
+      includedUsageStr = `${includedUsage} ${includedFeatureName}`;
+    } else {
+      includedUsageStr = `${includedUsage} included`;
+    }
+  }
 
   let priceStr = getPriceText({ item, org });
   let billingFeatureName = getFeatureName({
@@ -336,7 +340,12 @@ export const toPricecnProduct = async ({
 
     let feature = features.find((f) => f.id == i.feature_id);
     if (isFeaturePriceItem(i)) {
-      data = featurePricetoPricecnItem({ feature, item: i, org });
+      data = featurePricetoPricecnItem({
+        feature,
+        item: i,
+        org,
+        withNameAfterIncluded: true,
+      });
     } else {
       data = featureToPricecnItem({ feature, item: i });
     }
@@ -359,12 +368,7 @@ export const toPricecnProduct = async ({
 
   if (isCurrent) {
     let isCanceled = curMainProduct!.canceled_at != null;
-    let isTrialing = curMainProduct!.trial_ends_at! > Date.now();
-    buttonText = isCanceled
-      ? "Renew"
-      : isTrialing
-        ? "Trialing"
-        : "Current Plan";
+    buttonText = isCanceled ? "Renew" : "Current Plan";
   } else if (isScheduled) {
     buttonText = "Scheduled";
   }
@@ -427,15 +431,14 @@ export const toPricecnProduct = async ({
       : null,
     items: pricecnItems,
     scenario,
-    button_text: buttonText,
-    free_trial: freeTrial
-      ? FreeTrialResponseSchema.parse({
-          ...freeTrial,
-          trial_available: trialAvailable,
-        })
-      : null,
+    // free_trial: freeTrial
+    //   ? FreeTrialResponseSchema.parse({
+    //       ...freeTrial,
+    //       trial_available: trialAvailable,
+    //     })
+    //   : null,
 
-    interval_group: intervalGroup,
+    // interval_group: intervalGroup,
 
     // To deprecate
     buttonText,

@@ -4,9 +4,9 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import {
   isOneOff,
   isProductUpgrade,
-  sortProductsByPrice,
 } from "@/internal/products/productUtils.js";
-import { getProductResponse } from "@/internal/products/productV2Utils.js";
+import { sortProductsByPrice } from "@/internal/products/productUtils/sortProductUtils.js";
+import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { notNullish } from "@/utils/genUtils.js";
 import {
   type Feature,
@@ -41,7 +41,7 @@ export const getCheckPreview = async ({
   let cusOwnedProducts = mainCusProds.map((cp: FullCusProduct) =>
     fullCusProductToProduct(cp),
   );
-  sortProductsByPrice(cusOwnedProducts);
+  sortProductsByPrice({ products: cusOwnedProducts });
   let highestTierProd =
     cusOwnedProducts.length > 0 ? cusOwnedProducts[0] : null;
 
@@ -94,8 +94,10 @@ export const getCheckPreview = async ({
     }));
   }
 
-  let v2Prods = rawProducts.map((p) =>
-    getProductResponse({ product: p, features: allFeatures }),
+  let v2Prods = await Promise.all(
+    rawProducts.map((p) =>
+      getProductResponse({ product: p, features: allFeatures }),
+    ),
   );
 
   let scenario = notNullish(balance)

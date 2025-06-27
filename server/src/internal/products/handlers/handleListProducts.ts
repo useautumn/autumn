@@ -1,9 +1,8 @@
 import { routeHandler } from "@/utils/routerUtils.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import { getProductResponse } from "@/internal/products/productV2Utils.js";
+import { getProductResponse } from "../productUtils/productResponseUtils/getProductResponse.js";
 
 export const handleListProducts = async (req: any, res: any) =>
   routeHandler({
@@ -22,8 +21,8 @@ export const handleListProducts = async (req: any, res: any) =>
         }),
       ]);
 
-      let prods = products.map((p) =>
-        getProductResponse({ product: p, features }),
+      let prods = await Promise.all(
+        products.map((p) => getProductResponse({ product: p, features })),
       );
 
       if (req.query.v1_schema === "true") {

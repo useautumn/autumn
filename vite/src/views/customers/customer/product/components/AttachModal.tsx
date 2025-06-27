@@ -55,7 +55,9 @@ export const AttachModal = ({
       customer?.name || customer?.id || customer.email || customer.internal_id;
 
     if (entityId) {
-      const entity = entities.find((e: Entity) => e.id === entityId);
+      const entity = entities.find(
+        (e: Entity) => e.id === entityId || e.internal_id === entityId,
+      );
       const entityName = entity?.name || entity?.id || entity?.internal_id;
       return `${cusName} (${entityName})`;
     }
@@ -207,12 +209,6 @@ export const AttachModal = ({
               <AttachInfo />
             </div>
 
-            {/* <div className="flex justify-end">
-              <ToggleConfigButton
-                configOpen={configOpen}
-                setConfigOpen={setConfigOpen}
-              />
-            </div> */}
             <div className="my-2"></div>
           </div>
           <div

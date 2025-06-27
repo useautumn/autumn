@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { logger } from "../logtail/logtailUtils.js";
 
 export const createResendCli = () => {
   return new Resend(process.env.RESEND_API_KEY);
@@ -25,15 +26,29 @@ export const sendTextEmail = async ({
 }: ResendEmailProps) => {
   const resend = createResendCli();
   fromEmail = fromEmail
-    ? `${fromEmail}${process.env.RESEND_DOMAIN}`
+    ? `${fromEmail}@${process.env.RESEND_DOMAIN}`
     : nameToEmail(from);
 
-  await resend.emails.send({
-    from: `${from} <${fromEmail}>`,
-    to: to,
-    subject: subject,
-    text: body,
-  });
+  try {
+    logger.info(`Sending email to ${to} with subject ${subject}`);
+    const { data, error } = await resend.emails.send({
+      from: `${from} <${fromEmail}>`,
+      to: to,
+      subject: subject,
+      text: body,
+    });
+
+    if (error) {
+      logger.error(`Error sending email`, {
+        error,
+      });
+    }
+  } catch (error) {
+    logger.error(`Error sending email`, {
+      error,
+    });
+    throw error;
+  }
 };
 
 export const sendHtmlEmail = async ({
@@ -44,8 +59,9 @@ export const sendHtmlEmail = async ({
   fromEmail,
 }: ResendEmailProps) => {
   const resend = createResendCli();
+
   fromEmail = fromEmail
-    ? `${fromEmail}${process.env.RESEND_DOMAIN}`
+    ? `${fromEmail}@${process.env.RESEND_DOMAIN}`
     : nameToEmail(from);
 
   await resend.emails.send({
