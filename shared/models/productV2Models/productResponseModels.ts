@@ -6,8 +6,8 @@ import { AttachScenario } from "../checkModels/checkPreviewModels.js";
 
 export const ProductPropertiesSchema = z.object({
   is_free: z.boolean(),
-  is_subscription: z.boolean(),
-  interval_group: z.string().nullable(),
+  is_one_off: z.boolean(),
+  interval_group: z.string().nullish(),
 });
 
 export const ProductResponseSchema = z.object({

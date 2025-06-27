@@ -22,7 +22,7 @@ productBetaRouter.get("", handleListProductsBeta);
 
 export const productRouter: Router = Router();
 
-productRouter.get("", handleListProducts);
+productRouter.get("", handleListProductsBeta);
 
 productRouter.post("", handleCreateProduct);
 

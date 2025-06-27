@@ -70,6 +70,7 @@ export const featuresToObject = ({
 
       next_reset_at: getEarliestNextResetAt(relatedEnts),
       interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",
+      overage_allowed: relatedEnts.some((e) => e.overage_allowed),
       breakdown:
         !unlimited && relatedEnts.length > 1
           ? relatedEnts.map((e) => ({
@@ -114,6 +115,7 @@ export const balancesToFeatureResponse = ({
       ...b,
       usage: b.used,
       included_usage: b.allowance,
+      overage_allowed: b.overage_allowed,
     });
   });
 

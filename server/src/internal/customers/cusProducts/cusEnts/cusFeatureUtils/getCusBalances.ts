@@ -32,6 +32,7 @@ export interface CusFeatureBalance {
   unused?: number | null;
   next_reset_at?: number | null;
   allowance?: number | null;
+  overage_allowed?: boolean | null;
 }
 
 export const getV1EntitlementsRes = ({
@@ -144,6 +145,7 @@ export const getCusBalances = async ({
           adjustment: isBoolean || unlimited ? undefined : 0,
           used: isBoolean ? undefined : unlimited ? null : 0,
           unused: 0,
+          overage_allowed: usageAllowed,
         };
 
         if (org.config.api_version >= BREAK_API_VERSION) {
