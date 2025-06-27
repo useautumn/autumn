@@ -71,7 +71,7 @@ export const featuresToObject = ({
       next_reset_at: getEarliestNextResetAt(relatedEnts),
       interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",
       breakdown:
-        relatedEnts.length > 1
+        !unlimited && relatedEnts.length > 1
           ? relatedEnts.map((e) => ({
               interval: e.interval!,
               balance: e.balance,

@@ -34,8 +34,10 @@ export const getCurContUseItems = async ({
   attachParams: AttachParams;
 }) => {
   const { features } = attachParams;
-  const { curMainProduct } = attachParamToCusProducts({ attachParams });
-  const curCusProduct = curMainProduct!;
+  const { curMainProduct, curSameProduct } = attachParamToCusProducts({
+    attachParams,
+  });
+  const curCusProduct = curSameProduct || curMainProduct!;
   const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
   const curEnts = cusProductToEnts({ cusProduct: curCusProduct });
 
