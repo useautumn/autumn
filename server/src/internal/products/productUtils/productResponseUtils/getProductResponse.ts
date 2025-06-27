@@ -9,6 +9,7 @@ import {
   Organization,
   AttachScenario,
   ProductPropertiesSchema,
+  BillingInterval,
 } from "@autumn/shared";
 import { sortProductItems } from "../../pricecn/pricecnUtils.js";
 import {
@@ -94,12 +95,14 @@ export const getFreeTrialResponse = async ({
 };
 
 export const getProductProperties = ({ product }: { product: FullProduct }) => {
-  let firstInterval = getFirstInterval({ prices: product.prices }) || null;
+  let firstInterval: any = getFirstInterval({ prices: product.prices });
+  if (firstInterval == BillingInterval.OneOff) {
+    firstInterval = null;
+  }
 
   return ProductPropertiesSchema.parse({
-    is_free: isFreeProduct(product.prices),
-    is_subscription:
-      !isOneOff(product.prices) && !isFreeProduct(product.prices),
+    is_free: isFreeProduct(product.prices) || false,
+    is_one_off: isOneOff(product.prices) || false,
     interval_group: firstInterval,
   });
 };
