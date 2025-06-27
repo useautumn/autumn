@@ -274,6 +274,10 @@ export const getAttachScenario = ({
 }) => {
   if (!curMainProduct) return AttachScenario.New;
 
+  if (fullProduct.is_add_on) {
+    return AttachScenario.New;
+  }
+
   // 1. If current product is the same as the product, return active
   if (curMainProduct?.product.id == fullProduct.id) {
     if (curMainProduct.canceled_at != null) {

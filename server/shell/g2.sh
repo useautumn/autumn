@@ -10,6 +10,7 @@ MOCHA_PARALLEL=true $MOCHA_SETUP && $MOCHA_CMD \
 'tests/attach/entities/*.ts' \
 'tests/attach/others/*.ts' \
 'tests/attach/updateEnts/*.ts' \
-'tests/advanced/check/*.ts'
+'tests/advanced/check/*.ts' \
+'tests/attach/others/*.ts'
 
 
