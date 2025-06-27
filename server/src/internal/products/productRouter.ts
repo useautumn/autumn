@@ -15,6 +15,10 @@ import { handleGetProduct } from "./handlers/handleGetProduct.js";
 import { handleCopyProduct } from "./handlers/handleCopyProduct.js";
 import { handleCreateProduct } from "./handlers/handleCreateProduct.js";
 import { handleListProducts } from "./handlers/handleListProducts.js";
+import { handleListProductsBeta } from "./handlers/handleListProductsBeta.js";
+
+export const productBetaRouter: Router = Router();
+productBetaRouter.get("", handleListProductsBeta);
 
 export const productRouter: Router = Router();
 

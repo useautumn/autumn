@@ -10,7 +10,7 @@ import {
   products,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { getLatestProducts, sortProductsByPrice } from "./productUtils.js";
+import { getLatestProducts } from "./productUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { and, desc, eq, exists, inArray, or, sql } from "drizzle-orm";
 

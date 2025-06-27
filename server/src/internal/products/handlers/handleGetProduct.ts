@@ -1,15 +1,10 @@
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import {
-  getProductResponse,
-  mapToProductItems,
-  mapToProductV2,
-} from "@/internal/products/productV2Utils.js";
+import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { ErrCode, ProductResponseSchema } from "@autumn/shared";
-import { ProductItemResponseSchema } from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
 export const handleGetProduct = async (req: any, res: any) =>
@@ -54,7 +49,7 @@ export const handleGetProduct = async (req: any, res: any) =>
         res.status(200).json(product);
       } else {
         res.status(200).json(
-          getProductResponse({
+          await getProductResponse({
             product,
             features,
           }),

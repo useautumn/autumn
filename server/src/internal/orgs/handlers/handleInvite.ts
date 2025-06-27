@@ -1,3 +1,4 @@
+import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
 import { auth } from "@/utils/auth.js";
 import {
   handleFrontendReqError,
@@ -28,6 +29,12 @@ export const handleInvite = async (
           role: role,
         },
       });
+
+      await sendInvitationEmail({
+        email: email,
+        orgName: org.name,
+      });
+
       res.status(200).send({
         message: "User added to organization",
       });

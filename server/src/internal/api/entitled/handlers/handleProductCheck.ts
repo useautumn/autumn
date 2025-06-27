@@ -3,7 +3,7 @@ import { notNullish } from "@/utils/genUtils.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { getOrgAndFeatures } from "@/internal/orgs/orgUtils.js";
-import { getProductResponse } from "@/internal/products/productV2Utils.js";
+
 import { getProductCheckPreview } from "./getProductCheckPreview.js";
 
 export const handleProductCheck = async ({

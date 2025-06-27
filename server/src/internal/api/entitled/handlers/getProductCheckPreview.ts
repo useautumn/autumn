@@ -13,12 +13,13 @@ import {
 } from "@autumn/shared";
 
 import { getAttachScenario } from "./attachToCheckPreview/getAttachScenario.js";
-import { getProductResponse } from "@/internal/products/productV2Utils.js";
+import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
 import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { DrizzleCli } from "@/db/initDrizzle.js";
 
 const getNextCycle = (preview: AttachPreview) => {
   if (!preview.due_next_cycle && !preview.due_today) {
@@ -34,12 +35,16 @@ export const attachToCheckPreview = async ({
   product,
   org,
   features,
+  db,
+  fullCus,
 }: {
   preview: AttachPreview;
   params: AttachParams;
   product: FullProduct;
   org: Organization;
   features: Feature[];
+  db: DrizzleCli;
+  fullCus: FullCustomer;
 }) => {
   // 1. If check
   let attachFunc = preview.func;
@@ -110,15 +115,16 @@ export const attachToCheckPreview = async ({
     current_product_name: preview.current_product?.name,
 
     // Otehrs
-
     options: options?.length > 0 ? options : undefined,
     items: items?.length > 0 ? items : undefined,
     due_today,
     due_next_cycle,
-    product: getProductResponse({
+    product: await getProductResponse({
       product,
       features,
-      trialAvailable: notNullish(params.freeTrial) ? true : false,
+      db,
+      fullCus,
+      currency: org.default_currency || undefined,
     }),
   };
   return checkPreview;
@@ -135,7 +141,7 @@ export const getProductCheckPreview = async ({
   product: FullProduct;
   logger: any;
 }) => {
-  const { org, features } = req;
+  const { org, features, db } = req;
 
   // Build attach params
   const attachParams = await checkToAttachParams({
@@ -164,6 +170,8 @@ export const getProductCheckPreview = async ({
     product,
     org,
     features,
+    db,
+    fullCus: customer,
   });
 
   return checkPreview;

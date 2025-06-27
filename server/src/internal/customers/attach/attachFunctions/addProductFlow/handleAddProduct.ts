@@ -79,7 +79,7 @@ export const handleAddProduct = async ({
           code: SuccessCode.FreeProductAttached,
           message: `Successfully attached ${productNames} to ${customerName}`,
           product_ids: products.map((p) => p.id),
-          customer_id: customer.id,
+          customer_id: customer.id || customer.internal_id,
         }),
       );
     } else {

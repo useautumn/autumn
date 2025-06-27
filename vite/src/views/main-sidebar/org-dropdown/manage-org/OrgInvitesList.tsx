@@ -1,11 +1,9 @@
 import { useMemberships } from "../hooks/useMemberships";
 import { Invite, Membership } from "@autumn/shared";
-import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { Item, Row } from "@/components/general/TableGrid";
 import { cn } from "@/lib/utils";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import { Badge } from "@/components/ui/badge";
-import { InvitePopover } from "./InvitePopover";
 import { useSession } from "@/lib/auth-client";
 import { MemberRowToolbar } from "./MemberRowToolbar";
 

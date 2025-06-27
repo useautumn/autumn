@@ -30,9 +30,21 @@ export function compareBillingIntervals(
   return BillingIntervalOrder.indexOf(a!) - BillingIntervalOrder.indexOf(b!);
 }
 
-export const getFirstInterval = ({ prices }: { prices: Price[] }) => {
+export const getFirstInterval = ({
+  prices,
+  excludeOneOff = false,
+}: {
+  prices: Price[];
+  excludeOneOff?: boolean;
+}) => {
   return BillingIntervalOrder.find((interval) =>
-    prices.some((price) => price.config.interval === interval),
+    prices.some((price) => {
+      let intervalMatch = price.config.interval === interval;
+      let oneOffMatch = excludeOneOff
+        ? price.config.interval !== BillingInterval.OneOff
+        : true;
+      return intervalMatch && oneOffMatch;
+    }),
   )!;
 };
 
