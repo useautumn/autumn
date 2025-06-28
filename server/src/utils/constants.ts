@@ -16,4 +16,5 @@ export const ADMIN_USER_IDs =
 export const dashboardOrigins = [
   "http://localhost:3000",
   "https://app.useautumn.com",
+  process.env.CLIENT_URL!,
 ];
