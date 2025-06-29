@@ -157,6 +157,7 @@ export const priceToInvoiceDescription = ({
       cusProduct,
       internalFeatureId: ent.feature.internal_id,
     });
+
     description = formatPrepaidPrice({ price, ents, quantity });
   }
 

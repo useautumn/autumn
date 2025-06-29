@@ -6,6 +6,7 @@ import {
   FullRewardProgram,
   ReferralCode,
   Reward,
+  RewardCategory,
   RewardReceivedBy,
   RewardRedemption,
 } from "@autumn/shared";
@@ -22,6 +23,8 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusProductService } from "../customers/cusProducts/CusProductService.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
+import { getRewardCat } from "./rewardUtils.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const generateReferralCode = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -114,6 +117,7 @@ export const triggerRedemption = async ({
 };
 
 export const triggerFreeProduct = async ({
+  req,
   db,
   referralCode,
   redeemer,
@@ -123,6 +127,7 @@ export const triggerFreeProduct = async ({
   env,
   logger,
 }: {
+  req?: ExtendedRequest;
   db: DrizzleCli;
   referralCode: ReferralCode;
   redeemer: Customer;
@@ -177,6 +182,7 @@ export const triggerFreeProduct = async ({
   ]);
 
   let attachParams: InsertCusProductParams = {
+    req,
     org,
     product: fullProduct,
     prices: fullProduct.prices,

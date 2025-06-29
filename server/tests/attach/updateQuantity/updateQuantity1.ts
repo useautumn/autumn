@@ -18,8 +18,8 @@ import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { advanceTestClock } from "tests/utils/stripeUtils.js";
 import { addWeeks } from "date-fns";
 import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
-import { timeout } from "@/utils/genUtils.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
+import { timeout } from "@/utils/genUtils.js";
 
 const testCase = "updateQuantity1";
 
@@ -111,33 +111,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
     });
   });
 
-  // const newOpts = [
-  //   {
-  //     feature_id: TestFeature.Users,
-  //     quantity: 1,
-  //   },
-  // ];
-  // it("should throw error if try to reduce seats to less than current usage", async function () {
-  //   await autumn.track({
-  //     customer_id: customerId,
-  //     feature_id: TestFeature.Users,
-  //     value: 2,
-  //   });
-
-  //   await timeout(1000);
-
-  //   await expectAutumnError({
-  //     errCode: AttachErrCode.InvalidOptions,
-  //     func: async () => {
-  //       await autumn.attach({
-  //         customer_id: customerId,
-  //         product_id: pro.id,
-  //         options: newOpts,
-  //       });
-  //     },
-  //   });
-  // });
-
   const updatedOpts = [
     {
       feature_id: TestFeature.Users,
@@ -146,6 +119,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing upgrades with prepaid singl
   ];
 
   it("should update quantity to 4 users and have usage stay the same", async function () {
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Users,
+      value: 2,
+    });
+    await timeout(3000);
+
     curUnix = await advanceTestClock({
       stripeCli,
       testClockId,

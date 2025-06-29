@@ -1,4 +1,5 @@
 import "dotenv/config";
+
 import { db } from "@/db/initDrizzle.js";
 import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -48,7 +49,7 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "https://app.useautumn.com",
     "https://*.useautumn.com",
-    process.env.CLIENT_URL!,
+    // process.env.CLIENT_URL!,
   ],
   emailAndPassword: {
     enabled: true,
