@@ -1,12 +1,12 @@
+import "dotenv/config";
 import { db } from "@/db/initDrizzle.js";
-
+import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { betterAuth } from "better-auth";
 import { emailOTP, admin, organization } from "better-auth/plugins";
 
-import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
@@ -48,6 +48,7 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "https://app.useautumn.com",
     "https://*.useautumn.com",
+    process.env.CLIENT_URL!,
   ],
   emailAndPassword: {
     enabled: true,
