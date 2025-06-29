@@ -7,7 +7,6 @@ import {
   FullCustomerEntitlement,
   FullEntitlement,
   getFeatureInvoiceDescription,
-  InsertReplaceable,
   PreviewLineItem,
   Price,
 } from "@autumn/shared";
@@ -156,6 +155,7 @@ export const getContUseInvoiceItems = async ({
         attachParams,
         prevCusEnt,
       });
+
       const prevItem = curItems.find(
         (item) => item.price_id === prevCusPrice?.price.id,
       );
