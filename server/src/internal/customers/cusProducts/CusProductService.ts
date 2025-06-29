@@ -239,10 +239,14 @@ export class CusProductService {
   static async getByProductId({
     db,
     productId,
+    orgId,
+    env,
     limit = 1,
   }: {
     db: DrizzleCli;
     productId: string;
+    orgId: string;
+    env: AppEnv;
     limit?: number;
   }) {
     let data = await db
@@ -252,7 +256,13 @@ export class CusProductService {
         products,
         eq(customerProducts.internal_product_id, products.internal_id),
       )
-      .where(eq(products.id, productId))
+      .where(
+        and(
+          eq(products.id, productId),
+          eq(products.org_id, orgId),
+          eq(products.env, env),
+        ),
+      )
       .limit(1);
 
     return data.map((d) => ({

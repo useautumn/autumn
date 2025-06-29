@@ -23,7 +23,7 @@ import { hasPrepaidPrice } from "@/internal/products/prices/priceUtils/usagePric
 import { attachParamToCusProducts } from "./convertAttachParams.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 
-const checkMultiProductErrors = async ({
+const handleMultiProductErrors = async ({
   attachParams,
 }: {
   attachParams: AttachParams;
@@ -291,7 +291,7 @@ export const getAttachBranch = async ({
 }) => {
   // 1. Multi product
   if (notNullish(attachBody.product_ids)) {
-    await checkMultiProductErrors({ attachParams });
+    await handleMultiProductErrors({ attachParams });
     return AttachBranch.MultiProduct;
   }
 

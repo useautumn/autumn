@@ -47,7 +47,11 @@ export const createStripeCusIfNotExists = async ({
           expand: ["test_clock", "invoice_settings.default_payment_method"],
         },
       );
-      return stripeCus as Stripe.Customer;
+      if (!stripeCus.deleted) {
+        return stripeCus as Stripe.Customer;
+      } else {
+        createNew = true;
+      }
     } catch (error) {
       createNew = true;
     }

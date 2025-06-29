@@ -26,7 +26,8 @@ const getProductsForAttach = async ({
 
   if (notNullish(product_ids)) {
     let freeTrialProds = products.filter((prod) => notNullish(prod.free_trial));
-    if (freeTrialProds.length > 0) {
+    console.log("freeTrialProds", freeTrialProds);
+    if (freeTrialProds.length > 1) {
       throw new RecaseError({
         message:
           "When providing product_ids, can't have multiple free trial products",
