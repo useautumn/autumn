@@ -33,7 +33,7 @@ export const copyPrice = async ({
     newPrice = {
       ...newPrice,
       config: {
-        ...newPrice.config,
+        ...(newPrice.config as UsagePriceConfig),
         ...usagePriceConfig,
       },
     };
