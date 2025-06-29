@@ -186,6 +186,7 @@ export const itemsAreSame = ({
       item1: FeatureItemSchema.parse(item1),
       item2: item2 as FeatureItem,
     });
+
     pricesChanged = false;
   }
 
