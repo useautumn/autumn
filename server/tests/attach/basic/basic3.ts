@@ -106,7 +106,7 @@ describe(`${chalk.yellowBright("basic3: Testing attach one time / monthly add on
         res.checkout_url,
         oneTimeQuantity / oneTimeBillingUnits!,
       );
-      await timeout(10000);
+      await timeout(15000);
     }
   });
 
