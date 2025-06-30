@@ -14,15 +14,21 @@ import { useState } from "react";
 const attachCodeNextjs = (productId: string, apiKey: string) => {
   return `// app/page.tsx
 
-  import { useAutumn } from 'autumn-js/react';
+  import { useCustomer } from 'autumn-js/react';
 
-  const { attach } = useAutumn();
+  export default function PurchaseButton() {
+    const { attach } = useCustomer();
 
-  <Button onClick={() => attach({ productId: "${
-    productId || "<product_id>"
-  }" })}>
-    Buy ${productId || "<product_name>"}
-  </Button>
+    return (
+      <button
+        onClick={async () => {
+          await attach({ productId: "${productId || "pro"}" });
+        }}
+      >
+        Upgrade to ${productId || "Pro"}
+      </button>
+    );
+  }
 `;
 };
 
