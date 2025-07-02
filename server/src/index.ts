@@ -38,11 +38,14 @@ const init = async () => {
     cors({
       origin: [
         "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
         "https://app.useautumn.com",
         "https://*.useautumn.com",
         "https://localhost:8080",
         "https://app.aidvize.com",
         "http://staging.aidvize.com",
+        "https://www.alphalog.ai/",
         process.env.CLIENT_URL || "",
       ],
       credentials: true,
