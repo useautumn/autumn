@@ -23,23 +23,19 @@ const checkAccessCode = (
 import { useCustomer } from "autumn-js/react";
 
 export default function CheckAccess() {
-  const { customer } = useCustomer();
+  const { customer, allowed } = useCustomer();
 
   const handleCheckAccess = () => {
     ${
       isProduct
         ? `// Check if customer has an active product
-    const hasProduct = customer?.products?.some(p => p.id === "${id}" && p.status === "active");
-    
-    if (hasProduct) {
+    if (allowed({ productId: "${id}" })) {
       alert("You have access to ${id}");
     } else {
       alert("You don't have access to ${id}");
     }`
         : `// Check feature balance
-    const feature = customer?.features?.${id};
-    
-    if (feature && feature.balance > 0) {
+    if (allowed({ featureId: "${id}" });) {
       alert("You have access to ${id}. Balance: " + feature.balance);
     } else {
       alert("You don't have access to ${id}");

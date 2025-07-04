@@ -15,8 +15,8 @@ import { Dialog } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 import { useSearchParams } from "react-router";
-import { PricingTable } from "@/components/autumn/pricing-table";
-import { useAutumn, useCustomer } from "autumn-js/react";
+
+import { useCustomer, PricingTable, CheckDialog } from "autumn-js/react";
 import {
   Check,
   Lock,
@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
-import PaywallDialog from "@/components/autumn/paywall-dialog";
+// import PaywallDialog from "@/components/autumn/paywall-dialog";
 
 export const SampleApp = ({
   data,
@@ -44,8 +44,6 @@ export const SampleApp = ({
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
 
-  const [product, setProduct] = useState<any>(data.products[0]);
-  const [features, setFeatures] = useState<any[]>(data.features);
   const [open, setOpen] = useState(false);
   const [checkData, setCheckData] = useState<any>(null);
   const [trackData, setTrackData] = useState<any>(null);
@@ -58,8 +56,7 @@ export const SampleApp = ({
     value: 1,
   });
 
-  const { customer } = useCustomer();
-  const { openBillingPortal } = useAutumn();
+  const { customer, openBillingPortal } = useCustomer();
 
   if (!data.products) return null;
 
@@ -439,8 +436,7 @@ const FeatureUsageItem = ({
   onTrackData: (data: any) => void;
   onFeatureUsed: (feature: any) => void;
 }) => {
-  const { check, track } = useAutumn();
-  const { refetch } = useCustomer();
+  const { check, track, refetch } = useCustomer();
   const [trackValue, setTrackValue] = useState<number | string>(1);
 
   if (feature.type === "boolean") {
@@ -497,7 +493,7 @@ const FeatureUsageItem = ({
               });
               const { data: checkResponse } = await check({
                 featureId: customerFeature.id,
-                dialog: PaywallDialog,
+                dialog: CheckDialog,
               });
               onCheckData(checkResponse);
 
