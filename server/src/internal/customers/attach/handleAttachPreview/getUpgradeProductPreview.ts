@@ -27,6 +27,7 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { Decimal } from "decimal.js";
 import { intervalsAreSame } from "../attachUtils/getAttachConfig.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 const getNextCycleAt = ({
   prices,
@@ -183,6 +184,8 @@ export const getUpgradeProductPreview = async ({
     now,
     freeTrial: attachParams.freeTrial,
   });
+
+  items = items.filter((item) => item.amount !== 0);
 
   if (branch == AttachBranch.UpdatePrepaidQuantity) {
     items = items.filter((item) => item.usage_model == UsageModel.Prepaid);

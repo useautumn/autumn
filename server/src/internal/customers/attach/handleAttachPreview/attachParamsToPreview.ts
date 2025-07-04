@@ -23,6 +23,7 @@ export const attachParamsToPreview = async ({
   logger: any;
 }) => {
   // Handle existing product
+
   const branch = await getAttachBranch({
     req,
     attachBody,

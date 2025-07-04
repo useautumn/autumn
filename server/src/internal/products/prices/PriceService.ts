@@ -4,6 +4,12 @@ import { Price, prices, Product } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 
 export class PriceService {
+  static async get({ db, id }: { db: DrizzleCli; id: string }) {
+    return (await db.query.prices.findFirst({
+      where: eq(prices.id, id),
+    })) as Price;
+  }
+
   static async getCustomInEntIds({
     db,
     entitlementIds,

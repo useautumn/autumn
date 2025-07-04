@@ -31,8 +31,6 @@ export const handleSubscriptionUpdated = async ({
   previousAttributes: any;
   logger: any;
 }) => {
-  // const lockKey = `sub_updated_${subscription.id}`;
-
   // Get cus products by stripe sub id
   const cusProducts = await CusProductService.getByStripeSubId({
     db,
@@ -43,43 +41,8 @@ export const handleSubscriptionUpdated = async ({
   });
 
   if (cusProducts.length === 0) {
-    console.log(
-      `subscription.updated: no customer products found with stripe sub id: ${subscription.id}`,
-    );
     return;
   }
-
-  // // Create a lock to prevent race conditions
-  // let lockAcquired = false;
-  // try {
-  //   let attempts = 0;
-
-  //   while (!lockAcquired && attempts < 3) {
-  //     lockAcquired = await getWebhookLock({ lockKey, logger });
-  //     if (!lockAcquired) {
-  //       attempts++;
-  //       console.log(
-  //         `sub.updated: failed to acquire lock for ${subscription.id}, attempt ${attempts}`,
-  //       );
-  //       if (attempts < 3) {
-  //         await new Promise((resolve) => setTimeout(resolve, 1000));
-  //       }
-  //     } else {
-  //       break;
-  //     }
-  //   }
-  // } catch (error) {
-  //   logger.error("lock error, setting lockAcquired to true");
-  //   lockAcquired = true;
-  // }
-
-  // if (!lockAcquired) {
-  //   throw new RecaseError({
-  //     message: `Failed to acquire lock for stripe webhook, sub.updated.`,
-  //     code: ErrCode.InvalidRequest,
-  //     statusCode: 400,
-  //   });
-  // }
 
   // Handle syncing status
   let stripeCli = createStripeCli({
@@ -110,12 +73,14 @@ export const handleSubscriptionUpdated = async ({
   });
 
   if (updatedCusProducts.length > 0) {
-    console.log(
+    logger.info(
       `subscription.updated: updated ${updatedCusProducts.length} customer products`,
       {
-        ids: updatedCusProducts.map((cp) => cp.id),
-        status: updatedCusProducts[0].status,
-        canceled_at: updatedCusProducts[0].canceled_at,
+        data: {
+          ids: updatedCusProducts.map((cp) => cp.id),
+          status: updatedCusProducts[0].status,
+          canceled_at: updatedCusProducts[0].canceled_at,
+        },
       },
     );
   }
@@ -164,13 +129,48 @@ export const handleSubscriptionUpdated = async ({
       logger.error(
         `subscription.updated: error cancelling / voiding: ${error.message}`,
         {
-          subscriptionId: subscription.id,
-          stripeSubId: subscription.id,
-          error: error.message,
+          data: {
+            subscriptionId: subscription.id,
+            stripeSubId: subscription.id,
+            error: error.message,
+          },
         },
       );
     }
   }
-
-  // await releaseWebhookLock({ lockKey, logger });
 };
+
+// const lockKey = `sub_updated_${subscription.id}`;
+// // Create a lock to prevent race conditions
+// let lockAcquired = false;
+// try {
+//   let attempts = 0;
+
+//   while (!lockAcquired && attempts < 3) {
+//     lockAcquired = await getWebhookLock({ lockKey, logger });
+//     if (!lockAcquired) {
+//       attempts++;
+//       console.log(
+//         `sub.updated: failed to acquire lock for ${subscription.id}, attempt ${attempts}`,
+//       );
+//       if (attempts < 3) {
+//         await new Promise((resolve) => setTimeout(resolve, 1000));
+//       }
+//     } else {
+//       break;
+//     }
+//   }
+// } catch (error) {
+//   logger.error("lock error, setting lockAcquired to true");
+//   lockAcquired = true;
+// }
+
+// if (!lockAcquired) {
+//   throw new RecaseError({
+//     message: `Failed to acquire lock for stripe webhook, sub.updated.`,
+//     code: ErrCode.InvalidRequest,
+//     statusCode: 400,
+//   });
+// }
+
+// await releaseWebhookLock({ lockKey, logger });

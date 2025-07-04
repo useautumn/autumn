@@ -54,9 +54,6 @@ export const completeCheckoutForm = async (
   await page.waitForSelector("#billingPostalCode");
   await page.type("#billingPostalCode", "123456");
 
-  // await page.waitForSelector("#billingPostalCode");
-  // await page.type("#billingPostalCode", "123456");
-
   if (overrideQuantity) {
     // console.log("   - Overriding quantity");
     const quantityBtn = await page.$(".AdjustableQuantitySelector");
@@ -80,6 +77,7 @@ export const completeCheckoutForm = async (
     await timeout(5000);
   }
 
+  // const submitButton = await page.$(".SubmitButton-TextContainer");
   const submitButton = await page.$(".SubmitButton-TextContainer");
   await submitButton?.evaluate((b: any) => (b as HTMLElement).click());
   await timeout(7000);

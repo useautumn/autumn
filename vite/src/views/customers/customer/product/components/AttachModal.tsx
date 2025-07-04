@@ -122,7 +122,10 @@ export const AttachModal = ({
     const cusId = getCusId();
 
     for (const option of options) {
-      if (nullish(option.quantity)) {
+      if (
+        nullish(option.quantity) &&
+        preview?.branch != AttachBranch.SameCustomEnts
+      ) {
         toast.error(`Quantity for ${option.feature_name} is required`);
         return;
       }

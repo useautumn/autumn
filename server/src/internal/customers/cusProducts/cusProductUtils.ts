@@ -30,7 +30,7 @@ import {
   subIsPrematurelyCanceled,
 } from "@/external/stripe/stripeSubUtils.js";
 import { getRelatedCusEnt } from "./cusPrices/cusPriceUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -553,5 +553,5 @@ export const getFeatureQuantity = ({
   const option = options.find(
     (o) => o.internal_feature_id == internalFeatureId,
   );
-  return option?.quantity || 1;
+  return nullish(option?.quantity) ? 1 : option?.quantity!;
 };

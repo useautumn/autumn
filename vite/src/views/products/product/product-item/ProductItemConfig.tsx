@@ -66,7 +66,7 @@ export const ProductItemConfig = () => {
         const resetUsageWhenEnabled =
           feature.config?.usage_type == FeatureUsageType.Continuous
             ? false
-            : true;
+            : item.reset_usage_when_enabled;
 
         const newItem = {
           ...item,

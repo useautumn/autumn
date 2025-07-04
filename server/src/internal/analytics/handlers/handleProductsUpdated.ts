@@ -117,17 +117,6 @@ export const handleProductsUpdated = async ({
     deletedCusProduct,
   } = data;
 
-  if (!req) {
-    logger.warn("products.updated, no req object found, skipping", {
-      ...data,
-      org: {
-        id: org.id,
-        slug: org.slug,
-      },
-    });
-    return;
-  }
-
   // Product:
   let product = cusProduct.product;
   let prices = cusProduct.customer_prices.map((cp) => cp.price);
@@ -181,26 +170,32 @@ export const handleProductsUpdated = async ({
   // 1. Log action to DB
 
   try {
-    let action = constructAction({
-      org,
-      env,
-      customer,
-      entity: customer.entity,
-      type: ActionType.CustomerProductsUpdated,
-      req,
-      properties: {
-        product_id: product.id,
-        customer_product_id: cusProduct.id,
-        scenario,
+    if (req) {
+      let action = constructAction({
+        org,
+        env,
+        customer,
+        entity: customer.entity,
+        type: ActionType.CustomerProductsUpdated,
+        req,
+        properties: {
+          product_id: product.id,
+          customer_product_id: cusProduct.id,
+          scenario,
 
-        deleted_product_id: deletedCusProduct?.product.id,
-        scheduled_product_id: scheduledCusProduct?.product.id,
+          deleted_product_id: deletedCusProduct?.product.id,
+          scheduled_product_id: scheduledCusProduct?.product.id,
 
-        body: req.body,
-      },
-    });
+          body: req.body,
+        },
+      });
 
-    await ActionService.insert(db, action);
+      await ActionService.insert(db, action);
+    } else {
+      logger.warn(
+        "products.updated, no req object found, skipping action insert",
+      );
+    }
   } catch (error: any) {
     logger.error("Failed to log action to DB", {
       message: error.message,

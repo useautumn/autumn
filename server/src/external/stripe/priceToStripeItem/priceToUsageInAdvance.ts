@@ -60,8 +60,6 @@ export const priceToUsageInAdvance = ({
   let optionsQuantity = options?.quantity;
   let finalQuantity = optionsQuantity;
 
-  console.log("options", options);
-
   // 1. If adjustable quantity is set, use that, else if quantity is undefined, adjustable is true, else false
   let adjustable = !nullish(options?.adjustable_quantity)
     ? options!.adjustable_quantity

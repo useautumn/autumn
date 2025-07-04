@@ -11,7 +11,7 @@ import {
 import Stripe from "stripe";
 import { getCusPaymentMethod } from "../stripeCusUtils.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
-import { generateId } from "@/utils/genUtils.js";
+import { formatUnixToDateTime, generateId } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getAlignedIntervalUnix } from "@/internal/products/prices/billingIntervalUtils.js";

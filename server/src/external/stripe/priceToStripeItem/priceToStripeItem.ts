@@ -64,6 +64,7 @@ export const priceToStripeItem = ({
     billingType == BillingType.OneOff
   ) {
     const config = price.config as FixedPriceConfig;
+
     lineItem = {
       price: config.stripe_price_id,
       quantity: 1,
