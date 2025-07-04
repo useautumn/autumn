@@ -56,7 +56,7 @@
     "@sentry/node": "^9.30.0",
     "@supabase/supabase-js": "^2.46.2",
     "ai": "^4.3.10",
-    "autumn-js": "^0.0.65",
+    "autumn-js": "^0.0.77",
     "axios": "^1.8.3",
     "better-auth": "^1.2.9",
     "body-parser": "^1.20.3",
