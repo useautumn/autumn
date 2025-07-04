@@ -451,7 +451,16 @@ export class CusProductService {
     let updated = await db
       .update(customerProducts)
       .set(updates as any)
-      .where(arrayContains(customerProducts.subscription_ids, [stripeSubId]))
+      .where(
+        and(
+          arrayContains(customerProducts.subscription_ids, [stripeSubId]),
+          or(
+            eq(customerProducts.status, CusProductStatus.Active),
+            eq(customerProducts.status, CusProductStatus.PastDue),
+            eq(customerProducts.status, CusProductStatus.Scheduled),
+          ),
+        ),
+      )
       .returning({
         id: customerProducts.id,
       });

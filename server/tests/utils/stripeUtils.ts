@@ -51,11 +51,8 @@ export const completeCheckoutForm = async (
 
   await page.waitForSelector("#billingName");
   await page.type("#billingName", "Test Customer");
-  // await page.waitForSelector("#billingPostalCode");
-  // await page.type("#billingPostalCode", "123456");
-
-  // await page.waitForSelector("#billingPostalCode");
-  // await page.type("#billingPostalCode", "123456");
+  await page.waitForSelector("#billingPostalCode");
+  await page.type("#billingPostalCode", "123456");
 
   if (overrideQuantity) {
     // console.log("   - Overriding quantity");

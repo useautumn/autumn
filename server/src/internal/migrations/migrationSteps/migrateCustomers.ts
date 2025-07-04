@@ -73,11 +73,12 @@ export const migrateCustomers = async ({
     let batchCustomers = customers.slice(i, i + batchSize);
     let batchPromises = [];
     for (let customer of batchCustomers) {
+      if (!customer.id) continue;
       batchPromises.push(
         migrateCustomer({
           db,
           migrationJob,
-          customer,
+          customerId: customer.id!,
           org,
           logger,
           env,
