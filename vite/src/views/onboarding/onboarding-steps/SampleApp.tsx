@@ -16,7 +16,8 @@ import { toast } from "sonner";
 
 import { useSearchParams } from "react-router";
 
-import { useCustomer, PricingTable, CheckDialog } from "autumn-js/react";
+import { useCustomer, CheckDialog } from "autumn-js/react";
+import PricingTable from "@/components/autumn/pricing-table";
 import {
   Check,
   Lock,

@@ -11,6 +11,7 @@ if [ -z "$LOCALTUNNEL_RESERVED_KEY" ]; then
 fi
 
 echo "Installing localtunnel..."
+echo "Reserved key: ${LOCALTUNNEL_RESERVED_KEY}"
 npm install -g localtunnel
 
 

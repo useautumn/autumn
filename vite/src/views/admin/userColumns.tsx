@@ -67,9 +67,10 @@ export const columns: UserColumnDef[] = [
     width: 150,
     cell: ({ row }: { row: Row<User> }) => {
       const value = row.getValue("createdAt");
+
       return (
         <span className="w-30">
-          {format(new Date(value as string), "dd MMM hh:mm")}
+          {format(new Date(value as string), "dd MMM HH:mm")}
         </span>
       );
     },

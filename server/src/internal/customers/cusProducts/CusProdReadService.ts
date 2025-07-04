@@ -1,8 +1,9 @@
 import { CusProductStatus } from "@autumn/shared";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { customerProducts } from "@autumn/shared";
-import { eq, isNotNull, sql, countDistinct, count } from "drizzle-orm";
+import { eq, isNotNull, sql, countDistinct, count, inArray } from "drizzle-orm";
 
+const activeStatuses = [CusProductStatus.Active, CusProductStatus.PastDue];
 export class CusProdReadService {
   static getCounts = async ({
     db,
@@ -14,16 +15,16 @@ export class CusProdReadService {
     let result = await db
       .select({
         active: countDistinct(
-          sql`CASE WHEN ${eq(customerProducts.status, CusProductStatus.Active)} THEN ${customerProducts.internal_customer_id} END`,
+          sql`CASE WHEN ${inArray(customerProducts.status, activeStatuses)} THEN ${customerProducts.internal_customer_id} END`,
         ).as("active"),
         canceled: count(
-          sql`CASE WHEN ${isNotNull(customerProducts.canceled_at)} AND ${eq(customerProducts.status, CusProductStatus.Active)} THEN 1 END`,
+          sql`CASE WHEN ${isNotNull(customerProducts.canceled_at)} AND ${inArray(customerProducts.status, activeStatuses)} THEN 1 END`,
         ).as("canceled"),
         custom: count(
-          sql`CASE WHEN ${eq(customerProducts.is_custom, true)} AND ${eq(customerProducts.status, CusProductStatus.Active)} THEN 1 END`,
+          sql`CASE WHEN ${eq(customerProducts.is_custom, true)} AND ${inArray(customerProducts.status, activeStatuses)} THEN 1 END`,
         ).as("custom"),
         trialing: count(
-          sql`CASE WHEN ${isNotNull(customerProducts.trial_ends_at)} AND ${sql`${customerProducts.trial_ends_at} > (EXTRACT(EPOCH FROM NOW()) * 1000)::bigint`} AND ${eq(customerProducts.status, CusProductStatus.Active)} THEN 1 END`,
+          sql`CASE WHEN ${isNotNull(customerProducts.trial_ends_at)} AND ${sql`${customerProducts.trial_ends_at} > (EXTRACT(EPOCH FROM NOW()) * 1000)::bigint`} AND ${inArray(customerProducts.status, activeStatuses)} THEN 1 END`,
         ).as("trialing"),
         all: countDistinct(customerProducts.internal_customer_id).as("all"),
       })

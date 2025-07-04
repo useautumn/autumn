@@ -30,6 +30,7 @@ export const handleAttachPreview = (req: any, res: any) =>
       });
 
       res.status(200).json(attachPreview);
+
       return;
 
       // // Handle existing product

@@ -15,6 +15,7 @@ import { getProration } from "./getItemsForNewProduct.js";
 import { getCusPriceUsage } from "@/internal/customers/cusProducts/cusPrices/cusPriceUtils.js";
 import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
+import { isTrialing } from "@/internal/customers/cusProducts/cusProductUtils.js";
 
 export const getItemsForCurProduct = async ({
   stripeSubs,
@@ -36,6 +37,7 @@ export const getItemsForCurProduct = async ({
   const curPrices = cusProductToPrices({ cusProduct: curCusProduct });
 
   let items: PreviewLineItem[] = [];
+  let onTrial = isTrialing(curMainProduct!);
 
   for (const sub of stripeSubs) {
     for (const item of sub.items.data) {
@@ -54,7 +56,11 @@ export const getItemsForCurProduct = async ({
         continue;
 
       const totalAmountCents = getSubItemAmount({ subItem: item });
-      const totalAmount = new Decimal(totalAmountCents).div(100).toNumber();
+      let totalAmount = new Decimal(totalAmountCents).div(100).toNumber();
+
+      if (onTrial) {
+        totalAmount = 0;
+      }
 
       const periodEnd = sub.current_period_end * 1000;
 

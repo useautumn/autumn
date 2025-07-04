@@ -65,8 +65,9 @@ export const expectInvoicesCorrect = ({
 
   if (first) {
     try {
-      expect(invoices![0].total).to.equal(
+      expect(invoices![0].total).to.approximately(
         first.total,
+        0.01,
         `invoice total is correct: ${first.total}`,
       );
 

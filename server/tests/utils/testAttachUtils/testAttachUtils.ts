@@ -10,7 +10,13 @@ export const getAttachTotal = ({
   options?: any;
 }) => {
   const dueToday = preview?.due_today;
-  let total = new Decimal(dueToday?.total || 0);
+  let dueTodayTotal =
+    dueToday?.line_items.reduce((acc: any, item: any) => {
+      if (item.amount) {
+        return acc.plus(item.amount);
+      }
+      return acc;
+    }, new Decimal(0)) || new Decimal(0);
 
   for (const option of options || []) {
     let previewOption = preview?.options.find(
@@ -26,8 +32,8 @@ export const getAttachTotal = ({
       .times(option.quantity)
       .dividedBy(previewOption.billing_units);
 
-    total = total.plus(prepaidAmt);
+    dueTodayTotal = dueTodayTotal.plus(prepaidAmt);
   }
 
-  return total.toDecimalPlaces(2).toNumber();
+  return dueTodayTotal.toDecimalPlaces(2).toNumber();
 };

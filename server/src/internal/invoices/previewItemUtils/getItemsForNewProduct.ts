@@ -148,7 +148,7 @@ export const getItemsForNewProduct = async ({
     });
 
     if (isFixedPrice({ price })) {
-      const amount = finalProration
+      let amount = finalProration
         ? calculateProrationAmount({
             periodEnd: finalProration.end,
             periodStart: finalProration.start,
@@ -156,6 +156,10 @@ export const getItemsForNewProduct = async ({
             amount: getPriceForOverage(price),
           })
         : getPriceForOverage(price, 0);
+
+      if (freeTrial) {
+        amount = 0;
+      }
 
       let description = newPriceToInvoiceDescription({
         org,
@@ -221,56 +225,3 @@ export const getItemsForNewProduct = async ({
 
   return items;
 };
-
-// if (
-//   billingType == BillingType.UsageInAdvance ||
-//   billingType == BillingType.InArrearProrated
-// )
-//   continue;
-
-// const usage = getExistingUsageFromCusProducts({
-//   entitlement: ent,
-//   cusProducts: attachParams.cusProducts,
-//   entities: attachParams.entities,
-//   carryExistingUsages: undefined,
-//   internalEntityId: attachParams.internalEntityId,
-// });
-
-// let description = newPriceToInvoiceDescription({
-//   org,
-//   price,
-//   product: newProduct,
-//   quantity: usage,
-// });
-
-// if (usage == 0) {
-//   items.push({
-//     price_id: price.id,
-//     price: getDefaultPriceStr({ org, price, ent, features }),
-//     amount: undefined,
-//     description,
-//     usage_model: priceToUsageModel(price),
-//   });
-// } else {
-//   const overage = new Decimal(usage).sub(ent.allowance!).toNumber();
-//   const amount = finalProration
-//     ? calculateProrationAmount({
-//         periodEnd: finalProration.end,
-//         periodStart: finalProration.start,
-//         now,
-//         amount: getPriceForOverage(price, overage),
-//       })
-//     : getPriceForOverage(price, overage);
-
-//   if (proration) {
-//     description = `${description} (from ${formatUnixToDate(now)})`;
-//   }
-
-//   items.push({
-//     price_id: price.id,
-//     price: "",
-//     description,
-//     amount,
-//     usage_model: priceToUsageModel(price),
-//   });
-// }

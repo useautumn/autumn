@@ -17,7 +17,10 @@ import { AttachConfig } from "@autumn/shared";
 import { handleScheduleFunction } from "../attachFunctions/scheduleFlow/handleScheduleFunction.js";
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
 import { SuccessCode } from "@autumn/shared";
-import { attachParamToCusProducts } from "./convertAttachParams.js";
+import {
+  attachParamsToCurCusProduct,
+  attachParamToCusProducts,
+} from "./convertAttachParams.js";
 import { deleteCurrentScheduledProduct } from "./deleteCurrentScheduledProduct.js";
 import { handleOneOffFunction } from "../attachFunctions/addProductFlow/handleOneOffFunction.js";
 import { handleUpgradeSameInterval } from "../attachFunctions/upgradeSameIntFlow/handleUpgradeSameInt.js";
@@ -84,6 +87,10 @@ export const getAttachFunction = async ({
 
   // 4. Prepaid scenarios
   if (branch == AttachBranch.UpdatePrepaidQuantity) {
+    let curSameProduct = attachParamsToCurCusProduct({ attachParams });
+    if (curSameProduct?.free_trial) {
+      attachParams.freeTrial = curSameProduct.free_trial;
+    }
     return AttachFunction.UpdatePrepaidQuantity;
   }
 
