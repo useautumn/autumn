@@ -121,6 +121,8 @@ export const handleUpdateProductDetails = async ({
   const customersOnAllVersions = await CusProductService.getByProductId({
     db,
     productId: curProduct.id,
+    orgId: org.id,
+    env: curProduct.env as AppEnv,
   });
 
   if (productDetailsSame(curProduct, newProduct)) {

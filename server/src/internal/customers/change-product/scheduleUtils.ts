@@ -29,6 +29,7 @@ import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/han
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const getPricesForCusProduct = ({
   cusProduct,
@@ -298,23 +299,23 @@ export const cancelFutureProductSchedule = async ({
   }
 
   // TODO: Check?
-  // if (
-  //   !curScheduledProduct &&
-  //   curMainProduct &&
-  //   notNullish(curMainProduct.canceled_at)
-  // ) {
-  //   console.log("Renewing main product... why...");
-  //   const batchRenew = [];
-  //   for (const subId of curMainProduct.subscription_ids || []) {
-  //     batchRenew.push(
-  //       stripeCli.subscriptions.update(subId, {
-  //         cancel_at: null,
-  //       }),
-  //     );
-  //   }
+  if (
+    !curScheduledProduct &&
+    curMainProduct &&
+    notNullish(curMainProduct.canceled_at)
+  ) {
+    logger.info(`renewing ${curMainProduct.product.name}!`);
+    const batchRenew = [];
+    for (const subId of curMainProduct.subscription_ids || []) {
+      batchRenew.push(
+        stripeCli.subscriptions.update(subId, {
+          cancel_at: null,
+        }),
+      );
+    }
 
-  //   await Promise.all(batchRenew);
+    await Promise.all(batchRenew);
 
-  //   return;
-  // }
+    return;
+  }
 };

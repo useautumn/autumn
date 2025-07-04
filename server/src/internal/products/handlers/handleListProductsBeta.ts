@@ -30,6 +30,13 @@ export const handleListProductsBeta = async (req: any, res: any) =>
         })(),
       ]);
 
+      if (req.query.v1_schema === "true") {
+        res.status(200).json({
+          list: products,
+        });
+        return;
+      }
+
       sortFullProducts({ products });
 
       let batchResponse = [];

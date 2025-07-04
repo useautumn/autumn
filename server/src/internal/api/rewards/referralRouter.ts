@@ -1,6 +1,7 @@
 import { CusService } from "@/internal/customers/CusService.js";
 import {
   generateReferralCode,
+  triggerFreeProduct,
   triggerRedemption,
 } from "@/internal/rewards/referralUtils.js";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
@@ -8,11 +9,15 @@ import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionServ
 import RecaseError from "@/utils/errorUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { ErrCode, RewardTriggerEvent } from "@autumn/shared";
+import { ErrCode, RewardCategory, RewardTriggerEvent } from "@autumn/shared";
 import express, { Router } from "express";
 import { RewardRedemption } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
+import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
+import { RewardService } from "@/internal/rewards/RewardService.js";
+import { parseReqForAction } from "@/internal/analytics/actionUtils.js";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const referralRouter: Router = express.Router();
 
@@ -215,15 +220,45 @@ referralRouter.post("/redeem", (req, res) =>
       if (
         referralCode.reward_program.when === RewardTriggerEvent.CustomerCreation
       ) {
-        redemption = await triggerRedemption({
-          db: req.db,
-          referralCode,
-          org,
+        const reward = await RewardService.get({
+          db,
+          orgId,
           env,
-          logger,
-          reward: reward_program.reward,
-          redemption,
+          idOrInternalId: reward_program.internal_reward_id,
         });
+
+        if (!reward) {
+          throw new RecaseError({
+            message: `Reward ${reward_program.internal_reward_id} not found`,
+            statusCode: 404,
+            code: ErrCode.RewardNotFound,
+          });
+        }
+
+        let rewardCat = getRewardCat(reward);
+        if (rewardCat === RewardCategory.FreeProduct) {
+          await triggerFreeProduct({
+            req: parseReqForAction(req) as ExtendedRequest,
+            db,
+            referralCode,
+            redeemer: customer,
+            rewardProgram: reward_program,
+            org,
+            env,
+            logger,
+            redemption,
+          });
+        } else {
+          await triggerRedemption({
+            db,
+            referralCode,
+            org,
+            env,
+            logger,
+            reward,
+            redemption,
+          });
+        }
       }
 
       // Add coupon to customer?

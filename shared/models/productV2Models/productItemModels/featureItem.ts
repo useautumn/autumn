@@ -29,7 +29,8 @@ export const FeatureItemSchema = ProductItemSchema.pick({
       }
 
       return num;
-    }),
+    })
+    .nullish(),
 });
 
 export type FeatureItem = z.infer<typeof FeatureItemSchema>;

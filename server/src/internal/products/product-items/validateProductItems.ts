@@ -187,7 +187,7 @@ export const validateProductItems = ({
         return i.feature_id == item.feature_id && index2 != index;
       });
 
-      if (otherItem) {
+      if (otherItem && isFeaturePriceItem(otherItem)) {
         throw new RecaseError({
           message: `If feature is lifetime and paid, can't have any other features`,
           code: ErrCode.InvalidInputs,

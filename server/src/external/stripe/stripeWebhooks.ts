@@ -68,13 +68,13 @@ stripeWebhookRouter.post(
       return;
     }
 
-    // const webhookSecret = getStripeWebhookSecret(org, env);
-    // try {
-    //   event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
-    // } catch (err: any) {
-    //   response.status(400).send(`Webhook Error: ${err.message}`);
-    //   return;
-    // }
+    const webhookSecret = getStripeWebhookSecret(org, env);
+    try {
+      event = stripe.webhooks.constructEvent(request.body, sig, webhookSecret);
+    } catch (err: any) {
+      response.status(400).send(`Webhook Error: ${err.message}`);
+      return;
+    }
 
     try {
       request.body = JSON.parse(request.body);
@@ -83,7 +83,7 @@ stripeWebhookRouter.post(
       console.log("Error parsing body", error);
     }
 
-    event = request.body;
+    // event = request.body;
 
     request.logtail = request.logtail.child({
       context: {
@@ -91,6 +91,7 @@ stripeWebhookRouter.post(
           // body: request.body,
           event_type: event.type,
           event_id: event.id,
+          // @ts-ignore
           object_id: `${event.data?.object?.id}` || "N/A",
           authType: AuthType.Stripe,
           org_id: orgId,

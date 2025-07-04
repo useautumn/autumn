@@ -68,99 +68,6 @@ const getRequiredAndActualBalance = ({
   };
 };
 
-const getMeteredEntitledResult = ({
-  originalFeature,
-  creditSystems,
-  cusEnts,
-  quantity,
-  entityId,
-  org,
-}: {
-  originalFeature: Feature;
-  creditSystems: Feature[];
-  cusEnts: FullCustomerEntitlement[];
-  quantity: number;
-  entityId: string;
-  org: Organization;
-}) => {
-  // If no entitlements -> return false
-  if (!cusEnts || cusEnts.length === 0) {
-    return {
-      allowed: false,
-      balances: [],
-    };
-  }
-
-  let allowed = false;
-  const balances = [];
-
-  for (const feature of [originalFeature, ...creditSystems]) {
-    // 1. Skip if feature not among cusEnt
-
-    if (!cusEntsContainFeature({ cusEnts, feature })) {
-      continue;
-    }
-
-    // 2. Handle unlimited / usage allowed features
-    let { unlimited, usageAllowed } = getUnlimitedAndUsageAllowed({
-      cusEnts,
-      internalFeatureId: feature.internal_id!,
-    });
-
-    if (unlimited || usageAllowed) {
-      balances.push({
-        feature_id: feature.id,
-        unlimited,
-        usage_allowed: usageAllowed,
-        required: null,
-        balance: unlimited
-          ? null
-          : getFeatureBalance({
-              cusEnts,
-              internalFeatureId: feature.internal_id!,
-              entityId,
-            }),
-      });
-      allowed = true;
-      // continue;
-      break;
-    }
-
-    // 3. Get required and actual balance
-    const { required, actual } = getRequiredAndActualBalance({
-      cusEnts,
-      feature,
-      originalFeatureId: originalFeature.id,
-      required: quantity,
-      entityId,
-    });
-
-    let newBalance: any = {
-      feature_id: feature.id,
-      required,
-      balance: actual,
-    };
-
-    if (entityId) {
-      newBalance.entity_id = entityId;
-    }
-
-    balances.push(newBalance);
-
-    // allowed = allowed && actual! >= required;
-    allowed = actual! >= required;
-
-    if (allowed) {
-      break;
-    }
-  }
-
-  return {
-    allowed,
-    balances,
-  };
-};
-
 checkRouter.post("", async (req: any, res: any) => {
   try {
     let {
@@ -320,7 +227,7 @@ checkRouter.post("", async (req: any, res: any) => {
         preview = await getCheckPreview({
           db,
           allowed,
-          balance: balance || undefined,
+          balance: notNullish(balance) ? balance : undefined,
           feature: featureToUse!,
           cusProducts,
           allFeatures,
