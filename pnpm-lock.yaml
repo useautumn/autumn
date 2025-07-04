@@ -97,8 +97,8 @@ importers:
         specifier: ^4.3.10
         version: 4.3.16(react@18.3.1)(zod@3.25.64)
       autumn-js:
-        specifier: ^0.0.65
-        version: 0.0.65(@tanstack/react-query@5.80.7(react@18.3.1))(react@18.3.1)
+        specifier: ^0.0.77
+        version: 0.0.77(react@18.3.1)
       axios:
         specifier: ^1.8.3
         version: 1.10.0
@@ -378,8 +378,8 @@ importers:
         specifier: ^3.6.0
         version: 3.8.0
       autumn-js:
-        specifier: ^0.0.41
-        version: 0.0.41(@tanstack/react-query@5.80.7(react@18.3.1))(react@18.3.1)
+        specifier: ^0.0.77
+        version: 0.0.77(react@18.3.1)
       axios:
         specifier: ^1.8.3
         version: 1.10.0
@@ -3389,14 +3389,6 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6
 
-  '@tanstack/query-core@5.80.7':
-    resolution: {integrity: sha512-s09l5zeUKC8q7DCCCIkVSns8zZrK4ZDT6ryEjxNBFi68G4z2EBobBS7rdOY3r6W1WbUDpc1fe5oY+YO/+2UVUg==}
-
-  '@tanstack/react-query@5.80.7':
-    resolution: {integrity: sha512-u2F0VK6+anItoEvB3+rfvTO9GEh2vb00Je05OwlUe/A0lkJBgW1HckiY3f9YZa+jx6IOe4dHPh10dyp9aY3iRQ==}
-    peerDependencies:
-      react: ^18 || ^19
-
   '@tanstack/react-table@8.21.3':
     resolution: {integrity: sha512-5nNMTSETP4ykGegmVkhjcS8tTLW6Vl4axfEGQN3v0zdHYbK4UfoqfPChclTrJ4EoK9QynqAu9oUf8VEmrpZ5Ww==}
     engines: {node: '>=12'}
@@ -3795,20 +3787,10 @@ packages:
     resolution: {integrity: sha512-0bDNnY/u6pPwHDMoF0FieU354oBi0a8rD9FcsLwzcGWbc8KS8KPIi7y+s13OlVY+gMWc/9xEMUgNE6Qm8ZllYQ==}
     engines: {node: '>=4'}
 
-  autumn-js@0.0.41:
-    resolution: {integrity: sha512-oP6CMamBTm8LlJPZCt3JTdG2mRkY7NGKp4jgY5l2GY0LTtjtoKJsDyoNqL2nzWR30Sayct9EG4WDUFZQtrgAZA==}
+  autumn-js@0.0.77:
+    resolution: {integrity: sha512-P5btZQjaq/y4A7lcd4aK3QgZBtLZKwwQypCvJrX8SmLG/Oe+wyuWzIhdNsa/fO5ATExNmAkdP344dSUlfbgQnQ==}
     peerDependencies:
-      '@tanstack/react-query': ^5.76.1
-      react: ^18.0.0 || ^19.0.0
-    peerDependenciesMeta:
-      react:
-        optional: true
-
-  autumn-js@0.0.65:
-    resolution: {integrity: sha512-YKR5kNDdpYvxGDNEmgqtqrDODyJG3frApR2HC9z05hazg94rEDSoatfUh7iweJUAGSauhqhjWADtgMvRRbSLfA==}
-    peerDependencies:
-      '@tanstack/react-query': ^5.76.1
-      react: ^18.0.0 || ^19.0.0
+      react: '*'
     peerDependenciesMeta:
       react:
         optional: true
@@ -10337,13 +10319,6 @@ snapshots:
       tailwindcss: 4.1.10
       vite: 6.3.5(@types/node@22.15.32)(jiti@2.4.2)(lightningcss@1.30.1)(tsx@4.20.3)
 
-  '@tanstack/query-core@5.80.7': {}
-
-  '@tanstack/react-query@5.80.7(react@18.3.1)':
-    dependencies:
-      '@tanstack/query-core': 5.80.7
-      react: 18.3.1
-
   '@tanstack/react-table@8.21.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@tanstack/table-core': 8.21.3
@@ -10799,16 +10774,9 @@ snapshots:
 
   attr-accept@2.2.5: {}
 
-  autumn-js@0.0.41(@tanstack/react-query@5.80.7(react@18.3.1))(react@18.3.1):
+  autumn-js@0.0.77(react@18.3.1):
     dependencies:
-      '@tanstack/react-query': 5.80.7(react@18.3.1)
-      rou3: 0.6.3
-    optionalDependencies:
-      react: 18.3.1
-
-  autumn-js@0.0.65(@tanstack/react-query@5.80.7(react@18.3.1))(react@18.3.1):
-    dependencies:
-      '@tanstack/react-query': 5.80.7(react@18.3.1)
+      chalk: 5.4.1
       rou3: 0.6.3
       swr: 2.3.3(react@18.3.1)
     optionalDependencies:
