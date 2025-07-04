@@ -15,8 +15,8 @@ import { Dialog } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 import { useSearchParams } from "react-router";
-import { PricingTable } from "@/components/autumn/pricing-table";
-import { useAutumn, useCustomer } from "autumn-js/react";
+
+import { useCustomer, PricingTable, CheckDialog } from "autumn-js/react";
 import {
   Check,
   Lock,
@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CodeBlock from "@/views/onboarding/components/CodeBlock";
-import PaywallDialog from "@/components/autumn/paywall-dialog";
+// import PaywallDialog from "@/components/autumn/paywall-dialog";
 
 export const SampleApp = ({
   data,
@@ -44,8 +44,6 @@ export const SampleApp = ({
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
 
-  const [product, setProduct] = useState<any>(data.products[0]);
-  const [features, setFeatures] = useState<any[]>(data.features);
   const [open, setOpen] = useState(false);
   const [checkData, setCheckData] = useState<any>(null);
   const [trackData, setTrackData] = useState<any>(null);
@@ -58,8 +56,7 @@ export const SampleApp = ({
     value: 1,
   });
 
-  const { customer } = useCustomer();
-  const { openBillingPortal } = useAutumn();
+  const { customer, openBillingPortal } = useCustomer();
 
   if (!data.products) return null;
 
@@ -210,17 +207,29 @@ export const SampleApp = ({
                                   displayLanguage: "typescript",
                                   content: `${
                                     checkData
-                                      ? `import { useAutumn } from 'autumn-js/react';
-import PaywallDialog from '@/components/...';
+                                      ? `import { useCustomer } from 'autumn-js/react';
 
-const { check } = useAutumn();
+export default function CheckFeature() {
+  const { customer } = useCustomer();
 
-const handleCheckFeature = async () => {
-  const { data } = await check({
-    featureId: '${lastUsedFeature?.featureId || data.features?.[0]?.id || "feature-id"}',
-    dialog: PaywallDialog
-  });
-};`
+  const handleCheckFeature = () => {
+    const feature = customer?.features?.${lastUsedFeature?.featureId || data.features?.[0]?.id || "messages"};
+    
+    if (feature && feature.balance > 0) {
+      // Feature has remaining usage
+      console.log("Feature access granted");
+      console.log("Remaining balance:", feature.balance);
+    } else {
+      alert("You're out of usage for this feature");
+    }
+  };
+  
+  return (
+    <button onClick={handleCheckFeature}>
+      Check Feature Access
+    </button>
+  );
+}`
                                       : "// Click 'Send' on a feature to see a check request"
                                   }`,
                                 },
@@ -282,16 +291,31 @@ const { data } = await autumn.check({
                                   displayLanguage: "typescript",
                                   content: `${
                                     trackData
-                                      ? `import { useAutumn } from 'autumn-js/react';
+                                      ? `import { useCustomer } from 'autumn-js/react';
 
-const { track } = useAutumn();
+export default function SendChatMessage() {
+  const { customer, refetch } = useCustomer();
 
-const handleTrackUsage = async () => {
-  await track({
-    featureId: '${lastUsedFeature?.featureId || data.features?.[0]?.id || "feature-id"}',
-    value: ${lastUsedFeature?.value || 1}
-  });
-};`
+  const handleSendMessage = async () => {
+    const feature = customer?.features?.${lastUsedFeature?.featureId || data.features?.[0]?.id || "messages"};
+    
+    if (feature && feature.balance > 0) {
+      // Send chatbot message server-side, then
+      await refetch(); // refetch customer usage data
+      alert(
+        "Remaining messages: " + customer?.features?.${lastUsedFeature?.featureId || data.features?.[0]?.id || "messages"}?.balance
+      );
+    } else {
+      alert("You're out of messages");
+    }
+  };
+  
+  return (
+    <button onClick={handleSendMessage}>
+      Send Message
+    </button>
+  );
+}`
                                       : "// Click 'Send' on a feature to see a track request"
                                   }`,
                                 },
@@ -412,8 +436,7 @@ const FeatureUsageItem = ({
   onTrackData: (data: any) => void;
   onFeatureUsed: (feature: any) => void;
 }) => {
-  const { check, track } = useAutumn();
-  const { refetch } = useCustomer();
+  const { check, track, refetch } = useCustomer();
   const [trackValue, setTrackValue] = useState<number | string>(1);
 
   if (feature.type === "boolean") {
@@ -470,7 +493,7 @@ const FeatureUsageItem = ({
               });
               const { data: checkResponse } = await check({
                 featureId: customerFeature.id,
-                dialog: PaywallDialog,
+                dialog: CheckDialog,
               });
               onCheckData(checkResponse);
 

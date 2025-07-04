@@ -20,20 +20,30 @@ const checkAccessCode = (
   isProduct: boolean,
 ) => `// app/page.tsx
 
-import { useAutumn, useCustomer } from "autumn-js/react";
+import { useCustomer } from "autumn-js/react";
 
-const { check } = useAutumn();
-const { customer } = useCustomer();
+export default function CheckAccess() {
+  const { customer, allowed } = useCustomer();
 
-async function handleCheckAccess() {
-  let { data } = await check({ ${isProduct ? "productId" : "featureId"}: "${id}" });
+  const handleCheckAccess = () => {
+    ${
+      isProduct
+        ? `// Check if customer has an active product
+    if (allowed({ productId: "${id}" })) {
+      alert("You have access to ${id}");
+    } else {
+      alert("You don't have access to ${id}");
+    }`
+        : `// Check feature balance
+    if (allowed({ featureId: "${id}" });) {
+      alert("You have access to ${id}. Balance: " + feature.balance);
+    } else {
+      alert("You don't have access to ${id}");
+    }`
+    }
+  };
   
-
-  if (data?.allowed) {
-    alert("You have access to ${id} " + customer?.name);
-  } else {
-    alert("You don't have access to ${id}");
-  }
+  return <button onClick={handleCheckAccess}>Check Access</button>;
 }
 `;
 
