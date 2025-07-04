@@ -23,7 +23,14 @@ export const DueToday = () => {
   const branch = preview.branch;
 
   const getTotalPrice = () => {
-    let total = preview?.due_today?.total || 0;
+    let total =
+      preview?.due_today?.line_items.reduce((acc: any, item: any) => {
+        if (item.amount) {
+          return acc.plus(item.amount);
+        }
+        return acc;
+      }, new Decimal(0)) || new Decimal(0);
+    total = total.toNumber();
 
     options.forEach((option: any) => {
       if (option.price && option.quantity) {

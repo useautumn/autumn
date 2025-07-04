@@ -7,20 +7,8 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
 import { addPrefixToProducts, runAttachTest } from "../utils.js";
-import {
-  constructArrearItem,
-  constructArrearProratedItem,
-} from "@/utils/scriptUtils/constructItem.js";
-import { TestFeature } from "tests/setup/v2Features.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
-import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
-import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { timeout } from "@/utils/genUtils.js";
-import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
-import { expectSubItemsCorrect } from "tests/utils/expectUtils/expectSubUtils.js";
-import { expectFeaturesCorrect } from "tests/utils/expectUtils/expectFeaturesCorrect.js";
+import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 
 const testCase = "upgrade7";
 

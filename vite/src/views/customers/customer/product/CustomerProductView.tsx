@@ -3,36 +3,19 @@
 import ProductSidebar from "@/views/products/product/ProductSidebar";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { useState, useEffect, useRef } from "react";
-import {
-  Customer,
-  Entity,
-  Feature,
-  FeatureOptions,
-  ProductItem,
-  ProductV2,
-} from "@autumn/shared";
+import { Customer, Entity, Feature, ProductItem } from "@autumn/shared";
 import { useAxiosSWR } from "@/services/useAxiosSwr";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { ManageProduct } from "@/views/products/product/ManageProduct";
 import { ProductContext } from "@/views/products/product/ProductContext";
-
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-
-import { Link, useNavigate, useParams, useSearchParams } from "react-router";
+import { Link, useParams, useSearchParams } from "react-router";
 import ErrorScreen from "@/views/general/ErrorScreen";
 import { ProductOptions } from "./ProductOptions";
-import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useEnv } from "@/utils/envUtils";
-
 import { FeaturesContext } from "@/views/features/FeaturesContext";
 import { CustomerProductBreadcrumbs } from "./components/CustomerProductBreadcrumbs";
 import { FrontendProduct, useAttachState } from "./hooks/useAttachState";
+import { sortProductItems } from "@/utils/productUtils";
 
 interface OptionValue {
   feature_id: string;
@@ -105,7 +88,10 @@ export default function CustomerProductView() {
 
     const product = data.product;
     setProduct(product);
-    initialProductRef.current = structuredClone(product);
+    initialProductRef.current = structuredClone({
+      ...product,
+      items: sortProductItems(product.items),
+    });
 
     setEntityFeatureIds(
       Array.from(

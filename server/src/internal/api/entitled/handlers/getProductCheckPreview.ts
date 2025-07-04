@@ -14,7 +14,7 @@ import {
 
 import { getAttachScenario } from "./attachToCheckPreview/getAttachScenario.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
-import { isOneOff } from "@/internal/products/productUtils.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { formatAmount } from "@/utils/formatUtils.js";
 import { Decimal } from "decimal.js";
 import { notNullish } from "@/utils/genUtils.js";
@@ -48,6 +48,13 @@ export const attachToCheckPreview = async ({
 }) => {
   // 1. If check
   let attachFunc = preview.func;
+
+  if (
+    attachFunc == AttachFunction.AddProduct &&
+    isFreeProduct(product.prices)
+  ) {
+    return null;
+  }
 
   const noOptions = !preview.options || preview.options.length === 0;
   if (attachFunc == AttachFunction.CreateCheckout && noOptions) {

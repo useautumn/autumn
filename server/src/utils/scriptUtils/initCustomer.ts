@@ -74,10 +74,20 @@ export const initCustomer = async ({
     fingerprint,
   };
 
-  // Create and delete customer
-  try {
+  let customer = await CusService.get({
+    db,
+    idOrInternalId: customerId,
+    orgId: org.id,
+    env: env,
+  });
+
+  if (customer) {
     await autumn.customers.delete(customerId);
-  } catch (error) {}
+  }
+  // // Create and delete customer
+  // try {
+
+  // } catch (error) {}
 
   let testClockId = null;
   try {
