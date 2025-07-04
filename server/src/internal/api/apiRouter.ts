@@ -20,6 +20,7 @@ import { analyticsMiddleware } from "@/middleware/analyticsMiddleware.js";
 
 import rewardRouter from "./rewards/rewardRouter.js";
 import expireRouter from "../customers/expire/expireRouter.js";
+import { handleSetupPayment } from "../customers/attach/handleSetupPayment.js";
 
 const apiRouter: Router = Router();
 
@@ -49,8 +50,8 @@ apiRouter.use("/attach", attachRouter);
 apiRouter.use("/cancel", expireRouter);
 apiRouter.use("/entitled", checkRouter);
 apiRouter.use("/check", checkRouter);
-
 apiRouter.use("/events", eventsRouter);
 apiRouter.use("/track", eventsRouter);
+apiRouter.post("/setup_payment", handleSetupPayment);
 
 export { apiRouter };

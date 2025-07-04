@@ -24,15 +24,18 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { isFreeProduct, isOneOff } from "../../productUtils.js";
 import { getFirstInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
+import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
 
 export const getProductItemResponse = ({
   item,
   features,
   currency,
+  withDisplay = true,
 }: {
   item: ProductItem;
   features: Feature[];
   currency?: string;
+  withDisplay?: boolean;
 }) => {
   // 1. Get item type
   let type = getItemType(item);
@@ -44,10 +47,13 @@ export const getProductItemResponse = ({
     currency,
   });
 
+  let priceData = itemToPriceOrTiers({ item });
+
   return ProductItemResponseSchema.parse({
     type,
     ...item,
-    display,
+    display: withDisplay ? display : undefined,
+    ...priceData,
   });
 };
 
@@ -113,12 +119,14 @@ export const getProductResponse = async ({
   fullCus,
   currency,
   db,
+  withDisplay = true,
 }: {
   product: FullProduct;
   features: Feature[];
   fullCus?: FullCustomer;
   currency?: string;
   db?: DrizzleCli;
+  withDisplay?: boolean;
 }) => {
   // 1. Get items with display
   let items = mapToProductItems({
@@ -130,6 +138,7 @@ export const getProductResponse = async ({
       item,
       features,
       currency,
+      withDisplay,
     });
   });
 
@@ -153,7 +162,7 @@ export const getProductResponse = async ({
     name: product.name || null,
     group: product.group || null,
     items: items,
-    free_trial: freeTrial,
+    free_trial: freeTrial || null,
     scenario: attachScenario,
     properties: getProductProperties({ product }),
   });

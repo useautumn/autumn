@@ -3,7 +3,7 @@ import { FullCusProduct, Organization, Entity } from "@autumn/shared";
 import {
   cusProductsToCusEnts,
   cusProductsToCusPrices,
-} from "../../cusProductUtils/convertCusProduct.js";
+} from "../../cusProducts/cusProductUtils/convertCusProduct.js";
 import { getCusBalances } from "./getCusBalances.js";
 
 export const getCusFeaturesResponse = async ({
