@@ -49,7 +49,7 @@ export default function AttachProduct({
             The{" "}
             <span className="font-mono text-red-500">
               <a
-                href="https://docs.useautumn.com/api-reference/attach/post"
+                href="https://docs.useautumn.com/api-reference/attach#attach-product"
                 target="_blank"
                 rel="noopener noreferrer"
               >
