@@ -1,4 +1,4 @@
-import { Organization } from "@autumn/shared";
+import { AttachFunction, Organization } from "@autumn/shared";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
 import { cancelFutureProductSchedule } from "../../change-product/scheduleUtils.js";
@@ -8,11 +8,13 @@ export const deleteCurrentScheduledProduct = async ({
   req,
   org,
   attachParams,
+  attachFunc,
   logger,
 }: {
   req: any;
   org: Organization;
   attachParams: AttachParams;
+  attachFunc: AttachFunction;
   logger: any;
 }) => {
   const stripeCli = attachParams.stripeCli;
@@ -31,7 +33,9 @@ export const deleteCurrentScheduledProduct = async ({
       db: req.db,
       cusProductId: curScheduledProduct.id,
     });
+  }
 
+  if (attachFunc == AttachFunction.Renew || curScheduledProduct) {
     await cancelFutureProductSchedule({
       req,
       db: req.db,

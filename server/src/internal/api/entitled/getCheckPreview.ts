@@ -25,7 +25,7 @@ export const getCheckPreview = async ({
 }: {
   db: DrizzleCli;
   allowed: boolean;
-  balance?: number;
+  balance?: number | null;
   feature: Feature;
   cusProducts: FullCusProduct[];
   allFeatures: Feature[];
@@ -107,12 +107,13 @@ export const getCheckPreview = async ({
   if (mainProds.length === 0 && addOns.length === 0) {
     return {
       scenario,
-      title: "Feature Unavailable",
+      title: `Feature Unavailable`,
       feature_id: feature.id,
       feature_name: feature.name,
-      message: notNullish(balance)
-        ? `You have run out of ${feature.name}. Please contact us to get more.`
-        : `Your current plan does not include the ${feature.name} feature. Please contact us to get access.`,
+      message:
+        scenario == FeaturePreviewScenario.UsageLimit
+          ? `You have reached the usage limit for ${feature.name}. Please contact us to increase your limit.`
+          : `${feature.name} is not available for your account. Please contact us to enable it.`,
 
       products: v2Prods,
       upgrade_product_id: null,
@@ -120,9 +121,6 @@ export const getCheckPreview = async ({
   }
 
   let nextProd = mainProds.length > 0 ? mainProds[0] : addOns[0];
-  // let curProduct = mainCusProds.find(
-  //   (cp: FullCusProduct) => cp.product.group == nextProd.group
-  // );
 
   let title = nextProd.free_trial
     ? `Start trial for ${nextProd.name}`
@@ -130,12 +128,10 @@ export const getCheckPreview = async ({
       ? `Upgrade to ${nextProd.name}`
       : `Purchase ${nextProd.name}`;
 
-  // If there's a current balance...
   let msg = "";
-  // let scenario: FeaturePreviewScenario = FeaturePreviewScenario.FeatureFlag;
 
   if (notNullish(balance)) {
-    msg = `You have run out of ${feature.name}.`;
+    msg = `You have reached the usage limit for ${feature.name.toLowerCase()}.`;
 
     if (mainProds.length > 0) {
       let prodString = `Please upgrade to ${mainProds[0].name} to continue using this feature.`;

@@ -112,7 +112,7 @@ export const getPriceItemDisplay = ({
     currency,
     amount: item.price as number,
   });
-  let secondaryText = item.interval || undefined;
+  let secondaryText = item.interval ? `per ${item.interval}` : undefined;
 
   return {
     primary_text: primaryText,
