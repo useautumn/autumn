@@ -1,11 +1,9 @@
 import { CusService } from "@/internal/customers/CusService.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { CusExpand, CusProductStatus, ErrCode } from "@autumn/shared";
+import { CusProductStatus, ErrCode } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { getCustomerDetails } from "../cusUtils/getCustomerDetails.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 import { parseCusExpand } from "../cusUtils/cusUtils.js";
-import { FeatureService } from "@/internal/features/FeatureService.js";
 
 export const handleGetCustomer = async (req: any, res: any) =>
   routeHandler({
@@ -32,7 +30,6 @@ export const handleGetCustomer = async (req: any, res: any) =>
           CusProductStatus.Scheduled,
         ],
         withEntities: true,
-        // withEntities: expandArray.includes(CusExpand.Entities),
         expand: expandArray,
         allowNotFound: true,
       });

@@ -1,12 +1,13 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { getCusProductsResponse } from "@/internal/customers/cusUtils/cusResponseUtils.js";
-import { getCusFeaturesResponse } from "@/internal/customers/cusProducts/cusEnts/cusFeatureUtils/getCusFeaturesResponse.js";
+import { getCusFeaturesResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusFeaturesResponse.js";
+import { processFullCusProducts } from "@/internal/customers/cusUtils/cusProductResponseUtils/processFullCusProducts.js";
 
 import RecaseError from "@/utils/errorUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import {
   type AppEnv,
+  Feature,
   CusProductStatus,
   type Entity,
   EntityExpand,
@@ -15,6 +16,7 @@ import {
   type FullCusProduct,
   type Organization,
   type Subscription,
+  CusProductResponse,
 } from "@autumn/shared";
 
 export const getEntityResponse = async ({
@@ -27,6 +29,7 @@ export const getEntityResponse = async ({
   entityId,
   withAutumnId = false,
   apiVersion,
+  features,
 }: {
   db: DrizzleCli;
   entityIds: string[];
@@ -37,6 +40,7 @@ export const getEntityResponse = async ({
   entityId?: string;
   withAutumnId?: boolean;
   apiVersion: number;
+  features: Feature[];
 }) => {
   let customer = await CusService.getFull({
     db,
@@ -81,15 +85,17 @@ export const getEntityResponse = async ({
       ),
     );
 
-    let products = await getCusProductsResponse({
-      cusProducts: entityCusProducts,
+    let { main, addOns } = await processFullCusProducts({
+      fullCusProducts: entityCusProducts,
       entities: customer.entities,
       subs: entitySubs,
       org,
       apiVersion,
+      features,
     });
+    let products: CusProductResponse[] = [...main, ...addOns];
 
-    let features = await getCusFeaturesResponse({
+    let cusFeatures = await getCusFeaturesResponse({
       cusProducts: entityCusProducts,
       org,
       entity,
@@ -105,7 +111,7 @@ export const getEntityResponse = async ({
       customer_id: customerId,
       env,
       products,
-      features,
+      features: cusFeatures,
     });
   }
 

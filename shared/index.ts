@@ -79,6 +79,7 @@ export * from "./models/cusModels/invoiceModels/invoiceTable.js";
 export * from "./models/cusModels/cusResponseModels.js";
 export * from "./models/cusModels/cusResModels/cusProductResponse.js";
 export * from "./models/cusModels/cusResModels/cusFeatureResponse.js";
+export * from "./models/cusModels/cusResModels/cusReferralsResponse.js";
 
 export * from "./models/cusModels/entityModels/entityModels.js";
 export * from "./models/cusModels/entityModels/entityTable.js";

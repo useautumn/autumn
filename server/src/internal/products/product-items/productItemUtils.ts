@@ -41,10 +41,12 @@ export const itemToPriceOrTiers = ({
             amount: item.price,
           })
         : item.price,
+      tiers: undefined,
     };
   } else if (item.tiers) {
     if (item.tiers.length > 1) {
       return {
+        price: undefined,
         tiers: item.tiers.map((tier) => ({
           ...tier,
           amount: proration
@@ -67,6 +69,7 @@ export const itemToPriceOrTiers = ({
               amount: item.tiers[0].amount,
             })
           : item.tiers[0].amount,
+        tiers: undefined,
       };
     }
   }
