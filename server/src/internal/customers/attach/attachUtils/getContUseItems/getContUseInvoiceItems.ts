@@ -69,6 +69,7 @@ export const getContUseNewItems = async ({
       amount: undefined,
       description,
       usage_model: priceToUsageModel(price),
+      feature_id: ent.feature_id,
     } as PreviewLineItem;
   } else {
     let overage = new Decimal(usage).sub(ent.allowance!).toNumber();
@@ -100,6 +101,7 @@ export const getContUseNewItems = async ({
       description,
       amount,
       usage_model: priceToUsageModel(price),
+      feature_id: ent.feature_id,
     } as PreviewLineItem;
   }
 };

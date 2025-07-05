@@ -145,21 +145,13 @@ export const createUpgradeProrationInvoice = async ({
   if (shouldBillNow(onIncrease)) {
     const { invoice: finalInvoice } = await createAndFinalizeInvoice({
       stripeCli,
+      paymentMethod,
       stripeCusId: sub.customer as string,
       stripeSubId: sub.id,
     });
 
-    const { invoice: paidInvoice, error } = await payForInvoice({
-      stripeCli,
-      paymentMethod,
-      invoiceId: finalInvoice.id,
-      logger,
-      errorOnFail: true,
-      voidIfFailed: true,
-    });
-
-    logger.info(`Paid for invoice ${paidInvoice?.id}`);
-    return paidInvoice;
+    logger.info(`Paid for invoice ${finalInvoice?.id}`);
+    return finalInvoice;
   }
 
   return null;

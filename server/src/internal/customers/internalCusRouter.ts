@@ -343,6 +343,7 @@ cusRouter.get(
               isActive: cusProduct.status === CusProductStatus.Active,
               isCustom: cusProduct.is_custom,
               isCanceled: cusProduct.canceled_at !== null,
+              cusProductId: cusProduct.id,
             }
           : productV2,
         features,

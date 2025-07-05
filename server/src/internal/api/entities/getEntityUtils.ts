@@ -1,4 +1,5 @@
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getCusFeaturesResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusFeaturesResponse.js";
 import { processFullCusProducts } from "@/internal/customers/cusUtils/cusProductResponseUtils/processFullCusProducts.js";
@@ -47,7 +48,7 @@ export const getEntityResponse = async ({
     idOrInternalId: customerId,
     orgId: org.id,
     env,
-    inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+    inStatuses: ACTIVE_STATUSES,
     withEntities: true,
     withSubs: true,
     expand,

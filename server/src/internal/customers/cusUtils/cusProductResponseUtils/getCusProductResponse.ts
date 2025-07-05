@@ -27,6 +27,16 @@ import {
   getProductResponse,
 } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 
+const getQuantityData = ({ cusProduct }: { cusProduct: FullCusProduct }) => {
+  return {
+    prepaid_quantities: cusProduct.options.map((o) => {
+      return {
+        quantity: o.quantity,
+        feature_id: o.feature_id,
+      };
+    }),
+  };
+};
 export const getCusProductResponse = async ({
   cusProduct,
   subs,
@@ -154,6 +164,7 @@ export const getCusProductResponse = async ({
       product: fullProduct,
       features,
       withDisplay: false,
+      options: cusProduct.options,
     });
 
     return CusProductResponseSchema.parse({

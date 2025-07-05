@@ -19,4 +19,12 @@ export const CusProductResponseSchema = z.object({
   current_period_end: z.number().nullish(),
   entity_id: z.string().nullish(),
   items: z.array(ProductItemResponseSchema).nullish(),
+  prepaid_quantities: z
+    .array(
+      z.object({
+        quantity: z.number(),
+        feature_id: z.string(),
+      }),
+    )
+    .nullish(),
 });

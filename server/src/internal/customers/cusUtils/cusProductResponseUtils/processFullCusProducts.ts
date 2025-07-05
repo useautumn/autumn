@@ -4,7 +4,7 @@ import {
   Feature,
   Organization,
 } from "@autumn/shared";
-import { getCusProductResponse } from "./getCusProductRepsonse.js";
+import { getCusProductResponse } from "./getCusProductResponse.js";
 
 export const processFullCusProducts = async ({
   fullCusProducts,

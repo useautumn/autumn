@@ -1,8 +1,11 @@
 import {
   BillingType,
+  Feature,
   FixedPriceConfig,
   Infinite,
   Price,
+  ProductItem,
+  UsageModel,
   UsagePriceConfig,
 } from "@autumn/shared";
 import { isFixedPrice } from "./usagePriceUtils/classifyUsagePrice.js";
@@ -13,6 +16,8 @@ import {
   calculateProrationAmount,
   Proration,
 } from "@/internal/invoices/prorationUtils.js";
+import { itemToPriceAndEnt } from "../../product-items/productItemUtils/itemToPriceAndEnt.js";
+import { isPriceItem } from "../../product-items/productItemUtils/getItemType.js";
 
 export const getAmountForQuantity = ({
   price,
@@ -64,16 +69,59 @@ export const getAmountForQuantity = ({
   return amount.toDecimalPlaces(10).toNumber();
 };
 
+export const itemToInvoiceAmount = ({
+  item,
+  quantity,
+  overage,
+}: {
+  item: ProductItem;
+  quantity?: number;
+  overage?: number;
+}) => {
+  let amount = 0;
+  if (isPriceItem(item)) {
+    amount = item.price!;
+  }
+
+  if (!nullish(quantity) && !nullish(overage)) {
+    throw new Error(
+      `itemToInvoiceAmount: quantity or overage is required, autumn item: ${item.feature_id}`,
+    );
+  }
+
+  let price = {
+    config: {
+      usage_tiers: item.tiers || [
+        {
+          to: Infinite,
+          amount: item.price!,
+        },
+      ],
+      billing_units: item.billing_units || 1,
+    },
+  } as unknown as Price;
+
+  if (item.usage_model == UsageModel.Prepaid) {
+    amount = getAmountForQuantity({ price, quantity: quantity! });
+  } else {
+    amount = getAmountForQuantity({ price, quantity: overage! });
+  }
+
+  return amount;
+};
+
 export const priceToInvoiceAmount = ({
   price,
-  overage,
+  item,
   quantity,
+  overage,
   proration,
   now,
 }: {
-  price: Price;
+  price?: Price;
+  item?: ProductItem;
+  quantity?: number; // quantity should be multiplied by billing units
   overage?: number;
-  quantity?: number;
   proration?: Proration;
   now?: number;
 }) => {
@@ -81,23 +129,27 @@ export const priceToInvoiceAmount = ({
 
   let amount = 0;
 
-  if (isFixedPrice({ price })) {
-    amount = (price.config as FixedPriceConfig).amount;
-  } else {
-    const config = price.config as UsagePriceConfig;
-    let billingType = getBillingType(config);
-
-    if (!nullish(quantity) && !nullish(overage)) {
-      throw new Error(
-        `getAmountForPrice: quantity or overage is required, autumn price: ${price.id}`,
-      );
-    }
-
-    if (billingType == BillingType.UsageInAdvance) {
-      amount = getAmountForQuantity({ price, quantity: quantity! });
+  if (price) {
+    if (isFixedPrice({ price })) {
+      amount = (price.config as FixedPriceConfig).amount;
     } else {
-      amount = getAmountForQuantity({ price, quantity: overage! });
+      const config = price.config as UsagePriceConfig;
+      let billingType = getBillingType(config);
+
+      if (!nullish(quantity) && !nullish(overage)) {
+        throw new Error(
+          `getAmountForPrice: quantity or overage is required, autumn price: ${price.id}`,
+        );
+      }
+
+      if (billingType == BillingType.UsageInAdvance) {
+        amount = getAmountForQuantity({ price, quantity: quantity! });
+      } else {
+        amount = getAmountForQuantity({ price, quantity: overage! });
+      }
     }
+  } else {
+    amount = itemToInvoiceAmount({ item: item!, quantity, overage });
   }
 
   if (proration) {

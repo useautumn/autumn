@@ -1,4 +1,4 @@
-import { AttachBranch, BillingInterval } from "@autumn/shared";
+import { AttachBranch, AttachConfig, BillingInterval } from "@autumn/shared";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
@@ -6,22 +6,25 @@ import { attachParamsToProduct } from "../attachUtils/convertAttachParams.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
 import {
   addBillingIntervalUnix,
+  getAlignedIntervalUnix,
   getNextStartOfMonthUnix,
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
+import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 
 export const getNewProductPreview = async ({
   branch,
   attachParams,
-  now,
   logger,
+  config,
 }: {
   branch: AttachBranch;
   attachParams: AttachParams;
-  now: number;
   logger: any;
+  config: AttachConfig;
 }) => {
   const { org } = attachParams;
   const newProduct = attachParamsToProduct({ attachParams });
@@ -31,11 +34,21 @@ export const getNewProductPreview = async ({
     anchorToUnix = getNextStartOfMonthUnix(BillingInterval.Month);
   }
 
+  const { mergeCusProduct, mergeSubs } = await getMergeCusProduct({
+    attachParams,
+    products: [newProduct],
+    config,
+  });
+
+  if (mergeSubs.length > 0) {
+    anchorToUnix = mergeSubs[0].current_period_end * 1000;
+  }
+
   const freeTrial = attachParams.freeTrial;
   const items = await getItemsForNewProduct({
     newProduct,
     attachParams,
-    now,
+    now: attachParams.now,
     anchorToUnix,
     freeTrial,
     logger,
@@ -43,11 +56,11 @@ export const getNewProductPreview = async ({
 
   let dueNextCycle = null;
 
-  if (freeTrial) {
+  if (freeTrial || notNullish(anchorToUnix)) {
     let nextCycleItems = await getItemsForNewProduct({
       newProduct,
       attachParams,
-      now,
+      now: attachParams.now,
       logger,
     });
 
@@ -55,9 +68,15 @@ export const getNewProductPreview = async ({
     let dueAt = freeTrial
       ? freeTrialToStripeTimestamp({
           freeTrial,
-          now,
+          now: attachParams.now,
         })! * 1000
-      : addBillingIntervalUnix(now, minInterval);
+      : anchorToUnix
+        ? getAlignedIntervalUnix({
+            alignWithUnix: anchorToUnix,
+            interval: minInterval,
+            now: attachParams.now,
+          })
+        : addBillingIntervalUnix(attachParams.now || Date.now(), minInterval);
 
     dueNextCycle = {
       line_items: nextCycleItems,
@@ -77,6 +96,7 @@ export const getNewProductPreview = async ({
     }),
     features: attachParams.features,
     anchorToUnix,
+    now: attachParams.now || Date.now(),
   });
 
   // Next cycle at
@@ -90,7 +110,10 @@ export const getNewProductPreview = async ({
           );
           return price?.config.interval == minInterval;
         }),
-        due_at: addBillingIntervalUnix(now, minInterval),
+        due_at: addBillingIntervalUnix(
+          attachParams.now || Date.now(),
+          minInterval,
+        ),
       };
     }
   }

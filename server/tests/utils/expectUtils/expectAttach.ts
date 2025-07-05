@@ -25,6 +25,7 @@ export const attachAndExpectCorrect = async ({
   customerId,
   entityId,
   product,
+  otherProducts,
   options,
   stripeCli,
   db,
@@ -40,6 +41,7 @@ export const attachAndExpectCorrect = async ({
   customerId: string;
   entityId?: string;
   product: ProductV2;
+  otherProducts?: ProductV2[];
   options?: FeatureOptions[];
   stripeCli: Stripe;
   db: DrizzleCli;
@@ -60,9 +62,10 @@ export const attachAndExpectCorrect = async ({
     entity_id: entityId,
   });
 
+  const optionsCopy = structuredClone(options);
   const total = getAttachTotal({
     preview,
-    options,
+    options: optionsCopy,
   });
 
   const { checkout_url } = await autumn.attach({
@@ -89,7 +92,7 @@ export const attachAndExpectCorrect = async ({
   }
 
   const productCount = customer.products.reduce((acc: number, p: any) => {
-    if (product.group == p.group) {
+    if (product.group == p.group && !p.is_add_on) {
       return acc + 1;
     } else return acc;
   }, 0);
@@ -110,18 +113,23 @@ export const attachAndExpectCorrect = async ({
   ).filter(notNullish);
   const multiInterval = intervals.length > 1;
 
-  expectInvoicesCorrect({
-    customer,
-    first: multiInterval ? undefined : { productId: product.id, total },
-    second: multiInterval ? { productId: product.id, total } : undefined,
-  });
+  const skipInvoiceCheck =
+    preview.branch == AttachBranch.UpdatePrepaidQuantity && total == 0;
+  if (!skipInvoiceCheck) {
+    expectInvoicesCorrect({
+      customer,
+      first: multiInterval ? undefined : { productId: product.id, total },
+      second: multiInterval ? { productId: product.id, total } : undefined,
+    });
+  }
 
   if (!skipFeatureCheck) {
     expectFeaturesCorrect({
       customer,
       product,
       usage,
-      options,
+      options: optionsCopy,
+      otherProducts,
     });
   }
 

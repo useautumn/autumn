@@ -129,11 +129,13 @@ export const constructProduct = ({
 
   let product: ProductV2 = {
     id: id_,
-    name: isAnnual
-      ? `${keyToTitle(type)} (Annual)`
-      : interval
-        ? `${keyToTitle(type)} (${interval})`
-        : keyToTitle(type),
+    name: id
+      ? keyToTitle(id)
+      : isAnnual
+        ? `${keyToTitle(type)} (Annual)`
+        : interval
+          ? `${keyToTitle(type)} (${interval})`
+          : keyToTitle(type),
     items,
     is_add_on: isAddOn,
     is_default: type == "free" && isDefault,

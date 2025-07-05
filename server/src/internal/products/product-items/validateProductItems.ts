@@ -10,6 +10,8 @@ import {
   Feature,
   FeatureType,
   AppEnv,
+  OnIncrease,
+  UsageModel,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { notNullish, nullish } from "@/utils/genUtils.js";
@@ -146,6 +148,17 @@ const validateProductItem = ({
         statusCode: StatusCodes.BAD_REQUEST,
       });
     }
+  }
+
+  if (
+    item.usage_model == UsageModel.Prepaid &&
+    item.config?.on_increase == OnIncrease.BillImmediately
+  ) {
+    throw new RecaseError({
+      message: `Bill immediately is not supported for prepaid just yet, contact us at hey@useautumn.com if you're interested!`,
+      code: ErrCode.InvalidInputs,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
   }
 };
 export const validateProductItems = ({

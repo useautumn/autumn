@@ -1,16 +1,16 @@
-import { AttachParams } from "../../cusProducts/AttachParams.js";
-import {
-  attachParamsToProduct,
-  attachParamToCusProducts,
-} from "../attachUtils/convertAttachParams.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { ExtendedRequest } from "@/utils/models/Request.js";
-import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
-import { getItemsForCurProduct } from "@/internal/invoices/previewItemUtils/getItemsForCurProduct.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
+import { getItemsForCurProduct } from "@/internal/invoices/previewItemUtils/getItemsForCurProduct.js";
+import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
+import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
+import {
+  addBillingIntervalUnix,
+  getAlignedIntervalUnix,
+} from "@/internal/products/prices/billingIntervalUtils.js";
+import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { mapToProductItems } from "@/internal/products/productV2Utils.js";
-import Stripe from "stripe";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   AttachBranch,
   BillingInterval,
@@ -19,15 +19,15 @@ import {
   Price,
   UsageModel,
 } from "@autumn/shared";
+
+import Stripe from "stripe";
 import {
-  addBillingIntervalUnix,
-  getAlignedIntervalUnix,
-} from "@/internal/products/prices/billingIntervalUtils.js";
-import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
-import { Decimal } from "decimal.js";
+  attachParamToCusProducts,
+  attachParamsToProduct,
+} from "../attachUtils/convertAttachParams.js";
 import { intervalsAreSame } from "../attachUtils/getAttachConfig.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { notNullish } from "@/utils/genUtils.js";
+import { AttachParams } from "../../cusProducts/AttachParams.js";
+import { Decimal } from "decimal.js";
 
 const getNextCycleAt = ({
   prices,
@@ -75,7 +75,7 @@ const getNextCycleAt = ({
   };
 };
 
-export const getUpgradeProductPreview = async ({
+export const getUpdateQuantityPreview = async ({
   req,
   attachParams,
   branch,
@@ -93,8 +93,7 @@ export const getUpgradeProductPreview = async ({
   const { curMainProduct, curSameProduct } = attachParamToCusProducts({
     attachParams,
   });
-
-  const curCusProduct = curSameProduct || curMainProduct!;
+  const curCusProduct = curMainProduct!;
 
   const stripeSubs = await getStripeSubs({
     stripeCli,
@@ -186,7 +185,7 @@ export const getUpgradeProductPreview = async ({
     anchorToUnix,
     now,
     freeTrial: attachParams.freeTrial,
-    cusProduct: curCusProduct,
+    cusProduct: curSameProduct,
   });
 
   items = items.filter((item) => item.amount !== 0);
@@ -211,8 +210,6 @@ export const getUpgradeProductPreview = async ({
   if (branch == AttachBranch.SameCustomEnts) {
     dueToday = undefined;
   }
-
-  console.log("Due today: ", dueToday);
 
   return {
     currency: attachParams.org.default_currency,

@@ -43,12 +43,17 @@ export const constructPrepaidItem = ({
   billingUnits = 100,
   includedUsage = 0,
   isOneOff = false,
+  config = {
+    on_increase: OnIncrease.ProrateImmediately,
+    on_decrease: OnDecrease.ProrateImmediately,
+  },
 }: {
   featureId: string;
   price?: number;
   billingUnits?: number;
   includedUsage?: number;
   isOneOff?: boolean;
+  config?: ProductItemConfig;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -59,6 +64,8 @@ export const constructPrepaidItem = ({
 
     interval: isOneOff ? null : ProductItemInterval.Month,
     included_usage: includedUsage,
+
+    config,
   };
 
   return item;

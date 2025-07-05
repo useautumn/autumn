@@ -26,8 +26,9 @@ export const DueNextCycle = () => {
   if (!preview.due_next_cycle) return null;
 
   if (
-    (!preview.due_next_cycle.line_items?.length && !preview.options?.length) ||
-    preview.options.every((option: any) => option.full_price == option.price)
+    !preview.due_next_cycle.line_items?.length &&
+    !preview.options?.length
+    // || preview.options.every((option: any) => option.full_price == option.price)
   )
     return null;
 
