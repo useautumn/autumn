@@ -6,11 +6,13 @@ import {
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { nullish } from "@/utils/genUtils.js";
 import {
   AppEnv,
+  BillingType,
   CusProductStatus,
   FullCusProduct,
   Organization,
@@ -210,6 +212,25 @@ export const expectSubItemsCorrect = async ({
         subItem,
         `sub item for price: ${(price.config as any).internal_feature_id || price.config.interval} should exist`,
       ).to.exist;
+    }
+
+    // 2. If prepaid...
+    let billingType = getBillingType(price.config);
+    if (billingType == BillingType.UsageInAdvance) {
+      const featureId = (price.config as any).feature_id;
+      const options = cusProduct.options.find((o) => o.feature_id == featureId);
+
+      expect(
+        options,
+        `options should exist for prepaid price (featureId: ${featureId})`,
+      ).to.exist;
+
+      const expectedQuantity = options?.upcoming_quantity || options?.quantity;
+      expect(
+        subItem?.quantity,
+        `sub item quantity for prepaid price (featureId: ${featureId}) should be ${expectedQuantity}`,
+      ).to.equal(expectedQuantity);
+      continue;
     }
   }
 

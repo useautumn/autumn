@@ -12,6 +12,7 @@ import { insertInvoiceFromAttach } from "@/internal/invoices/invoiceUtils.js";
 import { getNextStartOfMonthUnix } from "@/internal/products/prices/billingIntervalUtils.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   APIVersion,
@@ -106,6 +107,7 @@ export const handlePaidProduct = async ({
         itemSet,
         anchorToUnix: billingCycleAnchorUnix,
         reward: i == 0 ? reward : undefined,
+        now: attachParams.now,
       });
 
       let sub = subscription as Stripe.Subscription;

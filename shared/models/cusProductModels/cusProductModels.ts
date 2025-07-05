@@ -20,6 +20,7 @@ import { CusProductStatus } from "./cusProductEnums.js";
 export const FeatureOptionsSchema = z.object({
   feature_id: z.string(),
   quantity: z.number(), // same as prepaid
+  upcoming_quantity: z.number().nullish(),
 
   adjustable_quantity: z.boolean().nullish(),
   internal_feature_id: z.string().nullish(),

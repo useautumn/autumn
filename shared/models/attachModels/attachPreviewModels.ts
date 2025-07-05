@@ -11,6 +11,7 @@ export interface PreviewLineItem {
   price: string;
   price_id: string;
   usage_model?: UsageModel;
+  feature_id?: string;
 }
 
 export interface AttachPreview {

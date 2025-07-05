@@ -67,7 +67,7 @@ export const DueToday = () => {
             </PriceItem>
           );
         })}
-      <AttachNewItems />
+      {/* <AttachNewItems /> */}
       {options.length > 0 &&
         options.map((option: any, index: number) => {
           const { feature_name, billing_units, quantity, price } = option;
@@ -76,18 +76,6 @@ export const DueToday = () => {
               <span>
                 {product.name} - {feature_name}
               </span>
-              {/* <QuantityInput
-                key={feature_name}
-                value={quantity ? quantity / billing_units : ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  const newOptions = [...options];
-                  newOptions[index].quantity =
-                    parseInt(e.target.value) * billing_units;
-                  setOptions(newOptions);
-                }}
-              >
-                
-              </QuantityInput> */}
               <div className="flex items-center gap-2 ">
                 <Input
                   type="number"

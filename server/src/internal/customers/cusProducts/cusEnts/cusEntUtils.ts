@@ -303,7 +303,7 @@ export const getResetBalance = ({
 }: {
   entitlement: Entitlement;
   options: FeatureOptions | undefined | null;
-  relatedPrice: Price | undefined | null;
+  relatedPrice?: Price | null;
   productQuantity?: number;
 }) => {
   // 1. No related price
@@ -321,9 +321,6 @@ export const getResetBalance = ({
   let quantity = options?.quantity;
   let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
   if (nullish(quantity) || nullish(billingUnits)) {
-    // console.log("WARNING: Quantity or billing units not found");
-    // console.log("Entitlement:", entitlement.id, entitlement.feature_id);
-    // console.log("Options:", options);
     return entitlement.allowance;
   }
 

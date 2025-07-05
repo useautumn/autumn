@@ -109,18 +109,8 @@ export const useAttachState = ({
         free_trial: initialProductRef.current?.free_trial || null,
       });
 
-    console.log(
-      "Initial product ref",
-      JSON.stringify(initialProductRef.current, null, 2),
-    );
-    console.log("Sorted product", JSON.stringify(sortedProduct, null, 2));
-
     setItemsChanged(hasItemsChanged);
   }, [product]);
-
-  useEffect(() => {
-    console.log("Initial product ref", initialProductRef.current);
-  }, []);
 
   const getButtonDisabled = () => {
     if (product?.isActive && !itemsChanged && !flags.isCanceled) {
@@ -161,8 +151,6 @@ export const useAttachState = ({
   };
 
   const getButtonText = () => {
-    console.log("Is prepaid:", flags.hasPrepaid);
-    console.log("Items changed:", itemsChanged);
     if (product?.isActive && !itemsChanged) {
       if (flags.isOneOff) {
         return "Attach Product";

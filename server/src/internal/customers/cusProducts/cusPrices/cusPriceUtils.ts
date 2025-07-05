@@ -4,6 +4,7 @@ import {
   FullCustomerEntitlement,
   FullCustomerPrice,
   getFeatureInvoiceDescription,
+  OnDecrease,
   Price,
   UsagePriceConfig,
 } from "@autumn/shared";

@@ -10,6 +10,8 @@ import {
   AttachScenario,
   ProductPropertiesSchema,
   BillingInterval,
+  FeatureOptions,
+  UsageModel,
 } from "@autumn/shared";
 import { sortProductItems } from "../../pricecn/pricecnUtils.js";
 import {
@@ -31,11 +33,13 @@ export const getProductItemResponse = ({
   features,
   currency,
   withDisplay = true,
+  options,
 }: {
   item: ProductItem;
   features: Feature[];
   currency?: string;
   withDisplay?: boolean;
+  options?: FeatureOptions[];
 }) => {
   // 1. Get item type
   let type = getItemType(item);
@@ -49,11 +53,26 @@ export const getProductItemResponse = ({
 
   let priceData = itemToPriceOrTiers({ item });
 
+  let quantity = undefined;
+  let upcomingQuantity = undefined;
+  if (item.usage_model == UsageModel.Prepaid && notNullish(options)) {
+    let option = options!.find((o) => o.feature_id == item.feature_id);
+    quantity = option?.quantity
+      ? option?.quantity * (item.billing_units ?? 1)
+      : undefined;
+
+    upcomingQuantity = option?.upcoming_quantity
+      ? option?.upcoming_quantity * (item.billing_units ?? 1)
+      : undefined;
+  }
+
   return ProductItemResponseSchema.parse({
     type,
     ...item,
     display: withDisplay ? display : undefined,
     ...priceData,
+    quantity,
+    next_cycle_quantity: upcomingQuantity,
   });
 };
 
@@ -120,6 +139,7 @@ export const getProductResponse = async ({
   currency,
   db,
   withDisplay = true,
+  options,
 }: {
   product: FullProduct;
   features: Feature[];
@@ -127,6 +147,7 @@ export const getProductResponse = async ({
   currency?: string;
   db?: DrizzleCli;
   withDisplay?: boolean;
+  options?: FeatureOptions[];
 }) => {
   // 1. Get items with display
   let items = mapToProductItems({
@@ -139,6 +160,7 @@ export const getProductResponse = async ({
       features,
       currency,
       withDisplay,
+      options,
     });
   });
 

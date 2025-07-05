@@ -1,12 +1,18 @@
 import Stripe from "stripe";
 import { findPriceInStripeItems } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { attachParamToCusProducts } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
-import { cusProductToPrices } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
+import {
+  cusProductToEnts,
+  cusProductToPrices,
+} from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { getSubItemAmount } from "@/external/stripe/stripeSubUtils/getSubItemAmount.js";
 import { Decimal } from "decimal.js";
 import { calculateProrationAmount } from "../prorationUtils.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import {
+  getBillingType,
+  getPriceEntitlement,
+} from "@/internal/products/prices/priceUtils.js";
 import { BillingType, PreviewLineItem } from "@autumn/shared";
 import { priceToInvoiceDescription } from "../invoiceFormatUtils.js";
 import { formatUnixToDate } from "@/utils/genUtils.js";
@@ -64,6 +70,8 @@ export const getItemsForCurProduct = async ({
 
       const periodEnd = sub.current_period_end * 1000;
 
+      const ents = cusProductToEnts({ cusProduct: curCusProduct });
+      const ent = getPriceEntitlement(price, ents);
       if (now < periodEnd) {
         const finalProration = getProration({
           now,
@@ -97,6 +105,7 @@ export const getItemsForCurProduct = async ({
           amount: proratedAmount,
           usage_model: priceToUsageModel(price),
           price_id: price.id!,
+          feature_id: ent?.feature.id,
         });
       }
     }

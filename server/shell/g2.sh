@@ -13,4 +13,4 @@ MOCHA_PARALLEL=true $MOCHA_SETUP && $MOCHA_CMD \
 'tests/advanced/check/*.ts' \
 'tests/attach/others/*.ts'
 
-
+$MOCHA_CMD 'tests/attach/prepaid/*.ts'

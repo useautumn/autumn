@@ -63,10 +63,12 @@ export const createStripeSub = async ({
     : undefined;
 
   const { items, prices, usageFeatures } = itemSet;
+
   let subItems = items.filter(
     (i: any, index: number) =>
       prices[index].config!.interval !== BillingInterval.OneOff,
   );
+
   let invoiceItems = items.filter(
     (i: any, index: number) =>
       prices[index].config!.interval === BillingInterval.OneOff,
