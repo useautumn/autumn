@@ -11,14 +11,14 @@ import {
 import { Loader2 } from "lucide-react";
 
 import { getPaywallDialogTexts } from "@/lib/autumn/get-paywall-texts";
-import { type CheckFeatureFormattedPreview } from "autumn-js";
+import { type CheckFeaturePreview } from "autumn-js";
 import { useAutumn } from "autumn-js/react";
 import ProductChangeDialog from "./product-change-dialog";
 
 export interface PaywallDialogProps {
   open: boolean;
   setOpen: (open: boolean) => void;
-  preview: CheckFeatureFormattedPreview;
+  preview: CheckFeaturePreview;
 }
 
 export default function PaywallDialog(params?: PaywallDialogProps) {

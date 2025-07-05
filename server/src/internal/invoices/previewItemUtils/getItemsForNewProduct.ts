@@ -185,7 +185,7 @@ export const getItemsForNewProduct = async ({
 
     if (billingType == BillingType.UsageInArrear) {
       items.push({
-        price: getDefaultPriceStr({ org, price, ent, features }),
+        price: getDefaultPriceStr({ org, price, ent: ent!, features }),
         description: newPriceToInvoiceDescription({
           org,
           price,

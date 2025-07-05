@@ -195,10 +195,6 @@ export const getPriceEntitlement = (
 ) => {
   let config = price.config as UsagePriceConfig;
 
-  if (config.type == PriceType.Fixed) {
-    return null;
-  }
-
   const entitlement = entitlements.find((ent) => {
     let entIdMatch =
       notNullish(price.entitlement_id) && price.entitlement_id == ent.id;

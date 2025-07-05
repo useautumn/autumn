@@ -14,47 +14,36 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
 import { addPrefixToProducts } from "../utils.js";
-import {
-  constructFeatureItem,
-  constructPrepaidItem,
-} from "@/utils/scriptUtils/constructItem.js";
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { attachAndExpectCorrect } from "tests/utils/expectUtils/expectAttach.js";
+import { expectProductAttached } from "tests/utils/expectUtils/expectProductAttached.js";
+import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils.js";
+import { addHours, addMonths } from "date-fns";
+import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { expect } from "chai";
+import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
 
-const testCase = "prepaid6";
+const testCase = "prepaid1";
 
 export let pro = constructProduct({
+  items: [
+    constructPrepaidItem({
+      featureId: TestFeature.Messages,
+      billingUnits: 100,
+      price: 12.5,
+      config: {
+        on_increase: OnIncrease.ProrateImmediately,
+        on_decrease: OnDecrease.None,
+      },
+    }),
+  ],
+  excludeBase: true,
   type: "pro",
-  items: [
-    constructPrepaidItem({
-      featureId: TestFeature.Messages,
-      billingUnits: 100,
-      price: 12.5,
-      config: {
-        on_increase: OnIncrease.ProrateImmediately,
-        on_decrease: OnDecrease.None,
-      },
-    }),
-  ],
-});
-export let premium = constructProduct({
-  type: "premium",
-  items: [
-    constructPrepaidItem({
-      featureId: TestFeature.Messages,
-      billingUnits: 100,
-      price: 12.5,
-      config: {
-        on_increase: OnIncrease.ProrateImmediately,
-        on_decrease: OnDecrease.None,
-      },
-    }),
-  ],
 });
 
-describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entities`)}`, () => {
+describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proration downgrade, single use`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -80,27 +69,52 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
       org,
       env,
       attachPm: "success",
-      withTestClock: false,
     });
 
     addPrefixToProducts({
-      products: [pro, premium],
+      products: [pro],
       prefix: testCase,
     });
 
     await createProducts({
       autumn,
-      products: [pro, premium],
+      products: [pro],
       db,
       orgId: org.id,
       env,
     });
 
     customer = res.customer;
-    // testClockId = res.testClockId!;
+    testClockId = res.testClockId!;
   });
 
-  it("should attach pro product", async function () {
+  const options = [
+    {
+      feature_id: TestFeature.Messages,
+      quantity: 300,
+    },
+  ];
+
+  it("should attach pro product to customer", async function () {
+    await attachAndExpectCorrect({
+      autumn,
+      customerId,
+      product: pro,
+      stripeCli,
+      db,
+      org,
+      env,
+      options,
+    });
+
+    let customer = await autumn.customers.get(customerId);
+    expectProductAttached({
+      customer,
+      product: pro,
+    });
+  });
+
+  it("should reduce quantity to 200 and have correct sub item quantity + cus product quantity", async function () {
     await attachAndExpectCorrect({
       autumn,
       customerId,
@@ -112,75 +126,73 @@ describe(`${chalk.yellowBright(`attach/${testCase}: prepaid add on, with entitie
       options: [
         {
           feature_id: TestFeature.Messages,
-          quantity: 300,
+          quantity: 200,
         },
       ],
     });
   });
 
-  return;
+  it("should increase quantity to 400 and have correct sub item quantity + invoice..", async function () {
+    await attachAndExpectCorrect({
+      autumn,
+      customerId,
+      product: pro,
+      stripeCli,
+      db,
+      org,
+      env,
+      options: [
+        {
+          feature_id: TestFeature.Messages,
+          quantity: 400,
+        },
+      ],
+      waitForInvoice: 5000,
+    });
+  });
 
-  // it("should advance test clock and attach premium", async function () {
-  //   await advanceTestClock({
-  //     stripeCli,
-  //     testClockId,
-  //     advanceTo: addWeeks(new Date(), 2).getTime(),
-  //     waitForSeconds: 10,
-  //   });
+  const newQuantity = 200;
+  it("should decrease quantity to 200, advance clock to next cycle and have correct balance", async function () {
+    await attachAndExpectCorrect({
+      autumn,
+      customerId,
+      product: pro,
+      stripeCli,
+      db,
+      org,
+      env,
+      options: [
+        {
+          feature_id: TestFeature.Messages,
+          quantity: newQuantity,
+        },
+      ],
+    });
 
-  //   await attachAndExpectCorrect({
-  //     autumn,
-  //     customerId,
-  //     entityId: entity2Id,
-  //     product: premium,
-  //     stripeCli,
-  //     db,
-  //     org,
-  //     env,
-  //     numSubs: 3,
-  //   });
+    await advanceTestClock({
+      stripeCli,
+      testClockId,
+      advanceTo: addHours(
+        addMonths(new Date(), 1),
+        hoursToFinalizeInvoice,
+      ).getTime(),
+      waitForSeconds: 30,
+    });
 
-  //   await attachAndExpectCorrect({
-  //     autumn,
-  //     customerId,
-  //     entityId: entity2Id,
-  //     product: prepaidAddOn,
-  //     otherProducts: [premium],
-  //     stripeCli,
-  //     db,
-  //     org,
-  //     env,
-  //     options: [
-  //       {
-  //         feature_id: TestFeature.Messages,
-  //         quantity: oldEntity2Quantity,
-  //       },
-  //     ],
-  //     numSubs: 4,
-  //   });
-  // });
+    const autumnCus = await autumn.customers.get(customerId);
+    expect(autumnCus.features[TestFeature.Messages].balance).to.equal(
+      newQuantity,
+    );
 
-  // it("should increase prepaid add on quantity for entity1", async function () {
-  //   await attachAndExpectCorrect({
-  //     autumn,
-  //     customerId,
-  //     entityId: entity1Id,
-  //     product: prepaidAddOn,
-  //     otherProducts: [pro],
-  //     stripeCli,
-  //     db,
-  //     org,
-  //     env,
-  //     options: [
-  //       {
-  //         feature_id: TestFeature.Messages,
-  //         quantity: 200,
-  //       },
-  //     ],
-  //     numSubs: 4,
-  //     waitForInvoice: 10000,
-  //   });
-  // });
+    expect(autumnCus.invoices.length).to.equal(3);
+    expect(autumnCus.invoices[0].total).to.equal((newQuantity / 100) * 12.5);
 
-  return;
+    const cusProduct = await getMainCusProduct({
+      db,
+      internalCustomerId: customer.internal_id,
+    });
+    // console.log(cusProduct);
+    expect(cusProduct?.options[0].quantity).to.equal(newQuantity / 100);
+    expect(cusProduct?.options[0].upcoming_quantity).to.not.exist;
+  });
 });

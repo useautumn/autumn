@@ -93,8 +93,8 @@ export const shouldShowProrationConfig = ({
   // } else
 
   if (
-    usageType == ProductItemFeatureType.ContinuousUse &&
-    item.usage_model !== UsageModel.Prepaid
+    usageType == ProductItemFeatureType.ContinuousUse
+    // &&item.usage_model !== UsageModel.Prepaid
   ) {
     return true;
   }
