@@ -84,6 +84,16 @@ export const handlePrepaidPrices = async ({
         options: newOptions as FeatureOptions[],
       },
     });
+
+    if (ent.interval == EntInterval.Lifetime) {
+      let difference = options?.quantity! - options?.upcoming_quantity!;
+      await CusEntService.decrement({
+        db,
+        id: cusEnt.id,
+        amount: difference,
+      });
+      return;
+    }
   }
 
   if (ent.interval == EntInterval.Lifetime) {
