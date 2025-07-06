@@ -27,12 +27,14 @@ const autumnStripePricesMatch = ({
 export const findStripeItemForPrice = ({
   price,
   stripeItems,
+  stripeProdId,
 }: {
   price: Price;
   stripeItems:
     | Stripe.SubscriptionItem[]
     | Stripe.InvoiceLineItem[]
     | Stripe.LineItem[];
+  stripeProdId?: string;
 }) => {
   return stripeItems.find(
     (
@@ -41,7 +43,8 @@ export const findStripeItemForPrice = ({
       const config = price.config as UsagePriceConfig;
       return (
         config.stripe_price_id == si.price?.id ||
-        config.stripe_product_id == si.price?.product
+        config.stripe_product_id == si.price?.product ||
+        (stripeProdId && si.price?.product == stripeProdId)
       );
     },
   );
