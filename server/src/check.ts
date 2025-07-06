@@ -1,7 +1,7 @@
 import "dotenv/config";
 
 import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
-import { OrgId } from "../scripts/constants.js";
+// import { OrgId } from "../scripts/constants.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import {
   AppEnv,
@@ -20,7 +20,7 @@ import {
 } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { notNullish, nullish } from "@/utils/genUtils.js";
-import { getAllStripeSubscriptions } from "../scripts/customers/utils.js";
+import { getAllStripeSubscriptions } from "@/utils/scriptUtils/getAll/getAllStripeSubs.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
