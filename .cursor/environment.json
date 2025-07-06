@@ -1,6 +1,3 @@
 {
-  "snapshot": "snapshot-20250706-b03c4a7f-a8b7-4006-ab8a-6e29faeb8e3c",
-  "start": "docker compose -f docker-compose.unix.yml up",
-  "terminals": [],
-  "install": "sudo apt install -y docker.io && sudo apt install -y docker-compose && sudo dockerd &"
+  "terminals": []
 }
