@@ -24,26 +24,26 @@ import { addHours, addMonths } from "date-fns";
 import { hoursToFinalizeInvoice } from "tests/utils/constants.js";
 import { expect } from "chai";
 import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
+import { timeout } from "@/utils/genUtils.js";
 
-const testCase = "prepaid1";
+const userItem = constructPrepaidItem({
+  featureId: TestFeature.Users,
+  price: 10,
+  billingUnits: 1,
+  config: {
+    on_increase: OnIncrease.ProrateImmediately,
+    on_decrease: OnDecrease.None,
+  },
+});
 
 export let pro = constructProduct({
-  items: [
-    constructPrepaidItem({
-      featureId: TestFeature.Messages,
-      billingUnits: 100,
-      price: 12.5,
-      config: {
-        on_increase: OnIncrease.ProrateImmediately,
-        on_decrease: OnDecrease.None,
-      },
-    }),
-  ],
+  items: [userItem],
   excludeBase: true,
   type: "pro",
 });
 
-describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proration downgrade, single use`)}`, () => {
+const testCase = "prepaid6";
+describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proration downgrade, cont use`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -90,11 +90,12 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
 
   const options = [
     {
-      feature_id: TestFeature.Messages,
-      quantity: 300,
+      feature_id: TestFeature.Users,
+      quantity: 4,
     },
   ];
 
+  const originalQuantity = 4;
   it("should attach pro product to customer", async function () {
     await attachAndExpectCorrect({
       autumn,
@@ -114,25 +115,17 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
     });
   });
 
-  it("should reduce quantity to 200 and have correct sub item quantity + cus product quantity", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-      options: [
-        {
-          feature_id: TestFeature.Messages,
-          quantity: 200,
-        },
-      ],
+  const usage = 3;
+  const newQuantity = 3;
+  it("should use 3 users, then downgrade to 3 seats", async function () {
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Users,
+      value: usage,
     });
-  });
 
-  it("should increase quantity to 400 and have correct sub item quantity + invoice..", async function () {
+    await timeout(3000);
+
     await attachAndExpectCorrect({
       autumn,
       customerId,
@@ -143,32 +136,19 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
       env,
       options: [
         {
-          feature_id: TestFeature.Messages,
-          quantity: 400,
-        },
-      ],
-      waitForInvoice: 5000,
-    });
-  });
-
-  const newQuantity = 200;
-  it("should decrease quantity to 200, advance clock to next cycle and have correct balance", async function () {
-    await attachAndExpectCorrect({
-      autumn,
-      customerId,
-      product: pro,
-      stripeCli,
-      db,
-      org,
-      env,
-      options: [
-        {
-          feature_id: TestFeature.Messages,
+          feature_id: TestFeature.Users,
           quantity: newQuantity,
         },
       ],
+      usage: [
+        {
+          featureId: TestFeature.Users,
+          value: usage,
+        },
+      ],
     });
-
+  });
+  it("should have correct balance (0) next cycle", async function () {
     await advanceTestClock({
       stripeCli,
       testClockId,
@@ -180,19 +160,15 @@ describe(`${chalk.yellowBright(`attach/${testCase}: update quantity, no proratio
     });
 
     const autumnCus = await autumn.customers.get(customerId);
-    expect(autumnCus.features[TestFeature.Messages].balance).to.equal(
-      newQuantity,
+
+    expect(autumnCus.features[TestFeature.Users].balance).to.equal(0);
+    let product = autumnCus.products.find((p: any) => p.id == pro.id) as any;
+    let userItem = product.items.find(
+      (i: any) => i.feature_id == TestFeature.Users,
     );
 
-    expect(autumnCus.invoices.length).to.equal(3);
-    expect(autumnCus.invoices[0].total).to.equal((newQuantity / 100) * 12.5);
-
-    const cusProduct = await getMainCusProduct({
-      db,
-      internalCustomerId: customer.internal_id,
-    });
-    // console.log(cusProduct);
-    expect(cusProduct?.options[0].quantity).to.equal(newQuantity / 100);
-    expect(cusProduct?.options[0].upcoming_quantity).to.not.exist;
+    expect(userItem?.quantity).to.equal(newQuantity);
+    expect(userItem?.upcoming_quantity).to.not.exist;
+    expect(autumnCus.invoices[0].total).to.equal(newQuantity * userItem.price);
   });
 });
