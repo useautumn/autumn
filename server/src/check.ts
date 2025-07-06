@@ -1,7 +1,6 @@
 import "dotenv/config";
 
 import { getAllFullCustomers } from "@/utils/scriptUtils/getAll/getAllAutumnCustomers.js";
-// import { OrgId } from "../scripts/constants.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import {
   AppEnv,
@@ -23,7 +22,10 @@ import { notNullish, nullish } from "@/utils/genUtils.js";
 import { getAllStripeSubscriptions } from "@/utils/scriptUtils/getAll/getAllStripeSubs.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
+import {
+  formatPrice,
+  getBillingType,
+} from "@/internal/products/prices/priceUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createSupabaseClient } from "@/external/supabaseUtils.js";
@@ -33,7 +35,7 @@ const { db, client } = initDrizzle({ maxConnections: 5 });
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
 
-// orgSlugs = ["lingo"];
+// orgSlugs = ["athenahq"];
 
 const getSingleCustomer = async ({
   stripeCli,
@@ -239,24 +241,39 @@ export const check = async () => {
     console.log("--------------------------------");
     console.log(`Running error check for ${org.name}`);
 
-    const [customers, { subscriptions: stripeSubs }] = await Promise.all([
-      getAllFullCustomers({
-        db,
+    let customerId;
+
+    // customerId = "0ec443d3-8917-4a48-8892-c7479d57f78c";
+
+    let customers: FullCustomer[] = [];
+    let stripeSubs: Stripe.Subscription[] = [];
+
+    if (customerId) {
+      const res = await getSingleCustomer({
+        stripeCli,
+        customerId,
         orgId: org.id,
         env,
-      }),
-      getAllStripeSubscriptions({
-        stripeCli,
-        waitForSeconds: 1,
-      }),
-    ]);
+      });
 
-    // const { customers, stripeSubs } = await getSingleCustomer({
-    //   stripeCli,
-    //   customerId: "acc_lknjdevi2f3hx2b69ph0zbl8",
-    //   orgId: org.id,
-    //   env,
-    // });
+      customers = res.customers;
+      stripeSubs = res.stripeSubs;
+    } else {
+      const [customersRes, stripeSubsRes] = await Promise.all([
+        getAllFullCustomers({
+          db,
+          orgId: org.id,
+          env,
+        }),
+        getAllStripeSubscriptions({
+          stripeCli,
+          waitForSeconds: 1,
+        }),
+      ]);
+
+      customers = customersRes;
+      stripeSubs = stripeSubsRes.subscriptions;
+    }
 
     const batchSize = 1;
     const allErrors = [];
@@ -313,23 +330,25 @@ export const check = async () => {
     `COMPLETED ERROR CHECK FOR ${new Date().toISOString().slice(0, 16)}`,
   );
 
-  // const slackBody = {
-  //   text: `Completed error check for ${new Date().toISOString().slice(0, 16)}`,
-  //   blocks: [
-  //     {
-  //       type: "section",
-  //       text: {
-  //         type: "mrkdwn",
-  //         text: `Error check completed for ${new Date().toISOString().slice(0, 16)}`,
-  //       },
-  //     },
-  //   ],
-  // };
+  if (process.env.NODE_ENV == "production") {
+    const slackBody = {
+      text: `Completed error check for ${new Date().toISOString().slice(0, 16)}`,
+      blocks: [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `Error check completed for ${new Date().toISOString().slice(0, 16)}`,
+          },
+        },
+      ],
+    };
 
-  // await fetch(process.env.SLACK_WEBHOOK_URL!, {
-  //   method: "POST",
-  //   body: JSON.stringify(slackBody),
-  // });
+    await fetch(process.env.SLACK_WEBHOOK_URL!, {
+      method: "POST",
+      body: JSON.stringify(slackBody),
+    });
+  }
 };
 
 check().finally(() => {

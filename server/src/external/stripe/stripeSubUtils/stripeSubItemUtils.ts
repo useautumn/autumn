@@ -6,6 +6,7 @@ import {
   FullCusProduct,
   Price,
   prices,
+  PriceType,
   UsagePriceConfig,
 } from "@autumn/shared";
 import Stripe from "stripe";
@@ -41,10 +42,21 @@ export const findStripeItemForPrice = ({
       si: Stripe.SubscriptionItem | Stripe.InvoiceLineItem | Stripe.LineItem,
     ) => {
       const config = price.config as UsagePriceConfig;
+
+      if (config.type == PriceType.Fixed) {
+        return (
+          config.stripe_price_id == si.price?.id ||
+          (stripeProdId && si.price?.product == stripeProdId)
+        );
+      } else {
+        return (
+          config.stripe_price_id == si.price?.id ||
+          config.stripe_product_id == si.price?.product
+        );
+      }
       return (
         config.stripe_price_id == si.price?.id ||
-        config.stripe_product_id == si.price?.product ||
-        (stripeProdId && si.price?.product == stripeProdId)
+        config.stripe_product_id == si.price?.product
       );
     },
   );
