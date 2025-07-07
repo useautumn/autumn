@@ -1,4 +1,9 @@
-import { BillingInterval, Price } from "@autumn/shared";
+import {
+  BillingInterval,
+  EntInterval,
+  Entitlement,
+  Price,
+} from "@autumn/shared";
 import { nullish } from "@/utils/genUtils.js";
 
 const BillingIntervalOrder = [
@@ -16,6 +21,12 @@ const ReversedBillingIntervalOrder = [
   BillingInterval.SemiAnnual,
   BillingInterval.Year,
 ];
+
+const entToBillingInterval = (entInterval: EntInterval | null | undefined) => {
+  if (entInterval == EntInterval.Lifetime || !entInterval) {
+    return BillingInterval.OneOff;
+  } else return entInterval as unknown as BillingInterval;
+};
 
 export function compareBillingIntervals(
   a: BillingInterval | undefined,
@@ -48,9 +59,18 @@ export const getFirstInterval = ({
   )!;
 };
 
-export const getLastInterval = ({ prices }: { prices: Price[] }) => {
-  return ReversedBillingIntervalOrder.find((interval) =>
-    prices.some((price) => price.config.interval === interval),
+export const getLastInterval = ({
+  prices,
+  ents,
+}: {
+  prices: Price[];
+  ents?: Entitlement[];
+}) => {
+  return ReversedBillingIntervalOrder.find(
+    (interval) =>
+      prices.some((price) => price.config.interval === interval) ||
+      (ents &&
+        ents?.some((ent) => entToBillingInterval(ent.interval) === interval)),
   )!;
 };
 
