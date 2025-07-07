@@ -23,6 +23,8 @@ export const ProductItemResponseSchema = z.object({
   usage_model: z.nativeEnum(UsageModel).nullish(),
   billing_units: z.number().nullish(), // amount per billing unit (eg. $9 / 250 units)
   reset_usage_when_enabled: z.boolean().nullish(),
+  quantity: z.number().nullish(),
+  next_cycle_quantity: z.number().nullish(),
 
   display: z
     .object({

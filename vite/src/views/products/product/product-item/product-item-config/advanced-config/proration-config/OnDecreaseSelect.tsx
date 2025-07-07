@@ -1,13 +1,23 @@
 import { OnDecrease, UsageModel } from "@autumn/shared";
 import { useProductItemContext } from "../../../ProductItemContext";
 import { ProrationSelect } from "./ProrationSelect";
-import { nullish } from "zod/v4";
+import { nullish } from "@/utils/genUtils";
 
-const optionToText = (option: OnDecrease) => {
+const optionToText = ({
+  option,
+  usageModel,
+}: {
+  option: OnDecrease;
+  usageModel: UsageModel;
+}) => {
   switch (option) {
     case OnDecrease.Prorate:
       return "Prorate";
     case OnDecrease.None:
+      if (usageModel == UsageModel.Prepaid) {
+        return "No proration (balance will be kept till next cycle)";
+      }
+
       return "No proration (usage will be kept till next cycle)";
   }
 };
@@ -31,18 +41,6 @@ export const OnDecreaseSelect = () => {
     return OnDecrease.None;
   };
 
-  // useEffect(() => {
-  //   if (!item.config?.on_decrease) {
-  //     setItem({
-  //       ...item,
-  //       config: {
-  //         ...item.config,
-  //         on_decrease: OnDecrease.Prorate,
-  //       },
-  //     });
-  //   }
-  // }, [item]);
-
   const text =
     item.usage_model == UsageModel.PayPerUse
       ? "On usage decrease"
@@ -60,7 +58,9 @@ export const OnDecreaseSelect = () => {
             config: { ...item.config, on_decrease: value },
           });
         }}
-        optionToText={optionToText}
+        optionToText={(option: OnDecrease) =>
+          optionToText({ option, usageModel: item.usage_model })
+        }
         options={[OnDecrease.Prorate, OnDecrease.None]}
       />
     </div>

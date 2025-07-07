@@ -6,10 +6,15 @@ import { getAttachConfig } from "../attachUtils/getAttachConfig.js";
 import { AttachFunction } from "@autumn/shared";
 import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
 import { cusProductToProduct } from "../../cusProducts/cusProductUtils/convertCusProduct.js";
-import { attachParamToCusProducts } from "../attachUtils/convertAttachParams.js";
+import {
+  attachParamsToProduct,
+  attachParamToCusProducts,
+} from "../attachUtils/convertAttachParams.js";
 import { getDowngradeProductPreview } from "./getDowngradeProductPreview.js";
 import { getNewProductPreview } from "./getNewProductPreview.js";
 import { getUpgradeProductPreview } from "./getUpgradeProductPreview.js";
+import { getUpdateQuantityPreview } from "./getUpdateQuantityPreview.js";
+import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
 
 export const attachParamsToPreview = async ({
   req,
@@ -61,8 +66,8 @@ export const attachParamsToPreview = async ({
     preview = await getNewProductPreview({
       branch,
       attachParams,
-      now,
       logger,
+      config,
     });
   }
 
@@ -76,8 +81,8 @@ export const attachParamsToPreview = async ({
 
   if (
     func == AttachFunction.UpgradeDiffInterval ||
-    func == AttachFunction.UpdatePrepaidQuantity ||
-    func == AttachFunction.UpgradeSameInterval
+    func == AttachFunction.UpgradeSameInterval ||
+    func == AttachFunction.UpdatePrepaidQuantity
   ) {
     preview = await getUpgradeProductPreview({
       req,
@@ -86,6 +91,15 @@ export const attachParamsToPreview = async ({
       now,
     });
   }
+
+  // if (func == AttachFunction.UpdatePrepaidQuantity) {
+  //   preview = await getUpdateQuantityPreview({
+  //     req,
+  //     attachParams,
+  //     branch,
+  //     now,
+  //   });
+  // }
 
   const { curMainProduct, curScheduledProduct } = attachParamToCusProducts({
     attachParams,

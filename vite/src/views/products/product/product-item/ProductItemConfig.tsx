@@ -2,22 +2,12 @@ import {
   Feature,
   FeatureType,
   FeatureUsageType,
-  Infinite,
   ProductItemFeatureType,
   ProductItemInterval,
   TierInfinite,
 } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { useProductContext } from "@/views/products/product/ProductContext";
-import { Button } from "@/components/ui/button";
-import { PlusIcon } from "lucide-react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 import { cn } from "@/lib/utils";
 import { useProductItemContext } from "./ProductItemContext";
@@ -27,7 +17,6 @@ import {
 } from "@/utils/product/productItemUtils";
 import { ConfigWithFeature } from "./components/ConfigWithFeature";
 import FixedPriceConfig from "./components/ConfigFixedPrice";
-import { getFeature } from "@/utils/product/entitlementUtils";
 import { isFeaturePriceItem, isPriceItem } from "@/utils/product/getItemType";
 
 export const ProductItemConfig = () => {

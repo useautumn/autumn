@@ -194,6 +194,12 @@ const getSameProductBranch = async ({
     return AttachBranch.UpdatePrepaidQuantity;
   }
 
+  if (fromPreview) {
+    if (hasPrepaidPrice({ prices: attachParams.prices, excludeOneOff: true })) {
+      return AttachBranch.UpdatePrepaidQuantity;
+    }
+  }
+
   // 2. If add on product
   if (product.is_add_on) {
     return AttachBranch.AddOn;
@@ -213,12 +219,6 @@ const getSameProductBranch = async ({
 
   if (curSameProduct.canceled_at) {
     return AttachBranch.Renew;
-  }
-
-  if (fromPreview) {
-    if (hasPrepaidPrice({ prices: attachParams.prices, excludeOneOff: true })) {
-      return AttachBranch.UpdatePrepaidQuantity;
-    }
   }
 
   // Invalid, can't attach same product

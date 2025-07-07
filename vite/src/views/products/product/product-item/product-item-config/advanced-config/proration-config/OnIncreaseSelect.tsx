@@ -34,7 +34,14 @@ export const OnIncreaseSelect = () => {
           setItem({ ...item, config: { ...item.config, on_increase: value } })
         }
         optionToText={optionToText}
-        options={Object.values(OnIncrease)}
+        options={Object.values(OnIncrease).filter((o) => {
+          if (
+            item.usage_model == UsageModel.Prepaid &&
+            o == OnIncrease.BillImmediately
+          )
+            return false;
+          return true;
+        })}
       />
     </div>
   );

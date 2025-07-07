@@ -110,6 +110,10 @@ const resetCustomerEntitlement = async ({
 
     // 2. Quantity is from prices...
     const relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
+    if (relatedCusPrice) {
+      return;
+    }
+
     const entOptions = getEntOptions(
       cusEnt.customer_product.options,
       cusEnt.entitlement,
@@ -118,10 +122,9 @@ const resetCustomerEntitlement = async ({
     const resetBalance = getResetBalance({
       entitlement: cusEnt.entitlement,
       options: entOptions,
-      relatedPrice: relatedCusPrice?.price,
+      relatedPrice: undefined,
+      // relatedPrice: relatedCusPrice,
     });
-
-    // 3. Update the next_reset_at for each entitlement
 
     // Handle if entitlement changed to unlimited...
     let entitlement = cusEnt.entitlement;

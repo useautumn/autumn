@@ -3,8 +3,8 @@ import {
   getUnlimitedAndUsageAllowed,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { cusEntMatchesFeature } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
-import { getCusBalances } from "@/internal/customers/cusProducts/cusEnts/cusFeatureUtils/getCusBalances.js";
-import { balancesToFeatureResponse } from "@/internal/customers/cusProducts/cusEnts/cusFeatureUtils/balancesToFeatureResponse.js";
+import { getCusBalances } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusBalances.js";
+import { balancesToFeatureResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/balancesToFeatureResponse.js";
 import {
   CheckResponseSchema,
   Feature,

@@ -1,8 +1,6 @@
-import { type CheckFeatureFormattedPreview } from "autumn-js";
+import { type CheckFeaturePreview } from "autumn-js";
 
-export const getPaywallDialogTexts = (
-  preview: CheckFeatureFormattedPreview
-) => {
+export const getPaywallDialogTexts = (preview: CheckFeaturePreview) => {
   const { scenario, products, feature_name } = preview;
 
   if (products.length == 0) {
@@ -28,8 +26,8 @@ export const getPaywallDialogTexts = (
   const title = nextProduct.free_trial
     ? `Start trial for ${nextProduct.name}`
     : nextProduct.is_add_on
-    ? `Purchase ${nextProduct.name}`
-    : `Upgrade to ${nextProduct.name}`;
+      ? `Purchase ${nextProduct.name}`
+      : `Upgrade to ${nextProduct.name}`;
 
   let message = "";
   if (isAddOn) {
