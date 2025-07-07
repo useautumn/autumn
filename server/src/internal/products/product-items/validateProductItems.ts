@@ -23,7 +23,6 @@ import {
 } from "./productItemUtils/getItemType.js";
 import { itemToEntInterval } from "./itemIntervalUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
-import { Decimal } from "decimal.js";
 
 const validateProductItem = ({
   item,
@@ -243,13 +242,27 @@ export const validateProductItems = ({
 
     if (
       isFeatureItem(otherItem) ||
-      item.usage_model == otherItem?.usage_model
+      (item.usage_model && item.usage_model == otherItem?.usage_model)
     ) {
       throw new RecaseError({
         message: `Can't have two features with same reset interval, unless one is prepaid, and another is pay per use`,
         code: ErrCode.InvalidInputs,
         statusCode: StatusCodes.BAD_REQUEST,
       });
+    }
+
+    if (isPriceItem(item)) {
+      let otherItem = newItems.find((i: any, index2: any) => {
+        return i.interval === item.interval && index2 != index;
+      });
+
+      if (otherItem) {
+        throw new RecaseError({
+          message: `Can't have two fixed prices with the same interval`,
+          code: ErrCode.InvalidInputs,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
     }
   }
 

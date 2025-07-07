@@ -35,7 +35,7 @@ const { db, client } = initDrizzle({ maxConnections: 5 });
 let orgSlugs = process.env.ORG_SLUGS!.split(",");
 const skipEmails = process.env.SKIP_EMAILS!.split(",");
 
-// orgSlugs = ["athenahq"];
+orgSlugs = ["athenahq"];
 
 const getSingleCustomer = async ({
   stripeCli,
@@ -117,7 +117,11 @@ const checkCustomerCorrect = async ({
 
     const prices = cusProductToPrices({ cusProduct });
 
-    if (isOneOff(prices) || isFreeProduct(prices)) {
+    if (
+      isOneOff(prices) ||
+      isFreeProduct(prices) ||
+      cusProduct.status == CusProductStatus.Scheduled
+    ) {
       continue;
     }
 
@@ -171,7 +175,7 @@ const checkCustomerCorrect = async ({
           (price.config as any).feature_id || price.config.interval;
 
         // console.log("Stripe price ID:", price.config.stripe_price_id);
-        // console.log("Cus product:", cusProduct);
+        // console.log("Sub items:", subItems);
         assert(
           subItem,
           `(${cusProduct.product.name}) sub item for price: ${priceName} should exist`,
@@ -243,7 +247,7 @@ export const check = async () => {
 
     let customerId;
 
-    // customerId = "0ec443d3-8917-4a48-8892-c7479d57f78c";
+    customerId = "78a43491-2a8c-4fa6-9d02-fd14588731ea";
 
     let customers: FullCustomer[] = [];
     let stripeSubs: Stripe.Subscription[] = [];

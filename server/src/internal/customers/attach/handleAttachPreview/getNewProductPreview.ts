@@ -64,7 +64,11 @@ export const getNewProductPreview = async ({
       logger,
     });
 
-    let minInterval = getLastInterval({ prices: newProduct.prices });
+    let minInterval = getLastInterval({
+      prices: newProduct.prices,
+      ents: newProduct.entitlements,
+    });
+
     let dueAt = freeTrial
       ? freeTrialToStripeTimestamp({
           freeTrial,

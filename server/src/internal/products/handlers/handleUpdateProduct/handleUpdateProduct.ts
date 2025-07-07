@@ -50,8 +50,6 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         });
       }
 
-      // 1. Update product details
-
       const cusProductsCurVersion =
         await CusProductService.getByInternalProductId({
           db,
@@ -64,6 +62,7 @@ export const handleUpdateProductV2 = async (req: any, res: any) =>
         db,
         curProduct: fullProduct,
         newProduct: UpdateProductSchema.parse(req.body),
+        items: req.body.items,
         org,
         rewardPrograms,
         logger,

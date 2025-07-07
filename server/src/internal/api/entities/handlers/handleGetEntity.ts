@@ -1,5 +1,5 @@
 import { routeHandler } from "@/utils/routerUtils.js";
-import { EntityExpand, EntityResponseSchema } from "@autumn/shared";
+import { APIVersion, EntityExpand, EntityResponseSchema } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { parseEntityExpand } from "../entityUtils.js";
 import { getEntityResponse } from "../getEntityUtils.js";
@@ -21,7 +21,8 @@ export const handleGetEntity = async (req: any, res: any) =>
       let org = await OrgService.getFromReq(req);
       let apiVersion = orgToVersion({
         org,
-        reqApiVersion: req.apiVersion,
+        reqApiVersion:
+          req.apiVersion >= APIVersion.v1_1 ? req.apiVersion : APIVersion.v1_2,
       });
 
       // const start = performance.now();

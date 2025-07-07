@@ -11,6 +11,7 @@ import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handlePaidProduct } from "./handlePaidProduct.js";
 import { attachParamsToCurCusProduct } from "../../attachUtils/convertAttachParams.js";
 import { getDefaultAttachConfig } from "../../attachUtils/getAttachConfig.js";
+import { getMergeCusProduct } from "./getMergeCusProduct.js";
 
 export const handleAddProduct = async ({
   req,
@@ -45,12 +46,22 @@ export const handleAddProduct = async ({
 
   const batchInsert = [];
 
+  const { mergeCusProduct, mergeSubs } = await getMergeCusProduct({
+    attachParams,
+    config: config || defaultConfig,
+    products,
+  });
+
   for (const product of products) {
     let curCusProduct = attachParamsToCurCusProduct({ attachParams });
     let anchorToUnix = undefined;
 
     if (curCusProduct && config?.branch == AttachBranch.NewVersion) {
       anchorToUnix = curCusProduct.created_at;
+    }
+
+    if (mergeSubs.length > 0) {
+      anchorToUnix = mergeSubs[0].current_period_end * 1000;
     }
 
     batchInsert.push(

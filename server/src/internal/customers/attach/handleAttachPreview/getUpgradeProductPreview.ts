@@ -212,8 +212,6 @@ export const getUpgradeProductPreview = async ({
     dueToday = undefined;
   }
 
-  console.log("Due today: ", dueToday);
-
   return {
     currency: attachParams.org.default_currency,
     due_today: dueToday,

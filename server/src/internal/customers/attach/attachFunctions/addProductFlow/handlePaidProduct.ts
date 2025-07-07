@@ -133,16 +133,20 @@ export const handlePaidProduct = async ({
   // Add product and entitlements to customer
   const batchInsert = [];
 
+  const anchorToUnix =
+    subscriptions.length > 0
+      ? subscriptions[0].current_period_end * 1000
+      : mergeSubs.length > 0
+        ? mergeSubs[0].current_period_end * 1000
+        : undefined;
+
   for (const product of products) {
     batchInsert.push(
       createFullCusProduct({
         db: req.db,
         attachParams: attachToInsertParams(attachParams, product),
         subscriptionIds: subscriptions.map((s) => s.id),
-        anchorToUnix:
-          subscriptions.length > 0
-            ? subscriptions[0].current_period_end * 1000
-            : undefined,
+        anchorToUnix,
         carryExistingUsages: config.carryUsage,
         scenario: AttachScenario.New,
         logger,
