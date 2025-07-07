@@ -138,10 +138,16 @@ export const CustomerProductList = ({
                     key: "Cus Product ID",
                     value: cusProduct.id,
                   },
-                  {
-                    key: "Stripe Subscription ID (1)",
-                    value: cusProduct.subscription_ids?.[0] || "N/A",
-                  },
+                  // {
+                  //   key: "Stripe Subscription ID",
+                  //   value: cusProduct.subscription_ids?.[0] || "N/A",
+                  // },
+                  ...(cusProduct.subscription_ids
+                    ? cusProduct.subscription_ids.map((id: string) => ({
+                        key: "Stripe Subscription ID",
+                        value: id,
+                      }))
+                    : []),
                   {
                     key: "Entity ID",
                     value: cusProduct.entity_id || "N/A",
