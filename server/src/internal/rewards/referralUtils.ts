@@ -146,6 +146,7 @@ export const triggerFreeProduct = async ({
     received_by === RewardReceivedBy.All;
 
   let productId = rewardProgram.reward.free_product_id!;
+
   let fullProduct = await ProductService.getFull({
     db,
     idOrInternalId: productId,

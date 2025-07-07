@@ -13,12 +13,14 @@ import { Customer, Entity } from "autumn-js";
 export const expectFeaturesCorrect = ({
   customer,
   product,
+  otherProducts,
   options,
   usage,
   entities,
 }: {
   customer: Customer | Entity;
   product: ProductV2;
+  otherProducts?: ProductV2[];
   options?: FeatureOptions[];
   usage?: {
     featureId: string;
@@ -32,6 +34,8 @@ export const expectFeaturesCorrect = ({
     new Set(product.items.map((i) => i.feature_id)),
   ).filter(notNullish);
 
+  const otherItems = otherProducts?.flatMap((p) => p.items) || [];
+
   for (const featureId of featureIds) {
     let includedUsage: string | number = 0;
 
@@ -40,7 +44,7 @@ export const expectFeaturesCorrect = ({
 
     if (item.included_usage === undefined) continue;
 
-    for (const item of items) {
+    for (const item of [...items, ...otherItems]) {
       if (item.feature_id !== featureId) continue;
       if (item.included_usage == Infinite) {
         includedUsage = Infinite;

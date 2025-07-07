@@ -4,6 +4,7 @@ import { InvoiceResponseSchema } from "./invoiceModels/invoiceResponseModels.js"
 import { RewardResponseSchema } from "../rewardModels/rewardModels/rewardResponseModels.js";
 import { EntityResponseSchema } from "./entityModels/entityResModels.js";
 import { CusProductResponseSchema } from "./cusResModels/cusProductResponse.js";
+import { CusReferralResponseSchema } from "./cusResModels/cusReferralsResponse.js";
 
 export const TrialUsedResponseSchema = z.object({
   product_id: z.string(),
@@ -31,6 +32,8 @@ export const CusResponseSchema = z.object({
   rewards: RewardResponseSchema.nullish(),
   metadata: z.record(z.any()).default({}),
   entities: z.array(EntityResponseSchema).optional(),
+  referrals: z.array(CusReferralResponseSchema).optional(),
+  payment_method: z.any().nullish(),
 });
 
 export type CusResponse = z.infer<typeof CusResponseSchema>;

@@ -74,7 +74,7 @@ export const getCurContUseItems = async ({
         });
 
         const existingUsage = getExistingUsageFromCusProducts({
-          entitlement: ent,
+          entitlement: ent!,
           cusProducts: [curCusProduct],
           entities: attachParams.entities,
           carryExistingUsages: true,

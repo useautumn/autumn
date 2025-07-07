@@ -28,6 +28,8 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { getFullStripeInvoice } from "../../stripeInvoiceUtils.js";
 import { handleUsagePrices } from "./handleUsagePrices.js";
 import { handleContUsePrices } from "./handleContUsePrices.js";
+import { isFixedPrice } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
+import { handlePrepaidPrices } from "./handlePrepaidPrices.js";
 
 const handleInArrearProrated = async ({
   db,
@@ -194,10 +196,7 @@ export const sendUsageAndReset = async ({
     const price = cusPrice.price;
     let billingType = getBillingType(price.config);
 
-    if (
-      billingType !== BillingType.UsageInArrear &&
-      billingType !== BillingType.InArrearProrated
-    ) {
+    if (isFixedPrice({ price })) {
       continue;
     }
 
@@ -252,24 +251,23 @@ export const sendUsageAndReset = async ({
         stripeCli,
         cusEnts,
         cusPrice,
-        // customer,
-        // org,
-        // env,
         invoice,
         usageSub: usageBasedSub,
         logger,
       });
-      // await handleInArrearProrated({
-      //   db,
-      //   cusEnts,
-      //   cusPrice,
-      //   customer,
-      //   org,
-      //   env,
-      //   invoice,
-      //   usageSub: usageBasedSub,
-      //   logger,
-      // });
+    }
+
+    if (billingType == BillingType.UsageInAdvance) {
+      await handlePrepaidPrices({
+        db,
+        stripeCli,
+        cusPrice,
+        cusProduct: activeProduct,
+        usageSub: usageBasedSub,
+        customer,
+        invoice,
+        logger,
+      });
     }
   }
 };

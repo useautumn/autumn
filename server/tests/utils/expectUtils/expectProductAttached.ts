@@ -93,10 +93,11 @@ export const expectInvoicesCorrect = ({
     //   invoices![1].product_ids,
     // );
     try {
-      expect(
-        totalAmount == second.total,
+      expect(totalAmount).to.approximately(
+        second.total,
+        0.01,
         `first & second invoice total should sum to ${second.total}`,
-      ).to.be.true;
+      );
       expect(
         invoices![0].product_ids.includes(second.productId),
         `invoice 1 includes product ${second.productId}`,

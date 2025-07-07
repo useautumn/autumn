@@ -107,42 +107,6 @@ export const getCusInvoices = async ({
   return processedInvoices;
 };
 
-export const processFullCusProducts = ({
-  fullCusProducts,
-  subs,
-  org,
-  entities = [],
-  apiVersion,
-}: {
-  fullCusProducts: any;
-  subs: any;
-  org: Organization;
-  entities?: Entity[];
-  apiVersion: number;
-}) => {
-  // Process full cus products
-  let main = [];
-  let addOns = [];
-  for (const cusProduct of fullCusProducts) {
-    let processed = processFullCusProduct({
-      cusProduct,
-      subs,
-      org,
-      entities,
-      apiVersion,
-    });
-
-    let isAddOn = cusProduct.product.is_add_on;
-    if (isAddOn) {
-      addOns.push(processed);
-    } else {
-      main.push(processed);
-    }
-  }
-
-  return { main, addOns };
-};
-
 // IMPORTANT FUNCTION
 export const getCusEntsInFeatures = async ({
   customer,

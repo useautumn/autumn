@@ -1,8 +1,6 @@
 import Stripe from "stripe";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
-import { getCusBalances } from "@/internal/customers/cusProducts/cusEnts/cusFeatureUtils/getCusBalances.js";
-
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
   AppEnv,
@@ -15,8 +13,6 @@ import {
   FeatureType,
   Feature,
   Organization,
-  CusEntResponse,
-  CusEntResponseV2,
   FullCustomer,
   CusExpand,
   RewardType,
@@ -24,7 +20,7 @@ import {
   CouponDurationType,
   EntityResponseSchema,
 } from "@autumn/shared";
-import { getCusInvoices, processFullCusProducts } from "./cusUtils.js";
+import { getCusInvoices } from "./cusUtils.js";
 
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
@@ -33,7 +29,12 @@ import {
   cusProductsToCusPrices,
 } from "../cusProducts/cusProductUtils/convertCusProduct.js";
 import { invoicesToResponse } from "@/internal/invoices/invoiceUtils.js";
-import { featuresToObject } from "../cusProducts/cusEnts/cusFeatureUtils/balancesToFeatureResponse.js";
+import { getCusBalances } from "./cusFeatureResponseUtils/getCusBalances.js";
+import { featuresToObject } from "./cusFeatureResponseUtils/balancesToFeatureResponse.js";
+import { processFullCusProducts } from "./cusProductResponseUtils/processFullCusProducts.js";
+import { getCusReferrals } from "./cusResponseUtils/getCusReferrals.js";
+import { getCusRewards } from "./cusResponseUtils/getCusRewards.js";
+import { getCusPaymentMethodRes } from "./cusResponseUtils/getCusPaymentMethodRes.js";
 
 export const getCustomerDetails = async ({
   db,
@@ -95,12 +96,13 @@ export const getCustomerDetails = async ({
     });
   }
 
-  const { main, addOns } = processFullCusProducts({
+  const { main, addOns } = await processFullCusProducts({
     fullCusProducts: cusProducts,
     subs,
     org,
     apiVersion,
     entities: customer.entities,
+    features,
   });
 
   if (apiVersion >= APIVersion.v1_1) {
@@ -130,69 +132,27 @@ export const getCustomerDetails = async ({
 
     let withInvoices = expand.includes(CusExpand.Invoices);
 
-    let rewards: RewardResponse | undefined;
-    if (withRewards && customer.processor?.id) {
-      let stripeCli = createStripeCli({
-        org,
-        env,
-      });
+    let rewards: RewardResponse | undefined = await getCusRewards({
+      org,
+      env,
+      fullCus: customer,
+      subs,
+      subIds,
+      expand,
+    });
 
-      const [stripeCus, subsResult] = await Promise.all([
-        stripeCli.customers.retrieve(
-          customer.processor?.id!,
-        ) as Promise<Stripe.Customer>,
-        !subs
-          ? getStripeSubs({
-              stripeCli,
-              subIds,
-              expand: ["discounts"],
-            })
-          : null,
-      ]);
+    let referrals = await getCusReferrals({
+      db,
+      fullCus: customer,
+      expand,
+    });
 
-      if (!subs && subsResult) {
-        subs = subsResult;
-      }
-
-      let stripeDiscounts: Stripe.Discount[] = subs?.flatMap(
-        (s) => s.discounts,
-      ) as Stripe.Discount[];
-
-      if (stripeCus.discount) {
-        stripeDiscounts.push(stripeCus.discount);
-      }
-
-      rewards = {
-        discounts: stripeDiscounts.map((d) => {
-          let duration_type: CouponDurationType;
-          let duration_value = 0;
-          if (d.coupon?.duration === "forever") {
-            duration_type = CouponDurationType.Forever;
-          } else if (d.coupon?.duration === "once") {
-            duration_type = CouponDurationType.OneOff;
-          } else if (d.coupon?.duration === "repeating") {
-            duration_type = CouponDurationType.Months;
-            duration_value = d.coupon?.duration_in_months || 0;
-          } else {
-            duration_type = CouponDurationType.OneOff;
-          }
-          return {
-            id: d.coupon?.id,
-            name: d.coupon?.name ?? "",
-            type: d.coupon?.amount_off
-              ? RewardType.FixedDiscount
-              : RewardType.PercentageDiscount,
-            discount_value: d.coupon?.amount_off || d.coupon?.percent_off || 0,
-            currency: d.coupon?.currency ?? null,
-            start: d.start ?? null,
-            end: d.end ?? null,
-            subscription_id: d.subscription ?? null,
-            duration_type,
-            duration_value,
-          };
-        }),
-      };
-    }
+    let paymentMethod = await getCusPaymentMethodRes({
+      org,
+      env,
+      fullCus: customer,
+      expand,
+    });
 
     let cusResponse = {
       ...CusResponseSchema.parse({
@@ -224,6 +184,8 @@ export const getCustomerDetails = async ({
               }),
             )
           : undefined,
+        referrals,
+        payment_method: paymentMethod,
       }),
     };
 

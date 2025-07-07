@@ -3,6 +3,9 @@ import React from "react";
 import { AttachNewItems } from "./attach-preview/AttachNewItems";
 import { DueToday } from "./attach-preview/DueToday";
 import { DueNextCycle } from "./attach-preview/DueNextCycle";
+import { UpdateQuantity } from "./attach-preview/UpdateQuantity";
+import { AttachBranch } from "@autumn/shared";
+import { OptionsInput } from "./attach-preview/OptionsInput";
 
 export const AttachPreviewDetails = () => {
   const { org, attachState } = useProductContext();
@@ -12,10 +15,21 @@ export const AttachPreviewDetails = () => {
     return null;
   }
 
+  const branch = preview.branch;
+  const isUpdatePrepaidQuantity = branch == AttachBranch.UpdatePrepaidQuantity;
+
   return (
     <React.Fragment>
-      <DueToday />
-      <AttachNewItems />
+      {/* Options  */}
+
+      {/* <OptionsInput /> */}
+      <UpdateQuantity />
+      {!isUpdatePrepaidQuantity && (
+        <>
+          <DueToday />
+          <AttachNewItems />
+        </>
+      )}
       <DueNextCycle />
     </React.Fragment>
   );
