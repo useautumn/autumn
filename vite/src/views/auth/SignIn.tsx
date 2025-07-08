@@ -119,7 +119,7 @@ export const SignIn = () => {
                 Continue with Google
               </Button>
 
-              <Button
+              {/* <Button
                 variant="auth"
                 onClick={handleGoogleSignIn}
                 isLoading={googleLoading}
@@ -129,7 +129,7 @@ export const SignIn = () => {
                 className={height}
               >
                 Continue with Stripe
-              </Button>
+              </Button> */}
 
               {/* Divider */}
               <div className="relative">

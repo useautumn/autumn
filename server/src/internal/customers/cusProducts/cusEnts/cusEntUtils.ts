@@ -351,7 +351,10 @@ export const getUnlimitedAndUsageAllowed = ({
   );
 
   const usageAllowed = cusEnts.some(
-    (ent) => ent.internal_feature_id === internalFeatureId && ent.usage_allowed,
+    (ent) =>
+      ent.internal_feature_id === internalFeatureId &&
+      ent.usage_allowed &&
+      nullish(ent.entitlement.usage_limit),
   );
 
   return { unlimited, usageAllowed };

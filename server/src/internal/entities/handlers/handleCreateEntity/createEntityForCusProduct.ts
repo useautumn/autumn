@@ -134,7 +134,7 @@ export const createEntityForCusProduct = async ({
       ) {
         throw new RecaseError({
           message: `Cannot create ${inputEntities.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
-          code: ErrCode.InvalidInputs,
+          code: ErrCode.FeatureLimitReached,
         });
       }
 
