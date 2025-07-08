@@ -10,6 +10,7 @@ import {
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   CreateEntity,
@@ -118,10 +119,12 @@ export const createEntityForCusProduct = async ({
       const originalBalance = mainCusEnt.balance || 0;
       const newBalance = originalBalance - inputEntities.length;
 
+      const innerNewBalance = newBalance - deletedReplaceables.length;
+
       // Check if new balance would exceed usage limit
       if (
-        mainCusEnt.entitlement.usage_limit !== null &&
-        newBalance < -mainCusEnt.entitlement.usage_limit
+        notNullish(mainCusEnt.entitlement.usage_limit) &&
+        innerNewBalance < -mainCusEnt.entitlement.usage_limit!
       ) {
         throw new RecaseError({
           message: `Cannot create ${inputEntities.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
