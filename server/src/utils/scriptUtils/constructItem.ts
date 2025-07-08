@@ -105,11 +105,13 @@ export const constructArrearProratedItem = ({
     on_increase: OnIncrease.BillImmediately,
     on_decrease: OnDecrease.None,
   },
+  usageLimit,
 }: {
   featureId: string;
   pricePerUnit?: number;
   includedUsage?: number;
   config?: ProductItemConfig;
+  usageLimit?: number;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -119,6 +121,7 @@ export const constructArrearProratedItem = ({
     billing_units: 1,
     interval: ProductItemInterval.Month,
     config,
+    usage_limit: usageLimit,
   };
 
   return item;
