@@ -67,7 +67,7 @@ export const featuresToObject = ({
       balance: unlimited ? null : sumValues(relatedEnts, "balance"),
       usage: sumValues(relatedEnts, "usage"),
       included_usage: sumValues(relatedEnts, "included_usage"),
-      limit: relatedEnts[0].limit ?? null,
+      limit: sumValues(relatedEnts, "limit"),
 
       next_reset_at: getEarliestNextResetAt(relatedEnts),
       interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",
