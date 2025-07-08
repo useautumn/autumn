@@ -91,6 +91,12 @@ export const adjustAllowance = async ({
   let billingType = cusPrice ? getBillingType(cusPrice.price.config!) : null;
   let cusProduct = cusEnt.customer_product;
 
+  // TODO: TRACK
+
+  if (newBalance < -(cusEnt.entitlement.usage_limit || 0)) {
+    throw new Error(`Balance exceeds usage limit of ${cusEnt.entitlement.usage_limit}`);
+  }
+
   if (
     !cusProduct ||
     !cusPrice ||
