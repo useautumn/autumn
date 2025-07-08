@@ -9,14 +9,14 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
 
 import { useSearchParams } from "react-router";
 
-import { useCustomer, CheckDialog } from "autumn-js/react";
+import { useCustomer } from "autumn-js/react";
 import PricingTable from "@/components/autumn/pricing-table";
 import {
   Check,
@@ -494,7 +494,7 @@ const FeatureUsageItem = ({
               });
               const { data: checkResponse } = await check({
                 featureId: customerFeature.id,
-                dialog: CheckDialog,
+
               });
               onCheckData(checkResponse);
 

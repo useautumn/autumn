@@ -16,6 +16,7 @@ import {
   SuccessCode,
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
+import { freeTrialsAreSame } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 export const getFeatureToUse = ({
   creditSystems,
@@ -98,15 +99,33 @@ export const getV2CheckResponse = async ({
     balances,
   });
 
+//  cusFeature.balance += overage_limit
+
   const cusFeature = cusFeatures[featureToUse.id] || {};
 
   let allowed = false;
+  let totalUsageLimit = 0;
+  console.log(featureCusEnts.length);
+  for (const ent of featureCusEnts) {
+    totalUsageLimit += ent.entitlement.usage_limit || 0;
+  }
+
+  console.log("Feature Balance", cusFeature.balance);
+  console.log("Total Usage Limit", totalUsageLimit);
+  console.log("Required Balance", requiredBalance);
+  console.log("Current Usage", cusFeature.usage);
+
   if (
     (cusFeature && unlimited) ||
     usageAllowed ||
     cusFeature.balance >= (requiredBalance || 1)
   ) {
     allowed = true;
+  }
+
+  console.log("Included Usage", cusFeature.included_usage);
+  if ((cusFeature.balance - (requiredBalance || 1)) < -(totalUsageLimit - (cusFeature.included_usage || 0))) {
+    allowed = false;
   }
 
   return CheckResponseSchema.parse({

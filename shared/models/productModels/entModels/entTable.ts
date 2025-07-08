@@ -33,6 +33,7 @@ export const entitlements = pgTable(
     // Optional fields
     org_id: text("org_id"),
     feature_id: text("feature_id"),
+    usage_limit: numeric({ mode: "number" }),
   },
   (table) => [
     foreignKey({

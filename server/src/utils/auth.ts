@@ -49,7 +49,7 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "https://app.useautumn.com",
     "https://*.useautumn.com",
-    // process.env.CLIENT_URL!,
+    process.env.CLIENT_URL!,
   ],
   emailAndPassword: {
     enabled: true,
