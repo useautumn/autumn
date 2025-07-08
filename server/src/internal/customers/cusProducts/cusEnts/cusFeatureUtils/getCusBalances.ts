@@ -146,7 +146,7 @@ export const getCusBalances = async ({
           used: isBoolean ? undefined : unlimited ? null : 0,
           unused: 0,
           overage_allowed: usageAllowed,
-          limit: ent.usage_limit ?? null,
+          usage_limit: ent.usage_limit ?? null,
         };
 
         if (org.config.api_version >= BREAK_API_VERSION) {

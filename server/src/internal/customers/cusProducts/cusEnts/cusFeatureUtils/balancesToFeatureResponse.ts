@@ -6,7 +6,6 @@ import {
   Feature,
   FeatureType,
   FullCustomerEntitlement,
-  ProductItemFeatureType,
 } from "@autumn/shared";
 import { CusFeatureBalance } from "./getCusBalances.js";
 import {
@@ -67,7 +66,7 @@ export const featuresToObject = ({
       balance: unlimited ? null : sumValues(relatedEnts, "balance"),
       usage: sumValues(relatedEnts, "usage"),
       included_usage: sumValues(relatedEnts, "included_usage"),
-      limit: sumValues(relatedEnts, "limit"),
+      usage_limit: sumValues(relatedEnts, "usage_limit"),
 
       next_reset_at: getEarliestNextResetAt(relatedEnts),
       interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",

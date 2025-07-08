@@ -11,7 +11,7 @@ export const CusEntResponseSchema = z.object({
   included_usage: z.number().nullish(),
   next_reset_at: z.number().nullish(),
   overage_allowed: z.boolean().nullish(),
-  limit: z.number().nullish(),
+  usage_limit: z.number().nullish(),
 });
 
 export const CoreCusFeatureResponseSchema = z.object({
@@ -43,7 +43,7 @@ export const CoreCusFeatureResponseSchema = z.object({
     )
     .nullish(),
 
-  limit: z.number().nullish(),
+  usage_limit: z.number().nullish(),
 });
 
 export const CusEntResponseV2Schema = z
