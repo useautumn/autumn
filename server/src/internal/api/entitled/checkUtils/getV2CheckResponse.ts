@@ -124,8 +124,11 @@ export const getV2CheckResponse = async ({
   }
 
   console.log("Included Usage", cusFeature.included_usage);
-  if ((cusFeature.balance - (requiredBalance || 1)) < -(totalUsageLimit - (cusFeature.included_usage || 0))) {
-    allowed = false;
+
+  if (totalUsageLimit > 0) {
+    if ((cusFeature.balance - (requiredBalance || 1)) < -(totalUsageLimit - (cusFeature.included_usage || 0))) {
+      allowed = false;
+    }
   }
 
   return CheckResponseSchema.parse({

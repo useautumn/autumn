@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 export const AdvancedItemConfig = () => {
   const { features } = useProductContext();
   const { item, setItem } = useProductItemContext();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(item.usage_limit != null);
 
   const showProrationConfig = shouldShowProrationConfig({ item, features });
   const usageType = getFeatureUsageType({ item, features });
