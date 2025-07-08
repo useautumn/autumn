@@ -13,6 +13,9 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleSubCanceled } from "./handleSubUpdated/handleSubCanceled.js";
 import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
+import { formatUnixToDate } from "@/utils/genUtils.js";
+import { differenceInMinutes } from "date-fns";
+import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 
 export const handleSubscriptionUpdated = async ({
   req,
@@ -115,13 +118,23 @@ export const handleSubscriptionUpdated = async ({
   }
 
   // Cancel subscription immediately
+
   if (subscription.status === "past_due" && org.config.cancel_on_past_due) {
     const stripeCli = createStripeCli({
       org,
       env,
     });
 
-    console.log("subscription.updated: past due, cancelling:", subscription.id);
+    const latestInvoice = await stripeCli.invoices.retrieve(
+      subscription.latest_invoice,
+    );
+    if (latestInvoice.status !== "open") {
+      logger.info(
+        "sub.updated, latest invoice isn't open, past_due not forcing cancel",
+      );
+      return;
+    }
+
     try {
       await stripeCli.subscriptions.cancel(subscription.id);
       await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
@@ -139,6 +152,16 @@ export const handleSubscriptionUpdated = async ({
     }
   }
 };
+
+// server-1       | subscription.updated, previous attributes: { status: 'active' }
+// server-1       | current period start: 8 Jul 2025
+// server-1       | current period end: 8 Aug 2025
+// server-1       | subscription.updated: past due, cancelling: sub_1Rig399mx3u0jkgOquNmw5fM
+
+// server-1       | subscription.updated, previous attributes: { status: 'active' }
+// server-1       | current period start: 8 Aug 2025
+// server-1       | current period end: 8 Sep 2025
+// server-1       | subscription.updated: past due, cancelling: sub_1Rig3z9mx3u0jkgOzJTci91r
 
 // const lockKey = `sub_updated_${subscription.id}`;
 // // Create a lock to prevent race conditions
