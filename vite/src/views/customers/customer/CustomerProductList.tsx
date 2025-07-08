@@ -31,6 +31,13 @@ import AddProduct from "./add-product/NewProductDropdown";
 import { Item, Row } from "@/components/general/TableGrid";
 import { cn } from "@/lib/utils";
 import { CusProductStripeLink } from "./components/CusProductStripeLink";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export const CustomerProductList = ({
   customer,
@@ -248,35 +255,85 @@ const UpdateStatusDropdownBtn = ({
   status: CusProductStatus;
 }) => {
   const [loading, setLoading] = useState(false);
+  const [showDefaultWarning, setShowDefaultWarning] = useState(false);
   const { env, cusMutate } = useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
 
+  const handleStatusUpdate = async () => {
+    setLoading(true);
+    try {
+      await CusService.updateCusProductStatus(
+        axiosInstance,
+        cusProduct.id,
+        {
+          status,
+        },
+      );
+      await cusMutate();
+    } catch (error) {
+      toast.error(getBackendErr(error, "Failed to update status"));
+    }
+    setLoading(false);
+  };
+
+  const handleExpireClick = () => {
+    // Check if this is the expired status and if the product is default
+    if (status === CusProductStatus.Expired && cusProduct.product?.is_default) {
+      setShowDefaultWarning(true);
+    } else {
+      handleStatusUpdate();
+    }
+  };
+
   return (
-    <Button
-      variant="ghost"
-      dim={5}
-      size="sm"
-      className="p-2 h-full w-full flex justify-between"
-      // isLoading={loading}
-      onClick={async () => {
-        setLoading(true);
-        try {
-          await CusService.updateCusProductStatus(
-            axiosInstance,
-            cusProduct.id,
-            {
-              status,
-            },
-          );
-          await cusMutate();
-        } catch (error) {
-          toast.error(getBackendErr(error, "Failed to update status"));
-        }
-        setLoading(false);
-      }}
-    >
-      {keyToTitle(status)}
-      {loading && <SmallSpinner />}
-    </Button>
+    <>
+      <Dialog open={showDefaultWarning} onOpenChange={setShowDefaultWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Expire Default Product</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600">
+              This is the default product. Expiring it will reset it and reattach it to this customer. Do you want to continue?
+            </p>
+          </div>
+          <DialogFooter>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDefaultWarning(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  setShowDefaultWarning(false);
+                  handleStatusUpdate();
+                }}
+              >
+                Confirm
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Button
+        variant="ghost"
+        dim={5}
+        size="sm"
+        className="p-2 h-full w-full flex justify-between"
+        onClick={handleExpireClick}
+      >
+        {loading ? (
+          <SmallSpinner />
+        ) : (
+          <>
+            <span>Mark as {keyToTitle(status)}</span>
+            {status === "expired" && <span className="ml-1">⚠️</span>}
+          </>
+        )}
+      </Button>
+    </>
   );
 };
