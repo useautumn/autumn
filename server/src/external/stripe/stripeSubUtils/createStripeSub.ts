@@ -79,7 +79,7 @@ export const createStripeSub = async ({
       ...paymentMethodData,
       customer: customer.processor.id,
       items: subItems as any,
-      trial_end: freeTrialToStripeTimestamp({ freeTrial }),
+      trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
       payment_behavior: "error_if_incomplete",
       add_invoice_items: invoiceItems,
       collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
