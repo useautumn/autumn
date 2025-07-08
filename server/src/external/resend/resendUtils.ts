@@ -41,11 +41,25 @@ export const sendTextEmail = async ({
     if (error) {
       logger.error(`Error sending email`, {
         error,
+        data: {
+          from,
+          fromEmail,
+          to,
+          subject,
+          body,
+        },
       });
     }
   } catch (error) {
     logger.error(`Error sending email`, {
       error,
+      data: {
+        from,
+        fromEmail,
+        to,
+        subject,
+        body,
+      },
     });
     throw error;
   }

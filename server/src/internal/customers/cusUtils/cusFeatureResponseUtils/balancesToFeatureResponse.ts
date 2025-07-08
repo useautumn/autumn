@@ -12,6 +12,7 @@ import {
   getCusFeatureType,
   isCreditSystem,
 } from "@/internal/features/featureUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 
 export const sumValues = (
   entList: CusEntResponse[],
@@ -46,6 +47,7 @@ export const featuresToObject = ({
   entList: CusEntResponse[];
 }) => {
   let featureObject: Record<string, CusEntResponseV2> = {};
+
   for (let entRes of entList) {
     let feature = features.find((f) => f.id == entRes.feature_id)!;
     let featureType = getCusFeatureType({ feature });
@@ -57,7 +59,13 @@ export const featuresToObject = ({
     if (featureObject[featureId]) {
       continue;
     }
-    
+
+    let includedUsage = sumValues(relatedEnts, "included_usage");
+    let usageLimit: number | undefined = sumValues(relatedEnts, "usage_limit");
+    if (notNullish(usageLimit) && usageLimit === includedUsage) {
+      usageLimit = undefined;
+    }
+
     featureObject[featureId] = {
       id: featureId,
       name: feature.name,
@@ -66,7 +74,7 @@ export const featuresToObject = ({
       balance: unlimited ? null : sumValues(relatedEnts, "balance"),
       usage: sumValues(relatedEnts, "usage"),
       included_usage: sumValues(relatedEnts, "included_usage"),
-      usage_limit: sumValues(relatedEnts, "usage_limit"),
+      usage_limit: usageLimit,
 
       next_reset_at: getEarliestNextResetAt(relatedEnts),
       interval: relatedEnts.length == 1 ? relatedEnts[0].interval : "multiple",

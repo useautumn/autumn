@@ -26,7 +26,7 @@ export let pro = constructProduct({
   type: "pro",
 });
 
-const testCase = "usageLimit1";
+const testCase = "entity1";
 
 describe(`${chalk.yellowBright(`${testCase}: Testing entities`)}`, () => {
   let customerId = testCase;
@@ -132,15 +132,11 @@ describe(`${chalk.yellowBright(`${testCase}: Testing entities`)}`, () => {
       customer_id: customerId,
       feature_id: TestFeature.Users,
     });
-    const customer = await autumn.customers.get(customerId);
-
-    console.log(check);
-    console.log(customer);
-
     expect(check.balance).to.equal(-2);
     // @ts-ignore
     expect(check.usage_limit).to.equal(userItem.usage_limit);
 
+    const customer = await autumn.customers.get(customerId);
     // @ts-ignore
     expect(customer.features[TestFeature.Users].usage_limit).to.equal(
       userItem.usage_limit,

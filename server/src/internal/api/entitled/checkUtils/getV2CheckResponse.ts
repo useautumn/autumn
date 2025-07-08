@@ -1,14 +1,10 @@
-import {
-  getFeatureBalance,
-  getUnlimitedAndUsageAllowed,
-} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { cusEntMatchesFeature } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import { getCusBalances } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/getCusBalances.js";
 import { balancesToFeatureResponse } from "@/internal/customers/cusUtils/cusFeatureResponseUtils/balancesToFeatureResponse.js";
 import {
   CheckResponseSchema,
   Feature,
-  FeatureType,
   FullCusEntWithFullCusProduct,
   FullCusProduct,
   FullCustomer,
@@ -16,7 +12,6 @@ import {
   SuccessCode,
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils.js";
-import { freeTrialsAreSame } from "@/internal/products/free-trials/freeTrialUtils.js";
 
 export const getFeatureToUse = ({
   creditSystems,
@@ -59,6 +54,7 @@ export const getV2CheckResponse = async ({
   org,
   cusProducts,
   requiredBalance,
+  apiVersion,
 }: {
   fullCus: FullCustomer;
   cusEnts: FullCusEntWithFullCusProduct[];
@@ -67,6 +63,7 @@ export const getV2CheckResponse = async ({
   org: Organization;
   cusProducts: FullCusProduct[];
   requiredBalance?: number;
+  apiVersion: number;
 }) => {
   // 1. Get the feature to use
   const featureToUse = getFeatureToUse({
@@ -92,6 +89,7 @@ export const getV2CheckResponse = async ({
     cusPrices,
     org,
     entity: fullCus.entity,
+    apiVersion,
   });
 
   let cusFeatures = balancesToFeatureResponse({
@@ -99,37 +97,40 @@ export const getV2CheckResponse = async ({
     balances,
   });
 
-//  cusFeature.balance += overage_limit
-
   const cusFeature = cusFeatures[featureToUse.id] || {};
 
   let allowed = false;
-  let totalUsageLimit = 0;
-  console.log(featureCusEnts.length);
-  for (const ent of featureCusEnts) {
-    totalUsageLimit += ent.entitlement.usage_limit || 0;
-  }
 
-  console.log("Feature Balance", cusFeature.balance);
-  console.log("Total Usage Limit", totalUsageLimit);
-  console.log("Required Balance", requiredBalance);
-  console.log("Current Usage", cusFeature.usage);
+  let totalPaidUsageAllowance = featureCusEnts.reduce((acc, ce) => {
+    let ent = ce.entitlement;
+    if (notNullish(ent.usage_limit)) {
+      return acc + ent.usage_limit! - (ent.allowance || 0);
+    }
+    return acc;
+  }, 0);
 
   if (
     (cusFeature && unlimited) ||
     usageAllowed ||
-    cusFeature.balance >= (requiredBalance || 1)
+    // cusFeature.balance >= (requiredBalance || 1)
+    cusFeature.balance + totalPaidUsageAllowance >= (requiredBalance || 1)
   ) {
     allowed = true;
   }
 
-  console.log("Included Usage", cusFeature.included_usage);
+  // let totalUsageLimit = 0;
 
-  if (totalUsageLimit > 0) {
-    if ((cusFeature.balance - (requiredBalance || 1)) < -(totalUsageLimit - (cusFeature.included_usage || 0))) {
-      allowed = false;
-    }
-  }
+  // for (const ent of featureCusEnts) {
+  //   totalUsageLimit += ent.entitlement.usage_limit || 0;
+  // }
+  // if (totalUsageLimit > 0) {
+  //   if (
+  //     cusFeature.balance - (requiredBalance || 1) <
+  //     -(totalUsageLimit - (cusFeature.included_usage || 0))
+  //   ) {
+  //     allowed = false;
+  //   }
+  // }
 
   return CheckResponseSchema.parse({
     customer_id: fullCus.id,
