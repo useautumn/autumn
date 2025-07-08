@@ -14,6 +14,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@autumn/shared": "workspace:*",
+    "@better-auth/stripe": "^1.2.12",
     "@clerk/clerk-react": "^5.24.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
@@ -60,6 +61,7 @@
     "react-router": "^7.3.0",
     "react-router-dom": "^7.6.2",
     "sonner": "^2.0.1",
+    "stripe": "^18.3.0",
     "svix-react": "^1.13.3",
     "swr": "^2.3.3",
     "tailwind-merge": "^3.0.2",

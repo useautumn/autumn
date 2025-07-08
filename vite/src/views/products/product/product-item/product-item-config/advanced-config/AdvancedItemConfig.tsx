@@ -1,7 +1,7 @@
 import { useProductContext } from "@/views/products/product/ProductContext";
 import { useProductItemContext } from "../../ProductItemContext";
 import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, PlusIcon } from "lucide-react";
 import { ToggleButton } from "@/components/general/ToggleButton";
 import { OnDecreaseSelect } from "./proration-config/OnDecreaseSelect";
 import { OnIncreaseSelect } from "./proration-config/OnIncreaseSelect";
@@ -11,6 +11,7 @@ import {
   getFeatureUsageType,
 } from "@/utils/product/entitlementUtils";
 import { FeatureUsageType } from "@autumn/shared";
+import { Input } from "@/components/ui/input";
 
 export const AdvancedItemConfig = () => {
   const { features } = useProductContext();
@@ -53,6 +54,42 @@ export const AdvancedItemConfig = () => {
             disabled={usageType === FeatureUsageType.Continuous}
           />
 
+        <div className="relative flex flex-row items-center justify-between gap-3 min-h-[35px]">
+          <ToggleButton
+              value={item.usage_limit != null}
+              setValue={() => {
+                let usage_limit;
+                if (item.usage_limit) {
+                  usage_limit = null;
+                } else {
+                  usage_limit = Infinity;
+                }
+                setItem({
+                  ...item,
+                  usage_limit: usage_limit,
+                });
+              }}
+              buttonText="Enable usage limits"
+              className="text-t3 h-fit"
+            />
+
+              {item.usage_limit != null && (
+                <Input
+                  type="number"
+                  value={item.usage_limit || ""}
+                  className="ml-5"
+                  onChange={(e) => {
+                    setItem({
+                      ...item,
+                      usage_limit: parseInt(e.target.value),
+                    });
+                  }}
+                  placeholder="Enter usage limit"
+                />
+              )}
+            </div>
+        
+
           {showProrationConfig && (
             <>
               <OnIncreaseSelect />
@@ -61,6 +98,8 @@ export const AdvancedItemConfig = () => {
           )}
           {/* <div className="flex flex-col gap-2"></div>
           <div className="flex gap-2"></div> */}
+
+          
         </div>
       </div>
     </div>
