@@ -10,6 +10,7 @@
     "start": "npx tsx src/index.ts",
     "workers": "npx tsx watch src/workers.ts",
     "workers:start": "node --no-deprecation dist/src/workers.js",
+    "check": "tsx src/check.ts",
     "build": "tsc -b tsconfig.build.json",
     "prod": "tsc -b tsconfig.build.json && tsc-alias && node dist/src/index.js",
     "prod:build": "tsc -b tsconfig.build.json && tsc-alias",

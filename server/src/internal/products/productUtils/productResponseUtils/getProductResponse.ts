@@ -10,6 +10,8 @@ import {
   AttachScenario,
   ProductPropertiesSchema,
   BillingInterval,
+  FeatureOptions,
+  UsageModel,
 } from "@autumn/shared";
 import { sortProductItems } from "../../pricecn/pricecnUtils.js";
 import {
@@ -24,15 +26,20 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { isFreeProduct, isOneOff } from "../../productUtils.js";
 import { getFirstInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
+import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
 
 export const getProductItemResponse = ({
   item,
   features,
   currency,
+  withDisplay = true,
+  options,
 }: {
   item: ProductItem;
   features: Feature[];
   currency?: string;
+  withDisplay?: boolean;
+  options?: FeatureOptions[];
 }) => {
   // 1. Get item type
   let type = getItemType(item);
@@ -44,10 +51,28 @@ export const getProductItemResponse = ({
     currency,
   });
 
+  let priceData = itemToPriceOrTiers({ item });
+
+  let quantity = undefined;
+  let upcomingQuantity = undefined;
+  if (item.usage_model == UsageModel.Prepaid && notNullish(options)) {
+    let option = options!.find((o) => o.feature_id == item.feature_id);
+    quantity = option?.quantity
+      ? option?.quantity * (item.billing_units ?? 1)
+      : undefined;
+
+    upcomingQuantity = option?.upcoming_quantity
+      ? option?.upcoming_quantity * (item.billing_units ?? 1)
+      : undefined;
+  }
+
   return ProductItemResponseSchema.parse({
     type,
     ...item,
-    display,
+    display: withDisplay ? display : undefined,
+    ...priceData,
+    quantity,
+    next_cycle_quantity: upcomingQuantity,
   });
 };
 
@@ -113,12 +138,16 @@ export const getProductResponse = async ({
   fullCus,
   currency,
   db,
+  withDisplay = true,
+  options,
 }: {
   product: FullProduct;
   features: Feature[];
   fullCus?: FullCustomer;
   currency?: string;
   db?: DrizzleCli;
+  withDisplay?: boolean;
+  options?: FeatureOptions[];
 }) => {
   // 1. Get items with display
   let items = mapToProductItems({
@@ -130,6 +159,8 @@ export const getProductResponse = async ({
       item,
       features,
       currency,
+      withDisplay,
+      options,
     });
   });
 
@@ -153,7 +184,7 @@ export const getProductResponse = async ({
     name: product.name || null,
     group: product.group || null,
     items: items,
-    free_trial: freeTrial,
+    free_trial: freeTrial || null,
     scenario: attachScenario,
     properties: getProductProperties({ product }),
   });

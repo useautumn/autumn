@@ -8,6 +8,7 @@ import {
   FreeTrial,
   PreviewLineItem,
   BillingType,
+  AttachConfig,
 } from "@autumn/shared";
 import { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import {
@@ -38,6 +39,7 @@ import {
   attachParamToCusProducts,
 } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
+import { getMergeCusProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/getMergeCusProduct.js";
 
 export const getDefaultPriceStr = ({
   org,
@@ -127,7 +129,6 @@ export const getItemsForNewProduct = async ({
   logger: any;
 }) => {
   const { org, features } = attachParams;
-
   now = now || Date.now();
 
   const items: PreviewLineItem[] = [];
@@ -177,13 +178,14 @@ export const getItemsForNewProduct = async ({
         description,
         amount,
         usage_model: priceToUsageModel(price),
+        feature_id: ent?.feature_id,
       });
       continue;
     }
 
     if (billingType == BillingType.UsageInArrear) {
       items.push({
-        price: getDefaultPriceStr({ org, price, ent, features }),
+        price: getDefaultPriceStr({ org, price, ent: ent!, features }),
         description: newPriceToInvoiceDescription({
           org,
           price,
@@ -191,6 +193,7 @@ export const getItemsForNewProduct = async ({
         }),
         usage_model: priceToUsageModel(price),
         price_id: price.id,
+        feature_id: ent?.feature_id,
       });
       continue;
     }

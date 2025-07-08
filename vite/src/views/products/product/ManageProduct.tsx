@@ -18,7 +18,23 @@ export const ManageProduct = ({
       <div className="flex items-center justify-between pl-10 pr-10">
         <div className="col-span-2 flex">
           <div className="flex flex-col gap-1 justify-center w-full whitespace-nowrap">
-            <AdminHover texts={[product.internal_id!]} hide={hideAdminHover}>
+            <AdminHover
+              texts={[
+                {
+                  key: "internal_product_id",
+                  value: product.internal_id!,
+                },
+                {
+                  key: "stripe_id",
+                  value: product.stripe_id || "N/A",
+                },
+                {
+                  key: "customer_product_id",
+                  value: product.cusProductId || "N/A",
+                },
+              ]}
+              hide={hideAdminHover}
+            >
               <h2 className="text-lg font-medium w-fit whitespace-nowrap">
                 {product.name}
               </h2>

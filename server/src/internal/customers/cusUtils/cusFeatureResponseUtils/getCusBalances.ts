@@ -19,7 +19,7 @@ import {
   getRelatedCusPrice,
   getResetBalance,
   getUnlimitedAndUsageAllowed,
-} from "../cusEntUtils.js";
+} from "../../cusProducts/cusEnts/cusEntUtils.js";
 
 export interface CusFeatureBalance {
   feature_id: string;

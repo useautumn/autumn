@@ -14,6 +14,7 @@
     "server:start": "pnpm -F server prod:start",
     "server:cron": "pnpm -F server cron:start",
     "server:workers": "pnpm -F server workers:start",
+    "server:check": "NODE_ENV=production pnpm -F server check",
     "dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\"",
     "setup": "node setup.js",
     "db:push": " pnpm -F shared db:push",

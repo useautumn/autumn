@@ -8,6 +8,7 @@ import {
   FullProduct,
   Organization,
   Product,
+  ProductItem,
   RewardProgram,
   UpdateProduct,
 } from "@autumn/shared";
@@ -15,6 +16,11 @@ import { ProductService } from "../../ProductService.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { priceToFeature } from "../../prices/priceUtils/convertPrice.js";
 import { usagePriceToProductName } from "../../prices/priceUtils/usagePriceUtils/convertUsagePrice.js";
+import {
+  isFeaturePriceItem,
+  isPriceItem,
+} from "../../product-items/productItemUtils/getItemType.js";
+import { isFreeProduct } from "../../productUtils.js";
 
 const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
   if (notNullish(prod2.id) && prod1.id != prod2.id) {
@@ -53,6 +59,7 @@ const updateStripeProductNames = async ({
   newName: string;
   logger: any;
 }) => {
+  if (!org.stripe_connected) return;
   const stripeCli = createStripeCli({
     org,
     env: curProduct.env as AppEnv,
@@ -107,6 +114,7 @@ export const handleUpdateProductDetails = async ({
   db,
   newProduct,
   curProduct,
+  items,
   org,
   rewardPrograms,
   logger,
@@ -114,6 +122,7 @@ export const handleUpdateProductDetails = async ({
   db: DrizzleCli;
   curProduct: FullProduct;
   newProduct: UpdateProduct;
+  items: ProductItem[];
   org: Organization;
   rewardPrograms: RewardProgram[];
   logger: any;
@@ -124,6 +133,31 @@ export const handleUpdateProductDetails = async ({
     orgId: org.id,
     env: curProduct.env as AppEnv,
   });
+
+  if (newProduct.is_default && !org.config.allow_paid_default) {
+    // 1. Check if there are items
+    if (items) {
+      if (items.some((item) => isFeaturePriceItem(item) || isPriceItem(item))) {
+        throw new RecaseError({
+          message:
+            "Cannot make a product default if it has fixed prices or paid features",
+          code: ErrCode.InvalidProduct,
+          statusCode: 400,
+        });
+      }
+    } else {
+      if (!isFreeProduct(curProduct.prices)) {
+        throw new RecaseError({
+          message:
+            "Cannot make a product default if it has fixed prices or paid features",
+          code: ErrCode.InvalidProduct,
+          statusCode: 400,
+        });
+      }
+    }
+
+    // 2. Check if current product is default
+  }
 
   if (productDetailsSame(curProduct, newProduct)) {
     return;

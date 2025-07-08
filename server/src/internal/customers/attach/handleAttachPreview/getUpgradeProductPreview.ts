@@ -90,8 +90,11 @@ export const getUpgradeProductPreview = async ({
 
   const { stripeCli } = attachParams;
 
-  const { curMainProduct } = attachParamToCusProducts({ attachParams });
-  const curCusProduct = curMainProduct!;
+  const { curMainProduct, curSameProduct } = attachParamToCusProducts({
+    attachParams,
+  });
+
+  const curCusProduct = curSameProduct || curMainProduct!;
 
   const stripeSubs = await getStripeSubs({
     stripeCli,
@@ -183,6 +186,7 @@ export const getUpgradeProductPreview = async ({
     anchorToUnix,
     now,
     freeTrial: attachParams.freeTrial,
+    cusProduct: curCusProduct,
   });
 
   items = items.filter((item) => item.amount !== 0);
@@ -212,7 +216,6 @@ export const getUpgradeProductPreview = async ({
     currency: attachParams.org.default_currency,
     due_today: dueToday,
     due_next_cycle: dueNextCycle,
-
     options,
   };
 };

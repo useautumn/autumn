@@ -61,8 +61,8 @@ export const attachParamsToPreview = async ({
     preview = await getNewProductPreview({
       branch,
       attachParams,
-      now,
       logger,
+      config,
     });
   }
 
@@ -76,8 +76,8 @@ export const attachParamsToPreview = async ({
 
   if (
     func == AttachFunction.UpgradeDiffInterval ||
-    func == AttachFunction.UpdatePrepaidQuantity ||
-    func == AttachFunction.UpgradeSameInterval
+    func == AttachFunction.UpgradeSameInterval ||
+    func == AttachFunction.UpdatePrepaidQuantity
   ) {
     preview = await getUpgradeProductPreview({
       req,

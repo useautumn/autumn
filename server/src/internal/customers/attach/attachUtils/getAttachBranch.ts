@@ -194,13 +194,8 @@ const getSameProductBranch = async ({
     return AttachBranch.UpdatePrepaidQuantity;
   }
 
-  // 2. If add on product
-  if (product.is_add_on) {
-    return AttachBranch.AddOn;
-  }
-
   // 3. If main product
-  if (curScheduledProduct) {
+  if (curScheduledProduct && !product.is_add_on) {
     if (curScheduledProduct.product.id == product.id) {
       throw new RecaseError({
         message: `Product ${product.name} is already scheduled, can't attach again`,
@@ -219,6 +214,11 @@ const getSameProductBranch = async ({
     if (hasPrepaidPrice({ prices: attachParams.prices, excludeOneOff: true })) {
       return AttachBranch.UpdatePrepaidQuantity;
     }
+  }
+
+  // 2. If add on product
+  if (product.is_add_on) {
+    return AttachBranch.AddOn;
   }
 
   // Invalid, can't attach same product
