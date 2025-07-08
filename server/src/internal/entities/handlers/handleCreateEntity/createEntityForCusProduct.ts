@@ -118,6 +118,17 @@ export const createEntityForCusProduct = async ({
       const originalBalance = mainCusEnt.balance || 0;
       const newBalance = originalBalance - inputEntities.length;
 
+      // Check if new balance would exceed usage limit
+      if (
+        mainCusEnt.entitlement.usage_limit !== null &&
+        newBalance < -mainCusEnt.entitlement.usage_limit
+      ) {
+        throw new RecaseError({
+          message: `Cannot create ${inputEntities.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
+          code: ErrCode.InvalidInputs,
+        });
+      }
+
       const { deletedReplaceables: deletedReplaceables_, invoice } =
         await adjustAllowance({
           db,
