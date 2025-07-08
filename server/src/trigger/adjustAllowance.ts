@@ -1,5 +1,6 @@
 import {
   Entitlement,
+  ErrCode,
   FullCusEntWithFullCusProduct,
   FullCusEntWithProduct,
   Price,
@@ -24,6 +25,8 @@ import { findStripeItemForPrice } from "@/external/stripe/stripeSubUtils/stripeS
 import { handleProratedUpgrade } from "./arrearProratedUsage/handleProratedUpgrade.js";
 import Stripe from "stripe";
 import { handleProratedDowngrade } from "./arrearProratedUsage/handleProratedDowngrade.js";
+import RecaseError from "@/utils/errorUtils.js";
+import { StatusCodes } from "http-status-codes";
 
 export const getUsageFromBalance = ({
   ent,
@@ -94,7 +97,12 @@ export const adjustAllowance = async ({
   // TODO: TRACK
 
   if (newBalance < -(cusEnt.entitlement.usage_limit || 0)) {
-    throw new Error(`Balance exceeds usage limit of ${cusEnt.entitlement.usage_limit}`);
+    throw new RecaseError({
+      message: `Balance exceeds usage limit of ${cusEnt.entitlement.usage_limit}`,
+      code: ErrCode.InvalidInputs,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+    // return;
   }
 
   if (
