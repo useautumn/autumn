@@ -60,4 +60,12 @@ export class CusPriceService {
 
     return data as FullCustomerPrice[];
   }
+
+  static async delete({ db, id }: { db: DrizzleCli; id: string }) {
+    const deleted = await db
+      .delete(customerPrices)
+      .where(eq(customerPrices.id, id))
+      .returning();
+    return deleted;
+  }
 }

@@ -12,8 +12,14 @@ export interface ImportCustomer {
   options?: FeatureOptions[];
   // business_id;name;email;active_pass_count;Stripe id;Base price;free_trial_end
 }
-export const parseCsv = (slug: string): Promise<any[]> => {
-  const path = `scripts/customers/${slug}/data2.csv`;
+export const parseCsv = ({
+  slug,
+  filename,
+}: {
+  slug: string;
+  filename?: string;
+}): Promise<any[]> => {
+  const path = `scripts/customers/${slug}/${filename || "data.csv"}`;
   const results: ImportCustomer[] = [];
 
   return new Promise((resolve, reject) => {

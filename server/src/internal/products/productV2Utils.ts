@@ -103,6 +103,7 @@ export const mapToProductV2 = ({
     created_at: product.created_at,
 
     items: items,
+    stripe_id: product.processor?.id || null,
   };
 
   return productV2;

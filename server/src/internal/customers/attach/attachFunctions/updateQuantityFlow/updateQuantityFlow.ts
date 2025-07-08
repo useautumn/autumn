@@ -4,8 +4,10 @@ import {
   AttachResultSchema,
 } from "../../../cusProducts/AttachParams.js";
 import { attachParamToCusProducts } from "../../attachUtils/convertAttachParams.js";
-import { updateFeatureQuantity } from "./updateFeatureQuantity.js";
+import { handleUpdateFeatureQuantity } from "./updateFeatureQuantity.js";
 import { AttachConfig } from "@autumn/shared";
+import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 
 export const handleUpdateQuantityFunction = async ({
   req,
@@ -24,14 +26,28 @@ export const handleUpdateQuantityFunction = async ({
   const { curSameProduct } = attachParamToCusProducts({ attachParams });
 
   // Check balance of each option to update...?
+  const stripeCli = attachParams.stripeCli;
+  const cusProduct = curSameProduct!;
+  const stripeSubs = await getStripeSubs({
+    stripeCli: stripeCli,
+    subIds: cusProduct.subscription_ids || [],
+  });
 
-  await updateFeatureQuantity({
+  for (const options of optionsToUpdate) {
+    await handleUpdateFeatureQuantity({
+      req,
+      attachParams,
+      cusProduct,
+      stripeSubs,
+      oldOptions: options.old,
+      newOptions: options.new,
+    });
+  }
+
+  await CusProductService.update({
     db: req.db,
-    stripeCli: attachParams.stripeCli,
-    cusProduct: curSameProduct!,
-    optionsToUpdate: optionsToUpdate!,
-    config,
-    logger: req.logtail,
+    cusProductId: cusProduct.id,
+    updates: { options: optionsToUpdate.map((o) => o.new) },
   });
 
   res.status(200).json(

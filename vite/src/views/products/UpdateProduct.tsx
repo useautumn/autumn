@@ -35,16 +35,15 @@ export const UpdateProductDialog = ({
 
   const handleSave = async () => {
     setSaveLoading(true);
-    let originalProductId = originalProduct.current.id;
+    const originalProductId = originalProduct.current.id;
+
     try {
       await ProductService.updateProduct(axiosInstance, originalProductId, {
         ...UpdateProductSchema.parse(product),
       });
       await mutate();
       setModalOpen(false);
-      // if (setDropdownOpen) {
-      //   setDropdownOpen(false);
-      // }
+
       toast.success(`Successfully updated product ${product.id}`);
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to update product"));

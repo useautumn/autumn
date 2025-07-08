@@ -1,8 +1,6 @@
-import { type CheckProductFormattedPreview } from "autumn-js";
+import { type CheckProductPreview } from "autumn-js";
 
-export const getProductChangeTexts = (
-  preview: CheckProductFormattedPreview,
-) => {
+export const getProductChangeTexts = (preview: CheckProductPreview) => {
   const {
     scenario,
     product_name,

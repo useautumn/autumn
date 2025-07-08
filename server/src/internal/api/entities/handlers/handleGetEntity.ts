@@ -1,5 +1,5 @@
 import { routeHandler } from "@/utils/routerUtils.js";
-import { EntityExpand, EntityResponseSchema } from "@autumn/shared";
+import { APIVersion, EntityExpand, EntityResponseSchema } from "@autumn/shared";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { parseEntityExpand } from "../entityUtils.js";
 import { getEntityResponse } from "../getEntityUtils.js";
@@ -16,12 +16,13 @@ export const handleGetEntity = async (req: any, res: any) =>
       const customerId = req.params.customer_id as string;
       const expand = parseEntityExpand(req.query.expand);
 
-      let { orgId, env, db, logtail: logger } = req;
+      let { orgId, env, db, logger, features } = req;
 
       let org = await OrgService.getFromReq(req);
       let apiVersion = orgToVersion({
         org,
-        reqApiVersion: req.apiVersion,
+        reqApiVersion:
+          req.apiVersion >= APIVersion.v1_1 ? req.apiVersion : APIVersion.v1_2,
       });
 
       // const start = performance.now();
@@ -35,6 +36,7 @@ export const handleGetEntity = async (req: any, res: any) =>
           expand,
           entityId,
           apiVersion,
+          features,
         });
       // const end = performance.now();
       // logger.info(`getEntityResponse took ${(end - start).toFixed(2)}ms`);

@@ -107,6 +107,7 @@ export const createDowngradeProrationInvoice = async ({
   if (shouldBillNow(onDecrease)) {
     const { invoice: finalInvoice } = await createAndFinalizeInvoice({
       stripeCli,
+      paymentMethod: null,
       stripeCusId: sub.customer as string,
       stripeSubId: sub.id,
     });

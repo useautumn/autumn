@@ -120,6 +120,11 @@ export class InvoiceService {
     // Convert product ids to unique product ids
     const uniqueProductIds = [...new Set(productIds)];
     const uniqueInternalProductIds = [...new Set(internalProductIds)];
+    let total = stripeInvoice.total / 100;
+
+    if (stripeInvoice.currency.toLowerCase() == "clp") {
+      total = stripeInvoice.total;
+    }
 
     const invoice: Invoice = {
       id: generateId("inv"),
@@ -133,7 +138,7 @@ export class InvoiceService {
       internal_entity_id: internalEntityId || null,
 
       // Stripe stuff
-      total: stripeInvoice.total / 100,
+      total,
       currency: stripeInvoice.currency,
       discounts: getInvoiceDiscounts({
         expandedInvoice: stripeInvoice,

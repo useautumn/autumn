@@ -10,6 +10,8 @@ import {
   Feature,
   FeatureType,
   AppEnv,
+  OnIncrease,
+  UsageModel,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { notNullish, nullish } from "@/utils/genUtils.js";
@@ -21,7 +23,6 @@ import {
 } from "./productItemUtils/getItemType.js";
 import { itemToEntInterval } from "./itemIntervalUtils.js";
 import { createFeaturesFromItems } from "./createFeaturesFromItems.js";
-import { Decimal } from "decimal.js";
 
 const validateProductItem = ({
   item,
@@ -147,6 +148,17 @@ const validateProductItem = ({
       });
     }
   }
+
+  if (
+    item.usage_model == UsageModel.Prepaid &&
+    item.config?.on_increase == OnIncrease.BillImmediately
+  ) {
+    throw new RecaseError({
+      message: `Bill immediately is not supported for prepaid just yet, contact us at hey@useautumn.com if you're interested!`,
+      code: ErrCode.InvalidInputs,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
+  }
 };
 export const validateProductItems = ({
   newItems,
@@ -230,13 +242,27 @@ export const validateProductItems = ({
 
     if (
       isFeatureItem(otherItem) ||
-      item.usage_model == otherItem?.usage_model
+      (item.usage_model && item.usage_model == otherItem?.usage_model)
     ) {
       throw new RecaseError({
         message: `Can't have two features with same reset interval, unless one is prepaid, and another is pay per use`,
         code: ErrCode.InvalidInputs,
         statusCode: StatusCodes.BAD_REQUEST,
       });
+    }
+
+    if (isPriceItem(item)) {
+      let otherItem = newItems.find((i: any, index2: any) => {
+        return i.interval === item.interval && index2 != index;
+      });
+
+      if (otherItem) {
+        throw new RecaseError({
+          message: `Can't have two fixed prices with the same interval`,
+          code: ErrCode.InvalidInputs,
+          statusCode: StatusCodes.BAD_REQUEST,
+        });
+      }
     }
   }
 

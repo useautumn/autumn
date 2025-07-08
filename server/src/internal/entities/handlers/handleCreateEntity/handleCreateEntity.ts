@@ -93,6 +93,7 @@ export const createEntities = async ({
     customerId: customer.id || customer.internal_id,
     withAutumnId,
     apiVersion: apiVersion!,
+    features,
   });
 
   return entities;

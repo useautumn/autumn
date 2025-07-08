@@ -1,3 +1,5 @@
+import { notNullish } from "@/utils/genUtils";
+
 export const ProductOptions = ({
   options,
   setOptions,
@@ -23,6 +25,11 @@ export const ProductOptions = ({
             {option.quantity !== undefined && option.quantity !== null && (
               <div className="flex items-center gap-2">
                 <p className="text-sm text-t1 font-mono">{option.quantity}</p>
+                {notNullish(option.upcoming_quantity) && (
+                  <p className="text-sm text-t3 font-mono">
+                    (Upcoming: {option.upcoming_quantity})
+                  </p>
+                )}
               </div>
             )}
           </div>

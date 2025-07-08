@@ -18,6 +18,9 @@ import { getCheckPreview } from "./getCheckPreview.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getProration } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { notNullish } from "@/utils/genUtils.js";
+import { featureToCusPrice } from "@/internal/customers/cusProducts/cusPrices/convertCusPriceUtils.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
+import { Decimal } from "decimal.js";
 
 export const getBooleanEntitledResult = async ({
   db,
@@ -93,6 +96,7 @@ export const getOptions = ({
   proration,
   now,
   freeTrial,
+  cusProduct,
 }: {
   prodItems: ProductItem[];
   features: Feature[];
@@ -103,6 +107,7 @@ export const getOptions = ({
   };
   now?: number;
   freeTrial?: FreeTrial | null;
+  cusProduct?: FullCusProduct;
 }) => {
   now = now || Date.now();
 
@@ -121,6 +126,7 @@ export const getOptions = ({
         proration: finalProration,
         now,
       });
+
       let actualPrice = itemToPriceOrTiers({
         item: i,
       });
@@ -132,6 +138,40 @@ export const getOptions = ({
         };
       }
 
+      const currentOptions = cusProduct?.options.find(
+        (o) => o.feature_id == i.feature_id,
+      );
+
+      let currentQuantity = currentOptions?.quantity;
+      let prorationAmount = 0;
+
+      if (currentQuantity) {
+        currentQuantity = currentQuantity * (i.billing_units || 1);
+
+        const curPrice = featureToCusPrice({
+          internalFeatureId: currentOptions?.internal_feature_id!,
+          cusPrices: cusProduct?.customer_prices!,
+        })?.price;
+
+        const curPriceAmount = priceToInvoiceAmount({
+          price: curPrice!,
+          quantity: currentQuantity,
+          now,
+          proration: finalProration,
+        });
+
+        const newPriceAmount = priceToInvoiceAmount({
+          item: i,
+          quantity: currentQuantity,
+          now,
+          proration: finalProration,
+        });
+
+        prorationAmount = new Decimal(newPriceAmount)
+          .minus(curPriceAmount)
+          .toNumber();
+      }
+
       return {
         feature_id: i.feature_id,
         feature_name: features.find((f) => f.id == i.feature_id)?.name,
@@ -141,6 +181,12 @@ export const getOptions = ({
 
         full_price: actualPrice?.price,
         full_tiers: actualPrice?.tiers,
+
+        current_quantity: notNullish(currentQuantity)
+          ? currentQuantity
+          : undefined,
+        proration_amount: prorationAmount,
+        config: i.config,
       };
     });
 };

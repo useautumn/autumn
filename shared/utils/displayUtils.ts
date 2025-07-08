@@ -1,6 +1,6 @@
 import { Feature } from "../models/featureModels/featureModels.js";
 import { Decimal } from "decimal.js";
-
+import { format } from "date-fns";
 export const getFeatureName = ({
   feature,
   plural,
@@ -92,12 +92,14 @@ export const getFeatureInvoiceDescription = ({
   billingUnits = 1,
   prodName,
   isPrepaid = false,
+  fromUnix,
 }: {
   feature: Feature;
   usage: number;
   billingUnits?: number | null;
   prodName?: string;
   isPrepaid?: boolean;
+  fromUnix?: number;
 }) => {
   const { singular, plural } = getSingularAndPlural({ feature });
 
@@ -117,6 +119,10 @@ export const getFeatureInvoiceDescription = ({
 
   if (prodName) {
     result = `${prodName} - ${result}`;
+  }
+
+  if (fromUnix) {
+    result = `${result} (from ${format(fromUnix, "d MMM yyyy")})`;
   }
 
   return result;

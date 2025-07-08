@@ -423,3 +423,22 @@ export const roundUsage = ({
     .mul(billingUnits)
     .toNumber();
 };
+
+export const formatPrice = ({ price }: { price: Price }) => {
+  if (price.config.type == PriceType.Fixed) {
+    const config = price.config as FixedPriceConfig;
+    return `${config.amount}${config.interval == BillingInterval.OneOff ? "(one off)" : `/ ${config.interval}`}`;
+  } else {
+    const config = price.config as UsagePriceConfig;
+    let billingType = getBillingType(config);
+    let formatBillingType = {
+      [BillingType.UsageInAdvance]: "prepaid",
+      [BillingType.UsageInArrear]: "usage",
+      [BillingType.FixedCycle]: "cont_use",
+    };
+
+    let featureId = config.feature_id;
+
+    return `${formatBillingType[billingType as keyof typeof formatBillingType]} price for feature ${featureId}: $${config.usage_tiers[0].amount}${config.billing_units ? ` ${config.billing_units}` : ""}`;
+  }
+};
