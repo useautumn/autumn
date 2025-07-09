@@ -42,7 +42,7 @@ export function FeatureConfig({
       : {
           name: "",
           id: "",
-        },
+        }
   );
 
   const [meteredConfig, setMeteredConfig] = useState<MeteredConfig>(
@@ -61,16 +61,16 @@ export function FeatureConfig({
           //   type: "count",
           //   property: null,
           // },
-        },
+        }
   );
 
   const [showEventName, setShowEventName] = useState(
-    feature.config && feature.config.filters?.[0]?.value?.length > 0,
+    feature.config && feature.config.filters?.[0]?.value?.length > 0
   );
 
   const [idChanged, setIdChanged] = useState(!!feature.id);
   const [featureType, setFeatureType] = useState<string>(
-    feature.type ? feature.type : FeatureType.Metered,
+    feature.type ? feature.type : FeatureType.Metered
   );
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export function FeatureConfig({
   }, [featureType, meteredConfig, fields]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 min-w-md max-w-md">
       <Tabs
         defaultValue={feature.type}
         className="w-[400px]"
@@ -97,7 +97,7 @@ export function FeatureConfig({
         </TabsList>
         <p className="text-t3 text-sm">
           {featureType == FeatureType.Metered &&
-            "A usage-based feature that you want to track and bill for"}
+            "A usage-based feature that you want to track"}
           {featureType == FeatureType.Boolean &&
             "A feature flag that can be either enabled or disabled"}
         </p>
@@ -133,8 +133,8 @@ export function FeatureConfig({
               </TabsList>
               <p className="text-sm text-t3 flex items-center gap-1">
                 {meteredConfig.usage_type === FeatureUsageType.Continuous
-                  ? "For features used on an ongoing basis, like seats or storage"
-                  : "For consumable features like credits or API calls"}
+                  ? "For features used on an ongoing basis, like 'seats' or 'storage'"
+                  : "For features that are consumed and refilled like 'credits' or 'API calls'"}
                 <Tooltip delayDuration={400}>
                   <TooltipTrigger asChild>
                     <InfoIcon className="w-3 h-3 text-t3/50" />
@@ -146,8 +146,14 @@ export function FeatureConfig({
                     className="flex flex-col"
                   >
                     <p>
-                      This helps us determine things like whether to reset
-                      usage, prorate billing etc.
+                      Single use features can have a reset period, to refill a
+                      balance every month, day etc. Existing usage is also
+                      typically reset on upgrades.
+                      <br />
+                      <br />
+                      Continuous use features don't have a reset period. They
+                      can be prorated (eg, if a seat is purchased halfway during
+                      the month, it'll cost half the price).
                     </p>
                   </TooltipContent>
                 </Tooltip>
@@ -161,7 +167,7 @@ export function FeatureConfig({
         <div className="w-full">
           <FieldLabel>Name</FieldLabel>
           <Input
-            placeholder="Name"
+            placeholder="Eg, messages, seats"
             value={fields.name}
             onChange={(e) => {
               const newFields: any = { ...fields, name: e.target.value };
@@ -207,14 +213,30 @@ export function FeatureConfig({
               setEventNameInput={setEventNameInput}
               setEventNameChanged={setEventNameChanged}
             />
+            <p className="text-sm text-t3 mt-2 px-2">
+              Event names are only required if you want to link one event from
+              your application to multiple feature balances. Read more{" "}
+              <a
+                href="https://docs.useautumn.com/features/tracking-usage#using-event-names"
+                target="_blank"
+                className="text-primary underline"
+              >
+                here.
+              </a>
+            </p>
           </div>
           <div>
             <Tooltip delayDuration={400}>
               <TooltipTrigger asChild>
                 <Button
-                  className="h-7 border rounded-none text-t3 text-xs"
+                  className={cn(
+                    "h-7 border rounded-none text-t3 text-xs",
+                    showEventName && "text-red-300"
+                  )}
                   variant="outline"
-                  startIcon={<PlusIcon size={12} />}
+                  startIcon={
+                    showEventName ? <XIcon size={12} /> : <PlusIcon size={12} />
+                  }
                   onClick={() => {
                     setShowEventName(!showEventName);
                   }}
@@ -297,7 +319,7 @@ export const FilterInput = ({
         `p-2 py-2 h-fit rounded-md border text-sm w-full transition-colors duration-100 
         flex items-center flex-wrap gap-2 gap-y-2 bg-white`,
         inputFocused &&
-          "border-primary shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]",
+          "border-primary shadow-[0_0_2px_1px_rgba(139,92,246,0.25)]"
       )}
     >
       {filter.value.map((value: string, index: number) => (

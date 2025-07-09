@@ -17,14 +17,17 @@ export const IncludedUsage = () => {
         Included Usage
         <InfoTooltip>
           <span className="">
-            How much usage of this feature is included for free. If there is no
-            price, it is a usage limit.
+            How much of this feature can be used for free with this plan. If
+            there is no price, it is a usage limit.
+            <br />
+            <br />
+            Leave this blank if the feature is paid-only. Eg, 10 USD per seat.
           </span>
         </InfoTooltip>
       </FieldLabel>
       <div className="flex w-full h-fit gap-2">
         <Input
-          placeholder="None"
+          placeholder="eg, 300"
           className=""
           disabled={item.included_usage == Infinite}
           value={

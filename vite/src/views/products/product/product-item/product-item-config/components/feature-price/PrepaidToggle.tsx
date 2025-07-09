@@ -24,10 +24,15 @@ export const PrepaidToggle = () => {
             });
           }}
           buttonText="Prepaid"
-          className="text-xs gap-2 text-t3 p-1"
+          className="text-xs gap-2 text-t1 p-1"
         />
         <InfoTooltip align="start">
-          Prepaid means that the user will pay for the product upfront.
+          Prepaid features are paid for upfront, instead of at the end of the
+          billing period. You can pass in a{" "}
+          <span className="font-mono">
+            <code>quantity</code>
+          </span>{" "}
+          field when purchasing the product.
         </InfoTooltip>
       </div>
     </div>
