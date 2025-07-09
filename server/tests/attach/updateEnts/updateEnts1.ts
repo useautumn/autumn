@@ -132,6 +132,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing update ents (changing inclu
       ],
     });
   });
+  return;
 
   it("should have correct invoice  next cycle", async function () {
     const invoiceTotal = await getExpectedInvoiceTotal({

@@ -63,6 +63,7 @@ export const getV1EntitlementsRes = ({
     res.next_reset_at =
       isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
     res.allowance = isBoolean || unlimited ? undefined : 0;
+    res.usage_limit = isBoolean || unlimited ? undefined : 0;
   }
 
   return res;
@@ -74,6 +75,7 @@ export const getCusBalances = async ({
   cusPrices,
   org,
   entity,
+  apiVersion,
 }: {
   cusEntsWithCusProduct: (FullCustomerEntitlement & {
     customer_product: FullCusProduct;
@@ -81,6 +83,7 @@ export const getCusBalances = async ({
   cusPrices: FullCustomerPrice[];
   org: Organization;
   entity?: Entity;
+  apiVersion: number;
 }) => {
   const data: Record<string, any> = {};
   const features = cusEntsWithCusProduct.map(
@@ -116,7 +119,7 @@ export const getCusBalances = async ({
     });
 
     // 1. Initialize balance object
-    if (!data[key] && org.api_version == APIVersion.v1) {
+    if (!data[key] && apiVersion == APIVersion.v1) {
       data[key] = getV1EntitlementsRes({
         org,
         cusEnt,
@@ -152,6 +155,7 @@ export const getCusBalances = async ({
           data[key].next_reset_at =
             isBoolean || unlimited ? undefined : cusEnt.next_reset_at;
           data[key].allowance = isBoolean || unlimited ? undefined : 0;
+          data[key].usage_limit = isBoolean || unlimited ? undefined : 0;
         }
       }
     }
@@ -195,6 +199,13 @@ export const getCusBalances = async ({
       });
 
       data[key].allowance += (resetBalance || 0) * count;
+
+      let usageLimit = ent.usage_limit;
+      if (notNullish(usageLimit)) {
+        data[key].usage_limit += usageLimit;
+      } else {
+        data[key].usage_limit += ent.allowance || 0;
+      }
     }
   }
 

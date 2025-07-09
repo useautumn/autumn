@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faGoogle } from "@fortawesome/free-brands-svg-icons";
+import { faGoogle, faStripe } from "@fortawesome/free-brands-svg-icons";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
 import { OTPSignIn } from "./components/OTPSignIn";
 import { Mail } from "lucide-react";
@@ -118,6 +118,18 @@ export const SignIn = () => {
               >
                 Continue with Google
               </Button>
+
+              {/* <Button
+                variant="auth"
+                onClick={handleGoogleSignIn}
+                isLoading={googleLoading}
+                startIcon={
+                  <FontAwesomeIcon icon={faStripe} className="text-stone-400" />
+                }
+                className={height}
+              >
+                Continue with Stripe
+              </Button> */}
 
               {/* Divider */}
               <div className="relative">

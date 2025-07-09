@@ -6,6 +6,7 @@ import {
   Entity,
   Feature,
   FeatureType,
+  FullCusEntWithFullCusProduct,
   FullCusProduct,
   FullCustomerEntitlement,
   Price,
@@ -184,8 +185,8 @@ export const addExistingUsagesToCusEnts = ({
 
   let fullCusEnts = cusEnts.map((ce) => {
     let entitlement = entitlements.find((e) => e.id === ce.entitlement_id!);
-    return { ...ce, entitlement };
-  }) as FullCustomerEntitlement[];
+    return { ...ce, entitlement, customer_product: curCusProduct };
+  }) as FullCusEntWithFullCusProduct[];
 
   // Sort cusEnts
   sortCusEntsForDeduction(fullCusEnts);

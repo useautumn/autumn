@@ -28,6 +28,7 @@ export default function UpdateProductItem({
   const [showCreateFeature, setShowCreateFeature] = useState(false);
 
   const handleUpdateProductItem = () => {
+    console.log("Selected Item: ", selectedItem);
     const validatedItem = validateProductItem({
       item: selectedItem!,
       features,

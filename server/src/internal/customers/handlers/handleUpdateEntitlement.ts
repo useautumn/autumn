@@ -73,6 +73,13 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
       withCusProduct: true,
     });
 
+    const cusProduct = await CusProductService.get({
+      db,
+      id: cusEnt.customer_product_id,
+      orgId: req.orgId,
+      env: req.env,
+    });
+
     if (balance < 0 && !cusEnt.usage_allowed) {
       throw new RecaseError({
         message: "Entitlement does not allow usage",
@@ -99,7 +106,10 @@ export const handleUpdateEntitlement = async (req: any, res: any) => {
     let originalBalance = structuredClone(masterBalance);
 
     let { newBalance, newEntities, newAdjustment } = performDeductionOnCusEnt({
-      cusEnt,
+      cusEnt: {
+        ...cusEnt,
+        customer_product: cusProduct!,
+      },
       toDeduct: deducted,
       addAdjustment: true,
       allowNegativeBalance: cusEnt.usage_allowed || false,
