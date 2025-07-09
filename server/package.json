@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "email": "email dev -p 3001",
-    "dev": "npx nodemon --no-deprecation --exec npx tsx src/index.ts --ignore scripts --ignore tests",
+    "dev": "cross-env NODE_ENV=development npx nodemon --no-deprecation --exec npx tsx src/index.ts --ignore scripts --ignore tests",
     "start": "npx tsx src/index.ts",
     "workers": "npx tsx watch src/workers.ts",
     "workers:start": "node --no-deprecation dist/src/workers.js",
@@ -112,6 +112,7 @@
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@types/ws": "^8.18.1",
+    "cross-env": "^7.0.3",
     "drizzle-kit": "^0.31.1",
     "mocha": "^11.1.0",
     "puppeteer": "^24.2.0",

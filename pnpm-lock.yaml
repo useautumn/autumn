@@ -256,6 +256,9 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
+      cross-env:
+        specifier: ^7.0.3
+        version: 7.0.3
       drizzle-kit:
         specifier: ^0.31.1
         version: 0.31.1
@@ -387,8 +390,8 @@ importers:
         specifier: ^3.6.0
         version: 3.8.0
       autumn-js:
-        specifier: ^0.0.77
-        version: 0.0.77(react@18.3.1)
+        specifier: ^0.0.93
+        version: 0.0.93(better-auth@1.2.9)(react@18.3.1)
       axios:
         specifier: ^1.8.3
         version: 1.10.0
@@ -3807,6 +3810,20 @@ packages:
     peerDependencies:
       react: '*'
     peerDependenciesMeta:
+      react:
+        optional: true
+
+  autumn-js@0.0.93:
+    resolution: {integrity: sha512-zGq9cfkhHL6xAHlervcZHO2WQ28mHNoxKKI4vnkvKifW7ETDcQk0T7xdJS9g/a+BJh7CLqe697gEdMblMUDfUA==}
+    peerDependencies:
+      better-auth: ^1.2.12
+      better-call: ^1.0.12
+      react: '*'
+    peerDependenciesMeta:
+      better-auth:
+        optional: true
+      better-call:
+        optional: true
       react:
         optional: true
 
@@ -10821,6 +10838,16 @@ snapshots:
       rou3: 0.6.3
       swr: 2.3.3(react@18.3.1)
     optionalDependencies:
+      react: 18.3.1
+
+  autumn-js@0.0.93(better-auth@1.2.9)(react@18.3.1):
+    dependencies:
+      chalk: 5.4.1
+      rou3: 0.6.3
+      swr: 2.3.3(react@18.3.1)
+      zod: 3.25.64
+    optionalDependencies:
+      better-auth: 1.2.9
       react: 18.3.1
 
   axios@1.10.0:
