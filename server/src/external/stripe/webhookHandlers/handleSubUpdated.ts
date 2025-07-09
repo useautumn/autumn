@@ -13,9 +13,6 @@ import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { handleSubCanceled } from "./handleSubUpdated/handleSubCanceled.js";
 import { handleSubRenewed } from "./handleSubUpdated/handleSubRenewed.js";
-import { formatUnixToDate } from "@/utils/genUtils.js";
-import { differenceInMinutes } from "date-fns";
-import { getStripeNow } from "@/utils/scriptUtils/testClockUtils.js";
 
 export const handleSubscriptionUpdated = async ({
   req,
@@ -136,6 +133,9 @@ export const handleSubscriptionUpdated = async ({
     }
 
     try {
+      logger.info(
+        `sub.updated (past_due), cancelling subscription: ${subscription.id}`,
+      );
       await stripeCli.subscriptions.cancel(subscription.id);
       await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
     } catch (error: any) {
