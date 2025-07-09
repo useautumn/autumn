@@ -54,9 +54,9 @@ export const ProductList = ({
         new Set(
           product?.items
             .filter((item: ProductItem) => item.entity_feature_id != null)
-            .map((item: ProductItem) => item.entity_feature_id),
-        ),
-      ),
+            .map((item: ProductItem) => item.entity_feature_id)
+        )
+      )
     );
   }, [data.features, product]);
 
@@ -72,8 +72,8 @@ export const ProductList = ({
       number={1}
       description={
         <p>
-          Create your product tiers by defining the features your customers can
-          access and how much they cost.
+          Create products for any free plans, paid plans and any add-on or top
+          up products that your application offers.
         </p>
       }
     >
@@ -121,7 +121,7 @@ export const ProductList = ({
           products={data.products}
           onRowClick={(id) => {
             const selectedProduct = data.products.find(
-              (p: ProductV2) => p.id === id,
+              (p: ProductV2) => p.id === id
             );
             setProduct(selectedProduct);
             // setEntityFeatureIds([]);
@@ -184,7 +184,7 @@ const EditProductDialog = ({
       const res = await ProductService.updateProduct(
         axiosInstance,
         product.id,
-        product,
+        product
       );
       toast.success("Product updated successfully");
       await mutate();

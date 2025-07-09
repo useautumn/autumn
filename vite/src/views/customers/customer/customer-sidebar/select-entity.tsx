@@ -6,7 +6,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { Entity } from "@autumn/shared";
+import { Entity, Feature, FeatureUsageType } from "@autumn/shared";
 import { useLocation, useNavigate } from "react-router";
 
 import { CreateEntity } from "./create-entity/CreateEntity";
@@ -28,7 +28,19 @@ export const SelectEntity = ({
   const navigate = useNavigate();
   const location = useLocation();
 
+  console.log(cusContext);
+
   if (!entities || entities.length === 0) {
+    // Only show create entity flow if there are continuous use features
+    const hasContinuousUseFeatures = cusContext?.features?.some(
+      (feature: Feature) =>
+        feature.config?.usage_type === FeatureUsageType.Continuous
+    );
+
+    if (!hasContinuousUseFeatures) {
+      return null;
+    }
+
     // Create entity flow
     return (
       <>
@@ -46,8 +58,7 @@ export const SelectEntity = ({
   }
 
   const entity = entities.find(
-    (entity: Entity) =>
-      entity.id === entityId || entity.internal_id == entityId,
+    (entity: Entity) => entity.id === entityId || entity.internal_id == entityId
   );
 
   return (

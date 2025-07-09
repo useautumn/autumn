@@ -72,7 +72,7 @@ export const FeatureConfig = () => {
             startIcon={<PlusIcon size={12} />}
             onClick={handleAddUsagePrice}
           >
-            Add Usage Price
+            Add Price
           </Button>
         </div>
       )}

@@ -41,7 +41,7 @@ export const SelectItemFeature = ({
             <SelectItem key={feature.id} value={feature.id!}>
               <div className="flex gap-2 items-center max-w-sm">
                 <span className="truncate">{feature.name}</span>
-                <FeatureTypeBadge type={feature.type} />
+                <FeatureTypeBadge {...feature} />
               </div>
             </SelectItem>
           ))}

@@ -64,7 +64,7 @@ export const CustomerProductList = ({
             p.entitlements.some(
               (cusEnt: any) =>
                 cusEnt.entities &&
-                Object.keys(cusEnt.entities).includes(entity.internal_id),
+                Object.keys(cusEnt.entities).includes(entity.internal_id)
             )
           : true;
 
@@ -93,7 +93,7 @@ export const CustomerProductList = ({
               variant="ghost"
               className={cn(
                 "text-t3 text-xs font-normal p-0",
-                showExpired && "text-t1 hover:text-t1",
+                showExpired && "text-t1 hover:text-t1"
               )}
               size="sm"
               onClick={() => setShowExpired(!showExpired)}
@@ -125,7 +125,7 @@ export const CustomerProductList = ({
             className="grid-cols-12 pr-0"
             onClick={() => {
               const entity = entities.find(
-                (e: any) => e.internal_id === cusProduct.internal_entity_id,
+                (e: any) => e.internal_id === cusProduct.internal_entity_id
               );
               navigateTo(
                 `/customers/${customer.id || customer.internal_id}/${
@@ -134,7 +134,7 @@ export const CustomerProductList = ({
                   entity ? `&entity_id=${entity.id || entity.internal_id}` : ""
                 }`,
                 navigate,
-                env,
+                env
               );
             }}
           >
@@ -262,13 +262,9 @@ const UpdateStatusDropdownBtn = ({
   const handleStatusUpdate = async () => {
     setLoading(true);
     try {
-      await CusService.updateCusProductStatus(
-        axiosInstance,
-        cusProduct.id,
-        {
-          status,
-        },
-      );
+      await CusService.updateCusProductStatus(axiosInstance, cusProduct.id, {
+        status,
+      });
       await cusMutate();
     } catch (error) {
       toast.error(getBackendErr(error, "Failed to update status"));
@@ -288,36 +284,37 @@ const UpdateStatusDropdownBtn = ({
   return (
     <>
       <Dialog open={showDefaultWarning} onOpenChange={setShowDefaultWarning}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Expire Default Product</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="">
             <p className="text-sm text-gray-600">
-              This is the default product. Expiring it will reset it and reattach it to this customer. Do you want to continue?
+              This is the default product. Expiring it will reattach it to the
+              customer and reset their features.
             </p>
           </div>
           <DialogFooter>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowDefaultWarning(false)}
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   setShowDefaultWarning(false);
                   handleStatusUpdate();
                 }}
               >
-                Confirm
+                Expire Default
               </Button>
             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       <Button
         variant="ghost"
         dim={5}
@@ -329,8 +326,7 @@ const UpdateStatusDropdownBtn = ({
           <SmallSpinner />
         ) : (
           <>
-            <span>Mark as {keyToTitle(status)}</span>
-            {status === "expired" && <span className="ml-1">⚠️</span>}
+            <span>{keyToTitle(status)}</span>
           </>
         )}
       </Button>
