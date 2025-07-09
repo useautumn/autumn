@@ -315,13 +315,13 @@ export const getResetBalance = ({
 
   let billingType = getBillingType(config);
   if (billingType != BillingType.UsageInAdvance) {
-    return entitlement.allowance;
+    return entitlement.allowance || 0;
   }
 
   let quantity = options?.quantity;
   let billingUnits = (relatedPrice.config as UsagePriceConfig).billing_units;
   if (nullish(quantity) || nullish(billingUnits)) {
-    return entitlement.allowance;
+    return entitlement.allowance || 0;
   }
 
   try {
@@ -330,7 +330,7 @@ export const getResetBalance = ({
     console.log(
       "WARNING: Failed to return quantity * billing units, returning allowance...",
     );
-    return entitlement.allowance;
+    return entitlement.allowance || 0;
   }
 };
 
@@ -351,7 +351,10 @@ export const getUnlimitedAndUsageAllowed = ({
   );
 
   const usageAllowed = cusEnts.some(
-    (ent) => ent.internal_feature_id === internalFeatureId && ent.usage_allowed,
+    (ent) =>
+      ent.internal_feature_id === internalFeatureId &&
+      ent.usage_allowed &&
+      nullish(ent.entitlement.usage_limit),
   );
 
   return { unlimited, usageAllowed };

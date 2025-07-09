@@ -109,6 +109,7 @@ export const handleQuantityUpgrade = async ({
         stripeCusId: stripeSub.customer as string,
         stripeSubId: stripeSub.id,
         paymentMethod: paymentMethod || null,
+        logger,
       });
     }
   }

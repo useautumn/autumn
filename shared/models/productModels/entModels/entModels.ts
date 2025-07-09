@@ -26,6 +26,7 @@ export const EntitlementSchema = z.object({
   // Part of create entitlement
   org_id: z.string().optional(),
   feature_id: z.string().optional(),
+  usage_limit: z.number().nullable().optional().default(null),
 });
 
 export const CreateEntitlementSchema = z.object({
@@ -37,6 +38,7 @@ export const CreateEntitlementSchema = z.object({
   interval: z.nativeEnum(EntInterval).nullish(),
   carry_from_previous: z.boolean().default(false),
   entity_feature_id: z.string().nullish(),
+  usage_limit: z.number().nullish().default(null),
 });
 
 export type CreateEntitlement = z.infer<typeof CreateEntitlementSchema>;

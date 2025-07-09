@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import Step from "@/components/general/OnboardingStep";
+import CheckDialog from "@/components/autumn/paywall-dialog";
 
 import { useEnv } from "@/utils/envUtils";
 
@@ -9,14 +10,14 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
 
 import { useSearchParams } from "react-router";
 
-import { useCustomer, CheckDialog } from "autumn-js/react";
+import { useCustomer } from "autumn-js/react";
 import PricingTable from "@/components/autumn/pricing-table";
 import {
   Check,
@@ -48,7 +49,7 @@ export const SampleApp = ({
   const [open, setOpen] = useState(false);
   const [checkData, setCheckData] = useState<any>(null);
   const [trackData, setTrackData] = useState<any>(null);
-  const [showCodeSection, setShowCodeSection] = useState(false);
+  const [showCodeSection, setShowCodeSection] = useState(true);
   const [showCheckSnippet, setShowCheckSnippet] = useState(true);
   const [showTrackSnippet, setShowTrackSnippet] = useState(true);
   const [showCustomerSnippet, setShowCustomerSnippet] = useState(true);
@@ -124,12 +125,12 @@ export const SampleApp = ({
                     <div className="flex flex-wrap gap-2 items-center">
                       {data.features
                         ?.filter(
-                          (feature: any) => customer?.features?.[feature.id],
+                          (feature: any) => customer?.features?.[feature.id]
                         )
                         .concat(
                           data.features?.filter(
-                            (feature: any) => !customer?.features?.[feature.id],
-                          ) || [],
+                            (feature: any) => !customer?.features?.[feature.id]
+                          ) || []
                         )
                         .map((feature: any, index: number) => {
                           const customerFeature =
@@ -210,28 +211,18 @@ export const SampleApp = ({
                                     checkData
                                       ? `import { useCustomer } from 'autumn-js/react';
 
-export default function CheckFeature() {
-  const { customer } = useCustomer();
+const { allowed } = useCustomer();
 
-  const handleCheckFeature = () => {
-    const feature = customer?.features?.${lastUsedFeature?.featureId || data.features?.[0]?.id || "messages"};
-    
-    if (feature && feature.balance > 0) {
-      // Feature has remaining usage
-      console.log("Feature access granted");
-      console.log("Remaining balance:", feature.balance);
-    } else {
-      alert("You're out of usage for this feature");
-    }
-  };
-  
-  return (
-    <button onClick={handleCheckFeature}>
-      Check Feature Access
-    </button>
-  );
-}`
-                                      : "// Click 'Send' on a feature to see a check request"
+const handleCheckFeature = async () => {
+if ( !allowed({ featureId: '${
+                                          lastUsedFeature?.featureId ||
+                                          data.features?.[0]?.id ||
+                                          "feature-id"
+                                        }' }) ) {
+    alert('Feature not allowed');
+  }
+} `
+                                      : "// Click 'Send' on a feature"
                                   }`,
                                 },
                                 {
@@ -248,17 +239,23 @@ const autumn = new Autumn({
 
 const { data } = await autumn.check({
   customerId: 'user_123',
-  featureId: '${lastUsedFeature?.featureId || data.features?.[0]?.id || "feature-id"}'
+  featureId: '${
+    lastUsedFeature?.featureId || data.features?.[0]?.id || "feature-id"
+  }'
 });
 `
-                                      : "// Click 'Send' on a feature to see a check request"
+                                      : "// Click 'Send' on a feature"
                                   }`,
                                 },
                                 {
                                   title: "Response",
                                   language: "typescript",
                                   displayLanguage: "typescript",
-                                  content: `${checkData ? JSON.stringify(checkData, null, 2) : "// Click 'Send' on a feature to see a check response"}`,
+                                  content: `${
+                                    checkData
+                                      ? JSON.stringify(checkData, null, 2)
+                                      : "// Click 'Send' on a feature"
+                                  }`,
                                 },
                               ]}
                             />
@@ -294,30 +291,17 @@ const { data } = await autumn.check({
                                     trackData
                                       ? `import { useCustomer } from 'autumn-js/react';
 
-export default function SendChatMessage() {
-  const { customer, refetch } = useCustomer();
+const { track } = useCustomer();
 
-  const handleSendMessage = async () => {
-    const feature = customer?.features?.${lastUsedFeature?.featureId || data.features?.[0]?.id || "messages"};
-    
-    if (feature && feature.balance > 0) {
-      // Send chatbot message server-side, then
-      await refetch(); // refetch customer usage data
-      alert(
-        "Remaining messages: " + customer?.features?.${lastUsedFeature?.featureId || data.features?.[0]?.id || "messages"}?.balance
-      );
-    } else {
-      alert("You're out of messages");
-    }
-  };
-  
-  return (
-    <button onClick={handleSendMessage}>
-      Send Message
-    </button>
-  );
-}`
-                                      : "// Click 'Send' on a feature to see a track request"
+const handleTrackUsage = async () => {
+  await track({ 
+    featureId: '${
+      lastUsedFeature?.featureId || data.features?.[0]?.id || "feature-id"
+    }',
+    value: ${lastUsedFeature?.value || 1}
+  });
+};`
+                                      : "// Click 'Send' on a feature"
                                   }`,
                                 },
                                 {
@@ -333,18 +317,24 @@ const autumn = new Autumn({
 });
 
 const response = await autumn.track({
-  featureId: '${lastUsedFeature?.featureId || data.features?.[0]?.id || "feature-id"}',
+  featureId: '${
+    lastUsedFeature?.featureId || data.features?.[0]?.id || "feature-id"
+  }',
   value: ${lastUsedFeature?.value || 1}
 });
 `
-                                      : "// Click 'Send' on a feature to see a track request"
+                                      : "// Click 'Send' on a feature"
                                   }`,
                                 },
                                 {
                                   title: "Response",
                                   language: "typescript",
                                   displayLanguage: "typescript",
-                                  content: `${trackData ? JSON.stringify(trackData, null, 2) : "// Click 'Send' on a feature to see a track response"}`,
+                                  content: `${
+                                    trackData
+                                      ? JSON.stringify(trackData, null, 2)
+                                      : "// Click 'Send' on a feature"
+                                  }`,
                                 },
                               ]}
                             />
@@ -382,7 +372,11 @@ const response = await autumn.track({
 
 const { customer, refetch } = useCustomer();
 
-console.log('Customer:', customer);
+console.log('Customer balance:', customer?.features.${
+                                    lastUsedFeature?.featureId ||
+                                    data.features?.[0]?.id ||
+                                    "feature-id"
+                                  }?.balance);
 
 const handleTrackUsage = async () => {
   //refresh customer data after feature is used 
@@ -405,7 +399,11 @@ const { customer } = await autumn.customers.get('user_123');`,
                                   title: "Response",
                                   language: "typescript",
                                   displayLanguage: "typescript",
-                                  content: `${customer ? JSON.stringify(customer, null, 2) : "// Customer data will appear here after using features"}`,
+                                  content: `${
+                                    customer
+                                      ? JSON.stringify(customer, null, 2)
+                                      : "// Customer data will appear here"
+                                  }`,
                                 },
                               ]}
                             />
@@ -446,7 +444,7 @@ const FeatureUsageItem = ({
         <div
           className={cn(
             " text-xs uppercase rounded-md flex items-center gap-2 truncate",
-            !customerFeature ? "text-t3" : "text-t2",
+            !customerFeature ? "text-t3" : "text-t2"
           )}
         >
           {feature.name || `Feature ${feature.id || "Unknown"}`}
@@ -466,7 +464,7 @@ const FeatureUsageItem = ({
           <span
             className={cn(
               "text-xs truncate uppercase",
-              customerFeature ? "text-t2" : "text-t3",
+              customerFeature ? "text-t2" : "text-t3"
             )}
           >
             {feature.name || `Feature ${feature.id || "Unknown"}`}
@@ -494,7 +492,7 @@ const FeatureUsageItem = ({
               });
               const { data: checkResponse } = await check({
                 featureId: customerFeature.id,
-                dialog: CheckDialog,
+
               });
               onCheckData(checkResponse);
 
@@ -516,7 +514,11 @@ const FeatureUsageItem = ({
           <span className="text-sm text-t2">
             {customerFeature.unlimited
               ? "unlimited"
-              : `${customerFeature.usage}${customerFeature.included_usage > 0 ? ` / ${customerFeature.included_usage}` : ""}`}
+              : `${customerFeature.usage}${
+                  customerFeature.included_usage > 0
+                    ? ` / ${customerFeature.included_usage}`
+                    : ""
+                }`}
           </span>
         )}
       </div>

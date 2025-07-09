@@ -48,7 +48,7 @@ export const ProductsTable = ({
             className={cn(
               "flex flex-col justify-center items-center h-10 px-10 text-t3 min-h-[60vh] gap-4",
               "justify-start items-start mt-3",
-              onboarding && "px-2 mt-4",
+              onboarding && "px-2 mt-4"
             )}
           >
             {/* <img
@@ -58,8 +58,9 @@ export const ProductsTable = ({
               // className="w-48 h-48 opacity-80 filter brightness-0 invert" // this is for dark mode
             /> */}
             <span>
-              Products define the features your customers can access and how
-              much they cost. Create your first product to get started ☝️.
+              Each product defines features your customers get access to and how
+              much they cost. Create separate products for any free plans, paid
+              plans and any add-on or top up products ☝️
             </span>
           </div>
         )
@@ -71,7 +72,7 @@ export const ProductsTable = ({
             key={product.id}
             className={cn(
               "grid-cols-18 gap-2 items-center text-sm cursor-pointer hover:bg-primary/5 text-t2 whitespace-nowrap",
-              onboarding && "grid-cols-12",
+              onboarding && "grid-cols-12"
             )}
             isOnboarding={onboarding}
             onClick={() => {
@@ -122,7 +123,7 @@ export const ProductsTable = ({
             <Item
               className={cn(
                 "col-span-1 items-center justify-end",
-                onboarding && "col-span-6",
+                onboarding && "col-span-6"
               )}
             >
               <ProductRowToolbar product={product} />

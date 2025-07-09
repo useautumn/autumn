@@ -99,6 +99,7 @@ export const toFeaturePriceItem = ({
 
     price_config: price.config,
     config: price.proration_config || undefined,
+    usage_limit: ent.usage_limit,
   };
 
   return item;

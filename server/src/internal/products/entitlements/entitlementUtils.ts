@@ -88,7 +88,6 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
     );
     return false;
   }
-
   // 3. Check if they have same interval
   let diffs = {
     interval: {
@@ -108,6 +107,10 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
     entityFeatureId: {
       condition: ent1.entity_feature_id !== ent2.entity_feature_id,
       message: `Entity feature ID different: ${ent1.entity_feature_id} !== ${ent2.entity_feature_id}`,
+    },
+    usageLimit: {
+      condition: ent1.usage_limit !== ent2.usage_limit,
+      message: `Usage limit different: ${ent1.usage_limit} !== ${ent2.usage_limit}`,
     },
   };
 
