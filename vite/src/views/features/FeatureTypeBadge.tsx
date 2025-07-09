@@ -7,14 +7,12 @@ interface FeatureTypeBadgeProps {
 }
 
 export function FeatureTypeBadge(feature: Feature) {
-  console.log("feature", feature);
-
   const badgeType =
     feature.type == FeatureType.Boolean
       ? "boolean"
       : feature.config?.usage_type === FeatureUsageType.Continuous
-      ? "continuous use"
-      : "single use";
+        ? "continuous use"
+        : "single use";
 
   return (
     <Badge
@@ -23,7 +21,8 @@ export function FeatureTypeBadge(feature: Feature) {
         badgeType === "boolean" && "bg-lime-50 text-lime-600 border-lime-600",
         badgeType === "continuous use" &&
           "bg-cyan-50 text-cyan-600 border-cyan-600",
-        badgeType === "single use" && "bg-blue-50 text-blue-600 border-blue-600"
+        badgeType === "single use" &&
+          "bg-blue-50 text-blue-600 border-blue-600",
       )}
     >
       {badgeType}
