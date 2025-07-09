@@ -21,7 +21,7 @@ export const ProductTypeBadge = ({ product }: { product: Product }) => {
     // </>
     <Badge
       className={cn(
-        "bg-transparent border border-t1 text-t1 rounded-md px-2",
+        "bg-transparent border border-t1 text-t1 rounded-md px-2 pointer-events-none",
         badgeType === "default" &&
           "bg-stone-200 text-stone-700 border-stone-700",
         badgeType === "add-on" && "bg-zinc-100 text-zinc-500 border-zinc-400"
