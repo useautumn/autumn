@@ -23,6 +23,7 @@ import { PlusIcon, Check } from "lucide-react";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { ProductConfig } from "./ProductConfig";
 import { ProductV2 } from "@autumn/shared";
+import { ToggleButton } from "@/components/general/ToggleButton";
 
 export const defaultProduct = {
   name: "",
@@ -50,7 +51,7 @@ function CreateProduct({
     try {
       const newProduct = await ProductService.createProduct(
         axiosInstance,
-        product,
+        product
       );
 
       await mutate();
@@ -88,59 +89,28 @@ function CreateProduct({
 
         <DialogFooter>
           <div className="flex justify-between items-center gap-2 w-full mt-4">
-            <div className="flex gap-2">
-              <Tooltip delayDuration={200}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    disabled={product?.is_add_on}
-                    onClick={() =>
-                      setProduct({
-                        ...product,
-                        is_default: !product?.is_default,
-                      })
-                    }
-                    className={`min-w-32 flex items-center gap-2 ${
-                      product?.is_default ? "bg-stone-100" : ""
-                    }`}
-                  >
-                    {product?.is_default && (
-                      <div className="w-3 h-3 bg-lime-500 rounded-full flex items-center justify-center">
-                        <Check className="w-2 h-2 text-white" />
-                      </div>
-                    )}
-                    Default
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  This product is enabled by default for all new users
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip delayDuration={200}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    disabled={product?.is_default}
-                    onClick={() =>
-                      setProduct({ ...product, is_add_on: !product?.is_add_on })
-                    }
-                    className={`min-w-32 flex items-center gap-2 ${
-                      product?.is_add_on ? "bg-stone-100" : ""
-                    }`}
-                  >
-                    {product?.is_add_on && (
-                      <div className="w-3 h-3 bg-lime-500 rounded-full flex items-center justify-center">
-                        <Check className="w-2 h-2 text-white" />
-                      </div>
-                    )}
-                    Add-on
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  This product is an add-on that can be bought together with
-                  your base products
-                </TooltipContent>
-              </Tooltip>
+            <div className="flex gap-4">
+              <ToggleButton
+                disabled={product?.is_add_on}
+                buttonText="Default"
+                infoContent="This product is enabled by default for all new users, typically used for your free plan"
+                value={product?.is_default}
+                setValue={() =>
+                  setProduct({
+                    ...product,
+                    is_default: !product?.is_default,
+                  })
+                }
+              />
+              <ToggleButton
+                disabled={product?.is_default}
+                buttonText="Add-on"
+                infoContent="This product is an add-on that can be bought together with your base products (eg, for top ups)"
+                value={product?.is_add_on}
+                setValue={() =>
+                  setProduct({ ...product, is_add_on: !product?.is_add_on })
+                }
+              />
             </div>
             <Button
               isLoading={loading}

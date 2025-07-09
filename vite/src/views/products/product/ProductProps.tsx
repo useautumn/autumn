@@ -176,8 +176,19 @@ export const ProductProps = () => {
                 <DialogTitle>Edit Product Group</DialogTitle>
               </DialogHeader>
               <p className="text-t3 text-sm">
-                Assign this product to a group. Customers can have active
-                subscriptions from multiple product groups at the same time.
+                Assign this product to a group. Customers will be able to have
+                active subscriptions from different product groups at the same
+                time. This can alter your existing upgrade and downgrade logic,
+                so read the docs{" "}
+                <a
+                  href="https://docs.useautumn.com/products/create-product#product-groups"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-500 underline"
+                >
+                  here
+                </a>{" "}
+                to understand how this works.
               </p>
               <div className="flex gap-4 py-4">
                 <Input

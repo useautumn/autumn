@@ -141,7 +141,13 @@ export function CreateProductItem() {
                     ← Product
                   </Button>
                 )}
-                <DialogTitle>Add Product Item</DialogTitle>
+
+                <DialogTitle>
+                  {showCreateFeature ||
+                  (features.length == 0 && item.price === null)
+                    ? "Create Feature"
+                    : "Add Product Item"}
+                </DialogTitle>
               </div>
             </DialogHeader>
             <div className="flex !overflow-visible  w-fit">
@@ -163,7 +169,12 @@ export function CreateProductItem() {
               )}
             </div>
           </DialogContentWrapper>
-          {!showCreateFeature ? <ItemConfigFooter /> : <div className="" />}
+          {showCreateFeature ||
+          (features.length == 0 && item.price === null) ? (
+            <div className="" />
+          ) : (
+            <ItemConfigFooter />
+          )}
         </DialogContent>
       </Dialog>
     </ProductItemContext.Provider>
