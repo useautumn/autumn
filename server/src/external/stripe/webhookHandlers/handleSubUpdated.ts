@@ -125,9 +125,25 @@ export const handleSubscriptionUpdated = async ({
     const latestInvoice = await stripeCli.invoices.retrieve(
       subscription.latest_invoice,
     );
-    if (latestInvoice.status !== "open") {
+
+    logger.info("Latest invoice billing reason", latestInvoice.billing_reason);
+    logger.info("Latest invoice status", latestInvoice.status);
+
+    if (
+      latestInvoice.status !== "open" ||
+      latestInvoice.billing_reason !== "subscription_cycle"
+    ) {
       logger.info(
-        "sub.updated, latest invoice isn't open, past_due not forcing cancel",
+        "sub.updated, latest invoice isn't open or billing reason isn't subscription_update, past_due not forcing cancel",
+        {
+          data: {
+            subscriptionId: subscription.id,
+            stripeSubId: subscription.id,
+            latestInvoiceId: subscription.latest_invoice,
+            latestInvoiceStatus: latestInvoice.status,
+            latestInvoiceBillingReason: latestInvoice.billing_reason,
+          },
+        },
       );
       return;
     }
@@ -135,6 +151,15 @@ export const handleSubscriptionUpdated = async ({
     try {
       logger.info(
         `sub.updated (past_due), cancelling subscription: ${subscription.id}`,
+        {
+          data: {
+            subscriptionId: subscription.id,
+            stripeSubId: subscription.id,
+            latestInvoiceId: subscription.latest_invoice,
+            latestInvoiceStatus: latestInvoice.status,
+            latestInvoiceBillingReason: latestInvoice.billing_reason,
+          },
+        },
       );
       await stripeCli.subscriptions.cancel(subscription.id);
       await stripeCli.invoices.voidInvoice(subscription.latest_invoice);
@@ -146,6 +171,9 @@ export const handleSubscriptionUpdated = async ({
             subscriptionId: subscription.id,
             stripeSubId: subscription.id,
             error: error.message,
+            latestInvoiceId: subscription.latest_invoice,
+            latestInvoiceStatus: latestInvoice.status,
+            latestInvoiceBillingReason: latestInvoice.billing_reason,
           },
         },
       );
