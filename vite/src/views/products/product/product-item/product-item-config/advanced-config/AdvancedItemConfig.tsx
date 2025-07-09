@@ -37,7 +37,7 @@ export const AdvancedItemConfig = () => {
 
       <div
         className={`overflow-hidden transition-all duration-150 ease-out ${
-          isOpen ? "max-h-60 opacity-100 mt-2" : "max-h-0 opacity-0"
+          isOpen ? "max-h-72 opacity-100 mt-2" : "max-h-0 opacity-0"
         }`}
       >
         <div className="flex flex-col gap-4 p-4 bg-stone-100">
@@ -54,8 +54,8 @@ export const AdvancedItemConfig = () => {
             disabled={usageType === FeatureUsageType.Continuous}
           />
 
-        <div className="relative flex flex-row items-center justify-between gap-3 min-h-[35px]">
-          <ToggleButton
+          <div className="relative flex flex-row items-center gap-3 min-h-[35px]">
+            <ToggleButton
               value={item.usage_limit != null}
               setValue={() => {
                 let usage_limit;
@@ -73,22 +73,21 @@ export const AdvancedItemConfig = () => {
               className="text-t3 h-fit"
             />
 
-              {item.usage_limit != null && (
-                <Input
-                  type="number"
-                  value={item.usage_limit || ""}
-                  className="ml-5"
-                  onChange={(e) => {
-                    setItem({
-                      ...item,
-                      usage_limit: parseInt(e.target.value),
-                    });
-                  }}
-                  placeholder="Enter usage limit"
-                />
-              )}
-            </div>
-        
+            {item.usage_limit != null && (
+              <Input
+                type="number"
+                value={item.usage_limit || ""}
+                className="ml-5 w-25"
+                onChange={(e) => {
+                  setItem({
+                    ...item,
+                    usage_limit: parseInt(e.target.value),
+                  });
+                }}
+                placeholder="eg. 100"
+              />
+            )}
+          </div>
 
           {showProrationConfig && (
             <>
@@ -98,8 +97,6 @@ export const AdvancedItemConfig = () => {
           )}
           {/* <div className="flex flex-col gap-2"></div>
           <div className="flex gap-2"></div> */}
-
-          
         </div>
       </div>
     </div>

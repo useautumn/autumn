@@ -148,6 +148,7 @@ export const createUpgradeProrationInvoice = async ({
       paymentMethod,
       stripeCusId: sub.customer as string,
       stripeSubId: sub.id,
+      logger,
     });
 
     logger.info(`Paid for invoice ${finalInvoice?.id}`);

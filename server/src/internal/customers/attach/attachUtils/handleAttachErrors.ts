@@ -106,6 +106,18 @@ const handlePrepaidErrors = async ({
           statusCode: 400,
         });
       }
+
+      let usageLimit = priceEnt.usage_limit;
+      let totalQuantity =
+        options?.quantity! * (price.config as UsagePriceConfig).billing_units!;
+
+      if (usageLimit && totalQuantity + priceEnt.allowance! > usageLimit) {
+        throw new RecaseError({
+          message: `Quantity + included usage exceeds usage limit of ${usageLimit} for feature ${priceEnt.feature_id}`,
+          code: ErrCode.InvalidOptions,
+          statusCode: 400,
+        });
+      }
     }
   }
 };

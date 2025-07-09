@@ -72,25 +72,17 @@ export const productsAreSame = ({
 
   // Check if any feature's usage limits have changed
   let usageLimitsChanged = false;
-  items1.some(item1 => {
-    const matchingItem2 = items2?.find(item2 => item2.feature_id === item1.feature_id);
+  items1.some((item1) => {
+    const matchingItem2 = items2?.find(
+      (item2) => item2.feature_id === item1.feature_id,
+    );
     if (!matchingItem2) return false;
-    
-    const feature = features.find(f => f.id === item1.feature_id);
+
+    const feature = features.find((f) => f.id === item1.feature_id);
     if (!feature) return false;
 
-    // Check if the usage limit has changed
-    if (item1.usage_limit !== matchingItem2.usage_limit) {
-      usageLimitsChanged = true;
-      return true;
-    }
     return false;
   });
-
-  if (usageLimitsChanged) {
-    itemsSame = false;
-    pricesChanged = true;
-  }
 
   items2 =
     curProductV2?.items ||
