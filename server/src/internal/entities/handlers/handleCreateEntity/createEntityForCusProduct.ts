@@ -9,7 +9,9 @@ import {
   findMainCusEntForFeature,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
 import { adjustAllowance } from "@/trigger/adjustAllowance.js";
+import { getReps } from "@/trigger/arrearProratedUsage/handleProratedUpgrade.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { notNullish } from "@/utils/genUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import {
   CreateEntity,
@@ -117,6 +119,24 @@ export const createEntityForCusProduct = async ({
     if (mainCusEnt) {
       const originalBalance = mainCusEnt.balance || 0;
       const newBalance = originalBalance - inputEntities.length;
+
+      let repsLength = getReps({
+        cusEnt: mainCusEnt as any,
+        prevBalance: originalBalance,
+        newBalance,
+      }).length;
+      const innerNewBalance = newBalance + repsLength;
+
+      // Check if new balance would exceed usage limit
+      if (
+        notNullish(mainCusEnt.entitlement.usage_limit) &&
+        innerNewBalance < -mainCusEnt.entitlement.usage_limit!
+      ) {
+        throw new RecaseError({
+          message: `Cannot create ${inputEntities.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
+          code: ErrCode.FeatureLimitReached,
+        });
+      }
 
       const { deletedReplaceables: deletedReplaceables_, invoice } =
         await adjustAllowance({

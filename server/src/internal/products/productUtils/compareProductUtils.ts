@@ -16,6 +16,7 @@ import {
   isFeaturePriceItem,
   isPriceItem,
 } from "../product-items/productItemUtils/getItemType.js";
+import { StatusCodes } from "http-status-codes";
 
 export const productsAreSame = ({
   newProductV1,
@@ -61,15 +62,40 @@ export const productsAreSame = ({
     });
 
   let itemsSame = true;
+  let pricesChanged = false;
+  const newItems: ProductItem[] = [];
+  const removedItems: ProductItem[] = [];
 
   if (items1.length !== items2.length) {
     itemsSame = false;
   }
 
-  let pricesChanged = false;
+  // Check if any feature's usage limits have changed
+  let usageLimitsChanged = false;
+  items1.some((item1) => {
+    const matchingItem2 = items2?.find(
+      (item2) => item2.feature_id === item1.feature_id,
+    );
+    if (!matchingItem2) return false;
 
-  const newItems: ProductItem[] = [];
-  const removedItems: ProductItem[] = [];
+    const feature = features.find((f) => f.id === item1.feature_id);
+    if (!feature) return false;
+
+    return false;
+  });
+
+  items2 =
+    curProductV2?.items ||
+    mapToProductItems({
+      prices: curProductV1?.prices || [],
+      entitlements: curProductV1?.entitlements || [],
+      features,
+    });
+
+  if (items1.length !== items2.length) {
+    itemsSame = false;
+  }
+
   for (const item of items1) {
     let similarItem = findSimilarItem({
       item,
