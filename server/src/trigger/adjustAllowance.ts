@@ -96,15 +96,6 @@ export const adjustAllowance = async ({
 
   // TODO: TRACK
 
-  if (newBalance < -(cusEnt.entitlement.usage_limit || 0)) {
-    throw new RecaseError({
-      message: `Balance exceeds usage limit of ${cusEnt.entitlement.usage_limit}`,
-      code: ErrCode.InvalidInputs,
-      statusCode: StatusCodes.BAD_REQUEST,
-    });
-    // return;
-  }
-
   if (
     !cusProduct ||
     !cusPrice ||
@@ -112,6 +103,15 @@ export const adjustAllowance = async ({
     originalBalance == newBalance
   ) {
     return { newReplaceables: [], invoice: null, deletedReplaceables: null };
+  }
+
+  let ent = cusEnt.entitlement;
+  if (ent.usage_limit && newBalance < ent.allowance! - (ent.usage_limit || 0)) {
+    throw new RecaseError({
+      message: `Balance exceeds usage limit of ${cusEnt.entitlement.usage_limit}`,
+      code: ErrCode.InvalidInputs,
+      statusCode: StatusCodes.BAD_REQUEST,
+    });
   }
 
   logger.info(`--------------------------------`);

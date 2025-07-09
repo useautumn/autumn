@@ -98,6 +98,10 @@ export const featurePriceItemsAreSame = ({
       condition: item1.included_usage == item2.included_usage,
       message: `Included usage different: ${item1.included_usage} != ${item2.included_usage}`,
     },
+    usage_limit: {
+      condition: item1.usage_limit == item2.usage_limit,
+      message: `Usage limit different: ${item1.usage_limit} !== ${item2.usage_limit}`,
+    },
     reset_usage_when_enabled: {
       condition:
         item1.reset_usage_when_enabled == item2.reset_usage_when_enabled,

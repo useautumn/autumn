@@ -4,6 +4,7 @@ import {
   Event,
   FeatureType,
   FullCustomerEntitlement,
+  Entitlement,
 } from "@autumn/shared";
 
 import { AggregateType } from "@autumn/shared";
@@ -82,18 +83,39 @@ export const performDeduction = ({
   cusEntBalance,
   toDeduct,
   allowNegativeBalance = false,
+  ent,
+  resetBalance,
+  blockUsageLimit = true,
 }: {
   cusEntBalance: Decimal;
   toDeduct: number;
   allowNegativeBalance?: boolean;
+  ent: Entitlement;
+  resetBalance: number;
+  blockUsageLimit?: boolean;
 }) => {
   // Either deduct from balance or entity balance
-
   if (allowNegativeBalance) {
+    let usageLimit = ent.usage_limit;
+    let minBalance = usageLimit
+      ? new Decimal(resetBalance).minus(usageLimit).toNumber()
+      : undefined;
     let newBalance = cusEntBalance.minus(toDeduct).toNumber();
-    let deducted = toDeduct;
-    let toDeduct_ = 0;
-    return { newBalance, deducted, toDeduct: toDeduct_ };
+
+    if (
+      blockUsageLimit &&
+      minBalance &&
+      new Decimal(newBalance).lt(minBalance)
+    ) {
+      newBalance = minBalance;
+      let deducted = new Decimal(cusEntBalance).minus(minBalance).toNumber();
+      let toDeduct_ = new Decimal(toDeduct).minus(deducted).toNumber();
+      return { newBalance, deducted, toDeduct: toDeduct_ };
+    } else {
+      let deducted = toDeduct;
+      let toDeduct_ = 0;
+      return { newBalance, deducted, toDeduct: toDeduct_ };
+    }
   }
 
   if (cusEntBalance.lte(0) && toDeduct > 0) {

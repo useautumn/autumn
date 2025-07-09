@@ -17,6 +17,7 @@ export const FeaturePriceItemSchema = ProductItemSchema.pick({
   billing_units: true,
 
   reset_usage_when_enabled: true,
+  usage_limit: true,
 }).extend({
   feature_id: z.string().nonempty(),
   included_usage: z.number().nonnegative().nullish(),

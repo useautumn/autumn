@@ -120,6 +120,8 @@ export const getCusEntsInFeatures = async ({
   reverseOrder?: boolean;
 }) => {
   let cusProducts = customer.customer_products;
+
+  // This is important, attaching customer_product to cus ent is used elsewhere, don't delete.
   let cusEnts = cusProducts.flatMap((cusProduct) => {
     return cusProduct.customer_entitlements.map((cusEnt) => ({
       ...cusEnt,

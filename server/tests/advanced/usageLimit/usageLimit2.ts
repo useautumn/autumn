@@ -2,33 +2,48 @@ import chalk from "chalk";
 import Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomer } from "@/utils/scriptUtils/initCustomer.js";
-import { APIVersion, AppEnv, ErrCode, Organization } from "@autumn/shared";
+import { APIVersion, AppEnv, LimitedItem, Organization } from "@autumn/shared";
 
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { setupBefore } from "tests/before.js";
 import { createProducts } from "tests/utils/productUtils.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { constructArrearProratedItem } from "@/utils/scriptUtils/constructItem.js";
+import {
+  constructArrearItem,
+  constructFeatureItem,
+} from "@/utils/scriptUtils/constructItem.js";
 import { TestFeature } from "tests/setup/v2Features.js";
 import { addPrefixToProducts, runAttachTest } from "tests/attach/utils.js";
-import { expectAutumnError } from "tests/utils/expectUtils/expectErrUtils.js";
 import { expect } from "chai";
+import { timeout } from "@/utils/genUtils.js";
 
-const userItem = constructArrearProratedItem({
-  featureId: TestFeature.Users,
-  pricePerUnit: 50,
-  includedUsage: 0,
-  usageLimit: 2,
-});
+const messageItem = constructArrearItem({
+  featureId: TestFeature.Messages,
+  includedUsage: 100,
+  billingUnits: 1,
+  price: 0.5,
+  usageLimit: 500,
+}) as LimitedItem;
 
 export let pro = constructProduct({
-  items: [userItem],
+  items: [messageItem],
   type: "pro",
 });
 
-const testCase = "entity1";
+const addOnMessages = constructFeatureItem({
+  featureId: TestFeature.Messages,
+  interval: null,
+  includedUsage: 250,
+}) as LimitedItem;
 
-describe(`${chalk.yellowBright(`${testCase}: Testing entities`)}`, () => {
+const messageAddOn = constructProduct({
+  type: "one_off",
+  items: [addOnMessages],
+});
+
+const testCase = "usageLimit2";
+
+describe(`${chalk.yellowBright(`${testCase}: Testing usage limits, usage prices`)}`, () => {
   let customerId = testCase;
   let autumn: AutumnInt = new AutumnInt({ version: APIVersion.v1_4 });
   let testClockId: string;
@@ -47,13 +62,13 @@ describe(`${chalk.yellowBright(`${testCase}: Testing entities`)}`, () => {
     stripeCli = this.stripeCli;
 
     addPrefixToProducts({
-      products: [pro],
+      products: [pro, messageAddOn],
       prefix: testCase,
     });
 
     await createProducts({
       autumn,
-      products: [pro],
+      products: [pro, messageAddOn],
       customerId,
       db,
       orgId: org.id,
@@ -72,29 +87,6 @@ describe(`${chalk.yellowBright(`${testCase}: Testing entities`)}`, () => {
     testClockId = testClockId1!;
   });
 
-  const entities = [
-    {
-      id: "1",
-      name: "Entity 1",
-      feature_id: TestFeature.Users,
-    },
-    {
-      id: "2",
-      name: "Entity 2",
-      feature_id: TestFeature.Users,
-    },
-    {
-      id: "3",
-      name: "Entity 3",
-      feature_id: TestFeature.Users,
-    },
-    {
-      id: "4",
-      name: "Entity 4",
-      feature_id: TestFeature.Users,
-    },
-  ];
-
   it("should attach pro product", async function () {
     await runAttachTest({
       autumn,
@@ -106,40 +98,91 @@ describe(`${chalk.yellowBright(`${testCase}: Testing entities`)}`, () => {
       env,
     });
   });
-  it("should create more entities than the limit and hit error", async function () {
-    await expectAutumnError({
-      errCode: ErrCode.FeatureLimitReached,
-      func: async () => {
-        await autumn.entities.create(customerId, entities);
-      },
-    });
-  });
 
-  it("should create entities one by one, then hit usage limit", async function () {
-    await autumn.entities.create(customerId, entities[0]);
-    await autumn.entities.create(customerId, entities[1]);
+  let initialUsage =
+    messageItem.included_usage + messageItem.usage_limit! + 1000;
 
-    await expectAutumnError({
-      errCode: ErrCode.FeatureLimitReached,
-      func: async () => {
-        await autumn.entities.create(customerId, entities[2]);
-      },
-    });
-  });
-
-  it("should have correct check and get customer value", async function () {
-    const check = await autumn.check({
+  it("should track more messages than limit and not surpass", async function () {
+    await autumn.track({
       customer_id: customerId,
-      feature_id: TestFeature.Users,
+      feature_id: TestFeature.Messages,
+      value: initialUsage,
     });
-    expect(check.balance).to.equal(-2);
-    // @ts-ignore
-    expect(check.usage_limit).to.equal(userItem.usage_limit);
 
-    const customer = await autumn.customers.get(customerId);
+    await timeout(2000);
+
+    let check = await autumn.check({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+    });
+    let customer = await autumn.customers.get(customerId);
+
+    let expectedBalance = messageItem.included_usage - messageItem.usage_limit!;
+
+    expect(check.balance).to.equal(expectedBalance);
+    expect(check.allowed).to.equal(false);
     // @ts-ignore
-    expect(customer.features[TestFeature.Users].usage_limit).to.equal(
-      userItem.usage_limit,
+    expect(check.usage_limit!).to.equal(messageItem.usage_limit!);
+    // @ts-ignore
+    expect(customer.features[TestFeature.Messages].usage_limit).to.equal(
+      messageItem.usage_limit!,
+    );
+  });
+
+  it("should purchase add ons and have correct check results", async function () {
+    await autumn.attach({
+      customer_id: customerId,
+      product_id: messageAddOn.id,
+    });
+
+    let check = await autumn.check({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+    });
+    let customer = await autumn.customers.get(customerId);
+    let expectedBalance =
+      messageItem.included_usage -
+      messageItem.usage_limit! +
+      addOnMessages.included_usage;
+
+    expect(check.balance).to.equal(expectedBalance);
+    expect(check.allowed).to.equal(true);
+
+    // @ts-ignore
+    expect(check.usage_limit!).to.equal(
+      messageItem.usage_limit! + addOnMessages.included_usage,
+    );
+    // @ts-ignore
+    expect(customer.features[TestFeature.Messages].usage_limit).to.equal(
+      messageItem.usage_limit! + addOnMessages.included_usage,
+    );
+  });
+
+  it("should use up all add ons and have correct check results", async function () {
+    await autumn.track({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+      value: addOnMessages.included_usage + 500,
+    });
+
+    await timeout(2000);
+
+    let check = await autumn.check({
+      customer_id: customerId,
+      feature_id: TestFeature.Messages,
+    });
+    let customer = await autumn.customers.get(customerId);
+
+    let expectedBalance = messageItem.included_usage - messageItem.usage_limit!;
+    expect(check.balance).to.equal(expectedBalance);
+    expect(check.allowed).to.equal(false);
+    // @ts-ignore
+    expect(check.usage_limit!).to.equal(
+      messageItem.usage_limit! + addOnMessages.included_usage,
+    );
+    // @ts-ignore
+    expect(customer.features[TestFeature.Messages].usage_limit).to.equal(
+      messageItem.usage_limit! + addOnMessages.included_usage,
     );
   });
 });

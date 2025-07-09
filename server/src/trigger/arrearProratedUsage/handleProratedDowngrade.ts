@@ -110,6 +110,7 @@ export const createDowngradeProrationInvoice = async ({
       paymentMethod: null,
       stripeCusId: sub.customer as string,
       stripeSubId: sub.id,
+      logger,
     });
 
     invoice = finalInvoice;
