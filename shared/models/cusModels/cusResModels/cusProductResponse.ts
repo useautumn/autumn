@@ -13,7 +13,7 @@ export const CusProductResponseSchema = z.object({
   is_default: z.boolean(),
   is_add_on: z.boolean(),
 
-  subscription_ids: z.array(z.string()).nullish(),
+  stripe_subscription_ids: z.array(z.string()).nullish(),
 
   current_period_start: z.number().nullish(),
   current_period_end: z.number().nullish(),

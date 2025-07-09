@@ -1,4 +1,5 @@
 import {
+  Customer,
   Feature,
   Invoice,
   InvoiceItem,
@@ -33,7 +34,8 @@ export const processInvoice = ({
     total: invoice.total,
     currency: invoice.currency,
     created_at: invoice.created_at,
-    hosted_invoice_url: invoice.hosted_invoice_url,
+    // hosted_invoice_url: invoice.hosted_invoice_url,
+    hosted_invoice_url: `${process.env.BETTER_AUTH_URL}/invoices/hosted_invoice_url/${invoice.id}`,
     items: withItems
       ? (invoice.items || []).map((i) => {
           let feature = features?.find(
@@ -53,6 +55,19 @@ export const processInvoice = ({
 };
 
 export class InvoiceService {
+  static async get({ db, id }: { db: DrizzleCli; id: string }) {
+    return (await db.query.invoices.findFirst({
+      where: eq(invoices.id, id),
+      with: {
+        customer: {
+          with: {
+            org: true,
+          },
+        },
+      },
+    })) as Invoice & { customer: Customer & { org: Organization } };
+  }
+
   static async list({
     db,
     internalCustomerId,
