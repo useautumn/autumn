@@ -17,7 +17,7 @@ export const constructFeatureItem = ({
 }: {
   featureId: string;
   includedUsage?: number;
-  interval?: ProductItemInterval;
+  interval?: ProductItemInterval | null;
   entityFeatureId?: string;
   isBoolean?: boolean;
 }) => {
@@ -47,6 +47,7 @@ export const constructPrepaidItem = ({
     on_increase: OnIncrease.ProrateImmediately,
     on_decrease: OnDecrease.ProrateImmediately,
   },
+  usageLimit,
 }: {
   featureId: string;
   price?: number;
@@ -54,6 +55,7 @@ export const constructPrepaidItem = ({
   includedUsage?: number;
   isOneOff?: boolean;
   config?: ProductItemConfig;
+  usageLimit?: number;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -66,6 +68,7 @@ export const constructPrepaidItem = ({
     included_usage: includedUsage,
 
     config,
+    usage_limit: usageLimit,
   };
 
   return item;
@@ -81,6 +84,7 @@ export const constructArrearItem = ({
     on_decrease: OnDecrease.ProrateImmediately,
   },
   entityFeatureId,
+  usageLimit,
 }: {
   featureId: string;
   includedUsage?: number;
@@ -88,6 +92,7 @@ export const constructArrearItem = ({
   billingUnits?: number;
   config?: ProductItemConfig;
   entityFeatureId?: string;
+  usageLimit?: number;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -99,6 +104,7 @@ export const constructArrearItem = ({
     reset_usage_when_enabled: true,
     config,
     entity_feature_id: entityFeatureId,
+    usage_limit: usageLimit,
   };
 
   return item;
@@ -112,11 +118,13 @@ export const constructArrearProratedItem = ({
     on_increase: OnIncrease.BillImmediately,
     on_decrease: OnDecrease.None,
   },
+  usageLimit,
 }: {
   featureId: string;
   pricePerUnit?: number;
   includedUsage?: number;
   config?: ProductItemConfig;
+  usageLimit?: number;
 }) => {
   let item: ProductItem = {
     feature_id: featureId,
@@ -126,6 +134,7 @@ export const constructArrearProratedItem = ({
     billing_units: 1,
     interval: ProductItemInterval.Month,
     config,
+    usage_limit: usageLimit,
   };
 
   return item;

@@ -81,6 +81,20 @@ export const getPrevAndNewPriceForUpgrade = ({
   };
 };
 
+export function getReps({
+  cusEnt,
+  prevBalance,
+  newBalance,
+}: {
+  cusEnt: FullCusEntWithFullCusProduct;
+  prevBalance: number;
+  newBalance: number;
+}) {
+  let usageDiff = prevBalance - newBalance;
+  let reps = cusEnt.replaceables.slice(0, usageDiff);
+  return reps;
+}
+
 export const handleProratedUpgrade = async ({
   db,
   stripeCli,
@@ -107,8 +121,11 @@ export const handleProratedUpgrade = async ({
   logger.info(`Handling quantity increase`);
 
   // 1. Get num reps to use
-  let usageDiff = prevBalance - newBalance;
-  let reps = cusEnt.replaceables.slice(0, usageDiff);
+  let reps = getReps({
+    cusEnt,
+    prevBalance,
+    newBalance,
+  });
   newBalance = newBalance + reps.length; // Increase new balance by number of reps
 
   let { prevPrice, newPrice, newUsage } = getPrevAndNewPriceForUpgrade({

@@ -7,7 +7,7 @@ import {
 
 import { Select } from "@/components/ui/select";
 import { useProductItemContext } from "../../ProductItemContext";
-import { isFeatureItem, isFeaturePriceItem } from "@/utils/product/getItemType";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { EntInterval, FeatureUsageType, Infinite } from "@autumn/shared";
 import { itemToEntInterval } from "@/utils/product/itemIntervalUtils";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";

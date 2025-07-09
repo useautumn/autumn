@@ -67,6 +67,7 @@ export const ProductItemSchema = z.object({
   price: z.number().nullish(),
   tiers: z.array(PriceTierSchema).nullish(),
   billing_units: z.number().nullish(), // amount per billing unit (eg. $9 / 250 units)
+  usage_limit: z.number().nullish(),
 
   // Others
   // carry_over_usage: z.boolean().nullish(),

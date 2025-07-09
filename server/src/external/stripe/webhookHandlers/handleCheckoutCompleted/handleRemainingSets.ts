@@ -1,20 +1,11 @@
+import Stripe from "stripe";
 import { createStripeSub } from "../../stripeSubUtils/createStripeSub.js";
-
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { findPriceFromStripeId } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { ItemSet } from "@/utils/models/ItemSet.js";
-import {
-  APIVersion,
-  BillingType,
-  FullProduct,
-  Organization,
-  Price,
-} from "@autumn/shared";
-import Stripe from "stripe";
-import { getPlaceholderItem } from "../../stripePriceUtils.js";
+import { APIVersion, BillingType, Organization } from "@autumn/shared";
 import { getArrearItems } from "../../stripeSubUtils/getStripeSubItems/getArrearItems.js";
 
 const filterUsagePrices = ({

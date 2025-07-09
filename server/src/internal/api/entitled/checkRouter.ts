@@ -5,21 +5,16 @@ import {
   type Feature,
   FeatureType,
   type FullCustomerEntitlement,
-  type Organization,
 } from "@autumn/shared";
 
-import {
-  cusEntsContainFeature,
-  getFeatureBalance,
-  getUnlimitedAndUsageAllowed,
-} from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
+import { getFeatureBalance } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 
 import { Router } from "express";
 import { StatusCodes } from "http-status-codes";
 import { handleEventSent } from "../events/eventRouter.js";
 import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-import { SuccessCode } from "@autumn/shared";
+
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 import { getBooleanEntitledResult } from "./checkUtils.js";
 import { getCheckPreview } from "./getCheckPreview.js";
@@ -83,6 +78,8 @@ checkRouter.post("", async (req: any, res: any) => {
     } = req.body;
 
     const { logtail: logger, db } = req;
+
+    console.log("Check Request received");
 
     if (!customer_id) {
       throw new RecaseError({
@@ -181,6 +178,7 @@ checkRouter.post("", async (req: any, res: any) => {
       org,
       cusProducts,
       requiredBalance,
+      apiVersion,
     });
 
     const { allowed, balance } = v2Response;

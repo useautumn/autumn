@@ -17,9 +17,9 @@ export const ErrCode = {
 
   // General
   InvalidInputs: "invalid_inputs",
-  LimitsReached: "limits_reached",
   InvalidRequest: "invalid_request",
   InvalidExpand: "invalid_expand",
+  InvalidOptions: "invalid_options",
 
   // Org
   OrgNotFound: "org_not_found",
@@ -30,6 +30,7 @@ export const ErrCode = {
   InvalidFeature: "invalid_feature",
   DuplicateFeatureId: "duplicate_feature_id",
   InvalidEventName: "invalid_event_name",
+  FeatureLimitReached: "feature_limit_reached",
 
   // Internal
   InternalError: "internal_error",

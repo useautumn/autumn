@@ -15,9 +15,7 @@ import {
   Organization,
   FullCustomer,
   CusExpand,
-  RewardType,
   RewardResponse,
-  CouponDurationType,
   EntityResponseSchema,
 } from "@autumn/shared";
 import { getCusInvoices } from "./cusUtils.js";
@@ -77,6 +75,7 @@ export const getCustomerDetails = async ({
     cusEntsWithCusProduct: cusEnts,
     cusPrices: cusProductsToCusPrices({ cusProducts, inStatuses }),
     org,
+    apiVersion,
   });
 
   let subIds = cusProducts.flatMap(

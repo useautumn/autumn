@@ -10,7 +10,7 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
@@ -492,7 +492,7 @@ const FeatureUsageItem = ({
               });
               const { data: checkResponse } = await check({
                 featureId: customerFeature.id,
-                dialog: CheckDialog,
+
               });
               onCheckData(checkResponse);
 

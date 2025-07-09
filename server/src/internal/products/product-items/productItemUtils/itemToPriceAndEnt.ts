@@ -166,6 +166,7 @@ export const toFeatureAndPrice = ({
 
     carry_from_previous: !resetUsage,
     entity_feature_id: item.entity_feature_id,
+    usage_limit: item.usage_limit,
   };
 
   // Will only create new ent id if
