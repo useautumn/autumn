@@ -84,7 +84,7 @@ export const FeaturesTable = () => {
             </span>
           </Item>
           <Item className="col-span-3">
-            <FeatureTypeBadge type={feature.type} />
+            <FeatureTypeBadge {...feature} />
           </Item>
           {!onboarding && (
             <Item className="col-span-4">

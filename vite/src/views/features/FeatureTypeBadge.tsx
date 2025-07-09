@@ -1,16 +1,32 @@
 import { Badge } from "@/components/ui/badge";
-import { FeatureType } from "@autumn/shared";
+import { cn } from "@/lib/utils";
+import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 
 interface FeatureTypeBadgeProps {
   type: string | undefined;
 }
 
-export function FeatureTypeBadge({ type }: FeatureTypeBadgeProps) {
-  const variant = type === FeatureType.Metered ? "purple" : "blue";
-  
+export function FeatureTypeBadge(feature: Feature) {
+  console.log("feature", feature);
+
+  const badgeType =
+    feature.type == FeatureType.Boolean
+      ? "boolean"
+      : feature.config?.usage_type === FeatureUsageType.Continuous
+      ? "continuous use"
+      : "single use";
+
   return (
-    <Badge variant={variant}>
-      {type}
+    <Badge
+      className={cn(
+        "bg-transparent border border-t1 text-t1 rounded-md px-2",
+        badgeType === "boolean" && "bg-lime-50 text-lime-600 border-lime-600",
+        badgeType === "continuous use" &&
+          "bg-cyan-50 text-cyan-600 border-cyan-600",
+        badgeType === "single use" && "bg-blue-50 text-blue-600 border-blue-600"
+      )}
+    >
+      {badgeType}
     </Badge>
   );
 }

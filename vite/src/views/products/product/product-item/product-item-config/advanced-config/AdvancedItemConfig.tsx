@@ -48,7 +48,8 @@ export const AdvancedItemConfig = () => {
                 reset_usage_when_enabled: !item.reset_usage_when_enabled,
               });
             }}
-            buttonText="Reset usage when enabled"
+            infoContent="A customer has used 20/100 credits on a free plan. Then they upgrade to a Pro plan with 500 credits. If this flag is enabled, they’ll get 500 credits on upgrade. If false, they’ll have 480."
+            buttonText="Reset existing usage when product is enabled"
             className="text-t3 h-fit"
             disabled={usageType === FeatureUsageType.Continuous}
           />

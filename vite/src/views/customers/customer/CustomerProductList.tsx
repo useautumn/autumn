@@ -31,6 +31,13 @@ import AddProduct from "./add-product/NewProductDropdown";
 import { Item, Row } from "@/components/general/TableGrid";
 import { cn } from "@/lib/utils";
 import { CusProductStripeLink } from "./components/CusProductStripeLink";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export const CustomerProductList = ({
   customer,
@@ -57,7 +64,7 @@ export const CustomerProductList = ({
             p.entitlements.some(
               (cusEnt: any) =>
                 cusEnt.entities &&
-                Object.keys(cusEnt.entities).includes(entity.internal_id),
+                Object.keys(cusEnt.entities).includes(entity.internal_id)
             )
           : true;
 
@@ -86,7 +93,7 @@ export const CustomerProductList = ({
               variant="ghost"
               className={cn(
                 "text-t3 text-xs font-normal p-0",
-                showExpired && "text-t1 hover:text-t1",
+                showExpired && "text-t1 hover:text-t1"
               )}
               size="sm"
               onClick={() => setShowExpired(!showExpired)}
@@ -118,7 +125,7 @@ export const CustomerProductList = ({
             className="grid-cols-12 pr-0"
             onClick={() => {
               const entity = entities.find(
-                (e: any) => e.internal_id === cusProduct.internal_entity_id,
+                (e: any) => e.internal_id === cusProduct.internal_entity_id
               );
               navigateTo(
                 `/customers/${customer.id || customer.internal_id}/${
@@ -127,7 +134,7 @@ export const CustomerProductList = ({
                   entity ? `&entity_id=${entity.id || entity.internal_id}` : ""
                 }`,
                 navigate,
-                env,
+                env
               );
             }}
           >
@@ -248,35 +255,81 @@ const UpdateStatusDropdownBtn = ({
   status: CusProductStatus;
 }) => {
   const [loading, setLoading] = useState(false);
+  const [showDefaultWarning, setShowDefaultWarning] = useState(false);
   const { env, cusMutate } = useCustomerContext();
   const axiosInstance = useAxiosInstance({ env });
 
+  const handleStatusUpdate = async () => {
+    setLoading(true);
+    try {
+      await CusService.updateCusProductStatus(axiosInstance, cusProduct.id, {
+        status,
+      });
+      await cusMutate();
+    } catch (error) {
+      toast.error(getBackendErr(error, "Failed to update status"));
+    }
+    setLoading(false);
+  };
+
+  const handleExpireClick = () => {
+    // Check if this is the expired status and if the product is default
+    if (status === CusProductStatus.Expired && cusProduct.product?.is_default) {
+      setShowDefaultWarning(true);
+    } else {
+      handleStatusUpdate();
+    }
+  };
+
   return (
-    <Button
-      variant="ghost"
-      dim={5}
-      size="sm"
-      className="p-2 h-full w-full flex justify-between"
-      // isLoading={loading}
-      onClick={async () => {
-        setLoading(true);
-        try {
-          await CusService.updateCusProductStatus(
-            axiosInstance,
-            cusProduct.id,
-            {
-              status,
-            },
-          );
-          await cusMutate();
-        } catch (error) {
-          toast.error(getBackendErr(error, "Failed to update status"));
-        }
-        setLoading(false);
-      }}
-    >
-      {keyToTitle(status)}
-      {loading && <SmallSpinner />}
-    </Button>
+    <>
+      <Dialog open={showDefaultWarning} onOpenChange={setShowDefaultWarning}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Expire Default Product</DialogTitle>
+          </DialogHeader>
+          <div className="">
+            <p className="text-sm text-gray-600">
+              This is the default product. Expiring it will reattach it to the
+              customer and reset their features.
+            </p>
+          </div>
+          <DialogFooter>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowDefaultWarning(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  setShowDefaultWarning(false);
+                  handleStatusUpdate();
+                }}
+              >
+                Expire Default
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Button
+        variant="ghost"
+        dim={5}
+        size="sm"
+        className="p-2 h-full w-full flex justify-between"
+        onClick={handleExpireClick}
+      >
+        {loading ? (
+          <SmallSpinner />
+        ) : (
+          <>
+            <span>{keyToTitle(status)}</span>
+          </>
+        )}
+      </Button>
+    </>
   );
 };
