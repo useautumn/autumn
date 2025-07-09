@@ -19,7 +19,7 @@ export function FeatureTypeBadge(feature: Feature) {
   return (
     <Badge
       className={cn(
-        "bg-transparent border border-t1 text-t1 rounded-md px-2",
+        "bg-transparent border border-t1 text-t1 rounded-md px-2 pointer-events-none",
         badgeType === "boolean" && "bg-lime-50 text-lime-600 border-lime-600",
         badgeType === "continuous use" &&
           "bg-cyan-50 text-cyan-600 border-cyan-600",
