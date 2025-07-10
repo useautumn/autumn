@@ -187,8 +187,6 @@ export const handleCreateOtp = async (req: any, res: any) =>
         
         res.status(200).json({
           otp,
-          sandboxKey,
-          prodKey
         });
     },
   });
