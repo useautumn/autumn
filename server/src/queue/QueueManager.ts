@@ -93,7 +93,7 @@ export class QueueManager {
       connection: {
         url: MAIN_REDIS_URL,
         enableOfflineQueue: false,
-        retryStrategy: (times) => {
+        retryStrategy: (times: number) => {
           return 5000;
         },
       },
