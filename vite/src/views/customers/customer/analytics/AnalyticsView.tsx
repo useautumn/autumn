@@ -24,7 +24,7 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosPostSWR, useAxiosSWR } from "@/services/useAxiosSwr";
 import { OrgService } from "@/services/OrgService";
 import { toast } from "sonner";
-import { BrutalEventsBarChart, EventsBarChart } from "./AnalyticsGraph";
+import { EventsBarChart } from "./AnalyticsGraph";
 import {
   Card,
   CardTitle,
