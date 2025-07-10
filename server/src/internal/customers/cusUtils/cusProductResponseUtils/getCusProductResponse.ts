@@ -175,6 +175,7 @@ export const getCusProductResponse = async ({
       canceled_at: cusProduct.canceled_at,
       is_default: fullProduct.is_default || false,
       is_add_on: fullProduct.is_add_on || false,
+      version: fullProduct.version || 1,
 
       // stripe_subscription_ids: cusProduct.subscription_ids || [],
       started_at: cusProduct.starts_at,
