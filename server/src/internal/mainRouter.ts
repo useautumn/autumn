@@ -31,7 +31,7 @@ mainRouter.use("/features", withOrgAuth, featureRouter);
 mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
-mainRouter.use("/analytics", withOrgAuth, analyticsRouter);
+mainRouter.use("/query", withOrgAuth, analyticsRouter);
 
 // Optional...
 if (process.env.AUTUMN_SECRET_KEY) {
