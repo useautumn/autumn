@@ -28,15 +28,6 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import {
-  BrutalChartContainer,
-  BrutalChartTooltip,
-  BrutalChartTooltipContent,
-  BrutalChartLegend,
-  BrutalChartLegendContent,
-  BrutalChartStyle,
-  BrutalChartConfig,
-} from "@/components/ui/brutal-chart";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -127,43 +118,5 @@ export function EventsBarChart({
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
-  );
-}
-
-export function BrutalEventsBarChart({
-  data,
-  chartConfig,
-}: {
-  data: {
-    meta: any[];
-    rows: number;
-    data: Row[];
-  };
-  chartConfig: BrutalChartConfig;
-}) {
-  return (
-    <BrutalChartContainer config={chartConfig} className=" w-full">
-      <BarChart accessibilityLayer data={data.data}>
-        <CartesianGrid vertical={true} />
-        <XAxis
-          dataKey="interval_start"
-          tickLine={true}
-          tickMargin={10}
-          axisLine={false}
-          tickFormatter={(value: any) => {
-            let date = new Date(value);
-            return date.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            });
-          }}
-        />
-
-        <BrutalChartTooltip content={<BrutalChartTooltipContent />} />
-        {Object.keys(chartConfig).map((key) => {
-          return <Bar dataKey={key} fill={chartConfig[key].color} radius={4} />;
-        })}
-      </BarChart>
-    </BrutalChartContainer>
   );
 }
