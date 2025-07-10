@@ -22,9 +22,11 @@ import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import { generateId } from "./utils/genUtils.js";
 import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
 import { client, db } from "./db/initDrizzle.js";
+import { clickhouseClient } from "./db/initClickHouse.js";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
+import { ClickHouseClient } from "@clickhouse/client";
 
 const tracer = trace.getTracer("express");
 
@@ -86,6 +88,7 @@ const init = async () => {
   app.use(async (req: any, res: any, next: any) => {
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
     req.db = db;
+    req.clickhouseClient = clickhouseClient;
     // req.logtailAll = logtailAll;
     req.posthog = posthog;
     req.id = req.headers["rndr-id"] || generateId("local_req");
