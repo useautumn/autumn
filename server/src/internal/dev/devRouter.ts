@@ -9,6 +9,7 @@ import { handleRequestError } from "@/utils/errorUtils.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
 import { routeHandler } from "@/utils/routerUtils.js";
+import { inspect } from "util";
 
 export const devRouter: Router = Router();
 
@@ -104,3 +105,109 @@ devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
     return;
   }
 });
+
+
+const generateOtp = (): string => {
+    // Use Web Crypto API if available for cryptographically-secure randomness
+    const getRandomInt = (): number => {
+      if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+        const array = new Uint32Array(1);
+        crypto.getRandomValues(array);
+        return array[0];
+      }
+  
+      // Node.js (SSR / tests) – use crypto module's webcrypto if available
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const { webcrypto } = require("crypto");
+        if (webcrypto?.getRandomValues) {
+          const arr = new Uint32Array(1);
+          webcrypto.getRandomValues(arr);
+          return arr[0];
+        }
+      } catch (_) {
+        /* ignore */
+      }
+  
+      // Fallback (non-cryptographic)
+      return Math.floor(Math.random() * 0xffffffff);
+    };
+  
+    // Limit to range [100000, 999999]
+    const randomSixDigits = (getRandomInt() % 900000) + 100000;
+    return randomSixDigits.toString();
+  };
+
+export const handleCreateOtp = async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "Create OTP",
+    handler: async () => {
+        const { orgId, env, db } = req;
+
+        console.log("Organization ID", orgId);
+
+        // Generate OTP
+        const otp = generateOtp();
+        
+        // Generate API key for the OTP
+        const sandboxKey = await createKey({
+          db,
+          env: env || AppEnv.Sandbox,
+          name: `Autumn Key CLI`,
+          orgId: orgId,
+          prefix: "am_sk_test",
+          meta: {
+            fromCli: true,
+            generatedAt: new Date().toISOString()
+          }
+        });
+
+        const prodKey = await createKey({
+          db,
+          env: env || AppEnv.Live,
+          name: `Autumn Key CLI`,
+          orgId: orgId,
+          prefix: "am_sk_live",
+          meta: {
+            fromCli: true,
+            generatedAt: new Date().toISOString()
+          }
+        });
+
+        const cacheData = {
+            otp: otp,
+            sandboxKey: sandboxKey,
+            prodKey: prodKey
+        }
+
+        const cacheKey = `otp:${otp}`;
+        await CacheManager.setJson(cacheKey, cacheData);
+        
+        res.status(200).json({
+          otp,
+          sandboxKey,
+          prodKey
+        });
+    },
+  });
+
+  devRouter.post("/otp", withOrgAuth, handleCreateOtp);
+
+  devRouter.get("/otp/:otp", async (req: any, res: any) => {
+    try {
+      const { otp } = req.params;
+      const cacheKey = `otp:${otp}`;
+      const cacheData = await CacheManager.getJson(cacheKey);
+      if (!cacheData) {
+        res.status(404).json({ error: "OTP not found" });
+        return;
+      }
+      res.status(200).json(cacheData);
+    } catch (error) {
+      console.error("Failed to get OTP", error);
+      res.status(500).json({ error: "Failed to get OTP" });
+    }
+  });
+    

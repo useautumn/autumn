@@ -10,4 +10,9 @@ export class DevService {
     const { data: resBody } = await axiosInstance.delete(`/dev/api_key/${id}`);
     return resBody;
   }
+
+  static async createOTP(axiosInstance: AxiosInstance) {
+    const { data: resBody } = await axiosInstance.post("/dev/otp");
+    return resBody;
+  }
 }
