@@ -1,16 +1,16 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ErrCode } from "@/errors/errCodes.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { ClickHouseClient } from "@clickhouse/client";
 import { events } from "@autumn/shared";
 import { and, eq, sql } from "drizzle-orm";
 import { gte, lte } from "drizzle-orm";
+import { ExtendedRequest } from "@/utils/models/Request.js";
 
 export class AnalyticsService {
   static clickHouseEnabled =
     process.env.CLICKHOUSE_URL &&
     process.env.CLICKHOUSE_USERNAME &&
     process.env.CLICKHOUSE_PASSWORD;
+
   static drizzleEnabled = process.env.DATABASE_URL;
 
   static handleEarlyExit = () => {
@@ -32,12 +32,14 @@ export class AnalyticsService {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
   }
 
-  static async getEvents(req: any, params: any) {
-    const {
-      db,
-      clickhouseClient,
-      org,
-    }: { db: DrizzleCli; clickhouseClient: ClickHouseClient; org: any } = req;
+  static async getEvents({
+    req,
+    params,
+  }: {
+    req: ExtendedRequest;
+    params: any;
+  }) {
+    const { db, clickhouseClient, org } = req;
 
     let startDate = new Date();
     const intervalType = params.interval || "day";
@@ -96,15 +98,6 @@ WHERE org_id = {organizationId:String}
 GROUP BY interval_start
 ORDER BY interval_start ASC;`;
 
-      console.log("Query: ", query);
-
-      console.log("params", {
-        organizationId: org?.id,
-        customerId: params.customer_id,
-        startDate: this.formatJsDateToClickHouseDateTime(startDate),
-        endDate: this.formatJsDateToClickHouseDateTime(new Date()),
-      });
-
       const result = await (clickhouseClient as ClickHouseClient).query({
         query,
         query_params: {
@@ -120,45 +113,55 @@ ORDER BY interval_start ASC;`;
       return resultJson;
     } else {
       // Create the interval truncation expression
-      const getIntervalTrunc = () => sql`DATE_TRUNC(${
-        intervalType === "day" ? sql`'day'` :
-        intervalType === "week" ? sql`'week'` :
-        intervalType === "month" ? sql`'month'` :
-        intervalType === "quarter" ? sql`'quarter'` :
-        intervalType === "year" ? sql`'year'` :
-        sql`'day'`
-      }, ${events.timestamp})`;
+      const getIntervalTrunc = () =>
+        sql`DATE_TRUNC(${
+          intervalType === "day"
+            ? sql`'day'`
+            : intervalType === "week"
+              ? sql`'week'`
+              : intervalType === "month"
+                ? sql`'month'`
+                : intervalType === "quarter"
+                  ? sql`'quarter'`
+                  : intervalType === "year"
+                    ? sql`'year'`
+                    : sql`'day'`
+        }, ${events.timestamp})`;
 
       // Create Drizzle-specific count expressions
-      const drizzleCountExpressions = params.event_names.map((eventName: string) => 
-        sql`COUNT(*) FILTER (WHERE ${events.event_name} = ${eventName})`.as(`${eventName.replace(/[^a-zA-Z0-9]/g, "_")}_count`)
+      const drizzleCountExpressions = params.event_names.map(
+        (eventName: string) =>
+          sql`COUNT(*) FILTER (WHERE ${events.event_name} = ${eventName})`.as(
+            `${eventName.replace(/[^a-zA-Z0-9]/g, "_")}_count`,
+          ),
       );
 
       const query = db
         .select({
-          interval_start: getIntervalTrunc().as('interval_start'),
+          interval_start: getIntervalTrunc().as("interval_start"),
           ...Object.fromEntries(
             drizzleCountExpressions.map((expr: any, i: any) => [
               `${params.event_names[i].replace(/[^a-zA-Z0-9]/g, "_")}_count`,
-              expr
-            ])
+              expr,
+            ]),
           ),
         })
         .from(events)
-        .where(and(
-          eq(events.org_id, org.id),
-          eq(events.internal_customer_id, params.customer_id),
-          gte(events.timestamp, startDate),
-          lte(events.timestamp, new Date())
-        ))
+        .where(
+          and(
+            eq(events.org_id, org.id),
+            eq(events.internal_customer_id, params.customer_id),
+            gte(events.timestamp, startDate),
+            lte(events.timestamp, new Date()),
+          ),
+        )
         .groupBy(getIntervalTrunc())
         .orderBy(getIntervalTrunc());
 
-      console.log("Query:", query);
+      // console.log("Query:", query);
 
       const results = await query;
-      
-      console.log("Results:", results);
+
       return { data: results, rows: results.length };
     }
   }

@@ -4,49 +4,64 @@ import { AnalyticsService } from "./AnalyticsService.js";
 import { StatusCodes } from "http-status-codes";
 import { ErrCode } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
+import { routeHandler } from "@/utils/routerUtils.js";
 
 export const analyticsRouter = Router();
 
-analyticsRouter.post("/events/:customer_id", async (req: any, res: any) => {
-    try {
-        const { db, org, env } = req;
-        const { customer_id } = req.params;
-        const { interval, event_names } = req.body;
+analyticsRouter.post("/events/", async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "query events by customer id",
+    handler: async () => {
+      const { db, org, env, features } = req;
+      const { interval, event_names, customer_id } = req.body;
 
-        let customer = await CusService.get({
-            db,
-            idOrInternalId: customer_id,
-            orgId: org.id,
-            env,
+      if (!customer_id) {
+        throw new RecaseError({
+          message: "Customer ID is required",
+          code: ErrCode.InvalidRequest,
+          statusCode: StatusCodes.BAD_REQUEST,
         });
+      }
 
-        if(!customer) {
-            return handleRequestError({
-                error: new RecaseError({
-                    message: "Customer not found",
-                    code: ErrCode.CustomerNotFound,
-                    statusCode: StatusCodes.NOT_FOUND,
-                }),
-                req,
-                res,
-                action: "post_events_by_customer_id",
-            })
-        }
+      let customer = await CusService.get({
+        db,
+        idOrInternalId: customer_id,
+        orgId: org.id,
+        env,
+      });
 
-        const events = await AnalyticsService.getEvents(req, { customer_id: customer.internal_id, interval, event_names });
+      if (!customer) {
+        throw new RecaseError({
+          message: "Customer not found",
+          code: ErrCode.CustomerNotFound,
+          statusCode: StatusCodes.NOT_FOUND,
+        });
+      }
 
-        res.status(200).json(events);
-    } catch (error: any) {
-        console.log("Error: ", error);
-        return handleRequestError({
-            error: new RecaseError({
-                message: "An internal error occurred",
-                code: ErrCode.InternalError,
-                statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
-            }),
-            req,
-            res,
-            action: "post_events_by_customer_id",
-        })
-    }
-})
+      console.log("Query input:", {
+        customer_id,
+        interval,
+        event_names,
+      });
+
+      const events = await AnalyticsService.getEvents({
+        req,
+        params: {
+          customer_id: customer.internal_id,
+          interval,
+          event_names,
+        },
+      });
+
+      console.log("Events output:", events);
+
+      res.status(200).json({
+        customer,
+        events,
+        features,
+      });
+    },
+  }),
+);

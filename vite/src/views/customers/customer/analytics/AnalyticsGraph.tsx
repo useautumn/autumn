@@ -9,7 +9,7 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from "recharts";
 
 import {
@@ -66,104 +66,66 @@ export function EventsBarChart({
   chartConfig: ChartConfig;
 }) {
   const chartData = data.data;
-
-  console.log(chartData, chartConfig);
+  console.log(chartData);
 
   return (
-    <ChartContainer config={chartConfig} className="w-full h-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart 
-          accessibilityLayer 
-          data={chartData}
-        >
-          <CartesianGrid vertical={true} />
-          <XAxis
-            dataKey="interval_start"
-            tickLine={true}
-            tickMargin={10}
-            axisLine={false}
-            tickFormatter={(value) => {
-              let date = new Date(value);
-              return date.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              });
-            }}
-          />
-          <YAxis
-            tickLine={true}
-            tickMargin={10}
-            axisLine={false}
-            tickFormatter={(value) => {
-              return value.toLocaleString();
-            }}
-          />
-
-          <ChartTooltip
-            content={
-              <ChartTooltipContent
-                labelFormatter={(value) => {
-                  let date = new Date(value);
-                  return date.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  });
-                }}
-              />
-            }
-          />
-          {Object.keys(chartConfig).map((key) => {
-            return (
-              <Bar
-                key={key}
-                dataKey={key}
-                stackId="events"
-                fill={chartConfig[key].color}
-                radius={[4, 4, 0, 0]}
-                barSize={100}
-              />
-            );
-          })}
-        </BarChart>
-      </ResponsiveContainer>
-    </ChartContainer>
-  );
-}
-
-export function BrutalEventsBarChart({
-  data,
-  chartConfig,
-}: {
-  data: {
-    meta: any[];
-    rows: number;
-    data: Row[];
-  };
-  chartConfig: BrutalChartConfig;
-}) {
-  return (
-    <BrutalChartContainer config={chartConfig} className=" w-full">
-      <BarChart accessibilityLayer data={data.data}>
-        <CartesianGrid vertical={true} />
+    <ChartContainer config={chartConfig} className="max-h-[300px] w-full">
+      <BarChart
+        accessibilityLayer
+        data={chartData}
+        // margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+        className="pl-0"
+      >
+        <CartesianGrid vertical={false} />
         <XAxis
           dataKey="interval_start"
           tickLine={true}
           tickMargin={10}
           axisLine={false}
-          tickFormatter={(value: any) => {
-            let date = new Date(value);
+          tickFormatter={(value) => {
+            const date = new Date(value);
             return date.toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
             });
           }}
         />
+        <YAxis
+          tickLine={true}
+          tickMargin={10}
+          axisLine={false}
+          tickFormatter={(value) => {
+            return value.toLocaleString();
+          }}
+        />
 
-        <BrutalChartTooltip content={<BrutalChartTooltipContent />} />
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              labelFormatter={(value) => {
+                const date = new Date(value);
+                return date.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                });
+              }}
+            />
+          }
+        />
         {Object.keys(chartConfig).map((key) => {
-          return <Bar dataKey={key} fill={chartConfig[key].color} radius={4} />;
+          return (
+            <Bar
+              key={key}
+              dataKey={key}
+              stackId="events"
+              fill={chartConfig[key].color}
+              radius={[4, 4, 0, 0]}
+              barSize={40}
+              className="bg-primary"
+            />
+          );
         })}
       </BarChart>
-    </BrutalChartContainer>
+    </ChartContainer>
   );
 }
