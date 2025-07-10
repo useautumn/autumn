@@ -28,15 +28,6 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import {
-  BrutalChartContainer,
-  BrutalChartTooltip,
-  BrutalChartTooltipContent,
-  BrutalChartLegend,
-  BrutalChartLegendContent,
-  BrutalChartStyle,
-  BrutalChartConfig,
-} from "@/components/ui/brutal-chart";
-import {
   Select,
   SelectContent,
   SelectItem,
