@@ -126,8 +126,10 @@ export const handleSubscriptionUpdated = async ({
       subscription.latest_invoice,
     );
 
-    logger.info("Latest invoice billing reason", latestInvoice.billing_reason);
-    logger.info("Latest invoice status", latestInvoice.status);
+    logger.info(
+      `Latest invoice billing reason: ${latestInvoice.billing_reason}`,
+    );
+    logger.info(`Latest invoice status: ${latestInvoice.status}`);
 
     if (
       latestInvoice.status !== "open" ||
