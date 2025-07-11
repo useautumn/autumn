@@ -74,4 +74,8 @@ export const ErrCode = {
 
   // Entity
   EntityNotFound: "entity_not_found",
+
+  // Analytics
+  NoEventsFound: "no_events_found",
+  ClickHouseNotEnabled: "clickhouse_not_enabled",
 };

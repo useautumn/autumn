@@ -16,6 +16,7 @@ import { SignIn } from "./views/auth/SignIn";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { AdminView } from "./views/admin/AdminView";
 import { PasswordSignIn } from "./views/auth/components/PasswordSignIn";
+import { AnalyticsView } from "./views/customers/customer/analytics/AnalyticsView";
 
 export default function App() {
   return (
@@ -94,9 +95,14 @@ export default function App() {
             element={<DevScreen env={AppEnv.Sandbox} />}
           />
 
+          {/* ANALYTICS */}
+          <Route path="/analytics" element={<AnalyticsView env={AppEnv.Live} />} />
+          <Route path="/sandbox/analytics" element={<AnalyticsView env={AppEnv.Sandbox} />} />
+
           {/* STRIPE */}
           <Route path="/integrations/stripe" element={<StripePage />} />
           <Route path="/sandbox/integrations/stripe" element={<StripePage />} />
+
         </Route>
       </Routes>
     </BrowserRouter>

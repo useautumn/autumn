@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 export const PageSectionHeader = ({
   title,
   titleComponent,
+  endContent,
   isOnboarding = false,
   addButton,
   className,
@@ -10,6 +11,7 @@ export const PageSectionHeader = ({
 }: {
   title?: string;
   titleComponent?: React.ReactNode;
+  endContent?: React.ReactNode;
   isOnboarding?: boolean;
   addButton?: React.ReactNode;
   className?: string;
@@ -33,6 +35,7 @@ export const PageSectionHeader = ({
         )}
         {titleComponent}
       </div>
+      {endContent}
       {addButton && <div className="flex items-center">{addButton}</div>}
     </div>
   );

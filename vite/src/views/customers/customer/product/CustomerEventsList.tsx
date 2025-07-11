@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { navigateTo } from "@/utils/genUtils";
 import {
   formatUnixToDateTime,
   formatUnixToDateTimeWithMs,
@@ -20,9 +21,14 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import { ViewUserEvents } from "../analytics/ViewUserEvents";
+import { useNavigate } from "react-router";
+import { AppEnv } from "@autumn/shared";
 
-export const CustomerEventsList = ({ events }: { events: any }) => {
+export const CustomerEventsList = ({ events, customer, env }: { events: any, customer: any, env: AppEnv }) => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const navigate = useNavigate();
 
   console.log(events);
 
@@ -40,9 +46,13 @@ export const CustomerEventsList = ({ events }: { events: any }) => {
         </DialogContent>
       </Dialog>
 
-      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 h-10">
+      <div className="flex items-center grid grid-cols-10 gap-8 justify-between border-y bg-stone-100 pl-10 pr-7 h-10">
         <h2 className="text-sm text-t2 font-medium col-span-2 flex">Events</h2>
-        <div className="flex w-full h-full items-center col-span-8 justify-end"></div>
+        <div className="flex w-full h-full items-center col-span-8 justify-end">
+          <div className="flex w-fit h-full items-center gap-4">
+            <Button variant="analyse" onClick={() => navigateTo(`/analytics/?customer_id=${customer.id}`, navigate, env)}>Analyse Events</Button>
+          </div>
+        </div>
       </div>
 
       {events.length === 0 ? (

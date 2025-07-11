@@ -14,6 +14,7 @@ import { withAdminAuth } from "./admin/withAdminAuth.js";
 import { adminRouter } from "./admin/adminRouter.js";
 import { autumnHandler } from "autumn-js/express";
 import { Autumn } from "autumn-js";
+import { analyticsRouter } from "./analytics/internalAnalyticsRouter.js";
 
 const mainRouter: Router = Router();
 
@@ -30,6 +31,7 @@ mainRouter.use("/features", withOrgAuth, featureRouter);
 mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
+mainRouter.use("/query", withOrgAuth, analyticsRouter);
 
 // Optional...
 if (process.env.AUTUMN_SECRET_KEY) {
