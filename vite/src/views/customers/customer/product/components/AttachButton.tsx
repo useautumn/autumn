@@ -31,7 +31,7 @@ export const AttachButton = () => {
           attachState,
           product,
           entityId,
-          version,
+          version: version || product.version,
         }),
       );
 
