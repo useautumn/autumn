@@ -16,6 +16,7 @@
     "server:workers": "pnpm -F server workers:start",
     "server:check": "NODE_ENV=production pnpm -F server check",
     "dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\"",
+    "dev:wsl": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"cd shared && npm run dev\"",
     "setup": "node setup.js",
     "db:push": " pnpm -F shared db:push",
     "db:generate": "pnpm -F shared db:generate",

@@ -34,6 +34,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AllCommunityModule, ColDef, ModuleRegistry, ValidationModule, themeQuartz, themeMaterial, themeAlpine } from 'ag-grid-community'; 
+
+// Register all Community features
+
+
+
+import { AgGridReact } from "ag-grid-react";
+import { useEffect, useState } from "react";
 
 export const description = "An interactive area chart";
 
@@ -44,6 +52,12 @@ export type Row =
   | {
       [key: string]: number;
     };
+
+export interface IRow {
+  timestamp: string;
+  event_name: string;
+  value: number;
+}
 
 export function EventsBarChart({
   data,
@@ -60,12 +74,15 @@ export function EventsBarChart({
   console.log(chartData);
 
   return (
-    <ChartContainer config={chartConfig} className="max-h-[300px] w-full">
+    <ChartContainer
+      config={chartConfig}
+      className="max-h-[300px] w-full overflow-x-hidden"
+    >
       <BarChart
         accessibilityLayer
         data={chartData}
         // margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-        className="pl-0"
+        className="pr-5"
       >
         <CartesianGrid vertical={false} />
         <XAxis
@@ -118,5 +135,42 @@ export function EventsBarChart({
         })}
       </BarChart>
     </ChartContainer>
+  );
+}
+
+export function EventsAGGrid({ data }: { data: any }) {
+  const [rowData, setRowData] = useState<IRow[]>([]);
+  const [colDefs, setColDefs] = useState<ColDef<IRow>[]>([
+    { field: "timestamp", flex: 1 },
+    { field: "event_name", flex: 1 },
+    { field: "value", flex: 1 },
+  ]);
+
+  ModuleRegistry.registerModules([AllCommunityModule, ValidationModule]);
+
+  useEffect(() => {
+    setRowData(data.data);
+    console.log("rowData", rowData);
+  }, [data]);
+
+  return (
+    <div className="w-full h-full overflow-hidden">
+      <AgGridReact
+        rowData={rowData}
+        columnDefs={colDefs as any}
+        domLayout="normal"
+        pagination={true}
+        paginationPageSize={500}
+        paginationPageSizeSelector={[10, 100, 500, 1000]}
+        className="w-full h-full"
+        theme={themeQuartz}
+        defaultColDef={{
+          flex: 1,
+          resizable: true,
+          sortable: true,
+          filter: true
+        }}
+      />
+    </div>
   );
 }
