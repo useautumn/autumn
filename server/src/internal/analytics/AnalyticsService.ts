@@ -41,72 +41,70 @@ export class AnalyticsService {
     req: ExtendedRequest;
     params: any;
   }) {
-    const { clickhouseClient, org } = req;
+    const { clickhouseClient, org, env } = req;
 
-    let startDate = new Date();
-    const intervalType = params.interval || "day";
+    const intervalType: "24h" | "7d" | "30d" | "90d" =
+      params.interval || "24h";
 
     this.handleEarlyExit();
 
-    switch (params.interval) {
-      case "24h":
-        startDate.setHours(startDate.getHours() - 24);
-        break;
-      case "7d":
-        startDate.setDate(startDate.getDate() - 7);
-        break;
-      case "30d":
-        startDate.setDate(startDate.getDate() - 30);
-        break;
-      case "90d":
-        startDate.setDate(startDate.getDate() - 90);
-        break;
-      default:
-        startDate.setDate(startDate.getDate() - 24);
-        break;
-    }
-
     const countExpressions = params.event_names
-      .map((eventName: string) =>
-        this.clickhouseAvailable
-          ? `countIf(event_name = '${eventName}') AS ${eventName.replace(/[^a-zA-Z0-9]/g, "_")}_count`
-          : `COUNT(*) FILTER (WHERE event_name = '${eventName}') AS ${eventName.replace(/[^a-zA-Z0-9]/g, "_")}_count`,
+      .map(
+        (eventName: string) =>
+          `coalesce(sumIf(e.value, e.event_name = '${eventName}'), 0) as ${eventName.replace(/[^a-zA-Z0-9]/g, "_")}_count`,
       )
       .join(",\n  ");
 
     if (this.clickhouseAvailable) {
       const query = `
-SELECT
-  ${
-    intervalType === "day"
-      ? "toStartOfDay(timestamp)"
-      : intervalType === "week"
-        ? "toStartOfWeek(timestamp)"
-        : intervalType === "month"
-          ? "toStartOfMonth(timestamp)"
-          : intervalType === "quarter"
-            ? "toStartOfQuarter(timestamp)"
-            : intervalType === "year"
-              ? "toStartOfYear(timestamp)"
-              : "toStartOfDay(timestamp)"
-  } AS interval_start,
-  ${countExpressions}
-FROM public_events
-WHERE org_id = {organizationId:String}
-  AND internal_customer_id = {customerId:String}
-  AND timestamp >= toDateTime({startDate:String})
-  AND timestamp < toDateTime({endDate:String})
-GROUP BY interval_start
-ORDER BY interval_start ASC;`;
+with customer_events as (
+    select * 
+    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
+    where customer_id = {customer_id:String}
+)
+select 
+    dr.period, 
+    ${countExpressions}
+from date_range_view(bin_size={bin_size:String}, days={days:UInt32}) dr
+    left join customer_events e
+    on date_trunc({bin_size:String}, e.timestamp) = dr.period 
+group by dr.period 
+order by dr.period;
+`;
+
+      console.log("query", query);
+      console.log("query_params", {
+        org_id: org?.id,
+        env: env,
+        customer_id: params.customer_id,
+        days:
+          intervalType === "24h"
+            ? 1
+            : intervalType === "7d"
+              ? 7
+              : intervalType === "30d"
+                ? 30
+                : 90,
+        bin_size: intervalType === "24h" ? "hour" : "day",
+      });
 
       const result = await (clickhouseClient as ClickHouseClient).query({
         query,
         query_params: {
-          organizationId: org?.id,
-          customerId: params.customer_id,
-          startDate: this.formatJsDateToClickHouseDateTime(startDate),
-          endDate: this.formatJsDateToClickHouseDateTime(new Date()),
+          org_id: org?.id,
+          env: env,
+          customer_id: params.customer_id,
+          days:
+            intervalType === "24h"
+              ? 1
+              : intervalType === "7d"
+                ? 7
+                : intervalType === "30d"
+                  ? 30
+                  : 90,
+          bin_size: intervalType === "24h" ? "hour" : "day",
         },
+        format: "JSON",
       });
 
       const resultJson = await result.json();

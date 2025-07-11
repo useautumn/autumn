@@ -43,7 +43,7 @@ analyticsRouter.post("/events/", async (req: any, res: any) =>
       const events = await AnalyticsService.getTimeseriesEvents({
         req,
         params: {
-          customer_id: customer.internal_id,
+          customer_id,
           interval,
           event_names,
         },
