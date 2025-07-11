@@ -11,7 +11,7 @@ import {
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
 import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
 
@@ -55,8 +55,10 @@ export const getNewProductPreview = async ({
   });
 
   let dueNextCycle = null;
+  let oneOffOrFree =
+    isOneOff(newProduct.prices) || isFreeProduct(newProduct.prices);
 
-  if (freeTrial || notNullish(anchorToUnix)) {
+  if (!oneOffOrFree && (freeTrial || notNullish(anchorToUnix))) {
     let nextCycleItems = await getItemsForNewProduct({
       newProduct,
       attachParams,
@@ -69,14 +71,16 @@ export const getNewProductPreview = async ({
       ents: newProduct.entitlements,
     });
 
+    let getAligned = notNullish(anchorToUnix) && notNullish(minInterval);
+
     let dueAt = freeTrial
       ? freeTrialToStripeTimestamp({
           freeTrial,
           now: attachParams.now,
         })! * 1000
-      : anchorToUnix
+      : getAligned
         ? getAlignedIntervalUnix({
-            alignWithUnix: anchorToUnix,
+            alignWithUnix: anchorToUnix!,
             interval: minInterval,
             now: attachParams.now,
           })
