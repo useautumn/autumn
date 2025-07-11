@@ -37,7 +37,7 @@ export const getProductItemResponse = ({
 }: {
   item: ProductItem;
   features: Feature[];
-  currency?: string;
+  currency?: string | null;
   withDisplay?: boolean;
   options?: FeatureOptions[];
 }) => {
@@ -144,7 +144,7 @@ export const getProductResponse = async ({
   product: FullProduct;
   features: Feature[];
   fullCus?: FullCustomer;
-  currency?: string;
+  currency?: string | null;
   db?: DrizzleCli;
   withDisplay?: boolean;
   options?: FeatureOptions[];

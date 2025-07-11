@@ -33,3 +33,5 @@ export const ProductItemResponseSchema = z.object({
     })
     .nullish(),
 });
+
+export type ProductItemResponse = z.infer<typeof ProductItemResponseSchema>;
