@@ -162,4 +162,7 @@ export const ErrCode = {
   SupabaseNotFound: "supabase_not_found",
   // Entities
   EntityBalanceNotFound: "entity_balance_not_found",
+
+  // ClickHouse
+  ClickHouseDisabled: "clickhouse_disabled",
 };
