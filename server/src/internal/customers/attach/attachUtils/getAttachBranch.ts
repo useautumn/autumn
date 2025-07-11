@@ -91,7 +91,7 @@ const getOptionsToUpdate = ({
   for (const newOptions of newOptionsList) {
     let internalFeatureId = newOptions.internal_feature_id;
     let existingOptions = oldOptionsList.find(
-      (o) => o.internal_feature_id === internalFeatureId,
+      (o) => o.internal_feature_id === internalFeatureId
     );
 
     let price = findPrepaidPrice({
@@ -135,6 +135,9 @@ const checkSameCustom = async ({
     features: attachParams.features,
   });
 
+  // console.log("Attach params free trial:", attachParams.freeTrial);
+  // console.log("Cur same product free trial:", curSameProduct.free_trial);
+
   if (itemsSame && freeTrialsSame) {
     throw new RecaseError({
       message: `Items specified for ${product.name} are the same as the existing product, can't attach again`,
@@ -170,6 +173,7 @@ const getSameProductBranch = async ({
   }
 
   // 2. Same custom?
+
   if (attachParams.isCustom) {
     return await checkSameCustom({ attachParams, curSameProduct });
   }

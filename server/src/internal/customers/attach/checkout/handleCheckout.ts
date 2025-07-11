@@ -1,6 +1,7 @@
 import {
   AttachFunction,
   AttachScenario,
+  CheckoutResponseSchema,
   FreeTrialResponseSchema,
   ProductItemResponseSchema,
   ProductResponseSchema,
@@ -17,7 +18,6 @@ import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js"
 import { z } from "zod";
 import { checkStripeConnections } from "../attachRouter.js";
 import { attachParamsToPreview } from "../handleAttachPreview/attachParamsToPreview.js";
-import { CheckoutResponseSchema } from "./CheckoutResponse.js";
 import { previewToCheckoutRes } from "./previewToCheckoutRes.js";
 
 const getAttachVars = async ({
@@ -72,7 +72,7 @@ export const handleCheckout = (req: any, res: any) =>
       const attachBody = AttachBodySchema.parse(req.body);
 
       const { attachParams, flags, branch, config, func } = await getAttachVars(
-        { req, attachBody },
+        { req, attachBody }
       );
 
       if (func == AttachFunction.CreateCheckout) {
@@ -101,7 +101,11 @@ export const handleCheckout = (req: any, res: any) =>
         attachBody,
       });
 
-      const checkoutRes = previewToCheckoutRes({ preview });
+      const checkoutRes = await previewToCheckoutRes({
+        req,
+        attachParams,
+        preview,
+      });
 
       res.status(200).json(checkoutRes);
 
