@@ -16,6 +16,9 @@ import { getAttachFunction } from "../attachUtils/getAttachFunction.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { z } from "zod";
 import { checkStripeConnections } from "../attachRouter.js";
+import { attachParamsToPreview } from "../handleAttachPreview/attachParamsToPreview.js";
+import { CheckoutResponseSchema } from "./CheckoutResponse.js";
+import { previewToCheckoutRes } from "./previewToCheckoutRes.js";
 
 const getAttachVars = async ({
   req,
@@ -59,23 +62,6 @@ const getAttachVars = async ({
   };
 };
 
-const CheckoutResponseSchema = z.object({
-  url: z.string().nullish(),
-  customer_id: z.string().nullish(),
-  scenario: z.nativeEnum(AttachScenario),
-  lines: z.array(
-    z.object({
-      description: z.string(),
-      amount: z.number(),
-      item: ProductItemResponseSchema,
-    }),
-  ),
-  // next_cycle: {
-  //   lines
-  // }
-  product: ProductResponseSchema,
-});
-
 export const handleCheckout = (req: any, res: any) =>
   routeHandler({
     req,
@@ -108,7 +94,16 @@ export const handleCheckout = (req: any, res: any) =>
         return;
       }
 
-      res.status(200).json("ok");
+      const preview = await attachParamsToPreview({
+        req,
+        attachParams,
+        logger,
+        attachBody,
+      });
+
+      const checkoutRes = previewToCheckoutRes({ preview });
+
+      res.status(200).json(checkoutRes);
 
       return;
     },
