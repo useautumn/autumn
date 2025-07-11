@@ -1,5 +1,5 @@
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ErrCode } from "@autumn/shared";
 import { CustomerBreadcrumbs } from "../customer-breadcrumbs";
 import {
   Breadcrumb,
@@ -35,8 +35,9 @@ import {
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { QueryTopbar } from "./components/QueryTopbar";
 import { AnalyticsContext } from "./AnalyticsContext";
-import { useAnalyticsData } from "./hooks/useAnalyticsData";
+import { useAnalyticsData, useRawAnalyticsData } from "./hooks/useAnalyticsData";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
+import { EventsAGGrid } from "./AnalyticsGraph";
 
 export const INTERVALS: {
   [key: string]: string;
@@ -59,6 +60,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   const [featureNames, setFeatureNames] = useState<string[]>([]);
   const [noEventsFound, setNoEventsFound] = useState(false);
   const [eventsData, setEventsData] = useState<any>(null);
+  const [clickHouseDisabled, setClickHouseDisabled] = useState(false);
 
   const customerId = searchParams.get("customer_id");
 
@@ -69,13 +71,23 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
     searchParams.get("event_names")?.split(",").filter(Boolean) || [];
   const allSelectedItems = [...currentFeatureIds, ...currentEventNames];
 
-  const { customer, features, events, queryLoading, featuresLoading } =
-    useAnalyticsData();
+  const {
+    customer,
+    features,
+    events,
+    queryLoading,
+    featuresLoading,
+    error,
+  } = useAnalyticsData();
+
+  const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
 
   console.log("Customer:", customer);
   console.log("Features:", features);
   console.log("Events:", events);
   console.log("Selected items:", allSelectedItems);
+  console.log("Error:", error);
+  console.log("Raw events:", rawEvents);
 
   // Debug chart config
   const chartConfig = Object.fromEntries(
@@ -160,6 +172,22 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   //   reload();
   // }, [searchParams]);
 
+  useEffect(() => {
+    if (error) {
+      if (error.response.data.code === ErrCode.ClickHouseDisabled) {
+        setClickHouseDisabled(true);
+      }
+    }
+  }, [error]);
+
+  if (clickHouseDisabled) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <h3 className="text-sm text-t2 font-bold">ClickHouse is disabled</h3>
+      </div>
+    );
+  }
+
   return (
     <AnalyticsContext.Provider
       value={{
@@ -173,10 +201,9 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         features,
       }}
     >
-      <div className="flex flex-col gap-4 h-fit relative w-full text-sm">
+      <div className="flex flex-col gap-4 h-fit relative w-full text-sm pb-0 overflow-hidden">
         <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Analytics</h1>
         <PageSectionHeader title="Events" endContent={<QueryTopbar />} />
-
         <div className="h-[350px]">
           <div className="flex-1 px-10">
             {/* {selectedFeatures.length === 0 && (
@@ -207,6 +234,21 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         </div>
 
         <PageSectionHeader title="Raw Events" className="h-10" />
+
+        {rawQueryLoading && (
+          <p className="text-t3 text-sm shimmer w-fit">
+            Fetching raw events for {customerId}
+          </p>
+        )}
+
+        {rawEvents && rawEvents.data.length > 0 && !rawQueryLoading && (
+          <Card className="w-full h-full bg-transparent border-none rounded-none shadow-none">
+            <CardContent className="p-0 h-[600px] bg-transparent overflow-hidden">
+              <EventsAGGrid data={rawEvents} />
+            </CardContent>
+          </Card>
+        )}
+
       </div>
     </AnalyticsContext.Provider>
   );

@@ -1,4 +1,5 @@
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
+import { ErrCode } from "@autumn/shared";
 import { useSearchParams } from "react-router";
 
 export const useAnalyticsData = () => {
@@ -26,7 +27,7 @@ export const useAnalyticsData = () => {
 
   console.log("Query key:", queryKey);
 
-  const { data, isLoading: queryLoading } = usePostSWR({
+  const { data, isLoading: queryLoading, error } = usePostSWR({
     url: `/query/events`,
     data: {
       customer_id: customerId,
@@ -37,8 +38,15 @@ export const useAnalyticsData = () => {
     queryKey,
     options: {
       refreshInterval: 0,
+      onError: (error) => {
+        if (error.code === ErrCode.ClickHouseDisabled) {
+          return error;
+        }
+      },
     },
   });
+
+  console.log("Raw events:", data?.rawEvents);
 
   return {
     customer: data?.customer,
@@ -46,5 +54,58 @@ export const useAnalyticsData = () => {
     featuresLoading,
     queryLoading,
     events: data?.events,
+    error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
+  };
+};
+
+
+export const useRawAnalyticsData = () => {
+  const [searchParams] = useSearchParams();
+  const customerId = searchParams.get("customer_id");
+  const interval = searchParams.get("interval");
+
+  const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
+    url: `/features`,
+    options: {
+      refreshInterval: 0,
+    },
+  });
+
+  // Create a simple queryKey with the actual values that change
+  const queryKey = [
+    "query-raw-events",
+    customerId,
+    interval,
+  ];
+
+  console.log("Query key:", queryKey);
+
+  const { data, isLoading: queryLoading, error } = usePostSWR({
+    url: `/query/raw`,
+    data: {
+      customer_id: customerId,
+      interval,
+    },
+    enabled: !!customerId,
+    queryKey,
+    options: {
+      refreshInterval: 0,
+      onError: (error) => {
+        if (error.code === ErrCode.ClickHouseDisabled) {
+          return error;
+        }
+      },
+    },
+  });
+
+  console.log("Raw events:", data?.rawEvents);
+
+  return {
+    customer: data?.customer,
+    features: featuresData?.features || [],
+    featuresLoading,
+    queryLoading,
+    rawEvents: data?.rawEvents,
+    error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
   };
 };
