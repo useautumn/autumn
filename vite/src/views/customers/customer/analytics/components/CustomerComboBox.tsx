@@ -126,7 +126,7 @@ export function CustomerComboBox({
                         >
                           {c.name || c.email}{" "}
                           <span className="text-xs text-t3">
-                            ({c.id.slice(0, 10)}...)
+                            {c.id && `(${c.id.slice(0, 10)}...)`}
                           </span>
                         </CommandItem>
                       );
