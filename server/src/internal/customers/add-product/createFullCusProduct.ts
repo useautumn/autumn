@@ -9,15 +9,9 @@ import {
   CollectionMethod,
   FullCusProduct,
   APIVersion,
-  Replaceable,
   InsertReplaceable,
 } from "@autumn/shared";
-import {
-  formatUnixToDate,
-  generateId,
-  notNullish,
-  nullish,
-} from "@/utils/genUtils.js";
+import { generateId, notNullish, nullish } from "@/utils/genUtils.js";
 
 import { Customer } from "@autumn/shared";
 import { FullProduct } from "@autumn/shared";
@@ -421,18 +415,6 @@ export const createFullCusProduct = async ({
 
     cusPrices.push(cusPrice);
   }
-
-  // 5. create customer product
-
-  // let freeTrial = disableFreeTrial ? null : freeTrial;
-  // if (carryOverTrial && curCusProduct?.free_trial_id) {
-  //   logger.info(`Free trial ID: ${curCusProduct.free_trial_id}`);
-  //   logger.info(
-  //     `Trial ends at: ${formatUnixToDate(curCusProduct.trial_ends_at)}`,
-  //   );
-  //   freeTrial = curCusProduct.free_trial || null;
-  //   trialEndsAt = curCusProduct.trial_ends_at || null;
-  // }
 
   // let entityId = customer.entity?.id;
   const cusProd = initCusProduct({
