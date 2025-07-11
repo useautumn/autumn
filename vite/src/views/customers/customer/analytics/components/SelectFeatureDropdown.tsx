@@ -61,7 +61,10 @@ export const SelectFeatureDropdown = ({
           : [];
 
       return eventNames.filter(
-        (name: string) => !features.some((f: Feature) => f.id == name),
+        (name: string) =>
+          !features.some(
+            (f: Feature) => f.id == name && f.config.usage_type == "continuous_use",
+          ),
       );
     });
   };
