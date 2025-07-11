@@ -13,7 +13,7 @@ import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/free
 import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
-import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDate, notNullish, nullish } from "@/utils/genUtils.js";
 
 export const getNewProductPreview = async ({
   branch,
@@ -55,10 +55,10 @@ export const getNewProductPreview = async ({
   });
 
   let dueNextCycle = null;
-  let oneOffOrFree =
-    isOneOff(newProduct.prices) || isFreeProduct(newProduct.prices);
-
-  if (!oneOffOrFree && (freeTrial || notNullish(anchorToUnix))) {
+  // let oneOffOrFree =
+  //   isOneOff(newProduct.prices) || isFreeProduct(newProduct.prices);
+  // !oneOffOrFree &&
+  if (freeTrial || notNullish(anchorToUnix)) {
     let nextCycleItems = await getItemsForNewProduct({
       newProduct,
       attachParams,
@@ -84,12 +84,16 @@ export const getNewProductPreview = async ({
             interval: minInterval,
             now: attachParams.now,
           })
-        : addBillingIntervalUnix(attachParams.now || Date.now(), minInterval);
+        : notNullish(minInterval)
+          ? addBillingIntervalUnix(attachParams.now || Date.now(), minInterval)
+          : undefined;
 
-    dueNextCycle = {
-      line_items: nextCycleItems,
-      due_at: dueAt,
-    };
+    dueNextCycle = !nullish(dueAt)
+      ? {
+          line_items: nextCycleItems,
+          due_at: dueAt,
+        }
+      : undefined;
   }
 
   const dueTodayAmt = items.reduce((acc, item) => {
