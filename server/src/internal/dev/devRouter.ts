@@ -9,7 +9,16 @@ import { handleRequestError } from "@/utils/errorUtils.js";
 import { CacheManager } from "@/external/caching/CacheManager.js";
 import { CacheType } from "@/external/caching/cacheActions.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { inspect } from "util";
+import { encryptData } from "@/utils/encryptUtils.js";
+import Stripe from "stripe";
+import RecaseError from "@/utils/errorUtils.js";
+import { ErrCode } from "@/errors/errCodes.js";
+import {
+  checkKeyValid,
+  createWebhookEndpoint,
+} from "@/external/stripe/stripeOnboardingUtils.js";
+import { clearOrgCache } from "../orgs/orgUtils/clearOrgCache.js";
+import * as crypto from "crypto";
 
 export const devRouter: Router = Router();
 
@@ -108,35 +117,36 @@ devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
 
 
 const generateOtp = (): string => {
-    // Use Web Crypto API if available for cryptographically-secure randomness
-    const getRandomInt = (): number => {
-      if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
-        const array = new Uint32Array(1);
-        crypto.getRandomValues(array);
-        return array[0];
+  // Use Web Crypto API if available for cryptographically-secure randomness
+  const getRandomInt = (): number => {
+    if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+      const array = new Uint32Array(1);
+      crypto.getRandomValues(array);
+      return array[0];
+    }
+
+    // Node.js (SSR / tests) – use crypto module's webcrypto if available
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { webcrypto } = require("crypto");
+      if (webcrypto?.getRandomValues) {
+        const arr = new Uint32Array(1);
+        webcrypto.getRandomValues(arr);
+        return arr[0];
       }
-  
-      // Node.js (SSR / tests) – use crypto module's webcrypto if available
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { webcrypto } = require("crypto");
-        if (webcrypto?.getRandomValues) {
-          const arr = new Uint32Array(1);
-          webcrypto.getRandomValues(arr);
-          return arr[0];
-        }
-      } catch (_) {
-        /* ignore */
-      }
-  
-      // Fallback (non-cryptographic)
-      return Math.floor(Math.random() * 0xffffffff);
-    };
-  
-    // Limit to range [100000, 999999]
-    const randomSixDigits = (getRandomInt() % 900000) + 100000;
-    return randomSixDigits.toString();
+    } catch (_) {
+      /* ignore */
+    }
+
+    // Fallback (non-cryptographic)
+    return Math.floor(Math.random() * 0xffffffff);
   };
+
+  // Limit to range [100000, 999999]
+  const randomSixDigits = (getRandomInt() % 900000) + 100000;
+  return randomSixDigits.toString();
+};
+
 
 export const handleCreateOtp = async (req: any, res: any) =>
   routeHandler({
@@ -145,8 +155,6 @@ export const handleCreateOtp = async (req: any, res: any) =>
     action: "Create OTP",
     handler: async () => {
         const { orgId, env, db } = req;
-
-        console.log("Organization ID", orgId);
 
         // Generate OTP
         const otp = generateOtp();
@@ -179,7 +187,8 @@ export const handleCreateOtp = async (req: any, res: any) =>
         const cacheData = {
             otp: otp,
             sandboxKey: sandboxKey,
-            prodKey: prodKey
+            prodKey: prodKey,
+            orgId: orgId,
         }
 
         const cacheKey = `otp:${otp}`;
@@ -191,10 +200,21 @@ export const handleCreateOtp = async (req: any, res: any) =>
     },
   });
 
-  devRouter.post("/otp", withOrgAuth, handleCreateOtp);
+devRouter.post("/otp", withOrgAuth, handleCreateOtp);
 
-  devRouter.get("/otp/:otp", async (req: any, res: any) => {
-    try {
+export const generateRandomKey = (lengthInBytes: number = 32): string => {
+    if (lengthInBytes <= 0) {
+      throw new Error('Key length must be a positive number.');
+    }
+    return crypto.randomBytes(lengthInBytes).toString('hex');
+};
+
+export const handleGetOtp = async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "Get OTP",
+    handler: async () => {
       const { otp } = req.params;
       const cacheKey = `otp:${otp}`;
       const cacheData = await CacheManager.getJson(cacheKey);
@@ -202,10 +222,126 @@ export const handleCreateOtp = async (req: any, res: any) =>
         res.status(404).json({ error: "OTP not found" });
         return;
       }
-      res.status(200).json(cacheData);
-    } catch (error) {
-      console.error("Failed to get OTP", error);
-      res.status(500).json({ error: "Failed to get OTP" });
-    }
-  });
-    
+
+      let { stripe_connected } = await OrgService.get({
+        db: req.db,
+        orgId: cacheData.orgId,
+      });
+
+      let responseData = {
+        ...cacheData,
+        stripe_connected,
+      }
+
+      await CacheManager.invalidate({
+        action: 'otp',
+        value: otp,
+      });
+
+      if (!stripe_connected) {
+        // we need to generate a key for the CLI to use.
+        let key = generateRandomKey();
+        responseData.stripeFlowAuthKey = key;
+        let stripeCacheData = {
+          orgId: cacheData.orgId
+        }
+        await CacheManager.setJson(key, stripeCacheData);
+      }
+
+      res.status(200).json(responseData);
+    },
+});
+
+devRouter.post('/cli/stripe', async (req: any, res: any) => {
+    routeHandler({
+        req,
+        res,
+        action: "Get Stripe Flow Auth Key",
+        handler: async () => {
+            const { db, logtail: logger } = req;
+            const key = req.headers["authorization"];
+            if (!key) {
+                res.status(401).json({ message: "Unauthorized" });
+                return;
+            }
+            
+            const cacheData = await CacheManager.getJson(key);
+            if (!cacheData) {
+                res.status(404).json({ message: "Key not found" });
+                return;
+            }
+            
+            const { orgId } = cacheData;
+            const { stripeTestKey, stripeLiveKey } = req.body;
+
+            console.log("STRIPE TEST KEY", stripeTestKey);
+            console.log("STRIPE LIVE KEY", stripeLiveKey);
+
+            let stripe = new Stripe(stripeTestKey);
+            let account = await stripe.accounts.retrieve();
+
+            await clearOrgCache({
+                    db,
+                    orgId,
+                    logger,
+                  });
+            
+            await checkKeyValid(stripeTestKey);
+            await checkKeyValid(stripeLiveKey);
+
+            let testWebhook: Stripe.WebhookEndpoint;
+            let liveWebhook: Stripe.WebhookEndpoint;
+
+            try {
+              testWebhook = await createWebhookEndpoint(
+                stripeTestKey,
+                AppEnv.Sandbox,
+                orgId,
+              );
+
+              liveWebhook = await createWebhookEndpoint(
+                stripeLiveKey,
+                AppEnv.Live,
+                orgId,
+              );
+
+            } catch (error) {
+              console.log(error);
+              res.status(500).json({ message: "Error creating stripe webhook" });
+              return;
+            }
+
+            await OrgService.update({
+              db,
+              orgId: orgId,
+              updates: {
+                stripe_connected: true,
+                default_currency: 'usd',
+                stripe_config: {
+                  test_api_key: encryptData(stripeTestKey),
+                  live_api_key: encryptData(stripeLiveKey),
+                  test_webhook_secret: encryptData(testWebhook.secret as string),
+                  live_webhook_secret: encryptData(liveWebhook.secret as string),
+                  success_url: "https://useautumn.com",
+                },
+              },
+            });
+            
+            let redisClient = await CacheManager.getClient();
+            if (!redisClient) {
+                res.status(500).json({ message: "Cache client not initialized" });
+                return;
+            }
+
+            await redisClient.del(key);
+            
+            res.status(200).json({
+                message: "Stripe keys updated",
+            });
+
+            console.log(key);
+        },
+    });
+})
+
+devRouter.get("/otp/:otp", handleGetOtp);
