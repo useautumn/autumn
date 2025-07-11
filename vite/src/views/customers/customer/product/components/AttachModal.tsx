@@ -144,7 +144,7 @@ export const AttachModal = ({
         attachState,
         useInvoice,
         successUrl: `${import.meta.env.VITE_FRONTEND_URL}${redirectUrl}`,
-        version,
+        version: version || product.version,
       });
 
       const { data } = await CusService.attach(axiosInstance, attachBody);

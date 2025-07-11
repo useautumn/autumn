@@ -17,6 +17,7 @@ export const handleAttachPreview = (req: any, res: any) =>
       const { logtail: logger } = req;
       const attachBody = AttachBodySchema.parse(req.body);
 
+      // console.log("attachBody", attachBody);
       const { attachParams } = await getAttachParams({
         req,
         attachBody,

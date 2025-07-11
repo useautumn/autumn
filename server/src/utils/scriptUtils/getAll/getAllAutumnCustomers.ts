@@ -1,5 +1,8 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
-import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
+import {
+  ACTIVE_STATUSES,
+  RELEVANT_STATUSES,
+} from "@/internal/customers/cusProducts/CusProductService.js";
 import {
   AppEnv,
   CusProduct,
@@ -17,7 +20,7 @@ import { and, desc, eq, gt, lt, sql } from "drizzle-orm";
 let cusProductsQuery = ({
   orgId,
   env,
-  inStatuses = ACTIVE_STATUSES,
+  inStatuses = RELEVANT_STATUSES,
   lastProductId,
   pageSize = 250,
 }: {
@@ -99,7 +102,7 @@ export const getAllFullCusProducts = async ({
   db,
   orgId,
   env,
-  inStatuses = ACTIVE_STATUSES,
+  inStatuses = RELEVANT_STATUSES,
 }: {
   db: DrizzleCli;
   orgId: string;
