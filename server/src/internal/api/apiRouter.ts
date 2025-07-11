@@ -46,7 +46,7 @@ apiRouter.use("/referrals", referralRouter);
 apiRouter.use("/redemptions", redemptionRouter);
 
 // Cus Product
-apiRouter.use("/attach", attachRouter);
+apiRouter.use("", attachRouter);
 apiRouter.use("/cancel", expireRouter);
 apiRouter.use("/entitled", checkRouter);
 apiRouter.use("/check", checkRouter);

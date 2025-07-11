@@ -1,5 +1,4 @@
 services:
-
   valkey:
     image: docker.io/bitnami/valkey:8.0
     environment:
@@ -8,7 +7,7 @@ services:
     volumes:
       - valkey-data:/bitnami/valkey/data
     healthcheck:
-      test: ['CMD', 'redis-cli', '-h', 'localhost', '-p', '6379', 'ping']
+      test: ["CMD", "redis-cli", "-h", "localhost", "-p", "6379", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -88,7 +87,6 @@ services:
       - shared
     restart: unless-stopped
 
-
   # Run localtunnel
   localtunnel:
     build:
@@ -100,7 +98,6 @@ services:
     depends_on:
       - server
     restart: unless-stopped
-
 
 volumes:
   # Shared package dist output

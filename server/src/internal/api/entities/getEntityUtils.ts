@@ -100,7 +100,7 @@ export const getEntityResponse = async ({
       cusProducts: entityCusProducts,
       org,
       entity,
-      // entityId,
+      apiVersion,
     });
 
     entityResponses.push({

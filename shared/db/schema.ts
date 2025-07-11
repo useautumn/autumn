@@ -23,6 +23,7 @@ import { apiKeys } from "../models/devModels/apiKeyTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
 import { subscriptions } from "../models/subModels/subTable.js";
 import { invoices } from "../models/cusModels/invoiceModels/invoiceTable.js";
+import { invoiceRelations } from "../models/cusModels/invoiceModels/invoiceRelations.js";
 
 // Reward Tables
 import { rewards } from "../models/rewardModels/rewardModels/rewardTable.js";
@@ -132,6 +133,7 @@ export {
   rewardRedemptionRelations,
   migrationErrorRelations,
   replaceableRelations,
+  invoiceRelations,
 
   // Auth Relations
   userRelations,
