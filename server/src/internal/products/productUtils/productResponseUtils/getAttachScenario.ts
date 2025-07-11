@@ -1,6 +1,6 @@
 import { cusProductToProduct } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { AttachScenario, FullCustomer, FullProduct } from "@autumn/shared";
-import { isProductUpgrade } from "../../productUtils.js";
+import { isFreeProduct, isProductUpgrade } from "../../productUtils.js";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts.js";
 
 export const getAttachScenario = ({
@@ -31,6 +31,13 @@ export const getAttachScenario = ({
   }
 
   let curFullProduct = cusProductToProduct({ cusProduct: curMainProduct });
+
+  if (
+    isFreeProduct(curFullProduct.prices) &&
+    isFreeProduct(fullProduct.prices)
+  ) {
+    return AttachScenario.New;
+  }
 
   let isUpgrade = isProductUpgrade({
     prices1: curFullProduct.prices,
