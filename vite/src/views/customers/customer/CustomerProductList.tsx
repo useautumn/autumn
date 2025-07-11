@@ -64,7 +64,7 @@ export const CustomerProductList = ({
             p.entitlements.some(
               (cusEnt: any) =>
                 cusEnt.entities &&
-                Object.keys(cusEnt.entities).includes(entity.internal_id)
+                Object.keys(cusEnt.entities).includes(entity.internal_id),
             )
           : true;
 
@@ -93,7 +93,7 @@ export const CustomerProductList = ({
               variant="ghost"
               className={cn(
                 "text-t3 text-xs font-normal p-0",
-                showExpired && "text-t1 hover:text-t1"
+                showExpired && "text-t1 hover:text-t1",
               )}
               size="sm"
               onClick={() => setShowExpired(!showExpired)}
@@ -125,7 +125,7 @@ export const CustomerProductList = ({
             className="grid-cols-12 pr-0"
             onClick={() => {
               const entity = entities.find(
-                (e: any) => e.internal_id === cusProduct.internal_entity_id
+                (e: any) => e.internal_id === cusProduct.internal_entity_id,
               );
               navigateTo(
                 `/customers/${customer.id || customer.internal_id}/${
@@ -134,7 +134,7 @@ export const CustomerProductList = ({
                   entity ? `&entity_id=${entity.id || entity.internal_id}` : ""
                 }`,
                 navigate,
-                env
+                env,
               );
             }}
           >
@@ -219,7 +219,7 @@ export const CustomerProductList = ({
 const EditCustomerProductToolbar = ({
   cusProduct,
 }: {
-  cusProduct: CusProduct;
+  cusProduct: FullCusProduct;
 }) => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -251,7 +251,7 @@ const UpdateStatusDropdownBtn = ({
   cusProduct,
   status,
 }: {
-  cusProduct: CusProduct;
+  cusProduct: FullCusProduct;
   status: CusProductStatus;
 }) => {
   const [loading, setLoading] = useState(false);

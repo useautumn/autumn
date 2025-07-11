@@ -34,7 +34,7 @@
     "@tailwindcss/vite": "^4.0.13",
     "@tanstack/react-table": "^8.21.3",
     "@wooorm/starry-night": "^3.6.0",
-    "autumn-js": "^0.0.77",
+    "autumn-js": "^0.0.93",
     "axios": "^1.8.3",
     "better-auth": "^1.2.9",
     "class-variance-authority": "^0.7.1",

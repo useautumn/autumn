@@ -79,8 +79,6 @@ checkRouter.post("", async (req: any, res: any) => {
 
     const { logtail: logger, db } = req;
 
-    console.log("Check Request received");
-
     if (!customer_id) {
       throw new RecaseError({
         message: "`customer_id` is required",

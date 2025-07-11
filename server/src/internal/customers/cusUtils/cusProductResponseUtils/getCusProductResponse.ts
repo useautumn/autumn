@@ -47,7 +47,7 @@ export const getCusProductResponse = async ({
 }: {
   cusProduct: FullCusProduct;
   org: Organization;
-  subs?: (Stripe.Subscription | Subscription)[];
+  subs?: Subscription[];
   entities?: Entity[];
   apiVersion: number;
   features: Feature[];
@@ -175,8 +175,9 @@ export const getCusProductResponse = async ({
       canceled_at: cusProduct.canceled_at,
       is_default: fullProduct.is_default || false,
       is_add_on: fullProduct.is_add_on || false,
+      version: fullProduct.version,
 
-      stripe_subscription_ids: cusProduct.subscription_ids || [],
+      // stripe_subscription_ids: cusProduct.subscription_ids || [],
       started_at: cusProduct.starts_at,
       entity_id: cusProduct.internal_entity_id
         ? entities?.find(
