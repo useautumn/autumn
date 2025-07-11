@@ -34,11 +34,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AllCommunityModule, ColDef, ModuleRegistry, ValidationModule, themeQuartz, themeMaterial, themeAlpine } from 'ag-grid-community'; 
+import {
+  AllCommunityModule,
+  ColDef,
+  ModuleRegistry,
+  ValidationModule,
+  themeQuartz,
+  themeMaterial,
+  themeAlpine,
+} from "ag-grid-community";
+import {
+  AgChartOptions,
+  AgFlowProportionChartOptions,
+  AgStandaloneChartOptions,
+} from "ag-charts-community";
+import { AgCharts } from "ag-charts-react";
 
 // Register all Community features
-
-
 
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useState } from "react";
@@ -68,74 +80,95 @@ export function EventsBarChart({
     rows: number;
     data: Row[];
   };
-  chartConfig: ChartConfig;
+  chartConfig: any;
 }) {
+  const [options, setOptions] = useState<AgChartOptions>({
+    data: data.data,
+    series: chartConfig,
+    theme: {
+      palette: {
+        fills: ["#9c5aff", "#a97eff", "#8268ff", "#7571ff", "#687aff", "#5b83ff", "#4e8cff", "#4195ff", "#349eff", "#27a7ff"],
+      },
+    },
+  });
+
   const chartData = data.data;
-  console.log(chartData);
+  console.log("AgCharts data:", chartData);
+  console.log("AgCharts config:", chartConfig);
 
-  return (
-    <ChartContainer
-      config={chartConfig}
-      className="max-h-[300px] w-full overflow-x-hidden"
-    >
-      <BarChart
-        accessibilityLayer
-        data={chartData}
-        // margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-        className="pr-5"
-      >
-        <CartesianGrid vertical={false} />
-        <XAxis
-          dataKey="interval_start"
-          tickLine={true}
-          tickMargin={10}
-          axisLine={false}
-          tickFormatter={(value) => {
-            const date = new Date(value);
-            return date.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            });
-          }}
-        />
-        <YAxis
-          tickLine={true}
-          tickMargin={10}
-          axisLine={false}
-          tickFormatter={(value) => {
-            return value.toLocaleString();
-          }}
-        />
+  useEffect(() => {
+    setOptions({
+      ...options,
+      data: data.data,
+      series: chartConfig,
+    });
+  }, [chartConfig, data]);
 
-        <ChartTooltip
-          content={
-            <ChartTooltipContent
-              labelFormatter={(value) => {
-                const date = new Date(value);
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                });
-              }}
-            />
-          }
-        />
-        {Object.keys(chartConfig).map((key) => {
-          return (
-            <Bar
-              key={key}
-              dataKey={key}
-              stackId="events"
-              fill={chartConfig[key].color}
-              radius={[4, 4, 0, 0]}
-              barSize={40}
-              className="bg-primary"
-            />
-          );
-        })}
-      </BarChart>
-    </ChartContainer>
-  );
+  return <AgCharts options={options} />;
+
+  // return (
+  //   <ChartContainer
+  //     config={chartConfig}
+  //     className="max-h-[300px] w-full overflow-x-hidden"
+  //   >
+  //     <BarChart
+  //       accessibilityLayer
+  //       data={chartData}
+  //       // margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+  //       className="pr-5"
+  //     >
+  //       <CartesianGrid vertical={false} />
+  //       <XAxis
+  //         dataKey="interval_start"
+  //         tickLine={true}
+  //         tickMargin={10}
+  //         axisLine={false}
+  //         tickFormatter={(value) => {
+  //           const date = new Date(value);
+  //           return date.toLocaleDateString("en-US", {
+  //             month: "short",
+  //             day: "numeric",
+  //           });
+  //         }}
+  //       />
+  //       <YAxis
+  //         tickLine={true}
+  //         tickMargin={10}
+  //         axisLine={false}
+  //         tickFormatter={(value) => {
+  //           return value.toLocaleString();
+  //         }}
+  //       />
+
+  //       <ChartTooltip
+  //         content={
+  //           <ChartTooltipContent
+  //             labelFormatter={(value) => {
+  //               const date = new Date(value);
+  //               return date.toLocaleDateString("en-US", {
+  //                 month: "short",
+  //                 day: "numeric",
+  //               });
+  //             }}
+  //           />
+  //         }
+  //       />
+  //       {Object.keys(chartConfig).map((key) => {
+  //         return (
+  //           <Bar
+  //             key={key}
+  //             dataKey={key}
+  //             stackId="events"
+  //             fill={chartConfig[key].color}
+  //             radius={[4, 4, 0, 0]}
+  //             barSize={40}
+  //             className="bg-primary"
+  //           />
+  //         );
+  //       })}
+  //     </BarChart>
+  //   </ChartContainer>
+  // );
 }
 
 export function EventsAGGrid({ data }: { data: any }) {
@@ -168,7 +201,7 @@ export function EventsAGGrid({ data }: { data: any }) {
           flex: 1,
           resizable: true,
           sortable: true,
-          filter: true
+          filter: true,
         }}
       />
     </div>

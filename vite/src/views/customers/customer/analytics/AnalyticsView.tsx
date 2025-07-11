@@ -90,21 +90,39 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   console.log("Raw events:", rawEvents);
 
   // Debug chart config
-  const chartConfig = Object.fromEntries(
-    allSelectedItems.map((f: string, i: number) => {
-      let outOfTen = i + 1;
-      if (outOfTen > 10) outOfTen = 1;
-      // Convert hyphens to underscores to match data field names
-      const fieldName = f.replace(/-/g, "_") + "_count";
-      return [
-        fieldName,
-        {
-          label: f,
-          color: `var(--chart-${outOfTen})`,
-        },
-      ];
-    }),
-  );
+  // const chartConfig = Object.fromEntries(
+    // allSelectedItems.map((f: string, i: number) => {
+    //   let outOfTen = i + 1;
+    //   if (outOfTen > 10) outOfTen = 1;
+    //   // Convert hyphens to underscores to match data field names
+    //   const fieldName = f.replace(/-/g, "_") + "_count";
+    //   return [
+    //     fieldName,
+    //     {
+    //       label: f,
+    //       color: `var(--chart-${outOfTen})`,
+    //     },
+    //   ];
+    // }),
+  // );
+
+  const chartConfig = events?.meta.filter((x: any) => x.name != "period").map((x: any, index: number) => {
+    if(x.name != "period") {
+      // Generate a unique color for each event type
+      const colors = ["#9c5aff", "#a97eff", "#8268ff", "#7571ff", "#687aff", "#5b83ff", "#4e8cff", "#4195ff", "#349eff", "#27a7ff"];
+      const colorIndex = index % colors.length;
+      
+      return {
+        xKey: "period",
+        yKey: x.name,
+        type: "bar",
+        stacked: true,
+        yName: x.name.replace("_count", ""),
+        fill: colors[colorIndex],
+      }
+    }
+  })
+
   console.log("Chart config:", chartConfig);
 
   // useEffect(() => {
