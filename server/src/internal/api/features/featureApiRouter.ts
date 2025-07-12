@@ -4,7 +4,7 @@ import RecaseError, {
   handleRequestError,
 } from "@/utils/errorUtils.js";
 import { handleUpdateFeature } from "./handlers/handleUpdateFeature.js";
-import { Feature, FeatureResponseSchema, FeatureType } from "@autumn/shared";
+import { Feature, MinFeatureSchema, FeatureType } from "@autumn/shared";
 import { CreateFeatureSchema } from "@autumn/shared";
 import express, { Router } from "express";
 import { generateId } from "@/utils/genUtils.js";
@@ -68,7 +68,7 @@ featureApiRouter.get("", async (req: any, res) => {
   let features = await FeatureService.getFromReq(req);
   res
     .status(200)
-    .json(features.map((feature) => FeatureResponseSchema.parse(feature)));
+    .json(features.map((feature) => MinFeatureSchema.parse(feature)));
 });
 
 featureApiRouter.post("", async (req: any, res) => {
