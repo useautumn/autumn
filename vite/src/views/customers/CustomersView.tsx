@@ -31,6 +31,7 @@ function CustomersView({ env }: { env: AppEnv }) {
   const [filters, setFilters] = React.useState<any>({
     status: searchParams.get("status"),
     product_id: searchParams.get("product_id"),
+    version: searchParams.get("version"),
   });
 
   const [pagination, setPagination] = React.useState<{
@@ -57,6 +58,7 @@ function CustomersView({ env }: { env: AppEnv }) {
       filters: {
         status: searchParams.get("status"),
         product_id: searchParams.get("product_id"),
+        version: searchParams.get("version"),
       },
 
       page: pagination.page,
