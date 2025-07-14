@@ -132,7 +132,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
       }}
     >
       <div className="flex flex-col gap-4 h-fit relative w-full text-sm pb-0 overflow-hidden">
-        <h1 className={cn("text-xl font-medium shrink-0 pl-10", window.location.href.includes("sandbox") ? "pt-2" : "pt-6")}>Analytics</h1>
+        <h1 className={cn("text-xl font-medium shrink-0 pl-10", env === AppEnv.Sandbox ? "pt-2" : "pt-6")}>Analytics</h1>
         <PageSectionHeader title="Events" endContent={<QueryTopbar />} />
         <div className="h-[350px]">
           <div className="flex-1 px-10">
@@ -165,7 +165,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         )}
 
         {rawEvents && !rawQueryLoading && (
-          <Card className="w-full h-full bg-transparent border-none rounded-none shadow-none py-0">
+          <Card className="w-full h-full bg-transparent border-none rounded-none shadow-none py-0 pb-4">
             <CardContent className="p-0 h-[600px] bg-transparent overflow-hidden">
               <EventsAGGrid data={rawEvents} />
             </CardContent>
