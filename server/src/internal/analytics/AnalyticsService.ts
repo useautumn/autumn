@@ -208,7 +208,7 @@ order by dr.period;
       : this.formatJsDateToClickHouseDateTime(new Date());
 
     const query = `
-    SELECT timestamp, event_name, value
+    SELECT timestamp, event_name, value, properties, idempotency_key, entity_id, customer_id
 FROM public_events
 WHERE org_id = {organizationId:String}
   AND internal_customer_id = {customerId:String}
@@ -227,6 +227,8 @@ WHERE org_id = {organizationId:String}
     });
 
     const resultJson = await result.json();
+
+    console.log("resultJson", resultJson);
 
     return resultJson;
   }
