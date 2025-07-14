@@ -147,6 +147,7 @@ const generateOtp = (): string => {
   return randomSixDigits.toString();
 };
 
+const OTP_TTL = 300;
 
 export const handleCreateOtp = async (req: any, res: any) =>
   routeHandler({
@@ -155,6 +156,16 @@ export const handleCreateOtp = async (req: any, res: any) =>
     action: "Create OTP",
     handler: async () => {
         const { orgId, env, db } = req;
+
+        // Check if there's already an OTP to use
+        const maybeCacheKey = `orgOTPExists:${orgId}`;
+        const maybeCacheData = await CacheManager.getJson(maybeCacheKey);
+        if (maybeCacheData) {
+            res.status(200).json({
+                otp: maybeCacheData,
+            });
+            return;
+        }
 
         // Generate OTP
         const otp = generateOtp();
@@ -192,7 +203,10 @@ export const handleCreateOtp = async (req: any, res: any) =>
         }
 
         const cacheKey = `otp:${otp}`;
-        await CacheManager.setJson(cacheKey, cacheData);
+        await CacheManager.setJson(cacheKey, cacheData, OTP_TTL);
+        
+        const orgCacheKey = `orgOTPExists:${orgId}`;
+        await CacheManager.setJson(orgCacheKey, otp, OTP_TTL);
         
         res.status(200).json({
           otp,
@@ -237,6 +251,10 @@ export const handleGetOtp = async (req: any, res: any) =>
         action: 'otp',
         value: otp,
       });
+      await CacheManager.invalidate({
+        action: 'orgOTPExists',
+        value: cacheData.orgId,
+      });
 
       if (!stripe_connected) {
         // we need to generate a key for the CLI to use.
@@ -245,7 +263,7 @@ export const handleGetOtp = async (req: any, res: any) =>
         let stripeCacheData = {
           orgId: cacheData.orgId
         }
-        await CacheManager.setJson(key, stripeCacheData);
+        await CacheManager.setJson(key, stripeCacheData, OTP_TTL);
       }
 
       res.status(200).json(responseData);
@@ -274,17 +292,11 @@ devRouter.post('/cli/stripe', async (req: any, res: any) => {
             const { orgId } = cacheData;
             const { stripeTestKey, stripeLiveKey } = req.body;
 
-            console.log("STRIPE TEST KEY", stripeTestKey);
-            console.log("STRIPE LIVE KEY", stripeLiveKey);
-
-            let stripe = new Stripe(stripeTestKey);
-            let account = await stripe.accounts.retrieve();
-
             await clearOrgCache({
-                    db,
-                    orgId,
-                    logger,
-                  });
+                db,
+                orgId,
+                logger,
+            });
             
             await checkKeyValid(stripeTestKey);
             await checkKeyValid(stripeLiveKey);
@@ -338,8 +350,6 @@ devRouter.post('/cli/stripe', async (req: any, res: any) => {
             res.status(200).json({
                 message: "Stripe keys updated",
             });
-
-            console.log(key);
         },
     });
 })
