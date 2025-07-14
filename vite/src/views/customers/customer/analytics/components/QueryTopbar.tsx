@@ -26,10 +26,12 @@ export const INTERVALS: Record<string, string> = {
   "7d": "Last 7 days",
   "30d": "Last 30 days",
   "90d": "Last 90 days",
+  "1bc": "Last billing cycle",
+  "3bc": "Last 3 billing cycles",
 };
 
 export const QueryTopbar = () => {
-  const { customer, selectedInterval, setSelectedInterval } =
+  const { customer, selectedInterval, setSelectedInterval, bcExclusionFlag } =
     useAnalyticsContext();
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,7 +61,12 @@ export const QueryTopbar = () => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[160px]">
-          {Object.keys(INTERVALS).map((interval) => (
+          {Object.keys(INTERVALS).filter((interval) => {
+            if(bcExclusionFlag) {
+              return interval !== "1bc" && interval !== "3bc";
+            }
+            return true;
+          }).map((interval) => (
             <DropdownMenuItem
               key={interval}
               onClick={() => {
