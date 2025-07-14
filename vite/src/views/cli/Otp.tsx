@@ -52,7 +52,7 @@ export const Otp = () => {
         <div className="text-center">
           <h1 className="text-3xl font-bold">Copy OTP to Terminal</h1>
           <p className="mt-2 text-muted-foreground">
-            Copy the OTP code below and enter it in your terminal to continue
+            Copy the OTP code below and enter it in your terminal to continue. This code will only last 5 minutes.
           </p>
         </div>
 
