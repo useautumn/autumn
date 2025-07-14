@@ -1,39 +1,3 @@
-"use client";
-
-import * as React from "react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-} from "recharts";
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   AllCommunityModule,
   ColDef,
@@ -49,11 +13,21 @@ import {
   AgStandaloneChartOptions,
 } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Register all Community features
 
 import { AgGridReact } from "ag-grid-react";
 import { useEffect, useState } from "react";
+import { Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { CopyablePre } from "@/components/general/CopyablePre";
 
 export const description = "An interactive area chart";
 
@@ -69,6 +43,10 @@ export interface IRow {
   timestamp: string;
   event_name: string;
   value: number;
+  properties: any;
+  idempotency_key: string;
+  entity_id: string;
+  customer_id: string;
 }
 
 export function EventsBarChart({
@@ -87,7 +65,18 @@ export function EventsBarChart({
     series: chartConfig,
     theme: {
       palette: {
-        fills: ["#9c5aff", "#a97eff", "#8268ff", "#7571ff", "#687aff", "#5b83ff", "#4e8cff", "#4195ff", "#349eff", "#27a7ff"],
+        fills: [
+          "#9c5aff",
+          "#a97eff",
+          "#8268ff",
+          "#7571ff",
+          "#687aff",
+          "#5b83ff",
+          "#4e8cff",
+          "#4195ff",
+          "#349eff",
+          "#27a7ff",
+        ],
       },
     },
   });
@@ -109,10 +98,13 @@ export function EventsBarChart({
 
 export function EventsAGGrid({ data }: { data: any }) {
   const [rowData, setRowData] = useState<IRow[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [event, setEvent] = useState<IRow | null>(null);
   const [colDefs, setColDefs] = useState<ColDef<IRow>[]>([
     { field: "timestamp", flex: 1 },
     { field: "event_name", flex: 1 },
     { field: "value", flex: 1 },
+    { field: "properties", flex: 1 },
   ]);
 
   ModuleRegistry.registerModules([AllCommunityModule, ValidationModule]);
@@ -139,7 +131,108 @@ export function EventsAGGrid({ data }: { data: any }) {
           sortable: true,
           filter: true,
         }}
+        onRowClicked={(event) => {
+          setEvent(event.data as IRow);
+          setIsOpen(true);
+        }}
       />
+      {event && (
+        <RowClickDialog event={event} isOpen={isOpen} setIsOpen={setIsOpen} />
+      )}
     </div>
+  );
+}
+
+export function RowClickDialog({
+  event,
+  isOpen,
+  setIsOpen,
+}: {
+  event: IRow;
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+}) {
+  console.log("event", event);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogHeader>
+        <DialogTitle className="text-xl font-bold tracking-tight">
+          Event Details
+        </DialogTitle>
+      </DialogHeader>
+
+      <DialogContent className="sm:max-w-[600px]">
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">
+                  Event Name
+                </p>
+                <p className="text-lg font-medium">{event.event_name}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">
+                  Event Value
+                </p>
+                <p className="text-lg font-medium">{event.value}</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">
+                  Event Properties
+                </p>
+                <CopyablePre text={JSON.stringify(JSON.parse(event.properties), null, 2)} />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">
+                  Idempotency Key
+                </p>
+                <p className="text-lg font-medium">
+                  {event.idempotency_key || "N/A"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">
+                  Entity ID
+                </p>
+                <p className="text-lg font-medium">
+                  {event.entity_id || "N/A"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">
+                  Customer ID
+                </p>
+                <p className="text-lg font-medium">
+                  {event.customer_id || "N/A"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Accordion
+            type="single"
+            collapsible
+            className="w-full"
+          >
+            <AccordionItem value="item-1">
+              <AccordionTrigger>Raw Event</AccordionTrigger>
+              <AccordionContent>
+                <CopyablePre text={JSON.stringify({
+                  ...event,
+                  properties: JSON.parse(event.properties),
+                }, null, 4)} />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
