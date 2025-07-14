@@ -5,6 +5,7 @@
 /* 
 ---break--- */
 @plugin "tailwindcss-animate";
+@import 'tailwind-scrollbar-hide/v4';
 /* 
 ---break--- */
 @custom-variant dark (&:is(.dark *));
