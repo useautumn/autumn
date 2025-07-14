@@ -38,6 +38,7 @@ import { AnalyticsContext } from "./AnalyticsContext";
 import { useAnalyticsData, useRawAnalyticsData } from "./hooks/useAnalyticsData";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { EventsAGGrid } from "./AnalyticsGraph";
+import { cn } from "@/lib/utils";
 
 export const INTERVALS: {
   [key: string]: string;
@@ -50,16 +51,9 @@ export const INTERVALS: {
 
 export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const axiosInstance = useAxiosInstance();
   const [selectedInterval, setSelectedInterval] = useState("24h");
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
   const [eventNames, setEventNames] = useState<string[]>([]);
   const [featureIds, setFeatureIds] = useState<string[]>([]);
-  const [featureNames, setFeatureNames] = useState<string[]>([]);
-  const [noEventsFound, setNoEventsFound] = useState(false);
-  const [eventsData, setEventsData] = useState<any>(null);
   const [clickHouseDisabled, setClickHouseDisabled] = useState(false);
 
   const customerId = searchParams.get("customer_id");
@@ -89,23 +83,6 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   console.log("Error:", error);
   console.log("Raw events:", rawEvents);
 
-  // Debug chart config
-  // const chartConfig = Object.fromEntries(
-    // allSelectedItems.map((f: string, i: number) => {
-    //   let outOfTen = i + 1;
-    //   if (outOfTen > 10) outOfTen = 1;
-    //   // Convert hyphens to underscores to match data field names
-    //   const fieldName = f.replace(/-/g, "_") + "_count";
-    //   return [
-    //     fieldName,
-    //     {
-    //       label: f,
-    //       color: `var(--chart-${outOfTen})`,
-    //     },
-    //   ];
-    // }),
-  // );
-
   const chartConfig = events?.meta.filter((x: any) => x.name != "period").map((x: any, index: number) => {
     if(x.name != "period") {
       // Generate a unique color for each event type
@@ -124,71 +101,6 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   })
 
   console.log("Chart config:", chartConfig);
-
-  // useEffect(() => {
-  //   const featureNames: string[] = [];
-  //   const eventNames: string[] = [];
-
-  //   if (!featuresData) return;
-
-  //   featuresData.features.forEach((feature: any) => {
-  //     if (feature.config.usage_type === "continuous_use") return;
-  //     // If the feature has only one filter and it's the feature id, add the feature name to the list
-  //     const featureName = feature.id;
-  //     const featureFilters: any[][] = feature.config.filters
-  //       .map((filter: any) => filter.value)
-  //       .filter((f: any) => f != featureName);
-
-  //     featureNames.push(featureName);
-  //     featureFilters.forEach((f: any) => {
-  //       f.forEach((f: any) => {
-  //         if (f) {
-  //           eventNames.push(f);
-  //         }
-  //       });
-  //     });
-  //   });
-
-  //   setEventNames([...new Set(eventNames)]);
-  //   setFeatureNames([...new Set(featureNames)]);
-  // }, [featuresData]);
-
-  // useEffect(() => {
-  //   setIsLoadingEvents(true);
-
-  //   async function fetchEvents() {
-  //     const res = await axiosInstance.post(`/query/events/${customerId}`, {
-  //       interval: selectedInterval,
-  //       event_names: selectedFeatures.map((feature) => feature),
-  //     });
-
-  //     const data = res.data;
-
-  //     if (res.status === 200) {
-  //       if (data.rows === 0) setNoEventsFound(true);
-  //       else setNoEventsFound(false);
-  //       setIsLoadingEvents(false);
-  //     } else {
-  //       setNoEventsFound(true);
-  //       setIsLoadingEvents(false);
-  //     }
-  //     return setEventsData(data);
-  //   }
-  //   fetchEvents();
-  // }, [selectedFeatures, selectedInterval]);
-
-  // useEffect(() => {
-  //   async function reload() {
-  //     setSelectedFeatures([]);
-  //     setSelectedInterval("24h");
-  //     setEventsData(null);
-  //     setNoEventsFound(false);
-  //     setIsLoadingEvents(false);
-  //     await cusMutate();
-  //     await featureMutate();
-  //   }
-  //   reload();
-  // }, [searchParams]);
 
   useEffect(() => {
     if (error) {
@@ -220,23 +132,16 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
       }}
     >
       <div className="flex flex-col gap-4 h-fit relative w-full text-sm pb-0 overflow-hidden">
-        <h1 className="text-xl font-medium shrink-0 pt-6 pl-10">Analytics</h1>
+        <h1 className={cn("text-xl font-medium shrink-0 pl-10", window.location.href.includes("sandbox") ? "pt-2" : "pt-6")}>Analytics</h1>
         <PageSectionHeader title="Events" endContent={<QueryTopbar />} />
         <div className="h-[350px]">
           <div className="flex-1 px-10">
-            {/* {selectedFeatures.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-full">
-                <h3 className="text-sm text-t2 font-bold">
-                  Select some filters to get started
-                </h3>
-              </div>
-            )} */}
-            {!customer && !queryLoading && (
+            {!customer && (!queryLoading || (eventNames.length > 0 || featureIds.length > 0)) && (
               <p className="text-t3 text-sm">
                 Select a customer to query their events
               </p>
             )}
-            {queryLoading && customerId && (
+            {queryLoading && customerId && (eventNames.length > 0 || featureIds.length > 0) && (
               <p className="text-t3 text-sm shimmer w-fit">
                 Fetching events for {customerId}
               </p>
@@ -259,8 +164,8 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
           </p>
         )}
 
-        {rawEvents && rawEvents.data.length > 0 && !rawQueryLoading && (
-          <Card className="w-full h-full bg-transparent border-none rounded-none shadow-none">
+        {rawEvents && !rawQueryLoading && (
+          <Card className="w-full h-full bg-transparent border-none rounded-none shadow-none py-0">
             <CardContent className="p-0 h-[600px] bg-transparent overflow-hidden">
               <EventsAGGrid data={rawEvents} />
             </CardContent>
@@ -290,46 +195,3 @@ export const FeatureDropdownHeader = ({ text }: { text: string }) => {
     </>
   );
 };
-
-// <div className="h-[60px] p-6 pb-5">
-// <Breadcrumb>
-//   <BreadcrumbList className="text-t3 text-xs">
-//     <BreadcrumbItem>
-//       <BreadcrumbLink
-//         className="cursor-pointer"
-//         onClick={() => navigateTo("/customers", navigate, env)}
-//       >
-//         Customers
-//       </BreadcrumbLink>
-//     </BreadcrumbItem>
-
-//     <BreadcrumbSeparator />
-
-//     <BreadcrumbItem>
-//       <BreadcrumbLink
-//         className="cursor-pointer"
-//         onClick={() => navigateTo(`/customers`, navigate, env)}
-//       >
-//         Analytics
-//       </BreadcrumbLink>
-//     </BreadcrumbItem>
-
-//     <BreadcrumbSeparator />
-
-//     <BreadcrumbItem>
-//       <BreadcrumbLink
-//         className="cursor-pointer"
-//         onClick={() =>
-//           navigateTo(
-//             `/customers/${searchParams.get("customer_id")}`,
-//             navigate,
-//             env,
-//           )
-//         }
-//       >
-//         {data?.customer.name}
-//       </BreadcrumbLink>
-//     </BreadcrumbItem>
-//   </BreadcrumbList>
-// </Breadcrumb>
-// </div>
