@@ -72,6 +72,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
     queryLoading,
     featuresLoading,
     error,
+    bcExclusionFlag,
   } = useAnalyticsData();
 
   const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
@@ -85,7 +86,6 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 
   const chartConfig = events?.meta.filter((x: any) => x.name != "period").map((x: any, index: number) => {
     if(x.name != "period") {
-      // Generate a unique color for each event type
       const colors = ["#9c5aff", "#a97eff", "#8268ff", "#7571ff", "#687aff", "#5b83ff", "#4e8cff", "#4195ff", "#349eff", "#27a7ff"];
       const colorIndex = index % colors.length;
       
@@ -129,6 +129,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         featureIds,
         setFeatureIds,
         features,
+        bcExclusionFlag,
       }}
     >
       <div className="flex flex-col gap-4 h-fit relative w-full text-sm pb-0 scrollbar-hide">
