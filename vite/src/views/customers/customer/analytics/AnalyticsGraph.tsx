@@ -105,70 +105,6 @@ export function EventsBarChart({
   }, [chartConfig, data]);
 
   return <AgCharts options={options} />;
-
-  // return (
-  //   <ChartContainer
-  //     config={chartConfig}
-  //     className="max-h-[300px] w-full overflow-x-hidden"
-  //   >
-  //     <BarChart
-  //       accessibilityLayer
-  //       data={chartData}
-  //       // margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-  //       className="pr-5"
-  //     >
-  //       <CartesianGrid vertical={false} />
-  //       <XAxis
-  //         dataKey="interval_start"
-  //         tickLine={true}
-  //         tickMargin={10}
-  //         axisLine={false}
-  //         tickFormatter={(value) => {
-  //           const date = new Date(value);
-  //           return date.toLocaleDateString("en-US", {
-  //             month: "short",
-  //             day: "numeric",
-  //           });
-  //         }}
-  //       />
-  //       <YAxis
-  //         tickLine={true}
-  //         tickMargin={10}
-  //         axisLine={false}
-  //         tickFormatter={(value) => {
-  //           return value.toLocaleString();
-  //         }}
-  //       />
-
-  //       <ChartTooltip
-  //         content={
-  //           <ChartTooltipContent
-  //             labelFormatter={(value) => {
-  //               const date = new Date(value);
-  //               return date.toLocaleDateString("en-US", {
-  //                 month: "short",
-  //                 day: "numeric",
-  //               });
-  //             }}
-  //           />
-  //         }
-  //       />
-  //       {Object.keys(chartConfig).map((key) => {
-  //         return (
-  //           <Bar
-  //             key={key}
-  //             dataKey={key}
-  //             stackId="events"
-  //             fill={chartConfig[key].color}
-  //             radius={[4, 4, 0, 0]}
-  //             barSize={40}
-  //             className="bg-primary"
-  //           />
-  //         );
-  //       })}
-  //     </BarChart>
-  //   </ChartContainer>
-  // );
 }
 
 export function EventsAGGrid({ data }: { data: any }) {
@@ -187,7 +123,7 @@ export function EventsAGGrid({ data }: { data: any }) {
   }, [data]);
 
   return (
-    <div className="w-full h-full overflow-hidden">
+    <div className="w-full h-full overflow-hidden px-3">
       <AgGridReact
         rowData={rowData}
         columnDefs={colDefs as any}
