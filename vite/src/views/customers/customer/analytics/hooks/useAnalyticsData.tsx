@@ -1,5 +1,5 @@
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, FullCustomer } from "@autumn/shared";
 import { useSearchParams } from "react-router";
 
 export const useAnalyticsData = () => {
@@ -55,6 +55,7 @@ export const useAnalyticsData = () => {
     queryLoading,
     events: data?.events,
     error: error?.code === ErrCode.ClickHouseDisabled ? null : error,
+    bcExclusionFlag: data?.bcExclusionFlag ?? false,
   };
 };
 
