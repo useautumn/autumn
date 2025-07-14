@@ -2,7 +2,7 @@ import { Router } from "express";
 import { CusService } from "../customers/CusService.js";
 import { AnalyticsService } from "./AnalyticsService.js";
 import { StatusCodes } from "http-status-codes";
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, FullCusProduct } from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 
@@ -25,7 +25,7 @@ analyticsRouter.post("/events/", async (req: any, res: any) =>
         });
       }
 
-      let customer = await CusService.get({
+      let customer = await CusService.getFull({
         db,
         idOrInternalId: customer_id,
         orgId: org.id,
@@ -40,6 +40,14 @@ analyticsRouter.post("/events/", async (req: any, res: any) =>
         });
       }
 
+      let bcExclusionFlag = false;
+
+      customer.customer_products.forEach((product: FullCusProduct) => {
+        if(product.product.is_default) {
+          bcExclusionFlag = true;
+        }
+      })
+
       const events = await AnalyticsService.getTimeseriesEvents({
         req,
         params: {
@@ -47,12 +55,14 @@ analyticsRouter.post("/events/", async (req: any, res: any) =>
           interval,
           event_names,
         },
+        customer,
       });
 
       res.status(200).json({
         customer,
         events,
         features,
+        bcExclusionFlag,
       });
     },
   }),
@@ -75,7 +85,7 @@ analyticsRouter.post("/raw/", async (req: any, res: any) =>
         });
       }
 
-      let customer = await CusService.get({
+      let customer = await CusService.getFull({
         db,
         idOrInternalId: customer_id,
         orgId: org.id,
@@ -96,6 +106,7 @@ analyticsRouter.post("/raw/", async (req: any, res: any) =>
           customer_id: customer.internal_id,
           interval,
         },
+        customer,
       });
 
       res.status(200).json({
