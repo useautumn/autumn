@@ -51,7 +51,7 @@ export const INTERVALS: {
 
 export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   const [searchParams] = useSearchParams();
-  const [selectedInterval, setSelectedInterval] = useState("24h");
+  const [selectedInterval, setSelectedInterval] = useState("30d");
   const [eventNames, setEventNames] = useState<string[]>([]);
   const [featureIds, setFeatureIds] = useState<string[]>([]);
   const [clickHouseDisabled, setClickHouseDisabled] = useState(false);
