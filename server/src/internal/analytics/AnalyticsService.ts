@@ -48,10 +48,12 @@ export class AnalyticsService {
     req,
     params,
     customer,
+    aggregateAll = false,
   }: {
     req: ExtendedRequest;
     params: any;
-    customer: FullCustomer;
+    customer?: FullCustomer;
+    aggregateAll?: boolean;
   }) {
     const { clickhouseClient, org, env, db } = req;
 
@@ -61,7 +63,8 @@ export class AnalyticsService {
     const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
     this.handleEarlyExit();
 
-    let getBCResults = isBillingCycle
+    // Skip billing cycle calculation if aggregating all customers
+    let getBCResults = isBillingCycle && !aggregateAll && customer
       ? await this.getBillingCycleStartDate(
           customer,
           db,
@@ -83,7 +86,7 @@ export class AnalyticsService {
 with customer_events as (
     select * 
     from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
-    where customer_id = {customer_id:String}
+    ${aggregateAll ? "" : "where customer_id = {customer_id:String}"}
 )
 select 
     dr.period, 
@@ -99,7 +102,7 @@ order by dr.period;
 with customer_events as (
     select * 
     from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
-    where customer_id = {customer_id:String}
+    ${aggregateAll ? "" : "where customer_id = {customer_id:String}"}
 )
 select 
     dr.period, 
@@ -137,8 +140,11 @@ order by dr.period;
 
       console.log("queryParams", queryParams);
 
+      // Use regular query for aggregateAll or when no billing cycle data is available
+      const queryToUse = (isBillingCycle && !aggregateAll && getBCResults?.startDate) ? queryBillingCycle : query;
+
       const result = await (clickhouseClient as ClickHouseClient).query({
-        query: isBillingCycle ? queryBillingCycle : query,
+        query: queryToUse,
         query_params: queryParams,
         format: "JSON",
         clickhouse_settings: {
@@ -166,20 +172,24 @@ order by dr.period;
     req,
     params,
     customer,
+    aggregateAll = false,
   }: {
     req: ExtendedRequest;
     params: any;
-    customer: FullCustomer;
+    customer?: FullCustomer;
+    aggregateAll?: boolean;
   }) {
-    const { clickhouseClient, org, db } = req;
+    const { clickhouseClient, org, db, env } = req;
 
     this.handleEarlyExit();
 
     let startDate = new Date();
     const intervalType = params.interval || "day";
     const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
-    let getBCResults = isBillingCycle
-      ? await this.getBillingCycleStartDate(customer, db, intervalType)
+    
+    // Skip billing cycle calculation if aggregating all customers
+    let getBCResults = isBillingCycle && !aggregateAll && customer
+      ? await this.getBillingCycleStartDate(customer, db, intervalType as "1bc" | "3bc")
       : null;
 
     switch (intervalType) {
@@ -200,18 +210,19 @@ order by dr.period;
         break;
     }
 
-    const finalStartDate = isBillingCycle
-      ? getBCResults?.startDate
+    const finalStartDate = isBillingCycle && getBCResults?.startDate
+      ? getBCResults.startDate
       : this.formatJsDateToClickHouseDateTime(startDate);
-    const finalEndDate = isBillingCycle
-      ? getBCResults?.endDate
+    const finalEndDate = isBillingCycle && getBCResults?.endDate
+      ? getBCResults.endDate
       : this.formatJsDateToClickHouseDateTime(new Date());
 
     const query = `
     SELECT timestamp, event_name, value, properties, idempotency_key, entity_id, customer_id
 FROM public_events
 WHERE org_id = {organizationId:String}
-  AND internal_customer_id = {customerId:String}
+  ${aggregateAll ? "" : "AND internal_customer_id = {customerId:String}"}
+  AND env = {env:String}
   AND timestamp >= toDateTime({startDate:String})
   AND timestamp < toDateTime({endDate:String})
     `;
@@ -223,6 +234,7 @@ WHERE org_id = {organizationId:String}
         customerId: params.customer_id,
         startDate: finalStartDate,
         endDate: finalEndDate,
+        env: env,
       },
     });
 
@@ -234,20 +246,21 @@ WHERE org_id = {organizationId:String}
   }
 
   static async getBillingCycleStartDate(
-    customer: FullCustomer,
-    db: DrizzleCli,
-    intervalType: "1bc" | "3bc",
+    customer?: FullCustomer,
+    db?: DrizzleCli,
+    intervalType?: "1bc" | "3bc",
   ) {
+    // If no customer provided, return empty object (for aggregateAll case)
+    if (!customer || !db || !intervalType) {
+      return {};
+    }
+
     let subscriptions: Subscription[] = [];
     let customerHasProducts = notNullish(customer.customer_products);
     let customerHasSubscriptions = notNullish(customer.subscriptions);
-    // console.log("customerHasSubscriptions", customerHasSubscriptions);
-    // console.log("customer.subscriptions", customer.subscriptions);
-    // console.log("customerHasProducts", customerHasProducts);
-    // console.log("customer.customer_products", customer.customer_products);
 
     if (!customerHasProducts) {
-      // do something
+      return {}; // No products, return empty object
     }
 
     if (!customerHasSubscriptions) {
@@ -258,8 +271,6 @@ WHERE org_id = {organizationId:String}
             (product: FullCusProduct) => product.subscription_ids ?? [],
           ) ?? [],
       });
-
-      // console.log("subscriptions", subscriptions);
     }
 
     let customerProductsFiltered = customer.customer_products?.filter(
@@ -282,20 +293,17 @@ WHERE org_id = {organizationId:String}
       },
     );
 
-    // console.log("customerProductsFiltered", customerProductsFiltered);
-
-    if (customerProductsFiltered?.length === 0) return {}; // do something
+    if (!customerProductsFiltered || customerProductsFiltered.length === 0) return {}; 
 
     let startDates: any[] = [];
     let endDates: any[] = [];
 
-    customerProductsFiltered?.forEach((product: FullCusProduct) => {
+    customerProductsFiltered.forEach((product: FullCusProduct) => {
       product.subscription_ids?.forEach((subscriptionId: string) => {
         let subscription = subscriptions.find(
           (subscription: Subscription) =>
             subscription.stripe_id === subscriptionId,
         );
-        // console.log("subscription", subscription);
         if (subscription) {
           startDates.push(
             new Date((subscription.current_period_start ?? 0) * 1000)
@@ -313,8 +321,9 @@ WHERE org_id = {organizationId:String}
       });
     });
 
-    // console.log("startDates", startDates);
-    // console.log("endDates", endDates);
+    if (startDates.length === 0 || endDates.length === 0) {
+      return {};
+    }
 
     const startDate = new Date(startDates[0]);
     const endDate = new Date(endDates[0]);
