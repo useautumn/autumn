@@ -74,17 +74,30 @@ export const autoCreateEntity = async ({
       },
     });
   } else {
-    return await EntityService.insert({
-      db,
-      data: [
-        constructEntity({
-          inputEntity,
-          feature,
+    try {
+      const result = await EntityService.insert({
+        db,
+        data: [
+          constructEntity({
+            inputEntity,
+            feature,
+            internalCustomerId: customer.internal_id,
+            orgId: customer.org_id,
+            env: customer.env,
+          }),
+        ],
+      });
+    } catch (error: any) {
+      if (error.code == "23505") {
+        return await EntityService.get({
+          db,
+          id: entityId,
           internalCustomerId: customer.internal_id,
-          orgId: customer.org_id,
-          env: customer.env,
-        }),
-      ],
-    });
+          internalFeatureId: feature.internal_id,
+        });
+      } else {
+        throw error;
+      }
+    }
   }
 };
