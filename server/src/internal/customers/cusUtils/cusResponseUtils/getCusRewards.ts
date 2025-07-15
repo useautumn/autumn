@@ -16,14 +16,12 @@ export const getCusRewards = async ({
   org,
   env,
   fullCus,
-  subs,
   subIds,
   expand,
 }: {
   org: Organization;
   env: AppEnv;
   fullCus: FullCustomer;
-  subs?: Stripe.Subscription[];
   subIds?: string[];
   expand?: CusExpand[];
 }) => {
@@ -40,24 +38,18 @@ export const getCusRewards = async ({
     env,
   });
 
-  const [stripeCus, subsResult] = await Promise.all([
+  const [stripeCus, stripeSubs] = await Promise.all([
     stripeCli.customers.retrieve(
       fullCus.processor?.id!,
     ) as Promise<Stripe.Customer>,
-    !subs
-      ? getStripeSubs({
-          stripeCli,
-          subIds,
-          expand: ["discounts"],
-        })
-      : null,
+    getStripeSubs({
+      stripeCli,
+      subIds,
+      expand: ["discounts"],
+    }),
   ]);
 
-  if (!subs && subsResult) {
-    subs = subsResult;
-  }
-
-  let stripeDiscounts: Stripe.Discount[] = subs?.flatMap(
+  let stripeDiscounts: Stripe.Discount[] = stripeSubs?.flatMap(
     (s) => s.discounts,
   ) as Stripe.Discount[];
 

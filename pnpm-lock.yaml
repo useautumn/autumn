@@ -165,6 +165,9 @@ importers:
       express:
         specifier: ^4.21.1
         version: 4.21.2
+      express-rate-limit:
+        specifier: ^7.5.1
+        version: 7.5.1(express@4.21.2)
       fetch-retry:
         specifier: ^6.0.0
         version: 6.0.0
@@ -265,6 +268,9 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
+      cross-env:
+        specifier: ^7.0.3
+        version: 7.0.3
       drizzle-kit:
         specifier: ^0.31.1
         version: 0.31.4
@@ -408,8 +414,13 @@ importers:
         specifier: ^34.0.1
         version: 34.0.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       autumn-js:
+<<<<<<< HEAD
         specifier: ^0.0.77
         version: 0.0.77(react@18.2.0)
+=======
+        specifier: ^0.0.93
+        version: 0.0.93(better-auth@1.2.9)(react@18.3.1)
+>>>>>>> main
       axios:
         specifier: ^1.8.3
         version: 1.8.3
@@ -4189,6 +4200,20 @@ packages:
       react:
         optional: true
 
+  autumn-js@0.0.93:
+    resolution: {integrity: sha512-zGq9cfkhHL6xAHlervcZHO2WQ28mHNoxKKI4vnkvKifW7ETDcQk0T7xdJS9g/a+BJh7CLqe697gEdMblMUDfUA==}
+    peerDependencies:
+      better-auth: ^1.2.12
+      better-call: ^1.0.12
+      react: '*'
+    peerDependenciesMeta:
+      better-auth:
+        optional: true
+      better-call:
+        optional: true
+      react:
+        optional: true
+
   axios@1.10.0:
     resolution: {integrity: sha512-/1xYAC4MP/HEG+3duIhFr4ZQXR4sQXOIe+o6sdqzeykGLx6Upp/1p8MHqhINOvGeP7xyNHe7tsiJByc4SSVUxw==}
 
@@ -5054,6 +5079,12 @@ packages:
   events@3.3.0:
     resolution: {integrity: sha512-mQw+2fkQbALzQ7V0MY0IqdnXNOeTtP4r0lN9z7AAawCXgqea7bDii20AYrIBrFd/Hx0M2Ocz6S111CaFkUcb0Q==}
     engines: {node: '>=0.8.x'}
+
+  express-rate-limit@7.5.1:
+    resolution: {integrity: sha512-7iN8iPMDzOMHPUYllBEsQdWVB6fPDMPqwjBaFrgr4Jgr/+okjvzAy+UHlYYL/Vs0OsOrMkwS6PJDkFlJwoxUnw==}
+    engines: {node: '>= 16'}
+    peerDependencies:
+      express: '>= 4.11'
 
   express@4.21.2:
     resolution: {integrity: sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==}
@@ -11703,6 +11734,16 @@ snapshots:
     optionalDependencies:
       react: 18.3.1
 
+  autumn-js@0.0.93(better-auth@1.2.9)(react@18.3.1):
+    dependencies:
+      chalk: 5.4.1
+      rou3: 0.6.3
+      swr: 2.3.3(react@18.3.1)
+      zod: 3.25.64
+    optionalDependencies:
+      better-auth: 1.2.9
+      react: 18.3.1
+
   axios@1.10.0:
     dependencies:
       follow-redirects: 1.15.9
@@ -12554,6 +12595,10 @@ snapshots:
   eventemitter3@5.0.1: {}
 
   events@3.3.0: {}
+
+  express-rate-limit@7.5.1(express@4.21.2):
+    dependencies:
+      express: 4.21.2
 
   express@4.21.2:
     dependencies:

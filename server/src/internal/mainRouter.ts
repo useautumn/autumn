@@ -15,6 +15,9 @@ import { adminRouter } from "./admin/adminRouter.js";
 import { autumnHandler } from "autumn-js/express";
 import { Autumn } from "autumn-js";
 import { analyticsRouter } from "./analytics/internalAnalyticsRouter.js";
+import { createStripeCli } from "@/external/stripe/utils.js";
+import { InvoiceService } from "./invoices/InvoiceService.js";
+import rateLimit from "express-rate-limit";
 
 const mainRouter: Router = Router();
 
@@ -32,6 +35,44 @@ mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
 mainRouter.use("/query", withOrgAuth, analyticsRouter);
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000, // 15 minutes
+  limit: 10, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
+  standardHeaders: "draft-8", // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
+});
+
+mainRouter.use(
+  "/invoices/hosted_invoice_url/:invoiceId",
+  limiter,
+  async (req: any, res: any) => {
+    let invoiceId = req.params.invoiceId;
+    let invoice = await InvoiceService.get({
+      db: req.db,
+      id: invoiceId,
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ error: "Invoice not found" });
+    }
+
+    try {
+      let org = invoice.customer.org;
+      let env = invoice.customer.env;
+      let stripeCli = createStripeCli({
+        org,
+        env,
+      });
+      let stripeInvoice = await stripeCli.invoices.retrieve(invoice.stripe_id);
+
+      res.redirect(stripeInvoice.hosted_invoice_url);
+    } catch (e) {
+      console.error(e);
+      return res.status(500).json({ error: "Error retrieving invoice" });
+    }
+  },
+);
 
 // Optional...
 if (process.env.AUTUMN_SECRET_KEY) {
