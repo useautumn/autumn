@@ -16,6 +16,7 @@
     "server:workers": "pnpm -F server workers:start",
     "server:check": "NODE_ENV=production pnpm -F server check",
     "dev": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"redis-server\"",
+    "dev:wsl": "concurrently \"cd server && npm run dev\" \"cd vite && npm run dev\" \"cd shared && npm run dev\"",
     "setup": "node setup.js",
     "db:push": " pnpm -F shared db:push",
     "db:generate": "pnpm -F shared db:generate",
@@ -23,8 +24,11 @@
     "docker:up": "docker compose -f docker-compose.dev.yml up --build"
   },
   "dependencies": {
+    "@wooorm/starry-night": "^3.8.0",
+    "ag-charts-react": "^12.0.1",
     "chalk": "^5.3.0",
-    "drizzle-kit": "^0.31.1"
+    "drizzle-kit": "^0.31.1",
+    "tailwind-scrollbar-hide": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.3",
