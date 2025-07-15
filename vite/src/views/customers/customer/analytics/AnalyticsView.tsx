@@ -1,5 +1,5 @@
 import { useNavigate, useParams, useSearchParams } from "react-router";
-import { AppEnv, ErrCode } from "@autumn/shared";
+import { AppEnv, ErrCode, Feature } from "@autumn/shared";
 import { CustomerBreadcrumbs } from "../customer-breadcrumbs";
 import {
   Breadcrumb,
@@ -35,19 +35,13 @@ import {
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { QueryTopbar } from "./components/QueryTopbar";
 import { AnalyticsContext } from "./AnalyticsContext";
-import { useAnalyticsData, useRawAnalyticsData } from "./hooks/useAnalyticsData";
+import {
+  useAnalyticsData,
+  useRawAnalyticsData,
+} from "./hooks/useAnalyticsData";
 import { PageSectionHeader } from "@/components/general/PageSectionHeader";
 import { EventsAGGrid } from "./AnalyticsGraph";
 import { cn } from "@/lib/utils";
-
-export const INTERVALS: {
-  [key: string]: string;
-} = {
-  "24h": "Last 24 hours",
-  "7d": "Last 7 days",
-  "30d": "Last 30 days",
-  "90d": "Last 90 days",
-};
 
 export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   const [searchParams] = useSearchParams();
@@ -84,21 +78,45 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   console.log("Error:", error);
   console.log("Raw events:", rawEvents);
 
-  const chartConfig = events?.meta.filter((x: any) => x.name != "period").map((x: any, index: number) => {
-    if(x.name != "period") {
-      const colors = ["#9c5aff", "#a97eff", "#8268ff", "#7571ff", "#687aff", "#5b83ff", "#4e8cff", "#4195ff", "#349eff", "#27a7ff"];
-      const colorIndex = index % colors.length;
-      
-      return {
-        xKey: "period",
-        yKey: x.name,
-        type: "bar",
-        stacked: true,
-        yName: x.name.replace("_count", ""),
-        fill: colors[colorIndex],
+  const chartConfig = events?.meta
+    .filter((x: any) => x.name != "period")
+    .map((x: any, index: number) => {
+      if (x.name != "period") {
+        const colors = [
+          "#9c5aff",
+          "#a97eff",
+          "#8268ff",
+          "#7571ff",
+          "#687aff",
+          "#5b83ff",
+          "#4e8cff",
+          "#4195ff",
+          "#349eff",
+          "#27a7ff",
+        ];
+        const colorIndex = index % colors.length;
+
+        return {
+          xKey: "period",
+          yKey: x.name,
+          type: "bar",
+          stacked: true,
+          yName: features.find((feature: Feature) => {
+            const eventName = x.name.replace("_count", "");
+            if (feature.id === eventName) {
+              return true;
+            }
+            if (feature.config.filters && feature.config.filters.length > 0) {
+              return feature.config.filters.some((filter: any) => 
+                filter.value && Array.isArray(filter.value) && filter.value.includes(eventName)
+              );
+            }
+            return false;
+          })?.name || x.name.replace("_count", ""),
+          fill: colors[colorIndex],
+        };
       }
-    }
-  })
+    });
 
   console.log("Chart config:", chartConfig);
 
@@ -133,20 +151,32 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
       }}
     >
       <div className="flex flex-col gap-4 h-fit relative w-full text-sm pb-0 scrollbar-hide">
-        <h1 className={cn("text-xl font-medium shrink-0 pl-10", env === AppEnv.Sandbox ? "pt-4" : "pt-6")}>Analytics</h1>
+        <h1
+          className={cn(
+            "text-xl font-medium shrink-0 pl-10",
+            env === AppEnv.Sandbox ? "pt-4" : "pt-6",
+          )}
+        >
+          Analytics
+        </h1>
         <PageSectionHeader title="Events" endContent={<QueryTopbar />} />
         <div className="h-[350px]">
           <div className="flex-1 px-10">
-            {!customer && (!queryLoading || (eventNames.length > 0 || featureIds.length > 0)) && (
-              <p className="text-t3 text-sm">
-                Select a customer to query their events
-              </p>
-            )}
-            {queryLoading && customerId && (eventNames.length > 0 || featureIds.length > 0) && (
-              <p className="text-t3 text-sm shimmer w-fit">
-                Fetching events for {customerId}
-              </p>
-            )}
+            {!customer &&
+              (!queryLoading ||
+                eventNames.length > 0 ||
+                featureIds.length > 0) && (
+                <p className="text-t3 text-sm">
+                  Select a customer to query their events
+                </p>
+              )}
+            {queryLoading &&
+              customerId &&
+              (eventNames.length > 0 || featureIds.length > 0) && (
+                <p className="text-t3 text-sm shimmer w-fit">
+                  Fetching events for {customerId}
+                </p>
+              )}
           </div>
           {events && events.data.length > 0 && (
             <Card className="w-full bg-transparent border-none rounded-none shadow-none">
@@ -172,7 +202,6 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
             </CardContent>
           </Card>
         )}
-
       </div>
     </AnalyticsContext.Provider>
   );
