@@ -1,3 +1,0 @@
-when importing db, or client, it should look like this:
-
-import { db } from "@/db/initDrizzle.js";

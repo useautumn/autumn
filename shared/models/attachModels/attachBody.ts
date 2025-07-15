@@ -1,12 +1,8 @@
-import { notNullish } from "@/utils/genUtils.js";
-import {
-  CreateFreeTrialSchema,
-  FreeTrialSchema,
-  ProductItemSchema,
-} from "@autumn/shared";
-
-import { FeatureOptionsSchema } from "@autumn/shared";
 import { z } from "zod";
+import { FeatureOptionsSchema } from "../cusProductModels/cusProductModels.js";
+import { ProductItemSchema } from "../productV2Models/productItemModels/productItemModels.js";
+import { CreateFreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
+import { notNullish } from "../../utils/utils.js";
 
 export const AttachBodySchema = z
   .object({
@@ -58,7 +54,7 @@ export const AttachBodySchema = z
     },
     {
       message: "`product_id` is not provided",
-    },
+    }
   )
   .refine(
     (data) => {
@@ -70,7 +66,7 @@ export const AttachBodySchema = z
     },
     {
       message: "provide either one `product_id` or `product_ids`",
-    },
+    }
   )
   .refine(
     (data) => {
@@ -85,7 +81,7 @@ export const AttachBodySchema = z
     },
     {
       message: "Can't pass in duplicate product_ids",
-    },
+    }
   )
   .refine(
     (data) => {
@@ -97,7 +93,7 @@ export const AttachBodySchema = z
     },
     {
       message: "Can't pass in product_ids if is_custom is true",
-    },
+    }
   )
   .refine(
     (data) => {
@@ -109,20 +105,7 @@ export const AttachBodySchema = z
     },
     {
       message: "Can't pass in items if is_custom is false",
-    },
+    }
   );
-
-// .refine(
-//   (data) => {
-//     if (data.free_trial && !data.is_custom) {
-//       return false;
-//     }
-
-//     return true;
-//   },
-//   {
-//     message: "Can't pass in free_trial if is_custom is false",
-//   },
-// );
 
 export type AttachBody = z.infer<typeof AttachBodySchema>;

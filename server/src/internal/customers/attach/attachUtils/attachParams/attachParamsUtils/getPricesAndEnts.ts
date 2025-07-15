@@ -19,7 +19,7 @@ import {
   Entitlement,
   CreateFreeTrial,
 } from "@autumn/shared";
-import { AttachBody } from "../../../models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { mapOptionsList } from "../../mapOptionsList.js";
 
 export const getPricesAndEnts = async ({

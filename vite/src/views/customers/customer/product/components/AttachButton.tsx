@@ -7,7 +7,6 @@ import { AttachModal } from "./AttachModal";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { toast } from "sonner";
-import { FeatureOptions, ProductV2 } from "@autumn/shared";
 import { getAttachBody } from "./attachProductUtils";
 
 export const AttachButton = () => {
@@ -32,7 +31,7 @@ export const AttachButton = () => {
           product,
           entityId,
           version: version || product.version,
-        }),
+        })
       );
 
       setPreview(res.data);

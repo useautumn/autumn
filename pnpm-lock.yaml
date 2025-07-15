@@ -414,13 +414,8 @@ importers:
         specifier: ^34.0.1
         version: 34.0.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       autumn-js:
-<<<<<<< HEAD
-        specifier: ^0.0.77
-        version: 0.0.77(react@18.2.0)
-=======
         specifier: ^0.0.93
-        version: 0.0.93(better-auth@1.2.9)(react@18.3.1)
->>>>>>> main
+        version: 0.0.93(better-auth@1.2.9)(better-call@1.0.12)(react@18.2.0)
       axios:
         specifier: ^1.8.3
         version: 1.8.3
@@ -11718,14 +11713,6 @@ snapshots:
 
   attr-accept@2.2.5: {}
 
-  autumn-js@0.0.77(react@18.2.0):
-    dependencies:
-      chalk: 5.4.1
-      rou3: 0.6.3
-      swr: 2.3.4(react@18.2.0)
-    optionalDependencies:
-      react: 18.2.0
-
   autumn-js@0.0.77(react@18.3.1):
     dependencies:
       chalk: 5.4.1
@@ -11734,15 +11721,16 @@ snapshots:
     optionalDependencies:
       react: 18.3.1
 
-  autumn-js@0.0.93(better-auth@1.2.9)(react@18.3.1):
+  autumn-js@0.0.93(better-auth@1.2.9)(better-call@1.0.12)(react@18.2.0):
     dependencies:
       chalk: 5.4.1
       rou3: 0.6.3
-      swr: 2.3.3(react@18.3.1)
-      zod: 3.25.64
+      swr: 2.3.4(react@18.2.0)
+      zod: 3.25.76
     optionalDependencies:
       better-auth: 1.2.9
-      react: 18.3.1
+      better-call: 1.0.12
+      react: 18.2.0
 
   axios@1.10.0:
     dependencies:
