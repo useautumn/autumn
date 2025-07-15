@@ -37,7 +37,7 @@ pnpm run setup
 
 For Windows
 ```bash
-docker compose -f docker-compose.prod.yml up
+docker compose -f docker-compose.dev.yml up
 ```
 
 For mac/linux:
