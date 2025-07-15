@@ -1,8 +1,5 @@
 import { Feature, FeatureType } from "@autumn/shared";
-import {
-  FeatureResponseSchema,
-  FeatureResType,
-} from "@shared/models/featureModels/featureResModels.js";
+import { FeatureResponseSchema, FeatureResType } from "@autumn/shared";
 
 export const featureToResponse = (feature: Feature) => {
   // return FeatureResponseSchema.parse(feature);
