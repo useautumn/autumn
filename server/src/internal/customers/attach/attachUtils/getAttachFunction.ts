@@ -12,7 +12,7 @@ import {
 import { handleUpgradeDiffInterval } from "../attachFunctions/upgradeDiffIntFlow/handleUpgradeDiffInt.js";
 import { handleCreateCheckout } from "../../add-product/handleCreateCheckout.js";
 import { handleAddProduct } from "../attachFunctions/addProductFlow/handleAddProduct.js";
-import { AttachBody } from "../models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { AttachConfig } from "@autumn/shared";
 import { handleScheduleFunction } from "../attachFunctions/scheduleFlow/handleScheduleFunction.js";
 import { handleUpdateQuantityFunction } from "../attachFunctions/updateQuantityFlow/updateQuantityFlow.js";
@@ -136,7 +136,7 @@ export const runAttachFunction = async ({
 
   logger.info(`--------------------------------`);
   logger.info(
-    `ATTACHING ${productIdsStr} to ${customer.name} (${customer.id || customer.email}), org: ${org.slug}\n`,
+    `ATTACHING ${productIdsStr} to ${customer.name} (${customer.id || customer.email}), org: ${org.slug}\n`
   );
   if (customer.entity) {
     logger.info(`Entity: ${customer.entity.name} (${customer.entity.id})`);
@@ -149,7 +149,7 @@ export const runAttachFunction = async ({
         curSameProduct: curSameProduct?.product.id,
         curScheduledProduct: curScheduledProduct?.product.id,
       },
-    },
+    }
   );
 
   // config.proration = ProrationBehavior.None;
@@ -206,7 +206,7 @@ export const runAttachFunction = async ({
         product_ids: attachParams.products.map((p) => p.id),
         code: SuccessCode.RenewedProduct,
         message: `Successfully renewed product ${attachParams.products[0].id}`,
-      }),
+      })
     );
     return;
   }

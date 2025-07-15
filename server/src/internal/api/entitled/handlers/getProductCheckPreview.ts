@@ -1,7 +1,7 @@
 import { checkToAttachParams } from "@/internal/customers/attach/attachUtils/attachParams/checkToAttachParams.js";
 import { FullCustomer, FullProduct } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachBody } from "@/internal/customers/attach/models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { attachParamsToPreview } from "@/internal/customers/attach/handleAttachPreview/attachParamsToPreview.js";
 
 import {

@@ -59,25 +59,6 @@ export const updateCustomerDetails = async ({
   return customer;
 };
 
-const CusProductResultSchema = CusProductSchema.extend({
-  customer: CustomerSchema,
-  product: ProductSchema,
-});
-
-export const flipProductResults = (
-  cusProducts: z.infer<typeof CusProductResultSchema>[],
-) => {
-  const customers = [];
-
-  for (const cusProduct of cusProducts) {
-    customers.push({
-      ...cusProduct.customer,
-      customer_products: [cusProduct],
-    });
-  }
-  return customers;
-};
-
 export const getCusInvoices = async ({
   db,
   internalCustomerId,
@@ -106,7 +87,7 @@ export const getCusInvoices = async ({
       invoice: i,
       withItems,
       features,
-    }),
+    })
   );
 
   return processedInvoices;
@@ -140,7 +121,7 @@ export const getCusEntsInFeatures = async ({
 
   if (internalFeatureIds) {
     cusEnts = cusEnts.filter((cusEnt) =>
-      internalFeatureIds.includes(cusEnt.internal_feature_id),
+      internalFeatureIds.includes(cusEnt.internal_feature_id)
     );
   }
 
@@ -149,7 +130,7 @@ export const getCusEntsInFeatures = async ({
     cusEnts = cusEnts.filter(
       (cusEnt) =>
         nullish(cusEnt.customer_product.internal_entity_id) ||
-        cusEnt.customer_product.internal_entity_id === entity.internal_id,
+        cusEnt.customer_product.internal_entity_id === entity.internal_id
       // || cusEnt.entities
     );
   }

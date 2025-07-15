@@ -1,7 +1,7 @@
 import { routeHandler } from "@/utils/routerUtils.js";
 
 import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
-import { AttachBodySchema } from "../models/AttachBody.js";
+import { AttachBodySchema } from "@autumn/shared";
 
 import { ExtendedResponse } from "@/utils/models/Request.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";

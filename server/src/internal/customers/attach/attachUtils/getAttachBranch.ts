@@ -1,6 +1,6 @@
 import { ExtendedRequest } from "@/utils/models/Request.js";
 
-import { AttachBody } from "../models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { AttachBranch, AttachErrCode, BillingInterval } from "@autumn/shared";
@@ -91,7 +91,7 @@ const getOptionsToUpdate = ({
   for (const newOptions of newOptionsList) {
     let internalFeatureId = newOptions.internal_feature_id;
     let existingOptions = oldOptionsList.find(
-      (o) => o.internal_feature_id === internalFeatureId,
+      (o) => o.internal_feature_id === internalFeatureId
     );
 
     let price = findPrepaidPrice({
