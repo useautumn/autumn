@@ -16,7 +16,7 @@ export const ProductItemResponseSchema = z.object({
   feature_type: z.nativeEnum(ProductItemFeatureType).nullish(),
 
   // Feature response
-  feature: FeatureResponseSchema.nullish(),
+  feature: FeatureResponseSchema.nullable(),
 
   included_usage: z.number().or(z.literal(Infinite)).nullish(),
   interval: z.nativeEnum(ProductItemInterval).nullish(),

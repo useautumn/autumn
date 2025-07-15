@@ -27,6 +27,7 @@ import { notNullish } from "@/utils/genUtils.js";
 import { isFreeProduct, isOneOff } from "../../productUtils.js";
 import { getFirstInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
+import { featureToResponse } from "@/internal/features/convertFeatureUtils.js";
 
 export const getProductItemResponse = ({
   item,
@@ -66,9 +67,11 @@ export const getProductItemResponse = ({
       : undefined;
   }
 
+  let feature = features.find((f) => f.id == item.feature_id);
   return ProductItemResponseSchema.parse({
     type,
     ...item,
+    feature: feature ? featureToResponse(feature) : null,
     display: withDisplay ? display : undefined,
     ...priceData,
     quantity,
@@ -150,11 +153,17 @@ export const getProductResponse = async ({
   options?: FeatureOptions[];
 }) => {
   // 1. Get items with display
-  let items = mapToProductItems({
+  let rawItems = mapToProductItems({
     prices: product.prices,
     entitlements: product.entitlements,
     features: features,
-  }).map((item) => {
+  });
+
+  // Sort raw items first
+  let sortedItems = sortProductItems(rawItems, features);
+
+  // Transform sorted items
+  let items = sortedItems.map((item) => {
     return getProductItemResponse({
       item,
       features,
@@ -163,8 +172,6 @@ export const getProductResponse = async ({
       options,
     });
   });
-
-  items = sortProductItems(items, features);
 
   // 2. Get product properties
   let attachScenario = getAttachScenario({
