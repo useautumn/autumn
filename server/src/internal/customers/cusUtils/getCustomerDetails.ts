@@ -1,6 +1,3 @@
-import Stripe from "stripe";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
   AppEnv,
@@ -78,7 +75,7 @@ export const getCustomerDetails = async ({
   });
 
   let subIds = cusProducts.flatMap(
-    (cp: FullCusProduct) => cp.subscription_ids || [],
+    (cp: FullCusProduct) => cp.subscription_ids || []
   );
 
   // if (org.config.api_version >= BREAK_API_VERSION && org.stripe_connected) {
@@ -178,7 +175,7 @@ export const getCustomerDetails = async ({
                 feature_id: e.feature_id,
                 created_at: e.created_at,
                 env: customer.env,
-              }),
+              })
             )
           : undefined,
         referrals,

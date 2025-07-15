@@ -96,6 +96,7 @@ export const attachToCheckPreview = async ({
     : undefined;
 
   let due_next_cycle = undefined;
+
   if (preview.due_next_cycle) {
     due_next_cycle = {
       price: preview.due_next_cycle.line_items.reduce((acc, item) => {

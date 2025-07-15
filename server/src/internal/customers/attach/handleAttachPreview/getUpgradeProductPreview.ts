@@ -5,7 +5,10 @@ import {
 } from "../attachUtils/convertAttachParams.js";
 import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
+import {
+  getFirstInterval,
+  getLastInterval,
+} from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
 import { getItemsForNewProduct } from "@/internal/invoices/previewItemUtils/getItemsForNewProduct.js";
 import { getItemsForCurProduct } from "@/internal/invoices/previewItemUtils/getItemsForCurProduct.js";
 import { getOptions } from "@/internal/api/entitled/checkUtils.js";
@@ -127,7 +130,8 @@ export const getUpgradeProductPreview = async ({
     logger,
   });
 
-  const lastInterval = getLastInterval({ prices: newProduct.prices });
+  // const lastInterval = getLastInterval({ prices: newProduct.prices });
+  const lastInterval = getFirstInterval({ prices: newProduct.prices });
 
   let dueNextCycle = undefined;
   if (!isFreeProduct(newProduct.prices)) {
@@ -194,7 +198,7 @@ export const getUpgradeProductPreview = async ({
   if (branch == AttachBranch.UpdatePrepaidQuantity) {
     items = items.filter((item) => item.usage_model == UsageModel.Prepaid);
     dueNextCycle!.line_items = dueNextCycle!.line_items.filter(
-      (item) => item.usage_model == UsageModel.Prepaid,
+      (item) => item.usage_model == UsageModel.Prepaid
     );
   }
 
