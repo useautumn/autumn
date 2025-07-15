@@ -14,6 +14,8 @@ import { Feature } from "@autumn/shared";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSearchParams, useNavigate, useLocation } from "react-router";
+import { getAllEventNames } from "../utils/getAllEventNames";
+import { useEffect } from "react";
 
 export const SelectFeatureDropdown = ({
   classNames,
@@ -22,17 +24,31 @@ export const SelectFeatureDropdown = ({
     trigger?: string;
   };
 }) => {
-  const { features } = useAnalyticsContext();
+  const { features, hasCleared, setHasCleared } = useAnalyticsContext();
 
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Get all event names
+  const allEventNames = getAllEventNames({ features });
 
   // Read current values from query parameters
   const currentFeatureIds =
     searchParams.get("feature_ids")?.split(",").filter(Boolean) || [];
   const currentEventNames =
     searchParams.get("event_names")?.split(",").filter(Boolean) || [];
+
+  // If no selections are made, default to the first 10 items (features first, then events)
+  useEffect(() => {
+    if (currentFeatureIds.length === 0 && currentEventNames.length === 0 && !hasCleared) {
+      const defaultFeatureIds = features.slice(0, 10).map((feature: Feature) => feature.id);
+      const remainingSlots = 10 - defaultFeatureIds.length;
+      const defaultEventNames = remainingSlots > 0 ? allEventNames.slice(0, remainingSlots) : [];
+      
+      updateQueryParams(defaultFeatureIds, defaultEventNames);
+    }
+  }, [features, allEventNames, hasCleared]);
 
   // Helper function to update query parameters
   const updateQueryParams = (featureIds: string[], eventNames: string[]) => {
@@ -52,24 +68,6 @@ export const SelectFeatureDropdown = ({
 
     navigate(`${location.pathname}?${params.toString()}`);
   };
-
-  const getAllEventNames = () => {
-    return features.flatMap((feature: Feature) => {
-      const eventNames =
-        feature.config.filters && feature.config.filters.length > 0
-          ? feature.config.filters[0].value
-          : [];
-
-      return eventNames.filter(
-        (name: string) =>
-          !features.some(
-            (f: Feature) => f.id == name && f.config.usage_type == "continuous_use",
-          ),
-      );
-    });
-  };
-
-  const allEventNames = getAllEventNames();
 
   const numSelected = currentFeatureIds.length + currentEventNames.length;
 
@@ -149,6 +147,7 @@ export const SelectFeatureDropdown = ({
           <DropdownMenuItem
             onClick={() => {
               updateQueryParams([], []);
+              setHasCleared(true);
             }}
           >
             Clear filters
