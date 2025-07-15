@@ -64,13 +64,14 @@ export class AnalyticsService {
     this.handleEarlyExit();
 
     // Skip billing cycle calculation if aggregating all customers
-    let getBCResults = isBillingCycle && !aggregateAll && customer
-      ? await this.getBillingCycleStartDate(
-          customer,
-          db,
-          intervalType as "1bc" | "3bc",
-        )
-      : null;
+    let getBCResults =
+      isBillingCycle && !aggregateAll && customer
+        ? await this.getBillingCycleStartDate(
+            customer,
+            db,
+            intervalType as "1bc" | "3bc",
+          )
+        : null;
 
     const countExpressions = params.event_names
       .map(
@@ -114,8 +115,6 @@ group by dr.period
 order by dr.period;
       `;
 
-      console.log("getBCResults", getBCResults);
-
       const queryParams = {
         org_id: org?.id,
         env: env,
@@ -138,10 +137,11 @@ order by dr.period;
         end_date: isBillingCycle ? getBCResults?.endDate : undefined,
       };
 
-      console.log("queryParams", queryParams);
-
       // Use regular query for aggregateAll or when no billing cycle data is available
-      const queryToUse = (isBillingCycle && !aggregateAll && getBCResults?.startDate) ? queryBillingCycle : query;
+      const queryToUse =
+        isBillingCycle && !aggregateAll && getBCResults?.startDate
+          ? queryBillingCycle
+          : query;
 
       const result = await (clickhouseClient as ClickHouseClient).query({
         query: queryToUse,
@@ -186,11 +186,16 @@ order by dr.period;
     let startDate = new Date();
     const intervalType = params.interval || "day";
     const isBillingCycle = intervalType === "1bc" || intervalType === "3bc";
-    
+
     // Skip billing cycle calculation if aggregating all customers
-    let getBCResults = isBillingCycle && !aggregateAll && customer
-      ? await this.getBillingCycleStartDate(customer, db, intervalType as "1bc" | "3bc")
-      : null;
+    let getBCResults =
+      isBillingCycle && !aggregateAll && customer
+        ? await this.getBillingCycleStartDate(
+            customer,
+            db,
+            intervalType as "1bc" | "3bc",
+          )
+        : null;
 
     switch (intervalType) {
       case "24h":
@@ -210,25 +215,36 @@ order by dr.period;
         break;
     }
 
-    const finalStartDate = isBillingCycle && getBCResults?.startDate
-      ? getBCResults.startDate
-      : this.formatJsDateToClickHouseDateTime(startDate);
-    const finalEndDate = isBillingCycle && getBCResults?.endDate
-      ? getBCResults.endDate
-      : this.formatJsDateToClickHouseDateTime(new Date());
+    const finalStartDate =
+      isBillingCycle && getBCResults?.startDate
+        ? getBCResults.startDate
+        : this.formatJsDateToClickHouseDateTime(startDate);
+    const finalEndDate =
+      isBillingCycle && getBCResults?.endDate
+        ? getBCResults.endDate
+        : this.formatJsDateToClickHouseDateTime(new Date());
 
     const query = `
-    SELECT timestamp, event_name, value, properties, idempotency_key, entity_id, customer_id
-FROM public_events
-WHERE org_id = {organizationId:String}
-  ${aggregateAll ? "" : "AND internal_customer_id = {customerId:String}"}
-  AND env = {env:String}
-  AND timestamp >= toDateTime({startDate:String})
-  AND timestamp < toDateTime({endDate:String})
+    SELECT *
+    FROM org_events_view(org_id={organizationId:String}, org_slug='', env={env:String})
+    WHERE timestamp >= toDateTime({startDate:String})
+    AND timestamp < toDateTime({endDate:String})
+    ${aggregateAll ? "" : "AND customer_id = {customerId:String}"}
+    ORDER BY timestamp DESC
+    limit 10000
     `;
 
-    const result = await (clickhouseClient as ClickHouseClient).query({
-      query,
+    const filledQuery = query
+      .replace("{organizationId:String}", org?.id ?? "")
+      .replace("{customerId:String}", params.customer_id ?? "")
+      .replace("{startDate:String}", finalStartDate)
+      .replace("{endDate:String}", finalEndDate)
+      .replace("{env:String}", env);
+
+    // console.log("filledQuery", filledQuery);
+
+    const result = await clickhouseClient.query({
+      query: query,
       query_params: {
         organizationId: org?.id,
         customerId: params.customer_id,
@@ -238,9 +254,10 @@ WHERE org_id = {organizationId:String}
       },
     });
 
-    const resultJson = await result.json();
+    // log the actual query... with params filled in...?
+    // console.log("query", query);
 
-    console.log("resultJson", resultJson);
+    const resultJson = await result.json();
 
     return resultJson;
   }
@@ -280,20 +297,13 @@ WHERE org_id = {organizationId:String}
         let isActive =
           product.status === CusProductStatus.Active ||
           product.status === CusProductStatus.Trialing;
-        console.log(
-          "product",
-          product.product.name,
-          isAddon,
-          hasGroup,
-          isActive,
-          "condition: ",
-          !isAddon && !hasGroup && isActive,
-        );
+
         return !isAddon && !hasGroup && isActive;
       },
     );
 
-    if (!customerProductsFiltered || customerProductsFiltered.length === 0) return {}; 
+    if (!customerProductsFiltered || customerProductsFiltered.length === 0)
+      return {};
 
     let startDates: any[] = [];
     let endDates: any[] = [];
@@ -330,10 +340,6 @@ WHERE org_id = {organizationId:String}
     const gap = endDate.getTime() - startDate.getTime();
     const gapDays = Math.floor(gap / (1000 * 60 * 60 * 24));
 
-    console.log("startDates", startDates);
-    console.log("endDates", endDates);
-    console.log("gapDays", gapDays);
-
     return {
       startDate: startDates[0],
       endDate: endDates[0],
@@ -341,3 +347,23 @@ WHERE org_id = {organizationId:String}
     };
   }
 }
+
+// const query = `
+//     SELECT timestamp, event_name,
+//     case
+//       when isNotNull(JSONExtractString(properties, 'value')) AND JSONExtractString(properties, 'value') != ''
+//           then toFloat64OrZero(JSONExtractString(properties, 'value'))
+//       when isNotNull(value)
+//           then toFloat64(value)
+//       else 1.0
+//     end as value,
+//     properties, idempotency_key, entity_id, customer_id
+//     FROM events
+//     WHERE org_id = {organizationId:String}
+//     ${aggregateAll ? "" : "AND internal_customer_id = {customerId:String}"}
+//     AND env = {env:String}
+//     AND timestamp >= toDateTime({startDate:String})
+//     AND timestamp < toDateTime({endDate:String})
+//     order by timestamp desc
+//     limit 25000
+//     `;

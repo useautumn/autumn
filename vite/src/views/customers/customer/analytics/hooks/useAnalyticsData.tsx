@@ -25,9 +25,11 @@ export const useAnalyticsData = () => {
     ...(featureIds || []).sort(),
   ];
 
-  console.log("Query key:", queryKey);
-
-  const { data, isLoading: queryLoading, error } = usePostSWR({
+  const {
+    data,
+    isLoading: queryLoading,
+    error,
+  } = usePostSWR({
     url: `/query/events`,
     data: {
       customer_id: customerId || null,
@@ -45,8 +47,6 @@ export const useAnalyticsData = () => {
     },
   });
 
-  console.log("Raw events:", data?.rawEvents);
-
   return {
     customer: data?.customer,
     features: featuresData?.features || [],
@@ -57,7 +57,6 @@ export const useAnalyticsData = () => {
     bcExclusionFlag: data?.bcExclusionFlag ?? false,
   };
 };
-
 
 export const useRawAnalyticsData = () => {
   const [searchParams] = useSearchParams();
@@ -72,15 +71,13 @@ export const useRawAnalyticsData = () => {
   });
 
   // Create a simple queryKey with the actual values that change
-  const queryKey = [
-    "query-raw-events",
-    customerId,
-    interval,
-  ];
+  const queryKey = ["query-raw-events", customerId, interval];
 
-  console.log("Query key:", queryKey);
-
-  const { data, isLoading: queryLoading, error } = usePostSWR({
+  const {
+    data,
+    isLoading: queryLoading,
+    error,
+  } = usePostSWR({
     url: `/query/raw`,
     data: {
       customer_id: customerId || null,
@@ -96,8 +93,6 @@ export const useRawAnalyticsData = () => {
       },
     },
   });
-
-  console.log("Raw events:", data?.rawEvents);
 
   return {
     customer: data?.customer,

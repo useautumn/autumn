@@ -18,7 +18,7 @@ export interface ExtendedRequest extends ExpressRequest {
   db: DrizzleCli;
   logtail: Logtail;
   logger: Logger;
-  clickhouseClient?: ClickHouseClient;
+  clickhouseClient: ClickHouseClient;
 
   id?: string;
   userId?: string;

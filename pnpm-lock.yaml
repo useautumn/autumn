@@ -8,12 +8,21 @@ importers:
 
   .:
     dependencies:
+      '@wooorm/starry-night':
+        specifier: ^3.8.0
+        version: 3.8.0
+      ag-charts-react:
+        specifier: ^12.0.1
+        version: 12.0.2(react@18.3.1)
       chalk:
         specifier: ^5.3.0
         version: 5.3.0
       drizzle-kit:
         specifier: ^0.31.1
         version: 0.31.1
+      tailwind-scrollbar-hide:
+        specifier: ^4.0.0
+        version: 4.0.0(tailwindcss@4.0.13)
     devDependencies:
       '@types/node':
         specifier: ^24.0.3
@@ -389,6 +398,12 @@ importers:
       '@wooorm/starry-night':
         specifier: ^3.6.0
         version: 3.6.0
+      ag-grid-community:
+        specifier: ^34.0.2
+        version: 34.0.2
+      ag-grid-react:
+        specifier: ^34.0.1
+        version: 34.0.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       autumn-js:
         specifier: ^0.0.77
         version: 0.0.77(react@18.2.0)
@@ -4015,6 +4030,9 @@ packages:
   '@wooorm/starry-night@3.6.0':
     resolution: {integrity: sha512-AoDrqWZCZVymY48BClDaSuLgOe5vnl99S4hrqqg5OJ44x9NHo4s5LzOypKC3e6jGIUqHDfaDMvou8pelkq3dCw==}
 
+  '@wooorm/starry-night@3.8.0':
+    resolution: {integrity: sha512-BWRm0tCzWCmv1ucBh6frL2uFRvYFj/LWmJzr+rJsdF/JsJ1+bBkeiyExH1iWQS18IH22HFu7f4QgG99OU1nklA==}
+
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
     engines: {node: '>=6.5'}
@@ -4041,6 +4059,32 @@ packages:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
+
+  ag-charts-community@12.0.2:
+    resolution: {integrity: sha512-ew6f1FD2ow4X5E3165OZrPz08Yh+pkFvvZOZYXtcABCiZtjzY4mE4zTh7+ZOBQ6utMe7p60T7epI0qlU1ngkmQ==}
+
+  ag-charts-core@12.0.2:
+    resolution: {integrity: sha512-gIZW46N1MSiZoOnrmf0OIO1v1DibGTefntTWadYG68/nHBxeoV8jsPLfTMplUnPhGvzdQXWxXyvB9q9KKYV+0w==}
+
+  ag-charts-locale@12.0.2:
+    resolution: {integrity: sha512-uiMdNQL7aaOSBaIPpyiVKLLddGTo0pT/dRX46Ra3ywglsfPHT9dsM22GAnHl/njVrGD66RewT+N2FGpMZj2rGA==}
+
+  ag-charts-react@12.0.2:
+    resolution: {integrity: sha512-V4otOv3lsUTYWZLEhzQknLVkp/jHtqJNK41xrDHUho99VHOBrCbQxi/oKIEQijGASoA/iYH0xF7cEGqzizp8PQ==}
+    peerDependencies:
+      react: ^18.0.0 || ^19.0.0
+
+  ag-charts-types@12.0.2:
+    resolution: {integrity: sha512-AWM1Y+XW+9VMmV3AbzdVEnreh/I2C9Pmqpc2iLmtId3Xbvmv7O56DqnuDb9EXjK5uPxmyUerTP+utL13UGcztw==}
+
+  ag-grid-community@34.0.2:
+    resolution: {integrity: sha512-hVJp5vrmwHRB10YjfSOVni5YJkO/v+asLjT72S4YnIFSx8lAgyPmByNJgtojk1aJ5h6Up93jTEmGDJeuKiWWLA==}
+
+  ag-grid-react@34.0.2:
+    resolution: {integrity: sha512-1KBXkTvwtZiYVlSuDzBkiqfHjZgsATOmpLZdAtdmsCSOOOEWai0F9zHHgBuHfyciAE4nrbQWfojkx8IdnwsKFw==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
@@ -7034,6 +7078,11 @@ packages:
 
   tailwind-merge@3.0.2:
     resolution: {integrity: sha512-l7z+OYZ7mu3DTqrL88RiKrKIqO3NcpEO8V/Od04bNpvk0kiIFndGEoqfuzvj4yuhRkHKjRkII2z+KS2HfPcSxw==}
+
+  tailwind-scrollbar-hide@4.0.0:
+    resolution: {integrity: sha512-gobtvVcThB2Dxhy0EeYSS1RKQJ5baDFkamkhwBvzvevwX6L4XQfpZ3me9s25Ss1ecFVT5jPYJ50n+7xTBJG9WQ==}
+    peerDependencies:
+      tailwindcss: '>=3.0.0 || >= 4.0.0 || >= 4.0.0-beta.8 || >= 4.0.0-alpha.20'
 
   tailwindcss-animate@1.0.7:
     resolution: {integrity: sha512-bl6mpH3T7I3UFxuvDEXLxy/VuFxBk5bbzplh7tXI68mwMokNYd1t9qPBHlnyTwfa4JGC4zP516I1hYYtQ/vspA==}
@@ -11497,6 +11546,13 @@ snapshots:
       vscode-oniguruma: 2.0.1
       vscode-textmate: 9.2.0
 
+  '@wooorm/starry-night@3.8.0':
+    dependencies:
+      '@types/hast': 3.0.4
+      import-meta-resolve: 4.1.0
+      vscode-oniguruma: 2.0.1
+      vscode-textmate: 9.2.0
+
   abort-controller@3.0.0:
     dependencies:
       event-target-shim: 5.0.1
@@ -11519,6 +11575,36 @@ snapshots:
       acorn: 8.15.0
 
   acorn@8.15.0: {}
+
+  ag-charts-community@12.0.2:
+    dependencies:
+      ag-charts-core: 12.0.2
+      ag-charts-locale: 12.0.2
+      ag-charts-types: 12.0.2
+
+  ag-charts-core@12.0.2:
+    dependencies:
+      ag-charts-types: 12.0.2
+
+  ag-charts-locale@12.0.2: {}
+
+  ag-charts-react@12.0.2(react@18.3.1):
+    dependencies:
+      ag-charts-community: 12.0.2
+      react: 18.3.1
+
+  ag-charts-types@12.0.2: {}
+
+  ag-grid-community@34.0.2:
+    dependencies:
+      ag-charts-types: 12.0.2
+
+  ag-grid-react@34.0.2(react-dom@18.2.0(react@18.2.0))(react@18.2.0):
+    dependencies:
+      ag-grid-community: 34.0.2
+      prop-types: 15.8.1
+      react: 18.2.0
+      react-dom: 18.2.0(react@18.2.0)
 
   agent-base@7.1.4: {}
 
@@ -14752,6 +14838,10 @@ snapshots:
   symbol-observable@1.2.0: {}
 
   tailwind-merge@3.0.2: {}
+
+  tailwind-scrollbar-hide@4.0.0(tailwindcss@4.0.13):
+    dependencies:
+      tailwindcss: 4.0.13
 
   tailwindcss-animate@1.0.7(tailwindcss@4.0.13):
     dependencies:

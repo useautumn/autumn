@@ -54,7 +54,7 @@ export function CustomerComboBox({
   const debouncedSearch = useCallback(
     debounce(async (searchValue: string) => {
       setIsSearching(true);
-      console.log("Searching for:", searchValue);
+
       await mutate();
       setIsSearching(false);
     }, 300),
@@ -84,7 +84,9 @@ export function CustomerComboBox({
             setValue("");
           }}
         >
-          {customer?.name || customer?.id || "Viewing all customers"}
+          <span className="w-full truncate">
+            {customer?.name || customer?.id || "Viewing all customers"}
+          </span>
           <ChevronsUpDown className="opacity-50 h-4 w-4" />
         </Button>
       </PopoverTrigger>
@@ -109,12 +111,12 @@ export function CustomerComboBox({
                   <p className="mb-2 text-sm text-muted-foreground">
                     {value ? "No customer found." : "Search for a customer"}
                   </p>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     className="mx-auto"
                     onClick={() => {
-                      navigateTo('/analytics', navigate, env);
+                      navigateTo("/analytics", navigate, env);
                       setOpen(false);
                       setHasCleared(false);
                     }}
