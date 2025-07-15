@@ -17,7 +17,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { paginationOptions } from "./AGGrid";
 
@@ -66,6 +66,7 @@ export default function PaginationPanel() {
 
   // If grid is not initialized yet or loading, show a simplified version
   if (!gridRef.current?.api || queryLoading) {
+    return <></>;
     return (
       <div className="flex items-center py-0 h-full">
         <Pagination className="w-fit h-8 text-xs">
@@ -75,7 +76,7 @@ export default function PaginationPanel() {
             </PaginationItem>
             <PaginationItem className="">
               {queryLoading ? (
-                <span className="shimmer">Loading...</span>
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 "0 / 0"
               )}
@@ -91,11 +92,11 @@ export default function PaginationPanel() {
 
   return (
     <div className="flex items-center py-0 h-full select-none">
-      <div className="flex items-center mr-3 text-xs text-t2">
+      <div className="flex items-center mr-4 text-xs text-t2">
         <span>{totalRows} events</span>
       </div>
-      
-      <Button variant="outline" className="px-2 bg-white h-full select-none hover:bg-white border-y-0">
+
+      <div className="w-[150px] border-x h-full text-t3">
         <Pagination className="w-fit h-full text-xs select-none">
           <PaginationContent className="w-full flex justify-between select-none">
             <PaginationItem className="select-none">
@@ -106,7 +107,8 @@ export default function PaginationPanel() {
               />
             </PaginationItem>
             <PaginationItem className="select-none">
-              {currentPage} / {totalPages}
+              {currentPage * pageSize - pageSize} -{" "}
+              {Math.min(currentPage * pageSize, totalRows)}
             </PaginationItem>
             <PaginationItem className="select-none">
               <PaginationNext
@@ -117,9 +119,9 @@ export default function PaginationPanel() {
             </PaginationItem>
           </PaginationContent>
         </Pagination>
-      </Button>
+      </div>
 
-      <DropdownMenu>
+      {/* <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             variant="outline"
@@ -147,7 +149,7 @@ export default function PaginationPanel() {
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
-      </DropdownMenu>
+      </DropdownMenu> */}
     </div>
   );
 }

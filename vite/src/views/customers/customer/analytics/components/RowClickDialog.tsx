@@ -1,30 +1,50 @@
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { IRow } from "./AGGrid";
 import { CopyablePre } from "@/components/general/CopyablePre";
 
 export function RowClickDialog({
-    event,
-    isOpen,
-    setIsOpen,
-  }: {
-    event: IRow;
-    isOpen: boolean;
-    setIsOpen: (isOpen: boolean) => void;
-  }) {
-    return (
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold tracking-tight">
-            Event Details
-          </DialogTitle>
-        </DialogHeader>
-  
-        <DialogContent
-          className="sm:max-w-[600px]"
-          aria-describedby="Event Details"
-        >
-          <div className="flex flex-col gap-4">
+  event,
+  isOpen,
+  setIsOpen,
+}: {
+  event: IRow;
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+}) {
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogHeader>
+        <DialogTitle className="text-xl font-bold tracking-tight">
+          Event Details
+        </DialogTitle>
+      </DialogHeader>
+
+      <DialogContent
+        className="sm:max-w-[600px] p-2"
+        aria-describedby="Event Details"
+      >
+        <CopyablePre
+          text={JSON.stringify(
+            {
+              ...event,
+              properties: JSON.parse(event.properties),
+            },
+            null,
+            4,
+          )}
+        />
+        {/* <div className="flex flex-col gap-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-4">
                 <div>
@@ -96,8 +116,8 @@ export function RowClickDialog({
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+          </div> */}
+      </DialogContent>
+    </Dialog>
+  );
+}
