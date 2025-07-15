@@ -36,7 +36,7 @@ export function CustomerComboBox({
 }) {
   const env = useEnv();
   const navigate = useNavigate();
-  const { customer } = useAnalyticsContext();
+  const { customer, setHasCleared } = useAnalyticsContext();
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState("");
   const [isSearching, setIsSearching] = React.useState(false);
@@ -80,8 +80,11 @@ export function CustomerComboBox({
             "w-[200px] justify-between text-xs",
             classNames?.trigger,
           )}
+          onClick={() => {
+            setValue("");
+          }}
         >
-          {customer?.name || customer?.id || "Switch customer"}
+          {customer?.name || customer?.id || "Viewing all customers"}
           <ChevronsUpDown className="opacity-50 h-4 w-4" />
         </Button>
       </PopoverTrigger>
@@ -102,8 +105,22 @@ export function CustomerComboBox({
               </div>
             ) : (
               <>
-                <CommandEmpty>
-                  {value ? "No customer found." : "Search for a customer..."}
+                <CommandEmpty className="py-2 text-center">
+                  <p className="mb-2 text-sm text-muted-foreground">
+                    {value ? "No customer found." : "Search for a customer"}
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="mx-auto"
+                    onClick={() => {
+                      navigateTo('/analytics', navigate, env);
+                      setOpen(false);
+                      setHasCleared(false);
+                    }}
+                  >
+                    Or select all customers
+                  </Button>
                 </CommandEmpty>
                 <CommandGroup>
                   {value &&
