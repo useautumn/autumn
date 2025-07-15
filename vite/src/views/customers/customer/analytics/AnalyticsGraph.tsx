@@ -51,13 +51,16 @@ const hourFormatter = new Intl.DateTimeFormat(navigator.language || "en-US", {
   minute: "numeric",
 });
 
-const timestampFormatter = new Intl.DateTimeFormat(navigator.language || "en-US", {
-  month: "long",
-  day: "numeric",
-  hour: "numeric",
-  minute: "numeric",
-  second: "numeric",
-})
+const timestampFormatter = new Intl.DateTimeFormat(
+  navigator.language || "en-US",
+  {
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+  },
+);
 
 export function EventsBarChart({
   data,
@@ -134,15 +137,23 @@ export function EventsAGGrid({ data }: { data: any }) {
       valueFormatter: (params: ValueFormatterParams<any, unknown>) => {
         return timestampFormatter.format(new Date(params.value as string));
       },
+      cellStyle: {
+        paddingLeft: "2.5rem",
+        fontWeight: "normal",
+      },
+      headerStyle: {
+        paddingLeft: "2.5rem",
+      },
     },
-    { field: "event_name", flex: 1 },
-    { field: "value", flex: 0 },
-    { field: "properties", flex: 1 },
+    { field: "event_name", flex: 1, cellStyle: { fontWeight: "normal" } },
+    { field: "value", flex: 0, cellStyle: { fontWeight: "normal" } },
+    { field: "properties", flex: 1, cellStyle: { fontWeight: "normal" } },
   ]);
 
   ModuleRegistry.registerModules([AllCommunityModule, ValidationModule]);
 
-  const { gridRef, pageSize, setTotalRows, setTotalPages, setCurrentPage } = useAnalyticsContext();
+  const { gridRef, pageSize, setTotalRows, setTotalPages, setCurrentPage } =
+    useAnalyticsContext();
 
   useEffect(() => {
     setRowData(data.data);
@@ -150,7 +161,7 @@ export function EventsAGGrid({ data }: { data: any }) {
   }, [data]);
 
   return (
-    <div className="w-full h-full overflow-hidden px-9">
+    <div className="w-full h-full overflow-hidden">
       <AgGridReact
         ref={gridRef}
         rowData={rowData}

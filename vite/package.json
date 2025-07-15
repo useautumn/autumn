@@ -35,6 +35,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@types/recharts": "^2.0.1",
     "@wooorm/starry-night": "^3.6.0",
+    "ag-grid-community": "^34.0.2",
     "ag-grid-react": "^34.0.1",
     "autumn-js": "^0.0.77",
     "axios": "^1.8.3",

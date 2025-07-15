@@ -8,7 +8,7 @@ import { routeHandler } from "@/utils/routerUtils.js";
 
 export const analyticsRouter = Router();
 
-analyticsRouter.post("/events/", async (req: any, res: any) =>
+analyticsRouter.post("/events", async (req: any, res: any) =>
   routeHandler({
     req,
     res,
@@ -44,7 +44,7 @@ analyticsRouter.post("/events/", async (req: any, res: any) =>
         // Check for bcExclusionFlag only if we have a specific customer
         if (customer.customer_products) {
           customer.customer_products.forEach((product: FullCusProduct) => {
-            if(product.product.is_default) {
+            if (product.product.is_default) {
               bcExclusionFlag = true;
             }
           });
@@ -62,6 +62,8 @@ analyticsRouter.post("/events/", async (req: any, res: any) =>
         aggregateAll,
       });
 
+      // console.log("events", events);
+
       res.status(200).json({
         customer,
         events,
@@ -72,7 +74,7 @@ analyticsRouter.post("/events/", async (req: any, res: any) =>
   }),
 );
 
-analyticsRouter.post("/raw/", async (req: any, res: any) =>
+analyticsRouter.post("/raw", async (req: any, res: any) =>
   routeHandler({
     req,
     res,
@@ -108,7 +110,8 @@ analyticsRouter.post("/raw/", async (req: any, res: any) =>
       const events = await AnalyticsService.getRawEvents({
         req,
         params: {
-          customer_id: customer?.internal_id,
+          // customer_id: customer?.internal_id,
+          customer_id: customer?.id,
           interval,
         },
         customer,

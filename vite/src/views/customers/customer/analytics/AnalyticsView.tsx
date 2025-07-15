@@ -44,13 +44,6 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 
   const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
 
-  console.log("Customer:", customer);
-  console.log("Features:", features);
-  console.log("Events:", events);
-  console.log("Selected items:", allSelectedItems);
-  console.log("Error:", error);
-  console.log("Raw events:", rawEvents);
-
   const chartConfig = events?.meta
     .filter((x: any) => x.name != "period")
     .map((x: any, index: number) => {
@@ -82,8 +75,6 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         };
       }
     });
-
-  console.log("Chart config:", chartConfig);
 
   useEffect(() => {
     if (error) {
@@ -126,7 +117,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         setTotalRows,
       }}
     >
-      <div className="flex flex-col gap-4 h-fit relative w-full text-sm pb-0 scrollbar-hide">
+      <div className="flex flex-col gap-4 h-full relative w-full text-sm pb-0 overflow-hidden">
         <h1
           className={cn(
             "text-xl font-medium shrink-0 pl-10",
@@ -135,42 +126,54 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         >
           Analytics
         </h1>
-        <PageSectionHeader title="Events" endContent={<QueryTopbar />} />
-        <div className="h-[350px]">
-          <div className="flex-1 px-10">
-            {queryLoading &&
-              (eventNames.length > 0 || featureIds.length > 0) && (
-                <p className="text-t3 text-sm shimmer w-fit">
-                  Fetching events for {customerId || "all customers"}
-                </p>
-              )}
+        <div>
+          <PageSectionHeader
+            title="Events"
+            endContent={<QueryTopbar />}
+            className="h-10"
+          />
+          {queryLoading && (
+            <div className="flex-1 px-10 pt-6">
+              <p className="text-t3 text-sm shimmer w-fit">
+                Fetching usage {customerId ? `for ${customerId}` : ""}
+              </p>
+            </div>
+          )}
+
+          <div className="h-[350px]">
+            {events && events.data.length > 0 && (
+              <Card className="w-full bg-transparent border-none rounded-none shadow-none">
+                <CardContent className="px-6 h-full bg-transparent">
+                  <EventsBarChart data={events} chartConfig={chartConfig} />
+                </CardContent>
+              </Card>
+            )}
           </div>
-          {events && events.data.length > 0 && (
-            <Card className="w-full bg-transparent border-none rounded-none shadow-none">
-              <CardContent className="px-6 h-full bg-transparent">
-                <EventsBarChart data={events} chartConfig={chartConfig} />
+        </div>
+
+        <div className="h-full">
+          <PageSectionHeader
+            title="Raw Events"
+            className="h-10"
+            endContent={<PaginationPanel />}
+          />
+
+          {rawQueryLoading && (
+            <div className="flex-1 px-10 pt-6">
+              <p className="text-t3 text-sm shimmer w-fit">
+                Fetching raw events {customerId ? `for ${customerId}` : ""}
+              </p>
+            </div>
+          )}
+
+          {rawEvents && !rawQueryLoading && (
+            <Card className="w-full h-full bg-stone-50 border-none rounded-none shadow-none py-0 pb-10">
+              <CardContent className="p-0 h-full bg-transparent overflow-hidden">
+                <EventsAGGrid data={rawEvents} />
               </CardContent>
             </Card>
           )}
         </div>
-
-        <PageSectionHeader title="Raw Events" className="h-10" endContent={<PaginationPanel />} />
-
-        {rawQueryLoading && (
-          <div className="flex-1 px-10">
-            <p className="text-t3 text-sm shimmer w-fit">
-              Fetching raw events for {customerId}
-            </p>
-          </div>
-        )}
-
-        {rawEvents && !rawQueryLoading && (
-          <Card className="w-full h-full bg-transparent border-none rounded-none shadow-none py-0 pb-4">
-            <CardContent className="p-0 h-[600px] bg-transparent overflow-hidden">
-              <EventsAGGrid data={rawEvents} />
-            </CardContent>
-          </Card>
-        )}
       </div>
     </AnalyticsContext.Provider>
   );

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
 import { INTERVALS } from "./QueryTopbar";
 import { useAnalyticsContext } from "../AnalyticsContext";
-import { Feature } from "@autumn/shared";
+import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSearchParams, useNavigate, useLocation } from "react-router";
@@ -41,11 +41,32 @@ export const SelectFeatureDropdown = ({
 
   // If no selections are made, default to the first 10 items (features first, then events)
   useEffect(() => {
-    if (currentFeatureIds.length === 0 && currentEventNames.length === 0 && !hasCleared) {
-      const defaultFeatureIds = features.slice(0, 10).map((feature: Feature) => feature.id);
-      const remainingSlots = 10 - defaultFeatureIds.length;
-      const defaultEventNames = remainingSlots > 0 ? allEventNames.slice(0, remainingSlots) : [];
-      
+    if (
+      features.length > 0 && // Only run when features have actually loaded
+      currentFeatureIds.length === 0 &&
+      currentEventNames.length === 0 &&
+      !hasCleared
+    ) {
+      let defaultFeatureIds = features
+        .filter((feature: Feature) => {
+          if (
+            feature.type === FeatureType.Metered &&
+            feature.config.usage_type == FeatureUsageType.Single
+          ) {
+            return true;
+          }
+          return false;
+        })
+        .map((feature: Feature) => feature.id);
+
+      defaultFeatureIds = defaultFeatureIds.slice(0, 10);
+
+      let defaultEventNames = [];
+
+      if (defaultFeatureIds.length == 0) {
+        defaultEventNames = allEventNames.slice(0, 10);
+      }
+
       updateQueryParams(defaultFeatureIds, defaultEventNames);
     }
   }, [features, allEventNames, hasCleared]);
@@ -83,7 +104,10 @@ export const SelectFeatureDropdown = ({
             <ChevronDown className="ml-2 h-3 w-3" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[160px]">
+        <DropdownMenuContent
+          align="end"
+          className="w-[200px] max-h-[600px] overflow-y-auto"
+        >
           {features.length > 0 && <FeatureDropdownHeader text="Features" />}
           {features.map((feature: Feature) => (
             <DropdownMenuCheckboxItem
@@ -107,7 +131,7 @@ export const SelectFeatureDropdown = ({
               }}
               key={feature.id}
             >
-              {feature.name}
+              <span className="text-xs">{feature.name}</span>
             </DropdownMenuCheckboxItem>
           ))}
           {features.length > 0 && <DropdownMenuSeparator />}
@@ -136,7 +160,7 @@ export const SelectFeatureDropdown = ({
               }}
               key={eventName}
             >
-              {eventName}
+              <span className="text-xs">{eventName}</span>
             </DropdownMenuCheckboxItem>
           ))}
 
