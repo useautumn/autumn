@@ -165,6 +165,8 @@ const getSameProductBranch = async ({
   curSameProduct = curSameProduct!;
 
   // 1. If new version?
+  // console.log("Current same product version:", curSameProduct.product.version);
+  // console.log("New Product version:", product.version);
   if (curSameProduct.product.version !== product.version) {
     return AttachBranch.NewVersion;
   }

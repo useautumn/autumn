@@ -5,6 +5,26 @@ import { Entity, entities } from "@autumn/shared";
 import { and, eq, inArray, sql } from "drizzle-orm";
 
 export class EntityService {
+  static async get({
+    db,
+    id,
+    internalCustomerId,
+    internalFeatureId,
+  }: {
+    db: DrizzleCli;
+    id: string;
+    internalCustomerId: string;
+    internalFeatureId: string;
+  }) {
+    return await db.query.entities.findFirst({
+      where: (entities, { eq, and }) =>
+        and(
+          eq(entities.id, id),
+          eq(entities.internal_customer_id, internalCustomerId),
+          eq(entities.internal_feature_id, internalFeatureId),
+        ),
+    });
+  }
   static async getNull({
     db,
     orgId,

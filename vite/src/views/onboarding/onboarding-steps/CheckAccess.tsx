@@ -181,7 +181,7 @@ export default function CheckAccessStep({
                         : selectedFeature?.name}
                     </span>
                     {!isProduct && selectedFeature && (
-                      <FeatureTypeBadge type={selectedFeature.type} />
+                      <FeatureTypeBadge {...selectedFeature} />
                     )}
                   </div>
                 ) : (
@@ -195,9 +195,6 @@ export default function CheckAccessStep({
                   <SelectItem key={item.id} value={item.id!}>
                     <div className="flex items-center gap-2">
                       <span>{item.name}</span>
-                      {!isProduct && (
-                        <FeatureTypeBadge type={(item as Feature).type} />
-                      )}
                     </div>
                   </SelectItem>
                 ))}
