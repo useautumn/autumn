@@ -15,7 +15,7 @@ export const PageSectionHeader = ({
   isOnboarding?: boolean;
   addButton?: React.ReactNode;
   className?: string;
-  classNames?: {
+  classNames?: {  
     title?: string;
   };
 }) => {
