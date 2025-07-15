@@ -4,6 +4,7 @@ import {
   useSearchParams,
   useLocation,
 } from "react-router";
+import { useEffect } from "react";
 import { AppEnv } from "@autumn/shared";
 
 import {
@@ -26,8 +27,8 @@ export const INTERVALS: Record<string, string> = {
   "7d": "Last 7 days",
   "30d": "Last 30 days",
   "90d": "Last 90 days",
-  "1bc": "Last billing cycle",
-  "3bc": "Last 3 billing cycles",
+  "1bc": "Current billing cycle",
+  "3bc": "Latest 3 billing cycles",
 };
 
 export const QueryTopbar = () => {
@@ -42,6 +43,12 @@ export const QueryTopbar = () => {
     params.set(key, value);
     navigate(`${location.pathname}?${params.toString()}`);
   };
+
+  useEffect(() => {
+    if(!selectedInterval || !searchParams.get("interval")) {
+      updateQueryParams("interval", "30d");
+    }
+  }, [searchParams]);
 
   return (
     <div className="flex items-center py-0 h-full">
@@ -62,7 +69,7 @@ export const QueryTopbar = () => {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[160px]">
           {Object.keys(INTERVALS).filter((interval) => {
-            if(bcExclusionFlag) {
+            if(bcExclusionFlag || !customer) {
               return interval !== "1bc" && interval !== "3bc";
             }
             return true;
