@@ -43,6 +43,7 @@ const init = async () => {
         "http://localhost:5173",
         "http://localhost:5174",
         "https://app.useautumn.com",
+        "https://staging.useautumn.com",
         "https://*.useautumn.com",
         "https://localhost:8080",
         "https://app.aidvize.com",
@@ -69,7 +70,7 @@ const init = async () => {
         "If-Modified-Since",
         "If-Unmodified-Since",
       ],
-    }),
+    })
   );
 
   app.all("/api/auth/*", toNodeHandler(auth));
