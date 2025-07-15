@@ -398,6 +398,9 @@ importers:
       '@wooorm/starry-night':
         specifier: ^3.6.0
         version: 3.6.0
+      ag-charts-community:
+        specifier: ^12.0.2
+        version: 12.0.2
       ag-grid-community:
         specifier: ^34.0.2
         version: 34.0.2
