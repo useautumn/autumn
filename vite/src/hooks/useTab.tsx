@@ -5,6 +5,14 @@ export const useTab = () => {
   if (pathname.startsWith("/admin") || pathname.startsWith("/sandbox/admin")) {
     return "admin";
   }
+
+  if (
+    pathname.startsWith("/analytics") ||
+    pathname.startsWith("/sandbox/analytics")
+  ) {
+    return "analytics";
+  }
+
   if (
     pathname.startsWith("/features") ||
     pathname.startsWith("/sandbox/features")

@@ -1,8 +1,11 @@
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
+import { navigateTo, nullish } from "@/utils/genUtils";
 import { ErrCode, FullCustomer } from "@autumn/shared";
-import { useSearchParams } from "react-router";
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 
 export const useAnalyticsData = () => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const customerId = searchParams.get("customer_id");
   const featureIds = searchParams.get("feature_ids")?.split(",");
@@ -24,6 +27,34 @@ export const useAnalyticsData = () => {
     ...(eventNames || []).sort(),
     ...(featureIds || []).sort(),
   ];
+
+  const {
+    data: eventNamesData,
+    isLoading: eventNamesLoading,
+    error: eventNamesError,
+  } = usePostSWR({
+    method: "get",
+    url: `/query/event_names`,
+    enabled: nullish(eventNames) && nullish(featureIds),
+    queryKey,
+    options: {
+      refreshInterval: 0,
+      onError: (error) => {
+        if (error.code === ErrCode.ClickHouseDisabled) {
+          return error;
+        }
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (eventNamesData) {
+      searchParams.set("event_names", eventNamesData.eventNames.join(","));
+      searchParams.set("feature_ids", eventNamesData.featureIds.join(","));
+
+      navigate(`?${searchParams.toString()}`);
+    }
+  }, [eventNamesData, searchParams]);
 
   const {
     data,

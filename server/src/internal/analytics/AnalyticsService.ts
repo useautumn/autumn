@@ -1,16 +1,12 @@
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { ClickHouseClient } from "@clickhouse/client";
 import {
-  Customer,
   ErrCode,
-  events,
   FullCustomer,
   FullCusProduct,
   CusProductStatus,
   Subscription,
 } from "@autumn/shared";
-import { and, eq, sql } from "drizzle-orm";
-import { gte, lte } from "drizzle-orm";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { StatusCodes } from "http-status-codes";
@@ -42,6 +38,36 @@ export class AnalyticsService {
     const seconds = String(date.getSeconds() - 1).padStart(2, "0");
 
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+
+  static async getTopEventNames({
+    ch,
+    orgId,
+    env,
+  }: {
+    ch: ClickHouseClient;
+    orgId: string;
+    env: string;
+  }) {
+    const query = `
+    select count(*), event_name 
+    from org_events_view(org_id={org_id:String}, org_slug='', env={env:String}) 
+    where timestamp >= NOW() - INTERVAL '1 month'
+    group by event_name
+    order by count(*) desc
+    limit 3
+    `;
+    const result = await ch.query({
+      query,
+      query_params: {
+        org_id: orgId,
+        env: env,
+      },
+    });
+
+    const resultJson = await result.json();
+
+    return resultJson.data.map((row: any) => row.event_name);
   }
 
   static async getTimeseriesEvents({

@@ -77,7 +77,7 @@ export function CustomerComboBox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-[200px] justify-between text-xs",
+            "w-[150px] justify-between text-xs",
             classNames?.trigger,
           )}
           onClick={() => {
@@ -85,12 +85,12 @@ export function CustomerComboBox({
           }}
         >
           <span className="w-full truncate">
-            {customer?.name || customer?.id || "Viewing all customers"}
+            {customer?.name || customer?.id || "All customers"}
           </span>
           <ChevronsUpDown className="opacity-50 h-4 w-4" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0">
+      <PopoverContent className="w-[300px] p-0" align="start">
         <Command filter={() => 1}>
           <CommandInput
             placeholder="Search customer..."

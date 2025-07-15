@@ -3,40 +3,17 @@ import {
   ColDef,
   ModuleRegistry,
   ValidationModule,
-  themeQuartz,
-  themeMaterial,
-  themeAlpine,
   ValueFormatterParams,
   RowDataUpdatedEvent,
   PaginationChangedEvent,
 } from "ag-grid-community";
-import {
-  AgChartOptions,
-  AgFlowProportionChartOptions,
-  AgStandaloneChartOptions,
-  FormatterParams,
-} from "ag-charts-community";
+import { AgChartOptions, FormatterParams } from "ag-charts-community";
 import { AgCharts } from "ag-charts-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 // Register all Community features
 
 import { AgGridReact } from "ag-grid-react";
-import { useEffect, useRef, useState } from "react";
-import { Copy } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { CopyablePre } from "@/components/general/CopyablePre";
+import { useEffect, useState } from "react";
 import { IRow, Row, autumnTheme, paginationOptions } from "./components/AGGrid";
 import { useAnalyticsContext } from "./AnalyticsContext";
 import { RowClickDialog } from "./components/RowClickDialog";
@@ -112,8 +89,6 @@ export function EventsBarChart({
   });
 
   const chartData = data.data;
-  console.log("AgCharts data:", chartData);
-  console.log("AgCharts config:", chartConfig);
 
   useEffect(() => {
     setOptions({
@@ -157,7 +132,6 @@ export function EventsAGGrid({ data }: { data: any }) {
 
   useEffect(() => {
     setRowData(data.data);
-    console.log("rowData", rowData);
   }, [data]);
 
   return (

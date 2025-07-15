@@ -78,7 +78,11 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
 
   useEffect(() => {
     if (error) {
-      if (error.response.data.code === ErrCode.ClickHouseDisabled) {
+      if (
+        error.response &&
+        error.response.data &&
+        error.response.data.code === ErrCode.ClickHouseDisabled
+      ) {
         setClickHouseDisabled(true);
       }
     }
@@ -126,7 +130,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
         >
           Analytics
         </h1>
-        <div>
+        <div className="max-h-[400px] min-h-[400px] pb-6">
           <PageSectionHeader
             title="Events"
             endContent={<QueryTopbar />}
@@ -140,7 +144,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
             </div>
           )}
 
-          <div className="h-[350px]">
+          <div className="h-full">
             {events && events.data.length > 0 && (
               <Card className="w-full bg-transparent border-none rounded-none shadow-none">
                 <CardContent className="px-6 h-full bg-transparent">

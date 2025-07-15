@@ -67,18 +67,25 @@ export function usePostSWR({
   enabled = true,
   options = {},
   queryKey,
+  method = "post",
 }: {
   url: string;
-  data: any;
+  data?: any;
   enabled?: boolean;
   options?: SWRConfiguration;
   queryKey?: any[];
+  method?: "post" | "get";
 }) {
   const axiosInstance = useAxiosInstance();
 
   const fetcher = async () => {
-    const res = await axiosInstance.post(url, data);
-    return res.data;
+    if (method === "post") {
+      const res = await axiosInstance.post(url, data);
+      return res.data;
+    } else {
+      const res = await axiosInstance.get(url);
+      return res.data;
+    }
   };
 
   return useSWR(enabled ? queryKey || url : null, fetcher, {

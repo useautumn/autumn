@@ -2,11 +2,63 @@ import { Router } from "express";
 import { CusService } from "../customers/CusService.js";
 import { AnalyticsService } from "./AnalyticsService.js";
 import { StatusCodes } from "http-status-codes";
-import { ErrCode, FullCusProduct, FullCustomer } from "@autumn/shared";
+import {
+  ErrCode,
+  Feature,
+  FeatureType,
+  FullCusProduct,
+  FullCustomer,
+} from "@autumn/shared";
 import RecaseError, { handleRequestError } from "@/utils/errorUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 
 export const analyticsRouter = Router();
+
+analyticsRouter.get("/event_names", async (req: any, res: any) =>
+  routeHandler({
+    req,
+    res,
+    action: "query event names",
+    handler: async () => {
+      const { db, org, env, features } = req;
+      const { interval, event_names, customer_id } = req.body;
+
+      const result = await AnalyticsService.getTopEventNames({
+        ch: req.clickhouseClient,
+        orgId: org.id,
+        env,
+      });
+
+      // console.log("result", result);
+      let featureIds: string[] = [];
+      let eventNames: string[] = [];
+
+      for (let i = 0; i < result.length; i++) {
+        // Is an event name
+        if (
+          features.some(
+            (feature: Feature) =>
+              feature.type == FeatureType.Metered &&
+              feature.config.filters?.[0]?.value.includes(result[i]),
+          )
+        ) {
+          eventNames.push(result[i]);
+        } else if (
+          features.some((feature: Feature) => feature.id === result[i])
+        ) {
+          featureIds.push(result[i]);
+        }
+
+        if (i >= 2) break;
+      }
+
+      res.status(200).json({
+        featureIds,
+        eventNames,
+      });
+    },
+  }),
+);
 
 analyticsRouter.post("/events", async (req: any, res: any) =>
   routeHandler({
@@ -15,7 +67,7 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
     action: "query events by customer id",
     handler: async () => {
       const { db, org, env, features } = req;
-      const { interval, event_names, customer_id } = req.body;
+      let { interval, event_names, customer_id } = req.body;
 
       let aggregateAll = false;
       let customer: FullCustomer | undefined = undefined;
@@ -49,6 +101,10 @@ analyticsRouter.post("/events", async (req: any, res: any) =>
             }
           });
         }
+      }
+
+      if (event_names && Array.isArray(event_names)) {
+        event_names = event_names.filter((name: string) => name !== "");
       }
 
       const events = await AnalyticsService.getTimeseriesEvents({
