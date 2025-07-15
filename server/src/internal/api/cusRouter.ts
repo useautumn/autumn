@@ -28,8 +28,6 @@ cusRouter.post("/all/search", async (req: any, res: any) => {
   try {
     const { search, page_size = 50, page = 1, last_item, filters } = req.body;
 
-    const searchStart1 = Date.now();
-    const searchStart2 = Date.now();
     const { data: customers, count } = await CusSearchService.search({
       db: req.db,
       orgId: req.orgId,
@@ -40,8 +38,6 @@ cusRouter.post("/all/search", async (req: any, res: any) => {
       pageNumber: page,
       pageSize: page_size,
     });
-
-    // let totalCount = Number(count) + page_size * (page - 1);
 
     res.status(200).json({ customers, totalCount: Number(count) });
   } catch (error) {
