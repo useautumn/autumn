@@ -30,11 +30,10 @@ export const useAnalyticsData = () => {
   const { data, isLoading: queryLoading, error } = usePostSWR({
     url: `/query/events`,
     data: {
-      customer_id: customerId,
+      customer_id: customerId || null,
       interval,
       event_names: [...(eventNames || []), ...(featureIds || [])],
     },
-    enabled: !!customerId,
     queryKey,
     options: {
       refreshInterval: 0,
@@ -84,10 +83,9 @@ export const useRawAnalyticsData = () => {
   const { data, isLoading: queryLoading, error } = usePostSWR({
     url: `/query/raw`,
     data: {
-      customer_id: customerId,
+      customer_id: customerId || null,
       interval,
     },
-    enabled: !!customerId,
     queryKey,
     options: {
       refreshInterval: 0,
