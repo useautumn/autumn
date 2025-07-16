@@ -157,7 +157,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
               <div className="flex-1 px-10 pt-6">
                 <p className="text-t3 text-sm">
                   No events found. Please widen your filters.{" "}
-                  {eventNames.length === 0 ? "Try to select some events in the dropdown above" : ""}
+                  {eventNames.length === 0 ? "Try to select some events in the dropdown above." : ""}
                 </p>
               </div>
             )}
