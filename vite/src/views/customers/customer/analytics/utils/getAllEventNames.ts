@@ -1,4 +1,4 @@
-import { Feature } from "@autumn/shared";
+import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 
 export const getAllEventNames = ({ features }: { features: Feature[] }) => {
   return features.flatMap((feature: Feature) => {
@@ -15,4 +15,8 @@ export const getAllEventNames = ({ features }: { features: Feature[] }) => {
         ),
     );
   });
+};
+
+export const eventNameBelongsToFeature = ({ eventName, features }: { eventName: string, features: Feature[] }) => {
+  return features.some((feature: Feature) => feature.type === FeatureType.Metered && feature.config.usage_type === FeatureUsageType.Single && feature.config.filters && feature.config.filters.some((filter: any) => filter.value.includes(eventName)));
 };
