@@ -4,7 +4,11 @@ import { ErrCode, FullCustomer } from "@autumn/shared";
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
-export const useAnalyticsData = () => {
+export const useAnalyticsData = ({
+  hasCleared = false,
+}: {
+  hasCleared?: boolean;
+}) => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const customerId = searchParams.get("customer_id");
@@ -48,13 +52,13 @@ export const useAnalyticsData = () => {
   });
 
   useEffect(() => {
-    if (eventNamesData) {
+    if (eventNamesData && !hasCleared) {
       searchParams.set("event_names", eventNamesData.eventNames.join(","));
       searchParams.set("feature_ids", eventNamesData.featureIds.join(","));
 
       navigate(`?${searchParams.toString()}`);
     }
-  }, [eventNamesData, searchParams]);
+  }, [eventNamesData, searchParams, hasCleared, navigate]);
 
   const {
     data,
