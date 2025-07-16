@@ -41,10 +41,12 @@ export const constructBooleanFeature = ({
   featureId,
   orgId,
   env,
+  name,
 }: {
   featureId: string;
   orgId: string;
   env: AppEnv;
+  name?: string;
 }) => {
   let newFeature: Feature = {
     internal_id: generateId("fe"),
@@ -53,7 +55,7 @@ export const constructBooleanFeature = ({
     created_at: Date.now(),
 
     id: featureId,
-    name: keyToTitle(featureId),
+    name: name || keyToTitle(featureId),
     type: FeatureType.Boolean,
     config: null,
   };
@@ -63,11 +65,13 @@ export const constructBooleanFeature = ({
 
 export const constructMeteredFeature = ({
   featureId,
+  name,
   orgId,
   env,
   usageType,
 }: {
   featureId: string;
+  name?: string;
   orgId: string;
   env: AppEnv;
   usageType: FeatureUsageType;
@@ -79,7 +83,7 @@ export const constructMeteredFeature = ({
     created_at: Date.now(),
 
     id: featureId,
-    name: keyToTitle(featureId),
+    name: name || keyToTitle(featureId),
     type: FeatureType.Metered,
     config: {
       filters: [
@@ -102,11 +106,13 @@ export const constructMeteredFeature = ({
 
 export const constructCreditSystem = ({
   featureId,
+  name,
   orgId,
   env,
   schema,
 }: {
   featureId: string;
+  name?: string;
   orgId: string;
   env: AppEnv;
   schema: {
@@ -130,7 +136,7 @@ export const constructCreditSystem = ({
     created_at: Date.now(),
 
     id: featureId,
-    name: keyToTitle(featureId),
+    name: name || keyToTitle(featureId),
     type: FeatureType.CreditSystem,
     config,
   };
