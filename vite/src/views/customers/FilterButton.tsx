@@ -12,36 +12,27 @@ import {
 import { useCustomersContext } from "./CustomersContext";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { Check, ListFilter, X } from "lucide-react";
-import { useSearchParams } from "react-router";
-import { useSetSearchParams } from "@/utils/setSearchParams";
-import { useEffect } from "react";
 
 function FilterButton() {
   const { setFilters } = useCustomersContext();
-  const [searchParams] = useSearchParams();
-  const setSearchParams = useSetSearchParams();
-  // useEffect(() => {
-  //   let statusParam = searchParams.get("status");
-  //   let productIdParam = searchParams.get("product_id");
-  //   setFilters({ status: statusParam, product_id: productIdParam });
-  // }, [searchParams]);
+
+  const clearFilters = () => {
+    setFilters({
+      status: [],
+      product_id: [],
+    });
+  };
 
   return (
     <DropdownMenu>
       <RenderFilterTrigger />
-
       <DropdownMenuContent className="w-56" align="start">
         <FilterStatus />
         <ProductStatus />
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem
-            onClick={() =>
-              setSearchParams({
-                status: "",
-                product_id: "",
-              })
-            }
+            onClick={clearFilters}
             className="cursor-pointer"
           >
             <X size={14} className="text-t3" />
@@ -57,10 +48,21 @@ export default FilterButton;
 
 export const FilterStatus = () => {
   const { filters, setFilters } = useCustomersContext();
-  const statuses = ["canceled", "free_trial"];
 
-  const [searchParams] = useSearchParams();
-  const setSearchParams = useSetSearchParams();
+  const statuses: string[] = ["canceled", "free_trial"];
+
+  const selectedStatuses = filters.status || [];
+
+  const toggleStatus = (status: string) => {
+    const selected = filters.status || [];
+    const isSelected = selected.includes(status);
+
+    const updated = isSelected
+      ? selected.filter((s: string) => s !== status)
+      : [...selected, status];
+
+    setFilters({ ...filters, status: updated });
+  };
 
   return (
     <DropdownMenuGroup>
@@ -68,19 +70,11 @@ export const FilterStatus = () => {
         Status
       </DropdownMenuLabel>
       {statuses.map((status: any) => {
-        const isActive = searchParams.get("status") === status;
+        const isActive = selectedStatuses.includes(status);
         return (
           <DropdownMenuItem
             key={status}
-            onClick={() => {
-              if (isActive) {
-                // setFilters({ ...filters, status: undefined });
-                setSearchParams({ status: "" });
-              } else {
-                // setFilters({ ...filters, status });
-                setSearchParams({ status });
-              }
-            }}
+            onClick={() => toggleStatus(status)}
             className="flex items-center justify-between cursor-pointer text-sm"
           >
             {keyToTitle(status)}
@@ -93,26 +87,32 @@ export const FilterStatus = () => {
 };
 
 export const ProductStatus = () => {
-  const { products } = useCustomersContext();
-  const setSearchParams = useSetSearchParams();
-  const [searchParams] = useSearchParams();
+  const { products, filters, setFilters } = useCustomersContext();
+
+  const selectedProducts = filters.product_id || [];
+
+  const toggleProduct = (productId: string) => {
+    const selected = filters.product_id || [];
+    const isSelected = selected.includes(productId);
+
+    const updated = isSelected
+      ? selected.filter((s: string) => s !== productId)
+      : [...selected, productId];
+
+    setFilters({ ...filters, product_id: updated });
+  };
+
   return (
     <DropdownMenuGroup>
       <DropdownMenuLabel className="text-t3 !font-regular text-xs">
         Product
       </DropdownMenuLabel>
       {products.map((product: any) => {
-        const isActive = searchParams.get("product_id") === product.id;
+        const isActive = selectedProducts.includes(product.id);
         return (
           <DropdownMenuItem
             key={product.id}
-            onClick={() => {
-              if (isActive) {
-                setSearchParams({ product_id: "" });
-              } else {
-                setSearchParams({ product_id: product.id });
-              }
-            }}
+            onClick={() => toggleProduct(product.id)}
             className="flex items-center justify-between cursor-pointer"
           >
             {product.name}
