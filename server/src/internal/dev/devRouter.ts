@@ -202,7 +202,7 @@ export const handleGetOtp = async (req: any, res: any) =>
     res,
     action: "Get OTP",
     handler: async () => {
-      const { db, env, orgId } = req;
+      const { db, env } = req;
       const { otp } = req.params;
       const cacheKey = `otp:${otp}`;
       const cacheData = await CacheManager.getJson(cacheKey);
@@ -216,7 +216,7 @@ export const handleGetOtp = async (req: any, res: any) =>
         db,
         env: env || AppEnv.Sandbox,
         name: `Autumn Key CLI`,
-        orgId: orgId,
+        orgId: cacheData.orgId,
         prefix: "am_sk_test",
         meta: {
           fromCli: true,
@@ -228,13 +228,17 @@ export const handleGetOtp = async (req: any, res: any) =>
         db,
         env: env || AppEnv.Live,
         name: `Autumn Key CLI`,
-        orgId: orgId,
+        orgId: cacheData.orgId,
         prefix: "am_sk_live",
         meta: {
           fromCli: true,
           generatedAt: new Date().toISOString(),
         },
       });
+
+      // console.log("New keys created:");
+      // console.log("Sandbox key:", sandboxKey);
+      // console.log("Prod key:", prodKey);
 
       let org = await OrgService.get({
         db: req.db,
