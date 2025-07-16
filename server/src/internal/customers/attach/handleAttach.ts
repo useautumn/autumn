@@ -1,7 +1,7 @@
 import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { AttachBodySchema } from "./models/AttachBody.js";
+import { AttachBodySchema } from "@autumn/shared";
 import { getAttachParams } from "./attachUtils/attachParams/getAttachParams.js";
 import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "./attachUtils/getAttachConfig.js";

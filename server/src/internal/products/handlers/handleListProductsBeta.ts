@@ -26,6 +26,7 @@ export const handleListProductsBeta = async (req: any, res: any) =>
             orgId: org.id,
             env,
             idOrInternalId: customerId as string,
+            allowNotFound: true,
           });
         })(),
       ]);
@@ -47,7 +48,7 @@ export const handleListProductsBeta = async (req: any, res: any) =>
             features,
             currency: org.default_currency || undefined,
             db,
-            fullCus: customer,
+            fullCus: customer ? customer : undefined,
           }),
         );
       }

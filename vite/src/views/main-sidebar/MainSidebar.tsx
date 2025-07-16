@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useSidebarContext } from "./SidebarContext";
 import { useHotkeys } from "react-hotkeys-hook";
 import {
+  ChartBar,
   Code,
   Package,
   PanelLeft,
@@ -71,6 +72,12 @@ export const MainSidebar = () => {
             value="customers"
             icon={<User size={20} />}
             title="Customers"
+            env={env}
+          />
+          <NavButton
+            value="analytics"
+            icon={<ChartBar size={20} />}
+            title="Analytics"
             env={env}
           />
           <NavButton

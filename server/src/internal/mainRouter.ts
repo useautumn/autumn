@@ -14,6 +14,7 @@ import { withAdminAuth } from "./admin/withAdminAuth.js";
 import { adminRouter } from "./admin/adminRouter.js";
 import { autumnHandler } from "autumn-js/express";
 import { Autumn } from "autumn-js";
+import { analyticsRouter } from "./analytics/internalAnalyticsRouter.js";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { InvoiceService } from "./invoices/InvoiceService.js";
 import rateLimit from "express-rate-limit";
@@ -33,6 +34,7 @@ mainRouter.use("/features", withOrgAuth, featureRouter);
 mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
+mainRouter.use("/query", withOrgAuth, analyticsRouter);
 
 const limiter = rateLimit({
   windowMs: 60 * 1000, // 15 minutes

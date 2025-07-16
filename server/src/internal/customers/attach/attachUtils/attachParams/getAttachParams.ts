@@ -1,5 +1,5 @@
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachBody } from "../../models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { processAttachBody } from "./processAttachBody.js";
 import { orgToVersion } from "@/utils/versionUtils.js";
 import { APIVersion } from "@autumn/shared";

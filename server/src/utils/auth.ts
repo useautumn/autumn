@@ -48,6 +48,7 @@ export const auth = betterAuth({
   trustedOrigins: [
     "http://localhost:3000",
     "https://app.useautumn.com",
+    "https://staging.useautumn.com",
     "https://*.useautumn.com",
   ],
   emailAndPassword: {

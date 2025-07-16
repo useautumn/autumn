@@ -1,7 +1,7 @@
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { AttachFlags } from "../models/AttachFlags.js";
 import { AttachConfig, AttachBranch } from "@autumn/shared";
-import { AttachBody } from "../models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 import { ProrationBehavior } from "@autumn/shared";

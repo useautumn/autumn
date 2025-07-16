@@ -234,6 +234,7 @@ export const performDeductionOnCusEnt = ({
         }
 
         let entityBalance = cusEnt.entities[entityId].balance;
+
         let {
           newBalance: newEntityBalance,
           deducted: newDeducted,

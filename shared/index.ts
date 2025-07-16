@@ -133,6 +133,7 @@ export * from "./models/attachModels/attachEnums/AttachBranch.js";
 export * from "./models/attachModels/attachEnums/AttachFunction.js";
 export * from "./models/attachModels/attachEnums/AttachConfig.js";
 export * from "./models/attachModels/checkoutModels.js";
+export * from "./models/attachModels/attachBody.js";
 
 // Utils
 export * from "./utils/displayUtils.js";

@@ -26,7 +26,7 @@ export const getCusPaymentMethodRes = async ({
   let paymentMethod = await getCusPaymentMethod({
     stripeCli,
     stripeId: fullCus.processor?.id,
-    errorIfNone: true,
+    errorIfNone: false,
   });
 
   return paymentMethod;

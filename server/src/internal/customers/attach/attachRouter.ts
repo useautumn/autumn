@@ -29,7 +29,7 @@ import { orgToVersion } from "@/utils/versionUtils.js";
 import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
-import { AttachBodySchema } from "./models/AttachBody.js";
+import { AttachBodySchema } from "@autumn/shared";
 import { processAttachBody } from "./attachUtils/attachParams/processAttachBody.js";
 import { handleAttachPreview } from "./handleAttachPreview/handleAttachPreview.js";
 import { handleAttach } from "./handleAttach.js";
@@ -115,7 +115,7 @@ export const handlePublicAttachErrors = async ({
 
   // 1. If on paid plan, not allowed to switch product
   const curProductFree = isFreeProduct(
-    curCusProduct?.customer_prices.map((cp: any) => cp.price) || [], // if no current product...
+    curCusProduct?.customer_prices.map((cp: any) => cp.price) || [] // if no current product...
   );
 
   if (!curProductFree) {
@@ -169,7 +169,7 @@ export const checkStripeConnections = async ({
         env,
         customer,
         logger,
-      }),
+      })
     );
   }
   for (const product of products) {
@@ -180,7 +180,7 @@ export const checkStripeConnections = async ({
         env,
         product,
         logger,
-      }),
+      })
     );
   }
   await Promise.all(batchProductUpdates);
@@ -221,7 +221,7 @@ export const createStripePrices = async ({
         logger,
         internalEntityId: attachParams.internalEntityId,
         useCheckout,
-      }),
+      })
     );
   }
   await Promise.all(batchPriceUpdates);
