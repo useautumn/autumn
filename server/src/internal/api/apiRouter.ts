@@ -4,7 +4,7 @@ import { eventsRouter } from "./events/eventRouter.js";
 import { cusRouter } from "./cusRouter.js";
 import { productBetaRouter, productRouter } from "../products/productRouter.js";
 
-import { featureApiRouter } from "./features/featureApiRouter.js";
+import { featureRouter } from "../features/featureRouter.js";
 import { checkRouter } from "./entitled/checkRouter.js";
 import { attachRouter } from "../customers/attach/attachRouter.js";
 import { pricingMiddleware } from "@/middleware/pricingMiddleware.js";
@@ -34,7 +34,7 @@ apiRouter.use("/products", productRouter);
 apiRouter.use("/products_beta", productBetaRouter);
 apiRouter.use("/components", componentRouter);
 apiRouter.use("/rewards", rewardRouter);
-apiRouter.use("/features", featureApiRouter);
+apiRouter.use("/features", featureRouter);
 
 apiRouter.use("/usage", usageRouter);
 apiRouter.use("/entities", entityRouter);

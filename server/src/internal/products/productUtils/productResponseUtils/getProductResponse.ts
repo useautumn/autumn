@@ -27,7 +27,7 @@ import { notNullish } from "@/utils/genUtils.js";
 import { isFreeProduct, isOneOff } from "../../productUtils.js";
 import { getFirstInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
-import { featureToResponse } from "@/internal/features/convertFeatureUtils.js";
+import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 
 export const getProductItemResponse = ({
   item,
@@ -72,7 +72,7 @@ export const getProductItemResponse = ({
   return ProductItemResponseSchema.parse({
     type,
     ...item,
-    feature: feature ? featureToResponse(feature) : null,
+    feature: feature ? toAPIFeature({ feature }) : null,
     display: withDisplay ? display : undefined,
     ...priceData,
     quantity,
