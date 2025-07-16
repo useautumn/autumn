@@ -236,14 +236,16 @@ export const handleGetOtp = async (req: any, res: any) =>
         },
       });
 
-      let { stripe_connected } = await OrgService.get({
+      let org = await OrgService.get({
         db: req.db,
         orgId: cacheData.orgId,
       });
 
+      let stripeConnected = org.stripe_connected;
+
       let responseData = {
         ...cacheData,
-        stripe_connected,
+        stripe_connected: stripeConnected,
         sandboxKey,
         prodKey,
       };
@@ -257,7 +259,7 @@ export const handleGetOtp = async (req: any, res: any) =>
         value: cacheData.orgId,
       });
 
-      if (!stripe_connected) {
+      if (!stripeConnected) {
         // we need to generate a key for the CLI to use.
         let key = generateRandomKey();
         responseData.stripeFlowAuthKey = key;
