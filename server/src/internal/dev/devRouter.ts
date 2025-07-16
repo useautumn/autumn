@@ -11,8 +11,6 @@ import { CacheType } from "@/external/caching/cacheActions.js";
 import { routeHandler } from "@/utils/routerUtils.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import Stripe from "stripe";
-import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@/errors/errCodes.js";
 import {
   checkKeyValid,
   createWebhookEndpoint,
@@ -74,7 +72,7 @@ devRouter.post("/api_key", withOrgAuth, async (req: any, res) =>
         api_key: apiKey,
       });
     },
-  }),
+  })
 );
 
 devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
@@ -100,7 +98,7 @@ devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
         CacheManager.invalidate({
           action: CacheType.SecretKey,
           value: apiKey.hashed_key!,
-        }),
+        })
       );
     }
     await Promise.all(batchInvalidate);
@@ -115,11 +113,13 @@ devRouter.delete("/api_key/:id", withOrgAuth, async (req: any, res) => {
   }
 });
 
-
 const generateOtp = (): string => {
   // Use Web Crypto API if available for cryptographically-secure randomness
   const getRandomInt = (): number => {
-    if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    if (
+      typeof crypto !== "undefined" &&
+      typeof crypto.getRandomValues === "function"
+    ) {
       const array = new Uint32Array(1);
       crypto.getRandomValues(array);
       return array[0];
@@ -155,72 +155,45 @@ export const handleCreateOtp = async (req: any, res: any) =>
     res,
     action: "Create OTP",
     handler: async () => {
-        const { orgId, env, db } = req;
+      const { orgId, env, db } = req;
 
-        // Check if there's already an OTP to use
-        const maybeCacheKey = `orgOTPExists:${orgId}`;
-        const maybeCacheData = await CacheManager.getJson(maybeCacheKey);
-        if (maybeCacheData) {
-            res.status(200).json({
-                otp: maybeCacheData,
-            });
-            return;
-        }
-
-        // Generate OTP
-        const otp = generateOtp();
-        
-        // Generate API key for the OTP
-        const sandboxKey = await createKey({
-          db,
-          env: env || AppEnv.Sandbox,
-          name: `Autumn Key CLI`,
-          orgId: orgId,
-          prefix: "am_sk_test",
-          meta: {
-            fromCli: true,
-            generatedAt: new Date().toISOString()
-          }
-        });
-
-        const prodKey = await createKey({
-          db,
-          env: env || AppEnv.Live,
-          name: `Autumn Key CLI`,
-          orgId: orgId,
-          prefix: "am_sk_live",
-          meta: {
-            fromCli: true,
-            generatedAt: new Date().toISOString()
-          }
-        });
-
-        const cacheData = {
-            otp: otp,
-            sandboxKey: sandboxKey,
-            prodKey: prodKey,
-            orgId: orgId,
-        }
-
-        const cacheKey = `otp:${otp}`;
-        await CacheManager.setJson(cacheKey, cacheData, OTP_TTL);
-        
-        const orgCacheKey = `orgOTPExists:${orgId}`;
-        await CacheManager.setJson(orgCacheKey, otp, OTP_TTL);
-        
+      // Check if there's already an OTP to use
+      const maybeCacheKey = `orgOTPExists:${orgId}`;
+      const maybeCacheData = await CacheManager.getJson(maybeCacheKey);
+      if (maybeCacheData) {
         res.status(200).json({
-          otp,
+          otp: maybeCacheData,
         });
+        return;
+      }
+
+      // Generate OTP
+      const otp = generateOtp();
+
+      const cacheData = {
+        otp: otp,
+        orgId: orgId,
+      };
+
+      const cacheKey = `otp:${otp}`;
+      await CacheManager.setJson(cacheKey, cacheData, OTP_TTL);
+
+      const orgCacheKey = `orgOTPExists:${orgId}`;
+      await CacheManager.setJson(orgCacheKey, otp, OTP_TTL);
+
+      res.status(200).json({
+        otp,
+      });
     },
   });
 
 devRouter.post("/otp", withOrgAuth, handleCreateOtp);
 
 export const generateRandomKey = (lengthInBytes: number = 32): string => {
-    if (lengthInBytes <= 0) {
-      throw new Error('Key length must be a positive number.');
-    }
-    return crypto.randomBytes(lengthInBytes).toString('hex');
+  if (lengthInBytes <= 0) {
+    throw new Error("Key length must be a positive number.");
+  }
+  return crypto.randomBytes(lengthInBytes).toString("hex");
 };
 
 export const handleGetOtp = async (req: any, res: any) =>
@@ -229,6 +202,7 @@ export const handleGetOtp = async (req: any, res: any) =>
     res,
     action: "Get OTP",
     handler: async () => {
+      const { db, env, orgId } = req;
       const { otp } = req.params;
       const cacheKey = `otp:${otp}`;
       const cacheData = await CacheManager.getJson(cacheKey);
@@ -236,6 +210,31 @@ export const handleGetOtp = async (req: any, res: any) =>
         res.status(404).json({ error: "OTP not found" });
         return;
       }
+
+      // Generate API key for the OTP
+      const sandboxKey = await createKey({
+        db,
+        env: env || AppEnv.Sandbox,
+        name: `Autumn Key CLI`,
+        orgId: orgId,
+        prefix: "am_sk_test",
+        meta: {
+          fromCli: true,
+          generatedAt: new Date().toISOString(),
+        },
+      });
+
+      const prodKey = await createKey({
+        db,
+        env: env || AppEnv.Live,
+        name: `Autumn Key CLI`,
+        orgId: orgId,
+        prefix: "am_sk_live",
+        meta: {
+          fromCli: true,
+          generatedAt: new Date().toISOString(),
+        },
+      });
 
       let { stripe_connected } = await OrgService.get({
         db: req.db,
@@ -245,14 +244,16 @@ export const handleGetOtp = async (req: any, res: any) =>
       let responseData = {
         ...cacheData,
         stripe_connected,
-      }
+        sandboxKey,
+        prodKey,
+      };
 
       await CacheManager.invalidate({
-        action: 'otp',
+        action: "otp",
         value: otp,
       });
       await CacheManager.invalidate({
-        action: 'orgOTPExists',
+        action: "orgOTPExists",
         value: cacheData.orgId,
       });
 
@@ -261,97 +262,96 @@ export const handleGetOtp = async (req: any, res: any) =>
         let key = generateRandomKey();
         responseData.stripeFlowAuthKey = key;
         let stripeCacheData = {
-          orgId: cacheData.orgId
-        }
+          orgId: cacheData.orgId,
+        };
         await CacheManager.setJson(key, stripeCacheData, OTP_TTL);
       }
 
       res.status(200).json(responseData);
     },
-});
+  });
 
-devRouter.post('/cli/stripe', async (req: any, res: any) => {
-    routeHandler({
-        req,
-        res,
-        action: "Get Stripe Flow Auth Key",
-        handler: async () => {
-            const { db, logtail: logger } = req;
-            const key = req.headers["authorization"];
-            if (!key) {
-                res.status(401).json({ message: "Unauthorized" });
-                return;
-            }
-            
-            const cacheData = await CacheManager.getJson(key);
-            if (!cacheData) {
-                res.status(404).json({ message: "Key not found" });
-                return;
-            }
-            
-            const { orgId } = cacheData;
-            const { stripeTestKey, stripeLiveKey } = req.body;
+devRouter.post("/cli/stripe", async (req: any, res: any) => {
+  routeHandler({
+    req,
+    res,
+    action: "Get Stripe Flow Auth Key",
+    handler: async () => {
+      const { db, logtail: logger } = req;
+      const key = req.headers["authorization"];
+      if (!key) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
 
-            await clearOrgCache({
-                db,
-                orgId,
-                logger,
-            });
-            
-            await checkKeyValid(stripeTestKey);
-            await checkKeyValid(stripeLiveKey);
+      const cacheData = await CacheManager.getJson(key);
+      if (!cacheData) {
+        res.status(404).json({ message: "Key not found" });
+        return;
+      }
 
-            let testWebhook: Stripe.WebhookEndpoint;
-            let liveWebhook: Stripe.WebhookEndpoint;
+      const { orgId } = cacheData;
+      const { stripeTestKey, stripeLiveKey } = req.body;
 
-            try {
-              testWebhook = await createWebhookEndpoint(
-                stripeTestKey,
-                AppEnv.Sandbox,
-                orgId,
-              );
+      await clearOrgCache({
+        db,
+        orgId,
+        logger,
+      });
 
-              liveWebhook = await createWebhookEndpoint(
-                stripeLiveKey,
-                AppEnv.Live,
-                orgId,
-              );
+      await checkKeyValid(stripeTestKey);
+      await checkKeyValid(stripeLiveKey);
 
-            } catch (error) {
-              console.log(error);
-              res.status(500).json({ message: "Error creating stripe webhook" });
-              return;
-            }
+      let testWebhook: Stripe.WebhookEndpoint;
+      let liveWebhook: Stripe.WebhookEndpoint;
 
-            await OrgService.update({
-              db,
-              orgId: orgId,
-              updates: {
-                stripe_connected: true,
-                default_currency: 'usd',
-                stripe_config: {
-                  test_api_key: encryptData(stripeTestKey),
-                  live_api_key: encryptData(stripeLiveKey),
-                  test_webhook_secret: encryptData(testWebhook.secret as string),
-                  live_webhook_secret: encryptData(liveWebhook.secret as string),
-                  success_url: "https://useautumn.com",
-                },
-              },
-            });
-            
-            let redisClient = await CacheManager.getClient();
-            if (!redisClient) {
-                res.status(500).json({ message: "Cache client not initialized" });
-                return;
-            }
+      try {
+        testWebhook = await createWebhookEndpoint(
+          stripeTestKey,
+          AppEnv.Sandbox,
+          orgId
+        );
 
-            await redisClient.del(key);
-            
-            res.status(200).json({
-                message: "Stripe keys updated",
-            });
+        liveWebhook = await createWebhookEndpoint(
+          stripeLiveKey,
+          AppEnv.Live,
+          orgId
+        );
+      } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Error creating stripe webhook" });
+        return;
+      }
+
+      await OrgService.update({
+        db,
+        orgId: orgId,
+        updates: {
+          stripe_connected: true,
+          default_currency: "usd",
+          stripe_config: {
+            test_api_key: encryptData(stripeTestKey),
+            live_api_key: encryptData(stripeLiveKey),
+            test_webhook_secret: encryptData(testWebhook.secret as string),
+            live_webhook_secret: encryptData(liveWebhook.secret as string),
+            success_url: "https://useautumn.com",
+          },
         },
-    });
-})
+      });
+
+      let redisClient = await CacheManager.getClient();
+      if (!redisClient) {
+        res.status(500).json({ message: "Cache client not initialized" });
+        return;
+      }
+
+      await redisClient.del(key);
+
+      res.status(200).json({
+        message: "Stripe keys updated",
+      });
+    },
+  });
+});
 
 devRouter.get("/otp/:otp", handleGetOtp);
