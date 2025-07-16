@@ -9,15 +9,20 @@ import {
   PreviewLineItem,
   BillingType,
   AttachConfig,
+  getFeatureInvoiceDescription,
+  UsagePriceConfig,
+  UsageModel,
 } from "@autumn/shared";
 import { AttachParams } from "../../customers/cusProducts/AttachParams.js";
 import {
   getBillingType,
   getPriceForOverage,
+  getPriceOptions,
 } from "../../products/prices/priceUtils.js";
 import { getPriceEntitlement } from "../../products/prices/priceUtils.js";
 import {
   isFixedPrice,
+  isPrepaidPrice,
   isUsagePrice,
 } from "../../products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 
@@ -31,7 +36,10 @@ import {
   getAlignedIntervalUnix,
   subtractBillingIntervalUnix,
 } from "../../products/prices/billingIntervalUtils.js";
-import { priceToUsageModel } from "@/internal/products/prices/priceUtils/convertPrice.js";
+import {
+  priceToFeature,
+  priceToUsageModel,
+} from "@/internal/products/prices/priceUtils/convertPrice.js";
 import { getContUseInvoiceItems } from "@/internal/customers/attach/attachUtils/getContUseItems/getContUseInvoiceItems.js";
 import Stripe from "stripe";
 import {
@@ -40,6 +48,7 @@ import {
 } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import { sortPricesByType } from "@/internal/products/prices/priceUtils/sortPriceUtils.js";
 import { getMergeCusProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/getMergeCusProduct.js";
+import { priceToInvoiceAmount } from "@/internal/products/prices/priceUtils/priceToInvoiceAmount.js";
 
 export const getDefaultPriceStr = ({
   org,
@@ -114,6 +123,7 @@ export const getItemsForNewProduct = async ({
   freeTrial,
   stripeSubs,
   logger,
+  withPrepaid = false,
 }: {
   newProduct: FullProduct;
   attachParams: AttachParams;
@@ -127,6 +137,7 @@ export const getItemsForNewProduct = async ({
   freeTrial?: FreeTrial | null;
   stripeSubs?: Stripe.Subscription[];
   logger: any;
+  withPrepaid?: boolean;
 }) => {
   const { org, features } = attachParams;
   now = now || Date.now();
@@ -196,6 +207,37 @@ export const getItemsForNewProduct = async ({
         feature_id: ent?.feature_id,
       });
       continue;
+    }
+
+    if (withPrepaid && isPrepaidPrice({ price })) {
+      let options = getPriceOptions(price, attachParams.optionsList);
+      let quantity = notNullish(options?.quantity) ? options?.quantity! : 1;
+      let amount = priceToInvoiceAmount({
+        price,
+        quantity,
+        proration: finalProration,
+        now,
+      });
+      let feature = priceToFeature({
+        price,
+        features,
+      })!;
+
+      items.push({
+        price_id: price.id,
+        price: formatAmount({ org, amount: 0 }),
+        description: getFeatureInvoiceDescription({
+          feature,
+          usage: quantity,
+          billingUnits: (price.config as UsagePriceConfig).billing_units,
+          prodName: newProduct.name,
+          isPrepaid: true,
+          fromUnix: finalProration?.start,
+        }),
+        amount,
+        usage_model: UsageModel.Prepaid,
+        feature_id: ent?.feature_id,
+      });
     }
 
     if (isUsagePrice({ price })) continue;

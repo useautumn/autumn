@@ -10,7 +10,7 @@ import {
   DialogTrigger,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 
 import { toast } from "sonner";
@@ -125,12 +125,12 @@ export const SampleApp = ({
                     <div className="flex flex-wrap gap-2 items-center">
                       {data.features
                         ?.filter(
-                          (feature: any) => customer?.features?.[feature.id]
+                          (feature: any) => customer?.features?.[feature.id],
                         )
                         .concat(
                           data.features?.filter(
-                            (feature: any) => !customer?.features?.[feature.id]
-                          ) || []
+                            (feature: any) => !customer?.features?.[feature.id],
+                          ) || [],
                         )
                         .map((feature: any, index: number) => {
                           const customerFeature =
@@ -444,7 +444,7 @@ const FeatureUsageItem = ({
         <div
           className={cn(
             " text-xs uppercase rounded-md flex items-center gap-2 truncate",
-            !customerFeature ? "text-t3" : "text-t2"
+            !customerFeature ? "text-t3" : "text-t2",
           )}
         >
           {feature.name || `Feature ${feature.id || "Unknown"}`}
@@ -464,7 +464,7 @@ const FeatureUsageItem = ({
           <span
             className={cn(
               "text-xs truncate uppercase",
-              customerFeature ? "text-t2" : "text-t3"
+              customerFeature ? "text-t2" : "text-t3",
             )}
           >
             {feature.name || `Feature ${feature.id || "Unknown"}`}
@@ -492,7 +492,6 @@ const FeatureUsageItem = ({
               });
               const { data: checkResponse } = await check({
                 featureId: customerFeature.id,
-
               });
               onCheckData(checkResponse);
 

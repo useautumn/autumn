@@ -34,8 +34,15 @@ pnpm install
 pnpm run setup
 ```
 4. Run Autumn:
+
+For Windows
 ```bash
-docker compose -f docker-compose.prod.yml up
+docker compose -f docker-compose.dev.yml up
+```
+
+For mac/linux:
+ ```bash
+docker compose -f docker-compose.unix.yml up
 ```
 
 That's it! You should be able to see the Autumn dashboard on `http://localhost:3000`. 

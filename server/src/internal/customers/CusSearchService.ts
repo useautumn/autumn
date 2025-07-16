@@ -172,11 +172,11 @@ export class CusSearchService {
     env: AppEnv;
     search: string;
     lastItem?: { created_at: string; name: string; internal_id: string } | null;
-    filters: any;
+    filters?: any;
     pageSize?: number;
     pageNumber: number;
   }) {
-    if (filters.product_id || filters.status) {
+    if (filters?.product_id || filters?.status) {
       return await this.searchByProduct({
         db,
         orgId,

@@ -36,6 +36,7 @@ export const constructFeature = ({
 
   return newFeature;
 };
+
 export const constructBooleanFeature = ({
   featureId,
   orgId,

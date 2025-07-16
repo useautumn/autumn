@@ -233,6 +233,7 @@ export const addExistingUsagesToCusEnts = ({
             cusEnt,
             toDeduct: entityUsages[entityId],
             allowNegativeBalance: cusEnt.usage_allowed ?? false,
+            entityId,
           });
 
           existingUsages[key].entityUsages![entityId] = toDeduct;

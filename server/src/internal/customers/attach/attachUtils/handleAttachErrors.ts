@@ -3,7 +3,7 @@ import { ErrCode } from "@/errors/errCodes.js";
 import { StatusCodes } from "http-status-codes";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { AttachBranch, AttachErrCode, UsagePriceConfig } from "@autumn/shared";
-import { AttachBody } from "../models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { AttachConfig, AttachFlags } from "../models/AttachFlags.js";
 import {
   getEntOptions,
@@ -158,7 +158,7 @@ const handleUpdateQuantityErrors = async ({
           const allowance = getResetBalance({
             entitlement: curr.entitlement,
             options: cusProduct.options.find(
-              (o) => o.internal_feature_id == option.internal_feature_id,
+              (o) => o.internal_feature_id == option.internal_feature_id
             ),
             relatedPrice: price,
           });

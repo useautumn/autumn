@@ -9,6 +9,7 @@ import {
   ErrCode,
   Feature,
   FullCustomer,
+  Invoice,
   InvoiceResponse,
   Organization,
   ProductSchema,
@@ -19,7 +20,7 @@ import { processFullCusProduct } from "@/internal/customers/cusProducts/cusProdu
 import { InvoiceService } from "@/internal/invoices/InvoiceService.js";
 import { sortCusEntsForDeduction } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { StatusCodes } from "http-status-codes";
-import { nullish } from "@/utils/genUtils.js";
+import { notNullish, nullish } from "@/utils/genUtils.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { processInvoice } from "@/internal/invoices/InvoiceService.js";
@@ -58,50 +59,35 @@ export const updateCustomerDetails = async ({
   return customer;
 };
 
-const CusProductResultSchema = CusProductSchema.extend({
-  customer: CustomerSchema,
-  product: ProductSchema,
-});
-
-export const flipProductResults = (
-  cusProducts: z.infer<typeof CusProductResultSchema>[],
-) => {
-  const customers = [];
-
-  for (const cusProduct of cusProducts) {
-    customers.push({
-      ...cusProduct.customer,
-      customer_products: [cusProduct],
-    });
-  }
-  return customers;
-};
-
 export const getCusInvoices = async ({
   db,
   internalCustomerId,
+  invoices,
   limit = 10,
   withItems = false,
   features,
 }: {
   db: DrizzleCli;
   internalCustomerId: string;
+  invoices?: Invoice[];
   limit?: number;
   withItems?: boolean;
   features?: Feature[];
 }): Promise<InvoiceResponse[]> => {
-  const invoices = await InvoiceService.list({
-    db,
-    internalCustomerId,
-    limit,
-  });
+  const finalInvoices = notNullish(invoices)
+    ? invoices
+    : await InvoiceService.list({
+        db,
+        internalCustomerId,
+        limit,
+      });
 
-  const processedInvoices = invoices.map((i) =>
+  const processedInvoices = finalInvoices!.map((i) =>
     processInvoice({
       invoice: i,
       withItems,
       features,
-    }),
+    })
   );
 
   return processedInvoices;
@@ -135,7 +121,7 @@ export const getCusEntsInFeatures = async ({
 
   if (internalFeatureIds) {
     cusEnts = cusEnts.filter((cusEnt) =>
-      internalFeatureIds.includes(cusEnt.internal_feature_id),
+      internalFeatureIds.includes(cusEnt.internal_feature_id)
     );
   }
 
@@ -144,7 +130,7 @@ export const getCusEntsInFeatures = async ({
     cusEnts = cusEnts.filter(
       (cusEnt) =>
         nullish(cusEnt.customer_product.internal_entity_id) ||
-        cusEnt.customer_product.internal_entity_id === entity.internal_id,
+        cusEnt.customer_product.internal_entity_id === entity.internal_id
       // || cusEnt.entities
     );
   }

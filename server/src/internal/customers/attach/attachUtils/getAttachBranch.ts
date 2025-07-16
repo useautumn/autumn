@@ -1,6 +1,6 @@
 import { ExtendedRequest } from "@/utils/models/Request.js";
 
-import { AttachBody } from "../models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { AttachBranch, AttachErrCode, BillingInterval } from "@autumn/shared";
@@ -91,7 +91,7 @@ const getOptionsToUpdate = ({
   for (const newOptions of newOptionsList) {
     let internalFeatureId = newOptions.internal_feature_id;
     let existingOptions = oldOptionsList.find(
-      (o) => o.internal_feature_id === internalFeatureId,
+      (o) => o.internal_feature_id === internalFeatureId
     );
 
     let price = findPrepaidPrice({
@@ -135,6 +135,9 @@ const checkSameCustom = async ({
     features: attachParams.features,
   });
 
+  // console.log("Attach params free trial:", attachParams.freeTrial);
+  // console.log("Cur same product free trial:", curSameProduct.free_trial);
+
   if (itemsSame && freeTrialsSame) {
     throw new RecaseError({
       message: `Items specified for ${product.name} are the same as the existing product, can't attach again`,
@@ -165,11 +168,14 @@ const getSameProductBranch = async ({
   curSameProduct = curSameProduct!;
 
   // 1. If new version?
+  // console.log("Current same product version:", curSameProduct.product.version);
+  // console.log("New Product version:", product.version);
   if (curSameProduct.product.version !== product.version) {
     return AttachBranch.NewVersion;
   }
 
   // 2. Same custom?
+
   if (attachParams.isCustom) {
     return await checkSameCustom({ attachParams, curSameProduct });
   }

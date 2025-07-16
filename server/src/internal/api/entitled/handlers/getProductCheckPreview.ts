@@ -1,7 +1,7 @@
 import { checkToAttachParams } from "@/internal/customers/attach/attachUtils/attachParams/checkToAttachParams.js";
 import { FullCustomer, FullProduct } from "@autumn/shared";
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachBody } from "@/internal/customers/attach/models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { attachParamsToPreview } from "@/internal/customers/attach/handleAttachPreview/attachParamsToPreview.js";
 
 import {
@@ -21,14 +21,6 @@ import { notNullish } from "@/utils/genUtils.js";
 import { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { DrizzleCli } from "@/db/initDrizzle.js";
 
-const getNextCycle = (preview: AttachPreview) => {
-  if (!preview.due_next_cycle && !preview.due_today) {
-    return undefined;
-  }
-
-  if (!preview.due_today && preview.due_next_cycle) {
-  }
-};
 export const attachToCheckPreview = async ({
   preview,
   params,
@@ -96,6 +88,7 @@ export const attachToCheckPreview = async ({
     : undefined;
 
   let due_next_cycle = undefined;
+
   if (preview.due_next_cycle) {
     due_next_cycle = {
       price: preview.due_next_cycle.line_items.reduce((acc, item) => {

@@ -13,14 +13,32 @@ import { notNullish } from "@/utils/genUtils.js";
 import Stripe from "stripe";
 import { Decimal } from "decimal.js";
 
-export const isUsagePrice = ({ price }: { price: Price }) => {
+export const isUsagePrice = ({
+  price,
+  featureId,
+}: {
+  price: Price;
+  featureId?: string;
+}) => {
   let billingType = getBillingType(price.config);
 
-  return (
+  let isUsage =
     billingType == BillingType.UsageInArrear ||
     billingType == BillingType.InArrearProrated ||
-    billingType == BillingType.UsageInAdvance
-  );
+    billingType == BillingType.UsageInAdvance;
+
+  if (featureId) {
+    return (
+      isUsage && (price.config as UsagePriceConfig).feature_id == featureId
+    );
+  }
+
+  return isUsage;
+};
+
+export const isPrepaidPrice = ({ price }: { price: Price }) => {
+  let billingType = getBillingType(price.config);
+  return billingType == BillingType.UsageInAdvance;
 };
 
 export const isPayPerUse = ({ price }: { price: Price }) => {
