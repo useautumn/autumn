@@ -18,7 +18,7 @@ import {
   TrackParams,
   UsageParams,
 } from "autumn-js";
-import { AttachBody } from "@/internal/customers/attach/models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 
 export default class AutumnError extends Error {
   message: string;
@@ -104,14 +104,14 @@ export class AutumnInt {
       deleteInStripe = false,
     }: {
       deleteInStripe?: boolean;
-    } = {},
+    } = {}
   ) {
     const response = await fetch(
       `${this.baseUrl}${path}?${deleteInStripe ? "delete_in_stripe=true" : ""}`,
       {
         method: "DELETE",
         headers: this.headers,
-      },
+      }
     );
 
     if (response.status != 200) {
@@ -216,7 +216,7 @@ export class AutumnInt {
       customerId: string,
       params?: {
         expand?: CusExpand[];
-      },
+      }
     ): Promise<
       Customer & {
         invoices: any[];
@@ -233,7 +233,7 @@ export class AutumnInt {
       }
 
       const data = await this.get(
-        `/customers/${customerId}?${queryParams.toString()}`,
+        `/customers/${customerId}?${queryParams.toString()}`
       );
       return data;
     },
@@ -248,7 +248,7 @@ export class AutumnInt {
         deleteInStripe = false,
       }: {
         deleteInStripe?: boolean;
-      } = {},
+      } = {}
     ) => {
       const data = await this.delete(`/customers/${customerId}`, {
         deleteInStripe,
@@ -260,19 +260,19 @@ export class AutumnInt {
   entities = {
     get: async (customerId: string, entityId: string) => {
       const data = await this.get(
-        `/customers/${customerId}/entities/${entityId}?expand=${EntityExpand.Invoices}`,
+        `/customers/${customerId}/entities/${entityId}?expand=${EntityExpand.Invoices}`
       );
       return data;
     },
 
     create: async (
       customerId: string,
-      entity: CreateEntity | CreateEntity[],
+      entity: CreateEntity | CreateEntity[]
     ) => {
       // let entities = Array.isArray(entity) ? entity : [entity];
       const data = await this.post(
         `/customers/${customerId}/entities?with_autumn_id=true`,
-        entity,
+        entity
       );
 
       return data;
@@ -285,7 +285,7 @@ export class AutumnInt {
 
     delete: async (customerId: string, entityId: string) => {
       const data = await this.delete(
-        `/customers/${customerId}/entities/${entityId}`,
+        `/customers/${customerId}/entities/${entityId}`
       );
       return data;
     },
@@ -302,10 +302,10 @@ export class AutumnInt {
 
     get: async (
       productId: string,
-      { v1Schema = false }: { v1Schema?: boolean } = {},
+      { v1Schema = false }: { v1Schema?: boolean } = {}
     ) => {
       const data = await this.get(
-        `/products/${productId}?${v1Schema ? "schemaVersion=1" : ""}`,
+        `/products/${productId}?${v1Schema ? "schemaVersion=1" : ""}`
       );
       return data;
     },

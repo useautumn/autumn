@@ -1,5 +1,5 @@
 import { ExtendedRequest } from "@/utils/models/Request.js";
-import { AttachBody } from "../../models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { createStripeCli } from "@/external/stripe/utils.js";
 import { getStripeCusData } from "./attachParamsUtils/getStripeCusData.js";
 import { getPricesAndEnts } from "./attachParamsUtils/getPricesAndEnts.js";

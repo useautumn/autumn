@@ -8,6 +8,7 @@ import type {
 import { DrizzleCli } from "@/db/initDrizzle.js";
 import { PostHog } from "posthog-node";
 import { Logger } from "pino";
+import { ClickHouseClient } from "@clickhouse/client";
 
 export interface ExtendedRequest extends ExpressRequest {
   orgId: string;
@@ -17,6 +18,7 @@ export interface ExtendedRequest extends ExpressRequest {
   db: DrizzleCli;
   logtail: Logtail;
   logger: Logger;
+  clickhouseClient: ClickHouseClient;
 
   id?: string;
   userId?: string;

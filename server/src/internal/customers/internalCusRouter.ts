@@ -28,6 +28,29 @@ import { createOrgResponse } from "../orgs/orgUtils.js";
 
 export const cusRouter: Router = Router();
 
+cusRouter.get("/:customer_id/events", async (req: any, res: any) => {
+  try {
+    const { db, org, features, env } = req;
+    const { customer_id } = req.params;
+    const orgId = req.orgId;
+    const limit = req.query.limit || 10;
+    const period = req.query.period || "all";
+
+
+    const events = await EventService.getByCustomerId({
+      db,
+      internalCustomerId: customer_id,
+      env,
+      orgId: orgId,
+      limit,
+    });
+
+    res.status(200).json({ events });
+  } catch (error) {
+    handleFrontendReqError({ req, error, res, action: "get customer events" });
+  }
+})
+
 cusRouter.get("/:customer_id/data", async (req: any, res: any) => {
   try {
     const { db, org, features, env } = req;

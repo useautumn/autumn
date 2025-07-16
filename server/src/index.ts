@@ -22,6 +22,8 @@ import { createPosthogCli } from "./external/posthog/createPosthogCli.js";
 import { generateId } from "./utils/genUtils.js";
 import { subscribeToOrgUpdates } from "./external/supabase/subscribeToOrgUpdates.js";
 import { client, db } from "./db/initDrizzle.js";
+import { ClickHouseClient } from "@clickhouse/client";
+import { clickhouseClient } from "./db/initClickHouse.js";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./utils/auth.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -41,6 +43,7 @@ const init = async () => {
         "http://localhost:5173",
         "http://localhost:5174",
         "https://app.useautumn.com",
+        "https://staging.useautumn.com",
         "https://*.useautumn.com",
         "https://localhost:8080",
         "https://app.aidvize.com",
@@ -67,7 +70,7 @@ const init = async () => {
         "If-Modified-Since",
         "If-Unmodified-Since",
       ],
-    }),
+    })
   );
 
   app.all("/api/auth/*", toNodeHandler(auth));
@@ -86,7 +89,7 @@ const init = async () => {
   app.use(async (req: any, res: any, next: any) => {
     req.env = req.env = req.headers["app_env"] || AppEnv.Sandbox;
     req.db = db;
-    // req.logtailAll = logtailAll;
+    req.clickhouseClient = clickhouseClient;
     req.posthog = posthog;
     req.id = req.headers["rndr-id"] || generateId("local_req");
     req.timestamp = Date.now();

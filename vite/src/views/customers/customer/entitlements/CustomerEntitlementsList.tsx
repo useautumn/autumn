@@ -203,9 +203,7 @@ export const CustomerEntitlementsList = () => {
         (cusEnt: FullCustomerEntitlement & { unused: number }) => {
           const entitlement = cusEnt.entitlement;
           const allowanceType = entitlement.allowance_type;
-          // console.log("Cus ent:", cusEnt);
-          console.log("Balance:", cusEnt.balance);
-          // const entity = getEntity(cusEnt);
+
           return (
             <Row
               key={cusEnt.id}

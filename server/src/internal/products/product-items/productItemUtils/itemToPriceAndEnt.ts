@@ -115,6 +115,7 @@ export const toFeature = ({
 
     carry_from_previous: !resetUsage,
     entity_feature_id: item.entity_feature_id,
+    usage_limit: null,
   };
 
   if (isCustom || newVersion) {
@@ -166,7 +167,7 @@ export const toFeatureAndPrice = ({
 
     carry_from_previous: !resetUsage,
     entity_feature_id: item.entity_feature_id,
-    usage_limit: item.usage_limit,
+    usage_limit: item.usage_limit || null,
   };
 
   // Will only create new ent id if

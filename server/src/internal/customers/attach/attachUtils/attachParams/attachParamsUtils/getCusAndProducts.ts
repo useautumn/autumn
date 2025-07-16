@@ -5,7 +5,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { ExtendedRequest } from "@/utils/models/Request.js";
 import { ErrCode, CusProductStatus } from "@autumn/shared";
-import { AttachBody } from "../../../models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 
 const getProductsForAttach = async ({
   req,
@@ -37,7 +37,7 @@ const getProductsForAttach = async ({
 
     for (const prod of products) {
       let otherProd = products.find(
-        (p) => p.group === prod.group && !p.is_add_on && p.id !== prod.id,
+        (p) => p.group === prod.group && !p.is_add_on && p.id !== prod.id
       );
 
       if (otherProd && !otherProd.is_add_on && !isOneOff(prod.prices)) {

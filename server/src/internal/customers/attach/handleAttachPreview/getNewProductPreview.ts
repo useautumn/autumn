@@ -11,20 +11,22 @@ import {
 } from "@/internal/products/prices/billingIntervalUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
 import { getLastInterval } from "@/internal/products/prices/priceUtils/priceIntervalUtils.js";
-import { isFreeProduct } from "@/internal/products/productUtils.js";
+import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import { getMergeCusProduct } from "../attachFunctions/addProductFlow/getMergeCusProduct.js";
-import { formatUnixToDate, notNullish } from "@/utils/genUtils.js";
+import { formatUnixToDate, notNullish, nullish } from "@/utils/genUtils.js";
 
 export const getNewProductPreview = async ({
   branch,
   attachParams,
   logger,
   config,
+  withPrepaid = false,
 }: {
   branch: AttachBranch;
   attachParams: AttachParams;
   logger: any;
   config: AttachConfig;
+  withPrepaid?: boolean;
 }) => {
   const { org } = attachParams;
   const newProduct = attachParamsToProduct({ attachParams });
@@ -52,6 +54,7 @@ export const getNewProductPreview = async ({
     anchorToUnix,
     freeTrial,
     logger,
+    withPrepaid,
   });
 
   let dueNextCycle = null;
@@ -62,6 +65,7 @@ export const getNewProductPreview = async ({
       attachParams,
       now: attachParams.now,
       logger,
+      withPrepaid,
     });
 
     let minInterval = getLastInterval({
@@ -69,23 +73,29 @@ export const getNewProductPreview = async ({
       ents: newProduct.entitlements,
     });
 
+    let getAligned = notNullish(anchorToUnix) && notNullish(minInterval);
+
     let dueAt = freeTrial
       ? freeTrialToStripeTimestamp({
           freeTrial,
           now: attachParams.now,
         })! * 1000
-      : anchorToUnix
+      : getAligned
         ? getAlignedIntervalUnix({
-            alignWithUnix: anchorToUnix,
+            alignWithUnix: anchorToUnix!,
             interval: minInterval,
             now: attachParams.now,
           })
-        : addBillingIntervalUnix(attachParams.now || Date.now(), minInterval);
+        : notNullish(minInterval)
+          ? addBillingIntervalUnix(attachParams.now || Date.now(), minInterval)
+          : undefined;
 
-    dueNextCycle = {
-      line_items: nextCycleItems,
-      due_at: dueAt,
-    };
+    dueNextCycle = !nullish(dueAt)
+      ? {
+          line_items: nextCycleItems,
+          due_at: dueAt,
+        }
+      : undefined;
   }
 
   const dueTodayAmt = items.reduce((acc, item) => {
@@ -110,13 +120,13 @@ export const getNewProductPreview = async ({
       dueNextCycle = {
         line_items: items.filter((item) => {
           let price = newProduct.prices.find(
-            (price) => price.id == item.price_id,
+            (price) => price.id == item.price_id
           );
           return price?.config.interval == minInterval;
         }),
         due_at: addBillingIntervalUnix(
           attachParams.now || Date.now(),
-          minInterval,
+          minInterval
         ),
       };
     }

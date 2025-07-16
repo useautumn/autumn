@@ -1,6 +1,3 @@
-import Stripe from "stripe";
-import { getStripeSubs } from "@/external/stripe/stripeSubUtils.js";
-import { createStripeCli } from "@/external/stripe/utils.js";
 import { BREAK_API_VERSION } from "@/utils/constants.js";
 import {
   AppEnv,
@@ -64,7 +61,6 @@ export const getCustomerDetails = async ({
 
   let withRewards = expand.includes(CusExpand.Rewards);
 
-  let subs;
   let inStatuses = org.config.include_past_due
     ? [CusProductStatus.Active, CusProductStatus.PastDue]
     : [CusProductStatus.Active];
@@ -79,22 +75,22 @@ export const getCustomerDetails = async ({
   });
 
   let subIds = cusProducts.flatMap(
-    (cp: FullCusProduct) => cp.subscription_ids || [],
+    (cp: FullCusProduct) => cp.subscription_ids || []
   );
 
-  if (org.config.api_version >= BREAK_API_VERSION && org.stripe_connected) {
-    let stripeCli = createStripeCli({
-      org,
-      env,
-    });
+  // if (org.config.api_version >= BREAK_API_VERSION && org.stripe_connected) {
+  //   let stripeCli = createStripeCli({
+  //     org,
+  //     env,
+  //   });
 
-    subs = await getStripeSubs({
-      stripeCli,
-      subIds,
-      expand: withRewards ? ["discounts"] : undefined,
-    });
-  }
-
+  //   subs = await getStripeSubs({
+  //     stripeCli,
+  //     subIds,
+  //     expand: withRewards ? ["discounts"] : undefined,
+  //   });
+  // }
+  const subs = customer.subscriptions || [];
   const { main, addOns } = await processFullCusProducts({
     fullCusProducts: cusProducts,
     subs,
@@ -135,7 +131,6 @@ export const getCustomerDetails = async ({
       org,
       env,
       fullCus: customer,
-      subs,
       subIds,
       expand,
     });
@@ -180,7 +175,7 @@ export const getCustomerDetails = async ({
                 feature_id: e.feature_id,
                 created_at: e.created_at,
                 env: customer.env,
-              }),
+              })
             )
           : undefined,
         referrals,
@@ -202,6 +197,7 @@ export const getCustomerDetails = async ({
     const processedInvoices = await getCusInvoices({
       db,
       internalCustomerId: customer.internal_id,
+      invoices: customer.invoices,
       limit: 20,
       withItems,
       features,

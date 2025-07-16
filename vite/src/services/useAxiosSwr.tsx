@@ -35,22 +35,60 @@ export function useAxiosPostSWR({
   env,
   data,
   withAuth = true,
+  enabled = true,
   options = {},
+  queryKey,
 }: {
   url: string;
-  env: AppEnv;
+  env?: AppEnv;
   data: any;
   withAuth?: boolean;
   options?: SWRConfiguration;
+  enabled?: boolean;
+  queryKey?: any[];
 }) {
-  const axiosInstance = useAxiosInstance({ env, isAuth: withAuth });
+  const axiosInstance = useAxiosInstance();
 
   const fetcher = async (url: string) => {
     const res = await axiosInstance.post(url, data);
     return res.data;
   };
 
-  return useSWR(url, fetcher, {
+  return useSWR(enabled ? url : null, fetcher, {
+    refreshInterval: 0,
+    revalidateOnFocus: false,
+    ...options,
+  });
+}
+
+export function usePostSWR({
+  url,
+  data,
+  enabled = true,
+  options = {},
+  queryKey,
+  method = "post",
+}: {
+  url: string;
+  data?: any;
+  enabled?: boolean;
+  options?: SWRConfiguration;
+  queryKey?: any[];
+  method?: "post" | "get";
+}) {
+  const axiosInstance = useAxiosInstance();
+
+  const fetcher = async () => {
+    if (method === "post") {
+      const res = await axiosInstance.post(url, data);
+      return res.data;
+    } else {
+      const res = await axiosInstance.get(url);
+      return res.data;
+    }
+  };
+
+  return useSWR(enabled ? queryKey || url : null, fetcher, {
     refreshInterval: 0,
     revalidateOnFocus: false,
     ...options,

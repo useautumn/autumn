@@ -1,7 +1,7 @@
 import { handleAttachRaceCondition } from "@/external/redis/redisUtils.js";
 import { ExtendedRequest, ExtendedResponse } from "@/utils/models/Request.js";
 import { routeHandler } from "@/utils/routerUtils.js";
-import { AttachBodySchema } from "./models/AttachBody.js";
+import { AttachBodySchema } from "@autumn/shared";
 import { getAttachParams } from "./attachUtils/attachParams/getAttachParams.js";
 import { getAttachBranch } from "./attachUtils/getAttachBranch.js";
 import { getAttachConfig } from "./attachUtils/getAttachConfig.js";
@@ -49,13 +49,12 @@ export const handleAttach = async (req: any, res: any) =>
         config,
       });
 
-      await checkStripeConnections({ req, attachParams });
-      await createStripePrices({
+      await checkStripeConnections({
+        req,
         attachParams,
         useCheckout: config.onlyCheckout,
-        req,
-        logger,
       });
+
       await insertCustomItems({
         db: req.db,
         customPrices: customPrices || [],

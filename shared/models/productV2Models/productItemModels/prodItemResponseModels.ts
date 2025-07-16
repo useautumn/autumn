@@ -7,12 +7,16 @@ import {
   UsageModel,
 } from "./productItemModels.js";
 import { Infinite } from "../../productModels/productEnums.js";
+import { APIFeatureSchema } from "../../featureModels/featureResModels.js";
 
 export const ProductItemResponseSchema = z.object({
   // Feature stuff
   type: z.nativeEnum(ProductItemType).nullish(),
   feature_id: z.string().nullish(),
   feature_type: z.nativeEnum(ProductItemFeatureType).nullish(),
+
+  // Feature response
+  feature: APIFeatureSchema.nullable(),
 
   included_usage: z.number().or(z.literal(Infinite)).nullish(),
   interval: z.nativeEnum(ProductItemInterval).nullish(),
@@ -33,3 +37,5 @@ export const ProductItemResponseSchema = z.object({
     })
     .nullish(),
 });
+
+export type ProductItemResponse = z.infer<typeof ProductItemResponseSchema>;
