@@ -96,7 +96,7 @@ export default function PaginationPanel() {
         <span>{totalRows} events</span>
       </div>
 
-      <div className="w-[150px] border-x h-full text-t3">
+      <div className="w-[150px] border-x h-full text-t2">
         <Pagination className="w-fit h-full text-xs select-none">
           <PaginationContent className="w-full flex justify-between select-none">
             <PaginationItem className="select-none">
