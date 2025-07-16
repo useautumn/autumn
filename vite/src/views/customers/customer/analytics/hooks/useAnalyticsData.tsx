@@ -1,4 +1,6 @@
+import { useOrg } from "@/hooks/useOrg";
 import { useAxiosSWR, usePostSWR } from "@/services/useAxiosSwr";
+import { useEnv } from "@/utils/envUtils";
 import { navigateTo, nullish } from "@/utils/genUtils";
 import { ErrCode, FullCustomer } from "@autumn/shared";
 import { useEffect } from "react";
@@ -9,6 +11,7 @@ export const useAnalyticsData = ({
 }: {
   hasCleared?: boolean;
 }) => {
+  const { org } = useOrg();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const customerId = searchParams.get("customer_id");
@@ -30,6 +33,7 @@ export const useAnalyticsData = ({
     interval,
     ...(eventNames || []).sort(),
     ...(featureIds || []).sort(),
+    org?.slug,
   ];
 
   const {
@@ -94,19 +98,23 @@ export const useAnalyticsData = ({
 };
 
 export const useRawAnalyticsData = () => {
+  const { org } = useOrg();
+  const env = useEnv();
+
   const [searchParams] = useSearchParams();
   const customerId = searchParams.get("customer_id");
   const interval = searchParams.get("interval");
 
   const { data: featuresData, isLoading: featuresLoading } = useAxiosSWR({
     url: `/features`,
+    queryKey: [org?.slug, env],
     options: {
       refreshInterval: 0,
     },
   });
 
   // Create a simple queryKey with the actual values that change
-  const queryKey = ["query-raw-events", customerId, interval];
+  const queryKey = ["query-raw-events", customerId, interval, org?.slug, env];
 
   const {
     data,
