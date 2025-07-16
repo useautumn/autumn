@@ -19,7 +19,7 @@ import { Feature, FeatureType, FeatureUsageType } from "@autumn/shared";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSearchParams, useNavigate, useLocation } from "react-router";
-import { getAllEventNames } from "../utils/getAllEventNames";
+import { eventNameBelongsToFeature, getAllEventNames } from "../utils/getAllEventNames";
 import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -49,38 +49,6 @@ export const SelectFeatureDropdown = ({
   const currentEventNames =
     searchParams.get("event_names")?.split(",").filter(Boolean) || [];
 
-  // // If no selections are made, default to the first 10 items (features first, then events)
-  // useEffect(() => {
-  //   if (
-  //     features.length > 0 && // Only run when features have actually loaded
-  //     currentFeatureIds.length === 0 &&
-  //     currentEventNames.length === 0 &&
-  //     !hasCleared
-  //   ) {
-  //     let defaultFeatureIds = features
-  //       .filter((feature: Feature) => {
-  //         if (
-  //           feature.type === FeatureType.Metered &&
-  //           feature.config.usage_type == FeatureUsageType.Single
-  //         ) {
-  //           return true;
-  //         }
-  //         return false;
-  //       })
-  //       .map((feature: Feature) => feature.id);
-
-  //     defaultFeatureIds = defaultFeatureIds.slice(0, 10);
-
-  //     let defaultEventNames = [];
-
-  //     if (defaultFeatureIds.length == 0) {
-  //       defaultEventNames = allEventNames.slice(0, 10);
-  //     }
-
-  //     updateQueryParams(defaultFeatureIds, defaultEventNames);
-  //   }
-  // }, [features, allEventNames, hasCleared]);
-
   // Helper function to update query parameters
   const updateQueryParams = (featureIds: string[], eventNames: string[]) => {
     const params = new URLSearchParams(location.search);
@@ -103,14 +71,14 @@ export const SelectFeatureDropdown = ({
   const numSelected = currentFeatureIds.length + currentEventNames.length;
 
   // Create combined options for search
-  const featureOptions = features.map((feature: Feature) => ({
+  const featureOptions = features.filter((feature: Feature) => feature.type === FeatureType.Metered && feature.config.usage_type === FeatureUsageType.Single).map((feature: Feature) => ({
     type: "feature" as const,
     id: feature.id,
     name: feature.name,
     selected: currentFeatureIds.includes(feature.id),
   }));
 
-  const eventOptions = allEventNames.map((eventName: string) => ({
+  const eventOptions = allEventNames.filter((eventName: string) => eventNameBelongsToFeature({ eventName, features })).map((eventName: string) => ({
     type: "event" as const,
     id: eventName,
     name: eventName,
