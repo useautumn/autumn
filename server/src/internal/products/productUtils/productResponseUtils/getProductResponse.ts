@@ -27,6 +27,7 @@ import { notNullish } from "@/utils/genUtils.js";
 import { isFreeProduct, isOneOff } from "../../productUtils.js";
 import { getFirstInterval } from "../../prices/priceUtils/priceIntervalUtils.js";
 import { itemToPriceOrTiers } from "../../product-items/productItemUtils.js";
+import { toAPIFeature } from "@/internal/features/utils/mapFeatureUtils.js";
 
 export const getProductItemResponse = ({
   item,
@@ -37,7 +38,7 @@ export const getProductItemResponse = ({
 }: {
   item: ProductItem;
   features: Feature[];
-  currency?: string;
+  currency?: string | null;
   withDisplay?: boolean;
   options?: FeatureOptions[];
 }) => {
@@ -55,6 +56,7 @@ export const getProductItemResponse = ({
 
   let quantity = undefined;
   let upcomingQuantity = undefined;
+
   if (item.usage_model == UsageModel.Prepaid && notNullish(options)) {
     let option = options!.find((o) => o.feature_id == item.feature_id);
     quantity = option?.quantity
@@ -66,9 +68,11 @@ export const getProductItemResponse = ({
       : undefined;
   }
 
+  let feature = features.find((f) => f.id == item.feature_id);
   return ProductItemResponseSchema.parse({
     type,
     ...item,
+    feature: feature ? toAPIFeature({ feature }) : null,
     display: withDisplay ? display : undefined,
     ...priceData,
     quantity,
@@ -144,17 +148,23 @@ export const getProductResponse = async ({
   product: FullProduct;
   features: Feature[];
   fullCus?: FullCustomer;
-  currency?: string;
+  currency?: string | null;
   db?: DrizzleCli;
   withDisplay?: boolean;
   options?: FeatureOptions[];
 }) => {
   // 1. Get items with display
-  let items = mapToProductItems({
+  let rawItems = mapToProductItems({
     prices: product.prices,
     entitlements: product.entitlements,
     features: features,
-  }).map((item) => {
+  });
+
+  // Sort raw items first
+  let sortedItems = sortProductItems(rawItems, features);
+
+  // Transform sorted items
+  let items = sortedItems.map((item) => {
     return getProductItemResponse({
       item,
       features,
@@ -163,8 +173,6 @@ export const getProductResponse = async ({
       options,
     });
   });
-
-  items = sortProductItems(items, features);
 
   // 2. Get product properties
   let attachScenario = getAttachScenario({

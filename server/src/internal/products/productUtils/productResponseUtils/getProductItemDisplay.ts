@@ -192,7 +192,7 @@ export const getProductItemDisplay = ({
 }: {
   item: ProductItem;
   features: Feature[];
-  currency?: string;
+  currency?: string | null;
 }) => {
   if (isFeatureItem(item)) {
     return getFeatureItemDisplay({

@@ -4,7 +4,7 @@ import { orgRouter } from "./orgs/orgRouter.js";
 import { Router } from "express";
 import { userRouter } from "./users/userRouter.js";
 import { withAuth, withOrgAuth } from "../middleware/authMiddleware.js";
-import { featureRouter } from "./features/featureRouter.js";
+import { internalFeatureRouter } from "./features/internalFeatureRouter.js";
 import { productRouter } from "./products/internalProductRouter.js";
 import { devRouter } from "./dev/devRouter.js";
 import { cusRouter } from "./customers/internalCusRouter.js";
@@ -30,7 +30,7 @@ mainRouter.use("/admin", withAdminAuth, adminRouter);
 mainRouter.use("/users", withAuth, userRouter);
 mainRouter.use("/onboarding", withOrgAuth, onboardingRouter);
 mainRouter.use("/organization", withOrgAuth, orgRouter);
-mainRouter.use("/features", withOrgAuth, featureRouter);
+mainRouter.use("/features", withOrgAuth, internalFeatureRouter);
 mainRouter.use("/products", withOrgAuth, productRouter);
 mainRouter.use("/dev", devRouter);
 mainRouter.use("/customers", withOrgAuth, cusRouter);
@@ -71,7 +71,7 @@ mainRouter.use(
       console.error(e);
       return res.status(500).json({ error: "Error retrieving invoice" });
     }
-  },
+  }
 );
 
 // Optional...
@@ -89,7 +89,7 @@ if (process.env.AUTUMN_SECRET_KEY) {
           },
         };
       },
-    }),
+    })
   );
 }
 
@@ -117,7 +117,7 @@ mainRouter.use(
         },
       };
     },
-  }),
+  })
 );
 
 export default mainRouter;
