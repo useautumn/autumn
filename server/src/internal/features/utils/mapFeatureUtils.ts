@@ -37,13 +37,13 @@ export const fromAPIFeature = ({ apiFeature }: { apiFeature: APIFeature }) => {
 
   // let config = isMetered ? getMetered
 
-  let feature: Feature = {
-    id: apiFeature.id,
-    name: apiFeature.name,
-    type: featureType,
-    display: {
-      singular: apiFeature.display?.singular || apiFeature.name,
-      plural: apiFeature.display?.plural || apiFeature.name,
-    },
-  };
+  // let feature: Feature = {
+  //   id: apiFeature.id,
+  //   name: apiFeature.name,
+  //   type: featureType,
+  //   display: {
+  //     singular: apiFeature.display?.singular || apiFeature.name,
+  //     plural: apiFeature.display?.plural || apiFeature.name,
+  //   },
+  // };
 };
