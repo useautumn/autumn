@@ -40,7 +40,7 @@ export const AnalyticsView = ({ env }: { env: AppEnv }) => {
   const allSelectedItems = [...currentFeatureIds, ...currentEventNames];
 
   const { customer, features, events, queryLoading, error, bcExclusionFlag } =
-    useAnalyticsData();
+    useAnalyticsData({ hasCleared });
 
   const { rawEvents, queryLoading: rawQueryLoading } = useRawAnalyticsData();
 
