@@ -1,6 +1,6 @@
 import { ExtendedRequest } from "@/utils/models/Request.js";
 
-import { AttachBody } from "../models/AttachBody.js";
+import { AttachBody } from "@autumn/shared";
 import { AttachParams } from "../../cusProducts/AttachParams.js";
 import { notNullish } from "@/utils/genUtils.js";
 import { AttachBranch, AttachErrCode, BillingInterval } from "@autumn/shared";
@@ -168,6 +168,8 @@ const getSameProductBranch = async ({
   curSameProduct = curSameProduct!;
 
   // 1. If new version?
+  // console.log("Current same product version:", curSameProduct.product.version);
+  // console.log("New Product version:", product.version);
   if (curSameProduct.product.version !== product.version) {
     return AttachBranch.NewVersion;
   }

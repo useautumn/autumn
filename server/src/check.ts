@@ -248,6 +248,7 @@ export const check = async () => {
     let customerId;
 
     // customerId = "487bacbf-dd33-465e-a25a-09dd736dc81b";
+    // customerId = "0e87a086-89ce-4ad5-99c0-b78bea1c54ed";
 
     let customers: FullCustomer[] = [];
     let stripeSubs: Stripe.Subscription[] = [];

@@ -116,7 +116,7 @@ export default function CustomerView({ env }: { env: AppEnv }) {
               </div>
 
               <InvoicesTable />
-              <CustomerEventsList events={events} />
+              <CustomerEventsList customer={customer} events={events} env={env} />
             </div>
             {/* customer details */}
           </div>

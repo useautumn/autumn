@@ -17,6 +17,8 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "incremental": false,
+    "noEmitOnError": false,
     "paths": {
       "@/*": ["src/*"],
       "@emails/*": ["emails/*"]

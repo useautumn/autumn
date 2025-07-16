@@ -132,7 +132,7 @@ export const getCusProductResponse = async ({
     org.config.api_version >= BREAK_API_VERSION
   ) {
     let baseSub = subs?.find(
-      (s) => s.id == subIds[0] || (s as Subscription).stripe_id == subIds[0],
+      (s) => s.id == subIds[0] || (s as Subscription).stripe_id == subIds[0]
     );
     stripeSubData = {
       current_period_end: baseSub?.current_period_end
@@ -181,7 +181,7 @@ export const getCusProductResponse = async ({
       started_at: cusProduct.starts_at,
       entity_id: cusProduct.internal_entity_id
         ? entities?.find(
-            (e: Entity) => e.internal_id == cusProduct.internal_entity_id,
+            (e: Entity) => e.internal_id == cusProduct.internal_entity_id
           )?.id
         : cusProduct.entity_id || undefined,
 
